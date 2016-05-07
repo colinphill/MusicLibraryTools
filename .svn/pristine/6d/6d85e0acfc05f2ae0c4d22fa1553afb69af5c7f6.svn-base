@@ -1,0 +1,100 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace MusicFileUtilities
+{
+    public class MetadataCacheEntry : IMetadataProvider
+    {
+        private string _title = "";
+        private string _album = "";
+        private string _artist = "";
+        private string _albumartist = "";
+        private int _tracknumber = 0;
+
+        public MetadataCacheEntry(IMetadataProvider mp)
+        {
+            try
+            {
+                _title = mp.Title;
+            }
+            catch
+            {
+            }
+            try
+            {
+                _album = mp.Album;
+            }
+            catch
+            {
+            }
+            try
+            {
+                _artist = mp.Artist;
+            }
+            catch
+            {
+            }
+            try
+            {
+                _albumartist = mp.AlbumArtist;
+            }
+            catch
+            {
+            }
+            try
+            {
+                _tracknumber = mp.TrackNumber;
+            }
+            catch
+            {
+            }
+        }
+
+        public string Title
+        {
+            get
+            {
+                return _title;
+            }
+        }
+
+        public string Album
+        {
+            get
+            {
+                return _album;
+            }
+        }
+
+        public string Artist
+        {
+            get
+            {
+                return _artist;
+            }
+        }
+
+        public string AlbumArtist
+        {
+            get
+            {
+                return _albumartist;
+            }
+        }
+
+        public int TrackNumber
+        {
+            get
+            {
+                return _tracknumber;
+            }
+        }
+
+    }
+
+    public class MetadataCache
+    {
+    }
+}

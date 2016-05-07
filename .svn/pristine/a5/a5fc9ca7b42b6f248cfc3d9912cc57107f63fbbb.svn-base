@@ -1,0 +1,105 @@
+﻿/* 
+ * SVN Information:
+ * 
+ * $HeadURL: file:///Z:/SVN_Repositories/MusicLibraryTools/trunk/CheckRedundancies/Program.cs $
+ * $Date: 2012-12-21 17:25:46 -0700 (Fri, 21 Dec 2012) $
+ * $Revision: 11 $
+ * $Author: Colin $
+ * 
+ */
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Xml.Linq;
+
+namespace MusicLibraryTools
+{
+    public class LibraryConfiguration
+    {
+
+        static LibraryConfiguration()
+        {
+            try
+            {
+                XDocument doc = XDocument.Load("LibraryConfiguration.xml");
+                _syncsource = doc.Element("LibraryConfiguration").Element("SyncSource").Value;
+                _synctarget = doc.Element("LibraryConfiguration").Element("SyncTarget").Value;
+                _indextarget = doc.Element("LibraryConfiguration").Element("IndexTarget").Value;
+                _wpltarget = doc.Element("LibraryConfiguration").Element("WPLTarget").Value;
+                _trashtarget = doc.Element("LibraryConfiguration").Element("TrashTarget").Value;
+                _wploffset = doc.Element("LibraryConfiguration").Element("WPLOffset").Value;
+                _valid = true;
+            }
+            catch
+            {
+            }
+        }
+
+        private static string _syncsource = "";
+        private static string _synctarget = "";
+        private static string _indextarget = "";
+        private static string _wpltarget = "";
+        private static string _trashtarget = "";
+        private static string _wploffset = "";
+        private static bool _valid = false;
+
+        public static string CrossSyncTargetLibraryPath
+        {
+            get
+            {
+                return _synctarget;
+            }
+        }
+
+        public static string CrossSyncSourceLibraryPath
+        {
+            get
+            {
+                return _syncsource;
+            }
+        }
+        
+        public static string CrossSyncTargetMusicFolder
+        {
+            get
+            {
+                return _indextarget;
+            }
+        }
+
+        public static string WPLTargetFolder
+        {
+            get
+            {
+                return _wpltarget;
+            }
+        }
+
+        public static string WPLOffset
+        {
+            get
+            {
+                return _wploffset;
+            }
+        }
+
+        public static string TrashTargetFolder
+        {
+            get
+            {
+                return _trashtarget;
+            }
+        }
+
+        public static bool Valid
+        {
+            get
+            {
+                return _valid;
+            }
+        }
+
+    }
+}

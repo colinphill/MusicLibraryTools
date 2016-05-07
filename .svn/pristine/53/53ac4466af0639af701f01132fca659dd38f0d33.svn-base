@@ -1,0 +1,127 @@
+﻿/* 
+ * SVN Information:
+ * 
+ * $HeadURL$
+ * $Date$
+ * $Revision$
+ * $Author$
+ * 
+ */
+
+using System;
+
+namespace MusicFileUtilities
+{
+
+    internal class Tools
+    {
+
+        public static ushort UInt16AtLE(byte[] b, int offset)
+        {
+            ushort res = b[offset + 1];
+            res = (ushort)((res << 8) | b[offset]);
+            return res;
+        }
+
+        public static short Int16AtLE(byte[] b, int offset)
+        {
+            return unchecked((short)UInt16AtLE(b, offset));
+        }
+
+        public static ushort UInt16AtBE(byte[] b, int offset)
+        {
+            ushort res = b[offset];
+            res = (ushort)((res << 8) | b[offset + 1]);
+            return res;
+        }
+
+        public static short Int16AtBE(byte[] b, int offset)
+        {
+            return unchecked((short)UInt16AtBE(b, offset));
+        }
+
+        public static uint UInt32AtLE(byte[] b, int offset)
+        {
+            uint res = b[offset + 3];
+            res = (res << 8) | b[offset + 2];
+            res = (res << 8) | b[offset + 1];
+            res = (res << 8) | b[offset];
+            return res;
+        }
+
+        public static int Int32AtLE(byte[] b, int offset)
+        {
+            return unchecked((int)UInt32AtLE(b, offset));
+        }
+
+        public static uint UInt32AtBE(byte[] b, int offset)
+        {
+            uint res = b[offset];
+            res = (res << 8) | b[offset + 1];
+            res = (res << 8) | b[offset + 2];
+            res = (res << 8) | b[offset + 3];
+            return res;
+        }
+
+        public static int Int32AtBE(byte[] b, int offset)
+        {
+            return unchecked((int)UInt32AtBE(b, offset));
+        }
+
+        public static ulong UInt64AtLE(byte[] b, int offset)
+        {
+            ulong res = UInt32AtLE(b, offset + 4);
+            res = (res << 8) | UInt32AtLE(b, offset);
+            return res;
+        }
+
+        public static long Int64AtLE(byte[] b, int offset)
+        {
+            return unchecked((long)UInt64AtLE(b, offset));
+        }
+
+        public static ulong UInt64AtBE(byte[] b, int offset)
+        {
+            ulong res = UInt32AtBE(b, offset);
+            res = (res << 8) | UInt32AtBE(b, offset + 4);
+            return res;
+        }
+
+        public static long Int64AtBE(byte[] b, int offset)
+        {
+            return unchecked((long)UInt64AtBE(b, offset));
+        }
+
+        public static byte[] ToLE(uint u)
+        {
+            byte[] b = new byte[4];
+            b[0] = (byte)(u & 0xff);
+            b[1] = (byte)((u >> 8) & 0xff);
+            b[2] = (byte)((u >> 16) & 0xff);
+            b[3] = (byte)((u >> 24) & 0xff);
+            return b;
+        }
+
+        public static byte[] ToLE(int i)
+        {
+            return ToLE((uint)i);
+        }
+
+        public static byte[] ToBE(uint u)
+        {
+            byte[] b = new byte[4];
+            b[3] = (byte)(u & 0xff);
+            b[2] = (byte)((u >> 8) & 0xff);
+            b[1] = (byte)((u >> 16) & 0xff);
+            b[0] = (byte)((u >> 24) & 0xff);
+            return b;
+        }
+
+        public static byte[] ToBE(int i)
+        {
+            return ToBE((uint)i);
+        }
+
+    }
+
+}

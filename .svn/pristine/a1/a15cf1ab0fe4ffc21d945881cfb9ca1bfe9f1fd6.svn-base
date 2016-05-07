@@ -1,0 +1,108 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.IO;
+using System.Drawing;
+using System.Drawing.Imaging;
+
+namespace ScrubArtwork
+{
+    class Program
+    {
+
+
+        static ImageCodecInfo GetEncoder(ImageFormat format)
+        {
+            ImageCodecInfo[] codecs = ImageCodecInfo.GetImageDecoders();
+            foreach (ImageCodecInfo codec in codecs)
+            {
+                if (codec.FormatID == format.Guid)
+                {
+                    return codec;
+                }
+            }
+            return null;
+        }
+
+        static void Main(string[] args)
+        {
+            long [] encodequalities = new long[] { 75L, 70L, 60L, 50L };
+            const long THRESHOLD = 225 * 1024;
+            const int SIZE = 800;
+
+            string [] imagefiles = Directory.GetFiles(@"D:\BiggerArt");
+            foreach (string imagefile in imagefiles)
+            {
+                string filename = imagefile;
+                Console.WriteLine(filename);
+
+                FileInfo fi = new FileInfo(filename);
+
+                bool transcode = Path.GetExtension(filename).ToLower() != ".jpg";
+                if (fi.Length > THRESHOLD)
+                    transcode = true;
+
+                Image im = Image.FromFile(filename);
+                int newwidth = im.Width, newheight = im.Height;
+                bool resize = false;
+
+                if ((im.Width > SIZE) && (im.Width > im.Height))
+                {
+                    newwidth = SIZE;
+                    newheight = im.Height * SIZE / im.Width;
+                    resize = true;
+                }
+                else if (im.Height > SIZE)
+                {
+                    newheight = SIZE;
+                    newwidth = im.Width * SIZE / im.Height;
+                    resize = true;
+                }
+
+                if (resize)
+                {
+                    Bitmap b = new Bitmap(newwidth, newheight);
+                    Graphics g = Graphics.FromImage(b);
+                    g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                    g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
+                    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                    g.DrawImage(im, new Rectangle(0, 0, newwidth, newheight));
+                    g.Dispose();
+                    im.Dispose();
+                    im = b;
+                    transcode = true;
+                }
+
+                if (transcode)
+                {
+                    ImageCodecInfo jpgenc = GetEncoder(ImageFormat.Jpeg);
+                    EncoderParameters encparms = new EncoderParameters(1);
+                    bool done = false;
+                    foreach (long quality in encodequalities)
+                    {
+                        encparms.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, quality);
+                        string newfile = @"D:\BiggerArt\Scrubbed\" + Path.GetFileNameWithoutExtension(filename) + ".jpg";
+                        im.Save(newfile, jpgenc, encparms);
+                        FileInfo newfi = new FileInfo(newfile);
+                        if (newfi.Length <= THRESHOLD)
+                        {
+                            Console.WriteLine("Encoded At Quality: " + quality.ToString());
+                            done = true;
+                            break;
+                        }
+                        if (!done)
+                        {
+                            Console.WriteLine("Error: Can't Encode Below Threshold");
+                        }
+                    }
+                    im.Dispose();
+                }
+                else
+                    File.Copy(filename, @"D:\BiggerArt\Scrubbed\" + Path.GetFileName(filename), true);
+                
+
+            }
+        }
+    }
+}
