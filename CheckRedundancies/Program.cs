@@ -31,6 +31,8 @@ namespace CheckRedundancies
             Regex verre = new Regex(@"^(.*)[ \t]+\(.*\)[ \t]*$", RegexOptions.IgnoreCase);
 
             string iTunesLibraryFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "iTunes", "iTunes Music Library.xml");
+            if (Environment.GetEnvironmentVariable("ITUNES_XML") != null)
+                iTunesLibraryFile = Environment.GetEnvironmentVariable("ITUNES_XML");
             iTunesLibrary lib = new iTunesLibrary(iTunesLibraryFile);
 
             LogConsole.WriteLine("iTunes Library Size: " + lib.Tracks.Count.ToString());

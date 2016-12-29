@@ -85,6 +85,8 @@ namespace UpdateCarCard
 
             LogConsole.WriteLine("Loading iTunes Library XML...");
             string iTunesLibraryFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "iTunes", "iTunes Music Library.xml");
+            if (Environment.GetEnvironmentVariable("ITUNES_XML") != null)
+                iTunesLibraryFile = Environment.GetEnvironmentVariable("ITUNES_XML");
             iTunesLibrary lib = new iTunesLibrary(iTunesLibraryFile);
 
             string[] kinds = lib.Tracks.Select(t => t.Value.Kind).Distinct().ToArray();
@@ -114,10 +116,12 @@ namespace UpdateCarCard
                 Directory.CreateDirectory(artistdir);
 
                 using (StreamWriter allwriter = new StreamWriter(Path.Combine(artistdir, "All Tracks.m3u")),
-                    allalbumswriter = new StreamWriter(Path.Combine(artistdir, "All Albums.m3u")))
-                {
+                    allalbumswriter = new StreamWriter(Path.Combine(artistdir, "All Albums.m3u")),
+                    allalbumsbyyearwriter = new StreamWriter(Path.Combine(artistdir, "All Albums By Year.m3u")))
+             {
                     allwriter.WriteLine("#EXTM3U");
                     allalbumswriter.WriteLine("#EXTM3U");
+                    allalbumsbyyearwriter.WriteLine("#EXTM3U");
 
                     foreach (string album in albums.OrderBy(a => a.ToLower()))
                     {
@@ -164,7 +168,17 @@ namespace UpdateCarCard
 
                         LogConsole.WriteLine(albumdir);
                     }
-                  
+
+                    foreach (string album in albums.OrderBy(a => tracks.Where(t => t.Album == a).Select(t => t.Year).Max()).ThenBy(a => a.ToLower()))
+                    {
+                        iTunesTrack[] albumtracks = tracks.Where(t => t.Album == album).OrderBy(t => t.TrackNumber).ToArray();
+                        foreach (iTunesTrack track in albumtracks)
+                        {
+                            allalbumsbyyearwriter.WriteLine("#EXTINF:-1," + track.Artist.Replace("-", "") + " - " + track.Title.Replace("-", ""));
+                            allalbumsbyyearwriter.WriteLine(idmap[track.PersistentID].Replace(basedir, Path.DirectorySeparatorChar.ToString()));
+                        }
+                    }
+
                     foreach (iTunesTrack track in tracks.OrderBy(t => t.Title.ToLower()))
                     {
                         allwriter.WriteLine("#EXTINF:-1," + track.Artist.Replace("-", "") + " - " + track.Title.Replace("-", ""));
@@ -194,17 +208,19 @@ namespace UpdateCarCard
                 Directory.CreateDirectory(artistdir);
 
                 using (StreamWriter allwriter = new StreamWriter(Path.Combine(artistdir, "All Tracks.m3u")),
-                    allalbumswriter = new StreamWriter(Path.Combine(artistdir, "All Albums.m3u")))
+                    allalbumswriter = new StreamWriter(Path.Combine(artistdir, "All Albums.m3u")),
+                    allalbumsbyyearwriter = new StreamWriter(Path.Combine(artistdir, "All Albums By Year.m3u")))
                 {
                     allwriter.WriteLine("#EXTM3U");
                     allalbumswriter.WriteLine("#EXTM3U");
+                    allalbumsbyyearwriter.WriteLine("#EXTM3U");
 
                     foreach (string album in albums.OrderBy(a => a.ToLower()))
                     {
                         string fnalbum = FixPath(album);
 
                         string albumplaylist = Path.Combine(artistdir, fnalbum + ".m3u");
-      
+
                         using (StreamWriter albumwriter = new StreamWriter(albumplaylist))
                         {
                             albumwriter.WriteLine("#EXTM3U");
@@ -222,7 +238,17 @@ namespace UpdateCarCard
 
                         LogConsole.WriteLine(albumplaylist);
                     }
-                  
+
+                    foreach (string album in albums.OrderBy(a => tracks.Where(t => t.Album == a).Select(t => t.Year).Max()).ThenBy(a => a.ToLower()))
+                    {
+                        iTunesTrack[] albumtracks = tracks.Where(t => t.Album == album).OrderBy(t => t.TrackNumber).ToArray();
+                        foreach (iTunesTrack track in albumtracks)
+                        {
+                            allalbumsbyyearwriter.WriteLine("#EXTINF:-1," + track.Artist.Replace("-", "") + " - " + track.Title.Replace("-", ""));
+                            allalbumsbyyearwriter.WriteLine(idmap[track.PersistentID].Replace(basedir, Path.DirectorySeparatorChar.ToString()));
+                        }
+                    }
+
                     foreach (iTunesTrack track in tracks.OrderBy(t => t.Title.ToLower()))
                     {
                         allwriter.WriteLine("#EXTINF:-1," + track.Artist.Replace("-", "") + " - " + track.Title.Replace("-", ""));

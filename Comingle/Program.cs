@@ -24,8 +24,8 @@ namespace Comingle
             LogConsole.ConsoleVerbosity = LogVerbosity.Max;
             MetadataCache basecache = new MetadataCache();
             basecache.Load(@"c:\LibraryCaches\Colin");
-            //basecache.BuildCache(@"\\melchior\Sonos");
-            //basecache.Save(@"c:\LibraryCaches\Colin");
+            basecache.BuildCache(@"\\melchior\Sonos");
+            basecache.Save(@"c:\LibraryCaches\Colin");
 
             MetadataCache comingledcache = new MetadataCache();
             comingledcache.Load(@"c:\LibraryCaches\Jenny");

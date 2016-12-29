@@ -25,6 +25,8 @@ namespace PlayProject
         {
             Console.WriteLine("Loading iTunes Library XML...");
             string iTunesLibraryFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "iTunes", "iTunes Music Library.xml");
+            if (Environment.GetEnvironmentVariable("ITUNES_XML") != null)
+                iTunesLibraryFile = Environment.GetEnvironmentVariable("ITUNES_XML");
             iTunesLibrary lib = new iTunesLibrary(iTunesLibraryFile);
 
             string test = "Garbage\0Garbage";

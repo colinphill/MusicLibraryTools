@@ -86,6 +86,10 @@ namespace iTunes
                         PlayCount = int.Parse(next.Value);
                         break;
 
+                    case "Year":
+                        Year = int.Parse(next.Value);
+                        break;
+
                     default:
                         break;
                 }
@@ -105,6 +109,7 @@ namespace iTunes
         public int? TrackNumber = null;
         public int? TotalTracks = null;
         public int? ArtworkCount = null;
+        public int? Year = null;
         public string Kind = "";
         public string Genre = "";
         public string Type = "";

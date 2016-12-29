@@ -285,6 +285,8 @@ namespace CrossSyncPlaylists
             LogConsole.WriteLine("Loading iTunes Library XML...");
 
             string iTunesLibraryFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "iTunes", "iTunes Music Library.xml");
+            if (Environment.GetEnvironmentVariable("ITUNES_XML") != null)
+                iTunesLibraryFile = Environment.GetEnvironmentVariable("ITUNES_XML");
             iTunesLibrary lib = new iTunesLibrary(iTunesLibraryFile);
 
             LogConsole.WriteLine("iTunes Library Size: " + lib.Tracks.Count.ToString() + "  Playlist Count: " + lib.Playlists.Count);
@@ -359,9 +361,18 @@ namespace CrossSyncPlaylists
                         {
                             //IEnumerable<KeyValuePair<string, KeyValuePair<DateTime, VorbisComments>>> s = parsedfiles.Where(el => (el.Value.Value["ALBUM"] == track.Album) &&
                             //        (el.Value.Value["TITLE"] == track.Title));
-                            string newpath = parsedfiles.Where(el => (el.Value.Value["ALBUM"] == track.Album) &&
+                            KeyValuePair<string, KeyValuePair<DateTime, VorbisComments>> [] newfiles = parsedfiles.Where(el => (el.Value.Value["ALBUM"] == track.Album) &&
                                     (el.Value.Value["TITLE"] == track.Title) && ((el.Value.Value["ARTIST"] == track.Artist) || (el.Value.Value["ALBUMARTIST"] == track.AlbumArtist) ||
-                                    (el.Value.Value["ALBUMARTIST"] == track.Artist))).Single().Key;
+                                    (el.Value.Value["ALBUMARTIST"] == track.Artist))).ToArray();
+                            string newpath;
+                            try
+                            {
+                                newpath = newfiles.Single().Key;
+                            }
+                            catch
+                            {
+                                newpath = newfiles.Where(el => el.Value.Value.TrackNumber == track.TrackNumber).Single().Key;
+                            }
                             Uri newuri = new Uri(LibraryConfiguration.CrossSyncTargetLibraryPath).MakeRelativeUri(new Uri(newpath));
                             filepath = Uri.UnescapeDataString(newuri.ToString());
                         }
