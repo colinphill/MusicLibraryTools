@@ -181,7 +181,24 @@ namespace iTunes
         private Dictionary<int, iTunesTrack> _library = new Dictionary<int, iTunesTrack>();
         private Dictionary<int, iTunesPlaylist> _playlists = new Dictionary<int, iTunesPlaylist>();
         private string _persistentid = "";
+        private string _musicfolder = "";
 
+        public string LocalMusicFolder
+        {
+            get
+            {
+                return new Uri(_musicfolder).LocalPath.Replace(@"\\localhost\", "");
+            }
+        }
+
+        public string MusicFolder
+        {
+            get
+            {
+                return _musicfolder;
+            }
+        }
+            
         public Dictionary<int, iTunesTrack> Tracks
         {
             get
@@ -230,6 +247,7 @@ namespace iTunes
             IEnumerable<XElement> dockeys = doc.Elements("plist").Elements("dict").Elements("key");
 
             _persistentid = dockeys.Where(key => key.Value == "Library Persistent ID").First().ElementsAfterSelf().First().Value;
+            _musicfolder = dockeys.Where(key => key.Value == "Music Folder").First().ElementsAfterSelf().First().Value;
 
             IEnumerable<XElement> tracks = dockeys.Where(el => el.Value == "Tracks").First().ElementsAfterSelf().First().Elements("dict");
 
