@@ -273,7 +273,7 @@ namespace UpdateCarCard
                             {
                                 templeftname = leftname.Substring(0, ++len);
                             }
-                            while (reservednames_.Contains(templeftname.Substring(0, len), StringComparer.CurrentCultureIgnoreCase));
+                            while (templeftname.Equals(rightname, StringComparison.CurrentCultureIgnoreCase) || reservednames_.Contains(templeftname.Substring(0, len), StringComparer.CurrentCultureIgnoreCase));
                             leftname = templeftname;
                         }
                     }
@@ -287,7 +287,7 @@ namespace UpdateCarCard
                             {
                                 temprightname = rightname.Substring(0, ++len);
                             }
-                            while (reservednames_.Contains(temprightname.Substring(0, len), StringComparer.CurrentCultureIgnoreCase));
+                            while (temprightname.Equals(leftname, StringComparison.CurrentCultureIgnoreCase) || reservednames_.Contains(temprightname.Substring(0, len), StringComparer.CurrentCultureIgnoreCase));
                             rightname = temprightname;
                         }
                     }
@@ -805,9 +805,9 @@ namespace UpdateCarCard
             SHA1 hash = SHA1.Create();
             LogConsole.SwitchFile("UpdateCarCard.log");
 
-            if (args.Length != 1)
+            if (args.Length > 2)
             {
-                LogConsole.WriteLine("Usage: UpdateCarCard <destination>");
+                LogConsole.WriteLine("Usage: UpdateCarCard <destination> [rebalance]");
                 return;
             }
 
@@ -1022,6 +1022,9 @@ namespace UpdateCarCard
 
             bool forcerebalance = ((syncdb.BalanceSize != oldsyncdb.BalanceSize) || (syncdb.RebalanceSize != oldsyncdb.RebalanceSize) || 
                 (syncdb.BalanceBreak != oldsyncdb.BalanceBreak) || (syncdb.MaxDepthDisparity != oldsyncdb.MaxDepthDisparity));
+
+            if (args[1].Equals("rebalance", StringComparison.CurrentCultureIgnoreCase))
+                forcerebalance = true;
             
             syncdb.ArtistStructure.Rebalance(forcerebalance);
             syncdb.ContributingArtistStructure.Rebalance(forcerebalance);
