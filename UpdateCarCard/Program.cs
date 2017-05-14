@@ -1023,7 +1023,7 @@ namespace UpdateCarCard
             bool forcerebalance = ((syncdb.BalanceSize != oldsyncdb.BalanceSize) || (syncdb.RebalanceSize != oldsyncdb.RebalanceSize) || 
                 (syncdb.BalanceBreak != oldsyncdb.BalanceBreak) || (syncdb.MaxDepthDisparity != oldsyncdb.MaxDepthDisparity));
 
-            if (args[1].Equals("rebalance", StringComparison.CurrentCultureIgnoreCase))
+            if ((args.Length > 1)&&(args[1].Equals("rebalance", StringComparison.CurrentCultureIgnoreCase)))
                 forcerebalance = true;
             
             syncdb.ArtistStructure.Rebalance(forcerebalance);
