@@ -1362,8 +1362,9 @@ namespace UpdateCarCard
 
                 foreach (string diff in diffs)
                 {
-                    Console.WriteLine("Deleting File: " + diff);
-                    File.Delete(diff);
+                    string filename = Path.Combine(playlistsdir, diff);
+                    Console.WriteLine("Deleting File: " + filename);
+                    File.Delete(filename);
                 }
             }
 
