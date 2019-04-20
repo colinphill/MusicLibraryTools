@@ -805,13 +805,16 @@ namespace UpdateCarCard
             SHA1 hash = SHA1.Create();
             LogConsole.SwitchFile("UpdateCarCard.log");
 
-            if (args.Length > 2)
+            if (args.Length == 0)
             {
-                LogConsole.WriteLine("Usage: UpdateCarCard <destination> [rebalance]");
+                LogConsole.WriteLine("Usage: UpdateCarCard <destination> [rebalance] [walkman]");
                 return;
             }
 
+            bool walkmanmode = ((args.Length > 1) && (args.Skip(1).Where(a => a.Equals("walkman", StringComparison.CurrentCultureIgnoreCase)).Count() > 0));
+
             LogConsole.WriteLine("Loading iTunes Library XML...");
+
             string iTunesLibraryFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "iTunes", "iTunes Music Library.xml");
             if (Environment.GetEnvironmentVariable("ITUNES_XML") != null)
                 iTunesLibraryFile = Environment.GetEnvironmentVariable("ITUNES_XML");
@@ -829,13 +832,16 @@ namespace UpdateCarCard
 
             string artistsdir = Path.Combine(args[0], "Artists");
             string albumsdir = Path.Combine(args[0], "Albums");
-            string playlistsdir = Path.Combine(args[0], "Playlists");
+            string playlistsdir = walkmanmode ? args[0] : Path.Combine(args[0], "Playlists");
             string contributingartistsdir = Path.Combine(args[0], "Contributing Artists");
 
             Directory.CreateDirectory(artistsdir);
-            Directory.CreateDirectory(contributingartistsdir);
-            Directory.CreateDirectory(albumsdir);
-            Directory.CreateDirectory(playlistsdir);
+            if (!walkmanmode)
+            {
+                Directory.CreateDirectory(contributingartistsdir);
+                Directory.CreateDirectory(albumsdir);
+                Directory.CreateDirectory(playlistsdir);
+            }
 
             SyncDatabase syncdb = new SyncDatabase();
             syncdb.ArtistStructure = oldsyncdb.ArtistStructure.Clone();
@@ -894,9 +900,13 @@ namespace UpdateCarCard
                     oldartistmap.Add(v, kv.Key);
 
             Dictionary<string, string> oldcontributingartistmap = new Dictionary<string, string>();
-            foreach (KeyValuePair<string, List<string>> kv in oldsyncdb.ContributingArtistMap)
-                foreach (string v in kv.Value)
-                    oldcontributingartistmap.Add(v, kv.Key);
+
+            if (!walkmanmode)
+            {
+                foreach (KeyValuePair<string, List<string>> kv in oldsyncdb.ContributingArtistMap)
+                    foreach (string v in kv.Value)
+                        oldcontributingartistmap.Add(v, kv.Key);
+            }
 
             Console.WriteLine("Mapping Artist Names");
 
@@ -916,32 +926,34 @@ namespace UpdateCarCard
             foreach (string artist in syncdb.ArtistMap.Keys)
                 syncdb.ArtistStructure.AddItem(artist);
 
-            Console.WriteLine("Mapping Contributing Artist Names");
-
-            string[] contributingartists = library.Select(kv => kv.Value.Artist).Distinct().OrderBy(s => s).ToArray();
             Dictionary<string, string> contributingartistmap = new Dictionary<string, string>();
-
-            foreach (string artist in contributingartists)
-            {
-                string mappedname = FixArtistPath(artist);
-                if (syncdb.ContributingArtistMap.ContainsKey(mappedname))
-                    syncdb.ContributingArtistMap[mappedname].Add(artist);
-                else
-                    syncdb.ContributingArtistMap.Add(mappedname, new List<string>(new string[] { artist }));
-                contributingartistmap.Add(artist, mappedname);
-            }
-
-            foreach (string artist in syncdb.ContributingArtistMap.Keys)
-                syncdb.ContributingArtistStructure.AddItem(artist);
-
             Tuple<string, string>[] newalbums = syncdb.FileDatabase.Artists.SelectMany(a => a.Albums.Select(al => new Tuple<string, string>(a.Name, al.Name))).Distinct().ToArray();
-            foreach (Tuple<string, string> album in newalbums)
+
+            if (!walkmanmode)
             {
-                string albname = album.Item2;
-                if (newalbums.Where(a => a.Item2 == albname).Count() > 1)
-                    albname += " (" + artistmap[album.Item1] + ")";
-                albname = FixPath(albname + ".m3u");
-                syncdb.AlbumsStructure.AddItem(albname);
+                string[] contributingartists = library.Select(kv => kv.Value.Artist).Distinct().OrderBy(s => s).ToArray();
+                Console.WriteLine("Mapping Contributing Artist Names");
+                foreach (string artist in contributingartists)
+                {
+                    string mappedname = FixArtistPath(artist);
+                    if (syncdb.ContributingArtistMap.ContainsKey(mappedname))
+                        syncdb.ContributingArtistMap[mappedname].Add(artist);
+                    else
+                        syncdb.ContributingArtistMap.Add(mappedname, new List<string>(new string[] { artist }));
+                    contributingartistmap.Add(artist, mappedname);
+                }
+
+                foreach (string artist in syncdb.ContributingArtistMap.Keys)
+                    syncdb.ContributingArtistStructure.AddItem(artist);
+
+                foreach (Tuple<string, string> album in newalbums)
+                {
+                    string albname = album.Item2;
+                    if (newalbums.Where(a => a.Item2 == albname).Count() > 1)
+                        albname += " (" + artistmap[album.Item1] + ")";
+                    albname = FixPath(albname + ".m3u");
+                    syncdb.AlbumsStructure.AddItem(albname);
+                }
             }
 
             Console.WriteLine("Computing File Database Deltas");
@@ -954,68 +966,81 @@ namespace UpdateCarCard
                 string oldartistpath = Path.Combine(oldsyncdb.ArtistStructure.FindNode(mappedname).Path, mappedname);
                 string filename = Path.Combine(artistsdir, oldartistpath, FixPath(delta.Album), delta.FileName);
                 Console.WriteLine("Removing " + filename);
-                File.Delete(filename);
+                if (File.Exists(filename))
+                    File.Delete(filename);
+                else
+                    Console.WriteLine("Warning, Missing " + filename);
             }
 
-            Console.WriteLine("Removing Albums");
-            foreach (FileDatabase.RemoveAlbumDelta delta in deltas.Where(d => d is FileDatabase.RemoveAlbumDelta).Select(d => d as FileDatabase.RemoveAlbumDelta))
+            if (!walkmanmode)
             {
-                string mappedname = oldartistmap[delta.Artist];
-                string oldartistpath = Path.Combine(oldsyncdb.ArtistStructure.FindNode(mappedname).Path, mappedname);
-                string dirname = Path.Combine(artistsdir, oldartistpath, FixPath(delta.Album));
-                if (!Directory.EnumerateFileSystemEntries(dirname).Any())
+                Console.WriteLine("Removing Albums");
+                foreach (FileDatabase.RemoveAlbumDelta delta in deltas.Where(d => d is FileDatabase.RemoveAlbumDelta).Select(d => d as FileDatabase.RemoveAlbumDelta))
                 {
-                    Console.WriteLine("Removing " + dirname);
-                    Directory.Delete(dirname);
+                    string mappedname = oldartistmap[delta.Artist];
+                    string oldartistpath = Path.Combine(oldsyncdb.ArtistStructure.FindNode(mappedname).Path, mappedname);
+                    string dirname = Path.Combine(artistsdir, oldartistpath, FixPath(delta.Album));
+                    if (Directory.Exists(dirname))
+                    {
+                        if (!Directory.EnumerateFileSystemEntries(dirname).Any())
+                        {
+                            Console.WriteLine("Removing " + dirname);
+                            Directory.Delete(dirname);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine("Warning, Missing " + dirname);
+                    }
                 }
-            }
 
-            Console.WriteLine("Removing Artists");
-            foreach (FileDatabase.RemoveArtistDelta delta in deltas.Where(d => d is FileDatabase.RemoveArtistDelta).Select(d => d as FileDatabase.RemoveArtistDelta))
-            {
-                string mappedname = oldartistmap[delta.Artist];
-                string oldartistpath = Path.Combine(oldsyncdb.ArtistStructure.FindNode(mappedname).Path, mappedname);
-                string dirname = Path.Combine(artistsdir, oldartistpath);
-                if (!Directory.EnumerateDirectories(dirname).Any())
-                    Directory.GetFiles(dirname, "*.m3u").ToList().ForEach(s => File.Delete(s));
-                if (!Directory.EnumerateFileSystemEntries(dirname).Any())
+                Console.WriteLine("Removing Artists");
+                foreach (FileDatabase.RemoveArtistDelta delta in deltas.Where(d => d is FileDatabase.RemoveArtistDelta).Select(d => d as FileDatabase.RemoveArtistDelta))
                 {
-                    syncdb.ArtistStructure.RemoveItem(oldartistmap[delta.Artist]);
-                    Console.WriteLine("Removing " + dirname);
-                    Directory.Delete(dirname);
+                    string mappedname = oldartistmap[delta.Artist];
+                    string oldartistpath = Path.Combine(oldsyncdb.ArtistStructure.FindNode(mappedname).Path, mappedname);
+                    string dirname = Path.Combine(artistsdir, oldartistpath);
+                    if (!Directory.EnumerateDirectories(dirname).Any())
+                        Directory.GetFiles(dirname, "*.m3u").ToList().ForEach(s => File.Delete(s));
+                    if (!Directory.EnumerateFileSystemEntries(dirname).Any())
+                    {
+                        syncdb.ArtistStructure.RemoveItem(oldartistmap[delta.Artist]);
+                        Console.WriteLine("Removing " + dirname);
+                        Directory.Delete(dirname);
+                    }
                 }
-            }
 
-            string[] sharedcontarts = oldsyncdb.ContributingArtistMap.Keys.Intersect(syncdb.ContributingArtistMap.Keys, StringComparer.CurrentCultureIgnoreCase).Distinct().ToArray();
-            string[] removedcontarts = oldsyncdb.ContributingArtistMap.Keys.Where(s => !sharedcontarts.Contains(s, StringComparer.CurrentCultureIgnoreCase)).Distinct().ToArray();
+                string[] sharedcontarts = oldsyncdb.ContributingArtistMap.Keys.Intersect(syncdb.ContributingArtistMap.Keys, StringComparer.CurrentCultureIgnoreCase).Distinct().ToArray();
+                string[] removedcontarts = oldsyncdb.ContributingArtistMap.Keys.Where(s => !sharedcontarts.Contains(s, StringComparer.CurrentCultureIgnoreCase)).Distinct().ToArray();
 
-            Console.WriteLine("Removing Contributing Artists");
-            foreach (string artist in removedcontarts)
-            {
-                string oldartistpath = Path.Combine(contributingartistsdir, oldsyncdb.ContributingArtistStructure.FindNode(artist).Path, artist);
-                Console.WriteLine("Removing " + oldartistpath);
-                if (Directory.Exists(oldartistpath))
-                    Directory.Delete(oldartistpath, true);
-                syncdb.ContributingArtistStructure.RemoveItem(artist);
-            }
+                Console.WriteLine("Removing Contributing Artists");
+                foreach (string artist in removedcontarts)
+                {
+                    string oldartistpath = Path.Combine(contributingartistsdir, oldsyncdb.ContributingArtistStructure.FindNode(artist).Path, artist);
+                    Console.WriteLine("Removing " + oldartistpath);
+                    if (Directory.Exists(oldartistpath))
+                        Directory.Delete(oldartistpath, true);
+                    syncdb.ContributingArtistStructure.RemoveItem(artist);
+                }
 
-            Tuple<string, string>[] oldalbums = oldsyncdb.FileDatabase.Artists.SelectMany(a => a.Albums.Select(al => new Tuple<string, string>(a.Name, al.Name))).Distinct().ToArray();
-            Tuple<string, string>[] sharedalbums = oldsyncdb.FileDatabase.Artists.SelectMany(a => a.Albums.Select(al => new Tuple<string, string>(a.Name, al.Name))).Intersect(
-                syncdb.FileDatabase.Artists.SelectMany(a => a.Albums.Select(al => new Tuple<string, string>(a.Name, al.Name)))).Distinct().ToArray();
-            Tuple<string, string>[] removedalbums = oldsyncdb.FileDatabase.Artists.SelectMany(a => a.Albums.Select(al => new Tuple<string, string>(a.Name, al.Name))).Where(
-                s => !sharedalbums.Contains(s)).Distinct().ToArray();
+                Tuple<string, string>[] oldalbums = oldsyncdb.FileDatabase.Artists.SelectMany(a => a.Albums.Select(al => new Tuple<string, string>(a.Name, al.Name))).Distinct().ToArray();
+                Tuple<string, string>[] sharedalbums = oldsyncdb.FileDatabase.Artists.SelectMany(a => a.Albums.Select(al => new Tuple<string, string>(a.Name, al.Name))).Intersect(
+                    syncdb.FileDatabase.Artists.SelectMany(a => a.Albums.Select(al => new Tuple<string, string>(a.Name, al.Name)))).Distinct().ToArray();
+                Tuple<string, string>[] removedalbums = oldsyncdb.FileDatabase.Artists.SelectMany(a => a.Albums.Select(al => new Tuple<string, string>(a.Name, al.Name))).Where(
+                    s => !sharedalbums.Contains(s)).Distinct().ToArray();
 
-            Console.WriteLine("Removing Old Album Playlists");
-            foreach (Tuple<string, string> album in removedalbums)
-            {
-                string albname = album.Item2;
-                if (oldalbums.Where(a => a.Item2 == albname).Count() > 1)
-                    albname += " (" + album.Item1 + ")";
-                albname = FixPath(albname + ".m3u");
-                string oldalbumpath = Path.Combine(oldsyncdb.AlbumsStructure.FindNode(albname).Path, albname);
-                Console.WriteLine("Removing " + oldalbumpath);
-                File.Delete(oldalbumpath);
-                syncdb.AlbumsStructure.RemoveItem(albname);
+                Console.WriteLine("Removing Old Album Playlists");
+                foreach (Tuple<string, string> album in removedalbums)
+                {
+                    string albname = album.Item2;
+                    if (oldalbums.Where(a => a.Item2 == albname).Count() > 1)
+                        albname += " (" + album.Item1 + ")";
+                    albname = FixPath(albname + ".m3u");
+                    string oldalbumpath = Path.Combine(albumsdir, oldsyncdb.AlbumsStructure.FindNode(albname).Path, albname);
+                    Console.WriteLine("Removing " + oldalbumpath);
+                    File.Delete(oldalbumpath);
+                    syncdb.AlbumsStructure.RemoveItem(albname);
+                }
             }
 
             Console.WriteLine("Rebalancing Directories");
@@ -1023,12 +1048,16 @@ namespace UpdateCarCard
             bool forcerebalance = ((syncdb.BalanceSize != oldsyncdb.BalanceSize) || (syncdb.RebalanceSize != oldsyncdb.RebalanceSize) || 
                 (syncdb.BalanceBreak != oldsyncdb.BalanceBreak) || (syncdb.MaxDepthDisparity != oldsyncdb.MaxDepthDisparity));
 
-            if ((args.Length > 1)&&(args[1].Equals("rebalance", StringComparison.CurrentCultureIgnoreCase)))
+            if ((args.Length > 1)&&(args.Skip(1).Where(a => a.Equals("rebalance", StringComparison.CurrentCultureIgnoreCase)).Count() > 0))
                 forcerebalance = true;
             
             syncdb.ArtistStructure.Rebalance(forcerebalance);
-            syncdb.ContributingArtistStructure.Rebalance(forcerebalance);
-            syncdb.AlbumsStructure.Rebalance(forcerebalance);
+
+            if (!walkmanmode)
+            {
+                syncdb.ContributingArtistStructure.Rebalance(forcerebalance);
+                syncdb.AlbumsStructure.Rebalance(forcerebalance);
+            }
 
             Console.WriteLine("Computing Artist Directory Structure Deltas");
             BalancedPathNode.BalancedPathDelta [] pdeltas = syncdb.ArtistStructure.ComputeDelta(oldsyncdb.ArtistStructure).ToArray();
@@ -1050,43 +1079,48 @@ namespace UpdateCarCard
             foreach (BalancedPathNode.RemovePathDelta delta in pdeltas.Where(d => d is BalancedPathNode.RemovePathDelta).Select(d => d as BalancedPathNode.RemovePathDelta))
                 Directory.Delete(Path.Combine(artistsdir, delta.Path));
 
-            Console.WriteLine("Computing Album Directory Structure Deltas");
-            pdeltas = syncdb.AlbumsStructure.ComputeDelta(oldsyncdb.AlbumsStructure).ToArray();
-
-            Console.WriteLine("Adding Album Directories");
-            foreach (BalancedPathNode.AddPathDelta delta in pdeltas.Where(d => d is BalancedPathNode.AddPathDelta).Select(d => d as BalancedPathNode.AddPathDelta))
-                Directory.CreateDirectory(Path.Combine(albumsdir, delta.Path));
-
-            Console.WriteLine("Moving Album Directories");
-            foreach (BalancedPathNode.MovePathDelta delta in pdeltas.Where(d => d is BalancedPathNode.MovePathDelta).Select(d => d as BalancedPathNode.MovePathDelta))
+            if (!walkmanmode)
             {
-                string oldpath = Path.Combine(albumsdir, delta.OldPath, delta.Item);
-                string newpath = Path.Combine(albumsdir, delta.NewPath, delta.Item);
-                File.Move(oldpath, newpath);
+
+                Console.WriteLine("Computing Album Directory Structure Deltas");
+                pdeltas = syncdb.AlbumsStructure.ComputeDelta(oldsyncdb.AlbumsStructure).ToArray();
+
+                Console.WriteLine("Adding Album Directories");
+                foreach (BalancedPathNode.AddPathDelta delta in pdeltas.Where(d => d is BalancedPathNode.AddPathDelta).Select(d => d as BalancedPathNode.AddPathDelta))
+                    Directory.CreateDirectory(Path.Combine(albumsdir, delta.Path));
+
+                Console.WriteLine("Moving Album Directories");
+                foreach (BalancedPathNode.MovePathDelta delta in pdeltas.Where(d => d is BalancedPathNode.MovePathDelta).Select(d => d as BalancedPathNode.MovePathDelta))
+                {
+                    string oldpath = Path.Combine(albumsdir, delta.OldPath, delta.Item);
+                    string newpath = Path.Combine(albumsdir, delta.NewPath, delta.Item);
+                    File.Move(oldpath, newpath);
+                }
+
+                Console.WriteLine("Removing Album Directories");
+                foreach (BalancedPathNode.RemovePathDelta delta in pdeltas.Where(d => d is BalancedPathNode.RemovePathDelta).Select(d => d as BalancedPathNode.RemovePathDelta))
+                    Directory.Delete(Path.Combine(albumsdir, delta.Path));
+
+                Console.WriteLine("Computing Contributing Artist Directory Structure Deltas");
+                pdeltas = syncdb.ContributingArtistStructure.ComputeDelta(oldsyncdb.ContributingArtistStructure).ToArray();
+
+                Console.WriteLine("Adding Contributing Artist Directories");
+                foreach (BalancedPathNode.AddPathDelta delta in pdeltas.Where(d => d is BalancedPathNode.AddPathDelta).Select(d => d as BalancedPathNode.AddPathDelta))
+                    Directory.CreateDirectory(Path.Combine(contributingartistsdir, delta.Path));
+
+                Console.WriteLine("Moving Contributing Artist Directories");
+                foreach (BalancedPathNode.MovePathDelta delta in pdeltas.Where(d => d is BalancedPathNode.MovePathDelta).Select(d => d as BalancedPathNode.MovePathDelta))
+                {
+                    string oldpath = Path.Combine(contributingartistsdir, delta.OldPath, delta.Item);
+                    string newpath = Path.Combine(contributingartistsdir, delta.NewPath, delta.Item);
+                    Directory.Move(oldpath, newpath);
+                }
+
+                Console.WriteLine("Removing Contributing Artist Directories");
+                foreach (BalancedPathNode.RemovePathDelta delta in pdeltas.Where(d => d is BalancedPathNode.RemovePathDelta).Select(d => d as BalancedPathNode.RemovePathDelta))
+                    Directory.Delete(Path.Combine(contributingartistsdir, delta.Path));
+
             }
-
-            Console.WriteLine("Removing Album Directories");
-            foreach (BalancedPathNode.RemovePathDelta delta in pdeltas.Where(d => d is BalancedPathNode.RemovePathDelta).Select(d => d as BalancedPathNode.RemovePathDelta))
-                Directory.Delete(Path.Combine(albumsdir, delta.Path));
-
-            Console.WriteLine("Computing Contributing Artist Directory Structure Deltas");
-            pdeltas = syncdb.ContributingArtistStructure.ComputeDelta(oldsyncdb.ContributingArtistStructure).ToArray();
-
-            Console.WriteLine("Adding Contributing Artist Directories");
-            foreach (BalancedPathNode.AddPathDelta delta in pdeltas.Where(d => d is BalancedPathNode.AddPathDelta).Select(d => d as BalancedPathNode.AddPathDelta))
-                Directory.CreateDirectory(Path.Combine(contributingartistsdir, delta.Path));
-
-            Console.WriteLine("Moving Contributing Artist Directories");
-            foreach (BalancedPathNode.MovePathDelta delta in pdeltas.Where(d => d is BalancedPathNode.MovePathDelta).Select(d => d as BalancedPathNode.MovePathDelta))
-            {
-                string oldpath = Path.Combine(contributingartistsdir, delta.OldPath, delta.Item);
-                string newpath = Path.Combine(contributingartistsdir, delta.NewPath, delta.Item);
-                Directory.Move(oldpath, newpath);
-            }
-
-            Console.WriteLine("Removing Contributing Artist Directories");
-            foreach (BalancedPathNode.RemovePathDelta delta in pdeltas.Where(d => d is BalancedPathNode.RemovePathDelta).Select(d => d as BalancedPathNode.RemovePathDelta))
-                Directory.Delete(Path.Combine(contributingartistsdir, delta.Path));
 
             Console.WriteLine("Updating Tracks");
             foreach (FileDatabase.UpdateTrackDelta delta in deltas.Where(d => d is FileDatabase.UpdateTrackDelta).Select(d => d as FileDatabase.UpdateTrackDelta))
@@ -1104,206 +1138,211 @@ namespace UpdateCarCard
             //    syncdb.Serialize(fs);
 
             // Generate Playlists
-            Console.WriteLine("Updating Artist/Album Playlists");
-            foreach (string artist in syncdb.ArtistMap.Keys)
-            {
-                using (MemoryStream allms = new MemoryStream(), allalbumsms = new MemoryStream(), allalbumsbyyearms = new MemoryStream())
-                {
-                    using (StreamWriter allwriter = new StreamWriter(allms, Encoding.UTF8, 512, true),
-                        allalbumswriter = new StreamWriter(allalbumsms, Encoding.UTF8, 512, true),
-                        allalbumsbyyearwriter = new StreamWriter(allalbumsbyyearms, Encoding.UTF8, 512, true))
-                    {
-                        FileDatabase.Album[] albums = syncdb.FileDatabase.Artists.Where(a => artistmap[a.Name].Equals(artist, StringComparison.CurrentCultureIgnoreCase)).SelectMany(a => a.Albums).ToArray();
 
-                        allwriter.WriteLine("#EXTM3U");
-                        allalbumswriter.WriteLine("#EXTM3U");
-                        allalbumsbyyearwriter.WriteLine("#EXTM3U");
-
-                        foreach (FileDatabase.Album album in albums.OrderBy(a => a.Name, StringComparer.CurrentCultureIgnoreCase))
-                        {
-                            string albname = album.Name;
-                            if (newalbums.Where(a => a.Item2 == albname).Count() > 1)
-                                albname += " (" + artist + ")";
-                            albname = FixPath(albname + ".m3u");
-
-                            using (MemoryStream albumms = new MemoryStream())
-                            {
-                                using (StreamWriter albumwriter = new StreamWriter(albumms, Encoding.UTF8, 5123, true))
-                                {
-                                    foreach (FileDatabase.Track track in album.Tracks.OrderBy(t => t.Index).ThenBy(t => t.FileName))
-                                    {
-                                        albumwriter.WriteLine("#EXTM3U");
-                                        allalbumswriter.WriteLine("#EXTINF:-1," + artist.Replace("-", "") + " - " + track.Name.Replace("-", ""));
-                                        string trackfile = Path.Combine(artistsdir, syncdb.ArtistStructure.FindNode(artist).Path, artist, FixPath(album.Name), track.FileName);
-                                        allalbumswriter.WriteLine(Path.Combine(FixPath(album.Name), track.FileName));
-                                        albumwriter.WriteLine("#EXTINF:-1," + artist.Replace("-", "") + " - " + track.Name.Replace("-", ""));
-                                        albumwriter.WriteLine(GetRelativePath(trackfile, Path.Combine(albumsdir, syncdb.AlbumsStructure.FindNode(albname).Path)));
-                                    }
-                                }
-
-                                byte[] b = albumms.ToArray();
-                                PlaylistHash phash = new PlaylistHash() { Name = albname, Hash = Convert.ToBase64String(hash.ComputeHash(b)) };
-                                syncdb.HashSet.Albums.Add(phash);
-                                PlaylistHash ophash = oldsyncdb.HashSet.Albums.SingleOrDefault(a => a.Name == albname);
-                                if ((ophash == null)||(ophash.Hash != phash.Hash))
-                                {
-                                    Directory.CreateDirectory(Path.Combine(albumsdir, syncdb.AlbumsStructure.FindNode(albname).Path));
-                                    string filename = Path.Combine(albumsdir, syncdb.AlbumsStructure.FindNode(albname).Path, albname);
-                                    Console.WriteLine("Updating Playlist: " + filename);
-                                    File.WriteAllBytes(filename, b);
-                                }
-                            }
-                        }
-
-                        foreach (FileDatabase.Album album in albums.OrderBy(a => a.Tracks.Select(t => t.Year).Max()).ThenBy(a => a.Name, StringComparer.CurrentCultureIgnoreCase))
-                        {
-                            foreach (FileDatabase.Track track in album.Tracks.OrderBy(t => t.Index).ThenBy(t => t.FileName))
-                            {
-                                allalbumsbyyearwriter.WriteLine("#EXTINF:-1," + artist.Replace("-", "") + " - " + track.Name.Replace("-", ""));
-                                string trackfile = Path.Combine(artistsdir, syncdb.ArtistStructure.FindNode(artist).Path, artist, FixPath(album.Name), track.FileName);
-                                allalbumsbyyearwriter.WriteLine(Path.Combine(FixPath(album.Name), track.FileName));
-                            }
-                        }
-
-                        foreach (Tuple<string, FileDatabase.Track> track in albums.SelectMany(a => a.Tracks.Select(t => new Tuple<string, FileDatabase.Track>(a.Name, t))).OrderBy(t => t.Item2.Name.ToLower()))
-                        {
-                            allwriter.WriteLine("#EXTINF:-1," + artist.Replace("-", "") + " - " + track.Item2.Name.Replace("-", ""));
-                            string trackfile = Path.Combine(artistsdir, syncdb.ArtistStructure.FindNode(artist).Path, artist, FixPath(track.Item1), track.Item2.FileName);
-                            allwriter.WriteLine(Path.Combine(FixPath(track.Item1), track.Item2.FileName));
-                        }
-
-                    }
-
-                    Dictionary<string, MemoryStream> pldict = new Dictionary<string, MemoryStream>() { { "All Tracks.m3u", allms }, { "All Albums.m3u", allalbumsms }, { "All Albums By Year.m3u", allalbumsbyyearms } };
-
-                    foreach (KeyValuePair<string, MemoryStream> kv in pldict)
-                    {
-                        byte[] b = kv.Value.ToArray();
-                        PlaylistHash phash = new PlaylistHash() { Name = kv.Key, Hash = Convert.ToBase64String(hash.ComputeHash(b)) };
-                        if (syncdb.HashSet.Artists.ContainsKey(artist))
-                            syncdb.HashSet.Artists[artist].Add(phash);
-                        else
-                            syncdb.HashSet.Artists.Add(artist, new List<PlaylistHash>(new PlaylistHash[] { phash }));
-                        PlaylistHash ophash = oldsyncdb.HashSet.Artists.ContainsKey(artist) ? oldsyncdb.HashSet.Artists[artist].SingleOrDefault(a => a.Name == phash.Name) : null;
-                        if ((ophash == null) || (ophash.Hash != phash.Hash))
-                        {
-                            string filename = Path.Combine(artistsdir, syncdb.ArtistStructure.FindNode(artist).Path, artist, phash.Name);
-                            Console.WriteLine("Updating Playlist: " + filename);
-                            File.WriteAllBytes(filename, b);
-                        }
-                    }
-                    
-                }
-            }
-
-
-            Console.WriteLine("Updating Contributing Artist Playlists");
             Tuple<FileDatabase.Artist, FileDatabase.Album, FileDatabase.Track>[] alltracks = syncdb.FileDatabase.Artists.SelectMany(a => a.Albums.SelectMany(al => al.Tracks.Select(tr => new Tuple<FileDatabase.Artist, FileDatabase.Album, FileDatabase.Track>(a, al, tr)))).ToArray();
 
-            foreach (string artist in syncdb.ContributingArtistMap.Keys)
+            if (!walkmanmode)
             {
-                Directory.CreateDirectory(Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist));
-                using (MemoryStream allms = new MemoryStream(), allalbumsms = new MemoryStream(), allalbumsbyyearms = new MemoryStream())
+                Console.WriteLine("Updating Artist/Album Playlists");
+                foreach (string artist in syncdb.ArtistMap.Keys)
                 {
-                    using (StreamWriter allwriter = new StreamWriter(allms, Encoding.UTF8, 512, true),
-                        allalbumswriter = new StreamWriter(allalbumsms, Encoding.UTF8, 512, true),
-                        allalbumsbyyearwriter = new StreamWriter(allalbumsbyyearms, Encoding.UTF8, 512, true))
+                    using (MemoryStream allms = new MemoryStream(), allalbumsms = new MemoryStream(), allalbumsbyyearms = new MemoryStream())
                     {
-                        Tuple<FileDatabase.Artist, FileDatabase.Album, FileDatabase.Track>[] tracks = alltracks.Where(tr => contributingartistmap[tr.Item3.ContributingArtist].Equals(artist, StringComparison.CurrentCultureIgnoreCase)).ToArray();
-                        
-                        allwriter.WriteLine("#EXTM3U");
-                        allalbumswriter.WriteLine("#EXTM3U");
-                        allalbumsbyyearwriter.WriteLine("#EXTM3U");
-
-                        Tuple<string, FileDatabase.Album> [] albums = tracks.Select(trk => new Tuple<string, FileDatabase.Album>(trk.Item1.Name, trk.Item2)).Distinct().ToArray();
-
-                        foreach (Tuple<string, FileDatabase.Album> album in albums.OrderBy(a => a.Item2.Name, StringComparer.CurrentCultureIgnoreCase))
+                        using (StreamWriter allwriter = new StreamWriter(allms, Encoding.UTF8, 512, true),
+                            allalbumswriter = new StreamWriter(allalbumsms, Encoding.UTF8, 512, true),
+                            allalbumsbyyearwriter = new StreamWriter(allalbumsbyyearms, Encoding.UTF8, 512, true))
                         {
-                            string albname = album.Item2.Name;
-                            if (albums.Count(al => al.Item2.Name.Equals(albname, StringComparison.CurrentCultureIgnoreCase)) > 1)
-                                albname = albname + " (" + album.Item1 + ")";
-                            albname = FixPath(albname + ".m3u");
-                            string mappedname = artistmap[album.Item1];
+                            FileDatabase.Album[] albums = syncdb.FileDatabase.Artists.Where(a => artistmap[a.Name].Equals(artist, StringComparison.CurrentCultureIgnoreCase)).SelectMany(a => a.Albums).ToArray();
 
-                            using (MemoryStream albumms = new MemoryStream())
+                            allwriter.WriteLine("#EXTM3U");
+                            allalbumswriter.WriteLine("#EXTM3U");
+                            allalbumsbyyearwriter.WriteLine("#EXTM3U");
+
+                            foreach (FileDatabase.Album album in albums.OrderBy(a => a.Name, StringComparer.CurrentCultureIgnoreCase))
                             {
-                                using (StreamWriter albumwriter = new StreamWriter(albumms, Encoding.UTF8, 5123, true))
+                                string albname = album.Name;
+                                if (newalbums.Where(a => a.Item2 == albname).Count() > 1)
+                                    albname += " (" + artist + ")";
+                                albname = FixPath(albname + ".m3u");
+
+                                using (MemoryStream albumms = new MemoryStream())
                                 {
-                                    foreach (FileDatabase.Track track in tracks.Select(t => t.Item3).Intersect(album.Item2.Tracks).OrderBy(t => t.Index).ThenBy(t => t.FileName))
+                                    using (StreamWriter albumwriter = new StreamWriter(albumms, Encoding.UTF8, 5123, true))
                                     {
-                                        albumwriter.WriteLine("#EXTM3U");
-                                        allalbumswriter.WriteLine("#EXTINF:-1," + artist.Replace("-", "") + " - " + track.Name.Replace("-", ""));
-                                        string trackfile = Path.Combine(artistsdir, syncdb.ArtistStructure.FindNode(mappedname).Path, mappedname, FixPath(album.Item2.Name), track.FileName);
-                                        allalbumswriter.WriteLine(GetRelativePath(trackfile, Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist)));
-                                        albumwriter.WriteLine("#EXTINF:-1," + artist.Replace("-", "") + " - " + track.Name.Replace("-", ""));
-                                        albumwriter.WriteLine(GetRelativePath(trackfile, Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist)));
+                                        foreach (FileDatabase.Track track in album.Tracks.OrderBy(t => t.Index).ThenBy(t => t.FileName))
+                                        {
+                                            albumwriter.WriteLine("#EXTM3U");
+                                            allalbumswriter.WriteLine("#EXTINF:-1," + artist.Replace("-", "") + " - " + track.Name.Replace("-", ""));
+                                            string trackfile = Path.Combine(artistsdir, syncdb.ArtistStructure.FindNode(artist).Path, artist, FixPath(album.Name), track.FileName);
+                                            allalbumswriter.WriteLine(Path.Combine(FixPath(album.Name), track.FileName));
+                                            albumwriter.WriteLine("#EXTINF:-1," + artist.Replace("-", "") + " - " + track.Name.Replace("-", ""));
+                                            albumwriter.WriteLine(GetRelativePath(trackfile, Path.Combine(albumsdir, syncdb.AlbumsStructure.FindNode(albname).Path)));
+                                        }
+                                    }
+
+                                    byte[] b = albumms.ToArray();
+                                    PlaylistHash phash = new PlaylistHash() { Name = albname, Hash = Convert.ToBase64String(hash.ComputeHash(b)) };
+                                    syncdb.HashSet.Albums.Add(phash);
+                                    PlaylistHash ophash = oldsyncdb.HashSet.Albums.SingleOrDefault(a => a.Name == albname);
+                                    if ((ophash == null) || (ophash.Hash != phash.Hash))
+                                    {
+                                        Directory.CreateDirectory(Path.Combine(albumsdir, syncdb.AlbumsStructure.FindNode(albname).Path));
+                                        string filename = Path.Combine(albumsdir, syncdb.AlbumsStructure.FindNode(albname).Path, albname);
+                                        Console.WriteLine("Updating Playlist: " + filename);
+                                        File.WriteAllBytes(filename, b);
                                     }
                                 }
+                            }
 
-                                byte[] b = albumms.ToArray();
-                                PlaylistHash phash = new PlaylistHash() { Name = albname, Hash = Convert.ToBase64String(hash.ComputeHash(b)) };
-                                if (syncdb.HashSet.ContributingArtists.ContainsKey(artist))
-                                    syncdb.HashSet.ContributingArtists[artist].Add(phash);
-                                else
-                                    syncdb.HashSet.ContributingArtists.Add(artist, new List<PlaylistHash>(new PlaylistHash[] { phash }));
-                                PlaylistHash ophash = oldsyncdb.HashSet.ContributingArtists.ContainsKey(artist) ? oldsyncdb.HashSet.ContributingArtists[artist].SingleOrDefault(a => a.Name == phash.Name) : null;
-                                if ((ophash == null) || (ophash.Hash != phash.Hash))
+                            foreach (FileDatabase.Album album in albums.OrderBy(a => a.Tracks.Select(t => t.Year).Max()).ThenBy(a => a.Name, StringComparer.CurrentCultureIgnoreCase))
+                            {
+                                foreach (FileDatabase.Track track in album.Tracks.OrderBy(t => t.Index).ThenBy(t => t.FileName))
                                 {
-                                    string filename = Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist, albname);
-                                    Console.WriteLine("Updating Playlist: " + filename);
-                                    File.WriteAllBytes(filename, b);
+                                    allalbumsbyyearwriter.WriteLine("#EXTINF:-1," + artist.Replace("-", "") + " - " + track.Name.Replace("-", ""));
+                                    string trackfile = Path.Combine(artistsdir, syncdb.ArtistStructure.FindNode(artist).Path, artist, FixPath(album.Name), track.FileName);
+                                    allalbumsbyyearwriter.WriteLine(Path.Combine(FixPath(album.Name), track.FileName));
                                 }
                             }
+
+                            foreach (Tuple<string, FileDatabase.Track> track in albums.SelectMany(a => a.Tracks.Select(t => new Tuple<string, FileDatabase.Track>(a.Name, t))).OrderBy(t => t.Item2.Name.ToLower()))
+                            {
+                                allwriter.WriteLine("#EXTINF:-1," + artist.Replace("-", "") + " - " + track.Item2.Name.Replace("-", ""));
+                                string trackfile = Path.Combine(artistsdir, syncdb.ArtistStructure.FindNode(artist).Path, artist, FixPath(track.Item1), track.Item2.FileName);
+                                allwriter.WriteLine(Path.Combine(FixPath(track.Item1), track.Item2.FileName));
+                            }
+
                         }
 
-                        foreach (Tuple<string, FileDatabase.Album> album in albums.OrderBy(a => a.Item2.Tracks.Select(t => t.Year).Max()).ThenBy(a => a.Item2.Name, StringComparer.CurrentCultureIgnoreCase))
+                        Dictionary<string, MemoryStream> pldict = new Dictionary<string, MemoryStream>() { { "All Tracks.m3u", allms }, { "All Albums.m3u", allalbumsms }, { "All Albums By Year.m3u", allalbumsbyyearms } };
+
+                        foreach (KeyValuePair<string, MemoryStream> kv in pldict)
                         {
-                            string mappedname = artistmap[album.Item1];
-                            foreach (FileDatabase.Track track in tracks.Select(t => t.Item3).Intersect(album.Item2.Tracks).OrderBy(t => t.Index).ThenBy(t => t.FileName))
+                            byte[] b = kv.Value.ToArray();
+                            PlaylistHash phash = new PlaylistHash() { Name = kv.Key, Hash = Convert.ToBase64String(hash.ComputeHash(b)) };
+                            if (syncdb.HashSet.Artists.ContainsKey(artist))
+                                syncdb.HashSet.Artists[artist].Add(phash);
+                            else
+                                syncdb.HashSet.Artists.Add(artist, new List<PlaylistHash>(new PlaylistHash[] { phash }));
+                            PlaylistHash ophash = oldsyncdb.HashSet.Artists.ContainsKey(artist) ? oldsyncdb.HashSet.Artists[artist].SingleOrDefault(a => a.Name == phash.Name) : null;
+                            if ((ophash == null) || (ophash.Hash != phash.Hash))
                             {
-                                allalbumsbyyearwriter.WriteLine("#EXTINF:-1," + artist.Replace("-", "") + " - " + track.Name.Replace("-", ""));
-                                string trackfile = Path.Combine(artistsdir, syncdb.ArtistStructure.FindNode(mappedname).Path, mappedname, FixPath(album.Item2.Name), track.FileName);
-                                allalbumsbyyearwriter.WriteLine(GetRelativePath(trackfile, Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist)));
+                                string filename = Path.Combine(artistsdir, syncdb.ArtistStructure.FindNode(artist).Path, artist, phash.Name);
+                                Console.WriteLine("Updating Playlist: " + filename);
+                                File.WriteAllBytes(filename, b);
                             }
                         }
 
-                        foreach (Tuple<FileDatabase.Artist, FileDatabase.Album, FileDatabase.Track> track in tracks.OrderBy(t => t.Item3.Name.ToLower()))
-                        {
-                            allwriter.WriteLine("#EXTINF:-1," + artist.Replace("-", "") + " - " + track.Item2.Name.Replace("-", ""));
-                            string mappedname = artistmap[track.Item1.Name];
-                            string trackfile = Path.Combine(artistsdir, syncdb.ArtistStructure.FindNode(mappedname).Path, mappedname, FixPath(track.Item2.Name), track.Item3.FileName);
-                            allwriter.WriteLine(GetRelativePath(trackfile, Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist)));
-                        }
-                    }
-
-                    Dictionary<string, MemoryStream> pldict = new Dictionary<string, MemoryStream>() { { "All Tracks.m3u", allms }, { "All Albums.m3u", allalbumsms }, { "All Albums By Year.m3u", allalbumsbyyearms } };
-
-                    foreach (KeyValuePair<string, MemoryStream> kv in pldict)
-                    {
-                        byte[] b = kv.Value.ToArray();
-                        PlaylistHash phash = new PlaylistHash() { Name = kv.Key, Hash = Convert.ToBase64String(hash.ComputeHash(b)) };
-                        if (syncdb.HashSet.ContributingArtists.ContainsKey(artist))
-                            syncdb.HashSet.ContributingArtists[artist].Add(phash);
-                        else
-                            syncdb.HashSet.ContributingArtists.Add(artist, new List<PlaylistHash>(new PlaylistHash[] { phash }));
-                        PlaylistHash ophash = oldsyncdb.HashSet.ContributingArtists.ContainsKey(artist) ? oldsyncdb.HashSet.ContributingArtists[artist].SingleOrDefault(a => a.Name == phash.Name) : null;
-                        if ((ophash == null) || (ophash.Hash != phash.Hash))
-                        {
-                            string filename = Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist, phash.Name);
-                            Console.WriteLine("Updating Playlist: " + filename);
-                            File.WriteAllBytes(filename, b);
-                        }
                     }
                 }
 
-                string[] desiredfiles = syncdb.HashSet.ContributingArtists[artist].Select(h => h.Name).ToArray();
-                string[] existingfiles = Directory.GetFiles(Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist)).Select(f => Path.GetFileName(f)).ToArray();
-                string[] diffs = existingfiles.Where(s => !desiredfiles.Contains(s, StringComparer.CurrentCultureIgnoreCase)).ToArray();
 
-                foreach (string diff in diffs)
+                Console.WriteLine("Updating Contributing Artist Playlists");
+
+                foreach (string artist in syncdb.ContributingArtistMap.Keys)
                 {
-                    Console.WriteLine("Deleting File: " + artist + "::::" + diff);
-                    File.Delete(diff);
+                    Directory.CreateDirectory(Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist));
+                    using (MemoryStream allms = new MemoryStream(), allalbumsms = new MemoryStream(), allalbumsbyyearms = new MemoryStream())
+                    {
+                        using (StreamWriter allwriter = new StreamWriter(allms, Encoding.UTF8, 512, true),
+                            allalbumswriter = new StreamWriter(allalbumsms, Encoding.UTF8, 512, true),
+                            allalbumsbyyearwriter = new StreamWriter(allalbumsbyyearms, Encoding.UTF8, 512, true))
+                        {
+                            Tuple<FileDatabase.Artist, FileDatabase.Album, FileDatabase.Track>[] tracks = alltracks.Where(tr => contributingartistmap[tr.Item3.ContributingArtist].Equals(artist, StringComparison.CurrentCultureIgnoreCase)).ToArray();
+
+                            allwriter.WriteLine("#EXTM3U");
+                            allalbumswriter.WriteLine("#EXTM3U");
+                            allalbumsbyyearwriter.WriteLine("#EXTM3U");
+
+                            Tuple<string, FileDatabase.Album>[] albums = tracks.Select(trk => new Tuple<string, FileDatabase.Album>(trk.Item1.Name, trk.Item2)).Distinct().ToArray();
+
+                            foreach (Tuple<string, FileDatabase.Album> album in albums.OrderBy(a => a.Item2.Name, StringComparer.CurrentCultureIgnoreCase))
+                            {
+                                string albname = album.Item2.Name;
+                                if (albums.Count(al => al.Item2.Name.Equals(albname, StringComparison.CurrentCultureIgnoreCase)) > 1)
+                                    albname = albname + " (" + album.Item1 + ")";
+                                albname = FixPath(albname + ".m3u");
+                                string mappedname = artistmap[album.Item1];
+
+                                using (MemoryStream albumms = new MemoryStream())
+                                {
+                                    using (StreamWriter albumwriter = new StreamWriter(albumms, Encoding.UTF8, 5123, true))
+                                    {
+                                        foreach (FileDatabase.Track track in tracks.Select(t => t.Item3).Intersect(album.Item2.Tracks).OrderBy(t => t.Index).ThenBy(t => t.FileName))
+                                        {
+                                            albumwriter.WriteLine("#EXTM3U");
+                                            allalbumswriter.WriteLine("#EXTINF:-1," + artist.Replace("-", "") + " - " + track.Name.Replace("-", ""));
+                                            string trackfile = Path.Combine(artistsdir, syncdb.ArtistStructure.FindNode(mappedname).Path, mappedname, FixPath(album.Item2.Name), track.FileName);
+                                            allalbumswriter.WriteLine(GetRelativePath(trackfile, Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist)));
+                                            albumwriter.WriteLine("#EXTINF:-1," + artist.Replace("-", "") + " - " + track.Name.Replace("-", ""));
+                                            albumwriter.WriteLine(GetRelativePath(trackfile, Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist)));
+                                        }
+                                    }
+
+                                    byte[] b = albumms.ToArray();
+                                    PlaylistHash phash = new PlaylistHash() { Name = albname, Hash = Convert.ToBase64String(hash.ComputeHash(b)) };
+                                    if (syncdb.HashSet.ContributingArtists.ContainsKey(artist))
+                                        syncdb.HashSet.ContributingArtists[artist].Add(phash);
+                                    else
+                                        syncdb.HashSet.ContributingArtists.Add(artist, new List<PlaylistHash>(new PlaylistHash[] { phash }));
+                                    PlaylistHash ophash = oldsyncdb.HashSet.ContributingArtists.ContainsKey(artist) ? oldsyncdb.HashSet.ContributingArtists[artist].SingleOrDefault(a => a.Name == phash.Name) : null;
+                                    if ((ophash == null) || (ophash.Hash != phash.Hash))
+                                    {
+                                        string filename = Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist, albname);
+                                        Console.WriteLine("Updating Playlist: " + filename);
+                                        File.WriteAllBytes(filename, b);
+                                    }
+                                }
+                            }
+
+                            foreach (Tuple<string, FileDatabase.Album> album in albums.OrderBy(a => a.Item2.Tracks.Select(t => t.Year).Max()).ThenBy(a => a.Item2.Name, StringComparer.CurrentCultureIgnoreCase))
+                            {
+                                string mappedname = artistmap[album.Item1];
+                                foreach (FileDatabase.Track track in tracks.Select(t => t.Item3).Intersect(album.Item2.Tracks).OrderBy(t => t.Index).ThenBy(t => t.FileName))
+                                {
+                                    allalbumsbyyearwriter.WriteLine("#EXTINF:-1," + artist.Replace("-", "") + " - " + track.Name.Replace("-", ""));
+                                    string trackfile = Path.Combine(artistsdir, syncdb.ArtistStructure.FindNode(mappedname).Path, mappedname, FixPath(album.Item2.Name), track.FileName);
+                                    allalbumsbyyearwriter.WriteLine(GetRelativePath(trackfile, Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist)));
+                                }
+                            }
+
+                            foreach (Tuple<FileDatabase.Artist, FileDatabase.Album, FileDatabase.Track> track in tracks.OrderBy(t => t.Item3.Name.ToLower()))
+                            {
+                                allwriter.WriteLine("#EXTINF:-1," + artist.Replace("-", "") + " - " + track.Item2.Name.Replace("-", ""));
+                                string mappedname = artistmap[track.Item1.Name];
+                                string trackfile = Path.Combine(artistsdir, syncdb.ArtistStructure.FindNode(mappedname).Path, mappedname, FixPath(track.Item2.Name), track.Item3.FileName);
+                                allwriter.WriteLine(GetRelativePath(trackfile, Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist)));
+                            }
+                        }
+
+                        Dictionary<string, MemoryStream> pldict = new Dictionary<string, MemoryStream>() { { "All Tracks.m3u", allms }, { "All Albums.m3u", allalbumsms }, { "All Albums By Year.m3u", allalbumsbyyearms } };
+
+                        foreach (KeyValuePair<string, MemoryStream> kv in pldict)
+                        {
+                            byte[] b = kv.Value.ToArray();
+                            PlaylistHash phash = new PlaylistHash() { Name = kv.Key, Hash = Convert.ToBase64String(hash.ComputeHash(b)) };
+                            if (syncdb.HashSet.ContributingArtists.ContainsKey(artist))
+                                syncdb.HashSet.ContributingArtists[artist].Add(phash);
+                            else
+                                syncdb.HashSet.ContributingArtists.Add(artist, new List<PlaylistHash>(new PlaylistHash[] { phash }));
+                            PlaylistHash ophash = oldsyncdb.HashSet.ContributingArtists.ContainsKey(artist) ? oldsyncdb.HashSet.ContributingArtists[artist].SingleOrDefault(a => a.Name == phash.Name) : null;
+                            if ((ophash == null) || (ophash.Hash != phash.Hash))
+                            {
+                                string filename = Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist, phash.Name);
+                                Console.WriteLine("Updating Playlist: " + filename);
+                                File.WriteAllBytes(filename, b);
+                            }
+                        }
+                    }
+
+                    string[] desiredfiles = syncdb.HashSet.ContributingArtists[artist].Select(h => h.Name).ToArray();
+                    string[] existingfiles = Directory.GetFiles(Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist)).Select(f => Path.GetFileName(f)).ToArray();
+                    string[] diffs = existingfiles.Where(s => !desiredfiles.Contains(s, StringComparer.CurrentCultureIgnoreCase)).ToArray();
+
+                    foreach (string diff in diffs)
+                    {
+                        Console.WriteLine("Deleting File: " + artist + "::::" + diff);
+                        File.Delete(diff);
+                    }
                 }
             }
 
@@ -1368,11 +1407,7 @@ namespace UpdateCarCard
                 }
             }
 
-
-
-
-
-            Console.WriteLine("Writing Synchronization Database");
+                        Console.WriteLine("Writing Synchronization Database");
             using (FileStream fs = File.Create(Path.Combine(basedir, "syncdb.xml")))
                 syncdb.Serialize(fs);
 

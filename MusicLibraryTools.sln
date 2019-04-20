@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
+# Visual Studio 15
+VisualStudioVersion = 15.0.27428.2043
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MusicFileUtilities", "MusicFileUtilities\MusicFileUtilities.csproj", "{371A75BC-73F8-4222-A3B3-0B21497AFD0C}"
 EndProject
@@ -28,6 +28,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Comingle", "Comingle\Comingle.csproj", "{AAB5988F-BEE9-449B-A38F-85E165B26C05}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UpdateCarCard", "UpdateCarCard\UpdateCarCard.csproj", "{12FA782F-05D5-4BE7-8603-E553D835B456}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BackSyncPlaylists", "BackSyncPlaylists\BackSyncPlaylists.csproj", "{6925E0C2-FE74-453B-9FB8-FC8144B223A7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UpdateSmartStorage", "UpdateSmartStorage\UpdateSmartStorage.csproj", "{DB1FAD87-EC81-468B-8E26-07042EEF3462}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -169,8 +173,35 @@ Global
 		{12FA782F-05D5-4BE7-8603-E553D835B456}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{12FA782F-05D5-4BE7-8603-E553D835B456}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{12FA782F-05D5-4BE7-8603-E553D835B456}.Release|x86.ActiveCfg = Release|Any CPU
+		{6925E0C2-FE74-453B-9FB8-FC8144B223A7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6925E0C2-FE74-453B-9FB8-FC8144B223A7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6925E0C2-FE74-453B-9FB8-FC8144B223A7}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{6925E0C2-FE74-453B-9FB8-FC8144B223A7}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{6925E0C2-FE74-453B-9FB8-FC8144B223A7}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6925E0C2-FE74-453B-9FB8-FC8144B223A7}.Debug|x86.Build.0 = Debug|Any CPU
+		{6925E0C2-FE74-453B-9FB8-FC8144B223A7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6925E0C2-FE74-453B-9FB8-FC8144B223A7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6925E0C2-FE74-453B-9FB8-FC8144B223A7}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{6925E0C2-FE74-453B-9FB8-FC8144B223A7}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{6925E0C2-FE74-453B-9FB8-FC8144B223A7}.Release|x86.ActiveCfg = Release|Any CPU
+		{6925E0C2-FE74-453B-9FB8-FC8144B223A7}.Release|x86.Build.0 = Release|Any CPU
+		{DB1FAD87-EC81-468B-8E26-07042EEF3462}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DB1FAD87-EC81-468B-8E26-07042EEF3462}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DB1FAD87-EC81-468B-8E26-07042EEF3462}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{DB1FAD87-EC81-468B-8E26-07042EEF3462}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{DB1FAD87-EC81-468B-8E26-07042EEF3462}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{DB1FAD87-EC81-468B-8E26-07042EEF3462}.Debug|x86.Build.0 = Debug|Any CPU
+		{DB1FAD87-EC81-468B-8E26-07042EEF3462}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DB1FAD87-EC81-468B-8E26-07042EEF3462}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DB1FAD87-EC81-468B-8E26-07042EEF3462}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{DB1FAD87-EC81-468B-8E26-07042EEF3462}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{DB1FAD87-EC81-468B-8E26-07042EEF3462}.Release|x86.ActiveCfg = Release|Any CPU
+		{DB1FAD87-EC81-468B-8E26-07042EEF3462}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {88C60F2B-1E80-4D1A-884E-24DD8E7BCC38}
 	EndGlobalSection
 EndGlobal
