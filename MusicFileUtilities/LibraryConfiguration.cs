@@ -28,8 +28,10 @@ namespace MusicLibraryTools
                 _synctarget = doc.Element("LibraryConfiguration").Element("SyncTarget").Value;
                 _indextarget = doc.Element("LibraryConfiguration").Element("IndexTarget").Value;
                 _wpltarget = doc.Element("LibraryConfiguration").Element("WPLTarget").Value;
+                _m3utarget = doc.Element("LibraryConfiguration").Element("M3UTarget").Value;
                 _trashtarget = doc.Element("LibraryConfiguration").Element("TrashTarget").Value;
                 _wploffset = doc.Element("LibraryConfiguration").Element("WPLOffset").Value;
+                _m3uoffset = doc.Element("LibraryConfiguration").Element("M3UOffset").Value;
                 _valid = true;
             }
             catch
@@ -41,8 +43,10 @@ namespace MusicLibraryTools
         private static string _synctarget = "";
         private static string _indextarget = "";
         private static string _wpltarget = "";
+        private static string _m3utarget = "";
         private static string _trashtarget = "";
         private static string _wploffset = "";
+        private static string _m3uoffset = "";
         private static bool _valid = false;
 
         public static string CrossSyncTargetLibraryPath
@@ -77,11 +81,27 @@ namespace MusicLibraryTools
             }
         }
 
+        public static string M3UTargetFolder
+        {
+            get
+            {
+                return _m3utarget;
+            }
+        }
+
         public static string WPLOffset
         {
             get
             {
                 return _wploffset;
+            }
+        }
+
+        public static string M3UOffset
+        {
+            get
+            {
+                return _m3uoffset;
             }
         }
 

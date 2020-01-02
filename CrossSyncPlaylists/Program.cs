@@ -293,9 +293,11 @@ namespace CrossSyncPlaylists
 
             if ((args.Length == 1) && (args[0].ToLower() == "clean"))
             {
-                LogConsole.WriteLine("Cleaning Old Playlist Directory...");
+                LogConsole.WriteLine("Cleaning Old Playlist Directories...");
 
                 foreach (string file in Directory.GetFiles(LibraryConfiguration.WPLTargetFolder, "*.*"))
+                    File.Delete(file);
+                foreach (string file in Directory.GetFiles(LibraryConfiguration.M3UTargetFolder, "*.*"))
                     File.Delete(file);
             }
 
@@ -313,12 +315,19 @@ namespace CrossSyncPlaylists
                 LogConsole.WriteLine("Converting Playlist: " + pl.Title);
 
                 string plfilename = Path.Combine(LibraryConfiguration.WPLTargetFolder, FixPath(pl.Title).PadRight(SONOS_NAME_PAD) + ".wpl");
+                string m3ufilename = Path.Combine(LibraryConfiguration.M3UTargetFolder, FixPath(pl.Title) + ".m3u");
 
-                if (File.Exists(plfilename))
+                MemoryStream ms = new MemoryStream();
+                StreamWriter m3uw = new StreamWriter(ms, Encoding.GetEncoding(28591));
+                //m3uw.NewLine = "\n";
+
+                if (File.Exists(plfilename) && File.Exists(m3ufilename))
                 {
                     LogConsole.WriteLine("Skipping Due To Preexisting File");
                     continue;
                 }
+
+                m3uw.WriteLine("#EXTM3U");
 
                 XElement seqel;
                 XAttribute countat;
@@ -394,9 +403,12 @@ namespace CrossSyncPlaylists
                     testpath = LibraryConfiguration.CrossSyncTargetLibraryPath + filepath;
                     if (File.Exists(testpath))
                     {
+                        string m3ufp = Path.Combine(LibraryConfiguration.M3UOffset, filepath);
                         filepath = Path.Combine(LibraryConfiguration.WPLOffset, filepath);
 
                         seqel.Add(new XElement("media", new XAttribute("src", filepath)));
+                        m3uw.WriteLine("#EXTINF:-1," + track.Artist.Replace("-", "") + " - " + track.Title.Replace("-", ""));
+                        m3uw.WriteLine(m3ufp);
                     }
 
                     count++;
@@ -411,11 +423,19 @@ namespace CrossSyncPlaylists
                     settings.OmitXmlDeclaration = true;
                     settings.Indent = true;
                     settings.CloseOutput = true;
-                    StreamWriter w = new StreamWriter(plfilename);
+                    /*StreamWriter w = new StreamWriter(plfilename);
                     XmlWriter xw = XmlWriter.Create(w, settings);
                     pd.Save(xw);
-                    xw.Close();
+                    xw.Close();*/
+
+                    m3uw.Flush();
+                    File.WriteAllBytes(m3ufilename, ms.ToArray());
                 }
+
+                m3uw.Dispose();
+                ms.Dispose();
+
+                
             }
 
             LogConsole.WriteLine("Total FNF: " + missing.ToString());

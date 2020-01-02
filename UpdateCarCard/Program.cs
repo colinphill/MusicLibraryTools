@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.IO;
 using System.Runtime.Serialization;
@@ -15,15 +16,25 @@ using iTunes;
 
 namespace UpdateCarCard
 {
+
+    static class Extensions
+    {
+        public static string LimitLength(this string val, int length)
+        {
+            int l = Math.Min(length, val.Length);
+            return val.Substring(0, l);
+        }
+    }
+
     public class Program
     {
         static string FixPath(string item)
         {
             string fix = item;
             foreach (char c in Path.GetInvalidFileNameChars())
-                fix = fix.Replace(c.ToString(), "");
+                fix = fix.Replace(c.ToString(), "_");
             foreach (char c in Path.GetInvalidPathChars())
-                fix = fix.Replace(c.ToString(), "");
+                fix = fix.Replace(c.ToString(), "_");
             fix = fix.Replace('$', 's');
             fix = fix.Replace("\"", "");
             fix = fix.Trim();
@@ -784,7 +795,7 @@ namespace UpdateCarCard
                 }
             }
             if (startcount == -1)
-                Console.WriteLine(count);
+                LogConsole.WriteLine(count.ToString());
             return count;
         }
 
@@ -850,12 +861,13 @@ namespace UpdateCarCard
 
             Dictionary<string, DateTime> filetimes = new Dictionary<string, DateTime>(StringComparer.CurrentCultureIgnoreCase);
 
-            Console.WriteLine("Enumerating Current Files");
+            LogConsole.WriteLine("Enumerating Current Files");
             EnumerateDirectory(filetimes, new DirectoryInfo(lib.LocalMusicFolder));
 
-            Console.WriteLine("Enumerating iTunes Library");
+            LogConsole.WriteLine("Enumerating iTunes Library");
             KeyValuePair<int, iTunesTrack>[] library = lib.Tracks.Where(kv => (kv.Value.Type == "File") && (kv.Value.Kind.Contains("audio file") && (!kv.Value.Kind.ToLower().Contains("protected")))).ToArray();
             int libindex = 0;
+            Regex dnre = new Regex(@"(.+)[ \t]+\(Disc (.+)\)", RegexOptions.IgnoreCase);
             foreach (var kv in library)
             {
                 string loc = kv.Value.LocalLocation;
@@ -869,9 +881,11 @@ namespace UpdateCarCard
                     // Outside Normal Folder
                     dt = File.GetLastWriteTimeUtc(loc);
                 }
-                string artist = string.IsNullOrEmpty(kv.Value.AlbumArtist) ? kv.Value.Artist : kv.Value.AlbumArtist;
+                string artist = (string.IsNullOrEmpty(kv.Value.AlbumArtist) ? kv.Value.Artist : kv.Value.AlbumArtist).LimitLength(32);
                 string album = kv.Value.Album;
-                string title = kv.Value.Title;
+                Match m = dnre.Match(album);
+                album = m.Success ? (m.Groups[1].Value.LimitLength(28) + " (Disc " + m.Groups[2].Value + ")") : album.LimitLength(32);
+                string title = kv.Value.Title.LimitLength(32);
                 int tracknumber = kv.Value.TrackNumber ?? 0;
                 FileDatabase.Track trk = new FileDatabase.Track();
                 trk.Index = tracknumber;
@@ -880,7 +894,7 @@ namespace UpdateCarCard
                 trk.FileName = Path.GetFileName(loc);
                 trk.Name = title;
                 trk.Year = kv.Value.Year ?? 0;
-                trk.ContributingArtist = kv.Value.Artist;
+                trk.ContributingArtist = kv.Value.Artist.LimitLength(32);
                 trk.PersistentID = kv.Value.PersistentID;
                 syncdb.FileDatabase.FindArtist(artist).FindAlbum(album).Tracks.Add(trk);
                 libindex++;
@@ -890,9 +904,9 @@ namespace UpdateCarCard
                     Console.Out.Flush();
                 }
             }
-            Console.WriteLine(libindex);
+            LogConsole.WriteLine(libindex.ToString());
 
-            Console.WriteLine("Regenerating Database Maps");
+            LogConsole.WriteLine("Regenerating Database Maps");
 
             Dictionary<string, string> oldartistmap = new Dictionary<string, string>();
             foreach (KeyValuePair<string, List<string>> kv in oldsyncdb.ArtistMap)
@@ -905,12 +919,12 @@ namespace UpdateCarCard
             {
                 foreach (KeyValuePair<string, List<string>> kv in oldsyncdb.ContributingArtistMap)
                     foreach (string v in kv.Value)
-                        oldcontributingartistmap.Add(v, kv.Key);
+                        oldcontributingartistmap[v] = kv.Key;
             }
 
-            Console.WriteLine("Mapping Artist Names");
+            LogConsole.WriteLine("Mapping Artist Names");
 
-            string[] artists = library.Select(kv => string.IsNullOrWhiteSpace(kv.Value.AlbumArtist) ? kv.Value.Artist : kv.Value.AlbumArtist).Distinct().OrderBy(s => s).ToArray();
+            string[] artists = library.Select(kv => (string.IsNullOrWhiteSpace(kv.Value.AlbumArtist) ? kv.Value.Artist : kv.Value.AlbumArtist).LimitLength(32)).Distinct().OrderBy(s => s).ToArray();
             Dictionary<string, string> artistmap = new Dictionary<string, string>();
 
             foreach (string artist in artists)
@@ -932,15 +946,15 @@ namespace UpdateCarCard
             if (!walkmanmode)
             {
                 string[] contributingartists = library.Select(kv => kv.Value.Artist).Distinct().OrderBy(s => s).ToArray();
-                Console.WriteLine("Mapping Contributing Artist Names");
+                LogConsole.WriteLine("Mapping Contributing Artist Names");
                 foreach (string artist in contributingartists)
                 {
-                    string mappedname = FixArtistPath(artist);
+                    string mappedname = FixArtistPath(artist).LimitLength(32);
                     if (syncdb.ContributingArtistMap.ContainsKey(mappedname))
-                        syncdb.ContributingArtistMap[mappedname].Add(artist);
+                        syncdb.ContributingArtistMap[mappedname].Add(artist.LimitLength(32));
                     else
-                        syncdb.ContributingArtistMap.Add(mappedname, new List<string>(new string[] { artist }));
-                    contributingartistmap.Add(artist, mappedname);
+                        syncdb.ContributingArtistMap.Add(mappedname, new List<string>(new string[] { artist.LimitLength(32) }));
+                    contributingartistmap[artist.LimitLength(32)] = mappedname;
                 }
 
                 foreach (string artist in syncdb.ContributingArtistMap.Keys)
@@ -956,25 +970,25 @@ namespace UpdateCarCard
                 }
             }
 
-            Console.WriteLine("Computing File Database Deltas");
+            LogConsole.WriteLine("Computing File Database Deltas");
             FileDatabase.FileDatabaseDelta[] deltas = syncdb.FileDatabase.ComputeDelta(oldsyncdb.FileDatabase).ToArray();
 
-            Console.WriteLine("Removing Tracks");
+            LogConsole.WriteLine("Removing Tracks");
             foreach (FileDatabase.RemoveTrackDelta delta in deltas.Where(d => d is FileDatabase.RemoveTrackDelta).Select(d => d as FileDatabase.RemoveTrackDelta))
             {
                 string mappedname = oldartistmap[delta.Artist];
                 string oldartistpath = Path.Combine(oldsyncdb.ArtistStructure.FindNode(mappedname).Path, mappedname);
                 string filename = Path.Combine(artistsdir, oldartistpath, FixPath(delta.Album), delta.FileName);
-                Console.WriteLine("Removing " + filename);
+                LogConsole.WriteLine("Removing " + filename);
                 if (File.Exists(filename))
                     File.Delete(filename);
                 else
-                    Console.WriteLine("Warning, Missing " + filename);
+                    LogConsole.WriteLine("Warning, Missing " + filename);
             }
 
             if (!walkmanmode)
             {
-                Console.WriteLine("Removing Albums");
+                LogConsole.WriteLine("Removing Albums");
                 foreach (FileDatabase.RemoveAlbumDelta delta in deltas.Where(d => d is FileDatabase.RemoveAlbumDelta).Select(d => d as FileDatabase.RemoveAlbumDelta))
                 {
                     string mappedname = oldartistmap[delta.Artist];
@@ -984,17 +998,17 @@ namespace UpdateCarCard
                     {
                         if (!Directory.EnumerateFileSystemEntries(dirname).Any())
                         {
-                            Console.WriteLine("Removing " + dirname);
+                            LogConsole.WriteLine("Removing " + dirname);
                             Directory.Delete(dirname);
                         }
                     }
                     else
                     {
-                        Console.WriteLine("Warning, Missing " + dirname);
+                        LogConsole.WriteLine("Warning, Missing " + dirname);
                     }
                 }
 
-                Console.WriteLine("Removing Artists");
+                LogConsole.WriteLine("Removing Artists");
                 foreach (FileDatabase.RemoveArtistDelta delta in deltas.Where(d => d is FileDatabase.RemoveArtistDelta).Select(d => d as FileDatabase.RemoveArtistDelta))
                 {
                     string mappedname = oldartistmap[delta.Artist];
@@ -1005,7 +1019,7 @@ namespace UpdateCarCard
                     if (!Directory.EnumerateFileSystemEntries(dirname).Any())
                     {
                         syncdb.ArtistStructure.RemoveItem(oldartistmap[delta.Artist]);
-                        Console.WriteLine("Removing " + dirname);
+                        LogConsole.WriteLine("Removing " + dirname);
                         Directory.Delete(dirname);
                     }
                 }
@@ -1013,11 +1027,11 @@ namespace UpdateCarCard
                 string[] sharedcontarts = oldsyncdb.ContributingArtistMap.Keys.Intersect(syncdb.ContributingArtistMap.Keys, StringComparer.CurrentCultureIgnoreCase).Distinct().ToArray();
                 string[] removedcontarts = oldsyncdb.ContributingArtistMap.Keys.Where(s => !sharedcontarts.Contains(s, StringComparer.CurrentCultureIgnoreCase)).Distinct().ToArray();
 
-                Console.WriteLine("Removing Contributing Artists");
+                LogConsole.WriteLine("Removing Contributing Artists");
                 foreach (string artist in removedcontarts)
                 {
                     string oldartistpath = Path.Combine(contributingartistsdir, oldsyncdb.ContributingArtistStructure.FindNode(artist).Path, artist);
-                    Console.WriteLine("Removing " + oldartistpath);
+                    LogConsole.WriteLine("Removing " + oldartistpath);
                     if (Directory.Exists(oldartistpath))
                         Directory.Delete(oldartistpath, true);
                     syncdb.ContributingArtistStructure.RemoveItem(artist);
@@ -1029,7 +1043,7 @@ namespace UpdateCarCard
                 Tuple<string, string>[] removedalbums = oldsyncdb.FileDatabase.Artists.SelectMany(a => a.Albums.Select(al => new Tuple<string, string>(a.Name, al.Name))).Where(
                     s => !sharedalbums.Contains(s)).Distinct().ToArray();
 
-                Console.WriteLine("Removing Old Album Playlists");
+                LogConsole.WriteLine("Removing Old Album Playlists");
                 foreach (Tuple<string, string> album in removedalbums)
                 {
                     string albname = album.Item2;
@@ -1037,13 +1051,13 @@ namespace UpdateCarCard
                         albname += " (" + album.Item1 + ")";
                     albname = FixPath(albname + ".m3u");
                     string oldalbumpath = Path.Combine(albumsdir, oldsyncdb.AlbumsStructure.FindNode(albname).Path, albname);
-                    Console.WriteLine("Removing " + oldalbumpath);
+                    LogConsole.WriteLine("Removing " + oldalbumpath);
                     File.Delete(oldalbumpath);
                     syncdb.AlbumsStructure.RemoveItem(albname);
                 }
             }
 
-            Console.WriteLine("Rebalancing Directories");
+            LogConsole.WriteLine("Rebalancing Directories");
 
             bool forcerebalance = ((syncdb.BalanceSize != oldsyncdb.BalanceSize) || (syncdb.RebalanceSize != oldsyncdb.RebalanceSize) || 
                 (syncdb.BalanceBreak != oldsyncdb.BalanceBreak) || (syncdb.MaxDepthDisparity != oldsyncdb.MaxDepthDisparity));
@@ -1059,14 +1073,14 @@ namespace UpdateCarCard
                 syncdb.AlbumsStructure.Rebalance(forcerebalance);
             }
 
-            Console.WriteLine("Computing Artist Directory Structure Deltas");
+            LogConsole.WriteLine("Computing Artist Directory Structure Deltas");
             BalancedPathNode.BalancedPathDelta [] pdeltas = syncdb.ArtistStructure.ComputeDelta(oldsyncdb.ArtistStructure).ToArray();
 
-            Console.WriteLine("Adding Artist Directories");
+            LogConsole.WriteLine("Adding Artist Directories");
             foreach (BalancedPathNode.AddPathDelta delta in pdeltas.Where(d => d is BalancedPathNode.AddPathDelta).Select(d => d as BalancedPathNode.AddPathDelta))
                 Directory.CreateDirectory(Path.Combine(artistsdir, delta.Path));
 
-            Console.WriteLine("Moving Artist Directories");
+            LogConsole.WriteLine("Moving Artist Directories");
             foreach (BalancedPathNode.MovePathDelta delta in pdeltas.Where(d => d is BalancedPathNode.MovePathDelta).Select(d => d as BalancedPathNode.MovePathDelta))
             {
                 string oldpath = Path.Combine(artistsdir, delta.OldPath, delta.Item);
@@ -1075,21 +1089,21 @@ namespace UpdateCarCard
                     Directory.Move(oldpath, newpath);
             }
 
-            Console.WriteLine("Removing Artist Directories");
+            LogConsole.WriteLine("Removing Artist Directories");
             foreach (BalancedPathNode.RemovePathDelta delta in pdeltas.Where(d => d is BalancedPathNode.RemovePathDelta).Select(d => d as BalancedPathNode.RemovePathDelta))
                 Directory.Delete(Path.Combine(artistsdir, delta.Path));
 
             if (!walkmanmode)
             {
 
-                Console.WriteLine("Computing Album Directory Structure Deltas");
+                LogConsole.WriteLine("Computing Album Directory Structure Deltas");
                 pdeltas = syncdb.AlbumsStructure.ComputeDelta(oldsyncdb.AlbumsStructure).ToArray();
 
-                Console.WriteLine("Adding Album Directories");
+                LogConsole.WriteLine("Adding Album Directories");
                 foreach (BalancedPathNode.AddPathDelta delta in pdeltas.Where(d => d is BalancedPathNode.AddPathDelta).Select(d => d as BalancedPathNode.AddPathDelta))
                     Directory.CreateDirectory(Path.Combine(albumsdir, delta.Path));
 
-                Console.WriteLine("Moving Album Directories");
+                LogConsole.WriteLine("Moving Album Directories");
                 foreach (BalancedPathNode.MovePathDelta delta in pdeltas.Where(d => d is BalancedPathNode.MovePathDelta).Select(d => d as BalancedPathNode.MovePathDelta))
                 {
                     string oldpath = Path.Combine(albumsdir, delta.OldPath, delta.Item);
@@ -1097,18 +1111,18 @@ namespace UpdateCarCard
                     File.Move(oldpath, newpath);
                 }
 
-                Console.WriteLine("Removing Album Directories");
+                LogConsole.WriteLine("Removing Album Directories");
                 foreach (BalancedPathNode.RemovePathDelta delta in pdeltas.Where(d => d is BalancedPathNode.RemovePathDelta).Select(d => d as BalancedPathNode.RemovePathDelta))
                     Directory.Delete(Path.Combine(albumsdir, delta.Path));
 
-                Console.WriteLine("Computing Contributing Artist Directory Structure Deltas");
+                LogConsole.WriteLine("Computing Contributing Artist Directory Structure Deltas");
                 pdeltas = syncdb.ContributingArtistStructure.ComputeDelta(oldsyncdb.ContributingArtistStructure).ToArray();
 
-                Console.WriteLine("Adding Contributing Artist Directories");
+                LogConsole.WriteLine("Adding Contributing Artist Directories");
                 foreach (BalancedPathNode.AddPathDelta delta in pdeltas.Where(d => d is BalancedPathNode.AddPathDelta).Select(d => d as BalancedPathNode.AddPathDelta))
                     Directory.CreateDirectory(Path.Combine(contributingartistsdir, delta.Path));
 
-                Console.WriteLine("Moving Contributing Artist Directories");
+                LogConsole.WriteLine("Moving Contributing Artist Directories");
                 foreach (BalancedPathNode.MovePathDelta delta in pdeltas.Where(d => d is BalancedPathNode.MovePathDelta).Select(d => d as BalancedPathNode.MovePathDelta))
                 {
                     string oldpath = Path.Combine(contributingartistsdir, delta.OldPath, delta.Item);
@@ -1116,13 +1130,13 @@ namespace UpdateCarCard
                     Directory.Move(oldpath, newpath);
                 }
 
-                Console.WriteLine("Removing Contributing Artist Directories");
+                LogConsole.WriteLine("Removing Contributing Artist Directories");
                 foreach (BalancedPathNode.RemovePathDelta delta in pdeltas.Where(d => d is BalancedPathNode.RemovePathDelta).Select(d => d as BalancedPathNode.RemovePathDelta))
                     Directory.Delete(Path.Combine(contributingartistsdir, delta.Path));
 
             }
 
-            Console.WriteLine("Updating Tracks");
+            LogConsole.WriteLine("Updating Tracks");
             foreach (FileDatabase.UpdateTrackDelta delta in deltas.Where(d => d is FileDatabase.UpdateTrackDelta).Select(d => d as FileDatabase.UpdateTrackDelta))
             {
                 string mappedname = artistmap[delta.Artist];
@@ -1130,7 +1144,7 @@ namespace UpdateCarCard
                 string albumpath = Path.Combine(artistsdir, artistpath, FixPath(delta.Album));
                 string filename = Path.Combine(albumpath, delta.FileName);
                 Directory.CreateDirectory(albumpath);
-                Console.WriteLine("Copy " + delta.Loc + " -> " + filename);
+                LogConsole.WriteLine("Copy " + delta.Loc + " -> " + filename);
                 File.Copy(delta.Loc, filename, true);
             }
 
@@ -1143,7 +1157,7 @@ namespace UpdateCarCard
 
             if (!walkmanmode)
             {
-                Console.WriteLine("Updating Artist/Album Playlists");
+                LogConsole.WriteLine("Updating Artist/Album Playlists");
                 foreach (string artist in syncdb.ArtistMap.Keys)
                 {
                     using (MemoryStream allms = new MemoryStream(), allalbumsms = new MemoryStream(), allalbumsbyyearms = new MemoryStream())
@@ -1188,7 +1202,7 @@ namespace UpdateCarCard
                                     {
                                         Directory.CreateDirectory(Path.Combine(albumsdir, syncdb.AlbumsStructure.FindNode(albname).Path));
                                         string filename = Path.Combine(albumsdir, syncdb.AlbumsStructure.FindNode(albname).Path, albname);
-                                        Console.WriteLine("Updating Playlist: " + filename);
+                                        LogConsole.WriteLine("Updating Playlist: " + filename);
                                         File.WriteAllBytes(filename, b);
                                     }
                                 }
@@ -1227,7 +1241,7 @@ namespace UpdateCarCard
                             if ((ophash == null) || (ophash.Hash != phash.Hash))
                             {
                                 string filename = Path.Combine(artistsdir, syncdb.ArtistStructure.FindNode(artist).Path, artist, phash.Name);
-                                Console.WriteLine("Updating Playlist: " + filename);
+                                LogConsole.WriteLine("Updating Playlist: " + filename);
                                 File.WriteAllBytes(filename, b);
                             }
                         }
@@ -1236,7 +1250,7 @@ namespace UpdateCarCard
                 }
 
 
-                Console.WriteLine("Updating Contributing Artist Playlists");
+                LogConsole.WriteLine("Updating Contributing Artist Playlists");
 
                 foreach (string artist in syncdb.ContributingArtistMap.Keys)
                 {
@@ -1288,7 +1302,7 @@ namespace UpdateCarCard
                                     if ((ophash == null) || (ophash.Hash != phash.Hash))
                                     {
                                         string filename = Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist, albname);
-                                        Console.WriteLine("Updating Playlist: " + filename);
+                                        LogConsole.WriteLine("Updating Playlist: " + filename);
                                         File.WriteAllBytes(filename, b);
                                     }
                                 }
@@ -1328,7 +1342,7 @@ namespace UpdateCarCard
                             if ((ophash == null) || (ophash.Hash != phash.Hash))
                             {
                                 string filename = Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist, phash.Name);
-                                Console.WriteLine("Updating Playlist: " + filename);
+                                LogConsole.WriteLine("Updating Playlist: " + filename);
                                 File.WriteAllBytes(filename, b);
                             }
                         }
@@ -1340,13 +1354,13 @@ namespace UpdateCarCard
 
                     foreach (string diff in diffs)
                     {
-                        Console.WriteLine("Deleting File: " + artist + "::::" + diff);
+                        LogConsole.WriteLine("Deleting File: " + artist + "::::" + diff);
                         File.Delete(diff);
                     }
                 }
             }
 
-            Console.WriteLine("Updating User Playlists");
+            LogConsole.WriteLine("Updating User Playlists");
             foreach (iTunesPlaylist pl in lib.Playlists.Values)
             {
                 int icount = 0;
@@ -1386,7 +1400,7 @@ namespace UpdateCarCard
                     if ((ophash == null) || (ophash.Hash != phash.Hash))
                     {
                         string filename = Path.Combine(playlistsdir, plname);
-                        Console.WriteLine("Updating Playlist: " + filename);
+                        LogConsole.WriteLine("Updating Playlist: " + filename);
                         File.WriteAllBytes(filename, b);
                     }
 
@@ -1402,14 +1416,16 @@ namespace UpdateCarCard
                 foreach (string diff in diffs)
                 {
                     string filename = Path.Combine(playlistsdir, diff);
-                    Console.WriteLine("Deleting File: " + filename);
+                    LogConsole.WriteLine("Deleting File: " + filename);
                     File.Delete(filename);
                 }
             }
 
-                        Console.WriteLine("Writing Synchronization Database");
+            LogConsole.WriteLine("Writing Synchronization Database");
             using (FileStream fs = File.Create(Path.Combine(basedir, "syncdb.xml")))
                 syncdb.Serialize(fs);
+
+            LogConsole.Close();
 
 
             return;
