@@ -14,6 +14,40 @@ namespace MusicFileUtilities
         }
     }
 
+    public enum CodecType { Lossy, Lossless };
+
+    public interface ICodecProvider
+    {
+        string Name
+        {
+            get;
+        }
+        CodecType Type
+        {
+            get;
+        }
+        uint AverageBitrate
+        {
+            get;
+        }
+        uint MaxBitrate
+        {
+            get;
+        }
+        uint BitsPerSample
+        {
+            get;
+        }
+        uint Samplerate
+        {
+            get;
+        }
+        uint Channels
+        {
+            get;
+        }
+    }
+
     public interface IMetadataProvider
     {
         string Title
@@ -60,6 +94,7 @@ namespace MusicFileUtilities
         {
             set;
         }
+        void Write();
     }
 
     public class Metadata
@@ -72,6 +107,7 @@ namespace MusicFileUtilities
             switch (extension)
             {
                 case ".mp3":
+                case ".dsf":
                     return new ID3v2Tag(path);
 
                 case ".m4a":

@@ -257,13 +257,31 @@ namespace MusicFileUtilities
                 _albumartistcache.Remove(ce.AlbumArtist);
         }
 
+        public void BeginBuildCache()
+        {
+            foreach (KeyValuePair<string, MetadataCacheEntry> kv in _filecache)
+                kv.Value.UnTouch();
+        }
+
+        public void EndBuildCache()
+        {
+            List<string> toremove = new List<string>();
+            foreach (KeyValuePair<string, MetadataCacheEntry> kv in _filecache)
+            {
+                if (!kv.Value.Touched)
+                {
+                    UnReferenceFile(kv.Key);
+                    toremove.Add(kv.Key);
+                }
+            }
+            foreach (string key in toremove)
+                _filecache.Remove(key);
+        }
+
         public void BuildCache(string basepath, bool untouchall = true)
         {
             if (untouchall)
-            {
-                foreach (KeyValuePair<string, MetadataCacheEntry> kv in _filecache)
-                    kv.Value.UnTouch();
-            }
+                BeginBuildCache();
 
             LogConsole.WriteLine(LogVerbosity.Chatty, "Checking Directory - " + basepath);
 
@@ -272,6 +290,7 @@ namespace MusicFileUtilities
                 BuildCache(subdir, false);
 
             List<string> files = new List<string>(Directory.GetFiles(basepath, "*.mp3"));
+            files.AddRange(Directory.GetFiles(basepath, "*.dsf"));
             files.AddRange(Directory.GetFiles(basepath, "*.m4a"));
             files.AddRange(Directory.GetFiles(basepath, "*.ogg"));
             files.AddRange(Directory.GetFiles(basepath, "*.flac"));
@@ -299,19 +318,7 @@ namespace MusicFileUtilities
             }
 
             if (untouchall)
-            {
-                List<string> toremove = new List<string>();
-                foreach (KeyValuePair<string, MetadataCacheEntry> kv in _filecache)
-                {
-                    if (!kv.Value.Touched)
-                    {
-                        UnReferenceFile(kv.Key);
-                        toremove.Add(kv.Key);
-                    }
-                }
-                foreach (string key in toremove)
-                    _filecache.Remove(key);
-            }
+                EndBuildCache();
         }
 
 

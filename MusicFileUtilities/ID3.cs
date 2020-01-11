@@ -712,7 +712,17 @@ namespace MusicFileUtilities
             FileStream s = new FileStream(_filename = filename, FileMode.Open, FileAccess.Read);
             BinaryReader r = new BinaryReader(s);
             byte[] header = r.ReadBytes(10);
-            if ((header[0] == 0x49) && (header[1] == 0x44) && (header[2] == 0x33))
+            if (Encoding.ASCII.GetString(header, 0, 4) == "DSD ")
+            {
+                Array.Resize(ref header, 28);
+                r.Read(header, 10, 18);
+                long tagoffset = BitConverter.ToInt64(header, 20);
+                if (tagoffset == 0)
+                    return;
+                r.BaseStream.Seek(tagoffset, SeekOrigin.Begin);
+                header = r.ReadBytes(10);
+            }
+            if (Encoding.ASCII.GetString(header, 0, 3) == "ID3")
             {
                 _tagsize = header[6];
                 _tagsize = (_tagsize * 128) + header[7];

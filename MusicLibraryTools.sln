@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27428.2043
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29613.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MusicFileUtilities", "MusicFileUtilities\MusicFileUtilities.csproj", "{371A75BC-73F8-4222-A3B3-0B21497AFD0C}"
 EndProject
@@ -32,6 +32,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BackSyncPlaylists", "BackSyncPlaylists\BackSyncPlaylists.csproj", "{6925E0C2-FE74-453B-9FB8-FC8144B223A7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UpdateSmartStorage", "UpdateSmartStorage\UpdateSmartStorage.csproj", "{DB1FAD87-EC81-468B-8E26-07042EEF3462}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnalyzeMetadata", "AnalyzeMetadata\AnalyzeMetadata.csproj", "{0696986D-3B80-4A73-B75E-4314F83C3108}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -197,6 +199,18 @@ Global
 		{DB1FAD87-EC81-468B-8E26-07042EEF3462}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{DB1FAD87-EC81-468B-8E26-07042EEF3462}.Release|x86.ActiveCfg = Release|Any CPU
 		{DB1FAD87-EC81-468B-8E26-07042EEF3462}.Release|x86.Build.0 = Release|Any CPU
+		{0696986D-3B80-4A73-B75E-4314F83C3108}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0696986D-3B80-4A73-B75E-4314F83C3108}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0696986D-3B80-4A73-B75E-4314F83C3108}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{0696986D-3B80-4A73-B75E-4314F83C3108}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{0696986D-3B80-4A73-B75E-4314F83C3108}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0696986D-3B80-4A73-B75E-4314F83C3108}.Debug|x86.Build.0 = Debug|Any CPU
+		{0696986D-3B80-4A73-B75E-4314F83C3108}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0696986D-3B80-4A73-B75E-4314F83C3108}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0696986D-3B80-4A73-B75E-4314F83C3108}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{0696986D-3B80-4A73-B75E-4314F83C3108}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{0696986D-3B80-4A73-B75E-4314F83C3108}.Release|x86.ActiveCfg = Release|Any CPU
+		{0696986D-3B80-4A73-B75E-4314F83C3108}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

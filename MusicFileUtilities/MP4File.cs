@@ -78,6 +78,12 @@ namespace MusicFileUtilities
             AtomTypes.Add("name", typeof(StringAtom));
 
             AtomTypes.Add("mdat", typeof(DemandAtom));
+
+            AtomTypes.Add("stsd.mp4a", typeof(CodecAtom));
+            AtomTypes.Add("stsd.alac", typeof(CodecAtom));
+
+            AtomTypes.Add("alac.alac", typeof(Atom_alac));
+            AtomTypes.Add("mp4a.esds", typeof(Atom_mp4a_esds));
         }
 
         public static bool LoadData
@@ -167,33 +173,43 @@ namespace MusicFileUtilities
             _parent = parent;
         }
 
+        protected uint ReadUint16(Stream s)
+        {
+            byte[] b = new byte[2];
+            s.Read(b, 0, 2);
+            return (((uint)b[0]) << 8) | (uint)b[1];
+        }
+
         protected uint ReadUint32(Stream s)
         {
-            byte[] b = new byte[4];
-            s.Read(b, 0, 4);
-            return (((uint)b[0]) << 24) | (((uint)b[1]) << 16) | (((uint)b[2]) << 8) | (uint)b[3];
+            uint u = ReadUint16(s);
+            return (((uint)u) << 16) | (uint)ReadUint16(s);
         }
 
         protected ulong ReadUint64(Stream s)
         {
             uint u = ReadUint32(s);
-            return (((ulong)u) << 32) | (ulong)u;
+            return (((ulong)u) << 32) | (ulong)ReadUint32(s);
         }
 
+        protected void WriteUint16(Stream s, uint u)
+        {
+            byte[] b = new byte[2];
+            b[0] = (byte)((u >> 8) & 0xff);
+            b[1] = (byte)(u & 0xff);
+            s.Write(b, 0, 2);
+        }
+        
         protected void WriteUint32(Stream s, uint u)
         {
-            byte[] b = new byte[4];
-            b[0] = (byte)((u >> 24) & 0xff);
-            b[1] = (byte)((u >> 16) & 0xff);
-            b[2] = (byte)((u >> 8) & 0xff);
-            b[3] = (byte)(u & 0xff);
-            s.Write(b, 0, 4);
+            WriteUint16(s, (uint)(u >> 16));
+            WriteUint16(s, (uint)(u & 0xffffu));
         }
 
         protected void WriteUint64(Stream s, ulong u)
         {
             WriteUint32(s, (uint)(u >> 32));
-            WriteUint32(s, (uint)(u & 0xffffffffff));
+            WriteUint32(s, (uint)(u & 0xfffffffful));
         }
 
         public override string ToString()
@@ -1037,7 +1053,7 @@ namespace MusicFileUtilities
         public Atom_co64(Atom a, Stream s)
             : base(a, s, false)
         {
-            _versionandflags = _versionandflags;
+            //_versionandflags = _versionandflags;
             uint count = ReadUint32(s);
             for (uint i = 0; i < count; i++)
                 _offsets.Add(ReadUint64(s));
@@ -1122,6 +1138,12 @@ namespace MusicFileUtilities
                 if (MP4Util.AtomTypes.ContainsKey(sa.Type))
                 {
                     Type Atom_type = MP4Util.AtomTypes[sa.Type];
+                    Atom sa2 = (Atom_type == typeof(Atom)) ? sa : Activator.CreateInstance(Atom_type, new object[] { sa, s }) as Atom;
+                    _children.Add(sa2);
+                }
+                else if (MP4Util.AtomTypes.ContainsKey(Type + "." + sa.Type))
+                {
+                    Type Atom_type = MP4Util.AtomTypes[Type + "." + sa.Type];
                     Atom sa2 = (Atom_type == typeof(Atom)) ? sa : Activator.CreateInstance(Atom_type, new object[] { sa, s }) as Atom;
                     _children.Add(sa2);
                 }
@@ -1514,6 +1536,212 @@ namespace MusicFileUtilities
             foreach (Atom a in _children)
                 a.WriteAtom(s);
         }
+    }
+
+    public class Atom_mp4a_esds : DataAtom
+    {
+        public uint MaxBitrate
+        {
+            get
+            {
+                return Uint32At(22);
+            }
+        }
+
+
+        public uint AverageBitrate
+        {
+            get
+            {
+                return Uint32At(26);
+            }
+        }
+
+        public Atom_mp4a_esds(Atom a, Stream s)
+            : base(a, s)
+        {
+
+        }
+
+    }
+
+    public class Atom_alac : ContainerAtom
+    {
+        protected uint _version;
+        // Version 0
+        protected uint _framelength;
+        protected byte _compatibleversion;
+        protected byte _pb;
+        protected byte _mb;
+        protected byte _kb;
+        protected uint _maxrun;
+        protected uint _maxframebytes;
+        // Other Version
+        protected byte[] _data;
+
+        public uint SampleRate
+        {
+            protected set;
+            get;
+        }
+
+        public byte NumChannels
+        {
+            protected set;
+            get;
+        }
+
+        public uint AverageBitrate
+        {
+            protected set;
+            get;
+        }
+
+        public byte BitDepth
+        {
+            protected set;
+            get;
+        }
+
+        public Atom_alac(Atom a, Stream s)
+            : base(a, s, true)
+        {
+            _version = ReadUint32(s);
+            if (_version == 0)
+            {
+                _framelength = ReadUint32(s);
+                _compatibleversion = (byte)s.ReadByte();
+                BitDepth = (byte)s.ReadByte();
+                _pb = (byte)s.ReadByte();
+                _mb = (byte)s.ReadByte();
+                _kb = (byte)s.ReadByte();
+                NumChannels = (byte)s.ReadByte();
+                _maxrun = ReadUint16(s);
+                _maxframebytes = ReadUint32(s);
+                AverageBitrate = ReadUint32(s);
+                SampleRate = ReadUint32(s);
+                InitChildren(s, null, 24);
+            }
+            else
+            {
+                _data = new byte[_size - _headersize - 4];
+                s.Read(_data, 0, _data.Length);
+            }
+        }
+
+        public Atom_alac(ContainerAtom ca)
+            : base(ca)
+        {
+
+        }
+
+        public override void WriteAtom(Stream s)
+        {
+            WriteUint32(s, _version);
+            if (_version == 0)
+            {
+                WriteUint32(s, _framelength);
+                s.WriteByte(_compatibleversion);
+                s.WriteByte(BitDepth);
+                s.WriteByte(_pb);
+                s.WriteByte(_mb);
+                s.WriteByte(_kb);
+                s.WriteByte(NumChannels);
+                WriteUint16(s, _maxrun);
+                WriteUint32(s, _maxframebytes);
+                WriteUint32(s, AverageBitrate);
+                WriteUint32(s, SampleRate);
+                foreach (Atom a in _children)
+                    a.WriteAtom(s);
+            }
+        }
+
+    }
+
+    public class CodecAtom : ContainerAtom
+    {
+        protected byte[] _reserved0 = new byte[6];
+        protected uint _dref;
+        protected uint _audioencodingversion;
+        // Version 0
+        protected uint _audioencodingrevision;
+        protected uint _audioencodingvendor;
+        protected uint _compressionid;
+        protected uint _packetsize;
+        protected uint _sampleratefrac;
+        // Other Version
+        protected byte[] _data;
+
+        public uint Channels
+        {
+            get;
+            protected set;
+        }
+
+        public uint SampleRate
+        {
+            get;
+            protected set;
+        }
+
+        public uint SampleSize
+        {
+            get;
+            protected set;
+        }
+        
+        public CodecAtom(Atom a, Stream s)
+            : base(a, s, true)
+        {
+            s.Read(_reserved0, 0, 6);
+            _dref = ReadUint16(s);
+            _audioencodingversion = ReadUint16(s);
+            if (_audioencodingversion == 0)
+            {
+                _audioencodingrevision = ReadUint16(s);
+                _audioencodingvendor = ReadUint32(s);
+                Channels = ReadUint16(s);
+                SampleSize = ReadUint16(s);
+                _compressionid = ReadUint16(s);
+                _packetsize = ReadUint16(s);
+                SampleRate = ReadUint16(s);
+                _sampleratefrac = ReadUint16(s);
+                InitChildren(s, null, 28);
+            }
+            else
+            {
+                _data = new byte[_size - _headersize - 10];
+                s.Read(_data, 0, _data.Length);
+            }
+        }
+
+        public CodecAtom(ContainerAtom ca)
+            : base(ca)
+        {
+        }
+
+        public override void WriteAtom(Stream s)
+        {
+            s.Write(_reserved0, 0, 6);
+            WriteUint16(s, _dref);
+            WriteUint16(s, _audioencodingversion);
+            if (_audioencodingversion == 0)
+            {
+                WriteUint16(s, _audioencodingrevision);
+                WriteUint32(s, _audioencodingvendor);
+                WriteUint16(s, Channels);
+                WriteUint16(s, SampleSize);
+                WriteUint16(s, _compressionid);
+                WriteUint16(s, _packetsize);
+                WriteUint16(s, SampleRate);
+                WriteUint16(s, _sampleratefrac);
+                foreach (Atom a in _children)
+                    a.WriteAtom(s);
+            }
+            else
+                s.Write(_data, 0, _data.Length);
+        }
+
     }
 
     public class Atom_ilst : ContainerAtom
