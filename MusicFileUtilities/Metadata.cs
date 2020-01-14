@@ -18,11 +18,11 @@ namespace MusicFileUtilities
 
     public interface ICodecProvider
     {
-        string Name
+        string CodecName
         {
             get;
         }
-        CodecType Type
+        CodecType CodecType
         {
             get;
         }
@@ -107,8 +107,10 @@ namespace MusicFileUtilities
             switch (extension)
             {
                 case ".mp3":
+                    return new MP3File(path);
+
                 case ".dsf":
-                    return new ID3v2Tag(path);
+                    return new DSFFile(path);
 
                 case ".m4a":
                 case ".mp4":

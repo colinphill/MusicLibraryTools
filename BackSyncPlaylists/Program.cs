@@ -16,7 +16,7 @@ namespace BackSyncPlaylists
 
         static VorbisComments ReadID3Metadata(string filename)
         {
-            ID3v2Tag tag = new ID3v2Tag(filename);
+            ID3v2Tag tag = filename.ToLower().EndsWith(".mp3") ? (ID3v2Tag)new MP3File(filename) : (ID3v2Tag)new DSFFile(filename);
 
             VorbisComments vc = new VorbisComments();
 

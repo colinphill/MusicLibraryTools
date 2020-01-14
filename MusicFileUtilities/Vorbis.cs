@@ -303,14 +303,44 @@ namespace MusicFileUtilities
     }
 
     [Serializable]
-    public class OggVorbisFile : VorbisComments
+    public class OggVorbisFile : VorbisComments, ICodecProvider
     {
         public string Filename
         {
             get;
             set;
         }
-  
+
+        public string CodecName => "Vorbis";
+
+        public CodecType CodecType => CodecType.Lossy;
+
+        public uint AverageBitrate
+        {
+            get;
+            protected set;
+        }
+
+        public uint MaxBitrate
+        {
+            get;
+            protected set;
+        }
+
+        public uint BitsPerSample => 16;
+
+        public uint Samplerate
+        {
+            get;
+            protected set;
+        }
+
+        public uint Channels
+        {
+            get;
+            protected set;
+        }
+
         private bool ReadPageHeader(Stream s, out int datalen, out bool continuation, out bool firstpage)
         {
             byte[] b = new byte[27];
@@ -339,6 +369,17 @@ namespace MusicFileUtilities
                 byte[] stripped = new byte[page.Length - 7];
                 Array.Copy(page, 7, stripped, 0, page.Length - 7);
                 FromByteArray(stripped);
+            }
+            if (page[0] == 1) // Information Header
+            {
+                byte[] stripped = new byte[page.Length - 7];
+                Array.Copy(page, 7, stripped, 0, page.Length - 7);
+                Channels = stripped[4];
+                Samplerate = Tools.UInt32AtLE(stripped, 5);
+                MaxBitrate = Tools.UInt32AtLE(stripped, 9);
+                AverageBitrate = Tools.UInt32AtLE(stripped, 13);
+                if (MaxBitrate == 0)
+                    MaxBitrate = AverageBitrate;
             }
         }
 

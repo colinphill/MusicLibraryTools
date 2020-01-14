@@ -1318,7 +1318,7 @@ namespace MusicFileUtilities
 
     }
 
-    public class RootAtom : ContainerAtom, IMetadataProvider
+    public class RootAtom : ContainerAtom, IMetadataProvider, ICodecProvider
     {
 
         #region IMetadataProvider Properties
@@ -1414,9 +1414,88 @@ namespace MusicFileUtilities
                 return _associatedpath;
             }
         }
-                        
+
+        public string CodecName
+        {
+            get;
+            protected set;
+        }
+
+        public CodecType CodecType
+        {
+            get;
+            protected set;
+        }
+
+        public uint AverageBitrate
+        {
+            get;
+            protected set;
+        }
+
+        public uint MaxBitrate
+        {
+            get;
+            protected set;
+        }
+
+        public uint BitsPerSample
+        {
+            get;
+            protected set;
+        }
+
+        public uint Samplerate
+        {
+            get;
+            protected set;
+        }
+
+        public uint Channels
+        {
+            get;
+            protected set;
+        }
+
         public RootAtom()
         {
+        }
+
+        protected void ParseCodecInfo()
+        {
+            ContainerAtom stsd = FindPath("moov.trak.mdia.minf.stbl.stsd") as ContainerAtom;
+            if ((stsd != null)&&(stsd.Children.Count == 1))
+            {
+                CodecAtom codec = stsd.Children[0] as CodecAtom;
+                if (codec.Type == "mp4a")
+                {
+                    CodecName = "AAC";
+                    CodecType = CodecType.Lossy;
+                    Samplerate = codec.SampleRate;
+                    BitsPerSample = codec.SampleSize;
+                    Channels = codec.Channels;
+                    Atom_mp4a_esds esds = codec.Children[0] as Atom_mp4a_esds;
+                    if (esds != null)
+                    {
+                        AverageBitrate = esds.AverageBitrate;
+                        MaxBitrate = esds.MaxBitrate;
+                    }
+                }
+                if (codec.Type == "alac")
+                {
+                    CodecName = "ALAC";
+                    CodecType = CodecType.Lossless;
+                    Atom_alac alac = codec.Children[0] as Atom_alac;
+                    if (alac != null)
+                    {
+                        Samplerate = alac.SampleRate;
+                        BitsPerSample = alac.BitDepth;
+                        Channels = alac.NumChannels;
+                        AverageBitrate = alac.AverageBitrate;
+                        MaxBitrate = alac.AverageBitrate;
+                    }
+                }
+            }
         }
 
         public RootAtom(string path)
@@ -1447,6 +1526,7 @@ namespace MusicFileUtilities
 
             s.Close();
             _associatedpath = path;
+            ParseCodecInfo();
         }
 
         public void WriteFile(string path)

@@ -24,9 +24,9 @@ namespace MusicFileUtilities
             set;
         }
 
-        public string Name => "FLAC";
+        public string CodecName => "FLAC";
 
-        public CodecType Type => CodecType.Lossless;
+        public CodecType CodecType => CodecType.Lossless;
 
         public uint AverageBitrate
         {
@@ -34,13 +34,7 @@ namespace MusicFileUtilities
             protected set;
         }
 
-        public uint MaxBitrate
-        {
-            get
-            {
-                return AverageBitrate;
-            }
-        }
+        public uint MaxBitrate => AverageBitrate;
 
         public uint BitsPerSample
         {
@@ -60,7 +54,7 @@ namespace MusicFileUtilities
             protected set;
         }
 
-        private void ParseStreamInfo(byte [] si, long length)
+        private void ParseStreamInfo(byte [] si, long length, long framessize)
         {
             Samplerate = (((uint)Tools.UInt16AtBE(si, 10)) << 4) | (uint)(si[12] >> 4);
             Channels = (uint)(((si[12] >> 1) & 7) + 1);
@@ -76,7 +70,8 @@ namespace MusicFileUtilities
             Filename = filename;
 
             FileStream s = new FileStream(filename, FileMode.Open, FileAccess.Read);
-            
+
+            byte[] si = null;
             byte [] b = new byte[4];
             s.Read(b, 0, 4);
             if (Encoding.ASCII.GetString(b) != "fLaC")
@@ -93,9 +88,8 @@ namespace MusicFileUtilities
 
                 if ((b[0] & 127) == 0) // STREAMINFO
                 {
-                    byte[] si = new byte[len];
+                    si = new byte[len];
                     s.Read(si, 0, (int)len);
-                    ParseStreamInfo(si, s.Length);
                 }
                 else if ((b[0] & 127) == 4)
                 {
@@ -115,7 +109,10 @@ namespace MusicFileUtilities
                 last = ((b[0] & 128) == 128);
 
             }
-    
+
+            if (si != null)
+                ParseStreamInfo(si, s.Length, s.Length - s.Position);
+
             s.Close();
         }
 

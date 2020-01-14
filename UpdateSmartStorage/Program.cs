@@ -373,7 +373,7 @@ namespace UpdateSmartStorage
             }
             else if (ext.Equals(".mp3", StringComparison.InvariantCultureIgnoreCase))
             {
-                ID3v2Tag tag = new ID3v2Tag(filename);
+                ID3v2Tag tag = new MP3File(filename);
                 PictureFrame pf = tag.Frames.FirstOrDefault(f => f is PictureFrame) as PictureFrame;
                 if (pf != null)
                 {

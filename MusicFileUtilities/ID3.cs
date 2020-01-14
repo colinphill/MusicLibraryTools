@@ -501,7 +501,6 @@ namespace MusicFileUtilities
         private int _headerversion = 0;
         private int _tagsize = 0;
         private List<ID3v2Frame> _frames = new List<ID3v2Frame>();
-        private string _filename = "";
  
         public List<ID3v2Frame> Frames
         {
@@ -707,21 +706,11 @@ namespace MusicFileUtilities
             }
         }
 
-        public ID3v2Tag(string filename)
+        protected void ReadTag(Stream s)
         {
-            FileStream s = new FileStream(_filename = filename, FileMode.Open, FileAccess.Read);
-            BinaryReader r = new BinaryReader(s);
+            bool doclose = false;
+            BinaryReader r = new BinaryReader(s, Encoding.ASCII, true);
             byte[] header = r.ReadBytes(10);
-            if (Encoding.ASCII.GetString(header, 0, 4) == "DSD ")
-            {
-                Array.Resize(ref header, 28);
-                r.Read(header, 10, 18);
-                long tagoffset = BitConverter.ToInt64(header, 20);
-                if (tagoffset == 0)
-                    return;
-                r.BaseStream.Seek(tagoffset, SeekOrigin.Begin);
-                header = r.ReadBytes(10);
-            }
             if (Encoding.ASCII.GetString(header, 0, 3) == "ID3")
             {
                 _tagsize = header[6];
@@ -750,8 +739,8 @@ namespace MusicFileUtilities
                             unsync.Add(b[b.Length - 1]);
                             unsync.Add(0);
                             MemoryStream ms = new MemoryStream(unsync.ToArray());
-                            r.Close();
                             r = new BinaryReader(ms);
+                            doclose = true;
                         }
                         else
                             throw new Exception("Unsupported ID3v2 Header Features");
@@ -828,11 +817,15 @@ namespace MusicFileUtilities
 
                 }
             }
-            r.Close();
-            //s.Close();
+            if (doclose)
+                r.Close();
         }
 
-        public void Write()
+        public ID3v2Tag()
+        {
+        }
+
+        /*protected void Write()
         {
             int size = 0;
             foreach (ID3v2Frame f in _frames)
@@ -877,11 +870,111 @@ namespace MusicFileUtilities
             }
 
 
-        }
+        }*/
 
 
     }
 
+    public class MP3File : ID3v2Tag, ICodecProvider
+    {
+        private readonly int[] _bitrates = { 0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0 };
+        private readonly int[] _samplerates = { 44100, 48000, 32000, 0 };
+        private readonly int[] _channels = { 2, 2, 2, 1 };
+        private readonly int[] _sideinfolen = { 32, 32, 32, 17 };
 
+        public MP3File(string filename)
+        {
+            using (FileStream s = File.OpenRead(filename))
+            {
+                ReadTag(s);
+                // TBD: Parse frame/Xing header
+            }
+
+        }
+
+        public string CodecName => "MP3";
+
+        public CodecType CodecType => CodecType.Lossy;
+
+        public uint AverageBitrate => throw new NotImplementedException();
+
+        public uint MaxBitrate => throw new NotImplementedException();
+
+        public uint BitsPerSample => 16;
+
+        public uint Samplerate => throw new NotImplementedException();
+
+        public uint Channels => throw new NotImplementedException();
+    }
+
+    public class DSFFile : ID3v2Tag, ICodecProvider
+    {
+        public DSFFile(string filename)
+        {
+            using (FileStream s = File.OpenRead(filename))
+            {
+                byte[] header = new byte[4];
+                s.Read(header, 0, 4);
+                if (Encoding.ASCII.GetString(header, 0, 4) != "DSD ")
+                    return;
+                Array.Resize(ref header, 28);
+                s.Read(header, 4, 24);
+                long tagoffset = BitConverter.ToInt64(header, 20);
+                if (tagoffset != 0)
+                {
+                    s.Seek(tagoffset, SeekOrigin.Begin);
+                    ReadTag(s);
+                    s.Seek(28, SeekOrigin.Begin);
+                }
+                s.Read(header, 0, 4);
+                if (Encoding.ASCII.GetString(header, 0, 4) != "fmt ")
+                    return;
+                using (BinaryReader r = new BinaryReader(s, Encoding.ASCII, true))
+                {
+                    ulong chunksize = r.ReadUInt64();
+                    uint formatversion = r.ReadUInt32();
+                    uint formatid = r.ReadUInt32();
+                    uint channeltype = r.ReadUInt32();
+                    Channels = r.ReadUInt32();
+                    Samplerate = r.ReadUInt32();
+                    BitsPerSample = r.ReadUInt32();
+                }
+            }
+
+        }
+
+        public string CodecName => "DSD";
+
+        public CodecType CodecType => CodecType.Lossless;
+
+        public uint AverageBitrate
+        {
+            get
+            {
+                return BitsPerSample * Samplerate * Channels;
+            }
+        }
+
+        public uint MaxBitrate => AverageBitrate;
+
+        public uint BitsPerSample
+        {
+            protected set;
+            get;
+        }
+
+        public uint Samplerate
+        {
+            protected set;
+            get;
+        }
+
+        public uint Channels
+        {
+            protected set;
+            get;
+        }
+
+    }
 
 }

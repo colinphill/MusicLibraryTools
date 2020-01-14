@@ -38,7 +38,7 @@ namespace DumpTags
 
         static void DumpMP3Tags(string filename)
         {
-            ID3v2Tag tag = new ID3v2Tag(filename);
+            ID3v2Tag tag = filename.ToLower().EndsWith(".mp3") ? (ID3v2Tag)new MP3File(filename) : (ID3v2Tag)new DSFFile(filename);
             foreach (ID3v2Frame frame in tag.Frames)
             {
                 LogConsole.Write("Frame: " + frame.FrameID + " - ");

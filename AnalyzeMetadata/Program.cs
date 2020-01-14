@@ -13,6 +13,8 @@ namespace AnalyzeMetadata
     {
         static void Main(string[] args)
         {
+            DSFFile dsf = new DSFFile(@"c:\temp\testdsd.dsf");
+            OggVorbisFile vorb = new OggVorbisFile(@"c:\temp\testalac.ogg");
             FLACFile flac = new FLACFile(@"Z:\iTunes\HiRes\Multi\Downloads\85498-YAR88171DSD-yuko-mabuchi-plays-miles-davis-multi256\FLAC\1_All-Blues_multi256.flac");
             RootAtom aac = new RootAtom();
             aac.ReadFile(@"c:\temp\test.m4a");
@@ -30,7 +32,6 @@ namespace AnalyzeMetadata
             cache.EndBuildCache();
             cache.Save(@"metadata.cache");
             Console.WriteLine();
-
         }
     }
 }
