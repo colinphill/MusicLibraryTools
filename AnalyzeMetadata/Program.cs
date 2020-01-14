@@ -13,24 +13,41 @@ namespace AnalyzeMetadata
     {
         static void Main(string[] args)
         {
-            DSFFile dsf = new DSFFile(@"c:\temp\testdsd.dsf");
-            OggVorbisFile vorb = new OggVorbisFile(@"c:\temp\testalac.ogg");
-            FLACFile flac = new FLACFile(@"Z:\iTunes\HiRes\Multi\Downloads\85498-YAR88171DSD-yuko-mabuchi-plays-miles-davis-multi256\FLAC\1_All-Blues_multi256.flac");
-            RootAtom aac = new RootAtom();
-            aac.ReadFile(@"c:\temp\test.m4a");
-            RootAtom alac = new RootAtom();
-            alac.ReadFile(@"c:\temp\testalac.m4a");
-            RootAtom hr = new RootAtom();
-            hr.ReadFile(@"c:\temp\testhr.m4a");
             MetadataCache cache = new MetadataCache();
             if (File.Exists(@"metadata.cache"))
                 cache.Load(@"metadata.cache");
-            cache.BeginBuildCache();
+            /*cache.BeginBuildCache();
             cache.BuildCache(@"z:\itunes\hires", false);
             cache.BuildCache(@"z:\itunes\lossless\music", false);
             cache.BuildCache(@"z:\itunes\lossless\purchased sync", false);
             cache.EndBuildCache();
-            cache.Save(@"metadata.cache");
+            cache.Save(@"metadata.cache");*/
+            string [] artists = cache.Artists.Concat(cache.AlbumArtists).Distinct().ToArray();
+            var distdict = new Dictionary<int, List<Tuple<string, string>>>();
+            var checkdict = new Dictionary<Tuple<string, string>, bool>();
+            foreach (string a in artists)
+            {
+                foreach (string b in artists)
+                {
+                    if (a != b)
+                    {
+                        if (checkdict.ContainsKey(new Tuple<string, string>(b, a)))
+                            continue;
+                        int checklen = Math.Max(a.Length, b.Length);
+                        string ta = a.Replace(".", "").Replace(" ", "").ToLower();
+                        string tb = b.Replace(".", "").Replace(" ", "").ToLower();
+                        int dist = ta.EditDistance(tb);
+                        if ((100 * dist / checklen) < 10)
+                        {
+                            if (!distdict.ContainsKey(dist))
+                                distdict.Add(dist, new List<Tuple<string, string>>());
+                            distdict[dist].Add(new Tuple<string, string>(a, b));
+                        }
+                        checkdict.Add(new Tuple<string, string>(a, b), true);
+                    }
+                }
+            }
+            
             Console.WriteLine();
         }
     }

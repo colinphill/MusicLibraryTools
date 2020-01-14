@@ -20,6 +20,13 @@ namespace MusicFileUtilities
         private int _tracknumber = 0;
         private DateTime _scantime = DateTime.UtcNow;
         private bool _touched = false;
+        private CodecType _codectype = CodecType.Lossy;
+        private string _codecname = "";
+        private uint _channels = 0;
+        private uint _samplerate = 0;
+        private uint _bitspersample = 0;
+        private uint _averagebitrate = 0;
+        private uint _maxbitrate = 0;
 
         public MetadataCacheEntry(IMetadataProvider mp)
         {
@@ -58,6 +65,17 @@ namespace MusicFileUtilities
             }
             catch
             {
+            }
+            ICodecProvider codec = mp as ICodecProvider;
+            if (codec != null)
+            {
+                _codecname = codec.CodecName;
+                _codectype = codec.CodecType;
+                _channels = codec.Channels;
+                _bitspersample = codec.BitsPerSample;
+                _samplerate = codec.Samplerate;
+                _averagebitrate = codec.AverageBitrate;
+                _maxbitrate = codec.MaxBitrate;
             }
         }
 
@@ -294,7 +312,6 @@ namespace MusicFileUtilities
             files.AddRange(Directory.GetFiles(basepath, "*.m4a"));
             files.AddRange(Directory.GetFiles(basepath, "*.ogg"));
             files.AddRange(Directory.GetFiles(basepath, "*.flac"));
-            files.AddRange(Directory.GetFiles(basepath, "*.wma"));
 
             foreach (string file in files)
             {

@@ -754,9 +754,18 @@ namespace MusicFileUtilities
                         ID3v2Frame f = new ID3v2Frame();
                         f.FrameID = ID3v2Util.ISO8859Encoding.GetString(frame, 0, 4);
                         int framesize = frame[4];
-                        framesize = (framesize * 256) + frame[5];
-                        framesize = (framesize * 256) + frame[6];
-                        framesize = (framesize * 256) + frame[7];
+                        if (header[3] == 4) // SyncSafe 2.4 only
+                        {
+                            framesize = (framesize * 128) + frame[5];
+                            framesize = (framesize * 128) + frame[6];
+                            framesize = (framesize * 128) + frame[7];
+                        }
+                        else
+                        {
+                            framesize = (framesize * 256) + frame[5];
+                            framesize = (framesize * 256) + frame[6];
+                            framesize = (framesize * 256) + frame[7];
+                        }
                         f.Flags = (((int)frame[8]) << 8) + (int)frame[9];
                         f.Data = r.ReadBytes(framesize);
 
@@ -877,9 +886,9 @@ namespace MusicFileUtilities
 
     public class MP3File : ID3v2Tag, ICodecProvider
     {
-        private readonly int[] _bitrates = { 0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0 };
-        private readonly int[] _samplerates = { 44100, 48000, 32000, 0 };
-        private readonly int[] _channels = { 2, 2, 2, 1 };
+        private readonly uint[] _bitrates = { 0, 32000, 40000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 160000, 192000, 224000, 256000, 320000, 0 };
+        private readonly uint[] _samplerates = { 44100, 48000, 32000, 0 };
+        private readonly uint[] _channels = { 2, 2, 2, 1 };
         private readonly int[] _sideinfolen = { 32, 32, 32, 17 };
 
         public MP3File(string filename)
@@ -887,7 +896,58 @@ namespace MusicFileUtilities
             using (FileStream s = File.OpenRead(filename))
             {
                 ReadTag(s);
-                // TBD: Parse frame/Xing header
+                int b0 = -1, b1 = -1;
+                while (s.Position < s.Length)
+                {
+                    b1 = s.ReadByte();
+                    if ((b0 == 0xff) && ((b1 & 0xfa) == 0xfa))
+                        break;
+                    b0 = b1;
+                }
+                if (s.Position >= s.Length)
+                    return;
+                long datalength = s.Length - s.Position + 2;
+                int b2 = s.ReadByte();
+                int b3 = s.ReadByte();
+                uint bitrate = _bitrates[b2 >> 4];
+                AverageBitrate = bitrate;
+                Samplerate = _samplerates[(b2 >> 2) & 3];
+                Channels = _channels[(b3 >> 6) & 3];
+                int sideinfolen = _sideinfolen[(b3 >> 6) & 3];
+                int framesize = ((1152 / 8 * (int)bitrate) / (int)Samplerate);
+                if ((b2 & 8) == 8)
+                    framesize++;
+
+                byte[] frame = new byte[framesize - 4];
+                s.Read(frame, 0, frame.Length);
+
+                int offset = sideinfolen;
+                string id = Encoding.ASCII.GetString(frame, offset, 4);
+                if ((id == "Xing"||(id == "Info")))
+                {
+                    uint frames = 0;
+                    uint bytes = 0;
+                    offset += 4;
+                    uint flags = Tools.UInt32AtBE(frame, offset);
+                    offset += 4;
+                    if ((flags & 1) == 1)
+                    {
+                        frames = Tools.UInt32AtBE(frame, offset);
+                        offset += 4;
+                        AverageBitrate = (uint)(datalength / (frames * 1152 / Samplerate) * 8);
+                    }
+                    if ((bytes & 2) == 2)
+                    {
+                        bytes = Tools.UInt32AtBE(frame, offset);
+                        offset += 4;
+                    }
+                }
+                else if (Encoding.ASCII.GetString(frame, 32, 4) == "VBRI")
+                {
+                    offset += 10;
+                    uint frames = Tools.UInt32AtBE(frame, offset);
+                    AverageBitrate = (uint)(datalength / (frames * 1152 / Samplerate) * 8);
+                }
             }
 
         }
@@ -896,15 +956,28 @@ namespace MusicFileUtilities
 
         public CodecType CodecType => CodecType.Lossy;
 
-        public uint AverageBitrate => throw new NotImplementedException();
+        public uint AverageBitrate
+        {
+            get;
+            protected set;
+        }
 
-        public uint MaxBitrate => throw new NotImplementedException();
+        public uint MaxBitrate => AverageBitrate;
 
         public uint BitsPerSample => 16;
 
-        public uint Samplerate => throw new NotImplementedException();
+        public uint Samplerate
+        {
+            get;
+            protected set;
+        }
 
-        public uint Channels => throw new NotImplementedException();
+        public uint Channels
+        {
+            get;
+            protected set;
+        }
+
     }
 
     public class DSFFile : ID3v2Tag, ICodecProvider

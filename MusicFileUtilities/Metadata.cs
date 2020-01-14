@@ -14,6 +14,7 @@ namespace MusicFileUtilities
         }
     }
 
+    [Serializable]
     public enum CodecType { Lossy, Lossless };
 
     public interface ICodecProvider
