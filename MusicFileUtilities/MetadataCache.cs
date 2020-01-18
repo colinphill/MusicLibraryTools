@@ -154,6 +154,14 @@ namespace MusicFileUtilities
         private Dictionary<string, List<string>> _albumartistcache = new Dictionary<string, List<string>>();
         private Dictionary<string, List<string>> _artistcache = new Dictionary<string, List<string>>();
 
+        public Dictionary<string, MetadataCacheEntry> FileCache
+        {
+            get
+            {
+                return _filecache;
+            }
+        }
+
         public Dictionary<string, List<string>> ArtistCache
         {
             get
@@ -207,7 +215,7 @@ namespace MusicFileUtilities
             }
         }
 
-        public IMetadataProvider this[string k]
+        public MetadataCacheEntry this[string k]
         {
             get
             {

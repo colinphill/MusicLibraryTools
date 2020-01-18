@@ -373,6 +373,15 @@ namespace CrossSyncPlaylists
                             KeyValuePair<string, KeyValuePair<DateTime, VorbisComments>> [] newfiles = parsedfiles.Where(el => (el.Value.Value["ALBUM"] == track.Album) &&
                                     (el.Value.Value["TITLE"] == track.Title) && ((el.Value.Value["ARTIST"] == track.Artist) || (el.Value.Value["ALBUMARTIST"] == track.AlbumArtist) ||
                                     (el.Value.Value["ALBUMARTIST"] == track.Artist))).ToArray();
+
+                            if (newfiles.Length == 0)
+                            {
+                                IMetadataProvider provider = Metadata.GetProvider(track.LocalLocation);
+                                newfiles = parsedfiles.Where(el => (el.Value.Value["ALBUM"] == provider.Album) &&
+                                       (el.Value.Value["TITLE"] == provider.Title) && ((el.Value.Value["ARTIST"] == provider.Artist) || (el.Value.Value["ALBUMARTIST"] == provider.AlbumArtist) ||
+                                       (el.Value.Value["ALBUMARTIST"] == provider.Artist))).ToArray();
+                            }
+
                             string newpath;
                             try
                             {
