@@ -22,7 +22,7 @@ namespace UpdateCarCard
         public static string LimitLength(this string val, int length)
         {
             int l = Math.Min(length, val.Length);
-            return val.Substring(0, l);
+            return val.Substring(0, l).Trim(" \t".ToCharArray());
         }
     }
 
@@ -183,8 +183,8 @@ namespace UpdateCarCard
                 {
                     if ((nodes_[i].nodes_.Count == 0) && (nodes_[i].items_.Count == 0))
                         continue;
-                    if ((string.Compare(name, nodes_[i].FirstName, true) < 0)&&((StartMatchLength(nodes_[i].FirstName, name) <= BALANCE_BREAK)))
-                        return nodes_[i];
+                    if ((string.Compare(name, nodes_[i].FirstName, true) < 0) && ((StartMatchLength(nodes_[i].FirstName, name) <= BALANCE_BREAK)))
+                        return nodes_[i].FindNode(name); // Keep Diving
                     if ((string.Compare(name, nodes_[i].LastName, true) <= 0)||((StartMatchLength(nodes_[i].LastName, name) > BALANCE_BREAK)))
                         return nodes_[i].FindNode(name);
                 }
@@ -371,14 +371,17 @@ namespace UpdateCarCard
                 {
                     int sqrt = (int)Math.Sqrt(items_.Count);
                     int divisor = sqrt > BALANCE_SIZE ? BALANCE_SIZE : sqrt;
+                    int modulus = items_.Count % divisor;
                     int last = -1;
                     for (int i = 1; i <= divisor; i++)
                     {
                         int first = last + 1;
-                        int templast = i * items_.Count / divisor - 1;
-                        if (first > templast)
-                            continue;
-                        last = templast;
+                        last = first + items_.Count / divisor - 1;
+                        if (modulus > 0)
+                        {
+                            last++;
+                            modulus--;
+                        }
                         while ((last < (items_.Count - 1)) && ((StartMatchLength(items_[last], items_[last + 1]) > BALANCE_BREAK) || (StartMatchLength(items_[first], items_[last]) > BALANCE_BREAK)))
                             last++;
                         nodes_.Add(new BalancedPathNode(this, items_.GetRange(first, last - first + 1)));
@@ -1248,8 +1251,7 @@ namespace UpdateCarCard
 
                     }
                 }
-
-
+                
                 LogConsole.WriteLine("Updating Contributing Artist Playlists");
 
                 foreach (string artist in syncdb.ContributingArtistMap.Keys)
@@ -1354,8 +1356,8 @@ namespace UpdateCarCard
 
                     foreach (string diff in diffs)
                     {
-                        LogConsole.WriteLine("Deleting File: " + artist + "::::" + diff);
-                        File.Delete(diff);
+                        LogConsole.WriteLine("Deleting File: " + artist + "::::" + Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist, diff));
+                        File.Delete(Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist, diff));
                     }
                 }
             }

@@ -179,7 +179,7 @@ namespace MusicFileUtilities
             {
                 try
                 {
-                    return int.Parse(this["TRACKNUMBER"]);
+                    return int.Parse(this["TRACKNUMBER"].Split('/')[0]);
                 }
                 catch
                 {

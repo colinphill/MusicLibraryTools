@@ -30,171 +30,6 @@ namespace CrossSyncPlaylists
     {
         static int MAX_PLAYLIST_COUNT = 500;
         const int SONOS_NAME_PAD = 100;
-
-        static VorbisComments ReadID3Metadata(string filename)
-        {
-            ID3v2Tag tag = filename.ToLower().EndsWith(".mp3") ? (ID3v2Tag)new MP3File(filename) : (ID3v2Tag)new DSFFile(filename);
-                        
-            VorbisComments vc = new VorbisComments();
-
-            try
-            {
-                vc.Comments.Add(new KeyValuePair<string,string>("TITLE", (tag.FindFrame("TIT2") as TextFrame).Text));
-            }
-            catch
-            {
-                vc.Comments.Add(new KeyValuePair<string,string>("TITLE", ""));
-            }
-
-            try
-            {
-                vc.Comments.Add(new KeyValuePair<string,string>("ALBUM", (tag.FindFrame("TALB") as TextFrame).Text));
-            }
-            catch
-            {
-                vc.Comments.Add(new KeyValuePair<string,string>("ALBUM", ""));
-            }
-
-            try
-            {
-                vc.Comments.Add(new KeyValuePair<string,string>("ARTIST", (tag.FindFrame("TPE1") as TextFrame).Text));
-            }
-            catch
-            {
-                vc.Comments.Add(new KeyValuePair<string,string>("ARTIST", ""));
-            }
-
-            try
-            {
-                vc.Comments.Add(new KeyValuePair<string,string>("ALBUMARTIST", (tag.FindFrame("TPE2") as TextFrame).Text));
-            }
-            catch
-            {
-                vc.Comments.Add(new KeyValuePair<string,string>("ALBUMARTIST", ""));
-            }
-
-            try
-            {
-                vc.Comments.Add(new KeyValuePair<string,string>("TRACKNUMBER", int.Parse((tag.FindFrame("TRCK") as TextFrame).Text.Split("/".ToCharArray())[0]).ToString("D2")));
-            }
-            catch
-            {
-                vc.Comments.Add(new KeyValuePair<string,string>("TRACKNUMBER", "00"));
-            }
-
-            return vc;
-        }
-
-        static VorbisComments ReadM4AMetadata(string filename)
-        {
-            RootAtom root = new RootAtom(filename);
-            Atom_ilst atom = root.FindPath("moov.udta.meta.ilst") as Atom_ilst;
-
-            VorbisComments vc = new VorbisComments();
-            vc.Comments.Add(new KeyValuePair<string, string>("TITLE", (atom.FindPath("©nam.data") as Atom_data).Text));
-
-            try
-            {
-                vc.Comments.Add(new KeyValuePair<string, string>("ALBUM", (atom.FindPath("©alb.data") as Atom_data).Text));
-            }
-            catch
-            {
-                vc.Comments.Add(new KeyValuePair<string, string>("ALBUM", ""));
-            }
-
-            try
-            {
-                vc.Comments.Add(new KeyValuePair<string, string>("ARTIST", (atom.FindPath("©ART.data") as Atom_data).Text));
-            }
-            catch
-            {
-                vc.Comments.Add(new KeyValuePair<string, string>("ARTIST", ""));
-            }
-
-            try
-            {
-                vc.Comments.Add(new KeyValuePair<string, string>("ALBUMARTIST", (atom.FindPath("aART.data") as Atom_data).Text));
-            }
-            catch
-            {
-                vc.Comments.Add(new KeyValuePair<string, string>("ALBUMARTIST", ""));
-            }
-
-            try
-            {
-                vc.Comments.Add(new KeyValuePair<string, string>("TRACKNUMBER", (atom.FindPath("trkn.data") as Atom_data).TrackNumber.ToString("D2")));
-            }
-            catch
-            {
-                vc.Comments.Add(new KeyValuePair<string, string>("TRACKNUMBER", "00"));
-            }
-
-            return vc;
-        }
-
-        static void IndexAudioFiles(string path, Dictionary<string, KeyValuePair<DateTime, VorbisComments>> files, Dictionary<string, bool> touchlist)
-        {
-            foreach (string dir in Directory.GetDirectories(path))
-                IndexAudioFiles(dir, files, touchlist);
-
-            string[] exts = { ".flac", ".ogg", ".m4a", ".mp3" };
-
-            IEnumerable<string> filelist = Directory.GetFiles(path, "*.*").Where(s => exts.Contains(Path.GetExtension(s).ToLower()));
-
-            foreach (string file in filelist)
-            {
-                DateTime lastwrite = File.GetLastWriteTimeUtc(file);
-                if (files.ContainsKey(file))
-                {
-                    KeyValuePair<DateTime, VorbisComments> kv = files[file];
-                    if (lastwrite <= kv.Key)
-                    {
-                        touchlist[file] = true;
-                        continue;
-                    }
-                    files.Remove(file);
-                }
-
-                try
-                {
-                    VorbisComments vc;
-                    if (Path.GetExtension(file).ToLower() == ".flac")
-                    {
-                        FLACFile f = new FLACFile(file);
-                        vc = f;
-                    }
-                    else if (Path.GetExtension(file).ToLower() == ".ogg")
-                    {
-                        OggVorbisFile f = new OggVorbisFile(file);
-                        vc = f;
-                     }
-                    else if (Path.GetExtension(file).ToLower() == ".m4a")
-                    {
-                        vc = ReadM4AMetadata(file);
-                    }
-                    else if (Path.GetExtension(file).ToLower() == ".mp3")
-                    {
-                        vc = ReadID3Metadata(file);
-                    }
-                    else
-                        throw new InvalidDataException();
-
-                    vc.Artworks.Clear();
-                    files.Add(file, new KeyValuePair<DateTime, VorbisComments>(lastwrite, vc));
-                    touchlist[file] = true;
-
-                    if ((files.Count % 100) == 0)
-                    {
-                        Console.Write("Indexed Count: " + files.Count.ToString() + "      \r");
-                        Console.Out.Flush();
-                    }
-                }
-                catch
-                {
-                    Console.WriteLine("Failed Read Metadata: " + file);
-                }
-            }
-        }
                
         static string FixPath(string item)
         {
@@ -209,43 +44,19 @@ namespace CrossSyncPlaylists
             return fix;
         }
 
-        static Dictionary<string, KeyValuePair<DateTime, VorbisComments>> LoadMetadataCache(string filename)
-        {
-            //return new Dictionary<string, KeyValuePair<DateTime, VorbisComments>>();
-            try
-            {
-                FileStream fs = new FileStream(filename, FileMode.Open, FileAccess.Read);
-                BinaryFormatter bf = new BinaryFormatter();
-                Dictionary<string, KeyValuePair<DateTime, VorbisComments>> res =
-                    (Dictionary<string, KeyValuePair<DateTime, VorbisComments>>)bf.Deserialize(fs);
-                fs.Close();
-                return res;
-            }
-            catch
-            {
-                return new Dictionary<string, KeyValuePair<DateTime, VorbisComments>>();
-            }
-        }
-
-        static void SaveMetadataCache(string filename, Dictionary<string, KeyValuePair<DateTime, VorbisComments>> index)
-        {
-            FileStream fs = new FileStream(filename, FileMode.Create, FileAccess.Write);
-            BinaryFormatter bf = new BinaryFormatter();
-            bf.Serialize(fs, index);
-            fs.Close();
-        }
-
         static void Main(string[] args)
         {
             LogConsole.SwitchFile("CrossSyncPlaylists.log");
 
-            if (!LibraryConfiguration.Valid)
+            LibraryConfiguration config = new LibraryConfiguration(args[0]);
+
+            /*if (!LibraryConfiguration.Valid)
             {
                 LogConsole.WriteLine("Invalid Library Configuration File");
                 return;
-            }
+            }*/
 
-            Directory.CreateDirectory(LibraryConfiguration.WPLTargetFolder);
+            Directory.CreateDirectory(config.PlaylistTargetFolder);
 
             //string destplaylistfolder = @"z:/iTunes/Lossless/WPL/";
             //string rootlibpath = @"z:/iTunes/AAC/";
@@ -256,31 +67,39 @@ namespace CrossSyncPlaylists
 
             // TODO: Cull Cached Metadata Without Matching Files
 
-            Dictionary<string, bool> touchlist = new Dictionary<string, bool>();
- 
-            Dictionary<string, KeyValuePair<DateTime, VorbisComments>> parsedfiles = LoadMetadataCache("CrossSyncPlaylists.cache");
-
-            foreach (string cachedfile in parsedfiles.Keys)
-                touchlist.Add(cachedfile, false);
-           
-            Dictionary<string, bool> missingfiles = new Dictionary<string, bool>();
-
-            LogConsole.WriteLine("Indexing FLAC/Ogg/M4A/MP3 Files...");
-            IndexAudioFiles(LibraryConfiguration.CrossSyncTargetMusicFolder, parsedfiles, touchlist);
-
-            foreach (string removed in touchlist.Where(k => k.Value == false).Select(k => k.Key))
+            LogConsole.WriteLine("Indexing Files...");
+            MetadataCache cache = new MetadataCache();
+            if (File.Exists(args[0] + ".cache"))
+                cache.Load(args[0] + ".cache");
+            else
             {
-                LogConsole.WriteLine("Removed File: " + removed);
-                parsedfiles.Remove(removed);
+                try
+                {
+                    cache.Load(config.ReferenceConfig + ".cache");
+                }
+                catch
+                {
+
+                }
             }
+#if true
+            cache.BeginBuildCache();
+            foreach (var iloc in config.IndexLocations)
+                cache.BuildCache(iloc.Target, false);
+            cache.EndBuildCache();
+            cache.Save(args[0] + ".cache");
+#endif
+            LogConsole.WriteLine("Total Parsed Files: " + cache.FileCache.Count);
 
-            touchlist.Clear();
+            LogConsole.WriteLine("Building Dictionaries...");
 
-            LogConsole.WriteLine("Total Parsed Files: " + parsedfiles.Count + "                    ");
-
-            SaveMetadataCache("CrossSyncPlaylists.cache", parsedfiles);
-            
+            var aapairs = cache.FileCache.Select(kv => (kv.Value.Artist, kv.Value.StrippedAlbum)).Concat(
+                cache.FileCache.Where(kv=>!string.IsNullOrWhiteSpace(kv.Value.AlbumArtist)).Select(kv => (kv.Value.AlbumArtist, kv.Value.StrippedAlbum))).Distinct();
+            var aadict = aapairs.ToDictionary(k => k, k => cache.FileCache.Where(kv => (kv.Value.StrippedAlbum == k.StrippedAlbum) && (
+                (kv.Value.Artist == k.Item1) || (kv.Value.AlbumArtist == k.Item1))).ToArray());
+        
             int missing = 0;
+            var missingfiles = new Dictionary<string, bool>();
 
             LogConsole.WriteLine("Loading iTunes Library XML...");
 
@@ -291,17 +110,15 @@ namespace CrossSyncPlaylists
 
             LogConsole.WriteLine("iTunes Library Size: " + lib.Tracks.Count.ToString() + "  Playlist Count: " + lib.Playlists.Count);
 
-            if ((args.Length == 1) && (args[0].ToLower() == "clean"))
+            if ((args.Length == 2) && (args[1].ToLower() == "clean"))
             {
                 LogConsole.WriteLine("Cleaning Old Playlist Directories...");
 
-                foreach (string file in Directory.GetFiles(LibraryConfiguration.WPLTargetFolder, "*.*"))
-                    File.Delete(file);
-                foreach (string file in Directory.GetFiles(LibraryConfiguration.M3UTargetFolder, "*.*"))
+                foreach (string file in Directory.GetFiles(config.PlaylistTargetFolder, "*.*"))
                     File.Delete(file);
             }
 
-            bool checkmode = ((args.Length == 1) && (args[0].ToLower() == "check"));
+            bool checkmode = ((args.Length == 2) && (args[1].ToLower() == "check"));
 
             foreach (iTunesPlaylist pl in lib.Playlists.Values)
             {
@@ -314,14 +131,14 @@ namespace CrossSyncPlaylists
 
                 LogConsole.WriteLine("Converting Playlist: " + pl.Title);
 
-                string plfilename = Path.Combine(LibraryConfiguration.WPLTargetFolder, FixPath(pl.Title).PadRight(SONOS_NAME_PAD) + ".wpl");
-                string m3ufilename = Path.Combine(LibraryConfiguration.M3UTargetFolder, FixPath(pl.Title) + ".m3u");
+                string plfilename = (config.PlaylistType.ToLower() == "wpl") ? Path.Combine(config.PlaylistTargetFolder, FixPath(pl.Title).PadRight(SONOS_NAME_PAD) + ".wpl") :
+                    Path.Combine(config.PlaylistTargetFolder, FixPath(pl.Title) + ".m3u");
 
                 MemoryStream ms = new MemoryStream();
                 StreamWriter m3uw = new StreamWriter(ms, Encoding.GetEncoding(28591));
                 //m3uw.NewLine = "\n";
 
-                if (File.Exists(plfilename) && File.Exists(m3ufilename))
+                if (File.Exists(plfilename))
                 {
                     LogConsole.WriteLine("Skipping Due To Preexisting File");
                     continue;
@@ -348,103 +165,100 @@ namespace CrossSyncPlaylists
               
                 foreach (int item in pl.Items)
                 {
+                    string filepath = null;
 
                     iTunesTrack track = lib.Tracks[item];
                     if (track.Kind.ToLower().Contains("video") || (track.Type.ToLower() != "file") || (track.Kind.ToLower().Contains("protected")) || (track.Kind.ToLower().Contains("book")) || (track.Kind.ToLower().Contains("audible") ||
                         track.Kind.ToLower().Contains("document") || track.Kind.ToLower().Contains("app") || track.Kind.ToLower().Contains("tone")))
                         continue;
 
-                    string filepath = Uri.UnescapeDataString(new Uri(LibraryConfiguration.CrossSyncSourceLibraryPath).MakeRelativeUri(new Uri(track.LocalLocation)).ToString());
-
-                    // Handle protected files which have been reripped
-                    if (Path.GetExtension(filepath).ToLower() == ".m4p")
-                        filepath = Path.ChangeExtension(filepath, ".m4a");
-
-                    // One off correction for voice control in car
-                    filepath = filepath.Replace("Kesha", "Ke$ha");
-
-                    string testpath = Path.Combine(LibraryConfiguration.CrossSyncTargetLibraryPath, filepath);
-                    if (!File.Exists(testpath))
+                    try
                     {
-                        try
+                        KeyValuePair<string, MetadataCacheEntry>[] newfiles = new KeyValuePair<string, MetadataCacheEntry>[0];
+                        bool hasaa = aadict.ContainsKey((track.Artist, track.Album));
+                        bool hasaaa = (!string.IsNullOrWhiteSpace(track.AlbumArtist)) && (aadict.ContainsKey((track.AlbumArtist, track.Album)));
+
+                        if (hasaa)
+                            newfiles = newfiles.Concat(aadict[(track.Artist, track.Album)].Where(kv => kv.Value.TrackNumber == track.TrackNumber)).Distinct().OrderByDescending(kv => kv.Value.SampleRate).ThenByDescending(kv => kv.Value.BitsPerSample).ToArray();
+                        if (hasaaa)
+                            newfiles = newfiles.Concat(aadict[(track.AlbumArtist, track.Album)].Where(kv => kv.Value.TrackNumber == track.TrackNumber)).Distinct().OrderByDescending(kv => kv.Value.SampleRate).ThenByDescending(kv => kv.Value.BitsPerSample).ToArray();
+                        if (newfiles.Length == 0)
                         {
-                            //IEnumerable<KeyValuePair<string, KeyValuePair<DateTime, VorbisComments>>> s = parsedfiles.Where(el => (el.Value.Value["ALBUM"] == track.Album) &&
-                            //        (el.Value.Value["TITLE"] == track.Title));
-                            KeyValuePair<string, KeyValuePair<DateTime, VorbisComments>> [] newfiles = parsedfiles.Where(el => (el.Value.Value["ALBUM"] == track.Album) &&
-                                    (el.Value.Value["TITLE"] == track.Title) && ((el.Value.Value["ARTIST"] == track.Artist) || (el.Value.Value["ALBUMARTIST"] == track.AlbumArtist) ||
-                                    (el.Value.Value["ALBUMARTIST"] == track.Artist))).ToArray();
+                            if (hasaa)
+                                newfiles = newfiles.Concat(aadict[(track.Artist, track.Album)].Where(kv => kv.Value.Title.Equals(track.Title, StringComparison.InvariantCultureIgnoreCase))).Distinct().OrderByDescending(kv => kv.Value.SampleRate).ThenByDescending(kv => kv.Value.BitsPerSample).ToArray();
+                            if (hasaaa)
+                                newfiles = newfiles.Concat(aadict[(track.AlbumArtist, track.Album)].Where(kv => kv.Value.Title.Equals(track.Title, StringComparison.InvariantCultureIgnoreCase))).Distinct().OrderByDescending(kv => kv.Value.SampleRate).ThenByDescending(kv => kv.Value.BitsPerSample).ToArray();
+                        }
 
-                            if (newfiles.Length == 0)
-                            {
-                                IMetadataProvider provider = Metadata.GetProvider(track.LocalLocation);
-                                newfiles = parsedfiles.Where(el => (el.Value.Value["ALBUM"] == provider.Album) &&
-                                       (el.Value.Value["TITLE"] == provider.Title) && ((el.Value.Value["ARTIST"] == provider.Artist) || (el.Value.Value["ALBUMARTIST"] == provider.AlbumArtist) ||
-                                       (el.Value.Value["ALBUMARTIST"] == provider.Artist))).ToArray();
-                            }
-
-                            string newpath;
+                        if (newfiles.Length == 0)
+                        {
+                            IMetadataProvider provider = Metadata.GetProvider(track.LocalLocation);
+                            hasaa = aadict.ContainsKey((provider.Artist, provider.Album));
                             try
                             {
-                                newpath = newfiles.Single().Key;
+                                hasaaa = (!string.IsNullOrWhiteSpace(provider.AlbumArtist)) && (aadict.ContainsKey((provider.AlbumArtist, provider.Album)));
                             }
                             catch
                             {
-                                newpath = newfiles.Where(el => el.Value.Value.TrackNumber == track.TrackNumber).Single().Key;
+                                hasaaa = false;
                             }
-                            Uri newuri = new Uri(LibraryConfiguration.CrossSyncTargetLibraryPath).MakeRelativeUri(new Uri(newpath));
-                            filepath = Uri.UnescapeDataString(newuri.ToString());
+                            if (hasaa)
+                                newfiles = newfiles.Concat(aadict[(provider.Artist, provider.Album)].Where(kv => kv.Value.Title.Equals(provider.Title, StringComparison.InvariantCultureIgnoreCase))).Distinct().OrderByDescending(kv => kv.Value.SampleRate).ThenByDescending(kv => kv.Value.BitsPerSample).ToArray();
+                            if (hasaaa)
+                                newfiles = newfiles.Concat(aadict[(provider.AlbumArtist, provider.Album)].Where(kv => kv.Value.Title.Equals(provider.Title, StringComparison.InvariantCultureIgnoreCase))).Distinct().OrderByDescending(kv => kv.Value.SampleRate).ThenByDescending(kv => kv.Value.BitsPerSample).ToArray();
                         }
-                        catch
+
+                        if (newfiles.Count(kv => kv.Value.TrackNumber == track.TrackNumber) > 0)
+                            newfiles = newfiles.Where(kv => kv.Value.TrackNumber == track.TrackNumber).ToArray();
+
+                        filepath = newfiles[0].Key;
+                    }
+                    catch 
+                    {
+                        bool hashed = missingfiles.ContainsKey(track.LocalLocation);
+                        LogConsole.WriteLine("FNF: " + track.LocalLocation + ((!hashed) ? " (1st)" : ""));
+                        if (!hashed)
                         {
-                            bool hashed = missingfiles.ContainsKey(testpath);
-
-                            LogConsole.WriteLine("FNF: " + testpath + ((!hashed) ? " (1st)" : ""));
-
-                            if (!hashed)
-                            {
-                                missing++;
-                                missingfiles.Add(testpath, true);
-                            }
+                            missing++;
+                            missingfiles.Add(track.LocalLocation, true);
                         }
                     }
-
-
-                    testpath = LibraryConfiguration.CrossSyncTargetLibraryPath + filepath;
-                    if (File.Exists(testpath))
+                 
+                    if (!string.IsNullOrWhiteSpace(filepath))
                     {
-                        string m3ufp = Path.Combine(LibraryConfiguration.M3UOffset, filepath);
-                        filepath = Path.Combine(LibraryConfiguration.WPLOffset, filepath);
-
+                        foreach (var iloc in config.IndexLocations)
+                        {
+                            if (filepath.StartsWith(iloc.Target, StringComparison.InvariantCultureIgnoreCase))
+                                filepath = iloc.Offset + "/" + filepath.Remove(0, iloc.Target.Length).Replace('\\','/');
+                        }
                         seqel.Add(new XElement("media", new XAttribute("src", filepath)));
                         m3uw.WriteLine("#EXTINF:-1," + track.Artist.Replace("-", "") + " - " + track.Title.Replace("-", ""));
-                        m3uw.WriteLine(m3ufp);
+                        m3uw.WriteLine(filepath);
+                        count++;
                     }
-
-                    count++;
 
                 }
 
                 if ((count != 0)&&(!checkmode))
                 {
                     countat.Value = count.ToString();
-
                     XmlWriterSettings settings = new XmlWriterSettings();
                     settings.OmitXmlDeclaration = true;
                     settings.Indent = true;
                     settings.CloseOutput = true;
-                    /*StreamWriter w = new StreamWriter(plfilename);
-                    XmlWriter xw = XmlWriter.Create(w, settings);
-                    pd.Save(xw);
-                    xw.Close();*/
-
+                    if (config.PlaylistType.Equals("wpl", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        StreamWriter w = new StreamWriter(plfilename);
+                        XmlWriter xw = XmlWriter.Create(w, settings);
+                        pd.Save(xw);
+                        xw.Close();
+                    }
                     m3uw.Flush();
-                    File.WriteAllBytes(m3ufilename, ms.ToArray());
+                    if (config.PlaylistType.Equals("m3u", StringComparison.InvariantCultureIgnoreCase))
+                        File.WriteAllBytes(plfilename, ms.ToArray());
                 }
-
                 m3uw.Dispose();
                 ms.Dispose();
-
-                
             }
 
             LogConsole.WriteLine("Total FNF: " + missing.ToString());

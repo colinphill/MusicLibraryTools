@@ -69,19 +69,15 @@ namespace CrossSyncMusic
 
             string[] audioextensions = new string[] { ".m4a", ".mp3" }; //, ".flac", ".ogg" };
 
-            if (args.Length < 1)
+            if (args.Length < 2)
             {
-                LogConsole.WriteLine("Usage: CrossSyncMusic <playlistname> [playlistname] [playlistname] ...");
+                LogConsole.WriteLine("Usage: CrossSyncMusic <libraryconfiguration.xml> <playlistname> [playlistname] [playlistname] ...");
                 return;
             }
 
-            if (!LibraryConfiguration.Valid)
-            {
-                LogConsole.WriteLine("Invalid Library Configuration File");
-                return;
-            }
+            LibraryConfiguration config = new LibraryConfiguration(args[0]);
 
-            Directory.CreateDirectory(LibraryConfiguration.CrossSyncTargetMusicFolder);
+            Directory.CreateDirectory(config.CrossSyncTargetLibraryPath);
 
             LogConsole.WriteLine("Loading iTunes Library XML...");
             string iTunesLibraryFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "iTunes", "iTunes Music Library.xml");
@@ -93,12 +89,12 @@ namespace CrossSyncMusic
             //string trash = LibraryConfiguration.TrashTargetFolder;
 
             Dictionary<string, bool> namehits = new Dictionary<string, bool>();
-            PopulateHits(LibraryConfiguration.CrossSyncTargetMusicFolder, namehits, audioextensions);
+            PopulateHits(config.CrossSyncTargetLibraryPath, namehits, audioextensions);
 
             int tracks = 0;
             int converted = 0;
 
-            for (int i = 0; i < args.Length; i++)
+            for (int i = 1; i < args.Length; i++)
             {
 
                 iTunesPlaylist pl = lib.FindPlaylist(args[i]);
@@ -133,7 +129,7 @@ namespace CrossSyncMusic
                             if (title.Length > 50)
                                 title = title.Substring(0, 50).Trim();
 
-                            string dest = Path.Combine(LibraryConfiguration.CrossSyncTargetMusicFolder, artist, album, track.ToString("D2") + " " + title + Path.GetExtension(trk.LocalLocation));
+                            string dest = Path.Combine(config.CrossSyncTargetLibraryPath, artist, album, track.ToString("D2") + " " + title + Path.GetExtension(trk.LocalLocation));
 
                             Directory.CreateDirectory(Path.GetDirectoryName(dest));
 
@@ -174,7 +170,7 @@ namespace CrossSyncMusic
                 if (!namehits[file])
                 {
                     LogConsole.WriteLine("Miss: " + file);
-                    File.Move(file, Path.Combine(LibraryConfiguration.TrashTargetFolder, Path.GetFileName(file)));
+                    File.Move(file, Path.Combine(config.TrashTargetFolder, Path.GetFileName(file)));
                 }
 
             LogConsole.WriteLine("Total Misses: " + (namehits.Where(kv => kv.Value == false).Count()).ToString());

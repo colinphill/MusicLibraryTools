@@ -5,6 +5,7 @@ using System.Text;
 using System.IO;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Text.RegularExpressions;
 using ConsoleTools;
 
 namespace MusicFileUtilities
@@ -13,6 +14,8 @@ namespace MusicFileUtilities
     [Serializable]
     public class MetadataCacheEntry : IMetadataProvider
     {
+        private static Regex stripre_ = new Regex(@" \((DSD|DSD64|DSD128|DSD256|DVD-V|DVD-A|HiRes|Hi-Res|DTS-CD)\)$", RegexOptions.IgnoreCase);
+
         private string _title = "";
         private string _album = "";
         private string _artist = "";
@@ -27,6 +30,8 @@ namespace MusicFileUtilities
         private uint _bitspersample = 0;
         private uint _averagebitrate = 0;
         private uint _maxbitrate = 0;
+        [NonSerialized]
+        private string _strippedalbum = "";
 
         public MetadataCacheEntry(IMetadataProvider mp)
         {
@@ -79,53 +84,22 @@ namespace MusicFileUtilities
             }
         }
 
-        public string Title
-        {
-            get
-            {
-                return _title;
-            }
-        }
+        public string CodecName => _codecname;
+        public CodecType CodecType => _codectype;
+        public uint Channels => _channels;
+        public uint BitsPerSample => _bitspersample;
+        public uint SampleRate => _samplerate;
+        public uint AverageBitRate => _averagebitrate;
+        public uint MaxBitRate => _maxbitrate;
 
-        public string Album
-        {
-            get
-            {
-                return _album;
-            }
-        }
+        public string Title => _title;
+        public string Album => _album;
+        public string StrippedAlbum => _strippedalbum;
+        public string Artist => _artist;
+        public string AlbumArtist => _albumartist;
+        public int TrackNumber => _tracknumber;
+        public DateTime ScanTime => _scantime;
 
-        public string Artist
-        {
-            get
-            {
-                return _artist;
-            }
-        }
-
-        public string AlbumArtist
-        {
-            get
-            {
-                return _albumartist;
-            }
-        }
-
-        public int TrackNumber
-        {
-            get
-            {
-                return _tracknumber;
-            }
-        }
-
-        public DateTime ScanTime
-        {
-            get
-            {
-                return _scantime;
-            }
-        }
 
         public void Touch()
         {
@@ -137,14 +111,12 @@ namespace MusicFileUtilities
             _touched = false;
         }
 
-        public bool Touched
+        public void Strip()
         {
-            get
-            {
-                return _touched;
-            }
+            _strippedalbum = stripre_.Replace(_album, "");
         }
 
+        public bool Touched => _touched;
     }
 
     public class MetadataCache
@@ -252,7 +224,9 @@ namespace MusicFileUtilities
                 _albumcache = (Dictionary<string, List<string>>)formatter.Deserialize(fs);
                 _artistcache = (Dictionary<string, List<string>>)formatter.Deserialize(fs);
                 _albumartistcache = (Dictionary<string, List<string>>)formatter.Deserialize(fs);
-             }
+                foreach (var f in _filecache)
+                    f.Value.Strip();
+            }
         }
 
         private void CrossReferenceFile(string file)
@@ -302,6 +276,8 @@ namespace MusicFileUtilities
             }
             foreach (string key in toremove)
                 _filecache.Remove(key);
+            foreach (var f in _filecache)
+                f.Value.Strip();
         }
 
         public void BuildCache(string basepath, bool untouchall = true)
