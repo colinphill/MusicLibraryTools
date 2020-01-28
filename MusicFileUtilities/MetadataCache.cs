@@ -6,6 +6,8 @@ using System.IO;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using System.Collections.Concurrent;
 using ConsoleTools;
 
 namespace MusicFileUtilities
@@ -280,6 +282,8 @@ namespace MusicFileUtilities
                 f.Value.Strip();
         }
 
+        private readonly string[] validexts_ = { ".dsf", ".m4a", ".mp3", ".flac", ".ogg" };
+
         public void BuildCache(string basepath, bool untouchall = true)
         {
             if (untouchall)
@@ -287,7 +291,10 @@ namespace MusicFileUtilities
 
             LogConsole.WriteLine(LogVerbosity.Chatty, "Checking Directory - " + basepath);
 
-            string[] subdirs = Directory.GetDirectories(basepath);
+            DirectoryInfo di = new DirectoryInfo(basepath);
+            var files = di.EnumerateFileSystemInfos("*.*", SearchOption.AllDirectories).Where(fsi => validexts_.Contains(Path.GetExtension(fsi.FullName).ToLower()) && ((fsi.Attributes & FileAttributes.Directory) == 0)).ToArray();
+
+            /*string[] subdirs = Directory.GetDirectories(basepath);
             foreach (string subdir in subdirs)
                 BuildCache(subdir, false);
 
@@ -296,26 +303,44 @@ namespace MusicFileUtilities
             files.AddRange(Directory.GetFiles(basepath, "*.m4a"));
             files.AddRange(Directory.GetFiles(basepath, "*.ogg"));
             files.AddRange(Directory.GetFiles(basepath, "*.flac"));
+            */
 
-            foreach (string file in files)
+            var filestoscan = new List<string>();
+
+            foreach (var fi in files)
             {
-                LogConsole.WriteLine(LogVerbosity.Verbose, "Checking File - " + file);
+                LogConsole.WriteLine(LogVerbosity.Verbose, "Checking File - " + fi.FullName);
 
-                if (_filecache.ContainsKey(file))
+                if (_filecache.ContainsKey(fi.FullName))
                 {
-                    if (File.GetLastWriteTimeUtc(file) > _filecache[file].ScanTime)
+                    if (fi.LastWriteTimeUtc > _filecache[fi.FullName].ScanTime)
                     {
-                        UnReferenceFile(file);
-                        _filecache[file] = new MetadataCacheEntry(Metadata.GetProvider(file));
-                        CrossReferenceFile(file);
+                        UnReferenceFile(fi.FullName);
+                        filestoscan.Add(fi.FullName);
+                        //_filecache[fi.FullName] = new MetadataCacheEntry(Metadata.GetProvider(fi.FullName));
+                        //CrossReferenceFile(fi.FullName);
                     }
+                    else
+                        _filecache[fi.FullName].Touch();
                 }
                 else
                 {
-                    _filecache[file] = new MetadataCacheEntry(Metadata.GetProvider(file));
-                    CrossReferenceFile(file);
+                    filestoscan.Add(fi.FullName);
+                    //_filecache[fi.FullName] = new MetadataCacheEntry(Metadata.GetProvider(fi.FullName));
+                    //CrossReferenceFile(fi.FullName);
                 }
-                _filecache[file].Touch();
+            }
+
+            var bag = new ConcurrentBag<(string FileName, MetadataCacheEntry Entry)>();
+            Parallel.ForEach(filestoscan, (file) =>
+            {
+                bag.Add((file, new MetadataCacheEntry(Metadata.GetProvider(file))));
+            });
+            foreach (var entry in bag)
+            {
+                entry.Entry.Touch();
+                _filecache[entry.FileName] = entry.Entry;
+                CrossReferenceFile(entry.FileName);
             }
 
             if (untouchall)
