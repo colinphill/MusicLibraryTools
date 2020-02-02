@@ -54,9 +54,9 @@ namespace AnalyzeMetadata
             if (args.Skip(1).Any(s => s.ToLower() == "checkhires"))
             {
                 var re = new Regex(@" \((DSD|DSD64|DSD128|DSD256|DVD-V|DVD-A|HiRes|Hi-Res|DTS-CD)\)$", RegexOptions.IgnoreCase);
-                var hrfiles = cache.FileCache.Where(kv => kv.Key.ToLower().Contains(@"\hires\")).ToArray();
+                var hrfiles = cache.FileCache.Where(kv => kv.Key.ToLower().Contains(@"\hires\stereo\")).ToArray();
                 var stdfiles = cache.FileCache.Where(kv => !kv.Key.ToLower().Contains(@"\hires\")).ToArray();
-                var hralbums = hrfiles.Select(kv => (!string.IsNullOrWhiteSpace(kv.Value.AlbumArtist) ? kv.Value.AlbumArtist : kv.Value.Artist, re.Replace(kv.Value.Album, ""))).Distinct();
+                var hralbums = hrfiles.Select(kv => (!string.IsNullOrWhiteSpace(kv.Value.AlbumArtist) ? kv.Value.AlbumArtist : kv.Value.Artist, kv.Value.StrippedAlbum, Path.GetDirectoryName(kv.Key))).Distinct();
                 var stdalbums = stdfiles.Select(kv => (!string.IsNullOrWhiteSpace(kv.Value.AlbumArtist) ? kv.Value.AlbumArtist : kv.Value.Artist, kv.Value.Album, Path.GetDirectoryName(kv.Key))).Distinct();
                 int count = 0, miss = 0, hit = 0, multiple = 0;
                 foreach (var album in hralbums)
@@ -72,7 +72,21 @@ namespace AnalyzeMetadata
 
                     if (possibilities.Length == 1)
                     {
-                        //Console.WriteLine("Hit," + possibilities[0].Item1 + "," + possibilities[0].Item2 + "," + possibilities[0].Item3);
+                        // Check for mismatched file counts 
+                        int hrtracks = hrfiles.Count(kv => (kv.Value.StrippedAlbum == album.StrippedAlbum) && ((kv.Value.Artist == album.Item1) || (kv.Value.AlbumArtist == album.Item1)));
+                        int stdtracks = stdfiles.Count(kv => (kv.Value.Album == possibilities[0].Album) && ((kv.Value.Artist == possibilities[0].Item1) || (kv.Value.AlbumArtist == possibilities[0].Item1)));
+                        if (hrtracks < stdtracks)
+                            LogConsole.WriteLine("Count Mismatch," + hrtracks + "," + stdtracks + "," + possibilities[0].Item1 + "," + possibilities[0].Item2 + "," + possibilities[0].Item3);
+                        else
+                        {
+                            int dist1 = album.Item1.EditDistance(possibilities[0].Item1);
+                            int dist2 = album.StrippedAlbum.EditDistance(possibilities[0].Album);
+                            if ((dist1 != 0) || (dist2 != 0))
+                            {
+                                LogConsole.WriteLine("Hit," + dist1 + "," + dist2 + "," + possibilities[0].Item1 + "," + possibilities[0].Item2 + "," + possibilities[0].Item3);
+                                LogConsole.WriteLine("   ," + dist1 + "," + dist2 + "," + album.Item1 + "," + album.StrippedAlbum);
+                            }
+                        }
                         hit++;
                     }
                     else if (possibilities.Length == 0)
@@ -91,10 +105,64 @@ namespace AnalyzeMetadata
                 LogConsole.WriteLine();
             }
 
+            if (args.Skip(1).Any(s => s.ToLower() == "checkhiresmulti"))
+            {
+                var re = new Regex(@" \((DSD|DSD64|DSD128|DSD256|DVD-V|DVD-A|HiRes|Hi-Res|DTS-CD)\)$", RegexOptions.IgnoreCase);
+                var hrfiles = cache.FileCache.Where(kv => kv.Key.ToLower().Contains(@"\hires\multi\")).ToArray();
+                var stdfiles = cache.FileCache.Where(kv => !kv.Key.ToLower().Contains(@"\hires\")).ToArray();
+                var hralbums = hrfiles.Select(kv => (!string.IsNullOrWhiteSpace(kv.Value.AlbumArtist) ? kv.Value.AlbumArtist : kv.Value.Artist, kv.Value.StrippedAlbum, Path.GetDirectoryName(kv.Key))).Distinct();
+                var stdalbums = stdfiles.Select(kv => (!string.IsNullOrWhiteSpace(kv.Value.AlbumArtist) ? kv.Value.AlbumArtist : kv.Value.Artist, kv.Value.Album, Path.GetDirectoryName(kv.Key))).Distinct();
+                int count = 0, miss = 0, hit = 0, multiple = 0;
+                foreach (var album in hralbums)
+                {
+                    count++;
+                    float fuzzyvalue = 0.5f;
+                    var possibilities = stdalbums.Where(a => IsFuzzy(a.Item1, album.Item1, fuzzyvalue) && IsFuzzy(a.Item2, album.Item2, fuzzyvalue)).ToArray();
+                    while ((possibilities.Length > 1) && (fuzzyvalue >= 0.1f))
+                    {
+                        fuzzyvalue -= 0.1f;
+                        possibilities = stdalbums.Where(a => IsFuzzy(a.Item1, album.Item1, fuzzyvalue) && IsFuzzy(a.Item2, album.Item2, fuzzyvalue)).ToArray();
+                    }
+
+                    if (possibilities.Length == 1)
+                    {
+                        // Check for mismatched file counts 
+                        int hrtracks = hrfiles.Count(kv => (kv.Value.StrippedAlbum == album.StrippedAlbum) && ((kv.Value.Artist == album.Item1) || (kv.Value.AlbumArtist == album.Item1)));
+                        int stdtracks = stdfiles.Count(kv => (kv.Value.Album == possibilities[0].Album) && ((kv.Value.Artist == possibilities[0].Item1) || (kv.Value.AlbumArtist == possibilities[0].Item1)));
+                        if (hrtracks < stdtracks)
+                            LogConsole.WriteLine("Count Mismatch," + hrtracks + "," + stdtracks + "," + possibilities[0].Item1 + "," + possibilities[0].Item2 + "," + possibilities[0].Item3);
+                        else
+                        {
+                            int dist1 = album.Item1.EditDistance(possibilities[0].Item1);
+                            int dist2 = album.StrippedAlbum.EditDistance(possibilities[0].Album);
+                            if ((dist1 != 0) || (dist2 != 0))
+                            {
+                                LogConsole.WriteLine("Hit," + dist1 + "," + dist2 + "," + possibilities[0].Item1 + "," + possibilities[0].Item2 + "," + possibilities[0].Item3);
+                                LogConsole.WriteLine("   ," + dist1 + "," + dist2 + "," + album.Item1 + "," + album.StrippedAlbum);
+                            }
+                        }
+                        hit++;
+                    }
+                    else if (possibilities.Length == 0)
+                    {
+                        LogConsole.WriteLine("Miss," + album.Item1 + "," + album.Item2 + "," + fuzzyvalue);
+                        miss++;
+                    }
+                    else
+                    {
+                        LogConsole.WriteLine("Multiple," + album.Item1 + "," + album.Item2);
+                        multiple++;
+                    }
+                }
+
+                LogConsole.WriteLine(count + " " + hit + " " + miss + " " + multiple);
+                LogConsole.WriteLine();
+            }
+
             if (args.Skip(1).Any(s => s.ToLower() == "checklores"))
             {
                 var files = cache.FileCache.Where(kv => kv.Key.ToLower().Contains(@"\hires\") && (kv.Value.SampleRate <= 48000) && (kv.Value.BitsPerSample <= 16));
-                foreach (var f in files)
+                foreach (var f in files.OrderBy(kv => kv.Key))
                     LogConsole.WriteLine("(" + f.Value.SampleRate + "/" + f.Value.BitsPerSample + ") " + f.Key);
                 LogConsole.WriteLine();
             }
@@ -139,6 +207,16 @@ namespace AnalyzeMetadata
                 string[] artists = cache.Artists.Concat(cache.AlbumArtists).Distinct().ToArray();
                 var distdict = new Dictionary<int, List<Tuple<string, string>>>();
                 var checkdict = new Dictionary<Tuple<string, string>, bool>();
+                var moddict = new Dictionary<string, (string Value, int Length)>();
+                foreach (string a in artists)
+                {
+                    string ta = a.Replace(".", "").Replace(" ", "").ToLower();
+                    if (ta.StartsWith("a "))
+                        ta = ta.Remove(0, 2);
+                    if (ta.StartsWith("the "))
+                        ta = ta.Remove(0, 4);
+                    moddict[a] = (ta, a.Length);
+                }
                 foreach (string a in artists)
                 {
                     foreach (string b in artists)
@@ -147,18 +225,10 @@ namespace AnalyzeMetadata
                         {
                             if (checkdict.ContainsKey(new Tuple<string, string>(b, a)))
                                 continue;
-                            int checklen = Math.Max(a.Length, b.Length);
-                            string ta = a.Replace(".", "").Replace(" ", "").ToLower();
-                            if (ta.StartsWith("a "))
-                                ta = ta.Remove(0, 2);
-                            if (ta.StartsWith("the "))
-                                ta = ta.Remove(0, 4);
-                            string tb = b.Replace(".", "").Replace(" ", "").ToLower();
-                            if (tb.StartsWith("a "))
-                                tb = tb.Remove(0, 2);
-                            if (tb.StartsWith("the "))
-                                tb = tb.Remove(0, 4);
-                            int dist = ta.EditDistance(tb);
+                            var ta = moddict[a];
+                            var tb = moddict[b];
+                            int checklen = Math.Max(ta.Length, tb.Length);
+                            int dist = ta.Value.EditDistance(tb.Value);
                             if ((100 * dist / checklen) < 10)
                             {
                                 if (!distdict.ContainsKey(dist))

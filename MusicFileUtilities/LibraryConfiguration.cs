@@ -38,6 +38,8 @@ namespace MusicLibraryTools
         public string TrashTargetFolder => root_.Element("TrashTarget").Value;
 
         public string ReferenceConfig => root_.Element("ReferenceConfig").Value;
+
+        public string [] this[string key] => root_.Elements(key).Select(e => e.Value).ToArray();
  
     }
 }

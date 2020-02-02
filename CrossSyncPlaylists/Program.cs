@@ -228,7 +228,7 @@ namespace CrossSyncPlaylists
                     {
                         foreach (var iloc in config.IndexLocations)
                         {
-                            if (filepath.StartsWith(iloc.Target, StringComparison.InvariantCultureIgnoreCase))
+                            if (filepath.Replace('\\', '/').StartsWith(iloc.Target, StringComparison.InvariantCultureIgnoreCase))
                                 filepath = iloc.Offset + "/" + filepath.Remove(0, iloc.Target.Length).Replace('\\','/');
                         }
                         seqel.Add(new XElement("media", new XAttribute("src", filepath)));
