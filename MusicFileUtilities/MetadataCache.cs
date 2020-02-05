@@ -23,7 +23,7 @@ namespace MusicFileUtilities
         private string _artist = "";
         private string _albumartist = "";
         private int _tracknumber = 0;
-        private DateTime _scantime = DateTime.UtcNow;
+        private DateTime _lastwritetime;
         private bool _touched = false;
         private CodecType _codectype = CodecType.Lossy;
         private string _codecname = "";
@@ -35,8 +35,9 @@ namespace MusicFileUtilities
         [NonSerialized]
         private string _strippedalbum = "";
 
-        public MetadataCacheEntry(IMetadataProvider mp)
+        public MetadataCacheEntry(IMetadataProvider mp, DateTime lastwritetime)
         {
+            _lastwritetime = lastwritetime;
 
             try
             {
@@ -100,7 +101,7 @@ namespace MusicFileUtilities
         public string Artist => _artist;
         public string AlbumArtist => _albumartist;
         public int TrackNumber => _tracknumber;
-        public DateTime ScanTime => _scantime;
+        public DateTime LastWriteTime => _lastwritetime;
 
 
         public void Touch()
@@ -322,7 +323,7 @@ namespace MusicFileUtilities
             files.AddRange(Directory.GetFiles(basepath, "*.flac"));
             */
 
-            var filestoscan = new List<string>();
+            var filestoscan = new List<(string FileName, DateTime LastModifiedTime)>();
 
             foreach (var fi in files)
             {
@@ -330,10 +331,10 @@ namespace MusicFileUtilities
 
                 if (_filecache.ContainsKey(fi.FullName))
                 {
-                    if (fi.LastWriteTimeUtc > _filecache[fi.FullName].ScanTime)
+                    if (fi.LastWriteTimeUtc > _filecache[fi.FullName].LastWriteTime)
                     {
                         UnReferenceFile(fi.FullName);
-                        filestoscan.Add(fi.FullName);
+                        filestoscan.Add((fi.FullName, fi.LastWriteTimeUtc));
                         //_filecache[fi.FullName] = new MetadataCacheEntry(Metadata.GetProvider(fi.FullName));
                         //CrossReferenceFile(fi.FullName);
                     }
@@ -342,7 +343,7 @@ namespace MusicFileUtilities
                 }
                 else
                 {
-                    filestoscan.Add(fi.FullName);
+                    filestoscan.Add((fi.FullName, fi.LastWriteTimeUtc));
                     //_filecache[fi.FullName] = new MetadataCacheEntry(Metadata.GetProvider(fi.FullName));
                     //CrossReferenceFile(fi.FullName);
                 }
@@ -351,7 +352,7 @@ namespace MusicFileUtilities
             var bag = new ConcurrentBag<(string FileName, MetadataCacheEntry Entry)>();
             Parallel.ForEach(filestoscan, (file) =>
             {
-                bag.Add((file, new MetadataCacheEntry(Metadata.GetProvider(file))));
+                bag.Add((file.FileName, new MetadataCacheEntry(Metadata.GetProvider(file.FileName), file.LastModifiedTime)));
             });
             foreach (var entry in bag)
             {

@@ -21,17 +21,32 @@ using MusicFileUtilities;
 
 namespace CrossSyncMusic
 {
+
+    class HitRecord
+    {
+        public bool Hit
+        {
+            get;
+            set;
+        } = false;
+        public DateTime LastModifiedTime
+        {
+            get;
+            set;
+        }
+    }
+
     class Program
     {
 
-        static void PopulateHits(DirectoryInfo di, Dictionary<string, bool> hits)
+        static void PopulateHits(DirectoryInfo di, Dictionary<string, HitRecord> hits)
         {
             LogConsole.WriteLine("Scanning: " + di.FullName);
 
             var files = di.GetFileSystemInfos("*", SearchOption.AllDirectories).Where(fi => MetadataCache.ValidExtensions.Contains(Path.GetExtension(fi.Name).ToLower()));
 
             foreach (var file in files)
-                hits.Add(file.FullName.ToLower(), false);
+                hits.Add(file.FullName.ToLower(), new HitRecord { LastModifiedTime = file.LastWriteTimeUtc });
         }
 
         static void Main(string[] args)
@@ -56,7 +71,7 @@ namespace CrossSyncMusic
                 iTunesLibraryFile = Environment.GetEnvironmentVariable("ITUNES_XML");
             iTunesLibrary lib = new iTunesLibrary(iTunesLibraryFile);
             
-            Dictionary<string, bool> namehits = new Dictionary<string, bool>();
+            var namehits = new Dictionary<string, HitRecord>();
 
             var targetdi = new DirectoryInfo(config.CrossSyncTargetLibraryPath);
             PopulateHits(targetdi, namehits);
@@ -108,7 +123,7 @@ namespace CrossSyncMusic
                                 catch
                                 {
                                     LogConsole.WriteLine("WARNING: Out of tree");
-                                    entry = new MetadataCacheEntry(Metadata.GetProvider(trk.LocalLocation));
+                                    entry = new MetadataCacheEntry(Metadata.GetProvider(trk.LocalLocation), File.GetLastWriteTimeUtc(trk.LocalLocation));
                                     entry.Strip();
                                 }
                             }
@@ -117,27 +132,27 @@ namespace CrossSyncMusic
 
                             Directory.CreateDirectory(Path.GetDirectoryName(dest));
 
-                            namehits[dest.ToLower()] = true;
-
-                            if (File.Exists(dest))
+                            if (namehits.ContainsKey(dest.ToLower()))
                             {
-                                if (File.GetLastWriteTimeUtc(trk.LocalLocation) > File.GetLastWriteTimeUtc(dest))
+                                if (entry.LastWriteTime > namehits[dest.ToLower()].LastModifiedTime)
                                 {
                                     LogConsole.WriteLine("Rewriting: " + dest);
-                                    File.Delete(dest);
+                                    File.Copy(trk.LocalLocation, dest, true);
                                 }
-                            }
-
-                            if (File.Exists(dest))
-                            {
-                                LogConsole.WriteLine("Skipping: " + dest);
+                                else
+                                {
+                                    LogConsole.WriteLine("Skipping: " + dest);
+                                }
                             }
                             else
                             {
+                                namehits.Add(dest.ToLower(), new HitRecord { LastModifiedTime = entry.LastWriteTime });
                                 converted++;
                                 LogConsole.WriteLine("Copying: " + dest);
                                 File.Copy(trk.LocalLocation, dest);
                             }
+                            namehits[dest.ToLower()].Hit = true;
+
                         }
                     }
                 }
@@ -151,13 +166,13 @@ namespace CrossSyncMusic
             // TODO: Delete Missed Files To Keep Folder Clean
 
             foreach (string file in namehits.Keys.OrderBy(x => x))
-                if (!namehits[file])
+                if (!namehits[file].Hit)
                 {
                     LogConsole.WriteLine("Miss: " + file);
                     File.Delete(file);// (, Path.Combine(config.TrashTargetFolder, Path.GetFileName(file)));/ ;
                 }
 
-            LogConsole.WriteLine("Total Misses: " + (namehits.Where(kv => kv.Value == false).Count()).ToString());
+            LogConsole.WriteLine("Total Misses: " + (namehits.Where(kv => kv.Value.Hit == false).Count()).ToString());
 
             Extensions.CleanEmptyMusicFolders(targetdi);
     
