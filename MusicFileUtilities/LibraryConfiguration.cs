@@ -40,6 +40,10 @@ namespace MusicLibraryTools
         public string ReferenceConfig => root_.Element("ReferenceConfig").Value;
 
         public string [] this[string key] => root_.Elements(key).Select(e => e.Value).ToArray();
+
+        public int LengthLimit => int.Parse(root_.Element("LengthLimit").Value);
+
+        public int DiscNumLengthLimit => int.Parse(root_.Element("DiscNumLengthLimit").Value);
  
     }
 }

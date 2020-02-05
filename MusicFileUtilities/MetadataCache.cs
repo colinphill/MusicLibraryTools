@@ -119,10 +119,28 @@ namespace MusicFileUtilities
         }
 
         public bool Touched => _touched;
+
+        public string FormatPath(int length, int discnumlength)
+        {
+            string art = (string.IsNullOrWhiteSpace(AlbumArtist) ? Artist : AlbumArtist).LimitLength(length);
+            string alb = StrippedAlbum;
+            string ttl = Title.LimitLength(length);
+            var m = MetadataCache.DiscNumRegex.Match(Album);
+            alb = m.Success ? (m.Groups[1].Value.LimitLength(discnumlength) + " (Disc " + m.Groups[2].Value + ")") : alb.LimitLength(length);
+            art = art.FixPath();
+            alb = alb.FixPath();
+            ttl = ttl.FixPath();
+            string tgt = Path.Combine(art, alb, TrackNumber.ToString("D2") + " " + ttl);
+            return tgt;
+        }
+
     }
 
     public class MetadataCache
     {
+        public static readonly Regex DiscNumRegex = new Regex(@"(.+)[ \t]+\(Disc (.+)\)", RegexOptions.IgnoreCase);
+        public static readonly string[] ValidExtensions = { ".dsf", ".m4a", ".mp3", ".flac", ".ogg" };
+
         private Dictionary<string, MetadataCacheEntry> _filecache = new Dictionary<string, MetadataCacheEntry>();
         private Dictionary<string, List<string>> _albumcache = new Dictionary<string, List<string>>();
         private Dictionary<string, List<string>> _albumartistcache = new Dictionary<string, List<string>>();
@@ -282,7 +300,6 @@ namespace MusicFileUtilities
                 f.Value.Strip();
         }
 
-        private readonly string[] validexts_ = { ".dsf", ".m4a", ".mp3", ".flac", ".ogg" };
 
         public void BuildCache(string basepath, bool untouchall = true)
         {
@@ -292,7 +309,7 @@ namespace MusicFileUtilities
             LogConsole.WriteLine(LogVerbosity.Chatty, "Checking Directory - " + basepath);
 
             DirectoryInfo di = new DirectoryInfo(basepath);
-            var files = di.EnumerateFileSystemInfos("*.*", SearchOption.AllDirectories).Where(fsi => validexts_.Contains(Path.GetExtension(fsi.FullName).ToLower()) && ((fsi.Attributes & FileAttributes.Directory) == 0)).ToArray();
+            var files = di.EnumerateFileSystemInfos("*.*", SearchOption.AllDirectories).Where(fsi => ValidExtensions.Contains(Path.GetExtension(fsi.FullName).ToLower()) && ((fsi.Attributes & FileAttributes.Directory) == 0)).ToArray();
 
             /*string[] subdirs = Directory.GetDirectories(basepath);
             foreach (string subdir in subdirs)

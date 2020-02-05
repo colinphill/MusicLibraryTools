@@ -135,7 +135,8 @@ namespace CrossSyncPlaylists
                     Path.Combine(config.PlaylistTargetFolder, FixPath(pl.Title) + ".m3u");
 
                 MemoryStream ms = new MemoryStream();
-                StreamWriter m3uw = new StreamWriter(ms, Encoding.GetEncoding(28591));
+                //StreamWriter m3uw = new StreamWriter(ms, Encoding.GetEncoding(28591));
+                StreamWriter m3uw = new StreamWriter(ms, Encoding.UTF8);
                 //m3uw.NewLine = "\n";
 
                 if (File.Exists(plfilename))

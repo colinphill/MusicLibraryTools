@@ -86,6 +86,22 @@ namespace AnalyzeMetadata
                                 LogConsole.WriteLine("Hit," + dist1 + "," + dist2 + "," + possibilities[0].Item1 + "," + possibilities[0].Item2 + "," + possibilities[0].Item3);
                                 LogConsole.WriteLine("   ," + dist1 + "," + dist2 + "," + album.Item1 + "," + album.StrippedAlbum);
                             }
+                            else
+                            {
+                                // Pure Hit
+                                /*string parentdir = Path.GetDirectoryName(possibilities[0].Item3);
+                                string artdir = Path.GetFileName(parentdir);
+                                LogConsole.WriteLine("PureHit," + possibilities[0].Item3 + "," + artdir);
+                                string dest = Path.Combine(@"Z:\iTunes\FLAC2", artdir);
+                                Directory.CreateDirectory(dest);
+                                Directory.Move(possibilities[0].Item3, Path.Combine(dest, Path.GetFileName(possibilities[0].Item3)));
+                                if (Directory.GetFileSystemEntries(parentdir).Length == 0)
+                                {
+                                    Console.WriteLine("Delete:" + parentdir);
+                                    Directory.Delete(parentdir);
+                                }*/
+
+                            }
                         }
                         hit++;
                     }

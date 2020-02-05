@@ -9,6 +9,8 @@
  */
 
 using System;
+using System.IO;
+using System.Linq;
 using System.Collections.Generic;
 
 namespace MusicFileUtilities
@@ -197,4 +199,62 @@ namespace MusicFileUtilities
         }
 
     }
+
+    public static class Extensions
+    {
+        public static string LimitLength(this string val, int length)
+        {
+            int l = Math.Min(length, val.Length);
+            return val.Substring(0, l).Trim(" \t".ToCharArray());
+        }
+
+        public static string FixPath(this string item)
+        {
+            string fix = item;
+            foreach (char c in Path.GetInvalidFileNameChars())
+                fix = fix.Replace(c.ToString(), "_");
+            foreach (char c in Path.GetInvalidPathChars())
+                fix = fix.Replace(c.ToString(), "_");
+            fix = fix.Replace('$', 's');
+            fix = fix.Replace("\"", "");
+            fix = fix.Trim();
+            while (fix.EndsWith("."))
+                fix = fix.Remove(fix.Length - 1);
+            return fix;
+        }
+
+        public static bool CleanEmptyMusicFolders(DirectoryInfo di)
+        {
+            bool empty = true;
+            foreach (var subdi in di.GetDirectories())
+            {
+                if (!CleanEmptyMusicFolders(subdi))
+                    empty = false;
+            }
+
+            var files = di.GetFiles();
+            if (empty)
+            {
+                foreach (var file in files)
+                {
+                    if (MetadataCache.ValidExtensions.Contains(Path.GetExtension(file.Name).ToLower()))
+                        empty = false;
+                }
+                if (empty)
+                {
+                    foreach (var file in files)
+                        file.Delete();
+                }
+            }
+            if ((empty) && (di.GetFiles().Length == 0))
+            {
+                di.Delete();
+            }
+            else
+                empty = false;
+            return empty;
+        }
+
+    }
+
 }
