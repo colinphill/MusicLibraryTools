@@ -220,15 +220,17 @@ namespace MusicFileUtilities
             fix = fix.Trim();
             while (fix.EndsWith("."))
                 fix = fix.Remove(fix.Length - 1);
+            while (fix.StartsWith("."))
+                fix = fix.Remove(0, 1);
             return fix;
         }
 
-        public static bool CleanEmptyMusicFolders(DirectoryInfo di)
+        public static bool CleanEmptyMusicFolders(DirectoryInfo di, bool deletenonmusic = false)
         {
             bool empty = true;
             foreach (var subdi in di.GetDirectories())
             {
-                if (!CleanEmptyMusicFolders(subdi))
+                if (!CleanEmptyMusicFolders(subdi, deletenonmusic))
                     empty = false;
             }
 
@@ -239,10 +241,7 @@ namespace MusicFileUtilities
                 {
                     if (MetadataCache.ValidExtensions.Contains(Path.GetExtension(file.Name).ToLower()))
                         empty = false;
-                }
-                if (empty)
-                {
-                    foreach (var file in files)
+                    else if (deletenonmusic)
                         file.Delete();
                 }
             }
