@@ -95,8 +95,18 @@ namespace CrossSyncPlaylists
 
             var aapairs = cache.FileCache.Select(kv => (kv.Value.Artist, kv.Value.StrippedAlbum)).Concat(
                 cache.FileCache.Where(kv=>!string.IsNullOrWhiteSpace(kv.Value.AlbumArtist)).Select(kv => (kv.Value.AlbumArtist, kv.Value.StrippedAlbum))).Distinct();
-            var aadict = aapairs.ToDictionary(k => k, k => cache.FileCache.Where(kv => (kv.Value.StrippedAlbum == k.StrippedAlbum) && (
-                (kv.Value.Artist == k.Item1) || (kv.Value.AlbumArtist == k.Item1))).ToArray());
+            var aadict = aapairs.ToDictionary(k => k, k => new List<KeyValuePair<string, MetadataCacheEntry>>());
+
+            foreach (var kv in cache.FileCache)
+            {
+                if ((!string.IsNullOrWhiteSpace(kv.Value.AlbumArtist)) && (aadict.ContainsKey((kv.Value.AlbumArtist, kv.Value.StrippedAlbum))))
+                    aadict[(kv.Value.AlbumArtist, kv.Value.StrippedAlbum)].Add(kv);
+                else
+                    aadict[(kv.Value.Artist, kv.Value.StrippedAlbum)].Add(kv);
+            }
+
+            //var aadict = aapairs.ToDictionary(k => k, k => cache.FileCache.Where(kv => (kv.Value.StrippedAlbum == k.StrippedAlbum) && (
+            //    (kv.Value.Artist == k.Item1) || (kv.Value.AlbumArtist == k.Item1))).ToArray());
         
             int missing = 0;
             var missingfiles = new Dictionary<string, bool>();

@@ -310,7 +310,7 @@ namespace MusicFileUtilities
             LogConsole.WriteLine(LogVerbosity.Chatty, "Checking Directory - " + basepath);
 
             DirectoryInfo di = new DirectoryInfo(basepath);
-            var files = di.EnumerateFileSystemInfos("*.*", SearchOption.AllDirectories).Where(fsi => ValidExtensions.Contains(Path.GetExtension(fsi.FullName).ToLower()) && ((fsi.Attributes & FileAttributes.Directory) == 0)).ToArray();
+            var files = di.EnumerateFileSystemInfos("*", SearchOption.AllDirectories).Where(fsi => ValidExtensions.Contains(Path.GetExtension(fsi.FullName).ToLower()) && ((fsi.Attributes & FileAttributes.Directory) == 0)).ToArray();
 
             /*string[] subdirs = Directory.GetDirectories(basepath);
             foreach (string subdir in subdirs)
