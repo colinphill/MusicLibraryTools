@@ -342,7 +342,7 @@ namespace UpdateCarCard
                 return nodes;
             }
 
-            public void Rebalance(bool force = false)
+            public void Rebalance(bool force = false, bool ignorebreak = false)
             {
                 if (force || (nodes_.Count > REBALANCE_SIZE))
                 {
@@ -358,17 +358,26 @@ namespace UpdateCarCard
                     int divisor = sqrt > BALANCE_SIZE ? BALANCE_SIZE : sqrt;
                     int modulus = items_.Count % divisor;
                     int last = -1;
-                    for (int i = 1; i <= divisor; i++)
+                    int breakdelta = 0;
+                    for (int i = 1; (i <= divisor) && (last < (items_.Count-1)); i++)
                     {
                         int first = last + 1;
-                        last = first + items_.Count / divisor - 1;
+                        last = first - breakdelta + items_.Count / divisor - 1;
                         if (modulus > 0)
                         {
                             last++;
                             modulus--;
                         }
-                        while ((last < (items_.Count - 1)) && ((StartMatchLength(items_[last], items_[last + 1]) > BALANCE_BREAK) || (StartMatchLength(items_[first], items_[last]) > BALANCE_BREAK)))
-                            last++;
+                        int leftbreak = 0, rightbreak = 0;
+                        
+                        while ((!ignorebreak) && ((last + leftbreak) > first) && ((last + rightbreak) < (items_.Count - 1)) && ((StartMatchLength(items_[last + leftbreak], items_[last + leftbreak + 1]) > BALANCE_BREAK) || (StartMatchLength(items_[first], items_[last + leftbreak]) > BALANCE_BREAK)))
+                            leftbreak--;
+                        while ((!ignorebreak) && ((last + rightbreak) < (items_.Count - 1)) && ((StartMatchLength(items_[last + rightbreak], items_[last + rightbreak + 1]) > BALANCE_BREAK) || (StartMatchLength(items_[first], items_[last + rightbreak]) > BALANCE_BREAK)))
+                            rightbreak++;
+
+                        breakdelta = ((-leftbreak) < rightbreak) ? leftbreak : rightbreak;
+                        last += breakdelta;
+
                         nodes_.Add(new BalancedPathNode(this, items_.GetRange(first, last - first + 1)));
                     }
                     items_.Clear();
@@ -378,7 +387,15 @@ namespace UpdateCarCard
                     node.Rebalance();
 
                 if ((MaxDepth - MinDepth) > MAX_DEPTH_DISPARITY)
-                    Rebalance(true);
+                {
+                    if (force)
+                    {
+                        // Rebalance Problem
+                        Rebalance(true, true);
+                    }
+                    else
+                        Rebalance(true);
+                }
             }
 
             public class BalancedPathDelta

@@ -126,7 +126,7 @@ namespace MusicFileUtilities
             string art = (string.IsNullOrWhiteSpace(AlbumArtist) ? Artist : AlbumArtist).LimitLength(length);
             string alb = StrippedAlbum;
             string ttl = Title.LimitLength(length);
-            var m = MetadataCache.DiscNumRegex.Match(Album);
+            var m = MetadataCache.DiscNumRegex.Match(alb);
             alb = m.Success ? (m.Groups[1].Value.LimitLength(discnumlength) + " (Disc " + m.Groups[2].Value + ")") : alb.LimitLength(length);
             art = art.FixPath();
             alb = alb.FixPath();
