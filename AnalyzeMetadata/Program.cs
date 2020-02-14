@@ -217,6 +217,20 @@ namespace AnalyzeMetadata
             Console.WriteLine(count + " " + hit + " " + miss + " " + multiple);
             Console.WriteLine();
 #endif
+            if (args.Skip(1).Any(s => s.ToLower() == "checkcompilations"))
+            {
+                var compilations = cache.FileCache.Where(kv => kv.Value.Compilation).OrderBy(kv => kv.Key).ToArray();
+                var files = cache.FileCache.Where(kv => !string.IsNullOrWhiteSpace(kv.Value.AlbumArtist) && (kv.Value.AlbumArtist != kv.Value.Artist) && !kv.Value.Compilation).OrderBy(kv => kv.Key).ToArray();
+                Console.WriteLine();
+                
+            }
+
+            if (args.Skip(1).Any(s => s.ToLower() == "checksr"))
+            {
+                var files = cache.FileCache.Where(kv => (kv.Value.SampleRate > 44100)||(kv.Value.BitsPerSample > 16)).OrderBy(kv => kv.Key).ToArray();
+                Console.WriteLine();
+
+            }
 
             if (args.Skip(1).Any(s => s.ToLower() == "checkartists"))
             {
