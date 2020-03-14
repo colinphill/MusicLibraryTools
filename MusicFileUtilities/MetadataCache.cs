@@ -32,6 +32,7 @@ namespace MusicFileUtilities
         private uint _bitspersample = 0;
         private uint _averagebitrate = 0;
         private uint _maxbitrate = 0;
+        private bool _compilation = false;
         [NonSerialized]
         private string _strippedalbum = "";
 
@@ -74,6 +75,13 @@ namespace MusicFileUtilities
             catch
             {
             }
+            try
+            {
+                _compilation = mp.Compilation;
+            }
+            catch
+            {
+            }
             ICodecProvider codec = mp as ICodecProvider;
             if (codec != null)
             {
@@ -102,6 +110,7 @@ namespace MusicFileUtilities
         public string AlbumArtist => _albumartist;
         public int TrackNumber => _tracknumber;
         public DateTime LastWriteTime => _lastwritetime;
+        public bool Compilation => _compilation;
 
 
         public void Touch()

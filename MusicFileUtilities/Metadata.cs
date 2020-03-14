@@ -71,6 +71,10 @@ namespace MusicFileUtilities
         {
             get;
         }
+        bool Compilation
+        {
+            get;
+        }
     }
 
     public interface IMetadataAlterer

@@ -178,6 +178,21 @@ namespace MusicFileUtilities
             }
         }
 
+        public bool Compilation
+        {
+            get
+            {
+                try
+                {
+                    return int.Parse(TextFields.First(kv => kv.Key == "Compilation").Value) != 0;
+                }
+                catch
+                {
+                    throw new NoMetadataException("TrackNumber");
+                }
+            }
+        }
+
 
         #endregion
 

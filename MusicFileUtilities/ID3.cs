@@ -593,11 +593,26 @@ namespace MusicFileUtilities
             {
                 try
                 {
-                return int.Parse((FindFrame("TRCK") as TextFrame).Text.Split("/".ToCharArray())[0]);
+                    return int.Parse((FindFrame("TRCK") as TextFrame).Text.Split("/".ToCharArray())[0]);
                 }
                 catch
                 {
                     throw new NoMetadataException("TrackNumber");
+                }
+            }
+        }
+
+        public bool Compilation
+        {
+            get
+            {
+                try
+                {
+                    return int.Parse((FindFrame("TCMP") as TextFrame).Text) != 0;
+                }
+                catch
+                {
+                    throw new NoMetadataException("Compilation");
                 }
             }
         }

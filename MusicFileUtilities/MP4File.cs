@@ -1402,6 +1402,22 @@ namespace MusicFileUtilities
             }
         }
 
+        public bool Compilation
+        {
+            get
+            {
+                try
+                {
+                    Atom_ilst atom = FindPath("moov.udta.meta.ilst") as Atom_ilst;
+                    return (atom.FindPath("cpil.data") as Atom_data).BoolValue;
+                }
+                catch
+                {
+                    throw new NoMetadataException("Compilation");
+                }
+            }
+        }
+
 
         #endregion
 

@@ -188,6 +188,21 @@ namespace MusicFileUtilities
             }
         }
 
+        public bool Compilation
+        {
+            get
+            {
+                try
+                {
+                    return int.Parse(this["COMPILATION"]) != 0;
+                }
+                catch
+                {
+                    throw new NoMetadataException("Compilation");
+                }
+            }
+        }
+
 
         #endregion
 
