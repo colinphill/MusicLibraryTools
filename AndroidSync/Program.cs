@@ -171,8 +171,8 @@ namespace AndroidSync
 
             var receiver = new OutputReceiver();
             await AdbClient.Instance.ExecuteRemoteCommandAsync("TZ=UTC ls -l -A -R " + path, device, receiver, System.Threading.CancellationToken.None, int.MaxValue, Encoding.UTF8); // -R
-            var res = receiver.Lines.ToArray();
-            File.WriteAllLines(@"c:\adb-sync\alllines.txt", res);
+            var res = receiver.Lines;
+
             Stack<FSDirectory> dstack = new Stack<FSDirectory>();
             dstack.Push(root);
             FSDirectory top = root;
