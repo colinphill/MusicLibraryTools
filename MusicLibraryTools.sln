@@ -37,6 +37,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AnalyzeMetadata", "AnalyzeM
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OrganizeFiles", "OrganizeFiles\OrganizeFiles.csproj", "{C2817923-B945-417E-9BA3-2A8B9266C6C6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AndroidSync", "AndroidSync\AndroidSync.csproj", "{48BD553E-6D98-4BA7-A948-6AB404A6A3EC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -225,6 +227,18 @@ Global
 		{C2817923-B945-417E-9BA3-2A8B9266C6C6}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{C2817923-B945-417E-9BA3-2A8B9266C6C6}.Release|x86.ActiveCfg = Release|Any CPU
 		{C2817923-B945-417E-9BA3-2A8B9266C6C6}.Release|x86.Build.0 = Release|Any CPU
+		{48BD553E-6D98-4BA7-A948-6AB404A6A3EC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{48BD553E-6D98-4BA7-A948-6AB404A6A3EC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{48BD553E-6D98-4BA7-A948-6AB404A6A3EC}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{48BD553E-6D98-4BA7-A948-6AB404A6A3EC}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{48BD553E-6D98-4BA7-A948-6AB404A6A3EC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{48BD553E-6D98-4BA7-A948-6AB404A6A3EC}.Debug|x86.Build.0 = Debug|Any CPU
+		{48BD553E-6D98-4BA7-A948-6AB404A6A3EC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{48BD553E-6D98-4BA7-A948-6AB404A6A3EC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{48BD553E-6D98-4BA7-A948-6AB404A6A3EC}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{48BD553E-6D98-4BA7-A948-6AB404A6A3EC}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{48BD553E-6D98-4BA7-A948-6AB404A6A3EC}.Release|x86.ActiveCfg = Release|Any CPU
+		{48BD553E-6D98-4BA7-A948-6AB404A6A3EC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
