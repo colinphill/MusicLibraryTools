@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Globalization;
-using SharpAdbClient;
+using System.Net;
+//using SharpAdbClient;
 
 namespace AndroidSync
 {
@@ -147,7 +148,7 @@ namespace AndroidSync
             return root;
         }
 
-        class OutputReceiver : IShellOutputReceiver
+        class OutputReceiver //: IShellOutputReceiver
         {
             private List<string> lines_ = new List<string>();
             public IEnumerable<string> Lines => lines_;
@@ -163,15 +164,15 @@ namespace AndroidSync
             }
         }
 
-        static async Task<FSDirectory> BuildRemoteStructure(DeviceData device, string path)
+        static async Task<FSDirectory> BuildRemoteStructure(AdbClient client, string device, string path)
         {
             FSDirectory root = new FSDirectory(path, null);
             var dhash = new Dictionary<string, FSDirectory>();
             dhash.Add(path, root);
 
-            var receiver = new OutputReceiver();
-            await AdbClient.Instance.ExecuteRemoteCommandAsync("TZ=UTC ls -l -A -R " + path, device, receiver, System.Threading.CancellationToken.None, int.MaxValue, Encoding.UTF8); // -R
-            var res = receiver.Lines;
+            var receiver = new ShellReceiver();
+            int exitcode = await client.ShellExecuteAsync("TZ=UTC ls -l -A -R " + path, device, receiver);
+            var res = receiver.StdoutLines;
 
             Stack<FSDirectory> dstack = new Stack<FSDirectory>();
             dstack.Push(root);
@@ -208,14 +209,18 @@ namespace AndroidSync
             return root;
         }
 
-        class CopyProgress : IProgress<int>
+        class SyncProgress : ISyncProgress
         {
-            public CopyProgress(FSFile f)
-            {
+            private FSFile file_;
 
-            }
-            public void Report(int value)
+            public SyncProgress(FSFile f)
             {
+                file_ = f;
+            }
+
+            public void SetProgress(long transferred)
+            {
+                int value = (int)(100L * transferred / file_.Size);
                 Console.Write("[");
                 for (int i = 1; i <= value / 2; i++)
                     Console.Write("*");
@@ -258,14 +263,13 @@ namespace AndroidSync
             if (touch)
                 Console.WriteLine("Attempting Timestamp Updates");
                 
-            AdbServer server = new AdbServer();
-            var result = server.StartServer(FindExePath("adb.exe"), restartServerIfNewer: false);
-            var device = AdbClient.Instance.GetDevices().First();
-
             Console.WriteLine("Enumerating Local And Remote Paths");
 
+            AdbClient client = new AdbClient();
+            string device = null;
+
             var ltask = BuildLocalStructure(lpath);
-            FSDirectory remote = await BuildRemoteStructure(device, rpath);
+            FSDirectory remote = await BuildRemoteStructure(client, device, rpath);
             FSDirectory local = await ltask;
 
             Console.WriteLine("Computing Differences");
@@ -274,7 +278,7 @@ namespace AndroidSync
 
             foreach (var diff in diffs)
             {
-                var r = new OutputReceiver();
+                var r = new ShellReceiver();
                 var dest = diff.Dest;
                 if (dest is FSDirectory)
                 {
@@ -282,13 +286,13 @@ namespace AndroidSync
                     {
                         Console.WriteLine("Create Directory: " + diff.Dest.GetFullPath('/'));
                         if (!dry)
-                            AdbClient.Instance.ExecuteRemoteCommand("mkdir " + EscapeArgument(diff.Dest.GetFullPath('/')), device, r);
+                            await client.ShellExecuteAsync("mkdir " + EscapeArgument(diff.Dest.GetFullPath('/')), null, r);
                     }
                     else if (diff.DiffType == FSDiffType.Removal)
                     {
                         Console.WriteLine("Remove Directory: " + diff.Dest.GetFullPath('/'));
                         if (!dry)
-                            AdbClient.Instance.ExecuteRemoteCommand("rmdir " + EscapeArgument(diff.Dest.GetFullPath('/')), device, r);
+                            await client.ShellExecuteAsync("rmdir " + EscapeArgument(diff.Dest.GetFullPath('/')), null, r);
                     }
                     else
                         throw new Exception();
@@ -300,14 +304,11 @@ namespace AndroidSync
                         Console.WriteLine("New File: " + diff.Dest.GetFullPath('/'));
                         if (!dry)
                         {
-                            using (SyncService service = new SyncService(device))
-                            {
-                                using (Stream s = File.OpenRead(diff.Source.GetFullPath('\\')))
-                                    service.Push(s, diff.Dest.GetFullPath('/'), 505, diff.Source.Modified, new CopyProgress(dest), System.Threading.CancellationToken.None);
-                            }
+                            using (Stream s = File.OpenRead(diff.Source.GetFullPath('\\')))
+                                await client.PushAsync(s, device, diff.Dest.GetFullPath('/'), 505, diff.Source.Modified, new SyncProgress(dest));
                             Console.WriteLine();
                             if (touch)
-                                AdbClient.Instance.ExecuteRemoteCommand("touch -m -d" + diff.Source.Modified.ToString(" yyyyMMddHHmmZ ") + EscapeArgument(diff.Dest.GetFullPath('/')), device, r);
+                                await client.ShellExecuteAsync("touch -m -d" + diff.Source.Modified.ToString(" yyyyMMddHHmmZ ") + EscapeArgument(diff.Dest.GetFullPath('/')), device, r);
                         }
                     }
                     else if (diff.DiffType == FSDiffType.Change)
@@ -315,22 +316,19 @@ namespace AndroidSync
                         Console.WriteLine("Modify File: " + diff.Dest.GetFullPath('/'));
                         if (!dry)
                         {
-                            AdbClient.Instance.ExecuteRemoteCommand("rm " + EscapeArgument(diff.Dest.GetFullPath('/')), device, r);
-                            using (SyncService service = new SyncService(device))
-                            {
-                                using (Stream s = File.OpenRead(diff.Source.GetFullPath('\\')))
-                                    service.Push(s, diff.Dest.GetFullPath('/'), 505, diff.Source.Modified, new CopyProgress(dest), System.Threading.CancellationToken.None);
-                            }
+                            await client.ShellExecuteAsync("rm " + EscapeArgument(diff.Dest.GetFullPath('/')), device, r);
+                            using (Stream s = File.OpenRead(diff.Source.GetFullPath('\\')))
+                                await client.PushAsync(s, device, diff.Dest.GetFullPath('/'), 505, diff.Source.Modified, new SyncProgress(dest));
                             Console.WriteLine();
                             if (touch)
-                                AdbClient.Instance.ExecuteRemoteCommand("touch -m -d" + diff.Source.Modified.ToString(" yyyy-MM-ddTHH:mm:00Z ") + EscapeArgument(diff.Dest.GetFullPath('/')), device, r);
+                                await client.ShellExecuteAsync("touch -m -d" + diff.Source.Modified.ToString(" yyyy-MM-ddTHH:mm:00Z ") + EscapeArgument(diff.Dest.GetFullPath('/')), device, r);
                         }
                     }
                     else if (diff.DiffType == FSDiffType.Removal)
                     {
                         Console.WriteLine("Remove File: " + diff.Dest.GetFullPath('/'));
                         if (!dry)
-                            AdbClient.Instance.ExecuteRemoteCommand("rm " + EscapeArgument(diff.Dest.GetFullPath('/')), device, r);
+                            await client.ShellExecuteAsync("rm " + EscapeArgument(diff.Dest.GetFullPath('/')), device, r);
                     }
                     else
                         throw new Exception();
