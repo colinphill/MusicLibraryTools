@@ -88,11 +88,12 @@ namespace AndroidSync
                 mydirs = entries_.Select(e => e as FSDirectory).Where(e => e != null).ToArray();
                 foreach (var e in mydirs)
                 {
-                    var td = theirdirs.Single(d => d.Name == e.Name);
-                    diffs.AddRange(e.Diff(td));
+                    var td = theirdirs.SingleOrDefault(d => d.Name == e.Name);
+                    if (td == null)
+                        diffs.Add(new FSDiff(FSDiffType.Removal, null, e));
+                    else
+                        diffs.AddRange(e.Diff(td));
                 }
-                foreach (var e in mydirs.Where(f => theirdirs.Count(tf => tf.Name == f.Name) == 0))
-                    diffs.Add(new FSDiff(FSDiffType.Removal, null, e));
                 foreach (var e in theirfiles)
                 {
                     var f = myfiles.SingleOrDefault(tf => tf.Name == e.Name);
@@ -110,7 +111,7 @@ namespace AndroidSync
             }
         }
 
-        private static readonly string escchars_ = "`~!#$&*()\t{[|\\;'\"<>? ";
+        private static readonly string escchars_ = "\\`~!#$&*()\t{[|;'\"<>? ";
 
         static string EscapeArgument(string arg)
         {
@@ -119,6 +120,18 @@ namespace AndroidSync
                 res = res.Replace(e.ToString(), "\\" + e);
             return res;
         }
+
+        /*static string UnescapeArgument(string arg)
+        {
+            StringBuilder res = new StringBuilder();
+            for(int i=0;i<arg.Length;i++)
+            {
+                if (arg[i] == '\\')
+                    i++;
+                res.Append(arg[i]);
+            }
+            return res.ToString();
+        }*/
                      
         static async Task<FSDirectory> BuildLocalStructure(string path)
         {
@@ -164,6 +177,12 @@ namespace AndroidSync
             }
         }
 
+        static (string Dir, string File) SplitPath(string path, char separator)
+        {
+            var paths = path.Split(new char[] { separator });
+            return (string.Join(separator.ToString(), paths.Take(paths.Length - 1)), paths.Last());
+        }
+
         static async Task<FSDirectory> BuildRemoteStructure(AdbClient client, string device, string path)
         {
             FSDirectory root = new FSDirectory(path, null);
@@ -186,12 +205,13 @@ namespace AndroidSync
                     string dir = line.Substring(0, line.Length - 1);
                     if (dir == root.Name)
                         continue;
-                    while (top.GetFullPath('/') != Path.GetDirectoryName(dir).Replace('\\', '/'))
+                    var split = SplitPath(dir, '/');
+                    while (top.GetFullPath('/') != split.Dir)
                     {
                         dstack.Pop();
                         top = dstack.Peek();
                     }
-                    FSDirectory fdir = new FSDirectory(Path.GetFileName(dir), top);
+                    FSDirectory fdir = new FSDirectory(split.File, top);
                     top.Entries.Add(fdir);
                     dstack.Push(top = fdir);
                 }
@@ -292,7 +312,7 @@ namespace AndroidSync
                     {
                         Console.WriteLine("Remove Directory: " + diff.Dest.GetFullPath('/'));
                         if (!dry)
-                            await client.ShellExecuteAsync("rmdir " + EscapeArgument(diff.Dest.GetFullPath('/')), null, r);
+                            await client.ShellExecuteAsync("rm -rf " + EscapeArgument(diff.Dest.GetFullPath('/')), null, r);
                     }
                     else
                         throw new Exception();
