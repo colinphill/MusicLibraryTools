@@ -21,6 +21,8 @@ namespace AndroidSync
 
     interface ISyncProgress
     {
+        void Start();
+        void End();
         void SetProgress(long transferred);
     }
 
@@ -166,7 +168,7 @@ namespace AndroidSync
         public static readonly Encoding Encoding = Encoding.UTF8;
         private readonly int MaxBufferSize = 64 * 1024;
         private IPEndPoint endpoint_ = new IPEndPoint(IPAddress.Loopback, 5037);
-
+        
         public AdbClient()
         {
 
@@ -192,6 +194,8 @@ namespace AndroidSync
 
         public async Task PushAsync(Stream source, string device, string dest, int permissions, DateTime stamp, ISyncProgress progress = null)
         {
+            if (progress != null)
+                progress.Start();
             using (var conn = new AdbConnection(Encoding))
             {
                 await conn.ConnectAsync(IPAddress.Loopback, 5037);
@@ -205,12 +209,13 @@ namespace AndroidSync
                 for(; ;)
                 {
                     int read = await source.ReadAsync(buffer, 0, MaxBufferSize - 64);
-                    done += read;
-                    if (progress != null)
-                        progress.SetProgress(done);
 
                     if (read > 0)
                         await conn.SendSyncRequestAsync("DATA", buffer, 0, read);
+
+                    done += read;
+                    if (progress != null)
+                        progress.SetProgress(done);
 
                     if (read < (MaxBufferSize - 64))
                         break;
@@ -218,6 +223,8 @@ namespace AndroidSync
                 await conn.SendSyncRequestAsync("DONE", null, 0, (int)((stamp - epoch_).TotalSeconds));
                 await conn.ReceiveResponseAsync();
             }
+            if (progress != null)
+                progress.End();
         }
 
         public async Task<int> ShellExecuteAsync(string command, string device = null, IShellReceiver receiver = null)

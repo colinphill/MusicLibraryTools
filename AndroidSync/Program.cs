@@ -7,7 +7,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Globalization;
 using System.Net;
-//using SharpAdbClient;
+using System.Diagnostics;
 
 namespace AndroidSync
 {
@@ -231,23 +231,65 @@ namespace AndroidSync
 
         class SyncProgress : ISyncProgress
         {
-            private FSFile file_;
+            private StringBuilder builder_ = new StringBuilder();
+            private Stopwatch watch_ = new Stopwatch();
+            private string lastprogress_ = string.Empty;
+            private readonly string[] suffixes_ = { string.Empty, "k", "M", "G", "T", "P", "E" };
 
-            public SyncProgress(FSFile f)
+            public long Size
             {
-                file_ = f;
+                get;
+                set;
+            }
+
+            public SyncProgress()
+            {
+            }
+
+            public void Start()
+            {
+                watch_.Start();
+
+            }
+
+            public void End()
+            {
+                watch_.Stop();
+                SetProgress(Size);
+                watch_.Reset();
+                Console.WriteLine();
             }
 
             public void SetProgress(long transferred)
             {
-                int value = (int)(100L * transferred / file_.Size);
-                Console.Write("[");
+                builder_.Clear();
+                int value = (int)(100L * transferred / Size);
+                builder_.Append("\r[");
                 for (int i = 1; i <= value / 2; i++)
-                    Console.Write("*");
+                    builder_.Append("*");
                 for (int i = value / 2 + 1; i <= 50; i++)
-                    Console.Write(" ");
-                Console.Write("]\r");
-                Console.Out.Flush();
+                    builder_.Append(" ");
+                builder_.Append("] ");
+                long ems = watch_.ElapsedMilliseconds;
+                if (ems != 0)
+                {
+                    double rate = transferred * 1000 / ems;
+                    string suffix = string.Empty;
+                    foreach (string sfx in suffixes_)
+                    {
+                        suffix = sfx;
+                        if (rate < 900.0)
+                            break;
+                        rate /= 1000.0;
+                    }
+                    builder_.Append("" + rate.ToString("0.00") + " " + suffix + "B/s        ");
+                }
+                string val = builder_.ToString();
+                if (val != lastprogress_)
+                {
+                    Console.Write(lastprogress_ = val);
+                    Console.Out.Flush();
+                }
             }
         }
 
@@ -295,6 +337,7 @@ namespace AndroidSync
             Console.WriteLine("Computing Differences");
 
             var diffs = remote.Diff(local);
+            SyncProgress progress = new SyncProgress();
 
             foreach (var diff in diffs)
             {
@@ -324,9 +367,9 @@ namespace AndroidSync
                         Console.WriteLine("New File: " + diff.Dest.GetFullPath('/'));
                         if (!dry)
                         {
+                            progress.Size = dest.Size;
                             using (Stream s = File.OpenRead(diff.Source.GetFullPath('\\')))
-                                await client.PushAsync(s, device, diff.Dest.GetFullPath('/'), 505, diff.Source.Modified, new SyncProgress(dest));
-                            Console.WriteLine();
+                                await client.PushAsync(s, device, diff.Dest.GetFullPath('/'), 505, diff.Source.Modified, progress);
                             if (touch)
                                 await client.ShellExecuteAsync("touch -m -d" + diff.Source.Modified.ToString(" yyyyMMddHHmmZ ") + EscapeArgument(diff.Dest.GetFullPath('/')), device, r);
                         }
@@ -336,10 +379,10 @@ namespace AndroidSync
                         Console.WriteLine("Modify File: " + diff.Dest.GetFullPath('/'));
                         if (!dry)
                         {
+                            progress.Size = dest.Size;
                             await client.ShellExecuteAsync("rm " + EscapeArgument(diff.Dest.GetFullPath('/')), device, r);
                             using (Stream s = File.OpenRead(diff.Source.GetFullPath('\\')))
-                                await client.PushAsync(s, device, diff.Dest.GetFullPath('/'), 505, diff.Source.Modified, new SyncProgress(dest));
-                            Console.WriteLine();
+                                await client.PushAsync(s, device, diff.Dest.GetFullPath('/'), 505, diff.Source.Modified, progress);
                             if (touch)
                                 await client.ShellExecuteAsync("touch -m -d" + diff.Source.Modified.ToString(" yyyy-MM-ddTHH:mm:00Z ") + EscapeArgument(diff.Dest.GetFullPath('/')), device, r);
                         }
