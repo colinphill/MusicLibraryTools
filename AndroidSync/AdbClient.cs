@@ -74,11 +74,11 @@ namespace AndroidSync
         }
     }
 
-    class AdbConnection : TcpClient
+    class AdbConnection : Socket
     {
         private Encoding Encoding;
 
-        public AdbConnection(Encoding encoding)
+        public AdbConnection(Encoding encoding) : base(SocketType.Stream, ProtocolType.Tcp)
         {
             Encoding = encoding;
         }
@@ -93,7 +93,7 @@ namespace AndroidSync
                 int tbd = count;
                 while (tbd > 0)
                 {
-                    int done = Client.Receive(buffer, offset, tbd, SocketFlags.None);
+                    int done = Receive(buffer, offset, tbd, SocketFlags.None);
                     if (done < 0)
                         throw new Exception("Socket Error");
                     tbd -= done;
@@ -110,7 +110,10 @@ namespace AndroidSync
         {
             if (count == -1)
                 count = buffer.Length - offset;
-            return Client.SendAsync(new ArraySegment<byte>(buffer, offset, count), SocketFlags.None);
+            return Task.Run(() =>
+            {
+                return Send(buffer, offset, count, SocketFlags.None);
+            });
         }
 
         public async Task SendRequestAsync(string req)
