@@ -31,17 +31,8 @@ namespace AnalyzeMetadata
             MetadataCache cache = new MetadataCache();
             if (File.Exists(args[0] + ".cache"))
                 cache.Load(args[0] + ".cache");
-            else
-            {
-                try
-                {
-                    cache.Load(config.ReferenceConfig + ".cache");
-                }
-                catch
-                {
-
-                }
-            }
+            else if (File.Exists(config.ReferenceConfig + ".cache"))
+                cache.Load(config.ReferenceConfig + ".cache");
 #if true
             cache.BeginBuildCache();
             foreach (var iloc in config.IndexLocations)

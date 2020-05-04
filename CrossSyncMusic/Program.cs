@@ -55,9 +55,9 @@ namespace CrossSyncMusic
 
             string[] audioextensions = new string[] { ".m4a", ".mp3" }; //, ".flac", ".ogg" };
 
-            if (args.Length < 2)
+            if (args.Length != 1)
             {
-                LogConsole.WriteLine("Usage: CrossSyncMusic <libraryconfiguration.xml> <playlistname> [playlistname] [playlistname] ...");
+                LogConsole.WriteLine("Usage: CrossSyncMusic <libraryconfiguration.xml>");
                 return;
             }
 
@@ -79,21 +79,26 @@ namespace CrossSyncMusic
             MetadataCache cache = new MetadataCache();
             if (File.Exists(args[0] + ".cache"))
                 cache.Load(args[0] + ".cache");
+            else if (File.Exists(config.ReferenceConfig + ".cache"))
+                cache.Load(config.ReferenceConfig + ".cache");
+#if true
             cache.BeginBuildCache();
-            cache.BuildCache(config.CrossSyncSourceLibraryPath);
+            foreach (var iloc in config.IndexLocations)
+                cache.BuildCache(iloc.Target, false);
             cache.EndBuildCache();
             cache.Save(args[0] + ".cache");
+#endif
 
             int tracks = 0;
             int converted = 0;
 
-            for (int i = 1; i < args.Length; i++)
+            foreach (string playlist in config["SyncPlaylist"])
             {
 
-                iTunesPlaylist pl = lib.FindPlaylist(args[i]);
+                iTunesPlaylist pl = lib.FindPlaylist(playlist);
                 if (pl == null)
                 {
-                    LogConsole.WriteLine("Error: Can't Find Playlist: " + args[i]);
+                    LogConsole.WriteLine("Error: Can't Find Playlist: " + playlist);
                     continue;
                 }
 

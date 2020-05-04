@@ -21,7 +21,7 @@ namespace OrganizeFiles
             bool deletenonmusic = config["DeleteNonMusic"].Count() != 0;
             int LENGTH_LIMIT = config.LengthLimit;
             int DISC_NUM_LENGTH_LIMIT = config.DiscNumLengthLimit;
-            foreach (string basedir in config["BaseDir"])
+            foreach (string basedir in config.IndexLocations.Select(il => il.Target))
             {
                 LogConsole.WriteLine("Indexing: " + basedir);
                 MetadataCache cache = new MetadataCache();

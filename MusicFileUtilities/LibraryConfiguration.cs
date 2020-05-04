@@ -27,15 +27,11 @@ namespace MusicLibraryTools
         
         public string CrossSyncTargetLibraryPath => root_.Element("SyncTarget").Value;
 
-        public string CrossSyncSourceLibraryPath => root_.Element("SyncSource").Value;
-
-        public IEnumerable<(string Target, string Offset)> IndexLocations => root_.Elements("IndexTarget").Select(e => (e.Element("Target").Value, e.Element("Offset").Value));
+        public IEnumerable<(string Target, string Offset)> IndexLocations => root_.Elements("IndexTarget").Select(e => (e.Value, e.Attributes("Offset").FirstOrDefault()?.Value));
 
         public string PlaylistTargetFolder => root_.Element("PlaylistTarget").Value;
 
         public string PlaylistType => root_.Element("PlaylistType").Value;
-
-        public string TrashTargetFolder => root_.Element("TrashTarget").Value;
 
         public string ReferenceConfig => root_.Element("ReferenceConfig").Value;
 
