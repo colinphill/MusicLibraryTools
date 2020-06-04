@@ -160,23 +160,7 @@ namespace AndroidSync
             });
             return root;
         }
-
-        class OutputReceiver //: IShellOutputReceiver
-        {
-            private List<string> lines_ = new List<string>();
-            public IEnumerable<string> Lines => lines_;
-            public bool ParsesErrors => false;
-
-            public void AddOutput(string line)
-            {
-                lines_.Add(line);
-            }
-
-            public void Flush()
-            {
-            }
-        }
-
+           
         static (string Dir, string File) SplitPath(string path, char separator)
         {
             var paths = path.Split(new char[] { separator });
@@ -314,6 +298,8 @@ namespace AndroidSync
 
         static async Task Main(string[] args)
         {
+            Console.OutputEncoding = Encoding.UTF8;
+
             string lpath = args[0];
             string rpath = args[1];
 

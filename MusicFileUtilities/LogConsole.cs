@@ -10,6 +10,7 @@
 
 using System;
 using System.IO;
+using System.Text;
 
 namespace ConsoleTools
 {
@@ -20,6 +21,7 @@ namespace ConsoleTools
     {
         private static StreamWriter _w = null;
         private static string _filename = "Console.log";
+        private static bool encoded_ = false;
 
         public static LogVerbosity ConsoleVerbosity
         {
@@ -41,7 +43,7 @@ namespace ConsoleTools
         private static void CheckOpen()
         {
             if (_w == null)
-                _w = new StreamWriter(_filename);
+                _w = new StreamWriter(_filename, false, Encoding.UTF8);
         }
 
         public static void Write(string s)
@@ -54,8 +56,18 @@ namespace ConsoleTools
             WriteLine(LogVerbosity.Any, s);
         }
 
+        private static void CheckEncoded()
+        {
+            if (!encoded_)
+            {
+                Console.OutputEncoding = Encoding.UTF8;
+                encoded_ = true;
+            }
+        }
+
         public static void Write(LogVerbosity level, string s)
         {
+            CheckEncoded();
             if (FileVerbosity >= level)
             {
                 CheckOpen();
@@ -67,6 +79,7 @@ namespace ConsoleTools
 
         public static void WriteLine(LogVerbosity level, string s)
         {
+            CheckEncoded();
             if (FileVerbosity >= level)
             {
                 CheckOpen();
@@ -78,6 +91,7 @@ namespace ConsoleTools
 
         public static void WriteLine()
         {
+            CheckEncoded();
             CheckOpen();
             _w.WriteLine();
             Console.WriteLine();
@@ -87,7 +101,7 @@ namespace ConsoleTools
         {
             if (_w != null)
                 _w.Close();
-            _w = new StreamWriter(_filename = newfile);
+            _w = new StreamWriter(_filename = newfile, false, Encoding.UTF8);
         }
 
         public static void Close()
