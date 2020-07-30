@@ -39,6 +39,7 @@ namespace MusicFileUtilities
         {
             AtomTypes.Add("ftyp", typeof(Atom_ftyp));
             AtomTypes.Add("moov", typeof(ContainerAtom));
+            AtomTypes.Add("mvhd", typeof(Atom_mvhd));
             AtomTypes.Add("trak", typeof(ContainerAtom));
 
             AtomTypes.Add("edts", typeof(ContainerAtom));
@@ -446,6 +447,39 @@ namespace MusicFileUtilities
                 Array.Clear(_data, 0, newsize);
             Touch(delta);
         }
+    }
+
+    public class Atom_mvhd : DataAtom
+    {
+        public Atom_mvhd(ContainerAtom ca)
+            : base(ca)
+        {
+        }
+
+        public Atom_mvhd(Atom a, Stream s)
+            : base(a, s)
+        {
+        }
+
+        public uint Duration
+        {
+            get
+            {
+                if (_data[0] == 1)
+                {
+                    ulong scale = Uint64At(20);
+                    ulong duration = Uint64At(28);
+                    return (uint)(duration / scale);
+                }
+                else
+                {
+                    uint scale = Uint32At(12);
+                    uint duration = Uint32At(16);
+                    return duration / scale;
+                }
+            }
+        }
+
     }
 
     public class StringAtom : DataAtom
@@ -1473,6 +1507,12 @@ namespace MusicFileUtilities
             protected set;
         }
 
+        public uint Duration
+        {
+            get;
+            protected set;
+        }
+
         public RootAtom()
         {
         }
@@ -1543,6 +1583,9 @@ namespace MusicFileUtilities
             s.Close();
             _associatedpath = path;
             ParseCodecInfo();
+
+            Atom_mvhd mvhd = FindPath("moov.mvhd") as Atom_mvhd;
+            Duration = mvhd.Duration;
         }
 
         public void WriteFile(string path)

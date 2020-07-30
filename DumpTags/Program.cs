@@ -36,7 +36,7 @@ namespace DumpTags
             LogConsole.Write("SoundCheck Gain: " + Math.Round((lgain + rgain) / 2.0, 1).ToString() + " dB");
         }
 
-        static void DumpMP3Tags(string filename)
+        static void DumpID3Tags(string filename)
         {
             ID3v2Tag tag = filename.ToLower().EndsWith(".mp3") ? (ID3v2Tag)new MP3File(filename) : (ID3v2Tag)new DSFFile(filename);
             foreach (ID3v2Frame frame in tag.Frames)
@@ -98,9 +98,11 @@ namespace DumpTags
                             LogConsole.Write("Text: " + da.Text);
                             if ((a.Type == "----"))
                             {
-                                LogConsole.WriteLine();
                                 if ((((a as ContainerAtom).FindPath("name") as StringAtom).Text) == "iTunNORM")
+                                {
+                                    LogConsole.WriteLine();
                                     DecodeiTunNORM(da.Text);
+                                }
                             }
                         }
                         else if (da.IsEnumeratedGenre)
@@ -209,7 +211,8 @@ namespace DumpTags
                         break;
 
                     case ".mp3":
-                        DumpMP3Tags(arg);
+                    case ".dsf":
+                        DumpID3Tags(arg);
                         break;
 
                     case ".wma":

@@ -938,7 +938,7 @@ namespace MusicFileUtilities
 
                 int offset = sideinfolen;
                 string id = Encoding.ASCII.GetString(frame, offset, 4);
-                if ((id == "Xing"||(id == "Info")))
+                if ((id == "Xing" || (id == "Info")))
                 {
                     uint frames = 0;
                     uint bytes = 0;
@@ -956,12 +956,19 @@ namespace MusicFileUtilities
                         bytes = Tools.UInt32AtBE(frame, offset);
                         offset += 4;
                     }
+                    Duration = 26 * frames / 1000;
                 }
                 else if (Encoding.ASCII.GetString(frame, 32, 4) == "VBRI")
                 {
                     offset += 10;
                     uint frames = Tools.UInt32AtBE(frame, offset);
                     AverageBitrate = (uint)(datalength / (frames * 1152 / Samplerate) * 8);
+                    Duration = 26 * frames / 1000;
+                }
+                else
+                {
+                    // CBR
+                    Duration = (uint)(datalength / framesize * 26 / 1000);
                 }
             }
 
@@ -972,6 +979,12 @@ namespace MusicFileUtilities
         public CodecType CodecType => CodecType.Lossy;
 
         public uint AverageBitrate
+        {
+            get;
+            protected set;
+        }
+
+        public uint Duration
         {
             get;
             protected set;
@@ -1026,9 +1039,16 @@ namespace MusicFileUtilities
                     Channels = r.ReadUInt32();
                     Samplerate = r.ReadUInt32();
                     BitsPerSample = r.ReadUInt32();
+                    Duration = (uint)(r.ReadUInt64() / Samplerate);
                 }
             }
 
+        }
+
+        public uint Duration
+        {
+            get;
+            protected set;
         }
 
         public string CodecName => "DSD";

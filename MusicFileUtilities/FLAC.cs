@@ -54,6 +54,12 @@ namespace MusicFileUtilities
             protected set;
         }
 
+        public uint Duration
+        {
+            get;
+            protected set;
+        }
+
         private void ParseStreamInfo(byte [] si, long length, long framessize)
         {
             Samplerate = (((uint)Tools.UInt16AtBE(si, 10)) << 4) | (uint)(si[12] >> 4);
@@ -63,6 +69,7 @@ namespace MusicFileUtilities
             samples |= ((ulong)(si[13] & 0xf)) << 32;
             long seconds = (long)samples / Samplerate;
             AverageBitrate = (uint)(length / seconds * 8);
+            Duration = (uint)seconds;
         }
 
         public FLACFile(string filename)

@@ -47,6 +47,11 @@ namespace MusicFileUtilities
         {
             get;
         }
+
+        uint Duration
+        {
+            get;
+        }
     }
 
     public interface IMetadataProvider
