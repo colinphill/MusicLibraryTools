@@ -956,19 +956,21 @@ namespace MusicFileUtilities
                         bytes = Tools.UInt32AtBE(frame, offset);
                         offset += 4;
                     }
-                    Duration = 26 * frames / 1000;
+                    int decoderdelay = (frame[141 + sideinfolen] << 4) | (frame[142 + sideinfolen] >> 4);
+                    int endpadding = ((frame[142 + sideinfolen] & 0xf) << 8) | frame[143 + sideinfolen];
+                    DurationInFrames = (uint)((1152 * frames - decoderdelay - endpadding) / (Samplerate / 75));
                 }
                 else if (Encoding.ASCII.GetString(frame, 32, 4) == "VBRI")
                 {
                     offset += 10;
                     uint frames = Tools.UInt32AtBE(frame, offset);
                     AverageBitrate = (uint)(datalength / (frames * 1152 / Samplerate) * 8);
-                    Duration = 26 * frames / 1000;
+                    DurationInFrames = (uint)((1152 * frames) / (Samplerate / 75));
                 }
                 else
                 {
                     // CBR
-                    Duration = (uint)(datalength / framesize * 26 / 1000);
+                    DurationInFrames = (uint)((1152 * datalength / framesize) / (Samplerate / 75));
                 }
             }
 
@@ -984,11 +986,13 @@ namespace MusicFileUtilities
             protected set;
         }
 
-        public uint Duration
+        public uint DurationInFrames
         {
             get;
             protected set;
         }
+
+        public uint DurationInSeconds => DurationInFrames / 75;
 
         public uint MaxBitrate => AverageBitrate;
 
@@ -1039,17 +1043,19 @@ namespace MusicFileUtilities
                     Channels = r.ReadUInt32();
                     Samplerate = r.ReadUInt32();
                     BitsPerSample = r.ReadUInt32();
-                    Duration = (uint)(r.ReadUInt64() / Samplerate);
+                    DurationInFrames = (uint)(75 * r.ReadUInt64() / Samplerate);
                 }
             }
 
         }
 
-        public uint Duration
+        public uint DurationInFrames
         {
             get;
             protected set;
         }
+
+        public uint DurationInSeconds => DurationInFrames / 75;
 
         public string CodecName => "DSD";
 

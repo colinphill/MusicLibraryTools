@@ -33,6 +33,7 @@ namespace MusicFileUtilities
         private uint _averagebitrate = 0;
         private uint _maxbitrate = 0;
         private bool _compilation = false;
+        private int _durationinseconds = 0;
         [NonSerialized]
         private string _strippedalbum = "";
 
@@ -92,6 +93,7 @@ namespace MusicFileUtilities
                 _samplerate = codec.Samplerate;
                 _averagebitrate = codec.AverageBitrate;
                 _maxbitrate = codec.MaxBitrate;
+                _durationinseconds = (int)codec.DurationInSeconds;
             }
         }
 
@@ -111,6 +113,7 @@ namespace MusicFileUtilities
         public int TrackNumber => _tracknumber;
         public DateTime LastWriteTime => _lastwritetime;
         public bool Compilation => _compilation;
+        public int DurationInSeconds => _durationinseconds;
 
 
         public void Touch()

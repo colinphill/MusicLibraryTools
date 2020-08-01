@@ -356,7 +356,8 @@ namespace MusicFileUtilities
             protected set;
         }
 
-        public uint Duration => 0;
+        public uint DurationInFrames => 0;
+        public uint DurationInSeconds => 0;
 
         private bool ReadPageHeader(Stream s, out int datalen, out bool continuation, out bool firstpage)
         {

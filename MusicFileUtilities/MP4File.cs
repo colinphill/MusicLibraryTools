@@ -461,7 +461,7 @@ namespace MusicFileUtilities
         {
         }
 
-        public uint Duration
+        public uint DurationInFrames
         {
             get
             {
@@ -469,13 +469,13 @@ namespace MusicFileUtilities
                 {
                     ulong scale = Uint64At(20);
                     ulong duration = Uint64At(28);
-                    return (uint)(duration / scale);
+                    return (uint)(75 * duration / scale);
                 }
                 else
                 {
                     uint scale = Uint32At(12);
                     uint duration = Uint32At(16);
-                    return duration / scale;
+                    return 75 * duration / scale;
                 }
             }
         }
@@ -1507,11 +1507,13 @@ namespace MusicFileUtilities
             protected set;
         }
 
-        public uint Duration
+        public uint DurationInFrames
         {
             get;
             protected set;
         }
+
+        public uint DurationInSeconds => DurationInFrames / 75;
 
         public RootAtom()
         {
@@ -1585,7 +1587,7 @@ namespace MusicFileUtilities
             ParseCodecInfo();
 
             Atom_mvhd mvhd = FindPath("moov.mvhd") as Atom_mvhd;
-            Duration = mvhd.Duration;
+            DurationInFrames = mvhd.DurationInFrames;
         }
 
         public void WriteFile(string path)

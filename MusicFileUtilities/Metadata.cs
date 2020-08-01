@@ -48,7 +48,12 @@ namespace MusicFileUtilities
             get;
         }
 
-        uint Duration
+        uint DurationInFrames
+        {
+            get;
+        }
+
+        uint DurationInSeconds
         {
             get;
         }

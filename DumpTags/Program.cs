@@ -107,7 +107,7 @@ namespace DumpTags
                         }
                         else if (da.IsEnumeratedGenre)
                         {
-                            LogConsole.Write("Genres(s): ");
+                            LogConsole.Write("Genre(s): ");
                             foreach (string s in da.EnumeratedGenres)
                                 LogConsole.Write(s + " ");
                         }
