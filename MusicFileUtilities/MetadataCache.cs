@@ -14,7 +14,7 @@ namespace MusicFileUtilities
 {
 
     [Serializable]
-    public class MetadataCacheEntry : IMetadataProvider
+    public class MetadataCacheEntry// : IMetadataProvider
     {
         private static Regex stripre_ = new Regex(@" \((DSD|DSD64|DSD128|DSD256|DVD-V|DVD-A|HiRes|Hi-Res|DTS-CD)\)$", RegexOptions.IgnoreCase);
 

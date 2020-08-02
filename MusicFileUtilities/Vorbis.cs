@@ -203,6 +203,11 @@ namespace MusicFileUtilities
             }
         }
 
+        public IEnumerable<KeyValuePair<string, string>> GetTextMetadata()
+        {
+            foreach (var kv in Comments)
+                yield return kv;
+        }
 
         #endregion
 

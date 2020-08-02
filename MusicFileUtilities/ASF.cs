@@ -193,6 +193,12 @@ namespace MusicFileUtilities
             }
         }
 
+        public IEnumerable<KeyValuePair<string, string>> GetTextMetadata()
+        {
+            foreach (var kv in TextFields)
+                yield return kv;
+        }
+
 
         #endregion
 

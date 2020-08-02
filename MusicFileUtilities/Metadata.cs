@@ -85,6 +85,9 @@ namespace MusicFileUtilities
         {
             get;
         }
+
+        IEnumerable<KeyValuePair<string, string>> GetTextMetadata();
+
     }
 
     public interface IMetadataAlterer

@@ -63,41 +63,117 @@ namespace MusicFileUtilities
 
         public static bool Allowv24Tags = false;
 
-        private static Dictionary<string, string> _mappings = new Dictionary<string,string>();
+        private static Dictionary<string, string> _22mappings = new Dictionary<string, string>()
+        {
+            {"TT1", "TIT1"},
+            {"TT2", "TIT2"},
+            {"TT3", "TIT3"},
+            {"TP1", "TPE1"},
+            {"TP2", "TPE2"},
+            {"TP3", "TPE3"},
+            {"TP4", "TPE4"},
+            {"TCM", "TCOM"},
+            {"TXT", "TEXT"},
+            {"TLA", "TLAN"},
+            {"TAL", "TALB"},
+            {"TBP", "TBPM"},
+            {"TCO", "TCON"},
+            {"TCR", "TCOP"},
+            {"TDA", "TDAT"},
+            {"TEN", "TENC"},
+            {"TLE", "TLEN"},
+            {"TRK", "TRCK"},
+            {"TXX", "TXXX"},
+            {"TLN", "TLEN"},
+            {"TPA", "TPOS"},
+            {"TYE", "TYER"},
+            {"PIC", "APIC"},
+            {"COM", "COMM"},
+        };
+
+    private static Dictionary<string, string> _vcmappings = new Dictionary<string, string>()
+        {
+            {"TALB", "ALBUM"},
+            {"TSOA", "ALBUMSORT"},
+            {"TPE2", "ALBUMARTIST"},
+            {"TSO2", "ALBUMARTISTSORT"},
+            {"TPE1", "ARTIST"},
+            {"TSOP", "ARTISTSORT"},
+            {"TBPM", "BPM"},
+            {"TCMP", "COMPILATION"},
+            {"TCOM", "COMPOSER"},
+            {"TSOC", "COMPOSERSORT"},
+            {"TPE3", "CONDUCTOR"},
+            {"TIT1", "CONTENTGROUP"},
+            {"TCOP", "COPYRIGHT"},
+            {"TPOS", "DISCNUMBER"},
+            {"TENC", "ENCODEDBY"},
+            {"TSSE", "ENCODERSETTINGS"},
+            {"TOWN", "FILEOWNER"},
+            {"TFLT", "FILETYPE"},
+            {"TCON", "GENRE"},
+            {"GRP1", "GROUPING"},
+            {"TKEY", "INITIALKEY"},
+            {"IPLS", "INVOLVEDPEOPLE"},
+            {"TSRC", "ISRC"},
+            {"TLAN", "LANGUAGE"},
+            {"TLEN", "LENGTH"},
+            {"TEXT", "LYRICIST"},
+            {"TMED", "MEDIATYPE"},
+            {"TPE4", "MIXARTIST"},
+            {"MVNM", "MOVEMENTNAME"},
+            {"MVIN", "MOVEMENT"},
+//            {"MVIN", "MOVEMENTTOTAL"},
+            {"TRSO", "NETRADIOOWNER"},
+            {"TRSN", "NETRADIOSTATION"},
+            {"TOAL", "ORIGALBUM"},
+            {"TOPE", "ORIGARTIST"},
+            {"TOFN", "ORIGFILENAME"},
+            {"TOLY", "ORIGLYRICIST"},
+            {"TORY", "ORIGYEAR"},
+            {"PCST", "PODCAST"},
+            {"TCAT", "PODCASTCATEGORY"},
+            {"TDES", "PODCASTDESC"},
+            {"TGID", "PODCASTID"},
+            {"TKWD", "PODCASTKEYWORDS"},
+            {"WFED", "PODCASTURL"},
+            {"POPM", "POPULARIMETER"},
+            {"TPUB", "PUBLISHER"},
+            //{"POPM", "RATING MM"},
+            //{"POPM", "RATING WMP"},
+            {"TDRL", "RELEASETIME"},
+            {"TIT3", "SUBTITLE"},
+            {"TIT2", "TITLE"},
+            {"TSOT", "TITLESORT"},
+            {"TRCK", "TRACK"},
+            {"USLT", "UNSYNCEDLYRICS"},
+            {"WOAR", "WWWARTIST"},
+            {"WOAF", "WWWAUDIOFILE"},
+            {"WOAS", "WWWAUDIOSOURCE"},
+            {"WCOM", "WWWCOMMERCIALINFO"},
+            {"WCOP", "WWWCOPYRIGHT"},
+            {"WPAY", "WWWPAYMENT"},
+            {"WPUB", "WWWPUBLISHER"},
+            {"WORS", "WWWRADIOPAGE"},
+            {"TYER", "YEAR"},
+        };
 
         static ID3v2Util()
         {
-            _mappings.Add("TT1", "TIT1");
-            _mappings.Add("TT2", "TIT2");
-            _mappings.Add("TT3", "TIT3");
-            _mappings.Add("TP1", "TPE1");
-            _mappings.Add("TP2", "TPE2");
-            _mappings.Add("TP3", "TPE3");
-            _mappings.Add("TP4", "TPE4");
-            _mappings.Add("TCM", "TCOM");
-            _mappings.Add("TXT", "TEXT");
-            _mappings.Add("TLA", "TLAN");
-            _mappings.Add("TAL", "TALB");
-            _mappings.Add("TBP", "TBPM");
-            _mappings.Add("TCO", "TCON");
-            _mappings.Add("TCR", "TCOP");
-            _mappings.Add("TDA", "TDAT");
-            _mappings.Add("TEN", "TENC");
-            _mappings.Add("TLE", "TLEN");
-            _mappings.Add("TRK", "TRCK");
-            _mappings.Add("TXX", "TXXX");
-            _mappings.Add("TLN", "TLEN");
-            _mappings.Add("TPA", "TPOS");
-            _mappings.Add("TYE", "TYER");
-            _mappings.Add("PIC", "APIC");
-            _mappings.Add("COM", "COMM");
         }
 
         public static string GetNewID3v2Mapping(string frameid)
         {
-            if (_mappings.ContainsKey(frameid))
-                return _mappings[frameid];
+            if (_22mappings.ContainsKey(frameid))
+                return _22mappings[frameid];
             return "X" + frameid;
+        }
+
+        public static string GetVorbisCommentMapping(string frameid)
+        {
+            if (_vcmappings.ContainsKey(frameid))
+                return _vcmappings[frameid];
+            return frameid;
         }
 
     }
@@ -685,7 +761,30 @@ namespace MusicFileUtilities
                 }
             }
         }
- 
+
+        public IEnumerable<KeyValuePair<string, string>> GetTextMetadata()
+        {
+            foreach (var frame in Frames)
+            {
+                if (frame is UserStringFrame)
+                {
+                    UserStringFrame usf = frame as UserStringFrame;
+                    yield return new KeyValuePair<string, string>(usf.Key, usf.Value);
+                }
+                else if (frame is CommentFrame)
+                {
+                    CommentFrame cf = frame as CommentFrame;
+                    if (cf.Key == "iTunNORM")
+                        yield return new KeyValuePair<string, string>(cf.Key, cf.Value);
+                    yield return new KeyValuePair<string, string>("COMMENT", cf.Key + " - " + cf.Value);
+                }
+                else if (frame is TextFrame)
+                {
+                    TextFrame tf = frame as TextFrame;
+                    yield return new KeyValuePair<string, string>(ID3v2Util.GetVorbisCommentMapping(tf.FrameID), tf.Text);
+                }
+            }
+        }
 
         #endregion
 

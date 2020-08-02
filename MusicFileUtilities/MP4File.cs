@@ -1452,6 +1452,10 @@ namespace MusicFileUtilities
             }
         }
 
+        public IEnumerable<KeyValuePair<string, string>> GetTextMetadata()
+        {
+            yield break;
+        }
 
         #endregion
 

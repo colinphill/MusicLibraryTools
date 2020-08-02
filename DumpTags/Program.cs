@@ -36,7 +36,7 @@ namespace DumpTags
             LogConsole.Write("SoundCheck Gain: " + Math.Round((lgain + rgain) / 2.0, 1).ToString() + " dB");
         }
 
-        static void DumpID3Tags(string filename)
+        static IMetadataProvider DumpID3Tags(string filename)
         {
             ID3v2Tag tag = filename.ToLower().EndsWith(".mp3") ? (ID3v2Tag)new MP3File(filename) : (ID3v2Tag)new DSFFile(filename);
             foreach (ID3v2Frame frame in tag.Frames)
@@ -86,9 +86,10 @@ namespace DumpTags
                 else
                     LogConsole.WriteLine("Non Text Frame");
             }
+            return tag;
         }
 
-        static void DumpQTTags(string filename)
+        static IMetadataProvider DumpQTTags(string filename)
         {
             RootAtom root = new RootAtom(filename);
             Atom_ilst ilst = root.FindPath("moov.udta.meta.ilst") as Atom_ilst;
@@ -143,6 +144,7 @@ namespace DumpTags
                     LogConsole.WriteLine();
                 }
             }
+            return root;
         }
 
         static void DumpVorbisComments(VorbisComments vc)
@@ -163,7 +165,14 @@ namespace DumpTags
             }
         }
 
-        static void DumpASFTags(string filename)
+        static void DumpTextTags(IMetadataProvider mp)
+        {
+            foreach (KeyValuePair<string, string> kv in mp.GetTextMetadata())
+                LogConsole.WriteLine(kv.Key + "=" + kv.Value);
+            LogConsole.WriteLine();
+        }
+
+        static IMetadataProvider DumpASFTags(string filename)
         {
             ASFFile f = new ASFFile(filename);
 
@@ -177,18 +186,22 @@ namespace DumpTags
                 LogConsole.WriteLine("\tMime-Type: " + p.MimeType);
                 LogConsole.WriteLine("\tDescription: " + p.Description);
             }
+
+            return f;
         }
 
-        static void DumpFLACTags(string filename)
+        static IMetadataProvider DumpFLACTags(string filename)
         {
             FLACFile f = new FLACFile(filename);
             DumpVorbisComments(f);
+            return f;
         }
 
-        static void DumpOggVorbisTags(string filename)
+        static IMetadataProvider DumpOggVorbisTags(string filename)
         {
             OggVorbisFile f = new OggVorbisFile(filename);
             DumpVorbisComments(f);
+            return f;
         }
 
         static void Main(string[] args)
@@ -200,6 +213,7 @@ namespace DumpTags
                 LogConsole.WriteLine("Usage: DumpTags <filename> [filename]");
                 return;
             }
+            IMetadataProvider mp = null;
 
             foreach (string arg in args)
             {
@@ -207,24 +221,24 @@ namespace DumpTags
                 switch (Path.GetExtension(arg).ToLower())
                 {
                     case ".m4a":
-                        DumpQTTags(arg);
+                        mp = DumpQTTags(arg);
                         break;
 
                     case ".flac":
-                        DumpFLACTags(arg);
+                        mp = DumpFLACTags(arg);
                         break;
 
                     case ".ogg":
-                        DumpOggVorbisTags(arg);
+                        mp = DumpOggVorbisTags(arg);
                         break;
 
                     case ".mp3":
                     case ".dsf":
-                        DumpID3Tags(arg);
+                        mp = DumpID3Tags(arg);
                         break;
 
                     case ".wma":
-                        DumpASFTags(arg);
+                        mp = DumpASFTags(arg);
                         break;
 
                     default:
@@ -232,6 +246,11 @@ namespace DumpTags
                         break;
                 }
                 LogConsole.WriteLine();
+                if (mp != null)
+                {
+                    LogConsole.WriteLine("Text Tags:");
+                    DumpTextTags(mp);
+                }
             }
 
             LogConsole.Close();
