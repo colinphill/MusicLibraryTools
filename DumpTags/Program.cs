@@ -75,6 +75,14 @@ namespace DumpTags
                     TextFrame tf = frame as TextFrame;
                     LogConsole.WriteLine(tf.Text);
                 }
+                else if (frame is IdentifierFrame)
+                {
+                    IdentifierFrame idf = frame as IdentifierFrame;
+                    LogConsole.Write("Identifier: " + idf.Key + " - ");
+                    foreach (byte b in idf.Value)
+                        LogConsole.Write(b.ToString("X2") + " ");
+                    LogConsole.WriteLine();
+                }
                 else
                     LogConsole.WriteLine("Non Text Frame");
             }

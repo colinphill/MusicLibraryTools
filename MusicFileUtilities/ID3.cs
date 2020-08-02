@@ -249,6 +249,75 @@ namespace MusicFileUtilities
 
     }
 
+    public class IdentifierFrame : ID3v2Frame
+    {
+        public IdentifierFrame()
+        {
+            FrameID = "UFID";
+        }
+
+        public IdentifierFrame(ID3v2Frame from)
+            : base(from)
+        {
+            Decode();
+        }
+
+        private string _key = "";
+        private byte [] _value = new byte[0];
+
+        private void Decode()
+        {
+            try
+            {
+                _key = GetNullTerminatedStringAt(ID3v2Util.ID3Encoding.ISO8859, 0);
+                int start = CodeString(ID3v2Util.ID3Encoding.ISO8859, _key).Length + 1;
+                _value = new byte[Data.Length - start];
+                Array.Copy(Data, start, _value, 0, Data.Length - start);
+            }
+            catch
+            {
+                _key = "";
+                _value = new byte[0];
+            }
+        }
+
+        private void Encode()
+        {
+            byte[] k;
+            k = CodeString(ID3v2Util.ID3Encoding.ISO8859, _key);
+            Data = new byte[k.Length + 1 + _value.Length];
+            Array.Copy(k, 0, Data, 0, k.Length);
+            Array.Copy(_value, 0, Data, k.Length+1, _value.Length);
+        }
+
+        public string Key
+        {
+            get
+            {
+                return _key;
+            }
+            set
+            {
+                _key = value;
+                Encode();
+            }
+        }
+
+        public byte[] Value
+        {
+            get
+            {
+                return _value;
+            }
+            set
+            {
+                _value = value;
+                Encode();
+            }
+        }
+
+    }
+
     public class UserStringFrame : ID3v2Frame
     {
         public UserStringFrame()
@@ -784,13 +853,15 @@ namespace MusicFileUtilities
                         f.Flags = (((int)frame[8]) << 8) + (int)frame[9];
                         f.Data = r.ReadBytes(framesize);
 
-                        if (f.FrameID == "TXXX")
+                        if ((f.FrameID == "TXXX") || (f.FrameID == "WXXX"))
                             _frames.Add(new UserStringFrame(f));
+                        else if ((f.FrameID == "UFID")||(f.FrameID == "PRIV"))
+                            _frames.Add(new IdentifierFrame(f));
                         else if (f.FrameID == "APIC")
                             _frames.Add(new PictureFrame(f));
                         else if (f.FrameID == "COMM")
                             _frames.Add(new CommentFrame(f));
-                        else if (f.FrameID[0] == 'T')
+                        else if ((f.FrameID[0] == 'T') || (f.FrameID[0] == 'W'))
                             _frames.Add(new TextFrame(f));
                         else
                             _frames.Add(f);
