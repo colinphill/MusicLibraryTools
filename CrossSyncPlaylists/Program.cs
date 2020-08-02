@@ -69,10 +69,17 @@ namespace CrossSyncPlaylists
 
             LogConsole.WriteLine("Indexing Files...");
             MetadataCache cache = new MetadataCache();
-            if (File.Exists(args[0] + ".cache"))
-                cache.Load(args[0] + ".cache");
-            else if (File.Exists(config.ReferenceConfig + ".cache"))
-                cache.Load(config.ReferenceConfig + ".cache");
+            try
+            {
+                if (File.Exists(args[0] + ".cache"))
+                    cache.Load(args[0] + ".cache");
+                else if (File.Exists(config.ReferenceConfig + ".cache"))
+                    cache.Load(config.ReferenceConfig + ".cache");
+            }
+            catch
+            {
+                LogConsole.WriteLine("Rebuilding Cache");
+            }
 #if true
             cache.BeginBuildCache();
             foreach (var iloc in config.IndexLocations)

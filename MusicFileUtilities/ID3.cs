@@ -956,8 +956,17 @@ namespace MusicFileUtilities
                         bytes = Tools.UInt32AtBE(frame, offset);
                         offset += 4;
                     }
-                    int decoderdelay = (frame[141 + sideinfolen] << 4) | (frame[142 + sideinfolen] >> 4);
-                    int endpadding = ((frame[142 + sideinfolen] & 0xf) << 8) | frame[143 + sideinfolen];
+                    int decoderdelay = 0;
+                    int endpadding = 0;
+                    try
+                    {
+                        decoderdelay = (frame[141 + sideinfolen] << 4) | (frame[142 + sideinfolen] >> 4);
+                        endpadding = ((frame[142 + sideinfolen] & 0xf) << 8) | frame[143 + sideinfolen];
+                    }
+                    catch
+                    {
+                        // Short frame, no pad information
+                    }
                     DurationInFrames = (uint)((1152 * frames - decoderdelay - endpadding) / (Samplerate / 75));
                 }
                 else if (Encoding.ASCII.GetString(frame, 32, 4) == "VBRI")
