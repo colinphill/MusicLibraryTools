@@ -97,7 +97,7 @@ namespace MusicFileUtilities
             {"©nam", "TITLE"},
             {"sonm", "TITLESORT"},
             {"©lyr", "UNSYNCEDLYRICS"},
-            {"©day", "YEAR"},
+            {"©day", "DATE"},
         };
 
         public static void Init()

@@ -13,6 +13,7 @@ using System.IO;
 using System.Text;
 using System.Collections.Generic;
 using System.Linq;
+using System.Data;
 
 namespace MusicFileUtilities
 {
@@ -114,8 +115,53 @@ namespace MusicFileUtilities
 
         private static IEnumerable<KeyValuePair<string, string>> HandleGenre(TextFrame frame)
         {
-            // TBD: Handle weird ID3 genre rules
-            yield break;
+            string refinement = "", reference = "";
+            int state = 0;
+            foreach (char c in frame.Text)
+            {
+                switch (state)
+                {
+                    case 0:
+                        if (c == '(')
+                            state = 1;
+                        else
+                            refinement += c;
+                        break;
+
+                    case 1:
+                        if (c == '(')
+                        {
+                            refinement += "(";
+                            state = 2;
+                        }
+                        else if (c == ')')
+                        {
+                            int genre;
+                            if (int.TryParse(reference, out genre))
+                            {
+                                yield return new KeyValuePair<string, string>("GENRE", ID3v2Util.ID3v1Genres[genre]);
+                            }
+                            else
+                            {
+                                if (reference == "RX")
+                                    yield return new KeyValuePair<string, string>("GENRE", "Remix");
+                                if (reference == "CR")
+                                    yield return new KeyValuePair<string, string>("GENRE", "Cover");
+                            }
+                        }
+                        else
+                            reference += c;
+                        break;
+
+                    default:
+                        refinement += c;
+                        if (c == ')')
+                            state = 0;
+                        break;
+                }
+            }
+            if (refinement != "")
+                yield return new KeyValuePair<string, string>("GENRE", refinement);
         }
 
         public static Dictionary<string, HandleFrame> SpecialMappings = new Dictionary<string, HandleFrame>()
@@ -176,7 +222,7 @@ namespace MusicFileUtilities
             {"WPAY", "WWWPAYMENT"},
             {"WPUB", "WWWPUBLISHER"},
             {"WORS", "WWWRADIOPAGE"},
-            {"TYER", "YEAR"},
+            {"TYER", "DATE"},
         };
 
         static ID3v2Util()
