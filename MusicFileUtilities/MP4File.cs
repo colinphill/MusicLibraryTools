@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using System.ComponentModel;
 
 namespace MusicFileUtilities
 {
@@ -34,6 +35,70 @@ namespace MusicFileUtilities
         {
             Init();
         }
+
+        public delegate IEnumerable<KeyValuePair<string, string>> HandleAtom(ContainerAtom atom);
+
+        private static IEnumerable<KeyValuePair<string, string>> HandleNullAtom(ContainerAtom atom)
+        {
+            yield break;
+        }
+
+        private static IEnumerable<KeyValuePair<string, string>> HandleTrackDiscAtom(ContainerAtom atom)
+        {
+            Atom_data da = atom.FindPath("data") as Atom_data;
+            if (da.IsTrackNumber)
+            {
+                yield return new KeyValuePair<string, string>("TRACKNUMBER", da.TrackNumber.ToString());
+                if (da.TotalTracks != 0)
+                    yield return new KeyValuePair<string, string>("TRACKTOTAL", da.TotalTracks.ToString());
+            }
+            if (da.IsDiscNumber)
+            {
+                yield return new KeyValuePair<string, string>("DISCNUMBER", da.DiscNumber.ToString());
+                if (da.TotalTracks != 0)
+                    yield return new KeyValuePair<string, string>("DISCTOTAL", da.TotalDiscs.ToString());
+            }
+        }
+
+        public static Dictionary<string, HandleAtom> SpecialMapping = new Dictionary<string, HandleAtom>()
+        {
+            { "trkn",  new HandleAtom(HandleTrackDiscAtom) },
+            { "disk",  new HandleAtom(HandleTrackDiscAtom) },
+        };
+
+        public static Dictionary<string, string> VorbisCommentMapping = new Dictionary<string, string>()
+        {
+            {"©alb", "ALBUM"},
+            {"soal", "ALBUMSORT"},
+            {"aART", "ALBUMARTIST"},
+            {"soaa", "ALBUMARTISTSORT"},
+            {"©ART", "ARTIST"},
+            {"soar", "ARTISTSORT"},
+            {"tmpo", "BPM"},
+            {"©cmt", "COMMENT"},
+            {"cpil", "COMPILATION"},
+            {"©wrt", "COMPOSER"},
+            {"soco", "COMPOSERSORT"},
+            {"©con", "CONDUCTOR"},
+            {"©grp", "CONTENTGROUP"},
+            {"cprt", "COPYRIGHT"},
+            {"desc", "DESCRIPTION"},
+            {"©gen", "GENRE"},
+            {"gnre", "GENRE"},
+            {"©mvn", "MOVEMENTNAME"},
+            {"©mvi", "MOVEMENT"},
+            {"©mvc", "MOVEMENTTOTAL"},
+            {"pcst", "PODCAST"},
+            {"catg", "PODCASTCATEGORY"},
+            {"ldes", "PODCASTDESC"},
+            {"egid", "PODCASTID"},
+            {"keyw", "PODCASTKEYWORDS"},
+            {"purl", "PODCASTURL"},
+            {"©nam", "TITLE"},
+            {"sonm", "TITLESORT"},
+            {"©lyr", "UNSYNCEDLYRICS"},
+            {"©day", "YEAR"},
+        };
 
         public static void Init()
         {
@@ -1454,6 +1519,49 @@ namespace MusicFileUtilities
 
         public IEnumerable<KeyValuePair<string, string>> GetTextMetadata()
         {
+            Atom_ilst ilst = FindPath("moov.udta.meta.ilst") as Atom_ilst;
+            foreach (Atom atom in ilst.Children)
+            {
+                ContainerAtom ca = atom as ContainerAtom;
+                if (MP4Util.VorbisCommentMapping.ContainsKey(atom.Type))
+                {
+                    string key = MP4Util.VorbisCommentMapping[atom.Type];
+                    foreach (Atom childatom in ca.FindMultiplePath("data"))
+                    {
+                        Atom_data da = childatom as Atom_data;
+                        if (da.IsText)
+                            yield return new KeyValuePair<string, string>(key, da.Text);
+                        else if (da.DataType == Atom_data.DataTypes.Integer)
+                            yield return new KeyValuePair<string, string>(key, da.Uint64.ToString());
+                        else if (da.IsBoolean)
+                            yield return new KeyValuePair<string, string>(key, da.BoolValue ? "1" : "0");
+                        else if (da.IsEnumeratedGenre)
+                        {
+                            foreach (var g in da.EnumeratedGenres)
+                                yield return new KeyValuePair<string, string>(key, g);
+                        }
+                        else if (da.IsRating)
+                            yield return new KeyValuePair<string, string>(key, da.Rating.ToString());
+                    }
+                }
+                else if (MP4Util.SpecialMapping.ContainsKey(atom.Type))
+                {
+                    foreach (var kv in MP4Util.SpecialMapping[atom.Type](ca))
+                        yield return kv;
+                }
+                else if (atom.Type == "----")
+                {
+                    string key = (ca.FindPath("name") as StringAtom).Text;
+                    foreach (Atom childatom in (atom as ContainerAtom).FindMultiplePath("data"))
+                    {
+                        Atom_data da = childatom as Atom_data;
+                        if (da.IsText)
+                            yield return new KeyValuePair<string, string>(key, da.Text);
+                    }
+
+                }
+            }
+
             yield break;
         }
 

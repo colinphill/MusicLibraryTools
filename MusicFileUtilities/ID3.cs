@@ -91,7 +91,41 @@ namespace MusicFileUtilities
             {"COM", "COMM"},
         };
 
-    private static Dictionary<string, string> _vcmappings = new Dictionary<string, string>()
+        public delegate IEnumerable<KeyValuePair<string, string>> HandleFrame(TextFrame frame);
+
+        private static IEnumerable<KeyValuePair<string, string>> HandleDiscTrack(TextFrame frame)
+        {
+            string[] vals = frame.Text.Split("/".ToCharArray());
+            if (frame.FrameID == "TRCK")
+            {
+                if ((vals.Length >= 1) && (!string.IsNullOrEmpty(vals[0])))
+                    yield return new KeyValuePair<string, string>("TRACKNUMBER", vals[0]);
+                if ((vals.Length >= 2) && (!string.IsNullOrEmpty(vals[1])))
+                    yield return new KeyValuePair<string, string>("TRACKTOTAL", vals[1]);
+            }
+            else if (frame.FrameID == "TPOS")
+            {
+                if ((vals.Length >= 1) && (!string.IsNullOrEmpty(vals[0])))
+                    yield return new KeyValuePair<string, string>("DISCNUMBER", vals[0]);
+                if ((vals.Length >= 2) && (!string.IsNullOrEmpty(vals[1])))
+                    yield return new KeyValuePair<string, string>("DISCTOTAL", vals[1]);
+            }
+        }
+
+        private static IEnumerable<KeyValuePair<string, string>> HandleGenre(TextFrame frame)
+        {
+            // TBD: Handle weird ID3 genre rules
+            yield break;
+        }
+
+        public static Dictionary<string, HandleFrame> SpecialMappings = new Dictionary<string, HandleFrame>()
+        {
+            {"TRCK", new HandleFrame(HandleDiscTrack) },
+            {"TPOS", new HandleFrame(HandleDiscTrack) },
+            {"TCON", new HandleFrame(HandleGenre) },
+        };
+
+        private static Dictionary<string, string> _vcmappings = new Dictionary<string, string>()
         {
             {"TALB", "ALBUM"},
             {"TSOA", "ALBUMSORT"},
@@ -106,24 +140,17 @@ namespace MusicFileUtilities
             {"TPE3", "CONDUCTOR"},
             {"TIT1", "CONTENTGROUP"},
             {"TCOP", "COPYRIGHT"},
-            {"TPOS", "DISCNUMBER"},
             {"TENC", "ENCODEDBY"},
             {"TSSE", "ENCODERSETTINGS"},
             {"TOWN", "FILEOWNER"},
             {"TFLT", "FILETYPE"},
-            {"TCON", "GENRE"},
-            {"GRP1", "GROUPING"},
             {"TKEY", "INITIALKEY"},
-            {"IPLS", "INVOLVEDPEOPLE"},
             {"TSRC", "ISRC"},
             {"TLAN", "LANGUAGE"},
             {"TLEN", "LENGTH"},
             {"TEXT", "LYRICIST"},
             {"TMED", "MEDIATYPE"},
             {"TPE4", "MIXARTIST"},
-            {"MVNM", "MOVEMENTNAME"},
-            {"MVIN", "MOVEMENT"},
-//            {"MVIN", "MOVEMENTTOTAL"},
             {"TRSO", "NETRADIOOWNER"},
             {"TRSN", "NETRADIOSTATION"},
             {"TOAL", "ORIGALBUM"},
@@ -131,22 +158,16 @@ namespace MusicFileUtilities
             {"TOFN", "ORIGFILENAME"},
             {"TOLY", "ORIGLYRICIST"},
             {"TORY", "ORIGYEAR"},
-            {"PCST", "PODCAST"},
             {"TCAT", "PODCASTCATEGORY"},
             {"TDES", "PODCASTDESC"},
             {"TGID", "PODCASTID"},
             {"TKWD", "PODCASTKEYWORDS"},
             {"WFED", "PODCASTURL"},
-            {"POPM", "POPULARIMETER"},
             {"TPUB", "PUBLISHER"},
-            //{"POPM", "RATING MM"},
-            //{"POPM", "RATING WMP"},
             {"TDRL", "RELEASETIME"},
             {"TIT3", "SUBTITLE"},
             {"TIT2", "TITLE"},
             {"TSOT", "TITLESORT"},
-            {"TRCK", "TRACK"},
-            {"USLT", "UNSYNCEDLYRICS"},
             {"WOAR", "WWWARTIST"},
             {"WOAF", "WWWAUDIOFILE"},
             {"WOAS", "WWWAUDIOSOURCE"},
@@ -781,7 +802,13 @@ namespace MusicFileUtilities
                 else if (frame is TextFrame)
                 {
                     TextFrame tf = frame as TextFrame;
-                    yield return new KeyValuePair<string, string>(ID3v2Util.GetVorbisCommentMapping(tf.FrameID), tf.Text);
+                    if (ID3v2Util.SpecialMappings.ContainsKey(tf.FrameID))
+                    {
+                        foreach (var kv in ID3v2Util.SpecialMappings[tf.FrameID](tf) )
+                            yield return kv;
+                    }
+                    else
+                        yield return new KeyValuePair<string, string>(ID3v2Util.GetVorbisCommentMapping(tf.FrameID), tf.Text);
                 }
             }
         }

@@ -88,10 +88,10 @@ namespace Comingle
                 {
                     foreach (string basefile in basecache.AlbumCache[matchingalbum])
                     {
-                        IMetadataProvider basemeta = basecache[basefile];
+                        var basemeta = basecache[basefile];
                         foreach (string file in comingledcache.AlbumCache[album])
                         {
-                            IMetadataProvider meta = comingledcache[file];
+                            var meta = comingledcache[file];
                             if (meta.Title.FuzzyDistance(basemeta.Title) < 0.1)
                             {
                                 LogConsole.WriteLine("Probable Match - " + file + " (" + basefile + ")");
