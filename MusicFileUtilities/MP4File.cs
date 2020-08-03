@@ -25,7 +25,7 @@ namespace MusicFileUtilities
         
         public static Dictionary<string, Type> AtomTypes = new Dictionary<string, Type>();
 
-        public static Encoding TypeEncoding = Encoding.GetEncoding(1252,
+        public static Encoding TypeEncoding = Encoding.GetEncoding(28591,
            new EncoderExceptionFallback(), new DecoderExceptionFallback()); // iso-8859-1
 
         public static Encoding ShiftJISEncoding = Encoding.GetEncoding(932,

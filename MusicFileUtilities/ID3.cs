@@ -59,7 +59,7 @@ namespace MusicFileUtilities
 		    "Duet", "Punk Rock", "Drum Solo", "A Capella", "Euro-House",
 		    "Dance Hall" };
 
-        public static Encoding ISO8859Encoding = Encoding.GetEncoding(1252,
+        public static Encoding ISO8859Encoding = Encoding.GetEncoding(28591,
             new EncoderExceptionFallback(), new DecoderExceptionFallback()); // iso-8859-1
 
         public static bool Allowv24Tags = false;
@@ -371,22 +371,33 @@ namespace MusicFileUtilities
         {
             get
             {
-                return GetStringAt((ID3v2Util.ID3Encoding)Data[0], 1).Split("\0".ToCharArray())[0];
+                if (FrameID[0] == 'W')
+                    return GetStringAt(ID3v2Util.ID3Encoding.ISO8859, 0).Split("\0".ToCharArray())[0];
+                else
+                    return GetStringAt((ID3v2Util.ID3Encoding)Data[0], 1).Split("\0".ToCharArray())[0];
             }
             set
             {
                 byte[] data;
-                try
+                if (FrameID[0] == 'W')
                 {
-                    data = CodeString(ID3v2Util.ID3Encoding.ISO8859, value);
+                    data = ID3v2Util.ISO8859Encoding.GetBytes(value);
                 }
-                catch
+                else
                 {
-                    if (ID3v2Util.Allowv24Tags)
-                        data = CodeString(ID3v2Util.ID3Encoding.UTF8, value);
-                    else
-                        data = CodeString(ID3v2Util.ID3Encoding.MarkedUnicode, value);
+                    try
+                    {
+                        data = CodeString(ID3v2Util.ID3Encoding.ISO8859, value);
+                    }
+                    catch
+                    {
+                        if (ID3v2Util.Allowv24Tags)
+                            data = CodeString(ID3v2Util.ID3Encoding.UTF8, value);
+                        else
+                            data = CodeString(ID3v2Util.ID3Encoding.MarkedUnicode, value);
+                    }
                 }
+                Data = data;
             }
         }
 
