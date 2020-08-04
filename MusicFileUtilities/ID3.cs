@@ -14,6 +14,7 @@ using System.Text;
 using System.Collections.Generic;
 using System.Linq;
 using System.Data;
+using System.Drawing;
 
 namespace MusicFileUtilities
 {
@@ -641,7 +642,7 @@ namespace MusicFileUtilities
             
     }
 
-    public class PictureFrame : ID3v2Frame
+    public class PictureFrame : ID3v2Frame, IMetadataImage
     {
         bool _v22style = false;
 
@@ -649,11 +650,21 @@ namespace MusicFileUtilities
         private string _mimetype;
         private string _description;
         private byte[] _picdata;
+        private int _width;
+        private int _height;
+
+        string IMetadataImage.Description => string.IsNullOrWhiteSpace(_description) ? _type.ToString() : _description;
+        string IMetadataImage.ImageType => _mimetype;
+        int IMetadataImage.Width => _width;
+        int IMetadataImage.Height => _height;
+        int IMetadataImage.Size => _picdata.Length;
+        byte[] IMetadataImage.Data => _picdata;
       
         public PictureFrame(ID3v2Frame from, bool v22stle)
-            : this(from)
+            : base(from)
         {
             _v22style = v22stle;
+            Decode();
         }
 
         public PictureFrame(ID3v2Frame from)
@@ -670,13 +681,36 @@ namespace MusicFileUtilities
         private void Decode()
         {
             ID3v2Util.ID3Encoding encoding = (ID3v2Util.ID3Encoding)Data[0];
-            _mimetype = GetNullTerminatedStringAt(ID3v2Util.ID3Encoding.ISO8859, 1);
-            int codelen = CodeString(ID3v2Util.ID3Encoding.ISO8859, _mimetype + "\0").Length;
+            int codelen;
+            if (_v22style)
+            {
+                _mimetype = Encoding.ASCII.GetString(Data, 1, 3);
+                codelen = 3;
+            }
+            else
+            {
+                _mimetype = GetNullTerminatedStringAt(ID3v2Util.ID3Encoding.ISO8859, 1);
+                codelen = CodeString(ID3v2Util.ID3Encoding.ISO8859, _mimetype + "\0").Length;
+            }
+            if ((_mimetype.ToLower() == "jpeg") || (_mimetype.ToLower() == "jpg"))
+                _mimetype = "image/jpeg";
+            if (_mimetype.ToLower() == "png")
+                _mimetype = "image/png";
+            if (_mimetype.ToLower() == "bmp")
+                _mimetype = "image/bmp";
+            if (_mimetype.ToLower() == "gif")
+                _mimetype = "image/gif";
             _type = (ID3v2Util.APICType)Data[codelen + 1];
             _description = GetNullTerminatedStringAt(encoding, codelen + 2);
             int codelen2 = CodeString(encoding, _description + "\0").Length;
             _picdata = new byte[Data.Length - codelen - codelen2 - 2];
             Array.Copy(Data, codelen + codelen2 + 2, _picdata, 0, _picdata.Length);
+            using (var ms = new MemoryStream(_picdata))
+                using (Image img = Image.FromStream(ms))
+                {
+                    _width = img.Width;
+                    _height = img.Height;
+                }
         }
 
         public void Encode(ID3v2Util.APICType type, string mimetype, string desc, byte[] data)
@@ -868,6 +902,13 @@ namespace MusicFileUtilities
                         yield return new KeyValuePair<string, string>(ID3v2Util.GetVorbisCommentMapping(tf.FrameID), tf.Text);
                 }
             }
+        }
+
+        public IEnumerable<IMetadataImage> GetImageMetadata()
+        {
+            foreach (var frame in _frames)
+                if (frame is PictureFrame)
+                    yield return frame as IMetadataImage;
         }
 
         #endregion

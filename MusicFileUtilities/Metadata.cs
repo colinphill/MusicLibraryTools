@@ -59,6 +59,40 @@ namespace MusicFileUtilities
         }
     }
 
+    public interface IMetadataImage
+    {
+        string Description
+        {
+            get;
+        }
+
+        string ImageType
+        {
+            get;
+        }
+
+        int Width
+        {
+            get;
+        }
+
+        int Height
+        {
+            get;
+        }
+
+        int Size
+        {
+            get;
+        }
+
+        byte [] Data
+        {
+            get;
+        }
+
+    }
+
     public interface IMetadataProvider
     {
         string Title
@@ -87,6 +121,7 @@ namespace MusicFileUtilities
         }
 
         IEnumerable<KeyValuePair<string, string>> GetTextMetadata();
+        IEnumerable<IMetadataImage> GetImageMetadata();
 
     }
 

@@ -199,6 +199,11 @@ namespace MusicFileUtilities
                 yield return kv;
         }
 
+        public IEnumerable<IMetadataImage> GetImageMetadata()
+        {
+            yield break;
+        }
+
 
         #endregion
 

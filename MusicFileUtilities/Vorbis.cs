@@ -23,7 +23,7 @@ namespace MusicFileUtilities
     }
 
     [Serializable]
-    public class VorbisArtwork
+    public class VorbisArtwork : IMetadataImage
     {
         public ID3v2Util.APICType PictureType;
         public string MimeType;
@@ -33,6 +33,13 @@ namespace MusicFileUtilities
         public int Depth;
         public int ColorsUsed;
         public byte[] Data;
+
+        string IMetadataImage.Description => string.IsNullOrWhiteSpace(Description) ? PictureType.ToString() : Description;
+        string IMetadataImage.ImageType => MimeType;
+        int IMetadataImage.Width => Width;
+        int IMetadataImage.Height => Height;
+        int IMetadataImage.Size => Data.Length;
+        byte[] IMetadataImage.Data => Data;
 
         public byte[] ToByteArray()
         {
@@ -209,6 +216,11 @@ namespace MusicFileUtilities
                 yield return kv;
         }
 
+        public IEnumerable<IMetadataImage> GetImageMetadata()
+        {
+            foreach (var image in Artworks)
+                yield return image;
+        }
         #endregion
 
         public string Vendor;
