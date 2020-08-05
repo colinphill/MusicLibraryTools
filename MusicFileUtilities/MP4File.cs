@@ -20,16 +20,6 @@ using System.Runtime.CompilerServices;
 namespace MusicFileUtilities
 {
 
-    public class MP4Image : IMetadataImage
-    {
-        public string Description { get; set; }
-        public string ImageType { get; set; }
-        public int Width { get; set; }
-        public int Height { get; set; }
-        public int Size { get; set; }
-        public byte[] Data { get; set; }
-    }
-
     public static class MP4Util
     {
 
@@ -78,9 +68,9 @@ namespace MusicFileUtilities
             { "disk",  new HandleAtom(HandleTrackDiscAtom) },
         };
 
-        public static Dictionary<string, string> ImageMapping = new Dictionary<string, string>()
+        public static Dictionary<string, ID3v2Util.APICType> ImageMapping = new Dictionary<string, ID3v2Util.APICType>()
         {
-            {"covr", "Front Cover" },
+            {"covr", ID3v2Util.APICType.FrontCover },
         };
 
         public static Dictionary<string, string> VorbisCommentMapping = new Dictionary<string, string>()
@@ -1451,6 +1441,17 @@ namespace MusicFileUtilities
 
     public class RootAtom : ContainerAtom, IMetadataProvider, ICodecProvider
     {
+        private class MP4Image : IMetadataImage
+        {
+            public string Description { get; set; }
+            public string Category { get; set; }
+            public string ImageType { get; set; }
+            public int Width { get; set; }
+            public int Height { get; set; }
+            public int Size { get; set; }
+            public byte[] Data { get; set; }
+        }
+
 
         #region IMetadataProvider Properties
         public string Title
@@ -1605,18 +1606,19 @@ namespace MusicFileUtilities
                 ContainerAtom ca = atom as ContainerAtom;
                 if (MP4Util.ImageMapping.ContainsKey(ca.Type))
                 {
-                    string description = MP4Util.ImageMapping[ca.Type];
+                    var mapping = MP4Util.ImageMapping[ca.Type];
                     foreach (Atom childatom in ca.FindMultiplePath("data"))
                     {
                         Atom_data da = childatom as Atom_data;
                         if (da.IsImage)
                         {
-                            using (var ms = new MemoryStream(da.Data))
+                            using (var ms = new MemoryStream(da.ImageData))
                                 using (var image = Image.FromStream(ms))
                                 {
                                     yield return new MP4Image()
                                     {
-                                        Description = description,
+                                        Category = mapping.ToString(),
+                                        Description = "",
                                         ImageType = da.ImageToMimeType(),
                                         Width = image.Width,
                                         Height = image.Height,

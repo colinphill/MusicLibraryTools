@@ -66,6 +66,11 @@ namespace MusicFileUtilities
             get;
         }
 
+        string Category
+        {
+            get;
+        }
+
         string ImageType
         {
             get;

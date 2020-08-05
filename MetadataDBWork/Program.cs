@@ -26,9 +26,9 @@ namespace MetadataDBWork
             "CREATE TABLE Albums (ID INTEGER PRIMARY KEY, AlbumArtistID INTEGER NOT NULL REFERENCES AlbumArtists (ID), Name TEXT NOT NULL, Path TEXT NOT NULL);\r\n" +
             "CREATE TABLE Artists (ID INTEGER PRIMARY KEY, Name TEXT UNIQUE);\r\n" +
             "CREATE TABLE Files (ID INTEGER PRIMARY KEY, \"Set\" INTEGER NOT NULL, Path TEXT UNIQUE, ScanTime DATETIME NOT NULL, TrackID INTEGER REFERENCES Tracks (ID), CodecName TEXT NOT NULL, CodecType TEXT NOT NULL, AverageBitrate INTEGER NOT NULL, MaxBitrate INTEGER NOT NULL, BitsPerSample INTEGER NOT NULL, SampleRate INTEGER NOT NULL, Channels INTEGER NOT NULL, DurationInFrames INTEGER NOT NULL);\r\n" +
-            "CREATE TABLE Images (ID INTEGER PRIMARY KEY, FileID INTEGER REFERENCES Files (ID) NOT NULL, Description TEXT, ImageType TEXT, Width INTEGER, Height INTEGER, Size INTEGER, Data BLOB);\r\n" +
+            "CREATE TABLE Images (ID INTEGER PRIMARY KEY, FileID INTEGER REFERENCES Files (ID) NOT NULL, Description TEXT, Category TEXT, ImageType TEXT, Width INTEGER, Height INTEGER, Size INTEGER, Data BLOB);\r\n" +
             "CREATE TABLE Metadata (ID INTEGER PRIMARY KEY, FileID INTEGER REFERENCES Files (ID) NOT NULL, \"Key\" TEXT NOT NULL, Value TEXT NOT NULL);\r\n" +
-            "CREATE TABLE Tracks (ID INTEGER PRIMARY KEY, ArtistID INTEGER REFERENCES Artists (ID) NOT NULL, AlbumID INTEGER REFERENCES Albums (ID) NOT NULL, TrackNumber INTEGER, TrackTitle TEXT);\r\n" + 
+            "CREATE TABLE Tracks (ID INTEGER PRIMARY KEY, ArtistID INTEGER REFERENCES Artists (ID) NOT NULL, AlbumID INTEGER REFERENCES Albums (ID) NOT NULL, TrackNumber INTEGER, TrackName TEXT);\r\n" + 
             "CREATE INDEX MetadataFileIDIndex ON Metadata(FileID ASC);\r\n" +
             "CREATE INDEX AlbumsAlbumArtistIDIndex ON Albums (AlbumArtistID ASC);\r\n" +
             "CREATE INDEX ImagesFileIDIndex ON Images (FileID ASC);\r\n" +
@@ -71,12 +71,17 @@ namespace MetadataDBWork
             };
 
             var filesdict = new ConcurrentDictionary<string, ValueTuple<int, int, DateTime>>();
+            var fileshitdict = new ConcurrentDictionary<string, bool>();
 
             using var getfilescomm = conn.CreateCommand();
             getfilescomm.CommandText = "SELECT ID, \"Set\", Path, ScanTime FROM Files";
             using (var reader = getfilescomm.ExecuteReader())
                 while (reader.Read())
+                {
                     filesdict[reader.GetString(2)] = (reader.GetInt32(0), reader.GetInt32(1), DateTime.SpecifyKind(reader.GetDateTime(3), DateTimeKind.Utc));
+                    if (paths.Select(p => p.Item2).Contains(reader.GetInt32(1)))
+                        fileshitdict[reader.GetString(2)] = false;
+                }
 
             foreach (var scanpath in paths)
             {
@@ -96,45 +101,16 @@ namespace MetadataDBWork
                     {
                         var file = filesdict[fi.FullName];
                         if (fi.LastWriteTimeUtc > file.Item3)
-                        {
-                            deletekeys.Add(file.Item1);
                             scan = true;
-                        }
+                        else
+                            fileshitdict[fi.FullName] = true;
                     }
                     else
                         scan = true;
                     if (scan)
                         bag.Add(new Tuple<string, DateTime, IMetadataProvider>(fi.FullName, DateTime.UtcNow, Metadata.GetProvider(fi.FullName)));
                 });
-
-                if (!deletekeys.IsEmpty)
-                {
-                    using var deletecomm = conn.CreateCommand();
-                    var idparam = deletecomm.Parameters.Add("@ID", System.Data.DbType.Int32);
-                    using (var transaction = conn.BeginTransaction())
-                    {
-                        deletecomm.CommandText = "DELETE FROM Metadata WHERE FileID = @ID";
-                        foreach (var id in deletekeys)
-                        {
-                            idparam.Value = id;
-                            deletecomm.ExecuteNonQuery();
-                        }
-                        deletecomm.CommandText = "DELETE FROM Images WHERE FileID = @ID";
-                        foreach (var id in deletekeys)
-                        {
-                            idparam.Value = id;
-                            deletecomm.ExecuteNonQuery();
-                        }
-                        deletecomm.CommandText = "DELETE FROM Files WHERE ID = @ID";
-                        foreach (var id in deletekeys)
-                        {
-                            idparam.Value = id;
-                            deletecomm.ExecuteNonQuery();
-                        }
-                        transaction.Commit();
-                    }
-                }
-
+                 
                 if (!bag.IsEmpty)
                 {
                     using var filescomm = conn.CreateCommand();
@@ -205,9 +181,10 @@ namespace MetadataDBWork
                     }
 
                     using var imagecomm = conn.CreateCommand();
-                    imagecomm.CommandText = "INSERT INTO Images (FileID, Description, ImageType, Width, Height, Size, Data) VALUES (@FileID, @Description, @ImageType, @Width, @Height, @Size, @Data)";
+                    imagecomm.CommandText = "INSERT INTO Images (FileID, Description, Category, ImageType, Width, Height, Size, Data) VALUES (@FileID, @Description, @Category, @ImageType, @Width, @Height, @Size, @Data)";
                     fileidparam = imagecomm.Parameters.Add("@FileID", System.Data.DbType.Int32);
                     var descriptionparam = imagecomm.Parameters.Add("@Description", System.Data.DbType.String);
+                    var categoryparam = imagecomm.Parameters.Add("@Category", System.Data.DbType.String);
                     var imagetypeparam = imagecomm.Parameters.Add("@ImageType", System.Data.DbType.String);
                     var widthparam = imagecomm.Parameters.Add("@Width", System.Data.DbType.Int32);
                     var heightparam = imagecomm.Parameters.Add("@Height", System.Data.DbType.Int32);
@@ -222,6 +199,7 @@ namespace MetadataDBWork
                             foreach (var image in file.Item3.GetImageMetadata())
                             {
                                 descriptionparam.Value = image.Description;
+                                categoryparam.Value = image.Category;
                                 imagetypeparam.Value = image.ImageType;
                                 widthparam.Value = image.Width;
                                 heightparam.Value = image.Height;
@@ -307,7 +285,7 @@ namespace MetadataDBWork
 
                 var distincttracks = toupdate.Select(t => (Path.GetDirectoryName(t.Item2), t.Item3, t.Item4, t.Item5, t.Item6, t.Item7)).Distinct().ToDictionary(dt => dt, dt => true);
                 var tracksdict = new Dictionary<(string, string, string, string, int, string), int>();
-                querycomm.CommandText = "SELECT Tracks.ID, Albums.Path, Artists.Name, AlbumArtists.Name, Albums.Name, Tracks.TrackNumber, Tracks.TrackTitle FROM Tracks JOIN Albums ON Tracks.AlbumID = Albums.ID JOIN Artists ON Tracks.ArtistID = Artists.ID JOIN AlbumArtists ON Albums.AlbumArtistID = AlbumArtists.ID";
+                querycomm.CommandText = "SELECT Tracks.ID, Albums.Path, Artists.Name, AlbumArtists.Name, Albums.Name, Tracks.TrackNumber, Tracks.TrackName FROM Tracks JOIN Albums ON Tracks.AlbumID = Albums.ID JOIN Artists ON Tracks.ArtistID = Artists.ID JOIN AlbumArtists ON Albums.AlbumArtistID = AlbumArtists.ID";
                 querycomm.Parameters.Clear();
                 using (var reader = querycomm.ExecuteReader())
                     while (reader.Read())
@@ -318,25 +296,25 @@ namespace MetadataDBWork
                 {
                     using (var transaction = conn.BeginTransaction())
                     {
-                        querycomm.CommandText = "INSERT INTO Tracks (ArtistID, AlbumID, TrackNumber, TrackTitle) VALUES (@ArtistID, @AlbumID, @TrackNumber, @TrackTitle)";
+                        querycomm.CommandText = "INSERT INTO Tracks (ArtistID, AlbumID, TrackNumber, TrackName) VALUES (@ArtistID, @AlbumID, @TrackNumber, @TrackName)";
                         querycomm.Parameters.Clear();
                         var artistidparam = querycomm.Parameters.Add("@ArtistID", System.Data.DbType.Int32);
                         var albumidparam = querycomm.Parameters.Add("@AlbumID", System.Data.DbType.Int32);
                         var tracknumberparam = querycomm.Parameters.Add("@TrackNumber", System.Data.DbType.Int32);
-                        var tracktitleparam = querycomm.Parameters.Add("@TrackTitle", System.Data.DbType.String);
+                        var tracknameparam = querycomm.Parameters.Add("@TrackName", System.Data.DbType.String);
                         foreach (var track in trackdifferences)
                         {
                             artistidparam.Value = artistdict[track.Item2];
                             albumidparam.Value = albumsdict[(track.Item1, track.Item3, track.Item4)];
                             tracknumberparam.Value = track.Item5;
-                            tracktitleparam.Value = track.Item6;
+                            tracknameparam.Value = track.Item6;
                             querycomm.ExecuteNonQuery();
                         }
                         transaction.Commit();
                     }
                 }
 
-                querycomm.CommandText = "SELECT Tracks.ID, Albums.Path, Artists.Name, AlbumArtists.Name, Albums.Name, Tracks.TrackNumber, Tracks.TrackTitle FROM Tracks JOIN Albums ON Tracks.AlbumID = Albums.ID JOIN Artists ON Tracks.ArtistID = Artists.ID JOIN AlbumArtists ON Albums.AlbumArtistID = AlbumArtists.ID";
+                querycomm.CommandText = "SELECT Tracks.ID, Albums.Path, Artists.Name, AlbumArtists.Name, Albums.Name, Tracks.TrackNumber, Tracks.TrackName FROM Tracks JOIN Albums ON Tracks.AlbumID = Albums.ID JOIN Artists ON Tracks.ArtistID = Artists.ID JOIN AlbumArtists ON Albums.AlbumArtistID = AlbumArtists.ID";
                 querycomm.Parameters.Clear();
                 tracksdict.Clear();
                 using (var reader = querycomm.ExecuteReader())
@@ -362,14 +340,31 @@ namespace MetadataDBWork
                     }
                 }
 
+                using (var transaction = conn.BeginTransaction())
+                {
+                    querycomm.Parameters.Clear();
+                    querycomm.CommandText = "DELETE FROM Files WHERE ID = @ID";
+                    var idparam = querycomm.Parameters.Add("@ID", System.Data.DbType.Int32);
+                    foreach (var kv in fileshitdict)
+                    {
+                        if (!kv.Value)
+                        {
+                            idparam.Value = filesdict[kv.Key].Item1;
+                            querycomm.ExecuteNonQuery();
+                        }
+                    }
+                    querycomm.CommandText =
+                        "DELETE FROM Metadata WHERE FileID NOT IN (SELECT ID FROM Files);\r\n" +
+                        "DELETE FROM Images WHERE FileID NOT IN (SELECT ID FROM Files);\r\n" +
+                        "DELETE FROM Tracks WHERE ID NOT IN (SELECT TrackID FROM Files);\r\n" +
+                        "DELETE FROM Artists WHERE ID NOT IN (SELECT ArtistID FROM Tracks);\r\n" +
+                        "DELETE FROM Albums WHERE ID NOT IN (SELECT AlbumID FROM Tracks);\r\n" +
+                        "DELETE FROM AlbumArtists WHERE ID NOT IN (SELECT AlbumArtistID FROM Albums);";
+                    querycomm.ExecuteNonQuery();
+                    transaction.Commit();
+                }
+
                 // Clean Up
-                querycomm.Parameters.Clear();
-                querycomm.CommandText =
-                    "DELETE FROM Tracks WHERE ID NOT IN (SELECT TrackID FROM Files);\r\n" +
-                    "DELETE FROM Artists WHERE ID NOT IN(SELECT ArtistID FROM Tracks);\r\n" +
-                    "DELETE FROM Albums WHERE ID NOT IN(SELECT AlbumID FROM Tracks);\r\n" +
-                    "DELETE FROM AlbumArtists WHERE ID NOT IN(SELECT AlbumArtistID FROM Albums);";
-                querycomm.ExecuteNonQuery();
 
             }
 

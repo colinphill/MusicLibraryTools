@@ -35,6 +35,7 @@ namespace MusicFileUtilities
         public byte[] Data;
 
         string IMetadataImage.Description => string.IsNullOrWhiteSpace(Description) ? PictureType.ToString() : Description;
+        string IMetadataImage.Category => PictureType.ToString();
         string IMetadataImage.ImageType => MimeType;
         int IMetadataImage.Width => Width;
         int IMetadataImage.Height => Height;

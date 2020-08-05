@@ -654,6 +654,7 @@ namespace MusicFileUtilities
         private int _height;
 
         string IMetadataImage.Description => string.IsNullOrWhiteSpace(_description) ? _type.ToString() : _description;
+        string IMetadataImage.Category => _type.ToString();
         string IMetadataImage.ImageType => _mimetype;
         int IMetadataImage.Width => _width;
         int IMetadataImage.Height => _height;
