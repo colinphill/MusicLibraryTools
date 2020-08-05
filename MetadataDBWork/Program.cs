@@ -63,29 +63,35 @@ namespace MetadataDBWork
 
             var paths = new []
             {
-                ( @"\\ritsuko.projecteva.net\Roon\Purchased Sync", 30 ),
-                ( @"\\ritsuko.projecteva.net\AllMusic\FLAC", 1 ),
-                ( @"\\ritsuko.projecteva.net\AllMusic\FLAC2", 2 ),
-                ( @"\\ritsuko.projecteva.net\AllMusic\HiRes\Stereo", 10 ),
-                ( @"\\ritsuko.projecteva.net\AllMusic\HiRes\Multi", 20 )
+                ( @"Z:\iTunes\Purchased Sync", 4 ),
+                ( @"Z:\iTunes\FLAC", 2 ),
+                ( @"Z:\iTunes\FLAC2", 3 ),
+                ( @"Z:\iTunes\HiRes\Stereo", 1 ),
+                ( @"Z:\iTunes\HiRes\Multi", 100 ),
+                //( @"Z:\iTunes\AAC\Music", 10000 ),
             };
 
-            var filesdict = new ConcurrentDictionary<string, ValueTuple<int, int, DateTime>>();
+            bool allsets = false;
+
+            var setlist = paths.Aggregate("", (a, b) => a + ", " + b.Item2.ToString()).Substring(2);
+
+            var filesdict = new ConcurrentDictionary<string, ValueTuple<int, DateTime>>();
             var fileshitdict = new ConcurrentDictionary<string, bool>();
 
+            int count = 0;
             using var getfilescomm = conn.CreateCommand();
-            getfilescomm.CommandText = "SELECT ID, \"Set\", Path, ScanTime FROM Files";
+            getfilescomm.CommandText = "SELECT ID, Path, ScanTime FROM Files" + (allsets ? "" : (" WHERE \"SET\" IN (" + setlist + ")"));
             using (var reader = getfilescomm.ExecuteReader())
                 while (reader.Read())
                 {
-                    filesdict[reader.GetString(2)] = (reader.GetInt32(0), reader.GetInt32(1), DateTime.SpecifyKind(reader.GetDateTime(3), DateTimeKind.Utc));
-                    if (paths.Select(p => p.Item2).Contains(reader.GetInt32(1)))
-                        fileshitdict[reader.GetString(2)] = false;
+                    filesdict[reader.GetString(1)] = (reader.GetInt32(0), DateTime.SpecifyKind(reader.GetDateTime(2), DateTimeKind.Utc));
+                    fileshitdict[reader.GetString(1)] = false;
+                    count++;
                 }
 
             foreach (var scanpath in paths)
             {
-                GC.Collect();
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
 
                 DirectoryInfo di = new DirectoryInfo(scanpath.Item1);
                 int scanset = scanpath.Item2;
@@ -100,7 +106,7 @@ namespace MetadataDBWork
                     if (filesdict.ContainsKey(fi.FullName))
                     {
                         var file = filesdict[fi.FullName];
-                        if (fi.LastWriteTimeUtc > file.Item3)
+                        if (fi.LastWriteTimeUtc > file.Item2)
                             scan = true;
                         else
                             fileshitdict[fi.FullName] = true;
@@ -219,10 +225,10 @@ namespace MetadataDBWork
                 var artistlist = new List<string>();
                 var albumartistlist = new List<string>();
 
-                querycomm.CommandText = "INSERT INTO Artists (NAME) SELECT DISTINCT Artist FROM MetadataMapView WHERE Artist NOT IN (SELECT Name FROM Artists)";
+                querycomm.CommandText = "INSERT INTO Artists (NAME) SELECT DISTINCT Artist FROM MetadataMapView WHERE" + (allsets ? "" : (" \"SET\" IN (" + setlist + ") AND")) + " Artist NOT IN (SELECT Name FROM Artists)";
                 querycomm.Parameters.Clear();
                 querycomm.ExecuteNonQuery();
-                querycomm.CommandText = "INSERT INTO AlbumArtists (NAME) SELECT DISTINCT AlbumArtist FROM MetadataMapView WHERE AlbumArtist NOT IN (SELECT Name FROM AlbumArtists)";
+                querycomm.CommandText = "INSERT INTO AlbumArtists (NAME) SELECT DISTINCT AlbumArtist FROM MetadataMapView WHERE" + (allsets ? "" : (" \"SET\" IN (" + setlist + ") AND")) + " AlbumArtist NOT IN (SELECT Name FROM AlbumArtists)";
                 querycomm.Parameters.Clear();
                 querycomm.ExecuteNonQuery();
 
@@ -241,7 +247,7 @@ namespace MetadataDBWork
                         albumartistdict.Add(reader.GetString(1), reader.GetInt32(0));
 
                 var toupdate = new List<(int, string, string, string, string, int, string)>();
-                querycomm.CommandText = "SELECT ID, Path, Artist, AlbumArtist, Album, TrackNumber, TrackName FROM MetadataMapView WHERE TrackID IS NULL";
+                querycomm.CommandText = "SELECT ID, Path, Artist, AlbumArtist, Album, TrackNumber, TrackName FROM MetadataMapView WHERE" + (allsets ? "" : (" \"SET\" IN (" + setlist + ") AND")) + " TrackID IS NULL";
                 querycomm.Parameters.Clear();
                 using (var reader = querycomm.ExecuteReader())
                     while (reader.Read())
