@@ -19,7 +19,7 @@ namespace MetadataCaching
              "CREATE TABLE AlbumArtists (ID INTEGER PRIMARY KEY, Name TEXT UNIQUE);\r\n" +
              "CREATE TABLE Albums (ID INTEGER PRIMARY KEY, AlbumArtistID INTEGER NOT NULL REFERENCES AlbumArtists (ID), Name TEXT NOT NULL, Path TEXT NOT NULL);\r\n" +
              "CREATE TABLE Artists (ID INTEGER PRIMARY KEY, Name TEXT UNIQUE);\r\n" +
-             "CREATE TABLE Files (ID INTEGER PRIMARY KEY, \"Set\" INTEGER NOT NULL, Path TEXT UNIQUE, ScanTime DATETIME NOT NULL, TrackID INTEGER REFERENCES Tracks (ID), CodecName TEXT NOT NULL, CodecType TEXT NOT NULL, AverageBitrate INTEGER NOT NULL, MaxBitrate INTEGER NOT NULL, BitsPerSample INTEGER NOT NULL, SampleRate INTEGER NOT NULL, Channels INTEGER NOT NULL, DurationInFrames INTEGER NOT NULL);\r\n" +
+             "CREATE TABLE Files (ID INTEGER PRIMARY KEY, \"Set\" INTEGER NOT NULL, Path TEXT UNIQUE, ScanTime DATETIME NOT NULL, TrackID INTEGER REFERENCES Tracks (ID), CodecName TEXT NOT NULL, CodecType TEXT NOT NULL, AverageBitrate INTEGER NOT NULL, MaxBitrate INTEGER NOT NULL, BitsPerSample INTEGER NOT NULL, SampleRate INTEGER NOT NULL, Channels INTEGER NOT NULL, DurationInFrames INTEGER NOT NULL, UNIQUE(\"Set\", Path));\r\n" +
              "CREATE TABLE Images (ID INTEGER PRIMARY KEY, FileID INTEGER REFERENCES Files (ID) NOT NULL, Description TEXT, Category TEXT, ImageType TEXT, Width INTEGER, Height INTEGER, Size INTEGER, Data BLOB);\r\n" +
              "CREATE TABLE Metadata (ID INTEGER PRIMARY KEY, FileID INTEGER REFERENCES Files (ID) NOT NULL, \"Key\" TEXT NOT NULL, Value TEXT NOT NULL);\r\n" +
              "CREATE TABLE Tracks (ID INTEGER PRIMARY KEY, ArtistID INTEGER REFERENCES Artists (ID) NOT NULL, AlbumID INTEGER REFERENCES Albums (ID) NOT NULL, Number INTEGER, Name TEXT);\r\n" +
@@ -161,7 +161,7 @@ namespace MetadataCaching
                     var keymap = new Dictionary<string, int>();
                     using (var query = conn_.CreateCommand())
                     {
-                        query.CommandText = "SELECT ID, Path FROM Files";
+                        query.CommandText = "SELECT ID, Path FROM Files WHERE \"Set\" = " + scanset;
                         using (var reader = query.ExecuteReader())
                             while (reader.Read())
                                 keymap.Add(reader.GetString(1), reader.GetInt32(0));
