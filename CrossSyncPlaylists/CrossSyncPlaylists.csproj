@@ -50,6 +50,10 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\MetadataCaching\MetadataCaching.csproj">
+      <Project>{080de646-a227-4a79-baf1-9360cb4ec3c8}</Project>
+      <Name>MetadataCaching</Name>
+    </ProjectReference>
     <ProjectReference Include="..\MusicFileUtilities\MusicFileUtilities.csproj">
       <Project>{371A75BC-73F8-4222-A3B3-0B21497AFD0C}</Project>
       <Name>MusicFileUtilities</Name>

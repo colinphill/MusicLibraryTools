@@ -2,12 +2,13 @@
 using System.Text;
 using System.IO;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace MusicFileUtilities
 {
     public class ImageFile
     {
-        private static readonly byte[] standalonemarkers_ = { 0xd0, 0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8, 0xd9, 0xf1 };
+        private static readonly HashSet<byte> standalonemarkers_ = new HashSet<byte>() { 0xd0, 0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8, 0xd9, 0xf1 };
 
         public enum ImageFormat { Gif, Jpeg, Png, Bmp, Unknown };
 
@@ -34,22 +35,22 @@ namespace MusicFileUtilities
 
         private static (int Width, int Height) GetGifDimensions(byte[] b)
         {
-            int width = (((int)b[7]) << 8) | (int)b[6];
-            int height = (((int)b[9]) << 8) | (int)b[8];
+            int width = Tools.UInt16AtLE(b, 6);
+            int height = Tools.UInt16AtLE(b, 8);
             return (width, height);
         }
 
         private static (int Width, int Height) GetBmpDimensions(byte[] b)
         {
-            int width = (((((((int)b[21]) << 8) | (int)b[20]) << 8) | (int)b[19]) << 8) | (int)b[18];
-            int height = (((((((int)b[25]) << 8) | (int)b[24]) << 8) | (int)b[23]) << 8) | (int)b[22];
+            int width = (int)Tools.UInt32AtLE(b, 18);
+            int height = (int)Tools.UInt32AtLE(b, 22);
             return (width, height);
         }
 
         private static (int Width, int Height) GetPngDimensions(byte[] b)
         {
-            int width = (((((((int)b[16]) << 8) | (int)b[17]) << 8) | (int)b[18]) << 8) | (int)b[19];
-            int height = (((((((int)b[20]) << 8) | (int)b[21]) << 8) | (int)b[22]) << 8) | (int)b[23];
+            int width = (int)Tools.UInt32AtBE(b, 16);
+            int height = (int)Tools.UInt32AtBE(b, 20);
             return (width, height);
         }
 

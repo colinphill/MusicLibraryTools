@@ -8,9 +8,10 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
+using MusicFileUtilities;
 using ConsoleTools;
 
-namespace MusicFileUtilities
+namespace MetadataCaching
 {
 
     [Serializable]

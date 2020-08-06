@@ -22,6 +22,7 @@ using MusicFileUtilities;
 using iTunes;
 using ConsoleTools;
 using MusicLibraryTools;
+using MetadataCaching;
 
 namespace CrossSyncPlaylists
 {

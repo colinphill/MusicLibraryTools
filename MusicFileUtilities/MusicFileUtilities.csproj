@@ -52,7 +52,6 @@
     <Compile Include="LibraryConfiguration.cs" />
     <Compile Include="LogConsole.cs" />
     <Compile Include="Metadata.cs" />
-    <Compile Include="MetadataCache.cs" />
     <Compile Include="MetaTools.cs" />
     <Compile Include="MP4File.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

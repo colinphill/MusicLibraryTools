@@ -50,6 +50,10 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\MetadataCaching\MetadataCaching.csproj">
+      <Project>{080de646-a227-4a79-baf1-9360cb4ec3c8}</Project>
+      <Name>MetadataCaching</Name>
+    </ProjectReference>
     <ProjectReference Include="..\MusicFileUtilities\MusicFileUtilities.csproj">
       <Project>{371a75bc-73f8-4222-a3b3-0b21497afd0c}</Project>
       <Name>MusicFileUtilities</Name>

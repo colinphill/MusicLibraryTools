@@ -8,6 +8,7 @@ using System.IO;
 using MusicFileUtilities;
 using MusicLibraryTools;
 using ConsoleTools;
+using MetadataCaching;
 
 namespace OrganizeFiles
 {
@@ -44,7 +45,7 @@ namespace OrganizeFiles
                         File.Move(f.Key, tgt);
                     }
                 }
-                Extensions.CleanEmptyMusicFolders(new DirectoryInfo(basedir), deletenonmusic);
+                MetadataExtensions.CleanEmptyMusicFolders(new DirectoryInfo(basedir), deletenonmusic);
                 Console.WriteLine();
             }
         }

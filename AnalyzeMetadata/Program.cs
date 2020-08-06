@@ -8,6 +8,7 @@ using MusicFileUtilities;
 using MusicLibraryTools;
 using System.IO;
 using ConsoleTools;
+using MetadataCaching;
 
 namespace AnalyzeMetadata
 {

@@ -200,8 +200,10 @@ namespace MusicFileUtilities
 
     }
 
-    public static class Extensions
+    public static class MetadataExtensions
     {
+        public static readonly HashSet<string> ValidExtensions = new HashSet<string>() { ".dsf", ".m4a", ".mp3", ".flac", ".ogg" };
+
         public static string LimitLength(this string val, int length)
         {
             int l = Math.Min(length, val.Length);
@@ -239,7 +241,7 @@ namespace MusicFileUtilities
             {
                 foreach (var file in files)
                 {
-                    if (MetadataCache.ValidExtensions.Contains(Path.GetExtension(file.Name).ToLower()))
+                    if (ValidExtensions.Contains(Path.GetExtension(file.Name).ToLower()))
                         empty = false;
                     else if (deletenonmusic)
                         file.Delete();

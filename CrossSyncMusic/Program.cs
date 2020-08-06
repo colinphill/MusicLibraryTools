@@ -18,6 +18,7 @@ using iTunes;
 using ConsoleTools;
 using MusicLibraryTools;
 using MusicFileUtilities;
+using MetadataCaching;
 
 namespace CrossSyncMusic
 {
@@ -179,7 +180,7 @@ namespace CrossSyncMusic
 
             LogConsole.WriteLine("Total Misses: " + (namehits.Where(kv => kv.Value.Hit == false).Count()).ToString());
 
-            Extensions.CleanEmptyMusicFolders(targetdi);
+            MetadataExtensions.CleanEmptyMusicFolders(targetdi);
     
             LogConsole.Close();
 
