@@ -14,7 +14,6 @@ using System.Text;
 using System.Collections.Generic;
 using System.Linq;
 using System.Data;
-using System.Drawing;
 
 namespace MusicFileUtilities
 {
@@ -706,12 +705,9 @@ namespace MusicFileUtilities
             int codelen2 = CodeString(encoding, _description + "\0").Length;
             _picdata = new byte[Data.Length - codelen - codelen2 - 2];
             Array.Copy(Data, codelen + codelen2 + 2, _picdata, 0, _picdata.Length);
-            using (var ms = new MemoryStream(_picdata))
-                using (Image img = Image.FromStream(ms))
-                {
-                    _width = img.Width;
-                    _height = img.Height;
-                }
+            var img = ImageFile.GetImageDimensions(_picdata);
+            _width = img.Width;
+            _height = img.Height;
         }
 
         public void Encode(ID3v2Util.APICType type, string mimetype, string desc, byte[] data)

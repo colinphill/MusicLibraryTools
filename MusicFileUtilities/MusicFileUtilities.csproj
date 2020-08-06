@@ -36,7 +36,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Drawing" />
+    <Reference Include="System.Numerics" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -47,6 +47,7 @@
     <Compile Include="ASF.cs" />
     <Compile Include="FLAC.cs" />
     <Compile Include="ID3.cs" />
+    <Compile Include="Image.cs" />
     <Compile Include="iTunesLibrary.cs" />
     <Compile Include="LibraryConfiguration.cs" />
     <Compile Include="LogConsole.cs" />
@@ -56,6 +57,9 @@
     <Compile Include="MP4File.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Vorbis.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

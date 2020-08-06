@@ -13,9 +13,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
-using System.ComponentModel;
-using System.Drawing;
-using System.Runtime.CompilerServices;
 
 namespace MusicFileUtilities
 {
@@ -597,6 +594,10 @@ namespace MusicFileUtilities
             UPC = 25, BMP = 27, Invalid = 0xffffffff
         };
 
+        private byte[] _imagedata;
+        private int _imagewidth;
+        private int _imageheight;
+
         public string ImageToMimeType()
         {
             if (DataType == DataTypes.GIF)
@@ -620,6 +621,14 @@ namespace MusicFileUtilities
         public Atom_data(Atom a, Stream s)
             : base(a, s)
         {
+            if (IsImage)
+            {
+                _imagedata = new byte[Data.Length - 8];
+                Array.Copy(Data, 8, _imagedata, 0, _imagedata.Length);
+                var img = ImageFile.GetImageDimensions(_imagedata);
+                _imagewidth = img.Width;
+                _imageheight = img.Height;
+            }
         }
 
         public Atom_data(ContainerAtom ca)
@@ -1051,7 +1060,9 @@ namespace MusicFileUtilities
             s.Close();
         }
 
-        public byte[] ImageData => _data.Skip(8).ToArray();
+        public byte[] ImageData => _imagedata;
+        public int ImageWidth => _imagewidth;
+        public int ImageHeight => _imageheight;
 
         public void LoadImage(string path)
         {
@@ -1612,20 +1623,16 @@ namespace MusicFileUtilities
                         Atom_data da = childatom as Atom_data;
                         if (da.IsImage)
                         {
-                            using (var ms = new MemoryStream(da.ImageData))
-                                using (var image = Image.FromStream(ms))
-                                {
-                                    yield return new MP4Image()
-                                    {
-                                        Category = mapping.ToString(),
-                                        Description = "",
-                                        ImageType = da.ImageToMimeType(),
-                                        Width = image.Width,
-                                        Height = image.Height,
-                                        Size = da.Data.Length - 8,
-                                        Data = da.ImageData
-                                    }; 
-                                }
+                            yield return new MP4Image()
+                            {
+                                Category = mapping.ToString(),
+                                Description = "",
+                                ImageType = da.ImageToMimeType(),
+                                Width = da.ImageWidth,
+                                Height = da.ImageHeight,
+                                Size = da.ImageData.Length,
+                                Data = da.ImageData
+                            };
                         }
                     }
                 }

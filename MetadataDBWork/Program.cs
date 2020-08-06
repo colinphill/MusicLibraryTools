@@ -68,7 +68,7 @@ namespace MetadataDBWork
                 ( @"Z:\iTunes\FLAC2", 3 ),
                 ( @"Z:\iTunes\HiRes\Stereo", 1 ),
                 ( @"Z:\iTunes\HiRes\Multi", 100 ),
-                //( @"Z:\iTunes\AAC\Music", 10000 ),
+                ( @"Z:\iTunes\AAC\Music", 10000 ),
             };
 
             bool allsets = false;
