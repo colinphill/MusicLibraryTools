@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Data.SQLite;
 using System.IO;
 using MusicFileUtilities;
+using System.Threading;
 
 namespace MetadataCaching
 {
@@ -14,38 +15,39 @@ namespace MetadataCaching
         private SQLiteConnection conn_;
 
         private static readonly string creationsql_ =
-             "PRAGMA foreign_keys = off;\r\n" +
-             "BEGIN TRANSACTION;\r\n" +
-             "CREATE TABLE AlbumArtists (ID INTEGER PRIMARY KEY, Name TEXT UNIQUE);\r\n" +
-             "CREATE TABLE Albums (ID INTEGER PRIMARY KEY, AlbumArtistID INTEGER NOT NULL REFERENCES AlbumArtists (ID), Name TEXT NOT NULL, Path TEXT NOT NULL);\r\n" +
-             "CREATE TABLE Artists (ID INTEGER PRIMARY KEY, Name TEXT UNIQUE);\r\n" +
-             "CREATE TABLE Files (ID INTEGER PRIMARY KEY, \"Set\" INTEGER NOT NULL, Path TEXT UNIQUE, ScanTime DATETIME NOT NULL, TrackID INTEGER REFERENCES Tracks (ID), CodecName TEXT NOT NULL, CodecType TEXT NOT NULL, AverageBitrate INTEGER NOT NULL, MaxBitrate INTEGER NOT NULL, BitsPerSample INTEGER NOT NULL, SampleRate INTEGER NOT NULL, Channels INTEGER NOT NULL, DurationInFrames INTEGER NOT NULL, UNIQUE(\"Set\", Path));\r\n" +
-             "CREATE TABLE Images (ID INTEGER PRIMARY KEY, FileID INTEGER REFERENCES Files (ID) NOT NULL, Description TEXT, Category TEXT, ImageType TEXT, Width INTEGER, Height INTEGER, Size INTEGER, Data BLOB);\r\n" +
-             "CREATE TABLE Metadata (ID INTEGER PRIMARY KEY, FileID INTEGER REFERENCES Files (ID) NOT NULL, \"Key\" TEXT NOT NULL, Value TEXT NOT NULL);\r\n" +
-             "CREATE TABLE Tracks (ID INTEGER PRIMARY KEY, ArtistID INTEGER REFERENCES Artists (ID) NOT NULL, AlbumID INTEGER REFERENCES Albums (ID) NOT NULL, Number INTEGER, Name TEXT);\r\n" +
-             "CREATE INDEX AlbumsAlbumArtistIDIndex ON Albums (AlbumArtistID ASC);\r\n" +
-             "CREATE INDEX FilesPathIndex ON Files(Path ASC);\r\n" +
-             "CREATE INDEX FilesSetIndex ON Files(\"Set\" ASC);\r\n" +
-             "CREATE INDEX FilesTrackIDIndex ON Files(TrackID ASC);\r\n" +
-             "CREATE INDEX ImagesFileIDIndex ON Images (FileID ASC);\r\n" +
-             "CREATE INDEX MetadataFileIDIndex ON Metadata(FileID ASC);\r\n" +
-             "CREATE INDEX TracksAlbumIDIndex ON Tracks (AlbumID ASC);\r\n" +
-             "CREATE INDEX TracksArtistIDIndex ON Tracks (ArtistID ASC);\r\n" +
-             "CREATE VIEW MetadataMapView AS SELECT *,\r\n" +
-             "(SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'ARTIST') AS Artist,\r\n" +
-             "COALESCE(\r\n" +
-             "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'ALBUMARTIST'),\r\n" +
-             "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'ARTIST')) AS AlbumArtist,\r\n" +
-             "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'ALBUM') AS Album,\r\n" +
-             "   CAST((SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'Number') AS INTEGER) AS Number,\r\n" +
-             "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'TITLE') AS Name\r\n" +
-             "   FROM Files;\r\n" +
-             "CREATE VIEW MetadataSummaryView AS SELECT Files.ID, Files.\"Set\", Files.Path, Artists.Name AS Artist, AlbumArtists.Name AS AlbumArtists,\r\n" +
-             "   Albums.Name AS Album, Tracks.Number AS TrackNumber, Tracks.Name AS Track FROM\r\n" +
-             "   Files JOIN Tracks ON Files.TrackID = Tracks.ID JOIN Artists ON Tracks.ArtistID = Artists.ID JOIN\r\n" +
-             "   Albums ON Tracks.AlbumID = Albums.ID JOIN AlbumArtists ON Albums.AlbumArtistID = AlbumArtists.ID;\r\n" +
-             "COMMIT TRANSACTION;\r\n" +
-             "PRAGMA foreign_keys = on\r\n";
+            "PRAGMA foreign_keys = off;\r\n" +
+            "BEGIN TRANSACTION;\r\n" +
+            "CREATE TABLE AlbumArtists (ID INTEGER PRIMARY KEY, Name TEXT UNIQUE);\r\n" +
+            "CREATE TABLE Albums (ID INTEGER PRIMARY KEY, AlbumArtistID INTEGER NOT NULL REFERENCES AlbumArtists (ID), Name TEXT NOT NULL, Path TEXT NOT NULL);\r\n" +
+            "CREATE TABLE Artists (ID INTEGER PRIMARY KEY, Name TEXT UNIQUE);\r\n" +
+            "CREATE TABLE Files (ID INTEGER PRIMARY KEY, \"Set\" INTEGER NOT NULL, Path TEXT UNIQUE, FileSize INTEGER, ScanTime DATETIME NOT NULL, TrackID INTEGER REFERENCES Tracks (ID), CodecName TEXT NOT NULL, CodecType TEXT NOT NULL, AverageBitrate INTEGER NOT NULL, MaxBitrate INTEGER NOT NULL, BitsPerSample INTEGER NOT NULL, SampleRate INTEGER NOT NULL, Channels INTEGER NOT NULL, DurationInFrames INTEGER NOT NULL, UNIQUE(\"Set\", Path));\r\n" +
+            "CREATE TABLE Images (ID INTEGER PRIMARY KEY, FileID INTEGER REFERENCES Files (ID) NOT NULL, Description TEXT, Category TEXT, ImageType TEXT, Width INTEGER, Height INTEGER, Size INTEGER, Data BLOB);\r\n" +
+            "CREATE TABLE Metadata (ID INTEGER PRIMARY KEY, FileID INTEGER REFERENCES Files (ID) NOT NULL, \"Key\" TEXT NOT NULL, Value TEXT NOT NULL);\r\n" +
+            "CREATE TABLE Tracks (ID INTEGER PRIMARY KEY, ArtistID INTEGER REFERENCES Artists (ID) NOT NULL, AlbumID INTEGER REFERENCES Albums (ID) NOT NULL, Number INTEGER, Name TEXT);\r\n" +
+            "CREATE INDEX AlbumsAlbumArtistIDIndex ON Albums (AlbumArtistID ASC);\r\n" +
+            "CREATE INDEX FilesPathIndex ON Files(Path ASC);\r\n" +
+            "CREATE INDEX FilesSetIndex ON Files(\"Set\" ASC);\r\n" +
+            "CREATE INDEX FilesTrackIDIndex ON Files(TrackID ASC);\r\n" +
+            "CREATE INDEX ImagesFileIDIndex ON Images (FileID ASC);\r\n" +
+            "CREATE INDEX MetadataKeyIndex ON Metadata(\"Key\" ASC);\r\n" +
+            "CREATE INDEX MetadataFileIDIndex ON Metadata(FileID ASC);\r\n" +
+            "CREATE INDEX TracksAlbumIDIndex ON Tracks (AlbumID ASC);\r\n" +
+            "CREATE INDEX TracksArtistIDIndex ON Tracks (ArtistID ASC);\r\n" +
+            "CREATE VIEW MetadataMapView AS SELECT *,\r\n" +
+            "(SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'ARTIST') AS Artist,\r\n" +
+            "COALESCE(\r\n" +
+            "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'ALBUMARTIST'),\r\n" +
+            "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'ARTIST')) AS AlbumArtist,\r\n" +
+            "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'ALBUM') AS Album,\r\n" +
+            "   CAST((SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'TRACKNUMBER') AS INTEGER) AS Number,\r\n" +
+            "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'TITLE') AS Name\r\n" +
+            "   FROM Files;\r\n" +
+            "CREATE VIEW MetadataSummaryView AS SELECT Files.*, Artists.Name AS Artist, AlbumArtists.Name AS AlbumArtists,\r\n" +
+            "   Albums.Name AS Album, Tracks.Number AS TrackNumber, Tracks.Name AS Track FROM\r\n" +
+            "   Files JOIN Tracks ON Files.TrackID = Tracks.ID JOIN Artists ON Tracks.ArtistID = Artists.ID JOIN\r\n" +
+            "   Albums ON Tracks.AlbumID = Albums.ID JOIN AlbumArtists ON Albums.AlbumArtistID = AlbumArtists.ID;\r\n" +
+            "COMMIT TRANSACTION;\r\n" +
+            "PRAGMA foreign_keys = on\r\n";
 
         public MetadataDatabase(string filename)
         {
@@ -67,36 +69,36 @@ namespace MetadataCaching
             }
         }
 
-        public void IndexFiles(IEnumerable<(string path, int set)> sets, bool allsets = false)
+        public (int Added, int Modified, int Removed, int Unchanged) IndexFiles(IEnumerable<(string path, int set)> sets, bool fixup = true)
         {
             var setlist = sets.Aggregate("", (a, b) => a + ", " + b.Item2.ToString()).Substring(2);
 
-            var filesdict = new ConcurrentDictionary<string, ValueTuple<int, DateTime>>();
-            var fileshitdict = new ConcurrentDictionary<string, bool>();
-
-            int count = 0;
-            using (var getfilescomm = conn_.CreateCommand())
-            {
-
-                getfilescomm.CommandText = "SELECT ID, Path, ScanTime FROM Files" + (allsets ? "" : (" WHERE \"SET\" IN (" + setlist + ")"));
-                using (var reader = getfilescomm.ExecuteReader())
-                    while (reader.Read())
-                    {
-                        filesdict[reader.GetString(1)] = (reader.GetInt32(0), DateTime.SpecifyKind(reader.GetDateTime(2), DateTimeKind.Utc));
-                        fileshitdict[reader.GetString(1)] = false;
-                        count++;
-                    }
-            }
-
+            int added = 0, modified = 0, removed = 0, unchanged = 0;
+ 
             foreach (var scanpath in sets)
             {
                 GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced);
 
+                var filesdict = new ConcurrentDictionary<string, ValueTuple<int, long, DateTime>>();
+                var fileshitdict = new ConcurrentDictionary<string, bool>();
+
+                using (var getfilescomm = conn_.CreateCommand())
+                {
+
+                    getfilescomm.CommandText = "SELECT ID, Path, FileSize, ScanTime FROM Files WHERE \"Set\" = " + scanpath.set;
+                    using (var reader = getfilescomm.ExecuteReader())
+                        while (reader.Read())
+                        {
+                            filesdict[reader.GetString(1)] = (reader.GetInt32(0), reader.GetInt64(2), DateTime.SpecifyKind(reader.GetDateTime(3), DateTimeKind.Utc));
+                            fileshitdict[reader.GetString(1)] = false;
+                        }
+                }
+
                 DirectoryInfo di = new DirectoryInfo(scanpath.Item1);
                 int scanset = scanpath.Item2;
-                var files = di.EnumerateFileSystemInfos("*", SearchOption.AllDirectories).AsParallel().Where(fsi => MetadataExtensions.ValidExtensions.Contains(Path.GetExtension(fsi.FullName).ToLower()) && ((fsi.Attributes & FileAttributes.Directory) == 0));
+                var files = di.EnumerateFiles("*", SearchOption.AllDirectories).AsParallel().Where(fsi => MetadataExtensions.ValidExtensions.Contains(Path.GetExtension(fsi.FullName).ToLower()) && ((fsi.Attributes & FileAttributes.Directory) == 0));
 
-                var bag = new ConcurrentBag<Tuple<string, DateTime, IMetadataProvider>>();
+                var bag = new ConcurrentBag<Tuple<string, long, DateTime, IMetadataProvider>>();
                 var deletekeys = new ConcurrentBag<int>();
 
                 Parallel.ForEach(files, (fi) =>
@@ -106,44 +108,70 @@ namespace MetadataCaching
                     if (filesdict.ContainsKey(fi.FullName))
                     {
                         var file = filesdict[fi.FullName];
-                        if (fi.LastWriteTimeUtc > file.Item2)
+                        if ((fi.LastWriteTimeUtc > file.Item3)||(fi.Length != file.Item2))
+                        {
+                            Interlocked.Increment(ref modified);
                             scan = true;
+                        }
                         else
+                        {
+                            Interlocked.Increment(ref unchanged);
                             fileshitdict[fi.FullName] = true;
+                        }
                     }
                     else
+                    {
                         scan = true;
+                        Interlocked.Increment(ref added);
+                    }
                     if (scan)
-                        bag.Add(new Tuple<string, DateTime, IMetadataProvider>(fi.FullName, DateTime.UtcNow, Metadata.GetProvider(fi.FullName)));
+                        bag.Add(new Tuple<string, long, DateTime, IMetadataProvider>(fi.FullName, fi.Length, DateTime.UtcNow, Metadata.GetProvider(fi.FullName)));
                 });
 
                 if (!bag.IsEmpty)
                 {
                     using (var filescomm = conn_.CreateCommand())
                     {
-                        filescomm.Parameters.AddWithValue("@Set", scanset);
-                        var pathparam = filescomm.Parameters.Add("@Path", System.Data.DbType.String);
-                        var scantimeparam = filescomm.Parameters.Add("@ScanTime", System.Data.DbType.DateTime);
-                        var codecnameparam = filescomm.Parameters.Add("@CodecName", System.Data.DbType.String);
-                        var codectypeparam = filescomm.Parameters.Add("@CodecType", System.Data.DbType.String);
-                        var averagebitrateparam = filescomm.Parameters.Add("@AverageBitrate", System.Data.DbType.Int32);
-                        var maxbitrateparam = filescomm.Parameters.Add("@MaxBitrate", System.Data.DbType.Int32);
-                        var bitspersampleparam = filescomm.Parameters.Add("@BitsPerSample", System.Data.DbType.Int32);
-                        var samplerateparam = filescomm.Parameters.Add("@SampleRate", System.Data.DbType.Int32);
-                        var channelsparam = filescomm.Parameters.Add("@Channels", System.Data.DbType.Int32);
-                        var durationinframesparam = filescomm.Parameters.Add("@DurationInFrames", System.Data.DbType.Int32);
-                        filescomm.CommandText = "INSERT INTO Files (Path, \"Set\", ScanTime, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames)" +
-                        " VALUES (@Path, @Set, @ScanTime, @CodecName, @CodecType, @AverageBitrate, @MaxBitrate, @BitsPerSample, @SampleRate, @Channels, @DurationInFrames);";
-
                         using (var transaction = conn_.BeginTransaction())
                         {
+                            filescomm.CommandText = "DELETE FROM Files WHERE ID = @ID";
+                            filescomm.Parameters.Clear();
+                            var idparam = filescomm.Parameters.Add("@ID", System.Data.DbType.Int32);
+
+                            foreach (var kv in fileshitdict)
+                            {
+                                if (!kv.Value)
+                                {
+                                    removed++;
+                                    idparam.Value = filesdict[kv.Key].Item1;
+                                    filescomm.ExecuteNonQuery();
+                                }
+                            }
+
+                            filescomm.Parameters.Clear();
+                            filescomm.Parameters.AddWithValue("@Set", scanset);
+                            var pathparam = filescomm.Parameters.Add("@Path", System.Data.DbType.String);
+                            var filesizeparam = filescomm.Parameters.Add("@FileSize", System.Data.DbType.Int64);
+                            var scantimeparam = filescomm.Parameters.Add("@ScanTime", System.Data.DbType.DateTime);
+                            var codecnameparam = filescomm.Parameters.Add("@CodecName", System.Data.DbType.String);
+                            var codectypeparam = filescomm.Parameters.Add("@CodecType", System.Data.DbType.String);
+                            var averagebitrateparam = filescomm.Parameters.Add("@AverageBitrate", System.Data.DbType.Int32);
+                            var maxbitrateparam = filescomm.Parameters.Add("@MaxBitrate", System.Data.DbType.Int32);
+                            var bitspersampleparam = filescomm.Parameters.Add("@BitsPerSample", System.Data.DbType.Int32);
+                            var samplerateparam = filescomm.Parameters.Add("@SampleRate", System.Data.DbType.Int32);
+                            var channelsparam = filescomm.Parameters.Add("@Channels", System.Data.DbType.Int32);
+                            var durationinframesparam = filescomm.Parameters.Add("@DurationInFrames", System.Data.DbType.Int32);
+                            filescomm.CommandText = "INSERT INTO Files (Path, \"Set\", FileSize, ScanTime, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames)" +
+                            " VALUES (@Path, @Set, @FileSize, @ScanTime, @CodecName, @CodecType, @AverageBitrate, @MaxBitrate, @BitsPerSample, @SampleRate, @Channels, @DurationInFrames);";
+
                             foreach (var file in bag)
                             {
                                 string path = file.Item1;
-                                IMetadataProvider mp = file.Item3;
+                                IMetadataProvider mp = file.Item4;
                                 ICodecProvider cp = mp as ICodecProvider;
                                 pathparam.Value = path;
-                                scantimeparam.Value = file.Item2;
+                                filesizeparam.Value = file.Item2;
+                                scantimeparam.Value = file.Item3;
                                 codecnameparam.Value = cp.CodecName;
                                 codectypeparam.Value = cp.CodecType.ToString();
                                 averagebitrateparam.Value = cp.AverageBitrate;
@@ -154,6 +182,7 @@ namespace MetadataCaching
                                 durationinframesparam.Value = cp.DurationInFrames;
                                 filescomm.ExecuteNonQuery();
                             }
+
                             transaction.Commit();
                         }
                     }
@@ -179,7 +208,7 @@ namespace MetadataCaching
                             foreach (var file in bag)
                             {
                                 fileidparam.Value = keymap[file.Item1];
-                                foreach (var kv in file.Item3.GetTextMetadata())
+                                foreach (var kv in file.Item4.GetTextMetadata())
                                 {
                                     keyparam.Value = kv.Key;
                                     valueparam.Value = kv.Value;
@@ -207,7 +236,7 @@ namespace MetadataCaching
                             foreach (var file in bag)
                             {
                                 fileidparam.Value = keymap[file.Item1];
-                                foreach (var image in file.Item3.GetImageMetadata())
+                                foreach (var image in file.Item4.GetImageMetadata())
                                 {
                                     descriptionparam.Value = image.Description;
                                     categoryparam.Value = image.Category;
@@ -226,15 +255,23 @@ namespace MetadataCaching
                 }
             }
 
+            if (fixup)
+                Fixup();
+
+            return (added, modified, removed, unchanged);
+        }
+
+        private void Fixup()
+        {
             using (var querycomm = conn_.CreateCommand())
             {
                 var artistlist = new List<string>();
                 var albumartistlist = new List<string>();
 
-                querycomm.CommandText = "INSERT INTO Artists (NAME) SELECT DISTINCT Artist FROM MetadataMapView WHERE" + (allsets ? "" : (" \"SET\" IN (" + setlist + ") AND")) + " Artist NOT IN (SELECT Name FROM Artists)";
+                querycomm.CommandText = "INSERT INTO Artists (Name) SELECT DISTINCT Artist FROM MetadataMapView WHERE Artist NOT IN (SELECT Name FROM Artists)";
                 querycomm.Parameters.Clear();
                 querycomm.ExecuteNonQuery();
-                querycomm.CommandText = "INSERT INTO AlbumArtists (NAME) SELECT DISTINCT AlbumArtist FROM MetadataMapView WHERE" + (allsets ? "" : (" \"SET\" IN (" + setlist + ") AND")) + " AlbumArtist NOT IN (SELECT Name FROM AlbumArtists)";
+                querycomm.CommandText = "INSERT INTO AlbumArtists (Name) SELECT DISTINCT AlbumArtist FROM MetadataMapView WHERE AlbumArtist NOT IN (SELECT Name FROM AlbumArtists)";
                 querycomm.Parameters.Clear();
                 querycomm.ExecuteNonQuery();
 
@@ -253,7 +290,7 @@ namespace MetadataCaching
                         albumartistdict.Add(reader.GetString(1), reader.GetInt32(0));
 
                 var toupdate = new List<(int, string, string, string, string, int, string)>();
-                querycomm.CommandText = "SELECT ID, Path, Artist, AlbumArtist, Album, Number, Name FROM MetadataMapView WHERE" + (allsets ? "" : (" \"SET\" IN (" + setlist + ") AND")) + " TrackID IS NULL";
+                querycomm.CommandText = "SELECT ID, Path, Artist, AlbumArtist, Album, Number, Name FROM MetadataMapView WHERE TrackID IS NULL";
                 querycomm.Parameters.Clear();
                 using (var reader = querycomm.ExecuteReader())
                     while (reader.Read())
@@ -355,16 +392,6 @@ namespace MetadataCaching
                 using (var transaction = conn_.BeginTransaction())
                 {
                     querycomm.Parameters.Clear();
-                    querycomm.CommandText = "DELETE FROM Files WHERE ID = @ID";
-                    var idparam = querycomm.Parameters.Add("@ID", System.Data.DbType.Int32);
-                    foreach (var kv in fileshitdict)
-                    {
-                        if (!kv.Value)
-                        {
-                            idparam.Value = filesdict[kv.Key].Item1;
-                            querycomm.ExecuteNonQuery();
-                        }
-                    }
                     querycomm.CommandText =
                         "DELETE FROM Metadata WHERE FileID NOT IN (SELECT ID FROM Files);\r\n" +
                         "DELETE FROM Images WHERE FileID NOT IN (SELECT ID FROM Files);\r\n" +
@@ -375,11 +402,7 @@ namespace MetadataCaching
                     querycomm.ExecuteNonQuery();
                     transaction.Commit();
                 }
-
-                // Clean Up
-
             }
-
         }
 
         public void Dispose()
