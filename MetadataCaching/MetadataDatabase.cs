@@ -20,11 +20,12 @@ namespace MetadataCaching
             "CREATE TABLE AlbumArtists (ID INTEGER PRIMARY KEY, Name TEXT UNIQUE);\r\n" +
             "CREATE TABLE Albums (ID INTEGER PRIMARY KEY, AlbumArtistID INTEGER NOT NULL REFERENCES AlbumArtists (ID), Name TEXT NOT NULL, Path TEXT NOT NULL);\r\n" +
             "CREATE TABLE Artists (ID INTEGER PRIMARY KEY, Name TEXT UNIQUE);\r\n" +
-            "CREATE TABLE Files (ID INTEGER PRIMARY KEY, \"Set\" INTEGER NOT NULL, Path TEXT UNIQUE, FileSize INTEGER, ScanTime DATETIME NOT NULL, TrackID INTEGER REFERENCES Tracks (ID), CodecName TEXT NOT NULL, CodecType TEXT NOT NULL, AverageBitrate INTEGER NOT NULL, MaxBitrate INTEGER NOT NULL, BitsPerSample INTEGER NOT NULL, SampleRate INTEGER NOT NULL, Channels INTEGER NOT NULL, DurationInFrames INTEGER NOT NULL, UNIQUE(\"Set\", Path));\r\n" +
+            "CREATE TABLE Files (ID INTEGER PRIMARY KEY, Complete NOT NULL, \"Set\" INTEGER NOT NULL, Path TEXT UNIQUE, FileSize INTEGER, ScanTime DATETIME NOT NULL, TrackID INTEGER REFERENCES Tracks (ID), CodecName TEXT NOT NULL, CodecType TEXT NOT NULL, AverageBitrate INTEGER NOT NULL, MaxBitrate INTEGER NOT NULL, BitsPerSample INTEGER NOT NULL, SampleRate INTEGER NOT NULL, Channels INTEGER NOT NULL, DurationInFrames INTEGER NOT NULL, UNIQUE(Complete, \"Set\", Path));\r\n" +
             "CREATE TABLE Images (ID INTEGER PRIMARY KEY, FileID INTEGER REFERENCES Files (ID) NOT NULL, Description TEXT, Category TEXT, ImageType TEXT, Width INTEGER, Height INTEGER, Size INTEGER, Data BLOB);\r\n" +
             "CREATE TABLE Metadata (ID INTEGER PRIMARY KEY, FileID INTEGER REFERENCES Files (ID) NOT NULL, \"Key\" TEXT NOT NULL, Value TEXT NOT NULL);\r\n" +
             "CREATE TABLE Tracks (ID INTEGER PRIMARY KEY, ArtistID INTEGER REFERENCES Artists (ID) NOT NULL, AlbumID INTEGER REFERENCES Albums (ID) NOT NULL, Number INTEGER, Name TEXT);\r\n" +
             "CREATE INDEX AlbumsAlbumArtistIDIndex ON Albums (AlbumArtistID ASC);\r\n" +
+            "CREATE INDEX FilesCompleteIndex ON Files(Complete ASC);\r\n" +
             "CREATE INDEX FilesPathIndex ON Files(Path ASC);\r\n" +
             "CREATE INDEX FilesSetIndex ON Files(\"Set\" ASC);\r\n" +
             "CREATE INDEX FilesTrackIDIndex ON Files(TrackID ASC);\r\n" +
@@ -84,8 +85,8 @@ namespace MetadataCaching
 
                 using (var getfilescomm = conn_.CreateCommand())
                 {
-
-                    getfilescomm.CommandText = "SELECT ID, Path, FileSize, ScanTime FROM Files WHERE \"Set\" = " + scanpath.set;
+                    getfilescomm.CommandText = "DELETE FROM Files WHERE Complete = 0 AND \"Set\" = " + scanpath.set + ";\r\n" +
+                        "SELECT ID, Path, FileSize, ScanTime FROM Files WHERE \"Set\" = " + scanpath.set;
                     using (var reader = getfilescomm.ExecuteReader())
                         while (reader.Read())
                         {
@@ -111,6 +112,7 @@ namespace MetadataCaching
                         if ((fi.LastWriteTimeUtc > file.Item3)||(fi.Length != file.Item2))
                         {
                             Interlocked.Increment(ref modified);
+                            Interlocked.Decrement(ref removed);
                             scan = true;
                         }
                         else
@@ -150,6 +152,7 @@ namespace MetadataCaching
 
                             filescomm.Parameters.Clear();
                             filescomm.Parameters.AddWithValue("@Set", scanset);
+                            filescomm.Parameters.AddWithValue("@Complete", 0);
                             var pathparam = filescomm.Parameters.Add("@Path", System.Data.DbType.String);
                             var filesizeparam = filescomm.Parameters.Add("@FileSize", System.Data.DbType.Int64);
                             var scantimeparam = filescomm.Parameters.Add("@ScanTime", System.Data.DbType.DateTime);
@@ -161,8 +164,8 @@ namespace MetadataCaching
                             var samplerateparam = filescomm.Parameters.Add("@SampleRate", System.Data.DbType.Int32);
                             var channelsparam = filescomm.Parameters.Add("@Channels", System.Data.DbType.Int32);
                             var durationinframesparam = filescomm.Parameters.Add("@DurationInFrames", System.Data.DbType.Int32);
-                            filescomm.CommandText = "INSERT INTO Files (Path, \"Set\", FileSize, ScanTime, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames)" +
-                            " VALUES (@Path, @Set, @FileSize, @ScanTime, @CodecName, @CodecType, @AverageBitrate, @MaxBitrate, @BitsPerSample, @SampleRate, @Channels, @DurationInFrames);";
+                            filescomm.CommandText = "INSERT INTO Files (Path, Complete, \"Set\", FileSize, ScanTime, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames)" +
+                            " VALUES (@Path, @Complete, @Set, @FileSize, @ScanTime, @CodecName, @CodecType, @AverageBitrate, @MaxBitrate, @BitsPerSample, @SampleRate, @Channels, @DurationInFrames);";
 
                             foreach (var file in bag)
                             {
@@ -190,7 +193,7 @@ namespace MetadataCaching
                     var keymap = new Dictionary<string, int>();
                     using (var query = conn_.CreateCommand())
                     {
-                        query.CommandText = "SELECT ID, Path FROM Files WHERE \"Set\" = " + scanset;
+                        query.CommandText = "SELECT ID, Path FROM Files WHERE Complete = 0 AND \"Set\" = " + scanset;
                         using (var reader = query.ExecuteReader())
                             while (reader.Read())
                                 keymap.Add(reader.GetString(1), reader.GetInt32(0));
@@ -219,7 +222,7 @@ namespace MetadataCaching
                         }
                     }
 
-                    using (var imagecomm = conn_.CreateCommand())
+                    using (SQLiteCommand imagecomm = conn_.CreateCommand(), updatecomm = conn_.CreateCommand())
                     {
                         imagecomm.CommandText = "INSERT INTO Images (FileID, Description, Category, ImageType, Width, Height, Size, Data) VALUES (@FileID, @Description, @Category, @ImageType, @Width, @Height, @Size, @Data)";
                         var fileidparam = imagecomm.Parameters.Add("@FileID", System.Data.DbType.Int32);
@@ -230,12 +233,14 @@ namespace MetadataCaching
                         var heightparam = imagecomm.Parameters.Add("@Height", System.Data.DbType.Int32);
                         var sizeparam = imagecomm.Parameters.Add("@Size", System.Data.DbType.Int32);
                         var dataparam = imagecomm.Parameters.Add("@Data", System.Data.DbType.Object);
+                        updatecomm.CommandText = "UPDATE Files SET Complete = 1 WHERE ID = @ID";
+                        var idparam = updatecomm.Parameters.Add(@"ID", System.Data.DbType.Int32);
 
                         using (var transaction = conn_.BeginTransaction())
                         {
                             foreach (var file in bag)
                             {
-                                fileidparam.Value = keymap[file.Item1];
+                                fileidparam.Value = idparam.Value = keymap[file.Item1];
                                 foreach (var image in file.Item4.GetImageMetadata())
                                 {
                                     descriptionparam.Value = image.Description;
@@ -247,6 +252,7 @@ namespace MetadataCaching
                                     dataparam.Value = image.Data;
                                     imagecomm.ExecuteNonQuery();
                                 }
+                                updatecomm.ExecuteNonQuery();
                             }
                             transaction.Commit();
                         }
@@ -393,6 +399,7 @@ namespace MetadataCaching
                 {
                     querycomm.Parameters.Clear();
                     querycomm.CommandText =
+                        "DELETE FROM Files WHERE Complete = 0;\r\n" +
                         "DELETE FROM Metadata WHERE FileID NOT IN (SELECT ID FROM Files);\r\n" +
                         "DELETE FROM Images WHERE FileID NOT IN (SELECT ID FROM Files);\r\n" +
                         "DELETE FROM Tracks WHERE ID NOT IN (SELECT TrackID FROM Files);\r\n" +
