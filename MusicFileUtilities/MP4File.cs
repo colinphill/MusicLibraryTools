@@ -54,7 +54,7 @@ namespace MusicFileUtilities
             if (da.IsDiscNumber)
             {
                 yield return new KeyValuePair<string, string>("DISCNUMBER", da.DiscNumber.ToString());
-                if (da.TotalTracks != 0)
+                if (da.TotalDiscs != 0)
                     yield return new KeyValuePair<string, string>("DISCTOTAL", da.TotalDiscs.ToString());
             }
         }

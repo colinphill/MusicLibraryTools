@@ -19,20 +19,20 @@ namespace MetadataDBWork
 
             using (MetadataDatabase db = new MetadataDatabase("cache.db"))
             {
-                var res = db.IndexFiles(new [] { 
-                    (@"Z:\iTunes\HiRes\Stereo\Downloads", 1),
-                    (@"Z:\iTunes\HiRes\Stereo\DVD-As", 2),
-                    (@"Z:\iTunes\HiRes\Stereo\DVD-Vs", 3),
-                    (@"Z:\iTunes\HiRes\Stereo\SACDs", 4),
-                    (@"Z:\iTunes\FLAC", 100),
-                    (@"Z:\iTunes\FLAC2", 101),
-                    (@"Z:\iTunes\Purchased Sync", 200),
-                    (@"Z:\iTunes\HiRes\Multi\Downloads", 300),
-                    (@"Z:\iTunes\HiRes\Multi\DTS-CDs", 301),
-                    (@"Z:\iTunes\HiRes\Multi\DVD-As", 302),
-                    (@"Z:\iTunes\HiRes\Multi\SACDs", 303),
-                    (@"Z:\iTunes\AAC\Music", 1000),
-                    });
+                var res = db.IndexFiles(new string [] { 
+                    @"Z:\iTunes\HiRes\Stereo\Downloads",
+                    @"Z:\iTunes\HiRes\Stereo\DVD-As",
+                    @"Z:\iTunes\HiRes\Stereo\DVD-Vs",
+                    @"Z:\iTunes\HiRes\Stereo\SACDs",
+                    @"Z:\iTunes\FLAC",
+                    @"Z:\iTunes\FLAC2",
+                    @"Z:\iTunes\Purchased Sync",
+                    @"Z:\iTunes\HiRes\Multi\Downloads",
+                    @"Z:\iTunes\HiRes\Multi\DTS-CDs",
+                    @"Z:\iTunes\HiRes\Multi\DVD-As",
+                    @"Z:\iTunes\HiRes\Multi\SACDs",
+                    @"Z:\iTunes\AAC\Music",
+                    }, true, true);
                 Console.WriteLine("Added:" + res.Added + " Modified:" + res.Modified + " Removed:" + res.Removed + " Unchanged:" + res.Unchanged);
             }
 
