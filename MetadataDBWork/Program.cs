@@ -14,13 +14,12 @@ namespace MetadataDBWork
         static void Main(string[] args)
         {
             Console.WriteLine(DateTime.Now);
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
             Console.WriteLine("Indexing...");
 
             using (var db = new MetadataDatabase("cache.db"))
             {
-                /*var res = db.IndexFiles(new string [] { 
+                var res = db.IndexFiles(new string [] { 
                     @"Z:\iTunes\HiRes\Stereo\Downloads",
                     @"Z:\iTunes\HiRes\Stereo\DVD-As",
                     @"Z:\iTunes\HiRes\Stereo\DVD-Vs",
@@ -33,8 +32,8 @@ namespace MetadataDBWork
                     @"Z:\iTunes\HiRes\Multi\DVD-As",
                     @"Z:\iTunes\HiRes\Multi\SACDs",
                     @"Z:\iTunes\AAC\Music",
-                    }, true, true);*/
-                //Console.WriteLine("Added:" + res.Added + " Modified:" + res.Modified + " Removed:" + res.Removed + " Unchanged:" + res.Unchanged);
+                    }, true, true);
+                Console.WriteLine("Added:" + res.Added + " Modified:" + res.Modified + " Removed:" + res.Removed + " Unchanged:" + res.Unchanged);
 
                 var cache = db.BuildCache(new string [] {
                     @"Z:\iTunes\HiRes\Stereo\Downloads",

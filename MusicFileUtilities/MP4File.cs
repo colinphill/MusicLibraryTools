@@ -24,11 +24,9 @@ namespace MusicFileUtilities
         
         public static Dictionary<string, Type> AtomTypes = new Dictionary<string, Type>();
 
-        public static Encoding TypeEncoding = Encoding.GetEncoding(28591,
-           new EncoderExceptionFallback(), new DecoderExceptionFallback()); // iso-8859-1
+        public static Encoding TypeEncoding = null;
 
-        public static Encoding ShiftJISEncoding = Encoding.GetEncoding(932,
-            new EncoderExceptionFallback(), new DecoderExceptionFallback());
+        public static Encoding ShiftJISEncoding = null;
 
         static MP4Util()
         {
@@ -106,6 +104,12 @@ namespace MusicFileUtilities
 
         public static void Init()
         {
+#if NETCOREAPP
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+#endif
+            TypeEncoding = Encoding.GetEncoding(28591, new EncoderExceptionFallback(), new DecoderExceptionFallback()); // iso-8859-1
+            ShiftJISEncoding = Encoding.GetEncoding(932, new EncoderExceptionFallback(), new DecoderExceptionFallback());
+
             AtomTypes.Add("ftyp", typeof(Atom_ftyp));
             AtomTypes.Add("moov", typeof(ContainerAtom));
             AtomTypes.Add("mvhd", typeof(Atom_mvhd));
@@ -1464,7 +1468,7 @@ namespace MusicFileUtilities
         }
 
 
-        #region IMetadataProvider Properties
+#region IMetadataProvider Properties
         public string Title
         {
             get
@@ -1640,7 +1644,7 @@ namespace MusicFileUtilities
             yield break;
         }
 
-        #endregion
+#endregion
 
         private string _associatedpath;
 
