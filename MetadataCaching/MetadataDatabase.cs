@@ -117,64 +117,66 @@ namespace MetadataCaching
 
             var filequeue = new BlockingCollection<(int ID, int Set, string FileName, long Length, DateTime ScanTime, IMetadataProvider Metadata)>();
 
+            var filesdict = new ConcurrentDictionary<(int ScanSetID, string Path), (int ID, long Length, DateTime ScanTime)>();
+            var fileshitdict = new ConcurrentDictionary<(int ScanSetID, string Path), bool>();
+
+            using (var getfilescomm = conn_.CreateCommand())
+            {
+                getfilescomm.CommandText = "SELECT ID, ScanSetID, Path, FileSize, ScanTime FROM Files";
+                using (var reader = getfilescomm.ExecuteReader())
+                    while (reader.Read())
+                    {
+                        var key = (reader.GetInt32(1), reader.GetString(2));
+                        filesdict[key] = (reader.GetInt32(0), reader.GetInt64(3), DateTime.SpecifyKind(reader.GetDateTime(4), DateTimeKind.Utc));
+                        fileshitdict[key] = false;
+                    }
+            }
+
             var metadatareadtask = Task.Run(() =>
             {
-                foreach (var scanpath in sets)
+                Parallel.ForEach(sets, (scanpath) =>
                 {
-                    var filesdict = new ConcurrentDictionary<string, ValueTuple<int, long, DateTime>>();
-                    var fileshitdict = new ConcurrentDictionary<string, bool>();
+                   DirectoryInfo di = new DirectoryInfo(scanpath.Path);
+                   int scanset = scanpath.ID;
+                   var files = di.EnumerateFiles("*", SearchOption.AllDirectories).AsParallel().Where(fsi => MetadataExtensions.ValidExtensions.Contains(Path.GetExtension(fsi.FullName).ToLower()) && ((fsi.Attributes & FileAttributes.Directory) == 0)).ToArray();
 
-                    using (var getfilescomm = conn_.CreateCommand())
-                    {
-                        getfilescomm.CommandText = "SELECT ID, Path, FileSize, ScanTime FROM Files WHERE ScanSetID = " + scanpath.ID;
-                        using (var reader = getfilescomm.ExecuteReader())
-                            while (reader.Read())
-                            {
-                                filesdict[reader.GetString(1)] = (reader.GetInt32(0), reader.GetInt64(2), DateTime.SpecifyKind(reader.GetDateTime(3), DateTimeKind.Utc));
-                                fileshitdict[reader.GetString(1)] = false;
-                            }
-                    }
+                   Parallel.ForEach(files, (fi) =>
+                   {
+                       var relativename = fi.FullName.Substring(scanpath.Path.Length + 1);
+                       var key = (scanset, relativename);
+                       bool scan = false;
+                       int id = -1;
+                       if (filesdict.ContainsKey(key))
+                       {
+                           fileshitdict[key] = true;
+                           var file = filesdict[key];
+                           if ((fi.LastWriteTimeUtc > file.Item3) || (fi.Length != file.Item2))
+                           {
+                               id = file.Item1;
+                               Interlocked.Increment(ref modified);
+                               scan = true;
+                           }
+                           else
+                           {
+                               Interlocked.Increment(ref unchanged);
+                           }
+                       }
+                       else
+                       {
+                           scan = true;
+                           Interlocked.Increment(ref added);
+                       }
+                       if (scan)
+                           filequeue.Add((id, scanpath.ID, relativename, fi.Length, DateTime.UtcNow, Metadata.GetProvider(fi.FullName)));
+                   });
 
-                    DirectoryInfo di = new DirectoryInfo(scanpath.Path);
-                    int scanset = scanpath.ID;
-                    var files = di.EnumerateFiles("*", SearchOption.AllDirectories).AsParallel().Where(fsi => MetadataExtensions.ValidExtensions.Contains(Path.GetExtension(fsi.FullName).ToLower()) && ((fsi.Attributes & FileAttributes.Directory) == 0));
+                   foreach (var file in fileshitdict.Where(kv => (kv.Key.ScanSetID == scanset) && !kv.Value).Select(kv => kv.Key))
+                   {
+                       filequeue.Add((filesdict[file].Item1, scanpath.ID, null, 0, DateTime.MinValue, null));
+                       removed++;
+                   }
 
-                    Parallel.ForEach(files, (fi) =>
-                    {
-                        var relativename = fi.FullName.Substring(scanpath.Path.Length + 1);
-                        bool scan = false;
-                        int id = -1;
-                        if (filesdict.ContainsKey(relativename))
-                        {
-                            fileshitdict[relativename] = true;
-                            var file = filesdict[relativename];
-                            if ((fi.LastWriteTimeUtc > file.Item3) || (fi.Length != file.Item2))
-                            {
-                                id = file.Item1;
-                                Interlocked.Increment(ref modified);
-                                scan = true;
-                            }
-                            else
-                            {
-                                Interlocked.Increment(ref unchanged);
-                            }
-                        }
-                        else
-                        {
-                            scan = true;
-                            Interlocked.Increment(ref added);
-                        }
-                        if (scan)
-                            filequeue.Add((id, scanpath.ID, relativename, fi.Length, DateTime.UtcNow, Metadata.GetProvider(fi.FullName)));
-                    });
-
-                    foreach (string file in fileshitdict.Where(kv => !kv.Value).Select(kv => kv.Key))
-                    {
-                        filequeue.Add((filesdict[file].Item1, scanpath.ID, null, 0, DateTime.MinValue, null));
-                        removed++;
-                    }
-
-                }
+                });
                 filequeue.CompleteAdding();
             });
 
@@ -300,7 +302,7 @@ namespace MetadataCaching
                 }
             }
 
-            if (fixup)
+            if (fixup && ((added != 0) || (modified != 0) || (removed != 0)))
                 removed += Fixup();
 
             return (added, modified, removed, unchanged);
