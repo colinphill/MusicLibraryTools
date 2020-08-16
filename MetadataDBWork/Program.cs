@@ -17,7 +17,7 @@ namespace MetadataDBWork
 
             Console.WriteLine("Indexing...");
 
-            using (MetadataDatabase db = new MetadataDatabase("cache.db"))
+            using (var db = new MetadataDatabase("cache.db"))
             {
                 var res = db.IndexFiles(new string [] { 
                     @"Z:\iTunes\HiRes\Stereo\Downloads",
