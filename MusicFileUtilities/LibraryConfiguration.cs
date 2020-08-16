@@ -33,7 +33,20 @@ namespace MusicLibraryTools
 
         public string PlaylistType => root_.Element("PlaylistType").Value;
 
-        public string ReferenceConfig => root_.Element("ReferenceConfig").Value;
+        public string DatabaseFile
+        {
+            get
+            {
+                try
+                {
+                    return root_.Element("DatabaseFile").Value;
+                }
+                catch
+                {
+                    return "cache.db";
+                }
+            }
+        }
 
         public string [] this[string key] => root_.Elements(key).Select(e => e.Value).ToArray();
 

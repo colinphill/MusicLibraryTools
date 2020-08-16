@@ -237,6 +237,7 @@ namespace MetadataCaching
             }
         }
         
+        [Obsolete]
         public void Save(string path)
         {
             using (FileStream fs = File.Create(path))
@@ -249,6 +250,7 @@ namespace MetadataCaching
             }
         }
 
+        [Obsolete]
         public void Load(string path)
         {
             using (FileStream fs = File.Open(path, FileMode.Open))
@@ -261,6 +263,20 @@ namespace MetadataCaching
                 foreach (var f in _filecache)
                     f.Value.Strip();
             }
+        }
+
+        internal void AddDBCacheEntry(string file, MetadataCacheEntry ce)
+        {
+            _filecache.Add(file, ce);
+            if (!_albumcache.ContainsKey(ce.Album))
+                _albumcache.Add(ce.Album, new List<string>());
+            if (!_artistcache.ContainsKey(ce.Artist))
+                _artistcache.Add(ce.Artist, new List<string>());
+            if (!_albumartistcache.ContainsKey(ce.AlbumArtist))
+                _albumartistcache.Add(ce.AlbumArtist, new List<string>());
+            _albumcache[ce.Album].Add(file);
+            _artistcache[ce.Artist].Add(file);
+            _albumartistcache[ce.AlbumArtist].Add(file);
         }
 
         private void CrossReferenceFile(string file)
@@ -291,12 +307,14 @@ namespace MetadataCaching
                 _albumartistcache.Remove(ce.AlbumArtist);
         }
 
+        [Obsolete]
         public void BeginBuildCache()
         {
             foreach (KeyValuePair<string, MetadataCacheEntry> kv in _filecache)
                 kv.Value.UnTouch();
         }
 
+        [Obsolete]
         public void EndBuildCache()
         {
             List<string> toremove = new List<string>();
@@ -314,7 +332,7 @@ namespace MetadataCaching
                 f.Value.Strip();
         }
 
-
+        [Obsolete]
         public void BuildCache(string basepath, bool untouchall = true)
         {
             if (untouchall)

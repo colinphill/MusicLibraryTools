@@ -23,15 +23,11 @@ namespace Comingle
         static void Main(string[] args)
         {
             LogConsole.ConsoleVerbosity = LogVerbosity.Max;
-            MetadataCache basecache = new MetadataCache();
-            basecache.Load(@"c:\LibraryCaches\Colin");
-            basecache.BuildCache(@"\\melchior\Sonos");
-            basecache.Save(@"c:\LibraryCaches\Colin");
 
-            MetadataCache comingledcache = new MetadataCache();
-            comingledcache.Load(@"c:\LibraryCaches\Jenny");
-            comingledcache.BuildCache(@"\\melchior\Jenny\Jenny's Crappy Music");
-            comingledcache.Save(@"c:\LibraryCaches\Jenny");
+            MetadataDatabase db = new MetadataDatabase("cache.db");
+            db.IndexFiles(new string[] { @"\\ritsuko.projecteva.net\Sonos", @"\\ritsuko.projecteva.netJenny\Henny's Crappy Music" });
+            var basecache = db.BuildCache(new string[] { @"\\ritsuko.projecteva.net\Sonos" });
+            var comingledcache = db.BuildCache(new string[] { @"\\ritsuko.projecteva.netJenny\Henny's Crappy Music" });
 
             /*LogConsole.WriteLine("Checking Artists");
             foreach (string artist in comingledcache.Artists)

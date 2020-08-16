@@ -7,9 +7,35 @@ using System.Data.SQLite;
 using System.IO;
 using MusicFileUtilities;
 using System.Threading;
+using System.Data.Common;
 
 namespace MetadataCaching
 {
+ 
+    public partial class MetadataCacheEntry
+    {
+        public MetadataCacheEntry(DbDataReader reader)
+        {
+            _lastwritetime = DateTime.SpecifyKind(reader.GetDateTime(1), DateTimeKind.Utc);
+            _codecname = reader[2] as string;
+            _codectype = (CodecType)Enum.Parse(typeof(CodecType), reader[3] as string);
+            _averagebitrate = (uint)(long)reader[4];
+            _maxbitrate = (uint)(long)reader[5];
+            _bitspersample = (uint)(long)reader[6];
+            _samplerate = (uint)(long)reader[7];
+            _channels = (uint)(long)reader[8];
+            _durationinseconds = (int)(long)reader[9] / 75;
+            _artist = reader[10] as string;
+            _albumartist = reader[11] as string;
+            _album = reader[12] as string;
+            _tracknumber = (int)(long)reader[13];
+            _title = reader[14] as string;
+            _compilation = false;
+        }
+
+    }
+
+
     public class MetadataDatabase : IDisposable
     {
         private SQLiteConnection conn_;
@@ -69,6 +95,43 @@ namespace MetadataCaching
                     comm.ExecuteNonQuery();
                 }
             }
+        }
+
+        public MetadataCache BuildCache(IEnumerable<string> paths)
+        {
+            var dbsets = new List<(string Path, int ID)>();
+            using (var setscomm = conn_.CreateCommand())
+            {
+                setscomm.CommandText = "SELECT Path, ID FROM ScanSets";
+                using (var reader = setscomm.ExecuteReader())
+                    while (reader.Read())
+                        dbsets.Add((reader.GetString(0), reader.GetInt32(1)));
+            }
+
+            MetadataCache cache = new MetadataCache();
+
+            foreach (var path in paths)
+            {
+                var set = dbsets.SingleOrDefault(s => s.Path.Equals(path, StringComparison.InvariantCultureIgnoreCase));
+                if (set == default)
+                    continue;
+                using (var querycomm = conn_.CreateCommand())
+                {
+                    querycomm.CommandText = "SELECT Path, ScanTime, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames, Artist, AlbumArtist, Album, TrackNumber, Track FROM MetadataSummaryView WHERE ScanSetID = " + set.ID;
+                    using (var reader = querycomm.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var ce = new MetadataCacheEntry(reader);
+                            ce.Strip();
+                            cache.AddDBCacheEntry(Path.Combine(set.Path, reader[0] as string), ce);
+                        }
+                    }
+                }
+
+            }
+
+            return cache;
         }
 
         public (int Added, int Modified, int Removed, int Unchanged) IndexFiles(IEnumerable<string> paths, bool fixup = true, bool deletemissingsets = false)

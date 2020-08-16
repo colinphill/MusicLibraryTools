@@ -22,16 +22,17 @@ namespace OrganizeFiles
             bool deletenonmusic = config["DeleteNonMusic"].Count() != 0;
             int LENGTH_LIMIT = config.LengthLimit;
             int DISC_NUM_LENGTH_LIMIT = config.DiscNumLengthLimit;
+
+            LogConsole.WriteLine("Indexing...");
+
+            MetadataDatabase db = new MetadataDatabase(config.DatabaseFile); // TBD Dispose
+            db.IndexFiles(config.IndexLocations.Select(l => l.Target));
+
             foreach (string basedir in config.IndexLocations.Select(il => il.Target))
             {
                 LogConsole.WriteLine("Indexing: " + basedir);
-                MetadataCache cache = new MetadataCache();
-                if (File.Exists(basedir.FixPath() + ".cache"))
-                    cache.Load(basedir.FixPath() + ".cache");
-                cache.BeginBuildCache();
-                cache.BuildCache(basedir);
-                cache.EndBuildCache();
-                cache.Save(basedir.FixPath() + ".cache");
+
+                var cache = db.BuildCache(new string[] { basedir });
 
                 int count = 0;
                 foreach (var f in cache.FileCache)

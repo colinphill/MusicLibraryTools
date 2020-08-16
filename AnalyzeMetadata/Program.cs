@@ -29,18 +29,11 @@ namespace AnalyzeMetadata
             LibraryConfiguration config = new LibraryConfiguration(args[0]);
 
             LogConsole.WriteLine("Indexing Files...");
-            MetadataCache cache = new MetadataCache();
-            if (File.Exists(args[0] + ".cache"))
-                cache.Load(args[0] + ".cache");
-            else if (File.Exists(config.ReferenceConfig + ".cache"))
-                cache.Load(config.ReferenceConfig + ".cache");
-#if true
-            cache.BeginBuildCache();
-            foreach (var iloc in config.IndexLocations)
-                cache.BuildCache(iloc.Target, false);
-            cache.EndBuildCache();
-            cache.Save(args[0] + ".cache");
-#endif
+
+            MetadataDatabase db = new MetadataDatabase(config.DatabaseFile); // TBD Dispose
+            db.IndexFiles(config.IndexLocations.Select(l => l.Target));
+            var cache = db.BuildCache(config.IndexLocations.Select(l => l.Target));
+
             LogConsole.WriteLine("Total Parsed Files: " + cache.FileCache.Count);
 
             if (args.Skip(1).Any(s => s.ToLower() == "checkhires"))
