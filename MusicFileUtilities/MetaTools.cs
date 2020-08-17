@@ -227,6 +227,7 @@ namespace MusicFileUtilities
             return fix;
         }
 
+#if false
         public static bool CleanEmptyMusicFolders(DirectoryInfo di, bool deletenonmusic = false)
         {
             bool empty = true;
@@ -254,6 +255,39 @@ namespace MusicFileUtilities
             else
                 empty = false;
             return empty;
+        }
+#endif
+
+        public static void CleanEmptyMusicFolders(DirectoryInfo di, bool deletenonmusic = false)
+        {
+            var results = di.EnumerateFileSystemInfos("*", SearchOption.AllDirectories);
+            var hitpaths = results.Where(r => r is DirectoryInfo).ToDictionary(r => r.FullName, r => false);
+
+            foreach (var fi in results.Where(fi => fi is FileInfo))
+            {
+                var kept = false;
+                if (ValidExtensions.Contains(Path.GetExtension(fi.FullName).ToLower()))
+                    kept = true;
+                else if (deletenonmusic)
+                    fi.Delete();
+                else
+                    kept = true;
+                if (kept)
+                    hitpaths[Path.GetDirectoryName(fi.FullName)] = true;
+            }
+
+            foreach (var path in hitpaths.Where(kv => kv.Value).Select(kv => kv.Key).ToArray())
+            {
+                var tpath = Path.GetDirectoryName(path);
+                while (hitpaths.ContainsKey(tpath))
+                {
+                    hitpaths[tpath] = true;
+                    tpath = Path.GetDirectoryName(tpath);
+                }
+            }
+
+            foreach (var path in hitpaths.Where(kv => !kv.Value).Select(kv => kv.Key).OrderByDescending(p => p))
+                Directory.Delete(path);
         }
 
     }
