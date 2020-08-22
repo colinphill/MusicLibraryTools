@@ -62,8 +62,6 @@ namespace MusicFileUtilities
         public static Encoding ISO8859Encoding = Encoding.GetEncoding(28591,
             new EncoderExceptionFallback(), new DecoderExceptionFallback()); // iso-8859-1
 
-        public static bool Allowv24Tags = false;
-
         private static Dictionary<string, string> _22mappings = new Dictionary<string, string>()
         {
             {"TT1", "TIT1"},
@@ -240,6 +238,9 @@ namespace MusicFileUtilities
         {
             if (_vcmappings.ContainsKey(frameid))
                 return _vcmappings[frameid];
+            if (_22mappings.ContainsKey(frameid))
+                if (_vcmappings.ContainsKey(_22mappings[frameid]))
+                    return _vcmappings[_22mappings[frameid]];
             return frameid;
         }
 
@@ -248,34 +249,63 @@ namespace MusicFileUtilities
     public class ID3v2Frame
     {
 
+        public string AlternateFrameID => ID3v2Util.GetNewID3v2Mapping(FrameID);
+
         public void Write(FileStream s)
         {
-            byte[] header = new byte[10];
-            ID3v2Util.ISO8859Encoding.GetBytes(FrameID, 0, 4, header, 0);
             int datalen = Data.Length;
-            header[4] = (byte)((datalen >> 24) & 0xff);
-            header[5] = (byte)((datalen >> 16) & 0xff);
-            header[6] = (byte)((datalen >> 8) & 0xff);
-            header[7] = (byte)(datalen & 0xff);
-            header[8] = (byte)((Flags >> 8) & 0xff);
-            header[9] = (byte)(Flags & 0xff);
-            s.Write(header, 0, 10);
+            if (tag_.Version == 2)
+            {
+                byte[] header = new byte[6];
+                ID3v2Util.ISO8859Encoding.GetBytes(FrameID, 0, 3, header, 0);
+                header[3] = (byte)((datalen >> 16) & 0xff);
+                header[4] = (byte)((datalen >> 8) & 0xff);
+                header[5] = (byte)(datalen & 0xff);
+                s.Write(header, 0, 6);
+            }
+            else
+            {
+                byte[] header = new byte[10];
+                ID3v2Util.ISO8859Encoding.GetBytes(FrameID, 0, 4, header, 0);
+                if (tag_.Version >= 4) // SyncSafe
+                {
+                    header[4] = (byte)((datalen >> 21) & 0x7f);
+                    header[5] = (byte)((datalen >> 14) & 0x7f);
+                    header[6] = (byte)((datalen >> 7) & 0x7f);
+                    header[7] = (byte)(datalen & 0x7f);
+                }
+                else
+                {
+                    header[4] = (byte)((datalen >> 24) & 0xff);
+                    header[5] = (byte)((datalen >> 16) & 0xff);
+                    header[6] = (byte)((datalen >> 8) & 0xff);
+                    header[7] = (byte)(datalen & 0xff);
+                }
+                header[8] = (byte)((Flags >> 8) & 0xff);
+                header[9] = (byte)(Flags & 0xff);
+                s.Write(header, 0, 10);
+            }
             s.Write(Data, 0, datalen);
         }
 
         public string FrameID = "";
         public int Flags = 0;
         public byte[] Data = new byte[] { };
+        protected ID3v2Tag tag_;
+
+        public ID3v2Tag Tag => tag_;
 
         public ID3v2Frame(ID3v2Frame from)
         {
             FrameID = from.FrameID;
             Flags = from.Flags;
             Data = from.Data;
+            tag_ = from.tag_;
         }
 
-        public ID3v2Frame()
+        public ID3v2Frame(ID3v2Tag tag)
         {
+            tag_ = tag;
         }
 
         protected string GetStringAt(ID3v2Util.ID3Encoding coding, int offset)
@@ -343,7 +373,7 @@ namespace MusicFileUtilities
                 return newres;
             }
 
-            if (ID3v2Util.Allowv24Tags)
+            if (!(tag_.Version >= 4))
                 throw new InvalidDataException();
             
             if (coding == ID3v2Util.ID3Encoding.BEUnicode)
@@ -354,20 +384,81 @@ namespace MusicFileUtilities
             throw new InvalidDataException();
         }
 
+        public virtual void Encode()
+        {
+
+        }
+
+        public virtual void Decode()
+        {
+
+        }
+
     }
 
     public class TextFrame : ID3v2Frame
     {
-        public TextFrame()
+        public TextFrame(ID3v2Tag tag) : base(tag)
         {
         }
+
+        private string[] values_ = new string[] { string.Empty };
 
         public TextFrame(ID3v2Frame from)
             : base(from)
         {
+            Decode();
+        }
+
+        public override void Decode()
+        {
+            if (tag_.Version >= 4)
+            {
+                if (FrameID[0] == 'W')
+                    values_ = GetStringAt(ID3v2Util.ID3Encoding.ISO8859, 0).Split("\0".ToCharArray());
+                else
+                    values_ = GetStringAt((ID3v2Util.ID3Encoding)Data[0], 1).Split("\0".ToCharArray());
+            }
+            else
+            {
+                if (FrameID[0] == 'W')
+                    values_ = GetStringAt(ID3v2Util.ID3Encoding.ISO8859, 0).Split("\0".ToCharArray(), 1);
+                else
+                    values_ = GetStringAt((ID3v2Util.ID3Encoding)Data[0], 1).Split("\0".ToCharArray(), 1);
+            }
+        }
+
+        public override void Encode()
+        {
+            throw new NotImplementedException();
         }
 
         public string Text
+        {
+            get
+            {
+                return values_[0];
+            }
+            set
+            {
+                Array.Resize(ref values_, 1);
+                values_[0] = value;
+            }
+        }
+
+        public IEnumerable<string> Values
+        {
+            get
+            {
+                return values_;
+            }
+            set
+            {
+                values_ = value.ToArray();
+            }
+        }
+
+        /*public string Text
         {
             get
             {
@@ -391,7 +482,7 @@ namespace MusicFileUtilities
                     }
                     catch
                     {
-                        if (ID3v2Util.Allowv24Tags)
+                        if (tag_.Version >= 4)
                             data = CodeString(ID3v2Util.ID3Encoding.UTF8, value);
                         else
                             data = CodeString(ID3v2Util.ID3Encoding.MarkedUnicode, value);
@@ -399,13 +490,13 @@ namespace MusicFileUtilities
                 }
                 Data = data;
             }
-        }
+        }*/
 
     }
 
     public class IdentifierFrame : ID3v2Frame
     {
-        public IdentifierFrame()
+        public IdentifierFrame(ID3v2Tag tag) : base(tag)
         {
             FrameID = "UFID";
         }
@@ -419,7 +510,7 @@ namespace MusicFileUtilities
         private string _key = "";
         private byte [] _value = new byte[0];
 
-        private void Decode()
+        public override void Decode()
         {
             try
             {
@@ -435,7 +526,7 @@ namespace MusicFileUtilities
             }
         }
 
-        private void Encode()
+        public override void Encode()
         {
             byte[] k;
             k = CodeString(ID3v2Util.ID3Encoding.ISO8859, _key);
@@ -474,7 +565,7 @@ namespace MusicFileUtilities
 
     public class UserStringFrame : ID3v2Frame
     {
-        public UserStringFrame()
+        public UserStringFrame(ID3v2Tag tag) : base(tag)
         {
             FrameID = "TXXX";
         }
@@ -488,7 +579,7 @@ namespace MusicFileUtilities
         private string _key = "";
         private string _value = "";
 
-        private void Decode()
+        public override void Decode()
         {
             try
             {
@@ -503,7 +594,7 @@ namespace MusicFileUtilities
             }
         }
 
-        private void Encode()
+        public override void Encode()
         {
             byte [] k, v;
             try
@@ -514,7 +605,7 @@ namespace MusicFileUtilities
             }
             catch
             {
-                if (ID3v2Util.Allowv24Tags)
+                if (tag_.Version >= 4)
                 {
                     k = CodeString(ID3v2Util.ID3Encoding.UTF8, _key);
                     v = CodeString(ID3v2Util.ID3Encoding.UTF8, _value);
@@ -570,7 +661,7 @@ namespace MusicFileUtilities
             Decode();
         }
 
-        public CommentFrame()
+        public CommentFrame(ID3v2Tag tag) : base(tag)
         {
             FrameID = "COMM";
         }
@@ -579,11 +670,12 @@ namespace MusicFileUtilities
         private string _key = "";
         private string _value = "";
 
-        private void Encode()
+        public override void Encode()
         {
+            throw new NotImplementedException();
         }
 
-        private void Decode()
+        public override void Decode()
         {
             try
             {
@@ -643,8 +735,6 @@ namespace MusicFileUtilities
 
     public class PictureFrame : ID3v2Frame, IMetadataImage
     {
-        bool _v22style = false;
-
         private ID3v2Util.APICType _type;
         private string _mimetype;
         private string _description;
@@ -660,29 +750,22 @@ namespace MusicFileUtilities
         int IMetadataImage.Size => _picdata.Length;
         byte[] IMetadataImage.Data => _picdata;
       
-        public PictureFrame(ID3v2Frame from, bool v22stle)
-            : base(from)
-        {
-            _v22style = v22stle;
-            Decode();
-        }
-
         public PictureFrame(ID3v2Frame from)
             : base(from)
         {
             Decode();
         }
 
-        public PictureFrame()
+        public PictureFrame(ID3v2Tag tag) : base(tag)
         {
             FrameID = "APIC";
         }
 
-        private void Decode()
+        public override void Decode()
         {
             ID3v2Util.ID3Encoding encoding = (ID3v2Util.ID3Encoding)Data[0];
             int codelen;
-            if (_v22style)
+            if (tag_.Version == 2)
             {
                 _mimetype = Encoding.ASCII.GetString(Data, 1, 3);
                 codelen = 3;
@@ -710,7 +793,7 @@ namespace MusicFileUtilities
             _height = img.Height;
         }
 
-        public void Encode(ID3v2Util.APICType type, string mimetype, string desc, byte[] data)
+        public override void Encode()
         {
             throw new NotImplementedException();
         }
@@ -763,6 +846,8 @@ namespace MusicFileUtilities
                 return _frames;
             }
         }
+
+        public int Version => _headerversion;
 
         private void WriteHeader(FileStream s)
         {
@@ -1003,7 +1088,7 @@ namespace MusicFileUtilities
         {
             try
             {
-                return _frames.Where(frm => frm.FrameID == frame).Single();
+                return _frames.Where(frm => (frm.FrameID == frame) || (frm.AlternateFrameID == frame)).Single();
             }
             catch
             {
@@ -1016,6 +1101,8 @@ namespace MusicFileUtilities
             bool doclose = false;
             BinaryReader r = new BinaryReader(s, Encoding.ASCII, true);
             byte[] header = r.ReadBytes(10);
+            _headerversion = header[3];
+
             if (Encoding.ASCII.GetString(header, 0, 3) == "ID3")
             {
                 _tagsize = header[6];
@@ -1050,16 +1137,15 @@ namespace MusicFileUtilities
                         else
                             throw new Exception("Unsupported ID3v2 Header Features");
                     }
-                    _headerversion = header[3];
 
                     byte[] frame = r.ReadBytes(10);
                     int offset = 10;
                     while ((frame[0] != 0) && (offset < _tagsize))
                     {
-                        ID3v2Frame f = new ID3v2Frame();
+                        ID3v2Frame f = new ID3v2Frame(this);
                         f.FrameID = ID3v2Util.ISO8859Encoding.GetString(frame, 0, 4);
                         int framesize = frame[4];
-                        if (header[3] == 4) // SyncSafe 2.4 only
+                        if (_headerversion >= 4) // SyncSafe 2.4 only
                         {
                             framesize = (framesize * 128) + frame[5];
                             framesize = (framesize * 128) + frame[6];
@@ -1097,7 +1183,7 @@ namespace MusicFileUtilities
                 }
                 else
                 {
-                    if (header[3] != 0x02)
+                    if (_headerversion != 0x02)
                         throw new Exception("Invalid ID3v2 Version");
 
                     // Load Legacy V2 Header
@@ -1105,20 +1191,20 @@ namespace MusicFileUtilities
                     int offset = 6;
                     while ((frame[0] != 0) && (offset < _tagsize))
                     {
-                        ID3v2Frame f = new ID3v2Frame();
-                        f.FrameID = ID3v2Util.GetNewID3v2Mapping(ID3v2Util.ISO8859Encoding.GetString(frame, 0, 3));
+                        ID3v2Frame f = new ID3v2Frame(this);
+                        f.FrameID = ID3v2Util.ISO8859Encoding.GetString(frame, 0, 3);
                         int framesize = frame[3];
                         framesize = (framesize * 256) + frame[4];
                         framesize = (framesize * 256) + frame[5];
                         f.Data = r.ReadBytes(framesize);
 
-                        if (f.FrameID == "TXXX")
+                        if ((f.FrameID == "TXX") || (f.FrameID == "WXX"))
                             _frames.Add(new UserStringFrame(f));
-                        else if (f.FrameID == "APIC")
-                            _frames.Add(new PictureFrame(f, true));
-                        else if (f.FrameID == "COMM")
+                        else if (f.FrameID == "PIC")
+                            _frames.Add(new PictureFrame(f));
+                        else if (f.FrameID == "COM")
                             _frames.Add(new CommentFrame(f));
-                        else if (f.FrameID[0] == 'T')
+                        else if ((f.FrameID[0] == 'T') || (f.FrameID[0] == 'W'))
                             _frames.Add(new TextFrame(f));
                         else
                             _frames.Add(f);
