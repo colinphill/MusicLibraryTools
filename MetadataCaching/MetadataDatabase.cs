@@ -47,7 +47,7 @@ namespace MetadataCaching
             "CREATE TABLE Albums (ID INTEGER PRIMARY KEY, ScanSetID INTEGER REFERENCES ScanSets (ID) NOT NULL, AlbumArtistID INTEGER NOT NULL REFERENCES AlbumArtists (ID), Name TEXT NOT NULL, Path TEXT NOT NULL);\r\n" +
             "CREATE TABLE Artists (ID INTEGER PRIMARY KEY, Name TEXT UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE ScanSets (ID INTEGER PRIMARY KEY, Path TEXT UNIQUE NOT NULL);\r\n" +
-            "CREATE TABLE Files (ID INTEGER PRIMARY KEY, ScanSetID INTEGER REFERENCES ScanSets (ID) NOT NULL, Path TEXT NOT NULL, FileSize INTEGER NOT NULL, ScanTime DATETIME NOT NULL, TrackID INTEGER REFERENCES Tracks (ID), CodecName TEXT NOT NULL, CodecType TEXT NOT NULL, AverageBitrate INTEGER NOT NULL, MaxBitrate INTEGER NOT NULL, BitsPerSample INTEGER NOT NULL, SampleRate INTEGER NOT NULL, Channels INTEGER NOT NULL, DurationInFrames INTEGER NOT NULL, UNIQUE(ScanSetID, Path));\r\n" +
+            "CREATE TABLE Files (ID INTEGER PRIMARY KEY, ScanSetID INTEGER REFERENCES ScanSets (ID) NOT NULL, Path TEXT NOT NULL, FileSize INTEGER NOT NULL, LastWriteTime DATETIME NOT NULL, TrackID INTEGER REFERENCES Tracks (ID), CodecName TEXT NOT NULL, CodecType TEXT NOT NULL, AverageBitrate INTEGER NOT NULL, MaxBitrate INTEGER NOT NULL, BitsPerSample INTEGER NOT NULL, SampleRate INTEGER NOT NULL, Channels INTEGER NOT NULL, DurationInFrames INTEGER NOT NULL, UNIQUE(ScanSetID, Path));\r\n" +
             "CREATE TABLE Images (ID INTEGER PRIMARY KEY, FileID INTEGER REFERENCES Files (ID) NOT NULL, Description TEXT NOT NULL, Category TEXT NOT NULL, ImageType TEXT NOT NULL, Width INTEGER NOT NULL, Height INTEGER NOT NULL, Size INTEGER NOT NULL, Data BLOB NOT NULL);\r\n" +
             "CREATE TABLE Metadata (ID INTEGER PRIMARY KEY, FileID INTEGER REFERENCES Files (ID) NOT NULL, \"Key\" TEXT NOT NULL, Value TEXT NOT NULL);\r\n" +
             "CREATE TABLE Tracks (ID INTEGER PRIMARY KEY, ArtistID INTEGER REFERENCES Artists (ID) NOT NULL, AlbumID INTEGER REFERENCES Albums (ID) NOT NULL, Number INTEGER NOT NULL, Name TEXT NOT NULL);\r\n" +
@@ -117,7 +117,7 @@ namespace MetadataCaching
                     continue;
                 using (var querycomm = conn_.CreateCommand())
                 {
-                    querycomm.CommandText = "SELECT Path, ScanTime, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames, Artist, AlbumArtist, Album, TrackNumber, Track FROM MetadataSummaryView WHERE ScanSetID = " + set.ID;
+                    querycomm.CommandText = "SELECT Path, LastWriteTime, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames, Artist, AlbumArtist, Album, TrackNumber, Track FROM MetadataSummaryView WHERE ScanSetID = " + set.ID;
                     using (var reader = querycomm.ExecuteReader())
                     {
                         while (reader.Read())
@@ -178,14 +178,14 @@ namespace MetadataCaching
 
             int added = 0, modified = 0, removed = 0, unchanged = 0;
 
-            var filequeue = new BlockingCollection<(int ID, int Set, string FileName, long Length, DateTime ScanTime, IMetadataProvider Metadata)>();
+            var filequeue = new BlockingCollection<(int ID, int Set, string FileName, long Length, DateTime LastWriteTime, IMetadataProvider Metadata)>();
 
-            var filesdict = new ConcurrentDictionary<(int ScanSetID, string Path), (int ID, long Length, DateTime ScanTime)>();
+            var filesdict = new ConcurrentDictionary<(int ScanSetID, string Path), (int ID, long Length, DateTime LastWriteTime)>();
             var fileshitdict = new ConcurrentDictionary<(int ScanSetID, string Path), bool>();
 
             using (var getfilescomm = conn_.CreateCommand())
             {
-                getfilescomm.CommandText = "SELECT ID, ScanSetID, Path, FileSize, ScanTime FROM Files";
+                getfilescomm.CommandText = "SELECT ID, ScanSetID, Path, FileSize, LastWriteTime FROM Files";
                 using (var reader = getfilescomm.ExecuteReader())
                     while (reader.Read())
                     {
@@ -230,7 +230,7 @@ namespace MetadataCaching
                            Interlocked.Increment(ref added);
                        }
                        if (scan)
-                           filequeue.Add((id, scanpath.ID, relativename, fi.Length, DateTime.UtcNow, Metadata.GetProvider(fi.FullName)));
+                           filequeue.Add((id, scanpath.ID, relativename, fi.Length, fi.LastWriteTimeUtc, Metadata.GetProvider(fi.FullName)));
                    });
 
                    foreach (var file in fileshitdict.Where(kv => (kv.Key.ScanSetID == scanset) && !kv.Value).Select(kv => kv.Key))
@@ -255,7 +255,7 @@ namespace MetadataCaching
                     var setparam = filecomm.Parameters.Add("@Set", System.Data.DbType.Int32);
                     var pathparam = filecomm.Parameters.Add("@Path", System.Data.DbType.String);
                     var filesizeparam = filecomm.Parameters.Add("@FileSize", System.Data.DbType.Int64);
-                    var scantimeparam = filecomm.Parameters.Add("@ScanTime", System.Data.DbType.DateTime);
+                    var lastwritetimeparam = filecomm.Parameters.Add("@LastWriteTime", System.Data.DbType.DateTime);
                     var codecnameparam = filecomm.Parameters.Add("@CodecName", System.Data.DbType.String);
                     var codectypeparam = filecomm.Parameters.Add("@CodecType", System.Data.DbType.String);
                     var averagebitrateparam = filecomm.Parameters.Add("@AverageBitrate", System.Data.DbType.Int32);
@@ -264,8 +264,8 @@ namespace MetadataCaching
                     var samplerateparam = filecomm.Parameters.Add("@SampleRate", System.Data.DbType.Int32);
                     var channelsparam = filecomm.Parameters.Add("@Channels", System.Data.DbType.Int32);
                     var durationinframesparam = filecomm.Parameters.Add("@DurationInFrames", System.Data.DbType.Int32);
-                    filecomm.CommandText = "INSERT INTO Files (Path, ScanSetID, FileSize, ScanTime, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames)" +
-                    " VALUES (@Path, @Set, @FileSize, @ScanTime, @CodecName, @CodecType, @AverageBitrate, @MaxBitrate, @BitsPerSample, @SampleRate, @Channels, @DurationInFrames);\r\n" +
+                    filecomm.CommandText = "INSERT INTO Files (Path, ScanSetID, FileSize, LastWriteTime, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames)" +
+                    " VALUES (@Path, @Set, @FileSize, @LastWriteTime, @CodecName, @CodecType, @AverageBitrate, @MaxBitrate, @BitsPerSample, @SampleRate, @Channels, @DurationInFrames);\r\n" +
                     "SELECT last_insert_rowid();";
 
                     metacomm.CommandText = "INSERT INTO Metadata (FileID, \"Key\", Value) VALUES (@FileID, @Key, @Value)";
@@ -286,7 +286,7 @@ namespace MetadataCaching
                     while (!done)
                     {
 
-                        (int ID, int Set, string FileName, long Length, DateTime ScanTime, IMetadataProvider Metadata) file = (0, 0, null, 0, DateTime.MinValue, null);
+                        (int ID, int Set, string FileName, long Length, DateTime LastWriteTime, IMetadataProvider Metadata) file = (0, 0, null, 0, DateTime.MinValue, null);
                         try
                         {
                             file = filequeue.Take();
@@ -309,7 +309,7 @@ namespace MetadataCaching
                                 ICodecProvider cp = mp as ICodecProvider;
                                 pathparam.Value = file.FileName;
                                 filesizeparam.Value = file.Length;
-                                scantimeparam.Value = file.ScanTime;
+                                lastwritetimeparam.Value = file.LastWriteTime;
                                 codecnameparam.Value = cp.CodecName;
                                 codectypeparam.Value = cp.CodecType.ToString();
                                 averagebitrateparam.Value = cp.AverageBitrate;
