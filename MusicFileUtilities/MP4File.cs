@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using System.Diagnostics.Tracing;
 
 namespace MusicFileUtilities
 {
@@ -45,15 +46,15 @@ namespace MusicFileUtilities
             Atom_data da = atom.FindPath("data") as Atom_data;
             if (da.IsTrackNumber)
             {
-                yield return new KeyValuePair<string, string>("TRACKNUMBER", da.TrackNumber.ToString());
+                yield return new KeyValuePair<string, string>(TagFields.TrackNumber.ToString(), da.TrackNumber.ToString());
                 if (da.TotalTracks != 0)
-                    yield return new KeyValuePair<string, string>("TRACKTOTAL", da.TotalTracks.ToString());
+                    yield return new KeyValuePair<string, string>(TagFields.TotalTracks.ToString(), da.TotalTracks.ToString());
             }
             if (da.IsDiscNumber)
             {
-                yield return new KeyValuePair<string, string>("DISCNUMBER", da.DiscNumber.ToString());
+                yield return new KeyValuePair<string, string>(TagFields.DiscNumber.ToString(), da.DiscNumber.ToString());
                 if (da.TotalDiscs != 0)
-                    yield return new KeyValuePair<string, string>("DISCTOTAL", da.TotalDiscs.ToString());
+                    yield return new KeyValuePair<string, string>(TagFields.TotalDiscs.ToString(), da.TotalDiscs.ToString());
             }
         }
 
@@ -68,38 +69,78 @@ namespace MusicFileUtilities
             {"covr", ID3v2Util.APICType.FrontCover },
         };
 
-        public static Dictionary<string, string> VorbisCommentMapping = new Dictionary<string, string>()
+        public static Dictionary<string, TagFields> TagMapping = new Dictionary<string, TagFields>()
         {
-            {"©alb", "ALBUM"},
-            {"soal", "ALBUMSORT"},
-            {"aART", "ALBUMARTIST"},
-            {"soaa", "ALBUMARTISTSORT"},
-            {"©ART", "ARTIST"},
-            {"soar", "ARTISTSORT"},
-            {"tmpo", "BPM"},
-            {"©cmt", "COMMENT"},
-            {"cpil", "COMPILATION"},
-            {"©wrt", "COMPOSER"},
-            {"soco", "COMPOSERSORT"},
-            {"©con", "CONDUCTOR"},
-            {"©grp", "CONTENTGROUP"},
-            {"cprt", "COPYRIGHT"},
-            {"desc", "DESCRIPTION"},
-            {"©gen", "GENRE"},
-            {"gnre", "GENRE"},
-            {"©mvn", "MOVEMENTNAME"},
-            {"©mvi", "MOVEMENT"},
-            {"©mvc", "MOVEMENTTOTAL"},
-            {"pcst", "PODCAST"},
-            {"catg", "PODCASTCATEGORY"},
-            {"ldes", "PODCASTDESC"},
-            {"egid", "PODCASTID"},
-            {"keyw", "PODCASTKEYWORDS"},
-            {"purl", "PODCASTURL"},
-            {"©nam", "TITLE"},
-            {"sonm", "TITLESORT"},
-            {"©lyr", "UNSYNCEDLYRICS"},
-            {"©day", "DATE"},
+            { "Acoustid Id", TagFields.AcoustID_ID },
+            { "Acoustid Fingerprint", TagFields.AcoustID_Fingerprint },
+            { "©alb", TagFields.Album },
+            { "aART", TagFields.AlbumArtist },
+            { "soaa", TagFields.AlbumArtistSort },
+            { "soal", TagFields.AlbumSort },
+            { "©ART", TagFields.Artist },
+            { "soar", TagFields.ArtistSort },
+            { "ARTISTS", TagFields.Artists },
+            { "ASIN", TagFields.ASIN },
+            { "BARCODE", TagFields.Barcode },
+            { "tmpo", TagFields.BPM },
+            { "CATALOGNUMBER", TagFields.CatalogNumber },
+            { "©cmt", TagFields.Comment },
+            { "cpil", TagFields.Compilation },
+            { "©wrt", TagFields.Composer },
+            { "soco", TagFields.ComposerSort },
+            { "CONDUCTOR", TagFields.Conductor },
+            { "cprt", TagFields.Copyright },
+            { "DISCSUBTITLE", TagFields.DiscSubtitle },
+            { "©too", TagFields.EncodedBy },
+            { "ENGINEER", TagFields.Engineer },
+            { "pgap", TagFields.Gapless },
+            { "©gen", TagFields.Genre },
+            { "gnre", TagFields.Genre },
+            { "©grp", TagFields.Grouping },
+            { "initialkey", TagFields.Key },
+            { "ISRC", TagFields.ISRC },
+            { "LANGUAGE", TagFields.Language },
+            { "LICENSE", TagFields.License },
+            { "LYRICIST", TagFields.Lyricist },
+            { "©lyr", TagFields.Lyrics },
+            { "MEDIA", TagFields.Media },
+            { "DJMIXER", TagFields.DJMixer },
+            { "MIXER", TagFields.Mixer },
+            { "MOOD", TagFields.Mood },
+            { "©mvn", TagFields.Movement },
+            { "©mvc", TagFields.MovementTotal },
+            { "©mvi", TagFields.MovementNumber },
+            { "MusicBrainz Artist Id", TagFields.MusicBrainz_ArtistID },
+            { "MusicBrainz Disc Id", TagFields.MusicBrainz_DiscID },
+            { "MusicBrainz Original Artist Id", TagFields.MusicBrainz_OriginalArtistID },
+            { "MusicBrainz Original Album Id", TagFields.MusicBrainz_OriginalAlbumID },
+            { "MusicBrainz Track Id", TagFields.MusicBrainz_RecordingID },
+            { "MusicBrainz Album Artist Id", TagFields.MusicBrainz_AlbumArtistID },
+            { "MusicBrainz Release Group Id", TagFields.MusicBrainz_ReleaseGroupID },
+            { "MusicBrainz Album Id", TagFields.MusicBrainz_AlbumID },
+            { "MusicBrainz Release Track Id", TagFields.MusicBrainz_TrackID },
+            { "MusicBrainz Work Id", TagFields.MusicBrainz_WorkID },
+            { "PRODUCER", TagFields.Producer },
+            { "LABEL", TagFields.Label },
+            { "MusicBrainz Album Release Country", TagFields.ReleaseCountry },
+            { "©day", TagFields.Date },
+            { "MusicBrainz Album Status", TagFields.ReleaseStatus },
+            { "MusicBrainz Album Type", TagFields.ReleaseType },
+            { "REMIXER", TagFields.Remixer },
+            { "REPLAYGAIN_ALBUM_GAIN", TagFields.ReplayGain_Album_Gain },
+            { "REPLAYGAIN_ALBUM_PEAK", TagFields.ReplayGain_Album_Peak },
+            { "REPLAYGAIN_ALBUM_RANGE", TagFields.ReplayGain_Album_Range },
+            { "REPLAYGAIN_REFERENCE_LOUDNESS", TagFields.ReplayGain_Reference_Loudness },
+            { "REPLAYGAIN_TRACK_GAIN", TagFields.ReplayGain_Track_Gain },
+            { "REPLAYGAIN_TRACK_PEAK", TagFields.ReplayGain_Track_Peak },
+            { "REPLAYGAIN_TRACK_RANGE", TagFields.ReplayGain_Track_Range },
+            { "SCRIPT", TagFields.Script },
+            { "tvsh", TagFields.Show },
+            { "sosn", TagFields.ShowSort },
+            { "SUBTITLE", TagFields.Subtitle },
+            { "©nam", TagFields.Title },
+            { "sonm", TagFields.TitleSort },
+            { "©wrk", TagFields.Work },
         };
 
         public static void Init()
@@ -1571,9 +1612,9 @@ namespace MusicFileUtilities
             foreach (Atom atom in ilst.Children)
             {
                 ContainerAtom ca = atom as ContainerAtom;
-                if (MP4Util.VorbisCommentMapping.ContainsKey(atom.Type))
+                if (MP4Util.TagMapping.ContainsKey(atom.Type))
                 {
-                    string key = MP4Util.VorbisCommentMapping[atom.Type];
+                    string key = MP4Util.TagMapping[atom.Type].ToString();
                     foreach (Atom childatom in ca.FindMultiplePath("data"))
                     {
                         Atom_data da = childatom as Atom_data;
@@ -1600,11 +1641,15 @@ namespace MusicFileUtilities
                 else if (atom.Type == "----")
                 {
                     string key = (ca.FindPath("name") as StringAtom).Text;
-                    foreach (Atom childatom in (atom as ContainerAtom).FindMultiplePath("data"))
+                    if (MP4Util.TagMapping.ContainsKey(key))
                     {
-                        Atom_data da = childatom as Atom_data;
-                        if (da.IsText)
-                            yield return new KeyValuePair<string, string>(key, da.Text);
+                        key = MP4Util.TagMapping[key].ToString();
+                        foreach (Atom childatom in (atom as ContainerAtom).FindMultiplePath("data"))
+                        {
+                            Atom_data da = childatom as Atom_data;
+                            if (da.IsText)
+                                yield return new KeyValuePair<string, string>(key, da.Text);
+                        }
                     }
 
                 }

@@ -62,13 +62,13 @@ namespace MetadataCaching
             "CREATE INDEX TracksAlbumIDIndex ON Tracks (AlbumID ASC);\r\n" +
             "CREATE INDEX TracksArtistIDIndex ON Tracks (ArtistID ASC);\r\n" +
             "CREATE VIEW MetadataMapView AS SELECT *,\r\n" +
-            "(SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'ARTIST') AS Artist,\r\n" +
+            "(SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'Artist') AS Artist,\r\n" +
             "COALESCE(\r\n" +
-            "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'ALBUMARTIST'),\r\n" +
-            "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'ARTIST')) AS AlbumArtist,\r\n" +
-            "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'ALBUM') AS Album,\r\n" +
-            "   CAST((SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'TRACKNUMBER') AS INTEGER) AS Number,\r\n" +
-            "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'TITLE') AS Name\r\n" +
+            "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'AlbumArtist'),\r\n" +
+            "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'Artist')) AS AlbumArtist,\r\n" +
+            "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'Album') AS Album,\r\n" +
+            "   CAST((SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'TrackNumber') AS INTEGER) AS Number,\r\n" +
+            "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'Title') AS Name\r\n" +
             "   FROM Files;\r\n" +
             "CREATE VIEW MetadataSummaryView AS SELECT Files.*, Artists.Name AS Artist, AlbumArtists.Name AS AlbumArtist,\r\n" +
             "   Albums.Name AS Album, Tracks.Number AS TrackNumber, Tracks.Name AS Track FROM\r\n" +

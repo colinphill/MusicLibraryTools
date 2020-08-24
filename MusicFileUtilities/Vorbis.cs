@@ -16,9 +16,93 @@ using System.IO;
 namespace MusicFileUtilities
 {
 
-    public class VorbisTools
+    public class VorbisUtil
     {
 
+        public static Dictionary<string, TagFields> TagMappings = new Dictionary<string, TagFields>()
+        {
+            { "ACOUSTID_ID", TagFields.AcoustID_ID },
+            { "ACOUSTID_FINGERPRINT", TagFields.AcoustID_Fingerprint },
+            { "ALBUM", TagFields.Album },
+            { "ALBUMARTIST", TagFields.AlbumArtist },
+            { "ALBUMARTISTSORT", TagFields.AlbumArtistSort },
+            { "ALBUMSORT", TagFields.AlbumSort },
+            { "ARRANGER", TagFields.Arranger },
+            { "ARTIST", TagFields.Artist },
+            { "ARTISTSORT", TagFields.ArtistSort },
+            { "ARTISTS", TagFields.Artists },
+            { "ASIN", TagFields.ASIN },
+            { "BARCODE", TagFields.Barcode },
+            { "BPM", TagFields.BPM },
+            { "CATALOGNUMBER", TagFields.CatalogNumber },
+            { "COMMENT", TagFields.Comment },
+            { "COMPILATION", TagFields.Compilation },
+            { "COMPOSER", TagFields.Composer },
+            { "COMPOSERSORT", TagFields.ComposerSort },
+            { "CONDUCTOR", TagFields.Conductor },
+            { "COPYRIGHT", TagFields.Copyright },
+            { "DISCNUMBER", TagFields.DiscNumber },
+            { "DISCSUBTITLE", TagFields.DiscSubtitle },
+            { "ENCODEDBY", TagFields.EncodedBy },
+            { "ENCODERSETTINGS", TagFields.EncoderSettings },
+            { "ENGINEER", TagFields.Engineer },
+            { "GENRE", TagFields.Genre },
+            { "GROUPING", TagFields.Grouping },
+            { "KEY", TagFields.Key },
+            { "ISRC", TagFields.ISRC },
+            { "LANGUAGE", TagFields.Language },
+            { "LICENSE", TagFields.License },
+            { "LYRICIST", TagFields.Lyricist },
+            { "LYRICS", TagFields.Lyrics },
+            { "MEDIA", TagFields.Media },
+            { "DJMIXER", TagFields.DJMixer },
+            { "MIXER", TagFields.Mixer },
+            { "MOOD", TagFields.Mood },
+            { "MOVEMENTNAME", TagFields.Movement },
+            { "MOVEMENTTOTAL", TagFields.MovementTotal },
+            { "MOVEMENT", TagFields.MovementNumber },
+            { "MUSICBRAINZ_ARTISTID", TagFields.MusicBrainz_ArtistID },
+            { "MUSICBRAINZ_DISCID", TagFields.MusicBrainz_DiscID },
+            { "MUSICBRAINZ_ORIGINALARTISTID", TagFields.MusicBrainz_OriginalArtistID },
+            { "MUSICBRAINZ_ORIGINALALBUMID", TagFields.MusicBrainz_OriginalAlbumID },
+            { "MUSICBRAINZ_TRACKID", TagFields.MusicBrainz_RecordingID },
+            { "MUSICBRAINZ_ALBUMARTISTID", TagFields.MusicBrainz_AlbumArtistID },
+            { "MUSICBRAINZ_RELEASEGROUPID", TagFields.MusicBrainz_ReleaseGroupID },
+            { "MUSICBRAINZ_ALBUMID", TagFields.MusicBrainz_AlbumID },
+            { "MUSICBRAINZ_RELEASETRACKID", TagFields.MusicBrainz_TrackID },
+            { "MUSICBRAINZ_WORKID", TagFields.MusicBrainz_WorkID },
+            { "ORIGINALFILENAME", TagFields.OriginalFileName },
+            { "ORIGINALDATE", TagFields.OriginalDate },
+            { "ORIGINALYEAR", TagFields.OriginalYear },
+            { "PERFORMER", TagFields.Performer },
+            { "PRODUCER", TagFields.Producer },
+            { "RATING", TagFields.Rating },
+            { "LABEL", TagFields.Label },
+            { "RELEASECOUNTRY", TagFields.ReleaseCountry },
+            { "DATE", TagFields.Date },
+            { "RELEASESTATUS", TagFields.ReleaseStatus },
+            { "RELEASETYPE", TagFields.ReleaseType },
+            { "REMIXER", TagFields.Remixer },
+            { "REPLAYGAIN_ALBUM_GAIN", TagFields.ReplayGain_Album_Gain },
+            { "REPLAYGAIN_ALBUM_PEAK", TagFields.ReplayGain_Album_Peak },
+            { "REPLAYGAIN_ALBUM_RANGE", TagFields.ReplayGain_Album_Range },
+            { "REPLAYGAIN_REFERENCE_LOUDNESS", TagFields.ReplayGain_Reference_Loudness },
+            { "REPLAYGAIN_TRACK_GAIN", TagFields.ReplayGain_Track_Gain },
+            { "REPLAYGAIN_TRACK_PEAK", TagFields.ReplayGain_Track_Peak },
+            { "REPLAYGAIN_TRACK_RANGE", TagFields.ReplayGain_Track_Range },
+            { "SCRIPT", TagFields.Script },
+            { "SHOWMOVEMENT", TagFields.ShowMovement },
+            { "DISCTOTAL", TagFields.TotalDiscs },
+            { "TOTALDISCS", TagFields.TotalDiscs },
+            { "TRACKTOTAL", TagFields.TotalTracks },
+            { "TOTALTRACKS", TagFields.TotalTracks },
+            { "TRACKNUMBER", TagFields.TrackNumber },
+            { "TITLE", TagFields.Title },
+            { "TITLESORT", TagFields.TitleSort },
+            { "WEBSITE", TagFields.Website },
+            { "WORK", TagFields.Work },
+            { "WRITER", TagFields.Writer },
+        };
 
     }
 
@@ -214,7 +298,8 @@ namespace MusicFileUtilities
         public IEnumerable<KeyValuePair<string, string>> GetTextMetadata()
         {
             foreach (var kv in Comments)
-                yield return kv;
+                if (VorbisUtil.TagMappings.ContainsKey(kv.Key))
+                    yield return new KeyValuePair<string, string>(VorbisUtil.TagMappings[kv.Key].ToString(), kv.Value);
         }
 
         public IEnumerable<IMetadataImage> GetImageMetadata()

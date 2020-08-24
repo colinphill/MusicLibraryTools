@@ -92,22 +92,29 @@ namespace MusicFileUtilities
 
         public delegate IEnumerable<KeyValuePair<string, string>> HandleFrame(TextFrame frame);
 
-        private static IEnumerable<KeyValuePair<string, string>> HandleDiscTrack(TextFrame frame)
+        private static IEnumerable<KeyValuePair<string, string>> HandleDiscTrackMovement(TextFrame frame)
         {
             string[] vals = frame.Text.Split("/".ToCharArray());
             if (frame.FrameID == "TRCK")
             {
                 if ((vals.Length >= 1) && (!string.IsNullOrEmpty(vals[0])))
-                    yield return new KeyValuePair<string, string>("TRACKNUMBER", vals[0]);
+                    yield return new KeyValuePair<string, string>(TagFields.TrackNumber.ToString(), vals[0]);
                 if ((vals.Length >= 2) && (!string.IsNullOrEmpty(vals[1])))
-                    yield return new KeyValuePair<string, string>("TRACKTOTAL", vals[1]);
+                    yield return new KeyValuePair<string, string>(TagFields.TotalTracks.ToString(), vals[1]);
             }
             else if (frame.FrameID == "TPOS")
             {
                 if ((vals.Length >= 1) && (!string.IsNullOrEmpty(vals[0])))
-                    yield return new KeyValuePair<string, string>("DISCNUMBER", vals[0]);
+                    yield return new KeyValuePair<string, string>(TagFields.DiscNumber.ToString(), vals[0]);
                 if ((vals.Length >= 2) && (!string.IsNullOrEmpty(vals[1])))
-                    yield return new KeyValuePair<string, string>("DISCTOTAL", vals[1]);
+                    yield return new KeyValuePair<string, string>(TagFields.TotalDiscs.ToString(), vals[1]);
+            }
+            else if (frame.FrameID == "MVIN")
+            {
+                if ((vals.Length >= 1) && (!string.IsNullOrEmpty(vals[0])))
+                    yield return new KeyValuePair<string, string>(TagFields.MovementNumber.ToString(), vals[0]);
+                if ((vals.Length >= 2) && (!string.IsNullOrEmpty(vals[1])))
+                    yield return new KeyValuePair<string, string>(TagFields.MovementTotal.ToString(), vals[1]);
             }
         }
 
@@ -137,14 +144,14 @@ namespace MusicFileUtilities
                             int genre;
                             if (int.TryParse(reference, out genre))
                             {
-                                yield return new KeyValuePair<string, string>("GENRE", ID3v2Util.ID3v1Genres[genre]);
+                                yield return new KeyValuePair<string, string>(TagFields.Genre.ToString(), ID3v2Util.ID3v1Genres[genre]);
                             }
                             else
                             {
                                 if (reference == "RX")
-                                    yield return new KeyValuePair<string, string>("GENRE", "Remix");
+                                    yield return new KeyValuePair<string, string>(TagFields.Genre.ToString(), "Remix");
                                 if (reference == "CR")
-                                    yield return new KeyValuePair<string, string>("GENRE", "Cover");
+                                    yield return new KeyValuePair<string, string>(TagFields.Genre.ToString(), "Cover");
                             }
                         }
                         else
@@ -159,68 +166,94 @@ namespace MusicFileUtilities
                 }
             }
             if (refinement != "")
-                yield return new KeyValuePair<string, string>("GENRE", refinement);
+                yield return new KeyValuePair<string, string>(TagFields.Genre.ToString(), refinement);
+        }
+
+        private static IEnumerable<KeyValuePair<string, string>> HandleInvolvementFrame(TextFrame frame)
+        {
+            yield break;
         }
 
         public static Dictionary<string, HandleFrame> SpecialMappings = new Dictionary<string, HandleFrame>()
         {
-            {"TRCK", new HandleFrame(HandleDiscTrack) },
-            {"TPOS", new HandleFrame(HandleDiscTrack) },
-            {"TCON", new HandleFrame(HandleGenre) },
+            { "TRCK", new HandleFrame(HandleDiscTrackMovement) },
+            { "TPOS", new HandleFrame(HandleDiscTrackMovement) },
+            { "MVIN", new HandleFrame(HandleDiscTrackMovement) },
+            { "TCON", new HandleFrame(HandleGenre) },
+            { "TIPL", new HandleFrame(HandleInvolvementFrame) },
+            { "IPLS", new HandleFrame(HandleInvolvementFrame) },
         };
 
-        private static Dictionary<string, string> _vcmappings = new Dictionary<string, string>()
+        public static Dictionary<string, TagFields> TagMappings = new Dictionary<string, TagFields>()
         {
-            {"TALB", "ALBUM"},
-            {"TSOA", "ALBUMSORT"},
-            {"TPE2", "ALBUMARTIST"},
-            {"TSO2", "ALBUMARTISTSORT"},
-            {"TPE1", "ARTIST"},
-            {"TSOP", "ARTISTSORT"},
-            {"TBPM", "BPM"},
-            {"TCMP", "COMPILATION"},
-            {"TCOM", "COMPOSER"},
-            {"TSOC", "COMPOSERSORT"},
-            {"TPE3", "CONDUCTOR"},
-            {"TIT1", "CONTENTGROUP"},
-            {"TCOP", "COPYRIGHT"},
-            {"TENC", "ENCODEDBY"},
-            {"TSSE", "ENCODERSETTINGS"},
-            {"TOWN", "FILEOWNER"},
-            {"TFLT", "FILETYPE"},
-            {"TKEY", "INITIALKEY"},
-            {"TSRC", "ISRC"},
-            {"TLAN", "LANGUAGE"},
-            {"TLEN", "LENGTH"},
-            {"TEXT", "LYRICIST"},
-            {"TMED", "MEDIATYPE"},
-            {"TPE4", "MIXARTIST"},
-            {"TRSO", "NETRADIOOWNER"},
-            {"TRSN", "NETRADIOSTATION"},
-            {"TOAL", "ORIGALBUM"},
-            {"TOPE", "ORIGARTIST"},
-            {"TOFN", "ORIGFILENAME"},
-            {"TOLY", "ORIGLYRICIST"},
-            {"TORY", "ORIGYEAR"},
-            {"TCAT", "PODCASTCATEGORY"},
-            {"TDES", "PODCASTDESC"},
-            {"TGID", "PODCASTID"},
-            {"TKWD", "PODCASTKEYWORDS"},
-            {"WFED", "PODCASTURL"},
-            {"TPUB", "PUBLISHER"},
-            {"TDRL", "RELEASETIME"},
-            {"TIT3", "SUBTITLE"},
-            {"TIT2", "TITLE"},
-            {"TSOT", "TITLESORT"},
-            {"WOAR", "WWWARTIST"},
-            {"WOAF", "WWWAUDIOFILE"},
-            {"WOAS", "WWWAUDIOSOURCE"},
-            {"WCOM", "WWWCOMMERCIALINFO"},
-            {"WCOP", "WWWCOPYRIGHT"},
-            {"WPAY", "WWWPAYMENT"},
-            {"WPUB", "WWWPUBLISHER"},
-            {"WORS", "WWWRADIOPAGE"},
-            {"TYER", "DATE"},
+            { "Acoustid Id", TagFields.AcoustID_ID },
+            { "Acoustid Fingerprint", TagFields.AcoustID_Fingerprint },
+            { "TALB", TagFields.Album },
+            { "TPE2", TagFields.AlbumArtist },
+            { "TSO2", TagFields.AlbumArtistSort },
+            { "TSOA", TagFields.AlbumSort },
+            { "TPE1", TagFields.Artist },
+            { "TSOP", TagFields.ArtistSort },
+            { "Artists", TagFields.Artists },
+            { "ASIN", TagFields.ASIN },
+            { "BARCODE", TagFields.Barcode },
+            { "TBPM", TagFields.BPM },
+            { "CATALOGNUMBER", TagFields.CatalogNumber },
+            { "TCMP", TagFields.Compilation },
+            { "TCOM", TagFields.Composer },
+            { "TSOC", TagFields.ComposerSort },
+            { "TPE3", TagFields.Conductor },
+            { "TCOP", TagFields.Copyright },
+            { "TSST", TagFields.DiscSubtitle },
+            { "TENC", TagFields.EncodedBy },
+            { "TSSE", TagFields.EncoderSettings },
+            { "TIT1", TagFields.Grouping },
+            { "TKEY", TagFields.Key },
+            { "TSRC", TagFields.ISRC },
+            { "TLAN", TagFields.Language },
+            { "USLT", TagFields.Lyrics },
+            { "TMED", TagFields.Media },
+            { "TMOO", TagFields.Mood },
+            { "MVNM", TagFields.Movement },
+            { "MusicBrainz Artist Id", TagFields.MusicBrainz_ArtistID },
+            { "MusicBrainz Disc Id", TagFields.MusicBrainz_DiscID },
+            { "MusicBrainz Original Artist Id", TagFields.MusicBrainz_OriginalArtistID },
+            { "MusicBrainz Original Album Id", TagFields.MusicBrainz_OriginalAlbumID },
+            //{ "MusicBrainz Track Id", TagFields.MusicBrainz_RecordingID },
+            { "MusicBrainz Album Artist Id", TagFields.MusicBrainz_AlbumArtistID },
+            { "MusicBrainz Release Group Id", TagFields.MusicBrainz_ReleaseGroupID },
+            { "MusicBrainz Album Id", TagFields.MusicBrainz_AlbumID },
+            { "MusicBrainz Release Track Id", TagFields.MusicBrainz_TrackID },
+            { "MusicBrainz Work Id", TagFields.MusicBrainz_WorkID },
+            { "TOAL", TagFields.OriginalAlbum },
+            { "TOPE", TagFields.OriginalArtist },
+            { "TOFN", TagFields.OriginalFileName },
+            { "TDOR", TagFields.OriginalDate },
+            { "TORY", TagFields.OriginalDate },
+            { "POPM", TagFields.Rating },
+            { "TPUB", TagFields.Label },
+            { "MusicBrainz Album Release Country", TagFields.ReleaseCountry },
+            { "TDRC", TagFields.Date },
+            { "TDAT", TagFields.Date },
+            { "TYER", TagFields.Date },
+            { "MusicBrainz Album Status", TagFields.ReleaseStatus },
+            { "MusicBrainz Album Type", TagFields.ReleaseType },
+            { "TPE4", TagFields.Remixer },
+            { "REPLAYGAIN_ALBUM_GAIN", TagFields.ReplayGain_Album_Gain },
+            { "REPLAYGAIN_ALBUM_PEAK", TagFields.ReplayGain_Album_Peak },
+            { "REPLAYGAIN_ALBUM_RANGE", TagFields.ReplayGain_Album_Range },
+            { "REPLAYGAIN_REFERENCE_LOUDNESS", TagFields.ReplayGain_Reference_Loudness },
+            { "REPLAYGAIN_TRACK_GAIN", TagFields.ReplayGain_Track_Gain },
+            { "REPLAYGAIN_TRACK_PEAK", TagFields.ReplayGain_Track_Peak },
+            { "REPLAYGAIN_TRACK_RANGE", TagFields.ReplayGain_Track_Range },
+            { "SCRIPT", TagFields.Script },
+            { "SHOWMOVEMENT", TagFields.ShowMovement },
+            { "TIT3", TagFields.Subtitle },
+            { "TIT2", TagFields.Title },
+            { "TSOT", TagFields.TitleSort },
+            { "WOAR", TagFields.Website },
+            { "WORK", TagFields.Work },
+            { "Writer", TagFields.Writer },
         };
 
         static ID3v2Util()
@@ -233,17 +266,7 @@ namespace MusicFileUtilities
                 return _22mappings[frameid];
             return "X" + frameid;
         }
-
-        public static string GetVorbisCommentMapping(string frameid)
-        {
-            if (_vcmappings.ContainsKey(frameid))
-                return _vcmappings[frameid];
-            if (_22mappings.ContainsKey(frameid))
-                if (_vcmappings.ContainsKey(_22mappings[frameid]))
-                    return _vcmappings[_22mappings[frameid]];
-            return frameid;
-        }
-
+          
     }
 
     public class ID3v2Frame
@@ -963,15 +986,16 @@ namespace MusicFileUtilities
                 if (frame is UserStringFrame)
                 {
                     UserStringFrame usf = frame as UserStringFrame;
-                    yield return new KeyValuePair<string, string>(usf.Key, usf.Value);
+                    if (ID3v2Util.TagMappings.ContainsKey(usf.Key))
+                        yield return new KeyValuePair<string, string>(ID3v2Util.TagMappings[usf.Key].ToString(), usf.Value);
                 }
-                else if (frame is CommentFrame)
+                /*else if (frame is CommentFrame)
                 {
                     CommentFrame cf = frame as CommentFrame;
                     if (cf.Key == "iTunNORM")
                         yield return new KeyValuePair<string, string>(cf.Key, cf.Value);
                     yield return new KeyValuePair<string, string>("COMMENT", cf.Key + " - " + cf.Value);
-                }
+                }*/
                 else if (frame is TextFrame)
                 {
                     TextFrame tf = frame as TextFrame;
@@ -981,7 +1005,14 @@ namespace MusicFileUtilities
                             yield return kv;
                     }
                     else
-                        yield return new KeyValuePair<string, string>(ID3v2Util.GetVorbisCommentMapping(tf.FrameID), tf.Text);
+                    {
+                        if (ID3v2Util.TagMappings.ContainsKey(tf.FrameID))
+                            yield return new KeyValuePair<string, string>(ID3v2Util.TagMappings[tf.FrameID].ToString(), tf.Text);
+                        string newmapping = ID3v2Util.GetNewID3v2Mapping(tf.FrameID);
+                        if (ID3v2Util.TagMappings.ContainsKey(newmapping))
+                            yield return new KeyValuePair<string, string>(ID3v2Util.TagMappings[newmapping].ToString(), tf.Text);
+
+                    }
                 }
             }
         }
