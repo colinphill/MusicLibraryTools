@@ -88,13 +88,15 @@ namespace MusicFileUtilities
             {"TYE", "TYER"},
             {"PIC", "APIC"},
             {"COM", "COMM"},
+            {"UFI", "UFID"},
+            {"PRI", "PRIV"},
         };
 
-        public delegate IEnumerable<KeyValuePair<string, string>> HandleFrame(TextFrame frame);
+        public delegate IEnumerable<KeyValuePair<string, string>> HandleFrame(ID3v2Frame frame);
 
-        private static IEnumerable<KeyValuePair<string, string>> HandleDiscTrackMovement(TextFrame frame)
+        private static IEnumerable<KeyValuePair<string, string>> HandleDiscTrackMovement(ID3v2Frame frame)
         {
-            string[] vals = frame.Text.Split("/".ToCharArray());
+            string[] vals = (frame as TextFrame).Text.Split("/".ToCharArray());
             if (frame.FrameID == "TRCK")
             {
                 if ((vals.Length >= 1) && (!string.IsNullOrEmpty(vals[0])))
@@ -118,11 +120,11 @@ namespace MusicFileUtilities
             }
         }
 
-        private static IEnumerable<KeyValuePair<string, string>> HandleGenre(TextFrame frame)
+        private static IEnumerable<KeyValuePair<string, string>> HandleGenre(ID3v2Frame frame)
         {
             string refinement = "", reference = "";
             int state = 0;
-            foreach (char c in frame.Text)
+            foreach (char c in (frame as TextFrame).Text)
             {
                 switch (state)
                 {
@@ -169,9 +171,16 @@ namespace MusicFileUtilities
                 yield return new KeyValuePair<string, string>(TagFields.Genre.ToString(), refinement);
         }
 
-        private static IEnumerable<KeyValuePair<string, string>> HandleInvolvementFrame(TextFrame frame)
+        private static IEnumerable<KeyValuePair<string, string>> HandleInvolvementFrame(ID3v2Frame frame)
         {
             yield break;
+        }
+
+        private static IEnumerable<KeyValuePair<string, string>> HandleUFIDFrame(ID3v2Frame frame)
+        {
+            IdentifierFrame idframe = frame as IdentifierFrame;
+            if (idframe.Key == "http://musicbrainz.org")
+                yield return new KeyValuePair<string, string>(TagFields.MusicBrainz_RecordingID.ToString(), ISO8859Encoding.GetString(idframe.Value)); 
         }
 
         public static Dictionary<string, HandleFrame> SpecialMappings = new Dictionary<string, HandleFrame>()
@@ -182,6 +191,7 @@ namespace MusicFileUtilities
             { "TCON", new HandleFrame(HandleGenre) },
             { "TIPL", new HandleFrame(HandleInvolvementFrame) },
             { "IPLS", new HandleFrame(HandleInvolvementFrame) },
+            { "UFID", new HandleFrame(HandleUFIDFrame) },
         };
 
         public static Dictionary<string, TagFields> TagMappings = new Dictionary<string, TagFields>()
@@ -996,16 +1006,21 @@ namespace MusicFileUtilities
                         yield return new KeyValuePair<string, string>(cf.Key, cf.Value);
                     yield return new KeyValuePair<string, string>("COMMENT", cf.Key + " - " + cf.Value);
                 }*/
-                else if (frame is TextFrame)
+                else //if (frame is TextFrame)
                 {
-                    TextFrame tf = frame as TextFrame;
-                    if (ID3v2Util.SpecialMappings.ContainsKey(tf.FrameID))
+                    if (ID3v2Util.SpecialMappings.ContainsKey(frame.FrameID))
                     {
-                        foreach (var kv in ID3v2Util.SpecialMappings[tf.FrameID](tf) )
+                        foreach (var kv in ID3v2Util.SpecialMappings[frame.FrameID](frame) )
+                            yield return kv;
+                    } 
+                    else if (ID3v2Util.SpecialMappings.ContainsKey(ID3v2Util.GetNewID3v2Mapping(frame.FrameID)))
+                    {
+                        foreach (var kv in ID3v2Util.SpecialMappings[ID3v2Util.GetNewID3v2Mapping(frame.FrameID)](frame))
                             yield return kv;
                     }
-                    else
+                    else if (frame is TextFrame)
                     {
+                        TextFrame tf = frame as TextFrame;
                         if (ID3v2Util.TagMappings.ContainsKey(tf.FrameID))
                             yield return new KeyValuePair<string, string>(ID3v2Util.TagMappings[tf.FrameID].ToString(), tf.Text);
                         string newmapping = ID3v2Util.GetNewID3v2Mapping(tf.FrameID);
@@ -1233,6 +1248,8 @@ namespace MusicFileUtilities
                             _frames.Add(new UserStringFrame(f));
                         else if (f.FrameID == "PIC")
                             _frames.Add(new PictureFrame(f));
+                        else if ((f.FrameID == "UFI") || (f.FrameID == "PRI"))
+                            _frames.Add(new IdentifierFrame(f));
                         else if (f.FrameID == "COM")
                             _frames.Add(new CommentFrame(f));
                         else if ((f.FrameID[0] == 'T') || (f.FrameID[0] == 'W'))
