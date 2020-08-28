@@ -31,6 +31,10 @@ namespace MusicFileUtilities
             DuringPerformance = 15, VideoScreenCapture = 16, BrightColoredFish = 17, Illustration = 18, BandLogo = 19, StudioLogo = 20
         };
 
+        public static bool UseUTF8 { get; set; } = false;
+        public static bool CoalesceID3v23Values { get; set; } = true;
+        public static bool CoalesceID3v24Values { get; set; } = false;
+
         public static readonly IList<string> ID3v1Genres = new List<string> {
             "Blues", "Classic Rock", "Country", "Dance", "Disco",
 		    "Funk", "Grunge", "Hip-Hop", "Jazz", "Metal",
@@ -97,14 +101,14 @@ namespace MusicFileUtilities
         private static IEnumerable<KeyValuePair<string, string>> HandleDiscTrackMovement(ID3v2Frame frame)
         {
             string[] vals = (frame as TextFrame).Text.Split("/".ToCharArray());
-            if (frame.FrameID == "TRCK")
+            if ((frame.FrameID == "TRCK")||(frame.FrameID == "TRK"))
             {
                 if ((vals.Length >= 1) && (!string.IsNullOrEmpty(vals[0])))
                     yield return new KeyValuePair<string, string>(TagFields.TrackNumber.ToString(), vals[0]);
                 if ((vals.Length >= 2) && (!string.IsNullOrEmpty(vals[1])))
                     yield return new KeyValuePair<string, string>(TagFields.TotalTracks.ToString(), vals[1]);
             }
-            else if (frame.FrameID == "TPOS")
+            else if ((frame.FrameID == "TPOS")||(frame.FrameID == "TPA"))
             {
                 if ((vals.Length >= 1) && (!string.IsNullOrEmpty(vals[0])))
                     yield return new KeyValuePair<string, string>(TagFields.DiscNumber.ToString(), vals[0]);
@@ -357,8 +361,8 @@ namespace MusicFileUtilities
                 return encoding.GetString(Data, offset + 2, length - 2);
             }
 
-            /*if (ID3v2Util.Allowv24Tags)
-                throw new InvalidDataException();*/
+            if (!(tag_.Version >= 4))
+                throw new InvalidDataException();
 
             if (coding == ID3v2Util.ID3Encoding.BEUnicode)
                 return Encoding.BigEndianUnicode.GetString(Data, offset, length);
@@ -455,9 +459,9 @@ namespace MusicFileUtilities
             else
             {
                 if (FrameID[0] == 'W')
-                    values_ = GetStringAt(ID3v2Util.ID3Encoding.ISO8859, 0).Split("\0".ToCharArray(), 1);
+                    values_ = new [] { GetStringAt(ID3v2Util.ID3Encoding.ISO8859, 0).Split("\0".ToCharArray()).First() };
                 else
-                    values_ = GetStringAt((ID3v2Util.ID3Encoding)Data[0], 1).Split("\0".ToCharArray(), 1);
+                    values_ = new [] { GetStringAt((ID3v2Util.ID3Encoding)Data[0], 1).Split("\0".ToCharArray()).First() };
             }
         }
 
@@ -617,8 +621,12 @@ namespace MusicFileUtilities
             try
             {
                 _key = GetNullTerminatedStringAt((ID3v2Util.ID3Encoding)Data[0], 1);
-                _value = GetStringAt((ID3v2Util.ID3Encoding)Data[0],
-                    CodeString((ID3v2Util.ID3Encoding)Data[0], _key + "\0").Length + 1).Split("\0".ToCharArray()).First();
+                if (FrameID[0] == 'W')
+                    _value = GetStringAt(ID3v2Util.ID3Encoding.ISO8859,
+                        CodeString((ID3v2Util.ID3Encoding)Data[0], _key + "\0").Length + 1).Split("\0".ToCharArray()).First();
+                else
+                    _value = GetStringAt((ID3v2Util.ID3Encoding)Data[0],
+                        CodeString((ID3v2Util.ID3Encoding)Data[0], _key + "\0").Length + 1).Split("\0".ToCharArray()).First();
             }
             catch
             {
@@ -629,6 +637,7 @@ namespace MusicFileUtilities
 
         public override void Encode()
         {
+            // TBD: WXXX ISO8859-1 URL Encoding
             byte [] k, v;
             try
             {
@@ -638,7 +647,7 @@ namespace MusicFileUtilities
             }
             catch
             {
-                if (tag_.Version >= 4)
+                if ((ID3v2Util.UseUTF8) && (tag_.Version >= 4))
                 {
                     k = CodeString(ID3v2Util.ID3Encoding.UTF8, _key);
                     v = CodeString(ID3v2Util.ID3Encoding.UTF8, _value);
