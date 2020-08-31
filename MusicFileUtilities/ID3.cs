@@ -36,6 +36,7 @@ namespace MusicFileUtilities
         };
 
         public static bool UseUTF8 { get; set; } = false;
+        public static bool CoalesceID3v22Values { get; set; } = true;
         public static bool CoalesceID3v23Values { get; set; } = true;
         public static bool CoalesceID3v24Values { get; set; } = false;
 
@@ -67,7 +68,7 @@ namespace MusicFileUtilities
             "Duet", "Punk Rock", "Drum Solo", "A Capella", "Euro-House",
             "Dance Hall" };
 
-        public static Encoding ISO8859Encoding = Encoding.GetEncoding(28591,
+        public static readonly Encoding ISO8859Encoding = Encoding.GetEncoding(28591,
             new EncoderExceptionFallback(), new DecoderExceptionFallback()); // iso-8859-1
 
         public delegate object[] HandleTagAction(ID3v2Tag tag, TagAction action, params object[] values);
@@ -134,9 +135,9 @@ namespace MusicFileUtilities
             throw new InvalidOperationException();
         }
 
-        public static object[] UFIDMapping(ID3v2Tag tag, string ufidid, TagAction action, params object[] values)
+        public static object[] UFIDMapping(ID3v2Tag tag, string frameid, string ufidid, TagAction action, params object[] values)
         {
-            var frame = tag.Frames.SingleOrDefault(f => (f.FrameID == "UFID") && ((f as IdentifierFrame).Key == ufidid)) as IdentifierFrame;
+            var frame = tag.Frames.SingleOrDefault(f => (f.FrameID == frameid) && ((f as IdentifierFrame).Key == ufidid)) as IdentifierFrame;
             switch (action)
             {
                 case TagAction.Get:
@@ -301,7 +302,7 @@ namespace MusicFileUtilities
             throw new InvalidOperationException();
         }
 
-        public static Dictionary<TagFields, HandleTagAction> ActionMappingsv22 = new Dictionary<TagFields, HandleTagAction>()
+        public static readonly IReadOnlyDictionary<TagFields, HandleTagAction> ActionMappingsv22 = new Dictionary<TagFields, HandleTagAction>()
         {
             { TagFields.Album, (tag, action, values) => SimpleMapping(tag, "TAL", action, values) },
             { TagFields.AlbumArtist, (tag, action, values) => SimpleMapping(tag, "TP2", action, values) },
@@ -346,7 +347,7 @@ namespace MusicFileUtilities
             { TagFields.MusicBrainz_DiscID, (tag, action, values) => UserStringMapping(tag, "TXX", "MusicBrainz Disc Id", action, values) },
             { TagFields.MusicBrainz_OriginalArtistID, (tag, action, values) => UserStringMapping(tag, "TXX", "MusicBrainz Original Artist Id", action, values) },
             { TagFields.MusicBrainz_OriginalAlbumID, (tag, action, values) => UserStringMapping(tag, "TXX", "MusicBrainz Original Album Id", action, values) },
-            { TagFields.MusicBrainz_RecordingID, (tag, action, values) => UFIDMapping(tag, "http://musicbrainz.org", action, values) },
+            { TagFields.MusicBrainz_RecordingID, (tag, action, values) => UFIDMapping(tag, "UFI", "http://musicbrainz.org", action, values) },
             { TagFields.MusicBrainz_AlbumArtistID, (tag, action, values) => UserStringMapping(tag, "TXX", "MusicBrainz Album Artist Id", action, values) },
             { TagFields.MusicBrainz_ReleaseGroupID, (tag, action, values) => UserStringMapping(tag, "TXX", "MusicBrainz Release Group Id", action, values) },
             { TagFields.MusicBrainz_AlbumID, (tag, action, values) => UserStringMapping(tag, "TXX", "MusicBrainz Album Id", action, values) },
@@ -377,7 +378,7 @@ namespace MusicFileUtilities
             { TagFields.OriginalDate, OriginalDateMapping },
         };
 
-        public static Dictionary<TagFields, HandleTagAction> ActionMappingsv23v24 = new Dictionary<TagFields, HandleTagAction>()
+        public static readonly IReadOnlyDictionary<TagFields, HandleTagAction> ActionMappingsv23v24 = new Dictionary<TagFields, HandleTagAction>()
         {
             { TagFields.Album, (tag, action, values) => SimpleMapping(tag, "TALB", action, values) },
             { TagFields.AlbumArtist, (tag, action, values) => SimpleMapping(tag, "TPE2", action, values) },
@@ -422,7 +423,7 @@ namespace MusicFileUtilities
             { TagFields.MusicBrainz_DiscID, (tag, action, values) => UserStringMapping(tag, "TXXX", "MusicBrainz Disc Id", action, values) },
             { TagFields.MusicBrainz_OriginalArtistID, (tag, action, values) => UserStringMapping(tag, "TXXX", "MusicBrainz Original Artist Id", action, values) },
             { TagFields.MusicBrainz_OriginalAlbumID, (tag, action, values) => UserStringMapping(tag, "TXXX", "MusicBrainz Original Album Id", action, values) },
-            { TagFields.MusicBrainz_RecordingID, (tag, action, values) => UFIDMapping(tag, "http://musicbrainz.org", action, values) },
+            { TagFields.MusicBrainz_RecordingID, (tag, action, values) => UFIDMapping(tag, "UFID", "http://musicbrainz.org", action, values) },
             { TagFields.MusicBrainz_AlbumArtistID, (tag, action, values) => UserStringMapping(tag, "TXXX", "MusicBrainz Album Artist Id", action, values) },
             { TagFields.MusicBrainz_ReleaseGroupID, (tag, action, values) => UserStringMapping(tag, "TXXX", "MusicBrainz Release Group Id", action, values) },
             { TagFields.MusicBrainz_AlbumID, (tag, action, values) => UserStringMapping(tag, "TXXX", "MusicBrainz Album Id", action, values) },
@@ -605,6 +606,33 @@ namespace MusicFileUtilities
 
         public virtual void Decode()
         {
+            if (Tag.Version == 4)
+            {
+                if ((Flags & 1) == 1)
+                    Data = Data.Skip(4).ToArray();
+                if (((Flags & 2) == 2)||((Tag.Flags & 0x80) == 0x80))
+                {
+                    bool lastunsync = false;
+                    List<byte> unsync = new List<byte>();
+                    for (int i = 0; i < Data.Length - 1; i++)
+                    {
+                        if ((Data[i] == 0xff) && (Data[i + 1] == 0x00))
+                        {
+                            unsync.Add(0xff);
+                            i++;
+                            lastunsync = true;
+                        }
+                        else
+                        {
+                            unsync.Add(Data[i]);
+                            lastunsync = false;
+                        }
+                    }
+                    if (!lastunsync)
+                        unsync.Add(Data[Data.Length - 1]);
+                    Data = unsync.ToArray();
+                }
+            }
 
         }
 
@@ -626,12 +654,26 @@ namespace MusicFileUtilities
 
         public override void Decode()
         {
+            base.Decode();
             if (tag_.Version >= 4)
             {
                 if (FrameID[0] == 'W')
                     values_ = GetStringAt(ID3v2Util.ID3Encoding.ISO8859, 0).Split("\0".ToCharArray());
                 else
-                    values_ = GetStringAt((ID3v2Util.ID3Encoding)Data[0], 1).Split("\0".ToCharArray());
+                {
+                    var vals = new List<string>();
+                    int offset = 1;
+                    var encoding = (ID3v2Util.ID3Encoding)Data[0];
+                    while (offset < Data.Length)
+                    {
+                        string val = GetNullTerminatedStringAt(encoding, offset);
+                        offset += CodeString(encoding, val).Length;
+                        while ((offset < Data.Length) && (Data[offset] == 0))
+                            offset++;
+                        vals.Add(val);
+                    }
+                    values_ = vals.ToArray();
+                }
             }
             else
             {
@@ -726,6 +768,7 @@ namespace MusicFileUtilities
 
         public override void Decode()
         {
+            base.Decode();
             try
             {
                 _key = GetNullTerminatedStringAt(ID3v2Util.ID3Encoding.ISO8859, 0);
@@ -795,6 +838,7 @@ namespace MusicFileUtilities
 
         public override void Decode()
         {
+            base.Decode();
             try
             {
                 _key = GetNullTerminatedStringAt((ID3v2Util.ID3Encoding)Data[0], 1);
@@ -896,6 +940,7 @@ namespace MusicFileUtilities
 
         public override void Decode()
         {
+            base.Decode();
             try
             {
                 _lang = ID3v2Util.ISO8859Encoding.GetString(Data, 1, 3);
@@ -982,6 +1027,7 @@ namespace MusicFileUtilities
 
         public override void Decode()
         {
+            base.Decode();
             ID3v2Util.ID3Encoding encoding = (ID3v2Util.ID3Encoding)Data[0];
             int codelen;
             if (tag_.Version == 2)
@@ -1055,6 +1101,7 @@ namespace MusicFileUtilities
     {
 
         private int _headerversion = 0;
+        private int _flags = 0;
         private int _tagsize = 0;
         private List<ID3v2Frame> _frames = new List<ID3v2Frame>();
  
@@ -1067,6 +1114,7 @@ namespace MusicFileUtilities
         }
 
         public int Version => _headerversion;
+        public int Flags => _flags;
 
         private void WriteHeader(FileStream s)
         {
@@ -1344,6 +1392,7 @@ namespace MusicFileUtilities
 
             if (Encoding.ASCII.GetString(header, 0, 3) == "ID3")
             {
+                _flags = header[5];
                 _tagsize = header[6];
                 _tagsize = (_tagsize * 128) + header[7];
                 _tagsize = (_tagsize * 128) + header[8];
@@ -1352,7 +1401,7 @@ namespace MusicFileUtilities
                 {
                     if (header[5] != 0)
                     {
-                        if (header[5] == 0x80)
+                        if (((header[5] & 0x80) == 0x80) && (header[3] == 0x03)) // Unsync whole tag if v23, frame data v24
                         {
                             // Unsync
                             List<byte> unsync = new List<byte>();
@@ -1373,6 +1422,8 @@ namespace MusicFileUtilities
                             r = new BinaryReader(ms);
                             doclose = true;
                         }
+                        else if (((header[5] & 0x80) == 0x80) && (header[3] == 0x04))
+                            ;
                         else
                             throw new Exception("Unsupported ID3v2 Header Features");
                     }
