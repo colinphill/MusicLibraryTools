@@ -70,143 +70,11 @@ namespace MusicFileUtilities
         public static Encoding ISO8859Encoding = Encoding.GetEncoding(28591,
             new EncoderExceptionFallback(), new DecoderExceptionFallback()); // iso-8859-1
 
-        private static Dictionary<string, string> _22mappings = new Dictionary<string, string>()
-        {
-            {"TT1", "TIT1"},
-            {"TT2", "TIT2"},
-            {"TT3", "TIT3"},
-            {"TP1", "TPE1"},
-            {"TP2", "TPE2"},
-            {"TP3", "TPE3"},
-            {"TP4", "TPE4"},
-            {"TCM", "TCOM"},
-            {"TXT", "TEXT"},
-            {"TLA", "TLAN"},
-            {"TAL", "TALB"},
-            {"TBP", "TBPM"},
-            {"TCO", "TCON"},
-            {"TCR", "TCOP"},
-            {"TDA", "TDAT"},
-            {"TEN", "TENC"},
-            {"TLE", "TLEN"},
-            {"TRK", "TRCK"},
-            {"TXX", "TXXX"},
-            {"TLN", "TLEN"},
-            {"TPA", "TPOS"},
-            {"TYE", "TYER"},
-            {"PIC", "APIC"},
-            {"COM", "COMM"},
-            {"UFI", "UFID"},
-            {"PRI", "PRIV"},
-        };
-
-        public delegate IEnumerable<KeyValuePair<string, string>> HandleFrame(ID3v2Frame frame);
-
-        private static IEnumerable<KeyValuePair<string, string>> HandleDiscTrackMovement(ID3v2Frame frame)
-        {
-            string[] vals = (frame as TextFrame).Text.Split("/".ToCharArray());
-            if ((frame.FrameID == "TRCK") || (frame.FrameID == "TRK"))
-            {
-                if ((vals.Length >= 1) && (!string.IsNullOrEmpty(vals[0])))
-                    yield return new KeyValuePair<string, string>(TagFields.TrackNumber.ToString(), vals[0]);
-                if ((vals.Length >= 2) && (!string.IsNullOrEmpty(vals[1])))
-                    yield return new KeyValuePair<string, string>(TagFields.TotalTracks.ToString(), vals[1]);
-            }
-            else if ((frame.FrameID == "TPOS") || (frame.FrameID == "TPA"))
-            {
-                if ((vals.Length >= 1) && (!string.IsNullOrEmpty(vals[0])))
-                    yield return new KeyValuePair<string, string>(TagFields.DiscNumber.ToString(), vals[0]);
-                if ((vals.Length >= 2) && (!string.IsNullOrEmpty(vals[1])))
-                    yield return new KeyValuePair<string, string>(TagFields.TotalDiscs.ToString(), vals[1]);
-            }
-            else if (frame.FrameID == "MVIN")
-            {
-                if ((vals.Length >= 1) && (!string.IsNullOrEmpty(vals[0])))
-                    yield return new KeyValuePair<string, string>(TagFields.MovementNumber.ToString(), vals[0]);
-                if ((vals.Length >= 2) && (!string.IsNullOrEmpty(vals[1])))
-                    yield return new KeyValuePair<string, string>(TagFields.MovementTotal.ToString(), vals[1]);
-            }
-        }
-
-        private static IEnumerable<KeyValuePair<string, string>> HandleGenre(ID3v2Frame frame)
-        {
-            string refinement = "", reference = "";
-            int state = 0;
-            foreach (char c in (frame as TextFrame).Text)
-            {
-                switch (state)
-                {
-                    case 0:
-                        if (c == '(')
-                            state = 1;
-                        else
-                            refinement += c;
-                        break;
-
-                    case 1:
-                        if (c == '(')
-                        {
-                            refinement += "(";
-                            state = 2;
-                        }
-                        else if (c == ')')
-                        {
-                            int genre;
-                            if (int.TryParse(reference, out genre))
-                            {
-                                yield return new KeyValuePair<string, string>(TagFields.Genre.ToString(), ID3v2Util.ID3v1Genres[genre]);
-                            }
-                            else
-                            {
-                                if (reference == "RX")
-                                    yield return new KeyValuePair<string, string>(TagFields.Genre.ToString(), "Remix");
-                                if (reference == "CR")
-                                    yield return new KeyValuePair<string, string>(TagFields.Genre.ToString(), "Cover");
-                            }
-                        }
-                        else
-                            reference += c;
-                        break;
-
-                    default:
-                        refinement += c;
-                        if (c == ')')
-                            state = 0;
-                        break;
-                }
-            }
-            if (refinement != "")
-                yield return new KeyValuePair<string, string>(TagFields.Genre.ToString(), refinement);
-        }
-
-        private static IEnumerable<KeyValuePair<string, string>> HandleInvolvementFrame(ID3v2Frame frame)
-        {
-            yield break;
-        }
-
-        private static IEnumerable<KeyValuePair<string, string>> HandleUFIDFrame(ID3v2Frame frame)
-        {
-            IdentifierFrame idframe = frame as IdentifierFrame;
-            if (idframe.Key == "http://musicbrainz.org")
-                yield return new KeyValuePair<string, string>(TagFields.MusicBrainz_RecordingID.ToString(), ISO8859Encoding.GetString(idframe.Value));
-        }
-
-        public static Dictionary<string, HandleFrame> SpecialMappings = new Dictionary<string, HandleFrame>()
-        {
-            { "TRCK", new HandleFrame(HandleDiscTrackMovement) },
-            { "TPOS", new HandleFrame(HandleDiscTrackMovement) },
-            { "MVIN", new HandleFrame(HandleDiscTrackMovement) },
-            { "TCON", new HandleFrame(HandleGenre) },
-            { "TIPL", new HandleFrame(HandleInvolvementFrame) },
-            { "IPLS", new HandleFrame(HandleInvolvementFrame) },
-            { "UFID", new HandleFrame(HandleUFIDFrame) },
-        };
-
         public delegate object[] HandleTagAction(ID3v2Tag tag, TagAction action, params object[] values);
 
-        private static object[] GenreMapping(ID3v2Tag tag, TagAction action, params object[] values)
+        private static object[] GenreMapping(ID3v2Tag tag, string frameid, TagAction action, params object[] values)
         {
-            var frame = tag.FindFrame("TCON") as TextFrame;
+            var frame = tag.FindFrame(frameid) as TextFrame;
             if (action == TagAction.Get)
             {
                 if (frame is null)
@@ -349,6 +217,23 @@ namespace MusicFileUtilities
 
         public static object[] DateMapping(ID3v2Tag tag, TagAction action, params object[] values)
         {
+            if (tag.Version == 2)
+            {
+                var tyer = tag.FindFrame("TYE") as TextFrame;
+                var tdat = tag.FindFrame("TDA") as TextFrame;
+                if (action == TagAction.Get)
+                {
+                    string res = string.Empty;
+                    if (!(tyer is null))
+                    {
+                        res += tyer.Text;
+                        if (!(tdat is null))
+                            res += "-" + tdat.Text.Substring(2, 2) + "-" + tdat.Text.Substring(0, 2);
+                        return new string[] { res };
+                    }
+                }
+                throw new InvalidDataException();
+            }
             if (tag.Version == 3)
             {
                 var tyer = tag.FindFrame("TYER") as TextFrame;
@@ -381,6 +266,17 @@ namespace MusicFileUtilities
 
         public static object[] OriginalDateMapping(ID3v2Tag tag, TagAction action, params object[] values)
         {
+            if (tag.Version == 2)
+            {
+                var tory = tag.FindFrame("TOR") as TextFrame;
+                if (action == TagAction.Get)
+                {
+                    if (tory is null)
+                        throw new InvalidDataException();
+                    return new string[] { tory.Text };
+                }
+                throw new InvalidDataException();
+            }
             if (tag.Version == 3)
             {
                 var tory = tag.FindFrame("TORY") as TextFrame;
@@ -405,7 +301,83 @@ namespace MusicFileUtilities
             throw new InvalidOperationException();
         }
 
-        public static Dictionary<TagFields, HandleTagAction> NewMappings = new Dictionary<TagFields, HandleTagAction>()
+        public static Dictionary<TagFields, HandleTagAction> ActionMappingsv22 = new Dictionary<TagFields, HandleTagAction>()
+        {
+            { TagFields.Album, (tag, action, values) => SimpleMapping(tag, "TAL", action, values) },
+            { TagFields.AlbumArtist, (tag, action, values) => SimpleMapping(tag, "TP2", action, values) },
+            { TagFields.AlbumArtistSort, (tag, action, values) => SimpleMapping(tag, "TS2", action, values) },
+            { TagFields.AlbumSort, (tag, action, values) => SimpleMapping(tag, "TSA", action, values) },
+            { TagFields.Artist, (tag, action, values) => SimpleMapping(tag, "TP1", action, values) },
+            { TagFields.ArtistSort, (tag, action, values) => SimpleMapping(tag, "TSP", action, values) },
+            { TagFields.BPM, (tag, action, values) => SimpleMapping(tag, "TBP", action, values) },
+            { TagFields.Compilation, (tag, action, values) => SimpleMapping(tag, "TCP", action, values) },
+            { TagFields.Composer, (tag, action, values) => SimpleMapping(tag, "TCM", action, values) },
+            { TagFields.ComposerSort, (tag, action, values) => SimpleMapping(tag, "TSC", action, values) },
+            { TagFields.Conductor, (tag, action, values) => SimpleMapping(tag, "TP3", action, values) },
+            { TagFields.Copyright, (tag, action, values) => SimpleMapping(tag, "TCR", action, values) },
+            { TagFields.DiscSubtitle, (tag, action, values) => SimpleMapping(tag, "TPS", action, values) },
+            { TagFields.EncodedBy, (tag, action, values) => SimpleMapping(tag, "TEN", action, values) },
+           // { TagFields.EncoderSettings, (tag, action, values) => SimpleMapping(tag, "TSsdfsdfsdfsdfSE", action, values) },
+            { TagFields.Grouping, (tag, action, values) => SimpleMapping(tag, "GP1", action, values) },
+            { TagFields.Key, (tag, action, values) => SimpleMapping(tag, "TKE", action, values) },
+            { TagFields.ISRC, (tag, action, values) => SimpleMapping(tag, "TRC", action, values) },
+            { TagFields.Language, (tag, action, values) => SimpleMapping(tag, "TLA", action, values) },
+            { TagFields.Lyrics, (tag, action, values) => SimpleMapping(tag, "ULT", action, values) },
+            { TagFields.Media, (tag, action, values) => SimpleMapping(tag, "TMT", action, values) },
+            { TagFields.Mood, (tag, action, values) => UserStringMapping(tag, "TXX", "MOOD", action, values) },
+            { TagFields.Movement, (tag, action, values) => SimpleMapping(tag, "MVN", action, values) },
+            { TagFields.OriginalAlbum, (tag, action, values) => SimpleMapping(tag, "TOT", action, values) },
+            { TagFields.OriginalArtist, (tag, action, values) => SimpleMapping(tag, "TOA", action, values) },
+            { TagFields.OriginalFileName, (tag, action, values) => SimpleMapping(tag, "TOF", action, values) },
+            { TagFields.Rating, (tag, action, values) => SimpleMapping(tag, "POP", action, values) },
+            { TagFields.Label, (tag, action, values) => SimpleMapping(tag, "TPB", action, values) },
+            { TagFields.Remixer, (tag, action, values) => SimpleMapping(tag, "TP4", action, values) },
+            { TagFields.Subtitle, (tag, action, values) => SimpleMapping(tag, "TT3", action, values) },
+            { TagFields.Title, (tag, action, values) => SimpleMapping(tag, "TT2", action, values) },
+            { TagFields.TitleSort, (tag, action, values) => SimpleMapping(tag, "TST", action, values) },
+            { TagFields.Website, (tag, action, values) => SimpleMapping(tag, "WAR", action, values) },
+            { TagFields.AcoustID_ID, (tag, action, values) => UserStringMapping(tag, "TXX", "Acoustid Id", action, values) },
+            { TagFields.AcoustID_Fingerprint, (tag, action, values) => UserStringMapping(tag, "TXX", "Acoustid Fingerprint", action, values) },
+            { TagFields.Artists, (tag, action, values) => UserStringMapping(tag, "TXX", "Artists", action, values) },
+            { TagFields.ASIN, (tag, action, values) => UserStringMapping(tag, "TXX", "ASIN", action, values) },
+            { TagFields.Barcode, (tag, action, values) => UserStringMapping(tag, "TXX", "BARCODE", action, values) },
+            { TagFields.CatalogNumber, (tag, action, values) => UserStringMapping(tag, "TXX", "CATALOGNUMBER", action, values) },
+            { TagFields.MusicBrainz_ArtistID, (tag, action, values) => UserStringMapping(tag, "TXX", "MusicBrainz Artist Id", action, values) },
+            { TagFields.MusicBrainz_DiscID, (tag, action, values) => UserStringMapping(tag, "TXX", "MusicBrainz Disc Id", action, values) },
+            { TagFields.MusicBrainz_OriginalArtistID, (tag, action, values) => UserStringMapping(tag, "TXX", "MusicBrainz Original Artist Id", action, values) },
+            { TagFields.MusicBrainz_OriginalAlbumID, (tag, action, values) => UserStringMapping(tag, "TXX", "MusicBrainz Original Album Id", action, values) },
+            { TagFields.MusicBrainz_RecordingID, (tag, action, values) => UFIDMapping(tag, "http://musicbrainz.org", action, values) },
+            { TagFields.MusicBrainz_AlbumArtistID, (tag, action, values) => UserStringMapping(tag, "TXX", "MusicBrainz Album Artist Id", action, values) },
+            { TagFields.MusicBrainz_ReleaseGroupID, (tag, action, values) => UserStringMapping(tag, "TXX", "MusicBrainz Release Group Id", action, values) },
+            { TagFields.MusicBrainz_AlbumID, (tag, action, values) => UserStringMapping(tag, "TXX", "MusicBrainz Album Id", action, values) },
+            { TagFields.MusicBrainz_TrackID, (tag, action, values) => UserStringMapping(tag, "TXX", "MusicBrainz Release Track Id", action, values) },
+            { TagFields.MusicBrainz_WorkID, (tag, action, values) => UserStringMapping(tag, "TXX", "MusicBrainz Work Id", action, values) },
+            { TagFields.ReleaseCountry, (tag, action, values) => UserStringMapping(tag, "TXX", "MusicBrainz Album Release Country", action, values) },
+            { TagFields.ReleaseStatus, (tag, action, values) => UserStringMapping(tag, "TXX", "MusicBrainz Album Status", action, values) },
+            { TagFields.ReleaseType, (tag, action, values) => UserStringMapping(tag, "TXX", "MusicBrainz Album Type", action, values) },
+            { TagFields.ReplayGain_Album_Gain, (tag, action, values) => UserStringMapping(tag, "TXX", "REPLAYGAIN_ALBUM_GAIN", action, values) },
+            { TagFields.ReplayGain_Album_Peak, (tag, action, values) => UserStringMapping(tag, "TXX", "REPLAYGAIN_ALBUM_PEAK", action, values) },
+            { TagFields.ReplayGain_Album_Range, (tag, action, values) => UserStringMapping(tag, "TXX", "REPLAYGAIN_ALBUM_RANGE", action, values) },
+            { TagFields.ReplayGain_Reference_Loudness, (tag, action, values) => UserStringMapping(tag, "TXX", "REPLAYGAIN_REFERENCE_LOUDNESS", action, values) },
+            { TagFields.ReplayGain_Track_Gain, (tag, action, values) => UserStringMapping(tag, "TXX", "REPLAYGAIN_TRACK_GAIN", action, values) },
+            { TagFields.ReplayGain_Track_Peak, (tag, action, values) => UserStringMapping(tag, "TXX", "REPLAYGAIN_TRACK_PEAK", action, values) },
+            { TagFields.ReplayGain_Track_Range, (tag, action, values) => UserStringMapping(tag, "TXX", "REPLAYGAIN_TRACK_RANGE", action, values) },
+            { TagFields.Script, (tag, action, values) => UserStringMapping(tag, "TXX", "SCRIPT", action, values) },
+            { TagFields.ShowMovement, (tag, action, values) => UserStringMapping(tag, "TXX", "SHOWMOVEMENT", action, values) },
+            { TagFields.Work, (tag, action, values) => UserStringMapping(tag, "TXX", "WORK", action, values) },
+            { TagFields.Writer, (tag, action, values) => UserStringMapping(tag, "TXX", "Writer", action, values) },
+            { TagFields.TrackNumber, (tag, action, values) => IndexMapping(tag, "TRK", action, values) },
+            { TagFields.TotalTracks, (tag, action, values) => TotalMapping(tag, "TRK", action, values) },
+            { TagFields.DiscNumber, (tag, action, values) => IndexMapping(tag, "TPA", action, values) },
+            { TagFields.TotalDiscs, (tag, action, values) => TotalMapping(tag, "TPA", action, values) },
+            { TagFields.MovementNumber, (tag, action, values) => IndexMapping(tag, "MVI", action, values) },
+            { TagFields.MovementTotal, (tag, action, values) => TotalMapping(tag, "MVI", action, values) },
+            { TagFields.Genre, (tag, action, values) => GenreMapping(tag, "TCO", action, values) },
+            { TagFields.Date, DateMapping },
+            { TagFields.OriginalDate, OriginalDateMapping },
+        };
+
+        public static Dictionary<TagFields, HandleTagAction> ActionMappingsv23v24 = new Dictionary<TagFields, HandleTagAction>()
         {
             { TagFields.Album, (tag, action, values) => SimpleMapping(tag, "TALB", action, values) },
             { TagFields.AlbumArtist, (tag, action, values) => SimpleMapping(tag, "TPE2", action, values) },
@@ -476,103 +448,22 @@ namespace MusicFileUtilities
             { TagFields.TotalDiscs, (tag, action, values) => TotalMapping(tag, "TPOS", action, values) },
             { TagFields.MovementNumber, (tag, action, values) => IndexMapping(tag, "MVIN", action, values) },
             { TagFields.MovementTotal, (tag, action, values) => TotalMapping(tag, "MVIN", action, values) },
-            { TagFields.Genre, GenreMapping },
+            { TagFields.Genre, (tag, action, values) => GenreMapping(tag, "TCON", action, values) },
             { TagFields.Date, DateMapping },
             { TagFields.OriginalDate, OriginalDateMapping },
 
 
         };
 
-        public static Dictionary<string, TagFields> TagMappings = new Dictionary<string, TagFields>()
-        {
-            { "Acoustid Id", TagFields.AcoustID_ID },
-            { "Acoustid Fingerprint", TagFields.AcoustID_Fingerprint },
-            { "Artists", TagFields.Artists },
-            { "ASIN", TagFields.ASIN },
-            { "BARCODE", TagFields.Barcode },
-            { "CATALOGNUMBER", TagFields.CatalogNumber },
-            { "MusicBrainz Artist Id", TagFields.MusicBrainz_ArtistID },
-            { "MusicBrainz Disc Id", TagFields.MusicBrainz_DiscID },
-            { "MusicBrainz Original Artist Id", TagFields.MusicBrainz_OriginalArtistID },
-            { "MusicBrainz Original Album Id", TagFields.MusicBrainz_OriginalAlbumID },
-            //{ "MusicBrainz Track Id", TagFields.MusicBrainz_RecordingID },
-            { "MusicBrainz Album Artist Id", TagFields.MusicBrainz_AlbumArtistID },
-            { "MusicBrainz Release Group Id", TagFields.MusicBrainz_ReleaseGroupID },
-            { "MusicBrainz Album Id", TagFields.MusicBrainz_AlbumID },
-            { "MusicBrainz Release Track Id", TagFields.MusicBrainz_TrackID },
-            { "MusicBrainz Work Id", TagFields.MusicBrainz_WorkID },
-            { "MusicBrainz Album Release Country", TagFields.ReleaseCountry },
-            { "MusicBrainz Album Status", TagFields.ReleaseStatus },
-            { "MusicBrainz Album Type", TagFields.ReleaseType },
-            { "REPLAYGAIN_ALBUM_GAIN", TagFields.ReplayGain_Album_Gain },
-            { "REPLAYGAIN_ALBUM_PEAK", TagFields.ReplayGain_Album_Peak },
-            { "REPLAYGAIN_ALBUM_RANGE", TagFields.ReplayGain_Album_Range },
-            { "REPLAYGAIN_REFERENCE_LOUDNESS", TagFields.ReplayGain_Reference_Loudness },
-            { "REPLAYGAIN_TRACK_GAIN", TagFields.ReplayGain_Track_Gain },
-            { "REPLAYGAIN_TRACK_PEAK", TagFields.ReplayGain_Track_Peak },
-            { "REPLAYGAIN_TRACK_RANGE", TagFields.ReplayGain_Track_Range },
-            { "SCRIPT", TagFields.Script },
-            { "SHOWMOVEMENT", TagFields.ShowMovement },
-            { "WORK", TagFields.Work },
-            { "Writer", TagFields.Writer },
-
-            { "TALB", TagFields.Album },
-            { "TPE2", TagFields.AlbumArtist },
-            { "TSO2", TagFields.AlbumArtistSort },
-            { "TSOA", TagFields.AlbumSort },
-            { "TPE1", TagFields.Artist },
-            { "TSOP", TagFields.ArtistSort },
-            { "TBPM", TagFields.BPM },
-            { "TCMP", TagFields.Compilation },
-            { "TCOM", TagFields.Composer },
-            { "TSOC", TagFields.ComposerSort },
-            { "TPE3", TagFields.Conductor },
-            { "TCOP", TagFields.Copyright },
-            { "TSST", TagFields.DiscSubtitle },
-            { "TENC", TagFields.EncodedBy },
-            { "TSSE", TagFields.EncoderSettings },
-            { "TIT1", TagFields.Grouping },
-            { "TKEY", TagFields.Key },
-            { "TSRC", TagFields.ISRC },
-            { "TLAN", TagFields.Language },
-            { "USLT", TagFields.Lyrics },
-            { "TMED", TagFields.Media },
-            { "TMOO", TagFields.Mood },
-            { "MVNM", TagFields.Movement },
-            { "TOAL", TagFields.OriginalAlbum },
-            { "TOPE", TagFields.OriginalArtist },
-            { "TOFN", TagFields.OriginalFileName },
-            { "TDOR", TagFields.OriginalDate },
-            { "TORY", TagFields.OriginalDate },
-            { "POPM", TagFields.Rating },
-            { "TPUB", TagFields.Label },
-            { "TDRC", TagFields.Date },
-            { "TDAT", TagFields.Date },
-            { "TYER", TagFields.Date },
-            { "TPE4", TagFields.Remixer },
-            { "TIT3", TagFields.Subtitle },
-            { "TIT2", TagFields.Title },
-            { "TSOT", TagFields.TitleSort },
-            { "WOAR", TagFields.Website },
-        };
 
         static ID3v2Util()
         {
         }
-
-        public static string GetNewID3v2Mapping(string frameid)
-        {
-            if (_22mappings.ContainsKey(frameid))
-                return _22mappings[frameid];
-            return "X" + frameid;
-        }
-          
+         
     }
 
     public class ID3v2Frame
     {
-
-        public string AlternateFrameID => ID3v2Util.GetNewID3v2Mapping(FrameID);
 
         public void Write(FileStream s)
         {
@@ -1286,7 +1177,7 @@ namespace MusicFileUtilities
 
         public IEnumerable<KeyValuePair<string, string>> GetTextMetadata()
         {
-            foreach (var mapping in ID3v2Util.NewMappings)
+            foreach (var mapping in (Version == 2) ? ID3v2Util.ActionMappingsv22 : ID3v2Util.ActionMappingsv23v24)
             {
                 object[] values = new object[0];
                 try
@@ -1441,14 +1332,7 @@ namespace MusicFileUtilities
 
         public ID3v2Frame FindFrame(string frame)
         {
-            try
-            {
-                return _frames.Where(frm => (frm.FrameID == frame) || (frm.AlternateFrameID == frame)).Single();
-            }
-            catch
-            {
-                return null;
-            }
+            return _frames.SingleOrDefault(frm => (frm.FrameID == frame));
         }
 
         protected void ReadTag(Stream s)
