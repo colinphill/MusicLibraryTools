@@ -329,6 +329,7 @@ namespace AndroidSync
             {
                 var r = new ShellReceiver();
                 var dest = diff.Dest;
+                var source = diff.Source;
                 if (dest is FSDirectory)
                 {
                     if (diff.DiffType == FSDiffType.Addition)
@@ -365,7 +366,7 @@ namespace AndroidSync
                         Console.WriteLine("Modify File: " + diff.Dest.GetFullPath('/'));
                         if (!dry)
                         {
-                            progress.Size = dest.Size;
+                            progress.Size = source.Size;
                             await client.ShellExecuteAsync("rm " + EscapeArgument(diff.Dest.GetFullPath('/')), device, r);
                             using (Stream s = File.OpenRead(diff.Source.GetFullPath('\\')))
                                 await client.PushAsync(s, device, diff.Dest.GetFullPath('/'), 505, diff.Source.Modified, progress);

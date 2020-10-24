@@ -39,6 +39,7 @@ namespace MusicFileUtilities
         public static bool CoalesceID3v22Values { get; set; } = true;
         public static bool CoalesceID3v23Values { get; set; } = true;
         public static bool CoalesceID3v24Values { get; set; } = false;
+        public static bool StrictRules { get; set; } = false;
 
         public static readonly IList<string> ID3v1Genres = new List<string> {
             "Blues", "Classic Rock", "Country", "Dance", "Disco",
@@ -655,7 +656,7 @@ namespace MusicFileUtilities
         public override void Decode()
         {
             base.Decode();
-            if (tag_.Version >= 4)
+            if ((tag_.Version >= 4)||(!ID3v2Util.StrictRules))
             {
                 if (FrameID[0] == 'W')
                     values_ = GetStringAt(ID3v2Util.ID3Encoding.ISO8859, 0).Split("\0".ToCharArray());

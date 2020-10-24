@@ -102,6 +102,7 @@ namespace MusicFileUtilities
             { "LANGUAGE", TagFields.Language },
             { "LICENSE", TagFields.License },
             { "LYRICIST", TagFields.Lyricist },
+            { "Performer", TagFields.Performer },
             { "©lyr", TagFields.Lyrics },
             { "MEDIA", TagFields.Media },
             { "DJMIXER", TagFields.DJMixer },
