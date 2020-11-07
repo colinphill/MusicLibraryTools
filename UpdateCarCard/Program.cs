@@ -288,7 +288,7 @@ namespace UpdateCarCard
                         }
                     }
 
-                    return (leftname + ".." + rightname).Trim();
+                    return (leftname + ".." + rightname).Trim("\x00\t .".ToCharArray());
                 }
             }
 
@@ -872,7 +872,6 @@ namespace UpdateCarCard
             LogConsole.WriteLine("Enumerating iTunes Library");
             KeyValuePair<int, iTunesTrack>[] library = lib.Tracks.Where(kv => (kv.Value.Type == "File") && (kv.Value.Kind.Contains("audio file") && (!kv.Value.Kind.ToLower().Contains("protected")))).ToArray();
             int libindex = 0;
-            Regex dnre = new Regex(@"(.+)[ \t]+\(Disc (.+)\)", RegexOptions.IgnoreCase);
             foreach (var kv in library)
             {
                 string loc = kv.Value.LocalLocation;
@@ -887,9 +886,7 @@ namespace UpdateCarCard
                     dt = File.GetLastWriteTimeUtc(loc);
                 }
                 string artist = (string.IsNullOrEmpty(kv.Value.AlbumArtist) ? kv.Value.Artist : kv.Value.AlbumArtist).LimitLength(32);
-                string album = kv.Value.Album;
-                Match m = dnre.Match(album);
-                album = m.Success ? (m.Groups[1].Value.LimitLength(28) + " (Disc " + m.Groups[2].Value + ")") : album.LimitLength(32);
+                string album = kv.Value.Album.FormatDisc(32, 28);
                 string title = kv.Value.Title.LimitLength(32);
                 int tracknumber = kv.Value.TrackNumber ?? 0;
                 FileDatabase.Track trk = new FileDatabase.Track();

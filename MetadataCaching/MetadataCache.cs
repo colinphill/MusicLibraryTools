@@ -137,10 +137,9 @@ namespace MetadataCaching
         public string FormatPath(int length, int discnumlength)
         {
             string art = (string.IsNullOrWhiteSpace(AlbumArtist) ? Artist : AlbumArtist).LimitLength(length);
-            string alb = StrippedAlbum;
+            string alb = StrippedAlbum.FormatDisc(length, discnumlength);
             string ttl = Title.LimitLength(length);
-            var m = MetadataCache.DiscNumRegex.Match(alb);
-            alb = m.Success ? (m.Groups[1].Value.LimitLength(discnumlength) + " (Disc " + m.Groups[2].Value + ")") : alb.LimitLength(length);
+            var m = MetadataExtensions.DiscNumRegex.Match(alb);
             art = art.FixPath();
             alb = alb.FixPath();
             ttl = ttl.FixPath();
@@ -152,7 +151,6 @@ namespace MetadataCaching
 
     public class MetadataCache
     {
-        public static readonly Regex DiscNumRegex = new Regex(@"(.+)[ \t]+\(Disc (.+)\)", RegexOptions.IgnoreCase);
         public static readonly string[] ValidExtensions = { ".dsf", ".m4a", ".mp3", ".flac", ".ogg" };
 
         private Dictionary<string, MetadataCacheEntry> _filecache = new Dictionary<string, MetadataCacheEntry>();
