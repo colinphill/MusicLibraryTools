@@ -27,7 +27,8 @@ namespace MusicLibraryTools
         
         public string CrossSyncTargetLibraryPath => root_.Element("SyncTarget").Value;
 
-        public IEnumerable<(string Target, string Offset)> IndexLocations => root_.Elements("IndexTarget").Select(e => (e.Value, e.Attributes("Offset").FirstOrDefault()?.Value));
+        public IEnumerable<(string Target, string Offset, int Set)> IndexLocations => root_.Elements("IndexTarget").Select(e => (e.Value, e.Attributes("Offset").FirstOrDefault()?.Value, 
+            int.Parse(e.Attributes("Set").Select(a => a.Value).DefaultIfEmpty("0").First())));
 
         public string PlaylistTargetFolder => root_.Element("PlaylistTarget").Value;
 

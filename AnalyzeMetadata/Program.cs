@@ -9,6 +9,7 @@ using MusicLibraryTools;
 using System.IO;
 using ConsoleTools;
 using MetadataCaching;
+using System.Collections.Concurrent;
 
 namespace AnalyzeMetadata
 {
@@ -32,9 +33,31 @@ namespace AnalyzeMetadata
 
             MetadataDatabase db = new MetadataDatabase(config.DatabaseFile); // TBD Dispose
             db.IndexFiles(config.IndexLocations.Select(l => l.Target));
-            var cache = db.BuildCache(config.IndexLocations.Select(l => l.Target));
 
+            var cache = db.BuildCache(config.IndexLocations.Select(l => l.Target));
             LogConsole.WriteLine("Total Parsed Files: " + cache.FileCache.Count);
+
+            if (args.Skip(1).Any(s => s.ToLower() == "checksets"))
+            {
+                var caches = config.IndexLocations.Select(l => l.Set).Distinct().OrderBy(s => s).Select(s => (Set : s, Cache : db.BuildCache(config.IndexLocations.Where(l => l.Set == s).Select(l => l.Target))));
+                foreach (var tcache in caches)
+                {
+                    Console.WriteLine("Checking Cache Set: " + tcache.Set + " (" + tcache.Cache.FileCache.Count + ")");
+                    foreach (var ocache in caches.Where(c => c.Set != tcache.Set))
+                    {
+                        var ofiles = ocache.Cache.FileCache;
+                        var bag = new ConcurrentBag<(int Set, string Key)>();
+                        Parallel.ForEach(tcache.Cache.FileCache, (file) =>
+                        {
+                            var possibilities = ofiles.Where(of => ((of.Value.AlbumArtist == file.Value.AlbumArtist) || (of.Value.Artist == file.Value.Artist)) && (of.Value.Album == file.Value.Album) && (of.Value.TrackNumber == file.Value.TrackNumber));
+                            if (possibilities.Count() == 0)
+                                bag.Add((ocache.Set, file.Key));
+                        });
+                        foreach (var miss in bag.OrderBy(m => m.Key))
+                            Console.WriteLine("Missing In Set:" + miss.Set + " - " + miss.Key);
+                    }
+                }
+            }
 
             if (args.Skip(1).Any(s => s.ToLower() == "checkhires"))
             {
