@@ -245,4 +245,5 @@ ModelManifest.xml
 .fake/
 /CrossSyncMusic/Properties/launchSettings.json
 /DumpTags/Properties/launchSettings.json
+/CrossSyncPlaylists/Properties/launchSettings.json
 /AnalyzeMetadata/Properties/launchSettings.json

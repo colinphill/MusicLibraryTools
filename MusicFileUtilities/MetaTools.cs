@@ -12,6 +12,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 namespace MusicFileUtilities
 {
@@ -204,10 +205,18 @@ namespace MusicFileUtilities
     {
         public static readonly HashSet<string> ValidExtensions = new HashSet<string>() { ".dsf", ".m4a", ".mp3", ".flac", ".ogg" };
 
+        public static readonly Regex DiscNumRegex = new Regex(@"(.+)[ \t]+\(Disc (.+)\)", RegexOptions.IgnoreCase);
+
         public static string LimitLength(this string val, int length)
         {
             int l = Math.Min(length, val.Length);
             return val.Substring(0, l).Trim(" \t".ToCharArray());
+        }
+
+        public static string FormatDisc(this string alb, int length, int discnumlength)
+        {
+            var m = DiscNumRegex.Match(alb);
+            return m.Success ? (m.Groups[1].Value.LimitLength(discnumlength) + " (Disc " + m.Groups[2].Value + ")") : alb.LimitLength(length);
         }
 
         public static string FixPath(this string item)
