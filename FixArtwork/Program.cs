@@ -110,10 +110,10 @@ namespace FixArtwork
 
                                     if ((len <= THRESHOLD) && (im.Width <= SIZE) && (im.Height <= SIZE) && (art.Format == ITArtworkFormat.ITArtworkFormatJPEG) && (art.IsDownloadedArtwork))
                                     {
+                                        LogConsole.WriteLine("Downloaded Artwork");
                                         im.Dispose();
                                         large++;
                                         art.SetArtworkFromFile(artfile);
-
                                     }
                                     else
                                     {
@@ -179,7 +179,7 @@ namespace FixArtwork
                                             large++;
                                             File.Delete("temp3.jpg");
                                         }
-                                        else if (art.IsDownloadedArtwork)
+                                        else if (art.IsDownloadedArtwork || (art.Format != ITArtworkFormat.ITArtworkFormatJPEG))
                                         {
                                             LogConsole.WriteLine("Adding Artwork: temp2.jpg");
                                             art.SetArtworkFromFile(Environment.CurrentDirectory + "\\temp2.jpg");

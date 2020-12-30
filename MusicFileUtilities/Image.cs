@@ -9,6 +9,7 @@ namespace MusicFileUtilities
     public class ImageFile
     {
         private static readonly HashSet<byte> standalonemarkers_ = new HashSet<byte>() { 0xd0, 0xd1, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8, 0xd9, 0xf1 };
+        private static readonly HashSet<byte> sofmarkers_ = new HashSet<byte>() { 0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf };
 
         public enum ImageFormat { Gif, Jpeg, Png, Bmp, Unknown };
 
@@ -69,7 +70,7 @@ namespace MusicFileUtilities
                 byte l2 = b[offset++];
                 int length = (((int)l1) << 8) | (int)l2;
                 int toffset = offset;
-                if ((m2 >= 0xc0) && (m2 <= 0xcf))
+                if (sofmarkers_.Contains(m2))
                 {
                     byte p = b[offset++];
                     byte y1 = b[offset++];
