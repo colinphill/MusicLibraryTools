@@ -12,6 +12,7 @@ using MusicLibraryTools;
 using System.Xml.Serialization;
 using System.Security.Cryptography;
 using ConsoleTools;
+using MetadataCaching;
 using iTunes;
 
 namespace UpdateCarCard
@@ -43,16 +44,6 @@ namespace UpdateCarCard
                 DeleteEmptyFolders(dir);
             if ((Directory.GetDirectories(basedir).Length == 0) && (Directory.GetFiles(basedir).Length == 0))
                 Directory.Delete(basedir);
-        }
-
-        static void IndexDirectory(string basedir, Dictionary<string, bool> hits)
-        {
-            foreach (string dir in Directory.GetDirectories(basedir))
-                IndexDirectory(dir, hits);
-            foreach (string file in Directory.GetFiles(basedir, "*.m3u"))
-                File.Delete(file);
-            foreach (string file in Directory.GetFiles(basedir))
-                hits.Add(file.ToLower(), false);
         }
 
         static int BALANCE_SIZE = 15; // 20;
@@ -619,7 +610,7 @@ namespace UpdateCarCard
 
                         foreach (Track ot in oalbum.Tracks)
                         {
-                            Track[] tracks = album.Tracks.Where(t => t.FileName == ot.FileName).ToArray();
+                            Track[] tracks = album.Tracks.Where(t => string.Equals(t.FileName, ot.FileName, StringComparison.InvariantCultureIgnoreCase)).ToArray();
                             if (tracks.Length == 1)
                             {
                                 if (tracks[0].LastModifiedTime > ot.LastModifiedTime)
@@ -631,7 +622,7 @@ namespace UpdateCarCard
 
                         foreach (Track tt in album.Tracks)
                         {
-                            Track[] otracks = oalbum.Tracks.Where(t => t.FileName == tt.FileName).ToArray();
+                            Track[] otracks = oalbum.Tracks.Where(t => string.Equals(t.FileName, tt.FileName, StringComparison.InvariantCultureIgnoreCase)).ToArray();
                             if (otracks.Length == 0)
                                 deltas.Add(new UpdateTrackDelta() { Artist = name, Album = alname, Index = tt.Index, FileName = tt.FileName, Loc = tt.Loc });
                         }
@@ -823,11 +814,26 @@ namespace UpdateCarCard
 
             if (args.Length == 0)
             {
-                LogConsole.WriteLine("Usage: UpdateCarCard <destination> [rebalance] [walkman]");
+                LogConsole.WriteLine("Usage: UpdateCarCard <LibraryConfiguration.xml> [rebalance]");
                 return;
             }
 
-            bool walkmanmode = ((args.Length > 1) && (args.Skip(1).Where(a => a.Equals("walkman", StringComparison.CurrentCultureIgnoreCase)).Count() > 0));
+            LibraryConfiguration config = new LibraryConfiguration(args[0]);
+
+            bool walkmanmode = config["WalkmanMode"].Length != 0;
+            BALANCE_SIZE = config["BalanceSize"].Length != 0 ? int.Parse(config["BalanceSize"].First()) : 15;
+            REBALANCE_SIZE = config["RebalanceSize"].Length != 0 ? int.Parse(config["RebalanceSize"].First()) : 25;
+            MAX_DEPTH_DISPARITY = config["MaxDepthDisparity"].Length != 0 ? int.Parse(config["MaxDepthDisparity"].First()) : 0;
+            BALANCE_BREAK = config["BalanceBreak"].Length != 0 ? int.Parse(config["BalanceBreak"].First()) : 20;
+            string basedir = config["BaseDir"].First();
+
+            LogConsole.WriteLine("Indexing Files...");
+
+            MetadataDatabase db = new MetadataDatabase(config.DatabaseFile); // TBD Dispose
+            db.IndexFiles(config.IndexLocations.Select(l => l.Target));
+            var cache = db.BuildCache(config.IndexLocations.Select(l => l.Target));
+
+            LogConsole.WriteLine("Total Parsed Files: " + cache.FileCache.Count);
 
             LogConsole.WriteLine("Loading iTunes Library XML...");
 
@@ -836,9 +842,13 @@ namespace UpdateCarCard
                 iTunesLibraryFile = Environment.GetEnvironmentVariable("ITUNES_XML");
             iTunesLibrary lib = new iTunesLibrary(iTunesLibraryFile);
 
-            SyncDatabase oldsyncdb = new SyncDatabase();
+            LogConsole.WriteLine("iTunes Library Size: " + lib.Tracks.Count.ToString() + "  Playlist Count: " + lib.Playlists.Count);
 
-            string basedir = args[0];
+            LogConsole.WriteLine("Mapping Library...");
+
+            iTunesMapper mapper = new iTunesMapper(lib, cache);
+
+            SyncDatabase oldsyncdb = new SyncDatabase();
 
             if (!basedir.EndsWith(Path.DirectorySeparatorChar.ToString()))
                 basedir = basedir + Path.DirectorySeparatorChar;
@@ -846,10 +856,10 @@ namespace UpdateCarCard
                 using (FileStream s = File.OpenRead(Path.Combine(basedir, "syncdb.xml")))
                     oldsyncdb = SyncDatabase.Deserialize(s);
 
-            string artistsdir = Path.Combine(args[0], "Artists");
-            string albumsdir = Path.Combine(args[0], "Albums");
-            string playlistsdir = walkmanmode ? args[0] : Path.Combine(args[0], "Playlists");
-            string contributingartistsdir = Path.Combine(args[0], "Contributing Artists");
+            string artistsdir = Path.Combine(basedir, "Artists");
+            string albumsdir = Path.Combine(basedir, "Albums");
+            string playlistsdir = walkmanmode ? basedir : Path.Combine(basedir, "Playlists");
+            string contributingartistsdir = Path.Combine(basedir, "Contributing Artists");
 
             Directory.CreateDirectory(artistsdir);
             if (!walkmanmode)
@@ -866,25 +876,14 @@ namespace UpdateCarCard
 
             Dictionary<string, DateTime> filetimes = new Dictionary<string, DateTime>(StringComparer.CurrentCultureIgnoreCase);
 
-            LogConsole.WriteLine("Enumerating Current Files");
-            EnumerateDirectory(filetimes, new DirectoryInfo(lib.LocalMusicFolder));
-
             LogConsole.WriteLine("Enumerating iTunes Library");
             KeyValuePair<int, iTunesTrack>[] library = lib.Tracks.Where(kv => (kv.Value.Type == "File") && (kv.Value.Kind.Contains("audio file") && (!kv.Value.Kind.ToLower().Contains("protected")))).ToArray();
             int libindex = 0;
             foreach (var kv in library)
             {
-                string loc = kv.Value.LocalLocation;
-                DateTime dt;
-                try
-                {
-                    dt = filetimes[loc];
-                }
-                catch
-                {
-                    // Outside Normal Folder
-                    dt = File.GetLastWriteTimeUtc(loc);
-                }
+                string loc = mapper[kv.Key];
+                var entry = cache[loc];
+                DateTime dt = entry.LastWriteTime;
                 string artist = (string.IsNullOrEmpty(kv.Value.AlbumArtist) ? kv.Value.Artist : kv.Value.AlbumArtist).LimitLength(32);
                 string album = kv.Value.Album.FormatDisc(32, 28);
                 string title = kv.Value.Title.LimitLength(32);

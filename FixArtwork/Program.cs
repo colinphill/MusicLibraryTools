@@ -100,6 +100,7 @@ namespace FixArtwork
 
                                 FileStream artstream = File.OpenRead(artfile);
                                 long len = artstream.Length;
+                                long origlen = len;
                                 artstream.Close();
 
                                 if (true) // ((len > THRESHOLD)||(art.Format != ITArtworkFormat.ITArtworkFormatJPEG)||(art.IsDownloadedArtwork))
@@ -179,10 +180,11 @@ namespace FixArtwork
                                             large++;
                                             File.Delete("temp3.jpg");
                                         }
-                                        else if (art.IsDownloadedArtwork || (art.Format != ITArtworkFormat.ITArtworkFormatJPEG))
+                                        else if (art.IsDownloadedArtwork || (art.Format != ITArtworkFormat.ITArtworkFormatJPEG) || (origlen > THRESHOLD))
                                         {
                                             LogConsole.WriteLine("Adding Artwork: temp2.jpg");
                                             art.SetArtworkFromFile(Environment.CurrentDirectory + "\\temp2.jpg");
+                                            large++;
                                         }
                                         File.Delete("temp2.jpg");
 
