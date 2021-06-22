@@ -458,6 +458,24 @@ namespace UpdateCarCard
                 public string PersistentID { get; set; }
             }
 
+            public class TrackComparer : IEqualityComparer<Track>
+            {
+                public bool Equals(Track x, Track y)
+                {
+                    if (!string.Equals(x.Name, y.Name, StringComparison.InvariantCultureIgnoreCase))
+                        return false;
+                    if (x.Index != y.Index)
+                        return false;
+                    return true;
+                }
+
+                public int GetHashCode(Track obj)
+                {
+                    string hcode = obj.Index + obj.Name.ToLower();
+                    return hcode.GetHashCode();
+                }
+            }
+
             public class Album
             {
                 public string Name { get; set; }
@@ -905,7 +923,23 @@ namespace UpdateCarCard
                     Console.Out.Flush();
                 }
             }
-            LogConsole.WriteLine(libindex.ToString());
+            LogConsole.WriteLine("Scrubbing Duplicates");
+            var tcomparer = new FileDatabase.TrackComparer();
+            foreach (var art in syncdb.FileDatabase.Artists)
+            {
+                foreach (var alb in art.Albums)
+                {
+                    var dtracks = alb.Tracks.Distinct(tcomparer).ToArray();
+                    if (dtracks.Length < alb.Tracks.Count)
+                    {
+                        LogConsole.WriteLine("Durplicates Found In Album " + art.Name + " - " + alb.Name);
+                        alb.Tracks.Clear();
+                        alb.Tracks.AddRange(dtracks);
+                    }
+                }
+            }
+  
+            LogConsole.WriteLine("Total Files: " + libindex.ToString());
 
             LogConsole.WriteLine("Regenerating Database Maps");
 
