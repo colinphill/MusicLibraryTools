@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "UpdateCarCard": {
+      "commandName": "Project",
+      "commandLineArgs": "Car_FLAC_Config.xml fixerrors",
+      "workingDirectory": "C:\\Projects\\MusicLibraryTools\\UpdateCarCard\\bin\\Debug\\netcoreapp3.1"
+    }
+  }
+}

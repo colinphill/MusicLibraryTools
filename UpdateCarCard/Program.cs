@@ -458,6 +458,24 @@ namespace UpdateCarCard
                 public string PersistentID { get; set; }
             }
 
+            public class TrackComparer : IEqualityComparer<Track>
+            {
+                public bool Equals(Track x, Track y)
+                {
+                    if (!string.Equals(x.Name, y.Name, StringComparison.InvariantCultureIgnoreCase))
+                        return false;
+                    if (x.Index != y.Index)
+                        return false;
+                    return true;
+                }
+
+                public int GetHashCode(Track obj)
+                {
+                    string hcode = obj.Index + obj.Name.ToLower();
+                    return hcode.GetHashCode();
+                }
+            }
+
             public class Album
             {
                 public string Name { get; set; }
@@ -814,12 +832,13 @@ namespace UpdateCarCard
 
             if (args.Length == 0)
             {
-                LogConsole.WriteLine("Usage: UpdateCarCard <LibraryConfiguration.xml> [rebalance]");
+                LogConsole.WriteLine("Usage: UpdateCarCard <LibraryConfiguration.xml> [rebalance] [fixerrors]");
                 return;
             }
 
             LibraryConfiguration config = new LibraryConfiguration(args[0]);
 
+            bool fixerrors = ((args.Length > 1) && (args.Skip(1).Where(a => a.Equals("fixerrors", StringComparison.CurrentCultureIgnoreCase)).Count() > 0));
             bool walkmanmode = config["WalkmanMode"].Length != 0;
             BALANCE_SIZE = config["BalanceSize"].Length != 0 ? int.Parse(config["BalanceSize"].First()) : 15;
             REBALANCE_SIZE = config["RebalanceSize"].Length != 0 ? int.Parse(config["RebalanceSize"].First()) : 25;
@@ -860,6 +879,35 @@ namespace UpdateCarCard
             string albumsdir = Path.Combine(basedir, "Albums");
             string playlistsdir = walkmanmode ? basedir : Path.Combine(basedir, "Playlists");
             string contributingartistsdir = Path.Combine(basedir, "Contributing Artists");
+
+            if (fixerrors)
+            {
+                LogConsole.WriteLine("Enumerating Target...");
+                var di = new DirectoryInfo(basedir);
+                var entries = di.EnumerateFileSystemInfos("*", SearchOption.AllDirectories).ToDictionary(fse => fse.FullName.ToLower());
+                foreach (var art in oldsyncdb.FileDatabase.Artists)
+                {
+                    string mappedname = FixArtistPath(art.Name);
+                    var artnode = oldsyncdb.ArtistStructure.FindNode(mappedname);
+                    string artpath = Path.Combine(artistsdir, artnode.Path, mappedname);
+                    foreach (var alb in art.Albums)
+                    {
+                        var toremove = new List<FileDatabase.Track>();
+                        string albpath = Path.Combine(artpath, alb.Name.FixPath());
+                        foreach (var trk in alb.Tracks)
+                        {
+                            string trkpath = Path.Combine(albpath, trk.FileName);
+                            if (!entries.ContainsKey(trkpath.ToLower()))
+                            {
+                                LogConsole.WriteLine("Missing File: " + trkpath);
+                                toremove.Add(trk);
+                            }
+                        }
+                        foreach (var trk in toremove)
+                            alb.Tracks.Remove(trk);
+                    }
+                }
+            }
 
             Directory.CreateDirectory(artistsdir);
             if (!walkmanmode)
@@ -905,7 +953,23 @@ namespace UpdateCarCard
                     Console.Out.Flush();
                 }
             }
-            LogConsole.WriteLine(libindex.ToString());
+            LogConsole.WriteLine("Scrubbing Duplicates");
+            var tcomparer = new FileDatabase.TrackComparer();
+            foreach (var art in syncdb.FileDatabase.Artists)
+            {
+                foreach (var alb in art.Albums)
+                {
+                    var dtracks = alb.Tracks.Distinct(tcomparer).ToArray();
+                    if (dtracks.Length < alb.Tracks.Count)
+                    {
+                        LogConsole.WriteLine("Durplicates Found In Album " + art.Name + " - " + alb.Name);
+                        alb.Tracks.Clear();
+                        alb.Tracks.AddRange(dtracks);
+                    }
+                }
+            }
+  
+            LogConsole.WriteLine("Total Files: " + libindex.ToString());
 
             LogConsole.WriteLine("Regenerating Database Maps");
 
