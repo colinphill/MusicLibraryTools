@@ -146,11 +146,10 @@ namespace MusicFileUtilities
 
         public static void Init()
         {
-#if NETCOREAPP
-            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-#endif
             TypeEncoding = Encoding.GetEncoding(28591, new EncoderExceptionFallback(), new DecoderExceptionFallback()); // iso-8859-1
-            ShiftJISEncoding = Encoding.GetEncoding(932, new EncoderExceptionFallback(), new DecoderExceptionFallback());
+
+            if (MetadataOptions.UseLegacyEncodings)
+                ShiftJISEncoding = Encoding.GetEncoding(932, new EncoderExceptionFallback(), new DecoderExceptionFallback());
 
             AtomTypes.Add("ftyp", typeof(Atom_ftyp));
             AtomTypes.Add("moov", typeof(ContainerAtom));
@@ -729,6 +728,8 @@ namespace MusicFileUtilities
                             return Encoding.BigEndianUnicode.GetString(_data, 8, _data.Length - 8);
 
                         case DataTypes.SJIS:
+                            if (MP4Util.ShiftJISEncoding == null)
+                                throw new UnsupportedMetadataEncodingException("Shift-JIS");
                             return MP4Util.ShiftJISEncoding.GetString(_data, 8, _data.Length - 8);
 
                         default:
@@ -749,6 +750,8 @@ namespace MusicFileUtilities
                         break;
 
                     case DataTypes.SJIS:
+                        if (MP4Util.ShiftJISEncoding == null)
+                            throw new UnsupportedMetadataEncodingException("Shift-JIS");
                         b = MP4Util.ShiftJISEncoding.GetBytes(value);
                         break;
 

@@ -14,6 +14,18 @@ namespace MusicFileUtilities
         }
     }
 
+    public class UnsupportedMetadataEncodingException : Exception
+    {
+        public UnsupportedMetadataEncodingException(string item) : base("Unsupported Metadata Encoding - " + item)
+        {
+        }
+    }
+
+    public class MetadataOptions
+    {
+        public static bool UseLegacyEncodings { get; set; } = false;
+    }
+
     [Serializable]
     public enum CodecType { Lossy, Lossless };
 

@@ -18,7 +18,7 @@ namespace UpdateSmartStorage
     public class Program
     {
 
-        static SHA1 sha1_ = new SHA1CryptoServiceProvider();
+        static SHA1 sha1_ = SHA1.Create();
 
         const int BUCKET_THRESHOLD = 200;
         const int MAX_MAPPED_NAME_LENGTH = 40;

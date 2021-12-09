@@ -1424,7 +1424,9 @@ namespace MusicFileUtilities
                             doclose = true;
                         }
                         else if (((header[5] & 0x80) == 0x80) && (header[3] == 0x04))
+#pragma warning disable CS0642 // Possible mistaken empty statement
                             ;
+#pragma warning restore CS0642 // Possible mistaken empty statement
                         else
                             throw new Exception("Unsupported ID3v2 Header Features");
                     }

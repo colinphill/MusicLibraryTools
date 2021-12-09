@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "FixArtwork": {
+      "commandName": "Project",
+      "commandLineArgs": "test"
+    }
+  }
+}
