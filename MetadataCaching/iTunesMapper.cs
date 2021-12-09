@@ -59,6 +59,7 @@ namespace MetadataCaching
                     KeyValuePair<string, MetadataCacheEntry>[] newfiles = new KeyValuePair<string, MetadataCacheEntry>[0];
                     bool hasaa = aadict.ContainsKey((track.Artist, track.Album));
                     bool hasaaa = (!string.IsNullOrWhiteSpace(track.AlbumArtist)) && (aadict.ContainsKey((track.AlbumArtist, track.Album)));
+                    //var ds = aadict.Keys.OrderBy(k => k.Item1 + k.StrippedAlbum);
 
                     if (hasaa)
                         newfiles = newfiles.Concat(aadict[(track.Artist, track.Album)].Where(kv => kv.Value.TrackNumber == track.TrackNumber)).Distinct().OrderByDescending(kv => kv.Value.SampleRate).ThenByDescending(kv => kv.Value.BitsPerSample).ToArray();

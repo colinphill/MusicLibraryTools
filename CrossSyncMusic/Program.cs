@@ -106,16 +106,22 @@ namespace CrossSyncMusic
                             //    continue;
                             tracks++;
 
-                            LogConsole.WriteLine("Checking Track: " + trk.LocalLocation);
+                            string localloc = trk.LocalLocation;
+                            if (localloc.StartsWith(@"\\"))
+                                localloc = @"\\" + localloc.Substring(2).Replace(@"\\", @"\");
+                            else
+                                localloc = localloc.Replace(@"\\", @"\");
+                            LogConsole.WriteLine("Checking Track: " + localloc);
+                            
 
                             MetadataCacheEntry entry = null;
-                            if (cache.FileCache.ContainsKey(trk.LocalLocation))
-                                entry = cache[trk.LocalLocation];
+                            if (cache.FileCache.ContainsKey(localloc))
+                                entry = cache[localloc];
                             else 
                             {
                                 try
                                 {
-                                    entry = cache.FileCache.Single(kv => kv.Key.Equals(trk.LocalLocation, StringComparison.InvariantCultureIgnoreCase)).Value;
+                                    entry = cache.FileCache.Single(kv => kv.Key.Equals(localloc, StringComparison.InvariantCultureIgnoreCase)).Value;
                                 }
                                 catch
                                 {
