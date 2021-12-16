@@ -299,7 +299,36 @@ namespace MusicFileUtilities
         {
             foreach (var kv in Comments)
                 if (VorbisUtil.TagMappings.ContainsKey(kv.Key))
-                    yield return new KeyValuePair<string, string>(VorbisUtil.TagMappings[kv.Key].ToString(), kv.Value);
+                {
+                    var tag = VorbisUtil.TagMappings[kv.Key];
+                    if (tag == TagFields.TrackNumber)
+                    {
+                        var s = kv.Value.Split('/');
+                        var totaltag = TagFields.TotalTracks;
+                        yield return new KeyValuePair<string, string>(tag.ToString(), s[0]);
+                        if (s.Length > 1)
+                            yield return new KeyValuePair<string, string>(totaltag.ToString(), s[1]);
+                        
+                    }
+                    else if (tag == TagFields.DiscNumber)
+                    {
+                        var s = kv.Value.Split('/');
+                        var totaltag = TagFields.TotalDiscs;
+                        yield return new KeyValuePair<string, string>(tag.ToString(), s[0]);
+                        if (s.Length > 1)
+                            yield return new KeyValuePair<string, string>(totaltag.ToString(), s[1]);
+                    }
+                    else if (tag == TagFields.MovementNumber)
+                    {
+                        var s = kv.Value.Split('/');
+                        var totaltag = TagFields.MovementTotal;
+                        yield return new KeyValuePair<string, string>(tag.ToString(), s[0]);
+                        if (s.Length > 1)
+                            yield return new KeyValuePair<string, string>(totaltag.ToString(), s[1]);
+                    }
+                    else
+                        yield return new KeyValuePair<string, string>(VorbisUtil.TagMappings[kv.Key].ToString(), kv.Value);
+                }
         }
 
         public IEnumerable<IMetadataImage> GetImageMetadata()

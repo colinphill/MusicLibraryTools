@@ -77,7 +77,7 @@ namespace CrossSyncMusic
             var targetdi = new DirectoryInfo(config.CrossSyncTargetLibraryPath);
             PopulateHits(targetdi, namehits);
 
-            MetadataDatabase db = new MetadataDatabase(config.DatabaseFile); // TBD Dispose
+            using MetadataDatabase db = MetadataDatabase.OpenSqliteDatabase(config.DatabaseFile); // TBD Dispose
             db.IndexFiles(config.IndexLocations.Select(l => l.Target));
             var cache = db.BuildCache(config.IndexLocations.Select(l => l.Target));
 
