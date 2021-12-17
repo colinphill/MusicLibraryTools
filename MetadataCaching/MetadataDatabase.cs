@@ -158,6 +158,43 @@ namespace MetadataCaching
         {
         }
 
+        public static MetadataDatabase OpenDatabase(string conn)
+        {
+            if (conn.ToLower().StartsWith("sqlite:"))
+                return OpenSqliteDatabase(conn.Substring(7));
+            if (conn.ToLower().StartsWith("sql:"))
+            {
+                string server = "(local)";
+                string database = "metadata";
+                string username = null;
+                string password = null;
+                var args = conn.Substring(4).Split(':');
+                foreach (var arg in args)
+                {
+                    var kv = arg.Split('=');
+                    switch (kv[0].ToLower())
+                    {
+                        case "server":
+                            server = kv[1];
+                            break;
+                        case "database":
+                            database = kv[1];
+                            break;
+                        case "user":
+                            username = kv[1];
+                            break;
+                        case "password":
+                            password = kv[1];
+                            break;
+                        default:
+                            throw new ArgumentException("Bad connection string", "conn");
+                    }
+                }
+                return OpenSqlServerDatabase(database, server, username, password);
+            }
+            return OpenSqliteDatabase(conn);
+        }
+
         public static MetadataDatabase OpenSqliteDatabase(string filename)
         {
             var res = new MetadataDatabase();
@@ -205,7 +242,6 @@ namespace MetadataCaching
             res.lastidsql_ = "SELECT CAST(@@IDENTITY AS BIGINT);";
             var builder = new SqlConnectionStringBuilder();
             builder.DataSource = server;
-            builder.InitialCatalog = database;
             if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
                 builder.IntegratedSecurity = true;
             else
@@ -219,35 +255,52 @@ namespace MetadataCaching
             bool createtables = false;
             using (var comm = res.conn_.CreateCommand())
             {
-                comm.CommandText = "IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'AlbumArtists') SELECT 1 ELSE SELECT 0";
+                comm.CommandText = "IF DB_ID('" + database + "') IS NULL SELECT 0 ELSE SELECT 1";
                 if ((int)comm.ExecuteScalar() == 0)
+                {
+                    comm.CommandText = "CREATE DATABASE " + database;
+                    comm.ExecuteNonQuery();
+                    comm.CommandText = "ALTER DATABASE " + database + " COLLATE Latin1_General_BIN2";
+                    comm.ExecuteNonQuery();
+                    comm.CommandText = "USE " + database;
+                    comm.ExecuteNonQuery();
                     createtables = true;
+                }
+                else
+                {
+                    comm.CommandText = "USE " + database;
+                    comm.ExecuteNonQuery();
+                    comm.CommandText = "IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'AlbumArtists') SELECT 1 ELSE SELECT 0";
+                    if ((int)comm.ExecuteScalar() == 0)
+                        createtables = true;
+                }
             }
 
-            using (var trans = res.conn_.BeginTransaction())
+            if (createtables)
             {
-                try
+                using (var trans = res.conn_.BeginTransaction())
                 {
-                    using (var comm = res.conn_.CreateCommand())
+                    try
                     {
-                        comm.Transaction = trans;
-                        if (createtables)
+                        using (var comm = res.conn_.CreateCommand())
                         {
+                            comm.Transaction = trans;
                             foreach (string sql in sqlservercreationsql_)
                             {
                                 comm.CommandText = sql;
                                 comm.ExecuteNonQuery();
                             }
                         }
+                        trans.Commit();
                     }
-                    trans.Commit();
-                }
-                catch
-                {
-                    trans.Rollback();
-                    throw;
+                    catch
+                    {
+                        trans.Rollback();
+                        throw;
+                    }
                 }
             }
+
             return res;
         }
 

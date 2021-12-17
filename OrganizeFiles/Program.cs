@@ -25,7 +25,7 @@ namespace OrganizeFiles
 
             LogConsole.WriteLine("Indexing...");
 
-            using MetadataDatabase db = MetadataDatabase.OpenSqliteDatabase(config.DatabaseFile); // TBD Dispose
+            using MetadataDatabase db = MetadataDatabase.OpenDatabase(config.DatabaseFile); // TBD Dispose
             db.IndexFiles(config.IndexLocations.Select(l => l.Target));
 
             foreach (string basedir in config.IndexLocations.Select(il => il.Target))

@@ -18,10 +18,10 @@ namespace MetadataDBWork
             Console.WriteLine("Indexing...");
 
             //File.Delete("cache2.db");
-            //using (var db = MetadataDatabase.OpenSqliteDatabase("cache2.db"))
-            using (var db = MetadataDatabase.OpenSqlServerDatabase("metadata", "SHIGERU"))
+            //using (var db = MetadataDatabase.OpenDatabase("cache2.db"))
+            using (var db = MetadataDatabase.OpenDatabase("sql:database=metadata_test:server=SHIGERU"))
             {
-                var res = db.IndexFiles(new string [] { 
+                var res = db.IndexFiles(new string[] {
                     @"Z:\iTunes\HiRes\Stereo\Downloads",
                     @"Z:\iTunes\HiRes\Stereo\DVD-As",
                     @"Z:\iTunes\HiRes\Stereo\DVD-Vs",
@@ -39,7 +39,7 @@ namespace MetadataDBWork
                     }, true, true);
                 Console.WriteLine("Added:" + res.Added + " Modified:" + res.Modified + " Removed:" + res.Removed + " Unchanged:" + res.Unchanged);
 
-                var cache = db.BuildCache(new string [] {
+                var cache = db.BuildCache(new string[] {
                     @"Z:\iTunes\HiRes\Stereo\Downloads",
                     @"Z:\iTunes\HiRes\Stereo\DVD-As",
                     @"Z:\iTunes\HiRes\Stereo\DVD-Vs",
