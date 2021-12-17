@@ -239,7 +239,7 @@ namespace MetadataCaching
         public static MetadataDatabase OpenSqlServerDatabase(string database, string server = "(local)", string username = null, string password = null)
         {
             var res = new MetadataDatabase();
-            res.lastidsql_ = "SELECT CAST(@@IDENTITY AS BIGINT);";
+            res.lastidsql_ = "SELECT CAST(SCOPE_IDENTITY() AS BIGINT);";
             var builder = new SqlConnectionStringBuilder();
             builder.DataSource = server;
             if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
@@ -570,7 +570,6 @@ namespace MetadataCaching
                 {
                     using (DbCommand setcomm = conn_.CreateCommand(), albumcomm = conn_.CreateCommand(), metacomm = conn_.CreateCommand(),
                         imagecomm = conn_.CreateCommand(), trackscomm = conn_.CreateCommand(), filecomm = conn_.CreateCommand())
-                    //artistcomm = conn_.CreateCommand(), albumartistcomm = conn_.CreateCommand())
                     {
                         setcomm.CommandText = "DELETE FROM ScanSets WHERE ID = @ID";
                         var idparam = setcomm.Parameters.Add("@ID", System.Data.DbType.Int64);
@@ -578,14 +577,12 @@ namespace MetadataCaching
                         var filesidparam = filecomm.Parameters.Add("@ID", System.Data.DbType.Int64);
                         trackscomm.CommandText = "DELETE FROM Tracks WHERE AlbumID IN (SELECT ID From Albums WHERE ScanSetID = @ID)";
                         var tracksidparam = trackscomm.Parameters.Add("@ID", System.Data.DbType.Int64);
-                        metacomm.CommandText = "DELETE FROM Metadata WHERE FileID IN (SELECT FileID FROM Files WHERE ScanSetID = @ID)";
+                        metacomm.CommandText = "DELETE FROM Metadata WHERE FileID IN (SELECT ID FROM Files WHERE ScanSetID = @ID)";
                         var metaidparam = metacomm.Parameters.Add("@ID", System.Data.DbType.Int64);
-                        imagecomm.CommandText = "DELETE FROM Images WHERE FileID IN (SELECT FileID FROM Files WHERE ScanSetID = @ID)";
+                        imagecomm.CommandText = "DELETE FROM Images WHERE FileID IN (SELECT ID FROM Files WHERE ScanSetID = @ID)";
                         var imageidparam = imagecomm.Parameters.Add("@ID", System.Data.DbType.Int64);
                         albumcomm.CommandText = "DELETE FROM Albums WHERE ScanSetID = @ID";
                         var albumidparam = albumcomm.Parameters.Add("@ID", System.Data.DbType.Int64);
-                        //artistcomm.CommandText = "DELETE FROM Artists WHERE ID NOT IN (SELECT ArtistID FROM Tracks)";
-                        //albumartistcomm.CommandText = "DELETE FROM AlbumArtists WHERE ID NOT IN (SELECT AlbumArtistID FROM Albums)";
                         metacomm.CommandTimeout = imagecomm.CommandTimeout = 0;
 
                         setcomm.Transaction = transaction;
@@ -594,8 +591,6 @@ namespace MetadataCaching
                         metacomm.Transaction = transaction;
                         imagecomm.Transaction = transaction;
                         albumcomm.Transaction = transaction;
-                        //artistcomm.Transaction = transaction;
-                        //albumartistcomm.Transaction = transaction;
 
                         foreach (var set in missedsets)
                         {
@@ -607,22 +602,19 @@ namespace MetadataCaching
                             albumcomm.ExecuteNonQuery();
                             setcomm.ExecuteNonQuery();
                         }
-                        //artistcomm.ExecuteNonQuery();
-                        //albumartistcomm.ExecuteNonQuery();
                     }
                     transaction.Commit();
                 }
             }
 
             if (fixup && ((added != 0) || (modified != 0) || (removed != 0)))
-                removed += Fixup();
+                Fixup();
 
             return (added, modified, removed, unchanged);
         }
 
-        private int Fixup()
+        private void Fixup()
         {
-            int removed = 0;
             using (var querycomm = conn_.CreateCommand())
             {
                 var artistlist = new List<string>();
@@ -674,7 +666,7 @@ namespace MetadataCaching
                         querycomm.Parameters.Clear();
                         var nameparam = querycomm.Parameters.Add("@Name", System.Data.DbType.String);
                         var pathparam = querycomm.Parameters.Add("@Path", System.Data.DbType.String);
-                        var albumartistidparam = querycomm.Parameters.Add("@AlbumArtistID", System.Data.DbType.String);
+                        var albumartistidparam = querycomm.Parameters.Add("@AlbumArtistID", System.Data.DbType.Int64);
                         var scansetidparam = querycomm.Parameters.Add("@ScanSetID", System.Data.DbType.Int64);
                         foreach (var album in albumdifferences)
                         {
@@ -757,7 +749,7 @@ namespace MetadataCaching
 
                 querycomm.Transaction = null;
                 querycomm.Parameters.Clear();
-                querycomm.CommandText = "DELETE FROM Albums WHERE ID NOT IN (Select AlbumID FROM Tracks)";
+                querycomm.CommandText = "DELETE FROM Albums WHERE ID NOT IN (SELECT AlbumID FROM Tracks)";
                 querycomm.ExecuteNonQuery();
                 querycomm.CommandText = "DELETE FROM Artists WHERE ID NOT IN (SELECT ArtistID FROM Tracks)";
                 querycomm.ExecuteNonQuery();
@@ -765,8 +757,6 @@ namespace MetadataCaching
                 querycomm.ExecuteNonQuery();
 
             }
-
-            return removed;
         }
 
         public void Dispose()
