@@ -464,7 +464,6 @@ namespace MetadataCaching
 
                     delcomm.CommandText = "DELETE FROM Metadata WHERE FileID = @ID;\r\n" +
                         "DELETE FROM Images WHERE FileID = @ID;\r\n" + 
-                        "DELETE FROM Tracks WHERE FileID = @ID;\r\n" +
                         "DELETE FROM Files WHERE ID = @ID";
                     delcomm.Parameters.Clear();
                     var delidparam = delcomm.Parameters.Add("@ID", System.Data.DbType.Int64);
@@ -749,6 +748,8 @@ namespace MetadataCaching
 
                 querycomm.Transaction = null;
                 querycomm.Parameters.Clear();
+                querycomm.CommandText = "DELETE FROM Tracks WHERE ID NOT IN (SELECT TrackID FROM Files)";
+                querycomm.ExecuteNonQuery();
                 querycomm.CommandText = "DELETE FROM Albums WHERE ID NOT IN (SELECT AlbumID FROM Tracks)";
                 querycomm.ExecuteNonQuery();
                 querycomm.CommandText = "DELETE FROM Artists WHERE ID NOT IN (SELECT ArtistID FROM Tracks)";
