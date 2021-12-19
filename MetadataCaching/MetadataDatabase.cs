@@ -452,7 +452,6 @@ namespace MetadataCaching
                 filequeue.CompleteAdding();
             });
 
-            bool done = false;
             using (var transaction = conn_.BeginTransaction())
             {
                 using (DbCommand delcomm = conn_.CreateCommand(), filecomm = conn_.CreateCommand(), metacomm = conn_.CreateCommand(), imagecomm = conn_.CreateCommand())
@@ -499,66 +498,54 @@ namespace MetadataCaching
                     var sizeparam = imagecomm.Parameters.Add("@Size", System.Data.DbType.Int64);
                     var dataparam = imagecomm.Parameters.Add("@Data", System.Data.DbType.Object);
 
-                    while (!done)
+                    foreach (var file in filequeue.GetConsumingEnumerable())
                     {
 
-                        (long ID, long Set, string FileName, long Length, DateTime LastWriteTime, IMetadataProvider Metadata) file = (0, 0, null, 0, DateTime.MinValue, null);
-                        try
+                        if (file.ID != -1)
                         {
-                            file = filequeue.Take();
+                            delidparam.Value = file.ID;
+                            delcomm.ExecuteNonQuery();
                         }
-                        catch
+                        if (file.Metadata != null)
                         {
-                            done = true;
-                            transaction.Commit();
-                        }
-                        if (!done)
-                        {
-                            if (file.ID != -1)
+                            IMetadataProvider mp = file.Metadata;
+                            ICodecProvider cp = mp as ICodecProvider;
+                            pathparam.Value = file.FileName;
+                            filesizeparam.Value = file.Length;
+                            lastwritetimeparam.Value = file.LastWriteTime;
+                            codecnameparam.Value = cp.CodecName;
+                            codectypeparam.Value = cp.CodecType.ToString();
+                            averagebitrateparam.Value = cp.AverageBitrate;
+                            maxbitrateparam.Value = cp.MaxBitrate;
+                            bitspersampleparam.Value = cp.BitsPerSample;
+                            samplerateparam.Value = cp.Samplerate;
+                            channelsparam.Value = cp.Channels;
+                            durationinframesparam.Value = cp.DurationInFrames;
+                            setparam.Value = file.Set;
+
+                            metafileidparam.Value = imagefileidparam.Value = (long)filecomm.ExecuteScalar();
+                            foreach (var kv in mp.GetTextMetadata())
                             {
-                                delidparam.Value = file.ID;
-                                delcomm.ExecuteNonQuery();
+                                keyparam.Value = kv.Key;
+                                valueparam.Value = kv.Value;
+                                metacomm.ExecuteNonQuery();
                             }
-                            if (file.Metadata != null)
+
+                            foreach (var image in mp.GetImageMetadata())
                             {
-                                IMetadataProvider mp = file.Metadata;
-                                ICodecProvider cp = mp as ICodecProvider;
-                                pathparam.Value = file.FileName;
-                                filesizeparam.Value = file.Length;
-                                lastwritetimeparam.Value = file.LastWriteTime;
-                                codecnameparam.Value = cp.CodecName;
-                                codectypeparam.Value = cp.CodecType.ToString();
-                                averagebitrateparam.Value = cp.AverageBitrate;
-                                maxbitrateparam.Value = cp.MaxBitrate;
-                                bitspersampleparam.Value = cp.BitsPerSample;
-                                samplerateparam.Value = cp.Samplerate;
-                                channelsparam.Value = cp.Channels;
-                                durationinframesparam.Value = cp.DurationInFrames;
-                                setparam.Value = file.Set;
-
-                                metafileidparam.Value = imagefileidparam.Value = (long)filecomm.ExecuteScalar();
-                                foreach (var kv in mp.GetTextMetadata())
-                                {
-                                    keyparam.Value = kv.Key;
-                                    valueparam.Value = kv.Value;
-                                    metacomm.ExecuteNonQuery();
-                                }
-
-                                foreach (var image in mp.GetImageMetadata())
-                                {
-                                    descriptionparam.Value = image.Description;
-                                    categoryparam.Value = image.Category;
-                                    imagetypeparam.Value = image.ImageType;
-                                    widthparam.Value = image.Width;
-                                    heightparam.Value = image.Height;
-                                    sizeparam.Value = image.Size;
-                                    dataparam.Value = image.Data;
-                                    imagecomm.ExecuteNonQuery();
-                                }
+                                descriptionparam.Value = image.Description;
+                                categoryparam.Value = image.Category;
+                                imagetypeparam.Value = image.ImageType;
+                                widthparam.Value = image.Width;
+                                heightparam.Value = image.Height;
+                                sizeparam.Value = image.Size;
+                                dataparam.Value = image.Data;
+                                imagecomm.ExecuteNonQuery();
                             }
                         }
                     }
                 }
+                transaction.Commit();
             }
 
             await metadatareadtask;
