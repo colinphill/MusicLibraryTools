@@ -19,7 +19,7 @@ namespace MetadataDBWork
 
             File.Delete("cache.db");
             using (var db = MetadataDatabase.OpenDatabase("sqlite:cache.db"))
-            //using (var db = MetadataDatabase.OpenDatabase("sql:database=metadata2:server=SHIGERU"))
+            //using (var db = MetadataDatabase.OpenDatabase("sql:database=metadata2:server=SHIGERU:utf8=true"))
             {
                 var res = db.IndexFiles(new string[] {
                     @"Z:\iTunes\HiRes\Stereo\Downloads",

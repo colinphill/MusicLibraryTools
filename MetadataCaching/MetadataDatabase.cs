@@ -90,26 +90,32 @@ namespace MetadataCaching
             "CREATE TABLE Tracks (ID INTEGER PRIMARY KEY, ArtistID BIGINT REFERENCES Artists (ID) NOT NULL, AlbumID BIGINT REFERENCES Albums (ID) NOT NULL, Number BIGINT NOT NULL, Name TEXT NOT NULL);\r\n" +
             "CREATE TABLE Files (ID INTEGER PRIMARY KEY, ScanSetID BIGINT REFERENCES ScanSets (ID) NOT NULL, Path TEXT NOT NULL, FileSize BIGINT NOT NULL, LastWriteTime DATETIME NOT NULL, TrackID BIGINT REFERENCES Tracks (ID), CodecName TEXT NOT NULL, CodecType TEXT NOT NULL, AverageBitrate BIGINT NOT NULL, MaxBitrate BIGINT NOT NULL, BitsPerSample BIGINT NOT NULL, SampleRate BIGINT NOT NULL, Channels BIGINT NOT NULL, DurationInFrames BIGINT NOT NULL, UNIQUE(ScanSetID, Path));\r\n" +
             "CREATE TABLE Images (ID INTEGER PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, Description TEXT NOT NULL, Category TEXT NOT NULL, ImageType TEXT NOT NULL, Width BIGINT NOT NULL, Height BIGINT NOT NULL, Size BIGINT NOT NULL, Data BLOB NOT NULL);\r\n" +
-            "CREATE TABLE Metadata (ID INTEGER PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, \"Key\" TEXT NOT NULL, Value TEXT NOT NULL);\r\n" +
+            "CREATE TABLE MetadataKeys (ID INTEGER PRIMARY KEY, \"Key\" TEXT UNIQUE NOT NULL);\r\n" +
+            "CREATE TABLE Metadata (ID INTEGER PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, KeyID BIGINT REFERENCES MetadataKeys (ID) NOT NULL, Value TEXT NOT NULL);\r\n" +
+            "INSERT INTO MetadataKeys (ID, \"Key\") VALUES (1, 'Artist');\r\n" +
+            "INSERT INTO MetadataKeys (ID, \"Key\") VALUES (2, 'AlbumArtist');\r\n" +
+            "INSERT INTO MetadataKeys (ID, \"Key\") VALUES (3, 'Album');\r\n" +
+            "INSERT INTO MetadataKeys (ID, \"Key\") VALUES (4, 'TrackNumber');\r\n" +
+            "INSERT INTO MetadataKeys (ID, \"Key\") VALUES (5, 'Title');\r\n" +
             "CREATE INDEX AlbumsAlbumArtistIDIndex ON Albums (AlbumArtistID ASC);\r\n" +
             "CREATE INDEX AlbumsScanSetIDIndex ON Albums (ScanSetID ASC);\r\n" +
             "CREATE INDEX FilesPathIndex ON Files (Path ASC);\r\n" +
             "CREATE INDEX FilesScanSetIDIndex ON Files (ScanSetID ASC);\r\n" +
             "CREATE INDEX FilesTrackIDIndex ON Files (TrackID ASC);\r\n" +
             "CREATE INDEX ImagesFileIDIndex ON Images (FileID ASC);\r\n" +
-            "CREATE INDEX MetadataKeyIndex ON Metadata(\"Key\" ASC);\r\n" +
-            "CREATE INDEX MetadataFileIDIndex ON Metadata(FileID ASC);\r\n" +
+            "CREATE INDEX MetadataKeyIDIndex ON Metadata (KeyID ASC);\r\n" +
+            "CREATE INDEX MetadataFileIDIndex ON Metadata (FileID ASC);\r\n" +
             "CREATE INDEX TracksAlbumIDIndex ON Tracks (AlbumID ASC);\r\n" +
             "CREATE INDEX TracksArtistIDIndex ON Tracks (ArtistID ASC);\r\n",
 
             "CREATE VIEW MetadataMapView AS SELECT *,\r\n" +
-            "(SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'Artist' LIMIT 1) AS Artist,\r\n" +
+            "(SELECT Value FROM Metadata WHERE FileID = Files.ID AND KeyID = 1 LIMIT 1) AS Artist,\r\n" +
             "COALESCE(\r\n" +
-            "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'AlbumArtist' LIMIT 1),\r\n" +
-            "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'Artist' LIMIT 1)) AS AlbumArtist,\r\n" +
-            "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'Album' LIMIT 1) AS Album,\r\n" +
-            "   CAST((SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'TrackNumber' LIMIT 1) AS BIGINT) AS Number,\r\n" +
-            "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'Title' LIMIT 1) AS Name\r\n" +
+            "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND KeyID = 2 LIMIT 1),\r\n" +
+            "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND KeyID = 1 LIMIT 1)) AS AlbumArtist,\r\n" +
+            "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND KeyID = 3 LIMIT 1) AS Album,\r\n" +
+            "   CAST((SELECT Value FROM Metadata WHERE FileID = Files.ID AND KeyID = 4 LIMIT 1) AS BIGINT) AS Number,\r\n" +
+            "   (SELECT Value FROM Metadata WHERE FileID = Files.ID AND KeyID = 5 LIMIT 1) AS Name\r\n" +
             "   FROM Files;\r\n",
 
             "CREATE VIEW MetadataSummaryView AS SELECT Files.*, Artists.Name AS Artist, AlbumArtists.Name AS AlbumArtist,\r\n" +
@@ -126,26 +132,34 @@ namespace MetadataCaching
             "CREATE TABLE Tracks (ID BIGINT IDENTITY PRIMARY KEY, ArtistID BIGINT REFERENCES Artists (ID) NOT NULL, AlbumID BIGINT REFERENCES Albums (ID) NOT NULL, Number BIGINT NOT NULL, Name NVARCHAR(MAX) NOT NULL);\r\n" +
             "CREATE TABLE Files (ID BIGINT IDENTITY PRIMARY KEY, ScanSetID BIGINT REFERENCES ScanSets (ID) NOT NULL, Path NVARCHAR(512) NOT NULL, FileSize BIGINT NOT NULL, LastWriteTime DATETIME NOT NULL, TrackID BIGINT REFERENCES Tracks (ID), CodecName NVARCHAR(MAX) NOT NULL, CodecType NVARCHAR(MAX) NOT NULL, AverageBitrate BIGINT NOT NULL, MaxBitrate BIGINT NOT NULL, BitsPerSample BIGINT NOT NULL, SampleRate BIGINT NOT NULL, Channels BIGINT NOT NULL, DurationInFrames BIGINT NOT NULL, UNIQUE(ScanSetID, Path));\r\n" +
             "CREATE TABLE Images (ID BIGINT IDENTITY PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, Description NVARCHAR(MAX) NOT NULL, Category NVARCHAR(MAX) NOT NULL, ImageType NVARCHAR(MAX) NOT NULL, Width BIGINT NOT NULL, Height BIGINT NOT NULL, Size BIGINT NOT NULL, Data VARBINARY(MAX) NOT NULL);\r\n" +
-            "CREATE TABLE Metadata (ID BIGINT IDENTITY PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, \"Key\" NVARCHAR(512) NOT NULL, Value NVARCHAR(MAX) NOT NULL);\r\n" +
+            "CREATE TABLE MetadataKeys (ID BIGINT IDENTITY PRIMARY KEY, \"Key\" NVARCHAR(512) UNIQUE NOT NULL);\r\n" +
+            "CREATE TABLE Metadata (ID BIGINT IDENTITY PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, KeyID BIGINT REFERENCES MetadataKeys (ID) NOT NULL, Value NVARCHAR(MAX) NOT NULL);\r\n" +
+            "SET IDENTITY_INSERT MetadataKeys ON;\r\n" +
+            "INSERT INTO MetadataKeys (ID, \"Key\") VALUES (1, 'Artist');\r\n" +
+            "INSERT INTO MetadataKeys (ID, \"Key\") VALUES (2, 'AlbumArtist');\r\n" +
+            "INSERT INTO MetadataKeys (ID, \"Key\") VALUES (3, 'Album');\r\n" +
+            "INSERT INTO MetadataKeys (ID, \"Key\") VALUES (4, 'TrackNumber');\r\n" +
+            "INSERT INTO MetadataKeys (ID, \"Key\") VALUES (5, 'Title');\r\n" +
+            "SET IDENTITY_INSERT MetadataKeys OFF;\r\n",
             "CREATE INDEX AlbumsAlbumArtistIDIndex ON Albums (AlbumArtistID ASC);\r\n" +
             "CREATE INDEX AlbumsScanSetIDIndex ON Albums (ScanSetID ASC);\r\n" +
             "CREATE INDEX FilesPathIndex ON Files (Path ASC);\r\n" +
             "CREATE INDEX FilesScanSetIDIndex ON Files (ScanSetID ASC);\r\n" +
             "CREATE INDEX FilesTrackIDIndex ON Files (TrackID ASC);\r\n" +
             "CREATE INDEX ImagesFileIDIndex ON Images (FileID ASC);\r\n" +
-            "CREATE INDEX MetadataKeyIndex ON Metadata(\"Key\" ASC);\r\n" +
-            "CREATE INDEX MetadataFileIDIndex ON Metadata(FileID ASC);\r\n" +
+            "CREATE INDEX MetadataKeyIDIndex ON Metadata (KeyID ASC);\r\n" +
+            "CREATE INDEX MetadataFileIDIndex ON Metadata (FileID ASC);\r\n" +
             "CREATE INDEX TracksAlbumIDIndex ON Tracks (AlbumID ASC);\r\n" +
             "CREATE INDEX TracksArtistIDIndex ON Tracks (ArtistID ASC);\r\n",
-
+ 
             "CREATE VIEW MetadataMapView AS SELECT *,\r\n" +
-            "(SELECT TOP 1 Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'Artist') AS Artist,\r\n" +
+            "(SELECT TOP 1 Value FROM Metadata WHERE FileID = Files.ID AND KeyID = 1) AS Artist,\r\n" +
             "COALESCE(\r\n" +
-            "   (SELECT TOP 1 Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'AlbumArtist'),\r\n" +
-            "   (SELECT TOP 1 Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'Artist')) AS AlbumArtist,\r\n" +
-            "   (SELECT TOP 1 Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'Album') AS Album,\r\n" +
-            "   CAST((SELECT TOP 1 Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'TrackNumber') AS BIGINT) AS Number,\r\n" +
-            "   (SELECT TOP 1 Value FROM Metadata WHERE FileID = Files.ID AND \"Key\" = 'Title') AS Name\r\n" +
+            "   (SELECT TOP 1 Value FROM Metadata WHERE FileID = Files.ID AND KeyID = 2),\r\n" +
+            "   (SELECT TOP 1 Value FROM Metadata WHERE FileID = Files.ID AND KeyID = 1)) AS AlbumArtist,\r\n" +
+            "   (SELECT TOP 1 Value FROM Metadata WHERE FileID = Files.ID AND KeyID = 3) AS Album,\r\n" +
+            "   CAST((SELECT TOP 1 Value FROM Metadata WHERE FileID = Files.ID AND KeyID = 4) AS BIGINT) AS Number,\r\n" +
+            "   (SELECT TOP 1 Value FROM Metadata WHERE FileID = Files.ID AND KeyID = 5) AS Name\r\n" +
             "   FROM Files;\r\n",
 
             "CREATE VIEW MetadataSummaryView AS SELECT Files.*, Artists.Name AS Artist, AlbumArtists.Name AS AlbumArtist,\r\n" +
@@ -168,6 +182,7 @@ namespace MetadataCaching
                 string database = "metadata";
                 string username = null;
                 string password = null;
+                bool utf8 = false;
                 var args = conn.Substring(4).Split(':');
                 foreach (var arg in args)
                 {
@@ -186,16 +201,19 @@ namespace MetadataCaching
                         case "password":
                             password = kv[1];
                             break;
+                        case "utf8":
+                            utf8 = bool.Parse(kv[1]);
+                            break;
                         default:
                             throw new ArgumentException("Bad connection string", "conn");
                     }
                 }
-                return OpenSqlServerDatabase(database, server, username, password);
+                return OpenSqlServerDatabase(database, server, username, password, utf8);
             }
             return OpenSqliteDatabase(conn);
         }
 
-        public static MetadataDatabase OpenSqliteDatabase(string filename)
+        private static MetadataDatabase OpenSqliteDatabase(string filename)
         {
             var res = new MetadataDatabase();
             res.lastidsql_ = "SELECT last_insert_rowid();";
@@ -236,7 +254,7 @@ namespace MetadataCaching
             return res;
         }
 
-        public static MetadataDatabase OpenSqlServerDatabase(string database, string server = "(local)", string username = null, string password = null)
+        private static MetadataDatabase OpenSqlServerDatabase(string database, string server = "(local)", string username = null, string password = null, bool utf8 = false)
         {
             var res = new MetadataDatabase();
             res.lastidsql_ = "SELECT CAST(SCOPE_IDENTITY() AS BIGINT);";
@@ -260,7 +278,10 @@ namespace MetadataCaching
                 {
                     comm.CommandText = "CREATE DATABASE " + database;
                     comm.ExecuteNonQuery();
-                    comm.CommandText = "ALTER DATABASE " + database + " COLLATE Latin1_General_BIN2";
+                    if (utf8)
+                        comm.CommandText = "ALTER DATABASE " + database + " COLLATE Latin1_General_100_BIN2_UTF8";
+                    else
+                        comm.CommandText = "ALTER DATABASE " + database + " COLLATE Latin1_General_BIN2";
                     comm.ExecuteNonQuery();
                     comm.CommandText = "USE " + database;
                     comm.ExecuteNonQuery();
@@ -287,7 +308,10 @@ namespace MetadataCaching
                             comm.Transaction = trans;
                             foreach (string sql in sqlservercreationsql_)
                             {
-                                comm.CommandText = sql;
+                                if (utf8)
+                                    comm.CommandText = sql.Replace("NVARCHAR", "VARCHAR");
+                                else
+                                    comm.CommandText = sql;
                                 comm.ExecuteNonQuery();
                             }
                         }
@@ -387,21 +411,26 @@ namespace MetadataCaching
 
             int added = 0, modified = 0, removed = 0, unchanged = 0;
 
-            var filequeue = new BlockingCollection<(long ID, long Set, string FileName, long Length, DateTime LastWriteTime, IMetadataProvider Metadata)>();
+            using var filequeue = new BlockingCollection<(long ID, long Set, string FileName, long Length, DateTime LastWriteTime, IMetadataProvider Metadata)>();
 
             var filesdict = new ConcurrentDictionary<(long ScanSetID, string Path), (long ID, long Length, DateTime LastWriteTime)>();
             var fileshitdict = new ConcurrentDictionary<(long ScanSetID, string Path), bool>();
+            var metadatakeysdict = new Dictionary<string, long>();
 
-            using (var getfilescomm = conn_.CreateCommand())
+            using (var getidscomm = conn_.CreateCommand())
             {
-                getfilescomm.CommandText = "SELECT ID, ScanSetID, Path, FileSize, LastWriteTime FROM Files";
-                using (var reader = getfilescomm.ExecuteReader())
+                getidscomm.CommandText = "SELECT ID, ScanSetID, Path, FileSize, LastWriteTime FROM Files";
+                using (var reader = getidscomm.ExecuteReader())
                     while (reader.Read())
                     {
                         var key = (reader.GetInt64(1), reader.GetString(2));
                         filesdict[key] = (reader.GetInt64(0), reader.GetInt64(3), DateTime.SpecifyKind(reader.GetDateTime(4), DateTimeKind.Utc));
                         fileshitdict[key] = false;
                     }
+                getidscomm.CommandText = "SELECT ID, \"Key\" FROM MetadataKeys";
+                using (var reader = getidscomm.ExecuteReader())
+                    while (reader.Read())
+                        metadatakeysdict.Add(reader.GetString(1), reader.GetInt64(0));
             }
 
             var metadatareadtask = Task.Run(() =>
@@ -454,12 +483,14 @@ namespace MetadataCaching
 
             using (var transaction = conn_.BeginTransaction())
             {
-                using (DbCommand delcomm = conn_.CreateCommand(), filecomm = conn_.CreateCommand(), metacomm = conn_.CreateCommand(), imagecomm = conn_.CreateCommand())
+                using (DbCommand delcomm = conn_.CreateCommand(), filecomm = conn_.CreateCommand(), metacomm = conn_.CreateCommand(), imagecomm = conn_.CreateCommand(),
+                    keycomm = conn_.CreateCommand())
                 {
                     delcomm.Transaction = transaction;
                     filecomm.Transaction = transaction;
                     metacomm.Transaction = transaction;
                     imagecomm.Transaction = transaction;
+                    keycomm.Transaction = transaction;
 
                     delcomm.CommandText = "DELETE FROM Metadata WHERE FileID = @ID;\r\n" +
                         "DELETE FROM Images WHERE FileID = @ID;\r\n" + 
@@ -483,10 +514,13 @@ namespace MetadataCaching
                         " VALUES (@Path, @Set, @FileSize, @LastWriteTime, @CodecName, @CodecType, @AverageBitrate, @MaxBitrate, @BitsPerSample, @SampleRate, @Channels, @DurationInFrames);\r\n" +
                         lastidsql_;
 
-                    metacomm.CommandText = "INSERT INTO Metadata (FileID, \"Key\", Value) VALUES (@FileID, @Key, @Value)";
+                    metacomm.CommandText = "INSERT INTO Metadata (FileID, KeyID, Value) VALUES (@FileID, @KeyID, @Value)";
                     var metafileidparam = metacomm.Parameters.Add("@FileID", System.Data.DbType.Int64);
-                    var keyparam = metacomm.Parameters.Add("@Key", System.Data.DbType.String);
+                    var keyidparam = metacomm.Parameters.Add("@KeyID", System.Data.DbType.Int64);
                     var valueparam = metacomm.Parameters.Add("@Value", System.Data.DbType.String);
+
+                    keycomm.CommandText = "INSERT INTO MetadataKeys (\"Key\") VALUES (@Key);\r\n" + lastidsql_;
+                    var keyparam = keycomm.Parameters.Add("@Key", System.Data.DbType.String);
 
                     imagecomm.CommandText = "INSERT INTO Images (FileID, Description, Category, ImageType, Width, Height, Size, Data) VALUES (@FileID, @Description, @Category, @ImageType, @Width, @Height, @Size, @Data)";
                     var imagefileidparam = imagecomm.Parameters.Add("@FileID", System.Data.DbType.Int64);
@@ -526,7 +560,14 @@ namespace MetadataCaching
                             metafileidparam.Value = imagefileidparam.Value = (long)filecomm.ExecuteScalar();
                             foreach (var kv in mp.GetTextMetadata())
                             {
-                                keyparam.Value = kv.Key;
+                                long keyid;
+                                if (!metadatakeysdict.TryGetValue(kv.Key, out keyid))
+                                {
+                                    keyparam.Value = kv.Key;
+                                    keyid = (long)keycomm.ExecuteScalar();
+                                    metadatakeysdict.Add(kv.Key, keyid);
+                                }
+                                keyidparam.Value = keyid;
                                 valueparam.Value = kv.Value;
                                 metacomm.ExecuteNonQuery();
                             }
