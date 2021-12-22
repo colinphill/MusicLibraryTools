@@ -9,6 +9,7 @@ using MusicFileUtilities;
 using System.Threading;
 using System.Data.Common;
 using System.Data.SqlClient;
+using System.Data;
 
 namespace MetadataCaching
 {
@@ -39,7 +40,7 @@ namespace MetadataCaching
     internal static class DbHelpers
     {
 
-        public static DbParameter Add(this DbParameterCollection coll, string name, System.Data.DbType dbtype, System.Data.ParameterDirection dir = System.Data.ParameterDirection.Input)
+        public static DbParameter Add(this DbParameterCollection coll, string name, System.Data.DbType dbtype, System.Data.ParameterDirection dir = System.Data.ParameterDirection.Input, string typename = null)
         {
             var litecoll = coll as SQLiteParameterCollection;
             if (litecoll != null)
@@ -54,19 +55,27 @@ namespace MetadataCaching
                 SqlParameter parm = new SqlParameter();
                 parm.ParameterName = name;
                 parm.Direction = dir;
-                try
+                if (typename != null)
                 {
-                    parm.DbType = dbtype;
+                    parm.SqlDbType = SqlDbType.Structured;
+                    parm.TypeName = typename;
                 }
-                catch
+                else
                 {
+                    try
+                    {
+                        parm.DbType = dbtype;
+                    }
+                    catch
+                    {
+                        if (dbtype == System.Data.DbType.Object)
+                            parm.SqlDbType = System.Data.SqlDbType.VarBinary;
+                        else
+                            throw;
+                    }
                     if (dbtype == System.Data.DbType.Object)
                         parm.SqlDbType = System.Data.SqlDbType.VarBinary;
-                    else
-                        throw;
                 }
-                if (dbtype == System.Data.DbType.Object)
-                    parm.SqlDbType = System.Data.SqlDbType.VarBinary;
                 sqlcoll.Add(parm);
                 return parm;
             }
@@ -151,6 +160,8 @@ namespace MetadataCaching
             "CREATE INDEX MetadataFileIDIndex ON Metadata (FileID ASC);\r\n" +
             "CREATE INDEX TracksAlbumIDIndex ON Tracks (AlbumID ASC);\r\n" +
             "CREATE INDEX TracksArtistIDIndex ON Tracks (ArtistID ASC);\r\n",
+
+            "CREATE TYPE dbo.MetadataTableType AS TABLE (FileID BIGINT, KeyID BIGINT, Value NVARCHAR(MAX));\r\n",
  
             "CREATE VIEW MetadataMapView AS SELECT *,\r\n" +
             "(SELECT TOP 1 Value FROM Metadata WHERE FileID = Files.ID AND KeyID = 1) AS Artist,\r\n" +
@@ -492,6 +503,11 @@ namespace MetadataCaching
                     imagecomm.Transaction = transaction;
                     keycomm.Transaction = transaction;
 
+                    using DataTable metadatafields = new DataTable();
+                    metadatafields.Columns.Add("FileID", typeof(long));
+                    metadatafields.Columns.Add("KeyID", typeof(long));
+                    metadatafields.Columns.Add("Value", typeof(string));
+
                     delcomm.CommandText = "DELETE FROM Metadata WHERE FileID = @ID;\r\n" +
                         "DELETE FROM Images WHERE FileID = @ID;\r\n" + 
                         "DELETE FROM Files WHERE ID = @ID";
@@ -514,10 +530,19 @@ namespace MetadataCaching
                         " VALUES (@Path, @Set, @FileSize, @LastWriteTime, @CodecName, @CodecType, @AverageBitrate, @MaxBitrate, @BitsPerSample, @SampleRate, @Channels, @DurationInFrames);\r\n" +
                         lastidsql_;
 
-                    metacomm.CommandText = "INSERT INTO Metadata (FileID, KeyID, Value) VALUES (@FileID, @KeyID, @Value)";
-                    var metafileidparam = metacomm.Parameters.Add("@FileID", System.Data.DbType.Int64);
-                    var keyidparam = metacomm.Parameters.Add("@KeyID", System.Data.DbType.Int64);
-                    var valueparam = metacomm.Parameters.Add("@Value", System.Data.DbType.String);
+                    DbParameter metafileidparam = null, keyidparam = null, valueparam = null;
+                    if (metacomm is SqlCommand)
+                    {
+                        metacomm.CommandText = "INSERT INTO Metadata (FileID, KeyID, Value) SELECT m.FileID, m.KeyID, m.Value FROM @tvpMetadata AS m";
+                        valueparam = metacomm.Parameters.Add("@tvpMetadata", DbType.Object, ParameterDirection.Input, "dbo.MetadataTableType");
+                    }
+                    else
+                    {
+                        metacomm.CommandText = "INSERT INTO Metadata (FileID, KeyID, Value) VALUES (@FileID, @KeyID, @Value)";
+                        metafileidparam = metacomm.Parameters.Add("@FileID", System.Data.DbType.Int64);
+                        keyidparam = metacomm.Parameters.Add("@KeyID", System.Data.DbType.Int64);
+                        valueparam = metacomm.Parameters.Add("@Value", System.Data.DbType.String);
+                    }
 
                     keycomm.CommandText = "INSERT INTO MetadataKeys (\"Key\") VALUES (@Key);\r\n" + lastidsql_;
                     var keyparam = keycomm.Parameters.Add("@Key", System.Data.DbType.String);
@@ -534,7 +559,7 @@ namespace MetadataCaching
 
                     foreach (var file in filequeue.GetConsumingEnumerable())
                     {
-
+                        long fileid;
                         if (file.ID != -1)
                         {
                             delidparam.Value = file.ID;
@@ -557,7 +582,7 @@ namespace MetadataCaching
                             durationinframesparam.Value = cp.DurationInFrames;
                             setparam.Value = file.Set;
 
-                            metafileidparam.Value = imagefileidparam.Value = (long)filecomm.ExecuteScalar();
+                            imagefileidparam.Value = fileid = (long)filecomm.ExecuteScalar();
                             foreach (var kv in mp.GetTextMetadata())
                             {
                                 long keyid;
@@ -567,9 +592,24 @@ namespace MetadataCaching
                                     keyid = (long)keycomm.ExecuteScalar();
                                     metadatakeysdict.Add(kv.Key, keyid);
                                 }
-                                keyidparam.Value = keyid;
-                                valueparam.Value = kv.Value;
+                                if (metacomm is SqlCommand)
+                                {
+                                    metadatafields.Rows.Add(fileid, keyid, kv.Value);
+                                }
+                                else
+                                {
+                                    metafileidparam.Value = fileid;
+                                    keyidparam.Value = keyid;
+                                    valueparam.Value = kv.Value;
+                                    metacomm.ExecuteNonQuery();
+                                }
+                            }
+
+                            if ((metacomm is SqlCommand) && (metadatafields.Rows.Count > 1000))
+                            {
+                                valueparam.Value = metadatafields;
                                 metacomm.ExecuteNonQuery();
+                                metadatafields.Rows.Clear();
                             }
 
                             foreach (var image in mp.GetImageMetadata())
@@ -585,7 +625,15 @@ namespace MetadataCaching
                             }
                         }
                     }
+
+                    if ((metacomm is SqlCommand) && (metadatafields.Rows.Count != 0))
+                    {
+                        valueparam.Value = metadatafields;
+                        metacomm.ExecuteNonQuery();
+                        metadatafields.Rows.Clear();
+                    }
                 }
+
                 transaction.Commit();
             }
 
