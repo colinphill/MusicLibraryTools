@@ -726,13 +726,14 @@ namespace MetadataCaching
                 {
                     using (var comm = conn_.CreateCommand())
                     {
+                        comm.Transaction = transaction;
                         comm.CommandText = "DELETE FROM Tracks WHERE ID NOT IN (SELECT TrackID FROM Files)";
                         comm.ExecuteNonQuery();
-                        comm.CommandText = "DELETE FROM Albums WHERE ID NOT IN (SELECT AlbumID FROM Tracks)";
+                        comm.CommandText = "DELETE FROM Albums WHERE ID NOT IN (SELECT DISTINCT AlbumID FROM Tracks)";
                         comm.ExecuteNonQuery();
-                        comm.CommandText = "DELETE FROM Artists WHERE ID NOT IN (SELECT ArtistID FROM Tracks)";
+                        comm.CommandText = "DELETE FROM Artists WHERE ID NOT IN (SELECT DISTINCT ArtistID FROM Tracks)";
                         comm.ExecuteNonQuery();
-                        comm.CommandText = "DELETE FROM AlbumArtists WHERE ID NOT IN (SELECT AlbumArtistID FROM Albums)";
+                        comm.CommandText = "DELETE FROM AlbumArtists WHERE ID NOT IN (SELECT DISTINCT AlbumArtistID FROM Albums)";
                         comm.ExecuteNonQuery();
                     }
                     transaction.Commit();

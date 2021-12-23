@@ -19,7 +19,7 @@ namespace MetadataDBWork
 
             //File.Delete("cache.db");
             //using (var db = MetadataDatabase.OpenDatabase("sqlite:cache.db"))
-            using (var db = MetadataDatabase.OpenDatabase("sql:database=metadata2:server=SHIGERU:utf8=true"))
+            using (var db = MetadataDatabase.OpenDatabase("sql:database=metadata2:server=SHIGERU:utf8=false"))
             {
                 var res = db.IndexFiles(new string[] {
                     @"Z:\iTunes\HiRes\Stereo\Downloads",
@@ -34,7 +34,7 @@ namespace MetadataDBWork
                     @"Z:\iTunes\HiRes\Multi\Downloads",
                     @"Z:\iTunes\HiRes\Multi\DTS-CDs",
                     @"Z:\iTunes\HiRes\Multi\DVD-As",
-                    @"Z:\iTunes\HiRes\Multi\SACDs",
+                    //@"Z:\iTunes\HiRes\Multi\SACDs",
                     @"Z:\iTunes\AAC\Music",
                     }, true);
                 Console.WriteLine("Added:" + res.Added + " Modified:" + res.Modified + " Removed:" + res.Removed + " Unchanged:" + res.Unchanged);
