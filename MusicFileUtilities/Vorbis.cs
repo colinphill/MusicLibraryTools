@@ -205,97 +205,14 @@ namespace MusicFileUtilities
     {
 
         #region IMetadataProvider Properties
-        public string Title
-        {
-            get
-            {
-                try
-                {
-                    return this["TITLE"];
-                }
-                catch
-                {
-                    throw new NoMetadataException("Title");
-                }
-            }
-        }
-
-        public string Album
-        {
-            get
-            {
-                try
-                {
-                    return this["ALBUM"];
-                }
-                catch
-                {
-                    throw new NoMetadataException("Album");
-                }
-            }
-        }
-
-        public string Artist
-        {
-            get
-            {
-                try
-                {
-                    return this["ARTIST"];
-                }
-                catch
-                {
-                    throw new NoMetadataException("Artist");
-                }
-            }
-        }
-
-        public string AlbumArtist
-        {
-            get
-            {
-                try
-                {
-                    return this["ALBUMARTIST"];
-                }
-                catch
-                {
-                    throw new NoMetadataException("AlbumArtist");
-                }
-            }
-        }
-
-        public int TrackNumber
-        {
-            get
-            {
-                try
-                {
-                    return int.Parse(this["TRACKNUMBER"].Split('/')[0]);
-                }
-                catch
-                {
-                    throw new NoMetadataException("TrackNumber");
-                }
-            }
-        }
-
-        public bool Compilation
-        {
-            get
-            {
-                try
-                {
-                    return int.Parse(this["COMPILATION"]) != 0;
-                }
-                catch
-                {
-                    throw new NoMetadataException("Compilation");
-                }
-            }
-        }
 
         public IEnumerable<KeyValuePair<string, string>> GetTextMetadata()
+        {
+            foreach (var field in GetKnownMetadata())
+                yield return KeyValuePair.Create(field.Key.ToString(), field.Value);
+        }
+
+        public IEnumerable<KeyValuePair<TagFields, string>> GetKnownMetadata()
         {
             foreach (var kv in Comments)
                 if (VorbisUtil.TagMappings.ContainsKey(kv.Key))
@@ -304,30 +221,27 @@ namespace MusicFileUtilities
                     if (tag == TagFields.TrackNumber)
                     {
                         var s = kv.Value.Split('/');
-                        var totaltag = TagFields.TotalTracks;
-                        yield return new KeyValuePair<string, string>(tag.ToString(), s[0]);
+                        yield return KeyValuePair.Create(tag, s[0]);
                         if (s.Length > 1)
-                            yield return new KeyValuePair<string, string>(totaltag.ToString(), s[1]);
+                            yield return KeyValuePair.Create(TagFields.TotalTracks, s[1]);
                         
                     }
                     else if (tag == TagFields.DiscNumber)
                     {
                         var s = kv.Value.Split('/');
-                        var totaltag = TagFields.TotalDiscs;
-                        yield return new KeyValuePair<string, string>(tag.ToString(), s[0]);
+                        yield return KeyValuePair.Create(tag, s[0]);
                         if (s.Length > 1)
-                            yield return new KeyValuePair<string, string>(totaltag.ToString(), s[1]);
+                            yield return KeyValuePair.Create(TagFields.TotalDiscs, s[1]);
                     }
                     else if (tag == TagFields.MovementNumber)
                     {
                         var s = kv.Value.Split('/');
-                        var totaltag = TagFields.MovementTotal;
-                        yield return new KeyValuePair<string, string>(tag.ToString(), s[0]);
+                        yield return KeyValuePair.Create(tag, s[0]);
                         if (s.Length > 1)
-                            yield return new KeyValuePair<string, string>(totaltag.ToString(), s[1]);
+                            yield return KeyValuePair.Create(TagFields.MovementTotal, s[1]);
                     }
                     else
-                        yield return new KeyValuePair<string, string>(VorbisUtil.TagMappings[kv.Key].ToString(), kv.Value);
+                        yield return KeyValuePair.Create(VorbisUtil.TagMappings[kv.Key], kv.Value);
                 }
         }
 
@@ -336,6 +250,9 @@ namespace MusicFileUtilities
             foreach (var image in Artworks)
                 yield return image;
         }
+
+        public string TagType => "Vorbis";
+
         #endregion
 
         public string Vendor;

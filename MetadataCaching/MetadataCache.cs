@@ -33,7 +33,6 @@ namespace MetadataCaching
         private uint _bitspersample = 0;
         private uint _averagebitrate = 0;
         private uint _maxbitrate = 0;
-        private bool _compilation = false;
         private int _durationinseconds = 0;
         [NonSerialized]
         private string _strippedalbum = "";
@@ -41,49 +40,11 @@ namespace MetadataCaching
         public MetadataCacheEntry(IMetadataProvider mp, DateTime lastwritetime)
         {
             _lastwritetime = lastwritetime;
-
-            try
-            {
-                _title = mp.Title;
-            }
-            catch
-            {
-            }
-            try
-            {
-                _album = mp.Album;
-            }
-            catch
-            {
-            }
-            try
-            {
-                _artist = mp.Artist;
-            }
-            catch
-            {
-            }
-            try
-            {
-                _albumartist = mp.AlbumArtist;
-            }
-            catch
-            {
-            }
-            try
-            {
-                _tracknumber = mp.TrackNumber;
-            }
-            catch
-            {
-            }
-            try
-            {
-                _compilation = mp.Compilation;
-            }
-            catch
-            {
-            }
+            _title = mp.Title;
+            _album = mp.Album;
+            _artist = mp.Artist;
+            _albumartist = mp.AlbumArtist;
+            _tracknumber = mp.TrackNumber;
             ICodecProvider codec = mp as ICodecProvider;
             if (codec != null)
             {
@@ -113,9 +74,7 @@ namespace MetadataCaching
         public string AlbumArtist => _albumartist;
         public int TrackNumber => _tracknumber;
         public DateTime LastWriteTime => _lastwritetime;
-        public bool Compilation => _compilation;
         public int DurationInSeconds => _durationinseconds;
-
 
         public void Touch()
         {

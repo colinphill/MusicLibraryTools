@@ -34,27 +34,27 @@ namespace MusicFileUtilities
             Init();
         }
 
-        public delegate IEnumerable<KeyValuePair<string, string>> HandleAtom(ContainerAtom atom);
+        public delegate IEnumerable<KeyValuePair<TagFields, string>> HandleAtom(ContainerAtom atom);
 
-        private static IEnumerable<KeyValuePair<string, string>> HandleNullAtom(ContainerAtom atom)
+        private static IEnumerable<KeyValuePair<TagFields, string>> HandleNullAtom(ContainerAtom atom)
         {
             yield break;
         }
 
-        private static IEnumerable<KeyValuePair<string, string>> HandleTrackDiscAtom(ContainerAtom atom)
+        private static IEnumerable<KeyValuePair<TagFields, string>> HandleTrackDiscAtom(ContainerAtom atom)
         {
             Atom_data da = atom.FindPath("data") as Atom_data;
             if (da.IsTrackNumber)
             {
-                yield return new KeyValuePair<string, string>(TagFields.TrackNumber.ToString(), da.TrackNumber.ToString());
+                yield return KeyValuePair.Create(TagFields.TrackNumber, da.TrackNumber.ToString());
                 if (da.TotalTracks != 0)
-                    yield return new KeyValuePair<string, string>(TagFields.TotalTracks.ToString(), da.TotalTracks.ToString());
+                    yield return KeyValuePair.Create(TagFields.TotalTracks, da.TotalTracks.ToString());
             }
             if (da.IsDiscNumber)
             {
-                yield return new KeyValuePair<string, string>(TagFields.DiscNumber.ToString(), da.DiscNumber.ToString());
+                yield return KeyValuePair.Create(TagFields.DiscNumber, da.DiscNumber.ToString());
                 if (da.TotalDiscs != 0)
-                    yield return new KeyValuePair<string, string>(TagFields.TotalDiscs.ToString(), da.TotalDiscs.ToString());
+                    yield return KeyValuePair.Create(TagFields.TotalDiscs, da.TotalDiscs.ToString());
             }
         }
 
@@ -1514,103 +1514,8 @@ namespace MusicFileUtilities
 
 
 #region IMetadataProvider Properties
-        public string Title
-        {
-            get
-            {
-                try
-                {
-                    Atom_ilst atom = FindPath("moov.udta.meta.ilst") as Atom_ilst;
-                    return (atom.FindPath("©nam.data") as Atom_data).Text;
-                }
-                catch
-                {
-                    throw new NoMetadataException("Title");
-                }
-            }
-        }
 
-        public string Album
-        {
-            get
-            {
-                try
-                {
-                    Atom_ilst atom = FindPath("moov.udta.meta.ilst") as Atom_ilst;
-                    return (atom.FindPath("©alb.data") as Atom_data).Text;
-                }
-                catch
-                {
-                    throw new NoMetadataException("Album");
-                }
-            }
-        }
-
-        public string Artist
-        {
-            get
-            {
-                try
-                {
-                    Atom_ilst atom = FindPath("moov.udta.meta.ilst") as Atom_ilst;
-                    return (atom.FindPath("©ART.data") as Atom_data).Text;
-                }
-                catch
-                {
-                    throw new NoMetadataException("Artist");
-                }
-            }
-        }
-
-        public string AlbumArtist
-        {
-            get
-            {
-                try
-                {
-                    Atom_ilst atom = FindPath("moov.udta.meta.ilst") as Atom_ilst;
-                    return (atom.FindPath("aART.data") as Atom_data).Text;
-                }
-                catch
-                {
-                    throw new NoMetadataException("AlbumArtist");
-                }
-            }
-        }
-
-        public int TrackNumber
-        {
-            get
-            {
-                try
-                {
-                    Atom_ilst atom = FindPath("moov.udta.meta.ilst") as Atom_ilst;
-                    return (int)((atom.FindPath("trkn.data") as Atom_data).TrackNumber);
-                }
-                catch
-                {
-                    throw new NoMetadataException("TrackNumber");
-                }
-            }
-        }
-
-        public bool Compilation
-        {
-            get
-            {
-                try
-                {
-                    Atom_ilst atom = FindPath("moov.udta.meta.ilst") as Atom_ilst;
-                    return (atom.FindPath("cpil.data") as Atom_data).BoolValue;
-                }
-                catch
-                {
-                    throw new NoMetadataException("Compilation");
-                }
-            }
-        }
-
-        public IEnumerable<KeyValuePair<string, string>> GetTextMetadata()
+        public IEnumerable<KeyValuePair<TagFields, string>> GetKnownMetadata()
         {
             Atom_ilst ilst = FindPath("moov.udta.meta.ilst") as Atom_ilst;
             foreach (Atom atom in ilst.Children)
@@ -1618,23 +1523,23 @@ namespace MusicFileUtilities
                 ContainerAtom ca = atom as ContainerAtom;
                 if (MP4Util.TagMapping.ContainsKey(atom.Type))
                 {
-                    string key = MP4Util.TagMapping[atom.Type].ToString();
+                    var key = MP4Util.TagMapping[atom.Type];
                     foreach (Atom childatom in ca.FindMultiplePath("data"))
                     {
                         Atom_data da = childatom as Atom_data;
                         if (da.IsText)
-                            yield return new KeyValuePair<string, string>(key, da.Text);
+                            yield return KeyValuePair.Create(key, da.Text);
                         else if (da.DataType == Atom_data.DataTypes.Integer)
-                            yield return new KeyValuePair<string, string>(key, da.Uint64.ToString());
+                            yield return KeyValuePair.Create(key, da.Uint64.ToString());
                         else if (da.IsBoolean)
-                            yield return new KeyValuePair<string, string>(key, da.BoolValue ? "1" : "0");
+                            yield return KeyValuePair.Create(key, da.BoolValue ? "1" : "0");
                         else if (da.IsEnumeratedGenre)
                         {
                             foreach (var g in da.EnumeratedGenres)
-                                yield return new KeyValuePair<string, string>(key, g);
+                                yield return KeyValuePair.Create(key, g);
                         }
                         else if (da.IsRating)
-                            yield return new KeyValuePair<string, string>(key, da.Rating.ToString());
+                            yield return KeyValuePair.Create(key, da.Rating.ToString());
                     }
                 }
                 else if (MP4Util.SpecialMapping.ContainsKey(atom.Type))
@@ -1644,15 +1549,15 @@ namespace MusicFileUtilities
                 }
                 else if (atom.Type == "----")
                 {
-                    string key = (ca.FindPath("name") as StringAtom).Text;
-                    if (MP4Util.TagMapping.ContainsKey(key))
+                    string keystr = (ca.FindPath("name") as StringAtom).Text;
+                    if (MP4Util.TagMapping.ContainsKey(keystr))
                     {
-                        key = MP4Util.TagMapping[key].ToString();
+                        var key = MP4Util.TagMapping[keystr];
                         foreach (Atom childatom in (atom as ContainerAtom).FindMultiplePath("data"))
                         {
                             Atom_data da = childatom as Atom_data;
                             if (da.IsText)
-                                yield return new KeyValuePair<string, string>(key, da.Text);
+                                yield return KeyValuePair.Create(key, da.Text);
                         }
                     }
 
@@ -1660,6 +1565,12 @@ namespace MusicFileUtilities
             }
 
             yield break;
+        }
+
+        public IEnumerable<KeyValuePair<string, string>> GetTextMetadata()
+        {
+            foreach (var field in GetKnownMetadata())
+                yield return KeyValuePair.Create(field.Key.ToString(), field.Value);
         }
 
         public IEnumerable<IMetadataImage> GetImageMetadata()
@@ -1692,6 +1603,8 @@ namespace MusicFileUtilities
             }
             yield break;
         }
+
+        public string TagType => "MP4";
 
 #endregion
 

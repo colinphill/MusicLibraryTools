@@ -172,24 +172,6 @@ namespace DumpTags
             LogConsole.WriteLine();
         }
 
-        static IMetadataProvider DumpASFTags(string filename)
-        {
-            ASFFile f = new ASFFile(filename);
-
-            foreach (KeyValuePair<string, string> kv in f.TextFields)
-                LogConsole.WriteLine(kv.Key + "=" + kv.Value);
-
-            foreach (WMPicture p in f.Pictures)
-            {
-                LogConsole.WriteLine("Picture:");
-                LogConsole.WriteLine("\tType: " + p.Type.ToString());
-                LogConsole.WriteLine("\tMime-Type: " + p.MimeType);
-                LogConsole.WriteLine("\tDescription: " + p.Description);
-            }
-
-            return f;
-        }
-
         static IMetadataProvider DumpFLACTags(string filename)
         {
             FLACFile f = new FLACFile(filename);
@@ -235,10 +217,6 @@ namespace DumpTags
                     case ".mp3":
                     case ".dsf":
                         mp = DumpID3Tags(arg);
-                        break;
-
-                    case ".wma":
-                        mp = DumpASFTags(arg);
                         break;
 
                     default:

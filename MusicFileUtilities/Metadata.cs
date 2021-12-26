@@ -110,63 +110,65 @@ namespace MusicFileUtilities
 
     }
 
+    public class MetadataHelper
+    {
+
+    }
+
     public interface IMetadataProvider
     {
+
         string Title
         {
-            get;
+            get
+            {
+                return GetKnownMetadata().Where(kv => kv.Key == TagFields.Title).DefaultIfEmpty(KeyValuePair.Create(TagFields.Title, "Unknown")).FirstOrDefault().Value;
+            }
         }
+
         string Artist
         {
-            get;
+            get
+            {
+                return GetKnownMetadata().Where(kv => kv.Key == TagFields.Artist).DefaultIfEmpty(KeyValuePair.Create(TagFields.Artist, "Unknown")).FirstOrDefault().Value;
+            }
         }
+
         string AlbumArtist
         {
-            get;
+            get
+            {
+                return GetKnownMetadata().Where(kv => kv.Key == TagFields.AlbumArtist).DefaultIfEmpty(KeyValuePair.Create(TagFields.AlbumArtist, Artist)).FirstOrDefault().Value;
+            }
         }
+
         string Album
         {
-            get;
+            get
+            {
+                return GetKnownMetadata().Where(kv => kv.Key == TagFields.Album).DefaultIfEmpty(KeyValuePair.Create(TagFields.Album, "Unknown")).FirstOrDefault().Value;
+            }
         }
+
         int TrackNumber
         {
-            get;
+            get
+            {
+                return int.Parse(GetKnownMetadata().Where(kv => kv.Key == TagFields.TrackNumber).DefaultIfEmpty(KeyValuePair.Create(TagFields.TrackNumber, "0")).FirstOrDefault().Value);
+            }
         }
-        bool Compilation
+
+        string TagType
         {
             get;
         }
 
+        IEnumerable<KeyValuePair<TagFields, string>> GetKnownMetadata();
         IEnumerable<KeyValuePair<string, string>> GetTextMetadata();
         IEnumerable<IMetadataImage> GetImageMetadata();
 
     }
-
-    public interface IMetadataAlterer
-    {
-        string Title
-        {
-            set;
-        }
-        string Artist
-        {
-            set;
-        }
-        string AlbumArtist
-        {
-            set;
-        }
-        string Album
-        {
-            set;
-        }
-        int TrackNumber
-        {
-            set;
-        }
-        void Write();
-    }
-
+     
     public class Metadata
     {
         public static IMetadataProvider GetProvider(string path)
