@@ -91,8 +91,8 @@ namespace DumpTags
 
         static IMetadataProvider DumpQTTags(string filename)
         {
-            RootAtom root = new RootAtom(filename);
-            Atom_ilst ilst = root.FindPath("moov.udta.meta.ilst") as Atom_ilst;
+            MP4File file = new MP4File(filename);
+            Atom_ilst ilst = file.Root.FindPath("moov.udta.meta.ilst") as Atom_ilst;
 
             foreach (Atom a in ilst.Children)
             {
@@ -144,7 +144,7 @@ namespace DumpTags
                     LogConsole.WriteLine();
                 }
             }
-            return root;
+            return file;
         }
 
         static void DumpVorbisComments(VorbisComments vc)

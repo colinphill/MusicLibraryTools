@@ -1499,7 +1499,85 @@ namespace MusicFileUtilities
 
     }
 
-    public class RootAtom : ContainerAtom, IMetadataProvider, ICodecProvider
+    public class RootAtom : ContainerAtom
+    {
+        public RootAtom(string path)
+        {
+            ReadFile(path);
+        }
+
+        private string _associatedpath;
+
+        public string Path
+        {
+            get
+            {
+                return _associatedpath;
+            }
+        }
+
+        public void ReadFile(string path)
+        {
+            Stream s = new FileStream(path, FileMode.Open, FileAccess.Read);
+
+            while (s.Position < s.Length)
+            {
+                long pos = s.Position;
+
+                Atom a = new Atom(s, this);
+                if (MP4Util.AtomTypes.ContainsKey(a.Type))
+                {
+                    Type Atom_type = MP4Util.AtomTypes[a.Type];
+                    a = (Atom_type == typeof(Atom)) ? a : Activator.CreateInstance(Atom_type, new object[] { a, s }) as Atom;
+                }
+                else if (MP4Util.LoadData)
+                    a = new DataAtom(a, s);
+                Children.Add(a);
+
+                s.Seek(pos + a.Size, SeekOrigin.Begin);
+            }
+
+            s.Close();
+            _associatedpath = path;
+         }
+
+        public void WriteFile(string path)
+        {
+            Stream s = new FileStream(path, FileMode.Create, FileAccess.Write);
+            WriteAtom(s);
+            s.Close();
+            _associatedpath = path;
+            Untouch();
+        }
+
+        public void ModifyFile()
+        {
+            if ((Touched) || (!File.Exists(_associatedpath)))
+                throw new InvalidOperationException();
+            Stream s = new FileStream(_associatedpath, FileMode.Open, FileAccess.ReadWrite);
+            foreach (Atom a in _children)
+            {
+                bool writeatom = a.Touched || (a.DeltaSizeBefore != 0);
+                if ((!writeatom) && (a is ContainerAtom))
+                    writeatom = (a as ContainerAtom).Modified;
+                if (writeatom)
+                    a.WriteAtom(s);
+                else
+                    s.Seek(a.Size, SeekOrigin.Current);
+            }
+            s.Close();
+            Untouch();
+        }
+
+        public override void WriteAtom(Stream s)
+        {
+            foreach (Atom a in _children)
+                a.WriteAtom(s);
+        }
+
+    }
+
+    public class MP4File : TagBase, ICodecProvider
     {
         private class MP4Image : IMetadataImage
         {
@@ -1512,12 +1590,11 @@ namespace MusicFileUtilities
             public byte[] Data { get; set; }
         }
 
+ #region IMetadataProvider Properties
 
-#region IMetadataProvider Properties
-
-        public IEnumerable<KeyValuePair<TagFields, string>> GetKnownMetadata()
+        public override IEnumerable<KeyValuePair<TagFields, string>> GetKnownMetadata()
         {
-            Atom_ilst ilst = FindPath("moov.udta.meta.ilst") as Atom_ilst;
+            Atom_ilst ilst = root_.FindPath("moov.udta.meta.ilst") as Atom_ilst;
             foreach (Atom atom in ilst.Children)
             {
                 ContainerAtom ca = atom as ContainerAtom;
@@ -1567,15 +1644,15 @@ namespace MusicFileUtilities
             yield break;
         }
 
-        public IEnumerable<KeyValuePair<string, string>> GetTextMetadata()
+        public override IEnumerable<KeyValuePair<string, string>> GetTextMetadata()
         {
             foreach (var field in GetKnownMetadata())
                 yield return KeyValuePair.Create(field.Key.ToString(), field.Value);
         }
 
-        public IEnumerable<IMetadataImage> GetImageMetadata()
+        public override IEnumerable<IMetadataImage> GetImageMetadata()
         {
-            Atom_ilst ilst = FindPath("moov.udta.meta.ilst") as Atom_ilst;
+            Atom_ilst ilst = root_.FindPath("moov.udta.meta.ilst") as Atom_ilst;
             foreach (Atom atom in ilst.Children)
             {
                 ContainerAtom ca = atom as ContainerAtom;
@@ -1604,19 +1681,9 @@ namespace MusicFileUtilities
             yield break;
         }
 
-        public string TagType => "MP4";
+        public override string TagType => "MP4";
 
 #endregion
-
-        private string _associatedpath;
-
-        public string Path
-        {
-            get
-            {
-                return _associatedpath;
-            }
-        }
 
         public string CodecName
         {
@@ -1668,13 +1735,25 @@ namespace MusicFileUtilities
 
         public uint DurationInSeconds => DurationInFrames / 75;
 
-        public RootAtom()
+        private RootAtom root_;
+
+        public RootAtom Root
         {
+            get { return root_; }
+        }
+
+        public MP4File(string filename)
+        {
+            root_ = new RootAtom(filename);
+            ParseCodecInfo();
+            Atom_mvhd mvhd = root_.FindPath("moov.mvhd") as Atom_mvhd;
+            DurationInFrames = mvhd.DurationInFrames;
+            ParseStandardFields();
         }
 
         protected void ParseCodecInfo()
         {
-            ContainerAtom stsd = FindPath("moov.trak.mdia.minf.stbl.stsd") as ContainerAtom;
+            ContainerAtom stsd = root_.FindPath("moov.trak.mdia.minf.stbl.stsd") as ContainerAtom;
             if ((stsd != null)&&(stsd.Children.Count == 1))
             {
                 CodecAtom codec = stsd.Children[0] as CodecAtom;
@@ -1709,74 +1788,7 @@ namespace MusicFileUtilities
             }
         }
 
-        public RootAtom(string path)
-        {
-            ReadFile(path);
-        }
-
-        public void ReadFile(string path)
-        {
-            Stream s = new FileStream(path, FileMode.Open, FileAccess.Read);
-
-            while (s.Position < s.Length)
-            {
-                long pos = s.Position;
-
-                Atom a = new Atom(s, this);
-                if (MP4Util.AtomTypes.ContainsKey(a.Type))
-                {
-                    Type Atom_type = MP4Util.AtomTypes[a.Type];
-                    a = (Atom_type == typeof(Atom)) ? a : Activator.CreateInstance(Atom_type, new object[] { a, s }) as Atom;
-                }
-                else if (MP4Util.LoadData)
-                    a = new DataAtom(a, s);
-                Children.Add(a);
-
-                s.Seek(pos + a.Size, SeekOrigin.Begin);
-            }
-
-            s.Close();
-            _associatedpath = path;
-            ParseCodecInfo();
-
-            Atom_mvhd mvhd = FindPath("moov.mvhd") as Atom_mvhd;
-            DurationInFrames = mvhd.DurationInFrames;
-        }
-
-        public void WriteFile(string path)
-        {
-            Stream s = new FileStream(path, FileMode.Create, FileAccess.Write);
-            WriteAtom(s);
-            s.Close();
-            _associatedpath = path;
-            Untouch();
-        }
-
-        public void ModifyFile()
-        {
-            if ((Touched)||(!File.Exists(_associatedpath)))
-                throw new InvalidOperationException();
-            Stream s = new FileStream(_associatedpath, FileMode.Open, FileAccess.ReadWrite);
-            foreach (Atom a in _children)
-            {
-                bool writeatom = a.Touched || (a.DeltaSizeBefore != 0);
-                if ((!writeatom) && (a is ContainerAtom))
-                    writeatom = (a as ContainerAtom).Modified;
-                if (writeatom)
-                    a.WriteAtom(s);
-                else
-                    s.Seek(a.Size, SeekOrigin.Current);
-            }
-            s.Close();
-            Untouch();
-        }
-
-        public override void WriteAtom(Stream s)
-        {
-            foreach (Atom a in _children)
-                a.WriteAtom(s);
-        }
-
+        
      }
 
     public class FullContainerAtom : ContainerAtom

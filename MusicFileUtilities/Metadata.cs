@@ -120,42 +120,27 @@ namespace MusicFileUtilities
 
         string Title
         {
-            get
-            {
-                return GetKnownMetadata().Where(kv => kv.Key == TagFields.Title).DefaultIfEmpty(KeyValuePair.Create(TagFields.Title, "Unknown")).FirstOrDefault().Value;
-            }
+            get;
         }
 
         string Artist
         {
-            get
-            {
-                return GetKnownMetadata().Where(kv => kv.Key == TagFields.Artist).DefaultIfEmpty(KeyValuePair.Create(TagFields.Artist, "Unknown")).FirstOrDefault().Value;
-            }
+            get;
         }
 
         string AlbumArtist
         {
-            get
-            {
-                return GetKnownMetadata().Where(kv => kv.Key == TagFields.AlbumArtist).DefaultIfEmpty(KeyValuePair.Create(TagFields.AlbumArtist, Artist)).FirstOrDefault().Value;
-            }
+            get;
         }
 
         string Album
         {
-            get
-            {
-                return GetKnownMetadata().Where(kv => kv.Key == TagFields.Album).DefaultIfEmpty(KeyValuePair.Create(TagFields.Album, "Unknown")).FirstOrDefault().Value;
-            }
+            get;
         }
 
         int TrackNumber
         {
-            get
-            {
-                return int.Parse(GetKnownMetadata().Where(kv => kv.Key == TagFields.TrackNumber).DefaultIfEmpty(KeyValuePair.Create(TagFields.TrackNumber, "0")).FirstOrDefault().Value);
-            }
+            get;
         }
 
         string TagType
@@ -167,6 +152,52 @@ namespace MusicFileUtilities
         IEnumerable<KeyValuePair<string, string>> GetTextMetadata();
         IEnumerable<IMetadataImage> GetImageMetadata();
 
+    }
+
+    public abstract class TagBase : IMetadataProvider
+    {
+        public string Title { get; protected set; } = "";
+        public string Artist { get; protected set; } = "";
+        public string AlbumArtist { get; protected set; } = "";
+        public string Album { get; protected set; } = "";
+        public int TrackNumber { get; protected set; } = 0;
+
+        protected void ParseStandardFields()
+        {
+            int tn = 0;
+            foreach (var kv in GetKnownMetadata().Reverse())
+            {
+                switch (kv.Key)
+                {
+                    case TagFields.Title:
+                        Title = kv.Value;
+                        break;
+                    case TagFields.Artist:
+                        Artist = kv.Value;
+                        if (string.IsNullOrEmpty(AlbumArtist))
+                            AlbumArtist = kv.Value;
+                        break;
+                    case TagFields.AlbumArtist:
+                        AlbumArtist = kv.Value;
+                        break;
+                    case TagFields.Album:
+                        Album = kv.Value;
+                        break;
+                    case TagFields.TrackNumber:
+                        if (!int.TryParse(kv.Value, out tn))
+                            tn = 0;
+                        TrackNumber = tn;
+                        break;
+                    default:
+                        break;
+                }    
+            }
+        }
+
+        public abstract string TagType { get; }
+        public abstract IEnumerable<KeyValuePair<TagFields,string>> GetKnownMetadata();
+        public abstract IEnumerable<KeyValuePair<string,string>> GetTextMetadata();
+        public abstract IEnumerable<IMetadataImage> GetImageMetadata();
     }
      
     public class Metadata
@@ -188,7 +219,7 @@ namespace MusicFileUtilities
                 case ".mp4":
                 case ".m4p":
                 case ".m4r":
-                    return new RootAtom(path);
+                    return new MP4File(path);
 
                 case ".ogg":
                     return new OggVorbisFile(path);

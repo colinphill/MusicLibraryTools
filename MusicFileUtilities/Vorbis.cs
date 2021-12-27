@@ -201,18 +201,18 @@ namespace MusicFileUtilities
     }
 
     [Serializable]
-    public class VorbisComments : IMetadataProvider
+    public class VorbisComments : TagBase
     {
 
         #region IMetadataProvider Properties
 
-        public IEnumerable<KeyValuePair<string, string>> GetTextMetadata()
+        public override IEnumerable<KeyValuePair<string, string>> GetTextMetadata()
         {
             foreach (var field in GetKnownMetadata())
                 yield return KeyValuePair.Create(field.Key.ToString(), field.Value);
         }
 
-        public IEnumerable<KeyValuePair<TagFields, string>> GetKnownMetadata()
+        public override IEnumerable<KeyValuePair<TagFields, string>> GetKnownMetadata()
         {
             foreach (var kv in Comments)
                 if (VorbisUtil.TagMappings.ContainsKey(kv.Key))
@@ -245,13 +245,13 @@ namespace MusicFileUtilities
                 }
         }
 
-        public IEnumerable<IMetadataImage> GetImageMetadata()
+        public override IEnumerable<IMetadataImage> GetImageMetadata()
         {
             foreach (var image in Artworks)
                 yield return image;
         }
 
-        public string TagType => "Vorbis";
+        public override string TagType => "Vorbis";
 
         #endregion
 
@@ -355,6 +355,7 @@ namespace MusicFileUtilities
 
                 offset += commentlength;
             }
+            ParseStandardFields();
         }
 
         public VorbisComments(byte [] b)

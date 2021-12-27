@@ -1098,7 +1098,7 @@ namespace MusicFileUtilities
 
     }
 
-    public class ID3v2Tag : IMetadataProvider
+    public class ID3v2Tag : TagBase
     {
 
         private int _headerversion = 0;
@@ -1114,7 +1114,7 @@ namespace MusicFileUtilities
             }
         }
 
-        public string TagType
+        public override string TagType
         {
             get
             {
@@ -1143,7 +1143,7 @@ namespace MusicFileUtilities
 
         #region IMetadataProvider Properties
 
-        public IEnumerable<KeyValuePair<TagFields, string>> GetKnownMetadata()
+        public override IEnumerable<KeyValuePair<TagFields, string>> GetKnownMetadata()
         {
             foreach (var mapping in (Version == 2) ? ID3v2Util.ActionMappingsv22 : ID3v2Util.ActionMappingsv23v24)
             {
@@ -1161,13 +1161,13 @@ namespace MusicFileUtilities
             }
         }
 
-        public IEnumerable<KeyValuePair<string, string>> GetTextMetadata()
+        public override IEnumerable<KeyValuePair<string, string>> GetTextMetadata()
         {
             foreach (var field in GetKnownMetadata())
                 yield return KeyValuePair.Create(field.Key.ToString(), field.Value);
         }
 
-        public IEnumerable<IMetadataImage> GetImageMetadata()
+        public override IEnumerable<IMetadataImage> GetImageMetadata()
         {
             foreach (var frame in _frames)
                 if (frame is PictureFrame)
@@ -1402,6 +1402,7 @@ namespace MusicFileUtilities
             }
             if (doclose)
                 r.Close();
+            ParseStandardFields();
         }
 
         public ID3v2Tag()
