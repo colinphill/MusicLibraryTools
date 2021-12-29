@@ -181,8 +181,6 @@ namespace MusicFileUtilities
                         break;
                     case TagFields.Artist:
                         Artist = kv.Value;
-                        if (string.IsNullOrEmpty(AlbumArtist))
-                            AlbumArtist = kv.Value;
                         break;
                     case TagFields.AlbumArtist:
                         AlbumArtist = kv.Value;
@@ -199,6 +197,8 @@ namespace MusicFileUtilities
                         break;
                 }    
             }
+            if (string.IsNullOrEmpty(AlbumArtist))
+                AlbumArtist = Artist;
         }
 
         public abstract string TagType { get; }

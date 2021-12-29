@@ -515,7 +515,7 @@ namespace MetadataCaching
                     metadatafields.Columns.Add("Value", typeof(string));
 
                     delcomm.CommandText = "DELETE FROM Metadata WHERE FileID = @ID;\r\n" +
-                        "DELETE FROM Images WHERE FileID = @ID;\r\n" +
+                        "DELETE FROM ImageMetadata WHERE FileID = @ID;\r\n" +
                         "DELETE FROM Files WHERE ID = @ID";
                     delcomm.Parameters.Clear();
                     var delidparam = delcomm.Parameters.Add("@ID", System.Data.DbType.Int64);
