@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.IO;
+using System.Security.Cryptography;
 
 namespace MusicFileUtilities
 {
@@ -108,6 +108,13 @@ namespace MusicFileUtilities
             get;
         }
 
+        string Hash
+        {
+            get;
+        }
+
+        void HashImage(HashAlgorithm hash);
+
     }
 
     public class MetadataHelper
@@ -202,37 +209,48 @@ namespace MusicFileUtilities
      
     public class Metadata
     {
-        public static IMetadataProvider GetProvider(string path)
+        public static IMetadataProvider GetProvider(string path, HashAlgorithm hash = null)
         {
             string extension = Path.GetExtension(path).ToLower();
             if (!File.Exists(path))
                 throw new FileNotFoundException("File Not Found", path);
+
+            IMetadataProvider provider = null;
             switch (extension)
             {
                 case ".mp3":
-                    return new MP3File(path);
+                    provider = new MP3File(path);
+                    break;
 
                 case ".dsf":
-                    return new DSFFile(path);
+                    provider = new DSFFile(path);
+                    break;
 
                 case ".m4a":
                 case ".mp4":
                 case ".m4p":
                 case ".m4r":
-                    return new MP4File(path);
+                    provider = new MP4File(path);
+                    break;
 
                 case ".ogg":
-                    return new OggVorbisFile(path);
+                    provider = new OggVorbisFile(path);
+                    break;
 
                 case ".flac":
-                    return new FLACFile(path);
+                    provider = new FLACFile(path);
+                    break;
 
                 default:
                     throw new ArgumentException("Invalid File Type", "path");
             }
 
-        }
+            if (hash != null)
+                foreach (var image in provider.GetImageMetadata())
+                    image.HashImage(hash);
 
+            return provider;
+        }
     }
 
 }

@@ -126,6 +126,17 @@ namespace MusicFileUtilities
         int IMetadataImage.Size => Data.Length;
         byte[] IMetadataImage.Data => Data;
 
+        public string Hash
+        {
+            get;
+            protected set;
+        }
+
+        public void HashImage(System.Security.Cryptography.HashAlgorithm hash)
+        {
+            Hash = Convert.ToBase64String(hash.ComputeHash(Data));
+        }
+
         public byte[] ToByteArray()
         {
             List<byte> l = new List<byte>();

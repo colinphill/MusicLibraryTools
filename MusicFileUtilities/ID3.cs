@@ -1096,6 +1096,17 @@ namespace MusicFileUtilities
             }
         }
 
+        public string Hash
+        {
+            get;
+            protected set;
+        }
+
+        public void HashImage(System.Security.Cryptography.HashAlgorithm hash)
+        {
+            Hash = Convert.ToBase64String(hash.ComputeHash(Data));
+        }
+
     }
 
     public class ID3v2Tag : TagBase

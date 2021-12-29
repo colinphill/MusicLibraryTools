@@ -14,6 +14,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.Diagnostics.Tracing;
+using System.Security.Cryptography;
 
 namespace MusicFileUtilities
 {
@@ -629,7 +630,7 @@ namespace MusicFileUtilities
         }
     }
 
-    public class Atom_data : DataAtom
+    public class Atom_data : DataAtom, IMetadataImage
     {
 
         public enum DataTypes : uint
@@ -1113,6 +1114,31 @@ namespace MusicFileUtilities
         public int ImageWidth => _imagewidth;
         public int ImageHeight => _imageheight;
 
+        string IMetadataImage.Description => "";
+
+        string IMetadataImage.Category => MP4Util.ImageMapping[_parent.Type].ToString();
+
+        string IMetadataImage.ImageType => ImageToMimeType();
+
+        int IMetadataImage.Width => _imagewidth;
+
+        int IMetadataImage.Height => _imageheight;
+
+        int IMetadataImage.Size => _imagedata.Length;
+
+        byte[] IMetadataImage.Data => _imagedata;
+
+        public string Hash
+        {
+            get;
+            protected set;
+        }
+
+        void IMetadataImage.HashImage(HashAlgorithm hash)
+        {
+            Hash = Convert.ToBase64String(hash.ComputeHash(Data));
+        }
+
         public void LoadImage(string path)
         {
             FileInfo fi = new FileInfo(path);
@@ -1579,18 +1605,8 @@ namespace MusicFileUtilities
 
     public class MP4File : TagBase, ICodecProvider
     {
-        private class MP4Image : IMetadataImage
-        {
-            public string Description { get; set; }
-            public string Category { get; set; }
-            public string ImageType { get; set; }
-            public int Width { get; set; }
-            public int Height { get; set; }
-            public int Size { get; set; }
-            public byte[] Data { get; set; }
-        }
-
- #region IMetadataProvider Properties
+  
+        #region IMetadataProvider Properties
 
         public override IEnumerable<KeyValuePair<TagFields, string>> GetKnownMetadata()
         {
@@ -1663,18 +1679,7 @@ namespace MusicFileUtilities
                     {
                         Atom_data da = childatom as Atom_data;
                         if (da.IsImage)
-                        {
-                            yield return new MP4Image()
-                            {
-                                Category = mapping.ToString(),
-                                Description = "",
-                                ImageType = da.ImageToMimeType(),
-                                Width = da.ImageWidth,
-                                Height = da.ImageHeight,
-                                Size = da.ImageData.Length,
-                                Data = da.ImageData
-                            };
-                        }
+                            yield return da;
                     }
                 }
             }

@@ -10,6 +10,7 @@ using System.Threading;
 using System.Data.Common;
 using System.Data.SqlClient;
 using System.Data;
+using System.Security.Cryptography;
 
 namespace MetadataCaching
 {
@@ -97,14 +98,15 @@ namespace MetadataCaching
             "CREATE TABLE Albums (ID INTEGER PRIMARY KEY, ScanSetID BIGINT REFERENCES ScanSets (ID) NOT NULL, AlbumArtistID BIGINT NOT NULL REFERENCES AlbumArtists (ID), Name TEXT NOT NULL, Path TEXT NOT NULL);\r\n" +
             "CREATE TABLE Tracks (ID INTEGER PRIMARY KEY, ArtistID BIGINT REFERENCES Artists (ID) NOT NULL, AlbumID BIGINT REFERENCES Albums (ID) NOT NULL, Number BIGINT NOT NULL, Name TEXT NOT NULL);\r\n" +
             "CREATE TABLE Files (ID INTEGER PRIMARY KEY, ScanSetID BIGINT REFERENCES ScanSets (ID) NOT NULL, Path TEXT NOT NULL, FileSize BIGINT NOT NULL, LastWriteTime DATETIME NOT NULL, TrackID BIGINT REFERENCES Tracks (ID), CodecName TEXT NOT NULL, CodecType TEXT NOT NULL, AverageBitrate BIGINT NOT NULL, MaxBitrate BIGINT NOT NULL, BitsPerSample BIGINT NOT NULL, SampleRate BIGINT NOT NULL, Channels BIGINT NOT NULL, DurationInFrames BIGINT NOT NULL, TagType TEXT NOT NULL, UNIQUE(ScanSetID, Path));\r\n" +
-            "CREATE TABLE Images (ID INTEGER PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, Description TEXT NOT NULL, Category TEXT NOT NULL, ImageType TEXT NOT NULL, Width BIGINT NOT NULL, Height BIGINT NOT NULL, Size BIGINT NOT NULL, Data BLOB NOT NULL);\r\n" +
+            "CREATE TABLE Images (ID INTEGER PRIMARY KEY, Hash TEXT NOT NULL, ImageType TEXT NOT NULL, Width BIGINT NOT NULL, Height BIGINT NOT NULL, Size BIGINT NOT NULL, Data BLOB NOT NULL);\r\n" +
+            "CREATE TABLE ImageMetadata (ID INTEGER PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, ImageID BIGINT REFERENCES Images (ID), Description TEXT NOT NULL, Category TEXT NOT NULL);\r\n" +
             "CREATE TABLE MetadataKeys (ID INTEGER PRIMARY KEY, \"Key\" TEXT UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE Metadata (ID INTEGER PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, KeyID BIGINT REFERENCES MetadataKeys (ID) NOT NULL, Value TEXT NOT NULL);\r\n" +
             "CREATE INDEX AlbumsAlbumArtistIDIndex ON Albums (AlbumArtistID ASC);\r\n" +
             "CREATE INDEX AlbumsScanSetIDIndex ON Albums (ScanSetID ASC);\r\n" +
             "CREATE INDEX FilesScanSetIDIndex ON Files (ScanSetID ASC);\r\n" +
             "CREATE INDEX FilesTrackIDIndex ON Files (TrackID ASC);\r\n" +
-            "CREATE INDEX ImagesFileIDIndex ON Images (FileID ASC);\r\n" +
+            "CREATE INDEX ImageMetadataFileIDIndex ON ImageMetadata (FileID ASC);\r\n" +
             "CREATE INDEX MetadataKeyIDIndex ON Metadata (KeyID ASC);\r\n" +
             "CREATE INDEX MetadataFileIDIndex ON Metadata (FileID ASC);\r\n" +
             "CREATE INDEX TracksAlbumIDIndex ON Tracks (AlbumID ASC);\r\n" +
@@ -123,14 +125,15 @@ namespace MetadataCaching
             "CREATE TABLE Albums (ID BIGINT IDENTITY PRIMARY KEY, ScanSetID BIGINT REFERENCES ScanSets (ID) NOT NULL, AlbumArtistID BIGINT NOT NULL REFERENCES AlbumArtists (ID), Name NVARCHAR(MAX) NOT NULL, Path NVARCHAR(MAX) NOT NULL);\r\n" +
             "CREATE TABLE Tracks (ID BIGINT IDENTITY PRIMARY KEY, ArtistID BIGINT REFERENCES Artists (ID) NOT NULL, AlbumID BIGINT REFERENCES Albums (ID) NOT NULL, Number BIGINT NOT NULL, Name NVARCHAR(MAX) NOT NULL);\r\n" +
             "CREATE TABLE Files (ID BIGINT IDENTITY PRIMARY KEY, ScanSetID BIGINT REFERENCES ScanSets (ID) NOT NULL, Path NVARCHAR(512) NOT NULL, FileSize BIGINT NOT NULL, LastWriteTime DATETIME NOT NULL, TrackID BIGINT REFERENCES Tracks (ID), CodecName NVARCHAR(MAX) NOT NULL, CodecType NVARCHAR(MAX) NOT NULL, AverageBitrate BIGINT NOT NULL, MaxBitrate BIGINT NOT NULL, BitsPerSample BIGINT NOT NULL, SampleRate BIGINT NOT NULL, Channels BIGINT NOT NULL, DurationInFrames BIGINT NOT NULL, TagType NVARCHAR(64) NOT NULL, UNIQUE(ScanSetID, Path));\r\n" +
-            "CREATE TABLE Images (ID BIGINT IDENTITY PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, Description NVARCHAR(MAX) NOT NULL, Category NVARCHAR(MAX) NOT NULL, ImageType NVARCHAR(MAX) NOT NULL, Width BIGINT NOT NULL, Height BIGINT NOT NULL, Size BIGINT NOT NULL, Data VARBINARY(MAX) NOT NULL);\r\n" +
+            "CREATE TABLE Images (ID BIGINT IDENTITY PRIMARY KEY, Hash VARCHAR(64), ImageType NVARCHAR(MAX) NOT NULL, Width BIGINT NOT NULL, Height BIGINT NOT NULL, Size BIGINT NOT NULL, Data VARBINARY(MAX) NOT NULL);\r\n" +
             "CREATE TABLE MetadataKeys (ID BIGINT IDENTITY PRIMARY KEY, \"Key\" NVARCHAR(512) UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE Metadata (ID BIGINT IDENTITY PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, KeyID BIGINT REFERENCES MetadataKeys (ID) NOT NULL, Value NVARCHAR(MAX) NOT NULL);\r\n" +
+            "CREATE TABLE ImageMetadata (ID BIGINT IDENTITY PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, ImageID BIGINT REFERENCES Images (ID) NOT NULL, Description NVARCHAR(MAX) NOT NULL, Category NVARCHAR(MAX) NOT NULL);\r\n" +
             "CREATE INDEX AlbumsAlbumArtistIDIndex ON Albums (AlbumArtistID ASC);\r\n" +
             "CREATE INDEX AlbumsScanSetIDIndex ON Albums (ScanSetID ASC);\r\n" +
             "CREATE INDEX FilesScanSetIDIndex ON Files (ScanSetID ASC);\r\n" +
             "CREATE INDEX FilesTrackIDIndex ON Files (TrackID ASC);\r\n" +
-            "CREATE INDEX ImagesFileIDIndex ON Images (FileID ASC);\r\n" +
+            "CREATE INDEX ImageMetadataFileIDIndex ON ImageMetadata (FileID ASC);\r\n" +
             "CREATE INDEX MetadataKeyIDIndex ON Metadata (KeyID ASC);\r\n" +
             "CREATE INDEX MetadataFileIDIndex ON Metadata (FileID ASC);\r\n" +
             "CREATE INDEX TracksAlbumIDIndex ON Tracks (AlbumID ASC);\r\n" +
@@ -391,7 +394,7 @@ namespace MetadataCaching
 
             var filesdict = new ConcurrentDictionary<(long ScanSetID, string Path), (long ID, long Length, DateTime LastWriteTime)>();
             var fileshitdict = new ConcurrentDictionary<(long ScanSetID, string Path), bool>();
-            Dictionary<string, long> metadatakeysdict, artistsdict, albumartistsdict;
+            Dictionary<string, long> metadatakeysdict, artistsdict, albumartistsdict, imagesdict;
             Dictionary<(long ScanSetID, long AlbumArtistID, string Path, string Name), long> albumsdict;
 
             using (var querycomm = conn_.CreateCommand())
@@ -416,6 +419,9 @@ namespace MetadataCaching
                 querycomm.CommandText = "SELECT ID, ScanSetID, AlbumArtistID, Path, Name FROM Albums";
                 using (var reader = querycomm.ExecuteReader())
                     albumsdict = reader.Cast<IDataRecord>().ToDictionary(r => (r.GetInt64(1), r.GetInt64(2), r.GetString(3), r.GetString(4)), r => r.GetInt64(0));
+                querycomm.CommandText = "SELECT ID, Hash FROM Images";
+                using (var reader = querycomm.ExecuteReader())
+                    imagesdict = reader.Cast<IDataRecord>().ToDictionary(r => r.GetString(1), r => r.GetInt64(0));
             }
 
             var metadatareadtask = Task.Run(() =>
@@ -425,8 +431,9 @@ namespace MetadataCaching
                    DirectoryInfo di = new DirectoryInfo(scanpath.Path);
                    long scanset = scanpath.ID;
                    var files = di.EnumerateFiles("*", SearchOption.AllDirectories).AsParallel().Where(fsi => MetadataExtensions.ValidExtensions.Contains(Path.GetExtension(fsi.FullName).ToLower()) && ((fsi.Attributes & FileAttributes.Directory) == 0)).ToArray();
+                    var poptions = new ParallelOptions();
 
-                   Parallel.ForEach(files, (fi) =>
+                   Parallel.ForEach(files, poptions, () => { return SHA256.Create(); }, (fi, loopstate, hash) =>
                    {
                        var relativename = fi.FullName.Substring(scanpath.Path.Length + 1);
                        var key = (scanset, relativename);
@@ -453,8 +460,9 @@ namespace MetadataCaching
                            Interlocked.Increment(ref added);
                        }
                        if (scan)
-                           filequeue.Add((id, scanpath.ID, relativename, fi.Length, fi.LastWriteTimeUtc, Metadata.GetProvider(fi.FullName)));
-                   });
+                           filequeue.Add((id, scanpath.ID, relativename, fi.Length, fi.LastWriteTimeUtc, Metadata.GetProvider(fi.FullName, hash)));
+                       return hash;
+                   }, (hash) => { hash.Dispose(); });
 
                    foreach (var file in fileshitdict.Where(kv => (kv.Key.ScanSetID == scanset) && !kv.Value).Select(kv => kv.Key))
                    {
@@ -470,7 +478,7 @@ namespace MetadataCaching
             {
                 using (DbCommand delcomm = conn_.CreateCommand(), filecomm = conn_.CreateCommand(), metacomm = conn_.CreateCommand(), imagecomm = conn_.CreateCommand(),
                     keycomm = conn_.CreateCommand(), artistcomm = conn_.CreateCommand(), albumartistcomm = conn_.CreateCommand(), albumcomm = conn_.CreateCommand(),
-                    trackcomm = conn_.CreateCommand())
+                    trackcomm = conn_.CreateCommand(), imagemetacomm = conn_.CreateCommand())
                 {
                     delcomm.Transaction = transaction;
                     filecomm.Transaction = transaction;
@@ -481,6 +489,7 @@ namespace MetadataCaching
                     albumartistcomm.Transaction = transaction;
                     albumcomm.Transaction = transaction;
                     trackcomm.Transaction = transaction;
+                    imagemetacomm.Transaction = transaction;
 
                     artistcomm.CommandText = "INSERT INTO Artists (Name) VALUES (@Name);\r\n" + lastidsql_;
                     var artistparam = artistcomm.Parameters.Add("@Name", DbType.String);
@@ -546,10 +555,14 @@ namespace MetadataCaching
                     keycomm.CommandText = "INSERT INTO MetadataKeys (\"Key\") VALUES (@Key);\r\n" + lastidsql_;
                     var keyparam = keycomm.Parameters.Add("@Key", System.Data.DbType.String);
 
-                    imagecomm.CommandText = "INSERT INTO Images (FileID, Description, Category, ImageType, Width, Height, Size, Data) VALUES (@FileID, @Description, @Category, @ImageType, @Width, @Height, @Size, @Data)";
-                    var imagefileidparam = imagecomm.Parameters.Add("@FileID", System.Data.DbType.Int64);
-                    var descriptionparam = imagecomm.Parameters.Add("@Description", System.Data.DbType.String);
-                    var categoryparam = imagecomm.Parameters.Add("@Category", System.Data.DbType.String);
+                    imagemetacomm.CommandText = "INSERT INTO ImageMetadata (FileID, ImageID, Description, Category) VALUES (@FileID, @ImageID, @Description, @Category)";
+                    var imagefileidparam = imagemetacomm.Parameters.Add("@FileID", System.Data.DbType.Int64);
+                    var imageidparam = imagemetacomm.Parameters.Add("@ImageID", System.Data.DbType.Int64);
+                    var descriptionparam = imagemetacomm.Parameters.Add("@Description", System.Data.DbType.String);
+                    var categoryparam = imagemetacomm.Parameters.Add("@Category", System.Data.DbType.String);
+
+                    imagecomm.CommandText = "INSERT INTO Images (Hash, ImageType, Width, Height, Size, Data) VALUES (@Hash, @ImageType, @Width, @Height, @Size, @Data);\r\n" + lastidsql_;
+                    var imagehashparam = imagecomm.Parameters.Add("@Hash", System.Data.DbType.String);
                     var imagetypeparam = imagecomm.Parameters.Add("@ImageType", System.Data.DbType.String);
                     var widthparam = imagecomm.Parameters.Add("@Width", System.Data.DbType.Int64);
                     var heightparam = imagecomm.Parameters.Add("@Height", System.Data.DbType.Int64);
@@ -559,7 +572,7 @@ namespace MetadataCaching
                     foreach (var file in filequeue.GetConsumingEnumerable())
                     {
                         long fileid, artistid, albumid, albumartistid, trackid;
-                        if (file.ID != -1)
+                         if (file.ID != -1)
                         {
                             delidparam.Value = file.ID;
                             delcomm.ExecuteNonQuery();
@@ -651,14 +664,22 @@ namespace MetadataCaching
 
                             foreach (var image in mp.GetImageMetadata())
                             {
+                                string hash = image.Hash;
+                                long imageid;
+                                if (!imagesdict.TryGetValue(hash, out imageid))
+                                {
+                                    imagehashparam.Value = hash;
+                                    imagetypeparam.Value = image.ImageType;
+                                    widthparam.Value = image.Width;
+                                    heightparam.Value = image.Height;
+                                    sizeparam.Value = image.Size;
+                                    dataparam.Value = image.Data;
+                                    imagesdict.Add(hash, imageid = (long)imagecomm.ExecuteScalar());
+                                }
+                                imageidparam.Value = imageid;
                                 descriptionparam.Value = image.Description;
                                 categoryparam.Value = image.Category;
-                                imagetypeparam.Value = image.ImageType;
-                                widthparam.Value = image.Width;
-                                heightparam.Value = image.Height;
-                                sizeparam.Value = image.Size;
-                                dataparam.Value = image.Data;
-                                imagecomm.ExecuteNonQuery();
+                                imagemetacomm.ExecuteNonQuery();
                             }
                         }
                     }
@@ -735,6 +756,8 @@ namespace MetadataCaching
                         comm.CommandText = "DELETE FROM AlbumArtists WHERE ID NOT IN (SELECT DISTINCT AlbumArtistID FROM Albums)";
                         comm.ExecuteNonQuery();
                         comm.CommandText = "DELETE FROM MetadataKeys WHERE ID NOT IN (SELECT DISTINCT KeyID FROM Metadata)";
+                        comm.ExecuteNonQuery();
+                        comm.CommandText = "DELETE FROM Images WHERE ID NOT IN (SELECT DISTINCT ImageID FROM ImageMetadata)";
                         comm.ExecuteNonQuery();
                     }
                     transaction.Commit();
