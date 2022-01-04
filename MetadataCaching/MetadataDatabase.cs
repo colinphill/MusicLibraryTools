@@ -40,17 +40,22 @@ namespace MetadataCaching
     internal static class DbHelpers
     {
 
+        public static DbCommand CreateCommand(this DbTransaction trans)
+        {
+            var res = trans.Connection.CreateCommand();
+            res.Transaction = trans;
+            return res;
+        }
+
         public static DbParameter Add(this DbParameterCollection coll, string name, System.Data.DbType dbtype, System.Data.ParameterDirection dir = System.Data.ParameterDirection.Input, string typename = null)
         {
-            var litecoll = coll as SQLiteParameterCollection;
-            if (litecoll != null)
+            if (coll is SQLiteParameterCollection litecoll)
             {
                 var parm = litecoll.Add(name, dbtype);
                 parm.Direction = dir;
                 return parm;
             }
-            var sqlcoll = coll as SqlParameterCollection;
-            if (sqlcoll != null)
+            if (coll is SqlParameterCollection sqlcoll)
             {
                 SqlParameter parm = new SqlParameter();
                 parm.ParameterName = name;
@@ -427,21 +432,20 @@ namespace MetadataCaching
                    DirectoryInfo di = new DirectoryInfo(scanpath.Path);
                    long scanset = scanpath.ID;
                    var files = di.EnumerateFiles("*", SearchOption.AllDirectories).AsParallel().Where(fsi => MetadataExtensions.ValidExtensions.Contains(Path.GetExtension(fsi.FullName).ToLower()) && ((fsi.Attributes & FileAttributes.Directory) == 0)).ToArray();
-                    var poptions = new ParallelOptions();
-
-                   Parallel.ForEach(files, poptions, () => { return SHA256.Create(); }, (fi, loopstate, hash) =>
+ 
+                   Parallel.ForEach(files, new ParallelOptions(), () => { return SHA256.Create(); }, (fi, loopstate, hash) =>
                    {
                        var relativename = fi.FullName.Substring(scanpath.Path.Length + 1);
-                       var key = (scanset, relativename);
-                       bool scan = false;
+                       var key = (SetID: scanset, RelativeName: relativename);
+                       var scan = false;
                        long id = -1;
                        if (filesdict.ContainsKey(key))
                        {
                            fileshitdict[key] = true;
                            var file = filesdict[key];
-                           if ((fi.LastWriteTimeUtc.AddMilliseconds(-500.0) > file.Item3) || (fi.Length != file.Item2))
+                           if ((fi.LastWriteTimeUtc.AddMilliseconds(-500.0) > file.LastWriteTime) || (fi.Length != file.Length))
                            {
-                               id = file.Item1;
+                               id = file.ID;
                                Interlocked.Increment(ref modified);
                                scan = true;
                            }
@@ -462,7 +466,7 @@ namespace MetadataCaching
 
                    foreach (var file in fileshitdict.Where(kv => (kv.Key.ScanSetID == scanset) && !kv.Value).Select(kv => kv.Key))
                    {
-                       filequeue.Add((filesdict[file].Item1, scanpath.ID, null, 0, DateTime.MinValue, null));
+                       filequeue.Add((filesdict[file].ID, scanpath.ID, null, 0, DateTime.MinValue, null));
                        removed++;
                    }
 
@@ -470,23 +474,12 @@ namespace MetadataCaching
                 filequeue.CompleteAdding();
             });
 
-            using (var transaction = conn_.BeginTransaction())
+            using (var trans = conn_.BeginTransaction())
             {
-                using (DbCommand delcomm = conn_.CreateCommand(), filecomm = conn_.CreateCommand(), metacomm = conn_.CreateCommand(), imagecomm = conn_.CreateCommand(),
-                    keycomm = conn_.CreateCommand(), artistcomm = conn_.CreateCommand(), albumartistcomm = conn_.CreateCommand(), albumcomm = conn_.CreateCommand(),
-                    trackcomm = conn_.CreateCommand(), imagemetacomm = conn_.CreateCommand())
+                using (DbCommand delcomm = trans.CreateCommand(), filecomm = trans.CreateCommand(), metacomm = trans.CreateCommand(), imagecomm = trans.CreateCommand(),
+                    keycomm = trans.CreateCommand(), artistcomm = trans.CreateCommand(), albumartistcomm = trans.CreateCommand(), albumcomm = trans.CreateCommand(),
+                    trackcomm = trans.CreateCommand(), imagemetacomm = trans.CreateCommand())
                 {
-                    delcomm.Transaction = transaction;
-                    filecomm.Transaction = transaction;
-                    metacomm.Transaction = transaction;
-                    imagecomm.Transaction = transaction;
-                    keycomm.Transaction = transaction;
-                    artistcomm.Transaction = transaction;
-                    albumartistcomm.Transaction = transaction;
-                    albumcomm.Transaction = transaction;
-                    trackcomm.Transaction = transaction;
-                    imagemetacomm.Transaction = transaction;
-
                     artistcomm.CommandText = "INSERT INTO Artists (Name) VALUES (@Name);\r\n" + lastidsql_;
                     var artistparam = artistcomm.Parameters.Add("@Name", DbType.String);
 
@@ -506,7 +499,7 @@ namespace MetadataCaching
                     var tracknameparam = trackcomm.Parameters.Add("@Name", DbType.String);
                     var trackidparam = trackcomm.Parameters.Add("@ID", System.Data.DbType.Int64);
 
-                    using DataTable metadatafields = new DataTable();
+                    using var metadatafields = new DataTable();
                     metadatafields.Columns.Add("FileID", typeof(long));
                     metadatafields.Columns.Add("KeyID", typeof(long));
                     metadatafields.Columns.Add("Value", typeof(string));
@@ -568,115 +561,114 @@ namespace MetadataCaching
 
                     foreach (var file in filequeue.GetConsumingEnumerable())
                     {
-                        long fileid, artistid, albumid, albumartistid;
                         if (file.ID != -1)
                         {
                             delidparam.Value = file.ID;
                             delcomm.ExecuteNonQuery();
                         }
 
-                        if (file.Metadata != null)
+                        if (file.Metadata is null)
+                            continue;
+
+                        long fileid;
+
+                        var mp = file.Metadata;
+                        var cp = mp as ICodecProvider;
+
+                        var artist = mp.Artist;
+                        var albumartist = mp.AlbumArtist;
+                        var album = mp.Album;
+                        var title = mp.Title;
+                        var track = mp.TrackNumber;
+
+                        if (!artistsdict.TryGetValue(artist, out var artistid))
                         {
-                            IMetadataProvider mp = file.Metadata;
-                            ICodecProvider cp = mp as ICodecProvider;
+                            artistparam.Value = artist;
+                            artistsdict.Add(artist, artistid = (long)artistcomm.ExecuteScalar());
+                        }
 
-                            string artist = mp.Artist;
-                            string albumartist = mp.AlbumArtist;
-                            string album = mp.Album;
-                            string title = mp.Title;
-                            int track = mp.TrackNumber;
+                        if (!albumartistsdict.TryGetValue(albumartist, out var albumartistid))
+                        {
+                            albumartistparam.Value = albumartist;
+                            albumartistsdict.Add(albumartist, albumartistid = (long)albumartistcomm.ExecuteScalar());
+                        }
 
-                            if (!artistsdict.TryGetValue(artist, out artistid))
+                        var albumkey = (SetID: file.Set, AlbumArtistID: albumartistid, DirectorPath : Path.GetDirectoryName(file.FileName), Album : album);
+                        if (!albumsdict.TryGetValue(albumkey, out var albumid))
+                        {
+                            albumscansetidparam.Value = albumkey.SetID;
+                            albumartistidparam.Value = albumkey.AlbumArtistID;
+                            albumpathparam.Value = albumkey.DirectorPath;
+                            albumnameparam.Value = albumkey.Album;
+                            albumsdict.Add(albumkey, albumid = (long)albumcomm.ExecuteScalar());
+                        }
+
+                        trackalbumidparam.Value = albumid;
+                        trackartistidparam.Value = artistid;
+                        tracknumberparam.Value = track;
+                        tracknameparam.Value = title;
+
+                        pathparam.Value = Path.GetFileName(file.FileName);
+                        filesizeparam.Value = file.Length;
+                        lastwritetimeparam.Value = file.LastWriteTime;
+                        codecnameparam.Value = cp.CodecName;
+                        codectypeparam.Value = cp.CodecType.ToString();
+                        averagebitrateparam.Value = cp.AverageBitrate;
+                        maxbitrateparam.Value = cp.MaxBitrate;
+                        bitspersampleparam.Value = cp.BitsPerSample;
+                        samplerateparam.Value = cp.Samplerate;
+                        channelsparam.Value = cp.Channels;
+                        durationinframesparam.Value = cp.DurationInFrames;
+                        tagtypeparam.Value = mp.TagType;
+
+                        trackidparam.Value = imagefileidparam.Value = fileid = (long)filecomm.ExecuteScalar();
+                        trackcomm.ExecuteNonQuery();
+
+                        foreach (var kv in mp.GetTextMetadata())
+                        {
+                            if (!metadatakeysdict.TryGetValue(kv.Key, out var keyid))
                             {
-                                artistparam.Value = artist;
-                                artistsdict.Add(artist, artistid = (long)artistcomm.ExecuteScalar());
+                                keyparam.Value = kv.Key;
+                                keyid = (long)keycomm.ExecuteScalar();
+                                metadatakeysdict.Add(kv.Key, keyid);
                             }
-
-                            if (!albumartistsdict.TryGetValue(albumartist, out albumartistid))
+                            if (metacomm is SqlCommand)
                             {
-                                albumartistparam.Value = albumartist;
-                                albumartistsdict.Add(albumartist, albumartistid = (long)albumartistcomm.ExecuteScalar());
+                                metadatafields.Rows.Add(fileid, keyid, kv.Value);
                             }
-
-                            var albumkey = (file.Set, albumartistid, Path.GetDirectoryName(file.FileName), album);
-                            if (!albumsdict.TryGetValue(albumkey, out albumid))
+                            else
                             {
-                                albumscansetidparam.Value = albumkey.Item1;
-                                albumartistidparam.Value = albumkey.Item2;
-                                albumpathparam.Value = albumkey.Item3;
-                                albumnameparam.Value = albumkey.Item4;
-                                albumsdict.Add(albumkey, albumid = (long)albumcomm.ExecuteScalar());
-                            }
-
-                            trackalbumidparam.Value = albumid;
-                            trackartistidparam.Value = artistid;
-                            tracknumberparam.Value = track;
-                            tracknameparam.Value = title;
-
-                            pathparam.Value = Path.GetFileName(file.FileName);
-                            filesizeparam.Value = file.Length;
-                            lastwritetimeparam.Value = file.LastWriteTime;
-                            codecnameparam.Value = cp.CodecName;
-                            codectypeparam.Value = cp.CodecType.ToString();
-                            averagebitrateparam.Value = cp.AverageBitrate;
-                            maxbitrateparam.Value = cp.MaxBitrate;
-                            bitspersampleparam.Value = cp.BitsPerSample;
-                            samplerateparam.Value = cp.Samplerate;
-                            channelsparam.Value = cp.Channels;
-                            durationinframesparam.Value = cp.DurationInFrames;
-                            tagtypeparam.Value = mp.TagType;
-
-                            trackidparam.Value = imagefileidparam.Value = fileid = (long)filecomm.ExecuteScalar();
-                            trackcomm.ExecuteNonQuery();
-
-                            foreach (var kv in mp.GetTextMetadata())
-                            {
-                                long keyid;
-                                if (!metadatakeysdict.TryGetValue(kv.Key, out keyid))
-                                {
-                                    keyparam.Value = kv.Key;
-                                    keyid = (long)keycomm.ExecuteScalar();
-                                    metadatakeysdict.Add(kv.Key, keyid);
-                                }
-                                if (metacomm is SqlCommand)
-                                {
-                                    metadatafields.Rows.Add(fileid, keyid, kv.Value);
-                                }
-                                else
-                                {
-                                    metafileidparam.Value = fileid;
-                                    keyidparam.Value = keyid;
-                                    valueparam.Value = kv.Value;
-                                    metacomm.ExecuteNonQuery();
-                                }
-                            }
-
-                            if ((metacomm is SqlCommand) && (metadatafields.Rows.Count > 1000))
-                            {
-                                valueparam.Value = metadatafields;
+                                metafileidparam.Value = fileid;
+                                keyidparam.Value = keyid;
+                                valueparam.Value = kv.Value;
                                 metacomm.ExecuteNonQuery();
-                                metadatafields.Rows.Clear();
                             }
+                        }
 
-                            foreach (var image in mp.GetImageMetadata())
+                        if ((metacomm is SqlCommand) && (metadatafields.Rows.Count > 1000))
+                        {
+                            valueparam.Value = metadatafields;
+                            metacomm.ExecuteNonQuery();
+                            metadatafields.Rows.Clear();
+                        }
+
+                        foreach (var image in mp.GetImageMetadata())
+                        {
+                            string hash = image.Hash;
+                            if (!imagesdict.TryGetValue(hash, out var imageid))
                             {
-                                string hash = image.Hash;
-                                long imageid;
-                                if (!imagesdict.TryGetValue(hash, out imageid))
-                                {
-                                    imagehashparam.Value = hash;
-                                    imagetypeparam.Value = image.ImageType;
-                                    widthparam.Value = image.Width;
-                                    heightparam.Value = image.Height;
-                                    sizeparam.Value = image.Size;
-                                    dataparam.Value = image.Data;
-                                    imagesdict.Add(hash, imageid = (long)imagecomm.ExecuteScalar());
-                                }
-                                imageidparam.Value = imageid;
-                                descriptionparam.Value = image.Description;
-                                categoryparam.Value = image.Category;
-                                imagemetacomm.ExecuteNonQuery();
+                                imagehashparam.Value = hash;
+                                imagetypeparam.Value = image.ImageType;
+                                widthparam.Value = image.Width;
+                                heightparam.Value = image.Height;
+                                sizeparam.Value = image.Size;
+                                dataparam.Value = image.Data;
+                                imagesdict.Add(hash, imageid = (long)imagecomm.ExecuteScalar());
                             }
+                            imageidparam.Value = imageid;
+                            descriptionparam.Value = image.Description;
+                            categoryparam.Value = image.Category;
+                            imagemetacomm.ExecuteNonQuery();
                         }
                     }
 
@@ -688,17 +680,17 @@ namespace MetadataCaching
                     }
                 }
 
-                transaction.Commit();
+                trans.Commit();
             }
 
             await metadatareadtask;
 
             if (deletemissingsets && (missedsets.Count != 0))
             {
-                using (var transaction = conn_.BeginTransaction())
+                using (var trans = conn_.BeginTransaction())
                 {
-                    using (DbCommand setcomm = conn_.CreateCommand(), albumcomm = conn_.CreateCommand(), metacomm = conn_.CreateCommand(),
-                        imagecomm = conn_.CreateCommand(), trackscomm = conn_.CreateCommand(), filecomm = conn_.CreateCommand())
+                    using (DbCommand setcomm = trans.CreateCommand(), albumcomm = trans.CreateCommand(), metacomm = trans.CreateCommand(),
+                        imagecomm = trans.CreateCommand(), trackscomm = trans.CreateCommand(), filecomm = trans.CreateCommand())
                     {
                         setcomm.CommandText = "DELETE FROM ScanSets WHERE ID = @ID";
                         var idparam = setcomm.Parameters.Add("@ID", System.Data.DbType.Int64);
@@ -714,13 +706,6 @@ namespace MetadataCaching
                         var albumidparam = albumcomm.Parameters.Add("@ID", System.Data.DbType.Int64);
                         metacomm.CommandTimeout = imagecomm.CommandTimeout = 0;
 
-                        setcomm.Transaction = transaction;
-                        filecomm.Transaction = transaction;
-                        trackscomm.Transaction = transaction;
-                        metacomm.Transaction = transaction;
-                        imagecomm.Transaction = transaction;
-                        albumcomm.Transaction = transaction;
-
                         foreach (var set in missedsets)
                         {
                             idparam.Value = filesidparam.Value = tracksidparam.Value = metaidparam.Value = albumidparam.Value = imageidparam.Value = set;
@@ -732,17 +717,16 @@ namespace MetadataCaching
                             setcomm.ExecuteNonQuery();
                         }
                     }
-                    transaction.Commit();
+                    trans.Commit();
                 }
             }
 
             if ((modified != 0) || (removed != 0))
             {
-                using (var transaction = conn_.BeginTransaction())
+                using (var trans = conn_.BeginTransaction())
                 {
-                    using (var comm = conn_.CreateCommand())
+                    using (var comm = trans.CreateCommand())
                     {
-                        comm.Transaction = transaction;
                         comm.CommandText = "DELETE FROM Albums WHERE ID NOT IN (SELECT DISTINCT AlbumID FROM Tracks)";
                         comm.ExecuteNonQuery();
                         comm.CommandText = "DELETE FROM Artists WHERE ID NOT IN (SELECT DISTINCT ArtistID FROM Tracks)";
@@ -754,7 +738,7 @@ namespace MetadataCaching
                         comm.CommandText = "DELETE FROM Images WHERE ID NOT IN (SELECT DISTINCT ImageID FROM ImageMetadata)";
                         comm.ExecuteNonQuery();
                     }
-                    transaction.Commit();
+                    trans.Commit();
                 }
             }
 
