@@ -4,7 +4,6 @@ using System.Text;
 using System.Collections.Generic;
 using MetadataCaching;
 using System.Threading.Tasks;
-using System.Data.SQLite;
 using System.Linq;
 
 namespace MetadataDBWork
@@ -18,8 +17,8 @@ namespace MetadataDBWork
             Console.WriteLine("Indexing...");
 
             //File.Delete("cache.db");
-            //using (var db = MetadataDatabase.OpenDatabase("sqlite:cache.db"))
-            using (var db = MetadataDatabase.OpenDatabase("sql:database=metadata:server=SHIGERU:utf8=true"))
+            using (var db = MetadataDatabase.OpenDatabase("sqlite:cache3.db"))
+            //using (var db = MetadataDatabase.OpenDatabase("sql:database=metadata:server=SHIGERU:utf8=true"))
             //using (var db = MetadataDatabase.OpenDatabase("sql:database=metadata2:server=(localdb)\\metadata2"))
             {
                 var res = db.IndexFiles(new string[] {
@@ -38,7 +37,7 @@ namespace MetadataDBWork
                     @"Z:\iTunes\HiRes\Multi\SACDs",
                     @"Z:\iTunes\AAC\Music",
                     }, true);
-                Console.WriteLine("Added:" + res.Added + " Modified:" + res.Modified + " Removed:" + res.Removed + " Unchanged:" + res.Unchanged);
+                Console.WriteLine($"Added:{res.Added} Modified:{res.Modified} Removed:{res.Removed} Unchanged:{res.Unchanged}");
 
                 var cache = db.BuildCache(new string[] {
                     @"Z:\iTunes\HiRes\Stereo\Downloads",
