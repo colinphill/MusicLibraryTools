@@ -1923,25 +1923,33 @@ namespace MusicFileUtilities
     {
         public uint MaxBitrate
         {
-            get
-            {
-                return Uint32At(22);
-            }
+            get;
+            private set;
         }
 
 
         public uint AverageBitrate
         {
-            get
-            {
-                return Uint32At(26);
-            }
+            get;
+            private set;
         }
 
         public Atom_mp4a_esds(Atom a, Stream s)
             : base(a, s)
         {
-
+            MaxBitrate = AverageBitrate = 0;
+            int offset = 4;
+            if (_data[offset++] != 3)
+                return;
+            while ((_data[offset] == 0x80) || (_data[offset] == 0x81) || (_data[offset] == 0xfe))
+                offset++;
+            offset += 4;
+            if (_data[offset++] != 4)
+                return;
+            while ((_data[offset] == 0x80) || (_data[offset] == 0x81) || (_data[offset] == 0xfe))
+                offset++;
+            MaxBitrate = Uint32At(offset + 6);
+            AverageBitrate = Uint32At(offset + 10);
         }
 
     }
