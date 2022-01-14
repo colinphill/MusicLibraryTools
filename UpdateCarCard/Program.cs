@@ -848,7 +848,7 @@ namespace UpdateCarCard
 
             LogConsole.WriteLine("Indexing Files...");
 
-            MetadataDatabase db = new MetadataDatabase(config.DatabaseFile); // TBD Dispose
+            using MetadataDatabase db = MetadataDatabase.OpenDatabase(config.DatabaseFile); // TBD Dispose
             db.IndexFiles(config.IndexLocations.Select(l => l.Target));
             var cache = db.BuildCache(config.IndexLocations.Select(l => l.Target));
 

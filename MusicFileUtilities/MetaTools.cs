@@ -12,7 +12,9 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace MusicFileUtilities
 {
@@ -267,38 +269,74 @@ namespace MusicFileUtilities
         }
 #endif
 
-        public static void CleanEmptyMusicFolders(DirectoryInfo di, bool deletenonmusic = false)
+        /*       public static void CleanEmptyMusicFolders(DirectoryInfo di, bool deletenonmusic = false)
+               {
+                   var results = di.EnumerateFileSystemInfos("*", SearchOption.AllDirectories);
+                   var hitpaths = results.Where(r => r is DirectoryInfo).ToDictionary(r => r.FullName, r => false);
+
+                   foreach (var fi in results.Where(fi => fi is FileInfo))
+                   {
+                       var kept = false;
+                       if (ValidExtensions.Contains(Path.GetExtension(fi.FullName).ToLower()))
+                           kept = true;
+                       else if (deletenonmusic)
+                           fi.Delete();
+                       else
+                           kept = true;
+                       if (kept)
+                           hitpaths[Path.GetDirectoryName(fi.FullName)] = true;
+                   }
+
+                   foreach (var path in hitpaths.Where(kv => kv.Value).Select(kv => kv.Key).ToArray())
+                   {
+                       var tpath = Path.GetDirectoryName(path);
+                       while (hitpaths.ContainsKey(tpath))
+                       {
+                           hitpaths[tpath] = true;
+                           tpath = Path.GetDirectoryName(tpath);
+                       }
+                   }
+
+                   foreach (var path in hitpaths.Where(kv => !kv.Value).Select(kv => kv.Key).OrderByDescending(p => p))
+                       Directory.Delete(path);
+               }*/
+
+        public static void CleanEmptyMusicFolders(DirectoryInfo dirinfo, bool deletenonmusic = false)
         {
-            var results = di.EnumerateFileSystemInfos("*", SearchOption.AllDirectories);
-            var hitpaths = results.Where(r => r is DirectoryInfo).ToDictionary(r => r.FullName, r => false);
+            var results = dirinfo.EnumerateFileSystemInfos("*", SearchOption.AllDirectories);
+            var hitpaths = new ConcurrentDictionary<string, bool>();
 
-            foreach (var fi in results.Where(fi => fi is FileInfo))
+            Parallel.ForEach(results, (fsi) =>
             {
-                var kept = false;
-                if (ValidExtensions.Contains(Path.GetExtension(fi.FullName).ToLower()))
-                    kept = true;
-                else if (deletenonmusic)
-                    fi.Delete();
-                else
-                    kept = true;
-                if (kept)
-                    hitpaths[Path.GetDirectoryName(fi.FullName)] = true;
-            }
-
-            foreach (var path in hitpaths.Where(kv => kv.Value).Select(kv => kv.Key).ToArray())
-            {
-                var tpath = Path.GetDirectoryName(path);
-                while (hitpaths.ContainsKey(tpath))
+                if (fsi is FileInfo fi)
                 {
-                    hitpaths[tpath] = true;
-                    tpath = Path.GetDirectoryName(tpath);
+                    if (ValidExtensions.Contains(fi.Extension.ToLower()) || (!deletenonmusic))
+                        hitpaths[Path.GetDirectoryName(fi.FullName)] = true;
+                    else if (deletenonmusic)
+                        fi.Delete();
+                }
+                if (fsi is DirectoryInfo di)
+                    hitpaths.TryAdd(di.FullName, false);
+            });
+
+            var hitkeys = hitpaths.Where(kv => kv.Value).Select(kv => kv.Key);
+            var hitdict = new Dictionary<string, bool>(hitpaths);
+            foreach (var key in hitkeys)
+            {
+                var path = Path.GetDirectoryName(key);
+                while (path != dirinfo.FullName)
+                {
+                    hitdict[path] = true;
+                    path = Path.GetDirectoryName(path);
                 }
             }
 
-            foreach (var path in hitpaths.Where(kv => !kv.Value).Select(kv => kv.Key).OrderByDescending(p => p))
+            var missedpaths = hitdict.Where(kv => !kv.Value).Select(kv => kv.Key).OrderByDescending(p => p);
+
+            foreach (var path in missedpaths)
                 Directory.Delete(path);
         }
 
-    }
+   }
 
 }

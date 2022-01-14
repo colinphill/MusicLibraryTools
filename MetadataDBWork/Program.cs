@@ -4,7 +4,6 @@ using System.Text;
 using System.Collections.Generic;
 using MetadataCaching;
 using System.Threading.Tasks;
-using System.Data.SQLite;
 using System.Linq;
 
 namespace MetadataDBWork
@@ -17,9 +16,12 @@ namespace MetadataDBWork
 
             Console.WriteLine("Indexing...");
 
-            using (var db = new MetadataDatabase("cache.db"))
+            //File.Delete("cache.db");
+            using (var db = MetadataDatabase.OpenDatabase("sqlite:cache3.db"))
+            //using (var db = MetadataDatabase.OpenDatabase("sql:database=metadata:server=SHIGERU:utf8=true"))
+            //using (var db = MetadataDatabase.OpenDatabase("sql:database=metadata2:server=(localdb)\\metadata2"))
             {
-                var res = db.IndexFiles(new string [] { 
+                var res = db.IndexFiles(new string[] {
                     @"Z:\iTunes\HiRes\Stereo\Downloads",
                     @"Z:\iTunes\HiRes\Stereo\DVD-As",
                     @"Z:\iTunes\HiRes\Stereo\DVD-Vs",
@@ -34,10 +36,10 @@ namespace MetadataDBWork
                     @"Z:\iTunes\HiRes\Multi\DVD-As",
                     @"Z:\iTunes\HiRes\Multi\SACDs",
                     @"Z:\iTunes\AAC\Music",
-                    }, true, true);
-                Console.WriteLine("Added:" + res.Added + " Modified:" + res.Modified + " Removed:" + res.Removed + " Unchanged:" + res.Unchanged);
+                    }, true);
+                Console.WriteLine($"Added:{res.Added} Modified:{res.Modified} Removed:{res.Removed} Unchanged:{res.Unchanged}");
 
-                var cache = db.BuildCache(new string [] {
+                var cache = db.BuildCache(new string[] {
                     @"Z:\iTunes\HiRes\Stereo\Downloads",
                     @"Z:\iTunes\HiRes\Stereo\DVD-As",
                     @"Z:\iTunes\HiRes\Stereo\DVD-Vs",
@@ -52,7 +54,7 @@ namespace MetadataDBWork
                     @"Z:\iTunes\HiRes\Multi\DVD-As",
                     @"Z:\iTunes\HiRes\Multi\SACDs",
                     @"Z:\iTunes\AAC\Music", });
-                Console.WriteLine();
+                 Console.WriteLine();
             }
 
             Console.WriteLine(DateTime.Now);

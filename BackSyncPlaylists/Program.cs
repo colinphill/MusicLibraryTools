@@ -143,29 +143,10 @@ namespace BackSyncPlaylists
                     try
                     {
                         Console.WriteLine(plfile);
-                        VorbisComments tags = null;
-                        if (Path.GetExtension(plfile).ToLower() == ".flac")
-                        {
-                            FLACFile f = new FLACFile(plfile);
-                            tags = f;
-                        }
-                        else if (Path.GetExtension(plfile).ToLower() == ".ogg")
-                        {
-                            OggVorbisFile f = new OggVorbisFile(plfile);
-                            tags = f;
-                        }
-                        else if (Path.GetExtension(plfile).ToLower() == ".m4a")
-                        {
-                            tags = ReadM4AMetadata(plfile);
-                        }
-                        else if (Path.GetExtension(plfile).ToLower() == ".mp3")
-                        {
-                            tags = ReadID3Metadata(plfile);
-                        }
-                        else
-                            throw new InvalidDataException();
 
-                        KeyValuePair<int, iTunesTrack>[] tracks = lib.Tracks.Where(kv => (kv.Value.Title.ToLower() == tags.Title.ToLower()) && (kv.Value.Album.ToLower() == tags.Album.ToLower()) && ((kv.Value.Artist.ToLower() == tags.Artist.ToLower()) || (kv.Value.Artist.ToLower() == tags.AlbumArtist.ToLower())) && ((kv.Value.TrackNumber == tags.TrackNumber) || (tags.TrackNumber == 0))).ToArray();
+                        var mp = Metadata.GetProvider(plfile);
+
+                        KeyValuePair<int, iTunesTrack>[] tracks = lib.Tracks.Where(kv => (kv.Value.Title.ToLower() == mp.Title.ToLower()) && (kv.Value.Album.ToLower() == mp.Album.ToLower()) && ((kv.Value.Artist.ToLower() == mp.Artist.ToLower()) || (kv.Value.Artist.ToLower() == mp.AlbumArtist.ToLower())) && ((kv.Value.TrackNumber == mp.TrackNumber) || (mp.TrackNumber == 0))).ToArray();
                         if (tracks.Length != 1)
                         {
                             Console.WriteLine();
@@ -184,8 +165,6 @@ namespace BackSyncPlaylists
                                 Console.WriteLine();
                             //libplaylist.AddFile(tracks[0].Value.LocalLocation);
                         }
-
-
 
                         Console.WriteLine();
                     }

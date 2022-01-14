@@ -1096,9 +1096,20 @@ namespace MusicFileUtilities
             }
         }
 
+        public string Hash
+        {
+            get;
+            protected set;
+        }
+
+        public void HashImage(System.Security.Cryptography.HashAlgorithm hash)
+        {
+            Hash = Convert.ToBase64String(hash.ComputeHash(Data));
+        }
+
     }
 
-    public class ID3v2Tag : IMetadataProvider
+    public class ID3v2Tag : TagBase
     {
 
         private int _headerversion = 0;
@@ -1111,6 +1122,14 @@ namespace MusicFileUtilities
             get
             {
                 return _frames;
+            }
+        }
+
+        public override string TagType
+        {
+            get
+            {
+                return "ID3v2" + _headerversion.ToString();
             }
         }
 
@@ -1134,97 +1153,8 @@ namespace MusicFileUtilities
         }
 
         #region IMetadataProvider Properties
-        public string Title
-        {
-            get
-            {
-                try
-                {
-                    return (FindFrame("TIT2") as TextFrame).Text;
-                }
-                catch
-                {
-                    throw new NoMetadataException("Title");
-                }
-            }
-        }
 
-        public string Album
-        {
-            get
-            {
-                try
-                {
-                    return (FindFrame("TALB") as TextFrame).Text;
-                }
-                catch
-                {
-                    throw new NoMetadataException("Album");
-                }
-            }
-        }
-
-        public string Artist
-        {
-            get
-            {
-                try
-                {
-                    return (FindFrame("TPE1") as TextFrame).Text;
-                }
-                catch
-                {
-                    throw new NoMetadataException("Artist");
-                }
-            }
-        }
-
-        public string AlbumArtist
-        {
-            get
-            {
-                try
-                {
-                    return (FindFrame("TPE2") as TextFrame).Text;
-                }
-                catch
-                {
-                    throw new NoMetadataException("AlbumArtist");
-                }
-            }
-        }
-
-        public int TrackNumber
-        {
-            get
-            {
-                try
-                {
-                    return int.Parse((FindFrame("TRCK") as TextFrame).Text.Split("/".ToCharArray())[0]);
-                }
-                catch
-                {
-                    throw new NoMetadataException("TrackNumber");
-                }
-            }
-        }
-
-        public bool Compilation
-        {
-            get
-            {
-                try
-                {
-                    return int.Parse((FindFrame("TCMP") as TextFrame).Text) != 0;
-                }
-                catch
-                {
-                    throw new NoMetadataException("Compilation");
-                }
-            }
-        }
-
-        public IEnumerable<KeyValuePair<string, string>> GetTextMetadata()
+        public override IEnumerable<KeyValuePair<TagFields, string>> GetKnownMetadata()
         {
             foreach (var mapping in (Version == 2) ? ID3v2Util.ActionMappingsv22 : ID3v2Util.ActionMappingsv23v24)
             {
@@ -1238,50 +1168,17 @@ namespace MusicFileUtilities
                     // No value
                 }
                 foreach (var v in values)
-                    yield return new KeyValuePair<string, string>(mapping.Key.ToString(), v.ToString());
+                    yield return KeyValuePair.Create(mapping.Key, v.ToString());
             }
-            /*foreach (var frame in Frames)
-            {
-                if (frame is UserStringFrame)
-                {
-                    UserStringFrame usf = frame as UserStringFrame;
-                    if (ID3v2Util.TagMappings.ContainsKey(usf.Key))
-                        yield return new KeyValuePair<string, string>(ID3v2Util.TagMappings[usf.Key].ToString(), usf.Value);
-                }
-                /*else if (frame is CommentFrame)
-                {
-                    CommentFrame cf = frame as CommentFrame;
-                    if (cf.Key == "iTunNORM")
-                        yield return new KeyValuePair<string, string>(cf.Key, cf.Value);
-                    yield return new KeyValuePair<string, string>("COMMENT", cf.Key + " - " + cf.Value);
-                }*/
-            /*  else //if (frame is TextFrame)
-              {
-                  if (ID3v2Util.SpecialMappings.ContainsKey(frame.FrameID))
-                  {
-                      foreach (var kv in ID3v2Util.SpecialMappings[frame.FrameID](frame) )
-                          yield return kv;
-                  } 
-                  else if (ID3v2Util.SpecialMappings.ContainsKey(ID3v2Util.GetNewID3v2Mapping(frame.FrameID)))
-                  {
-                      foreach (var kv in ID3v2Util.SpecialMappings[ID3v2Util.GetNewID3v2Mapping(frame.FrameID)](frame))
-                          yield return kv;
-                  }
-                  else if (frame is TextFrame)
-                  {
-                      TextFrame tf = frame as TextFrame;
-                      if (ID3v2Util.TagMappings.ContainsKey(tf.FrameID))
-                          yield return new KeyValuePair<string, string>(ID3v2Util.TagMappings[tf.FrameID].ToString(), tf.Text);
-                      string newmapping = ID3v2Util.GetNewID3v2Mapping(tf.FrameID);
-                      if (ID3v2Util.TagMappings.ContainsKey(newmapping))
-                          yield return new KeyValuePair<string, string>(ID3v2Util.TagMappings[newmapping].ToString(), tf.Text);
-
-                  }
-              }
-          }*/
         }
 
-        public IEnumerable<IMetadataImage> GetImageMetadata()
+        public override IEnumerable<KeyValuePair<string, string>> GetTextMetadata()
+        {
+            foreach (var field in GetKnownMetadata())
+                yield return KeyValuePair.Create(field.Key.ToString(), field.Value);
+        }
+
+        public override IEnumerable<IMetadataImage> GetImageMetadata()
         {
             foreach (var frame in _frames)
                 if (frame is PictureFrame)
@@ -1516,6 +1413,7 @@ namespace MusicFileUtilities
             }
             if (doclose)
                 r.Close();
+            ParseStandardFields();
         }
 
         public ID3v2Tag()

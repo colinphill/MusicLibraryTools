@@ -14,6 +14,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.Diagnostics.Tracing;
+using System.Security.Cryptography;
 
 namespace MusicFileUtilities
 {
@@ -34,27 +35,27 @@ namespace MusicFileUtilities
             Init();
         }
 
-        public delegate IEnumerable<KeyValuePair<string, string>> HandleAtom(ContainerAtom atom);
+        public delegate IEnumerable<KeyValuePair<TagFields, string>> HandleAtom(ContainerAtom atom);
 
-        private static IEnumerable<KeyValuePair<string, string>> HandleNullAtom(ContainerAtom atom)
+        private static IEnumerable<KeyValuePair<TagFields, string>> HandleNullAtom(ContainerAtom atom)
         {
             yield break;
         }
 
-        private static IEnumerable<KeyValuePair<string, string>> HandleTrackDiscAtom(ContainerAtom atom)
+        private static IEnumerable<KeyValuePair<TagFields, string>> HandleTrackDiscAtom(ContainerAtom atom)
         {
             Atom_data da = atom.FindPath("data") as Atom_data;
             if (da.IsTrackNumber)
             {
-                yield return new KeyValuePair<string, string>(TagFields.TrackNumber.ToString(), da.TrackNumber.ToString());
+                yield return KeyValuePair.Create(TagFields.TrackNumber, da.TrackNumber.ToString());
                 if (da.TotalTracks != 0)
-                    yield return new KeyValuePair<string, string>(TagFields.TotalTracks.ToString(), da.TotalTracks.ToString());
+                    yield return KeyValuePair.Create(TagFields.TotalTracks, da.TotalTracks.ToString());
             }
             if (da.IsDiscNumber)
             {
-                yield return new KeyValuePair<string, string>(TagFields.DiscNumber.ToString(), da.DiscNumber.ToString());
+                yield return KeyValuePair.Create(TagFields.DiscNumber, da.DiscNumber.ToString());
                 if (da.TotalDiscs != 0)
-                    yield return new KeyValuePair<string, string>(TagFields.TotalDiscs.ToString(), da.TotalDiscs.ToString());
+                    yield return KeyValuePair.Create(TagFields.TotalDiscs, da.TotalDiscs.ToString());
             }
         }
 
@@ -629,7 +630,7 @@ namespace MusicFileUtilities
         }
     }
 
-    public class Atom_data : DataAtom
+    public class Atom_data : DataAtom, IMetadataImage
     {
 
         public enum DataTypes : uint
@@ -1113,6 +1114,31 @@ namespace MusicFileUtilities
         public int ImageWidth => _imagewidth;
         public int ImageHeight => _imageheight;
 
+        string IMetadataImage.Description => "";
+
+        string IMetadataImage.Category => MP4Util.ImageMapping[_parent.Type].ToString();
+
+        string IMetadataImage.ImageType => ImageToMimeType();
+
+        int IMetadataImage.Width => _imagewidth;
+
+        int IMetadataImage.Height => _imageheight;
+
+        int IMetadataImage.Size => _imagedata.Length;
+
+        byte[] IMetadataImage.Data => _imagedata;
+
+        public string Hash
+        {
+            get;
+            protected set;
+        }
+
+        void IMetadataImage.HashImage(HashAlgorithm hash)
+        {
+            Hash = Convert.ToBase64String(hash.ComputeHash(Data));
+        }
+
         public void LoadImage(string path)
         {
             FileInfo fi = new FileInfo(path);
@@ -1499,201 +1525,12 @@ namespace MusicFileUtilities
 
     }
 
-    public class RootAtom : ContainerAtom, IMetadataProvider, ICodecProvider
+    public class RootAtom : ContainerAtom
     {
-        private class MP4Image : IMetadataImage
+        public RootAtom(string path)
         {
-            public string Description { get; set; }
-            public string Category { get; set; }
-            public string ImageType { get; set; }
-            public int Width { get; set; }
-            public int Height { get; set; }
-            public int Size { get; set; }
-            public byte[] Data { get; set; }
+            ReadFile(path);
         }
-
-
-#region IMetadataProvider Properties
-        public string Title
-        {
-            get
-            {
-                try
-                {
-                    Atom_ilst atom = FindPath("moov.udta.meta.ilst") as Atom_ilst;
-                    return (atom.FindPath("©nam.data") as Atom_data).Text;
-                }
-                catch
-                {
-                    throw new NoMetadataException("Title");
-                }
-            }
-        }
-
-        public string Album
-        {
-            get
-            {
-                try
-                {
-                    Atom_ilst atom = FindPath("moov.udta.meta.ilst") as Atom_ilst;
-                    return (atom.FindPath("©alb.data") as Atom_data).Text;
-                }
-                catch
-                {
-                    throw new NoMetadataException("Album");
-                }
-            }
-        }
-
-        public string Artist
-        {
-            get
-            {
-                try
-                {
-                    Atom_ilst atom = FindPath("moov.udta.meta.ilst") as Atom_ilst;
-                    return (atom.FindPath("©ART.data") as Atom_data).Text;
-                }
-                catch
-                {
-                    throw new NoMetadataException("Artist");
-                }
-            }
-        }
-
-        public string AlbumArtist
-        {
-            get
-            {
-                try
-                {
-                    Atom_ilst atom = FindPath("moov.udta.meta.ilst") as Atom_ilst;
-                    return (atom.FindPath("aART.data") as Atom_data).Text;
-                }
-                catch
-                {
-                    throw new NoMetadataException("AlbumArtist");
-                }
-            }
-        }
-
-        public int TrackNumber
-        {
-            get
-            {
-                try
-                {
-                    Atom_ilst atom = FindPath("moov.udta.meta.ilst") as Atom_ilst;
-                    return (int)((atom.FindPath("trkn.data") as Atom_data).TrackNumber);
-                }
-                catch
-                {
-                    throw new NoMetadataException("TrackNumber");
-                }
-            }
-        }
-
-        public bool Compilation
-        {
-            get
-            {
-                try
-                {
-                    Atom_ilst atom = FindPath("moov.udta.meta.ilst") as Atom_ilst;
-                    return (atom.FindPath("cpil.data") as Atom_data).BoolValue;
-                }
-                catch
-                {
-                    throw new NoMetadataException("Compilation");
-                }
-            }
-        }
-
-        public IEnumerable<KeyValuePair<string, string>> GetTextMetadata()
-        {
-            Atom_ilst ilst = FindPath("moov.udta.meta.ilst") as Atom_ilst;
-            foreach (Atom atom in ilst.Children)
-            {
-                ContainerAtom ca = atom as ContainerAtom;
-                if (MP4Util.TagMapping.ContainsKey(atom.Type))
-                {
-                    string key = MP4Util.TagMapping[atom.Type].ToString();
-                    foreach (Atom childatom in ca.FindMultiplePath("data"))
-                    {
-                        Atom_data da = childatom as Atom_data;
-                        if (da.IsText)
-                            yield return new KeyValuePair<string, string>(key, da.Text);
-                        else if (da.DataType == Atom_data.DataTypes.Integer)
-                            yield return new KeyValuePair<string, string>(key, da.Uint64.ToString());
-                        else if (da.IsBoolean)
-                            yield return new KeyValuePair<string, string>(key, da.BoolValue ? "1" : "0");
-                        else if (da.IsEnumeratedGenre)
-                        {
-                            foreach (var g in da.EnumeratedGenres)
-                                yield return new KeyValuePair<string, string>(key, g);
-                        }
-                        else if (da.IsRating)
-                            yield return new KeyValuePair<string, string>(key, da.Rating.ToString());
-                    }
-                }
-                else if (MP4Util.SpecialMapping.ContainsKey(atom.Type))
-                {
-                    foreach (var kv in MP4Util.SpecialMapping[atom.Type](ca))
-                        yield return kv;
-                }
-                else if (atom.Type == "----")
-                {
-                    string key = (ca.FindPath("name") as StringAtom).Text;
-                    if (MP4Util.TagMapping.ContainsKey(key))
-                    {
-                        key = MP4Util.TagMapping[key].ToString();
-                        foreach (Atom childatom in (atom as ContainerAtom).FindMultiplePath("data"))
-                        {
-                            Atom_data da = childatom as Atom_data;
-                            if (da.IsText)
-                                yield return new KeyValuePair<string, string>(key, da.Text);
-                        }
-                    }
-
-                }
-            }
-
-            yield break;
-        }
-
-        public IEnumerable<IMetadataImage> GetImageMetadata()
-        {
-            Atom_ilst ilst = FindPath("moov.udta.meta.ilst") as Atom_ilst;
-            foreach (Atom atom in ilst.Children)
-            {
-                ContainerAtom ca = atom as ContainerAtom;
-                if (MP4Util.ImageMapping.ContainsKey(ca.Type))
-                {
-                    var mapping = MP4Util.ImageMapping[ca.Type];
-                    foreach (Atom childatom in ca.FindMultiplePath("data"))
-                    {
-                        Atom_data da = childatom as Atom_data;
-                        if (da.IsImage)
-                        {
-                            yield return new MP4Image()
-                            {
-                                Category = mapping.ToString(),
-                                Description = "",
-                                ImageType = da.ImageToMimeType(),
-                                Width = da.ImageWidth,
-                                Height = da.ImageHeight,
-                                Size = da.ImageData.Length,
-                                Data = da.ImageData
-                            };
-                        }
-                    }
-                }
-            }
-            yield break;
-        }
-
-#endregion
 
         private string _associatedpath;
 
@@ -1704,6 +1541,154 @@ namespace MusicFileUtilities
                 return _associatedpath;
             }
         }
+
+        public void ReadFile(string path)
+        {
+            Stream s = new FileStream(path, FileMode.Open, FileAccess.Read);
+
+            while (s.Position < s.Length)
+            {
+                long pos = s.Position;
+
+                Atom a = new Atom(s, this);
+                if (MP4Util.AtomTypes.ContainsKey(a.Type))
+                {
+                    Type Atom_type = MP4Util.AtomTypes[a.Type];
+                    a = (Atom_type == typeof(Atom)) ? a : Activator.CreateInstance(Atom_type, new object[] { a, s }) as Atom;
+                }
+                else if (MP4Util.LoadData)
+                    a = new DataAtom(a, s);
+                Children.Add(a);
+
+                s.Seek(pos + a.Size, SeekOrigin.Begin);
+            }
+
+            s.Close();
+            _associatedpath = path;
+         }
+
+        public void WriteFile(string path)
+        {
+            Stream s = new FileStream(path, FileMode.Create, FileAccess.Write);
+            WriteAtom(s);
+            s.Close();
+            _associatedpath = path;
+            Untouch();
+        }
+
+        public void ModifyFile()
+        {
+            if ((Touched) || (!File.Exists(_associatedpath)))
+                throw new InvalidOperationException();
+            Stream s = new FileStream(_associatedpath, FileMode.Open, FileAccess.ReadWrite);
+            foreach (Atom a in _children)
+            {
+                bool writeatom = a.Touched || (a.DeltaSizeBefore != 0);
+                if ((!writeatom) && (a is ContainerAtom))
+                    writeatom = (a as ContainerAtom).Modified;
+                if (writeatom)
+                    a.WriteAtom(s);
+                else
+                    s.Seek(a.Size, SeekOrigin.Current);
+            }
+            s.Close();
+            Untouch();
+        }
+
+        public override void WriteAtom(Stream s)
+        {
+            foreach (Atom a in _children)
+                a.WriteAtom(s);
+        }
+
+    }
+
+    public class MP4File : TagBase, ICodecProvider
+    {
+  
+        #region IMetadataProvider Properties
+
+        public override IEnumerable<KeyValuePair<TagFields, string>> GetKnownMetadata()
+        {
+            Atom_ilst ilst = root_.FindPath("moov.udta.meta.ilst") as Atom_ilst;
+            foreach (Atom atom in ilst.Children)
+            {
+                ContainerAtom ca = atom as ContainerAtom;
+                if (MP4Util.TagMapping.ContainsKey(atom.Type))
+                {
+                    var key = MP4Util.TagMapping[atom.Type];
+                    foreach (Atom childatom in ca.FindMultiplePath("data"))
+                    {
+                        Atom_data da = childatom as Atom_data;
+                        if (da.IsText)
+                            yield return KeyValuePair.Create(key, da.Text);
+                        else if (da.DataType == Atom_data.DataTypes.Integer)
+                            yield return KeyValuePair.Create(key, da.Uint64.ToString());
+                        else if (da.IsBoolean)
+                            yield return KeyValuePair.Create(key, da.BoolValue ? "1" : "0");
+                        else if (da.IsEnumeratedGenre)
+                        {
+                            foreach (var g in da.EnumeratedGenres)
+                                yield return KeyValuePair.Create(key, g);
+                        }
+                        else if (da.IsRating)
+                            yield return KeyValuePair.Create(key, da.Rating.ToString());
+                    }
+                }
+                else if (MP4Util.SpecialMapping.ContainsKey(atom.Type))
+                {
+                    foreach (var kv in MP4Util.SpecialMapping[atom.Type](ca))
+                        yield return kv;
+                }
+                else if (atom.Type == "----")
+                {
+                    string keystr = (ca.FindPath("name") as StringAtom).Text;
+                    if (MP4Util.TagMapping.ContainsKey(keystr))
+                    {
+                        var key = MP4Util.TagMapping[keystr];
+                        foreach (Atom childatom in (atom as ContainerAtom).FindMultiplePath("data"))
+                        {
+                            Atom_data da = childatom as Atom_data;
+                            if (da.IsText)
+                                yield return KeyValuePair.Create(key, da.Text);
+                        }
+                    }
+
+                }
+            }
+
+            yield break;
+        }
+
+        public override IEnumerable<KeyValuePair<string, string>> GetTextMetadata()
+        {
+            foreach (var field in GetKnownMetadata())
+                yield return KeyValuePair.Create(field.Key.ToString(), field.Value);
+        }
+
+        public override IEnumerable<IMetadataImage> GetImageMetadata()
+        {
+            Atom_ilst ilst = root_.FindPath("moov.udta.meta.ilst") as Atom_ilst;
+            foreach (Atom atom in ilst.Children)
+            {
+                ContainerAtom ca = atom as ContainerAtom;
+                if (MP4Util.ImageMapping.ContainsKey(ca.Type))
+                {
+                    var mapping = MP4Util.ImageMapping[ca.Type];
+                    foreach (Atom childatom in ca.FindMultiplePath("data"))
+                    {
+                        Atom_data da = childatom as Atom_data;
+                        if (da.IsImage)
+                            yield return da;
+                    }
+                }
+            }
+            yield break;
+        }
+
+        public override string TagType => "MP4";
+
+#endregion
 
         public string CodecName
         {
@@ -1755,13 +1740,25 @@ namespace MusicFileUtilities
 
         public uint DurationInSeconds => DurationInFrames / 75;
 
-        public RootAtom()
+        private RootAtom root_;
+
+        public RootAtom Root
         {
+            get { return root_; }
+        }
+
+        public MP4File(string filename)
+        {
+            root_ = new RootAtom(filename);
+            ParseCodecInfo();
+            Atom_mvhd mvhd = root_.FindPath("moov.mvhd") as Atom_mvhd;
+            DurationInFrames = mvhd.DurationInFrames;
+            ParseStandardFields();
         }
 
         protected void ParseCodecInfo()
         {
-            ContainerAtom stsd = FindPath("moov.trak.mdia.minf.stbl.stsd") as ContainerAtom;
+            ContainerAtom stsd = root_.FindPath("moov.trak.mdia.minf.stbl.stsd") as ContainerAtom;
             if ((stsd != null)&&(stsd.Children.Count == 1))
             {
                 CodecAtom codec = stsd.Children[0] as CodecAtom;
@@ -1796,74 +1793,7 @@ namespace MusicFileUtilities
             }
         }
 
-        public RootAtom(string path)
-        {
-            ReadFile(path);
-        }
-
-        public void ReadFile(string path)
-        {
-            Stream s = new FileStream(path, FileMode.Open, FileAccess.Read);
-
-            while (s.Position < s.Length)
-            {
-                long pos = s.Position;
-
-                Atom a = new Atom(s, this);
-                if (MP4Util.AtomTypes.ContainsKey(a.Type))
-                {
-                    Type Atom_type = MP4Util.AtomTypes[a.Type];
-                    a = (Atom_type == typeof(Atom)) ? a : Activator.CreateInstance(Atom_type, new object[] { a, s }) as Atom;
-                }
-                else if (MP4Util.LoadData)
-                    a = new DataAtom(a, s);
-                Children.Add(a);
-
-                s.Seek(pos + a.Size, SeekOrigin.Begin);
-            }
-
-            s.Close();
-            _associatedpath = path;
-            ParseCodecInfo();
-
-            Atom_mvhd mvhd = FindPath("moov.mvhd") as Atom_mvhd;
-            DurationInFrames = mvhd.DurationInFrames;
-        }
-
-        public void WriteFile(string path)
-        {
-            Stream s = new FileStream(path, FileMode.Create, FileAccess.Write);
-            WriteAtom(s);
-            s.Close();
-            _associatedpath = path;
-            Untouch();
-        }
-
-        public void ModifyFile()
-        {
-            if ((Touched)||(!File.Exists(_associatedpath)))
-                throw new InvalidOperationException();
-            Stream s = new FileStream(_associatedpath, FileMode.Open, FileAccess.ReadWrite);
-            foreach (Atom a in _children)
-            {
-                bool writeatom = a.Touched || (a.DeltaSizeBefore != 0);
-                if ((!writeatom) && (a is ContainerAtom))
-                    writeatom = (a as ContainerAtom).Modified;
-                if (writeatom)
-                    a.WriteAtom(s);
-                else
-                    s.Seek(a.Size, SeekOrigin.Current);
-            }
-            s.Close();
-            Untouch();
-        }
-
-        public override void WriteAtom(Stream s)
-        {
-            foreach (Atom a in _children)
-                a.WriteAtom(s);
-        }
-
+        
      }
 
     public class FullContainerAtom : ContainerAtom

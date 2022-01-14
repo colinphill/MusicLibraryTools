@@ -91,8 +91,8 @@ namespace DumpTags
 
         static IMetadataProvider DumpQTTags(string filename)
         {
-            RootAtom root = new RootAtom(filename);
-            Atom_ilst ilst = root.FindPath("moov.udta.meta.ilst") as Atom_ilst;
+            MP4File file = new MP4File(filename);
+            Atom_ilst ilst = file.Root.FindPath("moov.udta.meta.ilst") as Atom_ilst;
 
             foreach (Atom a in ilst.Children)
             {
@@ -144,7 +144,7 @@ namespace DumpTags
                     LogConsole.WriteLine();
                 }
             }
-            return root;
+            return file;
         }
 
         static void DumpVorbisComments(VorbisComments vc)
@@ -170,24 +170,6 @@ namespace DumpTags
             foreach (KeyValuePair<string, string> kv in mp.GetTextMetadata())
                 LogConsole.WriteLine(kv.Key + "=" + kv.Value);
             LogConsole.WriteLine();
-        }
-
-        static IMetadataProvider DumpASFTags(string filename)
-        {
-            ASFFile f = new ASFFile(filename);
-
-            foreach (KeyValuePair<string, string> kv in f.TextFields)
-                LogConsole.WriteLine(kv.Key + "=" + kv.Value);
-
-            foreach (WMPicture p in f.Pictures)
-            {
-                LogConsole.WriteLine("Picture:");
-                LogConsole.WriteLine("\tType: " + p.Type.ToString());
-                LogConsole.WriteLine("\tMime-Type: " + p.MimeType);
-                LogConsole.WriteLine("\tDescription: " + p.Description);
-            }
-
-            return f;
         }
 
         static IMetadataProvider DumpFLACTags(string filename)
@@ -235,10 +217,6 @@ namespace DumpTags
                     case ".mp3":
                     case ".dsf":
                         mp = DumpID3Tags(arg);
-                        break;
-
-                    case ".wma":
-                        mp = DumpASFTags(arg);
                         break;
 
                     default:
