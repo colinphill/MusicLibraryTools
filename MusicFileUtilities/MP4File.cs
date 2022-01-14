@@ -1857,7 +1857,6 @@ namespace MusicFileUtilities
             private set;
         }
 
-
         public uint AverageBitrate
         {
             get;
