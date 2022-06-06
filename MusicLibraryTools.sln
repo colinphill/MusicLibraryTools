@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29613.14
+# Visual Studio Version 17
+VisualStudioVersion = 17.2.32519.379
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MusicFileUtilities", "MusicFileUtilities\MusicFileUtilities.csproj", "{371A75BC-73F8-4222-A3B3-0B21497AFD0C}"
 EndProject
@@ -43,7 +43,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MetadataDBWork", "MetadataD
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MetadataCaching", "MetadataCaching\MetadataCaching.csproj", "{080DE646-A227-4A79-BAF1-9360CB4EC3C8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ArtworkScrubber", "ArtworkScrubber\ArtworkScrubber.csproj", "{81C8D8D6-2D1E-4FB2-B619-80083D601F20}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ArtworkScrubber", "ArtworkScrubber\ArtworkScrubber.csproj", "{81C8D8D6-2D1E-4FB2-B619-80083D601F20}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SortDownloads", "SortDownloads\SortDownloads.csproj", "{25C3C38E-F518-4D39-A9FF-2501873B33E0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -135,6 +137,10 @@ Global
 		{81C8D8D6-2D1E-4FB2-B619-80083D601F20}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{81C8D8D6-2D1E-4FB2-B619-80083D601F20}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{81C8D8D6-2D1E-4FB2-B619-80083D601F20}.Release|Any CPU.Build.0 = Release|Any CPU
+		{25C3C38E-F518-4D39-A9FF-2501873B33E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{25C3C38E-F518-4D39-A9FF-2501873B33E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{25C3C38E-F518-4D39-A9FF-2501873B33E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{25C3C38E-F518-4D39-A9FF-2501873B33E0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

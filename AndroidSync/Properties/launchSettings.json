@@ -2,7 +2,7 @@
   "profiles": {
     "AndroidSync": {
       "commandName": "Project",
-      "commandLineArgs": "\\\\ritsuko.projecteva.net\\HiResDAP\\SD1 /storage/external_sd1/MUSIC"
+      "commandLineArgs": "\\\\ritsuko.projecteva.net\\HiResDAP\\SD2 /storage/external_sd1/MUSIC"
     }
   }
 }

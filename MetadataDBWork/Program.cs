@@ -17,8 +17,8 @@ namespace MetadataDBWork
             Console.WriteLine("Indexing...");
 
             //File.Delete("cache.db");
-            using (var db = MetadataDatabase.OpenDatabase("sqlite:cache3.db"))
-            //using (var db = MetadataDatabase.OpenDatabase("sql:database=metadata:server=SHIGERU:utf8=true"))
+            //using (var db = MetadataDatabase.OpenDatabase("sqlite:cache3.db"))
+            using (var db = MetadataDatabase.OpenDatabase("sql:database=metadata:server=UTILITY:utf8=true"))
             //using (var db = MetadataDatabase.OpenDatabase("sql:database=metadata2:server=(localdb)\\metadata2"))
             {
                 var res = db.IndexFiles(new string[] {

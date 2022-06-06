@@ -32,9 +32,9 @@ namespace AnalyzeMetadata
             LogConsole.WriteLine("Indexing Files...");
 
             using MetadataDatabase db = MetadataDatabase.OpenDatabase(config.DatabaseFile); // TBD Dispose
-            db.IndexFiles(config.IndexLocations.Select(l => l.Target));
+            db.IndexFiles(config.IndexLocations.Select(l => l.Target).Distinct());
 
-            var cache = db.BuildCache(config.IndexLocations.Select(l => l.Target));
+            var cache = db.BuildCache(config.IndexLocations.Select(l => l.Target).Distinct());
             LogConsole.WriteLine("Total Parsed Files: " + cache.FileCache.Count);
 
             if (args.Skip(1).Any(s => s.ToLower() == "checksets"))
@@ -47,14 +47,48 @@ namespace AnalyzeMetadata
                     {
                         var ofiles = ocache.Cache.FileCache;
                         var bag = new ConcurrentBag<(int Set, string Key)>();
+                        var dupebag = new ConcurrentBag<(int Set, string Key, string[] Possibles)>();
+                        var hitbag = new ConcurrentBag<(string Key1, string Key2)>();
                         Parallel.ForEach(tcache.Cache.FileCache, (file) =>
                         {
                             var possibilities = ofiles.Where(of => ((of.Value.AlbumArtist == file.Value.AlbumArtist) || (of.Value.Artist == file.Value.Artist)) && (of.Value.Album == file.Value.Album) && (of.Value.TrackNumber == file.Value.TrackNumber));
                             if (possibilities.Count() == 0)
                                 bag.Add((ocache.Set, file.Key));
+                            if (possibilities.Count() == 1)
+                                hitbag.Add((possibilities.First().Key, file.Key));
+                            if (possibilities.Count() > 1)
+                            {
+                                possibilities = possibilities.Where(of => (of.Value.Title == file.Value.Title));
+                                if (possibilities.Count() == 0)
+                                    bag.Add((ocache.Set, file.Key));
+                                if (possibilities.Count() == 1)
+                                    hitbag.Add((possibilities.First().Key, file.Key));
+                                if (possibilities.Count() > 1)
+                                    dupebag.Add((ocache.Set, file.Key, possibilities.Select(kv => kv.Key).ToArray()));
+                            }
                         });
                         foreach (var miss in bag.OrderBy(m => m.Key))
                             Console.WriteLine("Missing In Set:" + miss.Set + " - " + miss.Key);
+                        foreach (var dupe in dupebag.OrderBy(m => m.Key))
+                        {
+                            Console.WriteLine("Dupe In Set:" + dupe.Set + " - " + dupe.Key);
+                            foreach (var poss in dupe.Possibles)
+                                Console.WriteLine("--> " + poss);
+                        }
+                        var hitdict = new Dictionary<string, List<string>>();
+                        foreach (var item in hitbag)
+                        {
+                            if (!hitdict.ContainsKey(item.Key1))
+                                hitdict.Add(item.Key1, new List<string>());
+                            hitdict[item.Key1].Add(item.Key2);
+                        }
+                        foreach (var kv in hitdict.Where(kv => kv.Value.Count > 1))
+                        {
+                            Console.WriteLine("Multi Hit: " + kv.Key);
+                            foreach (var val in kv.Value)
+                                Console.WriteLine("--> " + val);
+                        }
+
                     }
                 }
             }
