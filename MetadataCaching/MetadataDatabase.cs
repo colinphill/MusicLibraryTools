@@ -301,7 +301,7 @@ namespace MetadataCaching
             return res;
         }
 
-        public MetadataCache BuildCache(IEnumerable<string> paths)
+        public MetadataCache BuildCache(IEnumerable<(string Path, string[] Extensions)> paths)
         {
             var dbsets = new List<(string Path, long ID)>();
             using (var setscomm = conn_.CreateCommand())
@@ -316,7 +316,7 @@ namespace MetadataCaching
 
             foreach (var path in paths)
             {
-                var set = dbsets.SingleOrDefault(s => s.Path.Equals(path, StringComparison.InvariantCultureIgnoreCase));
+                var set = dbsets.SingleOrDefault(s => s.Path.Equals(path.Path, StringComparison.InvariantCultureIgnoreCase));
                 if (set == default)
                     continue;
                 using var querycomm = conn_.CreateCommand();
@@ -326,11 +326,19 @@ namespace MetadataCaching
                 {
                     var ce = new MetadataCacheEntry(reader);
                     ce.Strip();
-                    cache.AddDBCacheEntry(Path.Combine(set.Path, reader.GetString("AlbumPath"), reader.GetString("Path")), ce);
+                    var fullpath = Path.Combine(set.Path, reader.GetString("AlbumPath"), reader.GetString("Path"));
+                    if (path.Extensions == null)
+                        cache.AddDBCacheEntry(fullpath, ce);
+                    else if (path.Extensions.Contains(Path.GetExtension(fullpath)))
+                        cache.AddDBCacheEntry(fullpath, ce);
                 }
             }
-
             return cache;
+        }
+
+        public MetadataCache BuildCache(IEnumerable<string> paths)
+        {
+            return BuildCache(paths.Select<string, (string Path, string[] Extensions)>(p => (p, null)));
         }
 
         public (int Added, int Modified, int Removed, int Unchanged) IndexFiles(IEnumerable<string> paths, bool deletemissingsets = false)
