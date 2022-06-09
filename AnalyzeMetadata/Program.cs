@@ -51,21 +51,27 @@ namespace AnalyzeMetadata
                         var hitbag = new ConcurrentBag<(string Key1, string Key2)>();
                         Parallel.ForEach(tcache.Cache.FileCache, (file) =>
                         {
-                            var possibilities = ofiles.Where(of => ((of.Value.AlbumArtist == file.Value.AlbumArtist) || (of.Value.Artist == file.Value.Artist)) && (of.Value.Album == file.Value.Album) && (of.Value.TrackNumber == file.Value.TrackNumber));
-                            if (possibilities.Count() == 0)
-                                bag.Add((ocache.Set, file.Key));
-                            if (possibilities.Count() == 1)
-                                hitbag.Add((possibilities.First().Key, file.Key));
-                            if (possibilities.Count() > 1)
+                            if (ocache.Cache.AlbumCache.ContainsKey(file.Value.Album))
                             {
-                                possibilities = possibilities.Where(of => (of.Value.Title == file.Value.Title));
+                                var possibilities = ocache.Cache.AlbumCache[file.Value.Album].Select(of => KeyValuePair.Create(of, ofiles[of]));
+                                possibilities = possibilities.Where(of => ((of.Value.AlbumArtist == file.Value.AlbumArtist) || (of.Value.Artist == file.Value.Artist)) && (of.Value.TrackNumber == file.Value.TrackNumber));
                                 if (possibilities.Count() == 0)
                                     bag.Add((ocache.Set, file.Key));
                                 if (possibilities.Count() == 1)
                                     hitbag.Add((possibilities.First().Key, file.Key));
                                 if (possibilities.Count() > 1)
-                                    dupebag.Add((ocache.Set, file.Key, possibilities.Select(kv => kv.Key).ToArray()));
+                                {
+                                    possibilities = possibilities.Where(of => (of.Value.Title == file.Value.Title));
+                                    if (possibilities.Count() == 0)
+                                        bag.Add((ocache.Set, file.Key));
+                                    if (possibilities.Count() == 1)
+                                        hitbag.Add((possibilities.First().Key, file.Key));
+                                    if (possibilities.Count() > 1)
+                                        dupebag.Add((ocache.Set, file.Key, possibilities.Select(kv => kv.Key).ToArray()));
+                                }
                             }
+                            else
+                                bag.Add((ocache.Set, file.Key));
                         });
                         foreach (var miss in bag.OrderBy(m => m.Key))
                             Console.WriteLine("Missing In Set:" + miss.Set + " - " + miss.Key);
