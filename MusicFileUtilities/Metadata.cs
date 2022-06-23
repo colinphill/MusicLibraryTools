@@ -125,35 +125,25 @@ namespace MusicFileUtilities
     public interface IMetadataProvider
     {
 
-        string Title
-        {
-            get;
-        }
+        string Title { get; }
 
-        string Artist
-        {
-            get;
-        }
+        string Artist { get; }
 
-        string AlbumArtist
-        {
-            get;
-        }
+        string AlbumArtist { get; }
 
-        string Album
-        {
-            get;
-        }
+        string Album { get; }
 
-        int TrackNumber
-        {
-            get;
-        }
+        int? TrackNumber { get; }
 
-        string TagType
-        {
-            get;
-        }
+        string TagType { get; }
+
+        string ReleaseDate { get; }
+
+        int? TrackTotal { get; }
+
+        int? DiscNumber { get; }
+
+        int? DiscTotal { get; }
 
         IEnumerable<KeyValuePair<TagFields, string>> GetKnownMetadata();
         IEnumerable<KeyValuePair<string, string>> GetTextMetadata();
@@ -167,11 +157,16 @@ namespace MusicFileUtilities
         public string Artist { get; protected set; } = "";
         public string AlbumArtist { get; protected set; } = "";
         public string Album { get; protected set; } = "";
-        public int TrackNumber { get; protected set; } = 0;
+        public int? TrackNumber { get; protected set; } = null;
+        public int? TrackTotal { get; protected set; } = null;
+        public string ReleaseDate { get; protected set; } = null;
+        public int? DiscNumber { get; protected set; } = null;
+        public int? DiscTotal { get; protected set; } = null;
 
         protected void ParseStandardFields()
         {
-            int tn = 0;
+            int n = 0;
+            DateTime dt = DateTime.MinValue;
             foreach (var kv in GetKnownMetadata().Reverse())
             {
                 switch (kv.Key)
@@ -189,9 +184,23 @@ namespace MusicFileUtilities
                         Album = kv.Value;
                         break;
                     case TagFields.TrackNumber:
-                        if (!int.TryParse(kv.Value, out tn))
-                            tn = 0;
-                        TrackNumber = tn;
+                        if (int.TryParse(kv.Value, out n))
+                            TrackNumber = n;
+                        break;
+                    case TagFields.TotalTracks:
+                        if (int.TryParse(kv.Value, out n))
+                            TrackTotal = n;
+                        break;
+                    case TagFields.DiscNumber:
+                        if (int.TryParse(kv.Value, out n))
+                            DiscNumber = n;
+                        break;
+                    case TagFields.TotalDiscs:
+                        if (int.TryParse(kv.Value, out n))
+                            DiscTotal = n;
+                        break;
+                    case TagFields.Date:
+                        ReleaseDate = kv.Value;
                         break;
                     default:
                         break;

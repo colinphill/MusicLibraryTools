@@ -19,11 +19,12 @@ namespace MetadataCaching
     {
         private static Regex stripre_ = new Regex(@" \((DSD|DSD64|DSD128|DSD256|DVD-V|DVD-A|HiRes|Hi-Res|DTS-CD)\)$", RegexOptions.IgnoreCase);
 
-        private string _title = "";
-        private string _album = "";
-        private string _artist = "";
-        private string _albumartist = "";
-        private int _tracknumber = 0;
+        private string _title = null;
+        private string _album = null;
+        private string _artist = null;
+        private string _albumartist = null;
+        private int? _tracknumber = null;
+        private int? _tracktotal = null;
         private DateTime _lastwritetime;
         private bool _touched = false;
         private CodecType _codectype = CodecType.Lossy;
@@ -34,8 +35,11 @@ namespace MetadataCaching
         private uint _averagebitrate = 0;
         private uint _maxbitrate = 0;
         private int _durationinseconds = 0;
+        private string _releasedate = null;
+        private int? _discnumber = null;
+        private int? _disctotal = null;
         [NonSerialized]
-        private string _strippedalbum = "";
+        private string _strippedalbum = null;
 
         public MetadataCacheEntry(IMetadataProvider mp, DateTime lastwritetime)
         {
@@ -45,6 +49,11 @@ namespace MetadataCaching
             _artist = mp.Artist;
             _albumartist = mp.AlbumArtist;
             _tracknumber = mp.TrackNumber;
+            _tracktotal = mp.TrackTotal;
+            _discnumber = mp.DiscNumber;
+            _disctotal = mp.DiscTotal;
+            _releasedate = mp.ReleaseDate;
+            
             ICodecProvider codec = mp as ICodecProvider;
             if (codec != null)
             {
@@ -72,7 +81,11 @@ namespace MetadataCaching
         public string StrippedAlbum => _strippedalbum;
         public string Artist => _artist;
         public string AlbumArtist => _albumartist;
-        public int TrackNumber => _tracknumber;
+        public int? TrackNumber => _tracknumber;
+        public int? TrackTotal => _tracktotal;
+        public int? DiscNumber => _discnumber;
+        public int? DiscTotal => _disctotal;
+        public string ReleaseDate => _releasedate;
         public DateTime LastWriteTime => _lastwritetime;
         public int DurationInSeconds => _durationinseconds;
 
@@ -102,7 +115,7 @@ namespace MetadataCaching
             art = art.FixPath();
             alb = alb.FixPath();
             ttl = ttl.FixPath();
-            string tgt = Path.Combine(art, alb, TrackNumber.ToString("D2") + " " + ttl);
+            string tgt = Path.Combine(art, alb, ((TrackNumber != null) ? (TrackNumber.Value.ToString("D2") + " ") : "") + ttl);
             return tgt;
         }
 

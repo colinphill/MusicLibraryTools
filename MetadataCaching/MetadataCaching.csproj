@@ -5,6 +5,12 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <UserSecretsId>5b622ac7-b11d-47cb-8284-42c275d85087</UserSecretsId>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net60|AnyCPU'">
+    <DefineConstants>$(DefineConstants)TRACE;SQLITE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net60|AnyCPU'">
+    <DefineConstants>$(DefineConstants)TRACE;SQLITE</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\MusicFileUtilities\MusicFileUtilities.csproj" />
   </ItemGroup>

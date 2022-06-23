@@ -37,6 +37,44 @@ namespace AnalyzeMetadata
             var cache = db.BuildCache(config.IndexLocations.Select(l => l.Target).Distinct());
             LogConsole.WriteLine("Total Parsed Files: " + cache.FileCache.Count);
 
+            if (args.Skip(1).Any(s => s.ToLower() == "incon"))
+            {
+                var dirmap = new Dictionary<string, List<KeyValuePair<string, MetadataCacheEntry>>>();
+                foreach (var file in cache.FileCache)
+                {
+                    string path = Path.GetDirectoryName(file.Key);
+                    if (!dirmap.ContainsKey(path))
+                        dirmap.Add(path, new List<KeyValuePair<string, MetadataCacheEntry>>());
+                    dirmap[path].Add(file);
+                }
+                foreach (var path in dirmap.OrderBy(kv => kv.Key))
+                {
+                    var albumcount = path.Value.Select(f => f.Value.Album).Distinct().ToArray();
+                    if (albumcount.Length == 1)
+                    {
+                        var dates = path.Value.Select(f => f.Value.ReleaseDate).Distinct().ToArray();
+                        /*if (dates.Length != 1)
+                            Console.WriteLine("Multiple Release Dates: " + file);*/
+                        var tracktotals = path.Value.Select(f => f.Value.TrackTotal).Distinct().ToArray();
+                        if (tracktotals.Length != 1)
+                            Console.WriteLine("Multiple Track Totals: " + path.Key);
+                    }
+                }
+                foreach (var file in cache.FileCache.OrderBy(kv => kv.Key))
+                {
+                    var track = file.Value;
+                    if (track.TrackTotal == 0)
+                        Console.WriteLine("0 TrackTotal: " + file.Key);
+                    if (track.TrackTotal is null)
+                        Console.WriteLine("Missing TrackTotal: " + file.Key);
+                    if ((track.TrackNumber ?? 0) == 0)
+                        Console.WriteLine("0/Missing TrackNumber: " + file.Key);
+                    if ((track.DiscNumber != null)||(track.DiscTotal != null))
+                        Console.WriteLine($"({track.DiscNumber}/{track.DiscTotal}) Disc: {file.Key}");
+                 }
+
+            }
+
             if (args.Skip(1).Any(s => s.ToLower() == "checksets"))
             {
                 var caches = config.IndexLocations.Select(l => l.Set).Distinct().OrderBy(s => s).Select(s => (Set : s, Cache : db.BuildCache(config.IndexLocations.Where(l => l.Set == s).Select(l => (l.Target, l.Filter?.Split(",;|".ToCharArray(), StringSplitOptions.RemoveEmptyEntries))))));
