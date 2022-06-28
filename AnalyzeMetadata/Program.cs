@@ -71,6 +71,8 @@ namespace AnalyzeMetadata
                         Console.WriteLine("0/Missing TrackNumber: " + file.Key);
                     if ((track.DiscNumber != null)||(track.DiscTotal != null))
                         Console.WriteLine($"({track.DiscNumber}/{track.DiscTotal}) Disc: {file.Key}");
+                    if (file.Key.Contains('\xa0'))
+                        Console.WriteLine("Contains nbsp: " + file.Key);
                  }
 
             }
