@@ -175,9 +175,7 @@ namespace AndroidSync
 
             var receiver = new ShellReceiver();
             int exitcode = await client.ShellExecuteAsync("TZ=UTC ls -l -A -R " + path, device, receiver);
-
-            // For some reason, Android on FiiO M11Plus ESS is returning ;nbsp with bad encoding
-            var res = receiver.StdoutLines.Select(l => l.Replace('\ufffd', '\xa0'));
+            var res = receiver.StdoutLines;
 
             Stack<FSDirectory> dstack = new Stack<FSDirectory>();
             dstack.Push(root);
