@@ -16,8 +16,24 @@ using System.Text;
 namespace MusicFileUtilities
 {
     [Serializable]
-    public class FLACFile : VorbisComments, ICodecProvider
+    public class FLACFile : VorbisComments, ICodecProvider, IMediaFile
     {
+        public IEnumerable<ICodecProvider> Codecs
+        {
+            get
+            {
+                yield return this;
+            }
+        }
+
+        public IEnumerable<IMetadataProvider> Tags
+        {
+            get
+            {
+                yield return this;
+            }
+        }
+
         public string Filename
         {
             get;

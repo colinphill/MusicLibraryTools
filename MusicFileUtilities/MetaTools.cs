@@ -205,7 +205,7 @@ namespace MusicFileUtilities
 
     public static class MetadataExtensions
     {
-        public static readonly HashSet<string> ValidExtensions = new HashSet<string>() { ".dsf", ".m4a", ".mp3", ".flac", ".ogg" };
+        public static readonly HashSet<string> ValidExtensions = new HashSet<string>() { ".dsf", ".m4a", ".mp3", ".flac", ".ogg", ".wv" };
 
         public static readonly Regex DiscNumRegex = new Regex(@"(.+)[ \t]+\(Disc (.+)\)", RegexOptions.IgnoreCase);
 

@@ -17,12 +17,14 @@ namespace MetadataDBWork
             Console.WriteLine("Indexing...");
 
             //File.Delete("cache.db");
-            using (var db = MetadataDatabase.OpenDatabase("sqlite:cache.db"))
+            File.Delete("cachewv.db");
+            using (var db = MetadataDatabase.OpenDatabase("sqlite:cachewv.db"))
             //using (var db = MetadataDatabase.OpenDatabase("sql:database=metadata:server=UTILITY:utf8=true"))
             //using (var db = MetadataDatabase.OpenDatabase("sql:database=metadata2:server=(localdb)\\metadata2"))
             {
                 var res = db.IndexFiles(new string[] {
-                    @"Z:\iTunes\HiRes\Stereo\Downloads",
+                    /*@"Z:\iTunes\HiRes\Stereo\Downloads",
+                    @"Z:\iTunes\HiRes\Stereo\DSDDownloads",
                     @"Z:\iTunes\HiRes\Stereo\DVD-As",
                     @"Z:\iTunes\HiRes\Stereo\DVD-Vs",
                     @"Z:\iTunes\HiRes\Stereo\SACDs",
@@ -35,11 +37,13 @@ namespace MetadataDBWork
                     @"Z:\iTunes\HiRes\Multi\DTS-CDs",
                     @"Z:\iTunes\HiRes\Multi\DVD-As",
                     @"Z:\iTunes\HiRes\Multi\SACDs",
-                    @"Z:\iTunes\AAC\Music",
+                    @"Z:\iTunes\AAC\Music",*/
+                    @"C:\wavpack\SACDs",
+                    @"C:\wavpack\Downloads",
                     }, true);
                 Console.WriteLine($"Added:{res.Added} Modified:{res.Modified} Removed:{res.Removed} Unchanged:{res.Unchanged}");
 
-                var cache = db.BuildCache(new string[] {
+                /*var cache = db.BuildCache(new string[] {
                     @"Z:\iTunes\HiRes\Stereo\Downloads",
                     @"Z:\iTunes\HiRes\Stereo\DVD-As",
                     @"Z:\iTunes\HiRes\Stereo\DVD-Vs",
@@ -53,7 +57,7 @@ namespace MetadataDBWork
                     @"Z:\iTunes\HiRes\Multi\DTS-CDs",
                     @"Z:\iTunes\HiRes\Multi\DVD-As",
                     @"Z:\iTunes\HiRes\Multi\SACDs",
-                    @"Z:\iTunes\AAC\Music", });
+                    @"Z:\iTunes\AAC\Music", });*/
                  Console.WriteLine();
             }
 

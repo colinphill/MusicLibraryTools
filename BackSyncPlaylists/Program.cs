@@ -144,7 +144,7 @@ namespace BackSyncPlaylists
                     {
                         Console.WriteLine(plfile);
 
-                        var mp = Metadata.GetProvider(plfile);
+                        var mp = MediaFile.GetFile(plfile).Tags.First();
 
                         KeyValuePair<int, iTunesTrack>[] tracks = lib.Tracks.Where(kv => (kv.Value.Title.ToLower() == mp.Title.ToLower()) && (kv.Value.Album.ToLower() == mp.Album.ToLower()) && ((kv.Value.Artist.ToLower() == mp.Artist.ToLower()) || (kv.Value.Artist.ToLower() == mp.AlbumArtist.ToLower())) && ((kv.Value.TrackNumber == mp.TrackNumber) || (mp.TrackNumber == 0))).ToArray();
                         if (tracks.Length != 1)

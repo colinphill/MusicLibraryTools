@@ -1104,7 +1104,7 @@ namespace MusicFileUtilities
 
         public void HashImage(System.Security.Cryptography.HashAlgorithm hash)
         {
-            Hash = Convert.ToBase64String(hash.ComputeHash(Data));
+            Hash = Convert.ToBase64String(hash.ComputeHash(_picdata));
         }
 
     }
@@ -1470,12 +1470,29 @@ namespace MusicFileUtilities
 
     }
 
-    public class MP3File : ID3v2Tag, ICodecProvider
+    public class MP3File : ID3v2Tag, ICodecProvider, IMediaFile
     {
         private readonly uint[] _bitrates = { 0, 32000, 40000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 160000, 192000, 224000, 256000, 320000, 0 };
         private readonly uint[] _samplerates = { 44100, 48000, 32000, 0 };
         private readonly uint[] _channels = { 2, 2, 2, 1 };
         private readonly int[] _sideinfolen = { 32, 32, 32, 17 };
+
+        public IEnumerable<ICodecProvider> Codecs
+        {
+            get
+            {
+                yield return this;
+            }
+        }
+
+        public IEnumerable<IMetadataProvider> Tags
+        {
+            get
+            {
+                yield return this;
+            }
+        }
+
 
         public MP3File(string filename)
         {
@@ -1592,8 +1609,23 @@ namespace MusicFileUtilities
 
     }
 
-    public class DSFFile : ID3v2Tag, ICodecProvider
+    public class DSFFile : ID3v2Tag, ICodecProvider, IMediaFile
     {
+        public IEnumerable<ICodecProvider> Codecs
+        {
+            get
+            {
+                yield return this;
+            }
+        }
+
+        public IEnumerable<IMetadataProvider> Tags
+        {
+            get
+            {
+                yield return this;
+            }
+        }
         public DSFFile(string filename)
         {
             using (FileStream s = File.OpenRead(filename))

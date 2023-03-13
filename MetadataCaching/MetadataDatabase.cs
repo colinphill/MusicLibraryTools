@@ -420,7 +420,7 @@ namespace MetadataCaching
 
             int added = 0, modified = 0, removed = 0, unchanged = 0;
 
-            using var filequeue = new BlockingCollection<(long ID, long Set, string FileName, long Length, DateTime LastWriteTime, IMetadataProvider Metadata)>();
+            using var filequeue = new BlockingCollection<(long ID, long Set, string FileName, long Length, DateTime LastWriteTime, IMediaFile File)>();
 
             var filesdict = new ConcurrentDictionary<(long ScanSetID, string Path), (long ID, long Length, DateTime LastWriteTime)>();
             var fileshitdict = new ConcurrentDictionary<(long ScanSetID, string Path), bool>();
@@ -479,7 +479,7 @@ namespace MetadataCaching
                            Interlocked.Increment(ref added);
                        }
                        if (scan)
-                           filequeue.Add((id, scanpath.ID, relativename, fi.Length, fi.LastWriteTimeUtc, Metadata.GetProvider(fi.FullName, hash)));
+                           filequeue.Add((id, scanpath.ID, relativename, fi.Length, fi.LastWriteTimeUtc, MediaFile.GetFile(fi.FullName, hash)));
                        return hash;
                    }, (hash) => { hash.Dispose(); });
 
@@ -618,13 +618,13 @@ namespace MetadataCaching
                             delcomm.ExecuteNonQuery();
                         }
 
-                        if (file.Metadata is null)
+                        if (file.File is null)
                             continue;
 
                         long fileid;
 
-                        var mp = file.Metadata;
-                        var cp = mp as ICodecProvider;
+                        var mp = file.File.Tags.First();
+                        var cp = file.File.Codecs.First();
 
                         var artist = mp.Artist;
                         var albumartist = mp.AlbumArtist;

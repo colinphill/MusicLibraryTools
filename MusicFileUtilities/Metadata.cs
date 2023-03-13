@@ -29,6 +29,12 @@ namespace MusicFileUtilities
     [Serializable]
     public enum CodecType { Lossy, Lossless };
 
+    public interface IMediaFile
+    {
+        public IEnumerable<ICodecProvider> Codecs { get; }
+        public IEnumerable<IMetadataProvider> Tags { get; }
+    }
+
     public interface ICodecProvider
     {
         string CodecName
@@ -216,38 +222,42 @@ namespace MusicFileUtilities
         public abstract IEnumerable<IMetadataImage> GetImageMetadata();
     }
      
-    public class Metadata
+    public class MediaFile
     {
-        public static IMetadataProvider GetProvider(string path, HashAlgorithm hash = null)
+        public static IMediaFile GetFile(string path, HashAlgorithm hash = null)
         {
             string extension = Path.GetExtension(path).ToLower();
             if (!File.Exists(path))
                 throw new FileNotFoundException("File Not Found", path);
 
-            IMetadataProvider provider = null;
+            IMediaFile file = null;
             switch (extension)
             {
+                case ".wv":
+                    file = new WavPackFile(path);
+                    break;
+
                 case ".mp3":
-                    provider = new MP3File(path);
+                    file = new MP3File(path);
                     break;
 
                 case ".dsf":
-                    provider = new DSFFile(path);
+                    file = new DSFFile(path);
                     break;
 
                 case ".m4a":
                 case ".mp4":
                 case ".m4p":
                 case ".m4r":
-                    provider = new MP4File(path);
+                    file = new MP4File(path);
                     break;
 
                 case ".ogg":
-                    provider = new OggVorbisFile(path);
+                    file = new OggVorbisFile(path);
                     break;
 
                 case ".flac":
-                    provider = new FLACFile(path);
+                    file = new FLACFile(path);
                     break;
 
                 default:
@@ -255,10 +265,10 @@ namespace MusicFileUtilities
             }
 
             if (hash != null)
-                foreach (var image in provider.GetImageMetadata())
+                foreach (var image in file.Tags.SelectMany(t => t.GetImageMetadata()))
                     image.HashImage(hash);
 
-            return provider;
+            return file;
         }
     }
 

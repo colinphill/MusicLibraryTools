@@ -1136,7 +1136,7 @@ namespace MusicFileUtilities
 
         void IMetadataImage.HashImage(HashAlgorithm hash)
         {
-            Hash = Convert.ToBase64String(hash.ComputeHash(Data));
+            Hash = Convert.ToBase64String(hash.ComputeHash(_imagedata));
         }
 
         public void LoadImage(string path)
@@ -1603,7 +1603,7 @@ namespace MusicFileUtilities
 
     }
 
-    public class MP4File : TagBase, ICodecProvider
+    public class MP4File : TagBase, ICodecProvider, IMediaFile
     {
   
         #region IMetadataProvider Properties
@@ -1688,7 +1688,23 @@ namespace MusicFileUtilities
 
         public override string TagType => "MP4";
 
-#endregion
+        #endregion
+
+        public IEnumerable<ICodecProvider> Codecs
+        {
+            get
+            {
+                yield return this;
+            }
+        }
+
+        public IEnumerable<IMetadataProvider> Tags
+        {
+            get
+            {
+                yield return this;
+            }
+        }
 
         public string CodecName
         {

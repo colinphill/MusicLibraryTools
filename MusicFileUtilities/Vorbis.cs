@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.IO;
+using System.Runtime.CompilerServices;
 
 namespace MusicFileUtilities
 {
@@ -379,7 +380,7 @@ namespace MusicFileUtilities
     }
 
     [Serializable]
-    public class OggVorbisFile : VorbisComments, ICodecProvider
+    public class OggVorbisFile : VorbisComments, ICodecProvider, IMediaFile
     {
         public string Filename
         {
@@ -419,6 +420,22 @@ namespace MusicFileUtilities
 
         public uint DurationInFrames => 0;
         public uint DurationInSeconds => 0;
+
+        public IEnumerable<ICodecProvider> Codecs
+        {
+            get
+            {
+                yield return this;
+            }
+        }
+
+        public IEnumerable<IMetadataProvider> Tags
+        {
+            get
+            {
+                yield return this;
+            }
+        }
 
         private bool ReadPageHeader(Stream s, out int datalen, out bool continuation, out bool firstpage)
         {

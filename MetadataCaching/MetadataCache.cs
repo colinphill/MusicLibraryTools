@@ -41,8 +41,11 @@ namespace MetadataCaching
         [NonSerialized]
         private string _strippedalbum = null;
 
-        public MetadataCacheEntry(IMetadataProvider mp, DateTime lastwritetime)
+        public MetadataCacheEntry(IMediaFile file, DateTime lastwritetime)
         {
+            var mp = file.Tags.First();
+            var codec = file.Codecs.First();
+
             _lastwritetime = lastwritetime;
             _title = mp.Title;
             _album = mp.Album;
@@ -54,7 +57,6 @@ namespace MetadataCaching
             _disctotal = mp.DiscTotal;
             _releasedate = mp.ReleaseDate;
             
-            ICodecProvider codec = mp as ICodecProvider;
             if (codec != null)
             {
                 _codecname = codec.CodecName;
@@ -123,7 +125,7 @@ namespace MetadataCaching
 
     public class MetadataCache
     {
-        public static readonly string[] ValidExtensions = { ".dsf", ".m4a", ".mp3", ".flac", ".ogg" };
+        public static readonly string[] ValidExtensions = { ".dsf", ".m4a", ".mp3", ".flac", ".ogg", ".wv" };
 
         private Dictionary<string, MetadataCacheEntry> _filecache = new Dictionary<string, MetadataCacheEntry>();
         private Dictionary<string, List<string>> _albumcache = new Dictionary<string, List<string>>();
@@ -353,7 +355,7 @@ namespace MetadataCaching
             var bag = new ConcurrentBag<(string FileName, MetadataCacheEntry Entry)>();
             Parallel.ForEach(filestoscan, (file) =>
             {
-                bag.Add((file.FileName, new MetadataCacheEntry(Metadata.GetProvider(file.FileName), file.LastModifiedTime)));
+                bag.Add((file.FileName, new MetadataCacheEntry(MediaFile.GetFile(file.FileName), file.LastModifiedTime)));
             });
             foreach (var entry in bag)
             {
