@@ -162,10 +162,11 @@ namespace MusicFileUtilities
 
         public override IEnumerable<KeyValuePair<TagFields, string>> GetKnownMetadata()
         {
+            var tagmap = APEUtil.TagMappings.ToDictionary(kv => kv.Key.ToUpper(), kv => kv.Value);
             foreach (var kv in TextItems)
-                if (APEUtil.TagMappings.ContainsKey(kv.Key))
+                if (tagmap.ContainsKey(kv.Key.ToUpper()))
                 {
-                    var tag = APEUtil.TagMappings[kv.Key];
+                    var tag = tagmap[kv.Key.ToUpper()];
                     if (tag == TagFields.TrackNumber)
                     {
                         var s = kv.Value.Split('/');
@@ -189,7 +190,7 @@ namespace MusicFileUtilities
                             yield return KeyValuePair.Create(TagFields.MovementTotal, s[1]);
                     }
                     else
-                        yield return KeyValuePair.Create(APEUtil.TagMappings[kv.Key], kv.Value);
+                        yield return KeyValuePair.Create(tagmap[kv.Key.ToUpper()], kv.Value);
                 }
         }
 

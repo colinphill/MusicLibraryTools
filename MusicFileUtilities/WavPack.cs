@@ -73,7 +73,7 @@ namespace MusicFileUtilities
                 uint multiplier = 1;
                 if ((flags & 4) != 0)
                     channels_ = 1;
-                bitpersample_ = ((flags & 3) + 1) << 8;
+                bitpersample_ = ((flags & 3) + 1) << 3;
                 samplerate_ = samplerates_[(flags >> 23) & 15];
                 byte[] subblock = new byte[blocksize];
                 s.Read(subblock, 0, blocksize);
@@ -108,7 +108,7 @@ namespace MusicFileUtilities
             }
             tag_ = new APETag();
             if (!tag_.ReadTag(s))
-                tag_ = null;
+                tag_ = new APETag(); 
         }
     }
 }

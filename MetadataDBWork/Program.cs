@@ -38,8 +38,9 @@ namespace MetadataDBWork
                     @"Z:\iTunes\HiRes\Multi\DVD-As",
                     @"Z:\iTunes\HiRes\Multi\SACDs",
                     @"Z:\iTunes\AAC\Music",*/
-                    @"C:\wavpack\SACDs",
-                    @"C:\wavpack\Downloads",
+                    //@"C:\wavpack\SACDs",
+                    //@"C:\wavpack\Downloads",
+                    @"C:\wavpack\Test",
                     }, true);
                 Console.WriteLine($"Added:{res.Added} Modified:{res.Modified} Removed:{res.Removed} Unchanged:{res.Unchanged}");
 
