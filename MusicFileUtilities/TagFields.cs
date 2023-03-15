@@ -7,6 +7,7 @@ namespace MusicFileUtilities
 
     public enum TagFields
     {
+        NullField,
         AcoustID_ID,
         AcoustID_Fingerprint,
         Album,

@@ -66,86 +66,86 @@ namespace MusicFileUtilities
 
     internal class APEUtil
     {
-        public static Dictionary<string, TagFields> TagMappings = new Dictionary<string, TagFields>()
+        public static Dictionary<(string Key, bool CaseSensitive), TagFields> TagMappings = new ()
         {
-            { "ACOUSTID_ID", TagFields.AcoustID_ID },
-            { "ACOUSTID_FINGERPRINT", TagFields.AcoustID_Fingerprint },
-            { "Album", TagFields.Album },
-            { "Album Artist", TagFields.AlbumArtist },
-            { "AlbumArtist", TagFields.AlbumArtist },
-            { "ALBUMARTISTSORT", TagFields.AlbumArtistSort },
-            { "ALBUMSORT", TagFields.AlbumSort },
-            { "Arranger", TagFields.Arranger },
-            { "Artist", TagFields.Artist },
-            { "ARTISTSORT", TagFields.ArtistSort },
-            { "Artists", TagFields.Artists },
-            { "ASIN", TagFields.ASIN },
-            { "Barcode", TagFields.Barcode },
-            { "BPM", TagFields.BPM },
-            { "CatalogNumber", TagFields.CatalogNumber },
-            { "Comment", TagFields.Comment },
-            { "Compilation", TagFields.Compilation },
-            { "Composer", TagFields.Composer },
-            { "COMPOSERSORT", TagFields.ComposerSort },
-            { "Conductor", TagFields.Conductor },
-            { "Copyright", TagFields.Copyright },
-            { "Disc", TagFields.DiscNumber },
-            { "DiscSubtitle", TagFields.DiscSubtitle },
-            { "EncodedBy", TagFields.EncodedBy },
-            { "EncoderSettings", TagFields.EncoderSettings },
-            { "Engineer", TagFields.Engineer },
-            { "Genre", TagFields.Genre },
-            { "Grouping", TagFields.Grouping },
-            { "KEY", TagFields.Key },
-            { "ISRC", TagFields.ISRC },
-            { "Language", TagFields.Language },
-            { "LICENSE", TagFields.License },
-            { "Lyricist", TagFields.Lyricist },
-            { "Lyrics", TagFields.Lyrics },
-            { "Media", TagFields.Media },
-            { "DJMixer", TagFields.DJMixer },
-            { "Mixer", TagFields.Mixer },
-            { "Mood", TagFields.Mood },
-            { "MOVEMENTNAME", TagFields.Movement },
-            { "MOVEMENTTOTAL", TagFields.MovementTotal },
-            { "MOVEMENT", TagFields.MovementNumber },
-            { "MUSICBRAINZ_ARTISTID", TagFields.MusicBrainz_ArtistID },
-            { "MUSICBRAINZ_DISCID", TagFields.MusicBrainz_DiscID },
-            { "MUSICBRAINZ_ORIGINALARTISTID", TagFields.MusicBrainz_OriginalArtistID },
-            { "MUSICBRAINZ_ORIGINALALBUMID", TagFields.MusicBrainz_OriginalAlbumID },
-            { "MUSICBRAINZ_TRACKID", TagFields.MusicBrainz_RecordingID },
-            { "MUSICBRAINZ_ALBUMARTISTID", TagFields.MusicBrainz_AlbumArtistID },
-            { "MUSICBRAINZ_RELEASEGROUPID", TagFields.MusicBrainz_ReleaseGroupID },
-            { "MUSICBRAINZ_ALBUMID", TagFields.MusicBrainz_AlbumID },
-            { "MUSICBRAINZ_RELEASETRACKID", TagFields.MusicBrainz_TrackID },
-            { "MUSICBRAINZ_WORKID", TagFields.MusicBrainz_WorkID },
-            { "ORIGINALFILENAME", TagFields.OriginalFileName },
-            { "ORIGINALDATE", TagFields.OriginalDate },
-            { "ORIGINALYEAR", TagFields.OriginalYear },
-            { "Performer", TagFields.Performer },
-            { "Producer", TagFields.Producer },
-            { "RATING", TagFields.Rating },
-            { "Label", TagFields.Label },
-            { "RELEASECOUNTRY", TagFields.ReleaseCountry },
-            { "Year", TagFields.Date },
-            { "MUSICBRAINZ_ALBUMSTATUS", TagFields.ReleaseStatus },
-            { "MUSICBRAINZ_ALBUMTYPE", TagFields.ReleaseType },
-            { "MixArtist", TagFields.Remixer },
-            { "REPLAYGAIN_ALBUM_GAIN", TagFields.ReplayGain_Album_Gain },
-            { "REPLAYGAIN_ALBUM_PEAK", TagFields.ReplayGain_Album_Peak },
-            { "REPLAYGAIN_ALBUM_RANGE", TagFields.ReplayGain_Album_Range },
-            { "REPLAYGAIN_REFERENCE_LOUDNESS", TagFields.ReplayGain_Reference_Loudness },
-            { "REPLAYGAIN_TRACK_GAIN", TagFields.ReplayGain_Track_Gain },
-            { "REPLAYGAIN_TRACK_PEAK", TagFields.ReplayGain_Track_Peak },
-            { "REPLAYGAIN_TRACK_RANGE", TagFields.ReplayGain_Track_Range },
-            { "Script", TagFields.Script },
-            { "SHOWMOVEMENT", TagFields.ShowMovement },
-            { "Track", TagFields.TrackNumber },
-            { "Title", TagFields.Title },
-            { "TITLESORT", TagFields.TitleSort },
-            { "weblink", TagFields.Website },
-            { "WORK", TagFields.Work },
-            { "Writer", TagFields.Writer },
+            { ("ACOUSTID_ID", true), TagFields.AcoustID_ID },
+            { ("ACOUSTID_FINGERPRINT", true), TagFields.AcoustID_Fingerprint },
+            { ("Album", false), TagFields.Album },
+            { ("Album Artist", false), TagFields.AlbumArtist },
+            { ("AlbumArtist", false), TagFields.AlbumArtist },
+            { ("ALBUMARTISTSORT", true), TagFields.AlbumArtistSort },
+            { ("ALBUMSORT", true), TagFields.AlbumSort },
+            { ("Arranger", false), TagFields.Arranger },
+            { ("Artist", false), TagFields.Artist },
+            { ("ARTISTSORT", true), TagFields.ArtistSort },
+            { ("Artists", false), TagFields.Artists },
+            { ("ASIN", true), TagFields.ASIN },
+            { ("Barcode", false), TagFields.Barcode },
+            { ("BPM", true), TagFields.BPM },
+            { ("CatalogNumber", false), TagFields.CatalogNumber },
+            { ("Comment", false), TagFields.Comment },
+            { ("Compilation", false), TagFields.Compilation },
+            { ("Composer", false), TagFields.Composer },
+            { ("COMPOSERSORT", true), TagFields.ComposerSort },
+            { ("Conductor", false), TagFields.Conductor },
+            { ("Copyright", false), TagFields.Copyright },
+            { ("Disc", false), TagFields.DiscNumber },
+            { ("DiscSubtitle", false), TagFields.DiscSubtitle },
+            { ("EncodedBy", false), TagFields.EncodedBy },
+            { ("EncoderSettings", false), TagFields.EncoderSettings },
+            { ("Engineer", false), TagFields.Engineer },
+            { ("Genre", false), TagFields.Genre },
+            { ("Grouping", false), TagFields.Grouping },
+            { ("KEY", false), TagFields.Key },
+            { ("ISRC", false), TagFields.ISRC },
+            { ("Language", false), TagFields.Language },
+            { ("LICENSE", true), TagFields.License },
+            { ("Lyricist", false), TagFields.Lyricist },
+            { ("Lyrics", false), TagFields.Lyrics },
+            { ("Media", false), TagFields.Media },
+            { ("DJMixer", false), TagFields.DJMixer },
+            { ("Mixer", false), TagFields.Mixer },
+            { ("Mood", false), TagFields.Mood },
+            { ("MOVEMENTNAME", true), TagFields.Movement },
+            { ("MOVEMENTTOTAL", true), TagFields.MovementTotal },
+            { ("MOVEMENT", true), TagFields.MovementNumber },
+            { ("MUSICBRAINZ_ARTISTID", true), TagFields.MusicBrainz_ArtistID },
+            { ("MUSICBRAINZ_DISCID", true), TagFields.MusicBrainz_DiscID },
+            { ("MUSICBRAINZ_ORIGINALARTISTID", true), TagFields.MusicBrainz_OriginalArtistID },
+            { ("MUSICBRAINZ_ORIGINALALBUMID", true), TagFields.MusicBrainz_OriginalAlbumID },
+            { ("MUSICBRAINZ_TRACKID", true), TagFields.MusicBrainz_RecordingID },
+            { ("MUSICBRAINZ_ALBUMARTISTID", true), TagFields.MusicBrainz_AlbumArtistID },
+            { ("MUSICBRAINZ_RELEASEGROUPID", true), TagFields.MusicBrainz_ReleaseGroupID },
+            { ("MUSICBRAINZ_ALBUMID", true), TagFields.MusicBrainz_AlbumID },
+            { ("MUSICBRAINZ_RELEASETRACKID", true), TagFields.MusicBrainz_TrackID },
+            { ("MUSICBRAINZ_WORKID", true), TagFields.MusicBrainz_WorkID },
+            { ("ORIGINALFILENAME", true), TagFields.OriginalFileName },
+            { ("ORIGINALDATE", true), TagFields.OriginalDate },
+            { ("ORIGINALYEAR", true), TagFields.OriginalYear },
+            { ("Performer", false), TagFields.Performer },
+            { ("Producer", false), TagFields.Producer },
+            { ("RATING", true), TagFields.Rating },
+            { ("Label", false), TagFields.Label },
+            { ("RELEASECOUNTRY", true), TagFields.ReleaseCountry },
+            { ("Year", false), TagFields.Date },
+            { ("MUSICBRAINZ_ALBUMSTATUS", true), TagFields.ReleaseStatus },
+            { ("MUSICBRAINZ_ALBUMTYPE", true), TagFields.ReleaseType },
+            { ("MixArtist", false), TagFields.Remixer },
+            { ("REPLAYGAIN_ALBUM_GAIN", true), TagFields.ReplayGain_Album_Gain },
+            { ("REPLAYGAIN_ALBUM_PEAK", true), TagFields.ReplayGain_Album_Peak },
+            { ("REPLAYGAIN_ALBUM_RANGE", true), TagFields.ReplayGain_Album_Range },
+            { ("REPLAYGAIN_REFERENCE_LOUDNESS", true), TagFields.ReplayGain_Reference_Loudness },
+            { ("REPLAYGAIN_TRACK_GAIN", true), TagFields.ReplayGain_Track_Gain },
+            { ("REPLAYGAIN_TRACK_PEAK", true), TagFields.ReplayGain_Track_Peak },
+            { ("REPLAYGAIN_TRACK_RANGE", true), TagFields.ReplayGain_Track_Range },
+            { ("Script", false), TagFields.Script },
+            { ("SHOWMOVEMENT", true), TagFields.ShowMovement },
+            { ("Track", false), TagFields.TrackNumber },
+            { ("Title", false), TagFields.Title },
+            { ("TITLESORT", true), TagFields.TitleSort },
+            { ("weblink", false), TagFields.Website },
+            { ("WORK", true), TagFields.Work },
+            { ("Writer", false), TagFields.Writer },
         };
 
     }
@@ -162,11 +162,19 @@ namespace MusicFileUtilities
 
         public override IEnumerable<KeyValuePair<TagFields, string>> GetKnownMetadata()
         {
-            var tagmap = APEUtil.TagMappings.ToDictionary(kv => kv.Key.ToUpper(), kv => kv.Value);
+            var sensmap = APEUtil.TagMappings.Where(kv => kv.Key.CaseSensitive).ToDictionary(kv => kv.Key.Key, kv => kv.Value);
+            var insensmap = APEUtil.TagMappings.Where(kv => !kv.Key.CaseSensitive).ToDictionary(kv => kv.Key.Key.ToUpper(), kv => kv.Value);
             foreach (var kv in TextItems)
-                if (tagmap.ContainsKey(kv.Key.ToUpper()))
+            {
+                string ukey = kv.Key.ToUpper();
+                TagFields tag = TagFields.NullField;
+                if (sensmap.ContainsKey(kv.Key))
+                    tag = sensmap[kv.Key];
+                if (insensmap.ContainsKey(ukey))
+                    tag = insensmap[ukey];
+
+                if (tag != TagFields.NullField)
                 {
-                    var tag = tagmap[kv.Key.ToUpper()];
                     if (tag == TagFields.TrackNumber)
                     {
                         var s = kv.Value.Split('/');
@@ -190,8 +198,9 @@ namespace MusicFileUtilities
                             yield return KeyValuePair.Create(TagFields.MovementTotal, s[1]);
                     }
                     else
-                        yield return KeyValuePair.Create(tagmap[kv.Key.ToUpper()], kv.Value);
+                        yield return KeyValuePair.Create(tag, kv.Value);
                 }
+            }
         }
 
         public override IEnumerable<IMetadataImage> GetImageMetadata()
