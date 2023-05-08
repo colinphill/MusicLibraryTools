@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "BackSyncPlaylists": {
+      "commandName": "Project",
+      "commandLineArgs": "\"remap:/mnt/roon:\\\\ritsuko.projecteva.net\\Roon\" \"C:\\Users\\Colin\\Desktop\\* (3).xlsx\""
+    }
+  }
+}
