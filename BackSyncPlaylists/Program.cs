@@ -37,7 +37,7 @@ namespace BackSyncPlaylists
         {
             if (args.Length == 0)
             {
-                Console.WriteLine("Usage: BackSyncPlaylists <playlist> [playlist] [playlist...]");
+                Console.WriteLine("Usage: BackSyncPlaylists [playlist] [remap:src:dest] [playlist...] [remap:src:dest]");
                 return;
             }
 
@@ -67,7 +67,7 @@ namespace BackSyncPlaylists
                     {
                         XDocument doc = XDocument.Load(file);
                         plname = doc.Descendants("title").Single().Value;
-                        plfiles = doc.Descendants("media").Select(n => Path.Combine(dir, n.Attribute("src").Value)).ToArray();
+                        plfiles = doc.Descendants("media").Select(n => n.Attribute("src").Value).ToArray();
                     }
                     if (Path.GetExtension(file).Equals(".m3u", StringComparison.InvariantCultureIgnoreCase))
                         plfiles = File.ReadAllLines(file).Where(s => !s.StartsWith("#")).ToArray();
@@ -114,6 +114,7 @@ namespace BackSyncPlaylists
 
                     foreach (var rm in remaps)
                         plfiles = plfiles.Select(f => f.Replace(rm.oldval, rm.newval, StringComparison.InvariantCultureIgnoreCase)).ToArray();
+                    plfiles = plfiles.Select(f => Path.IsPathFullyQualified(f) ? f : Path.Combine(dir, f)).ToArray();
 
                     IITPlaylist playlist = app.CreatePlaylist(plname);
                     IITUserPlaylist libplaylist = playlist as IITUserPlaylist;
