@@ -19,11 +19,12 @@ namespace MetadataCaching
     {
         private static Regex stripre_ = new Regex(@" \((DSD|DSD64|DSD128|DSD256|DVD-V|DVD-A|HiRes|Hi-Res|DTS-CD)\)$", RegexOptions.IgnoreCase);
 
-        private string _title = "";
-        private string _album = "";
-        private string _artist = "";
-        private string _albumartist = "";
-        private int _tracknumber = 0;
+        private string _title = null;
+        private string _album = null;
+        private string _artist = null;
+        private string _albumartist = null;
+        private int? _tracknumber = null;
+        private int? _tracktotal = null;
         private DateTime _lastwritetime;
         private bool _touched = false;
         private CodecType _codectype = CodecType.Lossy;
@@ -34,18 +35,28 @@ namespace MetadataCaching
         private uint _averagebitrate = 0;
         private uint _maxbitrate = 0;
         private int _durationinseconds = 0;
+        private string _releasedate = null;
+        private int? _discnumber = null;
+        private int? _disctotal = null;
         [NonSerialized]
-        private string _strippedalbum = "";
+        private string _strippedalbum = null;
 
-        public MetadataCacheEntry(IMetadataProvider mp, DateTime lastwritetime)
+        public MetadataCacheEntry(IMediaFile file, DateTime lastwritetime)
         {
+            var mp = file.Tags.First();
+            var codec = file.Codecs.First();
+
             _lastwritetime = lastwritetime;
             _title = mp.Title;
             _album = mp.Album;
             _artist = mp.Artist;
             _albumartist = mp.AlbumArtist;
             _tracknumber = mp.TrackNumber;
-            ICodecProvider codec = mp as ICodecProvider;
+            _tracktotal = mp.TrackTotal;
+            _discnumber = mp.DiscNumber;
+            _disctotal = mp.DiscTotal;
+            _releasedate = mp.ReleaseDate;
+            
             if (codec != null)
             {
                 _codecname = codec.CodecName;
@@ -72,7 +83,11 @@ namespace MetadataCaching
         public string StrippedAlbum => _strippedalbum;
         public string Artist => _artist;
         public string AlbumArtist => _albumartist;
-        public int TrackNumber => _tracknumber;
+        public int? TrackNumber => _tracknumber;
+        public int? TrackTotal => _tracktotal;
+        public int? DiscNumber => _discnumber;
+        public int? DiscTotal => _disctotal;
+        public string ReleaseDate => _releasedate;
         public DateTime LastWriteTime => _lastwritetime;
         public int DurationInSeconds => _durationinseconds;
 
@@ -102,7 +117,7 @@ namespace MetadataCaching
             art = art.FixPath();
             alb = alb.FixPath();
             ttl = ttl.FixPath();
-            string tgt = Path.Combine(art, alb, TrackNumber.ToString("D2") + " " + ttl);
+            string tgt = Path.Combine(art, alb, ((TrackNumber != null) ? (TrackNumber.Value.ToString("D2") + " ") : "") + ttl);
             return tgt;
         }
 
@@ -110,7 +125,7 @@ namespace MetadataCaching
 
     public class MetadataCache
     {
-        public static readonly string[] ValidExtensions = { ".dsf", ".m4a", ".mp3", ".flac", ".ogg" };
+        public static readonly string[] ValidExtensions = { ".dsf", ".m4a", ".mp3", ".flac", ".ogg", ".wv" };
 
         private Dictionary<string, MetadataCacheEntry> _filecache = new Dictionary<string, MetadataCacheEntry>();
         private Dictionary<string, List<string>> _albumcache = new Dictionary<string, List<string>>();
@@ -340,7 +355,7 @@ namespace MetadataCaching
             var bag = new ConcurrentBag<(string FileName, MetadataCacheEntry Entry)>();
             Parallel.ForEach(filestoscan, (file) =>
             {
-                bag.Add((file.FileName, new MetadataCacheEntry(Metadata.GetProvider(file.FileName), file.LastModifiedTime)));
+                bag.Add((file.FileName, new MetadataCacheEntry(MediaFile.GetFile(file.FileName), file.LastModifiedTime)));
             });
             foreach (var entry in bag)
             {

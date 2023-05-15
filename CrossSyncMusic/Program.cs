@@ -126,7 +126,7 @@ namespace CrossSyncMusic
                                 catch
                                 {
                                     LogConsole.WriteLine("WARNING: Out of tree");
-                                    entry = new MetadataCacheEntry(Metadata.GetProvider(trk.LocalLocation), File.GetLastWriteTimeUtc(trk.LocalLocation));
+                                    entry = new MetadataCacheEntry(MediaFile.GetFile(trk.LocalLocation), File.GetLastWriteTimeUtc(trk.LocalLocation));
                                     entry.Strip();
                                 }
                             }

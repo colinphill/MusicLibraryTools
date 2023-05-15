@@ -58,7 +58,7 @@ namespace ArtworkScrubber
             foreach (var file in files)
             {
                 var path = Path.GetDirectoryName(file);
-                var provider = Metadata.GetProvider(file);
+                var provider = MediaFile.GetFile(file).Tags.First();
                 foreach (var artwork in provider.GetImageMetadata())
                 {
                     string extension = mimemapping_[artwork.ImageType];

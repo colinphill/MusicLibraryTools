@@ -33,6 +33,7 @@ namespace AndroidSync
         private MemoryStream stderrstream_ = new MemoryStream();
         private string[] stdoutlines_ = new string[0];
         private string[] stderrlines_ = new string[0];
+        private DecoderFallback fallback_ = new AndroidDecoderFixFallback();
 
         public string[] StdoutLines => stdoutlines_;
         public string[] StderrLines => stderrlines_;
@@ -166,9 +167,55 @@ namespace AndroidSync
 
     }
 
+    class AndroidDecoderFixFallbackBuffer : DecoderFallbackBuffer
+    {
+        private Queue<char> replacements_ = new Queue<char>();
+
+        public override int Remaining => replacements_.Count;
+
+        public override bool Fallback(byte[] bytesUnknown, int index)
+        {
+            if (bytesUnknown.Length == 1)
+            {
+                switch (bytesUnknown[0])
+                {
+                    case 0xa0:
+                        replacements_.Enqueue('\xa0');
+                        return true;
+
+                    default:
+                        break;
+                }
+            }
+            return false;
+        }
+
+        public override char GetNextChar()
+        {
+            if (replacements_.Count > 0)
+                return replacements_.Dequeue();
+            return '\x00';
+        }
+
+        public override bool MovePrevious()
+        {
+            return false;
+        }
+    }
+
+    class AndroidDecoderFixFallback : DecoderFallback
+    {
+        public override int MaxCharCount => 1;
+
+        public override DecoderFallbackBuffer CreateFallbackBuffer()
+        {
+            return new AndroidDecoderFixFallbackBuffer();
+        }
+    }
+
     class AdbClient
     {
-        public static readonly Encoding Encoding = Encoding.UTF8;
+        public static readonly Encoding Encoding = System.Text.Encoding.GetEncoding("utf-8", new EncoderExceptionFallback(), new AndroidDecoderFixFallback());
         private readonly int MaxBufferSize = 64 * 1024;
         private IPEndPoint endpoint_ = new IPEndPoint(IPAddress.Loopback, 5037);
         

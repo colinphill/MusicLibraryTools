@@ -75,7 +75,7 @@ namespace MetadataCaching
 
                     if (newfiles.Length == 0)
                     {
-                        IMetadataProvider provider = Metadata.GetProvider(track.LocalLocation);
+                        IMetadataProvider provider = MediaFile.GetFile(track.LocalLocation).Tags.First();
                         hasaa = aadict.ContainsKey((provider.Artist, provider.Album));
                         try
                         {

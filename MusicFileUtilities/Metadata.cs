@@ -29,6 +29,12 @@ namespace MusicFileUtilities
     [Serializable]
     public enum CodecType { Lossy, Lossless };
 
+    public interface IMediaFile
+    {
+        public IEnumerable<ICodecProvider> Codecs { get; }
+        public IEnumerable<IMetadataProvider> Tags { get; }
+    }
+
     public interface ICodecProvider
     {
         string CodecName
@@ -125,35 +131,25 @@ namespace MusicFileUtilities
     public interface IMetadataProvider
     {
 
-        string Title
-        {
-            get;
-        }
+        string Title { get; }
 
-        string Artist
-        {
-            get;
-        }
+        string Artist { get; }
 
-        string AlbumArtist
-        {
-            get;
-        }
+        string AlbumArtist { get; }
 
-        string Album
-        {
-            get;
-        }
+        string Album { get; }
 
-        int TrackNumber
-        {
-            get;
-        }
+        int? TrackNumber { get; }
 
-        string TagType
-        {
-            get;
-        }
+        string TagType { get; }
+
+        string ReleaseDate { get; }
+
+        int? TrackTotal { get; }
+
+        int? DiscNumber { get; }
+
+        int? DiscTotal { get; }
 
         IEnumerable<KeyValuePair<TagFields, string>> GetKnownMetadata();
         IEnumerable<KeyValuePair<string, string>> GetTextMetadata();
@@ -167,11 +163,16 @@ namespace MusicFileUtilities
         public string Artist { get; protected set; } = "";
         public string AlbumArtist { get; protected set; } = "";
         public string Album { get; protected set; } = "";
-        public int TrackNumber { get; protected set; } = 0;
+        public int? TrackNumber { get; protected set; } = null;
+        public int? TrackTotal { get; protected set; } = null;
+        public string ReleaseDate { get; protected set; } = null;
+        public int? DiscNumber { get; protected set; } = null;
+        public int? DiscTotal { get; protected set; } = null;
 
         protected void ParseStandardFields()
         {
-            int tn = 0;
+            int n = 0;
+            DateTime dt = DateTime.MinValue;
             foreach (var kv in GetKnownMetadata().Reverse())
             {
                 switch (kv.Key)
@@ -189,9 +190,23 @@ namespace MusicFileUtilities
                         Album = kv.Value;
                         break;
                     case TagFields.TrackNumber:
-                        if (!int.TryParse(kv.Value, out tn))
-                            tn = 0;
-                        TrackNumber = tn;
+                        if (int.TryParse(kv.Value, out n))
+                            TrackNumber = n;
+                        break;
+                    case TagFields.TotalTracks:
+                        if (int.TryParse(kv.Value, out n))
+                            TrackTotal = n;
+                        break;
+                    case TagFields.DiscNumber:
+                        if (int.TryParse(kv.Value, out n))
+                            DiscNumber = n;
+                        break;
+                    case TagFields.TotalDiscs:
+                        if (int.TryParse(kv.Value, out n))
+                            DiscTotal = n;
+                        break;
+                    case TagFields.Date:
+                        ReleaseDate = kv.Value;
                         break;
                     default:
                         break;
@@ -207,38 +222,42 @@ namespace MusicFileUtilities
         public abstract IEnumerable<IMetadataImage> GetImageMetadata();
     }
      
-    public class Metadata
+    public class MediaFile
     {
-        public static IMetadataProvider GetProvider(string path, HashAlgorithm hash = null)
+        public static IMediaFile GetFile(string path, HashAlgorithm hash = null)
         {
             string extension = Path.GetExtension(path).ToLower();
             if (!File.Exists(path))
                 throw new FileNotFoundException("File Not Found", path);
 
-            IMetadataProvider provider = null;
+            IMediaFile file = null;
             switch (extension)
             {
+                case ".wv":
+                    file = new WavPackFile(path);
+                    break;
+
                 case ".mp3":
-                    provider = new MP3File(path);
+                    file = new MP3File(path);
                     break;
 
                 case ".dsf":
-                    provider = new DSFFile(path);
+                    file = new DSFFile(path);
                     break;
 
                 case ".m4a":
                 case ".mp4":
                 case ".m4p":
                 case ".m4r":
-                    provider = new MP4File(path);
+                    file = new MP4File(path);
                     break;
 
                 case ".ogg":
-                    provider = new OggVorbisFile(path);
+                    file = new OggVorbisFile(path);
                     break;
 
                 case ".flac":
-                    provider = new FLACFile(path);
+                    file = new FLACFile(path);
                     break;
 
                 default:
@@ -246,10 +265,10 @@ namespace MusicFileUtilities
             }
 
             if (hash != null)
-                foreach (var image in provider.GetImageMetadata())
+                foreach (var image in file.Tags.SelectMany(t => t.GetImageMetadata()))
                     image.HashImage(hash);
 
-            return provider;
+            return file;
         }
     }
 
