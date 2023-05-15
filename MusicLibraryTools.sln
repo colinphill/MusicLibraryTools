@@ -45,7 +45,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MetadataCaching", "Metadata
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ArtworkScrubber", "ArtworkScrubber\ArtworkScrubber.csproj", "{81C8D8D6-2D1E-4FB2-B619-80083D601F20}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SortDownloads", "SortDownloads\SortDownloads.csproj", "{25C3C38E-F518-4D39-A9FF-2501873B33E0}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SortDownloads", "SortDownloads\SortDownloads.csproj", "{25C3C38E-F518-4D39-A9FF-2501873B33E0}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FixiTunesDupes", "FixiTunesDupes\FixiTunesDupes.csproj", "{883FCAA1-E5D9-45A2-B3B7-4D044112B236}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -141,6 +143,10 @@ Global
 		{25C3C38E-F518-4D39-A9FF-2501873B33E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{25C3C38E-F518-4D39-A9FF-2501873B33E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{25C3C38E-F518-4D39-A9FF-2501873B33E0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{883FCAA1-E5D9-45A2-B3B7-4D044112B236}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{883FCAA1-E5D9-45A2-B3B7-4D044112B236}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{883FCAA1-E5D9-45A2-B3B7-4D044112B236}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{883FCAA1-E5D9-45A2-B3B7-4D044112B236}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
