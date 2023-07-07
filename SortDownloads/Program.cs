@@ -56,7 +56,7 @@ namespace SortDownloads
                 if (bucket.Value.Select(i => i.Codec.AverageBitrate).Distinct().Count() == 1)
                 {
                     File.Move(bucket.Value[0].Path, Path.Combine(FLAC_DIR, Path.GetFileName(bucket.Value[0].Path)));
-                    File.Delete(bucket.Value[1].Path);
+                    bucket.Value.Skip(1).ToList().ForEach(p => File.Delete(p.Path));
                 }
                 else
                 {
