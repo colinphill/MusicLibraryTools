@@ -61,8 +61,8 @@ namespace SortDownloads
                 else
                 {
                     var ordered = bucket.Value.OrderBy(i => i.Codec.AverageBitrate).ToArray();
-                    File.Move(bucket.Value[0].Path, Path.Combine(FLAC2_DIR, Path.GetFileName(bucket.Value[0].Path)));
-                    File.Move(bucket.Value[1].Path, Path.Combine(HiRes_DIR, Path.GetFileName(bucket.Value[1].Path)));
+                    File.Move(ordered[0].Path, Path.Combine(FLAC2_DIR, Path.GetFileName(ordered[0].Path)));
+                    File.Move(ordered[1].Path, Path.Combine(HiRes_DIR, Path.GetFileName(ordered[1].Path)));
                 }
             }
 
