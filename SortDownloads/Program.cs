@@ -13,7 +13,22 @@ namespace SortDownloads
     {
         const string FLAC_DIR = @"Z:\ITunes\FLAC\Sorted";
         const string FLAC2_DIR = @"Z:\iTunes\FLAC2\Sorted";
-        const string HiRes_DIR = @"Z:\iTunes\HiRes\Stereo\Downloads\Sorted";
+        const string HiRes_DIR = @"Z:\iTunes\HiRes\Stereo\PCM\Sorted";
+
+        static string GetFileName(string desired)
+        {
+            if (!File.Exists(desired))
+                return desired;
+            string dir = Path.GetDirectoryName(desired);
+            string file = Path.GetFileNameWithoutExtension(desired);
+            string ext = Path.GetExtension(desired);
+            for(int i=1; ;i++)
+            {
+                string fn = Path.Combine(dir, file) + i.ToString() + ext;
+                if (!File.Exists(fn))
+                    return fn;
+            }
+        }
 
         static void Main(string[] args)
         {
@@ -55,14 +70,14 @@ namespace SortDownloads
             {
                 if (bucket.Value.Select(i => i.Codec.AverageBitrate).Distinct().Count() == 1)
                 {
-                    File.Move(bucket.Value[0].Path, Path.Combine(FLAC_DIR, Path.GetFileName(bucket.Value[0].Path)));
+                    File.Move(bucket.Value[0].Path, GetFileName(Path.Combine(FLAC_DIR, Path.GetFileName(bucket.Value[0].Path))));
                     bucket.Value.Skip(1).ToList().ForEach(p => File.Delete(p.Path));
                 }
                 else
                 {
                     var ordered = bucket.Value.OrderBy(i => i.Codec.AverageBitrate).ToArray();
-                    File.Move(ordered[0].Path, Path.Combine(FLAC2_DIR, Path.GetFileName(ordered[0].Path)));
-                    File.Move(ordered[1].Path, Path.Combine(HiRes_DIR, Path.GetFileName(ordered[1].Path)));
+                    File.Move(ordered[0].Path, GetFileName(Path.Combine(FLAC2_DIR, Path.GetFileName(ordered[0].Path))));
+                    File.Move(ordered[1].Path, GetFileName(Path.Combine(HiRes_DIR, Path.GetFileName(ordered[1].Path))));
                 }
             }
 
