@@ -102,6 +102,9 @@ namespace MusicFileUtilities
                 case ImageFormat.Gif:
                     return GetGifDimensions(b);
 
+                case ImageFormat.Unknown:
+                    return (0, 0);
+
                 default:
                     throw new InvalidDataException();
             }

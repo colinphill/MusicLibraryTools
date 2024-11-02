@@ -5,7 +5,7 @@
     <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.2" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="3.1.5" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MusicFileUtilities\MusicFileUtilities.csproj" />

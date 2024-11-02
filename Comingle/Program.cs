@@ -25,9 +25,9 @@ namespace Comingle
             LogConsole.ConsoleVerbosity = LogVerbosity.Max;
 
             using MetadataDatabase db = MetadataDatabase.OpenDatabase("cache.db");
-            db.IndexFiles(new string[] { @"\\ritsuko.projecteva.net\Sonos", @"\\ritsuko.projecteva.netJenny\Henny's Crappy Music" });
-            var basecache = db.BuildCache(new string[] { @"\\ritsuko.projecteva.net\Sonos" });
-            var comingledcache = db.BuildCache(new string[] { @"\\ritsuko.projecteva.netJenny\Henny's Crappy Music" });
+            db.IndexFiles(new string[] { @"\\ritsuko.projecteva.net\Sonos\FLAC", @"\\ritsuko.projecteva.net\Sonos\FLAC2", @"\\ritsuko.projecteva.net\Jenny\Jenny's Crappy Music" });
+            var basecache = db.BuildCache(new string[] { @"\\ritsuko.projecteva.net\Sonos\FLAC", @"\\ritsuko.projecteva.net\Sonos\FLAC2" });
+            var comingledcache = db.BuildCache(new string[] { @"\\ritsuko.projecteva.net\Jenny\Jenny's Crappy Music" });
 
             /*LogConsole.WriteLine("Checking Artists");
             foreach (string artist in comingledcache.Artists)
