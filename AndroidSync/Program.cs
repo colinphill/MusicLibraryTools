@@ -73,9 +73,7 @@ namespace AndroidSync
             {
                 if (path.EndsWith("/"))
                     path = path.Remove(path.Length - 1);
-                var dhash = new Dictionary<string, FSDirectory>();
-                FSDirectory root = new FSDirectory(path, null, '/', path, dhash);
-                dhash.Add(path, root);
+                FSDirectory root = new FSDirectory(path, null, '/', path);
 
                 var receiver = new ShellReceiver();
                 int exitcode = await client_.ShellExecuteAsync("TZ=UTC ls -l -A -R " + path, device_, receiver);
@@ -100,7 +98,6 @@ namespace AndroidSync
                             top = dstack.Peek();
                         }
                         FSDirectory fdir = new FSDirectory(split.File, top, '/', dir);
-                        dhash.Add(dir, fdir);
                         top.Entries.Add(fdir);
                         dstack.Push(top = fdir);
                     }
@@ -153,7 +150,7 @@ namespace AndroidSync
                 if (path.EndsWith("\\"))
                     path = path.Remove(path.Length - 1);
                 var dhash = new Dictionary<string, FSDirectory>();
-                FSDirectory root = new FSDirectory(path, null, '\\', Path.GetFullPath(path), dhash);
+                FSDirectory root = new FSDirectory(path, null, '\\', Path.GetFullPath(path));
                 await Task.Run(() =>
                 {
                     var locals = (new DirectoryInfo(path)).EnumerateFileSystemInfos("*", SearchOption.AllDirectories).OrderBy(f => f.FullName).ToArray();
@@ -229,14 +226,12 @@ namespace AndroidSync
 
         class FSDirectory : FSFile
         {
-            public FSDirectory(string name, FSDirectory parent, char separator, string localpath, Dictionary<string, FSDirectory> dhash = null) : base(name, parent, 0, DateTime.MinValue, separator, localpath)
+            public FSDirectory(string name, FSDirectory parent, char separator, string localpath) : base(name, parent, 0, DateTime.MinValue, separator, localpath)
             {
-                dhash_ = dhash;
             }
+
             private List<FSFile> entries_ = new List<FSFile>();
             public List<FSFile> Entries => entries_;
-            private Dictionary<string, FSDirectory> dhash_;
-            public Dictionary<string, FSDirectory> DirectoryHash => dhash_ ?? parent_.DirectoryHash;
 
             public IEnumerable<FSDiff> Diff(FSDirectory other)
             {
@@ -448,14 +443,15 @@ namespace AndroidSync
                 foreach (var sp in subpaths)
                 {
                     var tp = d.Name + d.Separator + sp;
-                    if (dhash.ContainsKey(tp))
-                        d = dhash[tp];
+                    var tpl = tp.ToLower();
+                    if (dhash.ContainsKey(tpl))
+                        d = dhash[tpl];
                     else
                     {
                         FSDirectory nd = new FSDirectory(sp, d, d.Separator, tp);
                         d.Entries.Add(nd);
                         d = nd;
-                        dhash.Add(tp, d);
+                        dhash.Add(tpl, d);
                     }
                 }
                 d.Entries.Add(f);
