@@ -136,14 +136,11 @@ namespace AndroidSync
                 return Task.Run(() => Directory.CreateDirectory(path));
             }
 
-            public override Task WriteFile(string path, Stream s, DateTime modified, ISyncProgress progress = null)
+            public override async Task WriteFile(string path, Stream s, DateTime modified, ISyncProgress progress = null)
             {
-                return Task.Run(() =>
-                {
-                    using (var fs = File.OpenWrite(path))
-                        s.CopyTo(fs);
-                    File.SetLastWriteTimeUtc(path, modified);
-                });
+                using (var fs = File.OpenWrite(path))
+                    await s.CopyToAsync(fs, 1 << 20);
+                File.SetLastWriteTimeUtc(path, modified);
             }
 
             public override Task<Stream> ReadFile(string path, ISyncProgress progress)
