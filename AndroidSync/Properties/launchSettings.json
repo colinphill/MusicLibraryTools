@@ -2,7 +2,7 @@
   "profiles": {
     "AndroidSync": {
       "commandName": "Project",
-      "commandLineArgs": "\\\\ritsuko.projecteva.net\\A6 /storage/external_sd/MUSIC"
+      "commandLineArgs": "\\\\ritsuko.projecteva.net\\DAPDSD Y:\\stupid"
     }
   }
 }

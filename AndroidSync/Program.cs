@@ -1,41 +1,180 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.IO;
-using System.Text.RegularExpressions;
-using System.Globalization;
-using System.Net;
+using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace AndroidSync
 {
     class Program
     {
-        class FSFile
-        {
-            public FSFile(FSFile other, FSDirectory parent)
-            {
-                (name_, parent_, size_, modtime_) = (other.name_, parent, other.size_, other.modtime_);
-            }
-            public FSFile(string name, FSDirectory parent, long size, DateTime modtime)
-            {
-                (name_, parent_, size_, modtime_) = (name, parent, size, modtime);
-            }
-            private FSDirectory parent_;
-            private string name_;
-            public string Name => name_;
-            private long size_;
-            public long Size => size_;
-            private DateTime modtime_;
-            public DateTime Modified => modtime_;
 
-            public string GetFullPath(char separator)
+        abstract class FileSystem
+        {
+            public abstract Task<FSDirectory> EnumerateDirectory(string path);
+            public abstract Task RemoveFile(string path);
+            public abstract Task RemoveDirectory(string path);
+            public abstract Task CreateDirectory(string path);
+            public abstract Task WriteFile(string path, Stream s, DateTime modified, ISyncProgress progress = null);
+            public abstract Task<Stream> ReadFile(string path, ISyncProgress progress = null);
+        }
+
+
+
+        class AndroidFileSystem : FileSystem
+        {
+            ShellReceiver receiver_ = new ShellReceiver();
+
+            public override async Task RemoveFile(string path)
             {
-                if (parent_ == null)
-                    return name_;
-                return parent_.GetFullPath(separator) + separator + name_;
+                await client_.ShellExecuteAsync("rm " + EscapeArgument(path), device_, receiver_);
+            }
+
+            public override async Task RemoveDirectory(string path)
+            {
+                await client_.ShellExecuteAsync("rm -rf " + EscapeArgument(path), device_, receiver_);
+            }
+
+            public override async Task CreateDirectory(string path)
+            {
+                await client_.ShellExecuteAsync("mkdir " + EscapeArgument(path), device_, receiver_);
+            }
+
+            public override async Task WriteFile(string path, Stream s, DateTime modified, ISyncProgress progress = null)
+            {
+                await client_.PushAsync(s, device_, path, 505, modified, progress);
+            }
+
+            public override async Task<Stream> ReadFile(string path, ISyncProgress progress)
+            {
+                string fn = Path.GetTempFileName();
+                using (var fs = File.OpenWrite(fn))
+                    await client_.PullAsync(fs, device_, path, progress);
+                return new FileStream(fn, FileMode.Open, FileAccess.Read, FileShare.None, 4096, FileOptions.DeleteOnClose);
+            }
+
+            public AndroidFileSystem(AdbClient client, string device)
+            {
+                client_ = client;
+                device_ = device;
+            }
+
+            private AdbClient client_;
+            private string device_;
+
+            public override async Task<FSDirectory> EnumerateDirectory(string path)
+            {
+                var dhash = new Dictionary<string, FSDirectory>();
+                FSDirectory root = new FSDirectory(path, null, '/', path, dhash);
+                dhash.Add(path, root);
+
+                var receiver = new ShellReceiver();
+                int exitcode = await client_.ShellExecuteAsync("TZ=UTC ls -l -A -R " + path, device_, receiver);
+                var res = receiver.StdoutLines;
+
+                Stack<FSDirectory> dstack = new Stack<FSDirectory>();
+                dstack.Push(root);
+                FSDirectory top = root;
+                foreach (var line in res)
+                {
+                    if (line.Length == 0)
+                        continue;
+                    if (line[0] == '/')
+                    {
+                        string dir = line.Substring(0, line.Length - 1);
+                        if (dir == root.Name)
+                            continue;
+                        var split = SplitPath(dir, '/');
+                        while (top.GetFullPath() != split.Dir)
+                        {
+                            dstack.Pop();
+                            top = dstack.Peek();
+                        }
+                        FSDirectory fdir = new FSDirectory(split.File, top, '/', dir);
+                        dhash.Add(dir, fdir);
+                        top.Entries.Add(fdir);
+                        dstack.Push(top = fdir);
+                    }
+                    else if (line[0] == '-')
+                    {
+                        string[] cols = line.Split(" ".ToCharArray(), 8, StringSplitOptions.RemoveEmptyEntries);
+                        (string attr, long count, string owner, string group, long size, DateTime date, string name) =
+                            (cols[0], long.Parse(cols[1]), cols[2], cols[3], long.Parse(cols[4]), DateTime.SpecifyKind(
+                                DateTime.ParseExact(cols[5] + " " + cols[6], "yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture), DateTimeKind.Utc),
+                                cols[7]);
+                        FSFile file = new FSFile(name, top, size, date, '/', top.LocalPath + '/' + name);
+                        top.Entries.Add(file);
+                    }
+                }
+                return root;
+            }
+        }
+        
+        class LocalFileSystem : FileSystem
+        {
+            public override Task RemoveFile(string path)
+            {
+                return Task.Run(() => File.Delete(path));
+            }
+
+            public override Task RemoveDirectory(string path)
+            {
+                return Task.Run(() => Directory.Delete(path, true));
+            }
+
+            public override Task CreateDirectory(string path)
+            {
+                return Task.Run(() => Directory.CreateDirectory(path));
+            }
+
+            public override Task WriteFile(string path, Stream s, DateTime modified, ISyncProgress progress = null)
+            {
+                return Task.Run(() =>
+                {
+                    using (var fs = File.OpenWrite(path))
+                        s.CopyTo(fs);
+                    File.SetLastWriteTimeUtc(path, modified);
+                });
+            }
+
+            public override Task<Stream> ReadFile(string path, ISyncProgress progress)
+            {
+                return Task.Run(() => { return File.OpenRead(path) as Stream; });
+            }
+
+            public override async Task<FSDirectory> EnumerateDirectory(string path)
+            {
+                var dhash = new Dictionary<string, FSDirectory>();
+                FSDirectory root = new FSDirectory(path, null, '\\', Path.GetFullPath(path), dhash);
+                await Task.Run(() =>
+                {
+                    var locals = (new DirectoryInfo(path)).EnumerateFileSystemInfos("*", SearchOption.AllDirectories).OrderBy(f => f.FullName).ToArray();
+                    dhash.Add(path, root);
+                    foreach (var fi in locals)
+                    {
+                        string p = Path.GetDirectoryName(fi.FullName);
+                        var top = dhash[p];
+                        if (fi is DirectoryInfo)
+                        {
+                            FSDirectory dir = new FSDirectory(fi.Name, top, '\\', fi.FullName);
+                            top.Entries.Add(dir);
+                            dhash.Add(dir.LocalPath, dir);
+                        }
+                        else if (fi is FileInfo)
+                        {
+                            FSFile file = new FSFile(fi.Name, top, ((FileInfo)fi).Length, fi.LastWriteTimeUtc, '\\', fi.FullName);
+                            top.Entries.Add(file);
+                        }
+                    }
+                });
+                return root;
             }
         }
 
@@ -55,13 +194,46 @@ namespace AndroidSync
             public FSFile Dest => dest_;
         }
 
+        class FSFile
+        {
+            public FSFile(FSFile other, FSDirectory parent)
+            {
+                (name_, parent_, size_, modtime_, separator_, localpath_) = (other.name_, parent, other.size_, other.modtime_, other.separator_, other.localpath_);
+            }
+            public FSFile(string name, FSDirectory parent, long size, DateTime modtime, char separator, string localpath)
+            {
+                (name_, parent_, size_, modtime_, separator_, localpath_) = (name, parent, size, modtime, separator, localpath);
+            }
+            protected FSDirectory parent_;
+            private string name_;
+            public string Name => name_;
+            private long size_;
+            public long Size => size_;
+            private DateTime modtime_;
+            public DateTime Modified => modtime_;
+            private char separator_;
+            private string localpath_;
+            public string LocalPath => localpath_;
+            public char Separator => separator_;
+
+            public string GetFullPath()
+            {
+                if (parent_ == null)
+                    return name_;
+                return parent_.GetFullPath() + separator_ + name_;
+            }
+        }
+
         class FSDirectory : FSFile
         {
-            public FSDirectory(string name, FSDirectory parent) : base(name, parent, 0, DateTime.MinValue)
+            public FSDirectory(string name, FSDirectory parent, char separator, string localpath, Dictionary<string, FSDirectory> dhash = null) : base(name, parent, 0, DateTime.MinValue, separator, localpath)
             {
+                dhash_ = dhash;
             }
             private List<FSFile> entries_ = new List<FSFile>();
             public List<FSFile> Entries => entries_;
+            private Dictionary<string, FSDirectory> dhash_;
+            public Dictionary<string, FSDirectory> DirectoryHash => dhash_ ?? parent_.DirectoryHash;
 
             public IEnumerable<FSDiff> Diff(FSDirectory other)
             {
@@ -81,7 +253,7 @@ namespace AndroidSync
                     diffs.Add(new FSDiff(FSDiffType.Removal, null, e));
                 foreach (var e in theirdirs.Where(td => mydirs.Count(d => d.Name == td.Name) == 0))
                 {
-                    FSDirectory nd = new FSDirectory(e.Name, this);
+                    FSDirectory nd = new FSDirectory(e.Name, this, Separator, LocalPath + Separator + e.Name);
                     entries_.Add(nd);
                     diffs.Add(new FSDiff(FSDiffType.Addition, null, nd));
                 }
@@ -133,33 +305,6 @@ namespace AndroidSync
             return res.ToString();
         }*/
                      
-        static async Task<FSDirectory> BuildLocalStructure(string path)
-        {
-            FSDirectory root = new FSDirectory(path, null);
-            await Task.Run(() =>
-            {
-                var locals = (new DirectoryInfo(path)).EnumerateFileSystemInfos("*", SearchOption.AllDirectories).OrderBy(f => f.FullName).ToArray();
-                var dhash = new Dictionary<string, FSDirectory>();
-                dhash.Add(path, root);
-                foreach (var fi in locals)
-                {
-                    string p = Path.GetDirectoryName(fi.FullName);
-                    var top = dhash[p];
-                    if (fi is DirectoryInfo)
-                    {
-                        FSDirectory dir = new FSDirectory(fi.Name, top);
-                        top.Entries.Add(dir);
-                        dhash.Add(dir.GetFullPath('\\'), dir);
-                    }
-                    else if (fi is FileInfo)
-                    {
-                        FSFile file = new FSFile(fi.Name, top, ((FileInfo)fi).Length, fi.LastWriteTimeUtc);
-                        top.Entries.Add(file);
-                    }
-                }
-            });
-            return root;
-        }
            
         static (string Dir, string File) SplitPath(string path, char separator)
         {
@@ -167,52 +312,7 @@ namespace AndroidSync
             return (string.Join(separator.ToString(), paths.Take(paths.Length - 1)), paths.Last());
         }
 
-        static async Task<FSDirectory> BuildRemoteStructure(AdbClient client, string device, string path)
-        {
-            FSDirectory root = new FSDirectory(path, null);
-            var dhash = new Dictionary<string, FSDirectory>();
-            dhash.Add(path, root);
-
-            var receiver = new ShellReceiver();
-            int exitcode = await client.ShellExecuteAsync("TZ=UTC ls -l -A -R " + path, device, receiver);
-            var res = receiver.StdoutLines;
-
-            Stack<FSDirectory> dstack = new Stack<FSDirectory>();
-            dstack.Push(root);
-            FSDirectory top = root;
-            foreach (var line in res)
-            {
-                if (line.Length == 0)
-                    continue;
-                if (line[0] == '/')
-                {
-                    string dir = line.Substring(0, line.Length - 1);
-                    if (dir == root.Name)
-                        continue;
-                    var split = SplitPath(dir, '/');
-                    while (top.GetFullPath('/') != split.Dir)
-                    {
-                        dstack.Pop();
-                        top = dstack.Peek();
-                    }
-                    FSDirectory fdir = new FSDirectory(split.File, top);
-                    top.Entries.Add(fdir);
-                    dstack.Push(top = fdir);
-                }
-                else if (line[0] == '-')
-                {
-                    string[] cols = line.Split(" ".ToCharArray(), 8, StringSplitOptions.RemoveEmptyEntries);
-                    (string attr, long count, string owner, string group, long size, DateTime date, string name) =
-                        (cols[0], long.Parse(cols[1]), cols[2], cols[3], long.Parse(cols[4]), DateTime.SpecifyKind(
-                            DateTime.ParseExact(cols[5] + " " + cols[6], "yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture), DateTimeKind.Utc),
-                            cols[7]);
-                    FSFile file = new FSFile(name, top, size, date);
-                    top.Entries.Add(file);
-                }
-            }
-            return root;
-        }
-
+  
         class SyncProgress : ISyncProgress
         {
             private StringBuilder builder_ = new StringBuilder();
@@ -296,6 +396,70 @@ namespace AndroidSync
             return Path.GetFullPath(exe);
         }
 
+        static IEnumerable<FSFile> GetAllFiles(FSDirectory dir)
+        {
+            foreach (var e in dir.Entries)
+            {
+                if (e is FSDirectory de)
+                {
+                    foreach (var res in GetAllFiles(de))
+                        yield return res;
+                }
+                else
+                    yield return e;
+            }
+        }
+
+        static bool CheckCollisions(FSDirectory dir)
+        {
+            bool collision = false;
+            int ucount = dir.Entries.Select(de => de.Name).Distinct().Count();
+            if (ucount != dir.Entries.Count)
+            {
+                Console.WriteLine($"Collision: {dir.GetFullPath()}");
+                foreach (var e in dir.Entries)
+                    Console.WriteLine(e.LocalPath);
+                collision = true;
+            }
+            foreach (var e in dir.Entries.Where(de => de is FSDirectory))
+                collision |= CheckCollisions(e as FSDirectory);
+            return collision;
+        }
+
+        static readonly string[] remappaths_ = { "FLAC", "FLAC2", "HiResPCM", "HiResDSD", "HiResWV", "Lossy" };
+
+        static FSDirectory RemapMusic(FSDirectory dir)
+        {
+            var dhash = new Dictionary<string, FSDirectory>();
+            FSDirectory ndir = new FSDirectory(dir.Name, null, dir.Separator, dir.LocalPath);
+            var allfiles = GetAllFiles(dir).ToArray();
+            foreach (var f in allfiles)
+            {
+                string newpath = f.GetFullPath();
+                foreach (var rp in remappaths_)
+                    newpath = newpath.Replace($"{dir.Separator}{rp}{dir.Separator}", $"{dir.Separator}Files{dir.Separator}");
+
+                var subpaths = newpath.Remove(0, dir.Name.Length + 1).Split($"{dir.Separator}");
+                subpaths = subpaths.Take(subpaths.Length - 1).ToArray();
+                var d = ndir;
+                foreach (var sp in subpaths)
+                {
+                    var tp = d.Name + d.Separator + sp;
+                    if (dhash.ContainsKey(tp))
+                        d = dhash[tp];
+                    else
+                    {
+                        FSDirectory nd = new FSDirectory(sp, d, d.Separator, tp);
+                        d.Entries.Add(nd);
+                        d = nd;
+                        dhash.Add(tp, d);
+                    }
+                }
+                d.Entries.Add(f);
+            }
+            return ndir;
+        }
+
         static async Task Main(string[] args)
         {
             Console.OutputEncoding = Encoding.UTF8;
@@ -304,21 +468,48 @@ namespace AndroidSync
             string rpath = args[1];
 
             bool dry = args.Skip(2).Count(a => a.ToLower() == "dry") != 0;
-            bool touch = args.Skip(2).Count(a => a.ToLower() == "touch") != 0;
+            bool remap = args.Skip(2).Count(a => a.ToLower() == "remap") != 0;
 
             if (dry)
                 Console.WriteLine("Test Mode");
-            if (touch)
-                Console.WriteLine("Attempting Timestamp Updates");
                 
-            Console.WriteLine("Enumerating Local And Remote Paths");
+            Console.WriteLine("Enumerating Paths");
+
+            FileSystem localfs, remotefs;
 
             AdbClient client = new AdbClient();
             string device = null;
 
-            var ltask = BuildLocalStructure(lpath);
-            FSDirectory remote = await BuildRemoteStructure(client, device, rpath);
+            if (lpath.StartsWith("adb:"))
+            {
+                localfs = new AndroidFileSystem(client, device);
+                lpath = lpath.Remove(0, 4);
+            }
+            else
+                localfs = new LocalFileSystem();
+
+            if (rpath.StartsWith("adb:"))
+            {
+                remotefs = new AndroidFileSystem(client, device);
+                rpath = rpath.Remove(0, 4);
+            }
+            else
+                remotefs = new LocalFileSystem();
+
+            var ltask = localfs.EnumerateDirectory(lpath);
+            FSDirectory remote = await remotefs.EnumerateDirectory(rpath);
             FSDirectory local = await ltask;
+
+            if (remap)
+            {
+                local = RemapMusic(local);
+                Console.WriteLine("Checking Collisions");
+                if (CheckCollisions(local))
+                {
+                    Console.WriteLine("Collisions Detected, Resolve Before Use");
+                    return;
+                }
+            }
 
             Console.WriteLine("Computing Differences");
 
@@ -334,15 +525,15 @@ namespace AndroidSync
                 {
                     if (diff.DiffType == FSDiffType.Addition)
                     {
-                        Console.WriteLine("Create Directory: " + diff.Dest.GetFullPath('/'));
+                        Console.WriteLine("Create Directory: " + diff.Dest.GetFullPath());
                         if (!dry)
-                            await client.ShellExecuteAsync("mkdir " + EscapeArgument(diff.Dest.GetFullPath('/')), null, r);
+                            await remotefs.CreateDirectory(diff.Dest.GetFullPath());
                     }
                     else if (diff.DiffType == FSDiffType.Removal)
                     {
-                        Console.WriteLine("Remove Directory: " + diff.Dest.GetFullPath('/'));
+                        Console.WriteLine("Remove Directory: " + diff.Dest.GetFullPath());
                         if (!dry)
-                            await client.ShellExecuteAsync("rm -rf " + EscapeArgument(diff.Dest.GetFullPath('/')), null, r);
+                            await remotefs.RemoveDirectory(diff.Dest.GetFullPath());
                     }
                     else
                         throw new Exception();
@@ -351,34 +542,30 @@ namespace AndroidSync
                 {
                     if (diff.DiffType == FSDiffType.Addition)
                     {
-                        Console.WriteLine("New File: " + diff.Dest.GetFullPath('/'));
+                        Console.WriteLine("New File: " + diff.Dest.GetFullPath());
                         if (!dry)
                         {
                             progress.Size = dest.Size;
-                            using (Stream s = File.OpenRead(diff.Source.GetFullPath('\\')))
-                                await client.PushAsync(s, device, diff.Dest.GetFullPath('/'), 505, diff.Source.Modified, progress);
-                            if (touch)
-                                await client.ShellExecuteAsync("touch -m -d" + diff.Source.Modified.ToString(" yyyyMMddHHmmZ ") + EscapeArgument(diff.Dest.GetFullPath('/')), device, r);
+                            using (Stream s = await localfs.ReadFile(diff.Source.LocalPath))
+                                await remotefs.WriteFile(diff.Dest.GetFullPath(), s, diff.Source.Modified, progress);
                         }
                     }
                     else if (diff.DiffType == FSDiffType.Change)
                     {
-                        Console.WriteLine("Modify File: " + diff.Dest.GetFullPath('/'));
+                        Console.WriteLine("Modify File: " + diff.Dest.GetFullPath());
                         if (!dry)
                         {
                             progress.Size = source.Size;
-                            await client.ShellExecuteAsync("rm " + EscapeArgument(diff.Dest.GetFullPath('/')), device, r);
-                            using (Stream s = File.OpenRead(diff.Source.GetFullPath('\\')))
-                                await client.PushAsync(s, device, diff.Dest.GetFullPath('/'), 505, diff.Source.Modified, progress);
-                            if (touch)
-                                await client.ShellExecuteAsync("touch -m -d" + diff.Source.Modified.ToString(" yyyy-MM-ddTHH:mm:00Z ") + EscapeArgument(diff.Dest.GetFullPath('/')), device, r);
+                            await remotefs.RemoveFile(diff.Dest.GetFullPath());
+                            using (Stream s = File.OpenRead(diff.Source.LocalPath))
+                                await remotefs.WriteFile(diff.Dest.GetFullPath(), s, diff.Source.Modified, progress);
                         }
                     }
                     else if (diff.DiffType == FSDiffType.Removal)
                     {
-                        Console.WriteLine("Remove File: " + diff.Dest.GetFullPath('/'));
+                        Console.WriteLine("Remove File: " + diff.Dest.GetFullPath());
                         if (!dry)
-                            await client.ShellExecuteAsync("rm " + EscapeArgument(diff.Dest.GetFullPath('/')), device, r);
+                            await remotefs.RemoveFile(diff.Dest.GetFullPath());
                     }
                     else
                         throw new Exception();
