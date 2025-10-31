@@ -71,6 +71,8 @@ namespace AndroidSync
 
             public override async Task<FSDirectory> EnumerateDirectory(string path)
             {
+                if (path.EndsWith("/"))
+                    path = path.Remove(path.Length - 1);
                 var dhash = new Dictionary<string, FSDirectory>();
                 FSDirectory root = new FSDirectory(path, null, '/', path, dhash);
                 dhash.Add(path, root);
@@ -151,6 +153,8 @@ namespace AndroidSync
 
             public override async Task<FSDirectory> EnumerateDirectory(string path)
             {
+                if (path.EndsWith("\\"))
+                    path = path.Remove(path.Length - 1);
                 var dhash = new Dictionary<string, FSDirectory>();
                 FSDirectory root = new FSDirectory(path, null, '\\', Path.GetFullPath(path), dhash);
                 await Task.Run(() =>
@@ -160,6 +164,8 @@ namespace AndroidSync
                     foreach (var fi in locals)
                     {
                         string p = Path.GetDirectoryName(fi.FullName);
+                        if (p.EndsWith("\\"))
+                            p = p.Remove(p.Length - 1);
                         var top = dhash[p];
                         if (fi is DirectoryInfo)
                         {
@@ -439,7 +445,7 @@ namespace AndroidSync
                 foreach (var rp in remappaths_)
                     newpath = newpath.Replace($"{dir.Separator}{rp}{dir.Separator}", $"{dir.Separator}Files{dir.Separator}");
 
-                var subpaths = newpath.Remove(0, dir.Name.Length + 1).Split($"{dir.Separator}");
+                var subpaths = newpath.Remove(0, dir.Name.Length + 1).Split($"{dir.Separator}", StringSplitOptions.RemoveEmptyEntries);
                 subpaths = subpaths.Take(subpaths.Length - 1).ToArray();
                 var d = ndir;
                 foreach (var sp in subpaths)
@@ -531,6 +537,9 @@ namespace AndroidSync
                     }
                     else if (diff.DiffType == FSDiffType.Removal)
                     {
+                        var fp = diff.Dest.GetFullPath();
+                        if (fp.Contains("System Volume Information") || fp.Contains(".thumbnail") || fp.Contains("$RECYCLE"))
+                            continue;
                         Console.WriteLine("Remove Directory: " + diff.Dest.GetFullPath());
                         if (!dry)
                             await remotefs.RemoveDirectory(diff.Dest.GetFullPath());
