@@ -90,7 +90,6 @@ namespace MetadataCaching
         public string ReleaseDate => _releasedate;
         public DateTime LastWriteTime => _lastwritetime;
         public int DurationInSeconds => _durationinseconds;
-
         public void Touch()
         {
             _touched = true;

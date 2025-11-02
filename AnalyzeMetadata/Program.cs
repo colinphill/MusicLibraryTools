@@ -37,6 +37,24 @@ namespace AnalyzeMetadata
             var cache = db.BuildCache(config.IndexLocations.Select(l => l.Target).Distinct());
             LogConsole.WriteLine("Total Parsed Files: " + cache.FileCache.Count);
 
+            if (args.Skip(1).Any(s => s.ToLower() == "lyrics"))
+            {
+                foreach (var file in cache.FileCache.OrderBy(kv => kv.Key))
+                {
+                    var track = file.Value;
+                    if (track.TrackTotal == 0)
+                        Console.WriteLine("0 TrackTotal: " + file.Key);
+                    if (track.TrackTotal is null)
+                        Console.WriteLine("Missing TrackTotal: " + file.Key);
+                    if ((track.TrackNumber ?? 0) == 0)
+                        Console.WriteLine("0/Missing TrackNumber: " + file.Key);
+                    if ((track.DiscNumber != null) || (track.DiscTotal != null))
+                        Console.WriteLine($"({track.DiscNumber}/{track.DiscTotal}) Disc: {file.Key}");
+                    if (file.Key.Contains('\xa0'))
+                        Console.WriteLine("Contains nbsp: " + file.Key.Replace("\xa0", "{&nbsp;}"));
+                }
+            }
+
             if (args.Skip(1).Any(s => s.ToLower() == "incon"))
             {
                 var dirmap = new Dictionary<string, List<KeyValuePair<string, MetadataCacheEntry>>>();
@@ -72,7 +90,7 @@ namespace AnalyzeMetadata
                     if ((track.DiscNumber != null)||(track.DiscTotal != null))
                         Console.WriteLine($"({track.DiscNumber}/{track.DiscTotal}) Disc: {file.Key}");
                     if (file.Key.Contains('\xa0'))
-                        Console.WriteLine("Contains nbsp: " + file.Key);
+                        Console.WriteLine("Contains nbsp: " + file.Key.Replace("\xa0", "{&nbsp;}"));
                  }
 
             }

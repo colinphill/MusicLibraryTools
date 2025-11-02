@@ -1,12 +1,13 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Net;
-using System.Net.Sockets;
-using System.IO;
 
 namespace AndroidSync
 {
@@ -272,6 +273,54 @@ namespace AndroidSync
                 }
                 await conn.SendSyncRequestAsync("DONE", null, 0, (int)((stamp - epoch_).TotalSeconds));
                 await conn.ReceiveResponseAsync();
+            }
+            if (progress != null)
+                progress.End();
+        }
+
+        public async Task PullAsync(Stream dest, string device, string source, ISyncProgress progress = null)
+        {
+            if (progress != null)
+                progress.Start();
+            using (var conn = new AdbConnection(Encoding))
+            {
+                await conn.ConnectAsync(IPAddress.Loopback, 5037);
+                await conn.SendRequestAsync(device == null ? "host:transport-any" : $"host:transport:{device}");
+                await conn.ReceiveResponseAsync();
+                await conn.SendRequestAsync("sync:");
+                await conn.ReceiveResponseAsync();
+                await conn.SendSyncRequestAsync("RECV", Encoding.GetBytes(source));
+                byte[] buffer = new byte[MaxBufferSize];
+                long done = 0;
+                for (; ; )
+                {
+                    int received = await conn.ReceiveAsync(buffer, 0, 4);
+                    if (received != 4)
+                        throw new Exception("ADB Exception: Mismatched Length");
+                    string res = Encoding.GetString(buffer, 0, 4);
+                    if (res == "DATA")
+                    {
+                        received = await conn.ReceiveAsync(buffer, 0, 4);
+                        if (received != 4)
+                            throw new Exception("ADB Exception: Mismatched Length");
+                        int len = BitConverter.ToInt32(buffer, 0);
+                        received = await conn.ReceiveAsync(buffer, 0, len);
+                        if (received != len)
+                            throw new Exception("ADB Exception: Mismatched Length");
+                        dest.Write(buffer, 0, len);
+                        done += len;
+                    }
+                    else if (res == "DONE")
+                    {
+                        break;
+
+                    }
+                    else
+                        throw new Exception($"ADB Exception: Unrecognized Response: {res}");
+
+                    if (progress != null)
+                        progress.SetProgress(done);
+                }
             }
             if (progress != null)
                 progress.End();

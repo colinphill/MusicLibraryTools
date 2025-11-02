@@ -16,6 +16,8 @@ using System.Linq;
 using System.Data;
 using System.Runtime.CompilerServices;
 using System.ComponentModel;
+using System.ComponentModel.Design;
+using System.Net.Mail;
 
 namespace MusicFileUtilities
 {
@@ -1352,12 +1354,14 @@ namespace MusicFileUtilities
 
                         if ((f.FrameID == "TXXX") || (f.FrameID == "WXXX"))
                             _frames.Add(new UserStringFrame(f));
-                        else if ((f.FrameID == "UFID")||(f.FrameID == "PRIV"))
+                        else if ((f.FrameID == "UFID") || (f.FrameID == "PRIV"))
                             _frames.Add(new IdentifierFrame(f));
                         else if (f.FrameID == "APIC")
                             _frames.Add(new PictureFrame(f));
                         else if (f.FrameID == "COMM")
                             _frames.Add(new CommentFrame(f));
+                        else if (f.FrameID == "MCDI")
+                            _frames.Add(f);
                         else if ((f.FrameID[0] == 'T') || (f.FrameID[0] == 'W') || (f.FrameID[0] == 'M'))
                             _frames.Add(new TextFrame(f));
                         else
@@ -1472,8 +1476,19 @@ namespace MusicFileUtilities
 
     public class MP3File : ID3v2Tag, ICodecProvider, IMediaFile
     {
-        private readonly uint[] _bitrates = { 0, 32000, 40000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 160000, 192000, 224000, 256000, 320000, 0 };
-        private readonly uint[] _samplerates = { 44100, 48000, 32000, 0 };
+        private readonly uint[,,] _bitrates = {
+            { { 0, 32000, 64000, 96000, 128000, 160000, 192000, 224000, 256000, 288000, 320000, 352000, 284000, 416000, 448000, 0 },
+            { 0, 32000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 160000, 192000, 224000, 256000, 320000, 384000, 0 },
+            { 0, 32000, 40000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 160000, 192000, 224000, 256000, 320000, 0 } },
+            { { 0, 32000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 144000, 160000, 176000, 192000, 224000, 256000, 0 },
+            { 0, 8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 144000, 160000, 0 },
+            { 0, 8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 144000, 160000, 0 } },
+            { { 0, 32000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 144000, 160000, 176000, 192000, 224000, 256000, 0 },
+            { 0, 8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 144000, 160000, 0 },
+            { 0, 8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 144000, 160000, 0 } } };
+        
+        private readonly uint[,] _samplerates = { { 44100, 48000, 32000, 0 }, { 22050, 24000, 16000, 0 }, { 11025, 12000, 8000, 0 } };
+        private readonly int[,] _samplesperframe = { { 384, 1152, 1152 }, { 384, 1152, 576 }, { 384, 1152, 576 } };
         private readonly uint[] _channels = { 2, 2, 2, 1 };
         private readonly int[] _sideinfolen = { 32, 32, 32, 17 };
 
@@ -1499,75 +1514,140 @@ namespace MusicFileUtilities
             using (FileStream s = File.OpenRead(filename))
             {
                 ReadTag(s);
-                int b0 = -1, b1 = -1;
-                while (s.Position < s.Length)
+                for (; ; )
                 {
-                    b1 = s.ReadByte();
-                    if ((b0 == 0xff) && ((b1 & 0xfa) == 0xfa))
-                        break;
-                    b0 = b1;
-                }
-                if (s.Position >= s.Length)
-                    return;
-                long datalength = s.Length - s.Position + 2;
-                int b2 = s.ReadByte();
-                int b3 = s.ReadByte();
-                uint bitrate = _bitrates[b2 >> 4];
-                AverageBitrate = bitrate;
-                Samplerate = _samplerates[(b2 >> 2) & 3];
-                Channels = _channels[(b3 >> 6) & 3];
-                int sideinfolen = _sideinfolen[(b3 >> 6) & 3];
-                int framesize = ((1152 / 8 * (int)bitrate) / (int)Samplerate);
-                if ((b2 & 8) == 8)
-                    framesize++;
-
-                byte[] frame = new byte[framesize - 4];
-                s.Read(frame, 0, frame.Length);
-
-                int offset = sideinfolen;
-                string id = Encoding.ASCII.GetString(frame, offset, 4);
-                if ((id == "Xing" || (id == "Info")))
-                {
-                    uint frames = 0;
-                    uint bytes = 0;
-                    offset += 4;
-                    uint flags = Tools.UInt32AtBE(frame, offset);
-                    offset += 4;
-                    if ((flags & 1) == 1)
+                    int b0 = -1, b1 = -1, b5 = -1;
+                    while (s.Position < s.Length)
                     {
-                        frames = Tools.UInt32AtBE(frame, offset);
-                        offset += 4;
-                        AverageBitrate = (uint)(datalength / (frames * 1152 / Samplerate) * 8);
+                        b1 = b5 = s.ReadByte();
+                        if ((b0 == 0xff) && ((b1 & 0xe0) == 0xe0))
+                            break;
+                        b0 = b1;
                     }
-                    if ((bytes & 2) == 2)
+                    if (s.Position >= s.Length)
+                        return;
+                    int ver = (b1 & 0x8) == 0x8 ? 0 : 1;
+                    if ((b1 & 0x10) == 0x00)
                     {
-                        bytes = Tools.UInt32AtBE(frame, offset);
-                        offset += 4;
+                        if (ver == 0)
+                            ver = 2;
+                        else
+                        {
+                            s.Seek(-1, SeekOrigin.Current);
+                            b0 = b1 = -1;
+                            continue;
+                        }
                     }
-                    int decoderdelay = 0;
-                    int endpadding = 0;
+                    int layer = -1;
+                    if ((b1 & 0x6) == 0x2)
+                        layer = 2;
+                    else if ((b1 & 0x6) == 0x4)
+                        layer = 1;
+                    else if ((b1 & 0x6) == 0x6)
+                        layer = 0;
+                    if (layer == -1)
+                    {
+                        s.Seek(-1, SeekOrigin.Current);
+                        b0 = b1 = -1;
+                        continue;
+                    }
+                    long datalength = s.Length - s.Position + 2;
+                    int b2 = s.ReadByte();
+                    int b3 = s.ReadByte();
+                    uint bitrate = _bitrates[ver, layer, b2 >> 4];
+                    AverageBitrate = bitrate;
+                    Samplerate = _samplerates[ver, (b2 >> 2) & 3];
+                    Channels = _channels[(b3 >> 6) & 3];
+                    int samplesperframe = _samplesperframe[ver, layer];
+
+                    if ((Samplerate == 0) || (AverageBitrate == 0))
+                    {
+                        s.Seek(-3, SeekOrigin.Current);
+                        b0 = b1 = -1;
+                        continue;
+                    }
+                    int sideinfolen = _sideinfolen[(b3 >> 6) & 3];
+                    int framesize = (int)((double)samplesperframe * (double)bitrate / (double)Samplerate / 8.0);
+                    if ((b2 & 8) == 8)
+                        framesize += 1;
+                    if (layer == 0)
+                        framesize *= 4;
+
+                    if (framesize < 4)
+                    {
+                        s.Seek(-3, SeekOrigin.Current);
+                        b0 = b1 = -1;
+                        continue;
+                    }
+
+                    byte[] frame = new byte[framesize - 4];
+                    s.Read(frame, 0, frame.Length);
+
                     try
                     {
-                        decoderdelay = (frame[141 + sideinfolen] << 4) | (frame[142 + sideinfolen] >> 4);
-                        endpadding = ((frame[142 + sideinfolen] & 0xf) << 8) | frame[143 + sideinfolen];
+                        int offset = sideinfolen;
+                        string id = Encoding.ASCII.GetString(frame, offset, 4);
+                        if ((id == "Xing" || (id == "Info")))
+                        {
+                            uint frames = 0;
+                            uint bytes = 0;
+                            offset += 4;
+                            uint flags = Tools.UInt32AtBE(frame, offset);
+                            offset += 4;
+                            if ((flags & 1) == 1)
+                            {
+                                frames = Tools.UInt32AtBE(frame, offset);
+                                offset += 4;
+                                AverageBitrate = (uint)(datalength / (frames * samplesperframe / Samplerate) * 8);
+                            }
+                            if ((bytes & 2) == 2)
+                            {
+                                bytes = Tools.UInt32AtBE(frame, offset);
+                                offset += 4;
+                            }
+                            int decoderdelay = 0;
+                            int endpadding = 0;
+                            try
+                            {
+                                decoderdelay = (frame[141 + sideinfolen] << 4) | (frame[142 + sideinfolen] >> 4);
+                                endpadding = ((frame[142 + sideinfolen] & 0xf) << 8) | frame[143 + sideinfolen];
+                            }
+                            catch
+                            {
+                                // Short frame, no pad information
+                            }
+                            DurationInFrames = (uint)((samplesperframe * frames - decoderdelay - endpadding) / (Samplerate / 75));
+                        }
+                        else if (Encoding.ASCII.GetString(frame, 32, 4) == "VBRI")
+                        {
+                            offset += 10;
+                            uint frames = Tools.UInt32AtBE(frame, offset);
+                            AverageBitrate = (uint)(datalength / (frames * 1152 / Samplerate) * 8);
+                            DurationInFrames = (uint)((samplesperframe * frames) / (Samplerate / 75));
+                        }
+                        else
+                        {
+                            // CBR
+                            DurationInFrames = (uint)((samplesperframe * datalength / framesize) / (Samplerate / 75));
+                        }
                     }
                     catch
                     {
-                        // Short frame, no pad information
+                        DurationInFrames = (uint)((samplesperframe * datalength / framesize) / (Samplerate / 75));
                     }
-                    DurationInFrames = (uint)((1152 * frames - decoderdelay - endpadding) / (Samplerate / 75));
-                }
-                else if (Encoding.ASCII.GetString(frame, 32, 4) == "VBRI")
-                {
-                    offset += 10;
-                    uint frames = Tools.UInt32AtBE(frame, offset);
-                    AverageBitrate = (uint)(datalength / (frames * 1152 / Samplerate) * 8);
-                    DurationInFrames = (uint)((1152 * frames) / (Samplerate / 75));
-                }
-                else
-                {
-                    // CBR
-                    DurationInFrames = (uint)((1152 * datalength / framesize) / (Samplerate / 75));
+
+                    b0 = s.ReadByte();
+                    b1 = s.ReadByte();
+                    if ((b0 == -1) || (b1 == -1))
+                        return;
+
+                    if ((b0 != 0xff)||((b1 & 0xe0) != 0xe0))
+                    {
+                        s.Seek(-framesize - 1, SeekOrigin.Current);
+                        continue;
+                    }
+
+                    return;
                 }
             }
 

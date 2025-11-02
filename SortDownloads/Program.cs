@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.IO;
+using MusicFileUtilities;
 
 namespace SortDownloads
 {
@@ -12,7 +13,22 @@ namespace SortDownloads
     {
         const string FLAC_DIR = @"Z:\ITunes\FLAC\Sorted";
         const string FLAC2_DIR = @"Z:\iTunes\FLAC2\Sorted";
-        const string HiRes_DIR = @"Z:\iTunes\HiRes\Stereo\Downloads\Sorted";
+        const string HiRes_DIR = @"Z:\iTunes\HiRes\Stereo\PCM\Sorted";
+
+        static string GetFileName(string desired)
+        {
+            if (!File.Exists(desired))
+                return desired;
+            string dir = Path.GetDirectoryName(desired);
+            string file = Path.GetFileNameWithoutExtension(desired);
+            string ext = Path.GetExtension(desired);
+            for(int i=1; ;i++)
+            {
+                string fn = Path.Combine(dir, file) + i.ToString() + ext;
+                if (!File.Exists(fn))
+                    return fn;
+            }
+        }
 
         static void Main(string[] args)
         {
@@ -24,42 +40,48 @@ namespace SortDownloads
 
             var di = new DirectoryInfo(basedir);
             var files = di.GetFileSystemInfos("*.*", SearchOption.AllDirectories);
-            var buckets = new Dictionary<string, List<string>>();
+            var buckets = new Dictionary<string, List<(string Path, ICodecProvider Codec)>>();
 
-            foreach (var file in files)
+            foreach (var file in files.Where(f => !f.Attributes.HasFlag(FileAttributes.Directory)))
             {
-                if ((file.Attributes & FileAttributes.Directory) == 0)
+                try
                 {
-                    string fn = file.Name.ToLower();
-                    if (!buckets.ContainsKey(fn))
-                        buckets.Add(fn, new List<string>());
-                    buckets[fn].Add(file.FullName);
+                    var filename = file.FullName;
+                    var mediafile = MediaFile.GetFile(filename);
+                    var tag = mediafile.Tags.First();
+                    var codec = mediafile.Codecs.First();
+                    if (codec.CodecType == CodecType.Lossy)
+                    {
+                        Console.WriteLine($"Skipping Lossy File: {filename}");
+                        continue;
+                    }
+                    var name = $"{tag.TrackNumber ?? 0} {tag.AlbumArtist} {tag.Album} {tag.Title}".ToLower();
+                    if (!buckets.ContainsKey(name))
+                        buckets.Add(name, new List<(string, ICodecProvider)>());
+                    buckets[name].Add((filename, codec));
+                }
+                catch
+                {
+
                 }
             }
 
             foreach (var bucket in buckets)
             {
-                if (bucket.Value.Count > 1)
+                if (bucket.Value.Select(i => i.Codec.AverageBitrate).Distinct().Count() == 1)
                 {
-                    string dest = Path.Combine(FLAC_DIR, bucket.Key);
-                    while (File.Exists(dest))
-                    {
-
-                    }
-                    File.Copy(bucket.Value[0], dest);
+                    File.Move(bucket.Value[0].Path, GetFileName(Path.Combine(FLAC_DIR, Path.GetFileName(bucket.Value[0].Path))));
+                    bucket.Value.Skip(1).ToList().ForEach(p => File.Delete(p.Path));
                 }
                 else
                 {
-                    string dest = Path.Combine(FLAC2_DIR, bucket.Key);
-                    if (bucket.Key.Contains("-smr"))
-                        dest = Path.Combine(HiRes_DIR, bucket.Key);
-                    while (File.Exists(dest))
-                    {
-
-                    }
-                    File.Copy(bucket.Value[0], dest);
+                    var ordered = bucket.Value.OrderBy(i => i.Codec.AverageBitrate).ToArray();
+                    File.Move(ordered[0].Path, GetFileName(Path.Combine(FLAC2_DIR, Path.GetFileName(ordered[0].Path))));
+                    File.Move(ordered[1].Path, GetFileName(Path.Combine(HiRes_DIR, Path.GetFileName(ordered[1].Path))));
                 }
             }
+
+            MetadataExtensions.CleanEmptyMusicFolders(di, true);
 
             Console.WriteLine();
 
