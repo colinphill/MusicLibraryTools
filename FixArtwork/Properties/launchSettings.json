@@ -2,7 +2,7 @@
   "profiles": {
     "FixArtwork": {
       "commandName": "Project",
-      "commandLineArgs": "test"
+      "commandLineArgs": "\"Recently Added\""
     }
   }
 }
