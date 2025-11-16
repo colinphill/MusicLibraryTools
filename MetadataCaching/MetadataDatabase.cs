@@ -249,8 +249,6 @@ namespace MetadataCaching
                         comm.ExecuteNonQuery();
                     }
                 }
-                comm.CommandText = "PRAGMA foreign_keys = on;\r\n";
-                comm.ExecuteNonQuery();
                 trans.Commit();
             }
             catch
@@ -258,6 +256,10 @@ namespace MetadataCaching
                 trans.Rollback();
                 throw;
             }
+            using var pcomm = res.conn_.CreateCommand();
+            pcomm.CommandText = "PRAGMA foreign_keys = on;\r\nPRAGMA journal_mode = WAL;\r\npragma synchronous = normal;\r\n";
+            pcomm.ExecuteNonQuery();
+
             return res;
         }
 #endif
@@ -418,7 +420,7 @@ namespace MetadataCaching
                 missedsets.AddRange(dbsets.Where(s => !s.Hit).Select(s => (s.ID)));
             }
 
-            int added = 0, modified = 0, removed = 0, unchanged = 0;
+            int added = 0, modified = 0, removed = 0, unchanged = 0, scanned = 0;
 
             using var filequeue = new BlockingCollection<(long ID, long Set, string FileName, long Length, DateTime LastWriteTime, IMediaFile File)>();
 
@@ -479,7 +481,27 @@ namespace MetadataCaching
                            Interlocked.Increment(ref added);
                        }
                        if (scan)
-                           filequeue.Add((id, scanpath.ID, relativename, fi.Length, fi.LastWriteTimeUtc, MediaFile.GetFile(fi.FullName, hash)));
+                       {
+                           try
+                           {
+                               filequeue.Add((id, scanpath.ID, relativename, fi.Length, fi.LastWriteTimeUtc, MediaFile.GetFile(fi.FullName, hash)));
+                               int done = Interlocked.Increment(ref scanned);
+                               if ((done % 100) == 0)
+                               {
+                                   Console.Write($"Scanned: {done}\r");
+                                   Console.Out.Flush();
+                               }
+                           }
+                           catch (IOException ex)
+                           {
+                               Console.WriteLine($"IOException On File: {fi.FullName} - {ex.Message}");
+                           }
+                           catch (Exception ex)
+                           {
+                               Console.WriteLine($"Unknown Exception On File: {fi.FullName} - {ex.Message}");
+                               loopstate.Break();
+                           }
+                       }
                        return hash;
                    }, (hash) => { hash.Dispose(); });
 
@@ -490,6 +512,7 @@ namespace MetadataCaching
                    }
 
                 });
+                Console.WriteLine($"Scanned: {scanned}");
                 filequeue.CompleteAdding();
             });
 
