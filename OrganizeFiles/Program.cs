@@ -41,9 +41,23 @@ namespace OrganizeFiles
                     string tgt = Path.Combine(basedir, f.Value.FormatPath(LENGTH_LIMIT, DISC_NUM_LENGTH_LIMIT) + Path.GetExtension(f.Key));
                     if (!f.Key.Equals(tgt, StringComparison.InvariantCultureIgnoreCase))
                     {
-                        LogConsole.WriteLine(count.ToString() + ") " + f.Key + " -> " + tgt);
-                        Directory.CreateDirectory(Path.GetDirectoryName(tgt));
-                        File.Move(f.Key, tgt);
+                        int index = 2;
+                        bool move = true;
+                        while (File.Exists(tgt))
+                        {
+                            tgt = Path.Combine(basedir, f.Value.FormatPath(LENGTH_LIMIT, DISC_NUM_LENGTH_LIMIT) + $"_{index++}" + Path.GetExtension(f.Key));
+                            if (f.Key.Equals(tgt, StringComparison.InvariantCultureIgnoreCase))
+                            {
+                                move = false; 
+                                break; 
+                            }
+                        }
+                        if (move)
+                        {
+                            LogConsole.WriteLine(count.ToString() + ") " + f.Key + " -> " + tgt);
+                            Directory.CreateDirectory(Path.GetDirectoryName(tgt));
+                            File.Move(f.Key, tgt);
+                        }
                     }
                 }
                 MetadataExtensions.CleanEmptyMusicFolders(new DirectoryInfo(basedir), deletenonmusic);
