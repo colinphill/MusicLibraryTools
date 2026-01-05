@@ -38,15 +38,15 @@ namespace OrganizeFiles
                 foreach (var f in cache.FileCache)
                 {
                     count++;
-                    string tgt = Path.Combine(basedir, f.Value.FormatPath(LENGTH_LIMIT, DISC_NUM_LENGTH_LIMIT) + Path.GetExtension(f.Key));
-                    if (!f.Key.Equals(tgt, StringComparison.InvariantCultureIgnoreCase))
+                    string tgt = Path.Combine(basedir, f.Value.FormatPath(LENGTH_LIMIT, DISC_NUM_LENGTH_LIMIT) + Path.GetExtension(f.Key)).Normalize();
+                    if (!f.Key.Equals(tgt, StringComparison.InvariantCultureIgnoreCase) || !f.Key.IsNormalized())
                     {
                         int index = 2;
                         bool move = true;
-                        while (File.Exists(tgt))
+                        while (File.Exists(tgt) && f.Key.IsNormalized())
                         {
-                            tgt = Path.Combine(basedir, f.Value.FormatPath(LENGTH_LIMIT, DISC_NUM_LENGTH_LIMIT) + $"_{index++}" + Path.GetExtension(f.Key));
-                            if (f.Key.Equals(tgt, StringComparison.InvariantCultureIgnoreCase))
+                            tgt = Path.Combine(basedir, f.Value.FormatPath(LENGTH_LIMIT, DISC_NUM_LENGTH_LIMIT) + $"_{index++}" + Path.GetExtension(f.Key)).Normalize();
+                            if (f.Key.Equals(tgt, StringComparison.InvariantCultureIgnoreCase) && f.Key.IsNormalized())
                             {
                                 move = false; 
                                 break; 
