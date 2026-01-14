@@ -313,7 +313,7 @@ namespace MusicFileUtilities
                 {
                     if (ValidExtensions.Contains(fi.Extension.ToLower()) || (!deletenonmusic))
                         hitpaths[Path.GetDirectoryName(fi.FullName)] = true;
-                    else if (deletenonmusic)
+                    else if ((deletenonmusic)&&(!Path.GetFileNameWithoutExtension(fi.FullName).Equals("folder", StringComparison.InvariantCultureIgnoreCase)))
                         fi.Delete();
                 }
                 if (fsi is DirectoryInfo di)
@@ -335,7 +335,7 @@ namespace MusicFileUtilities
             var missedpaths = hitdict.Where(kv => !kv.Value).Select(kv => kv.Key).OrderByDescending(p => p);
 
             foreach (var path in missedpaths)
-                Directory.Delete(path);
+                Directory.Delete(path, true);
         }
 
    }
