@@ -64,6 +64,9 @@ namespace CrossSyncMusic
 
             LibraryConfiguration config = new LibraryConfiguration(args[0]);
 
+            bool deletenonmusic = config["DeleteNonMusic"].Count() != 0;
+            bool keepfolderimages = config["KeepFolderImages"].Count() != 0;
+ 
             Directory.CreateDirectory(config.CrossSyncTargetLibraryPath);
 
             LogConsole.WriteLine("Loading iTunes Library XML...");
@@ -177,7 +180,7 @@ namespace CrossSyncMusic
 
             LogConsole.WriteLine("Total Misses: " + (namehits.Where(kv => kv.Value.Hit == false).Count()).ToString());
 
-            MetadataExtensions.CleanEmptyMusicFolders(targetdi);
+            MetadataExtensions.CleanEmptyMusicFolders(targetdi, deletenonmusic, keepfolderimages);
     
             LogConsole.Close();
 

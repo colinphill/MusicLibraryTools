@@ -20,6 +20,7 @@ namespace OrganizeFiles
         {
             LibraryConfiguration config = new LibraryConfiguration(args[0]);
             bool deletenonmusic = config["DeleteNonMusic"].Count() != 0;
+            bool keepfolderimages = config["KeepFolderImages"].Count() != 0;
             int LENGTH_LIMIT = config.LengthLimit;
             int DISC_NUM_LENGTH_LIMIT = config.DiscNumLengthLimit;
 
@@ -60,7 +61,7 @@ namespace OrganizeFiles
                         }
                     }
                 }
-                MetadataExtensions.CleanEmptyMusicFolders(new DirectoryInfo(basedir), deletenonmusic);
+                MetadataExtensions.CleanEmptyMusicFolders(new DirectoryInfo(basedir), deletenonmusic, keepfolderimages);
                 Console.WriteLine();
             }
         }

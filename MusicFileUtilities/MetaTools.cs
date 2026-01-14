@@ -302,7 +302,7 @@ namespace MusicFileUtilities
         }
 #endif
 
-        public static void CleanEmptyMusicFolders(DirectoryInfo dirinfo, bool deletenonmusic = false)
+        public static void CleanEmptyMusicFolders(DirectoryInfo dirinfo, bool deletenonmusic = false, bool keepfolderimages = false)
         {
             var results = dirinfo.EnumerateFileSystemInfos("*", SearchOption.AllDirectories);
             var hitpaths = new ConcurrentDictionary<string, bool>();
@@ -313,11 +313,14 @@ namespace MusicFileUtilities
                 {
                     if (ValidExtensions.Contains(fi.Extension.ToLower()) || (!deletenonmusic))
                         hitpaths[Path.GetDirectoryName(fi.FullName)] = true;
-                    else if ((deletenonmusic)&&(!Path.GetFileNameWithoutExtension(fi.FullName).Equals("folder", StringComparison.InvariantCultureIgnoreCase)))
-                        fi.Delete();
+                    else if (deletenonmusic)
+                    {
+                        if ((keepfolderimages) && (!Path.GetFileNameWithoutExtension(fi.FullName).Equals("folder", StringComparison.InvariantCultureIgnoreCase)))
+                            fi.Delete();
+                    }
+                    if (fsi is DirectoryInfo di)
+                        hitpaths.TryAdd(di.FullName, false);
                 }
-                if (fsi is DirectoryInfo di)
-                    hitpaths.TryAdd(di.FullName, false);
             });
 
             var hitkeys = hitpaths.Where(kv => kv.Value).Select(kv => kv.Key);
