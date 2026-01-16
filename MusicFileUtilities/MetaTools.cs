@@ -315,7 +315,12 @@ namespace MusicFileUtilities
                         hitpaths[Path.GetDirectoryName(fi.FullName)] = true;
                     else if (deletenonmusic)
                     {
-                        if ((keepfolderimages) && (!Path.GetFileNameWithoutExtension(fi.FullName).Equals("folder", StringComparison.InvariantCultureIgnoreCase)))
+                        if (keepfolderimages)
+                        {
+                            if (!Path.GetFileNameWithoutExtension(fi.FullName).Equals("folder", StringComparison.InvariantCultureIgnoreCase))
+                                fi.Delete();
+                        }
+                        else
                             fi.Delete();
                     }
                     if (fsi is DirectoryInfo di)
