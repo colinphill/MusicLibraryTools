@@ -319,13 +319,15 @@ namespace MusicFileUtilities
                         {
                             if (!Path.GetFileNameWithoutExtension(fi.FullName).Equals("folder", StringComparison.InvariantCultureIgnoreCase))
                                 fi.Delete();
+                            else
+                                hitpaths[Path.GetDirectoryName(fi.FullName)] = true;
                         }
                         else
                             fi.Delete();
                     }
-                    if (fsi is DirectoryInfo di)
-                        hitpaths.TryAdd(di.FullName, false);
                 }
+                if (fsi is DirectoryInfo di)
+                    hitpaths.TryAdd(di.FullName, false);
             });
 
             var hitkeys = hitpaths.Where(kv => kv.Value).Select(kv => kv.Key);
