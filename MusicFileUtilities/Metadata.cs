@@ -161,6 +161,7 @@ namespace MusicFileUtilities
     public interface IMetadataWriter
     {
         void SetField(TagFields field, string value);
+        void RemoveField(TagFields field);
         void Save(string outputPath = null);
     }
 

@@ -280,6 +280,8 @@ namespace MusicFileUtilities
                 TextItems.Add(new KeyValuePair<string, string>(key, value));
         }
 
+        public void RemoveField(TagFields field) => SetField(field, null);
+
         public byte[] ToByteArray()
         {
             // Gather all items: text items (flags=0) and binary/artwork items (flags=2)

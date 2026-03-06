@@ -1893,6 +1893,35 @@ namespace MusicFileUtilities
             }
         }
 
+        public void RemoveField(TagFields field)
+        {
+            Atom_ilst ilst = root_.FindPath("moov.udta.meta.ilst") as Atom_ilst
+                ?? throw new InvalidOperationException("No ilst atom found.");
+
+            if (field == TagFields.TrackNumber || field == TagFields.TotalTracks)
+            {
+                var existing = ilst.Children.FirstOrDefault(a => a.Type == "trkn") as ContainerAtom;
+                if (existing == null) return;
+                var da = existing.FindPath("data") as Atom_data;
+                if (field == TagFields.TrackNumber) da.TrackNumber = 0; else da.TotalTracks = 0;
+                if (da.TrackNumber == 0 && da.TotalTracks == 0)
+                    { ilst.Children.Remove(existing); ilst.Touch(-(long)existing.Size); }
+                return;
+            }
+            if (field == TagFields.DiscNumber || field == TagFields.TotalDiscs)
+            {
+                var existing = ilst.Children.FirstOrDefault(a => a.Type == "disk") as ContainerAtom;
+                if (existing == null) return;
+                var da = existing.FindPath("data") as Atom_data;
+                if (field == TagFields.DiscNumber) da.DiscNumber = 0; else da.TotalDiscs = 0;
+                if (da.DiscNumber == 0 && da.TotalDiscs == 0)
+                    { ilst.Children.Remove(existing); ilst.Touch(-(long)existing.Size); }
+                return;
+            }
+
+            SetField(field, null);
+        }
+
         private Atom_data GetOrCreateStandardDataAtom(Atom_ilst ilst, string atomType)
         {
             var existing = ilst.Children.FirstOrDefault(a => a.Type == atomType) as ContainerAtom;

@@ -1396,6 +1396,8 @@ namespace MusicFileUtilities
             }
         }
 
+        public void RemoveField(TagFields field) => SetField(field, null);
+
         public void Save(string outputPath = null)
         {
             string target = outputPath ?? _filename

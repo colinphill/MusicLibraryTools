@@ -404,6 +404,8 @@ namespace MusicFileUtilities
                 Comments.Add(new KeyValuePair<string, string>(key, value));
         }
 
+        public void RemoveField(TagFields field) => SetField(field, null);
+
     }
 
     [Serializable]

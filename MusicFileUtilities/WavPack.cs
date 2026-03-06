@@ -115,10 +115,9 @@ namespace MusicFileUtilities
 
         public void SaveTags(string outputPath = null) => Save(outputPath);
 
-        public void SetField(TagFields field, string value)
-        {
-            tag_.SetField(field, value);
-        }
+        public void SetField(TagFields field, string value) => tag_.SetField(field, value);
+
+        public void RemoveField(TagFields field) => tag_.RemoveField(field);
 
         public void Save(string outputPath = null)
         {
