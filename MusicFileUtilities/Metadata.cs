@@ -33,6 +33,7 @@ namespace MusicFileUtilities
     {
         public IEnumerable<ICodecProvider> Codecs { get; }
         public IEnumerable<IMetadataProvider> Tags { get; }
+        void SaveTags(string outputPath = null);
     }
 
     public interface ICodecProvider
@@ -155,6 +156,12 @@ namespace MusicFileUtilities
         IEnumerable<KeyValuePair<string, string>> GetTextMetadata();
         IEnumerable<IMetadataImage> GetImageMetadata();
 
+    }
+
+    public interface IMetadataWriter
+    {
+        void SetField(TagFields field, string value);
+        void Save(string outputPath = null);
     }
 
     public abstract class TagBase : IMetadataProvider

@@ -689,7 +689,30 @@ namespace MusicFileUtilities
 
         public override void Encode()
         {
-            throw new NotImplementedException();
+            if (FrameID.Length > 0 && FrameID[0] == 'W')
+            {
+                Data = ID3v2Util.ISO8859Encoding.GetBytes(values_[0]);
+                return;
+            }
+
+            ID3v2Util.ID3Encoding enc;
+            byte[] encoded;
+            try
+            {
+                enc = ID3v2Util.ID3Encoding.ISO8859;
+                encoded = CodeString(enc, string.Join("\0", values_));
+            }
+            catch
+            {
+                enc = (ID3v2Util.UseUTF8 && tag_.Version >= 4)
+                    ? ID3v2Util.ID3Encoding.UTF8
+                    : ID3v2Util.ID3Encoding.MarkedUnicode;
+                encoded = CodeString(enc, string.Join("\0", values_));
+            }
+
+            Data = new byte[1 + encoded.Length];
+            Data[0] = (byte)enc;
+            Array.Copy(encoded, 0, Data, 1, encoded.Length);
         }
 
         public string Text
@@ -702,6 +725,7 @@ namespace MusicFileUtilities
             {
                 Array.Resize(ref values_, 1);
                 values_[0] = value;
+                Encode();
             }
         }
 
@@ -1063,39 +1087,43 @@ namespace MusicFileUtilities
 
         public override void Encode()
         {
-            throw new NotImplementedException();
+            if (_picdata == null) return;
+            byte[] mime = ID3v2Util.ISO8859Encoding.GetBytes(_mimetype ?? "image/jpeg");
+            byte[] desc = ID3v2Util.ISO8859Encoding.GetBytes(_description ?? "");
+            int totalLen = 1 + mime.Length + 1 + 1 + desc.Length + 1 + _picdata.Length;
+            Data = new byte[totalLen];
+            int pos = 0;
+            Data[pos++] = (byte)ID3v2Util.ID3Encoding.ISO8859;
+            Array.Copy(mime, 0, Data, pos, mime.Length); pos += mime.Length;
+            Data[pos++] = 0;
+            Data[pos++] = (byte)_type;
+            Array.Copy(desc, 0, Data, pos, desc.Length); pos += desc.Length;
+            Data[pos++] = 0;
+            Array.Copy(_picdata, 0, Data, pos, _picdata.Length);
         }
 
         public ID3v2Util.APICType Type
         {
-            get
-            {
-               return _type;
-            }
+            get => _type;
+            set { _type = value; Encode(); }
         }
 
         public string MimeType
         {
-            get
-            {
-                return _mimetype;
-            }
+            get => _mimetype;
+            set { _mimetype = value; Encode(); }
         }
 
         public string Description
         {
-            get
-            {
-                 return _description;
-            }
+            get => _description;
+            set { _description = value; Encode(); }
         }
 
         public byte[] PictureData
         {
-            get
-            {
-                return _picdata;
-            }
+            get => _picdata;
+            set { _picdata = value; _width = 0; _height = 0; if (value != null) { var img = ImageFile.GetImageDimensions(value); _width = img.Width; _height = img.Height; } Encode(); }
         }
 
         public string Hash
@@ -1114,10 +1142,11 @@ namespace MusicFileUtilities
     public class ID3v2Tag : TagBase
     {
 
-        private int _headerversion = 0;
+        protected int _headerversion = 0;
         private int _flags = 0;
-        private int _tagsize = 0;
+        protected int _tagsize = 0;
         private List<ID3v2Frame> _frames = new List<ID3v2Frame>();
+        protected string _filename = null;
  
         public List<ID3v2Frame> Frames
         {
@@ -1138,7 +1167,7 @@ namespace MusicFileUtilities
         public int Version => _headerversion;
         public int Flags => _flags;
 
-        private void WriteHeader(FileStream s)
+        protected void WriteHeader(FileStream s)
         {
             byte[] header = new byte[10];
             header[0] = 0x49;
@@ -1189,94 +1218,241 @@ namespace MusicFileUtilities
 
         #endregion
 
-        /*public ID3v2Frame GetFrame(string id)
-         {
-             foreach (ID3v2Frame f in _frames)
-                 if (f.FrameID == id)
-                     return f;
-             return null;
-         }
+        public void SetString(string frameId, string value)
+        {
+            var existing = _frames.OfType<TextFrame>().FirstOrDefault(f => f.FrameID == frameId);
+            if (existing != null)
+            {
+                existing.Text = value;
+                return;
+            }
+            _frames.RemoveAll(f => f.FrameID == frameId);
+            var frame = new TextFrame(this) { FrameID = frameId };
+            frame.Text = value;
+            _frames.Add(frame);
+        }
 
-         public string GetString(string id)
-         {
-             foreach (ID3v2Frame f in _frames)
-                 if (f.FrameID == id)
-                     return f.StringValue;
-             return "";
-         }
+        public void SetUserString(string key, string value)
+        {
+            string txxx = (_headerversion == 2) ? "TXX" : "TXXX";
+            var existing = _frames.OfType<UserStringFrame>()
+                                  .FirstOrDefault(f => f.FrameID == txxx && f.Key == key);
+            if (existing != null)
+            {
+                existing.Value = value;
+                return;
+            }
+            var frame = new UserStringFrame(this) { FrameID = txxx };
+            frame.Key = key;
+            frame.Value = value;
+            _frames.Add(frame);
+        }
 
-         public string GetUserString(string id)
-         {
-             foreach (ID3v2Frame f in _frames)
-                 if (f.FrameID == "TXXX")
-                 {
-                     string[] vals = f.StringValue.Split("\0".ToCharArray());
-                     if (vals[0] == id)
-                         return vals[1];
-                 }
-             return "";
-         }
+        public void SetAttachedImage(ID3v2Util.APICType pictureType, string mimeType,
+                                     string description, byte[] data)
+        {
+            string apic = (_headerversion == 2) ? "PIC" : "APIC";
+            var existing = _frames.OfType<PictureFrame>()
+                                  .FirstOrDefault(f => f.FrameID == apic && f.Type == pictureType);
+            if (existing != null)
+            {
+                existing.MimeType = mimeType;
+                existing.Description = description;
+                existing.PictureData = data;
+                return;
+            }
+            var frame = new PictureFrame(this) { FrameID = apic };
+            frame.Type = pictureType;
+            frame.MimeType = mimeType;
+            frame.Description = description;
+            frame.PictureData = data;
+            _frames.Add(frame);
+        }
 
-         public void SetString(string id, string value)
-         {
-             foreach (ID3v2Frame f in _frames)
-                 if (f.FrameID == id)
-                 {
-                     f.StringValue = value;
-                     return;
-                 }
-             ID3v2Frame frm = new ID3v2Frame();
-             frm.FrameID = id;
-             frm.StringValue = value;
-             _frames.Add(frm);
-         }
+        public void SetField(TagFields field, string value)
+        {
+            if (!ID3v2Util.ActionMappingsv23v24.ContainsKey(field))
+                throw new ArgumentException($"Unsupported tag field for ID3: {field}");
 
-         public void SetAttachedImage(ID3v2Util.APICType picturetype, string mimetype, byte[] data)
-         {
-             string newstring = "\0" + mimetype + "\0" + char.ConvertFromUtf32((byte)picturetype) + "\0";
-             byte[] encoded = _8bitencoding.GetBytes(newstring);
+            // Special compound fields stored as "N/total" in a single frame
+            if (field == TagFields.TrackNumber || field == TagFields.TotalTracks)
+            {
+                var tf = _frames.OfType<TextFrame>().FirstOrDefault(f => f.FrameID == "TRCK");
+                string[] parts = (tf?.Text ?? "").Split('/');
+                string num = parts.Length >= 1 ? parts[0] : "";
+                string tot = parts.Length >= 2 ? parts[1] : "";
+                if (field == TagFields.TrackNumber) num = value ?? "";
+                else tot = value ?? "";
+                string combined = string.IsNullOrEmpty(tot) ? num : num + "/" + tot;
+                if (string.IsNullOrEmpty(combined))
+                    _frames.RemoveAll(f => f.FrameID == "TRCK");
+                else
+                    SetString("TRCK", combined);
+                return;
+            }
+            if (field == TagFields.DiscNumber || field == TagFields.TotalDiscs)
+            {
+                var tf = _frames.OfType<TextFrame>().FirstOrDefault(f => f.FrameID == "TPOS");
+                string[] parts = (tf?.Text ?? "").Split('/');
+                string num = parts.Length >= 1 ? parts[0] : "";
+                string tot = parts.Length >= 2 ? parts[1] : "";
+                if (field == TagFields.DiscNumber) num = value ?? "";
+                else tot = value ?? "";
+                string combined = string.IsNullOrEmpty(tot) ? num : num + "/" + tot;
+                if (string.IsNullOrEmpty(combined))
+                    _frames.RemoveAll(f => f.FrameID == "TPOS");
+                else
+                    SetString("TPOS", combined);
+                return;
+            }
+            if (field == TagFields.MovementNumber || field == TagFields.MovementTotal)
+            {
+                var tf = _frames.OfType<TextFrame>().FirstOrDefault(f => f.FrameID == "MVIN");
+                string[] parts = (tf?.Text ?? "").Split('/');
+                string num = parts.Length >= 1 ? parts[0] : "";
+                string tot = parts.Length >= 2 ? parts[1] : "";
+                if (field == TagFields.MovementNumber) num = value ?? "";
+                else tot = value ?? "";
+                string combined = string.IsNullOrEmpty(tot) ? num : num + "/" + tot;
+                if (string.IsNullOrEmpty(combined))
+                    _frames.RemoveAll(f => f.FrameID == "MVIN");
+                else
+                    SetString("MVIN", combined);
+                return;
+            }
+            if (field == TagFields.Date)
+            {
+                if (value == null) { _frames.RemoveAll(f => f.FrameID == "TDRC" || f.FrameID == "TYER"); return; }
+                if (_headerversion >= 4) SetString("TDRC", value);
+                else SetString("TYER", value.Length >= 4 ? value.Substring(0, 4) : value);
+                return;
+            }
 
-             foreach (ID3v2Frame f in _frames)
-                 if (f.FrameID == "APIC")
-                 {
-                     if (data[0] != 0)
-                         throw new Exception("Can't Handle Unicode Encodings In APIC Frame");
-                     string s = _8bitencoding.GetString(data, 0, data.Length);
-                     string[] ses = s.Split("\0".ToCharArray(), 2, StringSplitOptions.RemoveEmptyEntries);
-                     if (ses[1] == "" + char.ConvertFromUtf32((byte)picturetype))
-                     {
-                         f.Data = new byte[data.Length + encoded.Length];
-                         Array.Copy(encoded, 0, f.Data, 0, encoded.Length);
-                         Array.Copy(data, 0, f.Data, encoded.Length, data.Length);
-                         return;
-                     }
-                 }
+            switch (field)
+            {
+                case TagFields.Album:            if (value == null) _frames.RemoveAll(f => f.FrameID == "TALB"); else SetString("TALB", value); break;
+                case TagFields.AlbumArtist:      if (value == null) _frames.RemoveAll(f => f.FrameID == "TPE2"); else SetString("TPE2", value); break;
+                case TagFields.AlbumArtistSort:  if (value == null) _frames.RemoveAll(f => f.FrameID == "TSO2"); else SetString("TSO2", value); break;
+                case TagFields.AlbumSort:        if (value == null) _frames.RemoveAll(f => f.FrameID == "TSOA"); else SetString("TSOA", value); break;
+                case TagFields.Artist:           if (value == null) _frames.RemoveAll(f => f.FrameID == "TPE1"); else SetString("TPE1", value); break;
+                case TagFields.ArtistSort:       if (value == null) _frames.RemoveAll(f => f.FrameID == "TSOP"); else SetString("TSOP", value); break;
+                case TagFields.BPM:              if (value == null) _frames.RemoveAll(f => f.FrameID == "TBPM"); else SetString("TBPM", value); break;
+                case TagFields.Compilation:      if (value == null) _frames.RemoveAll(f => f.FrameID == "TCMP"); else SetString("TCMP", value); break;
+                case TagFields.Composer:         if (value == null) _frames.RemoveAll(f => f.FrameID == "TCOM"); else SetString("TCOM", value); break;
+                case TagFields.ComposerSort:     if (value == null) _frames.RemoveAll(f => f.FrameID == "TSOC"); else SetString("TSOC", value); break;
+                case TagFields.Conductor:        if (value == null) _frames.RemoveAll(f => f.FrameID == "TPE3"); else SetString("TPE3", value); break;
+                case TagFields.Copyright:        if (value == null) _frames.RemoveAll(f => f.FrameID == "TCOP"); else SetString("TCOP", value); break;
+                case TagFields.DiscSubtitle:     if (value == null) _frames.RemoveAll(f => f.FrameID == "TSST"); else SetString("TSST", value); break;
+                case TagFields.EncodedBy:        if (value == null) _frames.RemoveAll(f => f.FrameID == "TENC"); else SetString("TENC", value); break;
+                case TagFields.EncoderSettings:  if (value == null) _frames.RemoveAll(f => f.FrameID == "TSSE"); else SetString("TSSE", value); break;
+                case TagFields.Genre:            if (value == null) _frames.RemoveAll(f => f.FrameID == "TCON"); else SetString("TCON", value); break;
+                case TagFields.Grouping:         if (value == null) _frames.RemoveAll(f => f.FrameID == "TIT1"); else SetString("TIT1", value); break;
+                case TagFields.Key:              if (value == null) _frames.RemoveAll(f => f.FrameID == "TKEY"); else SetString("TKEY", value); break;
+                case TagFields.ISRC:             if (value == null) _frames.RemoveAll(f => f.FrameID == "TSRC"); else SetString("TSRC", value); break;
+                case TagFields.Language:         if (value == null) _frames.RemoveAll(f => f.FrameID == "TLAN"); else SetString("TLAN", value); break;
+                case TagFields.Lyrics:           if (value == null) _frames.RemoveAll(f => f.FrameID == "USLT"); else SetString("USLT", value); break;
+                case TagFields.Media:            if (value == null) _frames.RemoveAll(f => f.FrameID == "TMED"); else SetString("TMED", value); break;
+                case TagFields.Mood:             if (value == null) _frames.RemoveAll(f => f.FrameID == "TMOO"); else SetString("TMOO", value); break;
+                case TagFields.Movement:         if (value == null) _frames.RemoveAll(f => f.FrameID == "MVNM"); else SetString("MVNM", value); break;
+                case TagFields.OriginalAlbum:    if (value == null) _frames.RemoveAll(f => f.FrameID == "TOAL"); else SetString("TOAL", value); break;
+                case TagFields.OriginalArtist:   if (value == null) _frames.RemoveAll(f => f.FrameID == "TOPE"); else SetString("TOPE", value); break;
+                case TagFields.OriginalFileName: if (value == null) _frames.RemoveAll(f => f.FrameID == "TOFN"); else SetString("TOFN", value); break;
+                case TagFields.Rating:           if (value == null) _frames.RemoveAll(f => f.FrameID == "POPM"); else SetString("POPM", value); break;
+                case TagFields.Label:            if (value == null) _frames.RemoveAll(f => f.FrameID == "TPUB"); else SetString("TPUB", value); break;
+                case TagFields.Remixer:          if (value == null) _frames.RemoveAll(f => f.FrameID == "TPE4"); else SetString("TPE4", value); break;
+                case TagFields.Subtitle:         if (value == null) _frames.RemoveAll(f => f.FrameID == "TIT3"); else SetString("TIT3", value); break;
+                case TagFields.Title:            if (value == null) _frames.RemoveAll(f => f.FrameID == "TIT2"); else SetString("TIT2", value); break;
+                case TagFields.TitleSort:        if (value == null) _frames.RemoveAll(f => f.FrameID == "TSOT"); else SetString("TSOT", value); break;
+                case TagFields.Website:          if (value == null) _frames.RemoveAll(f => f.FrameID == "WOAR"); else SetString("WOAR", value); break;
+                case TagFields.AcoustID_ID:             if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "Acoustid Id"); else SetUserString("Acoustid Id", value); break;
+                case TagFields.AcoustID_Fingerprint:    if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "Acoustid Fingerprint"); else SetUserString("Acoustid Fingerprint", value); break;
+                case TagFields.Artists:                 if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "Artists"); else SetUserString("Artists", value); break;
+                case TagFields.ASIN:                    if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "ASIN"); else SetUserString("ASIN", value); break;
+                case TagFields.Barcode:                 if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "BARCODE"); else SetUserString("BARCODE", value); break;
+                case TagFields.CatalogNumber:           if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "CATALOGNUMBER"); else SetUserString("CATALOGNUMBER", value); break;
+                case TagFields.MusicBrainz_ArtistID:    if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "MusicBrainz Artist Id"); else SetUserString("MusicBrainz Artist Id", value); break;
+                case TagFields.MusicBrainz_DiscID:      if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "MusicBrainz Disc Id"); else SetUserString("MusicBrainz Disc Id", value); break;
+                case TagFields.MusicBrainz_OriginalArtistID: if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "MusicBrainz Original Artist Id"); else SetUserString("MusicBrainz Original Artist Id", value); break;
+                case TagFields.MusicBrainz_OriginalAlbumID:  if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "MusicBrainz Original Album Id"); else SetUserString("MusicBrainz Original Album Id", value); break;
+                case TagFields.MusicBrainz_AlbumArtistID:    if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "MusicBrainz Album Artist Id"); else SetUserString("MusicBrainz Album Artist Id", value); break;
+                case TagFields.MusicBrainz_ReleaseGroupID:   if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "MusicBrainz Release Group Id"); else SetUserString("MusicBrainz Release Group Id", value); break;
+                case TagFields.MusicBrainz_AlbumID:     if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "MusicBrainz Album Id"); else SetUserString("MusicBrainz Album Id", value); break;
+                case TagFields.MusicBrainz_TrackID:     if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "MusicBrainz Release Track Id"); else SetUserString("MusicBrainz Release Track Id", value); break;
+                case TagFields.MusicBrainz_WorkID:      if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "MusicBrainz Work Id"); else SetUserString("MusicBrainz Work Id", value); break;
+                case TagFields.ReleaseCountry:          if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "MusicBrainz Album Release Country"); else SetUserString("MusicBrainz Album Release Country", value); break;
+                case TagFields.ReleaseStatus:           if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "MusicBrainz Album Status"); else SetUserString("MusicBrainz Album Status", value); break;
+                case TagFields.ReleaseType:             if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "MusicBrainz Album Type"); else SetUserString("MusicBrainz Album Type", value); break;
+                case TagFields.ReplayGain_Album_Gain:   if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "REPLAYGAIN_ALBUM_GAIN"); else SetUserString("REPLAYGAIN_ALBUM_GAIN", value); break;
+                case TagFields.ReplayGain_Album_Peak:   if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "REPLAYGAIN_ALBUM_PEAK"); else SetUserString("REPLAYGAIN_ALBUM_PEAK", value); break;
+                case TagFields.ReplayGain_Album_Range:  if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "REPLAYGAIN_ALBUM_RANGE"); else SetUserString("REPLAYGAIN_ALBUM_RANGE", value); break;
+                case TagFields.ReplayGain_Reference_Loudness: if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "REPLAYGAIN_REFERENCE_LOUDNESS"); else SetUserString("REPLAYGAIN_REFERENCE_LOUDNESS", value); break;
+                case TagFields.ReplayGain_Track_Gain:   if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "REPLAYGAIN_TRACK_GAIN"); else SetUserString("REPLAYGAIN_TRACK_GAIN", value); break;
+                case TagFields.ReplayGain_Track_Peak:   if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "REPLAYGAIN_TRACK_PEAK"); else SetUserString("REPLAYGAIN_TRACK_PEAK", value); break;
+                case TagFields.ReplayGain_Track_Range:  if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "REPLAYGAIN_TRACK_RANGE"); else SetUserString("REPLAYGAIN_TRACK_RANGE", value); break;
+                case TagFields.Script:                  if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "SCRIPT"); else SetUserString("SCRIPT", value); break;
+                case TagFields.ShowMovement:            if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "SHOWMOVEMENT"); else SetUserString("SHOWMOVEMENT", value); break;
+                case TagFields.Work:                    if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "WORK"); else SetUserString("WORK", value); break;
+                case TagFields.Writer:                  if (value == null) _frames.RemoveAll(f => f is UserStringFrame u && u.Key == "Writer"); else SetUserString("Writer", value); break;
+            }
+        }
 
-             ID3v2Frame frm = new ID3v2Frame();
-             frm.FrameID = "APIC";
-             frm.Data = new byte[data.Length + encoded.Length];
-             Array.Copy(encoded, 0, frm.Data, 0, encoded.Length);
-             Array.Copy(data, 0, frm.Data, encoded.Length, data.Length);
-             _frames.Add(frm);
-         }
+        public void Save(string outputPath = null)
+        {
+            string target = outputPath ?? _filename
+                ?? throw new InvalidOperationException("No filename associated with this tag.");
 
-         public void SetUserString(string id, string value)
-         {
-             foreach (ID3v2Frame f in _frames)
-                 if (f.FrameID == "TXXX")
-                 {
-                     string[] vals = f.StringValue.Split("\0".ToCharArray());
-                     if (vals[0] == id)
-                     {
-                         f.StringValue = id + "\0" + value;
-                         return;
-                     }
-                 }
-             ID3v2Frame frm = new ID3v2Frame();
-             frm.FrameID = "TXXX";
-             frm.StringValue = id + "\0" + value;
-             _frames.Add(frm);
-         }*/
+            int frameHeaderSize = (_headerversion == 2) ? 6 : 10;
+            int size = 0;
+            foreach (ID3v2Frame f in _frames)
+                size += frameHeaderSize + f.Data.Length;
+
+            int padSize = (size <= _tagsize) ? (_tagsize - size) : 1024;
+            byte[] pad = new byte[padSize];
+
+            if (size <= _tagsize && target == _filename)
+            {
+                using FileStream s = new FileStream(target, FileMode.Open, FileAccess.ReadWrite);
+                s.Seek(0, SeekOrigin.Begin);
+                WriteHeader(s);
+                foreach (ID3v2Frame f in _frames)
+                    f.Write(s);
+                s.Write(pad, 0, pad.Length);
+            }
+            else
+            {
+                string tempPath = target + ".tmp~";
+                try
+                {
+                    string sourcePath = _filename ?? target;
+                    using FileStream source = new FileStream(sourcePath, FileMode.Open, FileAccess.Read);
+                    using FileStream dest = new FileStream(tempPath, FileMode.Create, FileAccess.Write);
+
+                    long oldTagEnd = (_tagsize == 0) ? 0 : (_tagsize + 10);
+                    source.Seek(oldTagEnd, SeekOrigin.Begin);
+
+                    _tagsize = size + padSize;
+                    if (_headerversion < 3) _headerversion = 3;
+                    WriteHeader(dest);
+                    foreach (ID3v2Frame f in _frames)
+                        f.Write(dest);
+                    dest.Write(pad, 0, pad.Length);
+
+                    byte[] buffer = new byte[65536];
+                    int read;
+                    while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
+                        dest.Write(buffer, 0, read);
+                }
+                catch
+                {
+                    if (File.Exists(tempPath)) File.Delete(tempPath);
+                    throw;
+                }
+
+                if (File.Exists(target)) File.Delete(target);
+                File.Move(tempPath, target);
+                _filename = target;
+            }
+        }
 
         public ID3v2Frame FindFrame(string frame)
         {
@@ -1285,6 +1461,8 @@ namespace MusicFileUtilities
 
         protected void ReadTag(Stream s)
         {
+            if (s is FileStream fs)
+                _filename = fs.Name;
             bool doclose = false;
             BinaryReader r = new BinaryReader(s, Encoding.ASCII, true);
             byte[] header = r.ReadBytes(10);
@@ -1474,7 +1652,7 @@ namespace MusicFileUtilities
 
     }
 
-    public class MP3File : ID3v2Tag, ICodecProvider, IMediaFile
+    public class MP3File : ID3v2Tag, ICodecProvider, IMediaFile, IMetadataWriter
     {
         private readonly uint[,,] _bitrates = {
             { { 0, 32000, 64000, 96000, 128000, 160000, 192000, 224000, 256000, 288000, 320000, 352000, 284000, 416000, 448000, 0 },
@@ -1687,10 +1865,14 @@ namespace MusicFileUtilities
             protected set;
         }
 
+        public void SaveTags(string outputPath = null) => Save(outputPath);
+
     }
 
-    public class DSFFile : ID3v2Tag, ICodecProvider, IMediaFile
+    public class DSFFile : ID3v2Tag, ICodecProvider, IMediaFile, IMetadataWriter
     {
+        private long _tagoffset = 0;
+
         public IEnumerable<ICodecProvider> Codecs
         {
             get
@@ -1716,10 +1898,10 @@ namespace MusicFileUtilities
                     return;
                 Array.Resize(ref header, 28);
                 s.Read(header, 4, 24);
-                long tagoffset = BitConverter.ToInt64(header, 20);
-                if (tagoffset != 0)
+                _tagoffset = BitConverter.ToInt64(header, 20);
+                if (_tagoffset != 0)
                 {
-                    s.Seek(tagoffset, SeekOrigin.Begin);
+                    s.Seek(_tagoffset, SeekOrigin.Begin);
                     ReadTag(s);
                     s.Seek(28, SeekOrigin.Begin);
                 }
@@ -1779,6 +1961,61 @@ namespace MusicFileUtilities
         {
             protected set;
             get;
+        }
+
+        public void SaveTags(string outputPath = null)
+        {
+            if (_filename == null && outputPath == null)
+                throw new InvalidOperationException("No filename associated with this file.");
+
+            int frameHeaderSize = (_headerversion == 2) ? 6 : 10;
+            int newTagBodySize = 0;
+            foreach (var f in Frames)
+                newTagBodySize += frameHeaderSize + f.Data.Length;
+            _tagsize = newTagBodySize;
+            if (_headerversion < 3) _headerversion = 3;
+
+            if (outputPath == null)
+            {
+                // In-place: truncate at audio end, append new tag, patch DSD header
+                long audioEnd = _tagoffset > 0 ? _tagoffset : new FileInfo(_filename).Length;
+                using FileStream fs = new FileStream(_filename, FileMode.Open, FileAccess.ReadWrite);
+                fs.SetLength(audioEnd);
+                fs.Seek(0, SeekOrigin.End);
+                WriteHeader(fs);
+                foreach (var f in Frames)
+                    f.Write(fs);
+                long newTotalSize = fs.Position;
+                fs.Seek(12, SeekOrigin.Begin);
+                fs.Write(BitConverter.GetBytes(newTotalSize), 0, 8);
+                fs.Write(BitConverter.GetBytes(audioEnd), 0, 8);
+                _tagoffset = audioEnd;
+            }
+            else
+            {
+                // Write to new path: copy audio, append tag, patch DSD header
+                string sourcePath = _filename ?? outputPath;
+                long audioEnd = _tagoffset > 0 ? _tagoffset : new FileInfo(sourcePath).Length;
+                using FileStream source = new FileStream(sourcePath, FileMode.Open, FileAccess.Read);
+                using FileStream dest = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
+                byte[] buffer = new byte[65536];
+                long remaining = audioEnd;
+                int read;
+                while (remaining > 0 && (read = source.Read(buffer, 0, (int)Math.Min(buffer.Length, remaining))) > 0)
+                {
+                    dest.Write(buffer, 0, read);
+                    remaining -= read;
+                }
+                WriteHeader(dest);
+                foreach (var f in Frames)
+                    f.Write(dest);
+                long newTotalSize = dest.Position;
+                dest.Seek(12, SeekOrigin.Begin);
+                dest.Write(BitConverter.GetBytes(newTotalSize), 0, 8);
+                dest.Write(BitConverter.GetBytes(audioEnd), 0, 8);
+                _filename = outputPath;
+                _tagoffset = audioEnd;
+            }
         }
 
     }

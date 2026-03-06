@@ -105,6 +105,23 @@ namespace MusicFileUtilities
             { "WRITER", TagFields.Writer },
         };
 
+        private static Dictionary<TagFields, string> _reverseTagMappings = null;
+
+        public static Dictionary<TagFields, string> ReverseTagMappings
+        {
+            get
+            {
+                if (_reverseTagMappings == null)
+                {
+                    _reverseTagMappings = new Dictionary<TagFields, string>();
+                    foreach (var kv in TagMappings)
+                        if (!_reverseTagMappings.ContainsKey(kv.Value))
+                            _reverseTagMappings[kv.Value] = kv.Key;
+                }
+                return _reverseTagMappings;
+            }
+        }
+
     }
 
     [Serializable]
@@ -375,7 +392,17 @@ namespace MusicFileUtilities
             FromByteArray(b);
         }
 
+        public void SetField(TagFields field, string value)
+        {
+            // TotalTracks and TotalDiscs are stored as separate fields in Vorbis,
+            // unlike ID3/APE which use "N/total" notation.
+            if (!VorbisUtil.ReverseTagMappings.TryGetValue(field, out string key))
+                throw new ArgumentException($"Unsupported tag field for Vorbis: {field}");
 
+            Comments.RemoveAll(c => c.Key == key);
+            if (value != null)
+                Comments.Add(new KeyValuePair<string, string>(key, value));
+        }
 
     }
 
@@ -504,14 +531,214 @@ namespace MusicFileUtilities
                 }
 
                 s.Read(pagedata, pagedata.Length - datalen, datalen);
-            } 
+            }
             while (!lastpage);
 
             ParsePage(pagedata);
-            
+
             s.Close();
         }
 
+        public void SaveTags(string outputPath = null)
+        {
+            string target = outputPath ?? Filename
+                ?? throw new InvalidOperationException("No filename associated with this file.");
+
+            // Build Vorbis comment packet: [0x03 "vorbis"] + VorbisComments data + framing bit
+            byte[] commentData = ToByteArray(true);
+            byte[] newPacket = new byte[7 + commentData.Length + 1];
+            newPacket[0] = 0x03;
+            newPacket[1] = (byte)'v'; newPacket[2] = (byte)'o'; newPacket[3] = (byte)'r';
+            newPacket[4] = (byte)'b'; newPacket[5] = (byte)'i'; newPacket[6] = (byte)'s';
+            Array.Copy(commentData, 0, newPacket, 7, commentData.Length);
+            newPacket[7 + commentData.Length] = 0x01; // framing bit
+
+            string tempPath = target + ".tmp~";
+            try
+            {
+                using FileStream source = new FileStream(Filename ?? target, FileMode.Open, FileAccess.Read);
+                using FileStream dest = new FileStream(tempPath, FileMode.Create, FileAccess.Write);
+
+                int seqDelta = 0;
+                int state = 0; // 0=Looking, 1=Skipping old continuation pages, 2=Copying
+
+                while (source.Position < source.Length)
+                {
+                    byte[] hdr = new byte[27];
+                    if (source.Read(hdr, 0, 27) < 27) break;
+                    if (hdr[0] != (byte)'O' || hdr[1] != (byte)'g' || hdr[2] != (byte)'g' || hdr[3] != (byte)'S')
+                        throw new InvalidDataException("Invalid OGG page");
+
+                    int numSegs = hdr[26];
+                    byte[] segTable = new byte[numSegs];
+                    source.Read(segTable, 0, numSegs);
+                    int dataLen = 0;
+                    foreach (byte sg in segTable) dataLen += sg;
+                    byte[] data = new byte[dataLen];
+                    if (dataLen > 0) source.Read(data, 0, dataLen);
+
+                    bool isCont = (hdr[5] & 1) != 0;
+                    bool packetEndsHere = numSegs == 0 || segTable[numSegs - 1] < 255;
+
+                    if (state == 0) // Looking for comment packet
+                    {
+                        if (!isCont && data.Length >= 7 &&
+                            data[0] == 0x03 && data[1] == (byte)'v' && data[2] == (byte)'o' &&
+                            data[3] == (byte)'r' && data[4] == (byte)'b' && data[5] == (byte)'i' && data[6] == (byte)'s')
+                        {
+                            int serial = OggReadInt32LE(hdr, 14);
+                            int newSeq = OggReadInt32LE(hdr, 18) + seqDelta;
+                            long granulePos = OggReadInt64LE(hdr, 6);
+                            byte headerType = (byte)(hdr[5] & ~1); // clear continuation bit
+                            int pagesWritten = WriteOggPacketPages(dest, newPacket, headerType, granulePos, serial, newSeq);
+                            seqDelta += pagesWritten - 1;
+                            state = packetEndsHere ? 2 : 1;
+                        }
+                        else
+                        {
+                            WriteOggPage(dest, hdr, segTable, data, seqDelta);
+                        }
+                    }
+                    else if (state == 1) // Skipping old comment continuation pages
+                    {
+                        seqDelta--;
+                        if (packetEndsHere) state = 2;
+                    }
+                    else // state == 2, Copying remaining pages
+                    {
+                        WriteOggPage(dest, hdr, segTable, data, seqDelta);
+                    }
+                }
+            }
+            catch
+            {
+                if (File.Exists(tempPath)) File.Delete(tempPath);
+                throw;
+            }
+
+            if (File.Exists(target)) File.Delete(target);
+            File.Move(tempPath, target);
+            Filename = target;
+        }
+
+        private static void WriteOggPage(Stream dest, byte[] hdr, byte[] segTable, byte[] data, int seqDelta)
+        {
+            if (seqDelta == 0)
+            {
+                dest.Write(hdr, 0, 27);
+                dest.Write(segTable, 0, segTable.Length);
+                dest.Write(data, 0, data.Length);
+                return;
+            }
+            byte[] h = (byte[])hdr.Clone();
+            OggWriteInt32LE(h, 18, OggReadInt32LE(h, 18) + seqDelta);
+            h[22] = h[23] = h[24] = h[25] = 0; // zero CRC field
+            uint crc = OggCRC(h, 0, 27);
+            crc = OggCRC(segTable, 0, segTable.Length, crc);
+            crc = OggCRC(data, 0, data.Length, crc);
+            OggWriteUInt32LE(h, 22, crc);
+            dest.Write(h, 0, 27);
+            dest.Write(segTable, 0, segTable.Length);
+            dest.Write(data, 0, data.Length);
+        }
+
+        private static int WriteOggPacketPages(Stream dest, byte[] packet, byte headerType, long granulePos, int serial, int startSeq)
+        {
+            // Generate all lacing segments for the packet
+            var allSegs = new List<byte>();
+            int rem = packet.Length;
+            while (rem >= 255) { allSegs.Add(255); rem -= 255; }
+            allSegs.Add((byte)rem); // final segment (0 if length is multiple of 255)
+
+            int segOffset = 0;
+            int dataOffset = 0;
+            int pagesWritten = 0;
+
+            while (segOffset < allSegs.Count)
+            {
+                int segsThisPage = Math.Min(255, allSegs.Count - segOffset);
+                byte[] segArr = allSegs.GetRange(segOffset, segsThisPage).ToArray();
+                int pageDataLen = 0;
+                foreach (byte sg in segArr) pageDataLen += sg;
+
+                bool isLastPage = (segOffset + segsThisPage == allSegs.Count);
+                bool isFirstPage = (pagesWritten == 0);
+                byte thisHeaderType = (byte)(headerType | (isFirstPage ? 0 : 1));
+                long thisGranule = isLastPage ? granulePos : unchecked((long)0xFFFFFFFFFFFFFFFFL);
+
+                byte[] hdr = new byte[27];
+                hdr[0] = (byte)'O'; hdr[1] = (byte)'g'; hdr[2] = (byte)'g'; hdr[3] = (byte)'S';
+                hdr[4] = 0;
+                hdr[5] = thisHeaderType;
+                OggWriteInt64LE(hdr, 6, thisGranule);
+                OggWriteInt32LE(hdr, 14, serial);
+                OggWriteInt32LE(hdr, 18, startSeq + pagesWritten);
+                hdr[26] = (byte)segsThisPage;
+
+                byte[] pageData = new byte[pageDataLen];
+                Array.Copy(packet, dataOffset, pageData, 0, pageDataLen);
+
+                uint crc = OggCRC(hdr, 0, 27);
+                crc = OggCRC(segArr, 0, segArr.Length, crc);
+                crc = OggCRC(pageData, 0, pageData.Length, crc);
+                OggWriteUInt32LE(hdr, 22, crc);
+
+                dest.Write(hdr, 0, 27);
+                dest.Write(segArr, 0, segArr.Length);
+                dest.Write(pageData, 0, pageData.Length);
+
+                segOffset += segsThisPage;
+                dataOffset += pageDataLen;
+                pagesWritten++;
+            }
+            return pagesWritten;
+        }
+
+        private static readonly uint[] _oggCrcTable = BuildOggCrcTable();
+        private static uint[] BuildOggCrcTable()
+        {
+            uint[] table = new uint[256];
+            for (int i = 0; i < 256; i++)
+            {
+                uint crc = (uint)i << 24;
+                for (int j = 0; j < 8; j++)
+                    crc = (crc & 0x80000000u) != 0 ? (crc << 1) ^ 0x04c11db7u : crc << 1;
+                table[i] = crc;
+            }
+            return table;
+        }
+
+        private static uint OggCRC(byte[] buf, int offset, int count, uint crc = 0)
+        {
+            for (int i = offset; i < offset + count; i++)
+                crc = (crc << 8) ^ _oggCrcTable[(crc >> 24) ^ buf[i]];
+            return crc;
+        }
+
+        private static long OggReadInt64LE(byte[] b, int off) =>
+            (long)((ulong)b[off] | ((ulong)b[off+1] << 8) | ((ulong)b[off+2] << 16) | ((ulong)b[off+3] << 24) |
+                   ((ulong)b[off+4] << 32) | ((ulong)b[off+5] << 40) | ((ulong)b[off+6] << 48) | ((ulong)b[off+7] << 56));
+
+        private static int OggReadInt32LE(byte[] b, int off) =>
+            (int)((uint)b[off] | ((uint)b[off+1] << 8) | ((uint)b[off+2] << 16) | ((uint)b[off+3] << 24));
+
+        private static void OggWriteInt64LE(byte[] b, int off, long v)
+        {
+            ulong u = (ulong)v;
+            b[off] = (byte)u; b[off+1] = (byte)(u >> 8); b[off+2] = (byte)(u >> 16); b[off+3] = (byte)(u >> 24);
+            b[off+4] = (byte)(u >> 32); b[off+5] = (byte)(u >> 40); b[off+6] = (byte)(u >> 48); b[off+7] = (byte)(u >> 56);
+        }
+
+        private static void OggWriteInt32LE(byte[] b, int off, int v)
+        {
+            uint u = (uint)v;
+            b[off] = (byte)u; b[off+1] = (byte)(u >> 8); b[off+2] = (byte)(u >> 16); b[off+3] = (byte)(u >> 24);
+        }
+
+        private static void OggWriteUInt32LE(byte[] b, int off, uint v)
+        {
+            b[off] = (byte)v; b[off+1] = (byte)(v >> 8); b[off+2] = (byte)(v >> 16); b[off+3] = (byte)(v >> 24);
+        }
 
 
     }

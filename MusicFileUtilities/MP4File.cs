@@ -145,6 +145,35 @@ namespace MusicFileUtilities
             { "©wrk", TagFields.Work },
         };
 
+        private static Dictionary<TagFields, string> _reverseTagMapping = null;
+
+        // Maps each TagFields value to the canonical atom key for writing.
+        // Standard 4-byte iTunes keys are preferred over freeform string keys.
+        public static Dictionary<TagFields, string> ReverseTagMapping
+        {
+            get
+            {
+                if (_reverseTagMapping == null)
+                {
+                    _reverseTagMapping = new Dictionary<TagFields, string>();
+                    // First pass: 4-byte standard keys
+                    foreach (var kv in TagMapping)
+                    {
+                        if (!_reverseTagMapping.ContainsKey(kv.Value))
+                        {
+                            try { if (TypeEncoding.GetBytes(kv.Key).Length == 4) _reverseTagMapping[kv.Value] = kv.Key; }
+                            catch { }
+                        }
+                    }
+                    // Second pass: freeform keys for any fields not yet covered
+                    foreach (var kv in TagMapping)
+                        if (!_reverseTagMapping.ContainsKey(kv.Value))
+                            _reverseTagMapping[kv.Value] = kv.Key;
+                }
+                return _reverseTagMapping;
+            }
+        }
+
         public static void Init()
         {
             TypeEncoding = Encoding.GetEncoding(28591, new EncoderExceptionFallback(), new DecoderExceptionFallback()); // iso-8859-1
@@ -1603,7 +1632,7 @@ namespace MusicFileUtilities
 
     }
 
-    public class MP4File : TagBase, ICodecProvider, IMediaFile
+    public class MP4File : TagBase, ICodecProvider, IMediaFile, IMetadataWriter
     {
   
         #region IMetadataProvider Properties
@@ -1809,7 +1838,122 @@ namespace MusicFileUtilities
             }
         }
 
-        
+        public void SetField(TagFields field, string value)
+        {
+            Atom_ilst ilst = root_.FindPath("moov.udta.meta.ilst") as Atom_ilst
+                ?? throw new InvalidOperationException("No ilst atom found.");
+
+            // trkn: TrackNumber / TotalTracks stored as binary in Atom_data
+            if (field == TagFields.TrackNumber || field == TagFields.TotalTracks)
+            {
+                Atom_data da = GetOrCreateTrackDiscDataAtom(ilst, "trkn");
+                if (field == TagFields.TrackNumber)
+                    da.TrackNumber = (value == null) ? 0 : uint.Parse(value);
+                else
+                    da.TotalTracks = (value == null) ? 0 : uint.Parse(value);
+                return;
+            }
+            if (field == TagFields.DiscNumber || field == TagFields.TotalDiscs)
+            {
+                Atom_data da = GetOrCreateTrackDiscDataAtom(ilst, "disk");
+                if (field == TagFields.DiscNumber)
+                    da.DiscNumber = (value == null) ? 0 : uint.Parse(value);
+                else
+                    da.TotalDiscs = (value == null) ? 0 : uint.Parse(value);
+                return;
+            }
+
+            if (!MP4Util.ReverseTagMapping.TryGetValue(field, out string atomKey))
+                throw new ArgumentException($"Unsupported tag field for MP4: {field}");
+
+            bool isStandard = false;
+            try { isStandard = MP4Util.TypeEncoding.GetBytes(atomKey).Length == 4; }
+            catch { }
+
+            if (isStandard)
+            {
+                if (value == null)
+                {
+                    var toRemove = ilst.Children.FirstOrDefault(a => a.Type == atomKey);
+                    if (toRemove != null) { ilst.Children.Remove(toRemove); ilst.Touch(-(long)toRemove.Size); }
+                    return;
+                }
+                GetOrCreateStandardDataAtom(ilst, atomKey).Text = value;
+            }
+            else
+            {
+                if (value == null)
+                {
+                    var toRemove = ilst.Children.FirstOrDefault(a =>
+                        a.Type == "----" && (a as ContainerAtom)?.FindPath("name") is StringAtom sa && sa.Text == atomKey);
+                    if (toRemove != null) { ilst.Children.Remove(toRemove); ilst.Touch(-(long)toRemove.Size); }
+                    return;
+                }
+                GetOrCreateFreeformDataAtom(ilst, atomKey).Text = value;
+            }
+        }
+
+        private Atom_data GetOrCreateStandardDataAtom(Atom_ilst ilst, string atomType)
+        {
+            var existing = ilst.Children.FirstOrDefault(a => a.Type == atomType) as ContainerAtom;
+            if (existing != null)
+                return existing.FindPath("data") as Atom_data;
+
+            ContainerAtom ca = ilst.CreateChild(atomType) as ContainerAtom;
+            Atom_data da = new Atom_data(ca) { Type = "data" };
+            ca.Children.Add(da);
+            ca.Touch((long)da.Size);
+            return da;
+        }
+
+        private Atom_data GetOrCreateTrackDiscDataAtom(Atom_ilst ilst, string atomType)
+        {
+            var existing = ilst.Children.FirstOrDefault(a => a.Type == atomType) as ContainerAtom;
+            if (existing != null)
+                return existing.FindPath("data") as Atom_data;
+
+            ContainerAtom ca = ilst.CreateChild(atomType) as ContainerAtom;
+            Atom_data da = new Atom_data(ca) { Type = "data" };
+            ca.Children.Add(da);
+            ca.Touch((long)da.Size);
+            return da;
+        }
+
+        private Atom_data GetOrCreateFreeformDataAtom(Atom_ilst ilst, string key)
+        {
+            var existing = ilst.Children
+                .Where(a => a.Type == "----")
+                .Select(a => a as ContainerAtom)
+                .FirstOrDefault(ca => (ca?.FindPath("name") as StringAtom)?.Text == key);
+            if (existing != null)
+                return existing.FindPath("data") as Atom_data;
+
+            ContainerAtom freeform = ilst.CreateChild("----") as ContainerAtom;
+
+            StringAtom mean = new StringAtom(freeform) { Type = "mean" };
+            freeform.Children.Add(mean);
+            freeform.Touch((long)mean.Size);
+            mean.Text = "com.apple.iTunes";
+
+            StringAtom name = new StringAtom(freeform) { Type = "name" };
+            freeform.Children.Add(name);
+            freeform.Touch((long)name.Size);
+            name.Text = key;
+
+            Atom_data da = new Atom_data(freeform) { Type = "data" };
+            freeform.Children.Add(da);
+            freeform.Touch((long)da.Size);
+            return da;
+        }
+
+        public void SaveTags(string outputPath = null) => Save(outputPath);
+
+        public void Save(string outputPath = null)
+        {
+            root_.WriteFile(outputPath ?? root_.Path);
+        }
+
+
      }
 
     public class FullContainerAtom : ContainerAtom
