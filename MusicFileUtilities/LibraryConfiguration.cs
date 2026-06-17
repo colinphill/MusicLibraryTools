@@ -8,14 +8,51 @@
  * 
  */
 
+using MusicFileUtilities;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using System.IO.Enumeration;
 using System.Linq;
 using System.Text;
 using System.Xml.Linq;
 
 namespace MusicLibraryTools
 {
+
+    public enum MFEType { Directory, MusicFile, Other }
+
+    public class MusicFileEnumerator : FileSystemEnumerator<(string Name, DateTime Modified, long Size, MFEType FileType)>, IEnumerable<(string Name, DateTime Modified, long Size, MFEType FileType)>
+    {
+        public MusicFileEnumerator(string directory) : base(directory, new EnumerationOptions { RecurseSubdirectories = true }) { }
+
+        public IEnumerator<(string Name, DateTime Modified, long Size, MFEType FileType)> GetEnumerator()
+        {
+            return this;
+        }
+
+        protected override bool ShouldIncludeEntry(ref FileSystemEntry entry)
+        {
+            return true;
+        }
+
+        protected override bool ShouldRecurseIntoEntry(ref FileSystemEntry entry)
+        {
+            return (!entry.FileName.Contains(".itlp", StringComparison.OrdinalIgnoreCase));
+        }
+
+        protected override (string Name, DateTime Modified, long Size, MFEType FileType) TransformEntry(ref FileSystemEntry entry)
+        {
+            return (entry.ToFullPath(), entry.LastWriteTimeUtc.UtcDateTime, entry.Length, entry.IsDirectory ? MFEType.Directory : (MetadataExtensions.ValidExtensionSpans.Contains(Path.GetExtension(entry.FileName)) ? MFEType.MusicFile : MFEType.Other));
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+    }
+
     public class LibraryConfiguration
     {
         private XElement root_;

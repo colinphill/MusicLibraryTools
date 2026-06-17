@@ -10,6 +10,9 @@ using System.IO;
 using ConsoleTools;
 using MetadataCaching;
 using System.Collections.Concurrent;
+using System.Net;
+using System.Threading;
+using System.Globalization;
 
 namespace AnalyzeMetadata
 {
@@ -341,39 +344,134 @@ namespace AnalyzeMetadata
 
             if (args.Skip(1).Any(s => s.ToLower() == "checkartists"))
             {
+                int thresh = args.Skip(1).Where(s => s.ToLower().StartsWith("thresh") && int.TryParse(s.Substring(6), out int num)).Select(s => int.Parse(s.Substring(6))).DefaultIfEmpty(-1).Max();
+
                 string[] artists = cache.Artists.Concat(cache.AlbumArtists).Distinct().ToArray();
                 var distdict = new Dictionary<int, List<Tuple<string, string>>>();
                 var checkdict = new Dictionary<Tuple<string, string>, bool>();
                 var moddict = new Dictionary<string, (string Value, int Length)>();
+                var invmod = new Dictionary<string, List<string>>();
                 foreach (string a in artists)
                 {
-                    string ta = a.Replace(".", "").Replace(" ", "").ToLower();
+                    string ta = a.Replace("&", "and").ToLower();
+                    var chars = ta.Normalize(NormalizationForm.FormD).Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark).ToArray();
+                    ta = new string(chars).Normalize(NormalizationForm.FormC);
+                    ta = new string(ta.Where(c => char.IsLetterOrDigit(c)).ToArray());
+
                     if (ta.StartsWith("a "))
                         ta = ta.Remove(0, 2);
+                    if (ta.StartsWith("an "))
+                        ta = ta.Remove(0, 3);
                     if (ta.StartsWith("the "))
                         ta = ta.Remove(0, 4);
                     moddict[a] = (ta, a.Length);
+                    if (invmod.ContainsKey(ta))
+                        invmod[ta].Add(a);
+                    else
+                        invmod.Add(ta, new List<string> { a });
                 }
-                foreach (string a in artists)
+
+                var dupes = invmod.Where(kv => kv.Value.Count > 1).ToArray();
+
+
+                foreach ((var key, var variations) in dupes)
                 {
-                    foreach (string b in artists)
+                    var varlist = new List<(string variation, int count)>();
+                    var files = new List<(string variation, string file)>();
+                    foreach (var variation in variations)
                     {
-                        if (a != b)
+                        Console.WriteLine($"Variation: {variation}");
+                        var varfiles = cache.FileCache.Where(e => (e.Value.Artist == variation) || (e.Value.AlbumArtist == variation)).Select(e => (variation, e.Key)).ToArray();
+                        varlist.Add((variation, varfiles.Length));
+                        files.AddRange(varfiles);
+                        foreach (var p in varfiles.Select(f => Path.GetDirectoryName(f.Key)).Distinct())
+                            Console.WriteLine(p);
+                    }
+                    Console.WriteLine();
+                    if (thresh >= 0)
+                    {
+                        varlist = varlist.OrderByDescending(v => v.count).ToList();
+                        Console.WriteLine("Select Variation:");
+                        for(int i=0;i<varlist.Count;i++)
+                            Console.WriteLine($"{i + 1}) {varlist[i].variation} ({varlist[i].count})");
+                        Console.Write("-> ");
+                        Console.Out.Flush();
+                        if (int.TryParse(Console.ReadLine(), out int res) && ((res > 0) && (res <= varlist.Count)))
                         {
-                            if (checkdict.ContainsKey(new Tuple<string, string>(b, a)))
-                                continue;
-                            var ta = moddict[a];
-                            var tb = moddict[b];
-                            int checklen = Math.Max(ta.Length, tb.Length);
-                            int dist = ta.Value.EditDistance(tb.Value);
-                            if ((100 * dist / checklen) < 10)
+                            var variation = varlist[res - 1].variation;
+                            var variantstochange = variations.Where(v => v != variation).ToArray();
+                            var performers = new string[] { variation };
+                            foreach (var f in files.Where(f => f.variation != variation))
                             {
-                                if (!distdict.ContainsKey(dist))
-                                    distdict.Add(dist, new List<Tuple<string, string>>());
-                                distdict[dist].Add(new Tuple<string, string>(a, b));
+                                bool update = false;
+                                var tfile = TagLib.File.Create(f.file);
+                                if (tfile.Tag.Performers.Any(p => variantstochange.Contains(p)))
+                                {
+                                    tfile.Tag.Performers = performers;
+                                    update = true;
+                                }
+                                if (tfile.Tag.AlbumArtists.Any(p => variantstochange.Contains(p)))
+                                {
+                                    tfile.Tag.AlbumArtists = performers;
+                                    update = true;
+                                }
+           
+                                /*var mp = MediaFile.GetFile(f.file);
+                                if (mp.Tags.Any(t => variantstochange.Contains(t.Artist)))
+                                {
+                                    foreach (var tag in mp.Tags)
+                                    {
+                                        if (tag is IMetadataWriter tagw)
+                                        { 
+                                            tagw.SetField(TagFields.Artist, variation);
+                                            update = true;
+                                        }
+                                    }
+                                }
+                                if (mp.Tags.Any(t => t.HasAlbumArtist && variantstochange.Contains(t.AlbumArtist)))
+                                {
+                                    foreach (var tag in mp.Tags)
+                                    {
+                                        if (tag is IMetadataWriter tagw)
+                                        {
+                                            tagw.SetField(TagFields.AlbumArtist, variation);
+                                            update = true;
+                                        }
+                                    }
+                                } */
+                                if (update)
+                                {
+                                    Console.WriteLine($"Updating: {f}");
+                                    //mp.SaveTags();
+                                    tfile.Save();
+                                }
                             }
-                            checkdict.Add(new Tuple<string, string>(a, b), true);
                         }
+                    }
+                }
+
+                for (int i = 0; i < artists.Length; i++)
+                {
+                    string a = artists[i];
+                    for (int j = i + 1; j < artists.Length; j++)
+                    {
+                        string b = artists[j];
+                        if (checkdict.ContainsKey(new Tuple<string, string>(b, a)))
+                            continue;
+                        var ta = moddict[a];
+                        var tb = moddict[b];
+                        if (ta.Value == tb.Value)
+                            continue;
+                        int checklen = Math.Max(ta.Length, tb.Length);
+                        int dist = ta.Value.EditDistance(tb.Value);
+                        if ((100 * dist / checklen) < 10)
+                        {
+                            if (!distdict.ContainsKey(dist))
+                                distdict.Add(dist, new List<Tuple<string, string>>());
+                            distdict[dist].Add(new Tuple<string, string>(a, b));
+                            //Console.WriteLine($"{ta} //// {tb}");
+                        }
+                        checkdict.Add(new Tuple<string, string>(a, b), true);
                     }
                 }
 
@@ -384,16 +482,19 @@ namespace AnalyzeMetadata
                     foreach (var pair in distdict[dist])
                     {
                         LogConsole.WriteLine("First: " + pair.Item1);
-                        string[] paths = cache.FileCache.Where(f => f.Value.Artist == pair.Item1).Select(f => Path.GetDirectoryName(f.Key)).Concat(
-                            cache.FileCache.Where(f => f.Value.AlbumArtist == pair.Item1).Select(f => Path.GetDirectoryName(f.Key))).Distinct().ToArray();
-                        foreach (string s in paths)
+                        string[] ffiles = cache.FileCache.Where(f => f.Value.Artist == pair.Item1).Select(f => f.Key).Concat(
+                            cache.FileCache.Where(f => f.Value.AlbumArtist == pair.Item1).Select(f => f.Key)).Distinct().ToArray();
+
+                        foreach (string s in ffiles.Select(f => Path.GetDirectoryName(f)).Distinct())
                             LogConsole.WriteLine(s);
 
                         LogConsole.WriteLine();
                         LogConsole.WriteLine("Second: " + pair.Item2);
-                        paths = cache.FileCache.Where(f => f.Value.Artist == pair.Item2).Select(f => Path.GetDirectoryName(f.Key)).Concat(
-                            cache.FileCache.Where(f => f.Value.AlbumArtist == pair.Item2).Select(f => Path.GetDirectoryName(f.Key))).Distinct().ToArray();
-                        foreach (string s in paths)
+                        
+                        string [] sfiles = cache.FileCache.Where(f => f.Value.Artist == pair.Item2).Select(f => f.Key).Concat(
+                            cache.FileCache.Where(f => f.Value.AlbumArtist == pair.Item2).Select(f => f.Key)).Distinct().ToArray();
+
+                        foreach (string s in sfiles.Select(f => Path.GetDirectoryName(f)).Distinct())
                             LogConsole.WriteLine(s);
 
                         LogConsole.WriteLine();

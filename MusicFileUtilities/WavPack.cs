@@ -62,7 +62,7 @@ namespace MusicFileUtilities
             _filename = filename;
             using var s = File.OpenRead(filename);
             byte[] header = new byte[32];
-            s.Read(header, 0, 32);
+            s.ReadExactly(header);
             while (Encoding.ASCII.GetString(header,0,4) == "wvpk")
             {
                 int blocksize = Tools.Int32AtLE(header, 4) - 24;
@@ -78,7 +78,7 @@ namespace MusicFileUtilities
                 bitpersample_ = ((flags & 3) + 1) << 3;
                 samplerate_ = samplerates_[(flags >> 23) & 15];
                 byte[] subblock = new byte[blocksize];
-                s.Read(subblock, 0, blocksize);
+                s.ReadExactly(subblock);
                 int offset = 0;
                 while (offset < blocksize)
                 {

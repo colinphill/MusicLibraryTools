@@ -248,3 +248,4 @@ ModelManifest.xml
 /CrossSyncPlaylists/Properties/launchSettings.json
 /AnalyzeMetadata/Properties/launchSettings.json
 /OrganizeFiles/Properties/launchSettings.json
+/.claude/settings.local.json

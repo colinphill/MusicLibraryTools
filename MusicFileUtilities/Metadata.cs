@@ -152,6 +152,8 @@ namespace MusicFileUtilities
 
         int? DiscTotal { get; }
 
+        bool HasAlbumArtist { get; }
+
         IEnumerable<KeyValuePair<TagFields, string>> GetKnownMetadata();
         IEnumerable<KeyValuePair<string, string>> GetTextMetadata();
         IEnumerable<IMetadataImage> GetImageMetadata();
@@ -176,6 +178,7 @@ namespace MusicFileUtilities
         public string ReleaseDate { get; protected set; } = null;
         public int? DiscNumber { get; protected set; } = null;
         public int? DiscTotal { get; protected set; } = null;
+        public bool HasAlbumArtist { get; protected set; } = false;
 
         protected void ParseStandardFields()
         {
@@ -193,6 +196,7 @@ namespace MusicFileUtilities
                         break;
                     case TagFields.AlbumArtist:
                         AlbumArtist = kv.Value;
+                        HasAlbumArtist = true;
                         break;
                     case TagFields.Album:
                         Album = kv.Value;

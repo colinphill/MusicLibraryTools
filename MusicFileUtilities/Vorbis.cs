@@ -469,11 +469,11 @@ namespace MusicFileUtilities
         private bool ReadPageHeader(Stream s, out int datalen, out bool continuation, out bool firstpage)
         {
             byte[] b = new byte[27];
-            s.Read(b, 0, 27);
+            s.ReadExactly(b);
             if (Encoding.ASCII.GetString(b, 0, 4) != "OggS")
                 throw new InvalidDataException();
             byte[] segs = new byte[b[26]];
-            s.Read(segs, 0, b[26]);
+            s.ReadExactly(segs);
             int sum = 0;
             foreach (byte seg in segs)
                 sum += seg;
@@ -532,7 +532,7 @@ namespace MusicFileUtilities
                     pagedata = new byte[datalen];
                 }
 
-                s.Read(pagedata, pagedata.Length - datalen, datalen);
+                s.ReadExactly(pagedata, pagedata.Length - datalen, datalen);
             }
             while (!lastpage);
 
@@ -573,11 +573,11 @@ namespace MusicFileUtilities
 
                     int numSegs = hdr[26];
                     byte[] segTable = new byte[numSegs];
-                    source.Read(segTable, 0, numSegs);
+                    source.ReadExactly(segTable, 0, numSegs);
                     int dataLen = 0;
                     foreach (byte sg in segTable) dataLen += sg;
                     byte[] data = new byte[dataLen];
-                    if (dataLen > 0) source.Read(data, 0, dataLen);
+                    if (dataLen > 0) source.ReadExactly(data);
 
                     bool isCont = (hdr[5] & 1) != 0;
                     bool packetEndsHere = numSegs == 0 || segTable[numSegs - 1] < 255;

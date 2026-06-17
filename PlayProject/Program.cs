@@ -14,8 +14,9 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.Security.Cryptography;
+using MusicFileUtilities;
+using MusicLibraryTools;
 
-using iTunes;
 
 namespace PlayProject
 {
@@ -23,26 +24,18 @@ namespace PlayProject
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Loading iTunes Library XML...");
-            string iTunesLibraryFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "iTunes", "iTunes Music Library.xml");
-            if (Environment.GetEnvironmentVariable("ITUNES_XML") != null)
-                iTunesLibraryFile = Environment.GetEnvironmentVariable("ITUNES_XML");
-            iTunesLibrary lib = new iTunesLibrary(iTunesLibraryFile);
-
-            string test = "Garbage\0Garbage";
-            byte[] array = Encoding.ASCII.GetBytes(test);
-            MD5 hash = MD5.Create();
-            hash.TransformFinalBlock(array, 0, array.Length);
-
-            ulong sum = 0, xor = 0;
-            foreach (iTunesTrack track in lib.Tracks.Values)
+            int count = 0;
+            MusicFileEnumerator mfe = new MusicFileEnumerator(@"Z:\iTunes\FLAC");
+            foreach (var entry in mfe)
             {
-                ulong pid = ulong.Parse(track.PersistentID, System.Globalization.NumberStyles.HexNumber);
-                sum = unchecked(sum + pid);
-                xor = xor ^ pid;
+                if (entry.FileType != MFEType.MusicFile)
+                {
+                    Console.WriteLine(entry.Name);
+                    count++;
+                }
             }
-
-            Console.WriteLine();
+            
+            Console.WriteLine(count);
 
         }
     }

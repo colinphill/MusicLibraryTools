@@ -337,15 +337,15 @@ namespace MusicFileUtilities
             byte[] preamble = new byte[8];
             byte[] headerfooter = new byte[24];
             s.Seek(0, SeekOrigin.Begin);
-            s.Read(preamble, 0, 8);
+            s.ReadExactly(preamble);
             if (Encoding.ASCII.GetString(preamble) == "APETAGEX")
-                s.Read(headerfooter, 0, 24);
+                s.ReadExactly(headerfooter);
             else
             {
                 s.Seek(-32, SeekOrigin.End);
-                s.Read(preamble, 0, 8);
+                s.ReadExactly(preamble);
                 if (Encoding.ASCII.GetString(preamble) == "APETAGEX")
-                    s.Read(headerfooter, 0, 24);
+                    s.ReadExactly(headerfooter);
                 else
                     return false;
                 int sizeFromFooter = Tools.Int32AtLE(headerfooter, 4);
@@ -358,7 +358,7 @@ namespace MusicFileUtilities
                 {
                     s.Seek(itemsStart - 32, SeekOrigin.Begin);
                     byte[] maybePreamble = new byte[8];
-                    s.Read(maybePreamble, 0, 8);
+                    s.ReadExactly(maybePreamble);
                     AudioEndOffset = Encoding.ASCII.GetString(maybePreamble) == "APETAGEX"
                         ? itemsStart - 32
                         : itemsStart;
@@ -370,7 +370,7 @@ namespace MusicFileUtilities
             int tagsize = Tools.Int32AtLE(headerfooter, 4);
             int itemcount = Tools.Int32AtLE(headerfooter, 8);
             byte[] tag = new byte[tagsize];
-            s.Read(tag, 0, tagsize);
+            s.ReadExactly(tag);
             int offset = 0;
 
             for(int i=0;i<itemcount;i++)

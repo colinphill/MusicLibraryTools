@@ -108,14 +108,14 @@ namespace MusicFileUtilities
 
             byte[] si = null;
             byte [] b = new byte[4];
-            s.Read(b, 0, 4);
+            s.ReadExactly(b);
             if (Encoding.ASCII.GetString(b) != "fLaC")
                 throw new InvalidDataException();
 
             bool last = false;
             while (!last)
             {
-                s.Read(b, 0, 4);
+                s.ReadExactly(b);
 
                 long len = b[1];
                 len = (len << 8) | b[2];
@@ -126,7 +126,7 @@ namespace MusicFileUtilities
                 if (blockType == 0) // STREAMINFO
                 {
                     si = new byte[len];
-                    s.Read(si, 0, (int)len);
+                    s.ReadExactly(si);
                     _streamInfoData = si;
                 }
                 else if (blockType == 4) // VORBIS_COMMENT
@@ -135,19 +135,19 @@ namespace MusicFileUtilities
                     _vcBlockDataLen = (int)len;
                     _vcIsLast = (b[0] & 128) == 128;
                     byte [] vc = new byte[len];
-                    s.Read(vc, 0, (int)len);
+                    s.ReadExactly(vc);
                     FromByteArray(vc);
                 }
                 else if (blockType == 6) // PICTURE
                 {
                     byte[] p = new byte[len];
-                    s.Read(p, 0, (int)len);
+                    s.ReadExactly(p);
                     Artworks.Add(new VorbisArtwork(p));
                 }
                 else
                 {
                     byte[] raw = new byte[len];
-                    s.Read(raw, 0, (int)len);
+                    s.ReadExactly(raw);
                     _otherMetaBlocks.Add((blockType, raw));
                 }
 
@@ -228,14 +228,14 @@ namespace MusicFileUtilities
 
                 // Skip past original fLaC marker and all metadata blocks in source
                 byte[] marker = new byte[4];
-                source.Read(marker, 0, 4); // "fLaC"
+                source.ReadExactly(marker); // "fLaC"
 
                 // Skip original metadata blocks
                 bool lastSrc = false;
                 while (!lastSrc)
                 {
                     byte[] hdr = new byte[4];
-                    source.Read(hdr, 0, 4);
+                    source.ReadExactly(hdr);
                     long len = ((long)hdr[1] << 16) | ((long)hdr[2] << 8) | hdr[3];
                     lastSrc = (hdr[0] & 128) != 0;
                     source.Seek(len, SeekOrigin.Current);

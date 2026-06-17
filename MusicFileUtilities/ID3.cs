@@ -1761,7 +1761,7 @@ namespace MusicFileUtilities
                     }
 
                     byte[] frame = new byte[framesize - 4];
-                    s.Read(frame, 0, frame.Length);
+                    s.ReadExactly(frame);
 
                     try
                     {
@@ -1895,11 +1895,11 @@ namespace MusicFileUtilities
             using (FileStream s = File.OpenRead(filename))
             {
                 byte[] header = new byte[4];
-                s.Read(header, 0, 4);
+                s.ReadExactly(header);
                 if (Encoding.ASCII.GetString(header, 0, 4) != "DSD ")
                     return;
                 Array.Resize(ref header, 28);
-                s.Read(header, 4, 24);
+                s.ReadExactly(header, 4, 24);
                 _tagoffset = BitConverter.ToInt64(header, 20);
                 if (_tagoffset != 0)
                 {
@@ -1907,7 +1907,7 @@ namespace MusicFileUtilities
                     ReadTag(s);
                     s.Seek(28, SeekOrigin.Begin);
                 }
-                s.Read(header, 0, 4);
+                s.ReadExactly(header);
                 if (Encoding.ASCII.GetString(header, 0, 4) != "fmt ")
                     return;
                 using (BinaryReader r = new BinaryReader(s, Encoding.ASCII, true))

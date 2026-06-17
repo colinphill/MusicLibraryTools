@@ -464,7 +464,7 @@ namespace UpdateSmartStorage
                         {
                             ArtworkDatabase.Artwork aart = new ArtworkDatabase.Artwork() { Hash = art.Hash, FileType = art.FileType, Data = new byte[art.Length] };
                             s.Seek(art.Offset, SeekOrigin.Begin);
-                            s.Read(aart.Data, 0, art.Length);
+                            s.ReadExactly(aart.Data);
                             adb.Artworks.Add(aart);
                         }
                     }

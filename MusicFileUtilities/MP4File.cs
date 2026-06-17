@@ -301,7 +301,7 @@ namespace MusicFileUtilities
         {
             long offs = s.Position;
             ulong size = ReadUint32(s);
-            s.Read(_type, 0, 4);
+            s.ReadExactly(_type);
             if (size == 1)
             {
                 size = ReadUint64(s);
@@ -321,7 +321,7 @@ namespace MusicFileUtilities
         protected uint ReadUint16(Stream s)
         {
             byte[] b = new byte[2];
-            s.Read(b, 0, 2);
+            s.ReadExactly(b);
             return (((uint)b[0]) << 8) | (uint)b[1];
         }
 
@@ -482,7 +482,7 @@ namespace MusicFileUtilities
             while (todo > 0)
             {
                 int doing = (int)((todo > MP4Util.DEMAND_BLOCK_SIZE) ? MP4Util.DEMAND_BLOCK_SIZE : todo);
-                ds.Read(b, 0, doing);
+                ds.ReadExactly(b, 0, doing);
                 s.Write(b, 0, doing);
                 todo -= doing;
             }
@@ -513,7 +513,7 @@ namespace MusicFileUtilities
             if (s != null)
             {
                 _data = new byte[_size - _headersize];
-                s.Read(_data, 0, _data.Length);
+                s.ReadExactly(_data);
             }
         }
 
@@ -1192,7 +1192,7 @@ namespace MusicFileUtilities
                     throw new InvalidDataException();
             }
             Stream s = new FileStream(path, FileMode.Open, FileAccess.Read);
-            s.Read(_data, 8, (int)(fi.Length));
+            s.ReadExactly(_data, 8, (int)(fi.Length));
             s.Close();
         }
 
@@ -1598,9 +1598,27 @@ namespace MusicFileUtilities
 
         public void WriteFile(string path)
         {
-            Stream s = new FileStream(path, FileMode.Create, FileAccess.Write);
+            // mdat (DemandAtom) reads audio from absolute positions in the original file.
+            // If any preceding atom has changed size, the stco/co64 chunk offsets must be
+            // adjusted by the net delta before writing, otherwise the output file is corrupt.
+            long offsetDelta = 0;
+            foreach (Atom a in _children)
+            {
+                if (a is DemandAtom) break;
+                offsetDelta += a.DeltaSize;
+            }
+            if (offsetDelta != 0)
+                FixFileOffsets(offsetDelta);
+
+            string tpath = File.Exists(path) ? path + ".tmp" : path;
+            Stream s = new FileStream(tpath, FileMode.Create, FileAccess.Write);
             WriteAtom(s);
             s.Close();
+            if (tpath != path)
+            {
+                File.Delete(path);
+                File.Move(tpath, path);
+            }
             _associatedpath = path;
             Untouch();
         }
@@ -1979,7 +1997,10 @@ namespace MusicFileUtilities
 
         public void Save(string outputPath = null)
         {
-            root_.WriteFile(outputPath ?? root_.Path);
+            //if (outputPath == null)
+            //    root_.ModifyFile();
+            //else
+                root_.WriteFile(outputPath ?? root_.Path);
         }
 
 
@@ -2132,7 +2153,7 @@ namespace MusicFileUtilities
             else
             {
                 _data = new byte[_size - _headersize - 4];
-                s.Read(_data, 0, _data.Length);
+                s.ReadExactly(_data, 0, _data.Length);
             }
         }
 
@@ -2200,7 +2221,7 @@ namespace MusicFileUtilities
         public CodecAtom(Atom a, Stream s)
             : base(a, s, true)
         {
-            s.Read(_reserved0, 0, 6);
+            s.ReadExactly(_reserved0, 0, 6);
             _dref = ReadUint16(s);
             _audioencodingversion = ReadUint16(s);
             if (_audioencodingversion == 0)
@@ -2218,7 +2239,7 @@ namespace MusicFileUtilities
             else
             {
                 _data = new byte[_size - _headersize - 10];
-                s.Read(_data, 0, _data.Length);
+                s.ReadExactly(_data);
             }
         }
 
@@ -2229,6 +2250,7 @@ namespace MusicFileUtilities
 
         public override void WriteAtom(Stream s)
         {
+            WriteHeader(s);
             s.Write(_reserved0, 0, 6);
             WriteUint16(s, _dref);
             WriteUint16(s, _audioencodingversion);
