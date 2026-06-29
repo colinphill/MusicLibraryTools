@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MusicFileUtilities\MusicFileUtilities.csproj" />
+  </ItemGroup>
+
+  <!-- Media fixtures are generated at build time (not committed). The script uses ffmpeg
+       for the audio formats and hand-crafts the .dsf. Output goes straight into the test
+       binary's TestFiles folder, which is where MediaFixtures looks for them. -->
+  <Target Name="GenerateTestFixtures" AfterTargets="Build">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\generate-fixtures.ps1&quot; -OutDir &quot;$(TargetDir)TestFiles&quot;" />
+  </Target>
+
+</Project>

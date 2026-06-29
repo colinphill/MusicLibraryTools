@@ -95,8 +95,15 @@ namespace MusicFileUtilities
             BitsPerSample = (uint)(((si[12] & 1) << 4) | (si[13] >> 4)) + 1;
             ulong samples = Tools.UInt32AtBE(si, 14);
             samples |= ((ulong)(si[13] & 0xf)) << 32;
-            long seconds = (long)samples / Samplerate;
-            AverageBitrate = (uint)(length / seconds * 8);
+            if (samples == 0 || Samplerate == 0)
+            {
+                AverageBitrate = 0;
+                DurationInFrames = 0;
+                return;
+            }
+            // Compute bitrate directly from sample count to avoid truncating the
+            // duration to whole seconds (which is 0 for sub-second tracks -> divide by zero).
+            AverageBitrate = (uint)((ulong)length * 8 * Samplerate / samples);
             DurationInFrames = (uint)(75 * samples / Samplerate);
         }
 

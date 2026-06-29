@@ -240,7 +240,13 @@ namespace MusicFileUtilities
 
         public void SetField(TagFields field, string value)
         {
-            if (!APEUtil.ReverseTagMappings.TryGetValue(field, out string key))
+            // The compound Track/Disc fields are handled below before the mapping guard,
+            // because TotalTracks/TotalDiscs have no standalone key in ReverseTagMappings
+            // (they are stored inside the "Track"/"Disc" value as "N/total").
+            bool isCompound = field == TagFields.TrackNumber || field == TagFields.TotalTracks
+                           || field == TagFields.DiscNumber || field == TagFields.TotalDiscs;
+            string key = null;
+            if (!isCompound && !APEUtil.ReverseTagMappings.TryGetValue(field, out key))
                 throw new ArgumentException($"Unsupported tag field for APE: {field}");
 
             // TrackNumber and TotalTracks share the "Track" key as "N/total"

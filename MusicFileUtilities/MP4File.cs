@@ -2148,7 +2148,10 @@ namespace MusicFileUtilities
                 _maxframebytes = ReadUint32(s);
                 AverageBitrate = ReadUint32(s);
                 SampleRate = ReadUint32(s);
-                InitChildren(s, null, 24);
+                // 28 bytes consumed above (version + 24-byte ALACSpecificConfig). The offset
+                // passed here must match, otherwise InitChildren misreads a bogus child atom
+                // out of the following sibling's bytes and corrupts the file on rewrite.
+                InitChildren(s, null, 28);
             }
             else
             {
@@ -2165,6 +2168,7 @@ namespace MusicFileUtilities
 
         public override void WriteAtom(Stream s)
         {
+            WriteHeader(s);
             WriteUint32(s, _version);
             if (_version == 0)
             {
@@ -2182,6 +2186,8 @@ namespace MusicFileUtilities
                 foreach (Atom a in _children)
                     a.WriteAtom(s);
             }
+            else
+                s.Write(_data, 0, _data.Length);
         }
 
     }

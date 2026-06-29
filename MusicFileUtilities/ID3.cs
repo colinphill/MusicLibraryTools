@@ -887,11 +887,12 @@ namespace MusicFileUtilities
         {
             // TBD: WXXX ISO8859-1 URL Encoding
             byte [] k, v;
+            byte enc;
             try
             {
                 k = CodeString(ID3v2Util.ID3Encoding.ISO8859, _key);
                 v = CodeString(ID3v2Util.ID3Encoding.ISO8859, _value);
-                Data[0] = (byte)ID3v2Util.ID3Encoding.ISO8859;
+                enc = (byte)ID3v2Util.ID3Encoding.ISO8859;
             }
             catch
             {
@@ -899,19 +900,24 @@ namespace MusicFileUtilities
                 {
                     k = CodeString(ID3v2Util.ID3Encoding.UTF8, _key);
                     v = CodeString(ID3v2Util.ID3Encoding.UTF8, _value);
-                    Data[0] = (byte)ID3v2Util.ID3Encoding.UTF8;
+                    enc = (byte)ID3v2Util.ID3Encoding.UTF8;
                 }
                 else
                 {
                     k = CodeString(ID3v2Util.ID3Encoding.MarkedUnicode, _key);
                     v = CodeString(ID3v2Util.ID3Encoding.MarkedUnicode, _value);
-                    Data[0] = (byte)ID3v2Util.ID3Encoding.MarkedUnicode;
+                    enc = (byte)ID3v2Util.ID3Encoding.MarkedUnicode;
                 }
             }
 
-            Data = new byte[k.Length + v.Length + 1];
+            // Layout: [encoding byte][key][null separator][value].
+            // 16-bit encodings use a 2-byte null; ISO8859/UTF8 use a 1-byte null.
+            int sep = (enc == (byte)ID3v2Util.ID3Encoding.MarkedUnicode
+                    || enc == (byte)ID3v2Util.ID3Encoding.BEUnicode) ? 2 : 1;
+            Data = new byte[1 + k.Length + sep + v.Length];
+            Data[0] = enc;
             Array.Copy(k, 0, Data, 1, k.Length);
-            Array.Copy(v, 0, Data, 1 + k.Length, v.Length);
+            Array.Copy(v, 0, Data, 1 + k.Length + sep, v.Length);
         }
 
         public string Key
@@ -1657,7 +1663,7 @@ namespace MusicFileUtilities
     public class MP3File : ID3v2Tag, ICodecProvider, IMediaFile, IMetadataWriter
     {
         private readonly uint[,,] _bitrates = {
-            { { 0, 32000, 64000, 96000, 128000, 160000, 192000, 224000, 256000, 288000, 320000, 352000, 284000, 416000, 448000, 0 },
+            { { 0, 32000, 64000, 96000, 128000, 160000, 192000, 224000, 256000, 288000, 320000, 352000, 384000, 416000, 448000, 0 },
             { 0, 32000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 160000, 192000, 224000, 256000, 320000, 384000, 0 },
             { 0, 32000, 40000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 160000, 192000, 224000, 256000, 320000, 0 } },
             { { 0, 32000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 144000, 160000, 176000, 192000, 224000, 256000, 0 },
@@ -1892,6 +1898,9 @@ namespace MusicFileUtilities
         }
         public DSFFile(string filename)
         {
+            // ReadTag only runs when a metadata pointer is present, so set the filename here
+            // too — otherwise a DSF with no existing tag can't be saved in place.
+            _filename = filename;
             using (FileStream s = File.OpenRead(filename))
             {
                 byte[] header = new byte[4];
@@ -1907,8 +1916,12 @@ namespace MusicFileUtilities
                     ReadTag(s);
                     s.Seek(28, SeekOrigin.Begin);
                 }
-                s.ReadExactly(header);
-                if (Encoding.ASCII.GetString(header, 0, 4) != "fmt ")
+                // Read only the 4-byte "fmt " chunk id; the BinaryReader below continues from
+                // the chunk-size field. (Reusing the 28-byte buffer here consumed too much and
+                // misaligned every codec field.)
+                byte[] fmtId = new byte[4];
+                s.ReadExactly(fmtId);
+                if (Encoding.ASCII.GetString(fmtId, 0, 4) != "fmt ")
                     return;
                 using (BinaryReader r = new BinaryReader(s, Encoding.ASCII, true))
                 {

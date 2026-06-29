@@ -104,7 +104,9 @@ namespace MusicFileUtilities
                     totalsamples *= 8;
                 }
                 durationinframes_ = (uint)(75ul * totalsamples / samplerate_);
-                averagebitrate_ = (uint)(s.Length * 8 / (durationinframes_ / 75));
+                // Derive bitrate from the raw sample count so sub-second files
+                // (durationinframes_ < 75) don't divide by zero.
+                averagebitrate_ = totalsamples == 0 ? 0 : (uint)((ulong)s.Length * 8 * samplerate_ / totalsamples);
 
                 break;
             }

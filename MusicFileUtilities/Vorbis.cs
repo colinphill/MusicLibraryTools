@@ -340,7 +340,7 @@ namespace MusicFileUtilities
             {
                 foreach (VorbisArtwork art in Artworks)
                 {
-                    string combine = "METADATA_PICTURE_BLOCK=" + Convert.ToBase64String(art.ToByteArray(), Base64FormattingOptions.InsertLineBreaks);
+                    string combine = "METADATA_BLOCK_PICTURE=" + Convert.ToBase64String(art.ToByteArray(), Base64FormattingOptions.InsertLineBreaks);
                     b = Encoding.UTF8.GetBytes(combine);
                     l.AddRange(Tools.ToLE((int)b.Length));
                     l.AddRange(b);
