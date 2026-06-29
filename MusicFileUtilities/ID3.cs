@@ -140,7 +140,7 @@ namespace MusicFileUtilities
 
         public static object[] UFIDMapping(ID3v2Tag tag, string frameid, string ufidid, TagAction action, params object[] values)
         {
-            var frame = tag.Frames.SingleOrDefault(f => (f.FrameID == frameid) && ((f as IdentifierFrame).Key == ufidid)) as IdentifierFrame;
+            var frame = tag.FindIdentifierFrame(frameid, ufidid);
             switch (action)
             {
                 case TagAction.Get:
@@ -206,7 +206,7 @@ namespace MusicFileUtilities
 
         public static object[] UserStringMapping(ID3v2Tag tag, string frameid, string userstringid, TagAction action, params object[] values)
         {
-            var frame = tag.Frames.SingleOrDefault(f => (f.FrameID == frameid) && ((f as UserStringFrame).Key == userstringid)) as UserStringFrame;
+            var frame = tag.FindUserStringFrame(frameid, userstringid);
             switch (action)
             {
                 case TagAction.Get:
@@ -658,6 +658,13 @@ namespace MusicFileUtilities
         public override void Decode()
         {
             base.Decode();
+            // A zero-length (or encoding-byte-only) frame is malformed but real taggers emit
+            // them; treat it as a single empty value instead of indexing Data[0] out of range.
+            if (Data.Length == 0)
+            {
+                values_ = new[] { string.Empty };
+                return;
+            }
             if ((tag_.Version >= 4)||(!ID3v2Util.StrictRules))
             {
                 if (FrameID[0] == 'W')
@@ -675,7 +682,7 @@ namespace MusicFileUtilities
                             offset++;
                         vals.Add(val);
                     }
-                    values_ = vals.ToArray();
+                    values_ = vals.Count > 0 ? vals.ToArray() : new[] { string.Empty };
                 }
             }
             else
@@ -1038,13 +1045,28 @@ namespace MusicFileUtilities
         private byte[] _picdata;
         private int _width;
         private int _height;
+        private bool _dimsComputed;
+
+        // Image dimensions are parsed lazily: a library scan that only wants text tags
+        // shouldn't pay to decode every embedded cover.
+        private void EnsureDimensions()
+        {
+            if (_dimsComputed) return;
+            _dimsComputed = true;
+            if (_picdata != null && _picdata.Length > 0)
+            {
+                var img = ImageFile.GetImageDimensions(_picdata);
+                _width = img.Width;
+                _height = img.Height;
+            }
+        }
 
         string IMetadataImage.Description => string.IsNullOrWhiteSpace(_description) ? _type.ToString() : _description;
         string IMetadataImage.Category => _type.ToString();
         string IMetadataImage.ImageType => _mimetype;
-        int IMetadataImage.Width => _width;
-        int IMetadataImage.Height => _height;
-        int IMetadataImage.Size => _picdata.Length;
+        int IMetadataImage.Width { get { EnsureDimensions(); return _width; } }
+        int IMetadataImage.Height { get { EnsureDimensions(); return _height; } }
+        int IMetadataImage.Size => _picdata?.Length ?? 0;
         byte[] IMetadataImage.Data => _picdata;
       
         public PictureFrame(ID3v2Frame from)
@@ -1061,6 +1083,8 @@ namespace MusicFileUtilities
         public override void Decode()
         {
             base.Decode();
+            if (Data.Length == 0)
+                return;
             ID3v2Util.ID3Encoding encoding = (ID3v2Util.ID3Encoding)Data[0];
             int codelen;
             if (tag_.Version == 2)
@@ -1086,9 +1110,6 @@ namespace MusicFileUtilities
             int codelen2 = CodeString(encoding, _description + "\0").Length;
             _picdata = new byte[Data.Length - codelen - codelen2 - 2];
             Array.Copy(Data, codelen + codelen2 + 2, _picdata, 0, _picdata.Length);
-            var img = ImageFile.GetImageDimensions(_picdata);
-            _width = img.Width;
-            _height = img.Height;
         }
 
         public override void Encode()
@@ -1129,7 +1150,7 @@ namespace MusicFileUtilities
         public byte[] PictureData
         {
             get => _picdata;
-            set { _picdata = value; _width = 0; _height = 0; if (value != null) { var img = ImageFile.GetImageDimensions(value); _width = img.Width; _height = img.Height; } Encode(); }
+            set { _picdata = value; _dimsComputed = false; Encode(); }
         }
 
         public string Hash
@@ -1193,19 +1214,27 @@ namespace MusicFileUtilities
 
         public override IEnumerable<KeyValuePair<TagFields, string>> GetKnownMetadata()
         {
-            foreach (var mapping in (Version == 2) ? ID3v2Util.ActionMappingsv22 : ID3v2Util.ActionMappingsv23v24)
+            BuildFrameIndex();
+            try
             {
-                object[] values = new object[0];
-                try
+                foreach (var mapping in (Version == 2) ? ID3v2Util.ActionMappingsv22 : ID3v2Util.ActionMappingsv23v24)
                 {
-                    values = mapping.Value(this, TagAction.Get);
+                    object[] values = new object[0];
+                    try
+                    {
+                        values = mapping.Value(this, TagAction.Get);
+                    }
+                    catch
+                    {
+                        // No value
+                    }
+                    foreach (var v in values)
+                        yield return KeyValuePair.Create(mapping.Key, v.ToString());
                 }
-                catch
-                {
-                    // No value
-                }
-                foreach (var v in values)
-                    yield return KeyValuePair.Create(mapping.Key, v.ToString());
+            }
+            finally
+            {
+                ClearFrameIndex();
             }
         }
 
@@ -1462,9 +1491,57 @@ namespace MusicFileUtilities
             }
         }
 
+        // Transient lookup tables populated for the duration of a GetKnownMetadata() call so the
+        // ~70 field mappings don't each rescan every frame (was O(fields x frames)). They are
+        // null outside that call; mutation happens only via SetField, never during enumeration.
+        private Dictionary<string, List<ID3v2Frame>> _frameIndex;
+        private Dictionary<(string FrameID, string Key), UserStringFrame> _userIndex;
+        private Dictionary<(string FrameID, string Key), IdentifierFrame> _identIndex;
+
+        private void BuildFrameIndex()
+        {
+            _frameIndex = new Dictionary<string, List<ID3v2Frame>>();
+            _userIndex = new Dictionary<(string, string), UserStringFrame>();
+            _identIndex = new Dictionary<(string, string), IdentifierFrame>();
+            foreach (var f in _frames)
+            {
+                if (!_frameIndex.TryGetValue(f.FrameID, out var list))
+                    _frameIndex[f.FrameID] = list = new List<ID3v2Frame>();
+                list.Add(f);
+                if (f is UserStringFrame u)
+                    _userIndex.TryAdd((f.FrameID, u.Key), u);
+                else if (f is IdentifierFrame id)
+                    _identIndex.TryAdd((f.FrameID, id.Key), id);
+            }
+        }
+
+        private void ClearFrameIndex()
+        {
+            _frameIndex = null;
+            _userIndex = null;
+            _identIndex = null;
+        }
+
         public ID3v2Frame FindFrame(string frame)
         {
-            return _frames.SingleOrDefault(frm => (frm.FrameID == frame));
+            // First match (not Single): duplicate frame IDs shouldn't throw and silently drop the field.
+            if (_frameIndex != null)
+                return _frameIndex.TryGetValue(frame, out var l) ? l[0] : null;
+            return _frames.FirstOrDefault(frm => frm.FrameID == frame);
+        }
+
+        internal UserStringFrame FindUserStringFrame(string frameId, string key)
+        {
+            if (_userIndex != null)
+                return _userIndex.TryGetValue((frameId, key), out var f) ? f : null;
+            return _frames.OfType<UserStringFrame>().FirstOrDefault(f => f.FrameID == frameId && f.Key == key);
+        }
+
+        internal IdentifierFrame FindIdentifierFrame(string frameId, string key)
+        {
+            if (_identIndex != null)
+                return _identIndex.TryGetValue((frameId, key), out var f) ? f : null;
+            return _frames.OfType<IdentifierFrame>().FirstOrDefault(f => f.FrameID == frameId && f.Key == key);
         }
 
         protected void ReadTag(Stream s)
@@ -1662,7 +1739,7 @@ namespace MusicFileUtilities
 
     public class MP3File : ID3v2Tag, ICodecProvider, IMediaFile, IMetadataWriter
     {
-        private readonly uint[,,] _bitrates = {
+        private static readonly uint[,,] _bitrates = {
             { { 0, 32000, 64000, 96000, 128000, 160000, 192000, 224000, 256000, 288000, 320000, 352000, 384000, 416000, 448000, 0 },
             { 0, 32000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 160000, 192000, 224000, 256000, 320000, 384000, 0 },
             { 0, 32000, 40000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 160000, 192000, 224000, 256000, 320000, 0 } },
@@ -1673,10 +1750,10 @@ namespace MusicFileUtilities
             { 0, 8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 144000, 160000, 0 },
             { 0, 8000, 16000, 24000, 32000, 40000, 48000, 56000, 64000, 80000, 96000, 112000, 128000, 144000, 160000, 0 } } };
         
-        private readonly uint[,] _samplerates = { { 44100, 48000, 32000, 0 }, { 22050, 24000, 16000, 0 }, { 11025, 12000, 8000, 0 } };
-        private readonly int[,] _samplesperframe = { { 384, 1152, 1152 }, { 384, 1152, 576 }, { 384, 1152, 576 } };
-        private readonly uint[] _channels = { 2, 2, 2, 1 };
-        private readonly int[] _sideinfolen = { 32, 32, 32, 17 };
+        private static readonly uint[,] _samplerates = { { 44100, 48000, 32000, 0 }, { 22050, 24000, 16000, 0 }, { 11025, 12000, 8000, 0 } };
+        private static readonly int[,] _samplesperframe = { { 384, 1152, 1152 }, { 384, 1152, 576 }, { 384, 1152, 576 } };
+        private static readonly uint[] _channels = { 2, 2, 2, 1 };
+        private static readonly int[] _sideinfolen = { 32, 32, 32, 17 };
 
         public IEnumerable<ICodecProvider> Codecs
         {

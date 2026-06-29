@@ -17,25 +17,43 @@ namespace MusicFileUtilities
         private string _category;
         private int _width;
         private int _height;
+        private bool _dimsComputed;
+
+        // Dimensions are decoded lazily so a scan reading only text tags doesn't parse covers.
+        private void EnsureDimensions()
+        {
+            if (_dimsComputed) return;
+            _dimsComputed = true;
+            if (_picdata != null && _picdata.Length > 0)
+            {
+                var img = ImageFile.GetImageDimensions(_picdata);
+                _width = img.Width;
+                _height = img.Height;
+            }
+        }
 
         string IMetadataImage.Description => string.IsNullOrWhiteSpace(_description) ? _category : _description;
         string IMetadataImage.Category => _category;
         string IMetadataImage.ImageType => _mimetype;
-        int IMetadataImage.Width => _width;
-        int IMetadataImage.Height => _height;
-        int IMetadataImage.Size => _picdata.Length;
+        int IMetadataImage.Width { get { EnsureDimensions(); return _width; } }
+        int IMetadataImage.Height { get { EnsureDimensions(); return _height; } }
+        int IMetadataImage.Size => _picdata?.Length ?? 0;
         byte[] IMetadataImage.Data => _picdata;
 
         public APEArtwork(string key, byte[] value)
         {
             string filename = "";
             int offset = 0;
-            while (value[offset] != 0)
+            // Bounded: a binary item with no null terminator must not run off the end.
+            while (offset < value.Length && value[offset] != 0)
                 filename += (char)value[offset++];
-            offset++;
-            _picdata = new byte[value.Length - offset];
-            Array.Copy(value, offset, _picdata, 0, _picdata.Length);
-            _mimetype = Path.GetExtension(filename).ToLower().Substring(1);
+            offset++; // skip the null separator
+            int datalen = Math.Max(0, value.Length - offset);
+            _picdata = new byte[datalen];
+            if (datalen > 0)
+                Array.Copy(value, offset, _picdata, 0, datalen);
+            string ext = Path.GetExtension(filename).ToLower();
+            _mimetype = ext.Length > 1 ? ext.Substring(1) : "";
             if ((_mimetype.ToLower() == "jpeg") || (_mimetype.ToLower() == "jpg"))
                 _mimetype = "image/jpeg";
             if (_mimetype.ToLower() == "png")
@@ -46,9 +64,6 @@ namespace MusicFileUtilities
                 _mimetype = "image/gif";
             _description = filename;
             _category = key;
-            var img = ImageFile.GetImageDimensions(_picdata);
-            _width = img.Width;
-            _height = img.Height;
         }
 
         public string Hash
@@ -148,27 +163,33 @@ namespace MusicFileUtilities
             { ("Writer", false), TagFields.Writer },
         };
 
-        // Canonical write key for each TagField (case-sensitive key preferred; first match wins)
-        private static Dictionary<TagFields, string> _reverseTagMappings = null;
+        // Read-side lookups, built once. Previously rebuilt on every GetKnownMetadata call.
+        public static readonly Dictionary<string, TagFields> SensitiveMap =
+            TagMappings.Where(kv => kv.Key.CaseSensitive)
+                       .GroupBy(kv => kv.Key.Key)
+                       .ToDictionary(g => g.Key, g => g.First().Value);
 
-        public static Dictionary<TagFields, string> ReverseTagMappings
-        {
-            get
+        public static readonly Dictionary<string, TagFields> InsensitiveMap =
+            TagMappings.Where(kv => !kv.Key.CaseSensitive)
+                       .GroupBy(kv => kv.Key.Key.ToUpper())
+                       .ToDictionary(g => g.Key, g => g.First().Value);
+
+        // Canonical write key for each TagField (case-sensitive key preferred; first match wins).
+        // Lazily built once (thread-safe); the old null-check pattern could race.
+        private static readonly Lazy<Dictionary<TagFields, string>> _reverseTagMappings =
+            new Lazy<Dictionary<TagFields, string>>(() =>
             {
-                if (_reverseTagMappings == null)
-                {
-                    _reverseTagMappings = new Dictionary<TagFields, string>();
-                    // Prefer case-sensitive keys first
-                    foreach (var kv in TagMappings.Where(k => k.Key.CaseSensitive))
-                        if (!_reverseTagMappings.ContainsKey(kv.Value))
-                            _reverseTagMappings[kv.Value] = kv.Key.Key;
-                    foreach (var kv in TagMappings.Where(k => !k.Key.CaseSensitive))
-                        if (!_reverseTagMappings.ContainsKey(kv.Value))
-                            _reverseTagMappings[kv.Value] = kv.Key.Key;
-                }
-                return _reverseTagMappings;
-            }
-        }
+                var map = new Dictionary<TagFields, string>();
+                foreach (var kv in TagMappings.Where(k => k.Key.CaseSensitive))
+                    if (!map.ContainsKey(kv.Value))
+                        map[kv.Value] = kv.Key.Key;
+                foreach (var kv in TagMappings.Where(k => !k.Key.CaseSensitive))
+                    if (!map.ContainsKey(kv.Value))
+                        map[kv.Value] = kv.Key.Key;
+                return map;
+            });
+
+        public static Dictionary<TagFields, string> ReverseTagMappings => _reverseTagMappings.Value;
 
     }
 
@@ -184,8 +205,8 @@ namespace MusicFileUtilities
 
         public override IEnumerable<KeyValuePair<TagFields, string>> GetKnownMetadata()
         {
-            var sensmap = APEUtil.TagMappings.Where(kv => kv.Key.CaseSensitive).ToDictionary(kv => kv.Key.Key, kv => kv.Value);
-            var insensmap = APEUtil.TagMappings.Where(kv => !kv.Key.CaseSensitive).ToDictionary(kv => kv.Key.Key.ToUpper(), kv => kv.Value);
+            var sensmap = APEUtil.SensitiveMap;
+            var insensmap = APEUtil.InsensitiveMap;
             foreach (var kv in TextItems)
             {
                 string ukey = kv.Key.ToUpper();
@@ -371,28 +392,43 @@ namespace MusicFileUtilities
                 }
                 else
                     AudioEndOffset = itemsStart;
+                if (sizeFromFooter < 0 || sizeFromFooter > s.Length)
+                    return false;
                 s.Seek(-sizeFromFooter, SeekOrigin.End);
             }
+            // NOTE: in the header-first branch above, AudioEndOffset stays -1 (we can't infer the
+            // audio layout of a tag-at-start file); Save() then falls back to a full copy. That
+            // path isn't reached by WavPack, whose tag is always at the end.
             int tagsize = Tools.Int32AtLE(headerfooter, 4);
             int itemcount = Tools.Int32AtLE(headerfooter, 8);
+            // Item count/sizes come from the file; validate before allocating/indexing so a
+            // corrupt tag can't OOM or read out of bounds.
+            if (tagsize < 0 || tagsize > s.Length - s.Position)
+                return false;
             byte[] tag = new byte[tagsize];
             s.ReadExactly(tag);
             int offset = 0;
 
             for(int i=0;i<itemcount;i++)
             {
+                if (offset + 8 > tag.Length)
+                    break;
                 int itemlen = Tools.Int32AtLE(tag, offset);
                 int itemflags = Tools.Int32AtLE(tag, offset+4);
                 string itemkey = "";
                 offset += 8;
-                while (tag[offset] != 0)
+                while (offset < tag.Length && tag[offset] != 0)
                     itemkey += (char)tag[offset++];
-                offset++;
+                if (offset >= tag.Length)
+                    break;                 // unterminated key
+                offset++;                  // skip the null separator
+                if (itemlen < 0 || (long)offset + itemlen > tag.Length)
+                    break;                 // bad/oversized value length (long math avoids overflow)
                 if ((itemflags & 6) == 0)
                 {
                     string itemvalue = Encoding.UTF8.GetString(tag, offset, itemlen);
                     TextItems.AddRange(itemvalue.Split(new char[] { '\0' }, StringSplitOptions.RemoveEmptyEntries).Select(s => new KeyValuePair<string, string>(itemkey, s)));
-                } 
+                }
                 else if ((itemflags & 6) == 2)
                 {
                     byte[] bindata = new byte[itemlen];

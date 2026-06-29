@@ -183,9 +183,13 @@ namespace MusicFileUtilities
         protected void ParseStandardFields()
         {
             int n = 0;
-            DateTime dt = DateTime.MinValue;
-            foreach (var kv in GetKnownMetadata().Reverse())
+            // Keep the first value seen for each field, iterating forward. (Previously this
+            // buffered and reversed the entire sequence just to get first-wins semantics.)
+            var seen = new HashSet<TagFields>();
+            foreach (var kv in GetKnownMetadata())
             {
+                if (!seen.Add(kv.Key))
+                    continue;
                 switch (kv.Key)
                 {
                     case TagFields.Title:

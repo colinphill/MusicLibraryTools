@@ -105,22 +105,19 @@ namespace MusicFileUtilities
             { "WRITER", TagFields.Writer },
         };
 
-        private static Dictionary<TagFields, string> _reverseTagMappings = null;
-
-        public static Dictionary<TagFields, string> ReverseTagMappings
-        {
-            get
+        // Lazily built once (thread-safe); the old null-check pattern could race under
+        // parallel writes.
+        private static readonly Lazy<Dictionary<TagFields, string>> _reverseTagMappings =
+            new Lazy<Dictionary<TagFields, string>>(() =>
             {
-                if (_reverseTagMappings == null)
-                {
-                    _reverseTagMappings = new Dictionary<TagFields, string>();
-                    foreach (var kv in TagMappings)
-                        if (!_reverseTagMappings.ContainsKey(kv.Value))
-                            _reverseTagMappings[kv.Value] = kv.Key;
-                }
-                return _reverseTagMappings;
-            }
-        }
+                var map = new Dictionary<TagFields, string>();
+                foreach (var kv in TagMappings)
+                    if (!map.ContainsKey(kv.Value))
+                        map[kv.Value] = kv.Key;
+                return map;
+            });
+
+        public static Dictionary<TagFields, string> ReverseTagMappings => _reverseTagMappings.Value;
 
     }
 
@@ -187,37 +184,55 @@ namespace MusicFileUtilities
         public void FromByteArray(byte[] b)
         {
             int offset = 0;
-            
+            // Lengths come straight from file bytes; validate every read so a corrupt block
+            // throws a clean InvalidDataException instead of IndexOutOfRange/OutOfMemory.
+            void Need(long n)
+            {
+                if (n < 0 || offset + n > b.Length)
+                    throw new InvalidDataException("Malformed Vorbis picture block");
+            }
+
+            Need(4);
             PictureType = (ID3v2Util.APICType)Tools.Int32AtBE(b, offset);
             offset += 4;
 
+            Need(4);
             int mimelen = Tools.Int32AtBE(b, offset);
             offset += 4;
-            
+
+            Need(mimelen);
             MimeType = Encoding.UTF8.GetString(b, offset, mimelen);
             offset += mimelen;
 
+            Need(4);
             int desclen = Tools.Int32AtBE(b, offset);
             offset += 4;
 
+            Need(desclen);
             Description = Encoding.UTF8.GetString(b, offset, desclen);
             offset += desclen;
 
+            Need(4);
             Width = Tools.Int32AtBE(b, offset);
             offset += 4;
 
+            Need(4);
             Height = Tools.Int32AtBE(b, offset);
             offset += 4;
 
+            Need(4);
             Depth = Tools.Int32AtBE(b, offset);
             offset += 4;
 
+            Need(4);
             ColorsUsed = Tools.Int32AtBE(b, offset);
             offset += 4;
 
+            Need(4);
             int datasize = Tools.Int32AtBE(b, offset);
             offset += 4;
 
+            Need(datasize);
             Data = new byte[datasize];
             Array.Copy(b, offset, Data, 0, Data.Length);
         }
@@ -353,36 +368,44 @@ namespace MusicFileUtilities
         public void FromByteArray(byte[] b)
         {
             int offset = 0;
-            
+            // All lengths are read from file bytes, so bounds-check every read; a corrupt
+            // block stops parsing cleanly instead of throwing IndexOutOfRange/OutOfMemory.
+            bool CanRead(long n) => n >= 0 && offset + n <= b.Length;
+
+            if (!CanRead(4)) return;
             int vendorlength = Tools.Int32AtLE(b, offset);
             offset += 4;
 
+            if (!CanRead(vendorlength)) return;
             Vendor = Encoding.UTF8.GetString(b, offset, vendorlength);
-
             offset += vendorlength;
-            int commentlistlength = Tools.Int32AtLE(b, offset);
 
+            if (!CanRead(4)) { ParseStandardFields(); return; }
+            int commentlistlength = Tools.Int32AtLE(b, offset);
             offset += 4;
 
             for (int i = 0; i < commentlistlength; i++)
             {
+                if (!CanRead(4)) break;
                 int commentlength = Tools.Int32AtLE(b, offset);
                 offset += 4;
 
+                if (!CanRead(commentlength)) break;
                 string comment = Encoding.UTF8.GetString(b, offset, commentlength);
+                offset += commentlength;
 
                 string[] split = comment.Split(new char[] { '=' }, 2);
+                if (split.Length < 2)
+                    continue; // malformed comment with no '=' separator
                 split[0] = split[0].ToUpper();
 
                 if (split[0] == "METADATA_BLOCK_PICTURE")
                 {
-                    VorbisArtwork art = new VorbisArtwork(Convert.FromBase64String(split[1]));
-                    Artworks.Add(art);
+                    try { Artworks.Add(new VorbisArtwork(Convert.FromBase64String(split[1]))); }
+                    catch { /* skip a single malformed embedded picture */ }
                 }
                 else
                     Comments.Add(new KeyValuePair<string, string>(split[0], split[1]));
-
-                offset += commentlength;
             }
             ParseStandardFields();
         }

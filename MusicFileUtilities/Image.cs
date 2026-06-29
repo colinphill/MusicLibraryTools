@@ -58,20 +58,29 @@ namespace MusicFileUtilities
         private static (int Width, int Height) GetJpegDimensions(byte[] b)
         {
             int offset = 0;
-            while (offset < b.Length)
+            // Defensive against truncated/corrupt JPEGs: every read is bounds-checked and a
+            // segment length < 2 (which would fail to advance the cursor and spin forever)
+            // bails out with (0,0) rather than hanging or throwing.
+            while (offset + 2 <= b.Length)
             {
                 byte m1 = b[offset++];
                 byte m2 = b[offset++];
                 if (m1 != 0xff)
-                    throw new InvalidDataException();
+                    return (0, 0);
                 if (standalonemarkers_.Contains(m2))
                     continue;
+                if (offset + 2 > b.Length)
+                    return (0, 0);
                 byte l1 = b[offset++];
                 byte l2 = b[offset++];
                 int length = (((int)l1) << 8) | (int)l2;
+                if (length < 2)
+                    return (0, 0);
                 int toffset = offset;
                 if (sofmarkers_.Contains(m2))
                 {
+                    if (offset + 5 > b.Length)
+                        return (0, 0);
                     byte p = b[offset++];
                     byte y1 = b[offset++];
                     byte y2 = b[offset++];
@@ -83,7 +92,7 @@ namespace MusicFileUtilities
                 }
                 offset = toffset + length - 2;
             }
-            throw new InvalidDataException();
+            return (0, 0);
         }
 
         public static (int Width, int Height) GetImageDimensions(byte[] b)

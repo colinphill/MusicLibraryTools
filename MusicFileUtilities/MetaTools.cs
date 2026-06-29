@@ -13,6 +13,7 @@ using System.IO;
 using System.Linq;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
@@ -211,6 +212,17 @@ namespace MusicFileUtilities
 
         public static readonly Regex DiscNumRegex = new Regex(@"(.+)[ \t]+\(Disc (.+)\)", RegexOptions.IgnoreCase);
 
+        // Union of invalid filename + path chars, built once for FixPath's single-pass sanitize.
+        private static readonly HashSet<char> InvalidPathChars = BuildInvalidPathChars();
+
+        private static HashSet<char> BuildInvalidPathChars()
+        {
+            var set = new HashSet<char>(Path.GetInvalidFileNameChars());
+            foreach (char c in Path.GetInvalidPathChars())
+                set.Add(c);
+            return set;
+        }
+
         public static string LimitLength(this string val, int length)
         {
             int l = Math.Min(length, val.Length);
@@ -225,19 +237,27 @@ namespace MusicFileUtilities
 
         public static string FixPath(this string item)
         {
-            string fix = item;
-            foreach (char c in Path.GetInvalidFileNameChars())
-                fix = fix.Replace(c.ToString(), "_");
-            foreach (char c in Path.GetInvalidPathChars())
-                fix = fix.Replace(c.ToString(), "_");
-            fix = fix.Replace('$', 's');
-            fix = fix.Replace("\"", "");
-            fix = fix.Trim();
-            while (fix.EndsWith("."))
-                fix = fix.Remove(fix.Length - 1);
-            while (fix.StartsWith("."))
-                fix = fix.Remove(0, 1);
-            return fix;
+            // Single pass, preserving the original rules: invalid path/filename chars -> '_',
+            // '$' -> 's', and a '"' that isn't already an invalid char is dropped. Then trim
+            // surrounding whitespace and leading/trailing dots.
+            var sb = new StringBuilder(item.Length);
+            foreach (char c in item)
+            {
+                if (c == '$')
+                    sb.Append('s');
+                else if (InvalidPathChars.Contains(c))
+                    sb.Append('_');
+                else if (c == '"')
+                    continue; // only reached where '"' isn't an invalid char (non-Windows)
+                else
+                    sb.Append(c);
+            }
+
+            string fix = sb.ToString().Trim();
+            int start = 0, end = fix.Length;
+            while (end > start && fix[end - 1] == '.') end--;
+            while (start < end && fix[start] == '.') start++;
+            return fix.Substring(start, end - start);
         }
 
 #if false

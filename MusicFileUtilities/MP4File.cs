@@ -145,33 +145,31 @@ namespace MusicFileUtilities
             { "©wrk", TagFields.Work },
         };
 
-        private static Dictionary<TagFields, string> _reverseTagMapping = null;
-
         // Maps each TagFields value to the canonical atom key for writing.
         // Standard 4-byte iTunes keys are preferred over freeform string keys.
-        public static Dictionary<TagFields, string> ReverseTagMapping
+        // Lazily built once (thread-safe) — the old null-check pattern could race.
+        private static readonly Lazy<Dictionary<TagFields, string>> _reverseTagMapping =
+            new Lazy<Dictionary<TagFields, string>>(BuildReverseTagMapping);
+
+        public static Dictionary<TagFields, string> ReverseTagMapping => _reverseTagMapping.Value;
+
+        private static Dictionary<TagFields, string> BuildReverseTagMapping()
         {
-            get
+            var map = new Dictionary<TagFields, string>();
+            // First pass: 4-byte standard keys
+            foreach (var kv in TagMapping)
             {
-                if (_reverseTagMapping == null)
+                if (!map.ContainsKey(kv.Value))
                 {
-                    _reverseTagMapping = new Dictionary<TagFields, string>();
-                    // First pass: 4-byte standard keys
-                    foreach (var kv in TagMapping)
-                    {
-                        if (!_reverseTagMapping.ContainsKey(kv.Value))
-                        {
-                            try { if (TypeEncoding.GetBytes(kv.Key).Length == 4) _reverseTagMapping[kv.Value] = kv.Key; }
-                            catch { }
-                        }
-                    }
-                    // Second pass: freeform keys for any fields not yet covered
-                    foreach (var kv in TagMapping)
-                        if (!_reverseTagMapping.ContainsKey(kv.Value))
-                            _reverseTagMapping[kv.Value] = kv.Key;
+                    try { if (TypeEncoding.GetBytes(kv.Key).Length == 4) map[kv.Value] = kv.Key; }
+                    catch { }
                 }
-                return _reverseTagMapping;
             }
+            // Second pass: freeform keys for any fields not yet covered
+            foreach (var kv in TagMapping)
+                if (!map.ContainsKey(kv.Value))
+                    map[kv.Value] = kv.Key;
+            return map;
         }
 
         public static void Init()
@@ -431,9 +429,9 @@ namespace MusicFileUtilities
                 Atom a = this;
                 while (a._parent != null)
                 {
-                    int index = _parent.Children.IndexOf(this);
+                    int index = a._parent.Children.IndexOf(a);
                     for (int i = 0; i < index; i++)
-                        sum += _parent.Children[i]._deltasize;
+                        sum += a._parent.Children[i]._deltasize;
                     a = a._parent;
                 }
                 return sum;
@@ -672,6 +670,21 @@ namespace MusicFileUtilities
         private byte[] _imagedata;
         private int _imagewidth;
         private int _imageheight;
+        private bool _dimsComputed;
+
+        // Dimensions are decoded lazily so a scan that only reads text tags doesn't pay to
+        // parse every embedded cover image.
+        private void EnsureDimensions()
+        {
+            if (_dimsComputed) return;
+            _dimsComputed = true;
+            if (_imagedata != null && _imagedata.Length > 0)
+            {
+                var img = ImageFile.GetImageDimensions(_imagedata);
+                _imagewidth = img.Width;
+                _imageheight = img.Height;
+            }
+        }
 
         public string ImageToMimeType()
         {
@@ -700,9 +713,6 @@ namespace MusicFileUtilities
             {
                 _imagedata = new byte[Data.Length - 8];
                 Array.Copy(Data, 8, _imagedata, 0, _imagedata.Length);
-                var img = ImageFile.GetImageDimensions(_imagedata);
-                _imagewidth = img.Width;
-                _imageheight = img.Height;
             }
         }
 
@@ -1140,8 +1150,8 @@ namespace MusicFileUtilities
         }
 
         public byte[] ImageData => _imagedata;
-        public int ImageWidth => _imagewidth;
-        public int ImageHeight => _imageheight;
+        public int ImageWidth { get { EnsureDimensions(); return _imagewidth; } }
+        public int ImageHeight { get { EnsureDimensions(); return _imageheight; } }
 
         string IMetadataImage.Description => "";
 
@@ -1149,9 +1159,9 @@ namespace MusicFileUtilities
 
         string IMetadataImage.ImageType => ImageToMimeType();
 
-        int IMetadataImage.Width => _imagewidth;
+        int IMetadataImage.Width { get { EnsureDimensions(); return _imagewidth; } }
 
-        int IMetadataImage.Height => _imageheight;
+        int IMetadataImage.Height { get { EnsureDimensions(); return _imageheight; } }
 
         int IMetadataImage.Size => _imagedata.Length;
 
@@ -1657,7 +1667,11 @@ namespace MusicFileUtilities
 
         public override IEnumerable<KeyValuePair<TagFields, string>> GetKnownMetadata()
         {
+            // A file without an iTunes metadata list (common for non-iTunes muxers) has no
+            // known tags; don't dereference a null ilst. (SetField already guards this.)
             Atom_ilst ilst = root_.FindPath("moov.udta.meta.ilst") as Atom_ilst;
+            if (ilst == null)
+                yield break;
             foreach (Atom atom in ilst.Children)
             {
                 ContainerAtom ca = atom as ContainerAtom;
@@ -1669,7 +1683,9 @@ namespace MusicFileUtilities
                         Atom_data da = childatom as Atom_data;
                         if (da.IsText)
                             yield return KeyValuePair.Create(key, da.Text);
-                        else if (da.DataType == Atom_data.DataTypes.Integer)
+                        // Only emit integers of a recognized width; a non-standard width would
+                        // make the Uint64 accessor throw and abort the whole enumeration.
+                        else if (da.DataType == Atom_data.DataTypes.Integer && (da.IsUint8 || da.IsUint16 || da.IsUint32 || da.IsUint64))
                             yield return KeyValuePair.Create(key, da.Uint64.ToString());
                         else if (da.IsBoolean)
                             yield return KeyValuePair.Create(key, da.BoolValue ? "1" : "0");
@@ -1716,6 +1732,8 @@ namespace MusicFileUtilities
         public override IEnumerable<IMetadataImage> GetImageMetadata()
         {
             Atom_ilst ilst = root_.FindPath("moov.udta.meta.ilst") as Atom_ilst;
+            if (ilst == null)
+                yield break;
             foreach (Atom atom in ilst.Children)
             {
                 ContainerAtom ca = atom as ContainerAtom;
