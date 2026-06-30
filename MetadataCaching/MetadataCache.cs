@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Collections.Concurrent;
@@ -124,7 +123,8 @@ namespace MetadataCaching
 
     public class MetadataCache
     {
-        public static readonly string[] ValidExtensions = { ".dsf", ".m4a", ".mp3", ".flac", ".ogg", ".wv" };
+        // Single source of truth: derived from MetadataExtensions so the two lists can't drift.
+        public static readonly string[] ValidExtensions = MetadataExtensions.ValidExtensions.ToArray();
 
         private Dictionary<string, MetadataCacheEntry> _filecache = new Dictionary<string, MetadataCacheEntry>();
         private Dictionary<string, List<string>> _albumcache = new Dictionary<string, List<string>>();
@@ -208,33 +208,9 @@ namespace MetadataCaching
             }
         }
         
-        [Obsolete]
-        public void Save(string path)
-        {
-            using (FileStream fs = File.Create(path))
-            {
-                BinaryFormatter formatter = new BinaryFormatter();
-                formatter.Serialize(fs, _filecache);
-                formatter.Serialize(fs, _albumcache);
-                formatter.Serialize(fs, _artistcache);
-                formatter.Serialize(fs, _albumartistcache);
-            }
-        }
-
-        [Obsolete]
-        public void Load(string path)
-        {
-            using (FileStream fs = File.Open(path, FileMode.Open))
-            {
-                BinaryFormatter formatter = new BinaryFormatter();
-                _filecache = (Dictionary<string, MetadataCacheEntry>)formatter.Deserialize(fs);
-                _albumcache = (Dictionary<string, List<string>>)formatter.Deserialize(fs);
-                _artistcache = (Dictionary<string, List<string>>)formatter.Deserialize(fs);
-                _albumartistcache = (Dictionary<string, List<string>>)formatter.Deserialize(fs);
-                foreach (var f in _filecache)
-                    f.Value.Strip();
-            }
-        }
+        // Note: the former BinaryFormatter-based Save/Load lived here. BinaryFormatter was
+        // removed from the runtime in .NET 9+, and the SQLite-backed MetadataDatabase is the
+        // current persistence path, so they were deleted rather than ported.
 
         internal void AddDBCacheEntry(string file, MetadataCacheEntry ce)
         {

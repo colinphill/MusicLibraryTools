@@ -8,6 +8,7 @@ using Microsoft.Data.Sqlite;
 #endif
 using System.IO;
 using MusicFileUtilities;
+using MusicLibraryTools;
 using System.Threading;
 using System.Data.Common;
 #if SQLSERVER
@@ -15,6 +16,10 @@ using System.Data.SqlClient;
 #endif
 using System.Data;
 using System.Security.Cryptography;
+using System.Text;
+using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("MusicFileUtilities.Tests")]
 
 namespace MetadataCaching
 {
@@ -108,6 +113,12 @@ namespace MetadataCaching
     {
         private DbConnection conn_;
         private string lastidsql_;
+
+        // Indexer write-batching tunables. Defaults bound the WAL / per-statement overhead on a
+        // large library; tests lower them to exercise the multi-commit and multi-row-flush paths
+        // without huge inputs.
+        internal static int IndexFilesPerBatch = 2000;
+        internal static int IndexMetaRowsPerInsert = 500;
 
 #if SQLITE
         private static readonly string[] sqlitecreationsql_ = {
@@ -356,11 +367,12 @@ namespace MetadataCaching
                 using var querycomm = conn_.CreateCommand();
                 querycomm.CommandText = "SELECT Path, LastWriteTime, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames, Artist, AlbumArtist, Album, TrackNumber, TrackTotal, DiscNumber, DiscTotal, ReleaseDate, Track, AlbumPath FROM MetadataSummaryView WHERE ScanSetID = " + set.ID;
                 using var reader = querycomm.ExecuteReader();
+                int oAlbumPath = reader.GetOrdinal("AlbumPath"), oPath = reader.GetOrdinal("Path");
                 while (reader.Read())
                 {
                     var ce = new MetadataCacheEntry(reader);
                     ce.Strip();
-                    var fullpath = Path.Combine(set.Path, reader.GetString("AlbumPath"), reader.GetString("Path"));
+                    var fullpath = Path.Combine(set.Path, reader.GetString(oAlbumPath), reader.GetString(oPath));
                     if (path.Extensions == null)
                         cache.AddDBCacheEntry(fullpath, ce);
                     else if (path.Extensions.Contains(Path.GetExtension(fullpath)))
@@ -387,15 +399,19 @@ namespace MetadataCaching
 
             using (var setscomm = conn_.CreateCommand())
             {
-                var modpaths = paths.Select(p => p.EndsWith(Path.PathSeparator.ToString()) ? p.Substring(0, p.Length - 1) : p);
+                // Materialized: this is re-enumerated once per ScanSets row below, and `paths`
+                // itself may be a deferred query from the caller.
+                var modpaths = paths.Select(p => p.EndsWith(Path.PathSeparator.ToString()) ? p.Substring(0, p.Length - 1) : p).ToList();
                 var dbsets = new List<(string Path, long ID, bool Hit)>();
                 var missing = new List<string>();
                 setscomm.CommandText = "SELECT Path, ID FROM ScanSets";
                 using (var reader = setscomm.ExecuteReader())
                     while (reader.Read())
                         dbsets.Add((reader.GetString(0), reader.GetInt64(1), false));
+                // O(1) membership instead of an O(sets) LINQ scan per requested path.
+                var dbsetpaths = new HashSet<string>(dbsets.Select(s => s.Path), StringComparer.InvariantCultureIgnoreCase);
                 foreach (var path in modpaths)
-                    if (dbsets.Select(s => s.Path).Count(predicate => predicate.Equals(path, StringComparison.InvariantCultureIgnoreCase)) == 0)
+                    if (!dbsetpaths.Contains(path))
                         missing.Add(path);
                 setscomm.CommandText = "INSERT INTO ScanSets (Path) VALUES (@Path);";
                 var pathvar = setscomm.Parameters.Add("@Path", DbType.String);
@@ -413,9 +429,13 @@ namespace MetadataCaching
                 setscomm.Parameters.Clear();
                 setscomm.Transaction = null;
                 dbsets.Clear();
+                var requestedpaths = new HashSet<string>(modpaths, StringComparer.InvariantCultureIgnoreCase);
                 using (var reader = setscomm.ExecuteReader())
                     while (reader.Read())
-                        dbsets.Add((reader.GetString(0), reader.GetInt64(1), modpaths.Count(p => p.Equals(reader.GetString(0), StringComparison.InvariantCultureIgnoreCase)) != 0));
+                    {
+                        var setpath = reader.GetString(0);
+                        dbsets.Add((setpath, reader.GetInt64(1), requestedpaths.Contains(setpath)));
+                    }
                 sets.AddRange(dbsets.Where(s => s.Hit).Select(s => (s.Path, s.ID)));
                 missedsets.AddRange(dbsets.Where(s => !s.Hit).Select(s => (s.ID)));
             }
@@ -436,10 +456,15 @@ namespace MetadataCaching
             {
                 querycomm.CommandText = "SELECT ID, ScanSetID, Path, FileSize, LastWriteTime, AlbumPath FROM MetadataSummaryView";
                 using var reader = querycomm.ExecuteReader();
+                // Resolve ordinals once instead of a name->ordinal lookup per column per row;
+                // this loop walks the entire library.
+                int oId = reader.GetOrdinal("ID"), oSet = reader.GetOrdinal("ScanSetID"),
+                    oPath = reader.GetOrdinal("Path"), oSize = reader.GetOrdinal("FileSize"),
+                    oLwt = reader.GetOrdinal("LastWriteTime"), oAlbumPath = reader.GetOrdinal("AlbumPath");
                 while (reader.Read())
                 {
-                    var key = (reader.GetInt64("ScanSetID"), Path.Combine(reader.GetString("AlbumPath"), reader.GetString("Path")));
-                    filesdict[key] = (reader.GetInt64("ID"), reader.GetInt64("FileSize"), DateTime.SpecifyKind(reader.GetDateTime("LastWriteTime"), DateTimeKind.Utc));
+                    var key = (reader.GetInt64(oSet), Path.Combine(reader.GetString(oAlbumPath), reader.GetString(oPath)));
+                    filesdict[key] = (reader.GetInt64(oId), reader.GetInt64(oSize), DateTime.SpecifyKind(reader.GetDateTime(oLwt), DateTimeKind.Utc));
                     fileshitdict[key] = false;
                 }
             }
@@ -448,15 +473,20 @@ namespace MetadataCaching
             {
                 Parallel.ForEach(sets, (scanpath) =>
                 {
-                   DirectoryInfo di = new DirectoryInfo(scanpath.Path);
                    long scanset = scanpath.ID;
-                   var files = di.EnumerateFiles("*", SearchOption.AllDirectories).AsParallel().Where(fsi => MetadataExtensions.ValidExtensions.Contains(Path.GetExtension(fsi.FullName).ToLower()) && ((fsi.Attributes & FileAttributes.Directory) == 0)).ToArray();
- 
-                   Parallel.ForEach(files, new ParallelOptions(), () => { return SHA256.Create(); }, (fi, loopstate, hash) =>
+                   // MusicFileEnumerator streams the tree, prunes .itlp packages during recursion
+                   // (so no per-file ancestor check is needed), and tags music files by extension
+                   // via the allocation-free span lookup. It's a single-use, non-thread-safe
+                   // enumerator, but Parallel.ForEach synchronizes MoveNext on the shared source,
+                   // so concurrent consumption is safe.
+                   var files = new MusicFileEnumerator(scanpath.Path).Where(e => e.FileType == MFEType.MusicFile);
+
+                   // Cap the per-set parsing fan-out at the core count so several scan sets don't
+                   // oversubscribe the CPU with nested unbounded parallelism.
+                   var scanParallelOptions = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
+                   Parallel.ForEach(files, scanParallelOptions, () => { return SHA256.Create(); }, (file, loopstate, hash) =>
                    {
-                       if (fi.DirectoryName.Contains(".itlp", StringComparison.InvariantCultureIgnoreCase))
-                           return hash;
-                       var relativename = fi.FullName.Substring(scanpath.Path.Length + 1);
+                       var relativename = file.Name.Substring(scanpath.Path.Length + 1);
                        var key = (SetID: scanset, RelativeName: relativename);
                        var scan = false;
                        long id = -1;
@@ -464,7 +494,7 @@ namespace MetadataCaching
                        {
                            fileshitdict[key] = true;
                            var (ID, Length, LastWriteTime) = filesdict[key];
-                           if ((fi.LastWriteTimeUtc.AddMilliseconds(-500.0) > LastWriteTime) || (fi.Length != Length))
+                           if ((file.Modified.AddMilliseconds(-500.0) > LastWriteTime) || (file.Size != Length))
                            {
                                id = ID;
                                Interlocked.Increment(ref modified);
@@ -484,21 +514,21 @@ namespace MetadataCaching
                        {
                            try
                            {
-                               filequeue.Add((id, scanpath.ID, relativename, fi.Length, fi.LastWriteTimeUtc, MediaFile.GetFile(fi.FullName, hash)));
+                               filequeue.Add((id, scanpath.ID, relativename, file.Size, file.Modified, MediaFile.GetFile(file.Name, hash)));
                                int done = Interlocked.Increment(ref scanned);
-                               if ((done % 100) == 0)
-                               {
+                               // Console is internally locked; printing from every scan thread
+                               // every 100 files serializes them. A coarser cadence (and no
+                               // explicit Flush, which the console stream does anyway) avoids it.
+                               if ((done % 1000) == 0)
                                    Console.Write($"Scanned: {done}\r");
-                                   Console.Out.Flush();
-                               }
                            }
                            catch (IOException ex)
                            {
-                               Console.WriteLine($"IOException On File: {fi.FullName} - {ex.Message}");
+                               Console.WriteLine($"IOException On File: {file.Name} - {ex.Message}");
                            }
                            catch (Exception ex)
                            {
-                               Console.WriteLine($"Unknown Exception On File: {fi.FullName} - {ex.Message}");
+                               Console.WriteLine($"Unknown Exception On File: {file.Name} - {ex.Message}");
                                loopstate.Break();
                            }
                        }
@@ -540,12 +570,25 @@ namespace MetadataCaching
                         imagesdict.Add(reader.GetString("Hash"), reader.GetInt64("ID"));
             }
 
-            using (var trans = conn_.BeginTransaction())
+            // Batch the writes: commit and start a fresh transaction every FilesPerBatch files so
+            // the WAL can checkpoint instead of growing for the whole scan, and a crash loses only
+            // the current batch (the DB is a cache and self-heals on the next run). Metadata rows
+            // are buffered and flushed as multi-row INSERTs (MetaRowsPerInsert per statement).
+            int FilesPerBatch = IndexFilesPerBatch;
+            int MetaRowsPerInsert = IndexMetaRowsPerInsert;
+            var metabuffer = new List<(long FileID, long KeyID, string Value)>();
+
+            DbTransaction trans = conn_.BeginTransaction();
+            try
             {
-                using (DbCommand delcomm = trans.CreateCommand(), filecomm = trans.CreateCommand(), metacomm = trans.CreateCommand(), imagecomm = trans.CreateCommand(),
+                using DbCommand delcomm = trans.CreateCommand(), filecomm = trans.CreateCommand(), metacomm = trans.CreateCommand(), imagecomm = trans.CreateCommand(),
                     keycomm = trans.CreateCommand(), artistcomm = trans.CreateCommand(), albumartistcomm = trans.CreateCommand(), albumcomm = trans.CreateCommand(),
-                    trackcomm = trans.CreateCommand(), imagemetacomm = trans.CreateCommand())
-                {
+                    trackcomm = trans.CreateCommand(), imagemetacomm = trans.CreateCommand(), metabatchcomm = trans.CreateCommand();
+
+                // After a batch commit, every command bound to the old transaction must be
+                // re-pointed at the new one.
+                DbCommand[] batchcommands = { delcomm, filecomm, metacomm, imagecomm, keycomm, artistcomm, albumartistcomm, albumcomm, trackcomm, imagemetacomm, metabatchcomm };
+
                     artistcomm.CommandText = "INSERT INTO Artists (Name) VALUES (@Name);\r\n" + lastidsql_;
                     var artistparam = artistcomm.Parameters.Add("@Name", DbType.String);
 
@@ -598,23 +641,16 @@ namespace MetadataCaching
                         " VALUES (@Path, @FileSize, @LastWriteTime, @CodecName, @CodecType, @AverageBitrate, @MaxBitrate, @BitsPerSample, @SampleRate, @Channels, @DurationInFrames, @TagType);\r\n" +
                         lastidsql_;
 
-                    DbParameter metafileidparam = null, keyidparam = null, valueparam = null;
+                    // SQLite metadata rows are written via buffered multi-row INSERTs (see
+                    // FlushMetadata below), so no single-row metadata command is prepared here.
 #if SQLSERVER
+                    DbParameter valueparam = null;
                     if (metacomm is SqlCommand)
                     {
                         metacomm.CommandText = "INSERT INTO Metadata (FileID, KeyID, Value) SELECT m.FileID, m.KeyID, m.Value FROM @tvpMetadata AS m";
                         valueparam = metacomm.Parameters.Add("@tvpMetadata", DbType.Object, ParameterDirection.Input, "dbo.MetadataTableType");
                     }
-                    else
 #endif
-                    {
-#if SQLITE
-                        metacomm.CommandText = "INSERT INTO Metadata (FileID, KeyID, Value) VALUES (@FileID, @KeyID, @Value)";
-                        metafileidparam = metacomm.Parameters.Add("@FileID", DbType.Int64);
-                        keyidparam = metacomm.Parameters.Add("@KeyID", DbType.Int64);
-                        valueparam = metacomm.Parameters.Add("@Value", DbType.String);
-#endif
-                    }
 
                     keycomm.CommandText = "INSERT INTO MetadataKeys (\"Key\") VALUES (@Key);\r\n" + lastidsql_;
                     var keyparam = keycomm.Parameters.Add("@Key", DbType.String);
@@ -633,6 +669,61 @@ namespace MetadataCaching
                     var sizeparam = imagecomm.Parameters.Add("@Size", DbType.Int64);
                     var dataparam = imagecomm.Parameters.Add("@Data", DbType.Object);
 
+                    // Reusable full-size multi-row metadata INSERT (item 7). A short remainder
+                    // chunk is built on demand inside FlushMetadata.
+                    var metabatchparams = new DbParameter[MetaRowsPerInsert * 3];
+                    {
+                        var sb = new StringBuilder("INSERT INTO Metadata (FileID, KeyID, Value) VALUES ");
+                        for (int i = 0; i < MetaRowsPerInsert; i++)
+                        {
+                            if (i > 0) sb.Append(',');
+                            sb.Append("(@f").Append(i).Append(",@k").Append(i).Append(",@v").Append(i).Append(')');
+                            var fp = metabatchcomm.CreateParameter(); fp.ParameterName = "@f" + i; metabatchcomm.Parameters.Add(fp); metabatchparams[i * 3] = fp;
+                            var kp = metabatchcomm.CreateParameter(); kp.ParameterName = "@k" + i; metabatchcomm.Parameters.Add(kp); metabatchparams[i * 3 + 1] = kp;
+                            var vp = metabatchcomm.CreateParameter(); vp.ParameterName = "@v" + i; metabatchcomm.Parameters.Add(vp); metabatchparams[i * 3 + 2] = vp;
+                        }
+                        metabatchcomm.CommandText = sb.ToString();
+                    }
+
+                    void FlushMetadata()
+                    {
+                        int total = metabuffer.Count, start = 0;
+                        while (start < total)
+                        {
+                            int count = Math.Min(MetaRowsPerInsert, total - start);
+                            if (count == MetaRowsPerInsert)
+                            {
+                                for (int i = 0; i < count; i++)
+                                {
+                                    var row = metabuffer[start + i];
+                                    metabatchparams[i * 3].Value = row.FileID;
+                                    metabatchparams[i * 3 + 1].Value = row.KeyID;
+                                    metabatchparams[i * 3 + 2].Value = row.Value;
+                                }
+                                metabatchcomm.ExecuteNonQuery();
+                            }
+                            else
+                            {
+                                using var cmd = trans.CreateCommand();
+                                var sb = new StringBuilder("INSERT INTO Metadata (FileID, KeyID, Value) VALUES ");
+                                for (int i = 0; i < count; i++)
+                                {
+                                    if (i > 0) sb.Append(',');
+                                    sb.Append("(@f").Append(i).Append(",@k").Append(i).Append(",@v").Append(i).Append(')');
+                                    var row = metabuffer[start + i];
+                                    var fp = cmd.CreateParameter(); fp.ParameterName = "@f" + i; fp.Value = row.FileID; cmd.Parameters.Add(fp);
+                                    var kp = cmd.CreateParameter(); kp.ParameterName = "@k" + i; kp.Value = row.KeyID; cmd.Parameters.Add(kp);
+                                    var vp = cmd.CreateParameter(); vp.ParameterName = "@v" + i; vp.Value = row.Value; cmd.Parameters.Add(vp);
+                                }
+                                cmd.CommandText = sb.ToString();
+                                cmd.ExecuteNonQuery();
+                            }
+                            start += count;
+                        }
+                        metabuffer.Clear();
+                    }
+
+                    int filesInBatch = 0;
                     foreach (var file in filequeue.GetConsumingEnumerable())
                     {
                         if (file.ID != -1)
@@ -716,19 +807,10 @@ namespace MetadataCaching
                             }
 #if SQLSERVER
                             if (metacomm is SqlCommand)
-                            {
                                 metadatafields.Rows.Add(fileid, keyid, kv.Value);
-                            }
                             else
 #endif
-                            {
-#if SQLITE
-                                metafileidparam.Value = fileid;
-                                keyidparam.Value = keyid;
-                                valueparam.Value = kv.Value;
-                                metacomm.ExecuteNonQuery();
-#endif
-                            }
+                                metabuffer.Add((fileid, keyid, kv.Value));
                         }
 
 #if SQLSERVER
@@ -739,6 +821,9 @@ namespace MetadataCaching
                             metadatafields.Rows.Clear();
                         }
 #endif
+                        // Cap buffer memory between batch commits.
+                        if (metabuffer.Count >= 4000)
+                            FlushMetadata();
 
                         foreach (var image in mp.GetImageMetadata())
                         {
@@ -758,8 +843,20 @@ namespace MetadataCaching
                             categoryparam.Value = image.Category;
                             imagemetacomm.ExecuteNonQuery();
                         }
+
+                        if (++filesInBatch >= FilesPerBatch)
+                        {
+                            FlushMetadata();
+                            trans.Commit();
+                            trans.Dispose();
+                            trans = conn_.BeginTransaction();
+                            foreach (var c in batchcommands)
+                                c.Transaction = trans;
+                            filesInBatch = 0;
+                        }
                     }
 
+                    FlushMetadata();
 #if SQLSERVER
                     if ((metacomm is SqlCommand) && (metadatafields.Rows.Count != 0))
                     {
@@ -768,18 +865,20 @@ namespace MetadataCaching
                         metadatafields.Rows.Clear();
                     }
 #endif
-                }
-
-                trans.Commit();
+                    trans.Commit();
+            }
+            finally
+            {
+                trans.Dispose();
             }
 
             await metadatareadtask;
 
             if (deletemissingsets && (missedsets.Count != 0))
             {
-                using var trans = conn_.BeginTransaction();
-                using DbCommand setcomm = trans.CreateCommand(), albumcomm = trans.CreateCommand(), metacomm = trans.CreateCommand(),
-                    imagecomm = trans.CreateCommand(), trackscomm = trans.CreateCommand(), filecomm = trans.CreateCommand();
+                using var deltrans = conn_.BeginTransaction();
+                using DbCommand setcomm = deltrans.CreateCommand(), albumcomm = deltrans.CreateCommand(), metacomm = deltrans.CreateCommand(),
+                    imagecomm = deltrans.CreateCommand(), trackscomm = deltrans.CreateCommand(), filecomm = deltrans.CreateCommand();
 
                 setcomm.CommandText = "DELETE FROM ScanSets WHERE ID = @ID";
                 var idparam = setcomm.Parameters.Add("@ID", DbType.Int64);
@@ -805,20 +904,20 @@ namespace MetadataCaching
                     albumcomm.ExecuteNonQuery();
                     setcomm.ExecuteNonQuery();
                 }
-                trans.Commit();
+                deltrans.Commit();
             }
 
             if ((modified != 0) || (removed != 0))
             {
-                using var trans = conn_.BeginTransaction();
-                using var comm = trans.CreateCommand();
+                using var prunetrans = conn_.BeginTransaction();
+                using var comm = prunetrans.CreateCommand();
                 comm.CommandText = "DELETE FROM Albums WHERE ID NOT IN (SELECT DISTINCT AlbumID FROM Tracks);\r\n" +
                     "DELETE FROM Artists WHERE ID NOT IN (SELECT DISTINCT ArtistID FROM Tracks);\r\n" +
                     "DELETE FROM AlbumArtists WHERE ID NOT IN (SELECT DISTINCT AlbumArtistID FROM Albums);\r\n" +
                     "DELETE FROM MetadataKeys WHERE ID NOT IN (SELECT DISTINCT KeyID FROM Metadata);\r\n" +
                     "DELETE FROM Images WHERE ID NOT IN (SELECT DISTINCT ImageID FROM ImageMetadata)";
                 comm.ExecuteNonQuery();
-                trans.Commit();
+                prunetrans.Commit();
             }
 
             return (added, modified, removed, unchanged);

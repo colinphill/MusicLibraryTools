@@ -4,6 +4,10 @@
     <OutputType>Library</OutputType>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <UserSecretsId>5b622ac7-b11d-47cb-8284-42c275d85087</UserSecretsId>
+    <!-- SQLite is the active backend. The constant was previously only defined for the
+         legacy net80 build, which left the whole SQLite path (OpenSqliteDatabase, the
+         indexer's metadata inserts, etc.) compiled out of the net10.0 target. -->
+    <DefineConstants>$(DefineConstants);SQLITE</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net80|AnyCPU'">
     <DefineConstants>$(DefineConstants)TRACE;SQLITE</DefineConstants>

@@ -40,8 +40,11 @@ namespace FindNonLossless
             }
             foreach (string f in Directory.GetFiles(dir, "*.m4a"))
                 CheckM4AFile(f);
-            foreach (string f in Directory.GetFiles(dir, "*.mp3;*.ogg;*.flac;*.wav;*.aiff"))
-                LogConsole.WriteLine("Not ALAC: " + f);
+            // Directory.GetFiles takes a single pattern, not a ';'-separated list, so each
+            // non-ALAC extension must be enumerated on its own.
+            foreach (string ext in new[] { "*.mp3", "*.ogg", "*.flac", "*.wav", "*.aiff" })
+                foreach (string f in Directory.GetFiles(dir, ext))
+                    LogConsole.WriteLine("Not ALAC: " + f);
         }
 
         static void Main(string[] args)

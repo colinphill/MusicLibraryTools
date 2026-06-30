@@ -15,9 +15,15 @@ namespace MusicFileUtilities
         private string _description;
         private byte[] _picdata;
         private string _category;
+        private byte[] _rawvalue;
         private int _width;
         private int _height;
         private bool _dimsComputed;
+
+        // The original APE item value (filename\0picdata), kept so Save() can round-trip the
+        // artwork byte-for-byte instead of dropping it. See [[ape-artwork-save-dataloss]].
+        public byte[] RawValue => _rawvalue;
+        public string Key => _category;
 
         // Dimensions are decoded lazily so a scan reading only text tags doesn't parse covers.
         private void EnsureDimensions()
@@ -42,6 +48,7 @@ namespace MusicFileUtilities
 
         public APEArtwork(string key, byte[] value)
         {
+            _rawvalue = value;
             string filename = "";
             int offset = 0;
             // Bounded: a binary item with no null terminator must not run off the end.
@@ -309,24 +316,35 @@ namespace MusicFileUtilities
 
         public void RemoveField(TagFields field) => SetField(field, null);
 
+        // Serialize one APE item: [value length LE][flags LE][key]\0[value].
+        // flags bit 1 (value 2) marks a binary item; 0 marks UTF-8 text.
+        private static byte[] BuildItem(string key, byte[] valBytes, uint flags)
+        {
+            byte[] keyBytes = Encoding.ASCII.GetBytes(key);
+            byte[] item = new byte[8 + keyBytes.Length + 1 + valBytes.Length];
+            Tools.ToLE(valBytes.Length).CopyTo(item, 0);  // value length LE
+            Tools.ToLE(flags).CopyTo(item, 4);            // item flags LE
+            Array.Copy(keyBytes, 0, item, 8, keyBytes.Length);
+            item[8 + keyBytes.Length] = 0;                // null separator
+            Array.Copy(valBytes, 0, item, 8 + keyBytes.Length + 1, valBytes.Length);
+            return item;
+        }
+
         public byte[] ToByteArray()
         {
-            // Gather all items: text items (flags=0) and binary/artwork items (flags=2)
+            // Gather all items: text items (flags=0) and binary/artwork items (flags=2).
+            // Binary and artwork items must be preserved or a tag rewrite silently strips
+            // embedded cover art and other binary fields. See [[ape-artwork-save-dataloss]].
             var items = new List<byte[]>();
 
             foreach (var kv in TextItems)
-            {
-                byte[] keyBytes = Encoding.ASCII.GetBytes(kv.Key);
-                byte[] valBytes = Encoding.UTF8.GetBytes(kv.Value);
-                byte[] item = new byte[8 + keyBytes.Length + 1 + valBytes.Length];
-                Tools.ToLE(valBytes.Length).CopyTo(item, 0);  // value length LE
-                // flags = 0 (text item, read-write)
-                Array.Clear(item, 4, 4);
-                Array.Copy(keyBytes, 0, item, 8, keyBytes.Length);
-                item[8 + keyBytes.Length] = 0; // null separator
-                Array.Copy(valBytes, 0, item, 8 + keyBytes.Length + 1, valBytes.Length);
-                items.Add(item);
-            }
+                items.Add(BuildItem(kv.Key, Encoding.UTF8.GetBytes(kv.Value), 0));
+
+            foreach (var kv in BinaryItems)
+                items.Add(BuildItem(kv.Key, kv.Value, 2));
+
+            foreach (var kv in ArtworkItems)
+                items.Add(BuildItem(kv.Key, kv.Value.RawValue, 2));
 
             int itemCount = items.Count;
             int tagSize = items.Sum(i => i.Length); // items only, no header/footer in size field

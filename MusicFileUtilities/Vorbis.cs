@@ -536,7 +536,10 @@ namespace MusicFileUtilities
             Filename = filename;
 
             bool lastpage;
-            byte[] pagedata = new byte[] { };
+            // Accumulate a packet's pages here. This previously used Array.Resize per
+            // continuation page, recopying the whole buffer each time (O(n^2) for a packet
+            // spanning many pages); a List grows amortized O(1).
+            var pagedata = new List<byte>();
 
             FileStream s = new FileStream(filename, FileMode.Open, FileAccess.Read);
             do
@@ -546,20 +549,20 @@ namespace MusicFileUtilities
 
                 lastpage = ReadPageHeader(s, out datalen, out continuation, out firstpage);
 
-                if (continuation)
-                    Array.Resize(ref pagedata, pagedata.Length + datalen);
-                else
+                if (!continuation)
                 {
                     if (!firstpage)
-                        ParsePage(pagedata);
-                    pagedata = new byte[datalen];
+                        ParsePage(pagedata.ToArray());
+                    pagedata.Clear();
                 }
 
-                s.ReadExactly(pagedata, pagedata.Length - datalen, datalen);
+                byte[] buf = new byte[datalen];
+                s.ReadExactly(buf);
+                pagedata.AddRange(buf);
             }
             while (!lastpage);
 
-            ParsePage(pagedata);
+            ParsePage(pagedata.ToArray());
 
             s.Close();
         }

@@ -259,17 +259,19 @@ namespace AndroidSync
                 long done = 0;
                 for(; ;)
                 {
+                    // Stream.ReadAsync may legitimately return a short read mid-stream, so the
+                    // only reliable end-of-stream signal is a zero-length read. Keying off a
+                    // short read here would truncate the pushed file.
                     int read = await source.ReadAsync(buffer, 0, MaxBufferSize - 64);
 
-                    if (read > 0)
-                        await conn.SendSyncRequestAsync("DATA", buffer, 0, read);
+                    if (read <= 0)
+                        break;
+
+                    await conn.SendSyncRequestAsync("DATA", buffer, 0, read);
 
                     done += read;
                     if (progress != null)
                         progress.SetProgress(done);
-
-                    if (read < (MaxBufferSize - 64))
-                        break;
                 }
                 await conn.SendSyncRequestAsync("DONE", null, 0, (int)((stamp - epoch_).TotalSeconds));
                 await conn.ReceiveResponseAsync();

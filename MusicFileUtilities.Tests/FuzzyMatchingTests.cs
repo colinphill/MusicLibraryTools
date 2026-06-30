@@ -35,5 +35,13 @@ namespace MusicFileUtilities.Tests
             Assert.InRange(d, 0.0, 1.0);
             Assert.Equal(1.0 / 3.0, d, 5);
         }
+
+        [Fact]
+        public void FuzzyDistanceOfTwoEmptyStringsIsZeroNotNaN()
+        {
+            double d = "".FuzzyDistance("");
+            Assert.False(double.IsNaN(d));
+            Assert.Equal(0.0, d, 5);
+        }
     }
 }

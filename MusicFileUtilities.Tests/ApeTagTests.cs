@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using MusicFileUtilities;
 using Xunit;
 
@@ -76,6 +77,34 @@ namespace MusicFileUtilities.Tests
         {
             var tag = new APETag();
             Assert.False(tag.ReadTag(new MemoryStream(new byte[10])));
+        }
+
+        [Fact]
+        public void CoverArtAndBinaryItemsSurviveRoundTrip()
+        {
+            // Regression for the ToByteArray data-loss bug: binary + artwork items used to be
+            // dropped on serialize, so a WavPack tag edit silently stripped embedded cover art.
+            var tag = new APETag();
+            tag.SetField(TagFields.Title, "Has Art");
+
+            byte[] jpeg = { 0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3, 4 };
+            // APE cover-art item value is "filename\0<imagebytes>".
+            byte[] artValue = Encoding.ASCII.GetBytes("cover.jpg\0").Concat(jpeg).ToArray();
+            tag.ArtworkItems.Add(new KeyValuePair<string, APEArtwork>(
+                "Cover Art (Front)", new APEArtwork("Cover Art (Front)", artValue)));
+            tag.BinaryItems.Add(new KeyValuePair<string, byte[]>("Raw Item", new byte[] { 9, 8, 7 }));
+
+            var rt = RoundTrip(tag);
+
+            Assert.Equal("Has Art", Known(rt)[TagFields.Title]);
+
+            var art = Assert.Single(rt.ArtworkItems);
+            Assert.Equal("Cover Art (Front)", art.Key);
+            Assert.Equal(jpeg, ((IMetadataImage)art.Value).Data);
+
+            var bin = Assert.Single(rt.BinaryItems);
+            Assert.Equal("Raw Item", bin.Key);
+            Assert.Equal(new byte[] { 9, 8, 7 }, bin.Value);
         }
     }
 }

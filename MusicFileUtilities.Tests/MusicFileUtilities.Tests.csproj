@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MusicFileUtilities\MusicFileUtilities.csproj" />
+    <ProjectReference Include="..\MetadataCaching\MetadataCaching.csproj" />
   </ItemGroup>
 
   <!-- Media fixtures are generated at build time (not committed). The script uses ffmpeg

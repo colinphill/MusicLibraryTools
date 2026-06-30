@@ -1687,54 +1687,6 @@ namespace MusicFileUtilities
         {
         }
 
-        /*protected void Write()
-        {
-            int size = 0;
-            foreach (ID3v2Frame f in _frames)
-                size += 10 + f.Data.Length;
-
-            byte[] pad = new byte[(size <= _tagsize) ? (_tagsize - size) : 0];
-
-            if (size <= _tagsize)
-            {
-                FileStream s = new FileStream(_filename, FileMode.Open, FileAccess.Read | FileAccess.Write);
-                s.Seek(0, SeekOrigin.Begin);
-                WriteHeader(s);
-                foreach (ID3v2Frame f in _frames)
-                    f.Write(s);
-                s.Write(pad, 0, pad.Length);
-                s.Close();
-            }
-            else
-            {
-                FileStream source = new FileStream(_filename, FileMode.Open, FileAccess.Read);
-                FileStream dest = new FileStream(_filename + ".temp", FileMode.CreateNew, FileAccess.Write);
-                source.Seek((_tagsize == 0) ? 0 : (_tagsize + 10), SeekOrigin.Begin);
-                _tagsize = size + pad.Length;
-                _headerversion = 3;
-                WriteHeader(dest);
-                foreach (ID3v2Frame f in _frames)
-                    f.Write(dest);
-                dest.Write(pad, 0, pad.Length);
-                byte [] buffer = new byte[10240];
-                while (source.Position < source.Length)
-                {
-                    long amount = source.Length - source.Position;
-                    if (amount > 10240)
-                        amount = 10240;
-                    source.Read(buffer, 0, (int)amount);
-                    dest.Write(buffer, 0, (int)amount);
-                }
-                source.Close();
-                dest.Close();
-                File.Delete(_filename);
-                File.Move(_filename + ".temp", _filename);
-            }
-
-
-        }*/
-
-
     }
 
     public class MP3File : ID3v2Tag, ICodecProvider, IMediaFile, IMetadataWriter
@@ -1863,7 +1815,7 @@ namespace MusicFileUtilities
                                 offset += 4;
                                 AverageBitrate = (uint)(datalength / (frames * samplesperframe / Samplerate) * 8);
                             }
-                            if ((bytes & 2) == 2)
+                            if ((flags & 2) == 2)
                             {
                                 bytes = Tools.UInt32AtBE(frame, offset);
                                 offset += 4;

@@ -16,6 +16,12 @@ using System.Collections.Concurrent;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
+using MusicLibraryTools;
+
+// GenerateAssemblyInfo is disabled for this project, so the MSBuild <InternalsVisibleTo>
+// item is ignored; declare it here so the test project can reach the internal byte helpers.
+[assembly: InternalsVisibleTo("MusicFileUtilities.Tests")]
 
 namespace MusicFileUtilities
 {
@@ -78,7 +84,7 @@ namespace MusicFileUtilities
         public static ulong UInt64AtLE(byte[] b, int offset)
         {
             ulong res = UInt32AtLE(b, offset + 4);
-            res = (res << 8) | UInt32AtLE(b, offset);
+            res = (res << 32) | UInt32AtLE(b, offset);
             return res;
         }
 
@@ -90,7 +96,7 @@ namespace MusicFileUtilities
         public static ulong UInt64AtBE(byte[] b, int offset)
         {
             ulong res = UInt32AtBE(b, offset);
-            res = (res << 8) | UInt32AtBE(b, offset + 4);
+            res = (res << 32) | UInt32AtBE(b, offset + 4);
             return res;
         }
 
@@ -198,8 +204,11 @@ namespace MusicFileUtilities
 
         public static double FuzzyDistance(this string x, string y)
         {
+            int max = Math.Max(x.Length, y.Length);
+            if (max == 0)
+                return 0.0; // two empty strings are identical; avoid 0/0 -> NaN
             double dist = x.ToLower().EditDistance(y.ToLower());
-            return dist / Math.Max(x.Length, y.Length);
+            return dist / max;
         }
 
     }
@@ -260,96 +269,36 @@ namespace MusicFileUtilities
             return fix.Substring(start, end - start);
         }
 
-#if false
-        public static bool CleanEmptyMusicFolders(DirectoryInfo di, bool deletenonmusic = false)
-        {
-            bool empty = true;
-            foreach (var subdi in di.GetDirectories())
-            {
-                if (!CleanEmptyMusicFolders(subdi, deletenonmusic))
-                    empty = false;
-            }
-
-            var files = di.GetFiles();
-            if (empty)
-            {
-                foreach (var file in files)
-                {
-                    if (ValidExtensions.Contains(Path.GetExtension(file.Name).ToLower()))
-                        empty = false;
-                    else if (deletenonmusic)
-                        file.Delete();
-                }
-            }
-            if ((empty) && (di.GetFiles().Length == 0))
-            {
-                di.Delete();
-            }
-            else
-                empty = false;
-            return empty;
-        }
-#endif
-#if false
-        public static void CleanEmptyMusicFolders(DirectoryInfo di, bool deletenonmusic = false)
-        {
-            var results = di.EnumerateFileSystemInfos("*", SearchOption.AllDirectories);
-            var hitpaths = results.Where(r => r is DirectoryInfo).ToDictionary(r => r.FullName, r => false);
-
-            foreach (var fi in results.Where(fi => fi is FileInfo))
-            {
-                var kept = false;
-                if (ValidExtensions.Contains(Path.GetExtension(fi.FullName).ToLower()))
-                    kept = true;
-                else if (deletenonmusic)
-                    fi.Delete();
-                else
-                    kept = true;
-                if (kept)
-                    hitpaths[Path.GetDirectoryName(fi.FullName)] = true;
-            }
-
-            foreach (var path in hitpaths.Where(kv => kv.Value).Select(kv => kv.Key).ToArray())
-            {
-                var tpath = Path.GetDirectoryName(path);
-                while (hitpaths.ContainsKey(tpath))
-                {
-                    hitpaths[tpath] = true;
-                    tpath = Path.GetDirectoryName(tpath);
-                }
-            }
-
-            foreach (var path in hitpaths.Where(kv => !kv.Value).Select(kv => kv.Key).OrderByDescending(p => p))
-                Directory.Delete(path);
-        }
-#endif
-
         public static void CleanEmptyMusicFolders(DirectoryInfo dirinfo, bool deletenonmusic = false, bool keepfolderimages = false)
         {
-            var results = dirinfo.EnumerateFileSystemInfos("*", SearchOption.AllDirectories);
             var hitpaths = new ConcurrentDictionary<string, bool>();
 
-            Parallel.ForEach(results, (fsi) =>
+            // MusicFileEnumerator streams the tree, classifies files as music/other via the
+            // allocation-free span extension lookup, and prunes .itlp packages during recursion.
+            // Parallel.ForEach synchronizes MoveNext on the single-use enumerator, so concurrent
+            // consumption (and the file deletes below) is safe.
+            Parallel.ForEach(new MusicFileEnumerator(dirinfo.FullName), (entry) =>
             {
-                if (fsi is FileInfo fi)
+                if (entry.FileType == MFEType.Directory)
                 {
-                    if (ValidExtensions.Contains(fi.Extension.ToLower()) || (!deletenonmusic))
-                        hitpaths[Path.GetDirectoryName(fi.FullName)] = true;
-                    else if (deletenonmusic)
-                    {
-                        if (keepfolderimages)
-                        {
-                            if (!Path.GetFileNameWithoutExtension(fi.FullName).Equals("folder", StringComparison.InvariantCultureIgnoreCase))
-                                fi.Delete();
-                            else
-                                hitpaths[Path.GetDirectoryName(fi.FullName)] = true;
-                        }
-                        else
-                            fi.Delete();
-                    }
+                    // .itlp packages are not recursed into, so their contents are never seen and the
+                    // package would otherwise look empty and get pruned. Mark it kept to leave the
+                    // package (and everything under it) intact.
+                    if (Path.GetFileName(entry.Name).Contains(".itlp", StringComparison.OrdinalIgnoreCase))
+                        hitpaths[entry.Name] = true;
+                    else
+                        hitpaths.TryAdd(entry.Name, false);
+                    return;
                 }
-                if (fsi is DirectoryInfo di)
-                    hitpaths.TryAdd(di.FullName, false);
+
+                // A file: keep its folder for any music file, or for any file at all when we are
+                // not deleting non-music; otherwise delete it (optionally sparing folder images).
+                if (entry.FileType == MFEType.MusicFile || !deletenonmusic)
+                    hitpaths[Path.GetDirectoryName(entry.Name)] = true;
+                else if (keepfolderimages && Path.GetFileNameWithoutExtension(entry.Name).Equals("folder", StringComparison.InvariantCultureIgnoreCase))
+                    hitpaths[Path.GetDirectoryName(entry.Name)] = true;
+                else
+                    File.Delete(entry.Name);
             });
 
             var hitkeys = hitpaths.Where(kv => kv.Value).Select(kv => kv.Key);
@@ -357,17 +306,28 @@ namespace MusicFileUtilities
             foreach (var key in hitkeys)
             {
                 var path = Path.GetDirectoryName(key);
-                while (path != dirinfo.FullName)
+                // Stop as soon as we reach an ancestor already marked kept: its chain to the root
+                // was propagated by an earlier walk, so re-walking is redundant (turns the overall
+                // pass from O(hits x depth) into ~O(dirs)). The null check also prevents walking
+                // past the root if a casing/separator mismatch means dirinfo.FullName is never hit,
+                // which would otherwise index hitdict[null].
+                while (path != null && path != dirinfo.FullName)
                 {
+                    if (hitdict.TryGetValue(path, out var kept) && kept)
+                        break;
                     hitdict[path] = true;
                     path = Path.GetDirectoryName(path);
                 }
             }
 
-            var missedpaths = hitdict.Where(kv => !kv.Value).Select(kv => kv.Key).OrderByDescending(p => p);
-
-            foreach (var path in missedpaths)
-                Directory.Delete(path, true);
+            // A missed (false) directory has no music anywhere beneath it, so its descendants are
+            // all missed too. Delete only the top-most missed dirs and let the recursive delete
+            // remove each subtree in one call (and skip the O(n log n) ordering the old per-dir
+            // delete relied on).
+            var missed = new HashSet<string>(hitdict.Where(kv => !kv.Value).Select(kv => kv.Key));
+            foreach (var path in missed)
+                if (!missed.Contains(Path.GetDirectoryName(path)))
+                    Directory.Delete(path, true);
         }
 
    }

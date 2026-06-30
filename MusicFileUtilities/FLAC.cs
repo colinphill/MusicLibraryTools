@@ -11,6 +11,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace MusicFileUtilities
@@ -44,6 +45,11 @@ namespace MusicFileUtilities
         // captured during parsing so Save() can rewrite the file faithfully.
         private List<(byte Type, byte[] Data)> _otherMetaBlocks = new();
         private byte[] _streamInfoData = null;
+
+        // Raw PICTURE block bytes exactly as read from disk. Save() compares these against the
+        // current Artworks so the VORBIS_COMMENT-only in-place fast path is only taken when the
+        // artwork on disk is unchanged (otherwise added/removed art would be silently dropped).
+        private List<byte[]> _originalPictureBlocks = new();
 
         // Tracks the VORBIS_COMMENT block's location for in-place saving.
         private long _vcBlockOffset = -1;   // file offset of the block's 4-byte header
@@ -149,6 +155,7 @@ namespace MusicFileUtilities
                 {
                     byte[] p = new byte[len];
                     s.ReadExactly(p);
+                    _originalPictureBlocks.Add(p);
                     Artworks.Add(new VorbisArtwork(p));
                 }
                 else
@@ -170,6 +177,19 @@ namespace MusicFileUtilities
 
         public void SaveTags(string outputPath = null) => Save(outputPath);
 
+        // True when the in-memory Artworks serialize identically to the PICTURE blocks read
+        // from disk. When false (art added/removed/edited), the in-place VORBIS_COMMENT-only
+        // rewrite would not reflect the change, so Save() must do a full rewrite.
+        private bool ArtworksMatchDisk()
+        {
+            if (Artworks.Count != _originalPictureBlocks.Count)
+                return false;
+            for (int i = 0; i < Artworks.Count; i++)
+                if (!Artworks[i].ToByteArray().AsSpan().SequenceEqual(_originalPictureBlocks[i]))
+                    return false;
+            return true;
+        }
+
         private static void WriteMetaBlockHeader(FileStream fs, byte type, int len, bool isLast)
         {
             fs.WriteByte(isLast ? (byte)(type | 0x80) : type);
@@ -185,8 +205,9 @@ namespace MusicFileUtilities
 
             byte[] newVCData = ToByteArray(false);
 
-            // In-place: new VC data fits within original block space, no audio data moves
-            if (outputPath == null && _vcBlockOffset >= 0 && newVCData.Length <= _vcBlockDataLen)
+            // In-place: new VC data fits within original block space, no audio data moves, and
+            // the PICTURE blocks are unchanged (the in-place path only rewrites VORBIS_COMMENT).
+            if (outputPath == null && _vcBlockOffset >= 0 && newVCData.Length <= _vcBlockDataLen && ArtworksMatchDisk())
             {
                 int leftover = _vcBlockDataLen - newVCData.Length;
                 using FileStream fs = new FileStream(Filename, FileMode.Open, FileAccess.ReadWrite);
@@ -281,6 +302,15 @@ namespace MusicFileUtilities
             if (File.Exists(target)) File.Delete(target);
             File.Move(tempPath, target);
             Filename = target;
+
+            // The metadata layout just changed wholesale; the cached VORBIS_COMMENT offset and
+            // PICTURE bytes no longer describe the file. Disable the in-place fast path for any
+            // subsequent Save() on this instance (it would otherwise patch stale offsets).
+            if (outputPath == null)
+            {
+                _vcBlockOffset = -1;
+                _originalPictureBlocks = Artworks.Select(a => a.ToByteArray()).ToList();
+            }
         }
 
     }

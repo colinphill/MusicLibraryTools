@@ -100,11 +100,9 @@ namespace ScrubArtwork
                             done = true;
                             break;
                         }
-                        if (!done)
-                        {
-                            Console.WriteLine("Error: Can't Encode Below Threshold");
-                        }
                     }
+                    if (!done)
+                        Console.WriteLine("Error: Can't Encode Below Threshold");
                     im.Dispose();
                 }
                 else

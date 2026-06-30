@@ -76,8 +76,12 @@ namespace SortDownloads
                 else
                 {
                     var ordered = bucket.Value.OrderBy(i => i.Codec.AverageBitrate).ToArray();
+                    // Keep the lowest-bitrate copy as the standard FLAC and the highest as HiRes;
+                    // delete any intermediate duplicates so nothing is left behind in the source.
                     File.Move(ordered[0].Path, GetFileName(Path.Combine(FLAC2_DIR, Path.GetFileName(ordered[0].Path))));
-                    File.Move(ordered[1].Path, GetFileName(Path.Combine(HiRes_DIR, Path.GetFileName(ordered[1].Path))));
+                    File.Move(ordered[^1].Path, GetFileName(Path.Combine(HiRes_DIR, Path.GetFileName(ordered[^1].Path))));
+                    foreach (var extra in ordered.Skip(1).Take(ordered.Length - 2))
+                        File.Delete(extra.Path);
                 }
             }
 
