@@ -236,6 +236,32 @@ namespace MusicFileUtilities
                 return true;
             }
         }
+
+        // Direct construction for the known atom types. Activator.CreateInstance resolves the
+        // (Atom, Stream) constructor by reflection on every atom, which dominates parse CPU
+        // on a library scan; this keeps the AtomTypes registry but bypasses reflection for
+        // every type registered by Init().
+        public static Atom CreateAtom(Type t, Atom a, Stream s)
+        {
+            if (t == typeof(ContainerAtom)) return new ContainerAtom(a, s);
+            if (t == typeof(Atom_data)) return new Atom_data(a, s);
+            if (t == typeof(StringAtom)) return new StringAtom(a, s);
+            if (t == typeof(DataAtom)) return new DataAtom(a, s);
+            if (t == typeof(FullContainerAtom)) return new FullContainerAtom(a, s);
+            if (t == typeof(Atom_ftyp)) return new Atom_ftyp(a, s);
+            if (t == typeof(Atom_mvhd)) return new Atom_mvhd(a, s);
+            if (t == typeof(Atom_hdlr)) return new Atom_hdlr(a, s);
+            if (t == typeof(Atom_free)) return new Atom_free(a, s);
+            if (t == typeof(Atom_co64)) return new Atom_co64(a, s);
+            if (t == typeof(Atom_stco)) return new Atom_stco(a, s);
+            if (t == typeof(Atom_stsd)) return new Atom_stsd(a, s);
+            if (t == typeof(Atom_ilst)) return new Atom_ilst(a, s);
+            if (t == typeof(DemandAtom)) return new DemandAtom(a, s);
+            if (t == typeof(CodecAtom)) return new CodecAtom(a, s);
+            if (t == typeof(Atom_alac)) return new Atom_alac(a, s);
+            if (t == typeof(Atom_mp4a_esds)) return new Atom_mp4a_esds(a, s);
+            return Activator.CreateInstance(t, new object[] { a, s }) as Atom;
+        }
     }
 
 
@@ -247,6 +273,8 @@ namespace MusicFileUtilities
         protected ulong _headersize = 8;
         protected bool _touched = false;
         protected long _deltasize = 0;
+        // Type is consulted repeatedly (dictionary lookups, FindPath comparisons); decode once.
+        private string _typestring = null;
 
         protected Atom()
         {
@@ -264,11 +292,12 @@ namespace MusicFileUtilities
         {
             get
             {
-                return MP4Util.TypeEncoding.GetString(_type);
+                return _typestring ??= MP4Util.TypeEncoding.GetString(_type);
             }
             set
             {
                 _type = MP4Util.TypeEncoding.GetBytes(value);
+                _typestring = value;
             }
         }
 
@@ -284,6 +313,7 @@ namespace MusicFileUtilities
         {
             _parent = a._parent;
             _type = a._type;
+            _typestring = a._typestring;
             _size = a._size;
             _headersize = a._headersize;
         }
@@ -318,21 +348,26 @@ namespace MusicFileUtilities
 
         protected uint ReadUint16(Stream s)
         {
-            byte[] b = new byte[2];
+            Span<byte> b = stackalloc byte[2];
             s.ReadExactly(b);
             return (((uint)b[0]) << 8) | (uint)b[1];
         }
 
         protected uint ReadUint32(Stream s)
         {
-            uint u = ReadUint16(s);
-            return (((uint)u) << 16) | (uint)ReadUint16(s);
+            Span<byte> b = stackalloc byte[4];
+            s.ReadExactly(b);
+            return (((uint)b[0]) << 24) | (((uint)b[1]) << 16) | (((uint)b[2]) << 8) | (uint)b[3];
         }
 
         protected ulong ReadUint64(Stream s)
         {
-            uint u = ReadUint32(s);
-            return (((ulong)u) << 32) | (ulong)ReadUint32(s);
+            Span<byte> b = stackalloc byte[8];
+            s.ReadExactly(b);
+            ulong res = 0;
+            for (int i = 0; i < 8; i++)
+                res = (res << 8) | b[i];
+            return res;
         }
 
         protected void WriteUint16(Stream s, uint u)
@@ -672,15 +707,35 @@ namespace MusicFileUtilities
         private int _imageheight;
         private bool _dimsComputed;
 
+        // The image payload is _data minus the 8-byte data-atom header. Copied lazily: the
+        // eager copy doubled the memory traffic of every cover-art atom on a scan even when
+        // nothing looked at the image.
+        private byte[] ImageBytes
+        {
+            get
+            {
+                if (_imagedata == null && IsImage && _data.Length >= 8)
+                {
+                    _imagedata = new byte[_data.Length - 8];
+                    Array.Copy(_data, 8, _imagedata, 0, _imagedata.Length);
+                }
+                return _imagedata;
+            }
+        }
+
         // Dimensions are decoded lazily so a scan that only reads text tags doesn't pay to
-        // parse every embedded cover image.
+        // parse every embedded cover image, and probed in place so they don't force the
+        // payload copy either.
         private void EnsureDimensions()
         {
             if (_dimsComputed) return;
             _dimsComputed = true;
-            if (_imagedata != null && _imagedata.Length > 0)
+            ReadOnlySpan<byte> imagedata = _imagedata != null
+                ? _imagedata
+                : (IsImage && _data.Length > 8 ? _data.AsSpan(8) : default);
+            if (!imagedata.IsEmpty)
             {
-                var img = ImageFile.GetImageDimensions(_imagedata);
+                var img = ImageFile.GetImageDimensions(imagedata);
                 _imagewidth = img.Width;
                 _imageheight = img.Height;
             }
@@ -709,11 +764,6 @@ namespace MusicFileUtilities
         public Atom_data(Atom a, Stream s)
             : base(a, s)
         {
-            if (IsImage)
-            {
-                _imagedata = new byte[Data.Length - 8];
-                Array.Copy(Data, 8, _imagedata, 0, _imagedata.Length);
-            }
         }
 
         public Atom_data(ContainerAtom ca)
@@ -1149,7 +1199,7 @@ namespace MusicFileUtilities
             s.Close();
         }
 
-        public byte[] ImageData => _imagedata;
+        public byte[] ImageData => ImageBytes;
         public int ImageWidth { get { EnsureDimensions(); return _imagewidth; } }
         public int ImageHeight { get { EnsureDimensions(); return _imageheight; } }
 
@@ -1163,9 +1213,9 @@ namespace MusicFileUtilities
 
         int IMetadataImage.Height { get { EnsureDimensions(); return _imageheight; } }
 
-        int IMetadataImage.Size => _imagedata.Length;
+        int IMetadataImage.Size => _imagedata?.Length ?? Math.Max(0, _data.Length - 8);
 
-        byte[] IMetadataImage.Data => _imagedata;
+        byte[] IMetadataImage.Data => ImageBytes;
 
         public string Hash
         {
@@ -1175,7 +1225,11 @@ namespace MusicFileUtilities
 
         void IMetadataImage.HashImage(HashAlgorithm hash)
         {
-            Hash = Convert.ToBase64String(hash.ComputeHash(_imagedata));
+            // Hash straight over the payload slice of _data: materializing ImageBytes just to
+            // hash it would copy every cover on every scan.
+            Hash = Convert.ToBase64String(_imagedata != null
+                ? hash.ComputeHash(_imagedata)
+                : hash.ComputeHash(_data, 8, Math.Max(0, _data.Length - 8)));
         }
 
         public void LoadImage(string path)
@@ -1204,6 +1258,9 @@ namespace MusicFileUtilities
             Stream s = new FileStream(path, FileMode.Open, FileAccess.Read);
             s.ReadExactly(_data, 8, (int)(fi.Length));
             s.Close();
+            // The cached copy/dimensions (if any) describe the previous image.
+            _imagedata = null;
+            _dimsComputed = false;
         }
 
         public override string ToString()
@@ -1260,8 +1317,17 @@ namespace MusicFileUtilities
             if (init)
             {
                 uint count = ReadUint32(s);
-                for (uint i = 0; i < count; i++)
-                    _offsets.Add(ReadUint32(s));
+                // Clamp to the bytes actually present in the atom and the stream (malformed
+                // counts/sizes would otherwise over-allocate), then parse from one bulk read
+                // instead of a 4-byte stream read per chunk offset.
+                long available = Math.Min(((long)_size - (long)_headersize - 8) / 4, (s.Length - s.Position) / 4);
+                if (count > available)
+                    count = (uint)Math.Max(available, 0);
+                byte[] buf = new byte[(long)count * 4];
+                s.ReadExactly(buf);
+                _offsets.Capacity = (int)count;
+                for (int i = 0; i < buf.Length; i += 4)
+                    _offsets.Add((((uint)buf[i]) << 24) | (((uint)buf[i + 1]) << 16) | (((uint)buf[i + 2]) << 8) | (uint)buf[i + 3]);
             }
         }
 
@@ -1301,8 +1367,19 @@ namespace MusicFileUtilities
         {
             //_versionandflags = _versionandflags;
             uint count = ReadUint32(s);
-            for (uint i = 0; i < count; i++)
-                _offsets.Add(ReadUint64(s));
+            long available = Math.Min(((long)_size - (long)_headersize - 8) / 8, (s.Length - s.Position) / 8);
+            if (count > available)
+                count = (uint)Math.Max(available, 0);
+            byte[] buf = new byte[(long)count * 8];
+            s.ReadExactly(buf);
+            _offsets.Capacity = (int)count;
+            for (int i = 0; i < buf.Length; i += 8)
+            {
+                ulong o = 0;
+                for (int j = 0; j < 8; j++)
+                    o = (o << 8) | buf[i + j];
+                _offsets.Add(o);
+            }
         }
 
         public override void WriteAtom(Stream s)
@@ -1381,21 +1458,15 @@ namespace MusicFileUtilities
                 long spos = s.Position;
 
                 Atom sa = new Atom(s, this);
-                if (MP4Util.AtomTypes.ContainsKey(sa.Type))
+                if (MP4Util.AtomTypes.TryGetValue(sa.Type, out Type Atom_type) ||
+                    MP4Util.AtomTypes.TryGetValue(Type + "." + sa.Type, out Atom_type))
                 {
-                    Type Atom_type = MP4Util.AtomTypes[sa.Type];
-                    Atom sa2 = (Atom_type == typeof(Atom)) ? sa : Activator.CreateInstance(Atom_type, new object[] { sa, s }) as Atom;
-                    _children.Add(sa2);
-                }
-                else if (MP4Util.AtomTypes.ContainsKey(Type + "." + sa.Type))
-                {
-                    Type Atom_type = MP4Util.AtomTypes[Type + "." + sa.Type];
-                    Atom sa2 = (Atom_type == typeof(Atom)) ? sa : Activator.CreateInstance(Atom_type, new object[] { sa, s }) as Atom;
+                    Atom sa2 = (Atom_type == typeof(Atom)) ? sa : MP4Util.CreateAtom(Atom_type, sa, s);
                     _children.Add(sa2);
                 }
                 else if (forced_subatom != null)
                 {
-                    Atom sa2 = Activator.CreateInstance(forced_subatom, new object[] { sa, s }) as Atom;
+                    Atom sa2 = MP4Util.CreateAtom(forced_subatom, sa, s);
                     _children.Add(sa2);
                 }
                 else
@@ -1585,15 +1656,15 @@ namespace MusicFileUtilities
         {
             Stream s = Tools.OpenReadSequential(path);
 
-            while (s.Position < s.Length)
+            long length = s.Length;
+            while (s.Position < length)
             {
                 long pos = s.Position;
 
                 Atom a = new Atom(s, this);
-                if (MP4Util.AtomTypes.ContainsKey(a.Type))
+                if (MP4Util.AtomTypes.TryGetValue(a.Type, out Type Atom_type))
                 {
-                    Type Atom_type = MP4Util.AtomTypes[a.Type];
-                    a = (Atom_type == typeof(Atom)) ? a : Activator.CreateInstance(Atom_type, new object[] { a, s }) as Atom;
+                    a = (Atom_type == typeof(Atom)) ? a : MP4Util.CreateAtom(Atom_type, a, s);
                 }
                 else if (MP4Util.LoadData)
                     a = new DataAtom(a, s);

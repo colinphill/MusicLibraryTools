@@ -107,6 +107,84 @@ namespace MusicFileUtilities.Tests
             Assert.False(Read(tmp.Path).ContainsKey(TagFields.Genre));
         }
 
+        // Reassembles the logical packet stream of an ogg file from its page lacing values.
+        private static List<byte[]> ReadOggPackets(string path)
+        {
+            var packets = new List<byte[]>();
+            var current = new List<byte>();
+            using var fs = System.IO.File.OpenRead(path);
+            while (fs.Position < fs.Length)
+            {
+                byte[] hdr = new byte[27];
+                fs.ReadExactly(hdr);
+                Assert.Equal("OggS", System.Text.Encoding.ASCII.GetString(hdr, 0, 4));
+                byte[] segs = new byte[hdr[26]];
+                fs.ReadExactly(segs);
+                foreach (byte sg in segs)
+                {
+                    byte[] chunk = new byte[sg];
+                    fs.ReadExactly(chunk);
+                    current.AddRange(chunk);
+                    if (sg < 255)
+                    {
+                        packets.Add(current.ToArray());
+                        current.Clear();
+                    }
+                }
+            }
+            return packets;
+        }
+
+        private static bool IsVorbisHeaderPacket(byte[] p, byte type) =>
+            p.Length >= 7 && p[0] == type &&
+            p[1] == 'v' && p[2] == 'o' && p[3] == 'r' && p[4] == 'b' && p[5] == 'i' && p[6] == 's';
+
+        // The vorbis setup header (packet type 5) shares a page with the comment packet.
+        // SaveTags used to replace that whole page, silently dropping the setup header and
+        // leaving the file undecodable by real players (our own parser never noticed because
+        // it only reads packet types 1 and 3).
+        [Fact]
+        public void OggSavePreservesSetupHeaderPacket()
+        {
+            using var tmp = MediaFixtures.Copy("sample.ogg");
+            byte[] setupBefore = ReadOggPackets(tmp.Path).Single(p => IsVorbisHeaderPacket(p, 5));
+
+            var mf = MediaFile.GetFile(tmp.Path);
+            Setter(mf)(TagFields.Title, "New Title");
+            mf.SaveTags();
+
+            var packets = ReadOggPackets(tmp.Path);
+            Assert.True(IsVorbisHeaderPacket(packets[0], 1)); // identification header
+            byte[] setupAfter = packets.Single(p => IsVorbisHeaderPacket(p, 5));
+            Assert.Equal(setupBefore, setupAfter);
+            Assert.Equal("New Title", Read(tmp.Path)[TagFields.Title]);
+        }
+
+        // Same, but with the old comment packet spanning multiple pages so the setup header
+        // sits at the tail of a continuation page when the tag is rewritten smaller.
+        [Fact]
+        public void OggMultiPageCommentShrinkPreservesSetupHeader()
+        {
+            using var tmp = MediaFixtures.Copy("sample.ogg");
+            byte[] setupBefore = ReadOggPackets(tmp.Path).Single(p => IsVorbisHeaderPacket(p, 5));
+
+            var mf = MediaFile.GetFile(tmp.Path);
+            Setter(mf)(TagFields.Lyrics, new string('x', 300000));
+            mf.SaveTags();
+            Assert.Equal(setupBefore, ReadOggPackets(tmp.Path).Single(p => IsVorbisHeaderPacket(p, 5)));
+            Assert.Equal(300000, Read(tmp.Path)[TagFields.Lyrics].Length);
+
+            var mf2 = MediaFile.GetFile(tmp.Path);
+            Setter(mf2)(TagFields.Lyrics, "short");
+            mf2.SaveTags();
+
+            Assert.Equal(setupBefore, ReadOggPackets(tmp.Path).Single(p => IsVorbisHeaderPacket(p, 5)));
+            var tags = Read(tmp.Path);
+            Assert.Equal("short", tags[TagFields.Lyrics]);
+            Assert.Equal("TestArtist", tags[TagFields.Artist]);
+            Assert.Equal(44100u, MediaFile.GetFile(tmp.Path).Codecs.First().Samplerate);
+        }
+
         [Theory]
         [MemberData(nameof(WritableFiles))]
         public void SaveToSeparateOutputPathLeavesOriginalUntouched(string file)

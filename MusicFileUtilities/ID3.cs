@@ -78,11 +78,14 @@ namespace MusicFileUtilities
 
         private static object[] GenreMapping(ID3v2Tag tag, string frameid, TagAction action, params object[] values)
         {
+            // A missing frame is the overwhelmingly common case on a scan (each mapping is
+            // probed for every file), so it must not be signalled by throwing: exceptions as
+            // control flow here dominated the whole parse. Absent = empty result.
             var frame = tag.FindFrame(frameid) as TextFrame;
             if (action == TagAction.Get)
             {
                 if (frame is null)
-                    throw new InvalidDataException();
+                    return Array.Empty<object>();
 
                 var res = new List<object>();
 
@@ -145,7 +148,7 @@ namespace MusicFileUtilities
             {
                 case TagAction.Get:
                     if (frame is null)
-                        throw new InvalidDataException();
+                        return Array.Empty<object>();
                     return new string[] { ISO8859Encoding.GetString(frame.Value) };
 
                 default:
@@ -160,10 +163,10 @@ namespace MusicFileUtilities
             {
                 case TagAction.Get:
                     if (frame is null)
-                        throw new InvalidDataException();
+                        return Array.Empty<object>();
                     var splits = frame.Text.Split("/".ToCharArray());
                     if (splits.Length < 1)
-                        throw new InvalidCastException();
+                        return Array.Empty<object>();
                     return new string[] { splits[0] };
 
                 default:
@@ -178,10 +181,10 @@ namespace MusicFileUtilities
             {
                 case TagAction.Get:
                     if (frame is null)
-                        throw new InvalidDataException();
+                        return Array.Empty<object>();
                     var splits = frame.Text.Split("/".ToCharArray());
                     if (splits.Length < 2)
-                        throw new InvalidCastException();
+                        return Array.Empty<object>();
                     return new string[] { splits[1] };
 
                 default:
@@ -196,7 +199,7 @@ namespace MusicFileUtilities
             {
                 case TagAction.Get:
                     if (frame is null)
-                        throw new InvalidDataException();
+                        return Array.Empty<object>();
                     return frame.Values.ToArray();
 
                 default:
@@ -211,7 +214,7 @@ namespace MusicFileUtilities
             {
                 case TagAction.Get:
                     if (frame is null)
-                        throw new InvalidDataException();
+                        return Array.Empty<object>();
                     return new string[] { frame.Value };
 
                 default:
@@ -235,8 +238,9 @@ namespace MusicFileUtilities
                             res += "-" + tdat.Text.Substring(2, 2) + "-" + tdat.Text.Substring(0, 2);
                         return new string[] { res };
                     }
+                    return Array.Empty<object>();
                 }
-                throw new InvalidDataException();
+                throw new InvalidOperationException();
             }
             if (tag.Version == 3)
             {
@@ -252,8 +256,9 @@ namespace MusicFileUtilities
                             res += "-" + tdat.Text.Substring(2, 2) + "-" + tdat.Text.Substring(0, 2);
                         return new string[] { res };
                     }
+                    return Array.Empty<object>();
                 }
-                throw new InvalidDataException();
+                throw new InvalidOperationException();
             }
             if (tag.Version == 4)
             {
@@ -261,7 +266,7 @@ namespace MusicFileUtilities
                 if (action == TagAction.Get)
                 {
                     if (tdrc is null)
-                        throw new InvalidDataException();
+                        return Array.Empty<object>();
                     return tdrc.Values.ToArray();
                 }
             }
@@ -276,10 +281,10 @@ namespace MusicFileUtilities
                 if (action == TagAction.Get)
                 {
                     if (tory is null)
-                        throw new InvalidDataException();
+                        return Array.Empty<object>();
                     return new string[] { tory.Text };
                 }
-                throw new InvalidDataException();
+                throw new InvalidOperationException();
             }
             if (tag.Version == 3)
             {
@@ -287,10 +292,10 @@ namespace MusicFileUtilities
                 if (action == TagAction.Get)
                 {
                     if (tory is null)
-                        throw new InvalidDataException();
+                        return Array.Empty<object>();
                     return new string[] { tory.Text };
                 }
-                throw new InvalidDataException();
+                throw new InvalidOperationException();
             }
             if (tag.Version == 4)
             {
@@ -298,7 +303,7 @@ namespace MusicFileUtilities
                 if (action == TagAction.Get)
                 {
                     if (tdor is null)
-                        throw new InvalidDataException();
+                        return Array.Empty<object>();
                     return tdor.Values.ToArray();
                 }
             }
@@ -1043,19 +1048,39 @@ namespace MusicFileUtilities
         private string _mimetype;
         private string _description;
         private byte[] _picdata;
+        private int _picdataoffset = -1; // offset of the picture payload within Data; -1 = none
         private int _width;
         private int _height;
         private bool _dimsComputed;
 
-        // Image dimensions are parsed lazily: a library scan that only wants text tags
-        // shouldn't pay to decode every embedded cover.
+        // The picture payload is copied out of Data lazily: the eager copy doubled the memory
+        // traffic of every cover-art frame on a scan even when nothing looked at the image.
+        private byte[] PicData
+        {
+            get
+            {
+                if (_picdata == null && _picdataoffset >= 0)
+                {
+                    _picdata = new byte[Data.Length - _picdataoffset];
+                    Array.Copy(Data, _picdataoffset, _picdata, 0, _picdata.Length);
+                }
+                return _picdata;
+            }
+        }
+
+        // Image dimensions are parsed lazily (a library scan that only wants text tags
+        // shouldn't pay to decode every embedded cover) and probed in place so they don't
+        // force the payload copy either.
         private void EnsureDimensions()
         {
             if (_dimsComputed) return;
             _dimsComputed = true;
-            if (_picdata != null && _picdata.Length > 0)
+            ReadOnlySpan<byte> picdata = _picdata != null
+                ? _picdata
+                : (_picdataoffset >= 0 ? Data.AsSpan(_picdataoffset) : default);
+            if (!picdata.IsEmpty)
             {
-                var img = ImageFile.GetImageDimensions(_picdata);
+                var img = ImageFile.GetImageDimensions(picdata);
                 _width = img.Width;
                 _height = img.Height;
             }
@@ -1066,8 +1091,8 @@ namespace MusicFileUtilities
         string IMetadataImage.ImageType => _mimetype;
         int IMetadataImage.Width { get { EnsureDimensions(); return _width; } }
         int IMetadataImage.Height { get { EnsureDimensions(); return _height; } }
-        int IMetadataImage.Size => _picdata?.Length ?? 0;
-        byte[] IMetadataImage.Data => _picdata;
+        int IMetadataImage.Size => _picdata?.Length ?? (_picdataoffset >= 0 ? Data.Length - _picdataoffset : 0);
+        byte[] IMetadataImage.Data => PicData;
       
         public PictureFrame(ID3v2Frame from)
             : base(from)
@@ -1108,16 +1133,19 @@ namespace MusicFileUtilities
             _type = (ID3v2Util.APICType)Data[codelen + 1];
             _description = GetNullTerminatedStringAt(encoding, codelen + 2);
             int codelen2 = CodeString(encoding, _description + "\0").Length;
-            _picdata = new byte[Data.Length - codelen - codelen2 - 2];
-            Array.Copy(Data, codelen + codelen2 + 2, _picdata, 0, _picdata.Length);
+            _picdataoffset = Math.Min(codelen + codelen2 + 2, Data.Length);
+            _picdata = null;
+            _dimsComputed = false;
         }
 
         public override void Encode()
         {
-            if (_picdata == null) return;
+            // Materialize the payload before Data is rebuilt underneath it.
+            byte[] picdata = PicData;
+            if (picdata == null) return;
             byte[] mime = ID3v2Util.ISO8859Encoding.GetBytes(_mimetype ?? "image/jpeg");
             byte[] desc = ID3v2Util.ISO8859Encoding.GetBytes(_description ?? "");
-            int totalLen = 1 + mime.Length + 1 + 1 + desc.Length + 1 + _picdata.Length;
+            int totalLen = 1 + mime.Length + 1 + 1 + desc.Length + 1 + picdata.Length;
             Data = new byte[totalLen];
             int pos = 0;
             Data[pos++] = (byte)ID3v2Util.ID3Encoding.ISO8859;
@@ -1126,7 +1154,7 @@ namespace MusicFileUtilities
             Data[pos++] = (byte)_type;
             Array.Copy(desc, 0, Data, pos, desc.Length); pos += desc.Length;
             Data[pos++] = 0;
-            Array.Copy(_picdata, 0, Data, pos, _picdata.Length);
+            Array.Copy(picdata, 0, Data, pos, picdata.Length);
         }
 
         public ID3v2Util.APICType Type
@@ -1149,8 +1177,8 @@ namespace MusicFileUtilities
 
         public byte[] PictureData
         {
-            get => _picdata;
-            set { _picdata = value; _dimsComputed = false; Encode(); }
+            get => PicData;
+            set { _picdata = value; _picdataoffset = -1; _dimsComputed = false; Encode(); }
         }
 
         public string Hash
@@ -1161,7 +1189,11 @@ namespace MusicFileUtilities
 
         public void HashImage(System.Security.Cryptography.HashAlgorithm hash)
         {
-            Hash = Convert.ToBase64String(hash.ComputeHash(_picdata));
+            // Hash straight over the payload slice of Data: materializing PicData just to
+            // hash it would copy every cover on every scan.
+            Hash = Convert.ToBase64String(_picdata != null
+                ? hash.ComputeHash(_picdata)
+                : hash.ComputeHash(Data, _picdataoffset, Data.Length - _picdataoffset));
         }
 
     }
@@ -1219,7 +1251,9 @@ namespace MusicFileUtilities
             {
                 foreach (var mapping in (Version == 2) ? ID3v2Util.ActionMappingsv22 : ID3v2Util.ActionMappingsv23v24)
                 {
-                    object[] values = new object[0];
+                    object[] values = Array.Empty<object>();
+                    // Absent frames return empty (the common case); the catch only guards
+                    // against genuinely malformed frame data.
                     try
                     {
                         values = mapping.Value(this, TagAction.Get);
@@ -1729,17 +1763,20 @@ namespace MusicFileUtilities
             using (FileStream s = Tools.OpenReadSequential(filename))
             {
                 ReadTag(s);
+                // FileStream.Length is a syscall; don't pay it once per scanned byte while
+                // hunting for the first frame sync.
+                long length = s.Length;
                 for (; ; )
                 {
                     int b0 = -1, b1 = -1, b5 = -1;
-                    while (s.Position < s.Length)
+                    while (s.Position < length)
                     {
                         b1 = b5 = s.ReadByte();
                         if ((b0 == 0xff) && ((b1 & 0xe0) == 0xe0))
                             break;
                         b0 = b1;
                     }
-                    if (s.Position >= s.Length)
+                    if (s.Position >= length)
                         return;
                     int ver = (b1 & 0x8) == 0x8 ? 0 : 1;
                     if ((b1 & 0x10) == 0x00)
@@ -1766,7 +1803,7 @@ namespace MusicFileUtilities
                         b0 = b1 = -1;
                         continue;
                     }
-                    long datalength = s.Length - s.Position + 2;
+                    long datalength = length - s.Position + 2;
                     int b2 = s.ReadByte();
                     int b3 = s.ReadByte();
                     uint bitrate = _bitrates[ver, layer, b2 >> 4];

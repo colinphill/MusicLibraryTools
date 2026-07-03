@@ -131,14 +131,40 @@ namespace MusicFileUtilities
         public int Height;
         public int Depth;
         public int ColorsUsed;
-        public byte[] Data;
+
+        // The image payload is materialized lazily from the source block (which FLAC retains
+        // anyway for its save-time comparison); the eager copy doubled the memory traffic of
+        // every embedded picture on a scan even when nothing looked at the image.
+        private byte[] _data;
+        private byte[] _source;
+        private int _sourceoffset;
+        private int _sourcesize;
+
+        public byte[] Data
+        {
+            get
+            {
+                if (_data == null && _source != null)
+                {
+                    _data = new byte[_sourcesize];
+                    Array.Copy(_source, _sourceoffset, _data, 0, _sourcesize);
+                    _source = null;
+                }
+                return _data;
+            }
+            set
+            {
+                _data = value;
+                _source = null;
+            }
+        }
 
         string IMetadataImage.Description => string.IsNullOrWhiteSpace(Description) ? PictureType.ToString() : Description;
         string IMetadataImage.Category => PictureType.ToString();
         string IMetadataImage.ImageType => MimeType;
         int IMetadataImage.Width => Width;
         int IMetadataImage.Height => Height;
-        int IMetadataImage.Size => Data.Length;
+        int IMetadataImage.Size => _data?.Length ?? (_source != null ? _sourcesize : 0);
         byte[] IMetadataImage.Data => Data;
 
         public string Hash
@@ -149,7 +175,11 @@ namespace MusicFileUtilities
 
         public void HashImage(System.Security.Cryptography.HashAlgorithm hash)
         {
-            Hash = Convert.ToBase64String(hash.ComputeHash(Data));
+            // Hash straight over the source block slice: materializing Data just to hash it
+            // would copy every cover on every scan.
+            Hash = Convert.ToBase64String(_data == null && _source != null
+                ? hash.ComputeHash(_source, _sourceoffset, _sourcesize)
+                : hash.ComputeHash(Data));
         }
 
         public byte[] ToByteArray()
@@ -233,8 +263,10 @@ namespace MusicFileUtilities
             offset += 4;
 
             Need(datasize);
-            Data = new byte[datasize];
-            Array.Copy(b, offset, Data, 0, Data.Length);
+            _data = null;
+            _source = b;
+            _sourceoffset = offset;
+            _sourcesize = datasize;
         }
 
         public VorbisArtwork(byte[] b)
@@ -506,6 +538,9 @@ namespace MusicFileUtilities
             return ((b[5] & 4) == 4);
         }
 
+        private bool _gotinfo;
+        private bool _gotcomments;
+
         private void ParsePage(byte[] page)
         {
             if (page.Length < 7)
@@ -517,6 +552,7 @@ namespace MusicFileUtilities
                 byte[] stripped = new byte[page.Length - 7];
                 Array.Copy(page, 7, stripped, 0, page.Length - 7);
                 FromByteArray(stripped);
+                _gotcomments = true;
             }
             if (page[0] == 1) // Information Header
             {
@@ -528,6 +564,7 @@ namespace MusicFileUtilities
                 AverageBitrate = Tools.UInt32AtLE(stripped, 13);
                 if (MaxBitrate == 0)
                     MaxBitrate = AverageBitrate;
+                _gotinfo = true;
             }
         }
 
@@ -554,6 +591,11 @@ namespace MusicFileUtilities
                     if (!firstpage)
                         ParsePage(pagedata.ToArray());
                     pagedata.Clear();
+                    // The identification and comment headers always precede the audio pages;
+                    // once both have been parsed there is nothing left to learn from the rest
+                    // of the stream (duration is not derived from it), so don't read it.
+                    if (_gotinfo && _gotcomments)
+                        break;
                 }
 
                 byte[] buf = new byte[datalen];
@@ -606,7 +648,6 @@ namespace MusicFileUtilities
                     if (dataLen > 0) source.ReadExactly(data);
 
                     bool isCont = (hdr[5] & 1) != 0;
-                    bool packetEndsHere = numSegs == 0 || segTable[numSegs - 1] < 255;
 
                     if (state == 0) // Looking for comment packet
                     {
@@ -619,18 +660,53 @@ namespace MusicFileUtilities
                             long granulePos = OggReadInt64LE(hdr, 6);
                             byte headerType = (byte)(hdr[5] & ~1); // clear continuation bit
                             int pagesWritten = WriteOggPacketPages(dest, newPacket, headerType, granulePos, serial, newSeq);
+
+                            // The comment packet is only the FIRST packet on this page: the
+                            // vorbis setup header normally shares it. Replacing the whole page
+                            // used to drop the setup header and leave the file undecodable, so
+                            // re-emit whatever follows the comment packet on its own page.
+                            var (ends, segsUsed, bytesUsed) = MeasureFirstPacket(segTable, numSegs);
+                            if (ends)
+                            {
+                                if (segsUsed < numSegs)
+                                {
+                                    WriteRawPage(dest, headerType, granulePos, serial, newSeq + pagesWritten,
+                                                 segTable[segsUsed..], data[bytesUsed..]);
+                                    pagesWritten++;
+                                }
+                                state = 2;
+                            }
+                            else
+                                state = 1;
                             seqDelta += pagesWritten - 1;
-                            state = packetEndsHere ? 2 : 1;
                         }
                         else
                         {
                             WriteOggPage(dest, hdr, segTable, data, seqDelta);
                         }
                     }
-                    else if (state == 1) // Skipping old comment continuation pages
+                    else if (state == 1) // Old comment packet continues on this page
                     {
-                        seqDelta--;
-                        if (packetEndsHere) state = 2;
+                        var (ends, segsUsed, bytesUsed) = MeasureFirstPacket(segTable, numSegs);
+                        if (ends)
+                        {
+                            if (segsUsed < numSegs)
+                            {
+                                // Packets after the old comment's tail (the setup header) must
+                                // survive; they take over this page's sequence slot.
+                                int serial = OggReadInt32LE(hdr, 14);
+                                int seq = OggReadInt32LE(hdr, 18) + seqDelta;
+                                long granulePos = OggReadInt64LE(hdr, 6);
+                                byte headerType = (byte)(hdr[5] & ~1);
+                                WriteRawPage(dest, headerType, granulePos, serial, seq,
+                                             segTable[segsUsed..], data[bytesUsed..]);
+                            }
+                            else
+                                seqDelta--;
+                            state = 2;
+                        }
+                        else
+                            seqDelta--;
                     }
                     else // state == 2, Copying remaining pages
                     {
@@ -647,6 +723,40 @@ namespace MusicFileUtilities
             if (File.Exists(target)) File.Delete(target);
             File.Move(tempPath, target);
             Filename = target;
+        }
+
+        // Walks the lacing values of a page's FIRST packet: how many segments and bytes it
+        // spans, and whether it ends on this page (a lacing value < 255 terminates a packet).
+        private static (bool Ends, int SegsUsed, int BytesUsed) MeasureFirstPacket(byte[] segTable, int numSegs)
+        {
+            int bytes = 0;
+            for (int i = 0; i < numSegs; i++)
+            {
+                bytes += segTable[i];
+                if (segTable[i] < 255)
+                    return (true, i + 1, bytes);
+            }
+            return (false, numSegs, bytes);
+        }
+
+        // Writes a page from scratch (fresh header + CRC) around an existing lacing/payload.
+        private static void WriteRawPage(Stream dest, byte headerType, long granulePos, int serial, int seq, byte[] segTable, byte[] data)
+        {
+            byte[] hdr = new byte[27];
+            hdr[0] = (byte)'O'; hdr[1] = (byte)'g'; hdr[2] = (byte)'g'; hdr[3] = (byte)'S';
+            hdr[4] = 0;
+            hdr[5] = headerType;
+            OggWriteInt64LE(hdr, 6, granulePos);
+            OggWriteInt32LE(hdr, 14, serial);
+            OggWriteInt32LE(hdr, 18, seq);
+            hdr[26] = (byte)segTable.Length;
+            uint crc = OggCRC(hdr, 0, 27);
+            crc = OggCRC(segTable, 0, segTable.Length, crc);
+            crc = OggCRC(data, 0, data.Length, crc);
+            OggWriteUInt32LE(hdr, 22, crc);
+            dest.Write(hdr, 0, 27);
+            dest.Write(segTable, 0, segTable.Length);
+            dest.Write(data, 0, data.Length);
         }
 
         private static void WriteOggPage(Stream dest, byte[] hdr, byte[] segTable, byte[] data, int seqDelta)

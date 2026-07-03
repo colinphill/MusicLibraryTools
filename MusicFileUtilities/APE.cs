@@ -14,6 +14,7 @@ namespace MusicFileUtilities
         private string _mimetype;
         private string _description;
         private byte[] _picdata;
+        private int _picdataoffset = -1; // offset of the picture payload within _rawvalue
         private string _category;
         private byte[] _rawvalue;
         private int _width;
@@ -25,14 +26,36 @@ namespace MusicFileUtilities
         public byte[] RawValue => _rawvalue;
         public string Key => _category;
 
-        // Dimensions are decoded lazily so a scan reading only text tags doesn't parse covers.
+        // The picture payload is copied out of RawValue lazily (RawValue is retained for the
+        // save round-trip anyway); the eager copy doubled the memory traffic of every embedded
+        // picture on a scan even when nothing looked at the image.
+        private byte[] PicData
+        {
+            get
+            {
+                if (_picdata == null && _picdataoffset >= 0)
+                {
+                    int datalen = Math.Max(0, _rawvalue.Length - _picdataoffset);
+                    _picdata = new byte[datalen];
+                    if (datalen > 0)
+                        Array.Copy(_rawvalue, _picdataoffset, _picdata, 0, datalen);
+                }
+                return _picdata;
+            }
+        }
+
+        // Dimensions are decoded lazily so a scan reading only text tags doesn't parse covers,
+        // and probed in place so they don't force the payload copy either.
         private void EnsureDimensions()
         {
             if (_dimsComputed) return;
             _dimsComputed = true;
-            if (_picdata != null && _picdata.Length > 0)
+            ReadOnlySpan<byte> picdata = _picdata != null
+                ? _picdata
+                : (_picdataoffset >= 0 && _picdataoffset < _rawvalue.Length ? _rawvalue.AsSpan(_picdataoffset) : default);
+            if (!picdata.IsEmpty)
             {
-                var img = ImageFile.GetImageDimensions(_picdata);
+                var img = ImageFile.GetImageDimensions(picdata);
                 _width = img.Width;
                 _height = img.Height;
             }
@@ -43,8 +66,8 @@ namespace MusicFileUtilities
         string IMetadataImage.ImageType => _mimetype;
         int IMetadataImage.Width { get { EnsureDimensions(); return _width; } }
         int IMetadataImage.Height { get { EnsureDimensions(); return _height; } }
-        int IMetadataImage.Size => _picdata?.Length ?? 0;
-        byte[] IMetadataImage.Data => _picdata;
+        int IMetadataImage.Size => _picdata?.Length ?? (_picdataoffset >= 0 ? Math.Max(0, _rawvalue.Length - _picdataoffset) : 0);
+        byte[] IMetadataImage.Data => PicData;
 
         public APEArtwork(string key, byte[] value)
         {
@@ -55,10 +78,7 @@ namespace MusicFileUtilities
             while (offset < value.Length && value[offset] != 0)
                 filename += (char)value[offset++];
             offset++; // skip the null separator
-            int datalen = Math.Max(0, value.Length - offset);
-            _picdata = new byte[datalen];
-            if (datalen > 0)
-                Array.Copy(value, offset, _picdata, 0, datalen);
+            _picdataoffset = offset;
             string ext = Path.GetExtension(filename).ToLower();
             _mimetype = ext.Length > 1 ? ext.Substring(1) : "";
             if ((_mimetype.ToLower() == "jpeg") || (_mimetype.ToLower() == "jpg"))
@@ -81,7 +101,11 @@ namespace MusicFileUtilities
 
         public void HashImage(System.Security.Cryptography.HashAlgorithm hash)
         {
-            Hash = Convert.ToBase64String(hash.ComputeHash(_picdata));
+            // Hash straight over the payload slice of RawValue: materializing PicData just to
+            // hash it would copy every cover on every scan.
+            Hash = Convert.ToBase64String(_picdata != null
+                ? hash.ComputeHash(_picdata)
+                : hash.ComputeHash(_rawvalue, _picdataoffset, Math.Max(0, _rawvalue.Length - _picdataoffset)));
         }
 
     }

@@ -13,49 +13,50 @@ namespace MusicFileUtilities
 
         public enum ImageFormat { Gif, Jpeg, Png, Bmp, Unknown };
 
-        public static ImageFormat DetectImageFormat(byte[] b)
+        // Span-based so callers can probe an embedded image in place (a slice of the tag's
+        // frame/atom buffer) without copying the whole payload out first. byte[] callers
+        // convert implicitly.
+        public static ImageFormat DetectImageFormat(ReadOnlySpan<byte> b)
         {
             if (b.Length > 10)
             {
-                string idstring = Encoding.ASCII.GetString(b, 6, 5);
-                if ((idstring == "JFIF\x00") || (idstring == "Exif\x00"))
+                if (b.Slice(6, 5).SequenceEqual("JFIF\x00"u8) || b.Slice(6, 5).SequenceEqual("Exif\x00"u8))
                     return ImageFormat.Jpeg;
             }
             if (b.Length > 6)
             {
-                string gifstring = Encoding.ASCII.GetString(b, 0, 6);
-                if ((gifstring == "GIF87a") || (gifstring == "GIF89a"))
+                if (b.Slice(0, 6).SequenceEqual("GIF87a"u8) || b.Slice(0, 6).SequenceEqual("GIF89a"u8))
                     return ImageFormat.Gif;
             }
-            if ((b.Length > 8) && (Encoding.ASCII.GetString(b, 1, 7) == "PNG\x0d\x0a\x1a\x0a") && (b[0] == 0x89))
+            if ((b.Length > 8) && b.Slice(1, 7).SequenceEqual("PNG\x0d\x0a\x1a\x0a"u8) && (b[0] == 0x89))
                 return ImageFormat.Png;
-            if ((b.Length > 12) && (Encoding.ASCII.GetString(b, 0, 2) == "BM") && (Encoding.ASCII.GetString(b, 14, 4) == "\x28\x00\x00\x00"))
+            if ((b.Length > 12) && b.Slice(0, 2).SequenceEqual("BM"u8) && b.Slice(14, 4).SequenceEqual("\x28\x00\x00\x00"u8))
                 return ImageFormat.Bmp;
             return ImageFormat.Unknown;
         }
 
-        private static (int Width, int Height) GetGifDimensions(byte[] b)
+        private static (int Width, int Height) GetGifDimensions(ReadOnlySpan<byte> b)
         {
-            int width = Tools.UInt16AtLE(b, 6);
-            int height = Tools.UInt16AtLE(b, 8);
+            int width = b[6] | (b[7] << 8);
+            int height = b[8] | (b[9] << 8);
             return (width, height);
         }
 
-        private static (int Width, int Height) GetBmpDimensions(byte[] b)
+        private static (int Width, int Height) GetBmpDimensions(ReadOnlySpan<byte> b)
         {
-            int width = (int)Tools.UInt32AtLE(b, 18);
-            int height = (int)Tools.UInt32AtLE(b, 22);
+            int width = b[18] | (b[19] << 8) | (b[20] << 16) | (b[21] << 24);
+            int height = b[22] | (b[23] << 8) | (b[24] << 16) | (b[25] << 24);
             return (width, height);
         }
 
-        private static (int Width, int Height) GetPngDimensions(byte[] b)
+        private static (int Width, int Height) GetPngDimensions(ReadOnlySpan<byte> b)
         {
-            int width = (int)Tools.UInt32AtBE(b, 16);
-            int height = (int)Tools.UInt32AtBE(b, 20);
+            int width = (b[16] << 24) | (b[17] << 16) | (b[18] << 8) | b[19];
+            int height = (b[20] << 24) | (b[21] << 16) | (b[22] << 8) | b[23];
             return (width, height);
         }
 
-        private static (int Width, int Height) GetJpegDimensions(byte[] b)
+        private static (int Width, int Height) GetJpegDimensions(ReadOnlySpan<byte> b)
         {
             int offset = 0;
             // Defensive against truncated/corrupt JPEGs: every read is bounds-checked and a
@@ -95,7 +96,7 @@ namespace MusicFileUtilities
             return (0, 0);
         }
 
-        public static (int Width, int Height) GetImageDimensions(byte[] b)
+        public static (int Width, int Height) GetImageDimensions(ReadOnlySpan<byte> b)
         {
             switch (DetectImageFormat(b))
             {
