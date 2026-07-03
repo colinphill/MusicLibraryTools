@@ -117,7 +117,7 @@ namespace MusicFileUtilities
         {
             Filename = filename;
 
-            FileStream s = new FileStream(filename, FileMode.Open, FileAccess.Read);
+            FileStream s = Tools.OpenReadSequential(filename);
 
             byte[] si = null;
             byte [] b = new byte[4];

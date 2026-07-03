@@ -28,6 +28,15 @@ namespace MusicFileUtilities
 
     internal class Tools
     {
+        // Parse-time reads use a large buffer plus the sequential-scan hint: a tag parse makes
+        // many small reads, and over SMB each unbuffered read is a network round-trip. One
+        // 128KB read replaces dozens of 4KB ones; locally the cost is just a bigger buffer.
+        internal const int ParseReadBufferSize = 128 * 1024;
+
+        public static FileStream OpenReadSequential(string path)
+        {
+            return new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, ParseReadBufferSize, FileOptions.SequentialScan);
+        }
 
         public static ushort UInt16AtLE(byte[] b, int offset)
         {
@@ -269,15 +278,16 @@ namespace MusicFileUtilities
             return fix.Substring(start, end - start);
         }
 
+        // Global cap on concurrent subtree walkers in CleanEmptyMusicFolders (mirrors the
+        // indexer's IndexScanParallelism): enough to overlap directory-listing round-trips
+        // on a network share without flooding it.
+        internal static int CleanScanParallelism = 8;
+
         public static void CleanEmptyMusicFolders(DirectoryInfo dirinfo, bool deletenonmusic = false, bool keepfolderimages = false)
         {
             var hitpaths = new ConcurrentDictionary<string, bool>();
 
-            // MusicFileEnumerator streams the tree, classifies files as music/other via the
-            // allocation-free span extension lookup, and prunes .itlp packages during recursion.
-            // Parallel.ForEach synchronizes MoveNext on the single-use enumerator, so concurrent
-            // consumption (and the file deletes below) is safe.
-            Parallel.ForEach(new MusicFileEnumerator(dirinfo.FullName), (entry) =>
+            void ProcessEntry((string Name, DateTime Modified, long Size, MFEType FileType) entry)
             {
                 if (entry.FileType == MFEType.Directory)
                 {
@@ -299,6 +309,26 @@ namespace MusicFileUtilities
                     hitpaths[Path.GetDirectoryName(entry.Name)] = true;
                 else
                     File.Delete(entry.Name);
+            }
+
+            // Same per-subtree split as the metadata indexer: a single recursive enumerator
+            // serializes every directory-listing round-trip on its MoveNext, so instead walk
+            // each top-level directory with its own recursive enumerator under one global
+            // parallelism cap. Root-level entries are processed inline here; a top-level .itlp
+            // package is marked kept by ProcessEntry and gets no unit, so (as before) its
+            // contents are never walked or deleted.
+            var units = new List<string>();
+            foreach (var entry in new MusicFileEnumerator(dirinfo.FullName, recurse: false))
+            {
+                ProcessEntry(entry);
+                if (entry.FileType == MFEType.Directory && !Path.GetFileName(entry.Name).Contains(".itlp", StringComparison.OrdinalIgnoreCase))
+                    units.Add(entry.Name);
+            }
+
+            Parallel.ForEach(units, new ParallelOptions { MaxDegreeOfParallelism = CleanScanParallelism }, (unit) =>
+            {
+                foreach (var entry in new MusicFileEnumerator(unit))
+                    ProcessEntry(entry);
             });
 
             var hitkeys = hitpaths.Where(kv => kv.Value).Select(kv => kv.Key);

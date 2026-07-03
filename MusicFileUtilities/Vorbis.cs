@@ -541,7 +541,7 @@ namespace MusicFileUtilities
             // spanning many pages); a List grows amortized O(1).
             var pagedata = new List<byte>();
 
-            FileStream s = new FileStream(filename, FileMode.Open, FileAccess.Read);
+            FileStream s = Tools.OpenReadSequential(filename);
             do
             {
                 int datalen;

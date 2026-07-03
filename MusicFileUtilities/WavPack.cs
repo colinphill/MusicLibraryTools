@@ -60,7 +60,7 @@ namespace MusicFileUtilities
         public WavPackFile(string filename)
         {
             _filename = filename;
-            using var s = File.OpenRead(filename);
+            using var s = Tools.OpenReadSequential(filename);
             byte[] header = new byte[32];
             s.ReadExactly(header);
             while (Encoding.ASCII.GetString(header,0,4) == "wvpk")

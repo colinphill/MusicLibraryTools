@@ -25,7 +25,11 @@ namespace MusicLibraryTools
 
     public class MusicFileEnumerator : FileSystemEnumerator<(string Name, DateTime Modified, long Size, MFEType FileType)>, IEnumerable<(string Name, DateTime Modified, long Size, MFEType FileType)>
     {
-        public MusicFileEnumerator(string directory) : base(directory, new EnumerationOptions { RecurseSubdirectories = true }) { }
+        // The 64KB buffer sizes each directory-query round-trip; the default is small enough
+        // that large folders take several round-trips per directory on a network share.
+        // recurse:false enumerates just the immediate children (used to split a scan root
+        // into per-subtree units).
+        public MusicFileEnumerator(string directory, bool recurse = true) : base(directory, new EnumerationOptions { RecurseSubdirectories = recurse, BufferSize = 64 * 1024 }) { }
 
         public IEnumerator<(string Name, DateTime Modified, long Size, MFEType FileType)> GetEnumerator()
         {

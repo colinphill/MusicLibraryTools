@@ -243,8 +243,8 @@ namespace MusicFileUtilities
         public static IMediaFile GetFile(string path, HashAlgorithm hash = null)
         {
             string extension = Path.GetExtension(path).ToLower();
-            if (!File.Exists(path))
-                throw new FileNotFoundException("File Not Found", path);
+            // No File.Exists pre-check: on a network share it costs a full round-trip per file,
+            // and the parser's own open throws FileNotFoundException for a missing file anyway.
 
             IMediaFile file = null;
             switch (extension)

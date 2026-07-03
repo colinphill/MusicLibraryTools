@@ -120,6 +120,14 @@ namespace MetadataCaching
         internal static int IndexFilesPerBatch = 2000;
         internal static int IndexMetaRowsPerInsert = 500;
 
+        // Scan-side tunables. IndexScanParallelism is the GLOBAL cap on concurrent subtree
+        // scanners across all scan sets (per-set caps multiply by the set count and can
+        // swamp a NAS). IndexFileQueueBound caps parsed-but-unwritten files so parsing
+        // can't run arbitrarily far ahead of the SQLite writer (parsed files hold artwork
+        // bytes, so an unbounded queue can balloon to GBs on a big scan).
+        internal static int IndexScanParallelism = 8;
+        internal static int IndexFileQueueBound = 256;
+
 #if SQLITE
         private static readonly string[] sqlitecreationsql_ = {
             "PRAGMA foreign_keys = off;\r\n",
@@ -442,7 +450,7 @@ namespace MetadataCaching
 
             int added = 0, modified = 0, removed = 0, unchanged = 0, scanned = 0;
 
-            using var filequeue = new BlockingCollection<(long ID, long Set, string FileName, long Length, DateTime LastWriteTime, IMediaFile File)>();
+            using var filequeue = new BlockingCollection<(long ID, long Set, string FileName, long Length, DateTime LastWriteTime, IMediaFile File)>(IndexFileQueueBound);
 
             var filesdict = new ConcurrentDictionary<(long ScanSetID, string Path), (long ID, long Length, DateTime LastWriteTime)>();
             var fileshitdict = new ConcurrentDictionary<(long ScanSetID, string Path), bool>();
@@ -471,23 +479,32 @@ namespace MetadataCaching
 
             var metadatareadtask = Task.Run(() =>
             {
-                Parallel.ForEach(sets, (scanpath) =>
+                // Split each scan set into per-subtree units: one non-recursive unit for files
+                // sitting directly in the set root, plus one recursive walker per top-level
+                // subdirectory. A single recursive enumerator serializes every directory-listing
+                // round-trip; independent subtree walkers let listing itself fan out across the
+                // share. All units share ONE global parallelism cap (a per-set cap multiplies by
+                // the set count — 12 sets x 32 threads once flooded the NAS with ~384 readers).
+                var units = new List<(string SetPath, long SetID, string Root, bool Recurse)>();
+                foreach (var scanpath in sets)
                 {
-                   long scanset = scanpath.ID;
-                   // MusicFileEnumerator streams the tree, prunes .itlp packages during recursion
-                   // (so no per-file ancestor check is needed), and tags music files by extension
-                   // via the allocation-free span lookup. It's a single-use, non-thread-safe
-                   // enumerator, but Parallel.ForEach synchronizes MoveNext on the shared source,
-                   // so concurrent consumption is safe.
-                   var files = new MusicFileEnumerator(scanpath.Path).Where(e => e.FileType == MFEType.MusicFile);
+                    units.Add((scanpath.Path, scanpath.ID, scanpath.Path, false));
+                    foreach (var entry in new MusicFileEnumerator(scanpath.Path, recurse: false))
+                        // Skip .itlp packages here too: a recursive unit rooted INSIDE the package
+                        // would bypass the enumerator's recursion pruning.
+                        if (entry.FileType == MFEType.Directory && !Path.GetFileName(entry.Name).Contains(".itlp", StringComparison.OrdinalIgnoreCase))
+                            units.Add((scanpath.Path, scanpath.ID, entry.Name, true));
+                }
 
-                   // Cap the per-set parsing fan-out at the core count so several scan sets don't
-                   // oversubscribe the CPU with nested unbounded parallelism.
-                   var scanParallelOptions = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
-                   Parallel.ForEach(files, scanParallelOptions, () => { return SHA256.Create(); }, (file, loopstate, hash) =>
-                   {
-                       var relativename = file.Name.Substring(scanpath.Path.Length + 1);
-                       var key = (SetID: scanset, RelativeName: relativename);
+                var scanParallelOptions = new ParallelOptions { MaxDegreeOfParallelism = IndexScanParallelism };
+                Parallel.ForEach(units, scanParallelOptions, () => { return SHA256.Create(); }, (unit, loopstate, hash) =>
+                {
+                    foreach (var file in new MusicFileEnumerator(unit.Root, unit.Recurse))
+                    {
+                       if (file.FileType != MFEType.MusicFile)
+                           continue;
+                       var relativename = file.Name.Substring(unit.SetPath.Length + 1);
+                       var key = (SetID: unit.SetID, RelativeName: relativename);
                        var scan = false;
                        long id = -1;
                        if (filesdict.ContainsKey(key))
@@ -514,7 +531,7 @@ namespace MetadataCaching
                        {
                            try
                            {
-                               filequeue.Add((id, scanpath.ID, relativename, file.Size, file.Modified, MediaFile.GetFile(file.Name, hash)));
+                               filequeue.Add((id, unit.SetID, relativename, file.Size, file.Modified, MediaFile.GetFile(file.Name, hash)));
                                int done = Interlocked.Increment(ref scanned);
                                // Console is internally locked; printing from every scan thread
                                // every 100 files serializes them. A coarser cadence (and no
@@ -524,7 +541,8 @@ namespace MetadataCaching
                            }
                            catch (IOException ex)
                            {
-                               Console.WriteLine($"IOException On File: {file.Name} - {ex.Message}");
+                               Console.WriteLine($"IOException On File: {file.Name} - {ex.Message} (0x{ex.HResult:x})");
+                               Console.WriteLine(ex.StackTrace);
                            }
                            catch (Exception ex)
                            {
@@ -532,16 +550,21 @@ namespace MetadataCaching
                                loopstate.Break();
                            }
                        }
-                       return hash;
-                   }, (hash) => { hash.Dispose(); });
+                    }
+                    return hash;
+                }, (hash) => { hash.Dispose(); });
 
-                   foreach (var file in fileshitdict.Where(kv => (kv.Key.ScanSetID == scanset) && !kv.Value).Select(kv => kv.Key))
-                   {
-                       filequeue.Add((filesdict[file].ID, scanpath.ID, null, 0, DateTime.MinValue, null));
-                       removed++;
-                   }
+                // Removal detection must wait until every unit of every set has finished marking
+                // hits, so it runs once here rather than per set. Only sets scanned in this call
+                // count: files of unrequested sets were never walked, and those sets are handled
+                // by the deletemissingsets path instead.
+                var scannedsets = new HashSet<long>(sets.Select(s => s.ID));
+                foreach (var file in fileshitdict.Where(kv => !kv.Value && scannedsets.Contains(kv.Key.ScanSetID)).Select(kv => kv.Key))
+                {
+                    filequeue.Add((filesdict[file].ID, file.ScanSetID, null, 0, DateTime.MinValue, null));
+                    removed++;
+                }
 
-                });
                 Console.WriteLine($"Scanned: {scanned}");
                 filequeue.CompleteAdding();
             });

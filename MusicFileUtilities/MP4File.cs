@@ -1583,7 +1583,7 @@ namespace MusicFileUtilities
 
         public void ReadFile(string path)
         {
-            Stream s = new FileStream(path, FileMode.Open, FileAccess.Read);
+            Stream s = Tools.OpenReadSequential(path);
 
             while (s.Position < s.Length)
             {

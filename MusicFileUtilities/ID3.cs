@@ -1726,7 +1726,7 @@ namespace MusicFileUtilities
 
         public MP3File(string filename)
         {
-            using (FileStream s = File.OpenRead(filename))
+            using (FileStream s = Tools.OpenReadSequential(filename))
             {
                 ReadTag(s);
                 for (; ; )
@@ -1930,7 +1930,7 @@ namespace MusicFileUtilities
             // ReadTag only runs when a metadata pointer is present, so set the filename here
             // too — otherwise a DSF with no existing tag can't be saved in place.
             _filename = filename;
-            using (FileStream s = File.OpenRead(filename))
+            using (FileStream s = Tools.OpenReadSequential(filename))
             {
                 byte[] header = new byte[4];
                 s.ReadExactly(header);
