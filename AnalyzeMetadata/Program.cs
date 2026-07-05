@@ -40,7 +40,7 @@ namespace AnalyzeMetadata
             var cache = db.BuildCache(config.IndexLocations.Select(l => l.Target).Distinct());
             LogConsole.WriteLine("Total Parsed Files: " + cache.FileCache.Count);
 
-            if (args.Skip(1).Any(s => s.ToLower() == "lyrics"))
+            if (args.Skip(1).Any(s => s.ToLower() == "basecheck"))
             {
                 foreach (var file in cache.FileCache.OrderBy(kv => kv.Key))
                 {

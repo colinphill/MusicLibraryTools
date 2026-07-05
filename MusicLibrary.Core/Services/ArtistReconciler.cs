@@ -1,3 +1,5 @@
+using System.Globalization;
+using System.Text;
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
 
@@ -44,19 +46,43 @@ public sealed class ArtistReconciler : IArtistReconciler
 
         var names = byName.Keys.OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase).ToList();
 
-        // Union-find: merge any two names within the fuzzy-distance threshold.
+        // Union-find over the spellings.
         var parent = new int[names.Count];
         for (int i = 0; i < parent.Length; i++) parent[i] = i;
         int Find(int x) { while (parent[x] != x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; }
         void Union(int a, int b) { parent[Find(a)] = Find(b); }
 
+        var canonical = names.Select(Canonicalize).ToArray();
+
+        // Variations (AnalyzeMetadata's checkartists, lines 347-451): names that collapse to the same
+        // canonical form — case, punctuation, diacritics, a leading article, and "&"/"and" ignored —
+        // are the same artist.
+        var firstByCanonical = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (int i = 0; i < names.Count; i++)
+        {
+            if (canonical[i].Length == 0)
+                continue;
+            if (firstByCanonical.TryGetValue(canonical[i], out var first))
+                Union(first, i);
+            else
+                firstByCanonical[canonical[i]] = i;
+        }
+
+        // Fuzzy (AnalyzeMetadata's checkartists, lines 453-500): the O(n²) pairwise pass — edit distance
+        // between the canonical forms as a fraction of the longer *original* name, under the threshold.
+        // Exact-canonical pairs are skipped (already merged by the variations pass above).
         for (int i = 0; i < names.Count; i++)
         {
             ct.ThrowIfCancellationRequested();
             for (int j = i + 1; j < names.Count; j++)
             {
-                var d = names[i].FuzzyDistance(names[j]);
-                if (d > 0 && d <= threshold)
+                if (canonical[i] == canonical[j])
+                    continue;
+                int checkLen = Math.Max(names[i].Length, names[j].Length);
+                if (checkLen == 0)
+                    continue;
+                int dist = canonical[i].EditDistance(canonical[j]);
+                if ((double)dist / checkLen <= threshold)
                     Union(i, j);
             }
         }
@@ -80,6 +106,26 @@ public sealed class ArtistReconciler : IArtistReconciler
         return groups
             .OrderByDescending(g => g.AllPaths.Count)
             .ToList();
+    }
+
+    // Reduce an artist name to a canonical key: "&"→"and", lowercased, a leading article dropped,
+    // diacritics removed, and everything but letters/digits stripped. Two names with the same key are
+    // spelling variations of one artist (e.g. "The Beatles" / "Beatles" / "Beatlés").
+    private static string Canonicalize(string name)
+    {
+        var s = name.Replace("&", "and").ToLowerInvariant().Trim();
+
+        // Drop a leading article while the separating space still exists.
+        if (s.StartsWith("the ", StringComparison.Ordinal)) s = s[4..];
+        else if (s.StartsWith("an ", StringComparison.Ordinal)) s = s[3..];
+        else if (s.StartsWith("a ", StringComparison.Ordinal)) s = s[2..];
+
+        var decomposed = s.Normalize(NormalizationForm.FormD);
+        var sb = new StringBuilder(decomposed.Length);
+        foreach (var c in decomposed)
+            if (char.IsLetterOrDigit(c) && CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+                sb.Append(c);
+        return sb.ToString();
     }
 
     public async Task<int> RenameArtistAsync(IReadOnlyList<string> paths, string from, string to,

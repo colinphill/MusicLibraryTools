@@ -31,7 +31,6 @@ public static class Composition
         services.AddSingleton<FileInspectorViewModel>();
         services.AddSingleton<TagEditorViewModel>();
         services.AddSingleton<AnalyzerViewModel>();
-        services.AddSingleton<ArtistsViewModel>();
         services.AddSingleton<OrganizeViewModel>();
         services.AddSingleton<ArtworkViewModel>();
         services.AddSingleton<DetailsGridViewModel>();

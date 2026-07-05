@@ -105,6 +105,69 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         }
     }
 
+    public async Task<AnalysisReport> CheckSetsAsync(CancellationToken ct = default)
+    {
+        var config = _settings.Configuration
+            ?? throw new InvalidOperationException("No library configuration is loaded.");
+
+        await _gate.WaitAsync(ct);
+        try
+        {
+            var db = GetDatabase();
+            return await Task.Run(() =>
+            {
+                var locations = config.IndexLocations.ToList();
+                var setIds = locations.Select(l => l.Set).Distinct().OrderBy(s => s).ToList();
+                if (setIds.Count < 2)
+                    return new AnalysisReport("Cross-set check", []);
+
+                // One cache per set (honouring each target's optional extension filter).
+                var caches = setIds
+                    .Select(s => (Set: s, Cache: db.BuildCache(
+                        locations.Where(l => l.Set == s)
+                                 .Select(l => (l.Target, l.Filter?.Split([',', ';', '|'], StringSplitOptions.RemoveEmptyEntries))))))
+                    .ToList();
+
+                var findings = new List<AnalysisFinding>();
+                foreach (var target in caches)
+                {
+                    foreach (var other in caches.Where(c => c.Set != target.Set))
+                    {
+                        foreach (var (path, entry) in target.Cache.FileCache)
+                        {
+                            ct.ThrowIfCancellationRequested();
+                            if (!other.Cache.AlbumCache.TryGetValue(entry.Album, out var albumFiles))
+                            {
+                                findings.Add(new AnalysisFinding(path, $"missing from set {other.Set}"));
+                                continue;
+                            }
+
+                            var matches = albumFiles
+                                .Select(f => other.Cache.FileCache[f])
+                                .Where(f => (f.AlbumArtist == entry.AlbumArtist || f.Artist == entry.Artist) && f.TrackNumber == entry.TrackNumber)
+                                .ToList();
+
+                            if (matches.Count > 1)
+                                matches = matches.Where(f => f.Title == entry.Title).ToList();
+
+                            if (matches.Count == 0)
+                                findings.Add(new AnalysisFinding(path, $"missing from set {other.Set}"));
+                            else if (matches.Count > 1)
+                                findings.Add(new AnalysisFinding(path, $"ambiguous match in set {other.Set} ({matches.Count})"));
+                        }
+                    }
+                }
+
+                return new AnalysisReport("Cross-set check",
+                    findings.OrderBy(f => f.Path, StringComparer.CurrentCultureIgnoreCase).ToList());
+            }, ct);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     public async Task<FileDetails?> GetFileDetailsAsync(string path, bool includeArtwork, CancellationToken ct = default)
     {
         if (!IsReady)

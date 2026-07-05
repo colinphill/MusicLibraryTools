@@ -285,141 +285,149 @@
                         </Grid>
                     </TabItem>
 
-                    <!-- Library-wide analysis -->
+                    <!-- Library-wide analysis: each type runs on its own button -->
                     <TabItem Header="Analyze" DataContext="{Binding Analyzer}" x:DataType="vm:AnalyzerViewModel">
-                        <Grid RowDefinitions="Auto,*" Margin="2,12,2,2">
-                            <StackPanel Grid.Row="0" Classes="toolbarrow" Margin="0,0,0,10">
-                                <Button Content="Run analysis" Classes="accent" Command="{Binding RunCommand}"/>
-                                <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
-                                <ProgressBar IsIndeterminate="True" Width="70" VerticalAlignment="Center"
+                        <Grid RowDefinitions="Auto,Auto,*" Margin="2,12,2,2">
+                            <WrapPanel Grid.Row="0" Margin="0,0,0,4">
+                                <Button Content="Inconsistencies" Classes="accent" Margin="0,0,8,8"
+                                        Command="{Binding RunInconsistenciesCommand}"/>
+                                <Button Content="Lossy files" Margin="0,0,8,8" Command="{Binding RunLossyCommand}"/>
+                                <Button Content="Duplicates" Margin="0,0,8,8" Command="{Binding RunDuplicatesCommand}"/>
+                                <Button Content="Cross-set check" Margin="0,0,8,8" Command="{Binding RunCheckSetsCommand}"/>
+                                <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,8" VerticalAlignment="Center">
+                                    <Button Content="Similar artists" Command="{Binding RunSimilarArtistsCommand}"/>
+                                    <TextBlock Text="threshold" Classes="muted" VerticalAlignment="Center"/>
+                                    <NumericUpDown Value="{Binding ArtistThreshold}" Minimum="0" Maximum="100"
+                                                   Increment="0.05" FormatString="0.00" Width="200"
+                                                   ToolTip.Tip="Fuzzy-distance threshold for the artist check (0 = identical only)"/>
+                                </StackPanel>
+                                <Button Content="Cancel" Margin="0,0,8,8" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
+                                <ProgressBar IsIndeterminate="True" Width="70" VerticalAlignment="Center" Margin="0,0,8,8"
                                              IsVisible="{Binding IsBusy}"/>
-                                <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Classes="muted"/>
-                            </StackPanel>
+                            </WrapPanel>
 
-                            <ScrollViewer Grid.Row="1">
-                                <ItemsControl ItemsSource="{Binding Reports}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="models:AnalysisReport">
-                                            <Expander Margin="0,0,0,8" HorizontalAlignment="Stretch">
-                                                <Expander.Header>
-                                                    <TextBlock>
-                                                        <Run Text="{Binding Name}" FontWeight="SemiBold"/>
-                                                        <Run Text="{Binding Count, StringFormat=' ({0})'}"/>
-                                                    </TextBlock>
-                                                </Expander.Header>
-                                                <ItemsControl ItemsSource="{Binding Findings}">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate x:DataType="models:AnalysisFinding">
-                                                            <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                                                    Background="Transparent" Padding="8,4" CornerRadius="6"
-                                                                    Command="{Binding $parent[TabItem].((vm:AnalyzerViewModel)DataContext).OpenCommand}"
-                                                                    CommandParameter="{Binding Path}">
-                                                                <StackPanel>
-                                                                    <TextBlock Text="{Binding Description}"/>
-                                                                    <TextBlock Text="{Binding Path}" Classes="caption"/>
-                                                                </StackPanel>
-                                                            </Button>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                            </Expander>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
-                        </Grid>
-                    </TabItem>
+                            <TextBlock Grid.Row="1" Text="{Binding StatusText}" Classes="muted" Margin="0,0,0,8"/>
 
-                    <!-- Duplicate finder -->
-                    <TabItem Header="Duplicates" DataContext="{Binding Analyzer}" x:DataType="vm:AnalyzerViewModel">
-                        <Grid RowDefinitions="Auto,*" Margin="2,12,2,2">
-                        <StackPanel Grid.Row="0" Classes="toolbarrow" Margin="0,0,0,10">
-                            <Button Content="Run analysis" Classes="accent" Command="{Binding RunCommand}"/>
-                            <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
-                            <ProgressBar IsIndeterminate="True" Width="70" VerticalAlignment="Center"
-                                         IsVisible="{Binding IsBusy}"/>
-                            <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Classes="muted"/>
-                        </StackPanel>
-                        <ScrollViewer Grid.Row="1">
-                            <ItemsControl ItemsSource="{Binding Duplicates}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="models:DuplicateGroup">
-                                        <Border Classes="card" Margin="0,0,0,10" Padding="12">
-                                            <StackPanel Spacing="2">
-                                                <TextBlock Text="{Binding Key}" FontWeight="SemiBold" Margin="0,0,0,4"/>
-                                                <ItemsControl ItemsSource="{Binding Tracks}">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate x:DataType="models:TrackRecord">
-                                                            <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                                                    Background="Transparent" Padding="8,4" CornerRadius="6"
-                                                                    Command="{Binding $parent[TabItem].((vm:AnalyzerViewModel)DataContext).OpenCommand}"
-                                                                    CommandParameter="{Binding Path}">
-                                                                <TextBlock>
-                                                                    <Run Text="{Binding CodecName}" FontWeight="SemiBold"/>
-                                                                    <Run Text="{Binding SampleRate, StringFormat=' {0}Hz · '}"/>
-                                                                    <Run Text="{Binding Path}"/>
-                                                                </TextBlock>
-                                                            </Button>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                            </StackPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-                        </Grid>
-                    </TabItem>
-
-                    <!-- Check artists: merge near-duplicate artist-name spellings -->
-                    <TabItem Header="Artists" DataContext="{Binding Artists}" x:DataType="vm:ArtistsViewModel">
-                        <Grid RowDefinitions="Auto,*" Margin="2,12,2,2">
-                            <StackPanel Grid.Row="0" Classes="toolbarrow" Margin="0,0,0,10">
-                                <Button Content="Scan artists" Classes="accent" Command="{Binding ScanCommand}"/>
-                                <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
-                                <ProgressBar IsIndeterminate="True" Width="70" VerticalAlignment="Center"
-                                             IsVisible="{Binding IsBusy}"/>
-                                <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Classes="muted"/>
-                            </StackPanel>
-
-                            <ScrollViewer Grid.Row="1">
-                                <ItemsControl ItemsSource="{Binding Groups}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:ArtistGroupViewModel">
-                                            <Border Classes="card" Margin="0,0,0,10" Padding="12">
-                                                <StackPanel Spacing="8">
-                                                    <TextBlock Text="{Binding TrackCount, StringFormat='Similar spellings · {0} tracks'}"
-                                                               Classes="h2"/>
-                                                    <ItemsControl ItemsSource="{Binding Variants}">
+                            <Grid Grid.Row="2">
+                                <!-- Findings (inconsistencies / lossy / cross-set) -->
+                                <ScrollViewer IsVisible="{Binding ShowFindings}">
+                                    <ItemsControl ItemsSource="{Binding Reports}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="models:AnalysisReport">
+                                                <Expander Margin="0,0,0,8" HorizontalAlignment="Stretch" IsExpanded="True">
+                                                    <Expander.Header>
+                                                        <TextBlock>
+                                                            <Run Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                            <Run Text="{Binding Count, StringFormat=' ({0})'}"/>
+                                                        </TextBlock>
+                                                    </Expander.Header>
+                                                    <ItemsControl ItemsSource="{Binding Findings}">
                                                         <ItemsControl.ItemTemplate>
-                                                            <DataTemplate x:DataType="models:ArtistVariant">
-                                                                <TextBlock Margin="0,1">
-                                                                    <Run Text="{Binding Name}" FontWeight="SemiBold"/>
-                                                                    <Run Text="{Binding TrackCount, StringFormat='  ({0})'}"
-                                                                         Foreground="{DynamicResource AppTextMuted}"/>
-                                                                </TextBlock>
+                                                            <DataTemplate x:DataType="models:AnalysisFinding">
+                                                                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                                        Background="Transparent" Padding="8,4" CornerRadius="6"
+                                                                        Command="{Binding $parent[TabItem].((vm:AnalyzerViewModel)DataContext).OpenCommand}"
+                                                                        CommandParameter="{Binding Path}">
+                                                                    <StackPanel>
+                                                                        <TextBlock Text="{Binding Description}"/>
+                                                                        <TextBlock Text="{Binding Path}" Classes="caption"/>
+                                                                    </StackPanel>
+                                                                </Button>
                                                             </DataTemplate>
                                                         </ItemsControl.ItemTemplate>
                                                     </ItemsControl>
+                                                </Expander>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
 
-                                                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
-                                                        <TextBlock Text="Merge to:" VerticalAlignment="Center" Classes="muted"/>
-                                                        <TextBox Text="{Binding CanonicalName}" Width="280"
-                                                                 IsEnabled="{Binding !IsMerged}"/>
-                                                        <Button Content="Merge" Classes="accent"
-                                                                Command="{Binding MergeCommand}"/>
-                                                        <ProgressBar IsIndeterminate="True" Width="60" VerticalAlignment="Center"
-                                                                     IsVisible="{Binding IsBusy}"/>
+                                <!-- Duplicates -->
+                                <ScrollViewer IsVisible="{Binding ShowDuplicates}">
+                                    <ItemsControl ItemsSource="{Binding Duplicates}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="models:DuplicateGroup">
+                                                <Border Classes="card" Margin="0,0,0,10" Padding="12">
+                                                    <StackPanel Spacing="2">
+                                                        <TextBlock Text="{Binding Key}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                                        <ItemsControl ItemsSource="{Binding Tracks}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="models:TrackRecord">
+                                                                    <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                                            Background="Transparent" Padding="8,4" CornerRadius="6"
+                                                                            Command="{Binding $parent[TabItem].((vm:AnalyzerViewModel)DataContext).OpenCommand}"
+                                                                            CommandParameter="{Binding Path}">
+                                                                        <TextBlock>
+                                                                            <Run Text="{Binding CodecName}" FontWeight="SemiBold"/>
+                                                                            <Run Text="{Binding SampleRate, StringFormat=' {0}Hz · '}"/>
+                                                                            <Run Text="{Binding Path}"/>
+                                                                        </TextBlock>
+                                                                    </Button>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
                                                     </StackPanel>
-                                                    <TextBlock Text="{Binding Status}" Classes="muted"
-                                                               IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                                                </StackPanel>
-                                            </Border>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+
+                                <!-- Similar artists (merge in place) -->
+                                <ScrollViewer IsVisible="{Binding ShowArtists}">
+                                    <ItemsControl ItemsSource="{Binding ArtistGroups}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:ArtistGroupViewModel">
+                                                <Border Classes="card" Margin="0,0,0,10" Padding="12">
+                                                    <StackPanel Spacing="8">
+                                                        <TextBlock Text="{Binding TrackCount, StringFormat='Similar spellings · {0} tracks'}"
+                                                                   Classes="h2"/>
+                                                        <ItemsControl ItemsSource="{Binding Variants}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="models:ArtistVariant">
+                                                                    <Expander Margin="0,1" HorizontalAlignment="Stretch" Padding="8,4">
+                                                                        <Expander.Header>
+                                                                            <TextBlock>
+                                                                                <Run Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                                                <Run Text="{Binding TrackCount, StringFormat='  ({0} files)'}"
+                                                                                     Foreground="{DynamicResource AppTextMuted}"/>
+                                                                            </TextBlock>
+                                                                        </Expander.Header>
+                                                                        <ItemsControl ItemsSource="{Binding Paths}">
+                                                                            <ItemsControl.ItemTemplate>
+                                                                                <DataTemplate x:DataType="sys:String">
+                                                                                    <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                                                            Background="Transparent" Padding="8,2" CornerRadius="6"
+                                                                                            Command="{Binding $parent[TabItem].((vm:AnalyzerViewModel)DataContext).OpenCommand}"
+                                                                                            CommandParameter="{Binding}">
+                                                                                        <TextBlock Text="{Binding}" Classes="caption" TextWrapping="Wrap"/>
+                                                                                    </Button>
+                                                                                </DataTemplate>
+                                                                            </ItemsControl.ItemTemplate>
+                                                                        </ItemsControl>
+                                                                    </Expander>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+
+                                                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                                                            <TextBlock Text="Merge to:" VerticalAlignment="Center" Classes="muted"/>
+                                                            <TextBox Text="{Binding CanonicalName}" Width="280"
+                                                                     IsEnabled="{Binding !IsMerged}"/>
+                                                            <Button Content="Merge" Classes="accent"
+                                                                    Command="{Binding MergeCommand}"/>
+                                                            <ProgressBar IsIndeterminate="True" Width="60" VerticalAlignment="Center"
+                                                                         IsVisible="{Binding IsBusy}"/>
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding Status}" Classes="muted"
+                                                                   IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Grid>
                         </Grid>
                     </TabItem>
 

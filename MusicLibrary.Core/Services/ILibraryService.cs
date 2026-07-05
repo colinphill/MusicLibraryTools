@@ -27,6 +27,12 @@ public interface ILibraryService
     Task<IReadOnlyList<TrackRecord>> GetAllRecordsAsync(CancellationToken ct = default);
 
     /// <summary>
+    /// Cross-reference the configured scan sets (config IndexTargets carry a Set number): flag files
+    /// present in one set but missing (or ambiguous) in another. Empty unless 2+ sets are configured.
+    /// </summary>
+    Task<AnalysisReport> CheckSetsAsync(CancellationToken ct = default);
+
+    /// <summary>
     /// Read one file's full cached metadata straight from the database (structured + known + raw text
     /// + optionally images), or null if the file isn't in the cache. Avoids re-parsing the file.
     /// </summary>

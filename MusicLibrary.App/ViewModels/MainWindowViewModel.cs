@@ -11,7 +11,6 @@ public partial class MainWindowViewModel : ViewModelBase
     public FileInspectorViewModel Inspector { get; }
     public TagEditorViewModel Editor { get; }
     public AnalyzerViewModel Analyzer { get; }
-    public ArtistsViewModel Artists { get; }
     public OrganizeViewModel Organize { get; }
     public ArtworkViewModel Artwork { get; }
     public DetailsGridViewModel Table { get; }
@@ -22,7 +21,6 @@ public partial class MainWindowViewModel : ViewModelBase
         FileInspectorViewModel inspector,
         TagEditorViewModel editor,
         AnalyzerViewModel analyzer,
-        ArtistsViewModel artists,
         OrganizeViewModel organize,
         ArtworkViewModel artwork,
         DetailsGridViewModel table,
@@ -34,7 +32,6 @@ public partial class MainWindowViewModel : ViewModelBase
         Inspector = inspector;
         Editor = editor;
         Analyzer = analyzer;
-        Artists = artists;
         Organize = organize;
         Artwork = artwork;
         Table = table;

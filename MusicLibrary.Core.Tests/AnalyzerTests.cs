@@ -83,6 +83,21 @@ public class AnalyzerTests
     }
 
     [Fact]
+    public void Inconsistencies_FlagsMissingTrackNumberAndTotal()
+    {
+        var records = new[]
+        {
+            Rec("1.flac", "AA", "Album", "One", track: 1, total: 10),
+            Rec("2.flac", "AA", "Album", "Two", track: null, total: null),  // missing both
+        };
+
+        var report = LibraryAnalyzer.Inconsistencies(records);
+
+        Assert.Contains(report.Findings, f => f.Path == "2.flac" && f.Description.Contains("track number"));
+        Assert.Contains(report.Findings, f => f.Path == "2.flac" && f.Description.Contains("total"));
+    }
+
+    [Fact]
     public void SimilarArtists_FlagsNearDuplicateNames()
     {
         var records = new[]

@@ -39,6 +39,48 @@ public class ArtistReconcilerTests
     }
 
     [Fact]
+    public void FindSimilarArtists_ClustersNormalizedVariations()
+    {
+        var records = new[]
+        {
+            Rec("1.flac", "The Beatles"),
+            Rec("2.flac", "Beatles"),
+            Rec("3.flac", "Beatlés"),     // article + diacritic variations
+            Rec("4.flac", "R.E.M."),
+            Rec("5.flac", "REM"),         // punctuation variation
+            Rec("6.flac", "Radiohead"),   // unrelated
+        };
+
+        // threshold 0 disables fuzzy matching, so ONLY the variations check can cluster these.
+        var groups = _reconciler.FindSimilarArtists(records, threshold: 0);
+
+        Assert.Contains(groups, g => g.Variants.Any(v => v.Name == "The Beatles")
+            && g.Variants.Any(v => v.Name == "Beatles")
+            && g.Variants.Any(v => v.Name == "Beatlés"));
+        Assert.Contains(groups, g => g.Variants.Any(v => v.Name == "R.E.M.")
+            && g.Variants.Any(v => v.Name == "REM"));
+        Assert.DoesNotContain(groups, g => g.Variants.Any(v => v.Name == "Radiohead"));
+    }
+
+    [Fact]
+    public void FindSimilarArtists_FuzzyMatchesCanonicalForms()
+    {
+        // The fuzzy pass (checkartists 453-500) runs on the canonical forms: "The Beatles" → "beatles"
+        // is one typo away from "Beetles" → "beetles", so they cluster even though the raw names differ.
+        var records = new[]
+        {
+            Rec("1.flac", "The Beatles"),
+            Rec("2.flac", "Beetles"),
+            Rec("3.flac", "Radiohead"),
+        };
+
+        var group = Assert.Single(_reconciler.FindSimilarArtists(records));   // default threshold 0.2
+        Assert.Equal(2, group.Variants.Count);
+        Assert.Contains(group.Variants, v => v.Name == "The Beatles");
+        Assert.Contains(group.Variants, v => v.Name == "Beetles");
+    }
+
+    [Fact]
     public void FindSimilarArtists_NoFalsePositivesForDistinctNames()
     {
         var records = new[]
