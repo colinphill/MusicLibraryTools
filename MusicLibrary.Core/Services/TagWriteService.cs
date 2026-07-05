@@ -6,19 +6,28 @@ namespace MusicLibrary.Core.Services;
 /// <inheritdoc cref="ITagWriteService"/>
 public sealed class TagWriteService : ITagWriteService
 {
+    private readonly IReindexService? _reindex;
+
+    // The reindex service is optional so this service can be constructed standalone (unit tests).
+    public TagWriteService(IReindexService? reindex = null) => _reindex = reindex;
+
     public Task<BatchWriteResult> ApplyAsync(
         IReadOnlyList<string> paths,
         IReadOnlyList<TagEdit> edits,
         IProgress<int>? progress = null,
         CancellationToken ct = default)
-        => Task.Run(() =>
+        => Task.Run(async () =>
         {
             var results = new List<FileWriteResult>(paths.Count);
             int done = 0;
             foreach (var path in paths)
             {
                 ct.ThrowIfCancellationRequested();
-                results.Add(ApplyToFile(path, edits));
+                var result = ApplyToFile(path, edits);
+                // Keep the cache in sync with what we just wrote to disk.
+                if (result.Outcome == WriteOutcome.Saved && _reindex is not null)
+                    await _reindex.ReindexFileAsync(path, ct);
+                results.Add(result);
                 progress?.Report(++done);
             }
             return new BatchWriteResult(results);

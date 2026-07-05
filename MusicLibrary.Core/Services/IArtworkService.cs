@@ -29,11 +29,4 @@ public interface IArtworkService
 
     /// <summary>Replace the entire embedded-image set (each image carrying its picture type).</summary>
     Task<ArtworkOpResult> SaveImagesAsync(string musicPath, IReadOnlyList<ArtworkInput> images, CancellationToken ct = default);
-
-    /// <summary>
-    /// Read the first embedded image and re-encode it to a small JPEG thumbnail (downscaled to
-    /// maxDimension px), or null if the file has no artwork / can't be read. Used to populate the
-    /// details-grid thumbnail column lazily.
-    /// </summary>
-    Task<byte[]?> GetThumbnailJpegAsync(string musicPath, int maxDimension, CancellationToken ct = default);
 }

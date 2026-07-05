@@ -10,4 +10,10 @@ namespace MusicLibrary.Core.Services;
 public interface IMediaFileService
 {
     Task<OperationResult<MediaFileModel>> LoadAsync(string path, CancellationToken ct = default);
+
+    /// <summary>
+    /// Load a file's metadata, optionally skipping embedded artwork. Artwork is the heaviest part to
+    /// read, so callers that only need the text fields (e.g. the batch tag editor) pass false.
+    /// </summary>
+    Task<OperationResult<MediaFileModel>> LoadAsync(string path, bool includeArtwork, CancellationToken ct = default);
 }

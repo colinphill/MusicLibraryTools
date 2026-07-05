@@ -6,7 +6,7 @@ using MusicLibraryTools;
 namespace MusicLibrary.Core.Services;
 
 /// <inheritdoc cref="ILibraryService"/>
-public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IDisposable
+public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReindexService, IDisposable
 {
     private readonly IAppSettings _settings;
 
@@ -105,6 +105,70 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IDispos
         }
     }
 
+    public async Task<FileDetails?> GetFileDetailsAsync(string path, bool includeArtwork, CancellationToken ct = default)
+    {
+        if (!IsReady)
+            return null;
+        await _gate.WaitAsync(ct);
+        try
+        {
+            var db = GetDatabase();
+            return await Task.Run(() => db.GetFileDetails(path, includeArtwork), ct);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<byte[]?> GetFirstImageAsync(string path, CancellationToken ct = default)
+    {
+        if (!IsReady)
+            return null;
+        await _gate.WaitAsync(ct);
+        try
+        {
+            var db = GetDatabase();
+            return await Task.Run(() => db.GetFirstImageData(path), ct);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task<IReadOnlyList<string>> GetImageSignaturesAsync(IReadOnlyList<string> paths, CancellationToken ct = default)
+    {
+        if (!IsReady || paths.Count == 0)
+            return [];
+        await _gate.WaitAsync(ct);
+        try
+        {
+            var db = GetDatabase();
+            return await Task.Run(() => (IReadOnlyList<string>)db.GetImageSignatures(paths), ct);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task ReindexFileAsync(string path, CancellationToken ct = default)
+    {
+        if (!IsReady)
+            return;
+        await _gate.WaitAsync(ct);
+        try
+        {
+            var db = GetDatabase();
+            await Task.Run(() => db.ReindexFile(path), ct);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     public async Task<IReadOnlyList<PlannedMove>> PreviewMovesAsync(CancellationToken ct = default)
     {
         var config = _settings.Configuration
@@ -175,36 +239,77 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IDispos
         bool deleteNonMusic = config["DeleteNonMusic"].Length != 0;
         bool keepFolderImages = config["KeepFolderImages"].Length != 0;
 
-        return await Task.Run(() =>
+        // Successful (source → destination) pairs, so we can sync the cache to exactly the moves that
+        // happened — even if the operation is cancelled partway.
+        var relocated = new List<(string Source, string Destination)>();
+        try
         {
-            int moved = 0, done = 0;
-            var errors = new List<(string Source, string Error)>();
-
-            foreach (var move in moves)
+            return await Task.Run(() =>
             {
-                ct.ThrowIfCancellationRequested();
-                try
-                {
-                    Directory.CreateDirectory(Path.GetDirectoryName(move.Destination)!);
-                    File.Move(move.Source, move.Destination);
-                    moved++;
-                }
-                catch (Exception ex)
-                {
-                    errors.Add((move.Source, ex.Message));
-                }
-                progress?.Report(++done);
-            }
+                int moved = 0, done = 0;
+                var errors = new List<(string Source, string Error)>();
 
-            // Remove folders emptied by the moves (mirrors OrganizeFiles' cleanup step).
-            foreach (var baseDir in baseDirs)
+                foreach (var move in moves)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    try
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(move.Destination)!);
+                        File.Move(move.Source, move.Destination);
+                        relocated.Add((move.Source, move.Destination));
+                        moved++;
+                    }
+                    catch (Exception ex)
+                    {
+                        errors.Add((move.Source, ex.Message));
+                    }
+                    progress?.Report(++done);
+                }
+
+                // Remove folders emptied by the moves (mirrors OrganizeFiles' cleanup step).
+                foreach (var baseDir in baseDirs)
+                {
+                    try { MetadataExtensions.CleanEmptyMusicFolders(new DirectoryInfo(baseDir), deleteNonMusic, keepFolderImages); }
+                    catch { /* cleanup is best-effort */ }
+                }
+
+                return new OrganizeResult(moved, errors);
+            }, ct);
+        }
+        finally
+        {
+            // Keep the cache in sync with the moves: drop the stale entry at the old path and index the
+            // file at its new path. Runs even on cancel (with its own token) so the cache never lies.
+            await SyncMovesToCacheAsync(relocated);
+        }
+    }
+
+    private async Task SyncMovesToCacheAsync(IReadOnlyList<(string Source, string Destination)> moves)
+    {
+        if (moves.Count == 0 || !IsReady)
+            return;
+
+        await _gate.WaitAsync();
+        try
+        {
+            var db = GetDatabase();
+            await Task.Run(() =>
             {
-                try { MetadataExtensions.CleanEmptyMusicFolders(new DirectoryInfo(baseDir), deleteNonMusic, keepFolderImages); }
-                catch { /* cleanup is best-effort */ }
-            }
-
-            return new OrganizeResult(moved, errors);
-        }, ct);
+                foreach (var (source, destination) in moves)
+                {
+                    try
+                    {
+                        db.RemoveFile(source);
+                        db.ReindexFile(destination);
+                    }
+                    catch { /* one bad file shouldn't abort the cache sync */ }
+                }
+            });
+        }
+        finally
+        {
+            _gate.Release();
+        }
     }
 
     private static (int Length, int Disc) GetLimits(LibraryConfiguration config)

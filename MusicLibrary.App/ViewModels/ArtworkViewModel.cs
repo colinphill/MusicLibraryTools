@@ -19,6 +19,9 @@ public partial class ArtworkSlot : ObservableObject
     [ObservableProperty] private Bitmap? _preview;
     [ObservableProperty] private string? _caption;
 
+    /// <summary>For a multi-selection, how many of the selected files carry this image (else null).</summary>
+    [ObservableProperty] private string? _usage;
+
     public ArtworkSlot(ID3v2Util.APICType type, byte[] data, string mimeType)
     {
         _type = type;
@@ -34,6 +37,9 @@ public partial class ArtworkSlot : ObservableObject
 /// </summary>
 public partial class ArtworkViewModel : ViewModelBase
 {
+    // Comparing artwork loads each file's image bytes, so bound how many we pull for a huge selection.
+    private const int MaxCompareFiles = 60;
+
     private readonly IArtworkService _artwork;
     private readonly IMediaFileService _media;
     private readonly IFileDialogService _dialogs;
@@ -41,10 +47,17 @@ public partial class ArtworkViewModel : ViewModelBase
     // Guards against a slower, superseded target load overwriting a newer selection's gallery.
     private int _generation;
 
+    // The current multi-selection. The gallery is loaded from the first (representative) file, and a
+    // Save writes the whole image set to every target — e.g. re-cover a whole album at once.
+    private IReadOnlyList<string> _targets = [];
+
     [ObservableProperty] private string? _currentPath;
     [ObservableProperty] private bool _supportsWrite;
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string? _statusMessage;
+
+    /// <summary>Non-empty when more than one file is selected; describes the batch scope.</summary>
+    [ObservableProperty] private string? _targetSummary;
 
     /// <summary>Max dimension in px for resize on add/scrub (0 = keep original size).</summary>
     [ObservableProperty] private int _maxDimension = 1000;
@@ -53,8 +66,8 @@ public partial class ArtworkViewModel : ViewModelBase
 
     public IReadOnlyList<ID3v2Util.APICType> PictureTypes { get; } = Enum.GetValues<ID3v2Util.APICType>();
 
-    /// <summary>Raised after the embedded artwork changes so other panes can refresh.</summary>
-    public event Action? ArtworkChanged;
+    /// <summary>Raised after the embedded artwork changes, with the affected files, so other panes can refresh.</summary>
+    public event Action<IReadOnlyList<string>>? ArtworkChanged;
 
     private static readonly IReadOnlyList<FilePickerFilter> ImageFilters =
     [
@@ -69,36 +82,85 @@ public partial class ArtworkViewModel : ViewModelBase
         _dialogs = dialogs;
     }
 
-    public async Task SetTargetAsync(string? path)
+    /// <summary>Point the artwork tab at one or more files; the gallery compares/aggregates their images.</summary>
+    public async Task SetTargetsAsync(IReadOnlyList<string> paths)
     {
         var gen = ++_generation;
-        CurrentPath = path;
-        SupportsWrite = path is not null && _artwork.SupportsWrite(path);
+        _targets = paths;
+        CurrentPath = paths.Count > 0 ? paths[0] : null;
+        // Only offer writing when every selected file's format supports it (so a batch Save is all-or-nothing).
+        SupportsWrite = paths.Count > 0 && paths.All(_artwork.SupportsWrite);
         StatusMessage = null;
         NotifyCommands();
         await ReloadAsync(gen);
     }
 
+    // Loads the artwork across the selection: the gallery holds the DISTINCT images (deduped by hash),
+    // each badged with how many selected files carry it, plus an aggregate uniform/mixed summary. A
+    // Save writes the shown set to every selected file.
     private async Task ReloadAsync(int? gen = null)
     {
         foreach (var slot in Images)
             slot.Preview?.Dispose();
         Images.Clear();
+        TargetSummary = null;
 
-        if (CurrentPath is null)
+        if (_targets.Count == 0)
             return;
 
-        var result = await _media.LoadAsync(CurrentPath);
-        if (gen is int g && g != _generation)
-            return;   // a newer selection has taken over
-        if (!result.Success)
-            return;
+        var total = _targets.Count;
+        var sample = total > MaxCompareFiles ? _targets.Take(MaxCompareFiles).ToList() : _targets;
 
-        foreach (var art in result.Value!.Artwork)
+        var distinct = new Dictionary<string, (ArtworkModel Image, int Count)>();
+        var order = new List<string>();
+        var perFileSets = new List<HashSet<string>>();
+        int loaded = 0;
+
+        foreach (var path in sample)
         {
-            var slot = new ArtworkSlot(MapType(art.Category), art.Data, art.ImageType ?? "image/jpeg");
-            SetPreview(slot, art.Width, art.Height, art.Size);
+            var result = await _media.LoadAsync(path, includeArtwork: true);
+            if (gen is int g && g != _generation)
+                return;   // a newer selection has taken over
+            if (!result.Success)
+                continue;
+            loaded++;
+
+            var set = new HashSet<string>();
+            foreach (var art in result.Value!.Artwork)
+            {
+                var key = string.IsNullOrEmpty(art.Hash) ? Guid.NewGuid().ToString("N") : art.Hash;
+                if (set.Add(key) && !distinct.ContainsKey(key))
+                {
+                    distinct[key] = (art, 0);
+                    order.Add(key);
+                }
+            }
+            // Count each distinct image once per file that carries it.
+            foreach (var key in set)
+            {
+                var (image, count) = distinct[key];
+                distinct[key] = (image, count + 1);
+            }
+            perFileSets.Add(set);
+        }
+
+        foreach (var key in order)
+        {
+            var (image, count) = distinct[key];
+            var slot = new ArtworkSlot(MapType(image.Category), image.Data, image.ImageType ?? "image/jpeg");
+            SetPreview(slot, image.Width, image.Height, image.Size);
+            if (total > 1)
+                slot.Usage = $"in {count} of {loaded} file(s)";
             Images.Add(slot);
+        }
+
+        if (total > 1)
+        {
+            bool uniform = perFileSets.Count > 0 && perFileSets.All(s => s.SetEquals(perFileSets[0]));
+            var scope = total > MaxCompareFiles ? $"first {loaded:N0} of {total:N0} files" : $"{total:N0} files";
+            TargetSummary = uniform
+                ? $"{scope} selected — all share this artwork. Save writes it to every file."
+                : $"{scope} selected — {distinct.Count} different image(s) across them (badged below). Save sets every file to the images shown.";
         }
     }
 
@@ -179,12 +241,29 @@ public partial class ArtworkViewModel : ViewModelBase
         try
         {
             var inputs = Images.Select(s => new ArtworkInput(s.Type, s.MimeType, s.Data)).ToList();
-            var result = await _artwork.SaveImagesAsync(CurrentPath!, inputs);
-            StatusMessage = result.Success ? $"Saved {inputs.Count} image(s)." : $"Failed: {result.Error}";
-            if (result.Success)
+            var targets = _targets.Count > 0 ? _targets : (CurrentPath is null ? [] : new[] { CurrentPath });
+
+            int saved = 0;
+            string? firstError = null;
+            foreach (var path in targets)
+            {
+                var result = await _artwork.SaveImagesAsync(path, inputs);
+                if (result.Success)
+                    saved++;
+                else
+                    firstError ??= result.Error;
+            }
+
+            StatusMessage = saved == targets.Count
+                ? (targets.Count > 1
+                    ? $"Saved {inputs.Count} image(s) to {saved:N0} files."
+                    : $"Saved {inputs.Count} image(s).")
+                : $"Saved {saved:N0}/{targets.Count:N0} files. {firstError}";
+
+            if (saved > 0)
             {
                 await ReloadAsync();
-                ArtworkChanged?.Invoke();
+                ArtworkChanged?.Invoke(targets.ToList());
             }
         }
         finally

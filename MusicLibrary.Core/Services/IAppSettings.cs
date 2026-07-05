@@ -23,6 +23,12 @@ public interface IAppSettings
     /// <summary>The last-used config path from a previous session, if any and still present.</summary>
     string? GetRememberedConfigPath();
 
+    /// <summary>Recently loaded config paths, most-recent first (may include ones no longer on disk).</summary>
+    IReadOnlyList<string> RecentConfigPaths { get; }
+
+    /// <summary>Forget the recent-configuration history.</summary>
+    void ClearRecentConfigs();
+
     /// <summary>Read a persisted UI preference by key (e.g. the details-grid column layout), or null.</summary>
     string? GetPreference(string key);
 

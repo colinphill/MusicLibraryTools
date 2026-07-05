@@ -113,7 +113,7 @@ public partial class TagEditorViewModel : ViewModelBase
             foreach (var path in sample)
             {
                 ct.ThrowIfCancellationRequested();
-                var result = await _media.LoadAsync(path, ct);
+                var result = await _media.LoadAsync(path, includeArtwork: false, ct);
                 if (result.Success)
                     maps.Add(BuildMap(result.Value!));
             }

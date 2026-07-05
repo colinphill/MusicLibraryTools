@@ -98,7 +98,7 @@ public partial class FieldsDialogViewModel : ViewModelBase
             var maps = new List<Dictionary<TagFields, string>>();
             foreach (var path in _paths)
             {
-                var result = await _media.LoadAsync(path);
+                var result = await _media.LoadAsync(path, includeArtwork: false);
                 if (result.Success)
                 {
                     var map = new Dictionary<TagFields, string>();

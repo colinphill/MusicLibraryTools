@@ -28,6 +28,9 @@ public partial class OrganizeViewModel : ViewModelBase
 
     public ObservableCollection<PlannedMove> Moves { get; } = [];
 
+    /// <summary>Raised after moves are applied (the cache is already synced) so the grid can refresh.</summary>
+    public event Action? MovesApplied;
+
     public OrganizeViewModel(ILibraryOrganizer organizer, IAppSettings settings)
     {
         _organizer = organizer;
@@ -88,16 +91,18 @@ public partial class OrganizeViewModel : ViewModelBase
         {
             var result = await _organizer.ApplyMovesAsync([.. Moves], progress, _cts.Token);
             StatusText = result.FailedCount == 0
-                ? $"Moved {result.Moved:N0} files. Re-index to refresh the browser."
-                : $"Moved {result.Moved:N0}, {result.FailedCount:N0} failed. Re-index to refresh.";
+                ? $"Moved {result.Moved:N0} files. Cache updated."
+                : $"Moved {result.Moved:N0}, {result.FailedCount:N0} failed. Cache updated.";
             Moves.Clear();
             HasPreview = false;
+            MovesApplied?.Invoke();
         }
         catch (OperationCanceledException)
         {
-            StatusText = $"Cancelled — some files may have already moved. Re-index to refresh.";
+            StatusText = "Cancelled — files already moved were synced to the cache.";
             Moves.Clear();
             HasPreview = false;
+            MovesApplied?.Invoke();
         }
         catch (Exception ex)
         {

@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:MusicLibrary.App.ViewModels"
         xmlns:models="using:MusicLibrary.Core.Models"
+        xmlns:sys="using:System"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="820"
@@ -42,11 +43,29 @@
 
                 <StackPanel Grid.Column="3" Classes="toolbarrow">
                     <TextBlock Text="Config" Classes="h2" VerticalAlignment="Center"/>
-                    <TextBox Text="{Binding Settings.ConfigPath, Mode=OneWay}" IsReadOnly="True"
-                             Width="240" PlaceholderText="No configuration loaded"/>
+                    <ComboBox Width="180" PlaceholderText="No configuration loaded"
+                              ItemsSource="{Binding Settings.RecentConfigs}"
+                              SelectedItem="{Binding Settings.SelectedRecent}"
+                              ToolTip.Tip="{Binding Settings.ConfigPath}">
+                        <!-- Collapsed box: just the file name. -->
+                        <ComboBox.SelectionBoxItemTemplate>
+                            <DataTemplate x:DataType="sys:String">
+                                <TextBlock Text="{Binding Converter={x:Static vm:PathToFileNameConverter.Instance}}"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </DataTemplate>
+                        </ComboBox.SelectionBoxItemTemplate>
+                        <!-- Dropdown: full path (grows the popup to fit). -->
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="sys:String">
+                                <TextBlock Text="{Binding}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                     <Button Content="Browse…" Command="{Binding Settings.BrowseCommand}"/>
                     <Button Content="New…" Command="{Binding Settings.NewConfigCommand}"/>
                     <Button Content="Edit…" Command="{Binding Settings.EditConfigCommand}"/>
+                    <Button Content="Clear recent" Command="{Binding Settings.ClearRecentCommand}"
+                            ToolTip.Tip="Forget the recent-configuration history"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -136,29 +155,39 @@
                         </Grid>
                     </TabItem>
 
-                    <!-- Read-only details of the focused file -->
+                    <!-- Read-only details of the focused file (representative when multi-selected) -->
                     <TabItem Header="Details" DataContext="{Binding Inspector}" x:DataType="vm:FileInspectorViewModel">
-                        <Grid Margin="2,12,2,2">
-                            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                        <Grid Margin="2,12,2,2" RowDefinitions="Auto,*">
+                            <TextBlock Grid.Row="0" Text="{Binding MultiSelectionNote}" Classes="muted" Margin="0,0,0,8"
+                                       IsVisible="{Binding MultiSelectionNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                            <TextBlock Grid.Row="1" Text="{Binding ErrorMessage}" Foreground="{DynamicResource SystemFillColorCriticalBrush}"
                                        TextWrapping="Wrap"
                                        IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
-                            <Grid ColumnDefinitions="300,*"
-                                  IsVisible="{Binding File, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <Grid Grid.Row="1" ColumnDefinitions="300,*"
+                                  IsVisible="{Binding HasContent}">
                                 <StackPanel Grid.Column="0" Spacing="10" Margin="0,0,16,0">
                                     <Border Width="280" Height="280" HorizontalAlignment="Left" CornerRadius="10"
                                             ClipToBounds="True"
                                             Background="{DynamicResource AppInsetBg}">
-                                        <Image Source="{Binding Artwork}" Stretch="Uniform"/>
+                                        <Panel>
+                                            <Image Source="{Binding Artwork}" Stretch="Uniform"
+                                                   IsVisible="{Binding !ArtworkIsMixed}"/>
+                                            <StackPanel IsVisible="{Binding ArtworkIsMixed}" Spacing="8"
+                                                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                <TextBlock Text="🖼" FontSize="46" Opacity="0.55" HorizontalAlignment="Center"/>
+                                                <TextBlock Text="Artwork differs" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource AccentBrush}" HorizontalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Panel>
                                     </Border>
                                     <TextBlock Text="{Binding ArtworkCaption}" Classes="caption"/>
-                                    <StackPanel Spacing="3" Margin="0,4,0,0" DataContext="{Binding File}"
-                                                x:DataType="models:MediaFileModel">
-                                        <TextBlock Text="{Binding Title}" FontSize="17" FontWeight="Bold" TextWrapping="Wrap"/>
-                                        <TextBlock Text="{Binding Artist}" TextWrapping="Wrap"/>
-                                        <TextBlock Text="{Binding Album}" FontStyle="Italic" TextWrapping="Wrap" Classes="muted"/>
-                                        <TextBlock Text="{Binding TagType, StringFormat='Tag: {0}'}" Classes="caption" Margin="0,6,0,0"/>
-                                        <TextBlock Text="{Binding Codec.CodecName, StringFormat='Codec: {0}'}" Classes="caption"/>
+                                    <StackPanel Spacing="3" Margin="0,4,0,0">
+                                        <TextBlock Text="{Binding HeaderTitle}" FontSize="17" FontWeight="Bold" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding HeaderArtist}" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding HeaderAlbum}" FontStyle="Italic" TextWrapping="Wrap" Classes="muted"/>
+                                        <TextBlock Text="{Binding HeaderInfo}" Classes="caption" Margin="0,6,0,0"/>
                                     </StackPanel>
                                 </StackPanel>
 
@@ -167,10 +196,11 @@
                                         <ScrollViewer Margin="0,8,0,0">
                                             <ItemsControl ItemsSource="{Binding KnownFields}">
                                                 <ItemsControl.ItemTemplate>
-                                                    <DataTemplate x:DataType="models:TagFieldValue">
+                                                    <DataTemplate x:DataType="vm:AggregatedField">
                                                         <Grid ColumnDefinitions="220,*" Margin="0,3">
-                                                            <TextBlock Grid.Column="0" Text="{Binding Field}" Classes="muted"/>
-                                                            <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap"/>
+                                                            <TextBlock Grid.Column="0" Text="{Binding Name}" Classes="muted"/>
+                                                            <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap"
+                                                                       FontStyle="{Binding IsMixed, Converter={x:Static vm:MixedFontStyleConverter.Instance}}"/>
                                                         </Grid>
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
@@ -181,10 +211,11 @@
                                         <ScrollViewer Margin="0,8,0,0">
                                             <ItemsControl ItemsSource="{Binding TextFields}">
                                                 <ItemsControl.ItemTemplate>
-                                                    <DataTemplate x:DataType="models:TextField">
+                                                    <DataTemplate x:DataType="vm:AggregatedField">
                                                         <Grid ColumnDefinitions="220,*" Margin="0,3">
-                                                            <TextBlock Grid.Column="0" Text="{Binding Key}" Classes="muted"/>
-                                                            <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap"/>
+                                                            <TextBlock Grid.Column="0" Text="{Binding Name}" Classes="muted"/>
+                                                            <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap"
+                                                                       FontStyle="{Binding IsMixed, Converter={x:Static vm:MixedFontStyleConverter.Instance}}"/>
                                                         </Grid>
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
@@ -210,7 +241,10 @@
                                              IsVisible="{Binding IsBusy}"/>
                             </StackPanel>
 
-                            <StackPanel Grid.Row="1" Margin="0,0,0,8">
+                            <StackPanel Grid.Row="1" Margin="0,0,0,8" Spacing="2">
+                                <TextBlock Text="{Binding TargetSummary}" FontWeight="SemiBold"
+                                           Foreground="{DynamicResource AccentBrush}"
+                                           IsVisible="{Binding TargetSummary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                 <TextBlock Text="This file's format doesn't support artwork writing."
                                            Foreground="{DynamicResource SystemFillColorCriticalBrush}"
                                            IsVisible="{Binding !SupportsWrite}"/>
@@ -235,6 +269,9 @@
                                                     <ComboBox HorizontalAlignment="Stretch"
                                                               ItemsSource="{Binding $parent[ItemsControl].((vm:ArtworkViewModel)DataContext).PictureTypes}"
                                                               SelectedItem="{Binding Type}"/>
+                                                    <TextBlock Text="{Binding Usage}" FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource AccentBrush}"
+                                                               IsVisible="{Binding Usage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                                     <TextBlock Text="{Binding Caption}" TextWrapping="Wrap" Classes="caption"/>
                                                     <Button Content="Remove" HorizontalAlignment="Stretch"
                                                             Command="{Binding $parent[ItemsControl].((vm:ArtworkViewModel)DataContext).RemoveCommand}"

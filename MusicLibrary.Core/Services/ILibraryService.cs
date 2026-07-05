@@ -25,4 +25,19 @@ public interface ILibraryService
 
     /// <summary>Flatten the current cache into per-file records for the analyzers/duplicate finder.</summary>
     Task<IReadOnlyList<TrackRecord>> GetAllRecordsAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Read one file's full cached metadata straight from the database (structured + known + raw text
+    /// + optionally images), or null if the file isn't in the cache. Avoids re-parsing the file.
+    /// </summary>
+    Task<FileDetails?> GetFileDetailsAsync(string path, bool includeArtwork, CancellationToken ct = default);
+
+    /// <summary>The bytes of a file's first embedded image from the cache (for thumbnails), or null.</summary>
+    Task<byte[]?> GetFirstImageAsync(string path, CancellationToken ct = default);
+
+    /// <summary>
+    /// A per-path signature of each file's embedded-image hashes (order-independent; "" for none),
+    /// for cheaply detecting whether a selection's artwork is uniform. Same order as the input.
+    /// </summary>
+    Task<IReadOnlyList<string>> GetImageSignaturesAsync(IReadOnlyList<string> paths, CancellationToken ct = default);
 }

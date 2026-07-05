@@ -1,7 +1,11 @@
+using MusicLibrary.App.Services;
+
 namespace MusicLibrary.App.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase
 {
+    private readonly IThumbnailProvider _thumbnails;
+
     public SettingsViewModel Settings { get; }
     public LibraryViewModel Library { get; }
     public FileInspectorViewModel Inspector { get; }
@@ -21,8 +25,10 @@ public partial class MainWindowViewModel : ViewModelBase
         ArtistsViewModel artists,
         OrganizeViewModel organize,
         ArtworkViewModel artwork,
-        DetailsGridViewModel table)
+        DetailsGridViewModel table,
+        IThumbnailProvider thumbnails)
     {
+        _thumbnails = thumbnails;
         Settings = settings;
         Library = library;
         Inspector = inspector;
@@ -38,11 +44,14 @@ public partial class MainWindowViewModel : ViewModelBase
         Analyzer.OpenRequested += Open;
         // Re-scan finished → refresh the grid so new/changed files show up.
         Library.IndexCompleted += () => _ = Table.ReloadAsync();
-        // Editing artwork should refresh the read-only details view.
-        Artwork.ArtworkChanged += async () =>
+        // Organize already re-syncs the cache to the moves; refresh the grid to show the new locations.
+        Organize.MovesApplied += () => _ = Table.ReloadAsync();
+        // Editing artwork (possibly across a whole album) refreshes the details view + grid thumbnails.
+        Artwork.ArtworkChanged += async affected =>
         {
-            if (Inspector.FilePath is { } p)
-                await Inspector.LoadFromPathAsync(p);
+            foreach (var p in affected)
+                _thumbnails.Invalidate(p);
+            await Inspector.ReloadAsync();
         };
     }
 
@@ -66,16 +75,14 @@ public partial class MainWindowViewModel : ViewModelBase
     private async Task ApplySelection(IReadOnlyList<string> paths)
     {
         var gen = ++_selectionGen;
-        var focused = paths.Count > 0 ? paths[0] : null;
 
         await Editor.SetTargetsAsync(paths);
         if (gen != _selectionGen)
             return;
-        if (focused is not null)
-            await Inspector.LoadFromPathAsync(focused);
+        await Inspector.LoadFromPathsAsync(paths);
         if (gen != _selectionGen)
             return;
-        await Artwork.SetTargetAsync(focused);
+        await Artwork.SetTargetsAsync(paths);
     }
 
     /// <summary>Called once the UI is up so we can restore the last-used configuration.</summary>

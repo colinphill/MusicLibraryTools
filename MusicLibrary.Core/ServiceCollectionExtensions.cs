@@ -16,6 +16,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<LibraryService>();
         services.AddSingleton<ILibraryService>(sp => sp.GetRequiredService<LibraryService>());
         services.AddSingleton<ILibraryOrganizer>(sp => sp.GetRequiredService<LibraryService>());
+        services.AddSingleton<IReindexService>(sp => sp.GetRequiredService<LibraryService>());
         return services;
     }
 }

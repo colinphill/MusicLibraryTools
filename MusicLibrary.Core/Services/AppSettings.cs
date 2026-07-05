@@ -6,13 +6,16 @@ namespace MusicLibrary.Core.Services;
 /// <inheritdoc cref="IAppSettings"/>
 public sealed class AppSettings : IAppSettings
 {
-    private sealed record PersistedState(string? ConfigPath, Dictionary<string, string>? Preferences);
+    private const int MaxRecentConfigs = 12;
+
+    private sealed record PersistedState(string? ConfigPath, Dictionary<string, string>? Preferences, List<string>? RecentConfigs);
 
     private static readonly string StateFile = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "MusicLibraryTools", "app-settings.json");
 
     private readonly Dictionary<string, string> _preferences;
+    private readonly List<string> _recentConfigs;
     private string? _rememberedConfigPath;
 
     public AppSettings()
@@ -20,6 +23,7 @@ public sealed class AppSettings : IAppSettings
         var state = TryLoad();
         _rememberedConfigPath = state?.ConfigPath;
         _preferences = state?.Preferences ?? new();
+        _recentConfigs = state?.RecentConfigs ?? new();
     }
 
     public string? ConfigPath { get; private set; }
@@ -34,12 +38,30 @@ public sealed class AppSettings : IAppSettings
         Configuration = new LibraryConfiguration(path);
         ConfigPath = path;
         _rememberedConfigPath = path;
+        AddRecent(path);
         Persist();
         ConfigurationChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public string? GetRememberedConfigPath()
         => _rememberedConfigPath is not null && File.Exists(_rememberedConfigPath) ? _rememberedConfigPath : null;
+
+    public IReadOnlyList<string> RecentConfigPaths => _recentConfigs;
+
+    public void ClearRecentConfigs()
+    {
+        _recentConfigs.Clear();
+        Persist();
+    }
+
+    // Move the path to the most-recent slot (case-insensitive de-dupe) and cap the list.
+    private void AddRecent(string path)
+    {
+        _recentConfigs.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+        _recentConfigs.Insert(0, path);
+        if (_recentConfigs.Count > MaxRecentConfigs)
+            _recentConfigs.RemoveRange(MaxRecentConfigs, _recentConfigs.Count - MaxRecentConfigs);
+    }
 
     public string? GetPreference(string key)
         => _preferences.TryGetValue(key, out var value) ? value : null;
@@ -72,7 +94,7 @@ public sealed class AppSettings : IAppSettings
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(StateFile)!);
-            File.WriteAllText(StateFile, JsonSerializer.Serialize(new PersistedState(_rememberedConfigPath, _preferences)));
+            File.WriteAllText(StateFile, JsonSerializer.Serialize(new PersistedState(_rememberedConfigPath, _preferences, _recentConfigs)));
         }
         catch
         {

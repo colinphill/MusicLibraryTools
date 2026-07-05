@@ -9,21 +9,23 @@ namespace MusicLibrary.Core.Services;
 /// <inheritdoc cref="IArtworkService"/>
 public sealed class ArtworkService : IArtworkService
 {
-    public bool SupportsWrite(string musicPath)
-    {
-        try
-        {
-            var file = MediaFile.GetFile(musicPath);
-            return file is IArtworkWriter || file.Tags.FirstOrDefault() is IArtworkWriter;
-        }
-        catch
-        {
-            return false;
-        }
-    }
+    private readonly IReindexService? _reindex;
 
-    public Task<ArtworkOpResult> SetCoverFromFileAsync(string musicPath, string imagePath, int maxDimension = 0, CancellationToken ct = default)
-        => Task.Run(() =>
+    // The reindex service is optional so this service can be constructed standalone (unit tests).
+    public ArtworkService(IReindexService? reindex = null) => _reindex = reindex;
+
+    // Every audio format the toolkit tags can carry embedded artwork, so writability is decided by
+    // extension — no need to open/parse the file just to answer.
+    private static readonly HashSet<string> WritableExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".mp3", ".dsf", ".flac", ".ogg", ".m4a", ".mp4", ".m4p", ".m4r", ".wv",
+    };
+
+    public bool SupportsWrite(string musicPath) => WritableExtensions.Contains(Path.GetExtension(musicPath));
+
+    public async Task<ArtworkOpResult> SetCoverFromFileAsync(string musicPath, string imagePath, int maxDimension = 0, CancellationToken ct = default)
+    {
+        var result = await Task.Run(() =>
         {
             try
             {
@@ -36,9 +38,13 @@ public sealed class ArtworkService : IArtworkService
                 return ArtworkOpResult.Fail(ex.Message);
             }
         }, ct);
+        await ReindexIfSaved(result, musicPath, ct);
+        return result;
+    }
 
-    public Task<ArtworkOpResult> ScrubAsync(string musicPath, int maxDimension, int quality = 90, CancellationToken ct = default)
-        => Task.Run(() =>
+    public async Task<ArtworkOpResult> ScrubAsync(string musicPath, int maxDimension, int quality = 90, CancellationToken ct = default)
+    {
+        var result = await Task.Run(() =>
         {
             try
             {
@@ -55,9 +61,13 @@ public sealed class ArtworkService : IArtworkService
                 return ArtworkOpResult.Fail(ex.Message);
             }
         }, ct);
+        await ReindexIfSaved(result, musicPath, ct);
+        return result;
+    }
 
-    public Task<ArtworkOpResult> RemoveAsync(string musicPath, CancellationToken ct = default)
-        => Task.Run(() =>
+    public async Task<ArtworkOpResult> RemoveAsync(string musicPath, CancellationToken ct = default)
+    {
+        var result = await Task.Run(() =>
         {
             try
             {
@@ -73,6 +83,9 @@ public sealed class ArtworkService : IArtworkService
                 return ArtworkOpResult.Fail(ex.Message);
             }
         }, ct);
+        await ReindexIfSaved(result, musicPath, ct);
+        return result;
+    }
 
     public Task<PreparedImage?> PrepareFromFileAsync(string imagePath, int maxDimension = 0, CancellationToken ct = default)
         => Task.Run<PreparedImage?>(() =>
@@ -96,8 +109,9 @@ public sealed class ArtworkService : IArtworkService
             catch { return null; }
         }, ct);
 
-    public Task<ArtworkOpResult> SaveImagesAsync(string musicPath, IReadOnlyList<ArtworkInput> images, CancellationToken ct = default)
-        => Task.Run(() =>
+    public async Task<ArtworkOpResult> SaveImagesAsync(string musicPath, IReadOnlyList<ArtworkInput> images, CancellationToken ct = default)
+    {
+        var result = await Task.Run(() =>
         {
             try
             {
@@ -114,25 +128,16 @@ public sealed class ArtworkService : IArtworkService
                 return ArtworkOpResult.Fail(ex.Message);
             }
         }, ct);
+        await ReindexIfSaved(result, musicPath, ct);
+        return result;
+    }
 
-    public Task<byte[]?> GetThumbnailJpegAsync(string musicPath, int maxDimension, CancellationToken ct = default)
-        => Task.Run<byte[]?>(() =>
-        {
-            try
-            {
-                var file = MediaFile.GetFile(musicPath);
-                var current = file.Tags.FirstOrDefault()?.GetImageMetadata().FirstOrDefault();
-                if (current is null || current.Data.Length == 0)
-                    return null;
-
-                var (jpeg, _, _) = Encode(current.Data, maxDimension);
-                return jpeg;
-            }
-            catch
-            {
-                return null;
-            }
-        }, ct);
+    // Keep the cache in sync with what we just wrote to disk.
+    private async Task ReindexIfSaved(ArtworkOpResult result, string musicPath, CancellationToken ct)
+    {
+        if (result.Success && _reindex is not null)
+            await _reindex.ReindexFileAsync(musicPath, ct);
+    }
 
     private static ArtworkOpResult ApplyCover(string musicPath, byte[] jpeg, int w, int h)
     {

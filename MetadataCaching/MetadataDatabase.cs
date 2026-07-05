@@ -176,6 +176,8 @@ namespace MetadataCaching
             "CREATE TABLE MetadataKeys (ID BIGINT IDENTITY PRIMARY KEY, \"Key\" NVARCHAR(512) UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE Metadata (ID BIGINT IDENTITY PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, KeyID BIGINT REFERENCES MetadataKeys (ID) NOT NULL, Value NVARCHAR(MAX) NOT NULL);\r\n" +
             "CREATE TABLE ImageMetadata (ID BIGINT IDENTITY PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, ImageID BIGINT REFERENCES Images (ID) NOT NULL, Description NVARCHAR(MAX) NOT NULL, Category NVARCHAR(MAX) NOT NULL);\r\n" +
+            "CREATE TABLE KnownMetadata (ID BIGINT IDENTITY PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, Field NVARCHAR(128) NOT NULL, Value NVARCHAR(MAX) NOT NULL);\r\n" +
+            "CREATE INDEX KnownMetadataFileIDIndex ON KnownMetadata (FileID ASC);\r\n" +
             "CREATE INDEX AlbumsAlbumArtistIDIndex ON Albums (AlbumArtistID ASC);\r\n" +
             "CREATE INDEX AlbumsScanSetIDIndex ON Albums (ScanSetID ASC);\r\n" +
             "CREATE INDEX ImageMetadataFileIDIndex ON ImageMetadata (FileID ASC);\r\n" +
@@ -284,6 +286,15 @@ namespace MetadataCaching
             using var pcomm = res.conn_.CreateCommand();
             pcomm.CommandText = "PRAGMA foreign_keys = on;\r\nPRAGMA journal_mode = WAL;\r\npragma synchronous = normal;\r\n";
             pcomm.ExecuteNonQuery();
+
+            // Migration (safe on both new and existing DBs): the KnownMetadata table stores the
+            // normalized GetKnownMetadata() (TagFields) per file so the app can read the strongly-typed
+            // known fields straight from the cache instead of re-parsing the file.
+            using var mcomm = res.conn_.CreateCommand();
+            mcomm.CommandText =
+                "CREATE TABLE IF NOT EXISTS KnownMetadata (ID INTEGER PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, Field TEXT NOT NULL, Value TEXT NOT NULL);\r\n" +
+                "CREATE INDEX IF NOT EXISTS KnownMetadataFileIDIndex ON KnownMetadata (FileID ASC);\r\n";
+            mcomm.ExecuteNonQuery();
 
             return res;
         }
@@ -639,11 +650,11 @@ namespace MetadataCaching
             {
                 using DbCommand delcomm = trans.CreateCommand(), filecomm = trans.CreateCommand(), metacomm = trans.CreateCommand(), imagecomm = trans.CreateCommand(),
                     keycomm = trans.CreateCommand(), artistcomm = trans.CreateCommand(), albumartistcomm = trans.CreateCommand(), albumcomm = trans.CreateCommand(),
-                    trackcomm = trans.CreateCommand(), imagemetacomm = trans.CreateCommand(), metabatchcomm = trans.CreateCommand();
+                    trackcomm = trans.CreateCommand(), imagemetacomm = trans.CreateCommand(), metabatchcomm = trans.CreateCommand(), knownmetacomm = trans.CreateCommand();
 
                 // After a batch commit, every command bound to the old transaction must be
                 // re-pointed at the new one.
-                DbCommand[] batchcommands = { delcomm, filecomm, metacomm, imagecomm, keycomm, artistcomm, albumartistcomm, albumcomm, trackcomm, imagemetacomm, metabatchcomm };
+                DbCommand[] batchcommands = { delcomm, filecomm, metacomm, imagecomm, keycomm, artistcomm, albumartistcomm, albumcomm, trackcomm, imagemetacomm, metabatchcomm, knownmetacomm };
 
                     artistcomm.CommandText = "INSERT INTO Artists (Name) VALUES (@Name);\r\n" + lastidsql_;
                     var artistparam = artistcomm.Parameters.Add("@Name", DbType.String);
@@ -674,6 +685,7 @@ namespace MetadataCaching
                     metadatafields.Columns.Add("Value", typeof(string));
 
                     delcomm.CommandText = "DELETE FROM Metadata WHERE FileID = @ID;\r\n" +
+                        "DELETE FROM KnownMetadata WHERE FileID = @ID;\r\n" +
                         "DELETE FROM ImageMetadata WHERE FileID = @ID;\r\n" +
                         "DELETE FROM Files WHERE ID = @ID;\r\n" +
                         "DELETE FROM Tracks WHERE ID = @ID";
@@ -716,6 +728,11 @@ namespace MetadataCaching
                     var imageidparam = imagemetacomm.Parameters.Add("@ImageID", DbType.Int64);
                     var descriptionparam = imagemetacomm.Parameters.Add("@Description", DbType.String);
                     var categoryparam = imagemetacomm.Parameters.Add("@Category", DbType.String);
+
+                    knownmetacomm.CommandText = "INSERT INTO KnownMetadata (FileID, Field, Value) VALUES (@FileID, @Field, @Value)";
+                    var knownfileidparam = knownmetacomm.Parameters.Add("@FileID", DbType.Int64);
+                    var knownfieldparam = knownmetacomm.Parameters.Add("@Field", DbType.String);
+                    var knownvalueparam = knownmetacomm.Parameters.Add("@Value", DbType.String);
 
                     imagecomm.CommandText = "INSERT INTO Images (Hash, ImageType, Width, Height, Size, Data) VALUES (@Hash, @ImageType, @Width, @Height, @Size, @Data);\r\n" + lastidsql_;
                     var imagehashparam = imagecomm.Parameters.Add("@Hash", DbType.String);
@@ -881,6 +898,16 @@ namespace MetadataCaching
                         if (metabuffer.Count >= 4000)
                             FlushMetadata();
 
+                        // Normalized known fields (TagFields), so the app can read strongly-typed
+                        // metadata straight from the cache without re-parsing the file.
+                        knownfileidparam.Value = fileid;
+                        foreach (var kv in mp.GetKnownMetadata())
+                        {
+                            knownfieldparam.Value = kv.Key.ToString();
+                            knownvalueparam.Value = kv.Value ?? "";
+                            knownmetacomm.ExecuteNonQuery();
+                        }
+
                         foreach (var image in mp.GetImageMetadata())
                         {
                             string hash = image.Hash;
@@ -979,10 +1006,425 @@ namespace MetadataCaching
             return (added, modified, removed, unchanged);
         }
 
+        // ---- Single-file read/write API (used by the GUI to read tags/artwork from the cache instead
+        // of re-parsing files, and to re-index a single file immediately after it is edited) ----
+
+        private List<(string Path, long ID)> LoadScanSets()
+        {
+            var sets = new List<(string Path, long ID)>();
+            using var cmd = conn_.CreateCommand();
+            cmd.CommandText = "SELECT Path, ID FROM ScanSets";
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+                sets.Add((reader.GetString(0), reader.GetInt64(1)));
+            return sets;
+        }
+
+        // Split a full path into (scan set, album-relative directory, filename), matching how the
+        // indexer stores Files.Path (filename) and Albums.Path (directory relative to the set root).
+        // Returns SetId = -1 when the path isn't under any known scan set.
+        private (long SetId, string AlbumPath, string FileName) DecomposePath(string fullPath)
+        {
+            string bestRoot = null;
+            long bestId = -1;
+            foreach (var s in LoadScanSets())
+            {
+                var root = s.Path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                if (fullPath.Length > root.Length + 1 &&
+                    fullPath.StartsWith(root, StringComparison.InvariantCultureIgnoreCase) &&
+                    (fullPath[root.Length] == Path.DirectorySeparatorChar || fullPath[root.Length] == Path.AltDirectorySeparatorChar) &&
+                    root.Length > (bestRoot?.Length ?? -1))
+                {
+                    bestRoot = root;
+                    bestId = s.ID;
+                }
+            }
+            if (bestRoot is null)
+                return (-1, null, null);
+
+            var rel = fullPath.Substring(bestRoot.Length + 1);
+            return (bestId, Path.GetDirectoryName(rel) ?? "", Path.GetFileName(fullPath));
+        }
+
+        private long? ResolveFileId(string fullPath)
+        {
+            var (setId, albumPath, fileName) = DecomposePath(fullPath);
+            if (setId < 0)
+                return null;
+
+            using var cmd = conn_.CreateCommand();
+            cmd.CommandText = "SELECT f.ID FROM Files f JOIN Tracks t ON f.ID = t.ID JOIN Albums a ON t.AlbumID = a.ID" +
+                " WHERE a.ScanSetID = @set AND a.Path = @album AND f.Path = @file LIMIT 1";
+            cmd.Parameters.Add("@set", DbType.Int64).Value = setId;
+            cmd.Parameters.Add("@album", DbType.String).Value = albumPath;
+            cmd.Parameters.Add("@file", DbType.String).Value = fileName;
+            var r = cmd.ExecuteScalar();
+            return (r is null || r is DBNull) ? (long?)null : Convert.ToInt64(r);
+        }
+
+        /// <summary>
+        /// Read a single file's full cached metadata (structured + codec + normalized known fields +
+        /// raw text frames + optionally embedded images) by its full path, or null if the file isn't
+        /// in the cache. Lets the GUI avoid re-parsing files over the network.
+        /// </summary>
+        public FileDetails GetFileDetails(string fullPath, bool includeImages)
+        {
+            var id = ResolveFileId(fullPath);
+            if (id is null)
+                return null;
+            long fid = id.Value;
+
+            var details = new FileDetails { Path = fullPath };
+
+            using (var cmd = conn_.CreateCommand())
+            {
+                // Column order matches BuildCache so the MetadataCacheEntry(reader) ordinal reads line up.
+                cmd.CommandText = "SELECT Path, LastWriteTime, CodecName, CodecType, AverageBitrate, MaxBitrate," +
+                    " BitsPerSample, SampleRate, Channels, DurationInFrames, Artist, AlbumArtist, Album," +
+                    " TrackNumber, TrackTotal, DiscNumber, DiscTotal, ReleaseDate, Track, TagType" +
+                    " FROM MetadataSummaryView WHERE ID = @id";
+                cmd.Parameters.Add("@id", DbType.Int64).Value = fid;
+                using var reader = cmd.ExecuteReader();
+                if (!reader.Read())
+                    return null;
+                details.Entry = new MetadataCacheEntry(reader);
+                details.TagType = reader.GetString("TagType");
+            }
+
+            using (var cmd = conn_.CreateCommand())
+            {
+                cmd.CommandText = "SELECT Field, Value FROM KnownMetadata WHERE FileID = @id";
+                cmd.Parameters.Add("@id", DbType.Int64).Value = fid;
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                    details.KnownFields.Add(new KeyValuePair<string, string>(reader.GetString(0), reader.GetString(1)));
+            }
+
+            using (var cmd = conn_.CreateCommand())
+            {
+                cmd.CommandText = "SELECT k.\"Key\", m.Value FROM Metadata m JOIN MetadataKeys k ON m.KeyID = k.ID WHERE m.FileID = @id";
+                cmd.Parameters.Add("@id", DbType.Int64).Value = fid;
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                    details.TextFields.Add(new KeyValuePair<string, string>(reader.GetString(0), reader.GetString(1)));
+            }
+
+            if (includeImages)
+            {
+                using var cmd = conn_.CreateCommand();
+                cmd.CommandText = "SELECT im.Description, im.Category, i.ImageType, i.Width, i.Height, i.Size, i.Hash, i.Data" +
+                    " FROM ImageMetadata im JOIN Images i ON im.ImageID = i.ID WHERE im.FileID = @id";
+                cmd.Parameters.Add("@id", DbType.Int64).Value = fid;
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                    details.Images.Add(new FileImage
+                    {
+                        Description = reader.GetString(0),
+                        Category = reader.GetString(1),
+                        ImageType = reader.GetString(2),
+                        Width = (int)reader.GetInt64(3),
+                        Height = (int)reader.GetInt64(4),
+                        Size = (int)reader.GetInt64(5),
+                        Hash = reader.GetString(6),
+                        Data = (byte[])reader["Data"],
+                    });
+            }
+
+            return details;
+        }
+
+        /// <summary>
+        /// For each path, a signature of its embedded images (its image hashes, order-independent),
+        /// or "" if it has none. Lets callers cheaply tell whether a selection's artwork is uniform
+        /// without loading any image data. Same length/order as the input.
+        /// </summary>
+        public List<string> GetImageSignatures(IReadOnlyList<string> fullPaths)
+        {
+            var result = new List<string>(fullPaths.Count);
+            using var cmd = conn_.CreateCommand();
+            cmd.CommandText = "SELECT i.Hash FROM ImageMetadata im JOIN Images i ON im.ImageID = i.ID WHERE im.FileID = @id ORDER BY i.Hash";
+            var idparam = cmd.Parameters.Add("@id", DbType.Int64);
+            foreach (var path in fullPaths)
+            {
+                var id = ResolveFileId(path);
+                if (id is null)
+                {
+                    result.Add("");
+                    continue;
+                }
+                idparam.Value = id.Value;
+                var hashes = new List<string>();
+                using (var reader = cmd.ExecuteReader())
+                    while (reader.Read())
+                        hashes.Add(reader.GetString(0));
+                result.Add(string.Join("|", hashes));
+            }
+            return result;
+        }
+
+        /// <summary>The bytes of a file's first embedded image (for thumbnails), or null if none.</summary>
+        public byte[] GetFirstImageData(string fullPath)
+        {
+            var id = ResolveFileId(fullPath);
+            if (id is null)
+                return null;
+
+            using var cmd = conn_.CreateCommand();
+            cmd.CommandText = "SELECT i.Data FROM ImageMetadata im JOIN Images i ON im.ImageID = i.ID WHERE im.FileID = @id LIMIT 1";
+            cmd.Parameters.Add("@id", DbType.Int64).Value = id.Value;
+            var r = cmd.ExecuteScalar();
+            return (r is null || r is DBNull) ? null : (byte[])r;
+        }
+
+        /// <summary>
+        /// Remove a single file's rows from the cache (used after an Organize move relocates it, so the
+        /// stale entry at the old path is dropped). Returns false if the file isn't in the cache.
+        /// </summary>
+        public bool RemoveFile(string fullPath)
+        {
+            var id = ResolveFileId(fullPath);
+            if (id is null)
+                return false;
+
+            using var trans = conn_.BeginTransaction();
+            try
+            {
+                using var del = trans.CreateCommand();
+                del.CommandText = "DELETE FROM Metadata WHERE FileID = @id;\r\n" +
+                    "DELETE FROM KnownMetadata WHERE FileID = @id;\r\n" +
+                    "DELETE FROM ImageMetadata WHERE FileID = @id;\r\n" +
+                    "DELETE FROM Files WHERE ID = @id;\r\n" +
+                    "DELETE FROM Tracks WHERE ID = @id";
+                del.Parameters.Add("@id", DbType.Int64).Value = id.Value;
+                del.ExecuteNonQuery();
+                trans.Commit();
+                return true;
+            }
+            catch
+            {
+                trans.Rollback();
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Re-parse a single file and refresh its rows in the cache (delete + re-insert). Called right
+        /// after the file's tags/artwork are edited so the cache stays in sync without a full re-index.
+        /// Returns false if the file isn't under any known scan set (nothing to place it under).
+        /// </summary>
+        public bool ReindexFile(string fullPath)
+        {
+            var (setId, albumPath, fileName) = DecomposePath(fullPath);
+            if (setId < 0)
+                return false;
+
+            IMediaFile file;
+            using (var sha = SHA256.Create())
+                file = MediaFile.GetFile(fullPath, sha);
+
+            var mp = file.Tags.First();
+            var cp = file.Codecs.First();
+            var fi = new FileInfo(fullPath);
+
+            using var trans = conn_.BeginTransaction();
+            try
+            {
+                // Remove any existing rows for this file first.
+                using (var find = trans.CreateCommand())
+                {
+                    find.CommandText = "SELECT f.ID FROM Files f JOIN Tracks t ON f.ID = t.ID JOIN Albums a ON t.AlbumID = a.ID" +
+                        " WHERE a.ScanSetID = @set AND a.Path = @album AND f.Path = @file LIMIT 1";
+                    find.Parameters.Add("@set", DbType.Int64).Value = setId;
+                    find.Parameters.Add("@album", DbType.String).Value = albumPath;
+                    find.Parameters.Add("@file", DbType.String).Value = fileName;
+                    var existing = find.ExecuteScalar();
+                    if (existing is not null && existing is not DBNull)
+                    {
+                        using var del = trans.CreateCommand();
+                        del.CommandText = "DELETE FROM Metadata WHERE FileID = @id;\r\n" +
+                            "DELETE FROM KnownMetadata WHERE FileID = @id;\r\n" +
+                            "DELETE FROM ImageMetadata WHERE FileID = @id;\r\n" +
+                            "DELETE FROM Files WHERE ID = @id;\r\n" +
+                            "DELETE FROM Tracks WHERE ID = @id";
+                        del.Parameters.Add("@id", DbType.Int64).Value = Convert.ToInt64(existing);
+                        del.ExecuteNonQuery();
+                    }
+                }
+
+                long artistId = GetOrInsert(trans, "Artists", "Name", mp.Artist);
+                long albumArtistId = GetOrInsert(trans, "AlbumArtists", "Name", mp.AlbumArtist);
+                long albumId = GetOrInsertAlbum(trans, setId, albumArtistId, albumPath, mp.Album);
+
+                long fileId;
+                using (var fc = trans.CreateCommand())
+                {
+                    fc.CommandText = "INSERT INTO Files (Path, FileSize, LastWriteTime, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames, TagType)" +
+                        " VALUES (@Path, @FileSize, @LastWriteTime, @CodecName, @CodecType, @AverageBitrate, @MaxBitrate, @BitsPerSample, @SampleRate, @Channels, @DurationInFrames, @TagType);\r\n" + lastidsql_;
+                    fc.Parameters.Add("@Path", DbType.String).Value = fileName;
+                    fc.Parameters.Add("@FileSize", DbType.Int64).Value = fi.Length;
+                    fc.Parameters.Add("@LastWriteTime", DbType.DateTime).Value = fi.LastWriteTimeUtc;
+                    fc.Parameters.Add("@CodecName", DbType.String).Value = cp.CodecName;
+                    fc.Parameters.Add("@CodecType", DbType.String).Value = cp.CodecType.ToString();
+                    fc.Parameters.Add("@AverageBitrate", DbType.Int64).Value = (long)cp.AverageBitrate;
+                    fc.Parameters.Add("@MaxBitrate", DbType.Int64).Value = (long)cp.MaxBitrate;
+                    fc.Parameters.Add("@BitsPerSample", DbType.Int64).Value = (long)cp.BitsPerSample;
+                    fc.Parameters.Add("@SampleRate", DbType.Int64).Value = (long)cp.Samplerate;
+                    fc.Parameters.Add("@Channels", DbType.Int64).Value = (long)cp.Channels;
+                    fc.Parameters.Add("@DurationInFrames", DbType.Int64).Value = (long)cp.DurationInFrames;
+                    fc.Parameters.Add("@TagType", DbType.String).Value = mp.TagType;
+                    fileId = Convert.ToInt64(fc.ExecuteScalar());
+                }
+
+                using (var tc = trans.CreateCommand())
+                {
+                    tc.CommandText = "INSERT INTO Tracks (ID, ArtistID, AlbumID, Name, TrackNumber, TrackTotal, DiscNumber, DiscTotal, ReleaseDate)" +
+                        " VALUES (@ID, @ArtistID, @AlbumID, @Name, @TrackNumber, @TrackTotal, @DiscNumber, @DiscTotal, @ReleaseDate)";
+                    tc.Parameters.Add("@ID", DbType.Int64).Value = fileId;
+                    tc.Parameters.Add("@ArtistID", DbType.Int64).Value = artistId;
+                    tc.Parameters.Add("@AlbumID", DbType.Int64).Value = albumId;
+                    tc.Parameters.Add("@Name", DbType.String).Value = mp.Title ?? "";
+                    tc.Parameters.Add("@TrackNumber", DbType.Int64).Value = (object)(long?)mp.TrackNumber ?? DBNull.Value;
+                    tc.Parameters.Add("@TrackTotal", DbType.Int64).Value = (object)(long?)mp.TrackTotal ?? DBNull.Value;
+                    tc.Parameters.Add("@DiscNumber", DbType.Int64).Value = (object)(long?)mp.DiscNumber ?? DBNull.Value;
+                    tc.Parameters.Add("@DiscTotal", DbType.Int64).Value = (object)(long?)mp.DiscTotal ?? DBNull.Value;
+                    tc.Parameters.Add("@ReleaseDate", DbType.String).Value = (object)mp.ReleaseDate ?? DBNull.Value;
+                    tc.ExecuteNonQuery();
+                }
+
+                foreach (var kv in mp.GetTextMetadata())
+                {
+                    long keyId = GetOrInsert(trans, "MetadataKeys", "\"Key\"", kv.Key);
+                    using var mc = trans.CreateCommand();
+                    mc.CommandText = "INSERT INTO Metadata (FileID, KeyID, Value) VALUES (@f, @k, @v)";
+                    mc.Parameters.Add("@f", DbType.Int64).Value = fileId;
+                    mc.Parameters.Add("@k", DbType.Int64).Value = keyId;
+                    mc.Parameters.Add("@v", DbType.String).Value = kv.Value ?? "";
+                    mc.ExecuteNonQuery();
+                }
+
+                foreach (var kv in mp.GetKnownMetadata())
+                {
+                    using var kc = trans.CreateCommand();
+                    kc.CommandText = "INSERT INTO KnownMetadata (FileID, Field, Value) VALUES (@f, @field, @v)";
+                    kc.Parameters.Add("@f", DbType.Int64).Value = fileId;
+                    kc.Parameters.Add("@field", DbType.String).Value = kv.Key.ToString();
+                    kc.Parameters.Add("@v", DbType.String).Value = kv.Value ?? "";
+                    kc.ExecuteNonQuery();
+                }
+
+                foreach (var image in mp.GetImageMetadata())
+                {
+                    long imageId = GetOrInsertImage(trans, image);
+                    using var imc = trans.CreateCommand();
+                    imc.CommandText = "INSERT INTO ImageMetadata (FileID, ImageID, Description, Category) VALUES (@f, @i, @d, @c)";
+                    imc.Parameters.Add("@f", DbType.Int64).Value = fileId;
+                    imc.Parameters.Add("@i", DbType.Int64).Value = imageId;
+                    imc.Parameters.Add("@d", DbType.String).Value = image.Description ?? "";
+                    imc.Parameters.Add("@c", DbType.String).Value = image.Category ?? "";
+                    imc.ExecuteNonQuery();
+                }
+
+                trans.Commit();
+                return true;
+            }
+            catch
+            {
+                trans.Rollback();
+                throw;
+            }
+        }
+
+        private long GetOrInsert(DbTransaction trans, string table, string column, string value)
+        {
+            using (var sel = trans.CreateCommand())
+            {
+                sel.CommandText = $"SELECT ID FROM {table} WHERE {column} = @v LIMIT 1";
+                sel.Parameters.Add("@v", DbType.String).Value = value ?? "";
+                var found = sel.ExecuteScalar();
+                if (found is not null && found is not DBNull)
+                    return Convert.ToInt64(found);
+            }
+            using var ins = trans.CreateCommand();
+            ins.CommandText = $"INSERT INTO {table} ({column}) VALUES (@v);\r\n" + lastidsql_;
+            ins.Parameters.Add("@v", DbType.String).Value = value ?? "";
+            return Convert.ToInt64(ins.ExecuteScalar());
+        }
+
+        private long GetOrInsertAlbum(DbTransaction trans, long setId, long albumArtistId, string albumPath, string name)
+        {
+            using (var sel = trans.CreateCommand())
+            {
+                sel.CommandText = "SELECT ID FROM Albums WHERE ScanSetID = @s AND AlbumArtistID = @aa AND Path = @p AND Name = @n LIMIT 1";
+                sel.Parameters.Add("@s", DbType.Int64).Value = setId;
+                sel.Parameters.Add("@aa", DbType.Int64).Value = albumArtistId;
+                sel.Parameters.Add("@p", DbType.String).Value = albumPath ?? "";
+                sel.Parameters.Add("@n", DbType.String).Value = name ?? "";
+                var found = sel.ExecuteScalar();
+                if (found is not null && found is not DBNull)
+                    return Convert.ToInt64(found);
+            }
+            using var ins = trans.CreateCommand();
+            ins.CommandText = "INSERT INTO Albums (ScanSetID, AlbumArtistID, Path, Name) VALUES (@s, @aa, @p, @n);\r\n" + lastidsql_;
+            ins.Parameters.Add("@s", DbType.Int64).Value = setId;
+            ins.Parameters.Add("@aa", DbType.Int64).Value = albumArtistId;
+            ins.Parameters.Add("@p", DbType.String).Value = albumPath ?? "";
+            ins.Parameters.Add("@n", DbType.String).Value = name ?? "";
+            return Convert.ToInt64(ins.ExecuteScalar());
+        }
+
+        private long GetOrInsertImage(DbTransaction trans, IMetadataImage image)
+        {
+            using (var sel = trans.CreateCommand())
+            {
+                sel.CommandText = "SELECT ID FROM Images WHERE Hash = @h LIMIT 1";
+                sel.Parameters.Add("@h", DbType.String).Value = image.Hash;
+                var found = sel.ExecuteScalar();
+                if (found is not null && found is not DBNull)
+                    return Convert.ToInt64(found);
+            }
+            using var ins = trans.CreateCommand();
+            ins.CommandText = "INSERT INTO Images (Hash, ImageType, Width, Height, Size, Data) VALUES (@h, @t, @w, @ht, @s, @d);\r\n" + lastidsql_;
+            ins.Parameters.Add("@h", DbType.String).Value = image.Hash;
+            ins.Parameters.Add("@t", DbType.String).Value = image.ImageType;
+            ins.Parameters.Add("@w", DbType.Int64).Value = (long)image.Width;
+            ins.Parameters.Add("@ht", DbType.Int64).Value = (long)image.Height;
+            ins.Parameters.Add("@s", DbType.Int64).Value = (long)image.Size;
+            ins.Parameters.Add("@d", DbType.Object).Value = image.Data;
+            return Convert.ToInt64(ins.ExecuteScalar());
+        }
+
         public virtual void Dispose()
         {
             conn_.Dispose();
         }
 
+    }
+
+    /// <summary>A single file's full cached metadata, read straight from the database.</summary>
+    public sealed class FileDetails
+    {
+        public string Path { get; set; }
+        public string TagType { get; set; }
+        /// <summary>Structured fields + codec properties (reused from the summary view).</summary>
+        public MetadataCacheEntry Entry { get; set; }
+        /// <summary>Normalized known fields (TagFields name → value), first-value order preserved.</summary>
+        public List<KeyValuePair<string, string>> KnownFields { get; } = new();
+        /// <summary>Raw format-native text frames.</summary>
+        public List<KeyValuePair<string, string>> TextFields { get; } = new();
+        /// <summary>Embedded images (only populated when requested).</summary>
+        public List<FileImage> Images { get; } = new();
+    }
+
+    /// <summary>One embedded image read from the cache.</summary>
+    public sealed class FileImage
+    {
+        public string Description { get; set; }
+        public string Category { get; set; }
+        public string ImageType { get; set; }
+        public string Hash { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public int Size { get; set; }
+        public byte[] Data { get; set; }
     }
 }
