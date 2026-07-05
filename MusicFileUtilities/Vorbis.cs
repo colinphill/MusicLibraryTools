@@ -277,8 +277,53 @@ namespace MusicFileUtilities
     }
 
     [Serializable]
-    public class VorbisComments : TagBase
+    public class VorbisComments : TagBase, IArtworkWriter
     {
+        // IArtworkWriter: replace the front cover in the PICTURE list, probing dimensions the same
+        // way the reader does. FLAC/Ogg serialize Artworks on save (see FLAC.SaveTags / ToByteArray).
+        public void SetFrontCover(byte[] imageData, string mimeType)
+        {
+            if (imageData == null || imageData.Length == 0)
+            {
+                RemoveImages();
+                return;
+            }
+            Artworks.RemoveAll(a => a.PictureType == ID3v2Util.APICType.FrontCover);
+            var (w, h) = ImageFile.GetImageDimensions(imageData);
+            Artworks.Add(new VorbisArtwork
+            {
+                PictureType = ID3v2Util.APICType.FrontCover,
+                MimeType = mimeType,
+                Description = "",
+                Width = w,
+                Height = h,
+                Depth = 0,
+                ColorsUsed = 0,
+                Data = imageData,
+            });
+        }
+
+        public void RemoveImages() => Artworks.Clear();
+
+        public void SetImages(IReadOnlyList<ArtworkImage> images)
+        {
+            Artworks.Clear();
+            foreach (var img in images)
+            {
+                var (w, h) = ImageFile.GetImageDimensions(img.Data);
+                Artworks.Add(new VorbisArtwork
+                {
+                    PictureType = img.Type,
+                    MimeType = img.MimeType,
+                    Description = img.Description ?? "",
+                    Width = w,
+                    Height = h,
+                    Depth = 0,
+                    ColorsUsed = 0,
+                    Data = img.Data,
+                });
+            }
+        }
 
         #region IMetadataProvider Properties
 

@@ -1198,7 +1198,7 @@ namespace MusicFileUtilities
 
     }
 
-    public class ID3v2Tag : TagBase
+    public class ID3v2Tag : TagBase, IArtworkWriter
     {
 
         protected int _headerversion = 0;
@@ -1336,6 +1336,30 @@ namespace MusicFileUtilities
             frame.Description = description;
             frame.PictureData = data;
             _frames.Add(frame);
+        }
+
+        // IArtworkWriter: uniform front-cover write across formats. Delegates to SetAttachedImage
+        // (which replaces an existing front cover in place) / removes all picture frames.
+        public void SetFrontCover(byte[] imageData, string mimeType)
+        {
+            if (imageData == null || imageData.Length == 0)
+            {
+                RemoveImages();
+                return;
+            }
+            SetAttachedImage(ID3v2Util.APICType.FrontCover, mimeType, "", imageData);
+        }
+
+        public void RemoveImages()
+        {
+            _frames.RemoveAll(f => f is PictureFrame);
+        }
+
+        public void SetImages(IReadOnlyList<ArtworkImage> images)
+        {
+            RemoveImages();
+            foreach (var img in images)
+                SetAttachedImage(img.Type, img.MimeType, img.Description ?? "", img.Data);
         }
 
         public void SetField(TagFields field, string value)

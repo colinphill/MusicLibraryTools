@@ -1,0 +1,420 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:MusicLibrary.App.ViewModels"
+        xmlns:models="using:MusicLibrary.Core.Models"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="820"
+        x:Class="MusicLibrary.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Width="1280" Height="820" MinWidth="1040" MinHeight="620"
+        Background="{DynamicResource AppWindowBg}"
+        Title="Music Library">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- ===== Header ===== -->
+        <Border Grid.Row="0" Classes="toolbar">
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto">
+                <StackPanel Grid.Column="0" Classes="toolbarrow" Spacing="12">
+                    <Border Classes="chip">
+                        <TextBlock Text="♪" Foreground="White" FontSize="18" FontWeight="Bold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Music Library" Classes="h1"/>
+                        <TextBlock Text="{Binding Settings.StatusMessage}" Classes="caption"
+                                   MaxWidth="420" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Library indexing (browsing/selection happens in the Library table below) -->
+                <StackPanel Grid.Column="1" Classes="toolbarrow" Margin="28,0,0,0" VerticalAlignment="Center">
+                    <Button Content="Index" Classes="accent" Command="{Binding Library.IndexCommand}"/>
+                    <Button Content="Cancel" Command="{Binding Library.CancelIndexCommand}"
+                            IsVisible="{Binding Library.IsIndexing}"/>
+                    <ProgressBar IsIndeterminate="True" Width="60" VerticalAlignment="Center"
+                                 IsVisible="{Binding Library.IsIndexing}"/>
+                    <TextBlock Text="{Binding Library.StatusText}" Classes="muted" VerticalAlignment="Center"
+                               MaxWidth="360" TextTrimming="CharacterEllipsis"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="3" Classes="toolbarrow">
+                    <TextBlock Text="Config" Classes="h2" VerticalAlignment="Center"/>
+                    <TextBox Text="{Binding Settings.ConfigPath, Mode=OneWay}" IsReadOnly="True"
+                             Width="240" PlaceholderText="No configuration loaded"/>
+                    <Button Content="Browse…" Command="{Binding Settings.BrowseCommand}"/>
+                    <Button Content="New…" Command="{Binding Settings.NewConfigCommand}"/>
+                    <Button Content="Edit…" Command="{Binding Settings.EditConfigCommand}"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ===== Body ===== -->
+        <Border Grid.Row="1" Classes="card" Padding="0" Margin="14">
+            <TabControl Margin="14,4,14,14">
+
+                    <!-- Library: the primary browse + selection surface (auto-populates) -->
+                    <TabItem Header="Library" DataContext="{Binding Table}" x:DataType="vm:DetailsGridViewModel">
+                        <Grid RowDefinitions="Auto,*" Margin="2,12,2,2">
+                            <StackPanel Grid.Row="0" Classes="toolbarrow" Margin="0,0,0,10">
+                                <Button Content="Reload" Classes="accent" Command="{Binding LoadCommand}"/>
+                                <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
+                                <ProgressBar IsIndeterminate="True" Width="60" VerticalAlignment="Center"
+                                             IsVisible="{Binding IsBusy}"/>
+                                <Button Content="Columns ▾">
+                                    <Button.Flyout>
+                                        <Flyout>
+                                            <ScrollViewer MaxHeight="400">
+                                                <ItemsControl ItemsSource="{Binding Columns}" Margin="4">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:ColumnToggle">
+                                                            <CheckBox Content="{Binding Header}" IsChecked="{Binding IsSelected}"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
+                                <ComboBox ItemsSource="{Binding FilterModes}"
+                                          SelectedItem="{Binding SelectedFilterMode}" Width="120"/>
+                                <ComboBox ItemsSource="{Binding FilterScopes}"
+                                          SelectedItem="{Binding SelectedScope}" Width="170"
+                                          ToolTip.Tip="Filter in which column"/>
+                                <TextBox Text="{Binding FilterText}" Width="240"
+                                         PlaceholderText="Filter (realtime)…"/>
+                                <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Classes="muted"/>
+                            </StackPanel>
+
+                            <Border Grid.Row="1" CornerRadius="8" ClipToBounds="True"
+                                    BorderThickness="1" BorderBrush="{DynamicResource AppDivider}">
+                                <DataGrid Name="DetailsGrid"
+                                          ItemsSource="{Binding View}"
+                                          SelectionMode="Extended"
+                                          CanUserSortColumns="True"
+                                          CanUserResizeColumns="True"
+                                          CanUserReorderColumns="True"
+                                          RowHeight="48"
+                                          IsReadOnly="True"/>
+                            </Border>
+                        </Grid>
+                    </TabItem>
+
+                    <!-- Tag Editor (single + batch) -->
+                    <TabItem Header="Tag Editor">
+                        <Grid RowDefinitions="Auto,*,Auto" Margin="2,10,2,2" DataContext="{Binding Editor}"
+                              x:DataType="vm:TagEditorViewModel">
+                            <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,12">
+                                <TextBlock Text="{Binding TargetSummary}" FontWeight="SemiBold" FontSize="15"/>
+                                <TextBlock Text="Blank a field and Save to clear it. Only edited fields are written."
+                                           Classes="muted"/>
+                            </StackPanel>
+
+                            <ScrollViewer Grid.Row="1" IsEnabled="{Binding HasTargets}">
+                                <ItemsControl ItemsSource="{Binding Fields}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:EditableField">
+                                            <Grid ColumnDefinitions="150,*" Margin="0,4">
+                                                <TextBlock Grid.Column="0" Text="{Binding Label}"
+                                                           VerticalAlignment="Center" Classes="muted"/>
+                                                <TextBox Grid.Column="1" Text="{Binding Value, Mode=TwoWay}"
+                                                         PlaceholderText="{Binding IsMixed, Converter={x:Static vm:MixedConverter.Instance}}"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+
+                            <StackPanel Grid.Row="2" Classes="toolbarrow" Margin="0,12,0,0">
+                                <Button Content="Save" Classes="accent" Command="{Binding SaveCommand}"/>
+                                <Button Content="Revert" Command="{Binding RevertCommand}"/>
+                                <Button Content="Edit all fields…" Command="{Binding EditAllFieldsCommand}"/>
+                                <TextBlock Text="{Binding ResultMessage}" VerticalAlignment="Center" Classes="muted"/>
+                            </StackPanel>
+                        </Grid>
+                    </TabItem>
+
+                    <!-- Read-only details of the focused file -->
+                    <TabItem Header="Details" DataContext="{Binding Inspector}" x:DataType="vm:FileInspectorViewModel">
+                        <Grid Margin="2,12,2,2">
+                            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                            <Grid ColumnDefinitions="300,*"
+                                  IsVisible="{Binding File, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <StackPanel Grid.Column="0" Spacing="10" Margin="0,0,16,0">
+                                    <Border Width="280" Height="280" HorizontalAlignment="Left" CornerRadius="10"
+                                            ClipToBounds="True"
+                                            Background="{DynamicResource AppInsetBg}">
+                                        <Image Source="{Binding Artwork}" Stretch="Uniform"/>
+                                    </Border>
+                                    <TextBlock Text="{Binding ArtworkCaption}" Classes="caption"/>
+                                    <StackPanel Spacing="3" Margin="0,4,0,0" DataContext="{Binding File}"
+                                                x:DataType="models:MediaFileModel">
+                                        <TextBlock Text="{Binding Title}" FontSize="17" FontWeight="Bold" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding Artist}" TextWrapping="Wrap"/>
+                                        <TextBlock Text="{Binding Album}" FontStyle="Italic" TextWrapping="Wrap" Classes="muted"/>
+                                        <TextBlock Text="{Binding TagType, StringFormat='Tag: {0}'}" Classes="caption" Margin="0,6,0,0"/>
+                                        <TextBlock Text="{Binding Codec.CodecName, StringFormat='Codec: {0}'}" Classes="caption"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <TabControl Grid.Column="1">
+                                    <TabItem Header="Known fields">
+                                        <ScrollViewer Margin="0,8,0,0">
+                                            <ItemsControl ItemsSource="{Binding KnownFields}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="models:TagFieldValue">
+                                                        <Grid ColumnDefinitions="220,*" Margin="0,3">
+                                                            <TextBlock Grid.Column="0" Text="{Binding Field}" Classes="muted"/>
+                                                            <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </TabItem>
+                                    <TabItem Header="Raw text">
+                                        <ScrollViewer Margin="0,8,0,0">
+                                            <ItemsControl ItemsSource="{Binding TextFields}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="models:TextField">
+                                                        <Grid ColumnDefinitions="220,*" Margin="0,3">
+                                                            <TextBlock Grid.Column="0" Text="{Binding Key}" Classes="muted"/>
+                                                            <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </TabItem>
+                                </TabControl>
+                            </Grid>
+                        </Grid>
+                    </TabItem>
+
+                    <!-- Artwork gallery for the focused file -->
+                    <TabItem Header="Artwork" DataContext="{Binding Artwork}" x:DataType="vm:ArtworkViewModel">
+                        <Grid RowDefinitions="Auto,Auto,*" Margin="2,12,2,2">
+                            <StackPanel Grid.Row="0" Classes="toolbarrow" Margin="0,0,0,8">
+                                <Button Content="Add image…" Classes="accent" Command="{Binding AddCommand}"/>
+                                <Button Content="Scrub all" Command="{Binding ScrubAllCommand}"/>
+                                <Button Content="Save" Command="{Binding SaveCommand}"/>
+                                <TextBlock Text="Max px" VerticalAlignment="Center" Classes="muted"/>
+                                <NumericUpDown Value="{Binding MaxDimension}" Minimum="0" Maximum="4000"
+                                               Increment="100" Width="120" FormatString="0"/>
+                                <ProgressBar IsIndeterminate="True" Width="70" VerticalAlignment="Center"
+                                             IsVisible="{Binding IsBusy}"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1" Margin="0,0,0,8">
+                                <TextBlock Text="This file's format doesn't support artwork writing."
+                                           Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                                           IsVisible="{Binding !SupportsWrite}"/>
+                                <TextBlock Text="{Binding StatusMessage}" Classes="muted"/>
+                            </StackPanel>
+
+                            <ScrollViewer Grid.Row="2">
+                                <ItemsControl ItemsSource="{Binding Images}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ArtworkSlot">
+                                            <Border Classes="card" Margin="0,0,12,12" Padding="10" Width="236">
+                                                <StackPanel Spacing="8">
+                                                    <Border Width="214" Height="214" CornerRadius="8" ClipToBounds="True"
+                                                            Background="{DynamicResource AppInsetBg}">
+                                                        <Image Source="{Binding Preview}" Stretch="Uniform"/>
+                                                    </Border>
+                                                    <ComboBox HorizontalAlignment="Stretch"
+                                                              ItemsSource="{Binding $parent[ItemsControl].((vm:ArtworkViewModel)DataContext).PictureTypes}"
+                                                              SelectedItem="{Binding Type}"/>
+                                                    <TextBlock Text="{Binding Caption}" TextWrapping="Wrap" Classes="caption"/>
+                                                    <Button Content="Remove" HorizontalAlignment="Stretch"
+                                                            Command="{Binding $parent[ItemsControl].((vm:ArtworkViewModel)DataContext).RemoveCommand}"
+                                                            CommandParameter="{Binding}"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
+                    </TabItem>
+
+                    <!-- Library-wide analysis -->
+                    <TabItem Header="Analyze" DataContext="{Binding Analyzer}" x:DataType="vm:AnalyzerViewModel">
+                        <Grid RowDefinitions="Auto,*" Margin="2,12,2,2">
+                            <StackPanel Grid.Row="0" Classes="toolbarrow" Margin="0,0,0,10">
+                                <Button Content="Run analysis" Classes="accent" Command="{Binding RunCommand}"/>
+                                <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
+                                <ProgressBar IsIndeterminate="True" Width="70" VerticalAlignment="Center"
+                                             IsVisible="{Binding IsBusy}"/>
+                                <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Classes="muted"/>
+                            </StackPanel>
+
+                            <ScrollViewer Grid.Row="1">
+                                <ItemsControl ItemsSource="{Binding Reports}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="models:AnalysisReport">
+                                            <Expander Margin="0,0,0,8" HorizontalAlignment="Stretch">
+                                                <Expander.Header>
+                                                    <TextBlock>
+                                                        <Run Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                        <Run Text="{Binding Count, StringFormat=' ({0})'}"/>
+                                                    </TextBlock>
+                                                </Expander.Header>
+                                                <ItemsControl ItemsSource="{Binding Findings}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="models:AnalysisFinding">
+                                                            <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                                    Background="Transparent" Padding="8,4" CornerRadius="6"
+                                                                    Command="{Binding $parent[TabItem].((vm:AnalyzerViewModel)DataContext).OpenCommand}"
+                                                                    CommandParameter="{Binding Path}">
+                                                                <StackPanel>
+                                                                    <TextBlock Text="{Binding Description}"/>
+                                                                    <TextBlock Text="{Binding Path}" Classes="caption"/>
+                                                                </StackPanel>
+                                                            </Button>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </Expander>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
+                    </TabItem>
+
+                    <!-- Duplicate finder -->
+                    <TabItem Header="Duplicates" DataContext="{Binding Analyzer}" x:DataType="vm:AnalyzerViewModel">
+                        <Grid RowDefinitions="Auto,*" Margin="2,12,2,2">
+                        <StackPanel Grid.Row="0" Classes="toolbarrow" Margin="0,0,0,10">
+                            <Button Content="Run analysis" Classes="accent" Command="{Binding RunCommand}"/>
+                            <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
+                            <ProgressBar IsIndeterminate="True" Width="70" VerticalAlignment="Center"
+                                         IsVisible="{Binding IsBusy}"/>
+                            <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Classes="muted"/>
+                        </StackPanel>
+                        <ScrollViewer Grid.Row="1">
+                            <ItemsControl ItemsSource="{Binding Duplicates}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:DuplicateGroup">
+                                        <Border Classes="card" Margin="0,0,0,10" Padding="12">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="{Binding Key}" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                                                <ItemsControl ItemsSource="{Binding Tracks}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="models:TrackRecord">
+                                                            <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                                    Background="Transparent" Padding="8,4" CornerRadius="6"
+                                                                    Command="{Binding $parent[TabItem].((vm:AnalyzerViewModel)DataContext).OpenCommand}"
+                                                                    CommandParameter="{Binding Path}">
+                                                                <TextBlock>
+                                                                    <Run Text="{Binding CodecName}" FontWeight="SemiBold"/>
+                                                                    <Run Text="{Binding SampleRate, StringFormat=' {0}Hz · '}"/>
+                                                                    <Run Text="{Binding Path}"/>
+                                                                </TextBlock>
+                                                            </Button>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                        </Grid>
+                    </TabItem>
+
+                    <!-- Check artists: merge near-duplicate artist-name spellings -->
+                    <TabItem Header="Artists" DataContext="{Binding Artists}" x:DataType="vm:ArtistsViewModel">
+                        <Grid RowDefinitions="Auto,*" Margin="2,12,2,2">
+                            <StackPanel Grid.Row="0" Classes="toolbarrow" Margin="0,0,0,10">
+                                <Button Content="Scan artists" Classes="accent" Command="{Binding ScanCommand}"/>
+                                <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
+                                <ProgressBar IsIndeterminate="True" Width="70" VerticalAlignment="Center"
+                                             IsVisible="{Binding IsBusy}"/>
+                                <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Classes="muted"/>
+                            </StackPanel>
+
+                            <ScrollViewer Grid.Row="1">
+                                <ItemsControl ItemsSource="{Binding Groups}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ArtistGroupViewModel">
+                                            <Border Classes="card" Margin="0,0,0,10" Padding="12">
+                                                <StackPanel Spacing="8">
+                                                    <TextBlock Text="{Binding TrackCount, StringFormat='Similar spellings · {0} tracks'}"
+                                                               Classes="h2"/>
+                                                    <ItemsControl ItemsSource="{Binding Variants}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="models:ArtistVariant">
+                                                                <TextBlock Margin="0,1">
+                                                                    <Run Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                                    <Run Text="{Binding TrackCount, StringFormat='  ({0})'}"
+                                                                         Foreground="{DynamicResource AppTextMuted}"/>
+                                                                </TextBlock>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+
+                                                    <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                                                        <TextBlock Text="Merge to:" VerticalAlignment="Center" Classes="muted"/>
+                                                        <TextBox Text="{Binding CanonicalName}" Width="280"
+                                                                 IsEnabled="{Binding !IsMerged}"/>
+                                                        <Button Content="Merge" Classes="accent"
+                                                                Command="{Binding MergeCommand}"/>
+                                                        <ProgressBar IsIndeterminate="True" Width="60" VerticalAlignment="Center"
+                                                                     IsVisible="{Binding IsBusy}"/>
+                                                    </StackPanel>
+                                                    <TextBlock Text="{Binding Status}" Classes="muted"
+                                                               IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
+                    </TabItem>
+
+                    <!-- Organize / Rename (preview → confirm → apply) -->
+                    <TabItem Header="Organize" DataContext="{Binding Organize}" x:DataType="vm:OrganizeViewModel">
+                        <Grid RowDefinitions="Auto,*" Margin="2,12,2,2">
+                            <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,10">
+                                <StackPanel Classes="toolbarrow">
+                                    <Button Content="Preview" Command="{Binding PreviewCommand}"/>
+                                    <Button Content="Apply moves" Classes="accent" Command="{Binding ApplyCommand}"/>
+                                    <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
+                                    <ProgressBar IsIndeterminate="True" Width="70" VerticalAlignment="Center"
+                                                 IsVisible="{Binding IsBusy}"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" Classes="muted"/>
+                            </StackPanel>
+
+                            <ScrollViewer Grid.Row="1">
+                                <ItemsControl ItemsSource="{Binding Moves}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="models:PlannedMove">
+                                            <StackPanel Margin="0,4">
+                                                <TextBlock Text="{Binding Source}" Classes="caption"/>
+                                                <TextBlock Text="{Binding Destination, StringFormat='→ {0}'}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
+                    </TabItem>
+                </TabControl>
+            </Border>
+    </Grid>
+</Window>

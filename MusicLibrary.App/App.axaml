@@ -1,0 +1,28 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="MusicLibrary.App.App"
+             xmlns:local="using:MusicLibrary.App"
+             RequestedThemeVariant="Default">
+             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
+
+    <Application.Resources>
+        <!-- Override Fluent's accent so selections, focus rings and accent buttons are indigo. -->
+        <Color x:Key="SystemAccentColor">#6C5CE7</Color>
+        <Color x:Key="SystemAccentColorLight1">#8071EC</Color>
+        <Color x:Key="SystemAccentColorLight2">#9A8EF0</Color>
+        <Color x:Key="SystemAccentColorLight3">#B7AEF5</Color>
+        <Color x:Key="SystemAccentColorDark1">#5A4BD6</Color>
+        <Color x:Key="SystemAccentColorDark2">#4A3CB8</Color>
+        <Color x:Key="SystemAccentColorDark3">#392E93</Color>
+    </Application.Resources>
+
+    <Application.DataTemplates>
+        <local:ViewLocator/>
+    </Application.DataTemplates>
+
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+        <StyleInclude Source="avares://MusicLibrary.App/Styles/AppTheme.axaml"/>
+    </Application.Styles>
+</Application>

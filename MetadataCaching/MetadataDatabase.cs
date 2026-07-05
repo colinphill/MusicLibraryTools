@@ -23,7 +23,13 @@ using System.Runtime.CompilerServices;
 
 namespace MetadataCaching
 {
- 
+
+    /// <summary>
+    /// A snapshot of indexing progress, reported periodically from <see cref="MetadataDatabase.IndexFilesAsync"/>
+    /// so a GUI can show a live count without the library writing to the console.
+    /// </summary>
+    public readonly record struct IndexProgress(int Scanned, int Added, int Modified, int Unchanged);
+
     public partial class MetadataCacheEntry
     {
         public MetadataCacheEntry(DbDataReader reader)
@@ -395,12 +401,17 @@ namespace MetadataCaching
             return BuildCache(paths.Select<string, (string Path, string[] Extensions)>(p => (p, null)));
         }
 
-        public (int Added, int Modified, int Removed, int Unchanged) IndexFiles(IEnumerable<string> paths, bool deletemissingsets = false)
+        public (int Added, int Modified, int Removed, int Unchanged) IndexFiles(IEnumerable<string> paths, bool deletemissingsets = false, IProgress<IndexProgress> progress = null, CancellationToken ct = default)
         {
-            return IndexFilesAsync(paths, deletemissingsets).GetAwaiter().GetResult();
+            return IndexFilesAsync(paths, deletemissingsets, progress, ct).GetAwaiter().GetResult();
         }
 
-        public async Task<(int Added, int Modified, int Removed, int Unchanged)> IndexFilesAsync(IEnumerable<string> paths, bool deletemissingsets = false)
+        // progress (optional): when supplied, periodic IndexProgress snapshots are reported instead
+        // of the console "Scanned: N" line, so a GUI can drive its own progress UI. ct (optional):
+        // cooperative cancellation — the file walk stops at the next file boundary; whatever was
+        // already queued is still committed (the DB is a self-healing cache), and removal detection
+        // is skipped on cancel so a partial scan never deletes files it simply hadn't reached.
+        public async Task<(int Added, int Modified, int Removed, int Unchanged)> IndexFilesAsync(IEnumerable<string> paths, bool deletemissingsets = false, IProgress<IndexProgress> progress = null, CancellationToken ct = default)
         {
             var sets = new List<(string Path, long ID)>();
             var missedsets = new List<long>();
@@ -501,6 +512,15 @@ namespace MetadataCaching
                 {
                     foreach (var file in new MusicFileEnumerator(unit.Root, unit.Recurse))
                     {
+                       // Cooperative cancellation: stop the whole parallel walk at the next file
+                       // boundary. loopstate.Stop() lets Parallel.ForEach return normally so the
+                       // filequeue.CompleteAdding() below still runs (an exception here would leave
+                       // the consumer blocked forever).
+                       if (ct.IsCancellationRequested)
+                       {
+                           loopstate.Stop();
+                           break;
+                       }
                        if (file.FileType != MFEType.MusicFile)
                            continue;
                        var relativename = file.Name.Substring(unit.SetPath.Length + 1);
@@ -537,7 +557,12 @@ namespace MetadataCaching
                                // every 100 files serializes them. A coarser cadence (and no
                                // explicit Flush, which the console stream does anyway) avoids it.
                                if ((done % 1000) == 0)
-                                   Console.Write($"Scanned: {done}\r");
+                               {
+                                   if (progress != null)
+                                       progress.Report(new IndexProgress(done, added, modified, unchanged));
+                                   else
+                                       Console.Write($"Scanned: {done}\r");
+                               }
                            }
                            catch (IOException ex)
                            {
@@ -558,14 +583,22 @@ namespace MetadataCaching
                 // hits, so it runs once here rather than per set. Only sets scanned in this call
                 // count: files of unrequested sets were never walked, and those sets are handled
                 // by the deletemissingsets path instead.
-                var scannedsets = new HashSet<long>(sets.Select(s => s.ID));
-                foreach (var file in fileshitdict.Where(kv => !kv.Value && scannedsets.Contains(kv.Key.ScanSetID)).Select(kv => kv.Key))
+                // Skip removal detection on cancel: a partial walk didn't visit every file, so
+                // unhit entries don't mean "deleted" — they mean "not reached yet".
+                if (!ct.IsCancellationRequested)
                 {
-                    filequeue.Add((filesdict[file].ID, file.ScanSetID, null, 0, DateTime.MinValue, null));
-                    removed++;
+                    var scannedsets = new HashSet<long>(sets.Select(s => s.ID));
+                    foreach (var file in fileshitdict.Where(kv => !kv.Value && scannedsets.Contains(kv.Key.ScanSetID)).Select(kv => kv.Key))
+                    {
+                        filequeue.Add((filesdict[file].ID, file.ScanSetID, null, 0, DateTime.MinValue, null));
+                        removed++;
+                    }
                 }
 
-                Console.WriteLine($"Scanned: {scanned}");
+                if (progress != null)
+                    progress.Report(new IndexProgress(scanned, added, modified, unchanged));
+                else
+                    Console.WriteLine($"Scanned: {scanned}");
                 filequeue.CompleteAdding();
             });
 

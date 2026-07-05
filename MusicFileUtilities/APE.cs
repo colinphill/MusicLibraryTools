@@ -224,7 +224,7 @@ namespace MusicFileUtilities
 
     }
 
-    public class APETag : TagBase
+    public class APETag : TagBase, IArtworkWriter
     {
         public override string TagType => "APE";
 
@@ -339,6 +339,65 @@ namespace MusicFileUtilities
         }
 
         public void RemoveField(TagFields field) => SetField(field, null);
+
+        // IArtworkWriter: APEv2 stores a picture as a binary item whose value is "filename\0picdata";
+        // the reader derives the MIME type from the filename extension (see APEArtwork ctor), so the
+        // synthetic filename here must carry the matching extension. ToByteArray serializes
+        // ArtworkItems, so a subsequent Save round-trips the new cover.
+        public void SetFrontCover(byte[] imageData, string mimeType)
+        {
+            if (imageData == null || imageData.Length == 0)
+            {
+                RemoveImages();
+                return;
+            }
+            const string key = "Cover Art (Front)";
+            byte[] fnBytes = Encoding.UTF8.GetBytes("cover" + ExtForMime(mimeType));
+            byte[] raw = new byte[fnBytes.Length + 1 + imageData.Length];
+            Array.Copy(fnBytes, 0, raw, 0, fnBytes.Length);
+            raw[fnBytes.Length] = 0; // null separator between filename and payload
+            Array.Copy(imageData, 0, raw, fnBytes.Length + 1, imageData.Length);
+
+            ArtworkItems.RemoveAll(kv => kv.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+            ArtworkItems.Add(new KeyValuePair<string, APEArtwork>(key, new APEArtwork(key, raw)));
+        }
+
+        public void RemoveImages() => ArtworkItems.Clear();
+
+        public void SetImages(IReadOnlyList<ArtworkImage> images)
+        {
+            ArtworkItems.Clear();
+            foreach (var img in images)
+            {
+                var key = KeyForType(img.Type);
+                byte[] fnBytes = Encoding.UTF8.GetBytes("cover" + ExtForMime(img.MimeType));
+                byte[] raw = new byte[fnBytes.Length + 1 + img.Data.Length];
+                Array.Copy(fnBytes, 0, raw, 0, fnBytes.Length);
+                raw[fnBytes.Length] = 0;
+                Array.Copy(img.Data, 0, raw, fnBytes.Length + 1, img.Data.Length);
+                // One APE binary item per key; a repeated type overwrites the earlier one.
+                ArtworkItems.RemoveAll(kv => kv.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+                ArtworkItems.Add(new KeyValuePair<string, APEArtwork>(key, new APEArtwork(key, raw)));
+            }
+        }
+
+        // APEv2 convention keys embedded pictures as "Cover Art (Front)", "Cover Art (Back)", etc.
+        private static string KeyForType(ID3v2Util.APICType type) => type switch
+        {
+            ID3v2Util.APICType.FrontCover => "Cover Art (Front)",
+            ID3v2Util.APICType.BackCover => "Cover Art (Back)",
+            ID3v2Util.APICType.Media => "Cover Art (Media)",
+            ID3v2Util.APICType.LeafletPage => "Cover Art (Leaflet)",
+            _ => $"Cover Art ({type})",
+        };
+
+        private static string ExtForMime(string mimeType) => (mimeType ?? "").ToLowerInvariant() switch
+        {
+            "image/png" => ".png",
+            "image/gif" => ".gif",
+            "image/bmp" => ".bmp",
+            _ => ".jpg",
+        };
 
         // Serialize one APE item: [value length LE][flags LE][key]\0[value].
         // flags bit 1 (value 2) marks a binary item; 0 marks UTF-8 text.

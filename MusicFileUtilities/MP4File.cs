@@ -1263,6 +1263,17 @@ namespace MusicFileUtilities
             _dimsComputed = false;
         }
 
+        // In-memory counterpart to LoadImage: the value bytes sit after the data atom's 8-byte
+        // header (4-byte type + 4-byte reserved), which ResizeData(clear:true) zeroes.
+        public void LoadImageBytes(byte[] imageData, DataTypes type)
+        {
+            ResizeData(imageData.Length + 8, true);
+            DataType = type;
+            Array.Copy(imageData, 0, _data, 8, imageData.Length);
+            _imagedata = null;
+            _dimsComputed = false;
+        }
+
         public override string ToString()
         {
             return (IsText) ? Text : DataType.ToString();
@@ -1731,7 +1742,7 @@ namespace MusicFileUtilities
 
     }
 
-    public class MP4File : TagBase, ICodecProvider, IMediaFile, IMetadataWriter
+    public class MP4File : TagBase, ICodecProvider, IMediaFile, IMetadataWriter, IArtworkWriter
     {
   
         #region IMetadataProvider Properties
@@ -2028,6 +2039,61 @@ namespace MusicFileUtilities
 
             SetField(field, null);
         }
+
+        // IArtworkWriter: write the cover into the 'covr' atom under ilst, creating it if absent
+        // (same pattern as the text fields above). The atom tree resizes/reflows on Touch.
+        public void SetFrontCover(byte[] imageData, string mimeType)
+        {
+            if (imageData == null || imageData.Length == 0)
+            {
+                RemoveImages();
+                return;
+            }
+            Atom_ilst ilst = root_.FindPath("moov.udta.meta.ilst") as Atom_ilst
+                ?? throw new InvalidOperationException("No ilst atom found; cannot add artwork.");
+
+            // Replacing the cover: keep a single image, so drop any extra covr atoms first.
+            var extra = ilst.Children.Where(a => a.Type == "covr").Skip(1).ToList();
+            foreach (var c in extra) { ilst.Children.Remove(c); ilst.Touch(-(long)c.Size); }
+
+            var da = GetOrCreateStandardDataAtom(ilst, "covr");
+            da.LoadImageBytes(imageData, MimeToDataType(mimeType));
+        }
+
+        public void RemoveImages()
+        {
+            if (root_.FindPath("moov.udta.meta.ilst") is not Atom_ilst ilst)
+                return;
+            var covrs = ilst.Children.Where(a => a.Type == "covr").ToList();
+            foreach (var c in covrs) { ilst.Children.Remove(c); ilst.Touch(-(long)c.Size); }
+        }
+
+        public void SetImages(IReadOnlyList<ArtworkImage> images)
+        {
+            Atom_ilst ilst = root_.FindPath("moov.udta.meta.ilst") as Atom_ilst
+                ?? throw new InvalidOperationException("No ilst atom found; cannot add artwork.");
+            RemoveImages();
+            if (images.Count == 0)
+                return;
+
+            // MP4 has no per-image picture type; store every image as a data atom under one covr.
+            ContainerAtom covr = ilst.CreateChild("covr") as ContainerAtom;
+            foreach (var img in images)
+            {
+                Atom_data da = new Atom_data(covr) { Type = "data" };
+                covr.Children.Add(da);
+                covr.Touch((long)da.Size);
+                da.LoadImageBytes(img.Data, MimeToDataType(img.MimeType));
+            }
+        }
+
+        private static Atom_data.DataTypes MimeToDataType(string mimeType) => (mimeType ?? "").ToLowerInvariant() switch
+        {
+            "image/png" => Atom_data.DataTypes.PNG,
+            "image/gif" => Atom_data.DataTypes.GIF,
+            "image/bmp" => Atom_data.DataTypes.BMP,
+            _ => Atom_data.DataTypes.JPEG,
+        };
 
         private Atom_data GetOrCreateStandardDataAtom(Atom_ilst ilst, string atomType)
         {

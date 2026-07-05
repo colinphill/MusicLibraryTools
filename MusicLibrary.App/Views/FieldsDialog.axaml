@@ -1,0 +1,52 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:MusicLibrary.App.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="640" d:DesignHeight="560"
+        x:Class="MusicLibrary.App.Views.FieldsDialog"
+        x:DataType="vm:FieldsDialogViewModel"
+        Width="640" Height="560"
+        WindowStartupLocation="CenterOwner"
+        Title="{Binding Title}">
+
+    <Grid Margin="18" RowDefinitions="Auto,*,Auto,Auto">
+
+        <TextBlock Grid.Row="0" Text="{Binding Title}" Classes="h1" Margin="0,0,0,14"/>
+
+        <Border Grid.Row="1" Classes="card" Padding="10">
+            <ScrollViewer>
+                <ItemsControl ItemsSource="{Binding Rows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:FieldRow">
+                            <Grid ColumnDefinitions="200,*,Auto" Margin="0,3">
+                                <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center"
+                                           FontWeight="SemiBold"
+                                           TextDecorations="{Binding MarkedForRemoval, Converter={x:Static vm:StrikeConverter.Instance}}"/>
+                                <TextBox Grid.Column="1" Text="{Binding Value, Mode=TwoWay}"
+                                         IsEnabled="{Binding !MarkedForRemoval}"
+                                         PlaceholderText="{Binding IsMixed, Converter={x:Static vm:MixedConverter.Instance}}"/>
+                                <Button Grid.Column="2" Content="{Binding RemoveButtonText}" Margin="6,0,0,0"
+                                        Command="{Binding $parent[Window].((vm:FieldsDialogViewModel)DataContext).RemoveFieldCommand}"
+                                        CommandParameter="{Binding}"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="0,10,0,0">
+            <TextBlock Text="Add field:" VerticalAlignment="Center"/>
+            <ComboBox ItemsSource="{Binding AddableFields}" SelectedItem="{Binding FieldToAdd}" Width="240"/>
+            <Button Content="Add" Command="{Binding AddFieldCommand}"/>
+        </StackPanel>
+
+        <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="8" Margin="0,14,0,0">
+            <Button Content="Save" Classes="accent" Command="{Binding SaveCommand}"/>
+            <Button Content="Cancel" Command="{Binding CancelCommand}"/>
+            <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center"
+                       Foreground="{DynamicResource SystemFillColorCriticalBrush}"/>
+        </StackPanel>
+    </Grid>
+</Window>

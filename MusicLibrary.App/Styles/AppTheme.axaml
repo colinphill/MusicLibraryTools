@@ -1,0 +1,166 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Styles.Resources>
+        <ResourceDictionary>
+            <!-- Surface tokens with deliberate elevation contrast (the Fluent WinUI brushes are too
+                 subtle on a near-black base — cards vanished). Theme-aware. -->
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="AppWindowBg" Color="#121216"/>
+                    <SolidColorBrush x:Key="AppHeaderBg" Color="#191920"/>
+                    <SolidColorBrush x:Key="AppCardBg" Color="#1E1E27"/>
+                    <SolidColorBrush x:Key="AppCardStroke" Color="#2E2E3B"/>
+                    <SolidColorBrush x:Key="AppInsetBg" Color="#15151B"/>
+                    <SolidColorBrush x:Key="AppDivider" Color="#2A2A35"/>
+                    <!-- Text tokens live in the SAME dictionary as the surfaces so text and
+                         background always come from one variant — no cross-brush mismatch. -->
+                    <SolidColorBrush x:Key="AppText" Color="#ECECF1"/>
+                    <SolidColorBrush x:Key="AppTextMuted" Color="#A6A6B4"/>
+                    <SolidColorBrush x:Key="AppTextFaint" Color="#7C7C8C"/>
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="AppWindowBg" Color="#F3F3F7"/>
+                    <SolidColorBrush x:Key="AppHeaderBg" Color="#FBFBFE"/>
+                    <SolidColorBrush x:Key="AppCardBg" Color="#FFFFFF"/>
+                    <SolidColorBrush x:Key="AppCardStroke" Color="#E5E5EC"/>
+                    <SolidColorBrush x:Key="AppInsetBg" Color="#F7F7FA"/>
+                    <SolidColorBrush x:Key="AppDivider" Color="#EAEAF0"/>
+                    <SolidColorBrush x:Key="AppText" Color="#1B1B22"/>
+                    <SolidColorBrush x:Key="AppTextMuted" Color="#55555F"/>
+                    <SolidColorBrush x:Key="AppTextFaint" Color="#86868F"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+
+            <!-- Accent palette (indigo). Also wired into Fluent's SystemAccentColor* in App.axaml so
+                 selection highlights, focus rings, and the built-in accent button all match. -->
+            <SolidColorBrush x:Key="AccentBrush" Color="#6C5CE7"/>
+            <SolidColorBrush x:Key="AccentBrushLight" Color="#8071EC"/>
+            <SolidColorBrush x:Key="AccentBrushDark" Color="#5A4BD6"/>
+        </ResourceDictionary>
+    </Styles.Resources>
+
+    <!-- ===== Typography (own tokens — always consistent with the surfaces) ===== -->
+    <Style Selector="TextBlock.h1">
+        <Setter Property="FontSize" Value="20"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource AppText}"/>
+    </Style>
+    <Style Selector="TextBlock.h2">
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="{DynamicResource AppTextMuted}"/>
+    </Style>
+    <Style Selector="TextBlock.muted">
+        <Setter Property="Foreground" Value="{DynamicResource AppTextMuted}"/>
+    </Style>
+    <Style Selector="TextBlock.caption">
+        <Setter Property="FontSize" Value="11"/>
+        <Setter Property="Foreground" Value="{DynamicResource AppTextFaint}"/>
+    </Style>
+
+    <!-- ===== Surfaces ===== -->
+    <Style Selector="Border.card">
+        <Setter Property="Background" Value="{DynamicResource AppCardBg}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AppCardStroke}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="12"/>
+        <Setter Property="BoxShadow" Value="0 4 16 0 #22000000"/>
+    </Style>
+
+    <Style Selector="Border.toolbar">
+        <Setter Property="Background" Value="{DynamicResource AppHeaderBg}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AppDivider}"/>
+        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+        <Setter Property="Padding" Value="18,12"/>
+    </Style>
+
+    <!-- Accent chip used as a small brand mark in the header. -->
+    <Style Selector="Border.chip">
+        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="CornerRadius" Value="9"/>
+        <Setter Property="Width" Value="34"/>
+        <Setter Property="Height" Value="34"/>
+    </Style>
+
+    <!-- ===== Controls: rounder, roomier ===== -->
+    <Style Selector="Button">
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="14,7"/>
+    </Style>
+    <Style Selector="TextBox">
+        <Setter Property="CornerRadius" Value="8"/>
+    </Style>
+    <Style Selector="ComboBox">
+        <Setter Property="CornerRadius" Value="8"/>
+    </Style>
+    <Style Selector="NumericUpDown">
+        <Setter Property="CornerRadius" Value="8"/>
+    </Style>
+
+    <!-- Primary (accent) button -->
+    <Style Selector="Button.accent /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentBrush}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}"/>
+    </Style>
+    <Style Selector="Button.accent:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentBrushLight}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrushLight}"/>
+    </Style>
+    <Style Selector="Button.accent:pressed /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AccentBrushDark}"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrushDark}"/>
+    </Style>
+
+    <!-- ===== Tabs: clean, spaced ===== -->
+    <Style Selector="TabControl">
+        <Setter Property="Padding" Value="0,10,0,0"/>
+    </Style>
+    <Style Selector="TabItem">
+        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontWeight" Value="Medium"/>
+        <Setter Property="MinHeight" Value="40"/>
+        <Setter Property="Padding" Value="12,0"/>
+    </Style>
+
+    <!-- ===== Tree ===== -->
+    <Style Selector="TreeView">
+        <Setter Property="Padding" Value="4"/>
+    </Style>
+    <Style Selector="TreeViewItem">
+        <Setter Property="MinHeight" Value="30"/>
+    </Style>
+
+    <!-- ===== DataGrid ===== -->
+    <Style Selector="DataGrid">
+        <Setter Property="RowHeight" Value="30"/>
+        <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+        <Setter Property="HorizontalGridLinesBrush" Value="{DynamicResource DividerStrokeColorDefaultBrush}"/>
+    </Style>
+    <Style Selector="DataGridColumnHeader">
+        <Setter Property="Background" Value="{DynamicResource AppInsetBg}"/>
+        <Setter Property="Foreground" Value="{DynamicResource AppText}"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Padding" Value="10,8"/>
+        <Setter Property="SeparatorBrush" Value="{DynamicResource AppDivider}"/>
+    </Style>
+    <!-- Fluent's header template presents the content in its own ContentPresenter; force its
+         foreground too so the header text isn't left at the default (which rendered near-black). -->
+    <Style Selector="DataGridColumnHeader /template/ ContentPresenter">
+        <Setter Property="Foreground" Value="{DynamicResource AppText}"/>
+    </Style>
+    <!-- DataGrid cell text -->
+    <Style Selector="DataGridCell">
+        <Setter Property="Foreground" Value="{DynamicResource AppText}"/>
+    </Style>
+
+    <!-- Toolbar row helper: consistent inner spacing -->
+    <Style Selector="StackPanel.toolbarrow">
+        <Setter Property="Orientation" Value="Horizontal"/>
+        <Setter Property="Spacing" Value="8"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+</Styles>

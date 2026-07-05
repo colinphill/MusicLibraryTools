@@ -167,6 +167,31 @@ namespace MusicFileUtilities
         void Save(string outputPath = null);
     }
 
+    /// <summary>
+    /// Uniform embedded-artwork writing across formats. Implemented where the underlying tag can
+    /// carry pictures; the front cover is the common case. Call <see cref="IMediaFile.SaveTags"/>
+    /// (or <see cref="IMetadataWriter.Save"/>) afterwards to persist. Formats without an
+    /// implementation are treated as artwork-read-only by callers.
+    /// </summary>
+    public interface IArtworkWriter
+    {
+        /// <summary>Replace (or add) the front-cover image. Passing null/empty data removes covers.</summary>
+        void SetFrontCover(byte[] imageData, string mimeType);
+
+        /// <summary>Remove all embedded images.</summary>
+        void RemoveImages();
+
+        /// <summary>
+        /// Replace the entire embedded-image set with the given images (each carrying a picture
+        /// type such as FrontCover/BackCover/Media). Formats without per-image type semantics
+        /// (MP4) store them all as cover art.
+        /// </summary>
+        void SetImages(IReadOnlyList<ArtworkImage> images);
+    }
+
+    /// <summary>A single image to embed: its picture type, MIME type, description, and bytes.</summary>
+    public sealed record ArtworkImage(ID3v2Util.APICType Type, string MimeType, string Description, byte[] Data);
+
     public abstract class TagBase : IMetadataProvider
     {
         public string Title { get; protected set; } = "";
