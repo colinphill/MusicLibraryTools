@@ -273,6 +273,9 @@ namespace MusicFileUtilities
         protected ulong _headersize = 8;
         protected bool _touched = false;
         protected long _deltasize = 0;
+        // Absolute offset this atom was parsed from in the source file (-1 for atoms created in
+        // memory). In-place saves seek here to overwrite an atom without moving anything else.
+        protected long _fileoffset = -1;
         // Type is consulted repeatedly (dictionary lookups, FindPath comparisons); decode once.
         private string _typestring = null;
 
@@ -285,6 +288,25 @@ namespace MusicFileUtilities
             get
             {
                 return (long)_size;
+            }
+        }
+
+        public long FileOffset
+        {
+            get
+            {
+                return _fileoffset;
+            }
+        }
+
+        // True when writing this atom would require a different-length size field than it occupies
+        // on disk (32-bit <-> 64-bit extended size), which would shift its own body. Never happens
+        // for moov in practice, but guards the in-place path against it.
+        public bool WouldHeaderResize
+        {
+            get
+            {
+                return (_size > 0xffffffff) != (_headersize >= 16);
             }
         }
 
@@ -316,6 +338,9 @@ namespace MusicFileUtilities
             _typestring = a._typestring;
             _size = a._size;
             _headersize = a._headersize;
+            // A typed atom (moov/mdat/...) is built by copying the base Atom that read the header;
+            // the original file offset must survive that upgrade or in-place saves can't locate it.
+            _fileoffset = a._fileoffset;
         }
 
         protected Atom(ContainerAtom ca)
@@ -328,6 +353,7 @@ namespace MusicFileUtilities
         public Atom(Stream s)
         {
             long offs = s.Position;
+            _fileoffset = offs;
             ulong size = ReadUint32(s);
             s.ReadExactly(_type);
             if (size == 1)
@@ -453,23 +479,6 @@ namespace MusicFileUtilities
             get
             {
                 return _deltasize;
-            }
-        }
-
-        public long DeltaSizeBefore
-        {
-            get
-            {
-                long sum = 0;
-                Atom a = this;
-                while (a._parent != null)
-                {
-                    int index = a._parent.Children.IndexOf(a);
-                    for (int i = 0; i < index; i++)
-                        sum += a._parent.Children[i]._deltasize;
-                    a = a._parent;
-                }
-                return sum;
             }
         }
 
@@ -1287,6 +1296,18 @@ namespace MusicFileUtilities
         {
         }
 
+        // Builds a fresh `free` padding atom of the given payload size, ready to be added to a
+        // container. The caller propagates the size upward (adjust_free: false) so the padding is
+        // not immediately re-absorbed. Used to reserve in-place edit room inside moov.
+        public Atom_free(ContainerAtom ca, long payloadBytes)
+            : base(ca)
+        {
+            Type = "free";
+            _size = 8 + (ulong)payloadBytes;
+            _headersize = 8;
+            _deltasize = (long)_size;
+        }
+
         public override void WriteAtom(Stream s)
         {
             WriteHeader(s);
@@ -1688,8 +1709,16 @@ namespace MusicFileUtilities
             _associatedpath = path;
          }
 
+        // Payload bytes reserved for the in-place edit pad seeded into moov on a full rewrite.
+        // ~2KB covers typical text-tag churn; larger edits (artwork) simply fall back to a rewrite.
+        private const long MoovPaddingBytes = 2048;
+
         public void WriteFile(string path)
         {
+            // Since we're rebuilding the file anyway, reserve some free padding inside moov (for
+            // faststart layouts that lack it) so the NEXT tag edit can be absorbed in place.
+            EnsureMoovPadding();
+
             // mdat (DemandAtom) reads audio from absolute positions in the original file.
             // If any preceding atom has changed size, the stco/co64 chunk offsets must be
             // adjusted by the net delta before writing, otherwise the output file is corrupt.
@@ -1715,23 +1744,117 @@ namespace MusicFileUtilities
             Untouch();
         }
 
-        public void ModifyFile()
+        // Reserves a `free` padding atom inside moov so a later tag edit can be absorbed in place
+        // (Path A) rather than copying the whole audio payload again. Only meaningful — and only
+        // applied — for faststart files (moov before mdat) that don't already carry padding:
+        //  - moov-last files already get full in-place coverage from Path B, so padding them would
+        //    just bloat every file for no gain;
+        //  - files that already have ample free space in moov (e.g. iTunes-authored) are left alone.
+        // The pad goes in udta (alongside meta), where Touch's free-adjust will find it. No-op if
+        // there's no udta to hold it (e.g. an untagged file).
+        private void EnsureMoovPadding()
         {
-            if ((Touched) || (!File.Exists(_associatedpath)))
-                throw new InvalidOperationException();
-            Stream s = new FileStream(_associatedpath, FileMode.Open, FileAccess.ReadWrite);
+            int moovIdx = -1, mdatIdx = -1;
+            for (int i = 0; i < _children.Count; i++)
+            {
+                if (moovIdx < 0 && _children[i].Type == "moov") moovIdx = i;
+                if (mdatIdx < 0 && _children[i].Type == "mdat") mdatIdx = i;
+            }
+            if (moovIdx < 0 || mdatIdx < 0 || moovIdx > mdatIdx)
+                return; // no moov/mdat, or moov already trails mdat (Path B territory)
+
+            if (_children[moovIdx] is not ContainerAtom moov)
+                return;
+            if (moov.ComputeFreeSpace() >= MoovPaddingBytes)
+                return; // already has room to absorb edits in place
+            if (moov.FindPath("udta") is not ContainerAtom udta)
+                return;
+
+            Atom_free pad = new Atom_free(udta, MoovPaddingBytes - 8);
+            udta.Children.Add(pad);
+            // Propagate the pad's size up to moov WITHOUT triggering free-absorption (which would
+            // immediately soak the pad back into itself).
+            udta.Touch(pad.Size, false);
+        }
+
+        // Persists tag edits without copying the (large) audio payload, but ONLY when it can prove
+        // the audio bytes cannot move. Returns false — caller must fall back to WriteFile — in every
+        // other case. Two safe layouts:
+        //
+        //   Path B  moov is the last top-level atom. Its size may change freely: mdat precedes it, so
+        //           the audio and every stco/co64 chunk offset (which point into mdat) stay valid. We
+        //           rewrite only moov's byte range and truncate/extend at EOF.
+        //   Path A  no top-level atom changed size (a `free` atom absorbed the delta). Every offset is
+        //           preserved, so we overwrite each changed atom over its original range in place.
+        //
+        // Bails when audio would shift, an original offset is unknown, or the trailing atom's size
+        // field would grow/shrink (32<->64 bit). stco/co64 are never adjusted here: in both paths the
+        // audio does not move, so leaving FixFileOffsets to the WriteFile fallback is correct.
+        public bool TrySaveInPlace()
+        {
+            if (_associatedpath == null || !File.Exists(_associatedpath) || _children.Count == 0)
+                return false;
+
+            // Every top-level atom must know where it came from (all parsed atoms do).
+            foreach (Atom a in _children)
+                if (a.FileOffset < 0)
+                    return false;
+
+            Atom last = _children[_children.Count - 1];
+
+            // Look at which top-level atoms before the trailing one changed size. Any such change
+            // shifts the file offset of everything after it (including the audio), which an in-place
+            // write can't accommodate — UNLESS the changed atom is a `free` padding atom that Touch
+            // grew/shrank to absorb the edit. free is not real data, so we can reclaim it (restore
+            // it to its on-disk size) and let the whole delta fall on the trailing atom instead.
+            bool anyBeforeLastChanged = false;
+            bool beforeLastAllFree = true;
+            for (int i = 0; i < _children.Count - 1; i++)
+            {
+                if (_children[i].DeltaSize == 0)
+                    continue;
+                anyBeforeLastChanged = true;
+                if (!(_children[i] is Atom_free))
+                    beforeLastAllFree = false;
+            }
+
+            // Path A: nothing moved (e.g. a free atom *inside* moov absorbed the delta, so moov's own
+            //         size is unchanged) — overwrite each changed atom over its original range.
+            // Path B: only the trailing atom (moov, after mdat) needs to resize, once any pre-mdat
+            //         free padding is reclaimed — rewrite its range and truncate/extend at EOF;
+            //         mdat and its chunk offsets are untouched.
+            bool pathA = !anyBeforeLastChanged && last.DeltaSize == 0;
+            bool pathB = last.DeltaSize != 0 && !last.WouldHeaderResize
+                         && (!anyBeforeLastChanged || beforeLastAllFree);
+
+            if (!pathA && !pathB)
+                return false;
+
+            // Commit the reclaim only now that Path B is certain, so a fallback to WriteFile never
+            // sees a half-adjusted tree.
+            if (pathB && anyBeforeLastChanged)
+            {
+                for (int i = 0; i < _children.Count - 1; i++)
+                    if (_children[i] is Atom_free && _children[i].DeltaSize != 0)
+                        _children[i].NonRecursiveTouch(-_children[i].DeltaSize);
+            }
+
+            using FileStream s = new FileStream(_associatedpath, FileMode.Open, FileAccess.ReadWrite);
             foreach (Atom a in _children)
             {
-                bool writeatom = a.Touched || (a.DeltaSizeBefore != 0);
-                if ((!writeatom) && (a is ContainerAtom))
-                    writeatom = (a as ContainerAtom).Modified;
-                if (writeatom)
-                    a.WriteAtom(s);
-                else
-                    s.Seek(a.Size, SeekOrigin.Current);
+                bool changed = a.Touched || (a is ContainerAtom c && c.Modified);
+                if (!changed)
+                    continue;
+                s.Seek(a.FileOffset, SeekOrigin.Begin);
+                a.WriteAtom(s);
             }
-            s.Close();
+            // Path B may have shrunk the tail (leaving stale bytes) or grown it; the valid file ends
+            // exactly where the last write finished. Path A preserves length, so this is a no-op there.
+            if (pathB)
+                s.SetLength(s.Position);
+
             Untouch();
+            return true;
         }
 
         public override void WriteAtom(Stream s)
@@ -2150,12 +2273,22 @@ namespace MusicFileUtilities
 
         public void SaveTags(string outputPath = null) => Save(outputPath);
 
+        // Test-only: records whether the most recent Save() took the in-place fast path (true) or
+        // the full-rewrite fallback (false). Lets tests assert the perf win actually fired instead
+        // of silently regressing to a whole-file copy.
+        internal bool LastSaveWasInPlace { get; private set; }
+
         public void Save(string outputPath = null)
         {
-            //if (outputPath == null)
-            //    root_.ModifyFile();
-            //else
-                root_.WriteFile(outputPath ?? root_.Path);
+            // Fast path: overwrite an existing file in place without copying the audio payload when
+            // the layout makes it provably safe (see RootAtom.TrySaveInPlace). Otherwise rebuild.
+            if (outputPath == null && root_.TrySaveInPlace())
+            {
+                LastSaveWasInPlace = true;
+                return;
+            }
+            LastSaveWasInPlace = false;
+            root_.WriteFile(outputPath ?? root_.Path);
         }
 
 
