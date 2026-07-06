@@ -8,7 +8,7 @@
         mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="820"
         x:Class="MusicLibrary.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/logo.ico"
         Width="1280" Height="820" MinWidth="1040" MinHeight="620"
         Background="{DynamicResource AppWindowBg}"
         Title="Music Library">
@@ -19,9 +19,28 @@
         <Border Grid.Row="0" Classes="toolbar">
             <Grid ColumnDefinitions="Auto,Auto,*,Auto">
                 <StackPanel Grid.Column="0" Classes="toolbarrow" Spacing="12">
-                    <Border Classes="chip">
-                        <TextBlock Text="♪" Foreground="White" FontSize="18" FontWeight="Bold"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Border Classes="chip" Width="68" Height="68" CornerRadius="18">
+                        <!-- Brand mark: the full "lossless" waveform + verified metadata tag rows, from the app icon. -->
+                        <Viewbox Width="52" Height="52" Stretch="Uniform"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center">
+                            <Canvas Width="256" Height="256">
+                                <!-- Lossless: full, symmetric waveform -->
+                                <Rectangle Canvas.Left="29"  Canvas.Top="86" Width="18" Height="52"  RadiusX="9" RadiusY="9" Fill="White" Opacity="0.80"/>
+                                <Rectangle Canvas.Left="59"  Canvas.Top="54" Width="18" Height="116" RadiusX="9" RadiusY="9" Fill="White" Opacity="0.90"/>
+                                <Rectangle Canvas.Left="89"  Canvas.Top="68" Width="18" Height="88"  RadiusX="9" RadiusY="9" Fill="White" Opacity="0.95"/>
+                                <Rectangle Canvas.Left="119" Canvas.Top="28" Width="18" Height="168" RadiusX="9" RadiusY="9" Fill="White"/>
+                                <Rectangle Canvas.Left="149" Canvas.Top="48" Width="18" Height="128" RadiusX="9" RadiusY="9" Fill="White" Opacity="0.95"/>
+                                <Rectangle Canvas.Left="179" Canvas.Top="74" Width="18" Height="76"  RadiusX="9" RadiusY="9" Fill="White" Opacity="0.90"/>
+                                <Rectangle Canvas.Left="209" Canvas.Top="88" Width="18" Height="48"  RadiusX="9" RadiusY="9" Fill="White" Opacity="0.80"/>
+                                <!-- Consistent metadata: two identical, aligned, verified tag rows -->
+                                <Rectangle Canvas.Left="76" Canvas.Top="206" Width="104" Height="13" RadiusX="6.5" RadiusY="6.5" Fill="White" Opacity="0.92"/>
+                                <Ellipse Canvas.Left="84.8" Canvas.Top="209.3" Width="6.4" Height="6.4" Fill="#5A4BD6"/>
+                                <Path Data="M156,213 l3,3 l6,-8" Stroke="#5A4BD6" StrokeThickness="2.6" StrokeLineCap="Round" StrokeJoin="Round"/>
+                                <Rectangle Canvas.Left="76" Canvas.Top="224" Width="104" Height="13" RadiusX="6.5" RadiusY="6.5" Fill="White" Opacity="0.92"/>
+                                <Ellipse Canvas.Left="84.8" Canvas.Top="227.3" Width="6.4" Height="6.4" Fill="#5A4BD6"/>
+                                <Path Data="M156,231 l3,3 l6,-8" Stroke="#5A4BD6" StrokeThickness="2.6" StrokeLineCap="Round" StrokeJoin="Round"/>
+                            </Canvas>
+                        </Viewbox>
                     </Border>
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="Music Library" Classes="h1"/>
