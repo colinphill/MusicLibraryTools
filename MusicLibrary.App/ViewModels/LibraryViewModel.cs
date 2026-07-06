@@ -26,8 +26,14 @@ public partial class LibraryViewModel : ViewModelBase
     {
         _library = library;
         _settings = settings;
-        // A newly-loaded config flips IsReady; re-evaluate the Index button's CanExecute.
-        _settings.ConfigurationChanged += (_, _) => IndexCommand.NotifyCanExecuteChanged();
+        // A newly-loaded config flips IsReady; re-evaluate the Index button's CanExecute and kick off
+        // an index automatically so the cache reflects the just-loaded library without a manual click.
+        _settings.ConfigurationChanged += (_, _) =>
+        {
+            IndexCommand.NotifyCanExecuteChanged();
+            if (IndexCommand.CanExecute(null))
+                IndexCommand.Execute(null);
+        };
     }
 
     private bool CanIndex() => _library.IsReady && !IsIndexing;

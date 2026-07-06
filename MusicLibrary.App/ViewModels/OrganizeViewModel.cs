@@ -17,6 +17,8 @@ public partial class OrganizeViewModel : ViewModelBase
     private CancellationTokenSource? _cts;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PreviewCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
