@@ -16,29 +16,44 @@ public static class DuplicateFinder
 
     public static IReadOnlyList<DuplicateGroup> Find(IReadOnlyList<TrackRecord> records, CancellationToken ct = default)
     {
-        ct.ThrowIfCancellationRequested();
-        var groups = records
-            .Where(r => !string.IsNullOrWhiteSpace(r.Title))
-            .GroupBy(BuildKey)
-            .Where(g => g.Count() > 1)
-            .Select(g => new DuplicateGroup(
-                g.Key,
-                g.OrderByDescending(r => r.SampleRate)
-                 .ThenByDescending(r => r.BitsPerSample)
-                 .ToList()))
+        var buckets = new Dictionary<DuplicateKey, List<TrackRecord>>();
+        foreach (var record in records)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (string.IsNullOrWhiteSpace(record.Title))
+                continue;
+            var key = BuildKey(record);
+            if (!buckets.TryGetValue(key, out var bucket))
+                buckets[key] = bucket = [];
+            bucket.Add(record);
+        }
+
+        var groups = buckets
+            .Where(pair => pair.Value.Count > 1)
+            .Select(pair =>
+            {
+                ct.ThrowIfCancellationRequested();
+                return new DuplicateGroup(
+                    pair.Key.Display,
+                    pair.Value.OrderByDescending(r => r.SampleRate)
+                        .ThenByDescending(r => r.BitsPerSample)
+                        .ToList());
+            })
             .OrderBy(g => g.Key, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
 
         return groups;
     }
 
-    private static string BuildKey(TrackRecord r)
+    private static DuplicateKey BuildKey(TrackRecord r) => new(
+        Normalize(r.EffectiveAlbumArtist),
+        Normalize(r.StrippedAlbum ?? r.Album ?? ""),
+        r.TrackNumber,
+        Normalize(BaseTitle(r.Title ?? "")));
+
+    private readonly record struct DuplicateKey(string Artist, string Album, int? Track, string Title)
     {
-        var artist = Normalize(r.EffectiveAlbumArtist);
-        var album = Normalize(r.StrippedAlbum ?? r.Album ?? "");
-        var title = Normalize(BaseTitle(r.Title ?? ""));
-        var track = r.TrackNumber?.ToString() ?? "?";
-        return $"{artist}|{album}|{track}|{title}";
+        public string Display => $"{Artist} | {Album} | {Track?.ToString() ?? "?"} | {Title}";
     }
 
     private static string BaseTitle(string title) => VersionSuffix.Replace(title, "").Trim();

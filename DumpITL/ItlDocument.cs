@@ -258,7 +258,12 @@ public sealed class ItlDocument
     public bool RemoveAlbum(string name)
     {
         ItlRecord? album = Albums.FirstOrDefault(a => a.Field((int)ItlDataType.AlbumRecordName)?.Text == name);
-        return album is not null && Albums.Remove(album);
+        if (album is null)
+            return false;
+        uint id = RecordIdOf(album);
+        if (Tracks.Any(t => t.GetAlbumId() == id))
+            throw new InvalidOperationException($"Album '{name}' is still referenced by one or more tracks.");
+        return Albums.Remove(album);
     }
 
     public ItlRecord AddArtist(string name, ItlRecord template)
@@ -273,7 +278,12 @@ public sealed class ItlDocument
     public bool RemoveArtist(string name)
     {
         ItlRecord? artist = Artists.FirstOrDefault(a => a.Field((int)ItlDataType.ArtistRecordName)?.Text == name);
-        return artist is not null && Artists.Remove(artist);
+        if (artist is null)
+            return false;
+        uint id = RecordIdOf(artist);
+        if (Tracks.Any(t => t.GetArtistId() == id))
+            throw new InvalidOperationException($"Artist '{name}' is still referenced by one or more tracks.");
+        return Artists.Remove(artist);
     }
 
     private static ulong NewPersistentId()

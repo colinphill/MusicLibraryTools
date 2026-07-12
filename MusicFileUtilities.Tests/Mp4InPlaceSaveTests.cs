@@ -175,6 +175,31 @@ namespace MusicFileUtilities.Tests
             Assert.Equal(pcm, Ffmpeg.DecodePcm(tmp.Path));
         }
 
+        [Fact]
+        public void SameInstanceCanPerformTwoFullRewrites()
+        {
+            using var tmp = Ffmpeg.Faststart(MediaFixtures.Path_("sample_aac.m4a"));
+            byte[] pcmBefore = Ffmpeg.DecodePcm(tmp.Path);
+
+            var mp4 = (MP4File)MediaFile.GetFile(tmp.Path);
+            mp4.SetField(TagFields.Title, "First full rewrite");
+            mp4.Save();
+            Assert.False(mp4.LastSaveWasInPlace);
+
+            // Larger than the 2 KiB pad seeded by the first rewrite, forcing the same object to
+            // copy mdat a second time. Its demand source must be the committed file, not the old
+            // staging filename.
+            byte[] largeCover = Ffmpeg.EncodeJpeg(1024, 1024);
+            Assert.True(largeCover.Length > 2048);
+            ((IArtworkWriter)mp4).SetFrontCover(largeCover, "image/jpeg");
+            mp4.Save();
+
+            Assert.False(mp4.LastSaveWasInPlace);
+            Assert.Equal("First full rewrite", Read(tmp.Path)[TagFields.Title]);
+            Assert.Single(MediaFile.GetFile(tmp.Path).Tags.SelectMany(t => t.GetImageMetadata()));
+            Assert.Equal(pcmBefore, Ffmpeg.DecodePcm(tmp.Path));
+        }
+
         // ---- helpers -------------------------------------------------------------------------
 
         // Index of the first top-level atom of the given type, or -1.

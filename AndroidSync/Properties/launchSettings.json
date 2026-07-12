@@ -2,7 +2,7 @@
   "profiles": {
     "AndroidSync": {
       "commandName": "Project",
-      "commandLineArgs": "\\\\ritsuko.projecteva.net\\DAPDSD Y:\\stupid"
+      "commandLineArgs": "source destination"
     }
   }
 }

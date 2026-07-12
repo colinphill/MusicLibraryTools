@@ -37,17 +37,17 @@ namespace CheckRedundancies
 
             LogConsole.WriteLine("iTunes Library Size: " + lib.Tracks.Count.ToString());
 
-            Dictionary<string, List<iTunesTrack>> hash = new Dictionary<string, List<iTunesTrack>>();
+            Dictionary<(string Artist, string Title), List<iTunesTrack>> hash = new();
 
             LogConsole.WriteLine("Scanning Library");
 
-            foreach (iTunesTrack track in lib.Tracks.Values.Where(t => t.Type.ToLower() != "remote"))
+            foreach (iTunesTrack track in lib.Tracks.Values.Where(t => !string.Equals(t.Type, "remote", StringComparison.OrdinalIgnoreCase)))
             {
-                string artist = track.Artist.ToLower();
-                string title = track.Title;
+                string artist = (track.Artist ?? string.Empty).Trim().ToUpperInvariant();
+                string title = track.Title ?? string.Empty;
                 Match m = verre.Match(title);
-                string basetitle = (m.Success ? m.Groups[1].Value : title).ToLower();
-                string key = artist + "/" + basetitle;
+                string basetitle = (m.Success ? m.Groups[1].Value : title).Trim().ToUpperInvariant();
+                var key = (artist, basetitle);
                 List<iTunesTrack> list;
                 if (hash.ContainsKey(key))
                     list = hash[key];

@@ -5,16 +5,13 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.IO;
+using System.Security.Cryptography;
 using MusicFileUtilities;
 
 namespace SortDownloads
 {
     class Program
     {
-        const string FLAC_DIR = @"Z:\ITunes\FLAC\Sorted";
-        const string FLAC2_DIR = @"Z:\iTunes\FLAC2\Sorted";
-        const string HiRes_DIR = @"Z:\iTunes\HiRes\Stereo\PCM\Sorted";
-
         static string GetFileName(string desired)
         {
             if (!File.Exists(desired))
@@ -30,17 +27,75 @@ namespace SortDownloads
             }
         }
 
+        static string ComputeHash(string path)
+        {
+            using FileStream stream = File.OpenRead(path);
+            return Convert.ToHexString(SHA256.HashData(stream));
+        }
+
+        static bool PathsOverlap(string first, string second)
+        {
+            string a = Path.GetFullPath(first).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            string b = Path.GetFullPath(second).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            return a.StartsWith(b, StringComparison.OrdinalIgnoreCase) || b.StartsWith(a, StringComparison.OrdinalIgnoreCase);
+        }
+
+        static bool IsHighResolution(ICodecProvider codec) =>
+            codec.Samplerate > 48000 || codec.BitsPerSample > 16 || codec.Channels > 2;
+
+        static void Move(string source, string destination, bool apply, string description)
+        {
+            string actualDestination = apply ? GetFileName(destination) : destination;
+            Console.WriteLine($"{description}: {source} -> {actualDestination}");
+            if (apply)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(actualDestination));
+                File.Move(source, actualDestination);
+            }
+        }
+
         static void Main(string[] args)
         {
-            Directory.CreateDirectory(FLAC_DIR);
-            Directory.CreateDirectory(FLAC2_DIR);
-            Directory.CreateDirectory(HiRes_DIR);
+            bool apply = args.Any(a => a.Equals("--apply", StringComparison.OrdinalIgnoreCase));
+            string[] operands = args.Where(a => !a.Equals("--apply", StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (operands.Length != 4)
+            {
+                Console.WriteLine("Usage: SortDownloads <source> <standard-destination> <paired-standard-destination> <high-resolution-destination> [--apply]");
+                return;
+            }
 
-            string basedir = (args.Length > 0) ? args[0] : @"Z:\iTunes\Sort";
+            string basedir = Path.GetFullPath(operands[0]);
+            string standardDirectory = Path.GetFullPath(operands[1]);
+            string pairedStandardDirectory = Path.GetFullPath(operands[2]);
+            string highResolutionDirectory = Path.GetFullPath(operands[3]);
+            if (!Directory.Exists(basedir))
+            {
+                Console.WriteLine("Source directory does not exist: " + basedir);
+                return;
+            }
+            string[] destinations = { standardDirectory, pairedStandardDirectory, highResolutionDirectory };
+            if (destinations.Any(destination => PathsOverlap(basedir, destination)) ||
+                destinations.SelectMany((first, index) => destinations.Skip(index + 1).Select(second => (first, second)))
+                    .Any(pair => PathsOverlap(pair.first, pair.second)))
+            {
+                Console.WriteLine("Refusing to continue because source/destination directories overlap.");
+                return;
+            }
+
+            if (!apply)
+                Console.WriteLine("Dry-run mode; pass --apply to move files. No files are ever deleted.");
+            else
+            {
+                foreach (string destination in destinations)
+                    Directory.CreateDirectory(destination);
+            }
+
+            string quarantineRoot = basedir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
+                ".SortDownloads-quarantine" + Path.DirectorySeparatorChar + DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff");
 
             var di = new DirectoryInfo(basedir);
             var files = di.GetFileSystemInfos("*.*", SearchOption.AllDirectories);
-            var buckets = new Dictionary<string, List<(string Path, ICodecProvider Codec)>>();
+            var buckets = new Dictionary<(int Disc, int Track, string Artist, string Album, string Title), List<(string Path, ICodecProvider Codec)>>();
 
             foreach (var file in files.Where(f => !f.Attributes.HasFlag(FileAttributes.Directory)))
             {
@@ -55,37 +110,66 @@ namespace SortDownloads
                         Console.WriteLine($"Skipping Lossy File: {filename}");
                         continue;
                     }
-                    var name = $"{tag.TrackNumber ?? 0} {tag.AlbumArtist} {tag.Album} {tag.Title}".ToLower();
-                    if (!buckets.ContainsKey(name))
-                        buckets.Add(name, new List<(string, ICodecProvider)>());
-                    buckets[name].Add((filename, codec));
+                    string artist = string.IsNullOrWhiteSpace(tag.AlbumArtist) ? tag.Artist : tag.AlbumArtist;
+                    var key = (
+                        tag.DiscNumber ?? 0,
+                        tag.TrackNumber ?? 0,
+                        (artist ?? "").Trim().ToUpperInvariant(),
+                        (tag.Album ?? "").Trim().ToUpperInvariant(),
+                        (tag.Title ?? "").Trim().ToUpperInvariant());
+                    if (!buckets.ContainsKey(key))
+                        buckets.Add(key, new List<(string, ICodecProvider)>());
+                    buckets[key].Add((filename, codec));
                 }
-                catch
+                catch (Exception ex)
                 {
-
+                    Console.Error.WriteLine($"Skipping unreadable file {file.FullName}: {ex.Message}");
                 }
             }
 
             foreach (var bucket in buckets)
             {
-                if (bucket.Value.Select(i => i.Codec.AverageBitrate).Distinct().Count() == 1)
+                var candidates = bucket.Value
+                    .Select(item => (item.Path, item.Codec, Hash: ComputeHash(item.Path)))
+                    .ToArray();
+                var standard = candidates.Where(item => !IsHighResolution(item.Codec))
+                    .OrderBy(item => item.Codec.Samplerate)
+                    .ThenBy(item => item.Codec.BitsPerSample)
+                    .ThenBy(item => item.Codec.Channels)
+                    .LastOrDefault();
+                var highResolution = candidates.Where(item => IsHighResolution(item.Codec))
+                    .OrderBy(item => item.Codec.Samplerate)
+                    .ThenBy(item => item.Codec.BitsPerSample)
+                    .ThenBy(item => item.Codec.Channels)
+                    .LastOrDefault();
+
+                var retained = new List<(string Path, ICodecProvider Codec, string Hash)>();
+                if (standard.Path != null)
                 {
-                    File.Move(bucket.Value[0].Path, GetFileName(Path.Combine(FLAC_DIR, Path.GetFileName(bucket.Value[0].Path))));
-                    bucket.Value.Skip(1).ToList().ForEach(p => File.Delete(p.Path));
+                    retained.Add(standard);
+                    string destination = highResolution.Path == null ? standardDirectory : pairedStandardDirectory;
+                    Move(standard.Path, Path.Combine(destination, Path.GetFileName(standard.Path)), apply, "Standard lossless");
                 }
-                else
+                if (highResolution.Path != null)
                 {
-                    var ordered = bucket.Value.OrderBy(i => i.Codec.AverageBitrate).ToArray();
-                    // Keep the lowest-bitrate copy as the standard FLAC and the highest as HiRes;
-                    // delete any intermediate duplicates so nothing is left behind in the source.
-                    File.Move(ordered[0].Path, GetFileName(Path.Combine(FLAC2_DIR, Path.GetFileName(ordered[0].Path))));
-                    File.Move(ordered[^1].Path, GetFileName(Path.Combine(HiRes_DIR, Path.GetFileName(ordered[^1].Path))));
-                    foreach (var extra in ordered.Skip(1).Take(ordered.Length - 2))
-                        File.Delete(extra.Path);
+                    retained.Add(highResolution);
+                    Move(highResolution.Path, Path.Combine(highResolutionDirectory, Path.GetFileName(highResolution.Path)), apply, "High resolution");
+                }
+
+                var retainedPaths = new HashSet<string>(retained.Select(item => item.Path), StringComparer.OrdinalIgnoreCase);
+                var retainedHashes = new HashSet<string>(retained.Select(item => item.Hash), StringComparer.Ordinal);
+                foreach (var extra in candidates.Where(item => !retainedPaths.Contains(item.Path)))
+                {
+                    string relative = Path.GetRelativePath(basedir, extra.Path);
+                    string reason = retainedHashes.Contains(extra.Hash)
+                        ? "Verified byte-identical duplicate (quarantine)"
+                        : "Alternate resolution or metadata collision (quarantine)";
+                    Move(extra.Path, Path.Combine(quarantineRoot, relative), apply, reason);
                 }
             }
 
-            MetadataExtensions.CleanEmptyMusicFolders(di, true);
+            if (apply)
+                MetadataExtensions.CleanEmptyMusicFolders(di, false);
 
             Console.WriteLine();
 

@@ -25,11 +25,16 @@ public interface IThumbnailProvider
 public sealed class ThumbnailProvider : IThumbnailProvider
 {
     private const int ThumbnailPixels = 64;
+    private const int MaxCachedThumbnails = 512;
 
     private readonly ILibraryService _library;
     private readonly IArtworkService _artwork;
-    private readonly Dictionary<string, Bitmap?> _cache = new(StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, Task<Bitmap?>> _inflight = new(StringComparer.OrdinalIgnoreCase);
+    private readonly object _gate = new();
+    private readonly Dictionary<string, byte[]?> _cache = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Task<byte[]?>> _inflight = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, LinkedListNode<string>> _lruNodes = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, int> _versions = new(StringComparer.OrdinalIgnoreCase);
+    private readonly LinkedList<string> _lru = new();
 
     public ThumbnailProvider(ILibraryService library, IArtworkService artwork)
     {
@@ -37,46 +42,111 @@ public sealed class ThumbnailProvider : IThumbnailProvider
         _artwork = artwork;
     }
 
-    public Task<Bitmap?> GetAsync(string path)
+    public async Task<Bitmap?> GetAsync(string path)
     {
-        if (_cache.TryGetValue(path, out var cached))
-            return Task.FromResult(cached);
-        if (_inflight.TryGetValue(path, out var pending))
-            return pending;
+        var data = await GetDataAsync(path);
+        if (data is not { Length: > 0 })
+            return null;
 
-        var task = LoadAsync(path);
-        _inflight[path] = task;
-        return task;
+        using var ms = new MemoryStream(data, writable: false);
+        return new Bitmap(ms);
     }
 
-    public void Invalidate(string path) => _cache.Remove(path);
+    public void Invalidate(string path)
+    {
+        lock (_gate)
+        {
+            _versions[path] = GetVersionLocked(path) + 1;
+            RemoveCachedLocked(path);
+            // Do not reuse an in-flight load that captured the old image bytes. It will notice the
+            // version mismatch when it completes and will not repopulate the cache.
+            _inflight.Remove(path);
+        }
+    }
 
-    private async Task<Bitmap?> LoadAsync(string path)
+    private async Task<byte[]?> GetDataAsync(string path)
+    {
+        Task<byte[]?> task;
+        lock (_gate)
+        {
+            if (_cache.TryGetValue(path, out var cached))
+            {
+                TouchLocked(path);
+                return cached;
+            }
+            if (!_inflight.TryGetValue(path, out task!))
+            {
+                task = LoadDataAsync(path, GetVersionLocked(path));
+                _inflight[path] = task;
+            }
+        }
+
+        try
+        {
+            return await task;
+        }
+        finally
+        {
+            lock (_gate)
+            {
+                if (_inflight.TryGetValue(path, out var current) && ReferenceEquals(current, task))
+                    _inflight.Remove(path);
+            }
+        }
+    }
+
+    private async Task<byte[]?> LoadDataAsync(string path, int version)
     {
         try
         {
             var raw = await _library.GetFirstImageAsync(path);
-            Bitmap? bmp = null;
+            byte[]? data = null;
             if (raw is { Length: > 0 })
             {
                 var prepared = await _artwork.PrepareFromBytesAsync(raw, ThumbnailPixels);
                 if (prepared is not null)
-                {
-                    using var ms = new MemoryStream(prepared.Data);
-                    bmp = new Bitmap(ms);
-                }
+                    data = prepared.Data;
             }
-            _cache[path] = bmp;
-            return bmp;
+
+            lock (_gate)
+            {
+                if (GetVersionLocked(path) != version)
+                    return null;
+                AddCachedLocked(path, data);
+            }
+            return data;
         }
         catch
         {
-            _cache[path] = null;
+            lock (_gate)
+                if (GetVersionLocked(path) == version)
+                    AddCachedLocked(path, null);
             return null;
         }
-        finally
-        {
-            _inflight.Remove(path);
-        }
+    }
+
+    private int GetVersionLocked(string path) => _versions.GetValueOrDefault(path);
+
+    private void AddCachedLocked(string path, byte[]? data)
+    {
+        _cache[path] = data;
+        TouchLocked(path);
+        while (_cache.Count > MaxCachedThumbnails && _lru.First is { } oldest)
+            RemoveCachedLocked(oldest.Value);
+    }
+
+    private void TouchLocked(string path)
+    {
+        if (_lruNodes.Remove(path, out var existing))
+            _lru.Remove(existing);
+        var node = _lru.AddLast(path);
+        _lruNodes[path] = node;
+    }
+
+    private void RemoveCachedLocked(string path)
+    {
+        _cache.Remove(path);
+        if (_lruNodes.Remove(path, out var node))
+            _lru.Remove(node);
     }
 }

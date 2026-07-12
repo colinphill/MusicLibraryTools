@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Xml.Linq;
 using MusicLibraryTools;
 
 namespace MusicLibrary.Core.Services;
@@ -10,48 +11,123 @@ public sealed class AppSettings : IAppSettings
 
     private sealed record PersistedState(string? ConfigPath, Dictionary<string, string>? Preferences, List<string>? RecentConfigs);
 
-    private static readonly string StateFile = Path.Combine(
+    private static readonly string DefaultStateFile = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         "MusicLibraryTools", "app-settings.json");
 
+    private readonly object _sync = new();
+    private readonly string _stateFile;
     private readonly Dictionary<string, string> _preferences;
     private readonly List<string> _recentConfigs;
     private string? _rememberedConfigPath;
+    private string? _configPath;
+    private LibraryConfiguration? _configuration;
+    private long _configurationVersion;
 
-    public AppSettings()
+    public AppSettings() : this(DefaultStateFile)
     {
+    }
+
+    /// <summary>
+    /// Creates settings backed by a caller-selected state file. Primarily useful to isolate tests or
+    /// portable deployments from the user's normal roaming profile.
+    /// </summary>
+    public AppSettings(string stateFile)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(stateFile);
+        _stateFile = Path.GetFullPath(stateFile);
         var state = TryLoad();
         _rememberedConfigPath = state?.ConfigPath;
         _preferences = state?.Preferences ?? new();
         _recentConfigs = state?.RecentConfigs ?? new();
     }
 
-    public string? ConfigPath { get; private set; }
-    public LibraryConfiguration? Configuration { get; private set; }
+    public string? ConfigPath { get { lock (_sync) return _configPath; } }
+    public LibraryConfiguration? Configuration { get { lock (_sync) return _configuration; } }
+
+    public AppConfigurationSnapshot GetSnapshot()
+    {
+        lock (_sync)
+            return new AppConfigurationSnapshot(_configPath, _configuration, _configurationVersion);
+    }
 
     public event EventHandler? ConfigurationChanged;
 
     public void LoadConfig(string path)
     {
-        // Constructing LibraryConfiguration parses the XML; let exceptions surface to the caller
-        // so the UI can show a load error.
-        Configuration = new LibraryConfiguration(path);
-        ConfigPath = path;
-        _rememberedConfigPath = path;
-        AddRecent(path);
-        Persist();
+        var fullPath = Path.GetFullPath(path);
+        var configuration = LoadValidatedConfiguration(fullPath);
+
+        // Commit all observable state together only after validation has succeeded.
+        lock (_sync)
+        {
+            _configuration = configuration;
+            _configPath = fullPath;
+            _configurationVersion++;
+            _rememberedConfigPath = fullPath;
+            AddRecent(fullPath);
+            Persist();
+        }
         ConfigurationChanged?.Invoke(this, EventArgs.Empty);
     }
 
-    public string? GetRememberedConfigPath()
-        => _rememberedConfigPath is not null && File.Exists(_rememberedConfigPath) ? _rememberedConfigPath : null;
+    private static LibraryConfiguration LoadValidatedConfiguration(string path)
+    {
+        var root = XDocument.Load(path).Element("LibraryConfiguration")
+            ?? throw new InvalidDataException("Missing <LibraryConfiguration> root element.");
 
-    public IReadOnlyList<string> RecentConfigPaths => _recentConfigs;
+        var database = (string?)root.Element("DatabaseFile");
+        if (database is not null && string.IsNullOrWhiteSpace(database))
+            throw new InvalidDataException("<DatabaseFile> cannot be empty.");
+        if (database?.Equals("sqlite:", StringComparison.OrdinalIgnoreCase) == true)
+            throw new InvalidDataException("A sqlite: database specification must include a path.");
+
+        ValidatePositiveInteger(root, "LengthLimit");
+        ValidatePositiveInteger(root, "DiscNumLengthLimit");
+
+        foreach (var target in root.Elements("IndexTarget"))
+        {
+            if (string.IsNullOrWhiteSpace(target.Value))
+                throw new InvalidDataException("<IndexTarget> cannot be empty.");
+            if (target.Attribute("Set") is { } setAttribute &&
+                (!int.TryParse(setAttribute.Value, out var set) || set < 0))
+                throw new InvalidDataException($"Invalid IndexTarget Set value '{setAttribute.Value}'.");
+        }
+
+        // Eagerly materialize the deferred parser API so malformed target attributes fail before
+        // the active configuration is replaced and remembered.
+        var configuration = new LibraryConfiguration(path);
+        _ = configuration.IndexLocations.ToList();
+        _ = configuration.DatabaseFile;
+        return configuration;
+    }
+
+    private static void ValidatePositiveInteger(XElement root, string elementName)
+    {
+        if (root.Element(elementName) is not { } element)
+            return;
+        if (!int.TryParse(element.Value, out var value) || value <= 0)
+            throw new InvalidDataException($"<{elementName}> must be a positive integer.");
+    }
+
+    public string? GetRememberedConfigPath()
+    {
+        lock (_sync)
+            return _rememberedConfigPath is not null && File.Exists(_rememberedConfigPath) ? _rememberedConfigPath : null;
+    }
+
+    public IReadOnlyList<string> RecentConfigPaths
+    {
+        get { lock (_sync) return _recentConfigs.ToArray(); }
+    }
 
     public void ClearRecentConfigs()
     {
-        _recentConfigs.Clear();
-        Persist();
+        lock (_sync)
+        {
+            _recentConfigs.Clear();
+            Persist();
+        }
     }
 
     // Move the path to the most-recent slot (case-insensitive de-dupe) and cap the list.
@@ -64,23 +140,29 @@ public sealed class AppSettings : IAppSettings
     }
 
     public string? GetPreference(string key)
-        => _preferences.TryGetValue(key, out var value) ? value : null;
+    {
+        lock (_sync)
+            return _preferences.TryGetValue(key, out var value) ? value : null;
+    }
 
     public void SetPreference(string key, string? value)
     {
-        if (value is null)
-            _preferences.Remove(key);
-        else
-            _preferences[key] = value;
-        Persist();
+        lock (_sync)
+        {
+            if (value is null)
+                _preferences.Remove(key);
+            else
+                _preferences[key] = value;
+            Persist();
+        }
     }
 
-    private static PersistedState? TryLoad()
+    private PersistedState? TryLoad()
     {
         try
         {
-            if (File.Exists(StateFile))
-                return JsonSerializer.Deserialize<PersistedState>(File.ReadAllText(StateFile));
+            if (File.Exists(_stateFile))
+                return JsonSerializer.Deserialize<PersistedState>(File.ReadAllText(_stateFile));
         }
         catch
         {
@@ -93,8 +175,9 @@ public sealed class AppSettings : IAppSettings
     {
         try
         {
-            Directory.CreateDirectory(Path.GetDirectoryName(StateFile)!);
-            File.WriteAllText(StateFile, JsonSerializer.Serialize(new PersistedState(_rememberedConfigPath, _preferences, _recentConfigs)));
+            var bytes = JsonSerializer.SerializeToUtf8Bytes(
+                new PersistedState(_rememberedConfigPath, new(_preferences), new(_recentConfigs)));
+            AtomicFile.Write(_stateFile, stream => stream.Write(bytes));
         }
         catch
         {

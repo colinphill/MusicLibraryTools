@@ -376,7 +376,9 @@ namespace MusicFileUtilities
 
         #endregion
 
-        public string Vendor;
+        // A FLAC file is valid without a VORBIS_COMMENT block. Give newly-created comments a
+        // usable vendor so adding the first tag does not pass null to Encoding.GetBytes().
+        public string Vendor = "MusicFileUtilities";
         public List<KeyValuePair<string, string>> Comments = new List<KeyValuePair<string, string>>();
         public List<VorbisArtwork> Artworks = new List<VorbisArtwork>();
 
@@ -623,7 +625,7 @@ namespace MusicFileUtilities
             // spanning many pages); a List grows amortized O(1).
             var pagedata = new List<byte>();
 
-            FileStream s = Tools.OpenReadSequential(filename);
+            using FileStream s = Tools.OpenReadSequential(filename);
             do
             {
                 int datalen;
@@ -651,7 +653,6 @@ namespace MusicFileUtilities
 
             ParsePage(pagedata.ToArray());
 
-            s.Close();
         }
 
         public void SaveTags(string outputPath = null)
@@ -668,105 +669,125 @@ namespace MusicFileUtilities
             Array.Copy(commentData, 0, newPacket, 7, commentData.Length);
             newPacket[7 + commentData.Length] = 0x01; // framing bit
 
-            string tempPath = target + ".tmp~";
+            string tempPath = Tools.CreateSiblingTempPath(target);
             try
             {
-                using FileStream source = new FileStream(Filename ?? target, FileMode.Open, FileAccess.Read);
-                using FileStream dest = new FileStream(tempPath, FileMode.Create, FileAccess.Write);
-
-                int seqDelta = 0;
-                int state = 0; // 0=Looking, 1=Skipping old continuation pages, 2=Copying
-
-                while (source.Position < source.Length)
                 {
-                    byte[] hdr = new byte[27];
-                    if (source.Read(hdr, 0, 27) < 27) break;
-                    if (hdr[0] != (byte)'O' || hdr[1] != (byte)'g' || hdr[2] != (byte)'g' || hdr[3] != (byte)'S')
-                        throw new InvalidDataException("Invalid OGG page");
+                    using FileStream source = new FileStream(Filename ?? target, FileMode.Open, FileAccess.Read);
+                    using FileStream dest = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write);
 
-                    int numSegs = hdr[26];
-                    byte[] segTable = new byte[numSegs];
-                    source.ReadExactly(segTable, 0, numSegs);
-                    int dataLen = 0;
-                    foreach (byte sg in segTable) dataLen += sg;
-                    byte[] data = new byte[dataLen];
-                    if (dataLen > 0) source.ReadExactly(data);
+                    int seqDelta = 0;
+                    int state = 0; // 0=Looking, 1=Skipping old continuation pages, 2=Copying
+                    int? editedSerial = null;
+                    bool editedStreamEnded = false;
 
-                    bool isCont = (hdr[5] & 1) != 0;
-
-                    if (state == 0) // Looking for comment packet
+                    while (source.Position < source.Length)
                     {
-                        if (!isCont && data.Length >= 7 &&
-                            data[0] == 0x03 && data[1] == (byte)'v' && data[2] == (byte)'o' &&
-                            data[3] == (byte)'r' && data[4] == (byte)'b' && data[5] == (byte)'i' && data[6] == (byte)'s')
-                        {
-                            int serial = OggReadInt32LE(hdr, 14);
-                            int newSeq = OggReadInt32LE(hdr, 18) + seqDelta;
-                            long granulePos = OggReadInt64LE(hdr, 6);
-                            byte headerType = (byte)(hdr[5] & ~1); // clear continuation bit
-                            int pagesWritten = WriteOggPacketPages(dest, newPacket, headerType, granulePos, serial, newSeq);
+                        byte[] hdr = new byte[27];
+                        if (source.Read(hdr, 0, 27) < 27) break;
+                        if (hdr[0] != (byte)'O' || hdr[1] != (byte)'g' || hdr[2] != (byte)'g' || hdr[3] != (byte)'S')
+                            throw new InvalidDataException("Invalid OGG page");
 
-                            // The comment packet is only the FIRST packet on this page: the
-                            // vorbis setup header normally shares it. Replacing the whole page
-                            // used to drop the setup header and leave the file undecodable, so
-                            // re-emit whatever follows the comment packet on its own page.
+                        int numSegs = hdr[26];
+                        byte[] segTable = new byte[numSegs];
+                        source.ReadExactly(segTable, 0, numSegs);
+                        int dataLen = 0;
+                        foreach (byte sg in segTable) dataLen += sg;
+                        byte[] data = new byte[dataLen];
+                        if (dataLen > 0) source.ReadExactly(data);
+
+                        bool isCont = (hdr[5] & 1) != 0;
+                        int pageSerial = OggReadInt32LE(hdr, 14);
+
+                        if (state == 0) // Looking for comment packet
+                        {
+                            if (!isCont && data.Length >= 7 &&
+                                data[0] == 0x03 && data[1] == (byte)'v' && data[2] == (byte)'o' &&
+                                data[3] == (byte)'r' && data[4] == (byte)'b' && data[5] == (byte)'i' && data[6] == (byte)'s')
+                            {
+                                editedSerial = pageSerial;
+                                int newSeq = OggReadInt32LE(hdr, 18);
+                                long granulePos = OggReadInt64LE(hdr, 6);
+                                byte headerType = (byte)(hdr[5] & ~1); // clear continuation bit
+                                int pagesWritten = WriteOggPacketPages(dest, newPacket, headerType, granulePos, pageSerial, newSeq);
+
+                                // The comment packet is only the FIRST packet on this page: the
+                                // vorbis setup header normally shares it. Replacing the whole page
+                                // used to drop the setup header and leave the file undecodable, so
+                                // re-emit whatever follows the comment packet on its own page.
+                                var (ends, segsUsed, bytesUsed) = MeasureFirstPacket(segTable, numSegs);
+                                if (ends)
+                                {
+                                    if (segsUsed < numSegs)
+                                    {
+                                        WriteRawPage(dest, headerType, granulePos, pageSerial, newSeq + pagesWritten,
+                                                     segTable[segsUsed..], data[bytesUsed..]);
+                                        pagesWritten++;
+                                    }
+                                    state = 2;
+                                }
+                                else
+                                    state = 1;
+                                seqDelta += pagesWritten - 1;
+                            }
+                            else
+                            {
+                                WriteOggPage(dest, hdr, segTable, data, 0);
+                            }
+                        }
+                        else if (state == 1) // Old comment packet continues on this logical stream
+                        {
+                            // Ogg logical streams may be interleaved. Pages from another serial are
+                            // unrelated to the continued comment and must pass through untouched.
+                            if (pageSerial != editedSerial)
+                            {
+                                WriteOggPage(dest, hdr, segTable, data, 0);
+                                continue;
+                            }
+
+                            if (!isCont)
+                                throw new InvalidDataException("Invalid OGG comment continuation");
+
                             var (ends, segsUsed, bytesUsed) = MeasureFirstPacket(segTable, numSegs);
                             if (ends)
                             {
                                 if (segsUsed < numSegs)
                                 {
-                                    WriteRawPage(dest, headerType, granulePos, serial, newSeq + pagesWritten,
+                                    // Packets after the old comment's tail (the setup header) must
+                                    // survive; they take over this page's sequence slot.
+                                    int seq = OggReadInt32LE(hdr, 18) + seqDelta;
+                                    long granulePos = OggReadInt64LE(hdr, 6);
+                                    byte headerType = (byte)(hdr[5] & ~1);
+                                    WriteRawPage(dest, headerType, granulePos, pageSerial, seq,
                                                  segTable[segsUsed..], data[bytesUsed..]);
-                                    pagesWritten++;
                                 }
+                                else
+                                    seqDelta--;
                                 state = 2;
                             }
                             else
-                                state = 1;
-                            seqDelta += pagesWritten - 1;
-                        }
-                        else
-                        {
-                            WriteOggPage(dest, hdr, segTable, data, seqDelta);
-                        }
-                    }
-                    else if (state == 1) // Old comment packet continues on this page
-                    {
-                        var (ends, segsUsed, bytesUsed) = MeasureFirstPacket(segTable, numSegs);
-                        if (ends)
-                        {
-                            if (segsUsed < numSegs)
-                            {
-                                // Packets after the old comment's tail (the setup header) must
-                                // survive; they take over this page's sequence slot.
-                                int serial = OggReadInt32LE(hdr, 14);
-                                int seq = OggReadInt32LE(hdr, 18) + seqDelta;
-                                long granulePos = OggReadInt64LE(hdr, 6);
-                                byte headerType = (byte)(hdr[5] & ~1);
-                                WriteRawPage(dest, headerType, granulePos, serial, seq,
-                                             segTable[segsUsed..], data[bytesUsed..]);
-                            }
-                            else
                                 seqDelta--;
-                            state = 2;
                         }
-                        else
-                            seqDelta--;
+                        else // state == 2, Copying remaining pages
+                        {
+                            bool adjustThisPage = !editedStreamEnded && pageSerial == editedSerial;
+                            WriteOggPage(dest, hdr, segTable, data, adjustThisPage ? seqDelta : 0);
+                        }
+
+                        if (!editedStreamEnded && pageSerial == editedSerial && (hdr[5] & 4) != 0)
+                            editedStreamEnded = true;
                     }
-                    else // state == 2, Copying remaining pages
-                    {
-                        WriteOggPage(dest, hdr, segTable, data, seqDelta);
-                    }
+
+                    dest.Flush(flushToDisk: true);
                 }
+
+                Tools.AtomicReplace(tempPath, target);
             }
             catch
             {
-                if (File.Exists(tempPath)) File.Delete(tempPath);
+                Tools.DeleteIfExists(tempPath);
                 throw;
             }
-
-            if (File.Exists(target)) File.Delete(target);
-            File.Move(tempPath, target);
             Filename = target;
         }
 

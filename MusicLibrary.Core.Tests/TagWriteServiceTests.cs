@@ -101,4 +101,86 @@ public class TagWriteServiceTests
         var genre = reload.Value!.KnownFields.FirstOrDefault(f => f.Field == TagFields.Genre);
         Assert.Null(genre); // no Genre entry remains
     }
+
+    [Fact]
+    public async Task SavedFile_IsReturnedAsSaved_WhenCacheRefreshFails()
+    {
+        using var media = MediaFixtures.Copy("sample.flac");
+        var reindex = new ThrowingReindexService();
+        var writer = new TagWriteService(reindex);
+
+        var result = await writer.ApplyAsync(
+            [media.Path], [new TagEdit(TagFields.Title, "Committed")]);
+
+        var file = Assert.Single(result.Files);
+        Assert.Equal(WriteOutcome.Saved, file.Outcome);
+        Assert.Contains("cache unavailable", file.CacheError);
+        Assert.False(reindex.ReceivedToken.CanBeCanceled);
+        Assert.Equal("Committed", (await _reader.LoadAsync(media.Path)).Value!.Title);
+    }
+
+    [Fact]
+    public async Task CancellationAfterDiskCommit_DoesNotSkipCacheRefreshOrHideSuccess()
+    {
+        using var media = MediaFixtures.Copy("sample.flac");
+        using var cts = new CancellationTokenSource();
+        var reindex = new CancelDuringReindexService(cts);
+        var writer = new TagWriteService(reindex);
+
+        var result = await writer.ApplyAsync(
+            [media.Path], [new TagEdit(TagFields.Title, "Committed")], ct: cts.Token);
+
+        Assert.Equal(1, result.SavedCount);
+        Assert.True(reindex.Called);
+        Assert.False(reindex.ReceivedToken.CanBeCanceled);
+    }
+
+    [Fact]
+    public async Task SamePathMutation_WaitsForExistingLease()
+    {
+        using var media = MediaFixtures.Copy("sample.flac");
+        var coordinator = new FileMutationCoordinator();
+        var lease = await coordinator.AcquireAsync(media.Path);
+        try
+        {
+            var writer = new TagWriteService(mutations: coordinator);
+            var pending = writer.ApplyAsync(
+                [media.Path], [new TagEdit(TagFields.Title, "Serialized")]);
+
+            Assert.NotSame(pending, await Task.WhenAny(pending, Task.Delay(100)));
+            lease.Dispose();
+            await pending;
+        }
+        finally
+        {
+            lease.Dispose();
+        }
+
+        Assert.Equal("Serialized", (await _reader.LoadAsync(media.Path)).Value!.Title);
+    }
+
+    private sealed class ThrowingReindexService : IReindexService
+    {
+        public CancellationToken ReceivedToken { get; private set; }
+
+        public Task ReindexFileAsync(string path, CancellationToken ct = default)
+        {
+            ReceivedToken = ct;
+            throw new InvalidOperationException("cache unavailable");
+        }
+    }
+
+    private sealed class CancelDuringReindexService(CancellationTokenSource cts) : IReindexService
+    {
+        public bool Called { get; private set; }
+        public CancellationToken ReceivedToken { get; private set; }
+
+        public Task ReindexFileAsync(string path, CancellationToken ct = default)
+        {
+            Called = true;
+            ReceivedToken = ct;
+            cts.Cancel();
+            return Task.CompletedTask;
+        }
+    }
 }

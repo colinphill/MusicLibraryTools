@@ -48,39 +48,38 @@ namespace DumpArtworkSizes
             if (lib == null)
             {
                 LogConsole.WriteLine("Error Locating Playlist: " + args[0]);
+                Marshal.FinalReleaseComObject(app);
                 return;
             }
 
-            StreamWriter w = new StreamWriter("ArtworkSizes.dat");
+            using StreamWriter w = new StreamWriter("ArtworkSizes.dat");
 
             int tracks = 0, noartwork = 0;
-            Dictionary<string, bool> albums = new Dictionary<string, bool>();
+            var albums = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (IITTrack trk in lib.Tracks)
             {
-                if (trk.Kind == ITTrackKind.ITTrackKindFile)
+                try
                 {
+                    if (trk.Kind != ITTrackKind.ITTrackKindFile)
+                        continue;
+
                     IITFileOrCDTrack filetrk = trk as IITFileOrCDTrack;
-                    if (filetrk.VideoKind == ITVideoKind.ITVideoKindNone)
+                    if (filetrk.VideoKind != ITVideoKind.ITVideoKindNone || filetrk.Genre == "Podcast")
+                        continue;
+
+                    tracks++;
+                    string artist = string.IsNullOrEmpty(filetrk.AlbumArtist) ? filetrk.Artist : filetrk.AlbumArtist;
+                    string album = filetrk.Album;
+                    if (!albums.Add((artist ?? "") + "\0" + (album ?? "")))
+                        continue;
+
+                    LogConsole.WriteLine(tracks.ToString() + ") Checking Track: " + filetrk.Location);
+
+                    IITArtworkCollection artcol = null;
+                    try
                     {
-                        if (filetrk.Genre == "Podcast")
-                            continue;
-                        tracks++;
-
-                        string artist = filetrk.Artist;
-                        if ((filetrk.AlbumArtist != null) && (filetrk.AlbumArtist != ""))
-                            artist = filetrk.AlbumArtist;
-                        string album = filetrk.Album;
-
-                        string key = artist + "," + album;
-                        if (albums.ContainsKey(key))
-                            continue;
-
-                        albums.Add(key, true);
-
-                        LogConsole.WriteLine(tracks.ToString() + ") Checking Track: " + filetrk.Location);
-
-                        IITArtworkCollection artcol = filetrk.Artwork;
+                        artcol = filetrk.Artwork;
                         if (artcol.Count == 1)
                         {
                             IITArtwork art = artcol[1];
@@ -88,36 +87,56 @@ namespace DumpArtworkSizes
                                 (art.Format == ITArtworkFormat.ITArtworkFormatJPEG) ? "jpg" :
                                 (art.Format == ITArtworkFormat.ITArtworkFormatPNG) ? "png" : "unknown";
 
-                            string artfile = Environment.CurrentDirectory + "\\temp." + ext;
+                            string artfile = Path.Combine(Path.GetTempPath(), $"mlt-art-{Guid.NewGuid():N}.{ext}");
                             LogConsole.WriteLine("Saving Artwork: " + artfile);
-                            art.SaveArtworkToFile(artfile);
-                            // TODO: Analyze
-                            Image im = Image.FromFile(artfile);
-                            w.WriteLine(artist + "|" + album + "|" + im.Width.ToString() + "|" + im.Height.ToString() + "|" + new FileInfo(artfile).Length.ToString());
-                            im.Dispose();
-                            Marshal.FinalReleaseComObject(art);
+                            try
+                            {
+                                art.SaveArtworkToFile(artfile);
+                                using Image im = Image.FromFile(artfile);
+                                w.WriteLine(artist + "|" + album + "|" + im.Width.ToString() + "|" + im.Height.ToString() + "|" + new FileInfo(artfile).Length.ToString());
+                            }
+                            finally
+                            {
+                                Marshal.FinalReleaseComObject(art);
+                                try
+                                {
+                                    if (File.Exists(artfile))
+                                        File.Delete(artfile);
+                                }
+                                catch (Exception ex)
+                                {
+                                    LogConsole.WriteLine($"Unable to delete temporary artwork {artfile}: {ex.Message}");
+                                }
+                            }
                         }
                         else
                         {
                             w.WriteLine(artist + "|" + album + "|" + "0|0");
                             noartwork++;
                         }
-                        Marshal.FinalReleaseComObject(artcol);
-                        
-
                     }
-
+                    finally
+                    {
+                        if (artcol != null)
+                            Marshal.FinalReleaseComObject(artcol);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogConsole.WriteLine($"Unable to inspect track: {ex.Message}");
+                }
+                finally
+                {
                     Marshal.FinalReleaseComObject(trk);
                 }
             }
 
+            Marshal.FinalReleaseComObject(lib);
             Marshal.FinalReleaseComObject(app);
 
             LogConsole.WriteLine("Analyzed Tracks: " + tracks.ToString());
-            LogConsole.WriteLine("Analyzed Albums: " + albums.Keys.Count.ToString());
+            LogConsole.WriteLine("Analyzed Albums: " + albums.Count.ToString());
             LogConsole.WriteLine("Albums Without Artwork: " + noartwork.ToString());
-
-            w.Close();
 
         }
     }

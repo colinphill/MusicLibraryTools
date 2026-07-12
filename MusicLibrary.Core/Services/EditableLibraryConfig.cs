@@ -96,6 +96,7 @@ public sealed class EditableLibraryConfig
         foreach (var e in _passthrough)
             root.Add(e);
 
-        new XDocument(root).Save(path);
+        var document = new XDocument(root);
+        AtomicFile.Write(path, document.Save);
     }
 }

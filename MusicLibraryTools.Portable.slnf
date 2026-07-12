@@ -1,0 +1,32 @@
+{
+  "solution": {
+    "path": "MusicLibraryTools.sln",
+    "projects": [
+      "AnalyzeMetadata/AnalyzeMetadata.csproj",
+      "AndroidSync/AndroidSync.csproj",
+      "ArtworkScrubber/ArtworkScrubber.csproj",
+      "CheckRedundancies/CheckRedundancies.csproj",
+      "Comingle/Comingle.csproj",
+      "CrossSyncMusic/CrossSyncMusic.csproj",
+      "CrossSyncPlaylistFiles/CrossSyncPlaylistFiles.csproj",
+      "CrossSyncPlaylists/CrossSyncPlaylists.csproj",
+      "DumpITL/DumpITL.csproj",
+      "DumpTags/DumpTags.csproj",
+      "DumpTags2/DumpTags2.csproj",
+      "FindNonLossless/FindNonLossless.csproj",
+      "MetadataCaching/MetadataCaching.csproj",
+      "MetadataDBWork/MetadataDBWork.csproj",
+      "MusicFileUtilities/MusicFileUtilities.csproj",
+      "MusicFileUtilities.Tests/MusicFileUtilities.Tests.csproj",
+      "MusicLibrary.App/MusicLibrary.App.csproj",
+      "MusicLibrary.Core/MusicLibrary.Core.csproj",
+      "MusicLibrary.Core.Tests/MusicLibrary.Core.Tests.csproj",
+      "OrganizeFiles/OrganizeFiles.csproj",
+      "PlayProject/PlayProject.csproj",
+      "ScrubArtwork/ScrubArtwork.csproj",
+      "SortDownloads/SortDownloads.csproj",
+      "UpdateCarCard/UpdateCarCard.csproj",
+      "UpdateSmartStorage/UpdateSmartStorage.csproj"
+    ]
+  }
+}

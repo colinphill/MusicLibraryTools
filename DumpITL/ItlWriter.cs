@@ -17,7 +17,37 @@ public static class ItlWriter
     private const int MfdhTotalLengthOffset = 8;
 
     public static void Save(ItlEnvelope envelope, byte[] body, string path)
-        => File.WriteAllBytes(path, Build(envelope, body));
+    {
+        byte[] data = Build(envelope, body);
+        path = Path.GetFullPath(path);
+        string directory = Path.GetDirectoryName(path)!;
+        Directory.CreateDirectory(directory);
+        string temp = Path.Combine(directory, $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
+        string backup = path + ".bak";
+        try
+        {
+            using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+                       64 * 1024, FileOptions.WriteThrough))
+            {
+                stream.Write(data);
+                stream.Flush(flushToDisk: true);
+            }
+
+            if (File.Exists(path))
+            {
+                if (File.Exists(backup))
+                    File.Delete(backup);
+                File.Replace(temp, path, backup, ignoreMetadataErrors: true);
+            }
+            else
+                File.Move(temp, path);
+        }
+        finally
+        {
+            if (File.Exists(temp))
+                File.Delete(temp);
+        }
+    }
 
     public static byte[] Build(ItlEnvelope envelope, byte[] body)
     {

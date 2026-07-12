@@ -9,17 +9,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.v3" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\MusicFileUtilities\MusicFileUtilities.csproj" />
     <ProjectReference Include="..\MetadataCaching\MetadataCaching.csproj" />
+    <ProjectReference Include="..\DumpITL\DumpITL.csproj" />
   </ItemGroup>
 
   <!-- Media fixtures are generated at build time (not committed). The script uses ffmpeg

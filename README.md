@@ -79,16 +79,42 @@ library root(s), index locations, sync targets, playlist targets, the cache data
 (default `cache.db`), and length limits. See `LibraryConfiguration` in MusicFileUtilities
 for the schema.
 
+## Safe execution
+
+High-impact sync, organization, iTunes, and device commands now default to a dry run or refuse to
+write until `--apply` is supplied. Commands that can remove stale entries also default to a removal
+ceiling of zero; set an intentional limit with `--max-removals <count>`. Device-image tools require
+an initialized target marker (`--initialize` creates it after you verify the path), and removals are
+moved into timestamped quarantine/recovery directories rather than being deleted immediately.
+`UpdateCarCard --recover <journal.tsv>` can roll back an interrupted journaled update.
+
 ## Building and testing
 
-Build with Visual Studio 2026 or `dotnet build MusicLibraryTools.sln` (.NET 10 SDK).
+The repository pins the .NET 10 SDK in `global.json` and centralizes NuGet versions in
+`Directory.Packages.props`. The four utilities that automate iTunes
+(`BackSyncPlaylists`, `DumpArtworkSizes`, `FixArtwork`, and `FixiTunesDupes`) contain COM references,
+which require the full Visual Studio MSBuild host. Build everything in Visual Studio, or from a
+Developer PowerShell with:
+
+```
+msbuild MusicLibraryTools.sln /restore /p:Configuration=Release
+```
+
+All projects that do not require iTunes COM automation are also collected in a solution filter and
+can be built with the cross-platform .NET SDK:
+
+```
+dotnet build MusicLibraryTools.Portable.slnf
+```
 
 ```
 dotnet test MusicFileUtilities.Tests/MusicFileUtilities.Tests.csproj
+dotnet test MusicLibrary.Core.Tests/MusicLibrary.Core.Tests.csproj
 ```
 
 The xUnit suite covers the parsers, the tag write paths (copy → mutate → save → reopen,
-including artwork preservation), and the SQLite indexer. Real-media fixtures are generated
+including artwork preservation), the SQLite indexer, application services, and `.itl` safety checks.
+Real-media fixtures are generated
 at build time by `generate-fixtures.ps1` — **ffmpeg must be on the PATH** (or in
 `C:\ffmpeg\bin`) to build the test project; the fixtures are not committed.
 

@@ -42,7 +42,7 @@ public class DatabaseReadTests
         var (work, _, config, song) = Setup("sample.flac");
         try
         {
-            var settings = new AppSettings();
+            var settings = new AppSettings(Path.Combine(work, "settings.json"));
             settings.LoadConfig(config);
             using var library = new LibraryService(settings);
             await library.IndexAsync();
@@ -69,7 +69,7 @@ public class DatabaseReadTests
         var (work, _, config, song) = Setup("sample.flac");
         try
         {
-            var settings = new AppSettings();
+            var settings = new AppSettings(Path.Combine(work, "settings.json"));
             settings.LoadConfig(config);
             using var library = new LibraryService(settings);
             await library.IndexAsync();
@@ -96,7 +96,7 @@ public class DatabaseReadTests
         var (work, _, config, song) = Setup("sample.flac");
         try
         {
-            var settings = new AppSettings();
+            var settings = new AppSettings(Path.Combine(work, "settings.json"));
             settings.LoadConfig(config);
             using var library = new LibraryService(settings);
             await library.IndexAsync();
@@ -122,6 +122,33 @@ public class DatabaseReadTests
     }
 
     [Fact]
+    public async Task Organize_NonNormalizedSourcesStillReceiveDistinctDestinations()
+    {
+        var (work, music, config, song) = Setup("sample.flac");
+        string first = Path.Combine(music, "a\u0301.flac");
+        string second = Path.Combine(music, "b\u0301.flac");
+        File.Move(song, first);
+        File.Copy(first, second);
+
+        try
+        {
+            var settings = new AppSettings(Path.Combine(work, "settings.json"));
+            settings.LoadConfig(config);
+            using var library = new LibraryService(settings);
+            await library.IndexAsync();
+
+            var moves = await library.PreviewMovesAsync();
+
+            Assert.Equal(2, moves.Count);
+            Assert.Equal(2, moves.Select(m => m.Destination).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        }
+        finally
+        {
+            try { Directory.Delete(work, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public async Task EditingArtwork_ReindexesImageIntoCache()
     {
         var (work, _, config, song) = Setup("sample.flac");
@@ -134,7 +161,7 @@ public class DatabaseReadTests
                 image.Save(png, new PngEncoder());
             }
 
-            var settings = new AppSettings();
+            var settings = new AppSettings(Path.Combine(work, "settings.json"));
             settings.LoadConfig(config);
             using var library = new LibraryService(settings);
             await library.IndexAsync();

@@ -117,7 +117,7 @@ namespace MusicFileUtilities
         {
             Filename = filename;
 
-            FileStream s = Tools.OpenReadSequential(filename);
+            using FileStream s = Tools.OpenReadSequential(filename);
 
             byte[] si = null;
             byte [] b = new byte[4];
@@ -172,7 +172,6 @@ namespace MusicFileUtilities
             if (si != null)
                 ParseStreamInfo(si, s.Length, s.Length - s.Position);
 
-            s.Close();
         }
 
         public void SaveTags(string outputPath = null) => Save(outputPath);
@@ -190,8 +189,10 @@ namespace MusicFileUtilities
             return true;
         }
 
-        private static void WriteMetaBlockHeader(FileStream fs, byte type, int len, bool isLast)
+        internal static void WriteMetaBlockHeader(Stream fs, byte type, int len, bool isLast)
         {
+            if (len < 0 || len > 0xFFFFFF)
+                throw new ArgumentOutOfRangeException(nameof(len), "A FLAC metadata block length must fit in 24 bits.");
             fs.WriteByte(isLast ? (byte)(type | 0x80) : type);
             fs.WriteByte((byte)((len >> 16) & 0xFF));
             fs.WriteByte((byte)((len >> 8) & 0xFF));
@@ -247,70 +248,71 @@ namespace MusicFileUtilities
             foreach (VorbisArtwork art in Artworks)
                 blocks.Add((6, art.ToByteArray()));
 
-            string tempPath = target + ".tmp~";
+            // FLAC metadata block lengths are exactly 24 bits. Truncating a larger length in
+            // the header while writing all bytes makes the excess bytes look like audio data.
+            foreach (var (_, data) in blocks)
+                if (data.Length > 0xFFFFFF)
+                    throw new InvalidOperationException("A FLAC metadata block cannot exceed 16,777,215 bytes.");
+
+            string tempPath = Tools.CreateSiblingTempPath(target);
             try
             {
                 string sourcePath = Filename ?? target;
-                using FileStream source = new FileStream(sourcePath, FileMode.Open, FileAccess.Read);
-                using FileStream dest = new FileStream(tempPath, FileMode.Create, FileAccess.Write);
-
-                // Skip past original fLaC marker and all metadata blocks in source
-                byte[] marker = new byte[4];
-                source.ReadExactly(marker); // "fLaC"
-
-                // Skip original metadata blocks
-                bool lastSrc = false;
-                while (!lastSrc)
                 {
-                    byte[] hdr = new byte[4];
-                    source.ReadExactly(hdr);
-                    long len = ((long)hdr[1] << 16) | ((long)hdr[2] << 8) | hdr[3];
-                    lastSrc = (hdr[0] & 128) != 0;
-                    source.Seek(len, SeekOrigin.Current);
+                    using FileStream source = new FileStream(sourcePath, FileMode.Open, FileAccess.Read);
+                    using FileStream dest = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write);
+
+                    // Skip past original fLaC marker and all metadata blocks in source
+                    byte[] marker = new byte[4];
+                    source.ReadExactly(marker); // "fLaC"
+
+                    // Skip original metadata blocks
+                    bool lastSrc = false;
+                    while (!lastSrc)
+                    {
+                        byte[] hdr = new byte[4];
+                        source.ReadExactly(hdr);
+                        long len = ((long)hdr[1] << 16) | ((long)hdr[2] << 8) | hdr[3];
+                        lastSrc = (hdr[0] & 128) != 0;
+                        source.Seek(len, SeekOrigin.Current);
+                    }
+                    // source now positioned at start of audio data
+
+                    // Write fLaC marker
+                    dest.Write(Encoding.ASCII.GetBytes("fLaC"), 0, 4);
+
+                    // Write metadata blocks
+                    for (int i = 0; i < blocks.Count; i++)
+                    {
+                        bool isLast = (i == blocks.Count - 1);
+                        var (type, data) = blocks[i];
+                        int blockLen = data.Length;
+                        WriteMetaBlockHeader(dest, type, blockLen, isLast);
+                        dest.Write(data, 0, data.Length);
+                    }
+
+                    // Copy audio data
+                    byte[] buffer = new byte[65536];
+                    int read;
+                    while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
+                        dest.Write(buffer, 0, read);
+                    dest.Flush(flushToDisk: true);
                 }
-                // source now positioned at start of audio data
 
-                // Write fLaC marker
-                dest.Write(Encoding.ASCII.GetBytes("fLaC"), 0, 4);
-
-                // Write metadata blocks
-                for (int i = 0; i < blocks.Count; i++)
-                {
-                    bool isLast = (i == blocks.Count - 1);
-                    var (type, data) = blocks[i];
-                    byte typeByte = isLast ? (byte)(type | 0x80) : type;
-                    int blockLen = data.Length;
-                    dest.WriteByte(typeByte);
-                    dest.WriteByte((byte)((blockLen >> 16) & 0xFF));
-                    dest.WriteByte((byte)((blockLen >> 8) & 0xFF));
-                    dest.WriteByte((byte)(blockLen & 0xFF));
-                    dest.Write(data, 0, data.Length);
-                }
-
-                // Copy audio data
-                byte[] buffer = new byte[65536];
-                int read;
-                while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
-                    dest.Write(buffer, 0, read);
+                Tools.AtomicReplace(tempPath, target);
             }
             catch
             {
-                if (File.Exists(tempPath)) File.Delete(tempPath);
+                Tools.DeleteIfExists(tempPath);
                 throw;
             }
-
-            if (File.Exists(target)) File.Delete(target);
-            File.Move(tempPath, target);
             Filename = target;
 
             // The metadata layout just changed wholesale; the cached VORBIS_COMMENT offset and
             // PICTURE bytes no longer describe the file. Disable the in-place fast path for any
             // subsequent Save() on this instance (it would otherwise patch stale offsets).
-            if (outputPath == null)
-            {
-                _vcBlockOffset = -1;
-                _originalPictureBlocks = Artworks.Select(a => a.ToByteArray()).ToList();
-            }
+            _vcBlockOffset = -1;
+            _originalPictureBlocks = Artworks.Select(a => a.ToByteArray()).ToList();
         }
 
     }

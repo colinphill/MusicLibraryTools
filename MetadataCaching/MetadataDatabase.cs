@@ -134,6 +134,20 @@ namespace MetadataCaching
         internal static int IndexScanParallelism = 8;
         internal static int IndexFileQueueBound = 256;
 
+        private sealed class ScanFileKeyComparer : IEqualityComparer<(long ScanSetID, string Path)>
+        {
+            private static readonly StringComparer PathComparer =
+                OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+
+            public bool Equals(
+                (long ScanSetID, string Path) x,
+                (long ScanSetID, string Path) y) =>
+                x.ScanSetID == y.ScanSetID && PathComparer.Equals(x.Path, y.Path);
+
+            public int GetHashCode((long ScanSetID, string Path) value) =>
+                HashCode.Combine(value.ScanSetID, PathComparer.GetHashCode(value.Path));
+        }
+
 #if SQLITE
         private static readonly string[] sqlitecreationsql_ = {
             "PRAGMA foreign_keys = off;\r\n",
@@ -386,9 +400,16 @@ namespace MetadataCaching
 
             foreach (var path in paths)
             {
-                var set = dbsets.SingleOrDefault(s => s.Path.Equals(path.Path, StringComparison.InvariantCultureIgnoreCase));
+                string requestedPath = Path.TrimEndingDirectorySeparator(path.Path);
+                var set = dbsets.FirstOrDefault(s => Path.TrimEndingDirectorySeparator(s.Path).Equals(requestedPath, StringComparison.InvariantCultureIgnoreCase));
                 if (set == default)
                     continue;
+                HashSet<string> extensions = path.Extensions is null
+                    ? null
+                    : path.Extensions
+                        .Select(NormalizeExtensionFilter)
+                        .Where(e => e.Length != 0)
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
                 using var querycomm = conn_.CreateCommand();
                 querycomm.CommandText = "SELECT Path, LastWriteTime, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames, Artist, AlbumArtist, Album, TrackNumber, TrackTotal, DiscNumber, DiscTotal, ReleaseDate, Track, AlbumPath FROM MetadataSummaryView WHERE ScanSetID = " + set.ID;
                 using var reader = querycomm.ExecuteReader();
@@ -398,13 +419,26 @@ namespace MetadataCaching
                     var ce = new MetadataCacheEntry(reader);
                     ce.Strip();
                     var fullpath = Path.Combine(set.Path, reader.GetString(oAlbumPath), reader.GetString(oPath));
-                    if (path.Extensions == null)
+                    if (extensions is null || extensions.Count == 0)
                         cache.AddDBCacheEntry(fullpath, ce);
-                    else if (path.Extensions.Contains(Path.GetExtension(fullpath)))
+                    else if (extensions.Contains(Path.GetExtension(fullpath)))
                         cache.AddDBCacheEntry(fullpath, ce);
                 }
             }
             return cache;
+        }
+
+        private static string NormalizeExtensionFilter(string extension)
+        {
+            if (string.IsNullOrWhiteSpace(extension))
+                return string.Empty;
+
+            extension = extension.Trim();
+            if (extension.StartsWith("*.", StringComparison.Ordinal))
+                extension = extension[1..];
+            else if (!extension.StartsWith(".", StringComparison.Ordinal))
+                extension = "." + extension;
+            return extension;
         }
 
         public MetadataCache BuildCache(IEnumerable<string> paths)
@@ -431,7 +465,7 @@ namespace MetadataCaching
             {
                 // Materialized: this is re-enumerated once per ScanSets row below, and `paths`
                 // itself may be a deferred query from the caller.
-                var modpaths = paths.Select(p => p.EndsWith(Path.PathSeparator.ToString()) ? p.Substring(0, p.Length - 1) : p).ToList();
+                var modpaths = paths.Select(Path.TrimEndingDirectorySeparator).ToList();
                 var dbsets = new List<(string Path, long ID, bool Hit)>();
                 var missing = new List<string>();
                 setscomm.CommandText = "SELECT Path, ID FROM ScanSets";
@@ -439,7 +473,7 @@ namespace MetadataCaching
                     while (reader.Read())
                         dbsets.Add((reader.GetString(0), reader.GetInt64(1), false));
                 // O(1) membership instead of an O(sets) LINQ scan per requested path.
-                var dbsetpaths = new HashSet<string>(dbsets.Select(s => s.Path), StringComparer.InvariantCultureIgnoreCase);
+                var dbsetpaths = new HashSet<string>(dbsets.Select(s => Path.TrimEndingDirectorySeparator(s.Path)), StringComparer.InvariantCultureIgnoreCase);
                 foreach (var path in modpaths)
                     if (!dbsetpaths.Contains(path))
                         missing.Add(path);
@@ -464,18 +498,22 @@ namespace MetadataCaching
                     while (reader.Read())
                     {
                         var setpath = reader.GetString(0);
-                        dbsets.Add((setpath, reader.GetInt64(1), requestedpaths.Contains(setpath)));
+                        dbsets.Add((setpath, reader.GetInt64(1), requestedpaths.Contains(Path.TrimEndingDirectorySeparator(setpath))));
                     }
-                sets.AddRange(dbsets.Where(s => s.Hit).Select(s => (s.Path, s.ID)));
+                sets.AddRange(dbsets.Where(s => s.Hit)
+                    .GroupBy(s => Path.TrimEndingDirectorySeparator(s.Path), StringComparer.InvariantCultureIgnoreCase)
+                    .Select(g => (Path.TrimEndingDirectorySeparator(g.First().Path), g.First().ID)));
                 missedsets.AddRange(dbsets.Where(s => !s.Hit).Select(s => (s.ID)));
             }
 
             int added = 0, modified = 0, removed = 0, unchanged = 0, scanned = 0;
 
             using var filequeue = new BlockingCollection<(long ID, long Set, string FileName, long Length, DateTime LastWriteTime, IMediaFile File)>(IndexFileQueueBound);
+            using var pipelineCts = new CancellationTokenSource();
 
-            var filesdict = new ConcurrentDictionary<(long ScanSetID, string Path), (long ID, long Length, DateTime LastWriteTime)>();
-            var fileshitdict = new ConcurrentDictionary<(long ScanSetID, string Path), bool>();
+            var fileKeyComparer = new ScanFileKeyComparer();
+            var filesdict = new ConcurrentDictionary<(long ScanSetID, string Path), (long ID, long Length, DateTime LastWriteTime)>(fileKeyComparer);
+            var fileshitdict = new ConcurrentDictionary<(long ScanSetID, string Path), bool>(fileKeyComparer);
             var metadatakeysdict = new Dictionary<string, long>();
             var artistsdict = new Dictionary<string, long>();
             var albumartistsdict = new Dictionary<string, long>();
@@ -499,8 +537,37 @@ namespace MetadataCaching
                 }
             }
 
+            // Load writer lookup tables before starting the bounded producer. If this setup fails,
+            // no producer can be left blocked waiting for a consumer that never started.
+            using (var querycomm = conn_.CreateCommand())
+            {
+                querycomm.CommandText = "SELECT ID, \"Key\" FROM MetadataKeys";
+                using (var reader = querycomm.ExecuteReader())
+                    while (reader.Read())
+                        metadatakeysdict[reader.GetString("Key")] = reader.GetInt64("ID");
+                querycomm.CommandText = "SELECT ID, Name FROM Artists";
+                using (var reader = querycomm.ExecuteReader())
+                    while (reader.Read())
+                        artistsdict[reader.GetString("Name")] = reader.GetInt64("ID");
+                querycomm.CommandText = "SELECT ID, Name FROM AlbumArtists";
+                using (var reader = querycomm.ExecuteReader())
+                    while (reader.Read())
+                        albumartistsdict[reader.GetString("Name")] = reader.GetInt64("ID");
+                querycomm.CommandText = "SELECT ID, ScanSetID, AlbumArtistID, Path, Name FROM Albums";
+                using (var reader = querycomm.ExecuteReader())
+                    while (reader.Read())
+                        albumsdict[(reader.GetInt64("ScanSetID"), reader.GetInt64("AlbumArtistID"), reader.GetString("Path"), reader.GetString("Name"))] = reader.GetInt64("ID");
+                querycomm.CommandText = "SELECT ID, Hash FROM Images";
+                using (var reader = querycomm.ExecuteReader())
+                    while (reader.Read())
+                        imagesdict[reader.GetString("Hash")] = reader.GetInt64("ID");
+            }
+
+            int scanFailed = 0;
             var metadatareadtask = Task.Run(() =>
             {
+                try
+                {
                 // Split each scan set into per-subtree units: one non-recursive unit for files
                 // sitting directly in the set root, plus one recursive walker per top-level
                 // subdirectory. A single recursive enumerator serializes every directory-listing
@@ -534,18 +601,20 @@ namespace MetadataCaching
                        }
                        if (file.FileType != MFEType.MusicFile)
                            continue;
-                       var relativename = file.Name.Substring(unit.SetPath.Length + 1);
+                       var relativename = Path.GetRelativePath(unit.SetPath, file.Name);
                        var key = (SetID: unit.SetID, RelativeName: relativename);
                        var scan = false;
+                       var isAdded = false;
+                       var isModified = false;
                        long id = -1;
                        if (filesdict.ContainsKey(key))
                        {
                            fileshitdict[key] = true;
                            var (ID, Length, LastWriteTime) = filesdict[key];
-                           if ((file.Modified.AddMilliseconds(-500.0) > LastWriteTime) || (file.Size != Length))
+                           if ((Math.Abs((file.Modified - LastWriteTime).TotalMilliseconds) > 500.0) || (file.Size != Length))
                            {
                                id = ID;
-                               Interlocked.Increment(ref modified);
+                               isModified = true;
                                scan = true;
                            }
                            else
@@ -556,13 +625,17 @@ namespace MetadataCaching
                        else
                        {
                            scan = true;
-                           Interlocked.Increment(ref added);
+                           isAdded = true;
                        }
                        if (scan)
                        {
                            try
                            {
-                               filequeue.Add((id, unit.SetID, relativename, file.Size, file.Modified, MediaFile.GetFile(file.Name, hash)));
+                               filequeue.Add((id, unit.SetID, relativename, file.Size, file.Modified, MediaFile.GetFile(file.Name, hash)), pipelineCts.Token);
+                               if (isAdded)
+                                   Interlocked.Increment(ref added);
+                               else if (isModified)
+                                   Interlocked.Increment(ref modified);
                                int done = Interlocked.Increment(ref scanned);
                                // Console is internally locked; printing from every scan thread
                                // every 100 files serializes them. A coarser cadence (and no
@@ -583,7 +656,8 @@ namespace MetadataCaching
                            catch (Exception ex)
                            {
                                Console.WriteLine($"Unknown Exception On File: {file.Name} - {ex.Message}");
-                               loopstate.Break();
+                               Interlocked.Exchange(ref scanFailed, 1);
+                               loopstate.Stop();
                            }
                        }
                     }
@@ -596,12 +670,12 @@ namespace MetadataCaching
                 // by the deletemissingsets path instead.
                 // Skip removal detection on cancel: a partial walk didn't visit every file, so
                 // unhit entries don't mean "deleted" — they mean "not reached yet".
-                if (!ct.IsCancellationRequested)
+                if (!ct.IsCancellationRequested && Volatile.Read(ref scanFailed) == 0)
                 {
                     var scannedsets = new HashSet<long>(sets.Select(s => s.ID));
                     foreach (var file in fileshitdict.Where(kv => !kv.Value && scannedsets.Contains(kv.Key.ScanSetID)).Select(kv => kv.Key))
                     {
-                        filequeue.Add((filesdict[file].ID, file.ScanSetID, null, 0, DateTime.MinValue, null));
+                        filequeue.Add((filesdict[file].ID, file.ScanSetID, null, 0, DateTime.MinValue, null), pipelineCts.Token);
                         removed++;
                     }
                 }
@@ -610,32 +684,12 @@ namespace MetadataCaching
                     progress.Report(new IndexProgress(scanned, added, modified, unchanged));
                 else
                     Console.WriteLine($"Scanned: {scanned}");
-                filequeue.CompleteAdding();
+                }
+                finally
+                {
+                    filequeue.CompleteAdding();
+                }
             });
-
-            using (var querycomm = conn_.CreateCommand())
-            {
-                querycomm.CommandText = "SELECT ID, \"Key\" FROM MetadataKeys";
-                using (var reader = querycomm.ExecuteReader())
-                    while (reader.Read())
-                        metadatakeysdict.Add(reader.GetString("Key"), reader.GetInt64("ID"));
-                querycomm.CommandText = "SELECT ID, Name FROM Artists";
-                using (var reader = querycomm.ExecuteReader())
-                    while (reader.Read())
-                        artistsdict.Add(reader.GetString("Name"), reader.GetInt64("ID"));
-                querycomm.CommandText = "SELECT ID, Name FROM AlbumArtists";
-                using (var reader = querycomm.ExecuteReader())
-                    while (reader.Read())
-                        albumartistsdict.Add(reader.GetString("Name"), reader.GetInt64("ID"));
-                querycomm.CommandText = "SELECT ID, ScanSetID, AlbumArtistID, Path, Name FROM Albums";
-                using (var reader = querycomm.ExecuteReader())
-                    while (reader.Read())
-                        albumsdict.Add((reader.GetInt64("ScanSetID"), reader.GetInt64("AlbumArtistID"), reader.GetString("Path"), reader.GetString("Name")), reader.GetInt64("ID"));
-                querycomm.CommandText = "SELECT ID, Hash FROM Images";
-                using (var reader = querycomm.ExecuteReader())
-                    while (reader.Read())
-                        imagesdict.Add(reader.GetString("Hash"), reader.GetInt64("ID"));
-            }
 
             // Batch the writes: commit and start a fresh transaction every FilesPerBatch files so
             // the WAL can checkpoint instead of growing for the whole scan, and a crash loses only
@@ -645,9 +699,10 @@ namespace MetadataCaching
             int MetaRowsPerInsert = IndexMetaRowsPerInsert;
             var metabuffer = new List<(long FileID, long KeyID, string Value)>();
 
-            DbTransaction trans = conn_.BeginTransaction();
+            DbTransaction trans = null;
             try
             {
+                trans = conn_.BeginTransaction();
                 using DbCommand delcomm = trans.CreateCommand(), filecomm = trans.CreateCommand(), metacomm = trans.CreateCommand(), imagecomm = trans.CreateCommand(),
                     keycomm = trans.CreateCommand(), artistcomm = trans.CreateCommand(), albumartistcomm = trans.CreateCommand(), albumcomm = trans.CreateCommand(),
                     trackcomm = trans.CreateCommand(), imagemetacomm = trans.CreateCommand(), metabatchcomm = trans.CreateCommand(), knownmetacomm = trans.CreateCommand();
@@ -950,9 +1005,16 @@ namespace MetadataCaching
 #endif
                     trans.Commit();
             }
+            catch
+            {
+                // Unblock a producer waiting on the bounded queue if the database writer fails.
+                pipelineCts.Cancel();
+                try { await metadatareadtask; } catch { /* preserve the writer exception */ }
+                throw;
+            }
             finally
             {
-                trans.Dispose();
+                trans?.Dispose();
             }
 
             await metadatareadtask;

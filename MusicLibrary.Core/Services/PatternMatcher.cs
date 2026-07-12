@@ -11,6 +11,7 @@ public enum FilterMode { Substring, Glob, Regex }
 /// </summary>
 public sealed class PatternMatcher
 {
+    private static readonly TimeSpan MatchTimeout = TimeSpan.FromMilliseconds(250);
     private readonly Regex? _regex;
     private readonly string? _substring;
     public bool IsValid { get; }
@@ -35,9 +36,11 @@ public sealed class PatternMatcher
             {
                 FilterMode.Substring => new PatternMatcher(null, pattern, true, false),
                 FilterMode.Glob => new PatternMatcher(
-                    new Regex(GlobToRegex(pattern), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant), null, true, false),
+                    new Regex(GlobToRegex(pattern),
+                        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.NonBacktracking,
+                        MatchTimeout), null, true, false),
                 _ => new PatternMatcher(
-                    new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant), null, true, false),
+                    new Regex(pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, MatchTimeout), null, true, false),
             };
         }
         catch (ArgumentException)
@@ -54,7 +57,10 @@ public sealed class PatternMatcher
         if (!IsValid)
             return false;
         if (_regex is not null)
-            return _regex.IsMatch(text);
+        {
+            try { return _regex.IsMatch(text); }
+            catch (RegexMatchTimeoutException) { return false; }
+        }
         return text.Contains(_substring!, StringComparison.OrdinalIgnoreCase);
     }
 

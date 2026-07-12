@@ -41,10 +41,16 @@ public sealed class ItlEnvelope
         int sectionCount = BE(48);
         ulong persistentId = BinaryPrimitives.ReadUInt64BigEndian(file.AsSpan(52));
 
+        if (headerLength < 144 || headerLength > file.Length)
+            throw new InvalidDataException($"Invalid .itl header length: {headerLength}.");
+        if (fileLength < headerLength || maxCryptSize < 0 || sectionCount < 0)
+            throw new InvalidDataException("Invalid negative or inconsistent .itl envelope values.");
         if (fileLength != file.Length)
             throw new InvalidDataException($"Truncated .itl: header claims {fileLength} bytes, file has {file.Length}.");
 
         int versionLength = file[16];
+        if (17 + versionLength > headerLength)
+            throw new InvalidDataException("The .itl version string extends beyond the envelope header.");
         string version = Encoding.ASCII.GetString(file, 17, versionLength);
 
         int bodyLength = file.Length - headerLength;

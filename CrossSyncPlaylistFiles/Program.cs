@@ -47,7 +47,21 @@ namespace CrossSyncPlaylistFiles
         {
             LogConsole.SwitchFile("CrossSyncPlaylistFiles.log");
 
-            string destplaylistfolder = @"d:/PlayListFiles";
+            bool apply = args.Any(arg => arg.Equals("--apply", StringComparison.OrdinalIgnoreCase));
+            string[] operands = args.Where(arg => !arg.Equals("--apply", StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (operands.Length != 1 || args.Any(arg => arg.StartsWith("--", StringComparison.Ordinal) &&
+                !arg.Equals("--apply", StringComparison.OrdinalIgnoreCase)))
+            {
+                LogConsole.WriteLine("Usage: CrossSyncPlaylistFiles <destination-folder> [--apply]");
+                LogConsole.Close();
+                return;
+            }
+
+            string destplaylistfolder = Path.GetFullPath(operands[0]);
+            if (apply)
+                Directory.CreateDirectory(destplaylistfolder);
+            else
+                LogConsole.WriteLine("Dry run: pass --apply to replace playlist folders.");
                // TODO: Cull Cached Metadata Without Matching Files
 
             LogConsole.WriteLine("Loading iTunes Library XML...");
@@ -59,7 +73,8 @@ namespace CrossSyncPlaylistFiles
 
             LogConsole.WriteLine("iTunes Library Size: " + lib.Tracks.Count.ToString() + "  Playlist Count: " + lib.Playlists.Count);
 
-            foreach (iTunesPlaylist pl in lib.Playlists.Values.OrderBy(v => v.Title.ToLower()))
+            var claimed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (iTunesPlaylist pl in lib.Playlists.Values.OrderBy(v => v.Title, StringComparer.OrdinalIgnoreCase))
             {
                 if ((pl.Items.Count > MAX_PLAYLIST_COUNT) || (pl.Title.ToLower() == "library"))
                     continue;
@@ -67,22 +82,58 @@ namespace CrossSyncPlaylistFiles
                 LogConsole.WriteLine("Syncing Playlist: " + pl.Title);
 
                 string pldirname = Path.Combine(destplaylistfolder, FixPath(pl.Title));
-
-                int[] items = pl.Items.Where(i => (!lib.Tracks[i].Kind.ToLower().Contains("video") && Path.GetExtension(lib.Tracks[i].LocalLocation).ToLower() != ".m4p")).ToArray();
-
-                if (items.Length != 0)
-                    Directory.CreateDirectory(pldirname);
-
-                for (int i = 0; i < items.Length; i++)
+                if (!claimed.Add(pldirname))
                 {
+                    LogConsole.WriteLine("Skipping playlist with colliding sanitized name: " + pl.Title);
+                    continue;
+                }
 
-                    iTunesTrack track = lib.Tracks[items[i]];
+                string staged = pldirname + ".tmp-" + Guid.NewGuid().ToString("N");
+                string backup = pldirname + ".old-" + Guid.NewGuid().ToString("N");
 
-                    string newpath = Path.Combine(pldirname, (i + 1).ToString("D3") + " " + FixPath(track.Title + Path.GetExtension(track.LocalLocation)));
-                    File.Copy(track.LocalLocation, newpath);
+                int[] items = pl.Items.Where(i =>
+                    !(lib.Tracks[i].Kind ?? "").Contains("video", StringComparison.OrdinalIgnoreCase) &&
+                    !string.IsNullOrWhiteSpace(lib.Tracks[i].LocalLocation) &&
+                    !Path.GetExtension(lib.Tracks[i].LocalLocation).Equals(".m4p", StringComparison.OrdinalIgnoreCase)).ToArray();
 
-                    LogConsole.WriteLine(newpath);
+                LogConsole.WriteLine($"Would replace {pldirname} with {items.Length} file(s).");
+                if (!apply)
+                    continue;
 
+                Directory.CreateDirectory(staged);
+
+                try
+                {
+                    for (int i = 0; i < items.Length; i++)
+                    {
+                        iTunesTrack track = lib.Tracks[items[i]];
+                        string newpath = Path.Combine(staged, (i + 1).ToString("D3") + " " + FixPath(track.Title + Path.GetExtension(track.LocalLocation)));
+                        File.Copy(track.LocalLocation, newpath);
+                        LogConsole.WriteLine(newpath);
+                    }
+
+                    if (Directory.Exists(pldirname))
+                        Directory.Move(pldirname, backup);
+                    try
+                    {
+                        Directory.Move(staged, pldirname);
+                        if (Directory.Exists(backup))
+                        {
+                            try { Directory.Delete(backup, true); }
+                            catch (Exception ex) { LogConsole.WriteLine($"Replacement succeeded; unable to remove backup {backup}: {ex.Message}"); }
+                        }
+                    }
+                    catch
+                    {
+                        if (!Directory.Exists(pldirname) && Directory.Exists(backup))
+                            Directory.Move(backup, pldirname);
+                        throw;
+                    }
+                }
+                finally
+                {
+                    if (Directory.Exists(staged))
+                        Directory.Delete(staged, true);
                 }
             }
 

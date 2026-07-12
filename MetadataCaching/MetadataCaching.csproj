@@ -4,25 +4,14 @@
     <OutputType>Library</OutputType>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <UserSecretsId>5b622ac7-b11d-47cb-8284-42c275d85087</UserSecretsId>
-    <!-- SQLite is the active backend. The constant was previously only defined for the
-         legacy net80 build, which left the whole SQLite path (OpenSqliteDatabase, the
-         indexer's metadata inserts, etc.) compiled out of the net10.0 target. -->
+    <!-- SQLite is the active backend; keep its implementation enabled for every configuration. -->
     <DefineConstants>$(DefineConstants);SQLITE</DefineConstants>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|net80|AnyCPU'">
-    <DefineConstants>$(DefineConstants)TRACE;SQLITE</DefineConstants>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|net80|AnyCPU'">
-    <DefineConstants>$(DefineConstants)TRACE;SQLITE</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\MusicFileUtilities\MusicFileUtilities.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.9" />
-    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />
-    <PackageReference Include="SQLitePCLRaw.core" Version="3.0.3" />
-    <PackageReference Include="SQLitePCLRaw.provider.e_sqlite3" Version="3.0.3" />
-    <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" />
   </ItemGroup>
 </Project>

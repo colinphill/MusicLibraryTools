@@ -32,18 +32,54 @@ namespace FindNonLossless
 
         static void ScanDirectory(string dir)
         {
-            foreach (string s in Directory.GetDirectories(dir))
+            static string[] Files(string path, string pattern)
             {
-                if (s.ToLower().Contains("purchased sync"))
+                try { return Directory.GetFiles(path, pattern); }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                {
+                    LogConsole.WriteLine($"Unable to enumerate {path}: {ex.Message}");
+                    return Array.Empty<string>();
+                }
+            }
+
+            IEnumerable<string> directories;
+            try
+            {
+                directories = Directory.EnumerateDirectories(dir).ToArray();
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                LogConsole.WriteLine($"Unable to scan {dir}: {ex.Message}");
+                return;
+            }
+
+            foreach (string s in directories)
+            {
+                if (s.Contains("purchased sync", StringComparison.OrdinalIgnoreCase))
                     continue;
+                FileAttributes attributes;
+                try { attributes = File.GetAttributes(s); }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                {
+                    LogConsole.WriteLine($"Unable to inspect {s}: {ex.Message}");
+                    continue;
+                }
+                if ((attributes & FileAttributes.ReparsePoint) != 0)
+                {
+                    LogConsole.WriteLine("Skipping reparse point: " + s);
+                    continue;
+                }
                 ScanDirectory(s);
             }
-            foreach (string f in Directory.GetFiles(dir, "*.m4a"))
-                CheckM4AFile(f);
+            foreach (string f in Files(dir, "*.m4a"))
+            {
+                try { CheckM4AFile(f); }
+                catch (Exception ex) { LogConsole.WriteLine($"Unable to inspect {f}: {ex.Message}"); }
+            }
             // Directory.GetFiles takes a single pattern, not a ';'-separated list, so each
             // non-ALAC extension must be enumerated on its own.
             foreach (string ext in new[] { "*.mp3", "*.ogg", "*.flac", "*.wav", "*.aiff" })
-                foreach (string f in Directory.GetFiles(dir, ext))
+                foreach (string f in Files(dir, ext))
                     LogConsole.WriteLine("Not ALAC: " + f);
         }
 
@@ -56,6 +92,12 @@ namespace FindNonLossless
                 return;
             }
             string dir = args[0];
+            if (!Directory.Exists(dir))
+            {
+                LogConsole.WriteLine("Directory does not exist: " + dir);
+                LogConsole.Close();
+                return;
+            }
             ScanDirectory(dir);
             LogConsole.Close();
         }

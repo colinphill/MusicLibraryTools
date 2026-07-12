@@ -48,4 +48,15 @@ public class PatternMatcherTests
         Assert.True(m.IsEmpty);
         Assert.True(m.IsMatch("whatever"));
     }
+
+    [Fact]
+    public void Regex_PathologicalBacktrackingTimesOutAndDoesNotMatch()
+    {
+        var m = PatternMatcher.Create("^(a+)+$", FilterMode.Regex);
+        var input = new string('a', 50_000) + "!";
+
+        var started = DateTime.UtcNow;
+        Assert.False(m.IsMatch(input));
+        Assert.True(DateTime.UtcNow - started < TimeSpan.FromSeconds(2));
+    }
 }

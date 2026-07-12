@@ -27,14 +27,17 @@ public readonly record struct ItlChunk(string Signature, int Offset, int HeaderL
 
     public static ItlChunk Read(ReadOnlySpan<byte> data, int offset)
     {
+        if (offset < 0 || offset > data.Length - 12)
+            throw new InvalidDataException($"Truncated chunk header at {offset}.");
+
         string signature = Encoding.ASCII.GetString(data.Slice(offset, 4));
         int headerLength = BinaryPrimitives.ReadInt32LittleEndian(data.Slice(offset + 4));
         int sizeOrCount = BinaryPrimitives.ReadInt32LittleEndian(data.Slice(offset + 8));
-        int type = headerLength >= 16 ? BinaryPrimitives.ReadInt32LittleEndian(data.Slice(offset + 12)) : 0;
 
-        if (headerLength < 12 || offset + headerLength > data.Length)
+        if (headerLength < 12 || headerLength > data.Length - offset)
             throw new InvalidDataException($"Malformed '{signature}' chunk at {offset}: header={headerLength}.");
 
+        int type = headerLength >= 16 ? BinaryPrimitives.ReadInt32LittleEndian(data.Slice(offset + 12, 4)) : 0;
         return new ItlChunk(signature, offset, headerLength, sizeOrCount, type);
     }
 
@@ -44,11 +47,14 @@ public readonly record struct ItlChunk(string Signature, int Offset, int HeaderL
         while (offset < end)
         {
             ItlChunk chunk = Read(data, offset);
-            if (chunk.TotalLength < chunk.HeaderLength || chunk.EndOffset > end)
-                yield break;
+            if (chunk.TotalLength < chunk.HeaderLength || chunk.EndOffset < chunk.Offset || chunk.EndOffset > end)
+                throw new InvalidDataException($"Malformed '{chunk.Signature}' chunk at {chunk.Offset}: total={chunk.TotalLength}, header={chunk.HeaderLength}.");
             yield return chunk;
             offset = chunk.EndOffset;
         }
+
+        if (offset != end)
+            throw new InvalidDataException($"Chunk chain ended at {offset}, expected {end}.");
     }
 }
 

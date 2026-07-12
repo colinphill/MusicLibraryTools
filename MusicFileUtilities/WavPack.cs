@@ -94,7 +94,7 @@ namespace MusicFileUtilities
                     if ((id & 0x3f) == 0xd)
                         channels_ = subblock[offset];
                     if ((id & 0x3f) == 0x27)
-                        samplerate_ = Tools.UInt16AtLE(subblock, offset) | (((uint)subblock[offset + 2]) << 8);
+                        samplerate_ = Tools.UInt16AtLE(subblock, offset) | (((uint)subblock[offset + 2]) << 16);
                     offset += ws * 2;
                 }
                 if ((flags & 0x80000000u) != 0)
@@ -142,28 +142,33 @@ namespace MusicFileUtilities
                 // Write to a new path (or no prior tag offset known): copy audio + append tag
                 string sourcePath = _filename ?? target;
                 long copyLength = audioEnd >= 0 ? audioEnd : new FileInfo(sourcePath).Length;
-                string tempPath = target + ".tmp~";
+                string tempPath = Tools.CreateSiblingTempPath(target);
                 try
                 {
-                    using FileStream source = new FileStream(sourcePath, FileMode.Open, FileAccess.Read);
-                    using FileStream dest = new FileStream(tempPath, FileMode.Create, FileAccess.Write);
-                    byte[] buffer = new byte[65536];
-                    long remaining = copyLength;
-                    int read;
-                    while (remaining > 0 && (read = source.Read(buffer, 0, (int)Math.Min(buffer.Length, remaining))) > 0)
                     {
-                        dest.Write(buffer, 0, read);
-                        remaining -= read;
+                        using FileStream source = new FileStream(sourcePath, FileMode.Open, FileAccess.Read);
+                        using FileStream dest = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write);
+                        byte[] buffer = new byte[65536];
+                        long remaining = copyLength;
+                        int read;
+                        while (remaining > 0 && (read = source.Read(buffer, 0, (int)Math.Min(buffer.Length, remaining))) > 0)
+                        {
+                            dest.Write(buffer, 0, read);
+                            remaining -= read;
+                        }
+                        if (remaining != 0)
+                            throw new EndOfStreamException("The WavPack source changed while it was being saved.");
+                        dest.Write(tagBytes, 0, tagBytes.Length);
+                        dest.Flush(flushToDisk: true);
                     }
-                    dest.Write(tagBytes, 0, tagBytes.Length);
+
+                    Tools.AtomicReplace(tempPath, target);
                 }
                 catch
                 {
-                    if (File.Exists(tempPath)) File.Delete(tempPath);
+                    Tools.DeleteIfExists(tempPath);
                     throw;
                 }
-                if (File.Exists(target)) File.Delete(target);
-                File.Move(tempPath, target);
                 _filename = target;
             }
         }

@@ -9,7 +9,6 @@
     <ProjectReference Include="..\MusicFileUtilities\MusicFileUtilities.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="System.Data.DataSetExtensions" Version="4.5.0" />
-    <PackageReference Include="TagLibSharp" Version="2.5.0.1" />
+    <PackageReference Include="TagLibSharp" />
   </ItemGroup>
 </Project>

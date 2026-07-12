@@ -299,6 +299,21 @@ namespace MusicFileUtilities
             }
         }
 
+        internal void CommitFileOffset(long offset)
+        {
+            _fileoffset = offset;
+        }
+
+        internal ContainerAtom ParentAtom => _parent;
+
+        internal bool WouldHeaderResizeAfter(long sizeDelta)
+        {
+            Int128 newSize = (Int128)_size + sizeDelta;
+            if (newSize < 8 || newSize > long.MaxValue)
+                throw new OverflowException("The adjusted MP4 atom size is outside the supported range.");
+            return (newSize > uint.MaxValue) != (_headersize >= 16);
+        }
+
         // True when writing this atom would require a different-length size field than it occupies
         // on disk (32-bit <-> 64-bit extended size), which would shift its own body. Never happens
         // for moov in practice, but guards the in-place path against it.
@@ -487,6 +502,11 @@ namespace MusicFileUtilities
             // Nothing in base class
         }
 
+        public virtual void ValidateFileOffsetAdjustment(long delta)
+        {
+            // Nothing in base class
+        }
+
         public virtual void Untouch()
         {
             _deltasize = 0;
@@ -499,6 +519,7 @@ namespace MusicFileUtilities
     {
         protected string _demandpath;
         protected long _offset;
+        private long? _pendingOffset;
 
         public DemandAtom(Atom a, Stream s)
             : base(a)
@@ -516,11 +537,11 @@ namespace MusicFileUtilities
             WriteHeader(s);
             byte[] b = new byte[MP4Util.DEMAND_BLOCK_SIZE];
             long todo = (long)(_size - _headersize);
-            FileStream ds = new FileStream(_demandpath, FileMode.Open, FileAccess.Read);
+            using FileStream ds = new FileStream(_demandpath, FileMode.Open, FileAccess.Read);
             ds.Seek(_offset, SeekOrigin.Begin);
-            // The new demand location is the new file
-            _demandpath = (s as FileStream).Name;
-            _offset = s.Position;
+            // Do not rebind the demand source while a staged rewrite is still fallible. RootAtom
+            // commits this offset to the final destination only after the replacement rename.
+            _pendingOffset = s.Position;
             while (todo > 0)
             {
                 int doing = (int)((todo > MP4Util.DEMAND_BLOCK_SIZE) ? MP4Util.DEMAND_BLOCK_SIZE : todo);
@@ -528,7 +549,21 @@ namespace MusicFileUtilities
                 s.Write(b, 0, doing);
                 todo -= doing;
             }
-            ds.Close();
+        }
+
+        internal void CommitRewrite(string path)
+        {
+            if (_pendingOffset.HasValue)
+            {
+                _demandpath = path;
+                _offset = _pendingOffset.Value;
+                _pendingOffset = null;
+            }
+        }
+
+        internal void AbortRewrite()
+        {
+            _pendingOffset = null;
         }
     }
 
@@ -653,14 +688,18 @@ namespace MusicFileUtilities
             {
                 if (_data[0] == 1)
                 {
-                    ulong scale = Uint64At(20);
-                    ulong duration = Uint64At(28);
+                    uint scale = Uint32At(20);
+                    ulong duration = Uint64At(24);
+                    if (scale == 0)
+                        return 0;
                     return (uint)(75 * duration / scale);
                 }
                 else
                 {
                     uint scale = Uint32At(12);
                     uint duration = Uint32At(16);
+                    if (scale == 0)
+                        return 0;
                     return 75 * duration / scale;
                 }
             }
@@ -1341,26 +1380,16 @@ namespace MusicFileUtilities
 
     public class Atom_stco : FullAtom
     {
-        private List<uint> _offsets = new List<uint>();
+        // Keep a single 64-bit representation in memory for both stco and co64.  Apart from the
+        // entry width, the atoms have the same FullBox layout.  Sharing the list lets a full-file
+        // rewrite change the serialized representation without replacing nodes in the atom tree.
+        private readonly List<ulong> _offsets = new List<ulong>();
 
         public Atom_stco(Atom a, Stream s, bool init)
             : base(a, s)
         {
             if (init)
-            {
-                uint count = ReadUint32(s);
-                // Clamp to the bytes actually present in the atom and the stream (malformed
-                // counts/sizes would otherwise over-allocate), then parse from one bulk read
-                // instead of a 4-byte stream read per chunk offset.
-                long available = Math.Min(((long)_size - (long)_headersize - 8) / 4, (s.Length - s.Position) / 4);
-                if (count > available)
-                    count = (uint)Math.Max(available, 0);
-                byte[] buf = new byte[(long)count * 4];
-                s.ReadExactly(buf);
-                _offsets.Capacity = (int)count;
-                for (int i = 0; i < buf.Length; i += 4)
-                    _offsets.Add((((uint)buf[i]) << 24) | (((uint)buf[i + 1]) << 16) | (((uint)buf[i + 2]) << 8) | (uint)buf[i + 3]);
-            }
+                ReadOffsets(s, 4);
         }
 
         public Atom_stco(Atom a, Stream s)
@@ -1372,15 +1401,104 @@ namespace MusicFileUtilities
         {
             base.WriteAtom(s);
             WriteUint32(s, (uint)(_offsets.Count));
-            foreach (uint o in _offsets)
-                WriteUint32(s, o);
+            if (Uses64BitOffsets)
+            {
+                foreach (ulong o in _offsets)
+                    WriteUint64(s, o);
+            }
+            else
+            {
+                foreach (ulong o in _offsets)
+                {
+                    if (o > uint.MaxValue)
+                        throw new InvalidOperationException("An MP4 stco offset no longer fits in 32 bits.");
+                    WriteUint32(s, (uint)o);
+                }
+            }
+        }
+
+        internal bool Uses64BitOffsets => Type == "co64";
+
+        internal bool AdjustedOffsetsFitUInt32(long delta)
+        {
+            foreach (ulong offset in _offsets)
+            {
+                Int128 value = (Int128)offset + delta;
+                if (value < 0 || value > uint.MaxValue)
+                    return false;
+            }
+            return true;
+        }
+
+        internal void Validate64BitOffsetAdjustment(long delta)
+        {
+            foreach (ulong offset in _offsets)
+            {
+                Int128 value = (Int128)offset + delta;
+                if (value < 0 || value > ulong.MaxValue)
+                    throw new InvalidOperationException(
+                        "An MP4 chunk offset moved outside the valid unsigned 64-bit range.");
+            }
+        }
+
+        // Changes only the table representation.  Offset values are adjusted later, after all
+        // width changes have propagated to moov and the final mdat position is known.
+        internal void SetUses64BitOffsets(bool use64Bit)
+        {
+            if (Uses64BitOffsets == use64Bit)
+                return;
+
+            long sizeDelta = checked(_offsets.Count * (use64Bit ? 4L : -4L));
+            // Atom.NonRecursiveTouch predates extended-size support and cannot propagate the extra
+            // eight header bytes through every ancestor.  Tables this large are impractical to
+            // materialize here; reject that boundary instead of emitting inconsistent sizes.
+            if (sizeDelta != 0)
+            {
+                // RootAtom is a tree sentinel rather than a serialized atom; stop before it.
+                for (Atom atom = this; atom.ParentAtom != null; atom = atom.ParentAtom)
+                    if (atom.WouldHeaderResizeAfter(sizeDelta))
+                        throw new NotSupportedException(
+                            "Changing an MP4 chunk-offset table would resize a 32/64-bit atom header.");
+            }
+            Type = use64Bit ? "co64" : "stco";
+            Touch(sizeDelta, adjust_free: false);
+        }
+
+        protected void ReadOffsets(Stream s, int entryWidth)
+        {
+            uint count = ReadUint32(s);
+            // Clamp to the bytes actually present in the atom and the stream (malformed
+            // counts/sizes would otherwise over-allocate), then parse from one bulk read.
+            long atomPayloadBytes = Math.Max((long)_size - (long)_headersize - 8, 0);
+            long available = Math.Min(atomPayloadBytes / entryWidth, (s.Length - s.Position) / entryWidth);
+            if (count > available)
+                count = (uint)Math.Max(available, 0);
+
+            byte[] buf = new byte[checked((int)((long)count * entryWidth))];
+            s.ReadExactly(buf);
+            _offsets.Capacity = (int)count;
+            for (int i = 0; i < buf.Length; i += entryWidth)
+            {
+                ulong offset = 0;
+                for (int j = 0; j < entryWidth; j++)
+                    offset = (offset << 8) | buf[i + j];
+                _offsets.Add(offset);
+            }
         }
 
         public virtual void AdjustOffset(long delta)
         {
+            ValidateFileOffsetAdjustment(delta);
+            ulong[] adjusted = new ulong[_offsets.Count];
+            for (int i = 0; i < _offsets.Count; i++)
+            {
+                Int128 value = (Int128)_offsets[i] + delta;
+                adjusted[i] = (ulong)value;
+            }
+
             Touch(0);
             for (int i = 0; i < _offsets.Count; i++)
-                _offsets[i] = (uint)((int)_offsets[i] + delta);
+                _offsets[i] = adjusted[i];
         }
 
         public override void FixFileOffsets(long delta)
@@ -1388,45 +1506,22 @@ namespace MusicFileUtilities
             AdjustOffset(delta);
         }
 
+        public override void ValidateFileOffsetAdjustment(long delta)
+        {
+            Validate64BitOffsetAdjustment(delta);
+            if (!Uses64BitOffsets && !AdjustedOffsetsFitUInt32(delta))
+                throw new InvalidOperationException(
+                    "An MP4 stco offset no longer fits in 32 bits; conversion to co64 is required.");
+        }
+
     }
 
     public class Atom_co64 : Atom_stco
     {
-        private List<ulong> _offsets = new List<ulong>();
-
         public Atom_co64(Atom a, Stream s)
             : base(a, s, false)
         {
-            //_versionandflags = _versionandflags;
-            uint count = ReadUint32(s);
-            long available = Math.Min(((long)_size - (long)_headersize - 8) / 8, (s.Length - s.Position) / 8);
-            if (count > available)
-                count = (uint)Math.Max(available, 0);
-            byte[] buf = new byte[(long)count * 8];
-            s.ReadExactly(buf);
-            _offsets.Capacity = (int)count;
-            for (int i = 0; i < buf.Length; i += 8)
-            {
-                ulong o = 0;
-                for (int j = 0; j < 8; j++)
-                    o = (o << 8) | buf[i + j];
-                _offsets.Add(o);
-            }
-        }
-
-        public override void WriteAtom(Stream s)
-        {
-            base.WriteAtom(s);
-            WriteUint32(s, (uint)(_offsets.Count));
-            foreach (ulong o in _offsets)
-                WriteUint64(s, o);
-        }
-
-        public override void AdjustOffset(long delta)
-        {
-            Touch(0);
-            for (int i = 0; i < _offsets.Count; i++)
-                _offsets[i] = (ulong)((long)_offsets[i] + delta);
+            ReadOffsets(s, 8);
         }
     }
 
@@ -1641,6 +1736,12 @@ namespace MusicFileUtilities
                 a.FixFileOffsets(delta);
         }
 
+        public override void ValidateFileOffsetAdjustment(long delta)
+        {
+            foreach (Atom a in _children)
+                a.ValidateFileOffsetAdjustment(delta);
+        }
+
         public long ComputeFreeSpace()
         {
             long sum = 0;
@@ -1686,7 +1787,7 @@ namespace MusicFileUtilities
 
         public void ReadFile(string path)
         {
-            Stream s = Tools.OpenReadSequential(path);
+            using Stream s = Tools.OpenReadSequential(path);
 
             long length = s.Length;
             while (s.Position < length)
@@ -1705,7 +1806,6 @@ namespace MusicFileUtilities
                 s.Seek(pos + a.Size, SeekOrigin.Begin);
             }
 
-            s.Close();
             _associatedpath = path;
          }
 
@@ -1719,29 +1819,167 @@ namespace MusicFileUtilities
             // faststart layouts that lack it) so the NEXT tag edit can be absorbed in place.
             EnsureMoovPadding();
 
-            // mdat (DemandAtom) reads audio from absolute positions in the original file.
-            // If any preceding atom has changed size, the stco/co64 chunk offsets must be
-            // adjusted by the net delta before writing, otherwise the output file is corrupt.
+            List<Atom_stco> chunkOffsetAtoms = EnumerateChunkOffsetAtoms(this).ToList();
+            var widthChanges = new List<(Atom_stco Atom, bool PreviousWidth)>();
+            List<(Atom Atom, long Offset)> committedOffsets = null;
             long offsetDelta = 0;
-            foreach (Atom a in _children)
+            bool offsetsAdjusted = false;
+            string tpath = null;
+            try
             {
-                if (a is DemandAtom) break;
-                offsetDelta += a.DeltaSize;
-            }
-            if (offsetDelta != 0)
-                FixFileOffsets(offsetDelta);
+                // Width changes alter moov and can therefore alter mdat's staged position. Promote
+                // overflowing stco tables to co64 until the layout is stable, then opportunistically
+                // demote each co64 whose values still fit after its own shrink is accounted for.
+                SelectChunkOffsetWidths(chunkOffsetAtoms, widthChanges);
+                (committedOffsets, offsetDelta) = CalculateStagedLayout();
+                ValidateFileOffsetAdjustment(offsetDelta);
+                if (offsetDelta != 0)
+                {
+                    FixFileOffsets(offsetDelta);
+                    offsetsAdjusted = true;
+                }
 
-            string tpath = File.Exists(path) ? path + ".tmp" : path;
-            Stream s = new FileStream(tpath, FileMode.Create, FileAccess.Write);
-            WriteAtom(s);
-            s.Close();
-            if (tpath != path)
-            {
-                File.Delete(path);
-                File.Move(tpath, path);
+                tpath = Tools.CreateSiblingTempPath(path);
+                using (FileStream s = new FileStream(tpath, FileMode.CreateNew, FileAccess.Write))
+                {
+                    WriteAtom(s);
+                    s.Flush(flushToDisk: true);
+                }
+
+                Tools.AtomicReplace(tpath, path);
             }
+            catch
+            {
+                // Restore widths before numeric offsets: a co64 table may have been demoted only
+                // because the final negative delta made it fit, while a promoted stco may currently
+                // contain values above uint.MaxValue. The original representation can safely hold
+                // the values produced by reversing the adjustment.
+                for (int i = widthChanges.Count - 1; i >= 0; i--)
+                    widthChanges[i].Atom.SetUses64BitOffsets(widthChanges[i].PreviousWidth);
+                if (offsetsAdjusted)
+                    FixFileOffsets(-offsetDelta);
+                foreach (DemandAtom demand in _children.OfType<DemandAtom>())
+                    demand.AbortRewrite();
+                if (tpath != null)
+                    Tools.DeleteIfExists(tpath);
+                throw;
+            }
+
+            string committedPath = System.IO.Path.GetFullPath(path);
+            foreach (DemandAtom demand in _children.OfType<DemandAtom>())
+                demand.CommitRewrite(committedPath);
+            foreach (var (atom, offset) in committedOffsets)
+                atom.CommitFileOffset(offset);
             _associatedpath = path;
             Untouch();
+        }
+
+        private (List<(Atom Atom, long Offset)> AtomOffsets, long MediaDelta) CalculateStagedLayout()
+        {
+            // All mdat atoms may share one global stco/co64 adjustment only when they move by the
+            // same amount. If metadata sits between multiple mdats, selective table remapping is
+            // required; rejecting that layout is safer than corrupting a subset of the chunks.
+            var atomOffsets = new List<(Atom Atom, long Offset)>();
+            var mediaDeltas = new HashSet<long>();
+            long stagedOffset = 0;
+            foreach (Atom atom in _children)
+            {
+                atomOffsets.Add((atom, stagedOffset));
+                if (atom is DemandAtom)
+                {
+                    if (atom.FileOffset < 0)
+                        throw new InvalidOperationException("Cannot relocate an MP4 mdat with no source offset.");
+                    mediaDeltas.Add(stagedOffset - atom.FileOffset);
+                }
+                stagedOffset = checked(stagedOffset + atom.Size);
+            }
+
+            if (mediaDeltas.Count > 1)
+                throw new NotSupportedException(
+                    "This MP4 has multiple mdat atoms that would move by different amounts; selective chunk-offset remapping is required.");
+
+            return (atomOffsets, mediaDeltas.Count == 0 ? 0 : mediaDeltas.Single());
+        }
+
+        private void SelectChunkOffsetWidths(
+            IReadOnlyList<Atom_stco> chunkOffsetAtoms,
+            ICollection<(Atom_stco Atom, bool PreviousWidth)> widthChanges)
+        {
+            // Promote one table at a time and recalculate. Growing moov can move mdat farther and
+            // make another table overflow too, so a single pass is insufficient.
+            while (true)
+            {
+                long mediaDelta = CalculateStagedLayout().MediaDelta;
+                Atom_stco toPromote = null;
+                foreach (Atom_stco atom in chunkOffsetAtoms)
+                {
+                    atom.Validate64BitOffsetAdjustment(mediaDelta);
+                    if (!atom.Uses64BitOffsets && !atom.AdjustedOffsetsFitUInt32(mediaDelta))
+                    {
+                        toPromote = atom;
+                        break;
+                    }
+                }
+
+                if (toPromote == null)
+                    break;
+                widthChanges.Add((toPromote, false));
+                toPromote.SetUses64BitOffsets(true);
+            }
+
+            // A demotion is retained only if the layout produced by the smaller table leaves every
+            // chunk table valid in its selected representation. Start over after every success:
+            // one table's shrink can make an earlier table eligible on the next pass.
+            while (true)
+            {
+                bool acceptedDemotion = false;
+                foreach (Atom_stco atom in chunkOffsetAtoms)
+                {
+                    if (!atom.Uses64BitOffsets)
+                        continue;
+
+                    bool demoted = false;
+                    try
+                    {
+                        // Do not require a pre-demotion fit: shrinking this table may itself move
+                        // mdat backward far enough to bring a near-boundary value below uint.Max.
+                        atom.SetUses64BitOffsets(false);
+                        demoted = true;
+                        long candidateDelta = CalculateStagedLayout().MediaDelta;
+                        foreach (Atom_stco candidate in chunkOffsetAtoms)
+                        {
+                            candidate.Validate64BitOffsetAdjustment(candidateDelta);
+                            if (!candidate.Uses64BitOffsets && !candidate.AdjustedOffsetsFitUInt32(candidateDelta))
+                                throw new InvalidOperationException(
+                                    "The candidate stco layout does not fit in 32-bit chunk offsets.");
+                        }
+
+                        widthChanges.Add((atom, true));
+                        acceptedDemotion = true;
+                        break;
+                    }
+                    catch (Exception ex) when (ex is InvalidOperationException || ex is NotSupportedException)
+                    {
+                        if (demoted)
+                            atom.SetUses64BitOffsets(true);
+                    }
+                }
+
+                if (!acceptedDemotion)
+                    break;
+            }
+        }
+
+        private static IEnumerable<Atom_stco> EnumerateChunkOffsetAtoms(ContainerAtom container)
+        {
+            foreach (Atom atom in container.Children)
+            {
+                if (atom is Atom_stco chunkOffsets)
+                    yield return chunkOffsets;
+                if (atom is ContainerAtom childContainer)
+                    foreach (Atom_stco nested in EnumerateChunkOffsetAtoms(childContainer))
+                        yield return nested;
+            }
         }
 
         // Reserves a `free` padding atom inside moov so a later tag edit can be absorbed in place

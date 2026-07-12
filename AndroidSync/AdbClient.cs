@@ -114,8 +114,23 @@ namespace AndroidSync
                 count = buffer.Length - offset;
             return Task.Run(() =>
             {
-                return Send(buffer, offset, count, SocketFlags.None);
+                int total = 0;
+                while (total < count)
+                {
+                    int sent = Send(buffer, offset + total, count - total, SocketFlags.None);
+                    if (sent <= 0)
+                        throw new IOException("Socket closed while sending an ADB request.");
+                    total += sent;
+                }
+                return total;
             });
+        }
+
+        public Task<int> ReceiveSomeAsync(byte[] buffer, int offset = 0, int count = -1)
+        {
+            if (count == -1)
+                count = buffer.Length - offset;
+            return Task.Run(() => Receive(buffer, offset, count, SocketFlags.None));
         }
 
         public async Task SendRequestAsync(string req)
@@ -143,6 +158,8 @@ namespace AndroidSync
         {
             byte[] buffer = new byte[4];
             int received = await ReceiveAsync(buffer);
+            if (received != buffer.Length)
+                throw new IOException("ADB closed the connection before returning a response.");
             string resp = Encoding.GetString(buffer, 0, received);
             if (resp != "OKAY")
             {
@@ -234,7 +251,7 @@ namespace AndroidSync
         {
             using (var conn = new AdbConnection(Encoding))
             {
-                await conn.ConnectAsync(IPAddress.Loopback, 5037);
+                await conn.ConnectAsync(endpoint_);
                 await conn.SendRequestAsync("host:version");
                 await conn.ReceiveResponseAsync();
                 return int.Parse(await conn.ReceiveStringAsync(), System.Globalization.NumberStyles.HexNumber);
@@ -249,7 +266,7 @@ namespace AndroidSync
                 progress.Start();
             using (var conn = new AdbConnection(Encoding))
             {
-                await conn.ConnectAsync(IPAddress.Loopback, 5037);
+                await conn.ConnectAsync(endpoint_);
                 await conn.SendRequestAsync(device == null ? "host:transport-any" : $"host:transport:{device}");
                 await conn.ReceiveResponseAsync();
                 await conn.SendRequestAsync("sync:");
@@ -286,7 +303,7 @@ namespace AndroidSync
                 progress.Start();
             using (var conn = new AdbConnection(Encoding))
             {
-                await conn.ConnectAsync(IPAddress.Loopback, 5037);
+                await conn.ConnectAsync(endpoint_);
                 await conn.SendRequestAsync(device == null ? "host:transport-any" : $"host:transport:{device}");
                 await conn.ReceiveResponseAsync();
                 await conn.SendRequestAsync("sync:");
@@ -332,7 +349,7 @@ namespace AndroidSync
         {
             using (var conn = new AdbConnection(Encoding))
             {
-                await conn.ConnectAsync(IPAddress.Loopback, 5037);
+                await conn.ConnectAsync(endpoint_);
                 await conn.SendRequestAsync(device == null ? "host:transport-any" : $"host:transport:{device}");
                 await conn.ReceiveResponseAsync();
                 await conn.SendRequestAsync("shell,v2,raw:" + command);
@@ -348,7 +365,9 @@ namespace AndroidSync
 
                 for (; ; )
                 {
-                    int received = await conn.ReceiveAsync(buffer);
+                    int received = await conn.ReceiveSomeAsync(buffer);
+                    if (received == 0)
+                        break;
                     int offset = 0;
                     while (offset < received)
                     {
@@ -364,8 +383,12 @@ namespace AndroidSync
                             {
                                 ptype = packetheader[0];
                                 plen = BitConverter.ToInt32(packetheader, 1);
+                                if (plen < 0 || plen > MaxBufferSize)
+                                    throw new IOException($"Invalid ADB shell packet length: {plen}.");
                                 poffset = 0;
                                 Array.Resize(ref packet, plen);
+                                if (plen == 0)
+                                    phoffset = 0;
                             }
                         }
                         else if (plen > 0)
@@ -384,15 +407,14 @@ namespace AndroidSync
                                 else if ((receiver != null) && (ptype == 2)) // Stderr
                                     receiver.WriteStderr(packet, packet.Length);
                                 else if (ptype == 3)
-                                    retcode = packet[0];
+                                    retcode = packet.Length >= sizeof(int) ? BitConverter.ToInt32(packet, 0) : packet[0];
                                 phoffset = 0;
                             }
                         }
                     }
-
-                    if (received < buffer.Length)
-                        break;
                 }
+                if (phoffset != 0)
+                    throw new IOException("ADB shell connection ended in the middle of a packet.");
                 if (receiver != null)
                     receiver.End();
 

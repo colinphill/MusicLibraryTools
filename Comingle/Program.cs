@@ -10,24 +10,22 @@ using MetadataCaching;
 namespace Comingle
 {
 
-    public static partial class ComparisonMetrics
-    {
-        public static double RatcliffObershelpSimilarity(this string source, string target)
-        {
-            return (2 * Convert.ToDouble(source.ToLower().Intersect(target.ToLower()).Count())) / (Convert.ToDouble(source.Length + target.Length));
-        }
-
-    }
     class Program
     {
         static void Main(string[] args)
         {
+            if (args.Length != 3)
+            {
+                Console.Error.WriteLine("Usage: Comingle <cache.db> <base-library> <incoming-library>");
+                return;
+            }
+
             LogConsole.ConsoleVerbosity = LogVerbosity.Max;
 
-            using MetadataDatabase db = MetadataDatabase.OpenDatabase("cache.db");
-            db.IndexFiles(new string[] { @"\\ritsuko.projecteva.net\Sonos\FLAC", @"\\ritsuko.projecteva.net\Sonos\FLAC2", @"\\ritsuko.projecteva.net\Jenny\Jenny's Crappy Music" });
-            var basecache = db.BuildCache(new string[] { @"\\ritsuko.projecteva.net\Sonos\FLAC", @"\\ritsuko.projecteva.net\Sonos\FLAC2" });
-            var comingledcache = db.BuildCache(new string[] { @"\\ritsuko.projecteva.net\Jenny\Jenny's Crappy Music" });
+            using MetadataDatabase db = MetadataDatabase.OpenDatabase(args[0]);
+            db.IndexFiles(new[] { args[1], args[2] });
+            var basecache = db.BuildCache(new[] { args[1] });
+            var comingledcache = db.BuildCache(new[] { args[2] });
 
             /*LogConsole.WriteLine("Checking Artists");
             foreach (string artist in comingledcache.Artists)

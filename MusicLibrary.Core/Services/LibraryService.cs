@@ -9,30 +9,50 @@ namespace MusicLibrary.Core.Services;
 public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReindexService, IDisposable
 {
     private readonly IAppSettings _settings;
+    private readonly IFileMutationCoordinator _mutations;
 
     // The MetadataDatabase wraps a single DbConnection and is not safe for concurrent use, so every
     // operation goes through this gate. One instance is opened lazily and reopened if the config changes.
     private readonly SemaphoreSlim _gate = new(1, 1);
     private MetadataDatabase? _db;
-    private string? _openedForConfig;
+    private long _openedForVersion = -1;
+    private string? _openedDatabaseSpec;
 
-    public LibraryService(IAppSettings settings)
+    public LibraryService(IAppSettings settings, IFileMutationCoordinator? mutations = null)
     {
         _settings = settings;
-        _settings.ConfigurationChanged += (_, _) => InvalidateDatabase();
+        _mutations = mutations ?? FileMutationCoordinator.Shared;
     }
 
-    public bool IsReady => _settings.Configuration is not null;
+    public bool IsReady => _settings.GetSnapshot().Configuration is not null;
+
+    private sealed record LibraryContext(
+        LibraryConfiguration Configuration,
+        string? ConfigPath,
+        long Version);
+
+    private LibraryContext GetContext()
+    {
+        var snapshot = _settings.GetSnapshot();
+        return snapshot.Configuration is { } configuration
+            ? new LibraryContext(configuration, snapshot.ConfigPath, snapshot.Version)
+            : throw new InvalidOperationException("No library configuration is loaded.");
+    }
 
     public async Task<(int Added, int Modified, int Removed, int Unchanged)> IndexAsync(
         IProgress<IndexProgress>? progress = null, CancellationToken ct = default)
     {
-        var roots = GetRoots();
         await _gate.WaitAsync(ct);
         try
         {
-            var db = GetDatabase();
-            return await Task.Run(() => db.IndexFiles(roots, deletemissingsets: false, progress, ct), ct);
+            var context = GetContext();
+            var roots = GetRoots(context.Configuration);
+            var db = GetDatabase(context);
+            var result = await Task.Run(() => db.IndexFiles(roots, deletemissingsets: false, progress, ct), ct);
+            // MetadataDatabase deliberately commits and returns partial work on cancellation. Surface
+            // the cancellation to callers after that safe partial commit instead of calling it success.
+            ct.ThrowIfCancellationRequested();
+            return result;
         }
         finally
         {
@@ -42,11 +62,12 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
 
     public async Task<LibrarySnapshot> BuildSnapshotAsync(LibraryGrouping grouping = LibraryGrouping.AlbumArtist, CancellationToken ct = default)
     {
-        var roots = GetRoots();
         await _gate.WaitAsync(ct);
         try
         {
-            var db = GetDatabase();
+            var context = GetContext();
+            var roots = GetRoots(context.Configuration);
+            var db = GetDatabase(context);
             return await Task.Run(() =>
             {
                 var cache = db.BuildCache(roots);
@@ -61,11 +82,12 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
 
     public async Task<IReadOnlyList<TrackRecord>> GetAllRecordsAsync(CancellationToken ct = default)
     {
-        var roots = GetRoots();
         await _gate.WaitAsync(ct);
         try
         {
-            var db = GetDatabase();
+            var context = GetContext();
+            var roots = GetRoots(context.Configuration);
+            var db = GetDatabase(context);
             return await Task.Run(() =>
             {
                 var cache = db.BuildCache(roots);
@@ -107,13 +129,12 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
 
     public async Task<AnalysisReport> CheckSetsAsync(CancellationToken ct = default)
     {
-        var config = _settings.Configuration
-            ?? throw new InvalidOperationException("No library configuration is loaded.");
-
         await _gate.WaitAsync(ct);
         try
         {
-            var db = GetDatabase();
+            var context = GetContext();
+            var config = context.Configuration;
+            var db = GetDatabase(context);
             return await Task.Run(() =>
             {
                 var locations = config.IndexLocations.ToList();
@@ -121,34 +142,47 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                 if (setIds.Count < 2)
                     return new AnalysisReport("Cross-set check", []);
 
-                // One cache per set (honouring each target's optional extension filter).
-                var caches = setIds
-                    .Select(s => (Set: s, Cache: db.BuildCache(
-                        locations.Where(l => l.Set == s)
-                                 .Select(l => (l.Target, l.Filter?.Split([',', ';', '|'], StringSplitOptions.RemoveEmptyEntries))))))
-                    .ToList();
+                // Build each target unfiltered, then apply normalized extension filters here. The
+                // cache API compares literal extensions case-sensitively, while configuration files
+                // historically contain a mix of ".flac", "*.flac", casing, and whitespace.
+                var caches = new List<SetComparisonCache>(setIds.Count);
+                foreach (var setId in setIds)
+                {
+                    var files = new Dictionary<string, MetadataCacheEntry>(FilePathComparer);
+                    foreach (var location in locations.Where(l => l.Set == setId))
+                    {
+                        var extensions = ParseExtensionFilter(location.Filter);
+                        foreach (var (path, entry) in db.BuildCache([location.Target]).FileCache)
+                        {
+                            ct.ThrowIfCancellationRequested();
+                            if (extensions is null || extensions.Contains(Path.GetExtension(path)))
+                                files[path] = entry;
+                        }
+                    }
+                    caches.Add(new SetComparisonCache(setId, files));
+                }
 
                 var findings = new List<AnalysisFinding>();
                 foreach (var target in caches)
                 {
                     foreach (var other in caches.Where(c => c.Set != target.Set))
                     {
-                        foreach (var (path, entry) in target.Cache.FileCache)
+                        foreach (var (path, entry) in target.Files)
                         {
                             ct.ThrowIfCancellationRequested();
-                            if (!other.Cache.AlbumCache.TryGetValue(entry.Album, out var albumFiles))
+                            if (!other.Albums.TryGetValue(entry.Album ?? "", out var albumFiles))
                             {
                                 findings.Add(new AnalysisFinding(path, $"missing from set {other.Set}"));
                                 continue;
                             }
 
                             var matches = albumFiles
-                                .Select(f => other.Cache.FileCache[f])
-                                .Where(f => (f.AlbumArtist == entry.AlbumArtist || f.Artist == entry.Artist) && f.TrackNumber == entry.TrackNumber)
+                                .Where(f =>
+                                    (SameText(f.AlbumArtist, entry.AlbumArtist) || SameText(f.Artist, entry.Artist)) &&
+                                    f.TrackNumber == entry.TrackNumber &&
+                                    (f.DiscNumber ?? 1) == (entry.DiscNumber ?? 1) &&
+                                    SameText(f.Title, entry.Title))
                                 .ToList();
-
-                            if (matches.Count > 1)
-                                matches = matches.Where(f => f.Title == entry.Title).ToList();
 
                             if (matches.Count == 0)
                                 findings.Add(new AnalysisFinding(path, $"missing from set {other.Set}"));
@@ -175,7 +209,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         await _gate.WaitAsync(ct);
         try
         {
-            var db = GetDatabase();
+            var db = GetDatabase(GetContext());
             return await Task.Run(() => db.GetFileDetails(path, includeArtwork), ct);
         }
         finally
@@ -191,7 +225,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         await _gate.WaitAsync(ct);
         try
         {
-            var db = GetDatabase();
+            var db = GetDatabase(GetContext());
             return await Task.Run(() => db.GetFirstImageData(path), ct);
         }
         finally
@@ -207,7 +241,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         await _gate.WaitAsync(ct);
         try
         {
-            var db = GetDatabase();
+            var db = GetDatabase(GetContext());
             return await Task.Run(() => (IReadOnlyList<string>)db.GetImageSignatures(paths), ct);
         }
         finally
@@ -223,7 +257,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         await _gate.WaitAsync(ct);
         try
         {
-            var db = GetDatabase();
+            var db = GetDatabase(GetContext());
             await Task.Run(() => db.ReindexFile(path), ct);
         }
         finally
@@ -234,15 +268,14 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
 
     public async Task<IReadOnlyList<PlannedMove>> PreviewMovesAsync(CancellationToken ct = default)
     {
-        var config = _settings.Configuration
-            ?? throw new InvalidOperationException("No library configuration is loaded.");
-        var baseDirs = config.IndexLocations.Select(l => l.Target).ToList();
-        var (lengthLimit, discLimit) = GetLimits(config);
-
         await _gate.WaitAsync(ct);
         try
         {
-            var db = GetDatabase();
+            var context = GetContext();
+            var config = context.Configuration;
+            var baseDirs = GetRoots(config);
+            var (lengthLimit, discLimit) = GetLimits(config);
+            var db = GetDatabase(context);
             return await Task.Run(() =>
             {
                 var moves = new List<PlannedMove>();
@@ -251,7 +284,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                     var cache = db.BuildCache([baseDir]);
                     // Track destinations already claimed in this preview so two sources don't plan
                     // the same target (the console tool relied on File.Move happening between checks).
-                    var claimed = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+                    var claimed = new HashSet<string>(FilePathComparer);
                     foreach (var (source, entry) in cache.FileCache)
                     {
                         ct.ThrowIfCancellationRequested();
@@ -280,14 +313,14 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         var ext = Path.GetExtension(source);
         var tgt = Path.Combine(baseDir, entry.FormatPath(lengthLimit, discLimit) + ext).Normalize();
 
-        if (source.Equals(tgt, StringComparison.InvariantCultureIgnoreCase) && source.IsNormalized())
+        if (FilePathComparer.Equals(source, tgt) && source.IsNormalized())
             return null; // already canonical
 
         int index = 2;
-        while ((File.Exists(tgt) || claimed.Contains(tgt)) && source.IsNormalized())
+        while ((File.Exists(tgt) && !FilePathComparer.Equals(source, tgt)) || claimed.Contains(tgt))
         {
             tgt = Path.Combine(baseDir, entry.FormatPath(lengthLimit, discLimit) + $"_{index++}" + ext).Normalize();
-            if (source.Equals(tgt, StringComparison.InvariantCultureIgnoreCase) && source.IsNormalized())
+            if (FilePathComparer.Equals(source, tgt) && source.IsNormalized())
                 return null; // the numbered target is the file itself
         }
         return tgt;
@@ -296,18 +329,20 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
     public async Task<OrganizeResult> ApplyMovesAsync(
         IReadOnlyList<PlannedMove> moves, IProgress<int>? progress = null, CancellationToken ct = default)
     {
-        var config = _settings.Configuration
-            ?? throw new InvalidOperationException("No library configuration is loaded.");
-        var baseDirs = config.IndexLocations.Select(l => l.Target).ToList();
+        var context = GetContext();
+        var config = context.Configuration;
+        var baseDirs = GetRoots(config);
         bool deleteNonMusic = config["DeleteNonMusic"].Length != 0;
         bool keepFolderImages = config["KeepFolderImages"].Length != 0;
 
         // Successful (source → destination) pairs, so we can sync the cache to exactly the moves that
         // happened — even if the operation is cancelled partway.
         var relocated = new List<(string Source, string Destination)>();
+        OrganizeResult result;
+        IReadOnlyList<(string Source, string Error)> cacheErrors = [];
         try
         {
-            return await Task.Run(() =>
+            result = await Task.Run(async () =>
             {
                 int moved = 0, done = 0;
                 var errors = new List<(string Source, string Error)>();
@@ -317,10 +352,16 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                     ct.ThrowIfCancellationRequested();
                     try
                     {
+                        using var mutation = await _mutations.AcquireAsync(
+                            [move.Source, move.Destination], ct);
                         Directory.CreateDirectory(Path.GetDirectoryName(move.Destination)!);
                         File.Move(move.Source, move.Destination);
                         relocated.Add((move.Source, move.Destination));
                         moved++;
+                    }
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                    {
+                        throw;
                     }
                     catch (Exception ex)
                     {
@@ -341,33 +382,87 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         }
         finally
         {
-            // Keep the cache in sync with the moves: drop the stale entry at the old path and index the
-            // file at its new path. Runs even on cancel (with its own token) so the cache never lies.
-            await SyncMovesToCacheAsync(relocated);
+            // Attempt to keep the cache in sync with every completed move, even on cancellation. Any
+            // refresh failures are returned separately from filesystem move failures.
+            cacheErrors = await SyncMovesToCacheAsync(relocated, context);
+        }
+        return result with { CacheErrors = cacheErrors };
+    }
+
+    private static readonly StringComparer FilePathComparer =
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+
+    private sealed class SetComparisonCache
+    {
+        public int Set { get; }
+        public IReadOnlyDictionary<string, MetadataCacheEntry> Files { get; }
+        public IReadOnlyDictionary<string, List<MetadataCacheEntry>> Albums { get; }
+
+        public SetComparisonCache(int set, Dictionary<string, MetadataCacheEntry> files)
+        {
+            Set = set;
+            Files = files;
+            Albums = files.Values
+                .GroupBy(e => e.Album ?? "", StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
         }
     }
 
-    private async Task SyncMovesToCacheAsync(IReadOnlyList<(string Source, string Destination)> moves)
+    private static HashSet<string>? ParseExtensionFilter(string? filter)
+    {
+        if (string.IsNullOrWhiteSpace(filter))
+            return null;
+
+        var extensions = filter
+            .Split([',', ';', '|'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(value => Path.GetExtension(value) is { Length: > 0 } extension
+                ? extension
+                : "." + value.TrimStart('.', '*'))
+            .Where(extension => extension.Length > 1)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return extensions.Count == 0 ? null : extensions;
+    }
+
+    private static bool SameText(string? left, string? right)
+        => string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+
+    private async Task<IReadOnlyList<(string Source, string Error)>> SyncMovesToCacheAsync(
+        IReadOnlyList<(string Source, string Destination)> moves,
+        LibraryContext context)
     {
         if (moves.Count == 0 || !IsReady)
-            return;
+            return [];
 
+        var errors = new List<(string Source, string Error)>();
         await _gate.WaitAsync();
         try
         {
-            var db = GetDatabase();
+            // Synchronize the database belonging to the configuration under which the moves were
+            // performed, even if the user loaded another configuration while the batch was running.
+            var db = GetDatabase(context);
             await Task.Run(() =>
             {
                 foreach (var (source, destination) in moves)
                 {
                     try
                     {
+                        // Add the new entry first: if removing the stale entry then fails, the cache
+                        // is temporarily duplicated rather than losing the successfully moved file.
+                        if (!db.ReindexFile(destination))
+                            throw new InvalidOperationException("Destination is outside the configuration's indexed roots.");
                         db.RemoveFile(source);
-                        db.ReindexFile(destination);
                     }
-                    catch { /* one bad file shouldn't abort the cache sync */ }
+                    catch (Exception ex)
+                    {
+                        errors.Add((source, ex.Message));
+                    }
                 }
             });
+            return errors;
+        }
+        catch (Exception ex)
+        {
+            return moves.Select(move => (move.Source, ex.Message)).ToList();
         }
         finally
         {
@@ -445,52 +540,52 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
     private static string Coalesce(params string?[] values)
         => values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)) ?? values[^1] ?? "";
 
-    private List<string> GetRoots()
-    {
-        var config = _settings.Configuration
-            ?? throw new InvalidOperationException("No library configuration is loaded.");
-        return config.IndexLocations.Select(l => l.Target).ToList();
-    }
+    private static List<string> GetRoots(LibraryConfiguration config)
+        => config.IndexLocations.Select(l => l.Target).ToList();
 
-    private MetadataDatabase GetDatabase()
+    private MetadataDatabase GetDatabase(LibraryContext context)
     {
-        var config = _settings.Configuration
-            ?? throw new InvalidOperationException("No library configuration is loaded.");
-
-        if (_db is not null && _openedForConfig == _settings.ConfigPath)
+        var databaseSpec = ResolveDatabaseSpec(context.Configuration.DatabaseFile, context.ConfigPath);
+        if (_db is not null &&
+            _openedForVersion == context.Version &&
+            string.Equals(_openedDatabaseSpec, databaseSpec, StringComparison.Ordinal))
             return _db;
 
         _db?.Dispose();
-
-        // The cache filename in the config may be relative; resolve it next to the config file so
-        // the GUI's working directory doesn't matter.
-        var dbFile = config.DatabaseFile;
-        if (!Path.IsPathRooted(dbFile) && _settings.ConfigPath is { } cfgPath)
-            dbFile = Path.Combine(Path.GetDirectoryName(cfgPath)!, dbFile);
-
-        _db = MetadataDatabase.OpenDatabase(dbFile);
-        _openedForConfig = _settings.ConfigPath;
+        _db = MetadataDatabase.OpenDatabase(databaseSpec);
+        _openedForVersion = context.Version;
+        _openedDatabaseSpec = databaseSpec;
         return _db;
     }
 
-    private void InvalidateDatabase()
+    private static string ResolveDatabaseSpec(string databaseSpec, string? configPath)
     {
-        _gate.Wait();
-        try
+        var prefix = "";
+        var path = databaseSpec;
+        if (databaseSpec.StartsWith("sqlite:", StringComparison.OrdinalIgnoreCase))
         {
-            _db?.Dispose();
-            _db = null;
-            _openedForConfig = null;
+            prefix = databaseSpec[..7];
+            path = databaseSpec[7..];
+            if (path.Equals(":memory:", StringComparison.OrdinalIgnoreCase) ||
+                path.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
+                return prefix + path;
         }
-        finally
+        else if (databaseSpec.StartsWith("sql:", StringComparison.OrdinalIgnoreCase))
         {
-            _gate.Release();
+            // SQL connection specifications are opaque rather than filesystem paths.
+            return databaseSpec;
         }
+
+        if (!Path.IsPathRooted(path) && configPath is not null)
+            path = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(configPath))!, path);
+
+        return prefix + path;
     }
 
     public void Dispose()
     {
         _db?.Dispose();
+        _db = null;
         _gate.Dispose();
     }
 }

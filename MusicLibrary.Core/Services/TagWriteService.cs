@@ -7,9 +7,16 @@ namespace MusicLibrary.Core.Services;
 public sealed class TagWriteService : ITagWriteService
 {
     private readonly IReindexService? _reindex;
+    private readonly IFileMutationCoordinator _mutations;
 
     // The reindex service is optional so this service can be constructed standalone (unit tests).
-    public TagWriteService(IReindexService? reindex = null) => _reindex = reindex;
+    public TagWriteService(
+        IReindexService? reindex = null,
+        IFileMutationCoordinator? mutations = null)
+    {
+        _reindex = reindex;
+        _mutations = mutations ?? FileMutationCoordinator.Shared;
+    }
 
     public Task<BatchWriteResult> ApplyAsync(
         IReadOnlyList<string> paths,
@@ -23,10 +30,21 @@ public sealed class TagWriteService : ITagWriteService
             foreach (var path in paths)
             {
                 ct.ThrowIfCancellationRequested();
+                using var mutation = await _mutations.AcquireAsync(path, ct);
                 var result = ApplyToFile(path, edits);
-                // Keep the cache in sync with what we just wrote to disk.
+                // Once the disk commit succeeds, cancellation must not strand a stale cache or turn
+                // that committed write into an apparent failure. Cache errors are reported separately.
                 if (result.Outcome == WriteOutcome.Saved && _reindex is not null)
-                    await _reindex.ReindexFileAsync(path, ct);
+                {
+                    try
+                    {
+                        await _reindex.ReindexFileAsync(path, CancellationToken.None);
+                    }
+                    catch (Exception ex)
+                    {
+                        result = result with { CacheError = ex.Message };
+                    }
+                }
                 results.Add(result);
                 progress?.Report(++done);
             }

@@ -135,7 +135,7 @@ public sealed class ArtistReconciler : IArtistReconciler
         foreach (var path in paths)
         {
             ct.ThrowIfCancellationRequested();
-            var result = await _media.LoadAsync(path, ct);
+            var result = await _media.LoadAsync(path, includeArtwork: false, ct);
             if (result.Success)
             {
                 var model = result.Value!;

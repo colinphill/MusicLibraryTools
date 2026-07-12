@@ -9,6 +9,7 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddMusicLibraryCore(this IServiceCollection services)
     {
         services.AddSingleton<IAppSettings, AppSettings>();
+        services.AddSingleton<IFileMutationCoordinator, FileMutationCoordinator>();
         services.AddSingleton<IMediaFileService, MediaFileService>();
         services.AddSingleton<ITagWriteService, TagWriteService>();
         services.AddSingleton<IArtworkService, ArtworkService>();

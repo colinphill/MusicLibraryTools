@@ -38,6 +38,38 @@ namespace MusicFileUtilities
             return new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, ParseReadBufferSize, FileOptions.SequentialScan);
         }
 
+        // Full metadata rewrites are staged beside the destination so the final rename stays on
+        // one volume and can replace an existing file atomically. A per-save GUID also prevents
+        // concurrent writers from truncating each other's fixed ".tmp" file.
+        public static string CreateSiblingTempPath(string targetPath)
+        {
+            string fullTarget = Path.GetFullPath(targetPath);
+            string directory = Path.GetDirectoryName(fullTarget)
+                ?? throw new ArgumentException("The target path has no parent directory.", nameof(targetPath));
+            string filename = Path.GetFileName(fullTarget);
+            return Path.Combine(directory, $".{filename}.{Guid.NewGuid():N}.tmp");
+        }
+
+        public static void AtomicReplace(string tempPath, string targetPath)
+        {
+            // File.Move(..., overwrite:true) maps to a same-volume replacement rename. Unlike a
+            // Delete+Move pair, a failure leaves the original destination in place.
+            File.Move(tempPath, Path.GetFullPath(targetPath), overwrite: true);
+        }
+
+        public static void DeleteIfExists(string path)
+        {
+            try
+            {
+                if (File.Exists(path))
+                    File.Delete(path);
+            }
+            catch
+            {
+                // Cleanup must not hide the original staging/write exception.
+            }
+        }
+
         public static ushort UInt16AtLE(byte[] b, int offset)
         {
             ushort res = b[offset + 1];

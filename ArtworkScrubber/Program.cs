@@ -1,108 +1,123 @@
-﻿using System;
-using System.IO;
-using System.Linq;
-using System.Collections.Generic;
-using System.Text.RegularExpressions;
-using System.Drawing;
-using System.Drawing.Imaging;
 using MusicFileUtilities;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Processing;
 
-namespace ArtworkScrubber
+namespace ArtworkScrubber;
+
+internal static class Program
 {
-    class Program
+    private static IReadOnlyList<string> SplitCsv(string input)
     {
-
-        private static readonly IReadOnlyDictionary<string, string> mimemapping_ = new Dictionary<string, string>()
+        var fields = new List<string>();
+        var field = new System.Text.StringBuilder();
+        bool quoted = false;
+        for (int index = 0; index < input.Length; index++)
         {
-            { "image/png", ".png" },
-            { "image/bmp", ".bmp" },
-            { "image/gif", ".gif" },
-            { "image/jpeg", ".jpg" }
-        };
-
-        private static IEnumerable<string> SplitCSV(string input)
-        {
-            Regex csvSplit = new Regex("(?:^|,)(\"(?:[^\"]+|\"\")*\"|[^,]*)", RegexOptions.Compiled);
-
-            foreach (Match match in csvSplit.Matches(input))
+            char value = input[index];
+            if (value == '"')
             {
-                yield return match.Value.TrimStart(',').TrimStart('"').TrimEnd('"');
-            }
-        }
-
-        const long THRESHOLD = 225 * 1024;
-        const int SIZE = 600;
-
-        static ImageCodecInfo GetEncoder(ImageFormat format)
-        {
-            ImageCodecInfo[] codecs = ImageCodecInfo.GetImageDecoders();
-            foreach (ImageCodecInfo codec in codecs)
-            {
-                if (codec.FormatID == format.Guid)
+                if (quoted && index + 1 < input.Length && input[index + 1] == '"')
                 {
-                    return codec;
+                    field.Append('"');
+                    index++;
                 }
+                else
+                    quoted = !quoted;
             }
-            return null;
+            else if (value == ',' && !quoted)
+            {
+                fields.Add(field.ToString());
+                field.Clear();
+            }
+            else
+                field.Append(value);
+        }
+        if (quoted)
+            throw new FormatException("Unterminated quoted CSV field.");
+        fields.Add(field.ToString());
+        return fields;
+    }
+
+    private static int Main(string[] args)
+    {
+        if (args.Length is < 1 or > 3 ||
+            (args.Length > 1 && !int.TryParse(args[1], out _)) ||
+            (args.Length > 2 && !int.TryParse(args[2], out _)))
+        {
+            Console.Error.WriteLine("Usage: ArtworkScrubber <results.csv> [max-dimension=600] [jpeg-quality=75]");
+            return 2;
         }
 
-
-        static void Main(string[] args)
+        string csv = Path.GetFullPath(args[0]);
+        int maxDimension = args.Length > 1 ? int.Parse(args[1]) : 600;
+        int quality = args.Length > 2 ? int.Parse(args[2]) : 75;
+        if (!File.Exists(csv) || maxDimension <= 0 || quality is < 1 or > 100)
         {
-            var files = File.ReadAllLines(@"c:\projects\tempresults2.csv").Skip(1).Select(l => Path.Combine(SplitCSV(l).Skip(2).Take(2).ToArray()));
+            Console.Error.WriteLine("The CSV must exist, max dimension must be positive, and quality must be 1-100.");
+            return 2;
+        }
 
-            ImageCodecInfo jpgenc = GetEncoder(ImageFormat.Jpeg);
-            EncoderParameters encparms = new EncoderParameters(1);
-            encparms.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 75L);
-
-            foreach (var file in files)
+        int failures = 0;
+        var files = new List<string>();
+        int lineNumber = 1;
+        foreach (var line in File.ReadLines(csv).Skip(1))
+        {
+            lineNumber++;
+            try
             {
-                var path = Path.GetDirectoryName(file);
+                var parts = SplitCsv(line).Skip(2).Take(2).ToArray();
+                if (parts.Length == 2)
+                    files.Add(Path.Combine(parts));
+                else
+                    throw new FormatException("Expected at least four CSV columns.");
+            }
+            catch (Exception ex)
+            {
+                failures++;
+                Console.Error.WriteLine($"CSV line {lineNumber}: {ex.Message}");
+            }
+        }
+
+        foreach (var file in files)
+        {
+            try
+            {
                 var provider = MediaFile.GetFile(file).Tags.First();
-                foreach (var artwork in provider.GetImageMetadata())
+                var artwork = provider.GetImageMetadata().FirstOrDefault();
+                if (artwork is null || artwork.Data.Length == 0)
+                    continue;
+
+                using var image = Image.Load(artwork.Data);
+                if (image.Width > maxDimension || image.Height > maxDimension)
                 {
-                    string extension = mimemapping_[artwork.ImageType];
-                    string origimage = Path.Combine(path, provider.Album.FixPath() + extension);
-                    File.WriteAllBytes(origimage, artwork.Data);
-                    Bitmap im = new Bitmap(origimage);
-
-                    bool resize = false;
-
-                    int newwidth = im.Width, newheight = im.Height;
-                    if ((im.Width > SIZE) && (im.Width > im.Height))
+                    image.Mutate(x => x.Resize(new ResizeOptions
                     {
-                        newwidth = SIZE;
-                        newheight = im.Height * SIZE / im.Width;
-                        resize = true;
-                    }
-                    else if (im.Height > SIZE)
-                    {
-                        newheight = SIZE;
-                        newwidth = im.Width * SIZE / im.Height;
-                        resize = true;
-                    }
+                        Mode = ResizeMode.Max,
+                        Size = new Size(maxDimension, maxDimension),
+                    }));
+                }
 
-                    if (resize)
-                    {
-                        Bitmap b = new Bitmap(newwidth, newheight);
-                        Graphics g = Graphics.FromImage(b);
-                        g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-                        g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
-                        g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                        g.DrawImage(im, new Rectangle(0, 0, newwidth, newheight));
-                        g.Dispose();
-                        im.Dispose();
-                        im = b;
-                    }
-
-                    im.Save(Path.Combine(path, "folder.jpg"), jpgenc, encparms);
-                    im.Dispose();
-
-
-
+                string output = Path.Combine(Path.GetDirectoryName(file)!, "folder.jpg");
+                string temp = Path.Combine(Path.GetDirectoryName(output)!, $".folder.{Guid.NewGuid():N}.tmp");
+                try
+                {
+                    image.Save(temp, new JpegEncoder { Quality = quality });
+                    File.Move(temp, output, overwrite: true);
+                }
+                finally
+                {
+                    if (File.Exists(temp))
+                        File.Delete(temp);
                 }
             }
-            Console.WriteLine();
+            catch (Exception ex)
+            {
+                failures++;
+                Console.Error.WriteLine($"{file}: {ex.Message}");
+            }
         }
+
+        return failures == 0 ? 0 : 1;
     }
 }

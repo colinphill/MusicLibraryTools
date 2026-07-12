@@ -9,7 +9,7 @@ public class AnalyzerTests
 {
     private static TrackRecord Rec(string path, string albumArtist, string album, string title,
         int? track = null, int? total = null, CodecType codec = CodecType.Lossless,
-        uint sr = 44100, uint bps = 16, int? disc = null) =>
+        uint sr = 44100, uint bps = 16, int? disc = null, int? discTotal = null) =>
         new()
         {
             Path = path,
@@ -20,6 +20,7 @@ public class AnalyzerTests
             TrackNumber = track,
             TrackTotal = total,
             DiscNumber = disc,
+            DiscTotal = discTotal,
             CodecType = codec,
             CodecName = codec == CodecType.Lossy ? "MP3" : "FLAC",
             SampleRate = sr,
@@ -83,6 +84,21 @@ public class AnalyzerTests
     }
 
     [Fact]
+    public void InconsistentTotals_FlagsDisagreeingDiscTotalsAndDiscExceedingTotal()
+    {
+        var records = new[]
+        {
+            Rec("1.flac", "AA", "Album", "One", track: 1, total: 1, disc: 1, discTotal: 2),
+            Rec("2.flac", "aa", "album", "Two", track: 1, total: 1, disc: 4, discTotal: 3),
+        };
+
+        var report = LibraryAnalyzer.InconsistentTotals(records);
+
+        Assert.Contains(report.Findings, f => f.Description.Contains("disagreeing total discs"));
+        Assert.Contains(report.Findings, f => f.Path == "2.flac" && f.Description.Contains("disc 4 exceeds"));
+    }
+
+    [Fact]
     public void Inconsistencies_FlagsMissingTrackNumberAndTotal()
     {
         var records = new[]
@@ -129,5 +145,17 @@ public class AnalyzerTests
         Assert.Equal(2, group.Tracks.Count);
         // Highest quality first.
         Assert.Equal("hi.flac", group.Tracks[0].Path);
+    }
+
+    [Fact]
+    public void DuplicateFinder_DelimitersInFieldsDoNotCollide()
+    {
+        var records = new[]
+        {
+            Rec("one.flac", "a|b", "c", "Song", track: 1),
+            Rec("two.flac", "a", "b|c", "Song", track: 1),
+        };
+
+        Assert.Empty(DuplicateFinder.Find(records));
     }
 }

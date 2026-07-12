@@ -23,7 +23,7 @@ public class LibraryIndexingTests
                 IndexTargets = [new IndexTargetEntry { Target = MediaFixtures.Dir }],
             }.Save(configPath);
 
-            var settings = new AppSettings();
+            var settings = new AppSettings(Path.Combine(work, "settings.json"));
             settings.LoadConfig(configPath);
             Assert.NotNull(settings.Configuration);
 

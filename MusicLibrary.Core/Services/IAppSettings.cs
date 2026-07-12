@@ -14,6 +14,12 @@ public interface IAppSettings
     /// <summary>The loaded configuration, or null if none has been loaded.</summary>
     LibraryConfiguration? Configuration { get; }
 
+    /// <summary>
+    /// Atomically captures the loaded configuration and its path. <see cref="Version"/> changes
+    /// every time a configuration is loaded, including when the same path is reloaded.
+    /// </summary>
+    AppConfigurationSnapshot GetSnapshot();
+
     /// <summary>Raised when <see cref="Configuration"/> changes.</summary>
     event EventHandler? ConfigurationChanged;
 
@@ -35,3 +41,9 @@ public interface IAppSettings
     /// <summary>Persist a UI preference; passing null removes it. Written to app-local storage immediately.</summary>
     void SetPreference(string key, string? value);
 }
+
+/// <summary>An internally consistent snapshot of the active application configuration.</summary>
+public sealed record AppConfigurationSnapshot(
+    string? ConfigPath,
+    LibraryConfiguration? Configuration,
+    long Version);

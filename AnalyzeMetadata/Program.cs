@@ -21,14 +21,25 @@ namespace AnalyzeMetadata
 
         static bool IsFuzzy(string a, string b, float ratio)
         {
+            if (string.Equals(a, b, StringComparison.OrdinalIgnoreCase))
+                return true;
+            if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b))
+                return false;
             float len = Math.Max(a.Length, b.Length);
-            int dist = a.ToLower().EditDistance(b.ToLower());
+            int dist = a.ToLowerInvariant().EditDistance(b.ToLowerInvariant());
             return (dist / len) < ratio;
         }
 
         static void Main(string[] args)
         {
             LogConsole.SwitchFile("AnalyzeMetadata.log");
+
+            if (args.Length == 0)
+            {
+                LogConsole.WriteLine("Usage: AnalyzeMetadata <libraryconfiguration.xml> [checks]");
+                LogConsole.Close();
+                return;
+            }
 
             LibraryConfiguration config = new LibraryConfiguration(args[0]);
 
@@ -100,7 +111,7 @@ namespace AnalyzeMetadata
 
             if (args.Skip(1).Any(s => s.ToLower() == "checksets"))
             {
-                var caches = config.IndexLocations.Select(l => l.Set).Distinct().OrderBy(s => s).Select(s => (Set : s, Cache : db.BuildCache(config.IndexLocations.Where(l => l.Set == s).Select(l => (l.Target, l.Filter?.Split(",;|".ToCharArray(), StringSplitOptions.RemoveEmptyEntries))))));
+                var caches = config.IndexLocations.Select(l => l.Set).Distinct().OrderBy(s => s).Select(s => (Set : s, Cache : db.BuildCache(config.IndexLocations.Where(l => l.Set == s).Select(l => (l.Target, l.Filter?.Split(",;|".ToCharArray(), StringSplitOptions.RemoveEmptyEntries)))))).ToList();
                 foreach (var tcache in caches)
                 {
                     Console.WriteLine("Checking Cache Set: " + tcache.Set + " (" + tcache.Cache.FileCache.Count + ")");
@@ -197,19 +208,7 @@ namespace AnalyzeMetadata
                             }
                             else
                             {
-                                // Pure Hit
-                                /*string parentdir = Path.GetDirectoryName(possibilities[0].Item3);
-                                string artdir = Path.GetFileName(parentdir);
-                                LogConsole.WriteLine("PureHit," + possibilities[0].Item3 + "," + artdir);
-                                string dest = Path.Combine(@"Z:\iTunes\FLAC2", artdir);
-                                Directory.CreateDirectory(dest);
-                                Directory.Move(possibilities[0].Item3, Path.Combine(dest, Path.GetFileName(possibilities[0].Item3)));
-                                if (Directory.GetFileSystemEntries(parentdir).Length == 0)
-                                {
-                                    Console.WriteLine("Delete:" + parentdir);
-                                    Directory.Delete(parentdir);
-                                }*/
-
+                                // Pure hit; nothing to report.
                             }
                         }
                         hit++;
@@ -353,17 +352,16 @@ namespace AnalyzeMetadata
                 var invmod = new Dictionary<string, List<string>>();
                 foreach (string a in artists)
                 {
-                    string ta = a.Replace("&", "and").ToLower();
+                    string ta = a.Replace("&", "and").Trim().ToLowerInvariant();
+                    if (ta.StartsWith("a "))
+                        ta = ta.Remove(0, 2);
+                    else if (ta.StartsWith("an "))
+                        ta = ta.Remove(0, 3);
+                    else if (ta.StartsWith("the "))
+                        ta = ta.Remove(0, 4);
                     var chars = ta.Normalize(NormalizationForm.FormD).Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark).ToArray();
                     ta = new string(chars).Normalize(NormalizationForm.FormC);
                     ta = new string(ta.Where(c => char.IsLetterOrDigit(c)).ToArray());
-
-                    if (ta.StartsWith("a "))
-                        ta = ta.Remove(0, 2);
-                    if (ta.StartsWith("an "))
-                        ta = ta.Remove(0, 3);
-                    if (ta.StartsWith("the "))
-                        ta = ta.Remove(0, 4);
                     moddict[a] = (ta, a.Length);
                     if (invmod.ContainsKey(ta))
                         invmod[ta].Add(a);
@@ -400,19 +398,24 @@ namespace AnalyzeMetadata
                         {
                             var variation = varlist[res - 1].variation;
                             var variantstochange = variations.Where(v => v != variation).ToArray();
-                            var performers = new string[] { variation };
                             foreach (var f in files.Where(f => f.variation != variation))
                             {
                                 bool update = false;
-                                var tfile = TagLib.File.Create(f.file);
-                                if (tfile.Tag.Performers.Any(p => variantstochange.Contains(p)))
+                                using var tfile = TagLib.File.Create(f.file);
+                                if (tfile.Tag.Performers.Any(p => variantstochange.Contains(p, StringComparer.OrdinalIgnoreCase)))
                                 {
-                                    tfile.Tag.Performers = performers;
+                                    tfile.Tag.Performers = tfile.Tag.Performers
+                                        .Select(p => variantstochange.Contains(p, StringComparer.OrdinalIgnoreCase) ? variation : p)
+                                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                                        .ToArray();
                                     update = true;
                                 }
-                                if (tfile.Tag.AlbumArtists.Any(p => variantstochange.Contains(p)))
+                                if (tfile.Tag.AlbumArtists.Any(p => variantstochange.Contains(p, StringComparer.OrdinalIgnoreCase)))
                                 {
-                                    tfile.Tag.AlbumArtists = performers;
+                                    tfile.Tag.AlbumArtists = tfile.Tag.AlbumArtists
+                                        .Select(p => variantstochange.Contains(p, StringComparer.OrdinalIgnoreCase) ? variation : p)
+                                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                                        .ToArray();
                                     update = true;
                                 }
            

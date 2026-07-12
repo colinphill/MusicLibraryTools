@@ -74,6 +74,14 @@ namespace iTunes
                         TotalTracks = int.Parse(next.Value);
                         break;
 
+                    case "Disc Number":
+                        DiscNumber = int.Parse(next.Value);
+                        break;
+
+                    case "Disc Count":
+                        TotalDiscs = int.Parse(next.Value);
+                        break;
+
                     case "Artwork Count":
                         ArtworkCount = int.Parse(next.Value);
                         break;
@@ -108,6 +116,8 @@ namespace iTunes
         public string AlbumArtist = "";
         public int? TrackNumber = null;
         public int? TotalTracks = null;
+        public int? DiscNumber = null;
+        public int? TotalDiscs = null;
         public int? ArtworkCount = null;
         public int? Year = null;
         public string Kind = "";

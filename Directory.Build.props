@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+    <RestoreIgnoreFailedSources>false</RestoreIgnoreFailedSources>
+  </PropertyGroup>
+</Project>

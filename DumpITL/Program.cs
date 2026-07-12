@@ -35,6 +35,19 @@ if (args.Length < 2)
 string command = args[0];
 string itl = args[1];
 
+int required = command switch
+{
+    "probe" or "discover" or "plprobe" or "roundtrip" or "cloud" or "demo" or "verify" => 3,
+    "re" => 3,
+    "set" => 6,
+    _ => 2,
+};
+if (args.Length < required)
+{
+    Console.Error.WriteLine($"Command '{command}' requires at least {required - 2} argument(s) after the .itl path.");
+    return 2;
+}
+
 switch (command)
 {
     case "info":
@@ -90,6 +103,12 @@ switch (command)
         break;
 
     case "re":
+        int reRequired = args[2] is "sections" or "plists" or "fk" or "mhgh" or "links" or "aggregates" or "envelope" ? 3 : 4;
+        if (args.Length < reRequired)
+        {
+            Console.Error.WriteLine($"Reverse-engineering subcommand '{args[2]}' requires an additional argument.");
+            return 2;
+        }
         switch (args[2])
         {
             case "keys": ReverseEngineer.Keys(ItlLibrary.Load(itl), args[3]); break;
@@ -327,7 +346,10 @@ static void Demo(string itl, string outPath)
     added.SetString(ItlDataType.Title, "Brand New Track");
     added.SetString(ItlDataType.Artist, "DumpITL");
     added.SetString(ItlDataType.Album, "Synthetic Album");
-    added.SetString(ItlDataType.Location, @"Z:\iTunes\AAC\Music\DumpITL\Synthetic Album\01 Brand New Track.m4a");
+    added.SetString(ItlDataType.Location, Path.Combine(
+        Path.GetDirectoryName(Path.GetFullPath(outPath))!,
+        "Synthetic Album",
+        "01 Brand New Track.m4a"));
     added.SetTrackNumber(1);
     added.SetTrackCount(1);
     added.SetYear(2026);

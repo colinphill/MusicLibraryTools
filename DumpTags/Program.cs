@@ -30,6 +30,12 @@ namespace DumpTags
             for(int i=0;i<svals.Length;i++)
                 vals[i] = uint.Parse(svals[i], System.Globalization.NumberStyles.HexNumber);
 
+            if (vals.Length < 2 || vals[0] == 0 || vals[1] == 0)
+            {
+                LogConsole.Write("Invalid iTunNORM value");
+                return;
+            }
+
             double lgain = Math.Log10(vals[0] / 1000.0) / -0.1;
             double rgain = Math.Log10(vals[1] / 1000.0) / -0.1;
 
@@ -39,6 +45,7 @@ namespace DumpTags
         static IMetadataProvider DumpID3Tags(string filename)
         {
             ID3v2Tag tag = filename.ToLower().EndsWith(".mp3") ? (ID3v2Tag)new MP3File(filename) : (ID3v2Tag)new DSFFile(filename);
+            int artworkIndex = 0;
             foreach (ID3v2Frame frame in tag.Frames)
             {
                 LogConsole.Write("Frame: " + frame.FrameID + " - ");
@@ -66,9 +73,10 @@ namespace DumpTags
                     LogConsole.WriteLine("\tMime-Type: " + pf.MimeType);
                     LogConsole.WriteLine("\tDescription: " + pf.Description);
 
-                    FileStream s = new FileStream("artwork.bin", FileMode.Create, FileAccess.Write);
+                    string output = $"artwork-{Path.GetFileNameWithoutExtension(filename).FixPath()}-{++artworkIndex:D2}-{Guid.NewGuid():N}.bin";
+                    using FileStream s = new FileStream(output, FileMode.CreateNew, FileAccess.Write);
                     s.Write(pf.PictureData, 0, pf.PictureData.Length);
-                    s.Close();
+                    LogConsole.WriteLine("\tSaved As: " + output);
                 }
                 else if (frame is TextFrame)
                 {
@@ -199,29 +207,37 @@ namespace DumpTags
 
             foreach (string arg in args)
             {
+                mp = null;
                 LogConsole.WriteLine("File: " + arg);
-                switch (Path.GetExtension(arg).ToLower())
+                try
                 {
-                    case ".m4a":
-                        mp = DumpQTTags(arg);
-                        break;
+                    switch (Path.GetExtension(arg).ToLowerInvariant())
+                    {
+                        case ".m4a":
+                            mp = DumpQTTags(arg);
+                            break;
 
-                    case ".flac":
-                        mp = DumpFLACTags(arg);
-                        break;
+                        case ".flac":
+                            mp = DumpFLACTags(arg);
+                            break;
 
-                    case ".ogg":
-                        mp = DumpOggVorbisTags(arg);
-                        break;
+                        case ".ogg":
+                            mp = DumpOggVorbisTags(arg);
+                            break;
 
-                    case ".mp3":
-                    case ".dsf":
-                        mp = DumpID3Tags(arg);
-                        break;
+                        case ".mp3":
+                        case ".dsf":
+                            mp = DumpID3Tags(arg);
+                            break;
 
-                    default:
-                        LogConsole.WriteLine("Unrecognized File Extension");
-                        break;
+                        default:
+                            LogConsole.WriteLine("Unrecognized File Extension");
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogConsole.WriteLine($"Unable to inspect {arg}: {ex.Message}");
                 }
                 LogConsole.WriteLine();
                 if (mp != null)

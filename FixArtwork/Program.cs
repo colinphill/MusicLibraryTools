@@ -48,26 +48,35 @@ namespace FixArtwork
         {
             LogConsole.SwitchFile("FixArtwork.log");
 
+            if (args.Length is < 1 or > 2 ||
+                (args.Length == 2 && !args[1].Equals("--apply", StringComparison.OrdinalIgnoreCase)))
+            {
+                LogConsole.WriteLine("Usage: FixArtwork <playlist> [--apply]");
+                LogConsole.End();
+                return;
+            }
+
+            bool apply = args.Length == 2;
             iTunesApp app = new iTunesApp();
 
             IITPlaylist lib = null;
-            if (args.Length > 0)
+            foreach (IITSource s in app.Sources)
             {
-                foreach (IITSource s in app.Sources)
-                {
-                    lib = s.Playlists.get_ItemByName(args[0]);
-                    Marshal.FinalReleaseComObject(s);
-                    if (lib != null)
-                        break;
-                }
-                if (lib == null)
-                    lib = app.LibraryPlaylist;
+                lib = s.Playlists.get_ItemByName(args[0]);
+                Marshal.FinalReleaseComObject(s);
+                if (lib != null)
+                    break;
             }
-            else
+            if (lib == null)
             {
-                LogConsole.WriteLine("Usage: FixArtwork <playlist>");
+                LogConsole.WriteLine("Error: Playlist not found: " + args[0]);
+                Marshal.FinalReleaseComObject(app);
+                LogConsole.End();
                 return;
             }
+
+            if (!apply)
+                LogConsole.WriteLine("Dry run: pass --apply to update iTunes artwork.");
 
             int tracks = 0;
             int artwork = 0;
@@ -86,15 +95,22 @@ namespace FixArtwork
                         IITArtworkCollection artcol = filetrk.Artwork;
                         if (artcol.Count == 1)
                         {
+                            string prefix = Path.Combine(Path.GetTempPath(), "mlt-fixart-" + Guid.NewGuid().ToString("N"));
+                            string artfile = null;
+                            string temp2 = prefix + "-2.jpg";
+                            string temp3 = prefix + "-3.jpg";
+                            IITArtwork art = null;
+                            Bitmap im = null;
+                            EncoderParameters encparms = null;
                             try
                             {
-                                IITArtwork art = artcol[1];
+                                art = artcol[1];
                                 string ext = (art.Format == ITArtworkFormat.ITArtworkFormatBMP) ? "bmp" :
                                     (art.Format == ITArtworkFormat.ITArtworkFormatJPEG) ? "jpg" :
                                     (art.Format == ITArtworkFormat.ITArtworkFormatPNG) ? "png" : "unknown";
 
                                 LogConsole.WriteLine(tracks.ToString() + " Artwork (" + ext + "): " + filetrk.Location);
-                                string artfile = Environment.CurrentDirectory + "\\temp." + ext;
+                                artfile = prefix + "." + ext;
                                 LogConsole.WriteLine("Saving Artwork: " + artfile);
                                 art.SaveArtworkToFile(artfile);
 
@@ -106,7 +122,7 @@ namespace FixArtwork
                                 if (true) // ((len > THRESHOLD)||(art.Format != ITArtworkFormat.ITArtworkFormatJPEG)||(art.IsDownloadedArtwork))
                                 {
                                     LogConsole.WriteLine("Artwork Size: " + len);
-                                    Bitmap im = new Bitmap(artfile);
+                                    im = new Bitmap(artfile);
                                     LogConsole.WriteLine("Dimensions: " + im.Width + "x" + im.Height);
 
                                     if ((len <= THRESHOLD) && (im.Width <= SIZE) && (im.Height <= SIZE) && (art.Format == ITArtworkFormat.ITArtworkFormatJPEG) && (art.IsDownloadedArtwork))
@@ -114,18 +130,19 @@ namespace FixArtwork
                                         LogConsole.WriteLine("Downloaded Artwork");
                                         im.Dispose();
                                         large++;
-                                        art.SetArtworkFromFile(artfile);
+                                        if (apply)
+                                            art.SetArtworkFromFile(artfile);
                                     }
                                     else
                                     {
 
                                         ImageCodecInfo jpgenc = GetEncoder(ImageFormat.Jpeg);
-                                        EncoderParameters encparms = new EncoderParameters(1);
+                                        encparms = new EncoderParameters(1);
                                         encparms.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 75L);
 
-                                        im.Save("temp2.jpg", jpgenc, encparms);
+                                        im.Save(temp2, jpgenc, encparms);
  
-                                        artstream = File.OpenRead("temp2.jpg");
+                                        artstream = File.OpenRead(temp2);
                                         len = artstream.Length;
                                         artstream.Close();
                                         LogConsole.WriteLine("Artwork Size: " + len);
@@ -152,18 +169,17 @@ namespace FixArtwork
                                             if (resize)
                                             {
                                                 Bitmap b = new Bitmap(newwidth, newheight);
-                                                Graphics g = Graphics.FromImage(b);
+                                                using Graphics g = Graphics.FromImage(b);
                                                 g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
                                                 g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
                                                 g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
                                                 g.DrawImage(im, new Rectangle(0, 0, newwidth, newheight));
-                                                g.Dispose();
                                                 im.Dispose();
                                                 im = b;
                                             }
 
-                                            im.Save("temp3.jpg", jpgenc, encparms);
-                                            artstream = File.OpenRead("temp3.jpg");
+                                            im.Save(temp3, jpgenc, encparms);
+                                            artstream = File.OpenRead(temp3);
                                             len = artstream.Length;
                                             artstream.Close();
                                             LogConsole.WriteLine("Artwork Size: " + len);
@@ -174,19 +190,21 @@ namespace FixArtwork
                                             else
                                             {
                                                 LogConsole.WriteLine("Adding Artwork: temp3.jpg");
-                                                art.SetArtworkFromFile(Environment.CurrentDirectory + "\\temp3.jpg");
+                                                if (apply)
+                                                    art.SetArtworkFromFile(temp3);
                                             }
 
                                             large++;
-                                            File.Delete("temp3.jpg");
+                                            File.Delete(temp3);
                                         }
                                         else if (art.IsDownloadedArtwork || (art.Format != ITArtworkFormat.ITArtworkFormatJPEG) || (origlen > THRESHOLD))
                                         {
                                             LogConsole.WriteLine("Adding Artwork: temp2.jpg");
-                                            art.SetArtworkFromFile(Environment.CurrentDirectory + "\\temp2.jpg");
+                                            if (apply)
+                                                art.SetArtworkFromFile(temp2);
                                             large++;
                                         }
-                                        File.Delete("temp2.jpg");
+                                        File.Delete(temp2);
 
                                         im.Dispose();
 
@@ -198,12 +216,31 @@ namespace FixArtwork
                                 File.Delete(artfile);
                                 artwork++;
 
-                                Marshal.FinalReleaseComObject(art);
                             }
                             catch (Exception ex)
                             {
+                                errors++;
                                 LogConsole.WriteLine("Problem With File: " + filetrk.Location);
                                 LogConsole.WriteLine(ex.Message + " (" + ex.GetType().FullName + ")");
+                            }
+                            finally
+                            {
+                                im?.Dispose();
+                                encparms?.Dispose();
+                                if (art != null)
+                                    Marshal.FinalReleaseComObject(art);
+                                foreach (string temp in new[] { artfile, temp2, temp3 })
+                                {
+                                    try
+                                    {
+                                        if (!string.IsNullOrEmpty(temp) && File.Exists(temp))
+                                            File.Delete(temp);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        LogConsole.WriteLine($"Unable to delete temporary file {temp}: {ex.Message}");
+                                    }
+                                }
                             }
                         }
   
@@ -226,6 +263,7 @@ namespace FixArtwork
                 Marshal.FinalReleaseComObject(trk);
             }
 
+            Marshal.FinalReleaseComObject(lib);
             Marshal.FinalReleaseComObject(app);
 
             LogConsole.WriteLine();

@@ -54,7 +54,8 @@ public static class DetailsColumns
         if (seconds <= 0)
             return "";
         var t = TimeSpan.FromSeconds(seconds);
-        return t.Hours > 0 ? $"{t.Hours}:{t.Minutes:D2}:{t.Seconds:D2}" : $"{t.Minutes}:{t.Seconds:D2}";
+        var totalHours = (long)t.TotalHours;
+        return totalHours > 0 ? $"{totalHours}:{t.Minutes:D2}:{t.Seconds:D2}" : $"{t.Minutes}:{t.Seconds:D2}";
     }
 }
 

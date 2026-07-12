@@ -32,7 +32,7 @@ namespace MusicFileUtilities.Tests
             {
                 using (var db = MetadataDatabase.OpenDatabase("sqlite:" + dbPath))
                 {
-                    var res = db.IndexFiles(new[] { scanDir });
+                    var res = db.IndexFiles(new[] { scanDir }, ct: TestContext.Current.CancellationToken);
                     Assert.Equal(3, res.Added);
                     Assert.Equal(0, res.Modified);
                     Assert.Equal(0, res.Unchanged);
@@ -47,7 +47,7 @@ namespace MusicFileUtilities.Tests
                     });
 
                     // Re-indexing the untouched files marks them all unchanged.
-                    var res2 = db.IndexFiles(new[] { scanDir });
+                    var res2 = db.IndexFiles(new[] { scanDir }, ct: TestContext.Current.CancellationToken);
                     Assert.Equal(0, res2.Added);
                     Assert.Equal(3, res2.Unchanged);
                 }
@@ -63,6 +63,71 @@ namespace MusicFileUtilities.Tests
             {
                 MetadataDatabase.IndexFilesPerBatch = savedFiles;
                 MetadataDatabase.IndexMetaRowsPerInsert = savedRows;
+                SqliteConnection.ClearAllPools();
+                try { Directory.Delete(scanDir, true); } catch { /* best effort */ }
+            }
+        }
+
+        [Theory]
+        [InlineData("flac")]
+        [InlineData("*.FLAC")]
+        [InlineData(".FlAc")]
+        public void BuildCacheNormalizesRootAndExtensionFilters(string extensionFilter)
+        {
+            string scanDir = Path.Combine(Path.GetTempPath(), "mlt_idx_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(scanDir);
+            string dbPath = Path.Combine(scanDir, "cache.db");
+            string mediaPath = Path.Combine(scanDir, "SAMPLE.FLAC");
+            File.Copy(MediaFixtures.Path_("sample.flac"), mediaPath);
+
+            try
+            {
+                using var db = MetadataDatabase.OpenDatabase("sqlite:" + dbPath);
+                string rootWithSeparator = scanDir + Path.DirectorySeparatorChar;
+
+                Assert.Equal(1, db.IndexFiles(new[] { rootWithSeparator }, ct: TestContext.Current.CancellationToken).Added);
+
+                var cache = db.BuildCache(new[] { (scanDir, new[] { extensionFilter }) });
+                Assert.Single(cache.FileCache);
+                Assert.True(cache.FileCache.ContainsKey(mediaPath));
+            }
+            finally
+            {
+                SqliteConnection.ClearAllPools();
+                try { Directory.Delete(scanDir, true); } catch { /* best effort */ }
+            }
+        }
+
+        [Fact]
+        public async Task WriterFailureUnblocksBoundedProducer()
+        {
+            string scanDir = Path.Combine(Path.GetTempPath(), "mlt_idx_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(scanDir);
+            string dbPath = Path.Combine(scanDir, "cache.db");
+            for (int i = 0; i < 8; i++)
+                File.Copy(MediaFixtures.Path_("sample.flac"), Path.Combine(scanDir, $"sample-{i}.flac"));
+
+            int savedBound = MetadataDatabase.IndexFileQueueBound;
+            MetadataDatabase.IndexFileQueueBound = 1;
+            try
+            {
+                using var db = MetadataDatabase.OpenDatabase("sqlite:" + dbPath);
+                using (var connection = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = dbPath }.ConnectionString))
+                {
+                    connection.Open();
+                    using var command = connection.CreateCommand();
+                    command.CommandText = "CREATE TRIGGER FailFiles BEFORE INSERT ON Files BEGIN SELECT RAISE(FAIL, 'forced writer failure'); END;";
+                    command.ExecuteNonQuery();
+                }
+
+                var token = TestContext.Current.CancellationToken;
+                var operation = Task.Run(() => db.IndexFiles(new[] { scanDir }, ct: token), token);
+                await Assert.ThrowsAnyAsync<Exception>(async () =>
+                    await operation.WaitAsync(TimeSpan.FromSeconds(10), token));
+            }
+            finally
+            {
+                MetadataDatabase.IndexFileQueueBound = savedBound;
                 SqliteConnection.ClearAllPools();
                 try { Directory.Delete(scanDir, true); } catch { /* best effort */ }
             }

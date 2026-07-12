@@ -13,7 +13,6 @@ using System.IO;
 using System.Text;
 using System.Collections.Generic;
 using System.Linq;
-using System.Data;
 using System.Runtime.CompilerServices;
 using System.ComponentModel;
 using System.ComponentModel.Design;
@@ -617,28 +616,30 @@ namespace MusicFileUtilities
             if (Tag.Version == 4)
             {
                 if ((Flags & 1) == 1)
+                {
+                    if (Data.Length < 4)
+                        throw new InvalidDataException("ID3v2.4 frame has a truncated data-length indicator.");
                     Data = Data.Skip(4).ToArray();
+                    // Data now contains the decoded payload. Do not write a DLI flag without
+                    // restoring the four bytes that the flag promises.
+                    Flags &= ~1;
+                }
                 if (((Flags & 2) == 2)||((Tag.Flags & 0x80) == 0x80))
                 {
-                    bool lastunsync = false;
-                    List<byte> unsync = new List<byte>();
-                    for (int i = 0; i < Data.Length - 1; i++)
+                    List<byte> unsync = new List<byte>(Data.Length);
+                    for (int i = 0; i < Data.Length; i++)
                     {
-                        if ((Data[i] == 0xff) && (Data[i + 1] == 0x00))
+                        unsync.Add(Data[i]);
+                        if (Data[i] == 0xff && i + 1 < Data.Length && Data[i + 1] == 0x00)
                         {
-                            unsync.Add(0xff);
                             i++;
-                            lastunsync = true;
-                        }
-                        else
-                        {
-                            unsync.Add(Data[i]);
-                            lastunsync = false;
                         }
                     }
-                    if (!lastunsync)
-                        unsync.Add(Data[Data.Length - 1]);
                     Data = unsync.ToArray();
+                    // Frame data has been de-unsynchronized, so retaining the frame flag would
+                    // make the next reader remove bytes a second time. Tag-level unsync is also
+                    // cleared by WriteHeader, which deliberately emits a normalized tag.
+                    Flags &= ~2;
                 }
             }
 
@@ -1515,36 +1516,42 @@ namespace MusicFileUtilities
             }
             else
             {
-                string tempPath = target + ".tmp~";
+                string tempPath = Tools.CreateSiblingTempPath(target);
+                int previousTagSize = _tagsize;
+                int previousHeaderVersion = _headerversion;
                 try
                 {
                     string sourcePath = _filename ?? target;
-                    using FileStream source = new FileStream(sourcePath, FileMode.Open, FileAccess.Read);
-                    using FileStream dest = new FileStream(tempPath, FileMode.Create, FileAccess.Write);
+                    {
+                        using FileStream source = new FileStream(sourcePath, FileMode.Open, FileAccess.Read);
+                        using FileStream dest = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write);
 
-                    long oldTagEnd = (_tagsize == 0) ? 0 : (_tagsize + 10);
-                    source.Seek(oldTagEnd, SeekOrigin.Begin);
+                        long oldTagEnd = (_tagsize == 0) ? 0 : (_tagsize + 10);
+                        source.Seek(oldTagEnd, SeekOrigin.Begin);
 
-                    _tagsize = size + padSize;
-                    if (_headerversion < 3) _headerversion = 3;
-                    WriteHeader(dest);
-                    foreach (ID3v2Frame f in _frames)
-                        f.Write(dest);
-                    dest.Write(pad, 0, pad.Length);
+                        _tagsize = size + padSize;
+                        if (_headerversion < 3) _headerversion = 3;
+                        WriteHeader(dest);
+                        foreach (ID3v2Frame f in _frames)
+                            f.Write(dest);
+                        dest.Write(pad, 0, pad.Length);
 
-                    byte[] buffer = new byte[65536];
-                    int read;
-                    while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
-                        dest.Write(buffer, 0, read);
+                        byte[] buffer = new byte[65536];
+                        int read;
+                        while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
+                            dest.Write(buffer, 0, read);
+                        dest.Flush(flushToDisk: true);
+                    }
+
+                    Tools.AtomicReplace(tempPath, target);
                 }
                 catch
                 {
-                    if (File.Exists(tempPath)) File.Delete(tempPath);
+                    _tagsize = previousTagSize;
+                    _headerversion = previousHeaderVersion;
+                    Tools.DeleteIfExists(tempPath);
                     throw;
                 }
-
-                if (File.Exists(target)) File.Delete(target);
-                File.Move(tempPath, target);
                 _filename = target;
             }
         }
@@ -1608,7 +1615,21 @@ namespace MusicFileUtilities
                 _filename = fs.Name;
             bool doclose = false;
             BinaryReader r = new BinaryReader(s, Encoding.ASCII, true);
+            long tagStart = s.CanSeek ? s.Position : 0;
             byte[] header = r.ReadBytes(10);
+            if (header.Length < 10 || Encoding.ASCII.GetString(header, 0, 3) != "ID3")
+            {
+                // No existing tag: leave the audio untouched for the codec scanner and use a
+                // deterministic version if the caller later creates metadata.
+                _headerversion = 3;
+                _flags = 0;
+                _tagsize = 0;
+                if (s.CanSeek)
+                    s.Seek(tagStart, SeekOrigin.Begin);
+                ParseStandardFields();
+                return;
+            }
+
             _headerversion = header[3];
 
             if (Encoding.ASCII.GetString(header, 0, 3) == "ID3")
@@ -1637,7 +1658,8 @@ namespace MusicFileUtilities
                                 else
                                     unsync.Add(b[i]);
                             }
-                            unsync.Add(b[b.Length - 1]);
+                            if (b.Length != 0)
+                                unsync.Add(b[b.Length - 1]);
                             unsync.Add(0);
                             MemoryStream ms = new MemoryStream(unsync.ToArray());
                             r = new BinaryReader(ms);
@@ -1653,7 +1675,7 @@ namespace MusicFileUtilities
 
                     byte[] frame = r.ReadBytes(10);
                     int offset = 10;
-                    while ((frame[0] != 0) && (offset < _tagsize))
+                    while ((frame.Length == 10) && (frame[0] != 0) && (offset < _tagsize))
                     {
                         ID3v2Frame f = new ID3v2Frame(this);
                         f.FrameID = ID3v2Util.ISO8859Encoding.GetString(frame, 0, 4);
@@ -1682,11 +1704,17 @@ namespace MusicFileUtilities
                         else if (f.FrameID == "COMM")
                             _frames.Add(new CommentFrame(f));
                         else if (f.FrameID == "MCDI")
+                        {
+                            f.Decode();
                             _frames.Add(f);
+                        }
                         else if ((f.FrameID[0] == 'T') || (f.FrameID[0] == 'W') || (f.FrameID[0] == 'M'))
                             _frames.Add(new TextFrame(f));
                         else
+                        {
+                            f.Decode();
                             _frames.Add(f);
+                        }
 
                         offset += framesize;
                         if (offset < _tagsize)
@@ -1704,7 +1732,7 @@ namespace MusicFileUtilities
                     // Load Legacy V2 Header
                     byte[] frame = r.ReadBytes(6);
                     int offset = 6;
-                    while ((frame[0] != 0) && (offset < _tagsize))
+                    while ((frame.Length == 6) && (frame[0] != 0) && (offset < _tagsize))
                     {
                         ID3v2Frame f = new ID3v2Frame(this);
                         f.FrameID = ID3v2Util.ISO8859Encoding.GetString(frame, 0, 3);

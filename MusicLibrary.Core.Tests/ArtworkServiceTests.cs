@@ -105,6 +105,57 @@ public class ArtworkServiceTests
     }
 
     [Fact]
+    public async Task SaveImages_PreservesPictureDescription()
+    {
+        using var media = MediaFixtures.Copy("sample.flac");
+        var png = MakePng(100, 100);
+        try
+        {
+            var prepared = await _art.PrepareFromFileAsync(png);
+            var result = await _art.SaveImagesAsync(media.Path,
+            [
+                new ArtworkInput(
+                    ID3v2Util.APICType.FrontCover,
+                    prepared!.MimeType,
+                    prepared.Data,
+                    "Original scan")
+            ]);
+
+            Assert.True(result.Success, result.Error);
+            var cover = Assert.Single((await _reader.LoadAsync(media.Path)).Value!.Artwork);
+            Assert.Equal("Original scan", cover.Description);
+
+            // Callers compiled against the original three-field ArtworkInput API do not supply a
+            // description. Re-saving those same bytes must not erase the existing description.
+            var resave = await _art.SaveImagesAsync(media.Path,
+            [
+                new ArtworkInput(ID3v2Util.APICType.FrontCover, cover.ImageType!, cover.Data)
+            ]);
+            Assert.True(resave.Success, resave.Error);
+            Assert.Equal("Original scan",
+                Assert.Single((await _reader.LoadAsync(media.Path)).Value!.Artwork).Description);
+        }
+        finally
+        {
+            File.Delete(png);
+        }
+    }
+
+    [Fact]
+    public async Task SuccessfulArtworkWrite_ReportsCacheFailureWithoutBecomingDiskFailure()
+    {
+        using var media = MediaFixtures.Copy("sample.flac");
+        var reindex = new ThrowingReindexService();
+        var service = new ArtworkService(reindex);
+
+        var result = await service.RemoveAsync(media.Path);
+
+        Assert.True(result.Success);
+        Assert.Contains("cache unavailable", result.CacheError);
+        Assert.False(reindex.ReceivedToken.CanBeCanceled);
+    }
+
+    [Fact]
     public async Task Remove_ClearsArtwork()
     {
         using var media = MediaFixtures.Copy("sample.flac");
@@ -161,6 +212,17 @@ public class ArtworkServiceTests
             {
                 File.Delete(png);
             }
+        }
+    }
+
+    private sealed class ThrowingReindexService : IReindexService
+    {
+        public CancellationToken ReceivedToken { get; private set; }
+
+        public Task ReindexFileAsync(string path, CancellationToken ct = default)
+        {
+            ReceivedToken = ct;
+            throw new InvalidOperationException("cache unavailable");
         }
     }
 }

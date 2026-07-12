@@ -12,54 +12,32 @@ namespace MetadataDBWork
     {
         static void Main(string[] args)
         {
+            if (args.Length < 2)
+            {
+                Console.Error.WriteLine("Usage: MetadataDBWork <database-file> <scan-root> [scan-root...] [--reset]");
+                return;
+            }
+
             Console.WriteLine(DateTime.Now);
 
             Console.WriteLine("Indexing...");
 
-            //File.Delete("cache.db");
-            File.Delete("cachewv.db");
-            using (var db = MetadataDatabase.OpenDatabase("sqlite:cachewv.db"))
-            //using (var db = MetadataDatabase.OpenDatabase("sql:database=metadata:server=UTILITY:utf8=true"))
-            //using (var db = MetadataDatabase.OpenDatabase("sql:database=metadata2:server=(localdb)\\metadata2"))
+            string database = args[0];
+            bool reset = args.Skip(1).Any(a => a.Equals("--reset", StringComparison.OrdinalIgnoreCase));
+            string[] roots = args.Skip(1).Where(a => !a.Equals("--reset", StringComparison.OrdinalIgnoreCase)).ToArray();
+            if (reset)
             {
-                var res = db.IndexFiles(new string[] {
-                    /*@"Z:\iTunes\HiRes\Stereo\Downloads",
-                    @"Z:\iTunes\HiRes\Stereo\DSDDownloads",
-                    @"Z:\iTunes\HiRes\Stereo\DVD-As",
-                    @"Z:\iTunes\HiRes\Stereo\DVD-Vs",
-                    @"Z:\iTunes\HiRes\Stereo\SACDs",
-                    @"Z:\iTunes\FLAC",
-                    @"Z:\iTunes\FLAC2",
-                    @"Z:\iTunes\FLAC3\Stereo",
-                    @"Z:\iTunes\FLAC3\Multi",
-                    @"Z:\iTunes\Purchased Sync",
-                    @"Z:\iTunes\HiRes\Multi\Downloads",
-                    @"Z:\iTunes\HiRes\Multi\DTS-CDs",
-                    @"Z:\iTunes\HiRes\Multi\DVD-As",
-                    @"Z:\iTunes\HiRes\Multi\SACDs",
-                    @"Z:\iTunes\AAC\Music",*/
-                    //@"C:\wavpack\SACDs",
-                    //@"C:\wavpack\Downloads",
-                    @"C:\wavpack\Test",
-                    }, true);
-                Console.WriteLine($"Added:{res.Added} Modified:{res.Modified} Removed:{res.Removed} Unchanged:{res.Unchanged}");
+                string sqlitePath = database.StartsWith("sqlite:", StringComparison.OrdinalIgnoreCase) ? database[7..] : database;
+                if (database.StartsWith("sql:", StringComparison.OrdinalIgnoreCase))
+                    throw new ArgumentException("--reset only supports SQLite database files.");
+                File.Delete(sqlitePath);
+            }
 
-                /*var cache = db.BuildCache(new string[] {
-                    @"Z:\iTunes\HiRes\Stereo\Downloads",
-                    @"Z:\iTunes\HiRes\Stereo\DVD-As",
-                    @"Z:\iTunes\HiRes\Stereo\DVD-Vs",
-                    @"Z:\iTunes\HiRes\Stereo\SACDs",
-                    @"Z:\iTunes\FLAC",
-                    @"Z:\iTunes\FLAC2",
-                    @"Z:\iTunes\FLAC3\Stereo",
-                    @"Z:\iTunes\FLAC3\Multi",
-                    @"Z:\iTunes\Purchased Sync",
-                    @"Z:\iTunes\HiRes\Multi\Downloads",
-                    @"Z:\iTunes\HiRes\Multi\DTS-CDs",
-                    @"Z:\iTunes\HiRes\Multi\DVD-As",
-                    @"Z:\iTunes\HiRes\Multi\SACDs",
-                    @"Z:\iTunes\AAC\Music", });*/
-                 Console.WriteLine();
+            using (var db = MetadataDatabase.OpenDatabase(database))
+            {
+                var res = db.IndexFiles(roots, true);
+                Console.WriteLine($"Added:{res.Added} Modified:{res.Modified} Removed:{res.Removed} Unchanged:{res.Unchanged}");
+                Console.WriteLine();
             }
 
             Console.WriteLine(DateTime.Now);

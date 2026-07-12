@@ -19,7 +19,8 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        Services = Composition.BuildServiceProvider();
+        var provider = Composition.BuildServiceProvider();
+        Services = provider;
 
         // Wire the details-grid thumbnail loader (a static attached property) to its provider.
         Views.ThumbnailLoader.Init(Services.GetRequiredService<IThumbnailProvider>());
@@ -34,6 +35,7 @@ public partial class App : Application
             Services.GetRequiredService<DialogService>().Owner = window;
 
             window.Opened += (_, _) => vm.OnLoaded();
+            desktop.Exit += (_, _) => provider.Dispose();
             desktop.MainWindow = window;
         }
 

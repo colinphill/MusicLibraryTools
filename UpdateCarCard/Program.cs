@@ -29,6 +29,273 @@ namespace UpdateCarCard
 
     public class Program
     {
+        const string TARGET_MARKER = ".update-car-card-root";
+
+        sealed class MutationJournal : IDisposable
+        {
+            readonly List<(string Kind, string First, string Second)> operations_ = new List<(string, string, string)>();
+            readonly FileStream journalStream_;
+            readonly StreamWriter journalWriter_;
+            readonly string dataDirectory_;
+            bool closed_;
+
+            public string JournalPath { get; }
+
+            public MutationJournal(string baseDirectory)
+            {
+                string recoveryRoot = baseDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
+                    ".UpdateCarCard-recovery" + Path.DirectorySeparatorChar + DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff");
+                dataDirectory_ = Path.Combine(recoveryRoot, "data");
+                Directory.CreateDirectory(dataDirectory_);
+                JournalPath = Path.Combine(recoveryRoot, "journal.tsv");
+                journalStream_ = new FileStream(JournalPath, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
+                journalWriter_ = new StreamWriter(journalStream_, new UTF8Encoding(false));
+            }
+
+            static string Encode(string value) => Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
+            static string Decode(string value) => Encoding.UTF8.GetString(Convert.FromBase64String(value));
+
+            void Record(string kind, string first, string second = "")
+            {
+                operations_.Add((kind, first, second));
+                journalWriter_.WriteLine(kind + "\t" + Encode(first) + "\t" + Encode(second));
+                journalWriter_.Flush();
+                journalStream_.Flush(true);
+            }
+
+            static void MovePath(string source, string destination)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(destination));
+                if (Directory.Exists(source))
+                    Directory.Move(source, destination);
+                else
+                    File.Move(source, destination);
+            }
+
+            public void Quarantine(string path)
+            {
+                if (!File.Exists(path) && !Directory.Exists(path))
+                    return;
+                string destination = Path.Combine(dataDirectory_, Guid.NewGuid().ToString("N") + "-" + Path.GetFileName(path));
+                Record("MOVE", path, destination);
+                MovePath(path, destination);
+            }
+
+            public void Move(string source, string destination)
+            {
+                if (File.Exists(destination) || Directory.Exists(destination))
+                    Quarantine(destination);
+                Record("MOVE", source, destination);
+                MovePath(source, destination);
+            }
+
+            public void Copy(string source, string destination)
+            {
+                if (File.Exists(destination))
+                    Quarantine(destination);
+                Record("CREATE", destination);
+                CopyAtomically(source, destination);
+            }
+
+            public void WriteBytes(string destination, byte[] data)
+            {
+                if (File.Exists(destination))
+                    Quarantine(destination);
+                Record("CREATE", destination);
+                WriteAllBytesAtomically(destination, data);
+            }
+
+            public void WriteDatabase(string destination, SyncDatabase database)
+            {
+                if (File.Exists(destination))
+                    Quarantine(destination);
+                Record("CREATE", destination);
+                WriteSyncDatabaseAtomically(destination, database);
+            }
+
+            static void Undo(
+                (string Kind, string First, string Second) operation,
+                IReadOnlyList<(string Kind, string First, string Second)> operations,
+                int operationIndex)
+            {
+                if (operation.Kind == "CREATE")
+                {
+                    // When a create replaced an existing path, Quarantine recorded an earlier
+                    // MOVE from that same path. If its quarantine copy is already gone, a prior
+                    // recovery pass restored the original and then crashed before writing the
+                    // terminal marker; never delete that restored original on a retry.
+                    var priorBackup = operations.Take(operationIndex).LastOrDefault(candidate =>
+                        candidate.Kind == "MOVE" &&
+                        string.Equals(candidate.First, operation.First, StringComparison.OrdinalIgnoreCase));
+                    if (!string.IsNullOrEmpty(priorBackup.Second) &&
+                        !File.Exists(priorBackup.Second) && !Directory.Exists(priorBackup.Second))
+                        return;
+                    if (File.Exists(operation.First))
+                        File.Delete(operation.First);
+                    return;
+                }
+
+                if (operation.Kind == "MOVE" &&
+                    (File.Exists(operation.Second) || Directory.Exists(operation.Second)) &&
+                    !File.Exists(operation.First) && !Directory.Exists(operation.First))
+                    MovePath(operation.Second, operation.First);
+            }
+
+            public void Rollback()
+            {
+                bool complete = true;
+                for (int index = operations_.Count - 1; index >= 0; index--)
+                {
+                    try { Undo(operations_[index], operations_, index); }
+                    catch (Exception ex)
+                    {
+                        complete = false;
+                        LogConsole.WriteLine("Recovery warning: " + ex.Message);
+                    }
+                }
+                if (complete)
+                    Close("ROLLED_BACK");
+                else
+                {
+                    journalWriter_.Flush();
+                    journalStream_.Flush(true);
+                    LogConsole.WriteLine("Rollback was incomplete; keep the journal and retry with --recover.");
+                }
+            }
+
+            public void Commit() => Close("COMMIT");
+
+            void Close(string state)
+            {
+                if (closed_)
+                    return;
+                journalWriter_.WriteLine(state);
+                journalWriter_.Flush();
+                journalStream_.Flush(true);
+                journalWriter_.Dispose();
+                closed_ = true;
+            }
+
+            public static void Recover(string journalPath)
+            {
+                string[] lines = File.ReadAllLines(journalPath);
+                if (lines.LastOrDefault() == "ROLLED_BACK")
+                    throw new InvalidOperationException("This journal has already been rolled back.");
+                var operations = new List<(string Kind, string First, string Second)>();
+                foreach (string line in lines)
+                {
+                    string[] fields = line.Split('\t');
+                    if (fields.Length >= 2 && (fields[0] == "CREATE" || fields[0] == "MOVE"))
+                        operations.Add((fields[0], Decode(fields[1]), fields.Length > 2 ? Decode(fields[2]) : ""));
+                }
+                for (int index = operations.Count - 1; index >= 0; index--)
+                    Undo(operations[index], operations, index);
+                File.AppendAllText(journalPath, "ROLLED_BACK" + Environment.NewLine, new UTF8Encoding(false));
+            }
+
+            public void Dispose()
+            {
+                if (!closed_)
+                {
+                    journalWriter_.Flush();
+                    journalStream_.Flush(true);
+                    journalWriter_.Dispose();
+                    closed_ = true;
+                }
+            }
+        }
+
+        static bool PathsOverlap(string first, string second)
+        {
+            string a = Path.GetFullPath(first).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            string b = Path.GetFullPath(second).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            return a.StartsWith(b, StringComparison.OrdinalIgnoreCase) || b.StartsWith(a, StringComparison.OrdinalIgnoreCase);
+        }
+
+        static void EnsureSafeTarget(string baseDirectory, bool initialize)
+        {
+            string fullPath = Path.GetFullPath(baseDirectory);
+            string root = Path.GetPathRoot(fullPath);
+            if (string.Equals(fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                root?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Refusing to use a filesystem root as the target.");
+
+            if (!Directory.Exists(fullPath))
+            {
+                if (!initialize)
+                    throw new InvalidOperationException("The target does not exist; rerun with --initialize after verifying the path.");
+                Directory.CreateDirectory(fullPath);
+            }
+
+            string marker = Path.Combine(fullPath, TARGET_MARKER);
+            if (!File.Exists(marker) && !File.Exists(Path.Combine(fullPath, "syncdb.xml")) && !initialize)
+                throw new InvalidOperationException($"The target is not initialized; rerun with --initialize to create {TARGET_MARKER}.");
+            if (!File.Exists(marker))
+                File.WriteAllText(marker, "UpdateCarCard managed target" + Environment.NewLine);
+        }
+
+        static void WriteAllBytesAtomically(string destination, byte[] data)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(destination));
+            string temporary = destination + ".tmp-" + Guid.NewGuid().ToString("N");
+            try
+            {
+                using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                {
+                    stream.Write(data, 0, data.Length);
+                    stream.Flush(true);
+                }
+                File.Move(temporary, destination, true);
+            }
+            finally
+            {
+                try { if (File.Exists(temporary)) File.Delete(temporary); } catch { }
+            }
+        }
+
+        static void CopyAtomically(string source, string destination)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(destination));
+            string temporary = destination + ".tmp-" + Guid.NewGuid().ToString("N");
+            try
+            {
+                File.Copy(source, temporary, false);
+                using (var stream = new FileStream(temporary, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+                    stream.Flush(true);
+                File.Move(temporary, destination, true);
+            }
+            finally
+            {
+                try { if (File.Exists(temporary)) File.Delete(temporary); } catch { }
+            }
+        }
+
+        static void WriteSyncDatabaseAtomically(string destination, SyncDatabase database)
+        {
+            string temporary = destination + ".tmp-" + Guid.NewGuid().ToString("N");
+            string backup = destination + ".bak-" + Guid.NewGuid().ToString("N");
+            try
+            {
+                using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                {
+                    database.Serialize(stream);
+                    stream.Flush(true);
+                }
+
+                if (File.Exists(destination))
+                {
+                    File.Replace(temporary, destination, backup, true);
+                    try { File.Delete(backup); } catch { }
+                }
+                else
+                    File.Move(temporary, destination);
+            }
+            finally
+            {
+                try { if (File.Exists(temporary)) File.Delete(temporary); } catch { }
+            }
+        }
+
         static string FixArtistPath(string item)
         {
             if (item.StartsWith("a ", StringComparison.CurrentCultureIgnoreCase))
@@ -445,6 +712,7 @@ namespace UpdateCarCard
             public class Track
             {
                 public int Index { get; set; }
+                public int DiscNumber { get; set; }
                 [XmlIgnore]
                 public int Year { get; set; }
                 public DateTime LastModifiedTime { get; set; }
@@ -462,17 +730,23 @@ namespace UpdateCarCard
             {
                 public bool Equals(Track x, Track y)
                 {
-                    if (!string.Equals(x.Name, y.Name, StringComparison.InvariantCultureIgnoreCase))
+                    if (!string.Equals(x.Name, y.Name, StringComparison.OrdinalIgnoreCase))
                         return false;
                     if (x.Index != y.Index)
                         return false;
-                    return true;
+                    if (x.DiscNumber != y.DiscNumber)
+                        return false;
+                    return string.Equals(x.FileName, y.FileName, StringComparison.OrdinalIgnoreCase);
                 }
 
                 public int GetHashCode(Track obj)
                 {
-                    string hcode = obj.Index + obj.Name.ToLower();
-                    return hcode.GetHashCode();
+                    var hash = new HashCode();
+                    hash.Add(obj.Index);
+                    hash.Add(obj.DiscNumber);
+                    hash.Add(obj.Name, StringComparer.OrdinalIgnoreCase);
+                    hash.Add(obj.FileName, StringComparer.OrdinalIgnoreCase);
+                    return hash.ToHashCode();
                 }
             }
 
@@ -830,27 +1104,82 @@ namespace UpdateCarCard
             SHA1 hash = SHA1.Create();
             LogConsole.SwitchFile("UpdateCarCard.log");
 
+            if (args.Length == 2 && args[0].Equals("--recover", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    MutationJournal.Recover(Path.GetFullPath(args[1]));
+                    LogConsole.WriteLine("Recovery completed: " + args[1]);
+                }
+                catch (Exception ex)
+                {
+                    LogConsole.WriteLine("Recovery failed: " + ex.Message);
+                }
+                LogConsole.Close();
+                return;
+            }
+
             if (args.Length == 0)
             {
-                LogConsole.WriteLine("Usage: UpdateCarCard <LibraryConfiguration.xml> [rebalance] [fixerrors]");
+                LogConsole.WriteLine("Usage: UpdateCarCard <LibraryConfiguration.xml> [rebalance] [fixerrors] --apply [--initialize] [--max-removals <count>]");
+                LogConsole.WriteLine("       UpdateCarCard --recover <journal.tsv>");
+                LogConsole.Close();
+                return;
+            }
+
+            if (!args.Skip(1).Any(a => a.Equals("--apply", StringComparison.OrdinalIgnoreCase)))
+            {
+                LogConsole.WriteLine("No changes made. Pass --apply after verifying the configured target.");
+                LogConsole.Close();
                 return;
             }
 
             LibraryConfiguration config = new LibraryConfiguration(args[0]);
 
             bool fixerrors = ((args.Length > 1) && (args.Skip(1).Where(a => a.Equals("fixerrors", StringComparison.CurrentCultureIgnoreCase)).Count() > 0));
+            bool initialize = args.Skip(1).Any(a => a.Equals("--initialize", StringComparison.OrdinalIgnoreCase));
+            int maxRemovals = 0;
+            for (int i = 1; i < args.Length; i++)
+            {
+                if (args[i].Equals("--max-removals", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (++i >= args.Length || !int.TryParse(args[i], out maxRemovals) || maxRemovals < 0)
+                    {
+                        LogConsole.WriteLine("Invalid --max-removals value.");
+                        LogConsole.Close();
+                        return;
+                    }
+                }
+            }
             bool walkmanmode = config["WalkmanMode"].Length != 0;
             BALANCE_SIZE = config["BalanceSize"].Length != 0 ? int.Parse(config["BalanceSize"].First()) : 15;
             REBALANCE_SIZE = config["RebalanceSize"].Length != 0 ? int.Parse(config["RebalanceSize"].First()) : 25;
             MAX_DEPTH_DISPARITY = config["MaxDepthDisparity"].Length != 0 ? int.Parse(config["MaxDepthDisparity"].First()) : 0;
             BALANCE_BREAK = config["BalanceBreak"].Length != 0 ? int.Parse(config["BalanceBreak"].First()) : 20;
-            string basedir = config["BaseDir"].First();
+            string basedir = Path.GetFullPath(config["BaseDir"].First());
+            var indexLocations = config.IndexLocations.ToArray();
+            if (indexLocations.Any(location => PathsOverlap(basedir, location.Target)))
+            {
+                LogConsole.WriteLine("Refusing to continue because the target overlaps an indexed source location.");
+                LogConsole.Close();
+                return;
+            }
+            try
+            {
+                EnsureSafeTarget(basedir, initialize);
+            }
+            catch (Exception ex)
+            {
+                LogConsole.WriteLine("Target safety check failed: " + ex.Message);
+                LogConsole.Close();
+                return;
+            }
 
             LogConsole.WriteLine("Indexing Files...");
 
             using MetadataDatabase db = MetadataDatabase.OpenDatabase(config.DatabaseFile); // TBD Dispose
-            db.IndexFiles(config.IndexLocations.Select(l => l.Target));
-            var cache = db.BuildCache(config.IndexLocations.Select(l => l.Target));
+            db.IndexFiles(indexLocations.Select(l => l.Target));
+            var cache = db.BuildCache(indexLocations.Select(l => l.Target));
 
             LogConsole.WriteLine("Total Parsed Files: " + cache.FileCache.Count);
 
@@ -909,14 +1238,6 @@ namespace UpdateCarCard
                 }
             }
 
-            Directory.CreateDirectory(artistsdir);
-            if (!walkmanmode)
-            {
-                Directory.CreateDirectory(contributingartistsdir);
-                Directory.CreateDirectory(albumsdir);
-                Directory.CreateDirectory(playlistsdir);
-            }
-
             SyncDatabase syncdb = new SyncDatabase();
             syncdb.ArtistStructure = oldsyncdb.ArtistStructure.Clone();
             syncdb.AlbumsStructure = oldsyncdb.AlbumsStructure.Clone();
@@ -925,7 +1246,10 @@ namespace UpdateCarCard
             Dictionary<string, DateTime> filetimes = new Dictionary<string, DateTime>(StringComparer.CurrentCultureIgnoreCase);
 
             LogConsole.WriteLine("Enumerating iTunes Library");
-            KeyValuePair<int, iTunesTrack>[] library = lib.Tracks.Where(kv => (kv.Value.Type == "File") && (kv.Value.Kind.Contains("audio file") && (!kv.Value.Kind.ToLower().Contains("protected")))).ToArray();
+            KeyValuePair<int, iTunesTrack>[] library = lib.Tracks.Where(kv =>
+                string.Equals(kv.Value.Type, "File", StringComparison.OrdinalIgnoreCase) &&
+                (kv.Value.Kind ?? "").Contains("audio file", StringComparison.OrdinalIgnoreCase) &&
+                !(kv.Value.Kind ?? "").Contains("protected", StringComparison.OrdinalIgnoreCase)).ToArray();
             int libindex = 0;
             foreach (var kv in library)
             {
@@ -938,6 +1262,7 @@ namespace UpdateCarCard
                 int tracknumber = kv.Value.TrackNumber ?? 0;
                 FileDatabase.Track trk = new FileDatabase.Track();
                 trk.Index = tracknumber;
+                trk.DiscNumber = entry.DiscNumber ?? 0;
                 trk.LastModifiedTime = dt;
                 trk.Loc = loc;
                 trk.FileName = Path.GetFileName(loc);
@@ -1038,6 +1363,74 @@ namespace UpdateCarCard
             LogConsole.WriteLine("Computing File Database Deltas");
             FileDatabase.FileDatabaseDelta[] deltas = syncdb.FileDatabase.ComputeDelta(oldsyncdb.FileDatabase).ToArray();
 
+            var trackTargetCollisions = syncdb.FileDatabase.Artists
+                .SelectMany(artist => artist.Albums.SelectMany(album => album.Tracks.Select(track => new
+                {
+                    Artist = artistmap[artist.Name],
+                    Album = album.Name.FixPath(),
+                    track.FileName,
+                    Source = track.Loc,
+                })))
+                .GroupBy(item => (item.Artist.ToUpperInvariant(), item.Album.ToUpperInvariant(), item.FileName.ToUpperInvariant()))
+                .Where(group => group.Select(item => item.Source).Distinct(StringComparer.OrdinalIgnoreCase).Count() > 1)
+                .ToArray();
+            var userPlaylistCollisions = lib.Playlists.Values
+                .Where(playlist => playlist.Items.Count <= MAX_PLAYLIST_COUNT &&
+                    !string.Equals(playlist.Title, "library", StringComparison.OrdinalIgnoreCase))
+                .GroupBy(playlist => playlist.Title.FixPath() + ".m3u", StringComparer.OrdinalIgnoreCase)
+                .Where(group => group.Count() > 1)
+                .ToArray();
+            if (trackTargetCollisions.Length != 0 || userPlaylistCollisions.Length != 0)
+            {
+                foreach (var collision in trackTargetCollisions)
+                {
+                    LogConsole.WriteLine($"Track destination collision: {collision.Key.Item1} / {collision.Key.Item2} / {collision.Key.Item3}");
+                    foreach (var item in collision)
+                        LogConsole.WriteLine("  " + item.Source);
+                }
+                foreach (var collision in userPlaylistCollisions)
+                    LogConsole.WriteLine("Playlist destination collision: " + collision.Key);
+                LogConsole.WriteLine("Aborting before target changes because mapped destinations are not unique.");
+                LogConsole.Close();
+                return;
+            }
+
+            string[] missingUpdateSources = deltas
+                .OfType<FileDatabase.UpdateTrackDelta>()
+                .Select(delta => delta.Loc)
+                .Where(source => !File.Exists(source))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (missingUpdateSources.Length != 0)
+            {
+                foreach (string source in missingUpdateSources)
+                    LogConsole.WriteLine("Missing source file: " + source);
+                LogConsole.WriteLine("Aborting before target changes because one or more source files are unavailable.");
+                LogConsole.Close();
+                return;
+            }
+
+            int removalCount = deltas.OfType<FileDatabase.RemoveTrackDelta>().Count();
+            if (removalCount > maxRemovals)
+            {
+                LogConsole.WriteLine($"Safety stop: {removalCount} track removals exceeds --max-removals {maxRemovals}. No target files were changed.");
+                LogConsole.Close();
+                return;
+            }
+
+            using var journal = new MutationJournal(basedir);
+            LogConsole.WriteLine("Recovery journal: " + journal.JournalPath);
+            try
+            {
+
+            Directory.CreateDirectory(artistsdir);
+            if (!walkmanmode)
+            {
+                Directory.CreateDirectory(contributingartistsdir);
+                Directory.CreateDirectory(albumsdir);
+                Directory.CreateDirectory(playlistsdir);
+            }
+
             LogConsole.WriteLine("Removing Tracks");
             foreach (FileDatabase.RemoveTrackDelta delta in deltas.Where(d => d is FileDatabase.RemoveTrackDelta).Select(d => d as FileDatabase.RemoveTrackDelta))
             {
@@ -1046,7 +1439,7 @@ namespace UpdateCarCard
                 string filename = Path.Combine(artistsdir, oldartistpath, delta.Album.FixPath(), delta.FileName);
                 LogConsole.WriteLine("Removing " + filename);
                 if (File.Exists(filename))
-                    File.Delete(filename);
+                    journal.Quarantine(filename);
                 else
                     LogConsole.WriteLine("Warning, Missing " + filename);
             }
@@ -1080,7 +1473,7 @@ namespace UpdateCarCard
                     string oldartistpath = Path.Combine(oldsyncdb.ArtistStructure.FindNode(mappedname).Path, mappedname);
                     string dirname = Path.Combine(artistsdir, oldartistpath);
                     if (!Directory.EnumerateDirectories(dirname).Any())
-                        Directory.GetFiles(dirname, "*.m3u").ToList().ForEach(s => File.Delete(s));
+                        Directory.GetFiles(dirname, "*.m3u").ToList().ForEach(s => journal.Quarantine(s));
                     if (!Directory.EnumerateFileSystemEntries(dirname).Any())
                     {
                         syncdb.ArtistStructure.RemoveItem(oldartistmap[delta.Artist]);
@@ -1098,7 +1491,7 @@ namespace UpdateCarCard
                     string oldartistpath = Path.Combine(contributingartistsdir, oldsyncdb.ContributingArtistStructure.FindNode(artist).Path, artist);
                     LogConsole.WriteLine("Removing " + oldartistpath);
                     if (Directory.Exists(oldartistpath))
-                        Directory.Delete(oldartistpath, true);
+                        journal.Quarantine(oldartistpath);
                     syncdb.ContributingArtistStructure.RemoveItem(artist);
                 }
 
@@ -1117,7 +1510,7 @@ namespace UpdateCarCard
                     albname = albname.FixPath() + ".m3u";
                     string oldalbumpath = Path.Combine(albumsdir, oldsyncdb.AlbumsStructure.FindNode(albname).Path, albname);
                     LogConsole.WriteLine("Removing " + oldalbumpath);
-                    File.Delete(oldalbumpath);
+                    journal.Quarantine(oldalbumpath);
                     syncdb.AlbumsStructure.RemoveItem(albname);
                 }
             }
@@ -1151,7 +1544,7 @@ namespace UpdateCarCard
                 string oldpath = Path.Combine(artistsdir, delta.OldPath, delta.Item);
                 string newpath = Path.Combine(artistsdir, delta.NewPath, delta.Item);
                 if (Directory.Exists(oldpath) && !Directory.Exists(newpath))
-                    Directory.Move(oldpath, newpath);
+                    journal.Move(oldpath, newpath);
             }
 
             LogConsole.WriteLine("Removing Artist Directories");
@@ -1173,7 +1566,7 @@ namespace UpdateCarCard
                 {
                     string oldpath = Path.Combine(albumsdir, delta.OldPath, delta.Item);
                     string newpath = Path.Combine(albumsdir, delta.NewPath, delta.Item);
-                    File.Move(oldpath, newpath);
+                    journal.Move(oldpath, newpath);
                 }
 
                 LogConsole.WriteLine("Removing Album Directories");
@@ -1192,7 +1585,7 @@ namespace UpdateCarCard
                 {
                     string oldpath = Path.Combine(contributingartistsdir, delta.OldPath, delta.Item);
                     string newpath = Path.Combine(contributingartistsdir, delta.NewPath, delta.Item);
-                    Directory.Move(oldpath, newpath);
+                    journal.Move(oldpath, newpath);
                 }
 
                 LogConsole.WriteLine("Removing Contributing Artist Directories");
@@ -1210,7 +1603,7 @@ namespace UpdateCarCard
                 string filename = Path.Combine(albumpath, delta.FileName);
                 Directory.CreateDirectory(albumpath);
                 LogConsole.WriteLine("Copy " + delta.Loc + " -> " + filename);
-                File.Copy(delta.Loc, filename, true);
+                journal.Copy(delta.Loc, filename);
             }
 
             //using (FileStream fs = File.Create(Path.Combine(basedir, "syncdb.xml")))
@@ -1248,9 +1641,9 @@ namespace UpdateCarCard
                                 {
                                     using (StreamWriter albumwriter = new StreamWriter(albumms, Encoding.UTF8, 5123, true))
                                     {
+                                        albumwriter.WriteLine("#EXTM3U");
                                         foreach (FileDatabase.Track track in album.Tracks.OrderBy(t => t.Index).ThenBy(t => t.FileName))
                                         {
-                                            albumwriter.WriteLine("#EXTM3U");
                                             allalbumswriter.WriteLine("#EXTINF:-1," + artist.Replace("-", "") + " - " + track.Name.Replace("-", ""));
                                             string trackfile = Path.Combine(artistsdir, syncdb.ArtistStructure.FindNode(artist).Path, artist, album.Name.FixPath(), track.FileName);
                                             allalbumswriter.WriteLine(Path.Combine(album.Name.FixPath(), track.FileName));
@@ -1268,7 +1661,7 @@ namespace UpdateCarCard
                                         Directory.CreateDirectory(Path.Combine(albumsdir, syncdb.AlbumsStructure.FindNode(albname).Path));
                                         string filename = Path.Combine(albumsdir, syncdb.AlbumsStructure.FindNode(albname).Path, albname);
                                         LogConsole.WriteLine("Updating Playlist: " + filename);
-                                        File.WriteAllBytes(filename, b);
+                                        journal.WriteBytes(filename, b);
                                     }
                                 }
                             }
@@ -1307,7 +1700,7 @@ namespace UpdateCarCard
                             {
                                 string filename = Path.Combine(artistsdir, syncdb.ArtistStructure.FindNode(artist).Path, artist, phash.Name);
                                 LogConsole.WriteLine("Updating Playlist: " + filename);
-                                File.WriteAllBytes(filename, b);
+                                journal.WriteBytes(filename, b);
                             }
                         }
 
@@ -1345,9 +1738,9 @@ namespace UpdateCarCard
                                 {
                                     using (StreamWriter albumwriter = new StreamWriter(albumms, Encoding.UTF8, 5123, true))
                                     {
+                                        albumwriter.WriteLine("#EXTM3U");
                                         foreach (FileDatabase.Track track in tracks.Select(t => t.Item3).Intersect(album.Item2.Tracks).OrderBy(t => t.Index).ThenBy(t => t.FileName))
                                         {
-                                            albumwriter.WriteLine("#EXTM3U");
                                             allalbumswriter.WriteLine("#EXTINF:-1," + artist.Replace("-", "") + " - " + track.Name.Replace("-", ""));
                                             string trackfile = Path.Combine(artistsdir, syncdb.ArtistStructure.FindNode(mappedname).Path, mappedname, album.Item2.Name.FixPath(), track.FileName);
                                             allalbumswriter.WriteLine(GetRelativePath(trackfile, Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist)));
@@ -1367,7 +1760,7 @@ namespace UpdateCarCard
                                     {
                                         string filename = Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist, albname);
                                         LogConsole.WriteLine("Updating Playlist: " + filename);
-                                        File.WriteAllBytes(filename, b);
+                                        journal.WriteBytes(filename, b);
                                     }
                                 }
                             }
@@ -1407,19 +1800,19 @@ namespace UpdateCarCard
                             {
                                 string filename = Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist, phash.Name);
                                 LogConsole.WriteLine("Updating Playlist: " + filename);
-                                File.WriteAllBytes(filename, b);
+                                journal.WriteBytes(filename, b);
                             }
                         }
                     }
 
                     string[] desiredfiles = syncdb.HashSet.ContributingArtists[artist].Select(h => h.Name).ToArray();
-                    string[] existingfiles = Directory.GetFiles(Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist)).Select(f => Path.GetFileName(f)).ToArray();
+                    string[] existingfiles = Directory.GetFiles(Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist), "*.m3u").Select(f => Path.GetFileName(f)).ToArray();
                     string[] diffs = existingfiles.Where(s => !desiredfiles.Contains(s, StringComparer.CurrentCultureIgnoreCase)).ToArray();
 
                     foreach (string diff in diffs)
                     {
                         LogConsole.WriteLine("Deleting File: " + artist + "::::" + Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist, diff));
-                        File.Delete(Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist, diff));
+                        journal.Quarantine(Path.Combine(contributingartistsdir, syncdb.ContributingArtistStructure.FindNode(artist).Path, artist, diff));
                     }
                 }
             }
@@ -1465,7 +1858,7 @@ namespace UpdateCarCard
                     {
                         string filename = Path.Combine(playlistsdir, plname);
                         LogConsole.WriteLine("Updating Playlist: " + filename);
-                        File.WriteAllBytes(filename, b);
+                        journal.WriteBytes(filename, b);
                     }
 
                 }
@@ -1474,20 +1867,28 @@ namespace UpdateCarCard
             // Remove Olds
             {
                 string[] desiredfiles = syncdb.HashSet.Playlists.Select(h => h.Name).ToArray();
-                string[] existingfiles = Directory.GetFiles(playlistsdir).Select(f => Path.GetFileName(f)).ToArray();
+                string[] existingfiles = Directory.GetFiles(playlistsdir, "*.m3u").Select(f => Path.GetFileName(f)).ToArray();
                 string[] diffs = existingfiles.Where(s => !desiredfiles.Contains(s, StringComparer.CurrentCultureIgnoreCase)).ToArray();
 
                 foreach (string diff in diffs)
                 {
                     string filename = Path.Combine(playlistsdir, diff);
                     LogConsole.WriteLine("Deleting File: " + filename);
-                    File.Delete(filename);
+                    journal.Quarantine(filename);
                 }
             }
 
             LogConsole.WriteLine("Writing Synchronization Database");
-            using (FileStream fs = File.Create(Path.Combine(basedir, "syncdb.xml")))
-                syncdb.Serialize(fs);
+            journal.WriteDatabase(Path.Combine(basedir, "syncdb.xml"), syncdb);
+            journal.Commit();
+            }
+            catch (Exception ex)
+            {
+                LogConsole.WriteLine("Update failed; rolling back from " + journal.JournalPath + ": " + ex.Message);
+                journal.Rollback();
+                LogConsole.Close();
+                return;
+            }
 
             LogConsole.Close();
 

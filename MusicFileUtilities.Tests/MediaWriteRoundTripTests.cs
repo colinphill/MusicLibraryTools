@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using MusicFileUtilities;
 using Xunit;
@@ -183,6 +184,42 @@ namespace MusicFileUtilities.Tests
             Assert.Equal("short", tags[TagFields.Lyrics]);
             Assert.Equal("TestArtist", tags[TagFields.Artist]);
             Assert.Equal(44100u, MediaFile.GetFile(tmp.Path).Codecs.First().Samplerate);
+        }
+
+        [Fact]
+        public void OggSaveDoesNotRenumberAChainedLogicalStream()
+        {
+            byte[] stream = File.ReadAllBytes(MediaFixtures.Path_("sample.ogg"));
+            string path = Path.Combine(Path.GetTempPath(), $"mlt_{Guid.NewGuid():N}.ogg");
+            File.WriteAllBytes(path, stream.Concat(stream).ToArray());
+            using var tmp = new MediaFixtures.TempMedia(path);
+
+            var ogg = MediaFile.GetFile(path);
+            Setter(ogg)(TagFields.Lyrics, new string('x', 300000)); // force a page-count delta
+            ogg.SaveTags();
+
+            byte[] rewritten = File.ReadAllBytes(path);
+            int secondBos = FindNthOggBos(rewritten, 2);
+            Assert.True(secondBos > 0);
+            Assert.Equal(stream, rewritten[secondBos..]);
+        }
+
+        private static int FindNthOggBos(byte[] bytes, int occurrence)
+        {
+            int pos = 0, found = 0;
+            while (pos + 27 <= bytes.Length)
+            {
+                Assert.Equal("OggS", System.Text.Encoding.ASCII.GetString(bytes, pos, 4));
+                if ((bytes[pos + 5] & 2) != 0 && ++found == occurrence)
+                    return pos;
+                int segments = bytes[pos + 26];
+                Assert.True(pos + 27 + segments <= bytes.Length);
+                int dataLength = 0;
+                for (int i = 0; i < segments; i++)
+                    dataLength += bytes[pos + 27 + i];
+                pos += 27 + segments + dataLength;
+            }
+            return -1;
         }
 
         [Theory]

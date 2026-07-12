@@ -45,9 +45,36 @@ namespace CrossSyncPlaylists
             return fix;
         }
 
+        static void WriteAtomically(string path, byte[] data)
+        {
+            string temp = Path.Combine(Path.GetDirectoryName(path)!, $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
+            try
+            {
+                using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+                    64 * 1024, FileOptions.WriteThrough))
+                {
+                    stream.Write(data, 0, data.Length);
+                    stream.Flush(flushToDisk: true);
+                }
+                File.Move(temp, path, true);
+            }
+            finally
+            {
+                if (File.Exists(temp))
+                    File.Delete(temp);
+            }
+        }
+
         static void Main(string[] args)
         {
             LogConsole.SwitchFile("CrossSyncPlaylists.log");
+
+            if (args.Length == 0)
+            {
+                LogConsole.WriteLine("Usage: CrossSyncPlaylists <libraryconfiguration.xml> [clean|check] [--apply]");
+                LogConsole.Close();
+                return;
+            }
 
             LibraryConfiguration config = new LibraryConfiguration(args[0]);
 
@@ -57,7 +84,11 @@ namespace CrossSyncPlaylists
                 return;
             }*/
 
-            Directory.CreateDirectory(config.PlaylistTargetFolder);
+            bool apply = args.Skip(1).Any(a => a.Equals("--apply", StringComparison.OrdinalIgnoreCase));
+            if (apply)
+                Directory.CreateDirectory(config.PlaylistTargetFolder);
+            else
+                LogConsole.WriteLine("Dry run: pass --apply to write playlist files.");
 
             //string destplaylistfolder = @"z:/iTunes/Lossless/WPL/";
             //string rootlibpath = @"z:/iTunes/AAC/";
@@ -85,13 +116,9 @@ namespace CrossSyncPlaylists
 
             LogConsole.WriteLine("iTunes Library Size: " + lib.Tracks.Count.ToString() + "  Playlist Count: " + lib.Playlists.Count);
 
-            if ((args.Length == 2) && (args[1].ToLower() == "clean"))
-            {
-                LogConsole.WriteLine("Cleaning Old Playlist Directories...");
-
-                foreach (string file in Directory.GetFiles(config.PlaylistTargetFolder, "*.*"))
-                    File.Delete(file);
-            }
+            bool clean = args.Skip(1).Any(a => a.Equals("clean", StringComparison.OrdinalIgnoreCase));
+            var desiredFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var claimedOutputs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             LogConsole.WriteLine("Mapping Library...");
 
@@ -99,7 +126,7 @@ namespace CrossSyncPlaylists
 
             int missing = 0;
 
-            if ((args.Length == 2) && (args[1].ToLower() == "check"))
+            if (args.Skip(1).Any(a => a.Equals("check", StringComparison.OrdinalIgnoreCase)))
             {
                 foreach (var track in mapper.MissingTracks)
                 {
@@ -121,17 +148,16 @@ namespace CrossSyncPlaylists
 
                 string plfilename = (config.PlaylistType.ToLower() == "wpl") ? Path.Combine(config.PlaylistTargetFolder, FixPath(pl.Title).PadRight(SONOS_NAME_PAD) + ".wpl") :
                     Path.Combine(config.PlaylistTargetFolder, FixPath(pl.Title) + ".m3u");
+                if (!claimedOutputs.Add(Path.GetFullPath(plfilename)))
+                {
+                    LogConsole.WriteLine("Skipping playlist with colliding sanitized name: " + pl.Title);
+                    continue;
+                }
 
                 MemoryStream ms = new MemoryStream();
                 //StreamWriter m3uw = new StreamWriter(ms, Encoding.GetEncoding(28591));
                 StreamWriter m3uw = new StreamWriter(ms, Encoding.UTF8);
                 //m3uw.NewLine = "\n";
-
-                if (File.Exists(plfilename))
-                {
-                    LogConsole.WriteLine("Skipping Due To Preexisting File");
-                    continue;
-                }
 
                 m3uw.WriteLine("#EXTM3U");
 
@@ -195,21 +221,41 @@ namespace CrossSyncPlaylists
                     XmlWriterSettings settings = new XmlWriterSettings();
                     settings.OmitXmlDeclaration = true;
                     settings.Indent = true;
-                    settings.CloseOutput = true;
+                    settings.CloseOutput = false;
+                    byte[] output;
                     if (config.PlaylistType.Equals("wpl", StringComparison.InvariantCultureIgnoreCase))
                     {
-                        StreamWriter w = new StreamWriter(plfilename);
-                        XmlWriter xw = XmlWriter.Create(w, settings);
-                        pd.Save(xw);
-                        xw.Close();
+                        using var wpl = new MemoryStream();
+                        using (XmlWriter xw = XmlWriter.Create(wpl, settings))
+                            pd.Save(xw);
+                        output = wpl.ToArray();
                     }
-                    m3uw.Flush();
-                    if (config.PlaylistType.Equals("m3u", StringComparison.InvariantCultureIgnoreCase))
-                        File.WriteAllBytes(plfilename, ms.ToArray());
+                    else
+                    {
+                        m3uw.Flush();
+                        output = ms.ToArray();
+                    }
+                    if (apply)
+                        WriteAtomically(plfilename, output);
+                    else
+                        LogConsole.WriteLine("Would update: " + plfilename);
+                    desiredFiles.Add(Path.GetFullPath(plfilename));
                 }
                 m3uw.Dispose();
                 ms.Dispose();
             }
+
+            if (clean && apply)
+            {
+                LogConsole.WriteLine("Removing obsolete playlists...");
+                foreach (string file in Directory.GetFiles(config.PlaylistTargetFolder, "*.*"))
+                    if ((Path.GetExtension(file).Equals(".m3u", StringComparison.OrdinalIgnoreCase) ||
+                         Path.GetExtension(file).Equals(".wpl", StringComparison.OrdinalIgnoreCase)) &&
+                        !desiredFiles.Contains(Path.GetFullPath(file)))
+                        File.Delete(file);
+            }
+            else if (clean)
+                LogConsole.WriteLine("Would remove obsolete managed .m3u/.wpl files when run with --apply.");
 
             LogConsole.WriteLine("Total FNF: " + missing.ToString());
 

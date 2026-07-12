@@ -24,6 +24,8 @@ namespace UpdateSmartStorage
         const int MAX_MAPPED_NAME_LENGTH = 40;
         const int BUCKET_DIGITS = 4;
         const int MAX_PLAYLIST_COUNT = 500;
+        const string TARGET_MARKER = ".update-smart-storage-root";
+        const string DATABASE_COMMIT_MANIFEST = ".update-smart-storage-database-commit";
         static string FixPath(string item)
         {
             string fix = item;
@@ -36,6 +38,107 @@ namespace UpdateSmartStorage
             while (fix.EndsWith("."))
                 fix = fix.Remove(fix.Length - 1);
             return fix;
+        }
+
+        static bool PathsOverlap(string first, string second)
+        {
+            string a = Path.GetFullPath(first).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            string b = Path.GetFullPath(second).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            return a.StartsWith(b, StringComparison.OrdinalIgnoreCase) || b.StartsWith(a, StringComparison.OrdinalIgnoreCase);
+        }
+
+        static bool IsPlaylistTrackEligible(iTunesTrack track)
+        {
+            string kind = track.Kind ?? string.Empty;
+            return string.Equals(track.Type, "file", StringComparison.OrdinalIgnoreCase) &&
+                !kind.Contains("video", StringComparison.OrdinalIgnoreCase) &&
+                !kind.Contains("protected", StringComparison.OrdinalIgnoreCase) &&
+                !kind.Contains("book", StringComparison.OrdinalIgnoreCase) &&
+                !kind.Contains("audible", StringComparison.OrdinalIgnoreCase) &&
+                !kind.Contains("document", StringComparison.OrdinalIgnoreCase) &&
+                !kind.Contains("app", StringComparison.OrdinalIgnoreCase) &&
+                !kind.Contains("tone", StringComparison.OrdinalIgnoreCase);
+        }
+
+        static void EnsureSafeTarget(string baseDir, bool initialize)
+        {
+            string root = Path.GetPathRoot(baseDir);
+            if (string.Equals(baseDir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                root?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Refusing to use a filesystem root as the destination.");
+
+            if (!Directory.Exists(baseDir))
+            {
+                if (!initialize)
+                    throw new InvalidOperationException("The destination does not exist. Create it deliberately with --initialize.");
+                Directory.CreateDirectory(baseDir);
+            }
+
+            string marker = Path.Combine(baseDir, TARGET_MARKER);
+            bool knownDatabase = File.Exists(Path.Combine(baseDir, "filedb.xml"));
+            if (!File.Exists(marker) && !knownDatabase && !initialize)
+                throw new InvalidOperationException($"The destination is not initialized. Verify it and rerun with --initialize to create {TARGET_MARKER}.");
+
+            if (!File.Exists(marker))
+                File.WriteAllText(marker, "UpdateSmartStorage managed target" + Environment.NewLine);
+        }
+
+        static void ValidateMappedNames(FileDatabase database, IEnumerable<string> playlistNames)
+        {
+            var collisions = new List<string>();
+            foreach (var group in database.Artists.GroupBy(artist => $"{artist.Bucket}:{artist.MappedName}", StringComparer.OrdinalIgnoreCase).Where(group => group.Count() > 1))
+                collisions.Add("artist target " + group.Key + ": " + string.Join(", ", group.Select(artist => artist.Name)));
+
+            foreach (FileDatabase.Artist artist in database.Artists)
+            {
+                foreach (var group in artist.Albums.GroupBy(album => album.MappedName, StringComparer.OrdinalIgnoreCase).Where(group => group.Count() > 1))
+                    collisions.Add($"albums under '{artist.Name}' mapped to '{group.Key}': {string.Join(", ", group.Select(album => album.Name))}");
+                foreach (FileDatabase.Album album in artist.Albums)
+                    foreach (var group in album.Tracks.GroupBy(track => track.MappedName, StringComparer.OrdinalIgnoreCase).Where(group => group.Count() > 1))
+                        collisions.Add($"tracks under '{artist.Name} / {album.Name}' mapped to '{group.Key}'");
+            }
+
+            foreach (var group in playlistNames.GroupBy(name => name, StringComparer.OrdinalIgnoreCase).Where(group => group.Count() > 1))
+                collisions.Add("playlist target " + group.Key);
+
+            if (collisions.Count != 0)
+                throw new InvalidOperationException("Mapped-name collisions must be resolved before syncing:" + Environment.NewLine + string.Join(Environment.NewLine, collisions.Select(collision => "  " + collision)));
+        }
+
+        static void WriteAllBytesAtomically(string destination, byte[] data)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(destination));
+            string temporary = destination + ".tmp-" + Guid.NewGuid().ToString("N");
+            try
+            {
+                using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                {
+                    stream.Write(data, 0, data.Length);
+                    stream.Flush(true);
+                }
+                File.Move(temporary, destination, true);
+            }
+            finally
+            {
+                try { if (File.Exists(temporary)) File.Delete(temporary); } catch { }
+            }
+        }
+
+        static void CopyAtomically(string source, string destination, bool overwrite = true)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(destination));
+            string temporary = destination + ".tmp-" + Guid.NewGuid().ToString("N");
+            try
+            {
+                File.Copy(source, temporary, false);
+                using (var stream = new FileStream(temporary, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+                    stream.Flush(true);
+                File.Move(temporary, destination, overwrite);
+            }
+            finally
+            {
+                try { if (File.Exists(temporary)) File.Delete(temporary); } catch { }
+            }
         }
 
         public class XmlCloneable<T>
@@ -206,7 +309,7 @@ namespace UpdateSmartStorage
                     else if (ot.LastModifiedTime > t.LastModifiedTime)
                     {
                         Tracks.Remove(t);
-                        Tracks.Add(def);
+                        Tracks.Add(t = def);
                     }
                     t.Touched = true;
                     t.PersistentID = ot.PersistentID;
@@ -404,15 +507,185 @@ namespace UpdateSmartStorage
             return string.Empty;
         }
 
+        static void WriteDatabaseCommitManifest(string baseDir, string token, bool artworkExisted, bool fileExisted)
+        {
+            string manifest = Path.Combine(baseDir, DATABASE_COMMIT_MANIFEST);
+            string temporary = manifest + ".tmp-" + token;
+            try
+            {
+                using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                using (var writer = new StreamWriter(stream, new UTF8Encoding(false), 1024, true))
+                {
+                    writer.WriteLine(token);
+                    writer.WriteLine(artworkExisted ? "1" : "0");
+                    writer.WriteLine(fileExisted ? "1" : "0");
+                    writer.Flush();
+                    stream.Flush(true);
+                }
+                File.Move(temporary, manifest);
+            }
+            finally
+            {
+                try { if (File.Exists(temporary)) File.Delete(temporary); } catch { }
+            }
+        }
+
+        static void RecoverIncompleteDatabaseCommit(string baseDir)
+        {
+            string manifest = Path.Combine(baseDir, DATABASE_COMMIT_MANIFEST);
+            if (!File.Exists(manifest))
+                return;
+
+            string[] lines = File.ReadAllLines(manifest);
+            if (lines.Length != 3 || !Guid.TryParseExact(lines[0], "N", out _) ||
+                (lines[1] != "0" && lines[1] != "1") || (lines[2] != "0" && lines[2] != "1"))
+                throw new InvalidDataException($"Invalid database commit manifest: {manifest}");
+
+            string token = lines[0];
+            string artworkTarget = Path.Combine(baseDir, "artworkdb.bin");
+            string fileTarget = Path.Combine(baseDir, "filedb.xml");
+            string artworkTemporary = artworkTarget + ".tmp-" + token;
+            string fileTemporary = fileTarget + ".tmp-" + token;
+            string artworkBackup = artworkTarget + ".bak-" + token;
+            string fileBackup = fileTarget + ".bak-" + token;
+
+            void Restore(string target, string temporary, string backup, bool existed)
+            {
+                if (existed)
+                {
+                    if (File.Exists(backup))
+                        CopyAtomically(backup, target);
+                    else if (!File.Exists(temporary))
+                        throw new IOException($"Cannot recover '{target}': both its staged file and rollback backup are missing.");
+                }
+                else if (!File.Exists(temporary) && File.Exists(target))
+                    File.Delete(target);
+            }
+
+            Restore(artworkTarget, artworkTemporary, artworkBackup, lines[1] == "1");
+            Restore(fileTarget, fileTemporary, fileBackup, lines[2] == "1");
+
+            // The old pair is consistent again. Remove the manifest before cleaning staging
+            // artifacts so recovery itself is idempotent across a crash during cleanup.
+            File.Delete(manifest);
+            foreach (string path in new[] { artworkTemporary, fileTemporary, artworkBackup, fileBackup })
+                try { if (File.Exists(path)) File.Delete(path); } catch { }
+            LogConsole.WriteLine("Recovered an interrupted database commit.");
+        }
+
+        static void WriteDatabasesAtomically(string baseDir, FileDatabase fileDatabase, ArtworkDatabase artworkDatabase)
+        {
+            string artworkTarget = Path.Combine(baseDir, "artworkdb.bin");
+            string fileTarget = Path.Combine(baseDir, "filedb.xml");
+            string token = Guid.NewGuid().ToString("N");
+            string artworkTemporary = artworkTarget + ".tmp-" + token;
+            string fileTemporary = fileTarget + ".tmp-" + token;
+            string artworkBackup = artworkTarget + ".bak-" + token;
+            string fileBackup = fileTarget + ".bak-" + token;
+            string manifest = Path.Combine(baseDir, DATABASE_COMMIT_MANIFEST);
+            bool artworkExisted = File.Exists(artworkTarget);
+            bool fileExisted = File.Exists(fileTarget);
+
+            try
+            {
+                using (var stream = new FileStream(artworkTemporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                {
+                    fileDatabase.Artworks.Clear();
+                    foreach (ArtworkDatabase.Artwork artwork in artworkDatabase.Artworks)
+                    {
+                        long offset = stream.Position;
+                        fileDatabase.Artworks.Add(new FileDatabase.Artwork
+                        {
+                            FileType = artwork.FileType,
+                            Hash = artwork.Hash,
+                            Offset = offset,
+                            Length = artwork.Data.Length
+                        });
+                        stream.Write(artwork.Data, 0, artwork.Data.Length);
+                    }
+                    stream.Flush(true);
+                }
+
+                using (var stream = new FileStream(fileTemporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                {
+                    fileDatabase.Serialize(stream);
+                    stream.Flush(true);
+                }
+
+                // The durable manifest is published only after both staged files are flushed,
+                // and before either live database is replaced. Startup recovery always rolls a
+                // manifest-backed partial commit back to the previous consistent generation.
+                WriteDatabaseCommitManifest(baseDir, token, artworkExisted, fileExisted);
+
+                if (artworkExisted)
+                    File.Replace(artworkTemporary, artworkTarget, artworkBackup, true);
+                else
+                    File.Move(artworkTemporary, artworkTarget);
+
+                if (fileExisted)
+                    File.Replace(fileTemporary, fileTarget, fileBackup, true);
+                else
+                    File.Move(fileTemporary, fileTarget);
+
+                // Removing the manifest commits the pair. Backups are intentionally deleted
+                // afterward, so a crash can only yield either a recoverable manifest or a fully
+                // committed pair (possibly with harmless leftover backups).
+                File.Delete(manifest);
+                try { if (File.Exists(artworkBackup)) File.Delete(artworkBackup); } catch { }
+                try { if (File.Exists(fileBackup)) File.Delete(fileBackup); } catch { }
+            }
+            catch (Exception commitException)
+            {
+                try
+                {
+                    RecoverIncompleteDatabaseCommit(baseDir);
+                }
+                catch (Exception recoveryException)
+                {
+                    throw new AggregateException("Database commit failed and automatic recovery was incomplete. The commit manifest was preserved for the next run.", commitException, recoveryException);
+                }
+                throw;
+            }
+            finally
+            {
+                if (!File.Exists(manifest))
+                    foreach (string path in new[] { artworkTemporary, fileTemporary, artworkBackup, fileBackup })
+                        try { if (File.Exists(path)) File.Delete(path); } catch { }
+            }
+        }
+
         static void Main(string[] args)
         {
             LogConsole.SwitchFile("UpdateSmartStorage.log");
 
-            /*if (args.Length == 0)
+            bool apply = args.Skip(1).Any(arg => arg.Equals("--apply", StringComparison.OrdinalIgnoreCase));
+            bool initialize = args.Skip(1).Any(arg => arg.Equals("--initialize", StringComparison.OrdinalIgnoreCase));
+            int maxRemovals = 0;
+            bool validArguments = args.Length != 0 && !args[0].StartsWith("--", StringComparison.Ordinal);
+            for (int i = 1; validArguments && i < args.Length; i++)
             {
-                LogConsole.WriteLine("Usage: UpdateSmartStorage <destination>");
+                if (args[i].Equals("--apply", StringComparison.OrdinalIgnoreCase) || args[i].Equals("--initialize", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (args[i].Equals("--max-removals", StringComparison.OrdinalIgnoreCase) && ++i < args.Length && int.TryParse(args[i], out maxRemovals) && maxRemovals >= 0)
+                    continue;
+                validArguments = false;
+            }
+
+            if (!validArguments)
+            {
+                LogConsole.WriteLine("Usage: UpdateSmartStorage <destination> --apply [--initialize] [--max-removals <count>]");
+                LogConsole.Close();
                 return;
-            }*/
+            }
+
+            if (!apply)
+            {
+                LogConsole.WriteLine("No changes made. Pass --apply after verifying the required destination path.");
+                LogConsole.Close();
+                return;
+            }
+
+            string basedir = Path.GetFullPath(args[0]);
 
             LogConsole.WriteLine("Loading iTunes Library XML...");
 
@@ -421,24 +694,29 @@ namespace UpdateSmartStorage
                 iTunesLibraryFile = Environment.GetEnvironmentVariable("ITUNES_XML");
             iTunesLibrary lib = new iTunesLibrary(iTunesLibraryFile);
 
-            //string basedir = args[0];
-            //string basedir = @"d:\testfolder\";
-            string basedir = @"E:\Music\";
+            if (PathsOverlap(basedir, lib.LocalMusicFolder))
+            {
+                LogConsole.WriteLine("Refusing to continue because the destination overlaps the source iTunes music folder.");
+                LogConsole.Close();
+                return;
+            }
+
+            try
+            {
+                EnsureSafeTarget(basedir, initialize);
+                RecoverIncompleteDatabaseCommit(basedir);
+            }
+            catch (Exception ex)
+            {
+                LogConsole.WriteLine("Destination safety check failed: " + ex.Message);
+                LogConsole.Close();
+                return;
+            }
 
             if (!basedir.EndsWith(Path.DirectorySeparatorChar.ToString()))
                 basedir = basedir + Path.DirectorySeparatorChar;
 
             string playlistsdir = Path.Combine(basedir, "Playlists");
-            try
-            {
-                Directory.Delete(playlistsdir, true);
-            }
-            catch
-            {
-
-            }
-
-            Directory.CreateDirectory(playlistsdir);
 
             Dictionary<string, DateTime> filetimes = new Dictionary<string, DateTime>(StringComparer.CurrentCultureIgnoreCase);
 
@@ -478,8 +756,14 @@ namespace UpdateSmartStorage
             }
 
             Dictionary<string, ArtworkDatabase.Artwork> artdict = adb.Artworks.ToDictionary(a => a.Hash);
+            var previousPlaylistFiles = new HashSet<string>(
+                fdb.Playlists.Select(playlist => FixPath(playlist.Name) + ".m3u"),
+                StringComparer.OrdinalIgnoreCase);
 
-            KeyValuePair<int, iTunesTrack>[] library = lib.Tracks.Where(kv => (kv.Value.Type == "File") && (kv.Value.Kind.Contains("audio file") && (!kv.Value.Kind.ToLower().Contains("protected")))).ToArray();
+            KeyValuePair<int, iTunesTrack>[] library = lib.Tracks.Where(kv =>
+                string.Equals(kv.Value.Type, "File", StringComparison.OrdinalIgnoreCase) &&
+                (kv.Value.Kind ?? "").Contains("audio file", StringComparison.OrdinalIgnoreCase) &&
+                !(kv.Value.Kind ?? "").Contains("protected", StringComparison.OrdinalIgnoreCase)).ToArray();
             int libindex = 0;
             foreach (var kv in library)
             {
@@ -525,7 +809,77 @@ namespace UpdateSmartStorage
             fdb.Map(ifdb);
             fdb.Bucketize();
 
-            Tuple<FileDatabase.Artist, FileDatabase.Album, FileDatabase.Track>[] alltracks = fdb.Artists.SelectMany(a => a.Albums.SelectMany(al => al.Tracks.Select(tr => new Tuple<FileDatabase.Artist, FileDatabase.Album, FileDatabase.Track>(a, al, tr)))).ToArray();
+            string[] plannedPlaylistFiles = lib.Playlists.Values
+                .Where(playlist => playlist.Items.Count <= MAX_PLAYLIST_COUNT && !string.Equals(playlist.Title, "library", StringComparison.OrdinalIgnoreCase))
+                .Select(playlist => FixPath(playlist.Title) + ".m3u")
+                .ToArray();
+            try
+            {
+                ValidateMappedNames(fdb, plannedPlaylistFiles);
+            }
+            catch (Exception ex)
+            {
+                LogConsole.WriteLine(ex.Message);
+                LogConsole.Close();
+                return;
+            }
+
+            int staleTrackCount = fdb.Artists.SelectMany(artist => artist.Albums).SelectMany(album => album.Tracks).Count(track => !track.Touched);
+            if (staleTrackCount > maxRemovals)
+            {
+                LogConsole.WriteLine($"Safety stop: {staleTrackCount} stale tracks exceeds --max-removals {maxRemovals}. No library files were changed.");
+                LogConsole.Close();
+                return;
+            }
+
+            string[] missingSources = fdb.Artists
+                .SelectMany(artist => artist.Albums)
+                .SelectMany(album => album.Tracks)
+                .Where(track => track.New && !File.Exists(track.Loc))
+                .Select(track => track.Loc)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (missingSources.Length != 0)
+            {
+                foreach (string source in missingSources)
+                    LogConsole.WriteLine("Missing source file: " + source);
+                LogConsole.WriteLine("Aborting before destination changes because one or more source files are unavailable.");
+                LogConsole.Close();
+                return;
+            }
+
+            Tuple<FileDatabase.Artist, FileDatabase.Album, FileDatabase.Track>[] alltracks = fdb.Artists
+                .SelectMany(artist => artist.Albums.SelectMany(album => album.Tracks
+                    .Where(track => track.Touched)
+                    .Select(track => Tuple.Create(artist, album, track))))
+                .ToArray();
+
+            var currentByPersistentId = alltracks.ToLookup(track => track.Item3.PersistentID, StringComparer.OrdinalIgnoreCase);
+            string[] invalidPlaylistIds = lib.Playlists.Values
+                .Where(playlist => playlist.Items.Count <= MAX_PLAYLIST_COUNT &&
+                    !string.Equals(playlist.Title, "library", StringComparison.OrdinalIgnoreCase))
+                .SelectMany(playlist => playlist.Items.Select(item => lib.Tracks[item]))
+                .Where(IsPlaylistTrackEligible)
+                .Select(track => track.PersistentID)
+                .Where(id => currentByPersistentId[id].Count() != 1)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (invalidPlaylistIds.Length != 0)
+            {
+                foreach (string id in invalidPlaylistIds)
+                    LogConsole.WriteLine("Playlist track could not be mapped uniquely: " + id);
+                LogConsole.WriteLine("Aborting before destination changes because playlist mapping is incomplete.");
+                LogConsole.Close();
+                return;
+            }
+
+            string quarantineRoot = basedir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
+                ".UpdateSmartStorage-quarantine" + Path.DirectorySeparatorChar + DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff");
+            var quarantined = new List<(string Original, string Quarantine)>();
+            var createdFiles = new List<string>();
+
+            try
+            {
 
             Console.WriteLine("Deleting Old Tracks/Albums/Artists");
             List<FileDatabase.Artist> staleartists = new List<FileDatabase.Artist>();
@@ -542,8 +896,14 @@ namespace UpdateSmartStorage
                         if (!tr.Touched)
                         {
                             string filename = Path.Combine(alpath, tr.MappedName);
-                            Console.WriteLine("Deleting: " + filename);
-                            File.Delete(filename);
+                            string quarantine = Path.Combine(quarantineRoot, Path.GetRelativePath(basedir, filename));
+                            Console.WriteLine("Quarantining: " + filename + " -> " + quarantine);
+                            if (File.Exists(filename))
+                            {
+                                Directory.CreateDirectory(Path.GetDirectoryName(quarantine)!);
+                                File.Move(filename, quarantine);
+                                quarantined.Add((filename, quarantine));
+                            }
                             staletracks.Add(tr);
                         }
                         else if (!string.IsNullOrEmpty(tr.ArtworkHash))
@@ -563,8 +923,6 @@ namespace UpdateSmartStorage
                         al.Tracks.Remove(tr);
                     if (!al.Touched)
                     {
-                        Console.WriteLine("Deleting: " + alpath);
-                        Directory.Delete(alpath);
                         stalealbums.Add(al);
                     }
                 }
@@ -572,8 +930,6 @@ namespace UpdateSmartStorage
                     ar.Albums.Remove(tr);
                 if (!ar.Touched)
                 {
-                    Console.WriteLine("Deleting: " + arpath);
-                    Directory.Delete(arpath);
                     staleartists.Add(ar);
                 }
             }
@@ -600,10 +956,18 @@ namespace UpdateSmartStorage
                             string hash = ReadArtwork(tr.Loc, artdict);
                             tr.ArtworkHash = hash;
                             string filename = Path.Combine(alpath, tr.MappedName);
-                            foreach (string oldfile in Directory.GetFiles(alpath, Path.GetFileNameWithoutExtension(tr.MappedName) + ".*"))
-                                File.Delete(oldfile);
                             LogConsole.WriteLine("Copying " + tr.Loc + " To " + filename);
-                            File.Copy(tr.Loc, filename);
+                            if (File.Exists(filename))
+                            {
+                                string previous = Path.Combine(quarantineRoot, Path.GetRelativePath(basedir, filename));
+                                if (File.Exists(previous))
+                                    previous += "." + Guid.NewGuid().ToString("N");
+                                Directory.CreateDirectory(Path.GetDirectoryName(previous)!);
+                                File.Move(filename, previous);
+                                quarantined.Add((filename, previous));
+                            }
+                            CopyAtomically(tr.Loc, filename, overwrite: false);
+                            createdFiles.Add(filename);
                         }
                     }
                 }
@@ -615,7 +979,9 @@ namespace UpdateSmartStorage
 
             Console.WriteLine("Updating User Playlists");
 
+            Directory.CreateDirectory(playlistsdir);
             fdb.Playlists.Clear();
+            var desiredPlaylistFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (iTunesPlaylist pl in lib.Playlists.Values)
             {
                 int icount = 0;
@@ -635,8 +1001,7 @@ namespace UpdateSmartStorage
                         foreach (int item in pl.Items)
                         {
                             iTunesTrack track = lib.Tracks[item];
-                            if (track.Kind.ToLower().Contains("video") || (track.Type.ToLower() != "file") || (track.Kind.ToLower().Contains("protected")) || (track.Kind.ToLower().Contains("book")) || (track.Kind.ToLower().Contains("audible") ||
-                                track.Kind.ToLower().Contains("document") || track.Kind.ToLower().Contains("app") || track.Kind.ToLower().Contains("tone")))
+                            if (!IsPlaylistTrackEligible(track))
                                 continue;
                             plwriter.WriteLine("#EXTINF:-1," + track.Artist.Replace("-", "") + " - " + track.Title.Replace("-", ""));
                             Tuple<FileDatabase.Artist, FileDatabase.Album, FileDatabase.Track> titem = alltracks.Single(t => t.Item3.PersistentID == track.PersistentID);
@@ -657,33 +1022,77 @@ namespace UpdateSmartStorage
                         continue;
 
                     fdb.Playlists.Add(fpl);
+                    desiredPlaylistFiles.Add(plname);
 
                     byte[] b = plms.ToArray();
                     string filename = Path.Combine(playlistsdir, plname);
                     Console.WriteLine("Updating Playlist: " + filename);
-                    File.WriteAllBytes(filename, b);
+                    if (File.Exists(filename))
+                    {
+                        string previous = Path.Combine(quarantineRoot, Path.GetRelativePath(basedir, filename));
+                        if (File.Exists(previous))
+                            previous += "." + Guid.NewGuid().ToString("N");
+                        Directory.CreateDirectory(Path.GetDirectoryName(previous)!);
+                        File.Move(filename, previous);
+                        quarantined.Add((filename, previous));
+                    }
+                    WriteAllBytesAtomically(filename, b);
+                    createdFiles.Add(filename);
+                }
+            }
+
+            foreach (string stalePlaylist in previousPlaylistFiles.Except(desiredPlaylistFiles, StringComparer.OrdinalIgnoreCase))
+            {
+                string filename = Path.Combine(playlistsdir, stalePlaylist);
+                if (File.Exists(filename))
+                {
+                    string quarantine = Path.Combine(quarantineRoot, Path.GetRelativePath(basedir, filename));
+                    if (File.Exists(quarantine))
+                        quarantine += "." + Guid.NewGuid().ToString("N");
+                    Directory.CreateDirectory(Path.GetDirectoryName(quarantine)!);
+                    Console.WriteLine("Quarantining stale managed playlist: " + filename);
+                    File.Move(filename, quarantine);
+                    quarantined.Add((filename, quarantine));
                 }
             }
 
             Console.WriteLine("Writing Artwork Database");
-            //using (FileStream fs = File.Create(Path.Combine(basedir, "artworkdb.xml")))
-            //    adb.Serialize(fs);
-            using (FileStream fs = File.Create(Path.Combine(basedir, "artworkdb.bin")))
+            Console.WriteLine("Writing Synchronization Database");
+            WriteDatabasesAtomically(basedir, fdb, adb);
+
+            // Physical directory cleanup is deliberately last and best-effort: the database and
+            // all managed files already describe a consistent new snapshot at this point.
+            try { MetadataExtensions.CleanEmptyMusicFolders(new DirectoryInfo(basedir), false); }
+            catch (Exception ex) { LogConsole.WriteLine("Empty-directory cleanup failed: " + ex.Message); }
+            }
+            catch (Exception ex)
             {
-                fdb.Artworks.Clear();
-                foreach (ArtworkDatabase.Artwork art in adb.Artworks)
+                LogConsole.WriteLine("Update failed; rolling back staged filesystem changes: " + ex.Message);
+                foreach (string created in createdFiles.AsEnumerable().Reverse())
                 {
-                    long offset = fs.Position;
-                    fdb.Artworks.Add(new FileDatabase.Artwork() { FileType = art.FileType, Hash = art.Hash, Offset = offset, Length = art.Data.Length });
-                    fs.Write(art.Data, 0, art.Data.Length);
+                    try { if (File.Exists(created)) File.Delete(created); }
+                    catch (Exception rollbackEx) { LogConsole.WriteLine($"Unable to remove new file {created}: {rollbackEx.Message}"); }
                 }
+                foreach (var move in quarantined.AsEnumerable().Reverse())
+                {
+                    try
+                    {
+                        if (File.Exists(move.Quarantine) && !File.Exists(move.Original))
+                        {
+                            Directory.CreateDirectory(Path.GetDirectoryName(move.Original)!);
+                            File.Move(move.Quarantine, move.Original);
+                        }
+                    }
+                    catch (Exception rollbackEx)
+                    {
+                        LogConsole.WriteLine($"Unable to restore {move.Original}: {rollbackEx.Message}");
+                    }
+                }
+                LogConsole.Close();
+                return;
             }
 
-            Console.WriteLine("Writing Synchronization Database");
-            using (FileStream fs = File.Create(Path.Combine(basedir, "filedb.xml")))
-                fdb.Serialize(fs);
-
-
+            LogConsole.Close();
             return;
         }
     }

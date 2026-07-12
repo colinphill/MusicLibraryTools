@@ -48,6 +48,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             foreach (var p in affected)
                 _thumbnails.Invalidate(p);
+            await Table.ReloadAsync();
             await Inspector.ReloadAsync();
         };
     }

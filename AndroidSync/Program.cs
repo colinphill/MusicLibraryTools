@@ -22,7 +22,9 @@ namespace AndroidSync
             public abstract Task RemoveFile(string path);
             public abstract Task RemoveDirectory(string path);
             public abstract Task CreateDirectory(string path);
+            public abstract Task Move(string source, string destination);
             public abstract Task WriteFile(string path, Stream s, DateTime modified, ISyncProgress progress = null);
+            public abstract Task ReplaceFile(string path, Stream s, DateTime modified, ISyncProgress progress = null);
             public abstract Task<Stream> ReadFile(string path, ISyncProgress progress = null);
         }
 
@@ -34,22 +36,61 @@ namespace AndroidSync
 
             public override async Task RemoveFile(string path)
             {
-                await client_.ShellExecuteAsync("rm " + EscapeArgument(path), device_, receiver_);
+                int exitCode = await client_.ShellExecuteAsync("rm " + EscapeArgument(path), device_, receiver_);
+                if (exitCode != 0)
+                    throw new IOException($"Unable to remove Android file '{path}': {string.Join(Environment.NewLine, receiver_.StderrLines)}");
             }
 
             public override async Task RemoveDirectory(string path)
             {
-                await client_.ShellExecuteAsync("rm -rf " + EscapeArgument(path), device_, receiver_);
+                int exitCode = await client_.ShellExecuteAsync("rm -rf " + EscapeArgument(path), device_, receiver_);
+                if (exitCode != 0)
+                    throw new IOException($"Unable to remove Android directory '{path}': {string.Join(Environment.NewLine, receiver_.StderrLines)}");
             }
 
             public override async Task CreateDirectory(string path)
             {
-                await client_.ShellExecuteAsync("mkdir " + EscapeArgument(path), device_, receiver_);
+                int exitCode = await client_.ShellExecuteAsync("mkdir -p " + EscapeArgument(path), device_, receiver_);
+                if (exitCode != 0)
+                    throw new IOException($"Unable to create Android directory '{path}': {string.Join(Environment.NewLine, receiver_.StderrLines)}");
+            }
+
+            public override async Task Move(string source, string destination)
+            {
+                int separator = destination.LastIndexOf('/');
+                if (separator > 0)
+                    await CreateDirectory(destination.Substring(0, separator));
+                int exitCode = await client_.ShellExecuteAsync(
+                    "mv " + EscapeArgument(source) + " " + EscapeArgument(destination), device_, receiver_);
+                if (exitCode != 0)
+                    throw new IOException($"Unable to move Android path '{source}': {string.Join(Environment.NewLine, receiver_.StderrLines)}");
             }
 
             public override async Task WriteFile(string path, Stream s, DateTime modified, ISyncProgress progress = null)
             {
                 await client_.PushAsync(s, device_, path, 505, modified, progress);
+            }
+
+            public override async Task ReplaceFile(string path, Stream s, DateTime modified, ISyncProgress progress = null)
+            {
+                string temporary = path + ".androidsync-" + Guid.NewGuid().ToString("N");
+                bool committed = false;
+                try
+                {
+                    await WriteFile(temporary, s, modified, progress);
+                    int exitCode = await client_.ShellExecuteAsync(
+                        "mv -f " + EscapeArgument(temporary) + " " + EscapeArgument(path), device_, receiver_);
+                    if (exitCode != 0)
+                        throw new IOException($"Unable to replace Android file '{path}': {string.Join(Environment.NewLine, receiver_.StderrLines)}");
+                    committed = true;
+                }
+                finally
+                {
+                    if (!committed)
+                    {
+                        try { await RemoveFile(temporary); } catch { }
+                    }
+                }
             }
 
             public override async Task<Stream> ReadFile(string path, ISyncProgress progress)
@@ -76,7 +117,9 @@ namespace AndroidSync
                 FSDirectory root = new FSDirectory(path, null, '/', path);
 
                 var receiver = new ShellReceiver();
-                int exitcode = await client_.ShellExecuteAsync("TZ=UTC ls -l -A -R " + path, device_, receiver);
+                int exitcode = await client_.ShellExecuteAsync("TZ=UTC ls -l -A -R " + EscapeArgument(path), device_, receiver);
+                if (exitcode != 0)
+                    throw new IOException($"Unable to enumerate Android path '{path}': {string.Join(Environment.NewLine, receiver.StderrLines)}");
                 var res = receiver.StdoutLines;
 
                 Stack<FSDirectory> dstack = new Stack<FSDirectory>();
@@ -133,11 +176,46 @@ namespace AndroidSync
                 return Task.Run(() => Directory.CreateDirectory(path));
             }
 
+            public override Task Move(string source, string destination)
+            {
+                return Task.Run(() =>
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(destination));
+                    if (Directory.Exists(source))
+                        Directory.Move(source, destination);
+                    else
+                        File.Move(source, destination);
+                });
+            }
+
             public override async Task WriteFile(string path, Stream s, DateTime modified, ISyncProgress progress = null)
             {
-                using (var fs = File.OpenWrite(path))
+                Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+                using (var fs = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                {
                     await s.CopyToAsync(fs, 1 << 20);
+                    fs.Flush(flushToDisk: true);
+                }
                 File.SetLastWriteTimeUtc(path, modified);
+            }
+
+            public override async Task ReplaceFile(string path, Stream s, DateTime modified, ISyncProgress progress = null)
+            {
+                string temporary = path + ".androidsync-" + Guid.NewGuid().ToString("N");
+                try
+                {
+                    using (var fs = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                    {
+                        await s.CopyToAsync(fs, 1 << 20);
+                        fs.Flush(true);
+                    }
+                    File.SetLastWriteTimeUtc(temporary, modified);
+                    File.Move(temporary, path, true);
+                }
+                finally
+                {
+                    try { if (File.Exists(temporary)) File.Delete(temporary); } catch { }
+                }
             }
 
             public override Task<Stream> ReadFile(string path, ISyncProgress progress)
@@ -345,7 +423,7 @@ namespace AndroidSync
             public void SetProgress(long transferred)
             {
                 builder_.Clear();
-                int value = (int)(100L * transferred / Size);
+                int value = Size <= 0 ? 100 : (int)Math.Clamp(100L * transferred / Size, 0, 100);
                 builder_.Append("\r[");
                 for (int i = 1; i <= value / 2; i++)
                     builder_.Append("*");
@@ -459,18 +537,97 @@ namespace AndroidSync
             return ndir;
         }
 
+        static bool TryGetMaxRemovals(string[] args, out int maxRemovals)
+        {
+            maxRemovals = 0;
+            for (int i = 2; i < args.Length; i++)
+            {
+                if (args[i].Equals("--max-removals", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (++i >= args.Length || !int.TryParse(args[i], out maxRemovals) || maxRemovals < 0)
+                        return false;
+                }
+                else if (args[i].StartsWith("--max-removals=", StringComparison.OrdinalIgnoreCase) &&
+                    (!int.TryParse(args[i].Substring("--max-removals=".Length), out maxRemovals) || maxRemovals < 0))
+                    return false;
+            }
+            return true;
+        }
+
+        static bool IsProtectedPath(string path) =>
+            path.Contains("System Volume Information", StringComparison.OrdinalIgnoreCase) ||
+            path.Contains(".thumbnail", StringComparison.OrdinalIgnoreCase) ||
+            path.Contains("$RECYCLE", StringComparison.OrdinalIgnoreCase);
+
+        static bool IsProtectedEntry(FSFile entry) =>
+            IsProtectedPath(entry.GetFullPath()) ||
+            entry is FSDirectory directory && directory.Entries.Any(IsProtectedEntry);
+
+        static int RemovalWeight(FSFile entry) =>
+            entry is FSDirectory directory
+                ? 1 + directory.Entries.Sum(RemovalWeight)
+                : 1;
+
+        static bool LocalPathsOverlap(string first, string second)
+        {
+            string a = Path.GetFullPath(first).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            string b = Path.GetFullPath(second).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            return a.StartsWith(b, StringComparison.OrdinalIgnoreCase) || b.StartsWith(a, StringComparison.OrdinalIgnoreCase);
+        }
+
+        static bool AndroidPathsOverlap(string first, string second)
+        {
+            string a = "/" + first.Replace('\\', '/').Trim('/') + "/";
+            string b = "/" + second.Replace('\\', '/').Trim('/') + "/";
+            return a.StartsWith(b, StringComparison.Ordinal) || b.StartsWith(a, StringComparison.Ordinal);
+        }
+
+        static bool TryNormalizeAndroidPath(string path, out string normalized)
+        {
+            bool absolute = path.Replace('\\', '/').StartsWith("/", StringComparison.Ordinal);
+            var segments = new List<string>();
+            foreach (string segment in path.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (segment == ".")
+                    continue;
+                if (segment == "..")
+                {
+                    if (segments.Count == 0)
+                    {
+                        normalized = string.Empty;
+                        return false;
+                    }
+                    segments.RemoveAt(segments.Count - 1);
+                }
+                else
+                    segments.Add(segment);
+            }
+            normalized = (absolute ? "/" : string.Empty) + string.Join("/", segments);
+            return true;
+        }
+
         static async Task Main(string[] args)
         {
             Console.OutputEncoding = Encoding.UTF8;
 
+            if (args.Length < 2 || !TryGetMaxRemovals(args, out int maxRemovals))
+            {
+                Console.WriteLine("Usage: AndroidSync <source> <destination> [remap] [--apply] [--max-removals <count>]");
+                Console.WriteLine("The default mode only reports changes. Pass --apply to modify the destination.");
+                return;
+            }
+
             string lpath = args[0];
             string rpath = args[1];
+            bool localIsAndroid = lpath.StartsWith("adb:", StringComparison.OrdinalIgnoreCase);
+            bool remoteIsAndroid = rpath.StartsWith("adb:", StringComparison.OrdinalIgnoreCase);
 
-            bool dry = args.Skip(2).Count(a => a.ToLower() == "dry") != 0;
-            bool remap = args.Skip(2).Count(a => a.ToLower() == "remap") != 0;
+            bool apply = args.Skip(2).Any(a => a.Equals("--apply", StringComparison.OrdinalIgnoreCase));
+            bool dry = !apply;
+            bool remap = args.Skip(2).Any(a => a.Equals("remap", StringComparison.OrdinalIgnoreCase) || a.Equals("--remap", StringComparison.OrdinalIgnoreCase));
 
             if (dry)
-                Console.WriteLine("Test Mode");
+                Console.WriteLine("Dry-run mode; pass --apply to modify the destination.");
                 
             Console.WriteLine("Enumerating Paths");
 
@@ -479,7 +636,7 @@ namespace AndroidSync
             AdbClient client = new AdbClient();
             string device = null;
 
-            if (lpath.StartsWith("adb:"))
+            if (localIsAndroid)
             {
                 localfs = new AndroidFileSystem(client, device);
                 lpath = lpath.Remove(0, 4);
@@ -487,13 +644,32 @@ namespace AndroidSync
             else
                 localfs = new LocalFileSystem();
 
-            if (rpath.StartsWith("adb:"))
+            if (remoteIsAndroid)
             {
                 remotefs = new AndroidFileSystem(client, device);
                 rpath = rpath.Remove(0, 4);
             }
             else
                 remotefs = new LocalFileSystem();
+
+            if ((localIsAndroid && !TryNormalizeAndroidPath(lpath, out lpath)) ||
+                (remoteIsAndroid && !TryNormalizeAndroidPath(rpath, out rpath)))
+            {
+                Console.WriteLine("Refusing to continue because an Android path traverses above its root.");
+                return;
+            }
+
+            bool overlap = localIsAndroid == remoteIsAndroid &&
+                (localIsAndroid ? AndroidPathsOverlap(lpath, rpath) : LocalPathsOverlap(lpath, rpath));
+            bool targetIsRoot = remoteIsAndroid
+                ? string.IsNullOrEmpty(rpath.Trim('/', '\\'))
+                : string.Equals(Path.GetFullPath(rpath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+                    Path.GetPathRoot(Path.GetFullPath(rpath))?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), StringComparison.OrdinalIgnoreCase);
+            if (overlap || targetIsRoot)
+            {
+                Console.WriteLine("Refusing to continue because source/destination roots overlap or the destination is a filesystem root.");
+                return;
+            }
 
             var ltask = localfs.EnumerateDirectory(lpath);
             FSDirectory remote = await remotefs.EnumerateDirectory(rpath);
@@ -512,7 +688,24 @@ namespace AndroidSync
 
             Console.WriteLine("Computing Differences");
 
-            var diffs = remote.Diff(local);
+            var diffs = remote.Diff(local).ToArray();
+            int removalCount = diffs
+                .Where(diff => diff.DiffType == FSDiffType.Removal && !IsProtectedEntry(diff.Dest))
+                .Sum(diff => RemovalWeight(diff.Dest));
+            if (!dry && removalCount > maxRemovals)
+            {
+                Console.WriteLine($"Safety stop: {removalCount} removals exceeds --max-removals {maxRemovals}. No destination changes were made.");
+                return;
+            }
+
+            string remoteRoot = remote.GetFullPath().TrimEnd(remote.Separator);
+            string quarantineRoot = remoteRoot + ".AndroidSync-quarantine" + remote.Separator + DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff");
+            string QuarantinePath(FSFile entry)
+            {
+                string fullPath = entry.GetFullPath();
+                string relative = fullPath.Substring(remoteRoot.Length).TrimStart(remote.Separator);
+                return quarantineRoot + remote.Separator + relative;
+            }
             SyncProgress progress = new SyncProgress();
 
             foreach (var diff in diffs)
@@ -530,12 +723,11 @@ namespace AndroidSync
                     }
                     else if (diff.DiffType == FSDiffType.Removal)
                     {
-                        var fp = diff.Dest.GetFullPath();
-                        if (fp.Contains("System Volume Information") || fp.Contains(".thumbnail") || fp.Contains("$RECYCLE"))
+                        if (IsProtectedEntry(diff.Dest))
                             continue;
-                        Console.WriteLine("Remove Directory: " + diff.Dest.GetFullPath());
+                        Console.WriteLine("Quarantine Directory: " + diff.Dest.GetFullPath());
                         if (!dry)
-                            await remotefs.RemoveDirectory(diff.Dest.GetFullPath());
+                            await remotefs.Move(diff.Dest.GetFullPath(), QuarantinePath(diff.Dest));
                     }
                     else
                         throw new Exception();
@@ -558,16 +750,21 @@ namespace AndroidSync
                         if (!dry)
                         {
                             progress.Size = source.Size;
-                            await remotefs.RemoveFile(diff.Dest.GetFullPath());
-                            using (Stream s = File.OpenRead(diff.Source.LocalPath))
-                                await remotefs.WriteFile(diff.Dest.GetFullPath(), s, diff.Source.Modified, progress);
+                            // Materialize/open the source through the selected filesystem before
+                            // touching the destination. This is essential when the source is ADB:
+                            // File.OpenRead cannot open an Android path, and the old ordering had
+                            // already deleted the valid destination by the time that failed.
+                            using (Stream s = await localfs.ReadFile(diff.Source.LocalPath))
+                                await remotefs.ReplaceFile(diff.Dest.GetFullPath(), s, diff.Source.Modified, progress);
                         }
                     }
                     else if (diff.DiffType == FSDiffType.Removal)
                     {
-                        Console.WriteLine("Remove File: " + diff.Dest.GetFullPath());
+                        if (IsProtectedEntry(diff.Dest))
+                            continue;
+                        Console.WriteLine("Quarantine File: " + diff.Dest.GetFullPath());
                         if (!dry)
-                            await remotefs.RemoveFile(diff.Dest.GetFullPath());
+                            await remotefs.Move(diff.Dest.GetFullPath(), QuarantinePath(diff.Dest));
                     }
                     else
                         throw new Exception();

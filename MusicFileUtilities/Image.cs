@@ -18,25 +18,27 @@ namespace MusicFileUtilities
         // convert implicitly.
         public static ImageFormat DetectImageFormat(ReadOnlySpan<byte> b)
         {
-            if (b.Length > 10)
+            if (b.Length >= 11)
             {
                 if (b.Slice(6, 5).SequenceEqual("JFIF\x00"u8) || b.Slice(6, 5).SequenceEqual("Exif\x00"u8))
                     return ImageFormat.Jpeg;
             }
-            if (b.Length > 6)
+            if (b.Length >= 6)
             {
                 if (b.Slice(0, 6).SequenceEqual("GIF87a"u8) || b.Slice(0, 6).SequenceEqual("GIF89a"u8))
                     return ImageFormat.Gif;
             }
-            if ((b.Length > 8) && b.Slice(1, 7).SequenceEqual("PNG\x0d\x0a\x1a\x0a"u8) && (b[0] == 0x89))
+            if ((b.Length >= 8) && b.Slice(1, 7).SequenceEqual("PNG\x0d\x0a\x1a\x0a"u8) && (b[0] == 0x89))
                 return ImageFormat.Png;
-            if ((b.Length > 12) && b.Slice(0, 2).SequenceEqual("BM"u8) && b.Slice(14, 4).SequenceEqual("\x28\x00\x00\x00"u8))
+            if ((b.Length >= 18) && b.Slice(0, 2).SequenceEqual("BM"u8) && b.Slice(14, 4).SequenceEqual("\x28\x00\x00\x00"u8))
                 return ImageFormat.Bmp;
             return ImageFormat.Unknown;
         }
 
         private static (int Width, int Height) GetGifDimensions(ReadOnlySpan<byte> b)
         {
+            if (b.Length < 10)
+                return (0, 0);
             int width = b[6] | (b[7] << 8);
             int height = b[8] | (b[9] << 8);
             return (width, height);
@@ -44,6 +46,8 @@ namespace MusicFileUtilities
 
         private static (int Width, int Height) GetBmpDimensions(ReadOnlySpan<byte> b)
         {
+            if (b.Length < 26)
+                return (0, 0);
             int width = b[18] | (b[19] << 8) | (b[20] << 16) | (b[21] << 24);
             int height = b[22] | (b[23] << 8) | (b[24] << 16) | (b[25] << 24);
             return (width, height);
@@ -51,6 +55,8 @@ namespace MusicFileUtilities
 
         private static (int Width, int Height) GetPngDimensions(ReadOnlySpan<byte> b)
         {
+            if (b.Length < 24)
+                return (0, 0);
             int width = (b[16] << 24) | (b[17] << 16) | (b[18] << 8) | b[19];
             int height = (b[20] << 24) | (b[21] << 16) | (b[22] << 8) | b[23];
             return (width, height);

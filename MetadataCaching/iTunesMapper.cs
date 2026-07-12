@@ -31,16 +31,24 @@ namespace MetadataCaching
 
         public iTunesMapper(iTunesLibrary library, MetadataCache cache)
         {
-            var aapairs = cache.FileCache.Select(kv => (kv.Value.Artist, kv.Value.StrippedAlbum)).Concat(
-               cache.FileCache.Where(kv => !string.IsNullOrWhiteSpace(kv.Value.AlbumArtist)).Select(kv => (kv.Value.AlbumArtist, kv.Value.StrippedAlbum))).Distinct();
-            var aadict = aapairs.ToDictionary(k => k, k => new List<KeyValuePair<string, MetadataCacheEntry>>());
+            static (string Artist, string Album) Key(string artist, string album) =>
+                ((artist ?? string.Empty).Trim().ToUpperInvariant(), (album ?? string.Empty).Trim().ToUpperInvariant());
 
+            var aadict = new Dictionary<(string Artist, string Album), List<KeyValuePair<string, MetadataCacheEntry>>>();
             foreach (var kv in cache.FileCache)
             {
-                if ((!string.IsNullOrWhiteSpace(kv.Value.AlbumArtist)) && (aadict.ContainsKey((kv.Value.AlbumArtist, kv.Value.StrippedAlbum))))
-                    aadict[(kv.Value.AlbumArtist, kv.Value.StrippedAlbum)].Add(kv);
-                else
-                    aadict[(kv.Value.Artist, kv.Value.StrippedAlbum)].Add(kv);
+                void Add(string artist)
+                {
+                    var key = Key(artist, kv.Value.StrippedAlbum);
+                    if (!aadict.TryGetValue(key, out var entries))
+                        aadict.Add(key, entries = new List<KeyValuePair<string, MetadataCacheEntry>>());
+                    entries.Add(kv);
+                }
+
+                Add(kv.Value.Artist);
+                if (!string.IsNullOrWhiteSpace(kv.Value.AlbumArtist) &&
+                    !string.Equals(kv.Value.AlbumArtist, kv.Value.Artist, StringComparison.OrdinalIgnoreCase))
+                    Add(kv.Value.AlbumArtist);
             }
 
             var pl = library.Playlists.First(p => string.Equals(p.Value.Title, "library", System.StringComparison.OrdinalIgnoreCase)).Value;
@@ -56,57 +64,40 @@ namespace MetadataCaching
 
                 try
                 {
-                    KeyValuePair<string, MetadataCacheEntry>[] newfiles = new KeyValuePair<string, MetadataCacheEntry>[0];
-                    bool hasaa = aadict.ContainsKey((track.Artist, track.Album));
-                    bool hasaaa = (!string.IsNullOrWhiteSpace(track.AlbumArtist)) && (aadict.ContainsKey((track.AlbumArtist, track.Album)));
-                    //var ds = aadict.Keys.OrderBy(k => k.Item1 + k.StrippedAlbum);
+                    IEnumerable<KeyValuePair<string, MetadataCacheEntry>> Candidates(string artist, string album) =>
+                        aadict.TryGetValue(Key(artist, album), out var entries) ? entries : [];
 
-                    if (hasaa)
-                        newfiles = newfiles.Concat(aadict[(track.Artist, track.Album)].Where(kv => kv.Value.TrackNumber == track.TrackNumber)).Distinct().OrderByDescending(kv => kv.Value.SampleRate).ThenByDescending(kv => kv.Value.BitsPerSample).ToArray();
-                    if (hasaaa)
-                        newfiles = newfiles.Concat(aadict[(track.AlbumArtist, track.Album)].Where(kv => kv.Value.TrackNumber == track.TrackNumber)).Distinct().OrderByDescending(kv => kv.Value.SampleRate).ThenByDescending(kv => kv.Value.BitsPerSample).ToArray();
-                    if (newfiles.Length == 0)
-                    {
-                        if (hasaa)
-                            newfiles = newfiles.Concat(aadict[(track.Artist, track.Album)].Where(kv => kv.Value.Title.Equals(track.Title, StringComparison.InvariantCultureIgnoreCase))).Distinct().OrderByDescending(kv => kv.Value.SampleRate).ThenByDescending(kv => kv.Value.BitsPerSample).ToArray();
-                        if (hasaaa)
-                            newfiles = newfiles.Concat(aadict[(track.AlbumArtist, track.Album)].Where(kv => kv.Value.Title.Equals(track.Title, StringComparison.InvariantCultureIgnoreCase))).Distinct().OrderByDescending(kv => kv.Value.SampleRate).ThenByDescending(kv => kv.Value.BitsPerSample).ToArray();
-                    }
+                    var newfiles = Candidates(track.Artist, track.Album)
+                        .Concat(string.IsNullOrWhiteSpace(track.AlbumArtist) ? [] : Candidates(track.AlbumArtist, track.Album))
+                        .Distinct()
+                        .ToArray();
 
                     if (newfiles.Length == 0)
                     {
                         IMetadataProvider provider = MediaFile.GetFile(track.LocalLocation).Tags.First();
-                        hasaa = aadict.ContainsKey((provider.Artist, provider.Album));
-                        try
-                        {
-                            hasaaa = (!string.IsNullOrWhiteSpace(provider.AlbumArtist)) && (aadict.ContainsKey((provider.AlbumArtist, provider.Album)));
-                        }
-                        catch
-                        {
-                            hasaaa = false;
-                        }
-                        if (hasaa)
-                            newfiles = newfiles.Concat(aadict[(provider.Artist, provider.Album)].Where(kv => kv.Value.Title.Equals(provider.Title, StringComparison.InvariantCultureIgnoreCase))).Distinct().OrderByDescending(kv => kv.Value.SampleRate).ThenByDescending(kv => kv.Value.BitsPerSample).ToArray();
-                        if (hasaaa)
-                            newfiles = newfiles.Concat(aadict[(provider.AlbumArtist, provider.Album)].Where(kv => kv.Value.Title.Equals(provider.Title, StringComparison.InvariantCultureIgnoreCase))).Distinct().OrderByDescending(kv => kv.Value.SampleRate).ThenByDescending(kv => kv.Value.BitsPerSample).ToArray();
+                        newfiles = Candidates(provider.Artist, provider.Album)
+                            .Concat(string.IsNullOrWhiteSpace(provider.AlbumArtist) ? [] : Candidates(provider.AlbumArtist, provider.Album))
+                            .Distinct()
+                            .ToArray();
                     }
 
                     if (newfiles.Count(kv => kv.Value.TrackNumber == track.TrackNumber) > 0)
                         newfiles = newfiles.Where(kv => kv.Value.TrackNumber == track.TrackNumber).ToArray();
 
+                    if (track.DiscNumber is not null && newfiles.Count(kv => kv.Value.DiscNumber == track.DiscNumber) > 0)
+                        newfiles = newfiles.Where(kv => kv.Value.DiscNumber == track.DiscNumber).ToArray();
+
                     if (newfiles.Count(kv => string.Equals(kv.Value.Title, track.Title, StringComparison.InvariantCultureIgnoreCase)) > 0)
                         newfiles = newfiles.Where(kv => string.Equals(kv.Value.Title, track.Title, StringComparison.InvariantCultureIgnoreCase)).ToArray();
 
-                    newfiles = newfiles.OrderBy(kv => Path.GetFileName(track.LocalLocation).FuzzyDistance(Path.GetFileName(kv.Key))).ToArray();
-
-                    if (newfiles.Length == 0)
-                    {
-                        ;
-
-                    }
+                    newfiles = newfiles
+                        .OrderBy(kv => Path.GetFileName(track.LocalLocation).FuzzyDistance(Path.GetFileName(kv.Key)))
+                        .ThenByDescending(kv => kv.Value.SampleRate)
+                        .ThenByDescending(kv => kv.Value.BitsPerSample)
+                        .ToArray();
 
                     filepath = newfiles[0].Key;
-                    map_.Add(item, filepath);
+                    map_[item] = filepath;
                 }
                 catch
                 {

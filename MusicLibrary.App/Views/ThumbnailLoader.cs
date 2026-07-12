@@ -33,6 +33,8 @@ public static class ThumbnailLoader
 
     private static async void OnPathChanged(Image image, AvaloniaPropertyChangedEventArgs e)
     {
+        if (image.Source is IDisposable oldSource)
+            oldSource.Dispose();
         image.Source = null;
 
         var path = e.GetNewValue<string?>();
@@ -44,5 +46,7 @@ public static class ThumbnailLoader
         // The cell may have been recycled to a different row while we were loading.
         if (GetPath(image) == path)
             image.Source = bmp;
+        else
+            bmp?.Dispose();
     }
 }
