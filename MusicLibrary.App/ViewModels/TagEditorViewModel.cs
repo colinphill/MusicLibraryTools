@@ -43,6 +43,7 @@ public partial class TagEditorViewModel : ViewModelBase
     private string? _resultMessage;
 
     public ObservableCollection<EditableField> Fields { get; } = [];
+    public event Action<IReadOnlyList<string>>? TagsChanged;
 
     // The curated set of editable fields, in display order.
     private static readonly (TagFields Field, string Label)[] FieldDefs =
@@ -185,6 +186,8 @@ public partial class TagEditorViewModel : ViewModelBase
                 + (result.Files.Any(f => f.UnsupportedFields.Count > 0)
                     ? " (some fields unsupported by a file's tag format)"
                     : "");
+            if (result.SavedCount > 0)
+                TagsChanged?.Invoke(result.Files.Where(f => f.Outcome == WriteOutcome.Saved).Select(f => f.Path).ToList());
             // Reload so the editor reflects what's now on disk.
             await SetTargetsAsync(_targets);
         }
@@ -213,6 +216,7 @@ public partial class TagEditorViewModel : ViewModelBase
         if (saved)
         {
             ResultMessage = "Fields updated.";
+            TagsChanged?.Invoke(_targets);
             await SetTargetsAsync(_targets);   // reflect changes in the curated view
         }
     }

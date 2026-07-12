@@ -159,6 +159,22 @@ public class TagWriteServiceTests
         Assert.Equal("Serialized", (await _reader.LoadAsync(media.Path)).Value!.Title);
     }
 
+    [Fact]
+    public async Task Batch_ReindexesEverySuccessfullyChangedFile()
+    {
+        using var first = MediaFixtures.Copy("sample.flac");
+        using var second = MediaFixtures.Copy("sample.mp3");
+        var reindex = new RecordingReindexService();
+        var writer = new TagWriteService(reindex);
+
+        var result = await writer.ApplyAsync(
+            [first.Path, second.Path], [new TagEdit(TagFields.Album, "Reindexed")]);
+
+        Assert.Equal(2, result.SavedCount);
+        Assert.Equal(new[] { first.Path, second.Path }, reindex.Paths);
+        Assert.All(reindex.Tokens, token => Assert.False(token.CanBeCanceled));
+    }
+
     private sealed class ThrowingReindexService : IReindexService
     {
         public CancellationToken ReceivedToken { get; private set; }
@@ -180,6 +196,18 @@ public class TagWriteServiceTests
             Called = true;
             ReceivedToken = ct;
             cts.Cancel();
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class RecordingReindexService : IReindexService
+    {
+        public List<string> Paths { get; } = [];
+        public List<CancellationToken> Tokens { get; } = [];
+        public Task ReindexFileAsync(string path, CancellationToken ct = default)
+        {
+            Paths.Add(path);
+            Tokens.Add(ct);
             return Task.CompletedTask;
         }
     }

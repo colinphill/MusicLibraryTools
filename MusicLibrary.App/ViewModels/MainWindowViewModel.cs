@@ -46,6 +46,12 @@ public partial class MainWindowViewModel : ViewModelBase
         Library.IndexCompleted += () => _ = Table.ReloadAsync();
         // Organize already re-syncs the cache to the moves; refresh the grid to show the new locations.
         Organize.MovesApplied += () => _ = Table.ReloadAsync();
+        Ingest.IngestCompleted += () => _ = Table.ReloadAsync();
+        Editor.TagsChanged += async _ =>
+        {
+            await Table.ReloadAsync();
+            await Inspector.ReloadAsync();
+        };
         // Editing artwork (possibly across a whole album) refreshes the details view + grid thumbnails.
         Artwork.ArtworkChanged += async affected =>
         {

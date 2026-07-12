@@ -15,6 +15,7 @@ public partial class IngestViewModel : ViewModelBase
     private readonly IFileDialogService _files;
     private readonly IDialogService _dialogs;
     private readonly IAppSettings _settings;
+    private readonly ILibraryService _library;
     private CancellationTokenSource? _cts;
     private IngestPlan? _plan;
 
@@ -31,10 +32,12 @@ public partial class IngestViewModel : ViewModelBase
 
     public ObservableCollection<IngestAction> Actions { get; } = [];
     public ObservableCollection<IngestConflict> Conflicts { get; } = [];
+    public event Action? IngestCompleted;
 
-    public IngestViewModel(IIngestMusicService service, IFileDialogService files, IDialogService dialogs, IAppSettings settings)
+    public IngestViewModel(IIngestMusicService service, IFileDialogService files, IDialogService dialogs,
+        IAppSettings settings, ILibraryService library)
     {
-        _service = service; _files = files; _dialogs = dialogs; _settings = settings;
+        _service = service; _files = files; _dialogs = dialogs; _settings = settings; _library = library;
         SourceDirectory = settings.GetPreference(SourcePreference);
         ConfigurationPath = settings.GetPreference(ConfigPreference);
     }
@@ -140,7 +143,24 @@ public partial class IngestViewModel : ViewModelBase
             }
             var progress = new Progress<IngestProgress>(p => StatusText = $"{p.Operation}: {p.Album} ({p.CompletedAlbums}/{p.TotalAlbums})");
             var result = await _service.ApplyAsync(_plan, decisions, progress, _cts.Token);
-            StatusText = result.Cancelled ? result.Message ?? "Cancelled." : $"Installed {result.Installed} files; {result.Failed} albums failed.";
+            if (!result.Cancelled && result.Albums.Any(a => a.Success) && _library.IsReady)
+            {
+                // Once ingestion commits files, finish the cache refresh even if the user presses
+                // Cancel; otherwise disk and the library view would knowingly diverge.
+                StatusText = "Ingestion committed. Re-indexing the library…";
+                var indexed = await _library.IndexAsync(ct: CancellationToken.None);
+                StatusText = $"Installed {result.Installed} files; {result.Failed} albums failed. "
+                    + $"Index: {indexed.Added} added, {indexed.Modified} modified, {indexed.Removed} removed.";
+                IngestCompleted?.Invoke();
+            }
+            else
+            {
+                StatusText = result.Cancelled ? result.Message ?? "Cancelled."
+                    : $"Installed {result.Installed} files; {result.Failed} albums failed."
+                      + (!_library.IsReady && result.Albums.Any(a => a.Success)
+                          ? " No library configuration is loaded, so re-indexing was skipped." : "");
+                if (!result.Cancelled) IngestCompleted?.Invoke();
+            }
             HasApplicablePreview = false; _plan = null;
         }
         catch (OperationCanceledException) { StatusText = "Cancelled; any album already committed remains safely journaled."; }
