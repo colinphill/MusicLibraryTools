@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MusicLibrary.App.ViewModels;
 using MusicLibrary.App.Views;
 using MusicLibrary.Core.Services;
+using MusicLibrary.Core.Models;
 
 namespace MusicLibrary.App.Services;
 
@@ -37,5 +38,31 @@ public sealed class DialogService : IDialogService
         var vm = new ConfigDialogViewModel(_services.GetRequiredService<IFileDialogService>(), existingPath);
         var dialog = new ConfigDialog { DataContext = vm };
         return await dialog.ShowDialog<string?>(Owner);
+    }
+
+    public async Task<string?> ShowIngestConfigEditorAsync(string? existingPath)
+    {
+        if (Owner is null) return null;
+        var vm = new IngestConfigDialogViewModel(_services.GetRequiredService<IFileDialogService>(), existingPath);
+        var dialog = new IngestConfigDialog { DataContext = vm };
+        return await dialog.ShowDialog<string?>(Owner);
+    }
+
+    public async Task<bool> ConfirmCdDerivationAsync(IngestApprovalItem item)
+    {
+        if (Owner is null) return false;
+        var yes = new Button { Content = "Derive CD files", Classes = { "accent" } };
+        var no = new Button { Content = "Cancel entire run" };
+        var buttons = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8 };
+        buttons.Children.Add(yes); buttons.Children.Add(no);
+        var panel = new StackPanel { Margin = new Avalonia.Thickness(18), Spacing = 10 };
+        panel.Children.Add(new TextBlock { Text = $"CD-quality FLAC files are missing for {item.AlbumDisplay}.", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        panel.Children.Add(new TextBlock { Text = "You may have forgotten to obtain them. Derive these tracks from high-resolution files?", TextWrapping = Avalonia.Media.TextWrapping.Wrap });
+        panel.Children.Add(new ScrollViewer { Content = new ItemsControl { ItemsSource = item.MissingTracks }, MaxHeight = 300 });
+        panel.Children.Add(buttons);
+        var dialog = new Window { Title = "Confirm CD-quality derivation", Width = 620, SizeToContent = SizeToContent.Height,
+            Content = panel, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        yes.Click += (_, _) => dialog.Close(true); no.Click += (_, _) => dialog.Close(false);
+        return await dialog.ShowDialog<bool>(Owner);
     }
 }

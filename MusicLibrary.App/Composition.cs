@@ -32,6 +32,7 @@ public static class Composition
         services.AddSingleton<TagEditorViewModel>();
         services.AddSingleton<AnalyzerViewModel>();
         services.AddSingleton<OrganizeViewModel>();
+        services.AddSingleton<IngestViewModel>();
         services.AddSingleton<ArtworkViewModel>();
         services.AddSingleton<DetailsGridViewModel>();
 

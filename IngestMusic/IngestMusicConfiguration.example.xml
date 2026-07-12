@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<IngestMusicConfiguration>
+  <!-- Must be a build that includes libfdk_aac. A command on PATH is also accepted. -->
+  <FfmpegPath>ffmpeg</FfmpegPath>
+  <AacDestination>Z:\iTunes\AddAAC</AacDestination>
+  <CdDestination>Z:\iTunes\FLAC</CdDestination>
+  <PairedCdDestination>Z:\iTunes\FLAC2</PairedCdDestination>
+  <HighResolutionDestination>Z:\iTunes\HiRes\Stereo\PCM</HighResolutionDestination>
+  <LengthLimit>255</LengthLimit>
+  <DiscNumLengthLimit>255</DiscNumLengthLimit>
+  <AacEncoder>libfdk_aac</AacEncoder>
+  <AacBitrateKbps>256</AacBitrateKbps>
+</IngestMusicConfiguration>

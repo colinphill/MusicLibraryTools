@@ -450,6 +450,54 @@
                         </Grid>
                     </TabItem>
 
+                    <!-- Ingest incoming FLAC / ALAC albums -->
+                    <TabItem Header="Ingest" DataContext="{Binding Ingest}" x:DataType="vm:IngestViewModel">
+                        <Grid RowDefinitions="Auto,Auto,*" Margin="2,12,2,2">
+                            <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,10">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                    <TextBlock Grid.Column="0" Text="Source" VerticalAlignment="Center" Classes="muted"/>
+                                    <TextBox Grid.Column="1" Text="{Binding SourceDirectory}"/>
+                                    <Button Grid.Column="2" Content="Browse…" Command="{Binding BrowseSourceCommand}"/>
+                                </Grid>
+                                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="8">
+                                    <TextBlock Grid.Column="0" Text="Config" VerticalAlignment="Center" Classes="muted"/>
+                                    <TextBox Grid.Column="1" Text="{Binding ConfigurationPath}"/>
+                                    <Button Grid.Column="2" Content="Browse…" Command="{Binding BrowseConfigurationCommand}"/>
+                                    <Button Grid.Column="3" Content="New…" Command="{Binding NewConfigurationCommand}"/>
+                                    <Button Grid.Column="4" Content="Edit…" Command="{Binding EditConfigurationCommand}"/>
+                                </Grid>
+                                <StackPanel Classes="toolbarrow">
+                                    <Button Content="Preview" Command="{Binding PreviewCommand}"/>
+                                    <Button Content="Apply" Classes="accent" Command="{Binding ApplyCommand}"/>
+                                    <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
+                                    <ProgressBar IsIndeterminate="True" Width="70" VerticalAlignment="Center" IsVisible="{Binding IsBusy}"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" Classes="muted"/>
+                            </StackPanel>
+                            <ItemsControl Grid.Row="1" ItemsSource="{Binding Conflicts}" Margin="0,0,0,8">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="models:IngestConflict">
+                                        <TextBlock Text="{Binding Message}" Foreground="#D94A4A" TextWrapping="Wrap"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <ScrollViewer Grid.Row="2">
+                                <ItemsControl ItemsSource="{Binding Actions}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="models:IngestAction">
+                                            <StackPanel Margin="0,4">
+                                                <TextBlock Text="{Binding Description}"/>
+                                                <TextBlock Text="{Binding Source}" Classes="caption"/>
+                                                <TextBlock Text="{Binding Destination, StringFormat='→ {0}'}" Classes="caption"
+                                                           IsVisible="{Binding Destination, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
+                    </TabItem>
+
                     <!-- Organize / Rename (preview → confirm → apply) -->
                     <TabItem Header="Organize" DataContext="{Binding Organize}" x:DataType="vm:OrganizeViewModel">
                         <Grid RowDefinitions="Auto,*" Margin="2,12,2,2">

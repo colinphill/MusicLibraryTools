@@ -1,3 +1,5 @@
+using MusicLibrary.Core.Models;
+
 namespace MusicLibrary.App.Services;
 
 /// <summary>Opens the app's modal dialogs so ViewModels don't reference Window types directly.</summary>
@@ -8,4 +10,8 @@ public interface IDialogService
 
     /// <summary>Create/edit a LibraryConfiguration. Returns the saved config path, or null if cancelled.</summary>
     Task<string?> ShowConfigEditorAsync(string? existingPath);
+
+    Task<string?> ShowIngestConfigEditorAsync(string? existingPath);
+
+    Task<bool> ConfirmCdDerivationAsync(IngestApprovalItem item);
 }

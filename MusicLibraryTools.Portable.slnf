@@ -13,6 +13,7 @@
       "DumpITL/DumpITL.csproj",
       "DumpTags/DumpTags.csproj",
       "FindNonLossless/FindNonLossless.csproj",
+      "IngestMusic/IngestMusic.csproj",
       "MetadataCaching/MetadataCaching.csproj",
       "MetadataDBWork/MetadataDBWork.csproj",
       "MusicFileUtilities/MusicFileUtilities.csproj",

@@ -68,6 +68,10 @@ Organization:
 
 - **OrganizeFiles / SortDownloads / Comingle** — file layout and merging of new music into
   the library.
+- **IngestMusic** — preview and import incoming FLAC/ALAC albums: normalize multi-disc tags,
+  create approved CD-quality counterparts, encode 256 kbit/s AAC, and route each version into
+  the canonical library layout. The same workflow is available on the app's **Ingest** tab,
+  including a dialog for creating and editing ingestion configurations.
 
 `MetadataDBWork` and `PlayProject` are scratch projects for experiments.
 
@@ -86,6 +90,27 @@ ceiling of zero; set an intentional limit with `--max-removals <count>`. Device-
 an initialized target marker (`--initialize` creates it after you verify the path), and removals are
 moved into timestamped quarantine/recovery directories rather than being deleted immediately.
 `UpdateCarCard --recover <journal.tsv>` can roll back an interrupted journaled update.
+
+`IngestMusic` previews by default and requires `--apply`. If a high-resolution track has no
+CD-quality FLAC counterpart, apply asks for confirmation album-by-album before doing any work; one
+declined album cancels the whole run. Transcodes are staged and validated, source files are moved to
+a sibling `.IngestMusic-quarantine` tree only after an album commits, and ffmpeg jobs run in parallel
+up to the machine's CPU-core count. Start from
+[`IngestMusicConfiguration.example.xml`](IngestMusic/IngestMusicConfiguration.example.xml), then run:
+
+```
+IngestMusic <incoming-directory> <ingest-config.xml> [--apply]
+```
+
+The configured ffmpeg build must provide the `libfdk_aac` encoder.
+
+The machine-specific `MusicLibrary.NonFree.Tests` project is deliberately absent from both solution
+files and therefore from CI. On the workstation that has `C:\ffmpeg\nonfree\ffmpeg.exe`, run its
+real libfdk AAC integration test explicitly with:
+
+```
+dotnet test MusicLibrary.NonFree.Tests/MusicLibrary.NonFree.Tests.csproj
+```
 
 ## Building and testing
 

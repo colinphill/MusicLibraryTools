@@ -12,6 +12,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public TagEditorViewModel Editor { get; }
     public AnalyzerViewModel Analyzer { get; }
     public OrganizeViewModel Organize { get; }
+    public IngestViewModel Ingest { get; }
     public ArtworkViewModel Artwork { get; }
     public DetailsGridViewModel Table { get; }
 
@@ -22,6 +23,7 @@ public partial class MainWindowViewModel : ViewModelBase
         TagEditorViewModel editor,
         AnalyzerViewModel analyzer,
         OrganizeViewModel organize,
+        IngestViewModel ingest,
         ArtworkViewModel artwork,
         DetailsGridViewModel table,
         IThumbnailProvider thumbnails)
@@ -33,6 +35,7 @@ public partial class MainWindowViewModel : ViewModelBase
         Editor = editor;
         Analyzer = analyzer;
         Organize = organize;
+        Ingest = ingest;
         Artwork = artwork;
         Table = table;
 

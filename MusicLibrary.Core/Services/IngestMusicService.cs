@@ -1,0 +1,515 @@
+using System.Security.Cryptography;
+using System.Text.RegularExpressions;
+using System.Collections.Concurrent;
+using MusicFileUtilities;
+using MusicLibrary.Core.Models;
+
+namespace MusicLibrary.Core.Services;
+
+public sealed class IngestMusicService : IIngestMusicService
+{
+    private static readonly Regex DiscSuffix = new(
+        @"^(?<album>.+?)\s+\(Disc\s+(?<disc>\d+)\)$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private readonly IFfmpegRunner _ffmpeg;
+
+    public IngestMusicService(IFfmpegRunner ffmpeg) => _ffmpeg = ffmpeg;
+
+    public Task<IngestPlan> PreviewAsync(IngestRequest request, CancellationToken ct = default)
+        => Task.Run(() => Preview(request, ct), ct);
+
+    private static IngestPlan Preview(IngestRequest request, CancellationToken ct)
+    {
+        string sourceRoot = Path.GetFullPath(request.SourceDirectory);
+        if (!Directory.Exists(sourceRoot))
+            throw new DirectoryNotFoundException($"Source directory does not exist: {sourceRoot}");
+        var config = IngestMusicConfiguration.Load(request.ConfigurationPath);
+        string[] destinations = [config.AacDestination, config.CdDestination, config.PairedCdDestination, config.HighResolutionDestination];
+        if (destinations.Any(d => PathsOverlap(sourceRoot, d)))
+            throw new InvalidDataException("The source directory must not overlap an ingestion destination.");
+        if (destinations.SelectMany((a, i) => destinations.Skip(i + 1).Select(b => (a, b))).Any(p => PathsOverlap(p.a, p.b)))
+            throw new InvalidDataException("Ingestion destination directories must not overlap each other.");
+        var conflicts = new List<IngestConflict>();
+        var ignored = new List<string>();
+        var scanned = new List<ScannedTrack>();
+
+        foreach (string path in Directory.EnumerateFiles(sourceRoot, "*", SearchOption.AllDirectories))
+        {
+            ct.ThrowIfCancellationRequested();
+            string extension = Path.GetExtension(path);
+            if (!extension.Equals(".flac", StringComparison.OrdinalIgnoreCase) &&
+                !extension.Equals(".m4a", StringComparison.OrdinalIgnoreCase))
+            {
+                ignored.Add(path);
+                continue;
+            }
+            try
+            {
+                var media = MediaFile.GetFile(path);
+                var tag = media.Tags.FirstOrDefault() ?? throw new InvalidDataException("No metadata tag was found.");
+                var codec = media.Codecs.FirstOrDefault() ?? throw new InvalidDataException("No audio stream was found.");
+                bool alac = codec.CodecName.Equals("ALAC", StringComparison.OrdinalIgnoreCase);
+                if (extension.Equals(".m4a", StringComparison.OrdinalIgnoreCase) && !alac)
+                {
+                    ignored.Add(path);
+                    continue;
+                }
+                if (codec.CodecType != CodecType.Lossless)
+                {
+                    ignored.Add(path);
+                    continue;
+                }
+                string artist = (tag.Artist ?? "").Trim();
+                string albumArtist = (tag.AlbumArtist ?? "").Trim();
+                string album = (tag.Album ?? "").Trim();
+                string title = (tag.Title ?? "").Trim();
+                if (string.IsNullOrWhiteSpace(albumArtist)) albumArtist = artist;
+                if (string.IsNullOrWhiteSpace(artist) || string.IsNullOrWhiteSpace(albumArtist) ||
+                    string.IsNullOrWhiteSpace(album) || string.IsNullOrWhiteSpace(title) || tag.TrackNumber is null)
+                    throw new InvalidDataException("Artist, album artist, album, title, and track number are required.");
+                if (codec.Channels != 2)
+                    throw new InvalidDataException($"Only stereo input is supported (found {codec.Channels} channels).");
+                if (codec.Samplerate < 44100 || codec.BitsPerSample < 16)
+                    throw new InvalidDataException($"Below-CD-quality input is unsupported ({codec.Samplerate} Hz/{codec.BitsPerSample}-bit).");
+
+                var suffix = DiscSuffix.Match(album);
+                string baseAlbum = suffix.Success ? suffix.Groups["album"].Value.Trim() : album;
+                scanned.Add(new ScannedTrack(
+                    path, artist, albumArtist, baseAlbum, title, tag.TrackNumber.Value,
+                    tag.DiscNumber, codec.Samplerate, codec.BitsPerSample, codec.Channels,
+                    codec.DurationInSeconds, alac, new FileInfo(path)));
+            }
+            catch (Exception ex)
+            {
+                conflicts.Add(new IngestConflict(path, path, ex.Message));
+            }
+        }
+
+        var albums = new List<IngestAlbumPlan>();
+        var actions = new List<IngestAction>();
+        var approvals = new List<IngestApprovalItem>();
+        var claimed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var group in scanned.GroupBy(t => AlbumKey(t.AlbumArtist, t.BaseAlbum)))
+        {
+            ct.ThrowIfCancellationRequested();
+            var sourceTracks = group.ToList();
+            string display = $"{sourceTracks[0].AlbumArtist} — {sourceTracks[0].BaseAlbum}";
+            int before = conflicts.Count;
+            var discs = sourceTracks.Where(t => t.DiscNumber.HasValue).Select(t => t.DiscNumber!.Value).Distinct().Order().ToArray();
+            bool multiDisc = discs.Length > 1;
+            if (sourceTracks.Any(t => t.DiscNumber.HasValue) && sourceTracks.Any(t => !t.DiscNumber.HasValue))
+                conflicts.Add(new IngestConflict(group.Key, sourceRoot, "An album mixes tracks with and without DiscNumber."));
+            foreach (var slot in sourceTracks.GroupBy(t => (Disc: t.DiscNumber ?? 1, t.TrackNumber)))
+            {
+                string[] titles = slot.Select(t => NormalizeKey(t.Title)).Distinct().ToArray();
+                if (titles.Length > 1)
+                    conflicts.Add(new IngestConflict(group.Key, slot.First().Path,
+                        $"Disc {slot.Key.Disc}, track {slot.Key.TrackNumber} has conflicting titles."));
+            }
+
+            var trackPlans = new List<IngestTrackPlan>();
+            foreach (var discGroup in sourceTracks.GroupBy(t => t.DiscNumber ?? 1))
+            {
+                int offset = multiDisc ? discGroup.Min(t => t.TrackNumber) - 1 : 0;
+                int total = discGroup.Max(t => t.TrackNumber - offset);
+                foreach (var track in discGroup)
+                {
+                    int normalizedTrack = track.TrackNumber - offset;
+                    string normalizedAlbum = multiDisc ? $"{track.BaseAlbum} (Disc {discGroup.Key})" : track.BaseAlbum;
+                    string identity = TrackKey(track.AlbumArtist, track.BaseAlbum, discGroup.Key, track.TrackNumber, track.Title);
+                    trackPlans.Add(new IngestTrackPlan
+                    {
+                        Identity = identity,
+                        SourcePath = track.Path,
+                        Title = track.Title,
+                        Artist = track.Artist,
+                        AlbumArtist = track.AlbumArtist,
+                        Album = normalizedAlbum,
+                        TrackNumber = normalizedTrack,
+                        TrackTotal = total,
+                        OriginalDiscNumber = discGroup.Key,
+                        SampleRate = track.SampleRate,
+                        BitsPerSample = track.BitsPerSample,
+                        Channels = track.Channels,
+                        DurationInSeconds = track.Duration,
+                        IsAlac = track.IsAlac,
+                        IsHighResolution = track.SampleRate > 44100 || track.BitsPerSample > 16,
+                    });
+                }
+            }
+
+            foreach (var identity in trackPlans.GroupBy(t => t.Identity))
+            {
+                if (identity.Count(t => !t.IsHighResolution) > 1)
+                    conflicts.Add(new IngestConflict(group.Key, identity.First().SourcePath,
+                        $"Multiple CD-quality sources match '{identity.First().Title}'."));
+            }
+            if (conflicts.Count != before)
+                continue;
+
+            bool hasHigh = trackPlans.Any(t => t.IsHighResolution);
+            string cdRoot = hasHigh ? config.PairedCdDestination : config.CdDestination;
+            var outputs = new List<IngestOutputPlan>();
+            var missing = new List<string>();
+            foreach (var identity in trackPlans.GroupBy(t => t.Identity))
+            {
+                var candidates = identity.ToList();
+                foreach (var high in candidates.Where(t => t.IsHighResolution)
+                             .OrderByDescending(t => t.SampleRate).ThenByDescending(t => t.BitsPerSample).ThenBy(t => t.SourcePath))
+                {
+                    string destination = ClaimCanonical(config.HighResolutionDestination, high, ".flac", config, claimed);
+                    outputs.Add(Output(high, IngestOutputKind.HighResolutionFlac, high.SourcePath, destination));
+                }
+
+                var cd = candidates.SingleOrDefault(t => !t.IsHighResolution);
+                bool derive = cd is null;
+                if (derive)
+                {
+                    cd = candidates.Where(t => t.IsHighResolution)
+                        .OrderByDescending(t => t.SampleRate).ThenByDescending(t => t.BitsPerSample)
+                        .ThenBy(t => t.SourcePath, StringComparer.OrdinalIgnoreCase).First();
+                    missing.Add($"{cd.TrackNumber:D2} {cd.Title}");
+                }
+                var selectedCd = cd!;
+                string cdDestination = ClaimCanonical(cdRoot, selectedCd, ".flac", config, claimed);
+                outputs.Add(Output(selectedCd, IngestOutputKind.CdFlac, selectedCd.SourcePath, cdDestination, derive));
+                string aacDestination = ClaimCanonical(config.AacDestination, selectedCd, ".m4a", config, claimed);
+                outputs.Add(Output(selectedCd, IngestOutputKind.Aac, selectedCd.SourcePath, aacDestination));
+            }
+
+            var snapshots = sourceTracks.Select(t => new IngestFileSnapshot(t.Path, t.File.Length, t.File.LastWriteTimeUtc)).ToList();
+            var album = new IngestAlbumPlan
+            {
+                Key = group.Key,
+                Display = display,
+                Tracks = trackPlans,
+                Outputs = outputs,
+                Sources = snapshots,
+                HasHighResolution = hasHigh,
+            };
+            albums.Add(album);
+            if (missing.Count > 0)
+                approvals.Add(new IngestApprovalItem(group.Key, display, missing));
+
+            foreach (var track in trackPlans)
+                actions.Add(new IngestAction(IngestActionKind.NormalizeMetadata, group.Key, track.SourcePath, null,
+                    $"Normalize album/track fields to '{track.Album}', track {track.TrackNumber}/{track.TrackTotal}; remove disc fields."));
+            foreach (var output in outputs)
+            {
+                var kind = output.Kind switch
+                {
+                    IngestOutputKind.HighResolutionFlac when output.Metadata.IsAlac => IngestActionKind.ConvertAlac,
+                    IngestOutputKind.CdFlac when output.DeriveCd => IngestActionKind.DeriveCdFlac,
+                    IngestOutputKind.CdFlac when output.Metadata.IsAlac => IngestActionKind.ConvertAlac,
+                    IngestOutputKind.Aac => IngestActionKind.EncodeAac,
+                    _ => IngestActionKind.InstallFile,
+                };
+                actions.Add(new IngestAction(kind, group.Key, output.SourcePath, output.DestinationPath,
+                    $"{kind}: {Path.GetFileName(output.SourcePath)}"));
+            }
+            foreach (var source in snapshots)
+                actions.Add(new IngestAction(IngestActionKind.QuarantineSource, group.Key, source.Path, null, "Quarantine after successful commit."));
+        }
+
+        foreach (string file in ignored)
+            actions.Add(new IngestAction(IngestActionKind.IgnoreFile, "", file, null, "Unsupported or non-audio file; left untouched."));
+
+        return new IngestPlan
+        {
+            Request = request with { SourceDirectory = sourceRoot, ConfigurationPath = Path.GetFullPath(request.ConfigurationPath) },
+            Configuration = config,
+            Albums = albums,
+            Actions = actions,
+            RequiredApprovals = approvals,
+            Conflicts = conflicts,
+            IgnoredFiles = ignored,
+        };
+    }
+
+    public async Task<IngestResult> ApplyAsync(IngestPlan plan, IReadOnlyList<IngestApprovalDecision> approvals,
+        IProgress<IngestProgress>? progress = null, CancellationToken ct = default)
+    {
+        if (!plan.CanApply)
+            return new IngestResult([], true, "The preview contains conflicts or no importable albums.");
+        var decisions = approvals.GroupBy(a => a.AlbumKey).ToDictionary(g => g.Key, g => g.Last().Approved, StringComparer.OrdinalIgnoreCase);
+        foreach (var required in plan.RequiredApprovals)
+            if (!decisions.TryGetValue(required.AlbumKey, out bool approved) || !approved)
+                return new IngestResult([], true, $"CD-quality derivation was not approved for {required.AlbumDisplay}; nothing was changed.");
+
+        EnsureFresh(plan);
+        await _ffmpeg.PreflightAsync(plan.Configuration.FfmpegPath, plan.Configuration.AacEncoder, ct);
+        EnsureFresh(plan);
+
+        string runId = DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff");
+        string quarantineRoot = plan.Request.SourceDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+            + ".IngestMusic-quarantine" + Path.DirectorySeparatorChar + runId;
+        var results = new List<IngestAlbumResult>();
+        int completed = 0;
+        foreach (var album in plan.Albums)
+        {
+            ct.ThrowIfCancellationRequested();
+            progress?.Report(new IngestProgress(album.Display, "Staging", completed, plan.Albums.Count));
+            try
+            {
+                int installed = await ApplyAlbumAsync(plan, album, quarantineRoot, runId, ct);
+                results.Add(new IngestAlbumResult(album.Key, true, installed));
+            }
+            catch (OperationCanceledException) { throw; }
+            catch (Exception ex)
+            {
+                results.Add(new IngestAlbumResult(album.Key, false, 0, ex.Message));
+            }
+            completed++;
+            progress?.Report(new IngestProgress(album.Display, "Complete", completed, plan.Albums.Count));
+        }
+        return new IngestResult(results, false);
+    }
+
+    private async Task<int> ApplyAlbumAsync(IngestPlan plan, IngestAlbumPlan album, string quarantineRoot, string runId, CancellationToken ct)
+    {
+        foreach (var source in album.Sources) EnsureFresh(source);
+        var staged = new ConcurrentDictionary<IngestOutputPlan, string>();
+        var cdStages = new ConcurrentDictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var installed = new List<string>();
+        var quarantined = new List<(string Original, string Quarantine)>();
+        var stageRoots = new ConcurrentDictionary<string, byte>(StringComparer.OrdinalIgnoreCase);
+        var parallel = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = ct };
+        string journalPath = Path.Combine(quarantineRoot, "journal.tsv");
+        bool journalStarted = false;
+        try
+        {
+            await Parallel.ForEachAsync(album.Outputs.Where(o => o.Kind != IngestOutputKind.Aac), parallel, async (output, token) =>
+            {
+                string root = output.Kind == IngestOutputKind.HighResolutionFlac
+                    ? plan.Configuration.HighResolutionDestination
+                    : album.HasHighResolution ? plan.Configuration.PairedCdDestination : plan.Configuration.CdDestination;
+                string stageRoot = Path.Combine(root, ".IngestMusic-staging", runId, SafeToken(album.Key));
+                Directory.CreateDirectory(stageRoot);
+                stageRoots.TryAdd(stageRoot, 0);
+                string stage = Path.Combine(stageRoot, Guid.NewGuid().ToString("N") + ".flac");
+                if (output.DeriveCd)
+                    await _ffmpeg.DeriveCdFlacAsync(plan.Configuration.FfmpegPath, output.SourcePath, stage, token);
+                else if (output.Metadata.IsAlac)
+                    await _ffmpeg.ConvertAlacToFlacAsync(plan.Configuration.FfmpegPath, output.SourcePath, stage, token);
+                else
+                    File.Copy(output.SourcePath, stage);
+                Normalize(stage, output.Metadata, output.SourcePath);
+                Validate(stage, output);
+                staged[output] = stage;
+                if (output.Kind == IngestOutputKind.CdFlac)
+                    cdStages[output.Identity] = stage;
+            });
+
+            await Parallel.ForEachAsync(album.Outputs.Where(o => o.Kind == IngestOutputKind.Aac), parallel, async (output, token) =>
+            {
+                string stageRoot = Path.Combine(plan.Configuration.AacDestination, ".IngestMusic-staging", runId, SafeToken(album.Key));
+                Directory.CreateDirectory(stageRoot);
+                stageRoots.TryAdd(stageRoot, 0);
+                string stage = Path.Combine(stageRoot, Guid.NewGuid().ToString("N") + ".m4a");
+                await _ffmpeg.EncodeAacAsync(plan.Configuration.FfmpegPath, plan.Configuration.AacEncoder,
+                    plan.Configuration.AacBitrateKbps, cdStages[output.Identity], stage, token);
+                Normalize(stage, output.Metadata, output.SourcePath);
+                Validate(stage, output);
+                staged[output] = stage;
+            });
+
+            foreach (var output in album.Outputs)
+            {
+                string stage = staged[output];
+                if (!File.Exists(output.DestinationPath)) continue;
+                if (!await EquivalentAsync(plan.Configuration.FfmpegPath, stage, output.DestinationPath, output, ct))
+                    throw new IOException($"Destination exists with different content: {output.DestinationPath}");
+            }
+
+            foreach (var source in album.Sources) EnsureFresh(source);
+            var plannedQuarantine = album.Sources.Select(source =>
+            {
+                string relative = Path.GetRelativePath(plan.Request.SourceDirectory, source.Path);
+                return (Original: source.Path, Quarantine: Path.Combine(quarantineRoot, relative));
+            }).ToList();
+            WriteJournal(journalPath,
+                [$"BEGIN\t{album.Key}",
+                 .. album.Outputs.Where(o => !File.Exists(o.DestinationPath)).Select(o => $"PLAN_INSTALL\t{album.Key}\t{o.DestinationPath}"),
+                 .. plannedQuarantine.Select(q => $"PLAN_QUARANTINE\t{album.Key}\t{q.Original}\t{q.Quarantine}")]);
+            journalStarted = true;
+
+            foreach (var output in album.Outputs)
+            {
+                string stage = staged[output];
+                if (File.Exists(output.DestinationPath))
+                {
+                    File.Delete(stage);
+                    continue;
+                }
+                Directory.CreateDirectory(Path.GetDirectoryName(output.DestinationPath)!);
+                File.Move(stage, output.DestinationPath);
+                installed.Add(output.DestinationPath);
+            }
+
+            foreach (var move in plannedQuarantine)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(move.Quarantine)!);
+                if (File.Exists(move.Quarantine)) throw new IOException($"Quarantine collision: {move.Quarantine}");
+                File.Move(move.Original, move.Quarantine);
+                quarantined.Add(move);
+            }
+            WriteJournal(journalPath,
+                [.. installed.Select(path => $"INSTALL\t{album.Key}\t{path}"),
+                 .. quarantined.Select(q => $"QUARANTINE\t{album.Key}\t{q.Original}\t{q.Quarantine}"),
+                 $"COMMIT\t{album.Key}"]);
+            return installed.Count;
+        }
+        catch
+        {
+            foreach (var move in quarantined.AsEnumerable().Reverse())
+            {
+                try
+                {
+                    if (File.Exists(move.Quarantine) && !File.Exists(move.Original))
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(move.Original)!);
+                        File.Move(move.Quarantine, move.Original);
+                    }
+                }
+                catch { }
+            }
+            foreach (string path in installed.AsEnumerable().Reverse())
+                try { if (File.Exists(path)) File.Delete(path); } catch { }
+            if (journalStarted)
+                try { WriteJournal(journalPath, [$"ROLLBACK\t{album.Key}"]); } catch { }
+            throw;
+        }
+        finally
+        {
+            foreach (string stage in staged.Values)
+                try { if (File.Exists(stage)) File.Delete(stage); } catch { }
+            foreach (string root in stageRoots.Keys.OrderByDescending(p => p.Length))
+                try { if (Directory.Exists(root)) Directory.Delete(root, true); } catch { }
+        }
+    }
+
+    private async Task<bool> EquivalentAsync(string ffmpeg, string staged, string existing, IngestOutputPlan output, CancellationToken ct)
+    {
+        try
+        {
+            Validate(existing, output);
+            string first = await _ffmpeg.ComputeDecodedAudioHashAsync(ffmpeg, staged, ct);
+            string second = await _ffmpeg.ComputeDecodedAudioHashAsync(ffmpeg, existing, ct);
+            return string.Equals(first, second, StringComparison.OrdinalIgnoreCase) && ArtworkCount(staged) == ArtworkCount(existing);
+        }
+        catch { return false; }
+    }
+
+    private static void Normalize(string path, IngestTrackPlan track, string artworkSource)
+    {
+        var media = MediaFile.GetFile(path);
+        IMetadataWriter writer = media as IMetadataWriter
+            ?? media.Tags.FirstOrDefault() as IMetadataWriter
+            ?? throw new InvalidDataException($"Output tag format is not writable: {path}");
+        writer.SetField(TagFields.Title, track.Title);
+        writer.SetField(TagFields.Artist, track.Artist);
+        writer.SetField(TagFields.AlbumArtist, track.AlbumArtist);
+        writer.SetField(TagFields.Album, track.Album);
+        writer.SetField(TagFields.TrackNumber, track.TrackNumber.ToString());
+        writer.SetField(TagFields.TotalTracks, track.TrackTotal.ToString());
+        writer.RemoveField(TagFields.DiscNumber);
+        writer.RemoveField(TagFields.TotalDiscs);
+
+        if (media is IArtworkWriter artworkWriter)
+        {
+            var images = MediaFile.GetFile(artworkSource).Tags.SelectMany(t => t.GetImageMetadata())
+                .Select(i => new ArtworkImage(ParsePictureType(i.Category), NormalizeMime(i.ImageType), i.Description ?? "", i.Data))
+                .ToList();
+            artworkWriter.SetImages(images);
+        }
+        media.SaveTags();
+    }
+
+    private static ID3v2Util.APICType ParsePictureType(string? value)
+        => Enum.TryParse<ID3v2Util.APICType>(value, true, out var type) ? type : ID3v2Util.APICType.FrontCover;
+
+    private static string NormalizeMime(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return "image/jpeg";
+        return value.Contains('/') ? value : $"image/{value.TrimStart('.').ToLowerInvariant()}";
+    }
+
+    private static void Validate(string path, IngestOutputPlan output)
+    {
+        var media = MediaFile.GetFile(path);
+        var tag = media.Tags.First();
+        var codec = media.Codecs.First();
+        uint rate = output.Kind == IngestOutputKind.HighResolutionFlac ? output.Metadata.SampleRate : 44100;
+        uint bits = output.Kind == IngestOutputKind.HighResolutionFlac ? output.Metadata.BitsPerSample : 16;
+        if (codec.Samplerate != rate || (output.Kind != IngestOutputKind.Aac && codec.BitsPerSample != bits))
+            throw new InvalidDataException($"Generated file has unexpected audio format: {path}");
+        if (codec.Channels != 2 || (output.Kind == IngestOutputKind.Aac ? codec.CodecType != CodecType.Lossy : codec.CodecType != CodecType.Lossless))
+            throw new InvalidDataException($"Generated file has unexpected codec/channels: {path}");
+        if (!Same(tag.Title, output.Metadata.Title) || !Same(tag.Album, output.Metadata.Album) ||
+            !Same(tag.AlbumArtist, output.Metadata.AlbumArtist) || tag.TrackNumber != output.Metadata.TrackNumber ||
+            tag.TrackTotal != output.Metadata.TrackTotal || tag.DiscNumber is not null || tag.DiscTotal is not null)
+            throw new InvalidDataException($"Generated file metadata validation failed: {path}");
+        int delta = Math.Abs((int)codec.DurationInSeconds - (int)output.Metadata.DurationInSeconds);
+        if (delta > 1) throw new InvalidDataException($"Generated file duration changed unexpectedly: {path}");
+    }
+
+    private static int ArtworkCount(string path) => MediaFile.GetFile(path).Tags.Sum(t => t.GetImageMetadata().Count());
+    private static bool Same(string? a, string? b) => string.Equals(a?.Trim(), b?.Trim(), StringComparison.Ordinal);
+
+    private static void EnsureFresh(IngestPlan plan)
+    {
+        foreach (var source in plan.Albums.SelectMany(a => a.Sources)) EnsureFresh(source);
+    }
+
+    private static void EnsureFresh(IngestFileSnapshot source)
+    {
+        var info = new FileInfo(source.Path);
+        if (!info.Exists || info.Length != source.Length || info.LastWriteTimeUtc != source.LastWriteTimeUtc)
+            throw new InvalidOperationException($"Source changed since preview; preview again: {source.Path}");
+    }
+
+    private static IngestOutputPlan Output(IngestTrackPlan track, IngestOutputKind kind, string source, string destination, bool derive = false)
+        => new() { Identity = track.Identity, Kind = kind, Metadata = track, SourcePath = source, DestinationPath = destination, DeriveCd = derive };
+
+    private static string ClaimCanonical(string root, IngestTrackPlan track, string extension,
+        IngestMusicConfiguration config, HashSet<string> claimed)
+    {
+        string artist = track.AlbumArtist.LimitLength(config.LengthLimit).FixPath();
+        string album = track.Album.FormatDisc(config.LengthLimit, config.DiscNumLengthLimit).FixPath();
+        string title = track.Title.LimitLength(config.LengthLimit).FixPath();
+        string relative = Path.Combine(artist, album, $"{track.TrackNumber:D2} {title}");
+        string destination = Path.Combine(root, relative + extension).Normalize();
+        int suffix = 2;
+        while (!claimed.Add(destination))
+            destination = Path.Combine(root, relative + $"_{suffix++}" + extension).Normalize();
+        return destination;
+    }
+
+    private static string AlbumKey(string artist, string album) => $"{NormalizeKey(artist)}\u001f{NormalizeKey(album)}";
+    private static string TrackKey(string artist, string album, int disc, int track, string title)
+        => $"{AlbumKey(artist, album)}\u001f{disc}\u001f{track}\u001f{NormalizeKey(title)}";
+    private static string NormalizeKey(string value) => value.Trim().ToUpperInvariant();
+    private static string SafeToken(string value) => Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(value)))[..16];
+
+    private static bool PathsOverlap(string first, string second)
+    {
+        string a = Path.GetFullPath(first).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        string b = Path.GetFullPath(second).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        return a.StartsWith(b, StringComparison.OrdinalIgnoreCase) || b.StartsWith(a, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void WriteJournal(string path, IEnumerable<string> lines)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        using var stream = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Read);
+        using var writer = new StreamWriter(stream, leaveOpen: true);
+        foreach (string line in lines) writer.WriteLine(line);
+        writer.Flush();
+        stream.Flush(flushToDisk: true);
+    }
+
+    private sealed record ScannedTrack(string Path, string Artist, string AlbumArtist, string BaseAlbum,
+        string Title, int TrackNumber, int? DiscNumber, uint SampleRate, uint BitsPerSample,
+        uint Channels, uint Duration, bool IsAlac, FileInfo File);
+}

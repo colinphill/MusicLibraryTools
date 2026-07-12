@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Intentionally excluded from MusicLibraryTools.sln and MusicLibraryTools.Portable.slnf.
+       It requires the local nonfree ffmpeg build and must never run in normal/CI flows. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <PowerShellExecutable Condition="'$(OS)' == 'Windows_NT'">powershell -ExecutionPolicy Bypass</PowerShellExecutable>
+    <PowerShellExecutable Condition="'$(OS)' != 'Windows_NT'">pwsh</PowerShellExecutable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.runner.visualstudio">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="xunit.v3" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MusicLibrary.Core\MusicLibrary.Core.csproj" />
+  </ItemGroup>
+  <Target Name="GenerateTestFixtures" AfterTargets="Build">
+    <Exec Command="$(PowerShellExecutable) -NoProfile -File &quot;$(MSBuildProjectDirectory)/../MusicFileUtilities.Tests/generate-fixtures.ps1&quot; -OutDir &quot;$(TargetDir)TestFiles&quot;" />
+  </Target>
+</Project>
