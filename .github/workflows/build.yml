@@ -16,6 +16,10 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.301
+      - name: Install ffmpeg
+        run: choco install ffmpeg --yes --no-progress
+      - name: Verify ffmpeg
+        run: ffmpeg -version
       - name: Build portable projects
         run: dotnet build MusicLibraryTools.Portable.slnf --configuration Release
       - name: Test
