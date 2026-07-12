@@ -12,7 +12,6 @@
       "CrossSyncPlaylists/CrossSyncPlaylists.csproj",
       "DumpITL/DumpITL.csproj",
       "DumpTags/DumpTags.csproj",
-      "DumpTags2/DumpTags2.csproj",
       "FindNonLossless/FindNonLossless.csproj",
       "MetadataCaching/MetadataCaching.csproj",
       "MetadataDBWork/MetadataDBWork.csproj",

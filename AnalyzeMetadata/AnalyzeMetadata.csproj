@@ -4,11 +4,8 @@
     <OutputType>Exe</OutputType>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
- <ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\MetadataCaching\MetadataCaching.csproj" />
     <ProjectReference Include="..\MusicFileUtilities\MusicFileUtilities.csproj" />
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Include="TagLibSharp" />
   </ItemGroup>
 </Project>

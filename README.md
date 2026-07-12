@@ -62,8 +62,7 @@ Auditing and diagnostics:
 - **AnalyzeMetadata** — index the full library and report on metadata.
 - **FindNonLossless** — find files that aren't lossless where they should be.
 - **CheckRedundancies / FixiTunesDupes** — find duplicate/redundant tracks.
-- **DumpTags / DumpTags2** — dump raw tag contents for a file (DumpTags2 uses TagLibSharp
-  for cross-checking against the hand-written parsers).
+- **DumpTags** — dump raw tag contents for a file.
 
 Organization:
 
@@ -120,9 +119,9 @@ at build time by `generate-fixtures.ps1` — **ffmpeg must be on the PATH** (or 
 
 ## Design notes
 
-- The parsers are deliberately hand-written rather than using TagLibSharp: full control over
+- The parsers are deliberately hand-written: full control over
   what gets read (a library scan reads only what it needs), byte-exact round-tripping on
-  save, and no dependency drift. TagLibSharp appears only in throwaway diagnostic tools.
+  save, and no dependency drift.
 - Parsing is optimized for scanning huge libraries over a network share: large sequential
   read buffers, minimal per-file round trips, lazy artwork decoding, and no reflection or
   exception-driven control flow on the hot path.

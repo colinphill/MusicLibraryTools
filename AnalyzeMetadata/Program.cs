@@ -400,53 +400,30 @@ namespace AnalyzeMetadata
                             var variantstochange = variations.Where(v => v != variation).ToArray();
                             foreach (var f in files.Where(f => f.variation != variation))
                             {
+                                var mediaFile = MediaFile.GetFile(f.file);
+                                Action<TagFields, string> setField = mediaFile switch
+                                {
+                                    IMetadataWriter writer => writer.SetField,
+                                    VorbisComments vorbis => vorbis.SetField,
+                                    _ => throw new InvalidOperationException($"Metadata is read-only for '{f.file}'.")
+                                };
+
+                                var tags = mediaFile.Tags.ToArray();
                                 bool update = false;
-                                using var tfile = TagLib.File.Create(f.file);
-                                if (tfile.Tag.Performers.Any(p => variantstochange.Contains(p, StringComparer.OrdinalIgnoreCase)))
+                                if (tags.Any(t => variantstochange.Contains(t.Artist, StringComparer.OrdinalIgnoreCase)))
                                 {
-                                    tfile.Tag.Performers = tfile.Tag.Performers
-                                        .Select(p => variantstochange.Contains(p, StringComparer.OrdinalIgnoreCase) ? variation : p)
-                                        .Distinct(StringComparer.OrdinalIgnoreCase)
-                                        .ToArray();
+                                    setField(TagFields.Artist, variation);
                                     update = true;
                                 }
-                                if (tfile.Tag.AlbumArtists.Any(p => variantstochange.Contains(p, StringComparer.OrdinalIgnoreCase)))
+                                if (tags.Any(t => t.HasAlbumArtist && variantstochange.Contains(t.AlbumArtist, StringComparer.OrdinalIgnoreCase)))
                                 {
-                                    tfile.Tag.AlbumArtists = tfile.Tag.AlbumArtists
-                                        .Select(p => variantstochange.Contains(p, StringComparer.OrdinalIgnoreCase) ? variation : p)
-                                        .Distinct(StringComparer.OrdinalIgnoreCase)
-                                        .ToArray();
+                                    setField(TagFields.AlbumArtist, variation);
                                     update = true;
                                 }
-           
-                                /*var mp = MediaFile.GetFile(f.file);
-                                if (mp.Tags.Any(t => variantstochange.Contains(t.Artist)))
-                                {
-                                    foreach (var tag in mp.Tags)
-                                    {
-                                        if (tag is IMetadataWriter tagw)
-                                        { 
-                                            tagw.SetField(TagFields.Artist, variation);
-                                            update = true;
-                                        }
-                                    }
-                                }
-                                if (mp.Tags.Any(t => t.HasAlbumArtist && variantstochange.Contains(t.AlbumArtist)))
-                                {
-                                    foreach (var tag in mp.Tags)
-                                    {
-                                        if (tag is IMetadataWriter tagw)
-                                        {
-                                            tagw.SetField(TagFields.AlbumArtist, variation);
-                                            update = true;
-                                        }
-                                    }
-                                } */
                                 if (update)
                                 {
                                     Console.WriteLine($"Updating: {f}");
-                                    //mp.SaveTags();
-                                    tfile.Save();
+                                    mediaFile.SaveTags();
                                 }
                             }
                         }
