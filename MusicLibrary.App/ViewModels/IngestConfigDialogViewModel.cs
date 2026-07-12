@@ -18,6 +18,7 @@ public partial class IngestConfigDialogViewModel : ViewModelBase
     [ObservableProperty] private int _discNumLengthLimit = 255;
     [ObservableProperty] private string _aacEncoder = "libfdk_aac";
     [ObservableProperty] private int _aacBitrateKbps = 256;
+    [ObservableProperty] private bool _deleteSourcesAfterIngest;
     [ObservableProperty] private string? _currentPath;
     [ObservableProperty] private string? _statusMessage;
 
@@ -44,6 +45,7 @@ public partial class IngestConfigDialogViewModel : ViewModelBase
             DiscNumLengthLimit = config.DiscNumLengthLimit;
             AacEncoder = config.AacEncoder;
             AacBitrateKbps = config.AacBitrateKbps;
+            DeleteSourcesAfterIngest = config.DeleteSourcesAfterIngest;
             CurrentPath = Path.GetFullPath(path);
             OnPropertyChanged(nameof(Title));
         }
@@ -81,7 +83,7 @@ public partial class IngestConfigDialogViewModel : ViewModelBase
                 CdDestination = CdDestination.Trim(), PairedCdDestination = PairedCdDestination.Trim(),
                 HighResolutionDestination = HighResolutionDestination.Trim(), LengthLimit = LengthLimit,
                 DiscNumLengthLimit = DiscNumLengthLimit, AacEncoder = AacEncoder.Trim(),
-                AacBitrateKbps = AacBitrateKbps,
+                AacBitrateKbps = AacBitrateKbps, DeleteSourcesAfterIngest = DeleteSourcesAfterIngest,
             };
             config.Save(path);
             _ = IngestMusicConfiguration.Load(path);

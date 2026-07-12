@@ -51,7 +51,7 @@ static async Task<int> RunAsync(string[] args)
         }
 
         var progress = new Progress<IngestProgress>(p =>
-            Console.WriteLine($"[{p.CompletedAlbums}/{p.TotalAlbums}] {p.Album}: {p.Operation}"));
+            Console.WriteLine($"[{p.CompletedItems}/{p.TotalItems}] {p.Album}: {p.Operation}"));
         var result = await service.ApplyAsync(plan, approvals, progress);
         if (result.Cancelled)
         {
@@ -77,11 +77,15 @@ static async Task<int> RunAsync(string[] args)
 
 static void PrintPlan(IngestPlan plan)
 {
-    Console.WriteLine($"Albums: {plan.Albums.Count}; actions: {plan.Actions.Count}; approvals: {plan.RequiredApprovals.Count}; conflicts: {plan.Conflicts.Count}");
+    Console.WriteLine($"Albums: {plan.Albums.Count}; source files: {plan.Files.Count}; approvals: {plan.RequiredApprovals.Count}; conflicts: {plan.Conflicts.Count}");
     foreach (var conflict in plan.Conflicts)
         Console.Error.WriteLine($"CONFLICT {conflict.Path}: {conflict.Message}");
-    foreach (var action in plan.Actions)
-        Console.WriteLine($"{action.Kind}: {action.Source}{(action.Destination is null ? "" : " -> " + action.Destination)}");
+    foreach (var file in plan.Files)
+    {
+        Console.WriteLine($"{file.SourceType}: {file.Source}");
+        foreach (string line in file.Summary.Split(Environment.NewLine))
+            Console.WriteLine($"  {line}");
+    }
     if (plan.IgnoredFiles.Count > 0)
         Console.WriteLine($"Ignored and left untouched: {plan.IgnoredFiles.Count}");
 }

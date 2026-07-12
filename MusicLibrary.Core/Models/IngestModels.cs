@@ -1,24 +1,11 @@
 namespace MusicLibrary.Core.Models;
 
-public enum IngestActionKind
-{
-    NormalizeMetadata,
-    ConvertAlac,
-    DeriveCdFlac,
-    EncodeAac,
-    InstallFile,
-    QuarantineSource,
-    IgnoreFile,
-}
-
 public sealed record IngestRequest(string SourceDirectory, string ConfigurationPath);
 
-public sealed record IngestAction(
-    IngestActionKind Kind,
-    string AlbumKey,
+public sealed record IngestFileSummary(
     string Source,
-    string? Destination,
-    string Description);
+    string SourceType,
+    string Summary);
 
 public sealed record IngestConflict(string AlbumKey, string Path, string Message);
 
@@ -77,7 +64,7 @@ public sealed record IngestPlan
     public required IngestRequest Request { get; init; }
     public required IngestMusicConfiguration Configuration { get; init; }
     public required IReadOnlyList<IngestAlbumPlan> Albums { get; init; }
-    public required IReadOnlyList<IngestAction> Actions { get; init; }
+    public required IReadOnlyList<IngestFileSummary> Files { get; init; }
     public required IReadOnlyList<IngestApprovalItem> RequiredApprovals { get; init; }
     public required IReadOnlyList<IngestConflict> Conflicts { get; init; }
     public required IReadOnlyList<string> IgnoredFiles { get; init; }
@@ -85,7 +72,15 @@ public sealed record IngestPlan
     public bool CanApply => Conflicts.Count == 0 && Albums.Count > 0;
 }
 
-public sealed record IngestProgress(string Album, string Operation, int CompletedAlbums, int TotalAlbums);
+public enum IngestFileProgressState { InProgress, Completed, Failed }
+
+public sealed record IngestProgress(
+    string Album,
+    string Operation,
+    int CompletedItems,
+    int TotalItems,
+    string? SourcePath = null,
+    IngestFileProgressState? FileState = null);
 
 public sealed record IngestAlbumResult(string AlbumKey, bool Success, int Installed, string? Error = null);
 

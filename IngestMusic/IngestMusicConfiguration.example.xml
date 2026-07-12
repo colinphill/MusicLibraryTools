@@ -10,4 +10,6 @@
   <DiscNumLengthLimit>255</DiscNumLengthLimit>
   <AacEncoder>libfdk_aac</AacEncoder>
   <AacBitrateKbps>256</AacBitrateKbps>
+  <!-- The default false moves successfully ingested sources to the quarantine directory. -->
+  <DeleteSourcesAfterIngest>false</DeleteSourcesAfterIngest>
 </IngestMusicConfiguration>

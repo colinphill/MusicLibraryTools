@@ -91,7 +91,7 @@
 
         <!-- ===== Body ===== -->
         <Border Grid.Row="1" Classes="card" Padding="0" Margin="14">
-            <TabControl Margin="14,4,14,14">
+            <TabControl Margin="14,4,14,14" SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}">
 
                     <!-- Library: the primary browse + selection surface (auto-populates) -->
                     <TabItem Header="Library" DataContext="{Binding Table}" x:DataType="vm:DetailsGridViewModel">
@@ -470,7 +470,9 @@
                                     <Button Content="Preview" Command="{Binding PreviewCommand}"/>
                                     <Button Content="Apply" Classes="accent" Command="{Binding ApplyCommand}"/>
                                     <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
-                                    <ProgressBar IsIndeterminate="True" Width="70" VerticalAlignment="Center" IsVisible="{Binding IsBusy}"/>
+                                    <ProgressBar IsIndeterminate="True" Width="70" VerticalAlignment="Center" IsVisible="{Binding IsPreviewing}"/>
+                                    <ProgressBar Minimum="0" Maximum="{Binding ApplyProgressMaximum}" Value="{Binding ApplyProgress}"
+                                                 Width="180" VerticalAlignment="Center" IsVisible="{Binding IsApplying}"/>
                                 </StackPanel>
                                 <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" Classes="muted"/>
                             </StackPanel>
@@ -482,14 +484,18 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                             <ScrollViewer Grid.Row="2">
-                                <ItemsControl ItemsSource="{Binding Actions}">
+                                <ItemsControl ItemsSource="{Binding Files}">
                                     <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="models:IngestAction">
-                                            <StackPanel Margin="0,4">
-                                                <TextBlock Text="{Binding Description}"/>
-                                                <TextBlock Text="{Binding Source}" Classes="caption"/>
-                                                <TextBlock Text="{Binding Destination, StringFormat='→ {0}'}" Classes="caption"
-                                                           IsVisible="{Binding Destination, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                        <DataTemplate x:DataType="vm:IngestFileItemViewModel">
+                                            <StackPanel Margin="0,6">
+                                                <TextBlock Text="{Binding SourceType}" FontWeight="SemiBold"
+                                                           TextDecorations="{Binding IsComplete, Converter={x:Static vm:StrikeConverter.Instance}}"/>
+                                                <TextBlock Text="{Binding Source}" Classes="caption"
+                                                           TextDecorations="{Binding IsComplete, Converter={x:Static vm:StrikeConverter.Instance}}"/>
+                                                <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Margin="12,3,0,0"
+                                                           TextDecorations="{Binding IsComplete, Converter={x:Static vm:StrikeConverter.Instance}}"/>
+                                                <TextBlock Text="{Binding ProgressText}" FontWeight="SemiBold" Margin="12,4,0,0"
+                                                           IsVisible="{Binding ProgressText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                             </StackPanel>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>

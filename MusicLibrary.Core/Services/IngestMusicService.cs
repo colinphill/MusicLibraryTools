@@ -86,7 +86,7 @@ public sealed class IngestMusicService : IIngestMusicService
         }
 
         var albums = new List<IngestAlbumPlan>();
-        var actions = new List<IngestAction>();
+        var files = new List<IngestFileSummary>();
         var approvals = new List<IngestApprovalItem>();
         var claimed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -193,34 +193,43 @@ public sealed class IngestMusicService : IIngestMusicService
                 approvals.Add(new IngestApprovalItem(group.Key, display, missing));
 
             foreach (var track in trackPlans)
-                actions.Add(new IngestAction(IngestActionKind.NormalizeMetadata, group.Key, track.SourcePath, null,
-                    $"Normalize album/track fields to '{track.Album}', track {track.TrackNumber}/{track.TrackTotal}; remove disc fields."));
-            foreach (var output in outputs)
             {
-                var kind = output.Kind switch
-                {
-                    IngestOutputKind.HighResolutionFlac when output.Metadata.IsAlac => IngestActionKind.ConvertAlac,
-                    IngestOutputKind.CdFlac when output.DeriveCd => IngestActionKind.DeriveCdFlac,
-                    IngestOutputKind.CdFlac when output.Metadata.IsAlac => IngestActionKind.ConvertAlac,
-                    IngestOutputKind.Aac => IngestActionKind.EncodeAac,
-                    _ => IngestActionKind.InstallFile,
-                };
-                actions.Add(new IngestAction(kind, group.Key, output.SourcePath, output.DestinationPath,
-                    $"{kind}: {Path.GetFileName(output.SourcePath)}"));
+                var operations = outputs.Where(o => string.Equals(o.SourcePath, track.SourcePath, StringComparison.OrdinalIgnoreCase))
+                    .Select(output => output.Kind switch
+                    {
+                        IngestOutputKind.HighResolutionFlac when track.IsAlac =>
+                            $"Hi-Res FLAC → Transcode from ALAC, normalize metadata, move and rename to {output.DestinationPath}",
+                        IngestOutputKind.HighResolutionFlac =>
+                            $"Hi-Res FLAC → Normalize metadata, move and rename to {output.DestinationPath}",
+                        IngestOutputKind.CdFlac when output.DeriveCd =>
+                            $"CD FLAC → Transcode from Hi-Res, normalize metadata, move and rename to {output.DestinationPath}",
+                        IngestOutputKind.CdFlac when track.IsAlac =>
+                            $"CD FLAC → Transcode from ALAC, normalize metadata, move and rename to {output.DestinationPath}",
+                        IngestOutputKind.CdFlac =>
+                            $"CD FLAC → Normalize metadata, move and rename to {output.DestinationPath}",
+                        IngestOutputKind.Aac =>
+                            $"AAC → Transcode from CD FLAC, normalize metadata, move and rename to {output.DestinationPath}",
+                        _ => throw new ArgumentOutOfRangeException(),
+                    })
+                    .ToList();
+                operations.Add(PlanSourceDisposition(config));
+                string sourceType = track.IsHighResolution
+                    ? track.IsAlac ? "Hi-Res ALAC" : "Hi-Res FLAC"
+                    : track.IsAlac ? "CD-quality ALAC" : "CD FLAC";
+                files.Add(new IngestFileSummary(track.SourcePath, sourceType, string.Join(Environment.NewLine, operations)));
             }
-            foreach (var source in snapshots)
-                actions.Add(new IngestAction(IngestActionKind.QuarantineSource, group.Key, source.Path, null, "Quarantine after successful commit."));
+
         }
 
         foreach (string file in ignored)
-            actions.Add(new IngestAction(IngestActionKind.IgnoreFile, "", file, null, "Unsupported or non-audio file; left untouched."));
+            files.Add(new IngestFileSummary(file, "Ignored", "Source → Leave unchanged (unsupported or non-audio file)"));
 
         return new IngestPlan
         {
             Request = request with { SourceDirectory = sourceRoot, ConfigurationPath = Path.GetFullPath(request.ConfigurationPath) },
             Configuration = config,
             Albums = albums,
-            Actions = actions,
+            Files = files,
             RequiredApprovals = approvals,
             Conflicts = conflicts,
             IgnoredFiles = ignored,
@@ -246,27 +255,50 @@ public sealed class IngestMusicService : IIngestMusicService
             + ".IngestMusic-quarantine" + Path.DirectorySeparatorChar + runId;
         var results = new List<IngestAlbumResult>();
         int completed = 0;
+        int total = plan.Albums.Sum(a => a.Outputs.Count + 1);
         foreach (var album in plan.Albums)
         {
             ct.ThrowIfCancellationRequested();
-            progress?.Report(new IngestProgress(album.Display, "Staging", completed, plan.Albums.Count));
+            int completedDuringAlbum = completed;
+            progress?.Report(new IngestProgress(album.Display, "Staging outputs", completed, total));
             try
             {
-                int installed = await ApplyAlbumAsync(plan, album, quarantineRoot, runId, ct);
+                int installed = await ApplyAlbumAsync(plan, album, quarantineRoot, runId, (output, staged) =>
+                {
+                    int current = staged ? Interlocked.Increment(ref completedDuringAlbum) : Volatile.Read(ref completedDuringAlbum);
+                    string operation = staged
+                        ? $"Staged {OutputName(output.Kind)}: {Path.GetFileName(output.DestinationPath)}"
+                        : $"Processing {OutputName(output.Kind)}: {Path.GetFileName(output.SourcePath)}";
+                    progress?.Report(new IngestProgress(album.Display, operation, current, total,
+                        output.SourcePath, IngestFileProgressState.InProgress));
+                }, ct);
+                foreach (var source in album.Sources)
+                    progress?.Report(new IngestProgress(album.Display, "Source complete", completedDuringAlbum, total,
+                        source.Path, IngestFileProgressState.Completed));
                 results.Add(new IngestAlbumResult(album.Key, true, installed));
             }
-            catch (OperationCanceledException) { throw; }
+            catch (OperationCanceledException)
+            {
+                foreach (var source in album.Sources)
+                    progress?.Report(new IngestProgress(album.Display, "Cancelled", completedDuringAlbum, total,
+                        source.Path, IngestFileProgressState.Failed));
+                throw;
+            }
             catch (Exception ex)
             {
+                foreach (var source in album.Sources)
+                    progress?.Report(new IngestProgress(album.Display, ex.Message, completedDuringAlbum, total,
+                        source.Path, IngestFileProgressState.Failed));
                 results.Add(new IngestAlbumResult(album.Key, false, 0, ex.Message));
             }
-            completed++;
-            progress?.Report(new IngestProgress(album.Display, "Complete", completed, plan.Albums.Count));
+            completed += album.Outputs.Count + 1;
+            progress?.Report(new IngestProgress(album.Display, "Complete", completed, total));
         }
         return new IngestResult(results, false);
     }
 
-    private async Task<int> ApplyAlbumAsync(IngestPlan plan, IngestAlbumPlan album, string quarantineRoot, string runId, CancellationToken ct)
+    private async Task<int> ApplyAlbumAsync(IngestPlan plan, IngestAlbumPlan album, string quarantineRoot, string runId,
+        Action<IngestOutputPlan, bool> outputProgress, CancellationToken ct)
     {
         foreach (var source in album.Sources) EnsureFresh(source);
         var staged = new ConcurrentDictionary<IngestOutputPlan, string>();
@@ -281,6 +313,7 @@ public sealed class IngestMusicService : IIngestMusicService
         {
             await Parallel.ForEachAsync(album.Outputs.Where(o => o.Kind != IngestOutputKind.Aac), parallel, async (output, token) =>
             {
+                outputProgress(output, false);
                 string root = output.Kind == IngestOutputKind.HighResolutionFlac
                     ? plan.Configuration.HighResolutionDestination
                     : album.HasHighResolution ? plan.Configuration.PairedCdDestination : plan.Configuration.CdDestination;
@@ -299,10 +332,12 @@ public sealed class IngestMusicService : IIngestMusicService
                 staged[output] = stage;
                 if (output.Kind == IngestOutputKind.CdFlac)
                     cdStages[output.Identity] = stage;
+                outputProgress(output, true);
             });
 
             await Parallel.ForEachAsync(album.Outputs.Where(o => o.Kind == IngestOutputKind.Aac), parallel, async (output, token) =>
             {
+                outputProgress(output, false);
                 string stageRoot = Path.Combine(plan.Configuration.AacDestination, ".IngestMusic-staging", runId, SafeToken(album.Key));
                 Directory.CreateDirectory(stageRoot);
                 stageRoots.TryAdd(stageRoot, 0);
@@ -312,6 +347,7 @@ public sealed class IngestMusicService : IIngestMusicService
                 Normalize(stage, output.Metadata, output.SourcePath);
                 Validate(stage, output);
                 staged[output] = stage;
+                outputProgress(output, true);
             });
 
             foreach (var output in album.Outputs)
@@ -331,7 +367,9 @@ public sealed class IngestMusicService : IIngestMusicService
             WriteJournal(journalPath,
                 [$"BEGIN\t{album.Key}",
                  .. album.Outputs.Where(o => !File.Exists(o.DestinationPath)).Select(o => $"PLAN_INSTALL\t{album.Key}\t{o.DestinationPath}"),
-                 .. plannedQuarantine.Select(q => $"PLAN_QUARANTINE\t{album.Key}\t{q.Original}\t{q.Quarantine}")]);
+                 .. plannedQuarantine.Select(q => plan.Configuration.DeleteSourcesAfterIngest
+                     ? $"PLAN_DELETE\t{album.Key}\t{q.Original}"
+                     : $"PLAN_QUARANTINE\t{album.Key}\t{q.Original}\t{q.Quarantine}")]);
             journalStarted = true;
 
             foreach (var output in album.Outputs)
@@ -356,8 +394,29 @@ public sealed class IngestMusicService : IIngestMusicService
             }
             WriteJournal(journalPath,
                 [.. installed.Select(path => $"INSTALL\t{album.Key}\t{path}"),
-                 .. quarantined.Select(q => $"QUARANTINE\t{album.Key}\t{q.Original}\t{q.Quarantine}"),
-                 $"COMMIT\t{album.Key}"]);
+                 .. quarantined.Select(q => plan.Configuration.DeleteSourcesAfterIngest
+                     ? $"STAGE_DELETE\t{album.Key}\t{q.Original}\t{q.Quarantine}"
+                     : $"QUARANTINE\t{album.Key}\t{q.Original}\t{q.Quarantine}"),
+                  $"COMMIT\t{album.Key}"]);
+            if (plan.Configuration.DeleteSourcesAfterIngest)
+            {
+                foreach (var move in quarantined)
+                {
+                    try
+                    {
+                        File.SetAttributes(move.Quarantine, FileAttributes.Normal);
+                        File.Delete(move.Quarantine);
+                        WriteJournal(journalPath, [$"DELETE\t{album.Key}\t{move.Original}"]);
+                        DeleteEmptyParents(Path.GetDirectoryName(move.Quarantine), quarantineRoot);
+                    }
+                    catch (Exception ex)
+                    {
+                        // The ingest is already committed. Preserve an undeletable file in quarantine
+                        // and record it instead of reporting a rollback that did not happen.
+                        try { WriteJournal(journalPath, [$"DELETE_FAILED\t{album.Key}\t{move.Quarantine}\t{ex.Message}"]); } catch { }
+                    }
+                }
+            }
             return installed.Count;
         }
         catch
@@ -385,9 +444,57 @@ public sealed class IngestMusicService : IIngestMusicService
             foreach (string stage in staged.Values)
                 try { if (File.Exists(stage)) File.Delete(stage); } catch { }
             foreach (string root in stageRoots.Keys.OrderByDescending(p => p.Length))
-                try { if (Directory.Exists(root)) Directory.Delete(root, true); } catch { }
+                CleanupStageDirectories(root);
         }
     }
+
+    private static void CleanupStageDirectories(string albumStageRoot)
+    {
+        try
+        {
+            if (Directory.Exists(albumStageRoot))
+                Directory.Delete(albumStageRoot, true);
+
+            string? runStageRoot = Directory.GetParent(albumStageRoot)?.FullName;
+            if (runStageRoot is not null && Directory.Exists(runStageRoot))
+                Directory.Delete(runStageRoot);
+
+            string? stagingRoot = runStageRoot is null ? null : Directory.GetParent(runStageRoot)?.FullName;
+            if (stagingRoot is not null && Directory.Exists(stagingRoot))
+                Directory.Delete(stagingRoot);
+        }
+        catch
+        {
+            // A non-empty ancestor belongs to another album or concurrent ingest and must remain.
+        }
+    }
+
+    private static void DeleteEmptyParents(string? path, string stopAt)
+    {
+        string boundary = Path.GetFullPath(stopAt).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        string boundaryPrefix = boundary + Path.DirectorySeparatorChar;
+        while (path is not null)
+        {
+            string current = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            if (!current.StartsWith(boundaryPrefix, StringComparison.OrdinalIgnoreCase)) break;
+            try { Directory.Delete(current); }
+            catch { break; }
+            path = Directory.GetParent(current)?.FullName;
+        }
+    }
+
+    private static string PlanSourceDisposition(IngestMusicConfiguration configuration)
+        => configuration.DeleteSourcesAfterIngest
+            ? "Source → Delete after successful ingest"
+            : "Source → Quarantine after successful ingest";
+
+    private static string OutputName(IngestOutputKind kind) => kind switch
+    {
+        IngestOutputKind.HighResolutionFlac => "Hi-Res FLAC",
+        IngestOutputKind.CdFlac => "CD FLAC",
+        IngestOutputKind.Aac => "AAC",
+        _ => throw new ArgumentOutOfRangeException(nameof(kind)),
+    };
 
     private async Task<bool> EquivalentAsync(string ffmpeg, string staged, string existing, IngestOutputPlan output, CancellationToken ct)
     {

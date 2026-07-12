@@ -30,6 +30,13 @@ public class IngestMusicTests
         Assert.Equal(new[] { "Album (Disc 1)", "Album (Disc 1)", "Album (Disc 2)", "Album (Disc 2)" }, tracks.Select(t => t.Album));
         Assert.All(plan.Albums.Single().Outputs.Where(o => o.Kind == IngestOutputKind.CdFlac),
             o => Assert.StartsWith(tree.Path("cd"), o.DestinationPath, StringComparison.OrdinalIgnoreCase));
+        Assert.Equal(4, plan.Files.Count);
+        Assert.All(plan.Files, file =>
+        {
+            Assert.Contains("CD FLAC", file.Summary);
+            Assert.Contains("AAC", file.Summary);
+            Assert.Contains("Quarantine after successful ingest", file.Summary);
+        });
     }
 
     [Fact]
@@ -65,6 +72,43 @@ public class IngestMusicTests
         Assert.Equal(Math.Min(2, Environment.ProcessorCount), fake.MaxConcurrent);
         Assert.False(File.Exists(first));
         Assert.False(File.Exists(second));
+        Assert.False(Directory.Exists(tree.Path("paired", ".IngestMusic-staging")));
+        Assert.False(Directory.Exists(tree.Path("aac", ".IngestMusic-staging")));
+    }
+
+    [Fact]
+    public async Task Apply_ReportsDeterminateOutputProgress()
+    {
+        using var tree = new TempTree();
+        string source = tree.FileFromFixture("incoming", "one.flac", "sample.flac");
+        var plan = ManualPlan(tree, [source], requireApproval: false);
+        var updates = new List<IngestProgress>();
+
+        var result = await new IngestMusicService(new FakeFfmpeg()).ApplyAsync(plan, [], new InlineProgress(updates.Add));
+
+        Assert.Equal(0, result.Failed);
+        Assert.Contains(updates, update => update.Operation.StartsWith("Staged CD FLAC", StringComparison.Ordinal));
+        Assert.Contains(updates, update => update.Operation.StartsWith("Staged AAC", StringComparison.Ordinal));
+        Assert.Contains(updates, update => update.SourcePath == source && update.FileState == IngestFileProgressState.InProgress);
+        Assert.Contains(updates, update => update.SourcePath == source && update.FileState == IngestFileProgressState.Completed);
+        Assert.Equal(updates[^1].TotalItems, updates[^1].CompletedItems);
+    }
+
+    [Fact]
+    public async Task Apply_DeleteDispositionRemovesCommittedSourcesInsteadOfQuarantiningThem()
+    {
+        using var tree = new TempTree();
+        string source = tree.FileFromFixture("incoming", "one.flac", "sample.flac");
+        var plan = ManualPlan(tree, [source], requireApproval: false);
+        plan = plan with { Configuration = plan.Configuration with { DeleteSourcesAfterIngest = true } };
+
+        var result = await new IngestMusicService(new FakeFfmpeg()).ApplyAsync(plan, []);
+
+        Assert.Equal(0, result.Failed);
+        Assert.False(File.Exists(source));
+        string quarantine = tree.Path("incoming") + ".IngestMusic-quarantine";
+        Assert.DoesNotContain(Directory.EnumerateFiles(quarantine, "*", SearchOption.AllDirectories),
+            path => Path.GetFileName(path).Equals("one.flac", StringComparison.OrdinalIgnoreCase));
     }
 
     [Fact]
@@ -87,6 +131,7 @@ public class IngestMusicTests
             CdDestination = tree.Path("cd-out"), PairedCdDestination = tree.Path("paired-out"),
             HighResolutionDestination = tree.Path("hires-out"), LengthLimit = 180,
             DiscNumLengthLimit = 160, AacEncoder = "libfdk_aac", AacBitrateKbps = 256,
+            DeleteSourcesAfterIngest = true,
         };
 
         expected.Save(path);
@@ -118,7 +163,7 @@ public class IngestMusicTests
         return new IngestPlan
         {
             Request = new IngestRequest(tree.Path("incoming"), tree.Path("config.xml")), Configuration = config,
-            Albums = [album], Actions = [], Conflicts = [], IgnoredFiles = [],
+            Albums = [album], Files = [], Conflicts = [], IgnoredFiles = [],
             RequiredApprovals = requireApproval ? [new IngestApprovalItem("album", album.Display, tracks.Select(t => t.Title).ToList())] : [],
         };
     }
@@ -155,6 +200,11 @@ public class IngestMusicTests
             }
             finally { Interlocked.Decrement(ref _active); }
         }
+    }
+
+    private sealed class InlineProgress(Action<IngestProgress> report) : IProgress<IngestProgress>
+    {
+        public void Report(IngestProgress value) => report(value);
     }
 
     private sealed class TempTree : IDisposable

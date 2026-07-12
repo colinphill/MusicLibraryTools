@@ -1,10 +1,18 @@
+using System.Globalization;
+using CommunityToolkit.Mvvm.ComponentModel;
 using MusicLibrary.App.Services;
+using MusicLibrary.Core.Services;
 
 namespace MusicLibrary.App.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase
 {
+    private const string SelectedTabPreference = "MainWindow.SelectedTab";
     private readonly IThumbnailProvider _thumbnails;
+    private readonly IAppSettings _settings;
+
+    [ObservableProperty]
+    private int _selectedTabIndex;
 
     public SettingsViewModel Settings { get; }
     public LibraryViewModel Library { get; }
@@ -26,9 +34,14 @@ public partial class MainWindowViewModel : ViewModelBase
         IngestViewModel ingest,
         ArtworkViewModel artwork,
         DetailsGridViewModel table,
-        IThumbnailProvider thumbnails)
+        IThumbnailProvider thumbnails,
+        IAppSettings appSettings)
     {
         _thumbnails = thumbnails;
+        _settings = appSettings;
+        if (int.TryParse(appSettings.GetPreference(SelectedTabPreference), NumberStyles.None,
+                CultureInfo.InvariantCulture, out int selectedTab) && selectedTab is >= 0 and <= 6)
+            _selectedTabIndex = selectedTab;
         Settings = settings;
         Library = library;
         Inspector = inspector;
@@ -61,6 +74,9 @@ public partial class MainWindowViewModel : ViewModelBase
             await Inspector.ReloadAsync();
         };
     }
+
+    partial void OnSelectedTabIndexChanged(int value)
+        => _settings.SetPreference(SelectedTabPreference, value.ToString(CultureInfo.InvariantCulture));
 
     private int _selectionGen;
 

@@ -94,8 +94,9 @@ moved into timestamped quarantine/recovery directories rather than being deleted
 `IngestMusic` previews by default and requires `--apply`. If a high-resolution track has no
 CD-quality FLAC counterpart, apply asks for confirmation album-by-album before doing any work; one
 declined album cancels the whole run. Transcodes are staged and validated, source files are moved to
-a sibling `.IngestMusic-quarantine` tree only after an album commits, and ffmpeg jobs run in parallel
-up to the machine's CPU-core count. Start from
+a sibling `.IngestMusic-quarantine` tree only after an album commits by default, and ffmpeg jobs run
+in parallel up to the machine's CPU-core count. Set `DeleteSourcesAfterIngest` to `true` to delete
+successfully committed sources instead. Start from
 [`IngestMusicConfiguration.example.xml`](IngestMusic/IngestMusicConfiguration.example.xml), then run:
 
 ```
