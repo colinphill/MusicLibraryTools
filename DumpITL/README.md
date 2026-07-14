@@ -85,10 +85,15 @@ tags: corpus device records use `FILE`/`iPod`, while controlled local video play
 `FILE`/`lib `. The corpus's optional identity at `+124/+132` contains the current library and mapped
 local-track persistent IDs, confirming that those two records map iPod sources to library tracks.
 `+72` is a Mac-epoch event timestamp where nonzero. Controlled video-position playback created a
-local record, and native resaves update another identifier at `+140`; the exact queue/import
-lifecycle and the remaining generated identifiers are not yet proven, so records stay opaque. The
-validator checks current-library source and mapped-track foreign keys, and the writer rejects a
-track removal that would leave one dangling rather than guessing the native record-removal policy.
+local record. All records in one native save share the 64-bit value at `+140`; it changes with each
+fresh iTunes process and has canonical Windows heap-pointer form. It is therefore a process-local,
+pointer-derived runtime-context token rather than a durable semantic ID; the exact source object is
+unknown. Two independent video runs write `mhgh +252` 2–4 seconds after the `miqh +72` event, while
+metadata edits and later reopen/reversal saves leave it unchanged, identifying `mhgh +252` as the
+last media-reference/playback update timestamp. The exact queue/import lifecycle and remaining flags
+are not yet proven, so records stay opaque. The validator checks current-library source and mapped-
+track foreign keys, and the writer rejects a track removal that would leave one dangling rather than
+guessing the native record-removal policy.
 
 Track `mith +168` is the Apple Store/catalog item ID and is duplicated at `+428`. Eighty current
 tracks prove the mapping because type-514 uses the exact decimal value as its outer playback-state
@@ -274,7 +279,7 @@ Still unresolved:
 - the precise media-flag selection rule for the podcast playback-key branch, and reconciliation of
   the predominantly stale 1,943-key corpus with historical metadata;
 - the human-readable meanings of the native eligibility bits for the `mprh` Resume Playing history,
-  the exact lifecycle/generated identifiers of type-20 media references, and the meanings of other
+  the exact lifecycle/flags and runtime-context source of type-20 media references, and the meanings of other
   opaque section types.
 
 ## Commands
@@ -372,8 +377,9 @@ The final reverse-engineering work should proceed in this order:
 7. **Type-20 media-reference structure partially resolved:** `mlqh +16` is the record count;
    `+20/+28` are proven decoded-body anchors that the writer now refreshes; `miqh` source and optional
    destination library/track identities, display fields, timestamps, and `FILE`/`iPod` versus
-   `FILE`/`lib ` tags are mapped. Use isolated local playback and disposable-device import/removal
-   snapshots to determine record retention, flags, and the generated identifier at `+140`.
+   `FILE`/`lib ` tags are mapped. `miqh +140` is a pointer-derived process-local context token and
+   `mhgh +252` is the last media-reference/playback update timestamp. Use isolated local playback
+   and disposable-device import/removal snapshots to determine record retention and flags.
 8. Promote findings into writer behavior only after repeated native evidence. Add a synthetic
    fixture and regression test for every proven rule, keep unresolved bytes opaque, and make an
    unsupported mutation fail before saving rather than synthesizing metadata.

@@ -187,6 +187,26 @@ public static partial class ReverseEngineer
         ItlChunk record,
         IReadOnlyList<ItlDataObject> dataObjects)
     {
+        if (record.HeaderLength >= 148)
+        {
+            byte[] body = library.Envelope.Body;
+            ulong sourceLibrary = BinaryPrimitives.ReadUInt64LittleEndian(body.AsSpan(record.Offset + 28));
+            ulong sourceTrack = BinaryPrimitives.ReadUInt64LittleEndian(body.AsSpan(record.Offset + 36));
+            uint eventSeconds = BinaryPrimitives.ReadUInt32LittleEndian(body.AsSpan(record.Offset + 72));
+            string protocol = new(Encoding.ASCII.GetString(body, record.Offset + 80, 4).Reverse().ToArray());
+            string source = Encoding.ASCII.GetString(body, record.Offset + 84, 4);
+            ulong mappedLibrary = BinaryPrimitives.ReadUInt64LittleEndian(body.AsSpan(record.Offset + 124));
+            ulong mappedTrack = BinaryPrimitives.ReadUInt64LittleEndian(body.AsSpan(record.Offset + 132));
+            ulong runtimeContext = BinaryPrimitives.ReadUInt64LittleEndian(body.AsSpan(record.Offset + 140));
+            string eventText = eventSeconds == 0
+                ? "none"
+                : $"{MacEpoch.AddSeconds(eventSeconds):yyyy-MM-dd HH:mm:ss}Z";
+            Console.WriteLine($"      media reference: source={sourceLibrary:X16}/{sourceTrack:X16} " +
+                              $"tags='{protocol}'/'{source}' event={eventText}");
+            Console.WriteLine($"        mapped={mappedLibrary:X16}/{mappedTrack:X16} " +
+                              $"runtime-context-token=0x{runtimeContext:X16}");
+        }
+
         string? title = dataObjects.FirstOrDefault(data =>
             data.Type == (int)ItlDataType.ReferencedTrackTitle && data.IsString)?.Text;
         string? artistAlbum = dataObjects.FirstOrDefault(data =>

@@ -65,6 +65,14 @@ public static partial class ReverseEngineer
 
         Console.WriteLine($"mhgh header {mhgh.HeaderLength} bytes, word8={mhgh.SizeOrCount}, word12={mhgh.Type}");
         Dump(body, mhgh.Offset, mhgh.HeaderLength, 0);
+        if (mhgh.HeaderLength >= 256)
+        {
+            uint mediaReferenceSeconds = BinaryPrimitives.ReadUInt32LittleEndian(body.AsSpan(mhgh.Offset + 252));
+            string value = mediaReferenceSeconds == 0
+                ? "none"
+                : $"{MacEpoch.AddSeconds(mediaReferenceSeconds):yyyy-MM-dd HH:mm:ss}Z";
+            Console.WriteLine($"\nmhgh +252 last media-reference/playback update: {value} (0x{mediaReferenceSeconds:X8})");
+        }
 
         Console.WriteLine("\nchildren:");
         foreach (ItlChunk child in ItlChunk.Walk(body, mhgh.HeaderEnd, section.Chunk.EndOffset))
