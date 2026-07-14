@@ -13,7 +13,11 @@ param(
 
     [string]$RunName,
 
-    [ValidateSet('None', 'CreatePlaylist', 'CreatePlaylistsToCount', 'DeletePlaylist', 'SetFirstTrackName', 'SetFirstTrackBookmark', 'SetFirstTrackPlayCount', 'PlayFirstTrackAtPosition', 'ImportFile', 'ImportFilesToCount', 'DeleteFirstTrack')]
+    [ValidateSet('None', 'CreatePlaylist', 'CreatePlaylistsToCount', 'ManualCreateSmartPlaylist',
+        'DeletePlaylist', 'SetFirstTrackName',
+        'SetFirstTrackBookmark', 'SetFirstTrackPlayCount', 'SetFirstTrackRating',
+        'SetFirstTrackUnplayed', 'PlayFirstTrackAtPosition', 'ImportFile', 'ImportFilesToCount',
+        'DeleteFirstTrack')]
     [string]$Experiment = 'None',
 
     [string]$ExperimentValue,
@@ -189,6 +193,13 @@ function Invoke-ItunesExperiment(
                 }
                 Write-Host "Removed $(@($state.CreatedPlaylistNames).Count) threshold-probe playlists."
             }
+            'ManualCreateSmartPlaylist' {
+                $playlist = Find-ItunesPlaylist $application $value
+                if ($null -eq $playlist) { throw "Smart playlist '$value' was not found for reversal." }
+                $playlist.Delete()
+                [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($playlist)
+                Write-Host "Removed native smart playlist '$value'."
+            }
             'SetFirstTrackName' {
                 $track = $application.LibraryPlaylist.Tracks.Item(1)
                 if ($null -eq $track) { throw 'The disposable library has no first track to restore.' }
@@ -213,6 +224,20 @@ function Invoke-ItunesExperiment(
                 try { $track.PlayedCount = [int]$state.OriginalPlayedCount }
                 finally { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($track) }
                 Write-Host "Restored first track play count to $($state.OriginalPlayedCount)."
+            }
+            'SetFirstTrackRating' {
+                $track = $application.LibraryPlaylist.Tracks.Item(1)
+                if ($null -eq $track) { throw 'The disposable library has no first track to restore.' }
+                try { $track.Rating = [int]$state.OriginalRating }
+                finally { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($track) }
+                Write-Host "Restored first track rating to $($state.OriginalRating)."
+            }
+            'SetFirstTrackUnplayed' {
+                $track = $application.LibraryPlaylist.Tracks.Item(1)
+                if ($null -eq $track) { throw 'The disposable library has no first track to restore.' }
+                try { $track.Unplayed = [bool]$state.OriginalUnplayed }
+                finally { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($track) }
+                Write-Host "Restored first track unplayed state to $($state.OriginalUnplayed)."
             }
             'PlayFirstTrackAtPosition' {
                 $track = $application.LibraryPlaylist.Tracks.Item(1)
@@ -320,6 +345,22 @@ function Invoke-ItunesExperiment(
             $state.CreatedPlaylistNames = $names.ToArray()
             Write-Host "Created $($names.Count) playlists, targeting binary playlist count $target."
         }
+        'ManualCreateSmartPlaylist' {
+            if ([string]::IsNullOrWhiteSpace($value)) {
+                throw 'ManualCreateSmartPlaylist requires -ExperimentValue containing the exact playlist name.'
+            }
+            Write-Host 'Create one Smart Playlist in iTunes with: Media Kind is Music; limit 3 items by Random; Live updating enabled.'
+            Write-Host "Name it exactly '$value'. The harness is waiting for it to appear."
+            $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+            $playlist = $null
+            while ($null -eq $playlist -and [DateTime]::UtcNow -lt $deadline) {
+                $playlist = Find-ItunesPlaylist $application $value
+                if ($null -eq $playlist) { Start-Sleep -Milliseconds 500 }
+            }
+            if ($null -eq $playlist) { throw "Timed out waiting for native smart playlist '$value'." }
+            [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($playlist)
+            Write-Host "Captured native smart playlist '$value'."
+        }
         'DeletePlaylist' {
             if ([string]::IsNullOrWhiteSpace($value)) { throw 'DeletePlaylist requires -ExperimentValue.' }
             $playlist = Find-ItunesPlaylist $application $value
@@ -367,6 +408,34 @@ function Invoke-ItunesExperiment(
             }
             finally { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($track) }
             Write-Host "Set first track play count to $playCount."
+        }
+        'SetFirstTrackRating' {
+            $rating = 0
+            if (-not [int]::TryParse($value, [ref]$rating) -or $rating -lt 0 -or $rating -gt 100) {
+                throw 'SetFirstTrackRating requires -ExperimentValue containing an integer from 0 through 100.'
+            }
+            $track = $application.LibraryPlaylist.Tracks.Item(1)
+            if ($null -eq $track) { throw 'The disposable library has no first track.' }
+            try {
+                $state.OriginalRating = [int]$track.Rating
+                $track.Rating = $rating
+            }
+            finally { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($track) }
+            Write-Host "Set first track rating to $rating."
+        }
+        'SetFirstTrackUnplayed' {
+            $unplayed = $false
+            if (-not [bool]::TryParse($value, [ref]$unplayed)) {
+                throw 'SetFirstTrackUnplayed requires -ExperimentValue containing true or false.'
+            }
+            $track = $application.LibraryPlaylist.Tracks.Item(1)
+            if ($null -eq $track) { throw 'The disposable library has no first track.' }
+            try {
+                $state.OriginalUnplayed = [bool]$track.Unplayed
+                $track.Unplayed = $unplayed
+            }
+            finally { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($track) }
+            Write-Host "Set first track unplayed state to $unplayed."
         }
         'PlayFirstTrackAtPosition' {
             $position = 0.0
@@ -473,8 +542,8 @@ if (-not (Test-Path -LiteralPath $defaultsExe -PathType Leaf)) { throw "iTunes d
 if (-not (Test-Path -LiteralPath $itunesExe -PathType Leaf)) { throw "iTunes executable not found: $itunesExe" }
 if (-not (Test-Path -LiteralPath $preferences -PathType Leaf)) { throw "iTunes preferences not found: $preferences" }
 if (Get-Process iTunes -ErrorAction SilentlyContinue) { throw 'Quit iTunes before running acceptance.' }
-if ($MultiPhase -and $Experiment -notin @('CreatePlaylist', 'CreatePlaylistsToCount', 'SetFirstTrackName', 'SetFirstTrackBookmark', 'SetFirstTrackPlayCount', 'PlayFirstTrackAtPosition', 'ImportFile', 'ImportFilesToCount')) {
-    throw "Multi-phase mode requires a reversible experiment: CreatePlaylist, CreatePlaylistsToCount, SetFirstTrackName, SetFirstTrackBookmark, SetFirstTrackPlayCount, PlayFirstTrackAtPosition, ImportFile, or ImportFilesToCount."
+if ($MultiPhase -and $Experiment -notin @('CreatePlaylist', 'CreatePlaylistsToCount', 'ManualCreateSmartPlaylist', 'SetFirstTrackName', 'SetFirstTrackBookmark', 'SetFirstTrackPlayCount', 'SetFirstTrackRating', 'SetFirstTrackUnplayed', 'PlayFirstTrackAtPosition', 'ImportFile', 'ImportFilesToCount')) {
+    throw "Multi-phase mode requires a reversible experiment: CreatePlaylist, CreatePlaylistsToCount, ManualCreateSmartPlaylist, SetFirstTrackName, SetFirstTrackBookmark, SetFirstTrackPlayCount, SetFirstTrackRating, SetFirstTrackUnplayed, PlayFirstTrackAtPosition, ImportFile, or ImportFilesToCount."
 }
 if ($MultiPhase -and -not (Test-Path -LiteralPath $DumpItlExe -PathType Leaf)) {
     throw "Multi-phase mode requires the DumpITL executable: $DumpItlExe"

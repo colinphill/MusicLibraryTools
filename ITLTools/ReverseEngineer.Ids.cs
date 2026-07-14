@@ -45,6 +45,8 @@ public static partial class ReverseEngineer
                         BinaryPrimitives.ReadUInt32LittleEndian(field.Header.AsSpan(16))).Distinct().Order()];
                     Console.WriteLine($"  [{index + 1,2}] id={id(record),5} keys={string.Join(',', keys)} " +
                                       $"name=\"{ItlDocument.PlaylistNameOf(record)}\"");
+                    Console.WriteLine("       " + string.Join(' ', record.Fields.Select(field =>
+                        $"{field.Type}:{BinaryPrimitives.ReadUInt32LittleEndian(field.Header.AsSpan(16))}")));
                 }
             }
             else if (recordArray.Length is > 0 and <= 5)
@@ -103,6 +105,21 @@ public static partial class ReverseEngineer
                               $"pid={BinaryPrimitives.ReadUInt64LittleEndian(playlist.Header.AsSpan(ItlDocument.PlaylistPersistentIdOffset)):X16} " +
                               $"entries={string.Join(',', entries.Select(e => e.EntryId))} " +
                               $"name=\"{ItlDocument.PlaylistNameOf(playlist)}\"");
+        }
+    }
+
+    /// <summary>Prints the varying playlist-header flag bytes alongside manual/smart classification.</summary>
+    public static void PlaylistHeaders(ItlDocument document)
+    {
+        int[] offsets = [22, 24, 28, 29, 30, 32, 33, 34, 538, 568, 569, 628, 629, 630, 1840, 1847, 3189, 3217, 3467];
+        Console.WriteLine(" id   entries smart  " + string.Join(' ', offsets.Select(offset => $"+{offset}")) + "  name");
+        foreach (ItlRecord playlist in document.Playlists)
+        {
+            bool smart = playlist.Field((int)ItlDataType.SmartInfo) is not null &&
+                         playlist.Field((int)ItlDataType.SmartCriteria) is not null;
+            string values = string.Join(' ', offsets.Select(offset => playlist.Header[offset].ToString("X2")));
+            Console.WriteLine($"{ItlDocument.PlaylistRecordIdOf(playlist),4} {playlist.Entries.Count(),9} " +
+                              $"{(smart ? "yes" : "no "),5}  {values}  {ItlDocument.PlaylistNameOf(playlist)}");
         }
     }
 

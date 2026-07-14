@@ -33,7 +33,7 @@ if (args.Length < 2)
           re keys|strings|flags|numbers <Library.xml>
           re map|ids <recordSignature>       inspect record headers
           re memberships <trackId>           list every playlist containing a track
-          re sections|plists|fk|childkeys|mhgh|playback|links|aggregates|envelope
+          re sections|plists|fk|childkeys|playlistheaders|mhgh|playback|links|aggregates|envelope
           re blob|values <mhohType>          inspect data-object values
           re smart|predict|kinds <Library.xml>
 
@@ -43,6 +43,7 @@ if (args.Length < 2)
           track-add <media> <title> <out.itl>         clone a track for a disposable experiment
           track-add-new <media> <title> <out.itl>     clone with a new album and artist
           playlist-add <template> <name> <out.itl>  clone one playlist for a disposable experiment
+          smart-add <template> <name> <out.itl>     clone a smart playlist with factory criteria
           demo <out.itl>                    exercise every add/remove/edit operation
         """);
     return 1;
@@ -54,7 +55,7 @@ string itl = args[1];
 int required = command switch
 {
     "probe" or "discover" or "plprobe" or "roundtrip" or "cloud" or "demo" or "verify" or "compare" => 3,
-    "playlist-add" or "track-add" or "track-add-new" => 5,
+    "playlist-add" or "smart-add" or "track-add" or "track-add-new" => 5,
     "re" => 3,
     "set" => 6,
     _ => 2,
@@ -134,6 +135,10 @@ switch (command)
         PlaylistAdd(itl, args[2], args[3], args[4]);
         break;
 
+    case "smart-add":
+        SmartAdd(itl, args[2], args[3], args[4]);
+        break;
+
     case "track-add":
         TrackAdd(itl, args[2], args[3], args[4], addEntities: false);
         break;
@@ -147,7 +152,7 @@ switch (command)
         break;
 
     case "re":
-        int reRequired = args[2] is "sections" or "plists" or "fk" or "childkeys" or "mhgh" or "playback" or "links" or "aggregates" or "envelope" ? 3 : 4;
+        int reRequired = args[2] is "sections" or "plists" or "fk" or "childkeys" or "playlistheaders" or "mhgh" or "playback" or "links" or "aggregates" or "envelope" ? 3 : 4;
         if (args.Length < reRequired)
         {
             Console.Error.WriteLine($"Reverse-engineering subcommand '{args[2]}' requires an additional argument.");
@@ -167,6 +172,7 @@ switch (command)
             case "memberships": ReverseEngineer.Memberships(ItlDocument.Load(itl), int.Parse(args[3])); break;
             case "fk": ReverseEngineer.ForeignKeys(ItlLibrary.Load(itl)); break;
             case "childkeys": ReverseEngineer.ChildKeys(ItlDocument.Load(itl)); break;
+            case "playlistheaders": ReverseEngineer.PlaylistHeaders(ItlDocument.Load(itl)); break;
             case "mhgh": ReverseEngineer.Mhgh(ItlLibrary.Load(itl)); break;
             case "playback": ReverseEngineer.PlaybackLinks(ItlLibrary.Load(itl)); break;
             case "smart": ReverseEngineer.Smart(ItlLibrary.Load(itl), args[3]); break;
@@ -615,6 +621,38 @@ static void PlaylistAdd(string itl, string templateName, string name, string out
         throw new InvalidDataException("The writer-created playlist failed validation.");
 
     Console.WriteLine($"added playlist '{name}' id={ItlDocument.PlaylistRecordIdOf(playlist)}");
+    Console.WriteLine($"wrote {outPath} ({new FileInfo(outPath).Length:N0} bytes)");
+}
+
+/// <summary>Creates a typed smart playlist from a native smart header for disposable acceptance.</summary>
+static void SmartAdd(string itl, string templateName, string name, string outPath)
+{
+    ItlDocument document = ItlDocument.Load(itl);
+    ItlRecord template = document.FindPlaylist(templateName)
+        ?? throw new InvalidOperationException($"No playlist named '{templateName}'.");
+    ItlSmartCriteria criteria = ItlSmartCriteria.Create(ItlSmartConjunction.All,
+        ItlSmartRule.CreateNested(ItlSmartCriteria.Create(ItlSmartConjunction.Any,
+            ItlSmartRule.CreateMediaKind(1), ItlSmartRule.CreateMediaKind(32))),
+        ItlSmartRule.CreateNested(ItlSmartCriteria.Create(ItlSmartConjunction.All,
+            ItlSmartRule.CreateMediaKind(1))));
+    ItlSmartPlaylist smart = ItlSmartPlaylist.Create(criteria);
+    smart.Info.HasLimit = true;
+    smart.Info.LimitSize = 3;
+    smart.Info.LimitUnit = ItlSmartLimitUnit.Items;
+    smart.Info.SortField = ItlSmartSortField.Random;
+    smart.Info.Descending = true;
+    int[] initialTrackIds = [.. template.Entries.Select(entry => entry.TrackId).Distinct()];
+    ItlRecord playlist = document.AddSmartPlaylist(name, smart, template, initialTrackIds);
+    document.Save(outPath);
+
+    ItlDocument written = ItlDocument.Load(outPath);
+    IReadOnlyList<ItlValidationIssue> diagnostics = written.Validate();
+    foreach (ItlValidationIssue issue in diagnostics)
+        Console.WriteLine($"{issue.Severity,-7} {issue.Code}: {issue.Message}");
+    if (diagnostics.Any(issue => issue.Severity == ItlValidationSeverity.Error))
+        throw new InvalidDataException("The writer-created smart playlist failed validation.");
+
+    Console.WriteLine($"added smart playlist '{name}' id={ItlDocument.PlaylistRecordIdOf(playlist)}");
     Console.WriteLine($"wrote {outPath} ({new FileInfo(outPath).Length:N0} bytes)");
 }
 

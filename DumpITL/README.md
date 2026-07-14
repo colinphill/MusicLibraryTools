@@ -73,10 +73,11 @@ and the older [libgpod smart-playlist documentation](https://tmz.fedorapeople.or
 
 `ItlSmartPlaylist` exposes typed decode/encode models and factories for proven rule families.
 `ItlPlaylist.Smart` provides read access; `ItlDocument.SmartPlaylistOf` and `SetSmartPlaylist` edit
-existing smart playlists. Parse then encode is byte-identical for all 15 smart playlists in the
-private corpus. Unknown field/operator values retain their raw bytes. Converting a manual playlist
-to smart is deliberately rejected until native child-key allocation for newly added types 101/102
-is proven.
+existing smart playlists. `ItlDocument.AddSmartPlaylist` creates a new smart playlist by cloning a
+native smart-playlist template and requires an explicit initial membership snapshot. Parse then
+encode is byte-identical for all 15 smart playlists in the private corpus. Unknown field/operator
+values retain their raw bytes. Converting an arbitrary manual playlist to smart remains deliberately
+rejected because its required version-specific header flags have not been isolated.
 
 Native iTunes accepted a length-changing edit to the user-created K-Pop playlist, retained the new
 nested rule `Genre contains "Country"`, and recalculated its membership. It also retained a Smart
@@ -85,6 +86,14 @@ to XML with Smart Info and Smart Criteria byte-identical to the resaved ITL blob
 rule edit was accepted but regenerated to the canonical Music mask on save, proving distinguished
 built-ins are system-owned and should not be used as editable-rule templates. Remaining Windows-only
 unknowns in the corpus are field `0xA4` on TV & Movies and operator `0x0800` on Rentals.
+
+A four-phase native creation experiment proved that new Smart Info and Smart Criteria fields both
+use child key zero. A writer-created smart playlist with the same nested media-kind rules was then
+opened and re-saved by iTunes with no validation diagnostics: its seeded track membership and smart
+blobs survived, while iTunes replaced only allocation-sensitive playlist and entry IDs. A companion
+candidate with no seeded entries remained empty, proving that reopening a live smart playlist does
+not by itself materialize its membership. New smart playlists therefore clone a native smart header
+and carry a caller-supplied membership snapshot rather than depending on iTunes to populate it.
 
 ## Evidence-backed fields and open questions
 
@@ -124,6 +133,9 @@ Native one-change and reverse experiments proved:
   or refreshes section 20 and advances `mhgh +252`, still without type-514 or `+108`. This suggests
   the preserved corpus plist is legacy or sync-specific state rather than current local playback
   state;
+- reversible rating and unplayed-state runs also leave type 514 absent. Rating changes `mith +108`;
+  unplayed state changes `mith +238` and the playback/bookmark word at `+624`. The Windows COM
+  interface does not expose loved state, so that branch requires a guarded manual UI experiment;
 - the preserved type-514 plist has 2,024 dictionaries containing bookmark time (`bktm`), played
   state (`hbpl`), play count (`plct`), timestamp (`tstm`), and record version. Eighty of its 81
   decimal outer keys resolve to current Store Item IDs at `mith +168/+428`; the remaining decimal
@@ -133,6 +145,12 @@ Native one-change and reverse experiments proved:
   state, and none of the 50 nonzero `bktm` values exactly matches the controlled-bookmark word at
   `mith +624` when rounded to milliseconds.
   The bulk of this plist is therefore historical/device state or uses identities no longer present;
+- static inspection of iTunes 12.13.10.3 places `plct`, `hpbl`, `hbpl`, `tstm`, and `bktm` beside
+  `com.apple.upp`, `playedState`, `bookmarkTimeInMS`, and `Play Data.plist`. The corresponding import
+  routine converts `bktm` seconds to the millisecond bookmark field and maps the other abbreviated
+  keys into track playback state. Independent libgpod source identifies Play Data/PlayCounts plists
+  as iPhone/iPod synchronization input keyed by the device track's 64-bit persistent ID. This narrows
+  type 514 to imported device/Universal Playback Position state rather than ordinary local playback;
 
 Still unresolved:
 
@@ -169,9 +187,11 @@ and restoration guards.
 
 `CreatePlaylistsToCount` targets an exact parsed binary playlist count. `ImportFilesToCount` uses
 `-ExperimentTargetCount` and accepts either one media file to copy repeatedly or a directory of
-pre-tagged fixtures. Playback probes include `SetFirstTrackBookmark`, `SetFirstTrackPlayCount`, and
+pre-tagged fixtures. Playback probes include `SetFirstTrackBookmark`, `SetFirstTrackPlayCount`,
+`SetFirstTrackRating`, `SetFirstTrackUnplayed`, and
 `PlayFirstTrackAtPosition`. All manual chooser prompts place the disposable `.itl` path on the
-clipboard.
+clipboard. `ManualCreateSmartPlaylist` waits for one specifically named native smart playlist; the
+harness captures it, reopens it, removes it through COM, and records every phase.
 
 On iTunes 12.13.10.3, no-op and metadata-only rewrites of the full corpus opened successfully. In
 the disposable empty-library laboratory, writer-created playlists, tracks, albums, artists, foreign
@@ -192,10 +212,12 @@ The final reverse-engineering work should proceed in this order:
    proven unnecessary for structural writes and excluded from track, playlist, album, artist,
    section, and semantic value-key counts, including reversible boundary runs through 257 entities.
    Preserve it opaquely unless a future independent library exposes a repeatable semantic rule.
-3. **Ordinary playback paths tested; no plist generated:** Deliberately create a type-514 playback-state plist using longer audio and video fixtures. Test
-   one native operation at a time: play/stop position, remembered bookmark, `BookmarkTime`, play
-   count, rating, and loved state. Snapshot before and after each operation and its reversal so the
-   responsible plist entry and `mhgh` changes can be isolated.
+3. **Ordinary playback paths tested; no plist generated:** Play/stop position, remembered audio and
+   video bookmarks, completed playback, play count, rating, and unplayed state all update ordinary
+   track fields without creating type 514. Static evidence identifies the plist as imported Apple
+   device/Universal Playback Position state. Capturing a fresh payload/token pair now requires a
+   disposable iPhone/iPod sync or an independently supplied Play Data/PlayCounts artifact. Loved
+   state still needs a guarded manual UI experiment because Windows iTunes COM does not expose it.
 4. **Decimal Store Item ID branch resolved; hexadecimal branch remains:** Derive the type-514 key identity with a one-track, one-variable matrix. Change title, artist,
    filename, path, persistent ID, numeric track ID, library persistent ID, and media kind separately.
    Test normalized byte encodings and common digest families, and also search the complete decoded
@@ -205,13 +227,15 @@ The final reverse-engineering work should proceed in this order:
    is a checksum of the binary plist, plist XML, enclosing `mhoh`, or surrounding `mhgh` ranges; a
    revision or count; a random value; or a library-specific token. Until reproduced, preserve the
    field and reject playback-state mutations that would require recomputing it.
-6. **Smart-playlist decoding, editing, and typed rule construction completed:** Smart Info and
+6. **Smart-playlist decoding, editing, typed construction, and safe creation completed:** Smart Info and
    recursive Smart Criteria decode and byte-exactly re-encode; string, integer, Boolean, date,
    relative-date, media/location-mask, playlist-reference, nested, and unknown raw values are typed
    or preserved. Native iTunes retained a length-changing string edit, a live-updating toggle, and a
-   factory-created integer rule while regenerating membership. Continue one-variable experiments for
-   the two unknown Windows-only codes, playlist-reference edits, and manual-to-smart conversion.
-   Conversion remains deliberately unsupported until types 101/102 child-key allocation is proven.
+   factory-created integer rule while regenerating membership. It also accepted and normalized a
+   new writer-created smart playlist cloned from a native smart template, with explicit initial
+   membership; native creation proves the type 101/102 child keys are zero. Continue one-variable
+   experiments for the two unknown Windows-only codes and playlist-reference edits. Arbitrary
+   manual-to-smart conversion remains unsupported until its header flags are proven.
 7. Promote findings into writer behavior only after repeated native evidence. Add a synthetic
    fixture and regression test for every proven rule, keep unresolved bytes opaque, and make an
    unsupported mutation fail before saving rather than synthesizing metadata.
@@ -219,7 +243,7 @@ The final reverse-engineering work should proceed in this order:
 Completion criteria for these remaining areas are: `+88` is identified or experimentally excluded
 from required writer aggregates; `+108` has a safe preserve/recompute/reject policy; at least one
 controlled playback entry is mapped to its track identity or conclusively shown to be blob-local;
-smart playlists decode and re-encode byte-identically, supported edits survive native resave, and
-unsupported rule forms or manual-to-smart conversion fail before saving;
+smart playlists decode and re-encode byte-identically, supported edits and template-based creation
+survive native resave, and unsupported rule forms or manual-to-smart conversion fail before saving;
 each conclusion is reproduced in two fresh libraries; every candidate opens and re-saves in iTunes;
 and the harness confirms the live library and preferences are unchanged.

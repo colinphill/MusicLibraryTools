@@ -304,6 +304,36 @@ public sealed partial class ItlDocument
         return playlist;
     }
 
+    /// <summary>
+    /// Adds a smart playlist by cloning a native smart-playlist header and child layout. Native
+    /// experiments prove Smart Info and Smart Criteria use child key zero; cloning also preserves
+    /// version-specific playlist flags without synthesizing them on a manual-playlist header.
+    /// </summary>
+    public ItlRecord AddSmartPlaylist(string name, ItlSmartPlaylist smart, ItlRecord template,
+        IEnumerable<int> initialTrackIds)
+    {
+        ArgumentNullException.ThrowIfNull(smart);
+        ArgumentNullException.ThrowIfNull(template);
+        ArgumentNullException.ThrowIfNull(initialTrackIds);
+        if (!Playlists.Contains(template))
+            throw new ArgumentException("The smart-playlist template does not belong to this document.", nameof(template));
+        if (SmartPlaylistOf(template) is null)
+            throw new InvalidOperationException("Adding a smart playlist requires an existing native smart-playlist template.");
+        int[] trackIds = [.. initialTrackIds.Distinct()];
+        int? missingTrackId = trackIds.Where(trackId => FindTrack(trackId) is null)
+            .Select(trackId => (int?)trackId)
+            .FirstOrDefault();
+        if (missingTrackId.HasValue)
+            throw new ArgumentException($"Initial smart-playlist member track {missingTrackId.Value} is not in this document.",
+                nameof(initialTrackIds));
+
+        ItlRecord playlist = AddPlaylist(name, template);
+        SetSmartPlaylist(playlist, smart);
+        foreach (int trackId in trackIds)
+            AddToPlaylist(playlist, trackId);
+        return playlist;
+    }
+
     public bool RemovePlaylist(string name)
     {
         ItlRecord? playlist = FindPlaylist(name);

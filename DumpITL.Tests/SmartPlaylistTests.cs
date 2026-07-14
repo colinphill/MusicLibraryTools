@@ -138,6 +138,41 @@ public sealed class SmartPlaylistTests
     }
 
     [Fact]
+    public void AddsSmartPlaylistByCloningNativeSmartTemplate()
+    {
+        ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+        ItlRecord template = document.Playlists.Single();
+        ItlRecord manual = document.AddPlaylist("Manual", template);
+        ItlSmartPlaylist templateSmart = ItlSmartPlaylist.Create(ItlSmartCriteria.Create(ItlSmartConjunction.All));
+        (byte[] templateInfo, byte[] templateCriteria) = templateSmart.Encode();
+        int fieldEnd = template.Children.FindLastIndex(child => child is ItlField) + 1;
+        template.Children.Insert(fieldEnd, ItlField.CreateBlob((int)ItlDataType.SmartCriteria, templateCriteria));
+        template.Children.Insert(fieldEnd + 1, ItlField.CreateBlob((int)ItlDataType.SmartInfo, templateInfo));
+
+        ItlSmartPlaylist desired = ItlSmartPlaylist.Create(ItlSmartCriteria.Create(
+            ItlSmartConjunction.All, ItlSmartRule.CreateInteger(
+                ItlSmartField.PlayCount, ItlSmartOperator.GreaterThan, [5])));
+        desired.Info.HasLimit = true;
+        desired.Info.LimitSize = 3;
+        desired.Info.Descending = true;
+
+        Assert.Throws<InvalidOperationException>(() =>
+            document.AddSmartPlaylist("Rejected", desired, manual, []));
+        int initialTrackId = template.Entries.Single().TrackId;
+        ItlRecord added = document.AddSmartPlaylist("Writer Smart", desired, template, [initialTrackId]);
+
+        Assert.Equal([initialTrackId], added.Entries.Select(entry => entry.TrackId));
+        Assert.NotEqual(ItlDocument.PlaylistRecordIdOf(template), ItlDocument.PlaylistRecordIdOf(added));
+        Assert.All(added.Fields.Where(field => field.Type is
+                (int)ItlDataType.SmartInfo or (int)ItlDataType.SmartCriteria),
+            field => Assert.Equal(0u, BinaryPrimitives.ReadUInt32LittleEndian(field.Header.AsSpan(16))));
+        ItlSmartPlaylist result = ItlDocument.SmartPlaylistOf(added)!;
+        Assert.Equal(3u, result.Info.LimitSize);
+        Assert.Equal(5, result.Criteria.Rules.Single().IntegerValues[0]);
+        Assert.DoesNotContain(document.Validate(), issue => issue.Code.StartsWith("smart."));
+    }
+
+    [Fact]
     public void ValidationRejectsDanglingSmartPlaylistReferences()
     {
         ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
