@@ -34,6 +34,22 @@ public static partial class ReverseEngineer
             Console.WriteLine($"  inner '{inner.Signature}' hlen={inner.HeaderLength} word8={inner.SizeOrCount} word12={inner.Type}");
             Dump(body, start, Math.Min(inner.HeaderLength, 128), start);
 
+            if (ItlTraversal.IsFixedSizeList(inner))
+            {
+                IReadOnlyList<ItlFixedItem> records = ItlTraversal.WalkFixedItems(body, inner, end);
+                Console.WriteLine($"  {records.Count:N0} fixed {ItlTraversal.MprhLength}-byte records follow:");
+                foreach (ItlFixedItem record in records.Take(6))
+                {
+                    uint word8 = BinaryPrimitives.ReadUInt32LittleEndian(body.AsSpan(record.Offset + 8));
+                    uint word12 = BinaryPrimitives.ReadUInt32LittleEndian(body.AsSpan(record.Offset + 12));
+                    Console.WriteLine($"    '{record.Signature}' +8=0x{word8:X8} +12=0x{word12:X8}");
+                }
+                if (records.Count > 6)
+                    Console.WriteLine("    ...");
+                Console.WriteLine();
+                continue;
+            }
+
             // Anything after the inner header: chunks, or just bytes?
             int after = start + inner.HeaderLength;
             if (after < end)
@@ -89,7 +105,10 @@ public static partial class ReverseEngineer
                 continue;
 
             ItlChunk list = ItlChunk.Read(body, section.Chunk.BodyOffset);
-            foreach (ItlChunk record in ItlChunk.Walk(body, list.HeaderEnd, section.Chunk.EndOffset).Take(3))
+            if (!ItlTraversal.TryWalkChunkItems(body, list, section.Chunk.EndOffset, out var records, out _))
+                continue;
+
+            foreach (ItlChunk record in records.Take(3))
             {
                 foreach (ItlChunk child in ItlChunk.Walk(body, record.BodyOffset, record.EndOffset))
                 {

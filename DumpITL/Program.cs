@@ -23,10 +23,23 @@ if (args.Length < 2)
           discover <Library.xml> [sample]   locate numeric fields by correlation
           plprobe <Library.xml>             playlist entry and persistent-id layout
           identity                          parse and re-serialize; must be byte-identical
+          validate                          verify structural and referential invariants
+          compare <after.itl> [record]      structure-aware comparison, optionally filtered by record key
+
+        Reverse engineering
+          re keys|strings|flags|numbers <Library.xml>
+          re map|ids <recordSignature>       inspect record headers
+          re memberships <trackId>           list every playlist containing a track
+          re sections|plists|fk|childkeys|mhgh|playback|links|aggregates|envelope
+          re blob|values <mhohType>          inspect data-object values
+          re smart|predict|kinds <Library.xml>
 
         Write (prototype -- always work on a copy, with iTunes closed)
           roundtrip <out.itl>               re-encode unchanged, prove the body survives
           set <trackId> <field> <value> <out.itl>
+          track-add <media> <title> <out.itl>         clone a track for a disposable experiment
+          track-add-new <media> <title> <out.itl>     clone with a new album and artist
+          playlist-add <template> <name> <out.itl>  clone one playlist for a disposable experiment
           demo <out.itl>                    exercise every add/remove/edit operation
         """);
     return 1;
@@ -37,7 +50,8 @@ string itl = args[1];
 
 int required = command switch
 {
-    "probe" or "discover" or "plprobe" or "roundtrip" or "cloud" or "demo" or "verify" => 3,
+    "probe" or "discover" or "plprobe" or "roundtrip" or "cloud" or "demo" or "verify" or "compare" => 3,
+    "playlist-add" or "track-add" or "track-add-new" => 5,
     "re" => 3,
     "set" => 6,
     _ => 2,
@@ -48,6 +62,9 @@ if (args.Length < required)
     return 2;
 }
 
+int exitCode = 0;
+try
+{
 switch (command)
 {
     case "info":
@@ -98,12 +115,32 @@ switch (command)
         Identity(itl);
         break;
 
+    case "validate":
+        exitCode = ValidateDocument(itl);
+        break;
+
+    case "compare":
+        ItlComparer.Compare(itl, args[2], Console.Out, args.Length > 3 ? args[3] : null);
+        break;
+
+    case "playlist-add":
+        PlaylistAdd(itl, args[2], args[3], args[4]);
+        break;
+
+    case "track-add":
+        TrackAdd(itl, args[2], args[3], args[4], addEntities: false);
+        break;
+
+    case "track-add-new":
+        TrackAdd(itl, args[2], args[3], args[4], addEntities: true);
+        break;
+
     case "cloud":
         Cloud(ItlLibrary.Load(itl), int.Parse(args[2]));
         break;
 
     case "re":
-        int reRequired = args[2] is "sections" or "plists" or "fk" or "mhgh" or "links" or "aggregates" or "envelope" ? 3 : 4;
+        int reRequired = args[2] is "sections" or "plists" or "fk" or "childkeys" or "mhgh" or "playback" or "links" or "aggregates" or "envelope" ? 3 : 4;
         if (args.Length < reRequired)
         {
             Console.Error.WriteLine($"Reverse-engineering subcommand '{args[2]}' requires an additional argument.");
@@ -120,8 +157,11 @@ switch (command)
             case "plists": ReverseEngineer.Plists(ItlLibrary.Load(itl)); break;
             case "blob": ReverseEngineer.Blob(ItlLibrary.Load(itl), int.Parse(args[3])); break;
             case "ids": ReverseEngineer.Ids(ItlLibrary.Load(itl), args[3]); break;
+            case "memberships": ReverseEngineer.Memberships(ItlDocument.Load(itl), int.Parse(args[3])); break;
             case "fk": ReverseEngineer.ForeignKeys(ItlLibrary.Load(itl)); break;
+            case "childkeys": ReverseEngineer.ChildKeys(ItlDocument.Load(itl)); break;
             case "mhgh": ReverseEngineer.Mhgh(ItlLibrary.Load(itl)); break;
+            case "playback": ReverseEngineer.PlaybackLinks(ItlLibrary.Load(itl)); break;
             case "smart": ReverseEngineer.Smart(ItlLibrary.Load(itl), args[3]); break;
             case "links": ReverseEngineer.Links(ItlLibrary.Load(itl)); break;
             case "predict": ReverseEngineer.Predict(ItlLibrary.Load(itl), args[3]); break;
@@ -149,8 +189,26 @@ switch (command)
         Console.Error.WriteLine($"Unknown command '{command}'.");
         return 1;
 }
+}
+catch (Exception ex) when (ex is InvalidDataException or IOException or UnauthorizedAccessException or ArgumentException or FormatException or InvalidOperationException)
+{
+    Console.Error.WriteLine($"DumpITL: {ex.Message}");
+    return 3;
+}
 
-return 0;
+return exitCode;
+
+static int ValidateDocument(string path)
+{
+    ItlDocument document = ItlDocument.Load(path);
+    IReadOnlyList<ItlValidationIssue> issues = document.Validate();
+    foreach (ItlValidationIssue issue in issues)
+        Console.WriteLine($"{issue.Severity,-7} {issue.Code,-30} {issue.Message}");
+
+    int errors = issues.Count(i => i.Severity == ItlValidationSeverity.Error);
+    Console.WriteLine($"validation: {errors} error(s), {issues.Count(i => i.Severity == ItlValidationSeverity.Warning)} warning(s)");
+    return errors == 0 ? 0 : 4;
+}
 
 static void Info(ItlLibrary library)
 {
@@ -209,7 +267,10 @@ static void Counts(ItlLibrary library)
             continue;
 
         ItlChunk list = ItlChunk.Read(body, section.Chunk.BodyOffset);
-        foreach (ItlChunk record in ItlChunk.Walk(body, list.HeaderEnd, section.Chunk.EndOffset))
+        if (!ItlTraversal.TryWalkChunkItems(body, list, section.Chunk.EndOffset, out var recordsInSection, out _))
+            continue;
+
+        foreach (ItlChunk record in recordsInSection)
         {
             int all = 0, mhoh = 0, other = 0;
             foreach (ItlChunk child in ItlChunk.Walk(body, record.BodyOffset, record.EndOffset))
@@ -252,6 +313,11 @@ static void Counts(ItlLibrary library)
 
     Console.WriteLine($"\nmiph offsets whose u32 equals the mtph count on all {records.Count} playlists:");
     int distinct = records.Select(r => r.Mtph).Distinct().Count();
+    if (records.Count == 0 || distinct < 2)
+    {
+        Console.WriteLine("  insufficient variation to identify a cached count");
+        return;
+    }
     for (int offset = 12; offset + 4 <= records.Min(r => r.Header.Length); offset++)
     {
         if (records.All(r => BinaryPrimitives.ReadInt32LittleEndian(r.Header.AsSpan(offset)) == r.Mtph))
@@ -320,6 +386,11 @@ static void Cloud(ItlLibrary library, int trackId)
 
     Console.WriteLine($"section 13 holds {ids.Count:N0} 'mith' records (list declares {list.ItemCount:N0})");
     Console.WriteLine($"  ids also present in the main track list: {shared:N0} of {ids.Count:N0}");
+    if (ids.Count == 0 || mainIds.Count == 0)
+    {
+        Console.WriteLine($"  track {trackId} present in section 13: {ids.Contains(trackId)}");
+        return;
+    }
     Console.WriteLine($"  id range: {ids.Min():N0}..{ids.Max():N0}   (main list: {mainIds.Min():N0}..{mainIds.Max():N0})");
     Console.WriteLine($"  track {trackId} present in section 13: {ids.Contains(trackId)}");
 }
@@ -336,17 +407,17 @@ static void Demo(string itl, string outPath)
                       $"{document.Artists.Count:N0} artists, {document.Playlists.Count:N0} playlists");
 
     // 1. Edit fields on an existing track, both strings and numerics.
-    trackTemplate.SetString(ItlDataType.Title, "No Diggity (Edited by DumpITL)");
+    document.SetTrackString(trackTemplate, ItlDataType.Title, "No Diggity (Edited by DumpITL)");
     trackTemplate.SetYear(1997);
     trackTemplate.SetBpm(123);
     trackTemplate.SetPlayCount(42);
 
     // 2. Add a track. Unknown header fields are inherited from the template.
     ItlRecord added = document.AddTrack(trackTemplate);
-    added.SetString(ItlDataType.Title, "Brand New Track");
-    added.SetString(ItlDataType.Artist, "DumpITL");
-    added.SetString(ItlDataType.Album, "Synthetic Album");
-    added.SetString(ItlDataType.Location, Path.Combine(
+    document.SetTrackString(added, ItlDataType.Title, "Brand New Track");
+    document.SetTrackString(added, ItlDataType.Artist, "DumpITL");
+    document.SetTrackString(added, ItlDataType.Album, "Synthetic Album");
+    document.SetTrackString(added, ItlDataType.Location, Path.Combine(
         Path.GetDirectoryName(Path.GetFullPath(outPath))!,
         "Synthetic Album",
         "01 Brand New Track.m4a"));
@@ -408,17 +479,20 @@ static void Demo(string itl, string outPath)
     // Identifiers must stay unique, and the written file must itself round-trip losslessly.
     ItlDocument written = ItlDocument.Load(outPath);
     uint[] trackIds = [.. written.Tracks.Select(t => (uint)ItlDocument.TrackIdOf(t))];
+    uint[] trackSecondaryIds = [.. written.Tracks.Select(ItlDocument.TrackSecondaryIdOf)];
     uint[] albumIds = [.. written.Albums.Select(ItlDocument.RecordIdOf)];
     uint[] artistIds = [.. written.Artists.Select(ItlDocument.RecordIdOf)];
+    uint[] playlistIds = [.. written.Playlists.Select(ItlDocument.PlaylistRecordIdOf)];
     uint[] entryIds = [.. written.Playlists.SelectMany(p => p.Entries).Select(e => e.EntryId)];
 
     Console.WriteLine($"\n  track ids unique          : {trackIds.Length == trackIds.Distinct().Count()}");
+    Console.WriteLine($"  secondary track ids valid: {written.Tracks.All(t => ItlDocument.TrackSecondaryIdOf(t) == (uint)t.GetTrackId() + 1)}");
     Console.WriteLine($"  album ids unique          : {albumIds.Length == albumIds.Distinct().Count()}");
     Console.WriteLine($"  artist ids unique         : {artistIds.Length == artistIds.Distinct().Count()}");
     Console.WriteLine($"  entry ids unique          : {entryIds.Length == entryIds.Distinct().Count()}");
 
     // Every object in an iTunes library draws its id from one counter, so nothing may collide.
-    uint[] everything = [.. trackIds, .. albumIds, .. artistIds, .. entryIds];
+    uint[] everything = [.. trackIds, .. trackSecondaryIds, .. albumIds, .. artistIds, .. playlistIds, .. entryIds];
     Console.WriteLine($"  all ids globally unique   : {everything.Length == everything.Distinct().Count()} ({everything.Length:N0} ids)");
 
     // The new track's foreign keys must resolve to the album and artist we created.
@@ -481,7 +555,7 @@ static void Set(string itl, int trackId, ItlDataType type, string value, string 
     ItlRecord track = document.FindTrack(trackId) ?? throw new InvalidOperationException($"No track {trackId}.");
 
     Console.WriteLine($"before: [{trackId}] {type} = \"{track.GetString(type)}\"");
-    track.SetString(type, value);
+    document.SetTrackString(track, type, value);
     document.Save(outPath);
 
     // Re-read from disk with the independent reader: the only check that matters is that it parses.
@@ -492,6 +566,67 @@ static void Set(string itl, int trackId, ItlDataType type, string value, string 
     Console.WriteLine($"\nwrote {outPath} ({new FileInfo(outPath).Length:N0} bytes)");
     Console.WriteLine($"reparsed: {reloaded.Tracks.Count:N0} tracks, {reloaded.Playlists.Count:N0} playlists, " +
                       $"{reloaded.Albums.Count:N0} albums, {reloaded.Artists.Count:N0} artists");
+}
+
+/// <summary>Clones one known-good playlist for native-iTunes research on a disposable copy.</summary>
+static void PlaylistAdd(string itl, string templateName, string name, string outPath)
+{
+    ItlDocument document = ItlDocument.Load(itl);
+    ItlRecord template = document.FindPlaylist(templateName)
+        ?? throw new InvalidOperationException($"No playlist named '{templateName}'.");
+    ItlRecord playlist = document.AddPlaylist(name, template);
+    document.Save(outPath);
+
+    ItlDocument written = ItlDocument.Load(outPath);
+    IReadOnlyList<ItlValidationIssue> diagnostics = written.Validate();
+    foreach (ItlValidationIssue issue in diagnostics)
+        Console.WriteLine($"{issue.Severity,-7} {issue.Code}: {issue.Message}");
+    if (diagnostics.Any(issue => issue.Severity == ItlValidationSeverity.Error))
+        throw new InvalidDataException("The writer-created playlist failed validation.");
+
+    Console.WriteLine($"added playlist '{name}' id={ItlDocument.PlaylistRecordIdOf(playlist)}");
+    Console.WriteLine($"wrote {outPath} ({new FileInfo(outPath).Length:N0} bytes)");
+}
+
+/// <summary>Clones a track and points it at a real media file for native-iTunes research.</summary>
+static void TrackAdd(string itl, string mediaPath, string title, string outPath, bool addEntities)
+{
+    mediaPath = Path.GetFullPath(mediaPath);
+    if (!File.Exists(mediaPath)) throw new FileNotFoundException("Media file not found.", mediaPath);
+
+    ItlDocument document = ItlDocument.Load(itl);
+    ItlRecord template = document.Tracks.FirstOrDefault()
+        ?? throw new InvalidOperationException("A track template is required.");
+    ItlRecord track = document.AddTrack(template);
+    document.SetTrackString(track, ItlDataType.Title, title);
+    document.SetTrackString(track, ItlDataType.Location, mediaPath);
+    string fileUrl = new Uri(mediaPath).AbsoluteUri.Replace("file:///", "file://localhost/");
+    document.SetTrackString(track, ItlDataType.FileUrl, fileUrl);
+    track.SetSize((ulong)new FileInfo(mediaPath).Length);
+    track.SetDateModified(File.GetLastWriteTimeUtc(mediaPath));
+
+    if (addEntities)
+    {
+        const string artistName = "DumpITL Writer Other Artist";
+        const string albumName = "DumpITL Writer Other Album";
+        ItlRecord album = document.AddAlbum(albumName, artistName, document.Albums.First());
+        ItlRecord artist = document.AddArtist(artistName, document.Artists.First());
+        document.SetTrackString(track, ItlDataType.Album, albumName);
+        document.SetTrackString(track, ItlDataType.Artist, artistName);
+        track.SetAlbumId(ItlDocument.RecordIdOf(album));
+        track.SetArtistId(ItlDocument.RecordIdOf(artist));
+    }
+
+    document.Save(outPath);
+    ItlDocument written = ItlDocument.Load(outPath);
+    IReadOnlyList<ItlValidationIssue> diagnostics = written.Validate();
+    foreach (ItlValidationIssue issue in diagnostics)
+        Console.WriteLine($"{issue.Severity,-7} {issue.Code}: {issue.Message}");
+    if (diagnostics.Any(issue => issue.Severity == ItlValidationSeverity.Error))
+        throw new InvalidDataException("The writer-created track failed validation.");
+
+    Console.WriteLine($"added track {track.GetTrackId()} secondary={ItlDocument.TrackSecondaryIdOf(track)} '{title}'");
+    Console.WriteLine($"wrote {outPath} ({new FileInfo(outPath).Length:N0} bytes)");
 }
 
 /// <summary>Hex-dumps the first few playlist track entries, to locate the track id inside them.</summary>
@@ -536,6 +671,19 @@ static void Layout(ItlLibrary library)
 
         ItlChunk list = ItlChunk.Read(body, section.Chunk.BodyOffset);
         Console.WriteLine($"section type {section.Chunk.Type,-3} {list.Signature} hlen={list.HeaderLength} declares {list.ItemCount:N0} items");
+
+        if (ItlTraversal.IsFixedSizeList(list))
+        {
+            IReadOnlyList<ItlFixedItem> fixedItems = ItlTraversal.WalkFixedItems(body, list, section.Chunk.EndOffset);
+            foreach (ItlFixedItem item in fixedItems.Take(2))
+            {
+                uint word8 = BinaryPrimitives.ReadUInt32LittleEndian(body.AsSpan(item.Offset + 8));
+                uint word12 = BinaryPrimitives.ReadUInt32LittleEndian(body.AsSpan(item.Offset + 12));
+                Console.WriteLine($"    fixed '{item.Signature}' length={item.Length} +8=0x{word8:X8} +12=0x{word12:X8}");
+            }
+            Console.WriteLine();
+            continue;
+        }
 
         int shown = 0;
         foreach (ItlChunk item in ItlChunk.Walk(body, list.HeaderEnd, section.Chunk.EndOffset))

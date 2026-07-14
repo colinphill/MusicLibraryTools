@@ -20,6 +20,12 @@ public static partial class ReverseEngineer
         (ItlTrack Track, Dictionary<string, XElement> Xml)[] pairs =
             [.. library.Tracks.Where(t => xml.ContainsKey(t.Id)).Select(t => (t, xml[t.Id]))];
 
+        if (pairs.Length == 0)
+        {
+            Console.WriteLine($"{boolKeys.Length} boolean keys, no matched tracks to correlate");
+            return;
+        }
+
         int length = pairs.Min(p => p.Track.Header.Length);
 
         foreach (string key in boolKeys)
@@ -105,6 +111,12 @@ public static partial class ReverseEngineer
             .ToArray();
 
         Console.WriteLine("media kinds: " + string.Join("  ", groups.Select(g => $"{g.Key}={g.Count():N0}")) + "\n");
+
+        if (groups.Length == 0)
+        {
+            Console.WriteLine("no matched tracks to classify");
+            return;
+        }
 
         int length = library.Tracks.Min(t => t.Header.Length);
         for (int offset = 12; offset < length; offset++)

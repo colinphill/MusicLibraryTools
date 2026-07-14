@@ -123,7 +123,12 @@ public static class ItlTrackFields
     public static void SetAdvisory(this ItlRecord t, int v) => t.Header[166] = (byte)v;
 
     public static string? GetString(this ItlRecord t, ItlDataType type) => t.Field((int)type)?.Text;
-    public static void SetString(this ItlRecord t, ItlDataType type, string value) => t.SetField((int)type, value);
+    public static void SetString(this ItlRecord t, ItlDataType type, string value)
+    {
+        t.SetField((int)type, value);
+        if (t.Signature == "mith")
+            t.SetDateModified(DateTime.UtcNow);
+    }
 
     /// <summary>Timestamps are local-time seconds since 1904, so this machine's timezone is assumed.</summary>
     private static DateTime? ToUtc(uint seconds)

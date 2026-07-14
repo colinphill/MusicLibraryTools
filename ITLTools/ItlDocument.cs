@@ -8,7 +8,7 @@ namespace iTunes.Binary;
 /// A fully editable library. Sections we understand are parsed into records; the rest are kept
 /// byte for byte, so serializing an unmodified document reproduces the original body exactly.
 /// </summary>
-public sealed class ItlDocument
+public sealed partial class ItlDocument
 {
     // Section types, keyed by the word at msdh+12.
     private const int TrackSectionType = 1;
@@ -25,6 +25,9 @@ public sealed class ItlDocument
         [TrackSectionType, PlaylistSectionType, AlbumSectionType, ArtistSectionType, CloudTrackSectionType];
 
     private uint _nextId;
+    private readonly AggregateCounts _originalCounts;
+
+    private readonly record struct AggregateCounts(int Tracks, int Playlists, int Albums, int Artists);
 
     private ItlDocument(ItlEnvelope envelope, List<ItlSectionNode> sections)
     {
@@ -34,19 +37,22 @@ public sealed class ItlDocument
         // Every object in the library draws its id from one counter: track ids, album ids, artist
         // ids and playlist entry ids all overlap in range and none collides. Allocate above all.
         uint highestTrack = Tracks.Select(t => (uint)TrackIdOf(t)).DefaultIfEmpty(0u).Max();
+        uint highestTrackSecondary = Tracks.Select(TrackSecondaryIdOf).DefaultIfEmpty(0u).Max();
         uint highestCloud = CloudTracks.Select(t => (uint)TrackIdOf(t)).DefaultIfEmpty(0u).Max();
         uint highestAlbum = Albums.Select(RecordIdOf).DefaultIfEmpty(0u).Max();
         uint highestArtist = Artists.Select(RecordIdOf).DefaultIfEmpty(0u).Max();
+        uint highestPlaylist = Playlists.Select(PlaylistRecordIdOf).DefaultIfEmpty(0u).Max();
         uint highestEntry = Playlists.SelectMany(p => p.Entries).Select(e => e.EntryId).DefaultIfEmpty(0u).Max();
 
-        _nextId = new[] { highestTrack, highestCloud, highestAlbum, highestArtist, highestEntry }.Max() + 1;
+        _nextId = new[] { highestTrack, highestTrackSecondary, highestCloud, highestAlbum, highestArtist, highestPlaylist, highestEntry }.Max() + 1;
+        _originalCounts = CurrentCounts;
     }
 
     /// <summary>The record id every "mith", "miah" and "miih" carries at +16.</summary>
     public static uint RecordIdOf(ItlRecord record) =>
         BinaryPrimitives.ReadUInt32LittleEndian(record.Header.AsSpan(16));
 
-    /// <summary>Every record but "miph" carries a unique 64-bit persistent id at +20.</summary>
+    /// <summary>Album and artist entity records carry their unique 64-bit persistent ID at +20.</summary>
     private static void AssignNewIdentity(ItlRecord record, uint id)
     {
         BinaryPrimitives.WriteUInt32LittleEndian(record.Header.AsSpan(16), id);
@@ -69,6 +75,10 @@ public sealed class ItlDocument
 
     private List<ItlRecord> RecordsOf(int type) =>
         Sections.First(s => s.Type == type).List!.Records;
+
+    private AggregateCounts CurrentCounts => new(Tracks.Count, Playlists.Count, Albums.Count, Artists.Count);
+
+    public bool HasStructuralCountChanges => CurrentCounts != _originalCounts;
 
     public static ItlDocument Load(string path) => Parse(ItlEnvelope.Load(path));
 
@@ -123,15 +133,66 @@ public sealed class ItlDocument
         BinaryPrimitives.WriteInt32LittleEndian(body.AsSpan(offset + 8), Envelope.RawHeader.Length + body.Length);
     }
 
-    public void Save(string path) => ItlWriter.Save(Envelope, Serialize(), path);
+    public void Save(string path, ItlWriteOptions? options = null)
+    {
+        _ = options; // Retained for source compatibility with the earlier research-only writer API.
+        ItlWriter.Save(Envelope, Serialize(), path);
+    }
 
     // ---- tracks -------------------------------------------------------------------------------
 
     public ItlRecord? FindTrack(int trackId) =>
         Tracks.FirstOrDefault(t => TrackIdOf(t) == trackId);
 
+    /// <summary>
+    /// Updates a track string. Native iTunes reuses the mhoh +16 key for an equal semantic value
+    /// and allocates the next key for a new distinct value. Location and FileUrl instead carry
+    /// fixed structural subtypes, which are preserved from the existing field.
+    /// </summary>
+    public void SetTrackString(ItlRecord track, ItlDataType type, string value)
+    {
+        if (!Tracks.Contains(track))
+            throw new ArgumentException("The record is not a track in this document.", nameof(track));
+
+        if (type is ItlDataType.FileUrl or ItlDataType.Location)
+        {
+            track.SetString(type, value);
+            return;
+        }
+
+        SetInternedField(Tracks, track, (int)type, value);
+        track.SetDateModified(DateTime.UtcNow);
+    }
+
+    private static void SetInternedField(IEnumerable<ItlRecord> records, ItlRecord record, int type, string value)
+    {
+        ItlField[] fields = [.. records.SelectMany(item => item.Fields).Where(field => field.Type == type)];
+        uint? existingKey = fields.Where(field => field.Text == value)
+            .Select(field => (uint?)BinaryPrimitives.ReadUInt32LittleEndian(field.Header.AsSpan(16)))
+            .FirstOrDefault();
+        uint key;
+        if (existingKey.HasValue)
+        {
+            key = existingKey.Value;
+        }
+        else
+        {
+            uint highest = fields.Select(field => BinaryPrimitives.ReadUInt32LittleEndian(field.Header.AsSpan(16)))
+                .DefaultIfEmpty(0u).Max();
+            key = checked(highest + 1);
+        }
+
+        record.SetField(type, value);
+        ItlField field = record.Field(type)!;
+        BinaryPrimitives.WriteUInt32LittleEndian(field.Header.AsSpan(16), key);
+    }
+
     public static int TrackIdOf(ItlRecord track) =>
         BinaryPrimitives.ReadInt32LittleEndian(track.Header.AsSpan(16));
+
+    public const int TrackSecondaryIdOffset = 500;
+    public static uint TrackSecondaryIdOf(ItlRecord track) =>
+        BinaryPrimitives.ReadUInt32LittleEndian(track.Header.AsSpan(TrackSecondaryIdOffset));
 
     /// <summary>
     /// Adds a track by cloning an existing one. Fields we do not understand are inherited from the
@@ -139,10 +200,13 @@ public sealed class ItlDocument
     /// </summary>
     public ItlRecord AddTrack(ItlRecord template)
     {
+        int templateId = TrackIdOf(template);
         ItlRecord track = template.Clone();
 
         int trackId = (int)NextId();
+        uint secondaryId = NextId();
         BinaryPrimitives.WriteInt32LittleEndian(track.Header.AsSpan(16), trackId);
+        BinaryPrimitives.WriteUInt32LittleEndian(track.Header.AsSpan(TrackSecondaryIdOffset), secondaryId);
         BinaryPrimitives.WriteUInt64LittleEndian(track.Header.AsSpan(128), NewPersistentId());
 
         // A fresh track has no history.
@@ -154,7 +218,7 @@ public sealed class ItlDocument
         BinaryPrimitives.WriteUInt32LittleEndian(track.Header.AsSpan(32), now);
 
         Tracks.Add(track);
-        AddToMasterPlaylist(trackId);
+        AddToBuiltInTrackPlaylists(trackId, templateId);
         return track;
     }
 
@@ -179,6 +243,11 @@ public sealed class ItlDocument
     // ---- playlists ----------------------------------------------------------------------------
 
     public const int PlaylistPersistentIdOffset = 440;
+    public const int PlaylistRecordIdOffset = 3392;
+
+    /// <summary>The library-wide numeric ID carried by every playlist header at +3392.</summary>
+    public static uint PlaylistRecordIdOf(ItlRecord playlist) =>
+        BinaryPrimitives.ReadUInt32LittleEndian(playlist.Header.AsSpan(PlaylistRecordIdOffset));
 
     public static string? PlaylistNameOf(ItlRecord playlist) =>
         playlist.Field((int)ItlDataType.PlaylistName)?.Text;
@@ -198,6 +267,7 @@ public sealed class ItlDocument
         playlist.Children.RemoveAll(c => c is ItlEntry);
         playlist.SetField((int)ItlDataType.PlaylistName, name);
         BinaryPrimitives.WriteUInt64LittleEndian(playlist.Header.AsSpan(PlaylistPersistentIdOffset), NewPersistentId());
+        BinaryPrimitives.WriteUInt32LittleEndian(playlist.Header.AsSpan(PlaylistRecordIdOffset), NextId());
 
         Playlists.Add(playlist);
         return playlist;
@@ -236,10 +306,13 @@ public sealed class ItlDocument
     public bool RemoveFromPlaylist(ItlRecord playlist, int trackId) =>
         playlist.Children.RemoveAll(c => c is ItlEntry e && e.TrackId == trackId) > 0;
 
-    private void AddToMasterPlaylist(int trackId)
+    private void AddToBuiltInTrackPlaylists(int trackId, int templateId)
     {
-        if (Playlists.FirstOrDefault(IsMasterPlaylist) is { } master)
-            AddToPlaylist(master, trackId);
+        foreach (ItlRecord playlist in Playlists.Where(playlist =>
+                     IsMasterPlaylist(playlist) ||
+                     ((PlaylistNameOf(playlist) is "Downloaded" or "Music") &&
+                      playlist.Entries.Any(entry => entry.TrackId == templateId))))
+            AddToPlaylist(playlist, trackId);
     }
 
     // ---- albums and artists -------------------------------------------------------------------
@@ -248,9 +321,10 @@ public sealed class ItlDocument
     {
         ItlRecord album = template.Clone();
         AssignNewIdentity(album, NextId());
-        album.SetField((int)ItlDataType.AlbumRecordName, name);
-        album.SetField((int)ItlDataType.AlbumRecordArtist, artist);
-        album.SetField((int)ItlDataType.AlbumRecordSortArtist, artist);
+        SetInternedField(Albums, album, (int)ItlDataType.AlbumRecordName, name);
+        SetInternedField(Albums, album, (int)ItlDataType.AlbumRecordArtist, artist);
+        if (album.Field((int)ItlDataType.AlbumRecordSortArtist) is not null)
+            SetInternedField(Albums, album, (int)ItlDataType.AlbumRecordSortArtist, artist);
         Albums.Add(album);
         return album;
     }
@@ -270,7 +344,7 @@ public sealed class ItlDocument
     {
         ItlRecord artist = template.Clone();
         AssignNewIdentity(artist, NextId());
-        artist.SetField((int)ItlDataType.ArtistRecordName, name);
+        SetInternedField(Artists, artist, (int)ItlDataType.ArtistRecordName, name);
         Artists.Add(artist);
         return artist;
     }

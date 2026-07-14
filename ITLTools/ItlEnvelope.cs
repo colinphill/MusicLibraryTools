@@ -11,6 +11,8 @@ namespace iTunes.Binary;
 /// </summary>
 public sealed class ItlEnvelope
 {
+    private static readonly DateTime MacEpoch = new(1904, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
     /// <summary>iTunes encrypts at most this key's worth of the body; the key has never changed.</summary>
     private static readonly byte[] AesKey = "BHUILuilfghuila3"u8.ToArray();
 
@@ -20,7 +22,27 @@ public sealed class ItlEnvelope
     public required int MaxCryptSize { get; init; }
     public required int FileLength { get; init; }
 
-    /// <summary>The original envelope bytes, replayed verbatim on save with only the length patched.</summary>
+    /// <summary>Aggregate counts cached in both the outer envelope and its inner mfdh mirror.</summary>
+    public int TrackCount { get; init; }
+    public int PlaylistCount { get; init; }
+    public int AlbumCount { get; init; }
+    public int ArtistCount { get; init; }
+
+    /// <summary>
+    /// Word 88 is a confirmed non-aggregate with unresolved semantics. Word 108 is the token
+    /// mirrored at mhgh +120 for the optional type-514 playback-state plist.
+    /// </summary>
+    public uint RawWord88 { get; init; }
+    public uint RawWord108 { get; init; }
+
+    /// <summary>The library's base UTC offset in seconds, stored as a signed big-endian word.</summary>
+    public int UtcOffsetSeconds { get; init; }
+
+    /// <summary>Raw Mac-epoch timestamp at envelope +112.</summary>
+    public uint ModifiedDateSeconds { get; init; }
+    public DateTime? ModifiedDate => ModifiedDateSeconds == 0 ? null : MacEpoch.AddSeconds(ModifiedDateSeconds);
+
+    /// <summary>The original envelope bytes, replayed on save with lengths and proven aggregates patched.</summary>
     public required byte[] RawHeader { get; init; }
 
     /// <summary>Decrypted and inflated library payload: a chain of "msdh" sections.</summary>
@@ -40,6 +62,14 @@ public sealed class ItlEnvelope
         int maxCryptSize = BE(92);
         int sectionCount = BE(48);
         ulong persistentId = BinaryPrimitives.ReadUInt64BigEndian(file.AsSpan(52));
+        int trackCount = BE(68);
+        int playlistCount = BE(72);
+        int albumCount = BE(76);
+        int artistCount = BE(84);
+        uint rawWord88 = BinaryPrimitives.ReadUInt32BigEndian(file.AsSpan(88));
+        int utcOffsetSeconds = BE(100);
+        uint rawWord108 = BinaryPrimitives.ReadUInt32BigEndian(file.AsSpan(108));
+        uint modifiedDateSeconds = BinaryPrimitives.ReadUInt32BigEndian(file.AsSpan(112));
 
         if (headerLength < 144 || headerLength > file.Length)
             throw new InvalidDataException($"Invalid .itl header length: {headerLength}.");
@@ -80,6 +110,14 @@ public sealed class ItlEnvelope
             SectionCount = sectionCount,
             MaxCryptSize = maxCryptSize,
             FileLength = fileLength,
+            TrackCount = trackCount,
+            PlaylistCount = playlistCount,
+            AlbumCount = albumCount,
+            ArtistCount = artistCount,
+            RawWord88 = rawWord88,
+            RawWord108 = rawWord108,
+            UtcOffsetSeconds = utcOffsetSeconds,
+            ModifiedDateSeconds = modifiedDateSeconds,
             RawHeader = file.AsSpan(0, headerLength).ToArray(),
             Body = Inflate(body),
         };

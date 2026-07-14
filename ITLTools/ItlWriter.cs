@@ -12,9 +12,12 @@ namespace iTunes.Binary;
 public static class ItlWriter
 {
     private static readonly byte[] AesKey = "BHUILuilfghuila3"u8.ToArray();
+    private static readonly DateTime MacEpoch = new(1904, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
     /// <summary>Offset of the total-length word inside the internal "mfdh" copy of the envelope.</summary>
     private const int MfdhTotalLengthOffset = 8;
+
+    private readonly record struct Aggregates(int Sections, int Tracks, int Playlists, int Albums, int Artists);
 
     public static void Save(ItlEnvelope envelope, byte[] body, string path)
     {
@@ -52,12 +55,19 @@ public static class ItlWriter
     public static byte[] Build(ItlEnvelope envelope, byte[] body)
     {
         int headerLength = envelope.RawHeader.Length;
+        byte[] bodyCopy = (byte[])body.Clone();
+        byte[] headerCopy = (byte[])envelope.RawHeader.Clone();
+        Aggregates aggregates = ReadAggregates(bodyCopy);
+        bool bodyChanged = !body.AsSpan().SequenceEqual(envelope.Body);
+        uint modifiedDate = bodyChanged
+            ? checked((uint)(DateTime.UtcNow - MacEpoch).TotalSeconds)
+            : envelope.ModifiedDateSeconds;
 
         // The internal envelope copy records the *uncompressed* total length. iTunes reads it back,
         // so it has to track the body we are about to write.
-        PatchMfdh(body, headerLength);
+        PatchMfdh(bodyCopy, headerLength, aggregates, bodyChanged ? modifiedDate : null);
 
-        byte[] compressed = Deflate(body);
+        byte[] compressed = Deflate(bodyCopy);
 
         int cryptLength = Math.Min(envelope.MaxCryptSize, compressed.Length);
         cryptLength -= cryptLength % 16;
@@ -74,17 +84,20 @@ public static class ItlWriter
         }
 
         byte[] file = new byte[headerLength + compressed.Length];
-        envelope.RawHeader.CopyTo(file, 0);
+        headerCopy.CopyTo(file, 0);
         compressed.CopyTo(file, headerLength);
 
         // The envelope is the one big-endian structure in the file.
         BinaryPrimitives.WriteInt32BigEndian(file.AsSpan(8), file.Length);
+        PatchEnvelopeAggregates(file, aggregates);
+        if (bodyChanged)
+            BinaryPrimitives.WriteUInt32BigEndian(file.AsSpan(112), modifiedDate);
 
         return file;
     }
 
     /// <summary>Rewrites the total length inside the first section's "mfdh" record.</summary>
-    private static void PatchMfdh(byte[] body, int headerLength)
+    private static void PatchMfdh(byte[] body, int headerLength, Aggregates aggregates, uint? modifiedDate)
     {
         ItlChunk section = ItlChunk.Read(body, 0);
         int mfdh = section.BodyOffset;
@@ -93,7 +106,55 @@ public static class ItlWriter
             throw new InvalidDataException("First section does not contain the expected 'mfdh' record.");
 
         BinaryPrimitives.WriteInt32LittleEndian(body.AsSpan(mfdh + MfdhTotalLengthOffset), headerLength + body.Length);
+
+        int mfdhHeaderLength = BinaryPrimitives.ReadInt32LittleEndian(body.AsSpan(mfdh + 4));
+        if (mfdhHeaderLength >= 88)
+        {
+            WriteLittle(body, mfdh + 48, aggregates.Sections);
+            WriteLittle(body, mfdh + 68, aggregates.Tracks);
+            WriteLittle(body, mfdh + 72, aggregates.Playlists);
+            WriteLittle(body, mfdh + 76, aggregates.Albums);
+            WriteLittle(body, mfdh + 84, aggregates.Artists);
+        }
+        if (modifiedDate.HasValue && mfdhHeaderLength >= 116)
+            BinaryPrimitives.WriteUInt32LittleEndian(body.AsSpan(mfdh + 112), modifiedDate.Value);
     }
+
+    private static Aggregates ReadAggregates(byte[] body)
+    {
+        int sections = 0, tracks = 0, playlists = 0, albums = 0, artists = 0;
+        foreach (ItlChunk section in ItlChunk.Walk(body, 0, body.Length))
+        {
+            sections++;
+            if (section.Type is not (1 or 2 or 9 or 11) || section.BodyLength < 12)
+                continue;
+
+            ItlChunk list = ItlChunk.Read(body, section.BodyOffset);
+            switch (section.Type, list.Signature)
+            {
+                case (1, "mlth"): tracks = list.ItemCount; break;
+                case (2, "mlph"): playlists = list.ItemCount; break;
+                case (9, "mlah"): albums = list.ItemCount; break;
+                case (11, "mlih"): artists = list.ItemCount; break;
+            }
+        }
+        return new Aggregates(sections, tracks, playlists, albums, artists);
+    }
+
+    private static void PatchEnvelopeAggregates(byte[] file, Aggregates aggregates)
+    {
+        WriteBig(file, 48, aggregates.Sections);
+        WriteBig(file, 68, aggregates.Tracks);
+        WriteBig(file, 72, aggregates.Playlists);
+        WriteBig(file, 76, aggregates.Albums);
+        WriteBig(file, 84, aggregates.Artists);
+    }
+
+    private static void WriteLittle(byte[] bytes, int offset, int value) =>
+        BinaryPrimitives.WriteInt32LittleEndian(bytes.AsSpan(offset), value);
+
+    private static void WriteBig(byte[] bytes, int offset, int value) =>
+        BinaryPrimitives.WriteInt32BigEndian(bytes.AsSpan(offset), value);
 
     private static byte[] Deflate(byte[] body)
     {

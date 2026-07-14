@@ -62,7 +62,7 @@ public sealed class ItlField : ItlNode
 
         encoding = BinaryPrimitives.ReadInt32LittleEndian(Payload);
         byteLength = BinaryPrimitives.ReadInt32LittleEndian(Payload.AsSpan(4));
-        return byteLength > 0 && byteLength <= Payload.Length - PreambleLength && encoding is 1 or 2 or 3;
+        return byteLength >= 0 && byteLength <= Payload.Length - PreambleLength && encoding is 1 or 2 or 3;
     }
 
     public string? Text

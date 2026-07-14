@@ -78,6 +78,12 @@ public static partial class ReverseEngineer
         (ItlTrack Track, Dictionary<string, XElement> Xml)[] pairs =
             [.. library.Tracks.Where(t => xml.ContainsKey(t.Id)).Select(t => (t, xml[t.Id]))];
 
+        if (pairs.Length == 0)
+        {
+            Console.WriteLine($"{boolKeys.Length} boolean keys, no matched tracks to correlate");
+            return;
+        }
+
         int length = pairs.Min(p => p.Track.Header.Length);
         Console.WriteLine($"{boolKeys.Length} boolean keys, {pairs.Length:N0} tracks\n");
 
@@ -206,6 +212,11 @@ public static partial class ReverseEngineer
         ];
 
         ItlTrack[] tracks = [.. library.Tracks.Take(20000)];
+        if (tracks.Length == 0)
+        {
+            Console.WriteLine("no tracks to correlate");
+            return;
+        }
         int length = tracks.Min(t => t.Header.Length);
 
         foreach ((string label, var key) in groupings)

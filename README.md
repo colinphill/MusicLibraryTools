@@ -61,6 +61,10 @@ Auditing and diagnostics:
 
 - **AnalyzeMetadata** — index the full library and report on metadata.
 - **FindNonLossless** — find files that aren't lossless where they should be.
+- **ITLTools / DumpITL** — a reusable library plus standalone application for inspecting,
+  validating, comparing, and conservatively rewriting binary iTunes `.itl` libraries. See
+  [`DumpITL/README.md`](DumpITL/README.md) for the evidence-backed format map and disposable-library
+  acceptance workflow.
 - **CheckRedundancies / FixiTunesDupes** — find duplicate/redundant tracks.
 - **DumpTags** — dump raw tag contents for a file.
 

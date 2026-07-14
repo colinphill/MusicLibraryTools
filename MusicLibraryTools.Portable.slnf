@@ -11,6 +11,8 @@
       "CrossSyncPlaylistFiles/CrossSyncPlaylistFiles.csproj",
       "CrossSyncPlaylists/CrossSyncPlaylists.csproj",
       "DumpITL/DumpITL.csproj",
+      "DumpITL.Tests/DumpITL.Tests.csproj",
+      "ITLTools/ITLTools.csproj",
       "DumpTags/DumpTags.csproj",
       "FindNonLossless/FindNonLossless.csproj",
       "IngestMusic/IngestMusic.csproj",

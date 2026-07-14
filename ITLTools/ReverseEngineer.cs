@@ -34,7 +34,10 @@ public static partial class ReverseEngineer
                 continue;
 
             ItlChunk list = ItlChunk.Read(body, section.Chunk.BodyOffset);
-            foreach (ItlChunk record in ItlChunk.Walk(body, list.HeaderEnd, section.Chunk.EndOffset))
+            if (!ItlTraversal.TryWalkChunkItems(body, list, section.Chunk.EndOffset, out var records, out _))
+                continue;
+
+            foreach (ItlChunk record in records)
             {
                 foreach (ItlChunk child in ItlChunk.Walk(body, record.BodyOffset, record.EndOffset))
                 {
@@ -65,6 +68,11 @@ public static partial class ReverseEngineer
     public static void Map(ItlLibrary library, string recordSignature)
     {
         byte[][] headers = HeadersOf(library, recordSignature);
+        if (headers.Length == 0)
+        {
+            Console.WriteLine($"{recordSignature}: no records");
+            return;
+        }
         int length = headers.Min(h => h.Length);
         Console.WriteLine($"{recordSignature}: {headers.Length:N0} records, header {length} bytes\n");
 
@@ -102,7 +110,10 @@ public static partial class ReverseEngineer
                 continue;
 
             ItlChunk list = ItlChunk.Read(body, section.Chunk.BodyOffset);
-            foreach (ItlChunk record in ItlChunk.Walk(body, list.HeaderEnd, section.Chunk.EndOffset))
+            if (!ItlTraversal.TryWalkChunkItems(body, list, section.Chunk.EndOffset, out var records, out _))
+                continue;
+
+            foreach (ItlChunk record in records)
             {
                 if (record.Signature == signature)
                     headers.Add(body.AsSpan(record.Offset, record.HeaderLength).ToArray());

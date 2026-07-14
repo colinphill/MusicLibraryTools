@@ -96,7 +96,7 @@ public sealed class ItlDataObject
             encoding = BinaryPrimitives.ReadInt32LittleEndian(raw);
             int byteLength = BinaryPrimitives.ReadInt32LittleEndian(raw.AsSpan(4));
 
-            if (byteLength > 0 && byteLength <= bodyLength - 16)
+            if (encoding is 1 or 2 or 3 && byteLength >= 0 && byteLength <= bodyLength - 16)
             {
                 payloadBytes = raw.AsSpan(16, byteLength).ToArray();
 
