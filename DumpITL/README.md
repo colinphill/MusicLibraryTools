@@ -84,6 +84,12 @@ Native one-change and reverse experiments proved:
   none of CRC-32, CRC-32C, Adler-32,
   FNV-1/FNV-1a, DJB2, SDBM, Jenkins, Murmur3, or truncated MD5/SHA values over the payload,
   enclosing `mhoh`, `mhgh`, section, or library-ID-salted variants in either byte order;
+- changing one type-514 record-version digit from `4` to the otherwise observed value `5`, without
+  changing payload length or the preserved `+108/+124` token, produced a structurally valid candidate
+  that iTunes rejected twice before exposing COM and left byte-identical. This is evidence that the
+  token protects the exact playback payload (or participates in equivalent paired integrity state),
+  rather than being a passive revision. The writer therefore rejects all type-514 additions, removals,
+  and byte edits until the token can be reproduced;
 - `mhgh +233` changes from zero to one on the first native library mutation and then stays set;
 - metadata edits advance both library `+112` and track `mith +32`; iTunes may also refresh opaque
   search/index section 20 and track `+656` caches;

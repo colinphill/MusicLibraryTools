@@ -45,6 +45,21 @@ public sealed class WriterAndMutationTests
     }
 
     [Fact]
+    public void BuildRejectsPlaybackStateMutationWithoutAReproducibleToken()
+    {
+        ItlEnvelope envelope = ItlEnvelope.Parse(SyntheticLibrary.CreateFileWithPlaybackState());
+        byte[] body = (byte[])envelope.Body.Clone();
+        byte[] marker = "<string>4</string>"u8.ToArray();
+        int markerOffset = body.AsSpan().IndexOf(marker);
+        Assert.True(markerOffset >= 0);
+        body[markerOffset + "<string>".Length] = (byte)'5';
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => ItlWriter.Build(envelope, body));
+        Assert.Contains("integrity token", exception.Message);
+    }
+
+    [Fact]
     public void SyntheticDocumentValidatesAndStructuralWritesPatchCounts()
     {
         ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));

@@ -12,7 +12,14 @@ internal static class SyntheticLibrary
         return ItlWriter.Build(envelope, CreateBody());
     }
 
-    public static ItlEnvelope CreateEnvelope()
+    public static byte[] CreateFileWithPlaybackState()
+    {
+        byte[] body = CreateBody(includePlaybackState: true);
+        ItlEnvelope envelope = CreateEnvelope(body);
+        return ItlWriter.Build(envelope, body);
+    }
+
+    public static ItlEnvelope CreateEnvelope(byte[]? originalBody = null)
     {
         byte[] header = new byte[144];
         "hdfm"u8.CopyTo(header);
@@ -39,14 +46,21 @@ internal static class SyntheticLibrary
             AlbumCount = 99,
             ArtistCount = 99,
             RawHeader = header,
-            Body = [],
+            Body = originalBody ?? [],
         };
     }
 
-    public static byte[] CreateBody()
+    public static byte[] CreateBody(bool includePlaybackState = false)
     {
         byte[] mfdh = Chunk("mfdh", new byte[144], headerLength: 144);
-        byte[] mhgh = Chunk("mhgh", [], headerLength: 128, countAt8: 0);
+        byte[] playbackState = includePlaybackState
+            ? Chunk("mhoh", "<plist><dict><key>version</key><string>4</string></dict></plist>"u8.ToArray(),
+                headerLength: 24)
+            : [];
+        if (playbackState.Length > 0)
+            BinaryPrimitives.WriteInt32LittleEndian(playbackState.AsSpan(12), (int)ItlDataType.PlaybackStatePlist);
+        byte[] mhgh = Chunk("mhgh", playbackState, headerLength: 128,
+            countAt8: includePlaybackState ? 1 : 0);
 
         byte[] albumHeader = RecordHeader("miah", 100, id: 3);
         byte[] artistHeader = RecordHeader("miih", 100, id: 4);

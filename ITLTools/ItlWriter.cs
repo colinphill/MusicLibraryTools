@@ -57,6 +57,7 @@ public static class ItlWriter
         int headerLength = envelope.RawHeader.Length;
         byte[] bodyCopy = (byte[])body.Clone();
         byte[] headerCopy = (byte[])envelope.RawHeader.Clone();
+        EnsurePlaybackStateUnchanged(envelope.Body, bodyCopy);
         Aggregates aggregates = ReadAggregates(bodyCopy);
         bool bodyChanged = !body.AsSpan().SequenceEqual(envelope.Body);
         uint modifiedDate = bodyChanged
@@ -94,6 +95,37 @@ public static class ItlWriter
             BinaryPrimitives.WriteUInt32BigEndian(file.AsSpan(112), modifiedDate);
 
         return file;
+    }
+
+    private static void EnsurePlaybackStateUnchanged(byte[] originalBody, byte[] candidateBody)
+    {
+        byte[][] original = ReadPlaybackStateChunks(originalBody);
+        byte[][] candidate = ReadPlaybackStateChunks(candidateBody);
+        if (original.Length == candidate.Length &&
+            original.Zip(candidate).All(pair => pair.First.AsSpan().SequenceEqual(pair.Second)))
+            return;
+
+        throw new InvalidOperationException(
+            "Type-514 playback state cannot be added, removed, or edited because its +108/+124 integrity token is not reproducible.");
+    }
+
+    private static byte[][] ReadPlaybackStateChunks(byte[] body)
+    {
+        if (body.Length == 0) return [];
+
+        var result = new List<byte[]>();
+        foreach (ItlChunk section in ItlChunk.Walk(body, 0, body.Length))
+        {
+            if (section.Type != 12 || section.BodyLength < 12) continue;
+            ItlChunk mhgh = ItlChunk.Read(body, section.BodyOffset);
+            if (mhgh.Signature != "mhgh") continue;
+            foreach (ItlChunk child in ItlChunk.Walk(body, mhgh.HeaderEnd, section.EndOffset))
+            {
+                if (child.Signature == "mhoh" && child.Type == (int)ItlDataType.PlaybackStatePlist)
+                    result.Add(body.AsSpan(child.Offset, child.TotalLength).ToArray());
+            }
+        }
+        return [.. result];
     }
 
     /// <summary>Rewrites the total length inside the first section's "mfdh" record.</summary>
