@@ -164,6 +164,9 @@ public sealed class ItlTrack
     public bool HasVideo => (Header[233] & 1) != 0;
     public bool PartOfGaplessAlbum => (Header[278] & 1) != 0;
 
+    /// <summary>Whether iTunes marks the track as Loved. Stored as bit 1 at mith +703.</summary>
+    public bool Loved => (Header[703] & 2) != 0;
+
     /// <summary>0 = none, 1 = explicit, 2 = clean.</summary>
     public int Advisory => Header[166];
 

@@ -58,6 +58,9 @@ tracks prove the mapping because type-514 uses the exact decimal value as its ou
 key; one additional decimal plist key is stale. This field is exposed read-only until native edit
 semantics are established.
 
+Track `mith +703` bit 1 (`0x02`) is Loved. `ItlTrack.Loved` reads it, editable records expose
+`GetLoved`/`SetLoved`, and `set-loved` creates a validated disposable writer candidate.
+
 For semantic track, album, and artist strings, `mhoh +16` is a per-type value key: equal values
 reuse a key and new values receive the next key. Location and FileUrl instead retain structural
 subtypes 1 and 2. Fresh native user playlists used child key 3 and matured to 4 on the next save.
@@ -174,7 +177,11 @@ Native one-change and reverse experiments proved:
   state;
 - reversible rating and unplayed-state runs also leave type 514 absent. Rating changes `mith +108`;
   unplayed state changes `mith +238` and the playback/bookmark word at `+624`. The Windows COM
-  interface does not expose loved state, so that branch requires a guarded manual UI experiment;
+  interface does not expose loved state. Two guarded manual UI runs independently toggled Love and
+  Unlove on the same track, proving the flag is bit 1 (`0x02`) at `mith +703`; both directions
+  survived reopen, reversed to `0x00`, and left type 514 absent. `ItlTrack.Loved` and the editable
+  `GetLoved`/`SetLoved` accessors expose the field. A writer-created `0x00 -> 0x02` candidate then
+  opened and re-saved in iTunes with the byte retained and no validation diagnostics;
 - the preserved type-514 plist has 2,024 dictionaries containing bookmark time (`bktm`), played
   state (`hbpl`), play count (`plct`), timestamp (`tstm`), and record version. Eighty of its 81
   decimal outer keys resolve to current Store Item IDs at `mith +168/+428`; the remaining decimal
@@ -224,6 +231,8 @@ family inventories fields, sections, IDs, blobs, aggregates, `mprh` links, playb
 correlations, and `smartmembers` membership/header candidates. Research snapshot schema 2 includes
 a nullable type-15 record matrix. Run
 the executable without arguments for the complete command list.
+For changed ranges of up to 16 bytes, `compare` includes the before/after hex values so one-bit
+experiments can be interpreted directly from the research bundle.
 `smart-mask-probe` and `smart-field-probe` create disposable criteria for guarded native evaluation;
 they are research commands, not general-purpose smart-playlist editors.
 
@@ -251,6 +260,9 @@ harness captures it, reopens it, removes it through COM, and records every phase
 `-ManualInstructions` to describe a one-variable native rule such as `Playlist is Cafe Disco`.
 `ManualRefreshSmartPlaylist` waits for confirming an existing rule to change its COM membership,
 which distinguishes native rule evaluation from a merely preserved membership snapshot.
+`ManualToggleFirstTrackLoved` identifies one track by name, artist, and album and displays a guarded
+dialog for toggling its Love status once in the mutation phase and once again in the reversal phase.
+It requires `-MultiPhase`; unlike the smart-playlist probes, it does not depend on a named playlist.
 
 On iTunes 12.13.10.3, no-op and metadata-only rewrites of the full corpus opened successfully. In
 the disposable empty-library laboratory, writer-created playlists, tracks, albums, artists, foreign
@@ -273,10 +285,10 @@ The final reverse-engineering work should proceed in this order:
    unchanged. The writer preserves this native runtime high-water counter.
 3. **Ordinary playback paths tested; no plist generated:** Play/stop position, remembered audio and
    video bookmarks, completed playback, play count, rating, and unplayed state all update ordinary
-   track fields without creating type 514. Static evidence identifies the plist as imported Apple
-   device/Universal Playback Position state. Capturing a fresh payload/token pair now requires a
-   disposable iPhone/iPod sync or an independently supplied Play Data/PlayCounts artifact. Loved
-   state still needs a guarded manual UI experiment because Windows iTunes COM does not expose it.
+   track fields without creating type 514. Two reversible manual Loved-state runs additionally prove
+   Loved is `mith +703` bit 1 and does not create type 514. Static evidence identifies the plist as
+   imported Apple device/Universal Playback Position state. Capturing a fresh payload/token pair now
+   requires a disposable iPhone/iPod sync or an independently supplied Play Data/PlayCounts artifact.
 4. **Decimal Store Item ID branch resolved; hexadecimal branch remains:** Derive the type-514 key identity with a one-track, one-variable matrix. Change title, artist,
    filename, path, persistent ID, numeric track ID, library persistent ID, and media kind separately.
    Test normalized byte encodings and common digest families, and also search the complete decoded

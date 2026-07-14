@@ -188,14 +188,24 @@ public static class ItlComparer
             }
             else if (start >= 0)
             {
-                sink.Add($"{label} bytes +{start}..+{i - 1} changed");
+                ReportByteRange(label, before, after, start, i, sink);
                 start = -1;
             }
         }
         if (start >= 0)
-            sink.Add($"{label} bytes +{start}..+{common - 1} changed");
+            ReportByteRange(label, before, after, start, common, sink);
         if (before.Length != after.Length)
             sink.Add($"{label} length {before.Length} -> {after.Length}");
+    }
+
+    private static void ReportByteRange(string label, ReadOnlySpan<byte> before, ReadOnlySpan<byte> after,
+        int start, int endExclusive, DifferenceSink sink)
+    {
+        int length = endExclusive - start;
+        string values = length <= 16
+            ? $" ({Convert.ToHexString(before.Slice(start, length))} -> {Convert.ToHexString(after.Slice(start, length))})"
+            : string.Empty;
+        sink.Add($"{label} bytes +{start}..+{endExclusive - 1} changed{values}");
     }
 
     private sealed record SectionView(string Key, ItlChunk Chunk, bool Structured);

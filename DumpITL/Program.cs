@@ -41,6 +41,7 @@ if (args.Length < 2)
         Write (prototype -- always work on a copy, with iTunes closed)
           roundtrip <out.itl>               re-encode unchanged, prove the body survives
           set <trackId> <field> <value> <out.itl>
+          set-loved <trackId> <true|false> <out.itl>
           track-add <media> <title> <out.itl>         clone a track for a disposable experiment
           track-add-new <media> <title> <out.itl>     clone with a new album and artist
           playlist-add <template> <name> <out.itl>  clone one playlist for a disposable experiment
@@ -65,7 +66,7 @@ int required = command switch
 {
     "probe" or "discover" or "plprobe" or "roundtrip" or "cloud" or "demo" or "verify" or "compare" => 3,
     "smart-convert-probe" => 4,
-    "playlist-add" or "smart-add" or "track-add" or "track-add-new" => 5,
+    "playlist-add" or "smart-add" or "track-add" or "track-add-new" or "set-loved" => 5,
     "smart-ref-add" or "smart-mask-probe" or "smart-field-probe" => 6,
     "re" => 3,
     "set" => 6,
@@ -221,6 +222,10 @@ switch (command)
 
     case "set":
         Set(itl, int.Parse(args[2]), Enum.Parse<ItlDataType>(args[3]), args[4], args[5]);
+        break;
+
+    case "set-loved":
+        SetLoved(itl, int.Parse(args[2]), bool.Parse(args[3]), args[4]);
         break;
 
     case "verify":
@@ -631,6 +636,31 @@ static void Set(string itl, int trackId, ItlDataType type, string value, string 
     Console.WriteLine($"\nwrote {outPath} ({new FileInfo(outPath).Length:N0} bytes)");
     Console.WriteLine($"reparsed: {reloaded.Tracks.Count:N0} tracks, {reloaded.Playlists.Count:N0} playlists, " +
                       $"{reloaded.Albums.Count:N0} albums, {reloaded.Artists.Count:N0} artists");
+}
+
+/// <summary>Writes the native mith +703 bit-1 Loved flag on a disposable library copy.</summary>
+static void SetLoved(string itl, int trackId, bool value, string outPath)
+{
+    ItlDocument document = ItlDocument.Load(itl);
+    ItlRecord track = document.FindTrack(trackId) ?? throw new InvalidOperationException($"No track {trackId}.");
+
+    Console.WriteLine($"before: [{trackId}] Loved = {track.GetLoved()}");
+    track.SetLoved(value);
+    document.Save(outPath);
+
+    ItlLibrary reloaded = ItlLibrary.Load(outPath);
+    ItlTrack after = reloaded.Tracks.First(t => t.Id == trackId);
+    if (after.Loved != value)
+        throw new InvalidDataException($"Written Loved value for track {trackId} did not round-trip.");
+
+    IReadOnlyList<ItlValidationIssue> diagnostics = ItlDocument.Load(outPath).Validate();
+    foreach (ItlValidationIssue issue in diagnostics)
+        Console.WriteLine($"{issue.Severity,-7} {issue.Code}: {issue.Message}");
+    if (diagnostics.Any(issue => issue.Severity == ItlValidationSeverity.Error))
+        throw new InvalidDataException("The Loved-state candidate failed validation.");
+
+    Console.WriteLine($"after : [{trackId}] Loved = {after.Loved}");
+    Console.WriteLine($"wrote {outPath} ({new FileInfo(outPath).Length:N0} bytes)");
 }
 
 /// <summary>Clones one known-good playlist for native-iTunes research on a disposable copy.</summary>

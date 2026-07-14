@@ -122,6 +122,10 @@ public static class ItlTrackFields
     public static bool GetPartOfGaplessAlbum(this ItlRecord t) => Bit(t, 278, 0);
     public static void SetPartOfGaplessAlbum(this ItlRecord t, bool v) => SetBit(t, 278, 0, v);
 
+    /// <summary>Gets or sets the native Loved flag, proven by two reversible iTunes UI runs.</summary>
+    public static bool GetLoved(this ItlRecord t) => Bit(t, 703, 1);
+    public static void SetLoved(this ItlRecord t, bool v) => SetBit(t, 703, 1, v);
+
     /// <summary>0 = none, 1 = explicit, 2 = clean.</summary>
     public static int GetAdvisory(this ItlRecord t) => t.Header[166];
     public static void SetAdvisory(this ItlRecord t, int v) => t.Header[166] = (byte)v;

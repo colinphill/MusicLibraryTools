@@ -128,4 +128,45 @@ public sealed class FormatSafetyTests
         }
         finally { Directory.Delete(directory, recursive: true); }
     }
+
+    [Fact]
+    public void ComparerReportsValuesForSmallChangedByteRanges()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "dumpitl_compare_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        string before = Path.Combine(directory, "before.itl");
+        string after = Path.Combine(directory, "after.itl");
+        try
+        {
+            File.WriteAllBytes(before, SyntheticLibrary.CreateFile());
+            ItlDocument document = ItlDocument.Load(before);
+            document.Tracks.Single().Header[703] = 0x80;
+            document.Save(after);
+
+            using var output = new StringWriter();
+            ItlComparer.Compare(before, after, output, "mith:1");
+            Assert.Contains("header bytes +703..+703 changed (00 -> 80)", output.ToString());
+        }
+        finally { Directory.Delete(directory, recursive: true); }
+    }
+
+    [Fact]
+    public void LovedAccessorsUseBitOneAtTrackHeader703AndPreserveOtherBits()
+    {
+        ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+        ItlRecord editable = document.Tracks.Single();
+        editable.Header[703] = 0xA5;
+
+        Assert.False(editable.GetLoved());
+        editable.SetLoved(true);
+        Assert.Equal(0xA7, editable.Header[703]);
+        Assert.True(editable.GetLoved());
+        editable.SetLoved(false);
+        Assert.Equal(0xA5, editable.Header[703]);
+
+        var parsed = new ItlTrack { Id = 1, Header = (byte[])editable.Header.Clone(), DataObjects = [] };
+        Assert.False(parsed.Loved);
+        parsed.Header[703] = 0xA7;
+        Assert.True(parsed.Loved);
+    }
 }

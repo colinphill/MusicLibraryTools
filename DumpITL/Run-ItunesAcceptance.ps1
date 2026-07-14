@@ -14,6 +14,7 @@ param(
     [string]$RunName,
 
     [ValidateSet('None', 'CreatePlaylist', 'CreatePlaylistsToCount', 'ManualCreateSmartPlaylist', 'ManualRefreshSmartPlaylist',
+        'ManualToggleFirstTrackLoved',
         'DeletePlaylist', 'SetFirstTrackName',
         'SetFirstTrackBookmark', 'SetFirstTrackPlayCount', 'SetFirstTrackRating',
         'SetFirstTrackUnplayed', 'PlayFirstTrackAtPosition', 'ImportFile', 'ImportFilesToCount',
@@ -170,6 +171,63 @@ function Find-ItunesPlaylist([object]$application, [string]$name) {
     }
 }
 
+function Request-ManualFirstTrackLovedToggle(
+    [object]$application,
+    [Collections.IDictionary]$state,
+    [switch]$Reverse
+) {
+    Add-Type -AssemblyName System.Windows.Forms
+    $track = $application.LibraryPlaylist.Tracks.Item(1)
+    if ($null -eq $track) { throw 'The disposable library has no first track for the Loved-state probe.' }
+    try {
+        $name = [string]$track.Name
+        $artist = [string]$track.Artist
+        $album = [string]$track.Album
+        if (-not $Reverse) {
+            $state.LovedTrackName = $name
+            $state.LovedTrackArtist = $artist
+            $state.LovedTrackAlbum = $album
+        }
+        elseif ($name -ne [string]$state.LovedTrackName -or
+            $artist -ne [string]$state.LovedTrackArtist -or
+            $album -ne [string]$state.LovedTrackAlbum) {
+            throw 'The first track changed between Loved-state phases; refusing an ambiguous reversal.'
+        }
+
+        $action = if ($Reverse) { 'Toggle its Love status once more to restore the original state.' }
+            else { 'Toggle its Love status exactly once.' }
+        $message = @"
+In the disposable iTunes library, locate this track:
+
+Name: $name
+Artist: $artist
+Album: $album
+
+$action
+Use the track's context menu (Love or Unlove), make no other edits, then click OK.
+"@
+        Write-Host $message
+        $owner = [Windows.Forms.Form]::new()
+        try {
+            $owner.TopMost = $true
+            $owner.ShowInTaskbar = $false
+            $result = [Windows.Forms.MessageBox]::Show(
+                $owner,
+                $message,
+                'DumpITL Loved-state probe',
+                [Windows.Forms.MessageBoxButtons]::OKCancel,
+                [Windows.Forms.MessageBoxIcon]::Information)
+        }
+        finally { $owner.Dispose() }
+        if ($result -ne [Windows.Forms.DialogResult]::OK) {
+            throw 'The Loved-state probe was cancelled.'
+        }
+        Write-Host $(if ($Reverse) { 'Confirmed the manual Loved-state reversal.' }
+            else { 'Confirmed the manual Loved-state mutation.' })
+    }
+    finally { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($track) }
+}
+
 function Invoke-ItunesExperiment(
     [object]$application,
     [string]$mode,
@@ -201,6 +259,9 @@ function Invoke-ItunesExperiment(
                 $playlist.Delete()
                 [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($playlist)
                 Write-Host "Removed native smart playlist '$value'."
+            }
+            'ManualToggleFirstTrackLoved' {
+                Request-ManualFirstTrackLovedToggle $application $state -Reverse
             }
             'SetFirstTrackName' {
                 $track = $application.LibraryPlaylist.Tracks.Item(1)
@@ -398,6 +459,9 @@ function Invoke-ItunesExperiment(
             }
             Write-Host "Smart playlist '$value' membership changed from $initialCount to $currentCount."
         }
+        'ManualToggleFirstTrackLoved' {
+            Request-ManualFirstTrackLovedToggle $application $state
+        }
         'DeletePlaylist' {
             if ([string]::IsNullOrWhiteSpace($value)) { throw 'DeletePlaylist requires -ExperimentValue.' }
             $playlist = Find-ItunesPlaylist $application $value
@@ -579,8 +643,11 @@ if (-not (Test-Path -LiteralPath $defaultsExe -PathType Leaf)) { throw "iTunes d
 if (-not (Test-Path -LiteralPath $itunesExe -PathType Leaf)) { throw "iTunes executable not found: $itunesExe" }
 if (-not (Test-Path -LiteralPath $preferences -PathType Leaf)) { throw "iTunes preferences not found: $preferences" }
 if (Get-Process iTunes -ErrorAction SilentlyContinue) { throw 'Quit iTunes before running acceptance.' }
-if ($MultiPhase -and $Experiment -notin @('CreatePlaylist', 'CreatePlaylistsToCount', 'ManualCreateSmartPlaylist', 'SetFirstTrackName', 'SetFirstTrackBookmark', 'SetFirstTrackPlayCount', 'SetFirstTrackRating', 'SetFirstTrackUnplayed', 'PlayFirstTrackAtPosition', 'ImportFile', 'ImportFilesToCount')) {
-    throw "Multi-phase mode requires a reversible experiment: CreatePlaylist, CreatePlaylistsToCount, ManualCreateSmartPlaylist, SetFirstTrackName, SetFirstTrackBookmark, SetFirstTrackPlayCount, SetFirstTrackRating, SetFirstTrackUnplayed, PlayFirstTrackAtPosition, ImportFile, or ImportFilesToCount."
+if ($Experiment -eq 'ManualToggleFirstTrackLoved' -and -not $MultiPhase) {
+    throw 'ManualToggleFirstTrackLoved requires -MultiPhase so the original state is restored.'
+}
+if ($MultiPhase -and $Experiment -notin @('CreatePlaylist', 'CreatePlaylistsToCount', 'ManualCreateSmartPlaylist', 'ManualToggleFirstTrackLoved', 'SetFirstTrackName', 'SetFirstTrackBookmark', 'SetFirstTrackPlayCount', 'SetFirstTrackRating', 'SetFirstTrackUnplayed', 'PlayFirstTrackAtPosition', 'ImportFile', 'ImportFilesToCount')) {
+    throw "Multi-phase mode requires a reversible experiment: CreatePlaylist, CreatePlaylistsToCount, ManualCreateSmartPlaylist, ManualToggleFirstTrackLoved, SetFirstTrackName, SetFirstTrackBookmark, SetFirstTrackPlayCount, SetFirstTrackRating, SetFirstTrackUnplayed, PlayFirstTrackAtPosition, ImportFile, or ImportFilesToCount."
 }
 if ($MultiPhase -and -not (Test-Path -LiteralPath $DumpItlExe -PathType Leaf)) {
     throw "Multi-phase mode requires the DumpITL executable: $DumpItlExe"
