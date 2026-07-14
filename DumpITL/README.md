@@ -98,16 +98,16 @@ nested rule `Genre contains "Country"`, and recalculated its membership. It also
 Info live-updating toggle and a factory-created `Play Count > 5` integer rule. The latter re-exported
 to XML with Smart Info and Smart Criteria byte-identical to the resaved ITL blobs. A built-in Music
 rule edit was accepted but regenerated to the canonical Music mask on save, proving distinguished
-built-ins are system-owned and should not be used as editable-rule templates. The remaining
-Windows-only unknown in the corpus is field `0xA4` on TV & Movies.
+built-ins are system-owned and should not be used as editable-rule templates.
 
 Two complementary native probes establish that `0xA4` is Boolean for the observed rule form but do
-not establish its semantic name. Scoped to Movie and TV Show media, `is 1` selected none of the
+establish its semantic behavior. Scoped to Movie and TV Show media, `is 1` selected none of the
 local videos and `is 0` selected all 14 surviving local videos. iTunes retained both 68-byte values
 and exported byte-identical criteria. Applying the Movie/TV scope also moved the probe playlist out
-of the Music group and into the Movies/TV UI. The distinguished TV & Movies rule uses `is 1` and is
-empty in this corpus, so a purchased/cloud/system-video positive sample or native-code mapping is
-still required before exposing a named field.
+of the Music group and into the Movies/TV UI. Static inspection then closed the semantic mapping:
+iTunes' native field descriptor for track key `is-ams-video` contains smart field ID `0xA4` and
+Boolean type 1. The field is exposed as `ItlSmartField.AppleMediaServicesVideo`; a positive sample
+would still be useful corpus coverage but is no longer required to name or type the rule.
 
 Operator `0x0800` is now modeled as `AllowedAndRequiredBits`. Two guarded native recalculations used
 the same user smart playlist and complementary media masks. Operands `33/32` selected exactly the
@@ -226,10 +226,7 @@ Still unresolved:
   of a video filename/title or `Artist - Title`, while the other entries appear stale or use another
   branch; Store Item ID and StoreIdentifier hashes add no matches);
 - the exact eligibility meaning and downstream consumer of the newest-ten `mprh` playlist-entry
-  history, plus the meanings of other opaque section types;
-- the semantic name and positive track representation of Boolean smart field `0xA4`, used by the
-  empty distinguished TV & Movies playlist. Native `is 1`/`is 0` probes selected 0/14 local videos,
-  so resolving it now requires a purchased/cloud/system-video positive sample or native-code map.
+  history, plus the meanings of other opaque section types.
 
 ## Commands
 
@@ -317,9 +314,9 @@ The final reverse-engineering work should proceed in this order:
    playlist-reference capture established its 68-byte value layout, and the corrected typed factory
    survived a native re-save with byte-identical XML blobs and membership. Complementary native
    evaluations resolve operator `0x0800` as allowed/required media masks. Complementary field
-   `0xA4` probes prove Boolean behavior but find no positive local-video sample; retain it as raw
-   until a system/store-video sample or native mapping supplies the semantic name. A native re-save
-   also proves manual-to-smart conversion requires only the two zero-key blobs and no header edits;
+   `0xA4` probes prove Boolean behavior, and the native descriptor maps it directly to track key
+   `is-ams-video`, now exposed as `AppleMediaServicesVideo`. Finally, a native re-save proves
+   manual-to-smart conversion requires only the two zero-key blobs and no header edits;
    `SetSmartPlaylist` now supports it.
 7. Promote findings into writer behavior only after repeated native evidence. Add a synthetic
    fixture and regression test for every proven rule, keep unresolved bytes opaque, and make an

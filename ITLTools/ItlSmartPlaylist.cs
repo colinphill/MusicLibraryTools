@@ -83,6 +83,9 @@ public enum ItlSmartField : uint
     Location = 0x85,
     CloudStatus = 0x86,
     Love = 0x9A,
+
+    /// <summary>Native track key <c>is-ams-video</c>; true for Apple Media Services video assets.</summary>
+    AppleMediaServicesVideo = 0xA4,
 }
 
 public enum ItlSmartValueKind
@@ -609,7 +612,7 @@ public sealed class ItlSmartPlaylist
                 ItlSmartField.SkipCount or ItlSmartField.Duration or ItlSmartField.TrackNumber or
                 ItlSmartField.Year or ItlSmartField.AlbumRating => ItlSmartValueKind.Integer,
             ItlSmartField.Compilation or ItlSmartField.HasArtwork or ItlSmartField.Purchased or
-                ItlSmartField.Disabled => ItlSmartValueKind.Boolean,
+                ItlSmartField.Disabled or ItlSmartField.AppleMediaServicesVideo => ItlSmartValueKind.Boolean,
             ItlSmartField.DateAdded or ItlSmartField.DateModified or ItlSmartField.PlayDate or
                 ItlSmartField.SkipDate => ItlSmartValueKind.Date,
             ItlSmartField.MediaKind => ItlSmartValueKind.MediaKind,

@@ -63,7 +63,7 @@ public sealed class SmartPlaylistTests
         byte[] unknown = Enumerable.Range(0, 17).Select(value => (byte)value).ToArray();
         byte[] criteria = Criteria(ItlSmartConjunction.All,
             Rule(ItlSmartField.DateAdded, ItlSmartSign.PositiveInteger, ItlSmartOperator.Within, relative),
-            Rule((ItlSmartField)0xA4, ItlSmartSign.PositiveInteger,
+            Rule((ItlSmartField)0xDEAD, ItlSmartSign.PositiveInteger,
                 ItlSmartOperator.AllowedAndRequiredBits, unknown));
 
         ItlSmartPlaylist smart = ItlSmartPlaylist.Parse(new byte[112], criteria);
@@ -74,7 +74,7 @@ public sealed class SmartPlaylistTests
         Assert.Empty(date.DateValues);
         ItlSmartRule unmodeled = smart.Criteria.Rules[1];
         Assert.Equal(ItlSmartValueKind.Unknown, unmodeled.ValueKind);
-        Assert.Equal(0xA4u, unmodeled.RawField);
+        Assert.Equal(0xDEADu, unmodeled.RawField);
         Assert.Equal(unknown, unmodeled.RawValue);
         Assert.Equal(criteria, smart.EncodeCriteria());
     }
@@ -165,10 +165,9 @@ public sealed class SmartPlaylistTests
     }
 
     [Fact]
-    public void UnknownNumericFieldFactoryRoundTripsWithoutAssigningSemantics()
+    public void AppleMediaServicesVideoFactoryRoundTripsAsBoolean()
     {
-        ItlSmartRule rule = ItlSmartRule.CreateInteger(
-            (ItlSmartField)0xA4, ItlSmartOperator.Is, [1]);
+        ItlSmartRule rule = ItlSmartRule.CreateBoolean(ItlSmartField.AppleMediaServicesVideo, true);
         ItlSmartPlaylist smart = ItlSmartPlaylist.Create(
             ItlSmartCriteria.Create(ItlSmartConjunction.All, rule));
 
@@ -177,7 +176,9 @@ public sealed class SmartPlaylistTests
         ItlSmartRule parsedRule = parsed.Criteria.Rules.Single();
 
         Assert.Equal(0xA4u, parsedRule.RawField);
-        Assert.Equal(ItlSmartValueKind.Unknown, parsedRule.ValueKind);
+        Assert.Equal(ItlSmartField.AppleMediaServicesVideo, parsedRule.Field);
+        Assert.Equal(ItlSmartValueKind.Boolean, parsedRule.ValueKind);
+        Assert.Equal([1L, 1L, 0L], parsedRule.IntegerValues);
         Assert.Equal(68, parsedRule.RawValue.Length);
         Assert.Equal(1u, BinaryPrimitives.ReadUInt32BigEndian(parsedRule.RawValue.AsSpan(4)));
         Assert.Equal(criteria, parsed.EncodeCriteria());
