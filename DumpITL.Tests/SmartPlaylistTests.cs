@@ -22,7 +22,7 @@ public sealed class SmartPlaylistTests
 
         byte[] nested = Criteria(ItlSmartConjunction.Any,
             Rule(ItlSmartField.Genre, ItlSmartSign.PositiveString, ItlSmartOperator.Contains,
-                Encoding.BigEndianUnicode.GetBytes("K-Pop")),
+                Encoding.BigEndianUnicode.GetBytes("Synth Pop")),
             Rule(ItlSmartField.PlayCount, ItlSmartSign.PositiveInteger, ItlSmartOperator.GreaterThan,
                 Numeric(5, 5)));
         byte[] criteria = Criteria(ItlSmartConjunction.All,
@@ -45,7 +45,7 @@ public sealed class SmartPlaylistTests
 
         ItlSmartCriteria child = smart.Criteria.Rules[0].NestedCriteria!;
         Assert.Equal(ItlSmartConjunction.Any, child.Conjunction);
-        Assert.Equal("K-Pop", child.Rules[0].StringValue);
+        Assert.Equal("Synth Pop", child.Rules[0].StringValue);
         Assert.Equal(ItlSmartValueKind.Integer, child.Rules[1].ValueKind);
         Assert.Equal(5, child.Rules[1].IntegerValues[0]);
         Assert.Equal(0x1122334455667788UL, smart.Criteria.Rules[1].PlaylistPersistentId);

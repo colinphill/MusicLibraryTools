@@ -61,6 +61,9 @@ public static class ItlWriter
         EnsurePlaybackStateUnchanged(envelope.Body, bodyCopy);
         EnsureMiqhReferencesResolve(bodyCopy, envelope.LibraryPersistentId);
         EnsureMprhReferencesResolve(bodyCopy);
+        EnsureStshLayout(bodyCopy);
+        EnsureSpecialPlaylistLayout(bodyCopy);
+        EnsurePodcastStationLayout(bodyCopy);
         Aggregates aggregates = ReadAggregates(bodyCopy);
         bool bodyChanged = !body.AsSpan().SequenceEqual(envelope.Body);
         uint modifiedDate = bodyChanged
@@ -244,6 +247,47 @@ public static class ItlWriter
                 throw new InvalidOperationException(
                     $"Type-15 mprh references missing playlist entry {entryId} in {playlistPersistentId:X16}; " +
                     "its mutation policy is unproven.");
+        }
+    }
+
+    /// <summary>
+    /// Type 23 is preserved opaquely, but its confirmed container rules are cheap to enforce. This
+    /// prevents a caller using Build directly from emitting a stale child count or an unsupported
+    /// global-state object while types 900/901 still lack proven mutation semantics.
+    /// </summary>
+    private static void EnsureStshLayout(byte[] body)
+    {
+        foreach (ItlChunk section in ItlChunk.Walk(body, 0, body.Length).Where(candidate => candidate.Type == 23))
+        {
+            ItlChunk stsh = ItlChunk.Read(body, section.BodyOffset);
+            if (stsh.Signature != "stsh")
+                throw new InvalidDataException(
+                    $"Type-23 section has unsupported inner layout '{stsh.Signature}'.");
+            _ = ItlTraversal.WalkStshDataObjects(body, stsh, section.EndOffset);
+        }
+    }
+
+    private static void EnsureSpecialPlaylistLayout(byte[] body)
+    {
+        foreach (ItlChunk section in ItlChunk.Walk(body, 0, body.Length).Where(candidate => candidate.Type == 14))
+        {
+            ItlChunk mlph = ItlChunk.Read(body, section.BodyOffset);
+            if (mlph.Signature != "mlph")
+                throw new InvalidDataException(
+                    $"Type-14 section has unsupported inner layout '{mlph.Signature}'.");
+            _ = ItlTraversal.WalkMlphRecords(body, mlph, section.EndOffset);
+        }
+    }
+
+    private static void EnsurePodcastStationLayout(byte[] body)
+    {
+        foreach (ItlChunk section in ItlChunk.Walk(body, 0, body.Length).Where(candidate => candidate.Type == 21))
+        {
+            ItlChunk mlsh = ItlChunk.Read(body, section.BodyOffset);
+            if (mlsh.Signature != "mlsh")
+                throw new InvalidDataException(
+                    $"Type-21 section has unsupported inner layout '{mlsh.Signature}'.");
+            _ = ItlTraversal.WalkPodcastStations(body, mlsh, section.EndOffset);
         }
     }
 

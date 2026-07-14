@@ -95,6 +95,36 @@ are not yet proven, so records stay opaque. The validator checks current-library
 track foreign keys, and the writer rejects a track removal that would leave one dangling rather than
 guessing the native record-removal policy.
 
+### Type-23 global state
+
+Section 23 is an `stsh` global-state container with a 96-byte header. Its `+8` word is zero and
+`+12` counts optional `mhoh` children. Native iTunes 12.13 code emits at most two children: one each
+of types 900 and 901. Both the private full corpus and the native empty fixture have a zero count,
+so the values' application-level meanings remain unresolved. Traversal and validation handle empty
+and populated layouts, preserve payloads opaquely, and reject stale counts, duplicate values, or
+unproven child types before writing.
+
+### Type-14 special playlists
+
+Section 14 is a second `mlph`/`miph` playlist-shaped partition, not part of the ordinary type-2
+playlist count. Static inspection of iTunes 12.13 shows the library serializer invokes the same
+routine for section 2 and then section 14. It routes internal playlist object kinds `0x20` and
+`0x23` to type 14 and all other eligible playlist objects to type 2; only the type-2 count updates
+the library's public playlist aggregate. The observed full and empty libraries contain zero type-14
+records. The parser, validator, and writer now enforce its 92-byte `mlph` header, item count, and
+`miph` child signatures while preserving the records opaquely. The user-facing meanings of kinds
+`0x20` and `0x23`, and their mutation lifecycle, remain unresolved.
+
+### Type-21 podcast stations
+
+Section 21 is an `mlsh` list of `msph` podcast-station records. Native serialization proves the
+44-byte `mlsh` word at `+8` counts stations, each 48-byte `msph +12` counts its data objects, and a
+written station contains exactly one `mhoh` type 800 XML settings plist. The corpus has one station,
+whose plist title and UUID are `Most Recent` and `PlaylistMostRecent`; it also carries episode,
+sorting, podcast-selection, cloud-sync, and update-date settings. Type 800 remains exposed as
+`PodcastSettingsPlist`. The validator and writer now enforce the proven container shape while
+preserving the XML opaquely; station editing is not yet supported.
+
 Track `mith +168` is the Apple Store/catalog item ID and is duplicated at `+428`. Eighty current
 tracks prove the mapping because type-514 uses the exact decimal value as its outer playback-state
 key; one additional decimal plist key is stale. This field is exposed read-only until native edit
@@ -127,8 +157,8 @@ native smart-playlist template and requires an explicit initial membership snaps
 encode is byte-identical for all 15 smart playlists in the private corpus. Unknown field/operator
 values retain their raw bytes.
 
-Native iTunes accepted a length-changing edit to the user-created K-Pop playlist, retained the new
-nested rule `Genre contains "Country"`, and recalculated its membership. It also retained a Smart
+Native iTunes accepted a length-changing edit to a disposable user-created smart playlist, retained
+the new nested rule `Genre contains "Country"`, and recalculated its membership. It also retained a Smart
 Info live-updating toggle and a factory-created `Play Count > 5` integer rule. The latter re-exported
 to XML with Smart Info and Smart Criteria byte-identical to the resaved ITL blobs. A built-in Music
 rule edit was accepted but regenerated to the canonical Music mask on save, proving distinguished
@@ -380,7 +410,18 @@ The final reverse-engineering work should proceed in this order:
    `FILE`/`lib ` tags are mapped. `miqh +140` is a pointer-derived process-local context token and
    `mhgh +252` is the last media-reference/playback update timestamp. Use isolated local playback
    and disposable-device import/removal snapshots to determine record retention and flags.
-8. Promote findings into writer behavior only after repeated native evidence. Add a synthetic
+8. **Type-23 container structure resolved, values unresolved:** `stsh +12` counts optional `mhoh`
+   global-state objects and native code emits at most one each of types 900 and 901. The writer and
+   validator enforce this structure while preserving the payloads. Capture a native fixture in
+   which either value is present before assigning semantic names or exposing mutation APIs.
+9. **Type-14 partition structure resolved, kinds unresolved:** the second `mlph` contains ordinary
+   `miph` serialization selected for native playlist kinds `0x20`/`0x23`, and does not contribute to
+   the public playlist aggregate. Capture one nonempty native example to name those kinds and map
+   their reference/removal behavior before exposing them as editable playlists.
+10. **Type-21 podcast-station structure resolved:** `mlsh` contains counted `msph` records with one
+    type-800 settings plist apiece. Capture create/edit/delete snapshots for a disposable station
+    before exposing XML mutation or station lifecycle APIs.
+11. Promote findings into writer behavior only after repeated native evidence. Add a synthetic
    fixture and regression test for every proven rule, keep unresolved bytes opaque, and make an
    unsupported mutation fail before saving rather than synthesizing metadata.
 

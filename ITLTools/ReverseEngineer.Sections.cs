@@ -103,6 +103,12 @@ public static partial class ReverseEngineer
             Dump(body, start, Math.Min(inner.HeaderLength, 128), start);
             if (inner.Signature == "mlqh")
                 DescribeMlqhOffsets(library, inner);
+            else if (inner.Signature == "stsh")
+                DescribeStsh(library, inner, end);
+            else if (section.Chunk.Type == 14 && inner.Signature == "mlph")
+                DescribeSpecialMlph(library, inner, end);
+            else if (section.Chunk.Type == 21 && inner.Signature == "mlsh")
+                DescribePodcastStations(library, inner, end);
 
             if (ItlTraversal.IsFixedSizeList(inner))
             {
@@ -293,6 +299,67 @@ public static partial class ReverseEngineer
                 : $"section type {owner.Chunk.Type} +0x{candidate - (ulong)owner.Chunk.Offset:X}";
             Console.WriteLine($"  mlqh +{fieldOffset} -> decoded body 0x{candidate:X} ({ownerText})");
             Dump(body, (int)candidate, Math.Min(32, body.Length - (int)candidate), (int)candidate);
+        }
+    }
+
+    private static void DescribeStsh(ItlLibrary library, ItlChunk stsh, int end)
+    {
+        byte[] body = library.Envelope.Body;
+        int declaredCount = stsh.HeaderLength >= 16
+            ? BinaryPrimitives.ReadInt32LittleEndian(body.AsSpan(stsh.Offset + 12))
+            : 0;
+        Console.WriteLine($"  stsh +12 declared global-state object count: {declaredCount:N0}");
+        try
+        {
+            IReadOnlyList<ItlChunk> fields = ItlTraversal.WalkStshDataObjects(body, stsh, end);
+            if (fields.Count == 0)
+            {
+                Console.WriteLine("  no optional type-900/type-901 global-state objects are present");
+                return;
+            }
+
+            foreach (ItlChunk field in fields)
+                Console.WriteLine($"  mhoh type {field.Type}: {field.BodyLength:N0} opaque payload bytes " +
+                                  "(semantic meaning unresolved)");
+        }
+        catch (InvalidDataException exception)
+        {
+            Console.WriteLine($"  stsh layout unrecognized: {exception.Message}");
+        }
+    }
+
+    private static void DescribeSpecialMlph(ItlLibrary library, ItlChunk mlph, int end)
+    {
+        try
+        {
+            IReadOnlyList<ItlChunk> records =
+                ItlTraversal.WalkMlphRecords(library.Envelope.Body, mlph, end);
+            Console.WriteLine($"  type-14 special playlist partition: {records.Count:N0} miph record(s)");
+            Console.WriteLine("  native serializer routes internal playlist kinds 0x20/0x23 here; " +
+                              "their user-facing meanings remain unresolved");
+        }
+        catch (InvalidDataException exception)
+        {
+            Console.WriteLine($"  type-14 mlph layout unrecognized: {exception.Message}");
+        }
+    }
+
+    private static void DescribePodcastStations(ItlLibrary library, ItlChunk mlsh, int end)
+    {
+        try
+        {
+            IReadOnlyList<ItlChunk> stations =
+                ItlTraversal.WalkPodcastStations(library.Envelope.Body, mlsh, end);
+            Console.WriteLine($"  podcast stations: {stations.Count:N0} msph record(s), each with a type-800 XML settings plist");
+            foreach ((ItlChunk station, int index) in stations.Select((station, index) => (station, index)))
+            {
+                ItlChunk field = ItlChunk.Read(library.Envelope.Body, station.BodyOffset);
+                Console.WriteLine($"    station {index}: {field.BodyLength:N0} settings bytes");
+            }
+        }
+        catch (InvalidDataException exception)
+        {
+            Console.WriteLine($"  type-21 mlsh layout unrecognized: {exception.Message}");
         }
     }
 

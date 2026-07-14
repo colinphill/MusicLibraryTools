@@ -37,6 +37,9 @@ public sealed partial class ItlDocument
         ValidateSmartPlaylists();
         ValidateMprhReferences();
         ValidateMlqhAnchors();
+        ValidateStshGlobalState();
+        ValidateSpecialPlaylistPartition();
+        ValidatePodcastStations();
 
         AggregateCounts current = CurrentCounts;
         if (current == _originalCounts)
@@ -368,6 +371,100 @@ public sealed partial class ItlDocument
                 if (actual != expected)
                     Add($"mlqh.anchor-{fieldOffset}", ItlValidationSeverity.Error,
                         $"mlqh +{fieldOffset} is decoded-body offset 0x{actual:X}; expected 0x{expected:X}.");
+            }
+        }
+
+        void ValidateStshGlobalState()
+        {
+            foreach (ItlSectionNode section in Sections.Where(candidate => candidate.Type == 23))
+            {
+                byte[]? raw = section.Raw;
+                if (raw is null)
+                {
+                    Add("stsh.layout", ItlValidationSeverity.Error,
+                        "Type-23 section is unexpectedly modeled instead of preserving its stsh payload.");
+                    continue;
+                }
+
+                try
+                {
+                    ItlChunk stsh = ItlChunk.Read(raw, 0);
+                    if (stsh.Signature != "stsh")
+                    {
+                        Add("stsh.layout", ItlValidationSeverity.Warning,
+                            $"Type-23 section has unrecognized inner layout '{stsh.Signature}'.");
+                        continue;
+                    }
+
+                    _ = ItlTraversal.WalkStshDataObjects(raw, stsh, raw.Length);
+                }
+                catch (InvalidDataException exception)
+                {
+                    Add("stsh.layout", ItlValidationSeverity.Error,
+                        $"Type-23 global-state container is malformed: {exception.Message}");
+                }
+            }
+        }
+
+        void ValidateSpecialPlaylistPartition()
+        {
+            foreach (ItlSectionNode section in Sections.Where(candidate => candidate.Type == 14))
+            {
+                byte[]? raw = section.Raw;
+                if (raw is null)
+                {
+                    Add("mlph14.layout", ItlValidationSeverity.Error,
+                        "Type-14 section is unexpectedly modeled instead of preserving its special playlist partition.");
+                    continue;
+                }
+
+                try
+                {
+                    ItlChunk mlph = ItlChunk.Read(raw, 0);
+                    if (mlph.Signature != "mlph")
+                    {
+                        Add("mlph14.layout", ItlValidationSeverity.Warning,
+                            $"Type-14 section has unrecognized inner layout '{mlph.Signature}'.");
+                        continue;
+                    }
+                    _ = ItlTraversal.WalkMlphRecords(raw, mlph, raw.Length);
+                }
+                catch (InvalidDataException exception)
+                {
+                    Add("mlph14.layout", ItlValidationSeverity.Error,
+                        $"Type-14 special playlist partition is malformed: {exception.Message}");
+                }
+            }
+        }
+
+        void ValidatePodcastStations()
+        {
+            foreach (ItlSectionNode section in Sections.Where(candidate => candidate.Type == 21))
+            {
+                byte[]? raw = section.Raw;
+                if (raw is null)
+                {
+                    Add("mlsh.layout", ItlValidationSeverity.Error,
+                        "Type-21 section is unexpectedly modeled instead of preserving its podcast stations.");
+                    continue;
+                }
+
+                try
+                {
+                    ItlChunk mlsh = ItlChunk.Read(raw, 0);
+                    if (mlsh.Signature != "mlsh")
+                    {
+                        Add("mlsh.layout", ItlValidationSeverity.Warning,
+                            $"Type-21 section has unrecognized inner layout '{mlsh.Signature}'.");
+                        continue;
+                    }
+                    _ = ItlTraversal.WalkPodcastStations(raw, mlsh, raw.Length);
+                }
+                catch (InvalidDataException exception)
+                {
+                    Add("mlsh.layout", ItlValidationSeverity.Error,
+                        $"Type-21 podcast-station collection is malformed: {exception.Message}");
+                }
             }
         }
 
