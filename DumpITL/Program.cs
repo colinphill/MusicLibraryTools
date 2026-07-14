@@ -1,5 +1,7 @@
 ﻿using System.Buffers.Binary;
 using System.Xml.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using iTunes.Binary;
 
 if (args.Length < 2)
@@ -24,6 +26,7 @@ if (args.Length < 2)
           plprobe <Library.xml>             playlist entry and persistent-id layout
           identity                          parse and re-serialize; must be byte-identical
           validate                          verify structural and referential invariants
+          snapshot [out.json]               machine-readable research state
           compare <after.itl> [record]      structure-aware comparison, optionally filtered by record key
 
         Reverse engineering
@@ -119,6 +122,10 @@ switch (command)
         exitCode = ValidateDocument(itl);
         break;
 
+    case "snapshot":
+        WriteSnapshot(itl, args.Length > 2 ? args[2] : null);
+        break;
+
     case "compare":
         ItlComparer.Compare(itl, args[2], Console.Out, args.Length > 3 ? args[3] : null);
         break;
@@ -197,6 +204,29 @@ catch (Exception ex) when (ex is InvalidDataException or IOException or Unauthor
 }
 
 return exitCode;
+
+static void WriteSnapshot(string path, string? outputPath)
+{
+    ItlResearchSnapshot snapshot = ItlResearchSnapshot.Capture(path);
+    var options = new JsonSerializerOptions
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+    };
+    options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+    string json = JsonSerializer.Serialize(snapshot, options) + Environment.NewLine;
+
+    if (string.IsNullOrWhiteSpace(outputPath))
+    {
+        Console.Write(json);
+        return;
+    }
+
+    outputPath = Path.GetFullPath(outputPath);
+    Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
+    File.WriteAllText(outputPath, json, new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+    Console.WriteLine($"snapshot written to {outputPath}");
+}
 
 static int ValidateDocument(string path)
 {

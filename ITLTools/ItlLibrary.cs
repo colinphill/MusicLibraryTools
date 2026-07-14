@@ -128,6 +128,13 @@ public sealed class ItlTrack
 
     public ulong PersistentId => BinaryPrimitives.ReadUInt64LittleEndian(Header.AsSpan(128));
 
+    /// <summary>
+    /// Apple Store/catalog item ID. Type-514 playback-state entries use its decimal representation
+    /// directly for one key branch. iTunes keeps an identical mirror at +428.
+    /// </summary>
+    public uint StoreItemId => U32(168);
+    public uint StoreItemIdMirror => U32(428);
+
     /// <summary>File size. A 32-bit copy lives at +36 but truncates above 4 GiB, so this is the truth.</summary>
     public ulong Size => BinaryPrimitives.ReadUInt64LittleEndian(Header.AsSpan(324));
 

@@ -66,6 +66,11 @@ public sealed partial class ItlDocument
             Add("ids.track-secondary", ItlValidationSeverity.Error,
                 $"{badTrackSecondaryIds} tracks do not carry track ID + 1 at mith +500.");
 
+        int badStoreItemMirrors = Tracks.Count(track => track.GetStoreItemId() != track.GetStoreItemIdMirror());
+        if (badStoreItemMirrors > 0)
+            Add("ids.store-item-mirror", ItlValidationSeverity.Error,
+                $"{badStoreItemMirrors} tracks have different Store Item IDs at mith +168 and +428.");
+
         ulong[] persistentIds =
         [
             .. Tracks.Select(t => BinaryPrimitives.ReadUInt64LittleEndian(t.Header.AsSpan(128))),

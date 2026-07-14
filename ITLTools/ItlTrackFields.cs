@@ -22,6 +22,10 @@ public static class ItlTrackFields
     public static ulong GetPersistentId(this ItlRecord t) => BinaryPrimitives.ReadUInt64LittleEndian(t.Header.AsSpan(128));
     public static void SetPersistentId(this ItlRecord t, ulong v) => BinaryPrimitives.WriteUInt64LittleEndian(t.Header.AsSpan(128), v);
 
+    /// <summary>Apple Store/catalog item ID, mirrored at +428. Editing semantics are not yet proven.</summary>
+    public static uint GetStoreItemId(this ItlRecord t) => U32(t, 168);
+    public static uint GetStoreItemIdMirror(this ItlRecord t) => U32(t, 428);
+
     /// <summary>File size. iTunes keeps a 32-bit copy at +36 that truncates above 4 GiB; both are written.</summary>
     public static ulong GetSize(this ItlRecord t) => BinaryPrimitives.ReadUInt64LittleEndian(t.Header.AsSpan(324));
 

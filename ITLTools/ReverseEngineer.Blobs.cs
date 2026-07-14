@@ -119,7 +119,11 @@ public static partial class ReverseEngineer
         Console.WriteLine($"envelope +108=0x{library.Envelope.RawWord108:X8}; " +
                           $"payload crc32=0x{Crc32(state.Raw):X8} adler32=0x{Adler32(state.Raw):X8}; " +
                           $"xml crc32=0x{Crc32(xmlBytes):X8} adler32=0x{Adler32(xmlBytes):X8}");
-        string[] keys = [.. document.Root!.Element("dict")!.Elements("key").Select(k => k.Value)
+        XElement playbackDict = document.Root!.Element("dict")!;
+        SummarizePlaybackPlist(playbackDict);
+        string[] outerKeys = [.. playbackDict.Elements("key").Select(key => key.Value)];
+        TestDecimalPlaybackKeys(library, outerKeys);
+        string[] keys = [.. playbackDict.Elements("key").Select(k => k.Value)
             .Where(k => k.Length == 32 && k.All(Uri.IsHexDigit))];
         var keySet = keys.Select(key => key.ToLowerInvariant()).ToHashSet();
         TestCandidateHashes(library, keySet);
@@ -154,6 +158,78 @@ public static partial class ReverseEngineer
             Console.WriteLine("  no raw or byte-reversed 128-bit key appears in a fixed track-header window");
     }
 
+    private static void SummarizePlaybackPlist(XElement dictionary)
+    {
+        XElement[] children = [.. dictionary.Elements()];
+        var fields = new Dictionary<(string Name, string Type), (int Count, HashSet<string> Samples)>();
+        var samples = new List<string>();
+        var outerKeys = new List<string>();
+        int entries = 0, dictionaries = 0, empty = 0;
+
+        for (int index = 0; index + 1 < children.Length; index += 2)
+        {
+            if (children[index].Name != "key")
+                continue;
+
+            entries++;
+            string outerKey = children[index].Value;
+            outerKeys.Add(outerKey);
+            XElement value = children[index + 1];
+            if (value.Name != "dict")
+            {
+                Add("(top-level)", value.Name.LocalName, value.Value);
+                continue;
+            }
+
+            dictionaries++;
+            XElement[] nested = [.. value.Elements()];
+            if (nested.Length == 0) empty++;
+            var rendered = new List<string>();
+            for (int nestedIndex = 0; nestedIndex + 1 < nested.Length; nestedIndex += 2)
+            {
+                if (nested[nestedIndex].Name != "key")
+                    continue;
+                string name = nested[nestedIndex].Value;
+                XElement nestedValue = nested[nestedIndex + 1];
+                Add(name, nestedValue.Name.LocalName, nestedValue.Value);
+                rendered.Add($"{name}={nestedValue.Name.LocalName}:{Clip(nestedValue.Value, 32)}");
+            }
+            if (samples.Count < 5)
+                samples.Add($"  {outerKey}: {string.Join(", ", rendered)}");
+        }
+
+        Console.WriteLine($"type-514 structure: {entries:N0} top-level entries, " +
+                          $"{dictionaries:N0} dictionaries ({empty:N0} empty)");
+        int hexKeys = outerKeys.Count(key => key.Length == 32 && key.All(Uri.IsHexDigit));
+        Console.WriteLine($"  outer keys: {hexKeys:N0} are 32 hexadecimal characters; " +
+                          $"{outerKeys.Count - hexKeys:N0} use another form");
+        foreach (IGrouping<int, string> group in outerKeys
+                     .Where(key => key.Length != 32 || !key.All(Uri.IsHexDigit))
+                     .GroupBy(key => key.Length).OrderBy(group => group.Key))
+        {
+            Console.WriteLine($"    length {group.Key,-3} {group.Count(),5:N0}: " +
+                              string.Join(" | ", group.Take(4).Select(key => Clip(key, 50))));
+        }
+        foreach (((string name, string type), (int count, HashSet<string> values)) in
+                 fields.OrderBy(field => field.Key.Name).ThenBy(field => field.Key.Type))
+        {
+            Console.WriteLine($"  {name,-14} {type,-8} {count,7:N0}  " +
+                              string.Join(" | ", values.Select(value => Clip(value, 50))));
+        }
+        Console.WriteLine("sample playback entries:");
+        foreach (string sample in samples) Console.WriteLine(sample);
+
+        void Add(string name, string type, string value)
+        {
+            (int Count, HashSet<string> Samples) current = fields.TryGetValue((name, type), out var found)
+                ? found
+                : (0, []);
+            current.Count++;
+            if (current.Samples.Count < 4) current.Samples.Add(value);
+            fields[(name, type)] = current;
+        }
+    }
+
     private static void TestCandidateHashes(ItlLibrary library, HashSet<string> keys)
     {
         string libraryId = library.Envelope.LibraryPersistentId.ToString("X16");
@@ -163,6 +239,8 @@ public static partial class ReverseEngineer
             ("persistent ID lowercase", t => Utf8(t.PersistentId.ToString("x16"))),
             ("persistent ID decimal", t => Utf8(t.PersistentId.ToString())),
             ("track ID decimal", t => Utf8(t.Id.ToString())),
+            ("store item ID decimal", t => t.StoreItemId == 0 ? null : Utf8(t.StoreItemId.ToString())),
+            ("store identifier", t => Text(t[ItlDataType.StoreIdentifier])),
             ("location", t => Text(t.Location)),
             ("lowercase location", t => Text(t.Location?.ToLowerInvariant())),
             ("file URL", t => Text(t[ItlDataType.FileUrl])),
@@ -218,6 +296,55 @@ public static partial class ReverseEngineer
             else BinaryPrimitives.WriteUInt64BigEndian(bytes, value);
             return bytes;
         }
+    }
+
+    private static void TestDecimalPlaybackKeys(ItlLibrary library, IEnumerable<string> outerKeys)
+    {
+        var decimalKeys = new HashSet<uint>();
+        foreach (string key in outerKeys)
+        {
+            if (uint.TryParse(key, out uint value)) decimalKeys.Add(value);
+        }
+        if (decimalKeys.Count == 0) return;
+
+        Console.WriteLine($"decimal-key correlations ({decimalKeys.Count:N0} keys):");
+        int headerLength = library.Tracks.Select(track => track.Header.Length).DefaultIfEmpty(0).Min();
+        bool found = false;
+        for (int offset = 12; offset + 4 <= headerLength; offset++)
+        {
+            ItlTrack[] matches = [.. library.Tracks.Where(track =>
+                decimalKeys.Contains(BinaryPrimitives.ReadUInt32LittleEndian(track.Header.AsSpan(offset))))];
+            if (matches.Length == 0) continue;
+            found = true;
+            Console.WriteLine($"  fixed header +{offset,-4} {matches.Length,5:N0} matches");
+            foreach (ItlTrack track in matches.Take(4))
+            {
+                uint value = BinaryPrimitives.ReadUInt32LittleEndian(track.Header.AsSpan(offset));
+                Console.WriteLine($"    {value} -> [{track.Id}] {Clip($"{track.Artist} - {track.Title}", 90)}");
+            }
+        }
+
+        var stringMatches = new List<(uint Key, ItlTrack Track, int Type, string Value)>();
+        foreach (ItlTrack track in library.Tracks)
+        {
+            foreach (ItlDataObject field in track.DataObjects.Where(field => field.IsString))
+            {
+                string value = field.Text!;
+                ReadOnlySpan<char> candidate = value.AsSpan();
+                int colon = value.LastIndexOf(':');
+                if (colon >= 0) candidate = candidate[(colon + 1)..];
+                if (uint.TryParse(candidate, out uint key) && decimalKeys.Contains(key))
+                    stringMatches.Add((key, track, field.Type, value));
+            }
+        }
+        if (stringMatches.Count > 0)
+        {
+            found = true;
+            Console.WriteLine($"  string fields {stringMatches.Count:N0} matches");
+            foreach ((uint key, ItlTrack track, int type, string value) in stringMatches.Take(8))
+                Console.WriteLine($"    {key} -> [{track.Id}] mhoh {type}: {Clip(value, 80)}");
+        }
+        if (!found) Console.WriteLine("  no decimal key appears in a current fixed header or string field");
     }
 
     /// <summary>
