@@ -140,9 +140,12 @@ public static partial class ReverseEngineer
         TestDecimalPlaybackKeys(library, outerKeys);
         string[] keys = [.. playbackDict.Elements("key").Select(k => k.Value)
             .Where(k => k.Length == 32 && k.All(Uri.IsHexDigit))];
-        Console.WriteLine("native key construction: decimal Store Item ID when present; otherwise lowercase MD5 " +
-                          "over normalized metadata fields (secondary internal field names remain unresolved)");
+        Console.WriteLine("native ordinary key construction: decimal Store Item ID when present; otherwise " +
+                          "lowercase MD5 of UTF-8 Title + Artist + Album, without separators");
+        Console.WriteLine("native podcast key construction: lowercase MD5 of normalized Feed/RSS URL + " +
+                          "Episode URL, without a separator");
         var keySet = keys.Select(key => key.ToLowerInvariant()).ToHashSet();
+        TestNativeOrdinaryPlaybackKeys(library, keySet);
         TestCandidateHashes(library, keySet);
         TestDataObjectHashes(library, keySet);
         var direct = new HashSet<(ulong, ulong)>();
@@ -174,6 +177,18 @@ public static partial class ReverseEngineer
         }
         if (!found)
             Console.WriteLine("  no raw or byte-reversed 128-bit key appears in a fixed track-header window");
+    }
+
+    private static void TestNativeOrdinaryPlaybackKeys(ItlLibrary library, HashSet<string> keys)
+    {
+        var matches = library.Tracks
+            .Select(track => (Track: track, Key: ItlPlaybackStateKey.ForOrdinaryTrack(track)))
+            .Where(candidate => candidate.Key is not null && keys.Contains(candidate.Key))
+            .ToArray();
+        Console.WriteLine($"native ordinary MD5 correlations: {matches.Length:N0} current track/key matches " +
+                          $"({matches.Select(match => match.Key).Distinct().Count():N0} keys)");
+        foreach ((ItlTrack track, string? key) in matches.Take(8))
+            Console.WriteLine($"    {key} -> [{track.Id}] {Clip($"{track.Artist} - {track.Title} / {track.Album}", 88)}");
     }
 
     private static void CorrelatePlaybackState(ItlLibrary library, XElement dictionary)

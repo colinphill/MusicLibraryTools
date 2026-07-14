@@ -7,6 +7,31 @@ namespace DumpITL.Tests;
 public sealed class WriterAndMutationTests
 {
     [Fact]
+    public void PlaybackStateOrdinaryKeyUsesStoreIdOrTitleArtistAlbumMd5()
+    {
+        Assert.Equal("123456789", ItlPlaybackStateKey.ForOrdinaryMetadata(123456789, "ignored"));
+        Assert.Null(ItlPlaybackStateKey.ForOrdinaryMetadata(0, null, "Artist", "Album"));
+        Assert.Null(ItlPlaybackStateKey.ForOrdinaryMetadata(0, "", "Artist", "Album"));
+        Assert.Equal("b78a3223503896721cca1303f776159b",
+            ItlPlaybackStateKey.ForOrdinaryMetadata(0, "Title"));
+        Assert.Equal("5636957656239ac7c476da27398cbfc1",
+            ItlPlaybackStateKey.ForOrdinaryMetadata(0, "Title", "Artist"));
+        Assert.Equal("b3d33068e3b1ff5276cd357868a1921b",
+            ItlPlaybackStateKey.ForOrdinaryMetadata(0, "Title", "Artist", "Album"));
+    }
+
+    [Fact]
+    public void PlaybackStatePodcastKeyNormalizesFeedAndEpisodeUrls()
+    {
+        Assert.Null(ItlPlaybackStateKey.ForPodcastMetadata(null, "https://example.com/episode"));
+        Assert.Null(ItlPlaybackStateKey.ForPodcastMetadata("https://example.com/feed", "   "));
+        Assert.Equal("60142198bcee949a3cb0616478a6d1f4",
+            ItlPlaybackStateKey.ForPodcastMetadata(
+                "http://example.com//feed/  ",
+                "https:///cdn.example.com///episode.mp3   "));
+    }
+
+    [Fact]
     public void BuildDoesNotMutateInputsAndPatchesOuterAndInnerAggregates()
     {
         ItlEnvelope envelope = SyntheticLibrary.CreateEnvelope();

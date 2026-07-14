@@ -23,6 +23,10 @@ public enum ItlDataType
 
     /// <summary>Episode description. 18 and 22 both hold it; which is the "long" one is unproven.</summary>
     Description = 18,
+
+    /// <summary>Podcast episode/enclosure URL stored as a raw narrow string.</summary>
+    PodcastEpisodeUrl = 19,
+
     DescriptionLong = 22,
 
     Series = 24,
@@ -39,6 +43,10 @@ public enum ItlDataType
     SortAlbumArtist = 33,
     SortComposer = 34,
     SortSeries = 35,
+
+    /// <summary>Legacy podcast RSS feed URL.</summary>
+    PodcastRssUrl = 37,
+
     StoreIdentifier = 43,
 
     /// <summary>Version string of an iTunes LP package.</summary>
@@ -57,6 +65,12 @@ public enum ItlDataType
 
     /// <summary>A plist holding the store's redownload-params.</summary>
     RedownloadParamsPlist = 56,
+
+    /// <summary>Podcast episode URL stored in the normal flexible-string representation.</summary>
+    PodcastEpisodeUrlFlex = 57,
+
+    /// <summary>Podcast feed URL; preferred over <see cref="PodcastRssUrl"/> by native key generation.</summary>
+    PodcastFeedUrl = 58,
 
     PurchaserEmail = 59,
     PurchaserName = 60,
