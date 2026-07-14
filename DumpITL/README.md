@@ -74,12 +74,13 @@ sets. Field IDs and operator bits agree with the independently implemented
 and the older [libgpod smart-playlist documentation](https://tmz.fedorapeople.org/docs/libgpod/libgpod-Smart-Playlists.html).
 
 `ItlSmartPlaylist` exposes typed decode/encode models and factories for proven rule families.
-`ItlPlaylist.Smart` provides read access; `ItlDocument.SmartPlaylistOf` and `SetSmartPlaylist` edit
-existing smart playlists. `ItlDocument.AddSmartPlaylist` creates a new smart playlist by cloning a
+`ItlPlaylist.Smart` provides read access; `ItlDocument.SmartPlaylistOf` reads criteria and
+`SetSmartPlaylist` edits an existing smart playlist or converts a manual one. Conversion inserts
+zero-key Smart Criteria/Info fields without changing the fixed playlist header.
+`ItlDocument.AddSmartPlaylist` creates a new smart playlist by cloning a
 native smart-playlist template and requires an explicit initial membership snapshot. Parse then
 encode is byte-identical for all 15 smart playlists in the private corpus. Unknown field/operator
-values retain their raw bytes. Converting an arbitrary manual playlist to smart remains deliberately
-rejected because its required version-specific header flags have not been isolated.
+values retain their raw bytes.
 
 Native iTunes accepted a length-changing edit to the user-created K-Pop playlist, retained the new
 nested rule `Genre contains "Country"`, and recalculated its membership. It also retained a Smart
@@ -103,6 +104,12 @@ the same user smart playlist and complementary media masks. Operands `33/32` sel
 criteria. Together with the independent libgpod description, this proves a media kind matches when
 it uses only bits from the first mask and intersects the second mask. Reopening alone preserved the
 old membership snapshot, while opening Edit Smart Playlist and clicking OK triggered recalculation.
+
+Two guarded manual-to-smart conversions proved that there are no additional fixed-header flags. The
+writer added only zero-key Smart Criteria and Smart Info fields to the 7-member `Cafe Disco` and
+70-member `2000s` manual playlists. iTunes recognized both as smart, retained every member,
+re-exported both pairs of blobs byte-identically, and left each playlist's manual-header
+classification bytes unchanged.
 
 Native creation and reopen proved playlist-reference rules use a 68-byte comparison value rather
 than a bare 8-byte persistent ID. The referenced playlist ID is duplicated at value offsets `+0`
@@ -206,8 +213,7 @@ Still unresolved:
   references, plus the meanings of other opaque section types;
 - the semantic name and positive track representation of Boolean smart field `0xA4`, used by the
   empty distinguished TV & Movies playlist. Native `is 1`/`is 0` probes selected 0/14 local videos,
-  so resolving it now requires a purchased/cloud/system-video positive sample or native-code map;
-- the fixed-header flags required to convert an arbitrary manual playlist into a smart playlist.
+  so resolving it now requires a purchased/cloud/system-video positive sample or native-code map.
 
 ## Commands
 
@@ -291,9 +297,9 @@ The final reverse-engineering work should proceed in this order:
    survived a native re-save with byte-identical XML blobs and membership. Complementary native
    evaluations resolve operator `0x0800` as allowed/required media masks. Complementary field
    `0xA4` probes prove Boolean behavior but find no positive local-video sample; retain it as raw
-   until a system/store-video sample or native mapping supplies the semantic name. Arbitrary
-   manual-to-smart conversion remains
-   unsupported until its header flags are proven.
+   until a system/store-video sample or native mapping supplies the semantic name. A native re-save
+   also proves manual-to-smart conversion requires only the two zero-key blobs and no header edits;
+   `SetSmartPlaylist` now supports it.
 7. Promote findings into writer behavior only after repeated native evidence. Add a synthetic
    fixture and regression test for every proven rule, keep unresolved bytes opaque, and make an
    unsupported mutation fail before saving rather than synthesizing metadata.
@@ -301,6 +307,6 @@ The final reverse-engineering work should proceed in this order:
 Completion criteria for these remaining areas are: `+108` has a safe preserve/recompute/reject policy; at least one
 controlled playback entry is mapped to its track identity or conclusively shown to be blob-local;
 smart playlists decode and re-encode byte-identically, supported edits and template-based creation
-survive native resave, and unsupported rule forms or manual-to-smart conversion fail before saving;
+and manual conversion survive native resave, while unsupported rule forms fail before saving;
 each conclusion is reproduced in two fresh libraries; every candidate opens and re-saves in iTunes;
 and the harness confirms the live library and preferences are unchanged.

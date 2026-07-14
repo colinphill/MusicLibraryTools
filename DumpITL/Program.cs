@@ -51,6 +51,8 @@ if (args.Length < 2)
                                              write a differential media-kind operator 0x0800 probe
           smart-field-probe <playlist> <field> <value> <out.itl>
                                              write an unknown numeric smart-field probe
+          smart-convert-probe <playlist> <out.itl>
+                                             add smart blobs without changing the playlist header
           demo <out.itl>                    exercise every add/remove/edit operation
         """);
     return 1;
@@ -62,6 +64,7 @@ string itl = args[1];
 int required = command switch
 {
     "probe" or "discover" or "plprobe" or "roundtrip" or "cloud" or "demo" or "verify" or "compare" => 3,
+    "smart-convert-probe" => 4,
     "playlist-add" or "smart-add" or "track-add" or "track-add-new" => 5,
     "smart-ref-add" or "smart-mask-probe" or "smart-field-probe" => 6,
     "re" => 3,
@@ -157,6 +160,10 @@ switch (command)
 
     case "smart-field-probe":
         SmartFieldProbe(itl, args[2], (uint)ParseInteger(args[3]), ParseInteger(args[4]), args[5]);
+        break;
+
+    case "smart-convert-probe":
+        SmartConvertProbe(itl, args[2], args[3]);
         break;
 
     case "track-add":
@@ -761,6 +768,32 @@ static void SmartFieldProbe(string itl, string playlistName, uint field, long va
         throw new InvalidDataException("The unknown smart-field probe failed validation.");
 
     Console.WriteLine($"changed smart playlist '{playlistName}' to field 0x{field:X} is {value}");
+    Console.WriteLine($"wrote {outPath} ({new FileInfo(outPath).Length:N0} bytes)");
+}
+
+/// <summary>Tests whether zero-key smart blobs alone convert a manual playlist.</summary>
+static void SmartConvertProbe(string itl, string playlistName, string outPath)
+{
+    ItlDocument document = ItlDocument.Load(itl);
+    ItlRecord playlist = document.FindPlaylist(playlistName)
+        ?? throw new InvalidOperationException($"No playlist named '{playlistName}'.");
+    if (ItlDocument.SmartPlaylistOf(playlist) is not null)
+        throw new InvalidOperationException($"Playlist '{playlistName}' is already smart.");
+    ItlSmartPlaylist smart = ItlSmartPlaylist.Create(ItlSmartCriteria.Create(
+        ItlSmartConjunction.All,
+        ItlSmartRule.CreateNested(ItlSmartCriteria.Create(ItlSmartConjunction.Any,
+            ItlSmartRule.CreateMediaKind(1), ItlSmartRule.CreateMediaKind(32)))));
+    document.SetSmartPlaylist(playlist, smart);
+    document.Save(outPath);
+
+    ItlDocument written = ItlDocument.Load(outPath);
+    IReadOnlyList<ItlValidationIssue> diagnostics = written.Validate();
+    foreach (ItlValidationIssue issue in diagnostics)
+        Console.WriteLine($"{issue.Severity,-7} {issue.Code}: {issue.Message}");
+    if (diagnostics.Any(issue => issue.Severity == ItlValidationSeverity.Error))
+        throw new InvalidDataException("The manual-to-smart conversion probe failed validation.");
+
+    Console.WriteLine($"added zero-key smart blobs to manual playlist '{playlistName}' without header edits");
     Console.WriteLine($"wrote {outPath} ({new FileInfo(outPath).Length:N0} bytes)");
 }
 

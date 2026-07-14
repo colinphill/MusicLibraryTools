@@ -265,8 +265,9 @@ public sealed partial class ItlDocument
     }
 
     /// <summary>
-    /// Replaces the two blobs of an existing smart playlist. Converting a manual playlist remains
-    /// unsupported because the native allocation policy for new smart-field child keys is unproven.
+    /// Replaces the two blobs of an existing smart playlist, or converts a manual playlist by
+    /// inserting native-compatible zero-key Smart Criteria and Smart Info fields. Native iTunes
+    /// accepts the conversion without any fixed-header changes.
     /// </summary>
     public void SetSmartPlaylist(ItlRecord playlist, ItlSmartPlaylist smart)
     {
@@ -276,11 +277,20 @@ public sealed partial class ItlDocument
             throw new ArgumentException("The playlist does not belong to this document.", nameof(playlist));
         ItlField? info = playlist.Field((int)ItlDataType.SmartInfo);
         ItlField? criteria = playlist.Field((int)ItlDataType.SmartCriteria);
-        if (info is null || criteria is null)
-            throw new InvalidOperationException(
-                "Converting a manual playlist to a smart playlist is unsupported until smart-field child keys are proven.");
-
         (byte[] encodedInfo, byte[] encodedCriteria) = smart.Encode();
+        if (info is null && criteria is null)
+        {
+            int fieldEnd = playlist.Children.FindLastIndex(child => child is ItlField) + 1;
+            playlist.Children.Insert(fieldEnd,
+                ItlField.CreateBlob((int)ItlDataType.SmartCriteria, encodedCriteria));
+            playlist.Children.Insert(fieldEnd + 1,
+                ItlField.CreateBlob((int)ItlDataType.SmartInfo, encodedInfo));
+            return;
+        }
+        if (info is null || criteria is null)
+            throw new InvalidDataException(
+                $"Playlist '{PlaylistNameOf(playlist)}' has only one smart-playlist blob.");
+
         info.SetBlob(encodedInfo);
         criteria.SetBlob(encodedCriteria);
     }

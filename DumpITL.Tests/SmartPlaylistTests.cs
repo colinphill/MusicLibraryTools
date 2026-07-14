@@ -88,16 +88,19 @@ public sealed class SmartPlaylistTests
     }
 
     [Fact]
-    public void EditableDocumentReplacesExistingSmartBlobsButRejectsManualConversion()
+    public void EditableDocumentConvertsManualPlaylistWithoutChangingItsHeader()
     {
         ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
         ItlRecord playlist = document.Playlists.Single();
         ItlSmartPlaylist template = ItlSmartPlaylist.Parse(new byte[112], Criteria(ItlSmartConjunction.All));
-        Assert.Throws<InvalidOperationException>(() => document.SetSmartPlaylist(playlist, template));
+        byte[] originalHeader = (byte[])playlist.Header.Clone();
 
-        int fieldEnd = playlist.Children.FindLastIndex(child => child is ItlField) + 1;
-        playlist.Children.Insert(fieldEnd, ItlField.CreateBlob((int)ItlDataType.SmartCriteria, template.Criteria.Raw));
-        playlist.Children.Insert(fieldEnd + 1, ItlField.CreateBlob((int)ItlDataType.SmartInfo, template.Info.Raw));
+        document.SetSmartPlaylist(playlist, template);
+
+        Assert.Equal(originalHeader, playlist.Header);
+        Assert.All(playlist.Fields.Where(field => field.Type is
+                (int)ItlDataType.SmartInfo or (int)ItlDataType.SmartCriteria),
+            field => Assert.Equal(0u, BinaryPrimitives.ReadUInt32LittleEndian(field.Header.AsSpan(16))));
         ItlSmartPlaylist smart = ItlDocument.SmartPlaylistOf(playlist)!;
         smart.Info.LiveUpdating = true;
         smart.Info.CheckedOnly = true;
