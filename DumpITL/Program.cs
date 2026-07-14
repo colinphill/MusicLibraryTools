@@ -49,6 +49,8 @@ if (args.Length < 2)
                                              create a smart playlist referencing another playlist
           smart-mask-probe <playlist> <first> <second> <out.itl>
                                              write a differential media-kind operator 0x0800 probe
+          smart-field-probe <playlist> <field> <value> <out.itl>
+                                             write an unknown numeric smart-field probe
           demo <out.itl>                    exercise every add/remove/edit operation
         """);
     return 1;
@@ -61,7 +63,7 @@ int required = command switch
 {
     "probe" or "discover" or "plprobe" or "roundtrip" or "cloud" or "demo" or "verify" or "compare" => 3,
     "playlist-add" or "smart-add" or "track-add" or "track-add-new" => 5,
-    "smart-ref-add" or "smart-mask-probe" => 6,
+    "smart-ref-add" or "smart-mask-probe" or "smart-field-probe" => 6,
     "re" => 3,
     "set" => 6,
     _ => 2,
@@ -151,6 +153,10 @@ switch (command)
 
     case "smart-mask-probe":
         SmartMaskProbe(itl, args[2], ParseInteger(args[3]), ParseInteger(args[4]), args[5]);
+        break;
+
+    case "smart-field-probe":
+        SmartFieldProbe(itl, args[2], (uint)ParseInteger(args[3]), ParseInteger(args[4]), args[5]);
         break;
 
     case "track-add":
@@ -728,6 +734,33 @@ static void SmartMaskProbe(string itl, string playlistName, long first, long sec
         throw new InvalidDataException("The media-kind operator probe failed validation.");
 
     Console.WriteLine($"changed smart playlist '{playlistName}' to operator 0x0800 operands {first}/{second}");
+    Console.WriteLine($"wrote {outPath} ({new FileInfo(outPath).Length:N0} bytes)");
+}
+
+/// <summary>Writes a disposable numeric-rule probe for an otherwise unknown smart field.</summary>
+static void SmartFieldProbe(string itl, string playlistName, uint field, long value, string outPath)
+{
+    ItlDocument document = ItlDocument.Load(itl);
+    ItlRecord playlist = document.FindPlaylist(playlistName)
+        ?? throw new InvalidOperationException($"No playlist named '{playlistName}'.");
+    ItlSmartPlaylist existing = ItlDocument.SmartPlaylistOf(playlist)
+        ?? throw new InvalidOperationException($"Playlist '{playlistName}' is not smart.");
+    ItlSmartCriteria criteria = ItlSmartCriteria.Create(ItlSmartConjunction.All,
+        ItlSmartRule.CreateNested(ItlSmartCriteria.Create(ItlSmartConjunction.Any,
+            ItlSmartRule.CreateMediaKind(2), ItlSmartRule.CreateMediaKind(64))),
+        ItlSmartRule.CreateNested(ItlSmartCriteria.Create(ItlSmartConjunction.All,
+            ItlSmartRule.CreateInteger((ItlSmartField)field, ItlSmartOperator.Is, [value]))));
+    document.SetSmartPlaylist(playlist, new ItlSmartPlaylist { Info = existing.Info, Criteria = criteria });
+    document.Save(outPath);
+
+    ItlDocument written = ItlDocument.Load(outPath);
+    IReadOnlyList<ItlValidationIssue> diagnostics = written.Validate();
+    foreach (ItlValidationIssue issue in diagnostics)
+        Console.WriteLine($"{issue.Severity,-7} {issue.Code}: {issue.Message}");
+    if (diagnostics.Any(issue => issue.Severity == ItlValidationSeverity.Error))
+        throw new InvalidDataException("The unknown smart-field probe failed validation.");
+
+    Console.WriteLine($"changed smart playlist '{playlistName}' to field 0x{field:X} is {value}");
     Console.WriteLine($"wrote {outPath} ({new FileInfo(outPath).Length:N0} bytes)");
 }
 

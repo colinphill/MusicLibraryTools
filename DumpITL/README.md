@@ -89,6 +89,14 @@ rule edit was accepted but regenerated to the canonical Music mask on save, prov
 built-ins are system-owned and should not be used as editable-rule templates. The remaining
 Windows-only unknown in the corpus is field `0xA4` on TV & Movies.
 
+Two complementary native probes establish that `0xA4` is Boolean for the observed rule form but do
+not establish its semantic name. Scoped to Movie and TV Show media, `is 1` selected none of the
+local videos and `is 0` selected all 14 surviving local videos. iTunes retained both 68-byte values
+and exported byte-identical criteria. Applying the Movie/TV scope also moved the probe playlist out
+of the Music group and into the Movies/TV UI. The distinguished TV & Movies rule uses `is 1` and is
+empty in this corpus, so a purchased/cloud/system-video positive sample or native-code mapping is
+still required before exposing a named field.
+
 Operator `0x0800` is now modeled as `AllowedAndRequiredBits`. Two guarded native recalculations used
 the same user smart playlist and complementary media masks. Operands `33/32` selected exactly the
 39 music videos; operands `1/32` selected none. iTunes retained each rule and exported byte-identical
@@ -196,8 +204,10 @@ Still unresolved:
   branch; Store Item ID and StoreIdentifier hashes add no matches);
 - the feature-level purpose and creation/removal lifecycle of the ten timestamped `mprh` playlist
   references, plus the meanings of other opaque section types;
-- smart field `0xA4` used only by the empty distinguished TV & Movies playlist, and the fixed-header
-  flags required to convert an arbitrary manual playlist into a smart playlist.
+- the semantic name and positive track representation of Boolean smart field `0xA4`, used by the
+  empty distinguished TV & Movies playlist. Native `is 1`/`is 0` probes selected 0/14 local videos,
+  so resolving it now requires a purchased/cloud/system-video positive sample or native-code map;
+- the fixed-header flags required to convert an arbitrary manual playlist into a smart playlist.
 
 ## Commands
 
@@ -208,6 +218,8 @@ family inventories fields, sections, IDs, blobs, aggregates, `mprh` links, playb
 correlations, and `smartmembers` membership/header candidates. Research snapshot schema 2 includes
 a nullable type-15 record matrix. Run
 the executable without arguments for the complete command list.
+`smart-mask-probe` and `smart-field-probe` create disposable criteria for guarded native evaluation;
+they are research commands, not general-purpose smart-playlist editors.
 
 Private corpus regressions use `DUMPITL_CORPUS_ITL` and `DUMPITL_CORPUS_XML`. Native acceptance uses
 `Run-ItunesAcceptance.ps1`; it copies the candidate to `C:\tmp\DumpITL-acceptance`, hashes the live
@@ -277,8 +289,10 @@ The final reverse-engineering work should proceed in this order:
    membership; native creation proves the type 101/102 child keys are zero. A native
    playlist-reference capture established its 68-byte value layout, and the corrected typed factory
    survived a native re-save with byte-identical XML blobs and membership. Complementary native
-   evaluations resolve operator `0x0800` as allowed/required media masks. Continue one-variable
-   experiments for field `0xA4`. Arbitrary manual-to-smart conversion remains
+   evaluations resolve operator `0x0800` as allowed/required media masks. Complementary field
+   `0xA4` probes prove Boolean behavior but find no positive local-video sample; retain it as raw
+   until a system/store-video sample or native mapping supplies the semantic name. Arbitrary
+   manual-to-smart conversion remains
    unsupported until its header flags are proven.
 7. Promote findings into writer behavior only after repeated native evidence. Add a synthetic
    fixture and regression test for every proven rule, keep unresolved bytes opaque, and make an

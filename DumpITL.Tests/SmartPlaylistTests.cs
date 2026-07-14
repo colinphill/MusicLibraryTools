@@ -162,6 +162,25 @@ public sealed class SmartPlaylistTests
     }
 
     [Fact]
+    public void UnknownNumericFieldFactoryRoundTripsWithoutAssigningSemantics()
+    {
+        ItlSmartRule rule = ItlSmartRule.CreateInteger(
+            (ItlSmartField)0xA4, ItlSmartOperator.Is, [1]);
+        ItlSmartPlaylist smart = ItlSmartPlaylist.Create(
+            ItlSmartCriteria.Create(ItlSmartConjunction.All, rule));
+
+        (byte[] info, byte[] criteria) = smart.Encode();
+        ItlSmartPlaylist parsed = ItlSmartPlaylist.Parse(info, criteria);
+        ItlSmartRule parsedRule = parsed.Criteria.Rules.Single();
+
+        Assert.Equal(0xA4u, parsedRule.RawField);
+        Assert.Equal(ItlSmartValueKind.Unknown, parsedRule.ValueKind);
+        Assert.Equal(68, parsedRule.RawValue.Length);
+        Assert.Equal(1u, BinaryPrimitives.ReadUInt32BigEndian(parsedRule.RawValue.AsSpan(4)));
+        Assert.Equal(criteria, parsed.EncodeCriteria());
+    }
+
+    [Fact]
     public void AddsSmartPlaylistByCloningNativeSmartTemplate()
     {
         ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
