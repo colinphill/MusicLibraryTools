@@ -34,6 +34,7 @@ public sealed partial class ItlDocument
 
         ValidateEnvelopeMirror();
         ValidatePlaybackTokenMirror();
+        ValidateSmartPlaylists();
 
         AggregateCounts current = CurrentCounts;
         if (current == _originalCounts)
@@ -180,6 +181,47 @@ public sealed partial class ItlDocument
             if (innerValue != Envelope.RawWord108)
                 Add("mhgh.playback-token", ItlValidationSeverity.Error,
                     $"mhgh playback token is 0x{innerValue:X8}; outer envelope declares 0x{Envelope.RawWord108:X8}.");
+        }
+
+        void ValidateSmartPlaylists()
+        {
+            HashSet<ulong> playlistPersistentIds = Playlists.Select(playlist =>
+                BinaryPrimitives.ReadUInt64LittleEndian(playlist.Header.AsSpan(PlaylistPersistentIdOffset))).ToHashSet();
+            foreach (ItlRecord playlist in Playlists)
+            {
+                ItlField? info = playlist.Field((int)ItlDataType.SmartInfo);
+                ItlField? criteria = playlist.Field((int)ItlDataType.SmartCriteria);
+                string name = PlaylistNameOf(playlist) ?? "(unnamed)";
+                if ((info is null) != (criteria is null))
+                {
+                    Add("smart.missing-pair", ItlValidationSeverity.Error,
+                        $"Playlist '{name}' has only one of Smart Info and Smart Criteria.");
+                    continue;
+                }
+                if (info is null) continue;
+                try
+                {
+                    ItlSmartPlaylist smart = ItlSmartPlaylist.Parse(info.Payload, criteria!.Payload);
+                    foreach (ItlSmartRule rule in Flatten(smart.Criteria))
+                    {
+                        if (rule.ValueKind == ItlSmartValueKind.Playlist &&
+                            rule.PlaylistPersistentId is { } persistentId &&
+                            !playlistPersistentIds.Contains(persistentId))
+                            Add("smart.playlist-link", ItlValidationSeverity.Error,
+                                $"Playlist '{name}' has a smart rule referencing missing playlist {persistentId:X16}.");
+                    }
+                }
+                catch (InvalidDataException exception)
+                {
+                    Add("smart.malformed", ItlValidationSeverity.Error,
+                        $"Playlist '{name}' has malformed smart-playlist data: {exception.Message}");
+                }
+            }
+
+            static IEnumerable<ItlSmartRule> Flatten(ItlSmartCriteria criteria) =>
+                criteria.Rules.SelectMany(rule => rule.NestedCriteria is null
+                    ? [rule]
+                    : new[] { rule }.Concat(Flatten(rule.NestedCriteria)));
         }
 
         void CompareCount(string name, int envelopeValue, int actual)

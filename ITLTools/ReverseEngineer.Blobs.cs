@@ -728,7 +728,7 @@ public static partial class ReverseEngineer
         XElement array = doc.Root!.Element("dict")!
             .Elements("key").First(k => k.Value == "Playlists").ElementsAfterSelf().First();
 
-        var xml = new Dictionary<string, (byte[]? Info, byte[]? Criteria)>();
+        var xml = new Dictionary<string, Queue<(byte[]? Info, byte[]? Criteria)>>(StringComparer.Ordinal);
         foreach (XElement dict in array.Elements("dict"))
         {
             string? name = dict.Elements("key").FirstOrDefault(k => k.Value == "Name")?.ElementsAfterSelf().First().Value;
@@ -741,39 +741,27 @@ public static partial class ReverseEngineer
                 return e is null ? null : Convert.FromBase64String(e.Value);
             }
 
-            xml.TryAdd(name, (Data("Smart Info"), Data("Smart Criteria")));
+            if (!xml.TryGetValue(name, out Queue<(byte[]? Info, byte[]? Criteria)>? values))
+                xml[name] = values = new();
+            values.Enqueue((Data("Smart Info"), Data("Smart Criteria")));
         }
 
-        byte[] body = library.Envelope.Body;
-        ItlSection section = library.Sections.First(s => s.Chunk.Type == 2);
-        ItlChunk list = ItlChunk.Read(body, section.Chunk.BodyOffset);
-
         Console.WriteLine($"{"playlist",-28} {"mhoh 102 == Smart Info",24}  {"mhoh 101 == Smart Criteria",26}");
-
-        foreach (ItlChunk miph in ItlChunk.Walk(body, list.HeaderEnd, section.Chunk.EndOffset))
+        foreach (ItlPlaylist playlist in library.Playlists.Where(playlist => playlist.Smart is not null))
         {
-            string? name = null;
-            byte[]? blob101 = null, blob102 = null;
-
-            foreach (ItlChunk child in ItlChunk.Walk(body, miph.BodyOffset, miph.EndOffset))
-            {
-                if (child.Signature != "mhoh")
-                    continue;
-                ItlDataObject o = ItlDataObject.Parse(body, child);
-                switch (o.Type)
-                {
-                    case 100: name = o.Text; break;
-                    case 101: blob101 = o.Raw; break;
-                    case 102: blob102 = o.Raw; break;
-                }
-            }
-
-            if (name is null || (blob101 is null && blob102 is null))
-                continue;
-            if (!xml.TryGetValue(name, out var expected))
-                continue;
-
-            Console.WriteLine($"{Clip(name, 28),-28} {Compare(blob102, expected.Info),24}  {Compare(blob101, expected.Criteria),26}");
+            string name = playlist.Name ?? "(unnamed)";
+            (byte[]? Info, byte[]? Criteria) expected = xml.TryGetValue(name, out var values) && values.Count > 0
+                ? values.Dequeue()
+                : (null, null);
+            ItlSmartPlaylist smart = playlist.Smart!;
+            Console.WriteLine($"{Clip(name, 28),-28} {Compare(smart.Info.Raw, expected.Info),24}  " +
+                              $"{Compare(smart.Criteria.Raw, expected.Criteria),26}");
+            Console.WriteLine($"  info: live={smart.Info.LiveUpdating} match={smart.Info.MatchRules} " +
+                              $"checked={smart.Info.CheckedOnly} limit={smart.Info.HasLimit}" +
+                              (smart.Info.HasLimit
+                                  ? $" {smart.Info.LimitSize} {smart.Info.LimitUnit}, sort={smart.Info.SortField}, descending={smart.Info.Descending}"
+                                  : ""));
+            PrintCriteria(smart.Criteria, "  ");
         }
 
         static string Compare(byte[]? actual, byte[]? expected)
@@ -783,6 +771,32 @@ public static partial class ReverseEngineer
             if (expected is null) return "missing in xml";
             if (actual.AsSpan().SequenceEqual(expected)) return $"IDENTICAL ({actual.Length}b)";
             return $"differ ({actual.Length} vs {expected.Length}b)";
+        }
+
+        static void PrintCriteria(ItlSmartCriteria criteria, string indent)
+        {
+            Console.WriteLine($"{indent}{criteria.Conjunction}: {criteria.Rules.Count} rule(s)");
+            foreach (ItlSmartRule rule in criteria.Rules)
+            {
+                if (rule.NestedCriteria is not null)
+                {
+                    Console.WriteLine($"{indent}- nested {rule.Sign} {rule.Operator}");
+                    PrintCriteria(rule.NestedCriteria, indent + "  ");
+                    continue;
+                }
+
+                string value = rule.ValueKind switch
+                {
+                    ItlSmartValueKind.String => $"\"{Clip(rule.StringValue ?? "", 70)}\"",
+                    ItlSmartValueKind.Playlist => rule.PlaylistPersistentId?.ToString("X16") ?? "(missing)",
+                    ItlSmartValueKind.Date when rule.RelativeSeconds != 0 => $"relative {rule.RelativeSeconds:N0}s",
+                    ItlSmartValueKind.Date when rule.DateValues.Count > 0 => string.Join(" .. ", rule.DateValues.Select(date => date.ToString("O"))),
+                    ItlSmartValueKind.Unknown => Convert.ToHexString(rule.RawValue.AsSpan(0, Math.Min(24, rule.RawValue.Length))),
+                    _ => string.Join(", ", rule.IntegerValues),
+                };
+                Console.WriteLine($"{indent}- {rule.Field} (0x{rule.RawField:X}) {rule.Sign} {rule.Operator}: " +
+                                  $"{value} [{rule.ValueKind}, {rule.RawValue.Length}b]");
+            }
         }
     }
 }

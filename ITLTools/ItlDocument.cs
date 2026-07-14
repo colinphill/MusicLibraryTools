@@ -254,6 +254,37 @@ public sealed partial class ItlDocument
 
     public static bool IsMasterPlaylist(ItlRecord playlist) => PlaylistNameOf(playlist) == "####!####";
 
+    public static ItlSmartPlaylist? SmartPlaylistOf(ItlRecord playlist)
+    {
+        ItlField? info = playlist.Field((int)ItlDataType.SmartInfo);
+        ItlField? criteria = playlist.Field((int)ItlDataType.SmartCriteria);
+        if (info is null && criteria is null) return null;
+        if (info is null || criteria is null)
+            throw new InvalidDataException($"Playlist '{PlaylistNameOf(playlist)}' has only one smart-playlist blob.");
+        return ItlSmartPlaylist.Parse(info.Payload, criteria.Payload);
+    }
+
+    /// <summary>
+    /// Replaces the two blobs of an existing smart playlist. Converting a manual playlist remains
+    /// unsupported because the native allocation policy for new smart-field child keys is unproven.
+    /// </summary>
+    public void SetSmartPlaylist(ItlRecord playlist, ItlSmartPlaylist smart)
+    {
+        ArgumentNullException.ThrowIfNull(playlist);
+        ArgumentNullException.ThrowIfNull(smart);
+        if (!Playlists.Contains(playlist))
+            throw new ArgumentException("The playlist does not belong to this document.", nameof(playlist));
+        ItlField? info = playlist.Field((int)ItlDataType.SmartInfo);
+        ItlField? criteria = playlist.Field((int)ItlDataType.SmartCriteria);
+        if (info is null || criteria is null)
+            throw new InvalidOperationException(
+                "Converting a manual playlist to a smart playlist is unsupported until smart-field child keys are proven.");
+
+        (byte[] encodedInfo, byte[] encodedCriteria) = smart.Encode();
+        info.SetBlob(encodedInfo);
+        criteria.SetBlob(encodedCriteria);
+    }
+
     public ItlRecord? FindPlaylist(string name) =>
         Playlists.FirstOrDefault(p => PlaylistNameOf(p) == name);
 

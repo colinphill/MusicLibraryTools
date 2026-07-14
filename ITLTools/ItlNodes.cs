@@ -53,6 +53,23 @@ public sealed class ItlField : ItlNode
         return field;
     }
 
+    /// <summary>Creates an opaque blob field. Callers must still establish any owner-specific key semantics.</summary>
+    public static ItlField CreateBlob(int type, byte[] value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        byte[] header = new byte[HeaderLength];
+        "mhoh"u8.CopyTo(header);
+        BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(4), HeaderLength);
+        BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(12), type);
+        return new ItlField(header, (byte[])value.Clone());
+    }
+
+    public void SetBlob(byte[] value)
+    {
+        ArgumentNullException.ThrowIfNull(value);
+        Payload = (byte[])value.Clone();
+    }
+
     private bool HasStringPreamble(out int encoding, out int byteLength)
     {
         encoding = 0;

@@ -60,6 +60,32 @@ For semantic track, album, and artist strings, `mhoh +16` is a per-type value ke
 reuse a key and new values receive the next key. Location and FileUrl instead retain structural
 subtypes 1 and 2. Fresh native user playlists used child key 3 and matured to 4 on the next save.
 
+## Smart playlists
+
+Playlist `mhoh` type 102 is the 112-byte big-endian Smart Info preference block. It carries live
+updating, rule matching, checked-only filtering, limit enable/unit/size, sort field, and sort
+direction. Type 101 is Smart Criteria: a recursive big-endian `SLst` rule set with a 136-byte header,
+56-byte rule headers, and typed values. Confirmed value families are UTF-16BE strings, 68-byte
+integer/boolean/date/media/cloud/location records, 8-byte playlist persistent IDs, and nested rule
+sets. Field IDs and operator bits agree with the independently implemented
+[rclancey/itunes smart-playlist parser](https://github.com/rclancey/itunes/blob/master/loader/smart.go)
+and the older [libgpod smart-playlist documentation](https://tmz.fedorapeople.org/docs/libgpod/libgpod-Smart-Playlists.html).
+
+`ItlSmartPlaylist` exposes typed decode/encode models and factories for proven rule families.
+`ItlPlaylist.Smart` provides read access; `ItlDocument.SmartPlaylistOf` and `SetSmartPlaylist` edit
+existing smart playlists. Parse then encode is byte-identical for all 15 smart playlists in the
+private corpus. Unknown field/operator values retain their raw bytes. Converting a manual playlist
+to smart is deliberately rejected until native child-key allocation for newly added types 101/102
+is proven.
+
+Native iTunes accepted a length-changing edit to the user-created K-Pop playlist, retained the new
+nested rule `Genre contains "Country"`, and recalculated its membership. It also retained a Smart
+Info live-updating toggle and a factory-created `Play Count > 5` integer rule. The latter re-exported
+to XML with Smart Info and Smart Criteria byte-identical to the resaved ITL blobs. A built-in Music
+rule edit was accepted but regenerated to the canonical Music mask on save, proving distinguished
+built-ins are system-owned and should not be used as editable-rule templates. Remaining Windows-only
+unknowns in the corpus are field `0xA4` on TV & Movies and operator `0x0800` on Rentals.
+
 ## Evidence-backed fields and open questions
 
 `ItlTrackFields` contains the fixed fields verified against XML, including identifiers, sizes,
@@ -179,12 +205,21 @@ The final reverse-engineering work should proceed in this order:
    is a checksum of the binary plist, plist XML, enclosing `mhoh`, or surrounding `mhgh` ranges; a
    revision or count; a random value; or a library-specific token. Until reproduced, preserve the
    field and reject playback-state mutations that would require recomputing it.
-6. Promote findings into writer behavior only after repeated native evidence. Add a synthetic
+6. **Smart-playlist decoding, editing, and typed rule construction completed:** Smart Info and
+   recursive Smart Criteria decode and byte-exactly re-encode; string, integer, Boolean, date,
+   relative-date, media/location-mask, playlist-reference, nested, and unknown raw values are typed
+   or preserved. Native iTunes retained a length-changing string edit, a live-updating toggle, and a
+   factory-created integer rule while regenerating membership. Continue one-variable experiments for
+   the two unknown Windows-only codes, playlist-reference edits, and manual-to-smart conversion.
+   Conversion remains deliberately unsupported until types 101/102 child-key allocation is proven.
+7. Promote findings into writer behavior only after repeated native evidence. Add a synthetic
    fixture and regression test for every proven rule, keep unresolved bytes opaque, and make an
    unsupported mutation fail before saving rather than synthesizing metadata.
 
 Completion criteria for these remaining areas are: `+88` is identified or experimentally excluded
 from required writer aggregates; `+108` has a safe preserve/recompute/reject policy; at least one
 controlled playback entry is mapped to its track identity or conclusively shown to be blob-local;
+smart playlists decode and re-encode byte-identically, supported edits survive native resave, and
+unsupported rule forms or manual-to-smart conversion fail before saving;
 each conclusion is reproduced in two fresh libraries; every candidate opens and re-saves in iTunes;
 and the harness confirms the live library and preferences are unchanged.

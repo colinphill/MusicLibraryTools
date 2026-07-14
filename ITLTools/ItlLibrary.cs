@@ -220,6 +220,7 @@ public sealed class ItlPlaylist
 {
     public required string? Name { get; init; }
     public required IReadOnlyList<int> TrackIds { get; init; }
+    public ItlSmartPlaylist? Smart { get; init; }
 
     /// <summary>iTunes names the master library playlist with this sentinel.</summary>
     public bool IsMaster => Name == "####!####";
@@ -344,6 +345,8 @@ public sealed class ItlLibrary
     private static ItlPlaylist ReadPlaylist(byte[] body, ItlChunk miph)
     {
         string? name = null;
+        byte[]? smartInfo = null;
+        byte[]? smartCriteria = null;
         var trackIds = new List<int>();
 
         // A playlist's children are its "mhoh" attributes followed by one "mtph" per member track.
@@ -355,6 +358,10 @@ public sealed class ItlLibrary
                     ItlDataObject o = ItlDataObject.Parse(body, child);
                     if (o.Type == (int)ItlDataType.PlaylistName && o.IsString)
                         name = o.Text;
+                    else if (o.Type == (int)ItlDataType.SmartInfo)
+                        smartInfo = o.Raw;
+                    else if (o.Type == (int)ItlDataType.SmartCriteria)
+                        smartCriteria = o.Raw;
                     break;
 
                 case "mtph":
@@ -363,6 +370,9 @@ public sealed class ItlLibrary
             }
         }
 
-        return new ItlPlaylist { Name = name, TrackIds = trackIds };
+        ItlSmartPlaylist? smart = smartInfo is not null && smartCriteria is not null
+            ? ItlSmartPlaylist.Parse(smartInfo, smartCriteria)
+            : null;
+        return new ItlPlaylist { Name = name, TrackIds = trackIds, Smart = smart };
     }
 }
