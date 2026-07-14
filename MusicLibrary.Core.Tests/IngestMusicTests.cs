@@ -131,7 +131,7 @@ public class IngestMusicTests
             CdDestination = tree.Path("cd-out"), PairedCdDestination = tree.Path("paired-out"),
             HighResolutionDestination = tree.Path("hires-out"), LengthLimit = 180,
             DiscNumLengthLimit = 160, AacEncoder = "libfdk_aac", AacBitrateKbps = 256,
-            DeleteSourcesAfterIngest = true,
+            DeleteSourcesAfterIngest = true, ItunesLibraryPath = tree.Path("library.itl"),
         };
 
         expected.Save(path);

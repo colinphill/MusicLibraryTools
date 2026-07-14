@@ -7,6 +7,7 @@ public sealed record IngestMusicConfiguration
 {
     public required string FfmpegPath { get; init; }
     public required string AacDestination { get; init; }
+    public string? ItunesLibraryPath { get; init; }
     public required string CdDestination { get; init; }
     public required string PairedCdDestination { get; init; }
     public required string HighResolutionDestination { get; init; }
@@ -37,11 +38,17 @@ public sealed record IngestMusicConfiguration
             return parsed;
         }
         string ResolveRoot(string value) => Path.GetFullPath(value, Path.GetDirectoryName(fullPath)!);
+        string? OptionalPath(string name)
+        {
+            string? value = (string?)root.Element(name);
+            return string.IsNullOrWhiteSpace(value) ? null : ResolveRoot(value.Trim());
+        }
 
         return new IngestMusicConfiguration
         {
             FfmpegPath = Required("FfmpegPath"),
             AacDestination = ResolveRoot(Required("AacDestination")),
+            ItunesLibraryPath = OptionalPath("ItunesLibrary"),
             CdDestination = ResolveRoot(Required("CdDestination")),
             PairedCdDestination = ResolveRoot(Required("PairedCdDestination")),
             HighResolutionDestination = ResolveRoot(Required("HighResolutionDestination")),
@@ -68,6 +75,7 @@ public sealed record IngestMusicConfiguration
             new XElement("IngestMusicConfiguration",
                 new XElement("FfmpegPath", FfmpegPath),
                 new XElement("AacDestination", AacDestination),
+                string.IsNullOrWhiteSpace(ItunesLibraryPath) ? null : new XElement("ItunesLibrary", ItunesLibraryPath),
                 new XElement("CdDestination", CdDestination),
                 new XElement("PairedCdDestination", PairedCdDestination),
                 new XElement("HighResolutionDestination", HighResolutionDestination),

@@ -35,6 +35,7 @@ public sealed record IngestTrackPlan
     public required uint DurationInSeconds { get; init; }
     public required bool IsAlac { get; init; }
     public required bool IsHighResolution { get; init; }
+    public bool Compilation { get; init; }
 }
 
 public enum IngestOutputKind { HighResolutionFlac, CdFlac, Aac }
@@ -68,6 +69,7 @@ public sealed record IngestPlan
     public required IReadOnlyList<IngestApprovalItem> RequiredApprovals { get; init; }
     public required IReadOnlyList<IngestConflict> Conflicts { get; init; }
     public required IReadOnlyList<string> IgnoredFiles { get; init; }
+    public IngestFileSnapshot? ItunesLibrarySnapshot { get; init; }
     public DateTime CreatedUtc { get; init; } = DateTime.UtcNow;
     public bool CanApply => Conflicts.Count == 0 && Albums.Count > 0;
 }

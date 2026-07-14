@@ -13,7 +13,7 @@ using System.Xml.Serialization;
 using System.Security.Cryptography;
 using ConsoleTools;
 using MetadataCaching;
-using iTunes;
+using iTunes.Binary;
 
 namespace UpdateCarCard
 {
@@ -1183,18 +1183,16 @@ namespace UpdateCarCard
 
             LogConsole.WriteLine("Total Parsed Files: " + cache.FileCache.Count);
 
-            LogConsole.WriteLine("Loading iTunes Library XML...");
+            LogConsole.WriteLine("Loading iTunes Library...");
 
-            string iTunesLibraryFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "iTunes", "iTunes Music Library.xml");
-            if (Environment.GetEnvironmentVariable("ITUNES_XML") != null)
-                iTunesLibraryFile = Environment.GetEnvironmentVariable("ITUNES_XML");
-            iTunesLibrary lib = new iTunesLibrary(iTunesLibraryFile);
+            ItlLibrary lib = ItlLibrary.Load(ItlFileEditor.ResolveLibraryPath());
+            Dictionary<int, ItlTrack> tracksById = lib.Tracks.ToDictionary(track => track.Id);
 
             LogConsole.WriteLine("iTunes Library Size: " + lib.Tracks.Count.ToString() + "  Playlist Count: " + lib.Playlists.Count);
 
             LogConsole.WriteLine("Mapping Library...");
 
-            iTunesMapper mapper = new iTunesMapper(lib, cache);
+            ItlMapper mapper = new ItlMapper(lib, cache);
 
             SyncDatabase oldsyncdb = new SyncDatabase();
 
@@ -1246,20 +1244,20 @@ namespace UpdateCarCard
             Dictionary<string, DateTime> filetimes = new Dictionary<string, DateTime>(StringComparer.CurrentCultureIgnoreCase);
 
             LogConsole.WriteLine("Enumerating iTunes Library");
-            KeyValuePair<int, iTunesTrack>[] library = lib.Tracks.Where(kv =>
-                string.Equals(kv.Value.Type, "File", StringComparison.OrdinalIgnoreCase) &&
-                (kv.Value.Kind ?? "").Contains("audio file", StringComparison.OrdinalIgnoreCase) &&
-                !(kv.Value.Kind ?? "").Contains("protected", StringComparison.OrdinalIgnoreCase)).ToArray();
+            ItlTrack[] library = lib.Tracks.Where(track =>
+                !string.IsNullOrWhiteSpace(track.LocalPath) &&
+                (track.Kind ?? "").Contains("audio file", StringComparison.OrdinalIgnoreCase) &&
+                !(track.Kind ?? "").Contains("protected", StringComparison.OrdinalIgnoreCase)).ToArray();
             int libindex = 0;
-            foreach (var kv in library)
+            foreach (ItlTrack sourceTrack in library)
             {
-                string loc = mapper[kv.Key];
+                string loc = mapper[sourceTrack.Id];
                 var entry = cache[loc];
                 DateTime dt = entry.LastWriteTime;
-                string artist = (string.IsNullOrEmpty(kv.Value.AlbumArtist) ? kv.Value.Artist : kv.Value.AlbumArtist).LimitLength(32);
-                string album = kv.Value.Album.FormatDisc(32, 28);
-                string title = kv.Value.Title.LimitLength(32);
-                int tracknumber = kv.Value.TrackNumber ?? 0;
+                string artist = (string.IsNullOrEmpty(sourceTrack.AlbumArtist) ? sourceTrack.Artist ?? string.Empty : sourceTrack.AlbumArtist).LimitLength(32);
+                string album = (sourceTrack.Album ?? string.Empty).FormatDisc(32, 28);
+                string title = (sourceTrack.Title ?? string.Empty).LimitLength(32);
+                int tracknumber = sourceTrack.TrackNumber;
                 FileDatabase.Track trk = new FileDatabase.Track();
                 trk.Index = tracknumber;
                 trk.DiscNumber = entry.DiscNumber ?? 0;
@@ -1267,9 +1265,9 @@ namespace UpdateCarCard
                 trk.Loc = loc;
                 trk.FileName = Path.GetFileName(loc);
                 trk.Name = title;
-                trk.Year = kv.Value.Year ?? 0;
-                trk.ContributingArtist = kv.Value.Artist.LimitLength(32);
-                trk.PersistentID = kv.Value.PersistentID;
+                trk.Year = sourceTrack.Year;
+                trk.ContributingArtist = (sourceTrack.Artist ?? string.Empty).LimitLength(32);
+                trk.PersistentID = sourceTrack.PersistentIdString;
                 syncdb.FileDatabase.FindArtist(artist).FindAlbum(album).Tracks.Add(trk);
                 libindex++;
                 if ((libindex % 1000) == 0)
@@ -1314,7 +1312,9 @@ namespace UpdateCarCard
 
             LogConsole.WriteLine("Mapping Artist Names");
 
-            string[] artists = library.Select(kv => (string.IsNullOrWhiteSpace(kv.Value.AlbumArtist) ? kv.Value.Artist : kv.Value.AlbumArtist).LimitLength(32)).Distinct().OrderBy(s => s).ToArray();
+            string[] artists = library.Select(track =>
+                (string.IsNullOrWhiteSpace(track.AlbumArtist) ? track.Artist ?? string.Empty : track.AlbumArtist)
+                .LimitLength(32)).Distinct().OrderBy(s => s).ToArray();
             Dictionary<string, string> artistmap = new Dictionary<string, string>();
 
             foreach (string artist in artists)
@@ -1335,7 +1335,8 @@ namespace UpdateCarCard
 
             if (!walkmanmode)
             {
-                string[] contributingartists = library.Select(kv => kv.Value.Artist).Distinct().OrderBy(s => s).ToArray();
+                string[] contributingartists = library.Select(track => track.Artist ?? string.Empty)
+                    .Distinct().OrderBy(s => s).ToArray();
                 LogConsole.WriteLine("Mapping Contributing Artist Names");
                 foreach (string artist in contributingartists)
                 {
@@ -1374,10 +1375,9 @@ namespace UpdateCarCard
                 .GroupBy(item => (item.Artist.ToUpperInvariant(), item.Album.ToUpperInvariant(), item.FileName.ToUpperInvariant()))
                 .Where(group => group.Select(item => item.Source).Distinct(StringComparer.OrdinalIgnoreCase).Count() > 1)
                 .ToArray();
-            var userPlaylistCollisions = lib.Playlists.Values
-                .Where(playlist => playlist.Items.Count <= MAX_PLAYLIST_COUNT &&
-                    !string.Equals(playlist.Title, "library", StringComparison.OrdinalIgnoreCase))
-                .GroupBy(playlist => playlist.Title.FixPath() + ".m3u", StringComparer.OrdinalIgnoreCase)
+            var userPlaylistCollisions = lib.Playlists
+                .Where(playlist => playlist.TrackIds.Count <= MAX_PLAYLIST_COUNT && !playlist.IsMaster)
+                .GroupBy(playlist => playlist.DisplayName.FixPath() + ".m3u", StringComparer.OrdinalIgnoreCase)
                 .Where(group => group.Count() > 1)
                 .ToArray();
             if (trackTargetCollisions.Length != 0 || userPlaylistCollisions.Length != 0)
@@ -1818,27 +1818,33 @@ namespace UpdateCarCard
             }
 
             LogConsole.WriteLine("Updating User Playlists");
-            foreach (iTunesPlaylist pl in lib.Playlists.Values)
+            foreach (ItlPlaylist pl in lib.Playlists)
             {
                 int icount = 0;
-                if ((pl.Items.Count > MAX_PLAYLIST_COUNT) || ((pl.Title.ToLower() == "library")))
+                if (pl.TrackIds.Count > MAX_PLAYLIST_COUNT || pl.IsMaster)
                     continue;
 
-                string plname = pl.Title.FixPath() + ".m3u";
+                string plname = pl.DisplayName.FixPath() + ".m3u";
 
                 using (MemoryStream plms = new MemoryStream())
                 {
                     using (StreamWriter plwriter = new StreamWriter(plms, Encoding.UTF8, 5123, true))
                     {
                         plwriter.WriteLine("#EXTM3U");
-                        foreach (int item in pl.Items)
+                        foreach (int item in pl.TrackIds)
                         {
-                            iTunesTrack track = lib.Tracks[item];
-                            if (track.Kind.ToLower().Contains("video") || (track.Type.ToLower() != "file") || (track.Kind.ToLower().Contains("protected")) || (track.Kind.ToLower().Contains("book")) || (track.Kind.ToLower().Contains("audible") ||
-                                track.Kind.ToLower().Contains("document") || track.Kind.ToLower().Contains("app") || track.Kind.ToLower().Contains("tone")))
+                            ItlTrack track = tracksById[item];
+                            string kind = track.Kind ?? string.Empty;
+                            if (track.HasVideo || string.IsNullOrWhiteSpace(track.LocalPath) ||
+                                kind.Contains("protected", StringComparison.OrdinalIgnoreCase) ||
+                                kind.Contains("book", StringComparison.OrdinalIgnoreCase) ||
+                                kind.Contains("audible", StringComparison.OrdinalIgnoreCase) ||
+                                kind.Contains("document", StringComparison.OrdinalIgnoreCase) ||
+                                kind.Contains("app", StringComparison.OrdinalIgnoreCase) ||
+                                kind.Contains("tone", StringComparison.OrdinalIgnoreCase))
                                 continue;
-                            plwriter.WriteLine("#EXTINF:-1," + track.Artist.Replace("-", "") + " - " + track.Title.Replace("-", ""));
-                            Tuple<FileDatabase.Artist, FileDatabase.Album, FileDatabase.Track> titem = alltracks.Single(t => t.Item3.PersistentID == track.PersistentID);
+                            plwriter.WriteLine("#EXTINF:-1," + (track.Artist ?? string.Empty).Replace("-", "") + " - " + (track.Title ?? string.Empty).Replace("-", ""));
+                            Tuple<FileDatabase.Artist, FileDatabase.Album, FileDatabase.Track> titem = alltracks.Single(t => t.Item3.PersistentID == track.PersistentIdString);
 
                             string mappedname = artistmap[titem.Item1.Name];
                             string trackfile = Path.Combine(artistsdir, syncdb.ArtistStructure.FindNode(mappedname).Path, mappedname, titem.Item2.Name.FixPath(), titem.Item3.FileName);

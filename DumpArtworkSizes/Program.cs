@@ -1,143 +1,128 @@
-﻿/* 
- * SVN Information:
- * 
- * $HeadURL: file:///Z:/SVN_Repositories/MusicLibraryTools/trunk/DumpArtworkSizes/Program.cs $
- * $Date: 2013-01-06 06:58:46 -0700 (Sun, 06 Jan 2013) $
- * $Revision: 13 $
- * $Author: colin $
- * 
- */
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.IO;
-using System.Drawing;
-using System.Runtime.InteropServices;
-using iTunesLib;
 using ConsoleTools;
+using iTunes.Binary;
+using MusicFileUtilities;
 
-namespace DumpArtworkSizes
+namespace DumpArtworkSizes;
+
+internal static class Program
 {
+    private sealed record Options(string PlaylistName, string? LibraryPath, string OutputPath);
 
-    class Program
+    private static int Main(string[] args)
     {
-
-        static void Main(string[] args)
+        LogConsole.SwitchFile("DumpArtworkSizes.log");
+        try
         {
-
-            LogConsole.SwitchFile("DumpArtworkSizes.log");
-
-            if (args.Length != 1)
+            if (!TryParseArguments(args, out Options? options))
             {
-                LogConsole.WriteLine("Usage: DumpArtworkSizes <playlistname>");
-                return;
+                LogConsole.WriteLine(
+                    "Usage: DumpArtworkSizes <playlist> [--library <file.itl>] [--output <report.dat>]");
+                return 2;
             }
 
-            iTunesApp app = new iTunesApp();
-            IITPlaylist lib = null;
-
-            foreach (IITSource s in app.Sources)
-            {
-                lib = s.Playlists.get_ItemByName(args[0]);
-                Marshal.FinalReleaseComObject(s);
-                if (lib != null)
-                    break;
-            }
-            if (lib == null)
-            {
-                LogConsole.WriteLine("Error Locating Playlist: " + args[0]);
-                Marshal.FinalReleaseComObject(app);
-                return;
-            }
-
-            using StreamWriter w = new StreamWriter("ArtworkSizes.dat");
-
-            int tracks = 0, noartwork = 0;
-            var albums = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (IITTrack trk in lib.Tracks)
-            {
-                try
-                {
-                    if (trk.Kind != ITTrackKind.ITTrackKindFile)
-                        continue;
-
-                    IITFileOrCDTrack filetrk = trk as IITFileOrCDTrack;
-                    if (filetrk.VideoKind != ITVideoKind.ITVideoKindNone || filetrk.Genre == "Podcast")
-                        continue;
-
-                    tracks++;
-                    string artist = string.IsNullOrEmpty(filetrk.AlbumArtist) ? filetrk.Artist : filetrk.AlbumArtist;
-                    string album = filetrk.Album;
-                    if (!albums.Add((artist ?? "") + "\0" + (album ?? "")))
-                        continue;
-
-                    LogConsole.WriteLine(tracks.ToString() + ") Checking Track: " + filetrk.Location);
-
-                    IITArtworkCollection artcol = null;
-                    try
-                    {
-                        artcol = filetrk.Artwork;
-                        if (artcol.Count == 1)
-                        {
-                            IITArtwork art = artcol[1];
-                            string ext = (art.Format == ITArtworkFormat.ITArtworkFormatBMP) ? "bmp" :
-                                (art.Format == ITArtworkFormat.ITArtworkFormatJPEG) ? "jpg" :
-                                (art.Format == ITArtworkFormat.ITArtworkFormatPNG) ? "png" : "unknown";
-
-                            string artfile = Path.Combine(Path.GetTempPath(), $"mlt-art-{Guid.NewGuid():N}.{ext}");
-                            LogConsole.WriteLine("Saving Artwork: " + artfile);
-                            try
-                            {
-                                art.SaveArtworkToFile(artfile);
-                                using Image im = Image.FromFile(artfile);
-                                w.WriteLine(artist + "|" + album + "|" + im.Width.ToString() + "|" + im.Height.ToString() + "|" + new FileInfo(artfile).Length.ToString());
-                            }
-                            finally
-                            {
-                                Marshal.FinalReleaseComObject(art);
-                                try
-                                {
-                                    if (File.Exists(artfile))
-                                        File.Delete(artfile);
-                                }
-                                catch (Exception ex)
-                                {
-                                    LogConsole.WriteLine($"Unable to delete temporary artwork {artfile}: {ex.Message}");
-                                }
-                            }
-                        }
-                        else
-                        {
-                            w.WriteLine(artist + "|" + album + "|" + "0|0");
-                            noartwork++;
-                        }
-                    }
-                    finally
-                    {
-                        if (artcol != null)
-                            Marshal.FinalReleaseComObject(artcol);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    LogConsole.WriteLine($"Unable to inspect track: {ex.Message}");
-                }
-                finally
-                {
-                    Marshal.FinalReleaseComObject(trk);
-                }
-            }
-
-            Marshal.FinalReleaseComObject(lib);
-            Marshal.FinalReleaseComObject(app);
-
-            LogConsole.WriteLine("Analyzed Tracks: " + tracks.ToString());
-            LogConsole.WriteLine("Analyzed Albums: " + albums.Count.ToString());
-            LogConsole.WriteLine("Albums Without Artwork: " + noartwork.ToString());
-
+            return Run(options!);
         }
+        catch (Exception exception)
+        {
+            LogConsole.WriteLine($"DumpArtworkSizes: {exception.Message}");
+            return 1;
+        }
+        finally
+        {
+            LogConsole.End();
+        }
+    }
+
+    private static bool TryParseArguments(string[] args, out Options? options)
+    {
+        string? libraryPath = null;
+        string outputPath = "ArtworkSizes.dat";
+        var operands = new List<string>();
+
+        for (int index = 0; index < args.Length; index++)
+        {
+            if (args[index].Equals("--library", StringComparison.OrdinalIgnoreCase) && ++index < args.Length)
+                libraryPath = args[index];
+            else if (args[index].Equals("--output", StringComparison.OrdinalIgnoreCase) && ++index < args.Length)
+                outputPath = args[index];
+            else if (args[index].StartsWith("--", StringComparison.Ordinal))
+            {
+                options = null;
+                return false;
+            }
+            else
+                operands.Add(args[index]);
+        }
+
+        options = operands.Count == 1
+            ? new Options(operands[0], libraryPath, Path.GetFullPath(outputPath))
+            : null;
+        return options is not null;
+    }
+
+    private static int Run(Options options)
+    {
+        ItlLibrary library = ItlLibrary.Load(ItlFileEditor.ResolveLibraryPath(options.LibraryPath));
+        ItlPlaylist[] matchingPlaylists = [.. library.Playlists.Where(playlist =>
+            string.Equals(playlist.Name, options.PlaylistName, StringComparison.OrdinalIgnoreCase))];
+        if (matchingPlaylists.Length != 1)
+            throw new InvalidOperationException(
+                $"Expected one playlist named '{options.PlaylistName}', found {matchingPlaylists.Length}.");
+
+        Dictionary<int, ItlTrack> tracksById = library.Tracks.ToDictionary(track => track.Id);
+        using var writer = new StreamWriter(options.OutputPath);
+        int tracks = 0;
+        int noArtwork = 0;
+        int errors = 0;
+        var albums = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (int trackId in matchingPlaylists[0].TrackIds)
+        {
+            if (!tracksById.TryGetValue(trackId, out ItlTrack? track) || track.HasVideo ||
+                string.Equals(track.Genre, "Podcast", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            string? path = ItlLocation.ToLocalPath(track.Location);
+            if (string.IsNullOrWhiteSpace(path))
+                continue;
+
+            tracks++;
+            string artist = string.IsNullOrWhiteSpace(track.AlbumArtist) ? track.Artist ?? string.Empty : track.AlbumArtist;
+            string album = track.Album ?? string.Empty;
+            if (!albums.Add(artist + "\0" + album))
+                continue;
+
+            LogConsole.WriteLine($"{tracks}) Checking track: {path}");
+            try
+            {
+                IMediaFile mediaFile = MediaFile.GetFile(path);
+                IMetadataImage[] images = [.. mediaFile.Tags.SelectMany(tag => tag.GetImageMetadata())];
+                if (images.Length == 1)
+                {
+                    IMetadataImage image = images[0];
+                    writer.WriteLine($"{artist}|{album}|{image.Width}|{image.Height}|{image.Size}");
+                }
+                else
+                {
+                    writer.WriteLine($"{artist}|{album}|0|0");
+                    noArtwork++;
+                    LogConsole.WriteLine(images.Length == 0
+                        ? "No embedded artwork."
+                        : $"Expected one embedded artwork image, found {images.Length}.");
+                }
+            }
+            catch (Exception exception)
+            {
+                errors++;
+                LogConsole.WriteLine($"Unable to inspect '{path}': {exception.Message}");
+            }
+        }
+
+        LogConsole.WriteLine($"Analyzed Tracks: {tracks}");
+        LogConsole.WriteLine($"Analyzed Albums: {albums.Count}");
+        LogConsole.WriteLine($"Albums Without One Embedded Artwork Image: {noArtwork}");
+        LogConsole.WriteLine($"Errors: {errors}");
+        LogConsole.WriteLine($"Report: {options.OutputPath}");
+        return errors == 0 ? 0 : 1;
     }
 }

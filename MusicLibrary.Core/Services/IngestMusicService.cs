@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
+using iTunes.Binary;
 
 namespace MusicLibrary.Core.Services;
 
@@ -24,6 +25,19 @@ public sealed class IngestMusicService : IIngestMusicService
         if (!Directory.Exists(sourceRoot))
             throw new DirectoryNotFoundException($"Source directory does not exist: {sourceRoot}");
         var config = IngestMusicConfiguration.Load(request.ConfigurationPath);
+        string? itunesMediaFolder = null;
+        IngestFileSnapshot? itunesLibrarySnapshot = null;
+        if (!string.IsNullOrWhiteSpace(config.ItunesLibraryPath))
+        {
+            ItlLibrary library = ItlLibrary.Load(config.ItunesLibraryPath);
+            itunesMediaFolder = library.MusicFolderPath;
+            if (string.IsNullOrWhiteSpace(itunesMediaFolder))
+                throw new InvalidDataException("The configured iTunes library does not contain a media storage folder.");
+            var libraryFile = new FileInfo(config.ItunesLibraryPath);
+            itunesLibrarySnapshot = new IngestFileSnapshot(
+                libraryFile.FullName, libraryFile.Length, libraryFile.LastWriteTimeUtc);
+            config = config with { AacDestination = Path.Combine(itunesMediaFolder, "Music") };
+        }
         string[] destinations = [config.AacDestination, config.CdDestination, config.PairedCdDestination, config.HighResolutionDestination];
         if (destinations.Any(d => PathsOverlap(sourceRoot, d)))
             throw new InvalidDataException("The source directory must not overlap an ingestion destination.");
@@ -64,6 +78,12 @@ public sealed class IngestMusicService : IIngestMusicService
                 string album = (tag.Album ?? "").Trim();
                 string title = (tag.Title ?? "").Trim();
                 if (string.IsNullOrWhiteSpace(albumArtist)) albumArtist = artist;
+                string? compilationValue = tag.GetKnownMetadata()
+                    .FirstOrDefault(field => field.Key == TagFields.Compilation).Value;
+                bool compilation = compilationValue is not null &&
+                    (compilationValue.Equals("1", StringComparison.OrdinalIgnoreCase) ||
+                     compilationValue.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                     compilationValue.Equals("yes", StringComparison.OrdinalIgnoreCase));
                 if (string.IsNullOrWhiteSpace(artist) || string.IsNullOrWhiteSpace(albumArtist) ||
                     string.IsNullOrWhiteSpace(album) || string.IsNullOrWhiteSpace(title) || tag.TrackNumber is null)
                     throw new InvalidDataException("Artist, album artist, album, title, and track number are required.");
@@ -77,7 +97,7 @@ public sealed class IngestMusicService : IIngestMusicService
                 scanned.Add(new ScannedTrack(
                     path, artist, albumArtist, baseAlbum, title, tag.TrackNumber.Value,
                     tag.DiscNumber, codec.Samplerate, codec.BitsPerSample, codec.Channels,
-                    codec.DurationInSeconds, alac, new FileInfo(path)));
+                    codec.DurationInSeconds, alac, compilation, new FileInfo(path)));
             }
             catch (Exception ex)
             {
@@ -135,6 +155,7 @@ public sealed class IngestMusicService : IIngestMusicService
                         DurationInSeconds = track.Duration,
                         IsAlac = track.IsAlac,
                         IsHighResolution = track.SampleRate > 44100 || track.BitsPerSample > 16,
+                        Compilation = track.Compilation,
                     });
                 }
             }
@@ -174,7 +195,9 @@ public sealed class IngestMusicService : IIngestMusicService
                 var selectedCd = cd!;
                 string cdDestination = ClaimCanonical(cdRoot, selectedCd, ".flac", config, claimed);
                 outputs.Add(Output(selectedCd, IngestOutputKind.CdFlac, selectedCd.SourcePath, cdDestination, derive));
-                string aacDestination = ClaimCanonical(config.AacDestination, selectedCd, ".m4a", config, claimed);
+                string aacDestination = itunesMediaFolder is null
+                    ? ClaimCanonical(config.AacDestination, selectedCd, ".m4a", config, claimed)
+                    : ClaimItunesCanonical(itunesMediaFolder, selectedCd, claimed);
                 outputs.Add(Output(selectedCd, IngestOutputKind.Aac, selectedCd.SourcePath, aacDestination));
             }
 
@@ -233,6 +256,7 @@ public sealed class IngestMusicService : IIngestMusicService
             RequiredApprovals = approvals,
             Conflicts = conflicts,
             IgnoredFiles = ignored,
+            ItunesLibrarySnapshot = itunesLibrarySnapshot,
         };
     }
 
@@ -246,6 +270,8 @@ public sealed class IngestMusicService : IIngestMusicService
             if (!decisions.TryGetValue(required.AlbumKey, out bool approved) || !approved)
                 return new IngestResult([], true, $"CD-quality derivation was not approved for {required.AlbumDisplay}; nothing was changed.");
 
+        if (plan.ItunesLibrarySnapshot is not null)
+            ItlFileEditor.EnsureItunesIsClosed();
         EnsureFresh(plan);
         await _ffmpeg.PreflightAsync(plan.Configuration.FfmpegPath, plan.Configuration.AacEncoder, ct);
         EnsureFresh(plan);
@@ -309,6 +335,7 @@ public sealed class IngestMusicService : IIngestMusicService
         var parallel = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount, CancellationToken = ct };
         string journalPath = Path.Combine(quarantineRoot, "journal.tsv");
         bool journalStarted = false;
+        bool libraryCommitted = false;
         try
         {
             await Parallel.ForEachAsync(album.Outputs.Where(o => o.Kind != IngestOutputKind.Aac), parallel, async (output, token) =>
@@ -392,12 +419,25 @@ public sealed class IngestMusicService : IIngestMusicService
                 File.Move(move.Original, move.Quarantine);
                 quarantined.Add(move);
             }
-            WriteJournal(journalPath,
+
+            string[] commitJournal =
                 [.. installed.Select(path => $"INSTALL\t{album.Key}\t{path}"),
                  .. quarantined.Select(q => plan.Configuration.DeleteSourcesAfterIngest
                      ? $"STAGE_DELETE\t{album.Key}\t{q.Original}\t{q.Quarantine}"
                      : $"QUARANTINE\t{album.Key}\t{q.Original}\t{q.Quarantine}"),
-                  $"COMMIT\t{album.Key}"]);
+                  $"COMMIT\t{album.Key}"];
+            if (!string.IsNullOrWhiteSpace(plan.Configuration.ItunesLibraryPath))
+            {
+                UpdateItunesLibrary(plan.Configuration.ItunesLibraryPath, album);
+                libraryCommitted = true;
+                // The library replacement is the final commit point. A journal failure after it
+                // must not roll back files that the now-committed library references.
+                try { WriteJournal(journalPath, commitJournal); } catch { }
+            }
+            else
+            {
+                WriteJournal(journalPath, commitJournal);
+            }
             if (plan.Configuration.DeleteSourcesAfterIngest)
             {
                 foreach (var move in quarantined)
@@ -421,22 +461,25 @@ public sealed class IngestMusicService : IIngestMusicService
         }
         catch
         {
-            foreach (var move in quarantined.AsEnumerable().Reverse())
+            if (!libraryCommitted)
             {
-                try
+                foreach (var move in quarantined.AsEnumerable().Reverse())
                 {
-                    if (File.Exists(move.Quarantine) && !File.Exists(move.Original))
+                    try
                     {
-                        Directory.CreateDirectory(Path.GetDirectoryName(move.Original)!);
-                        File.Move(move.Quarantine, move.Original);
+                        if (File.Exists(move.Quarantine) && !File.Exists(move.Original))
+                        {
+                            Directory.CreateDirectory(Path.GetDirectoryName(move.Original)!);
+                            File.Move(move.Quarantine, move.Original);
+                        }
                     }
+                    catch { }
                 }
-                catch { }
+                foreach (string path in installed.AsEnumerable().Reverse())
+                    try { if (File.Exists(path)) File.Delete(path); } catch { }
+                if (journalStarted)
+                    try { WriteJournal(journalPath, [$"ROLLBACK\t{album.Key}"]); } catch { }
             }
-            foreach (string path in installed.AsEnumerable().Reverse())
-                try { if (File.Exists(path)) File.Delete(path); } catch { }
-            if (journalStarted)
-                try { WriteJournal(journalPath, [$"ROLLBACK\t{album.Key}"]); } catch { }
             throw;
         }
         finally
@@ -520,6 +563,10 @@ public sealed class IngestMusicService : IIngestMusicService
         writer.SetField(TagFields.Album, track.Album);
         writer.SetField(TagFields.TrackNumber, track.TrackNumber.ToString());
         writer.SetField(TagFields.TotalTracks, track.TrackTotal.ToString());
+        if (track.Compilation)
+            writer.SetField(TagFields.Compilation, "1");
+        else
+            writer.RemoveField(TagFields.Compilation);
         writer.RemoveField(TagFields.DiscNumber);
         writer.RemoveField(TagFields.TotalDiscs);
 
@@ -567,6 +614,38 @@ public sealed class IngestMusicService : IIngestMusicService
     private static void EnsureFresh(IngestPlan plan)
     {
         foreach (var source in plan.Albums.SelectMany(a => a.Sources)) EnsureFresh(source);
+        if (plan.ItunesLibrarySnapshot is not null)
+            EnsureFresh(plan.ItunesLibrarySnapshot);
+    }
+
+    private static void UpdateItunesLibrary(string libraryPath, IngestAlbumPlan album)
+    {
+        ItlDocument document = ItlDocument.Load(libraryPath);
+        int before = document.Tracks.Count;
+        foreach (IngestOutputPlan output in album.Outputs.Where(output => output.Kind == IngestOutputKind.Aac))
+        {
+            IMediaFile media = MediaFile.GetFile(output.DestinationPath);
+            ICodecProvider codec = media.Codecs.First();
+            IMetadataProvider tag = media.Tags.First();
+            string? genre = tag.GetKnownMetadata().FirstOrDefault(field => field.Key == TagFields.Genre).Value;
+            document.ImportAacTrack(new ItlAacTrackImport
+            {
+                Path = output.DestinationPath,
+                Title = output.Metadata.Title,
+                Artist = output.Metadata.Artist,
+                AlbumArtist = output.Metadata.AlbumArtist,
+                Album = output.Metadata.Album,
+                Genre = genre,
+                TrackNumber = output.Metadata.TrackNumber,
+                TrackCount = output.Metadata.TrackTotal,
+                Duration = TimeSpan.FromSeconds(codec.DurationInSeconds),
+                BitRate = checked((int)Math.Round(codec.AverageBitrate / 1000d)),
+                ArtworkCount = media.Tags.Sum(candidate => candidate.GetImageMetadata().Count()),
+                Compilation = output.Metadata.Compilation,
+            });
+        }
+        if (document.Tracks.Count != before)
+            ItlFileEditor.SaveValidated(document, libraryPath);
     }
 
     private static void EnsureFresh(IngestFileSnapshot source)
@@ -591,6 +670,21 @@ public sealed class IngestMusicService : IIngestMusicService
         while (!claimed.Add(destination))
             destination = Path.Combine(root, relative + $"_{suffix++}" + extension).Normalize();
         return destination;
+    }
+
+    private static string ClaimItunesCanonical(string mediaFolder, IngestTrackPlan track,
+        HashSet<string> claimed)
+    {
+        string destination = ItlMediaOrganization.CanonicalMusicPath(mediaFolder,
+            track.AlbumArtist, track.Artist, track.Album, track.TrackNumber, track.Title, track.Compilation);
+        string directory = Path.GetDirectoryName(destination)!;
+        string extension = Path.GetExtension(destination);
+        string stem = Path.GetFileNameWithoutExtension(destination);
+        int suffix = 1;
+        string candidate = destination;
+        while (!claimed.Add(candidate))
+            candidate = Path.Combine(directory, $"{stem} {suffix++}{extension}").Normalize();
+        return candidate;
     }
 
     private static string AlbumKey(string artist, string album) => $"{NormalizeKey(artist)}\u001f{NormalizeKey(album)}";
@@ -618,5 +712,5 @@ public sealed class IngestMusicService : IIngestMusicService
 
     private sealed record ScannedTrack(string Path, string Artist, string AlbumArtist, string BaseAlbum,
         string Title, int TrackNumber, int? DiscNumber, uint SampleRate, uint BitsPerSample,
-        uint Channels, uint Duration, bool IsAlac, FileInfo File);
+        uint Channels, uint Duration, bool IsAlac, bool Compilation, FileInfo File);
 }

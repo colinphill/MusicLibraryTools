@@ -147,11 +147,13 @@ public sealed class ItlTrack
     public string? Kind => this[ItlDataType.Kind];
     public string? Composer => this[ItlDataType.Composer];
     public string? Location => this[ItlDataType.Location];
+    public string? LocalPath => ItlLocation.ToLocalPath(Location);
 
     private ushort U16(int offset) => BinaryPrimitives.ReadUInt16LittleEndian(Header.AsSpan(offset));
     private uint U32(int offset) => BinaryPrimitives.ReadUInt32LittleEndian(Header.AsSpan(offset));
 
     public ulong PersistentId => BinaryPrimitives.ReadUInt64LittleEndian(Header.AsSpan(128));
+    public string PersistentIdString => PersistentId.ToString("X16");
 
     /// <summary>
     /// Apple Store/catalog item ID. Type-514 playback-state entries use its decimal representation
@@ -252,6 +254,7 @@ public sealed class ItlPlaylist
 
     /// <summary>iTunes names the master library playlist with this sentinel.</summary>
     public bool IsMaster => Name == "####!####";
+    public string DisplayName => IsMaster ? "Library" : Name ?? string.Empty;
 }
 
 public sealed class ItlSection
@@ -268,12 +271,17 @@ public sealed class ItlLibrary
     public required IReadOnlyList<ItlAlbum> Albums { get; init; }
     public required IReadOnlyList<ItlArtist> Artists { get; init; }
     public required IReadOnlyList<ItlPlaylist> Playlists { get; init; }
+    public string? MusicFolderPath { get; init; }
+
+    public ItlPlaylist? FindPlaylist(string name, StringComparison comparison = StringComparison.OrdinalIgnoreCase) =>
+        Playlists.FirstOrDefault(playlist => string.Equals(playlist.DisplayName, name, comparison));
 
     // Section types, keyed by the word at msdh+12.
     private const int TrackSection = 1;
     private const int PlaylistSection = 2;
     private const int AlbumSection = 9;
     private const int ArtistSection = 11;
+    private const int LibraryInfoSection = 12;
 
     public static ItlLibrary Load(string path) => Parse(ItlEnvelope.Load(path));
 
@@ -286,6 +294,7 @@ public sealed class ItlLibrary
         var albums = new List<ItlAlbum>();
         var artists = new List<ItlArtist>();
         var playlists = new List<ItlPlaylist>();
+        string? musicFolderPath = null;
 
         foreach (ItlChunk section in ItlChunk.Walk(body, 0, body.Length))
         {
@@ -316,6 +325,37 @@ public sealed class ItlLibrary
                 case PlaylistSection when innerSignature == "mlph":
                     ForEachItem(body, section, "miph", item => playlists.Add(ReadPlaylist(body, item)));
                     break;
+
+                case LibraryInfoSection when innerSignature == "mhgh":
+                    ItlChunk mhgh = ItlChunk.Read(body, section.BodyOffset);
+                    foreach (ItlChunk child in ItlChunk.Walk(body, mhgh.HeaderEnd, section.EndOffset))
+                    {
+                        if (child.Signature != "mhoh")
+                            continue;
+                        ItlDataObject value = ItlDataObject.Parse(body, child);
+                        if (value.Type == (int)ItlDataType.LibraryFolderPath && value.Raw.Length % 2 == 0)
+                            musicFolderPath = Encoding.Unicode.GetString(value.Raw).TrimEnd('\0');
+                    }
+                    break;
+            }
+        }
+
+        // Preserve the ordering contract of the former XML reader. That reader treated the
+        // conventional "Most Played" playlist as a play-count view rather than trusting its
+        // serialized member order.
+        Dictionary<int, ItlTrack> tracksById = tracks.ToDictionary(track => track.Id);
+        for (int index = 0; index < playlists.Count; index++)
+        {
+            ItlPlaylist playlist = playlists[index];
+            if (string.Equals(playlist.Name, "Most Played", StringComparison.OrdinalIgnoreCase))
+            {
+                playlists[index] = new ItlPlaylist
+                {
+                    Name = playlist.Name,
+                    Smart = playlist.Smart,
+                    TrackIds = [.. playlist.TrackIds.OrderByDescending(id =>
+                        tracksById.TryGetValue(id, out ItlTrack? track) ? track.PlayCount : int.MinValue)],
+                };
             }
         }
 
@@ -327,6 +367,7 @@ public sealed class ItlLibrary
             Albums = albums,
             Artists = artists,
             Playlists = playlists,
+            MusicFolderPath = musicFolderPath,
         };
     }
 

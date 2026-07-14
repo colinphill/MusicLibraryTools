@@ -19,7 +19,7 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 
 using MusicFileUtilities;
-using iTunes;
+using iTunes.Binary;
 using ConsoleTools;
 using MusicLibraryTools;
 using MetadataCaching;
@@ -107,12 +107,10 @@ namespace CrossSyncPlaylists
 
             LogConsole.WriteLine("Total Parsed Files: " + cache.FileCache.Count);
 
-            LogConsole.WriteLine("Loading iTunes Library XML...");
+            LogConsole.WriteLine("Loading iTunes Library...");
 
-            string iTunesLibraryFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "iTunes", "iTunes Music Library.xml");
-            if (Environment.GetEnvironmentVariable("ITUNES_XML") != null)
-                iTunesLibraryFile = Environment.GetEnvironmentVariable("ITUNES_XML");
-            iTunesLibrary lib = new iTunesLibrary(iTunesLibraryFile);
+            ItlLibrary lib = ItlLibrary.Load(ItlFileEditor.ResolveLibraryPath());
+            Dictionary<int, ItlTrack> tracksById = lib.Tracks.ToDictionary(track => track.Id);
 
             LogConsole.WriteLine("iTunes Library Size: " + lib.Tracks.Count.ToString() + "  Playlist Count: " + lib.Playlists.Count);
 
@@ -122,7 +120,7 @@ namespace CrossSyncPlaylists
 
             LogConsole.WriteLine("Mapping Library...");
 
-            iTunesMapper mapper = new iTunesMapper(lib, cache);
+            ItlMapper mapper = new ItlMapper(lib, cache);
 
             int missing = 0;
 
@@ -130,7 +128,7 @@ namespace CrossSyncPlaylists
             {
                 foreach (var track in mapper.MissingTracks)
                 {
-                    Console.WriteLine("FNF: " + lib.Tracks[track].LocalLocation);
+                    Console.WriteLine("FNF: " + tracksById[track].LocalPath);
                     missing++;
                 }
                 LogConsole.WriteLine("Total FNF: " + missing.ToString());
@@ -138,19 +136,19 @@ namespace CrossSyncPlaylists
                 return;
             }
 
-            foreach (iTunesPlaylist pl in lib.Playlists.Values)
+            foreach (ItlPlaylist pl in lib.Playlists)
             {
                 int count = 0;
-                if (pl.Items.Count > MAX_PLAYLIST_COUNT)
+                if (pl.TrackIds.Count > MAX_PLAYLIST_COUNT)
                     continue;
                  
-                LogConsole.WriteLine("Converting Playlist: " + pl.Title);
+                LogConsole.WriteLine("Converting Playlist: " + pl.DisplayName);
 
-                string plfilename = (config.PlaylistType.ToLower() == "wpl") ? Path.Combine(config.PlaylistTargetFolder, FixPath(pl.Title).PadRight(SONOS_NAME_PAD) + ".wpl") :
-                    Path.Combine(config.PlaylistTargetFolder, FixPath(pl.Title) + ".m3u");
+                string plfilename = (config.PlaylistType.ToLower() == "wpl") ? Path.Combine(config.PlaylistTargetFolder, FixPath(pl.DisplayName).PadRight(SONOS_NAME_PAD) + ".wpl") :
+                    Path.Combine(config.PlaylistTargetFolder, FixPath(pl.DisplayName) + ".m3u");
                 if (!claimedOutputs.Add(Path.GetFullPath(plfilename)))
                 {
-                    LogConsole.WriteLine("Skipping playlist with colliding sanitized name: " + pl.Title);
+                    LogConsole.WriteLine("Skipping playlist with colliding sanitized name: " + pl.DisplayName);
                     continue;
                 }
 
@@ -174,17 +172,23 @@ namespace CrossSyncPlaylists
                             new XElement("meta",
                                 new XAttribute("name", "ItemCount"),
                                 countat = new XAttribute("content", "")),
-                            new XElement("title", pl.Title)),
+                            new XElement("title", pl.DisplayName)),
                             new XElement("body",
                                 seqel = new XElement("seq"))));
               
-                foreach (int item in pl.Items)
+                foreach (int item in pl.TrackIds)
                 {
                     string filepath = null;
 
-                    iTunesTrack track = lib.Tracks[item];
-                    if (track.Kind.ToLower().Contains("video") || (track.Type.ToLower() != "file") || (track.Kind.ToLower().Contains("protected")) || (track.Kind.ToLower().Contains("book")) || (track.Kind.ToLower().Contains("audible") ||
-                        track.Kind.ToLower().Contains("document") || track.Kind.ToLower().Contains("app") || track.Kind.ToLower().Contains("tone")))
+                    ItlTrack track = tracksById[item];
+                    string kind = track.Kind ?? string.Empty;
+                    if (track.HasVideo || string.IsNullOrWhiteSpace(track.LocalPath) ||
+                        kind.Contains("protected", StringComparison.OrdinalIgnoreCase) ||
+                        kind.Contains("book", StringComparison.OrdinalIgnoreCase) ||
+                        kind.Contains("audible", StringComparison.OrdinalIgnoreCase) ||
+                        kind.Contains("document", StringComparison.OrdinalIgnoreCase) ||
+                        kind.Contains("app", StringComparison.OrdinalIgnoreCase) ||
+                        kind.Contains("tone", StringComparison.OrdinalIgnoreCase))
                         continue;
 
                     try
@@ -193,7 +197,7 @@ namespace CrossSyncPlaylists
                     }
                     catch 
                     {
-                        LogConsole.WriteLine("FNF: " + track.LocalLocation);
+                        LogConsole.WriteLine("FNF: " + track.LocalPath);
                         missing++;
                     }
                  
@@ -208,7 +212,9 @@ namespace CrossSyncPlaylists
                                 filepath = iloc.Offset + filepath.Remove(0, iloc.Target.Length).Replace('\\','/');
                         }
                         seqel.Add(new XElement("media", new XAttribute("src", filepath)));
-                        m3uw.WriteLine("#EXTINF:" + duration + "," + track.Artist.Replace("-", "") + " - " + track.Title.Replace("-", ""));
+                        m3uw.WriteLine("#EXTINF:" + duration + "," +
+                            (track.Artist ?? string.Empty).Replace("-", "") + " - " +
+                            (track.Title ?? string.Empty).Replace("-", ""));
                         m3uw.WriteLine(filepath);
                         count++;
                     }

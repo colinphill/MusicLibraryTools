@@ -14,7 +14,7 @@ using System.Linq;
 using System.Text;
 using System.IO;
 
-using iTunes;
+using iTunes.Binary;
 using ConsoleTools;
 using MusicLibraryTools;
 using MusicFileUtilities;
@@ -133,11 +133,9 @@ namespace CrossSyncMusic
                 return;
             }
 
-            LogConsole.WriteLine("Loading iTunes Library XML...");
-            string iTunesLibraryFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "iTunes", "iTunes Music Library.xml");
-            if (Environment.GetEnvironmentVariable("ITUNES_XML") != null)
-                iTunesLibraryFile = Environment.GetEnvironmentVariable("ITUNES_XML");
-            iTunesLibrary lib = new iTunesLibrary(iTunesLibraryFile);
+            LogConsole.WriteLine("Loading iTunes Library...");
+            ItlLibrary lib = ItlLibrary.Load(ItlFileEditor.ResolveLibraryPath());
+            Dictionary<int, ItlTrack> tracksById = lib.Tracks.ToDictionary(track => track.Id);
 
             string[] requestedPlaylists = config["SyncPlaylist"];
             if (requestedPlaylists.Length == 0)
@@ -170,22 +168,23 @@ namespace CrossSyncMusic
             db.IndexFiles(indexLocations.Select(l => l.Target));
             var cache = db.BuildCache(indexLocations.Select(l => l.Target));
 
-            var plannedTracks = new List<(iTunesTrack Track, MetadataCacheEntry Entry, string Destination)>();
+            var plannedTracks = new List<(ItlTrack Track, MetadataCacheEntry Entry, string Destination)>();
 
             foreach (var syncPlaylist in syncPlaylists)
             {
-                iTunesPlaylist pl = syncPlaylist.Playlist;
+                ItlPlaylist pl = syncPlaylist.Playlist;
 
-                foreach (int id in pl.Items)
+                foreach (int id in pl.TrackIds)
                 {
-                    iTunesTrack trk = lib.Tracks[id];
+                    ItlTrack trk = tracksById[id];
+                    string kind = trk.Kind ?? string.Empty;
+                    string localPath = trk.LocalPath ?? string.Empty;
 
-                    if (string.Equals(trk.Type, "File", StringComparison.OrdinalIgnoreCase))
+                    if (!string.IsNullOrWhiteSpace(localPath))
                     {
-                        if (!(trk.Kind ?? "").Contains("video", StringComparison.OrdinalIgnoreCase) &&
-                            !(trk.Kind ?? "").Contains("audible", StringComparison.OrdinalIgnoreCase))
+                        if (!trk.HasVideo && !kind.Contains("audible", StringComparison.OrdinalIgnoreCase))
                         {
-                            string localloc = trk.LocalLocation;
+                            string localloc = localPath;
                             if (localloc.StartsWith(@"\\"))
                                 localloc = @"\\" + localloc.Substring(2).Replace(@"\\", @"\");
                             else
@@ -205,12 +204,12 @@ namespace CrossSyncMusic
                                 catch
                                 {
                                     LogConsole.WriteLine("WARNING: Out of tree");
-                                    entry = new MetadataCacheEntry(MediaFile.GetFile(trk.LocalLocation), File.GetLastWriteTimeUtc(trk.LocalLocation));
+                                    entry = new MetadataCacheEntry(MediaFile.GetFile(localPath), File.GetLastWriteTimeUtc(localPath));
                                     entry.Strip();
                                 }
                             }
 
-                            string dest = Path.Combine(targetPath, entry.FormatPath(config.LengthLimit, config.DiscNumLengthLimit) + Path.GetExtension(trk.LocalLocation));
+                            string dest = Path.Combine(targetPath, entry.FormatPath(config.LengthLimit, config.DiscNumLengthLimit) + Path.GetExtension(localPath));
                             plannedTracks.Add((trk, entry, dest));
                         }
                     }
@@ -219,14 +218,14 @@ namespace CrossSyncMusic
 
             var destinationCollisions = plannedTracks
                 .GroupBy(item => item.Destination, StringComparer.OrdinalIgnoreCase)
-                .Where(group => group.Select(item => Path.GetFullPath(item.Track.LocalLocation)).Distinct(StringComparer.OrdinalIgnoreCase).Count() > 1)
+                .Where(group => group.Select(item => Path.GetFullPath(item.Track.LocalPath!)).Distinct(StringComparer.OrdinalIgnoreCase).Count() > 1)
                 .ToArray();
             if (destinationCollisions.Length != 0)
             {
                 foreach (var collision in destinationCollisions)
                 {
                     LogConsole.WriteLine("Destination collision: " + collision.Key);
-                    foreach (string source in collision.Select(item => item.Track.LocalLocation).Distinct(StringComparer.OrdinalIgnoreCase))
+                    foreach (string source in collision.Select(item => item.Track.LocalPath!).Distinct(StringComparer.OrdinalIgnoreCase))
                         LogConsole.WriteLine("  " + source);
                 }
                 LogConsole.WriteLine("Aborting before target changes because multiple source tracks map to the same destination.");
@@ -249,7 +248,7 @@ namespace CrossSyncMusic
             int converted = 0;
             foreach (var planned in plannedTracks.GroupBy(item => item.Destination, StringComparer.OrdinalIgnoreCase).Select(group => group.First()))
             {
-                iTunesTrack trk = planned.Track;
+                ItlTrack trk = planned.Track;
                 MetadataCacheEntry entry = planned.Entry;
                 string dest = planned.Destination;
 
@@ -262,7 +261,7 @@ namespace CrossSyncMusic
                     {
                         LogConsole.WriteLine("Rewriting: " + dest);
                         if (apply)
-                            CopyAtomically(trk.LocalLocation, dest);
+                            CopyAtomically(trk.LocalPath!, dest);
                     }
                     else
                         LogConsole.WriteLine("Skipping: " + dest);
@@ -273,7 +272,7 @@ namespace CrossSyncMusic
                     converted++;
                     LogConsole.WriteLine("Copying: " + dest);
                     if (apply)
-                        CopyAtomically(trk.LocalLocation, dest);
+                        CopyAtomically(trk.LocalPath!, dest);
                 }
                 namehits[dest].Hit = true;
             }

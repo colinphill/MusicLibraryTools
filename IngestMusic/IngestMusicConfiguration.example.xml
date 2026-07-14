@@ -3,6 +3,9 @@
   <!-- Must be a build that includes libfdk_aac. A command on PATH is also accepted. -->
   <FfmpegPath>ffmpeg</FfmpegPath>
   <AacDestination>Z:\iTunes\AddAAC</AacDestination>
+  <!-- Optional. When set, AAC files use this library's media folder and are added to the .itl.
+       iTunes must be closed while applying an ingest. Relative paths are resolved beside this file. -->
+  <!-- <ItunesLibrary>Z:\iTunes\iTunes Library.itl</ItunesLibrary> -->
   <CdDestination>Z:\iTunes\FLAC</CdDestination>
   <PairedCdDestination>Z:\iTunes\FLAC2</PairedCdDestination>
   <HighResolutionDestination>Z:\iTunes\HiRes\Stereo\PCM</HighResolutionDestination>

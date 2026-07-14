@@ -5,13 +5,11 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using System.IO;
-using iTunesLib;
-using iTunes;
+using iTunes.Binary;
 using MusicFileUtilities;
 using DocumentFormat.OpenXml.Spreadsheet;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml;
-using System.Globalization;
 
 namespace BackSyncPlaylists
 {
@@ -80,97 +78,103 @@ namespace BackSyncPlaylists
             return (row-1, col-1);
         }
 
-        static void CommitPlaylist(iTunesApp app, string playlistName, IReadOnlyList<(int High, int Low)> items)
+        static void CommitPlaylist(
+            ItlDocument document,
+            string playlistName,
+            IReadOnlyList<ulong> items,
+            string? templateName)
         {
-            var existing = new List<(IITSource Source, IITUserPlaylist Playlist)>();
-            foreach (IITSource source in app.Sources)
-                foreach (IITPlaylist playlist in source.Playlists)
-                    if (playlist.Kind == ITPlaylistKind.ITPlaylistKindUser &&
-                        playlist.Name.Equals(playlistName, StringComparison.OrdinalIgnoreCase) &&
-                        playlist is IITUserPlaylist user && !user.Smart &&
-                        user.SpecialKind == ITUserPlaylistSpecialKind.ITUserPlaylistSpecialKindNone)
-                        existing.Add((source, user));
+            ItlRecord[] existing = [.. document.FindPlaylists(playlistName, StringComparison.OrdinalIgnoreCase)];
 
-            if (existing.Count > 1)
+            if (existing.Length > 1)
                 throw new InvalidOperationException($"More than one writable playlist is named '{playlistName}'; no playlist was changed.");
 
-            IITSource targetSource = existing.Count == 1 ? existing[0].Source : app.LibrarySource;
-            string token = Guid.NewGuid().ToString("N");
-            string temporaryName = "BackSync staging " + token;
-            object sourceObject = targetSource;
-            IITUserPlaylist replacement = (IITUserPlaylist)app.CreatePlaylistInSource(temporaryName, ref sourceObject);
+            int[] trackIds = [.. items.Select(persistentId =>
+            {
+                ItlRecord? track = document.FindTrackByPersistentId(persistentId);
+                return track is null
+                    ? throw new InvalidOperationException(
+                        $"Planned track {persistentId:X16} is no longer present in the library.")
+                    : ItlDocument.TrackIdOf(track);
+            })];
+
+            ItlRecord playlist;
+            if (existing.Length == 1)
+            {
+                playlist = existing[0];
+                if (ItlDocument.IsMasterPlaylist(playlist) || ItlDocument.SmartPlaylistOf(playlist) is not null)
+                    throw new InvalidOperationException(
+                        $"Playlist '{playlistName}' is system-owned or smart and cannot be replaced as a manual playlist.");
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(templateName))
+                    throw new InvalidOperationException(
+                        $"Playlist '{playlistName}' does not exist. Specify --template <manual-playlist> " +
+                        "so its native header layout can be cloned safely.");
+                ItlRecord[] templates = [.. document.FindPlaylists(templateName, StringComparison.OrdinalIgnoreCase)];
+                if (templates.Length != 1 || ItlDocument.IsMasterPlaylist(templates[0]) ||
+                    ItlDocument.SmartPlaylistOf(templates[0]) is not null)
+                    throw new InvalidOperationException(
+                        $"Template '{templateName}' must name exactly one existing manual non-master playlist.");
+                playlist = document.AddPlaylist(playlistName, templates[0]);
+            }
+
+            document.ReplacePlaylistEntries(playlist, trackIds);
+        }
+
+        static int Main(string[] args)
+        {
             try
             {
-                if (existing.Count == 1)
-                {
-                    object parent = existing[0].Playlist.get_Parent();
-                    replacement.set_Parent(ref parent);
-                    replacement.Shuffle = existing[0].Playlist.Shuffle;
-                    replacement.SongRepeat = existing[0].Playlist.SongRepeat;
-                    replacement.Shared = existing[0].Playlist.Shared;
-                }
-
-                foreach (var item in items)
-                {
-                    IITTrack track = app.LibraryPlaylist.Tracks.get_ItemByPersistentID(item.High, item.Low);
-                    if (track == null)
-                        throw new InvalidOperationException("A planned persistent ID is no longer present in the live library.");
-                    replacement.AddTrack(track);
-                }
-                if (replacement.Tracks.Count != items.Count)
-                    throw new InvalidOperationException("The staged playlist item count did not match the plan.");
-
-                if (existing.Count == 0)
-                {
-                    replacement.Name = playlistName;
-                    return;
-                }
-
-                IITUserPlaylist original = existing[0].Playlist;
-                string backupName = "BackSync backup " + token;
-                original.Name = backupName;
-                try
-                {
-                    replacement.Name = playlistName;
-                }
-                catch
-                {
-                    original.Name = playlistName;
-                    throw;
-                }
-
-                try
-                {
-                    original.Delete();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Playlist was replaced, but backup '{backupName}' could not be removed: {ex.Message}");
-                }
+                return Run(args);
             }
-            catch
+            catch (Exception exception)
             {
-                try { replacement.Delete(); } catch { }
-                throw;
+                Console.Error.WriteLine($"BackSyncPlaylists: {exception.Message}");
+                return 1;
             }
         }
 
-        static void Main(string[] args)
+        static int Run(string[] args)
         {
-            bool apply = args.Any(a => a.Equals("--apply", StringComparison.OrdinalIgnoreCase));
-            string[] operands = args.Where(a => !a.Equals("--apply", StringComparison.OrdinalIgnoreCase)).ToArray();
+            bool apply = false;
+            string? specifiedLibrary = null;
+            string? templateName = null;
+            var operandList = new List<string>();
+            for (int index = 0; index < args.Length; index++)
+            {
+                if (args[index].Equals("--apply", StringComparison.OrdinalIgnoreCase))
+                    apply = true;
+                else if (args[index].Equals("--library", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (++index >= args.Length) throw new ArgumentException("--library requires a path.");
+                    specifiedLibrary = args[index];
+                }
+                else if (args[index].Equals("--template", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (++index >= args.Length) throw new ArgumentException("--template requires a playlist name.");
+                    templateName = args[index];
+                }
+                else
+                    operandList.Add(args[index]);
+            }
+            string[] operands = [.. operandList];
             if (operands.Length == 0)
             {
-                Console.WriteLine("Usage: BackSyncPlaylists [playlist] [remap:<src>=><dest>] ... [--apply]");
-                Console.WriteLine("The default mode only reports matches. Pass --apply to create playlists.");
-                return;
+                Console.WriteLine("Usage: BackSyncPlaylists [playlist] [remap:<src>=><dest>] ... " +
+                                  "[--library <file.itl>] [--template <manual-playlist>] [--apply]");
+                Console.WriteLine("The default mode only reports matches. Pass --apply to edit the ITL directly.");
+                return 0;
             }
 
-            iTunesApp app = apply ? new iTunesApp() : null;
-            string iTunesLibraryFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "iTunes", "iTunes Music Library.xml");
-            if (Environment.GetEnvironmentVariable("ITUNES_XML") != null)
-                iTunesLibraryFile = Environment.GetEnvironmentVariable("ITUNES_XML");
-            iTunesLibrary lib = new iTunesLibrary(iTunesLibraryFile);
+            string iTunesLibraryFile = ItlFileEditor.ResolveLibraryPath(specifiedLibrary);
+            if (apply)
+                ItlFileEditor.EnsureItunesIsClosed();
+            ItlEnvelope envelope = ItlEnvelope.Load(iTunesLibraryFile);
+            ItlLibrary lib = ItlLibrary.Parse(envelope);
+            ItlDocument? document = apply ? ItlDocument.Parse(envelope) : null;
+            int changedPlaylists = 0;
             var remaps = new List<(string oldval, string newval)>();
             var playlistOperands = new List<string>();
 
@@ -247,7 +251,7 @@ namespace BackSyncPlaylists
                         plfiles = plfiles.Select(f => f.Replace(rm.oldval, rm.newval, StringComparison.InvariantCultureIgnoreCase)).ToArray();
                     plfiles = plfiles.Select(f => Path.IsPathFullyQualified(f) ? f : Path.Combine(dir, f)).ToArray();
 
-                    var plannedItems = new List<(int High, int Low)>();
+                    var plannedItems = new List<ulong>();
                     bool validPlan = true;
                     foreach (string plfile in plfiles)
                     {
@@ -261,14 +265,14 @@ namespace BackSyncPlaylists
                                 .Where(value => !string.IsNullOrWhiteSpace(value))
                                 .Distinct(StringComparer.OrdinalIgnoreCase)
                                 .ToArray();
-                            KeyValuePair<int, iTunesTrack>[] tracks = lib.Tracks.Where(kv =>
-                                string.Equals(kv.Value.Title, mp.Title, StringComparison.OrdinalIgnoreCase) &&
-                                string.Equals(kv.Value.Album, mp.Album, StringComparison.OrdinalIgnoreCase) &&
+                            ItlTrack[] tracks = [.. lib.Tracks.Where(track =>
+                                string.Equals(track.Title, mp.Title, StringComparison.OrdinalIgnoreCase) &&
+                                string.Equals(track.Album, mp.Album, StringComparison.OrdinalIgnoreCase) &&
                                 sourceArtists.Any(artist =>
-                                    string.Equals(kv.Value.Artist, artist, StringComparison.OrdinalIgnoreCase) ||
-                                    string.Equals(kv.Value.AlbumArtist, artist, StringComparison.OrdinalIgnoreCase)) &&
-                                ((kv.Value.TrackNumber == mp.TrackNumber) || (mp.TrackNumber == 0)) &&
-                                ((kv.Value.DiscNumber == mp.DiscNumber) || (mp.DiscNumber is null or 0))).ToArray();
+                                    string.Equals(track.Artist, artist, StringComparison.OrdinalIgnoreCase) ||
+                                    string.Equals(track.AlbumArtist, artist, StringComparison.OrdinalIgnoreCase)) &&
+                                ((track.TrackNumber == mp.TrackNumber) || (mp.TrackNumber == 0)) &&
+                                ((track.DiscNumber == mp.DiscNumber) || (mp.DiscNumber is null or 0)))];
                             if (tracks.Length != 1)
                             {
                                 validPlan = false;
@@ -276,12 +280,8 @@ namespace BackSyncPlaylists
                             }
                             else
                             {
-                                Console.WriteLine(tracks[0].Value.Title);
-                                // Persistent IDs are unsigned 32-bit halves. Parse them as
-                                // uint and preserve their bit patterns for the signed COM API.
-                                int highpid = unchecked((int)uint.Parse(tracks[0].Value.PersistentID.Substring(0, 8), NumberStyles.HexNumber, CultureInfo.InvariantCulture));
-                                int lowpid = unchecked((int)uint.Parse(tracks[0].Value.PersistentID.Substring(8), NumberStyles.HexNumber, CultureInfo.InvariantCulture));
-                                plannedItems.Add((highpid, lowpid));
+                                Console.WriteLine(tracks[0].Title);
+                                plannedItems.Add(tracks[0].PersistentId);
                             }
 
                             Console.WriteLine();
@@ -306,8 +306,9 @@ namespace BackSyncPlaylists
                     {
                         try
                         {
-                            CommitPlaylist(app, plname, plannedItems);
-                            Console.WriteLine($"Updated playlist '{plname}' with {plannedItems.Count} items.");
+                            CommitPlaylist(document!, plname, plannedItems, templateName);
+                            changedPlaylists++;
+                            Console.WriteLine($"Prepared playlist '{plname}' with {plannedItems.Count} items.");
                         }
                         catch (Exception ex)
                         {
@@ -317,6 +318,14 @@ namespace BackSyncPlaylists
 
                 }
             }
+
+            if (apply && changedPlaylists > 0)
+            {
+                ItlFileEditor.SaveValidated(document!, iTunesLibraryFile);
+                Console.WriteLine($"Saved {changedPlaylists} playlist update(s) to '{iTunesLibraryFile}'.");
+                Console.WriteLine($"The previous file is retained as '{iTunesLibraryFile}.bak'.");
+            }
+            return 0;
         }
     }
 }

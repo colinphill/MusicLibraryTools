@@ -7,7 +7,8 @@ The design center is a set of **hand-written audio metadata parsers** (no TagLib
 read and write tags across every format in the library, plus a SQLite cache so tools don't
 re-parse tens of thousands of files on every run. Everything is driven by an XML library
 configuration that describes where the library, sync targets, playlists, and cache database
-live.
+live. iTunes library state itself is read directly from the binary `.itl` through ITLTools; the
+legacy MusicFileUtilities iTunes-XML parser has been removed.
 
 ## Supported formats
 
@@ -46,7 +47,8 @@ Sync and devices:
 
 - **CrossSyncMusic / CrossSyncPlaylists / CrossSyncPlaylistFiles** — keep library copies and
   their playlists in sync across locations.
-- **BackSyncPlaylists** — sync playlists back from a device/copy, with path remapping.
+- **BackSyncPlaylists** — sync playlists back from a device/copy, with path remapping. It reads
+  and updates the binary `.itl` directly through ITLTools; iTunes must be closed for `--apply`.
 - **AndroidSync** — push music to an Android phone over ADB.
 - **UpdateCarCard** — maintain the car's SD card copy (with rebalancing and error fixing).
 - **UpdateSmartStorage** — build a device image with its own file/artwork databases.
@@ -54,8 +56,11 @@ Sync and devices:
 Artwork:
 
 - **FixArtwork / ScrubArtwork / ArtworkScrubber** — repair, re-encode, and clean embedded
-  cover art.
-- **DumpArtworkSizes** — report artwork dimensions/sizes for a playlist.
+  cover art. `FixArtwork` resolves playlist membership from the binary `.itl`, reads and writes
+  media tags through MusicFileUtilities, and uses ImageSharp for portable JPEG conversion and
+  resizing.
+- **DumpArtworkSizes** — report embedded artwork dimensions/sizes for an `.itl` playlist using
+  MusicFileUtilities, without launching iTunes.
 
 Auditing and diagnostics:
 
@@ -65,7 +70,8 @@ Auditing and diagnostics:
   validating, comparing, and conservatively rewriting binary iTunes `.itl` libraries. See
   [`DumpITL/README.md`](DumpITL/README.md) for the evidence-backed format map and disposable-library
   acceptance workflow.
-- **CheckRedundancies / FixiTunesDupes** — find duplicate/redundant tracks.
+- **CheckRedundancies / FixiTunesDupes** — find duplicate/redundant tracks. `FixiTunesDupes`
+  redirects ordinary playlist memberships and removes verified duplicate ITL records offline.
 - **DumpTags** — dump raw tag contents for a file.
 
 Organization:
@@ -95,6 +101,15 @@ an initialized target marker (`--initialize` creates it after you verify the pat
 moved into timestamped quarantine/recovery directories rather than being deleted immediately.
 `UpdateCarCard --recover <journal.tsv>` can roll back an interrupted journaled update.
 
+Offline ITL editors accept `--library <file.itl>`, then fall back to the `ITUNES_ITL` environment
+variable and finally `%USERPROFILE%\Music\iTunes\iTunes Library.itl`. They refuse to apply while
+iTunes is running, validate before saving, atomically replace the selected library, and retain the
+previous file as `<file.itl>.bak`. `BackSyncPlaylists` requires `--template <manual-playlist>` only
+when it must create a playlist that does not already exist.
+
+Read-only library consumers such as the cross-sync, redundancy, car-card, and smart-storage tools
+also use `ITUNES_ITL` and the same default `.itl` location. `ITUNES_XML` is no longer supported.
+
 `IngestMusic` previews by default and requires `--apply`. If a high-resolution track has no
 CD-quality FLAC counterpart, apply asks for confirmation album-by-album before doing any work; one
 declined album cancels the whole run. Transcodes are staged and validated, source files are moved to
@@ -109,6 +124,13 @@ IngestMusic <incoming-directory> <ingest-config.xml> [--apply]
 
 The configured ffmpeg build must provide the `libfdk_aac` encoder.
 
+Set the optional `ItunesLibrary` configuration element to an `.itl` path to import generated AAC
+files directly. In this mode, the library's own media-folder setting determines the destination;
+tracks are organized below `Music` using iTunes' artist/album/track naming rules and then added to
+the binary library. iTunes must be closed during apply. Each album's library update is validated and
+atomically saved with a backup. If `ItunesLibrary` is omitted, AAC files continue to go to the
+configured `AacDestination` (normally `Z:\iTunes\AddAAC`).
+
 The machine-specific `MusicLibrary.NonFree.Tests` project is deliberately absent from both solution
 files and therefore from CI. On the workstation that has `C:\ffmpeg\nonfree\ffmpeg.exe`, run its
 real libfdk AAC integration test explicitly with:
@@ -120,21 +142,33 @@ dotnet test MusicLibrary.NonFree.Tests/MusicLibrary.NonFree.Tests.csproj
 ## Building and testing
 
 The repository pins the .NET 10 SDK in `global.json` and centralizes NuGet versions in
-`Directory.Packages.props`. The four utilities that automate iTunes
-(`BackSyncPlaylists`, `DumpArtworkSizes`, `FixArtwork`, and `FixiTunesDupes`) contain COM references,
-which require the full Visual Studio MSBuild host. Build everything in Visual Studio, or from a
-Developer PowerShell with:
+`Directory.Packages.props`. Build everything in Visual Studio, or from a Developer PowerShell with:
 
 ```
 msbuild MusicLibraryTools.sln /restore /p:Configuration=Release
 ```
 
-All projects that do not require iTunes COM automation are also collected in a solution filter and
+All projects that do not require platform-specific integration, including `BackSyncPlaylists`,
+`FixiTunesDupes`, `FixArtwork`, and `DumpArtworkSizes`, are also collected in a solution filter and
 can be built with the cross-platform .NET SDK:
 
 ```
 dotnet build MusicLibraryTools.Portable.slnf
 ```
+
+The artwork tools read the library selected by `--library <file.itl>`, then `ITUNES_ITL`, then the
+standard iTunes library location. Examples:
+
+```
+DumpArtworkSizes "My Playlist" --library "C:\Music\iTunes Library.itl" --output ArtworkSizes.dat
+FixArtwork "My Playlist" --library "C:\Music\iTunes Library.itl"
+FixArtwork "My Playlist" --library "C:\Music\iTunes Library.itl" --apply
+```
+
+`FixArtwork` changes embedded media-file artwork only; artwork that exists solely in iTunes'
+downloaded artwork cache is reported as missing. Apply mode requires iTunes to be closed, verifies
+each rewritten media file, updates the corresponding `.itl` size/date/artwork caches, validates the
+library, and retains the previous `.itl` as `<library>.bak`.
 
 ```
 dotnet test MusicFileUtilities.Tests/MusicFileUtilities.Tests.csproj

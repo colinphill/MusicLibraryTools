@@ -11,7 +11,7 @@ using MusicLibraryTools;
 using System.Xml.Serialization;
 using System.Security.Cryptography;
 using ConsoleTools;
-using iTunes;
+using iTunes.Binary;
 
 namespace UpdateSmartStorage
 {
@@ -47,11 +47,10 @@ namespace UpdateSmartStorage
             return a.StartsWith(b, StringComparison.OrdinalIgnoreCase) || b.StartsWith(a, StringComparison.OrdinalIgnoreCase);
         }
 
-        static bool IsPlaylistTrackEligible(iTunesTrack track)
+        static bool IsPlaylistTrackEligible(ItlTrack track)
         {
             string kind = track.Kind ?? string.Empty;
-            return string.Equals(track.Type, "file", StringComparison.OrdinalIgnoreCase) &&
-                !kind.Contains("video", StringComparison.OrdinalIgnoreCase) &&
+            return !string.IsNullOrWhiteSpace(track.LocalPath) && !track.HasVideo &&
                 !kind.Contains("protected", StringComparison.OrdinalIgnoreCase) &&
                 !kind.Contains("book", StringComparison.OrdinalIgnoreCase) &&
                 !kind.Contains("audible", StringComparison.OrdinalIgnoreCase) &&
@@ -687,14 +686,18 @@ namespace UpdateSmartStorage
 
             string basedir = Path.GetFullPath(args[0]);
 
-            LogConsole.WriteLine("Loading iTunes Library XML...");
+            LogConsole.WriteLine("Loading iTunes Library...");
 
-            string iTunesLibraryFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "iTunes", "iTunes Music Library.xml");
-            if (Environment.GetEnvironmentVariable("ITUNES_XML") != null)
-                iTunesLibraryFile = Environment.GetEnvironmentVariable("ITUNES_XML");
-            iTunesLibrary lib = new iTunesLibrary(iTunesLibraryFile);
+            ItlLibrary lib = ItlLibrary.Load(ItlFileEditor.ResolveLibraryPath());
+            Dictionary<int, ItlTrack> tracksById = lib.Tracks.ToDictionary(track => track.Id);
+            if (string.IsNullOrWhiteSpace(lib.MusicFolderPath))
+            {
+                LogConsole.WriteLine("The binary library does not contain a source music folder; no changes were made.");
+                LogConsole.Close();
+                return;
+            }
 
-            if (PathsOverlap(basedir, lib.LocalMusicFolder))
+            if (PathsOverlap(basedir, lib.MusicFolderPath))
             {
                 LogConsole.WriteLine("Refusing to continue because the destination overlaps the source iTunes music folder.");
                 LogConsole.Close();
@@ -721,7 +724,7 @@ namespace UpdateSmartStorage
             Dictionary<string, DateTime> filetimes = new Dictionary<string, DateTime>(StringComparer.CurrentCultureIgnoreCase);
 
             Console.WriteLine("Enumerating Current Files");
-            EnumerateDirectory(filetimes, new DirectoryInfo(lib.LocalMusicFolder));
+            EnumerateDirectory(filetimes, new DirectoryInfo(lib.MusicFolderPath));
 
             Console.WriteLine("Enumerating iTunes Library");
             FileDatabase ifdb = new FileDatabase();
@@ -760,14 +763,14 @@ namespace UpdateSmartStorage
                 fdb.Playlists.Select(playlist => FixPath(playlist.Name) + ".m3u"),
                 StringComparer.OrdinalIgnoreCase);
 
-            KeyValuePair<int, iTunesTrack>[] library = lib.Tracks.Where(kv =>
-                string.Equals(kv.Value.Type, "File", StringComparison.OrdinalIgnoreCase) &&
-                (kv.Value.Kind ?? "").Contains("audio file", StringComparison.OrdinalIgnoreCase) &&
-                !(kv.Value.Kind ?? "").Contains("protected", StringComparison.OrdinalIgnoreCase)).ToArray();
+            ItlTrack[] library = lib.Tracks.Where(track =>
+                !string.IsNullOrWhiteSpace(track.LocalPath) &&
+                (track.Kind ?? "").Contains("audio file", StringComparison.OrdinalIgnoreCase) &&
+                !(track.Kind ?? "").Contains("protected", StringComparison.OrdinalIgnoreCase)).ToArray();
             int libindex = 0;
-            foreach (var kv in library)
+            foreach (ItlTrack sourceTrack in library)
             {
-                string loc = kv.Value.LocalLocation;
+                string loc = sourceTrack.LocalPath!;
                 DateTime dt;
                 try
                 {
@@ -778,20 +781,20 @@ namespace UpdateSmartStorage
                     // Outside Normal Folder
                     dt = File.GetLastWriteTimeUtc(loc);
                 }
-                string artist = string.IsNullOrEmpty(kv.Value.AlbumArtist) ? kv.Value.Artist : kv.Value.AlbumArtist;
-                string album = kv.Value.Album;
-                string title = kv.Value.Title;
-                int tracknumber = kv.Value.TrackNumber ?? 0;
+                string artist = string.IsNullOrEmpty(sourceTrack.AlbumArtist) ? sourceTrack.Artist ?? string.Empty : sourceTrack.AlbumArtist;
+                string album = sourceTrack.Album ?? string.Empty;
+                string title = sourceTrack.Title ?? string.Empty;
+                int tracknumber = sourceTrack.TrackNumber;
                 FileDatabase.Track trk = new FileDatabase.Track();
                 trk.Index = tracknumber;
                 trk.LastModifiedTime = dt;
                 trk.Loc = loc;
                 trk.FileName = Path.GetFileName(loc);
                 trk.Name = title;
-                trk.Year = kv.Value.Year ?? 0;
-                trk.ContributingArtist = kv.Value.Artist;
-                trk.PersistentID = kv.Value.PersistentID;
-                trk.Genre = kv.Value.Genre;
+                trk.Year = sourceTrack.Year;
+                trk.ContributingArtist = sourceTrack.Artist ?? string.Empty;
+                trk.PersistentID = sourceTrack.PersistentIdString;
+                trk.Genre = sourceTrack.Genre ?? string.Empty;
                 if (!Path.GetExtension(trk.FileName).Equals(".m4p", StringComparison.InvariantCultureIgnoreCase))
                 {
                     ifdb.FindArtist(artist).FindAlbum(album).Tracks.Add(trk);
@@ -809,9 +812,9 @@ namespace UpdateSmartStorage
             fdb.Map(ifdb);
             fdb.Bucketize();
 
-            string[] plannedPlaylistFiles = lib.Playlists.Values
-                .Where(playlist => playlist.Items.Count <= MAX_PLAYLIST_COUNT && !string.Equals(playlist.Title, "library", StringComparison.OrdinalIgnoreCase))
-                .Select(playlist => FixPath(playlist.Title) + ".m3u")
+            string[] plannedPlaylistFiles = lib.Playlists
+                .Where(playlist => playlist.TrackIds.Count <= MAX_PLAYLIST_COUNT && !playlist.IsMaster)
+                .Select(playlist => FixPath(playlist.DisplayName) + ".m3u")
                 .ToArray();
             try
             {
@@ -855,12 +858,11 @@ namespace UpdateSmartStorage
                 .ToArray();
 
             var currentByPersistentId = alltracks.ToLookup(track => track.Item3.PersistentID, StringComparer.OrdinalIgnoreCase);
-            string[] invalidPlaylistIds = lib.Playlists.Values
-                .Where(playlist => playlist.Items.Count <= MAX_PLAYLIST_COUNT &&
-                    !string.Equals(playlist.Title, "library", StringComparison.OrdinalIgnoreCase))
-                .SelectMany(playlist => playlist.Items.Select(item => lib.Tracks[item]))
+            string[] invalidPlaylistIds = lib.Playlists
+                .Where(playlist => playlist.TrackIds.Count <= MAX_PLAYLIST_COUNT && !playlist.IsMaster)
+                .SelectMany(playlist => playlist.TrackIds.Select(item => tracksById[item]))
                 .Where(IsPlaylistTrackEligible)
-                .Select(track => track.PersistentID)
+                .Select(track => track.PersistentIdString)
                 .Where(id => currentByPersistentId[id].Count() != 1)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
@@ -982,29 +984,29 @@ namespace UpdateSmartStorage
             Directory.CreateDirectory(playlistsdir);
             fdb.Playlists.Clear();
             var desiredPlaylistFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (iTunesPlaylist pl in lib.Playlists.Values)
+            foreach (ItlPlaylist pl in lib.Playlists)
             {
                 int icount = 0;
-                if ((pl.Items.Count > MAX_PLAYLIST_COUNT) || ((pl.Title.ToLower() == "library")))
+                if (pl.TrackIds.Count > MAX_PLAYLIST_COUNT || pl.IsMaster)
                     continue;
 
                 FileDatabase.Playlist fpl = new FileDatabase.Playlist();
-                fpl.Name = pl.Title;
+                fpl.Name = pl.DisplayName;
 
-                string plname = FixPath(pl.Title) + ".m3u";
+                string plname = FixPath(pl.DisplayName) + ".m3u";
 
                 using (MemoryStream plms = new MemoryStream())
                 {
                     using (StreamWriter plwriter = new StreamWriter(plms, Encoding.UTF8, 5123, true))
                     {
                         plwriter.WriteLine("#EXTM3U");
-                        foreach (int item in pl.Items)
+                        foreach (int item in pl.TrackIds)
                         {
-                            iTunesTrack track = lib.Tracks[item];
+                            ItlTrack track = tracksById[item];
                             if (!IsPlaylistTrackEligible(track))
                                 continue;
-                            plwriter.WriteLine("#EXTINF:-1," + track.Artist.Replace("-", "") + " - " + track.Title.Replace("-", ""));
-                            Tuple<FileDatabase.Artist, FileDatabase.Album, FileDatabase.Track> titem = alltracks.Single(t => t.Item3.PersistentID == track.PersistentID);
+                            plwriter.WriteLine("#EXTINF:-1," + (track.Artist ?? string.Empty).Replace("-", "") + " - " + (track.Title ?? string.Empty).Replace("-", ""));
+                            Tuple<FileDatabase.Artist, FileDatabase.Album, FileDatabase.Track> titem = alltracks.Single(t => t.Item3.PersistentID == track.PersistentIdString);
                             FileDatabase.Playlist.Item plitem = new FileDatabase.Playlist.Item();
                             plitem.Artist = fdb.Artists.IndexOf(titem.Item1);
                             plitem.Album = titem.Item1.Albums.IndexOf(titem.Item2);

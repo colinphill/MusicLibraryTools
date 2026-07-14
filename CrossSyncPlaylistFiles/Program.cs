@@ -18,7 +18,7 @@ using System.IO;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 
-using iTunes;
+using iTunes.Binary;
 using ConsoleTools;
 using MusicLibraryTools;
 
@@ -64,37 +64,35 @@ namespace CrossSyncPlaylistFiles
                 LogConsole.WriteLine("Dry run: pass --apply to replace playlist folders.");
                // TODO: Cull Cached Metadata Without Matching Files
 
-            LogConsole.WriteLine("Loading iTunes Library XML...");
+            LogConsole.WriteLine("Loading iTunes Library...");
 
-            string iTunesLibraryFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "iTunes", "iTunes Music Library.xml");
-            if (Environment.GetEnvironmentVariable("ITUNES_XML") != null)
-                iTunesLibraryFile = Environment.GetEnvironmentVariable("ITUNES_XML");
-            iTunesLibrary lib = new iTunesLibrary(iTunesLibraryFile);
+            ItlLibrary lib = ItlLibrary.Load(ItlFileEditor.ResolveLibraryPath());
+            Dictionary<int, ItlTrack> tracksById = lib.Tracks.ToDictionary(track => track.Id);
 
             LogConsole.WriteLine("iTunes Library Size: " + lib.Tracks.Count.ToString() + "  Playlist Count: " + lib.Playlists.Count);
 
             var claimed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (iTunesPlaylist pl in lib.Playlists.Values.OrderBy(v => v.Title, StringComparer.OrdinalIgnoreCase))
+            foreach (ItlPlaylist pl in lib.Playlists.OrderBy(playlist => playlist.DisplayName, StringComparer.OrdinalIgnoreCase))
             {
-                if ((pl.Items.Count > MAX_PLAYLIST_COUNT) || (pl.Title.ToLower() == "library"))
+                if (pl.TrackIds.Count > MAX_PLAYLIST_COUNT || pl.IsMaster)
                     continue;
 
-                LogConsole.WriteLine("Syncing Playlist: " + pl.Title);
+                LogConsole.WriteLine("Syncing Playlist: " + pl.DisplayName);
 
-                string pldirname = Path.Combine(destplaylistfolder, FixPath(pl.Title));
+                string pldirname = Path.Combine(destplaylistfolder, FixPath(pl.DisplayName));
                 if (!claimed.Add(pldirname))
                 {
-                    LogConsole.WriteLine("Skipping playlist with colliding sanitized name: " + pl.Title);
+                    LogConsole.WriteLine("Skipping playlist with colliding sanitized name: " + pl.DisplayName);
                     continue;
                 }
 
                 string staged = pldirname + ".tmp-" + Guid.NewGuid().ToString("N");
                 string backup = pldirname + ".old-" + Guid.NewGuid().ToString("N");
 
-                int[] items = pl.Items.Where(i =>
-                    !(lib.Tracks[i].Kind ?? "").Contains("video", StringComparison.OrdinalIgnoreCase) &&
-                    !string.IsNullOrWhiteSpace(lib.Tracks[i].LocalLocation) &&
-                    !Path.GetExtension(lib.Tracks[i].LocalLocation).Equals(".m4p", StringComparison.OrdinalIgnoreCase)).ToArray();
+                int[] items = pl.TrackIds.Where(id =>
+                    !tracksById[id].HasVideo &&
+                    !string.IsNullOrWhiteSpace(tracksById[id].LocalPath) &&
+                    !Path.GetExtension(tracksById[id].LocalPath).Equals(".m4p", StringComparison.OrdinalIgnoreCase)).ToArray();
 
                 LogConsole.WriteLine($"Would replace {pldirname} with {items.Length} file(s).");
                 if (!apply)
@@ -106,9 +104,10 @@ namespace CrossSyncPlaylistFiles
                 {
                     for (int i = 0; i < items.Length; i++)
                     {
-                        iTunesTrack track = lib.Tracks[items[i]];
-                        string newpath = Path.Combine(staged, (i + 1).ToString("D3") + " " + FixPath(track.Title + Path.GetExtension(track.LocalLocation)));
-                        File.Copy(track.LocalLocation, newpath);
+                        ItlTrack track = tracksById[items[i]];
+                        string newpath = Path.Combine(staged, (i + 1).ToString("D3") + " " +
+                            FixPath((track.Title ?? string.Empty) + Path.GetExtension(track.LocalPath)));
+                        File.Copy(track.LocalPath!, newpath);
                         LogConsole.WriteLine(newpath);
                     }
 

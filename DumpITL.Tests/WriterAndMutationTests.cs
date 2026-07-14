@@ -7,6 +7,107 @@ namespace DumpITL.Tests;
 public sealed class WriterAndMutationTests
 {
     [Fact]
+    public void ItlLocationHandlesFileUrisPlainPathsAndMissingValues()
+    {
+        const string fileUri = "file:///C:/Music/Album/Track%2001.mp3";
+        Assert.Equal(new Uri(fileUri).LocalPath, ItlLocation.ToLocalPath(fileUri));
+        Assert.Equal("relative/Track.mp3", ItlLocation.ToLocalPath("relative/Track.mp3"));
+        Assert.Null(ItlLocation.ToLocalPath(null));
+        Assert.Null(ItlLocation.ToLocalPath("   "));
+    }
+
+    [Fact]
+    public void ReadOnlyLibraryExposesStableIdsAndMasterPlaylistDisplayName()
+    {
+        ItlLibrary library = ItlLibrary.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+        ItlTrack track = Assert.Single(library.Tracks);
+        ItlPlaylist master = Assert.Single(library.Playlists);
+
+        Assert.Equal("1111111111111111", track.PersistentIdString);
+        Assert.Equal("Library", master.DisplayName);
+        Assert.Same(master, library.FindPlaylist("library"));
+    }
+
+    [Fact]
+    public void CanonicalMediaPathUsesItunesComponentRules()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "iTunes Media");
+        string path = ItlMediaOrganization.CanonicalMusicPath(root, "Various Artists", "Track Artist",
+            "An Album: Deluxe", 4, "A/B? " + new string('x', 50), compilation: true);
+
+        Assert.Equal(Path.Combine(Path.GetFullPath(root), "Music", "Compilations",
+            "An Album_ Deluxe", "04 A_B_ " + new string('x', 28) + ".m4a"), path);
+        Assert.Equal(ItlMediaOrganization.ComponentLengthLimit,
+            Path.GetFileName(path).Length);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void CanonicalMediaPathFallsBackToArtistWhenAlbumArtistIsMissing(string? albumArtist)
+    {
+        string root = Path.Combine(Path.GetTempPath(), "iTunes Media");
+        string path = ItlMediaOrganization.CanonicalMusicPath(root, albumArtist, "Track Artist",
+            "Album", 1, "Title", compilation: false);
+
+        Assert.Equal(Path.Combine(Path.GetFullPath(root), "Music", "Track Artist",
+            "Album", "01 Title.m4a"), path);
+    }
+
+    [Fact]
+    public void AacImportReplacesTemplateMetadataAndLinksEntities()
+    {
+        string media = Path.Combine(Path.GetTempPath(), $"itl-import-{Guid.NewGuid():N}.m4a");
+        File.WriteAllBytes(media, [1, 2, 3, 4]);
+        try
+        {
+            ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+            ItlRecord template = document.Tracks.Single();
+            document.SetTrackString(template, ItlDataType.Kind, "AAC audio file");
+            document.SetTrackString(template, ItlDataType.Location, "template.m4a");
+            document.SetTrackString(template, ItlDataType.FileUrl, "file://localhost/template.m4a");
+            document.SetTrackString(template, ItlDataType.Comment, "must not leak");
+
+            ItlRecord imported = document.ImportAacTrack(new ItlAacTrackImport
+            {
+                Path = media,
+                Title = "Imported Song",
+                Artist = "Track Artist",
+                AlbumArtist = "Album Artist",
+                Album = "Imported Album",
+                Genre = "Pop",
+                TrackNumber = 3,
+                TrackCount = 12,
+                Duration = TimeSpan.FromSeconds(205),
+                BitRate = 256,
+                ArtworkCount = 1,
+                Compilation = true,
+            });
+
+            Assert.Equal("Imported Song", imported.GetString(ItlDataType.Title));
+            Assert.Equal(Path.GetFullPath(media), imported.GetString(ItlDataType.Location));
+            Assert.Null(imported.GetString(ItlDataType.Comment));
+            Assert.Equal(3, imported.GetTrackNumber());
+            Assert.Equal(12, imported.GetTrackCount());
+            Assert.True(imported.GetCompilation());
+            Assert.Contains(document.Albums, album => ItlDocument.RecordIdOf(album) == imported.GetAlbumId());
+            Assert.Contains(document.Artists, artist => ItlDocument.RecordIdOf(artist) == imported.GetArtistId());
+            Assert.Same(imported, document.ImportAacTrack(new ItlAacTrackImport
+            {
+                Path = media, Title = "Ignored", Artist = "Ignored", AlbumArtist = "Ignored",
+                Album = "Ignored", TrackNumber = 1, TrackCount = 1, Duration = TimeSpan.Zero,
+                BitRate = 1, ArtworkCount = 0,
+            }));
+            Assert.DoesNotContain(document.Validate(), issue => issue.Severity == ItlValidationSeverity.Error);
+        }
+        finally
+        {
+            File.Delete(media);
+        }
+    }
+
+    [Fact]
     public void PlaybackStateOrdinaryKeyUsesStoreIdOrTitleArtistAlbumMd5()
     {
         Assert.Equal("123456789", ItlPlaybackStateKey.ForOrdinaryMetadata(123456789, "ignored"));
@@ -235,6 +336,46 @@ public sealed class WriterAndMutationTests
         Assert.True(document.RemoveArtist("New Artist"));
         Assert.True(document.RemovePlaylist("Research"));
         Assert.DoesNotContain(document.Validate(), issue => issue.Severity == ItlValidationSeverity.Error);
+    }
+
+    [Fact]
+    public void PlaylistReplacementResolvesTracksBeforeMutatingAndPreservesDuplicates()
+    {
+        ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+        ItlRecord first = document.Tracks.Single();
+        ItlRecord second = document.AddTrack(first);
+        ItlRecord playlist = document.AddPlaylist("Offline editor", document.Playlists.Single());
+        ulong secondPersistentId = ItlDocument.TrackPersistentIdOf(second);
+
+        Assert.Same(second, document.FindTrackByPersistentId(secondPersistentId));
+        document.ReplacePlaylistEntries(playlist,
+            [second.GetTrackId(), first.GetTrackId(), second.GetTrackId()]);
+        Assert.Equal([second.GetTrackId(), first.GetTrackId(), second.GetTrackId()],
+            playlist.Entries.Select(entry => entry.TrackId));
+        Assert.Equal(3, playlist.Entries.Select(entry => entry.EntryId).Distinct().Count());
+
+        int[] before = [.. playlist.Entries.Select(entry => entry.TrackId)];
+        Assert.Throws<ArgumentException>(() => document.ReplacePlaylistEntries(playlist, [int.MaxValue]));
+        Assert.Equal(before, playlist.Entries.Select(entry => entry.TrackId));
+    }
+
+    [Fact]
+    public void PlaylistRedirectPreservesEntryIdentityAndOrderDuringTrackConsolidation()
+    {
+        ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+        ItlRecord duplicate = document.Tracks.Single();
+        ItlRecord retained = document.AddTrack(duplicate);
+        ItlRecord playlist = document.AddPlaylist("Duplicate membership", document.Playlists.Single());
+        document.ReplacePlaylistEntries(playlist,
+            [duplicate.GetTrackId(), retained.GetTrackId(), duplicate.GetTrackId()]);
+        uint[] entryIds = [.. playlist.Entries.Select(entry => entry.EntryId)];
+        uint[] orderKeys = [.. playlist.Entries.Select(entry => entry.OrderKey)];
+
+        Assert.Equal(2, document.RedirectPlaylistEntries(
+            playlist, duplicate.GetTrackId(), retained.GetTrackId()));
+        Assert.All(playlist.Entries, entry => Assert.Equal(retained.GetTrackId(), entry.TrackId));
+        Assert.Equal(entryIds, playlist.Entries.Select(entry => entry.EntryId));
+        Assert.Equal(orderKeys, playlist.Entries.Select(entry => entry.OrderKey));
     }
 
     [Fact]

@@ -6,47 +6,51 @@
         mc:Ignorable="d" d:DesignWidth="760" d:DesignHeight="610"
         x:Class="MusicLibrary.App.Views.IngestConfigDialog"
         x:DataType="vm:IngestConfigDialogViewModel"
-        Width="760" Height="610" WindowStartupLocation="CenterOwner" Title="{Binding Title}">
+        Width="760" Height="650" WindowStartupLocation="CenterOwner" Title="{Binding Title}">
     <Grid Margin="18" RowDefinitions="Auto,*,Auto,Auto">
         <TextBlock Grid.Row="0" Text="{Binding Title}" Classes="h1" Margin="0,0,0,14"/>
         <ScrollViewer Grid.Row="1">
-            <Grid ColumnDefinitions="190,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="8">
+            <Grid ColumnDefinitions="190,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="8">
                 <TextBlock Grid.Row="0" Grid.Column="0" Text="ffmpeg:" VerticalAlignment="Center"/>
                 <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding FfmpegPath}" PlaceholderText="ffmpeg or full executable path"/>
                 <Button Grid.Row="0" Grid.Column="2" Content="Browse…" Command="{Binding BrowseFfmpegCommand}"/>
 
-                <TextBlock Grid.Row="1" Grid.Column="0" Text="AAC destination:" VerticalAlignment="Center"/>
-                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding AacDestination}"/>
-                <Button Grid.Row="1" Grid.Column="2" Content="Browse…" Command="{Binding BrowseAacDestinationCommand}"/>
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="iTunes library (optional):" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ItunesLibraryPath}" PlaceholderText="Directly import AAC into this .itl"/>
+                <Button Grid.Row="1" Grid.Column="2" Content="Browse…" Command="{Binding BrowseItunesLibraryCommand}"/>
 
-                <TextBlock Grid.Row="2" Grid.Column="0" Text="CD-only destination:" VerticalAlignment="Center"/>
-                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding CdDestination}"/>
-                <Button Grid.Row="2" Grid.Column="2" Content="Browse…" Command="{Binding BrowseCdDestinationCommand}"/>
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="AAC fallback destination:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding AacDestination}"/>
+                <Button Grid.Row="2" Grid.Column="2" Content="Browse…" Command="{Binding BrowseAacDestinationCommand}"/>
 
-                <TextBlock Grid.Row="3" Grid.Column="0" Text="Paired CD destination:" VerticalAlignment="Center"/>
-                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding PairedCdDestination}"/>
-                <Button Grid.Row="3" Grid.Column="2" Content="Browse…" Command="{Binding BrowsePairedCdDestinationCommand}"/>
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="CD-only destination:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding CdDestination}"/>
+                <Button Grid.Row="3" Grid.Column="2" Content="Browse…" Command="{Binding BrowseCdDestinationCommand}"/>
 
-                <TextBlock Grid.Row="4" Grid.Column="0" Text="High-resolution destination:" VerticalAlignment="Center"/>
-                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding HighResolutionDestination}"/>
-                <Button Grid.Row="4" Grid.Column="2" Content="Browse…" Command="{Binding BrowseHighResolutionDestinationCommand}"/>
+                <TextBlock Grid.Row="4" Grid.Column="0" Text="Paired CD destination:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding PairedCdDestination}"/>
+                <Button Grid.Row="4" Grid.Column="2" Content="Browse…" Command="{Binding BrowsePairedCdDestinationCommand}"/>
 
-                <TextBlock Grid.Row="5" Grid.Column="0" Text="Path length limits:" VerticalAlignment="Center"/>
-                <StackPanel Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8">
+                <TextBlock Grid.Row="5" Grid.Column="0" Text="High-resolution destination:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding HighResolutionDestination}"/>
+                <Button Grid.Row="5" Grid.Column="2" Content="Browse…" Command="{Binding BrowseHighResolutionDestinationCommand}"/>
+
+                <TextBlock Grid.Row="6" Grid.Column="0" Text="Path length limits:" VerticalAlignment="Center"/>
+                <StackPanel Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8">
                     <TextBlock Text="Normal" VerticalAlignment="Center"/>
                     <NumericUpDown Value="{Binding LengthLimit}" Minimum="1" Maximum="4096" Width="110" FormatString="0"/>
                     <TextBlock Text="Disc title" VerticalAlignment="Center"/>
                     <NumericUpDown Value="{Binding DiscNumLengthLimit}" Minimum="1" Maximum="4096" Width="110" FormatString="0"/>
                 </StackPanel>
 
-                <TextBlock Grid.Row="6" Grid.Column="0" Text="AAC encoder:" VerticalAlignment="Center"/>
-                <TextBox Grid.Row="6" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding AacEncoder}"/>
+                <TextBlock Grid.Row="7" Grid.Column="0" Text="AAC encoder:" VerticalAlignment="Center"/>
+                <TextBox Grid.Row="7" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding AacEncoder}"/>
 
-                <TextBlock Grid.Row="7" Grid.Column="0" Text="AAC bitrate (kbit/s):" VerticalAlignment="Center"/>
-                <NumericUpDown Grid.Row="7" Grid.Column="1" Value="{Binding AacBitrateKbps}" Minimum="1" Maximum="1000" Width="130" HorizontalAlignment="Left" FormatString="0"/>
+                <TextBlock Grid.Row="8" Grid.Column="0" Text="AAC bitrate (kbit/s):" VerticalAlignment="Center"/>
+                <NumericUpDown Grid.Row="8" Grid.Column="1" Value="{Binding AacBitrateKbps}" Minimum="1" Maximum="1000" Width="130" HorizontalAlignment="Left" FormatString="0"/>
 
-                <TextBlock Grid.Row="8" Grid.Column="0" Text="After successful ingest:" VerticalAlignment="Center"/>
-                <CheckBox Grid.Row="8" Grid.Column="1" Grid.ColumnSpan="2"
+                <TextBlock Grid.Row="9" Grid.Column="0" Text="After successful ingest:" VerticalAlignment="Center"/>
+                <CheckBox Grid.Row="9" Grid.Column="1" Grid.ColumnSpan="2"
                           Content="Delete source files instead of quarantining them"
                           IsChecked="{Binding DeleteSourcesAfterIngest}"/>
             </Grid>

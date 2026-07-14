@@ -11,6 +11,7 @@ public partial class IngestConfigDialogViewModel : ViewModelBase
 
     [ObservableProperty] private string _ffmpegPath = "ffmpeg";
     [ObservableProperty] private string _aacDestination = @"Z:\iTunes\AddAAC";
+    [ObservableProperty] private string _itunesLibraryPath = string.Empty;
     [ObservableProperty] private string _cdDestination = @"Z:\iTunes\FLAC";
     [ObservableProperty] private string _pairedCdDestination = @"Z:\iTunes\FLAC2";
     [ObservableProperty] private string _highResolutionDestination = @"Z:\iTunes\HiRes\Stereo\PCM";
@@ -38,6 +39,7 @@ public partial class IngestConfigDialogViewModel : ViewModelBase
             var config = IngestMusicConfiguration.Load(path);
             FfmpegPath = config.FfmpegPath;
             AacDestination = config.AacDestination;
+            ItunesLibraryPath = config.ItunesLibraryPath ?? string.Empty;
             CdDestination = config.CdDestination;
             PairedCdDestination = config.PairedCdDestination;
             HighResolutionDestination = config.HighResolutionDestination;
@@ -61,6 +63,13 @@ public partial class IngestConfigDialogViewModel : ViewModelBase
     }
 
     [RelayCommand] private async Task BrowseAacDestinationAsync() => AacDestination = await PickFolder(AacDestination, "Select AAC destination");
+    [RelayCommand]
+    private async Task BrowseItunesLibraryAsync()
+    {
+        string? path = await _dialogs.PickOpenFileAsync("Select iTunes library",
+            [new FilePickerFilter("iTunes library", ["*.itl"])]);
+        if (path is not null) ItunesLibraryPath = path;
+    }
     [RelayCommand] private async Task BrowseCdDestinationAsync() => CdDestination = await PickFolder(CdDestination, "Select CD-only FLAC destination");
     [RelayCommand] private async Task BrowsePairedCdDestinationAsync() => PairedCdDestination = await PickFolder(PairedCdDestination, "Select paired CD FLAC destination");
     [RelayCommand] private async Task BrowseHighResolutionDestinationAsync() => HighResolutionDestination = await PickFolder(HighResolutionDestination, "Select high-resolution destination");
@@ -80,6 +89,7 @@ public partial class IngestConfigDialogViewModel : ViewModelBase
             var config = new IngestMusicConfiguration
             {
                 FfmpegPath = FfmpegPath.Trim(), AacDestination = AacDestination.Trim(),
+                ItunesLibraryPath = string.IsNullOrWhiteSpace(ItunesLibraryPath) ? null : ItunesLibraryPath.Trim(),
                 CdDestination = CdDestination.Trim(), PairedCdDestination = PairedCdDestination.Trim(),
                 HighResolutionDestination = HighResolutionDestination.Trim(), LengthLimit = LengthLimit,
                 DiscNumLengthLimit = DiscNumLengthLimit, AacEncoder = AacEncoder.Trim(),

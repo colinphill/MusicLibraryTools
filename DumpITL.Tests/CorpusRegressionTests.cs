@@ -21,6 +21,7 @@ public sealed class CorpusRegressionTests
         Assert.DoesNotContain(document.Validate(), issue => issue.Severity == ItlValidationSeverity.Error);
 
         ItlLibrary library = ItlLibrary.Parse(envelope);
+        Assert.Equal(@"Z:\iTunes\AAC", library.MusicFolderPath);
         ItlSmartPlaylist[] smart = [.. library.Playlists.Select(playlist => playlist.Smart).OfType<ItlSmartPlaylist>()];
         Assert.Equal(15, smart.Length);
         foreach (ItlSmartPlaylist playlist in smart)

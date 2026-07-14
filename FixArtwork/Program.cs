@@ -1,281 +1,220 @@
-﻿/*
- * FixArtwork: Resize artwork for Sonos iPhone controller/convert to JPEG/store in tags. 
- * 
- * SVN Information:
- * 
- * $HeadURL: file:///Z:/SVN_Repositories/MusicLibraryTools/trunk/FixArtwork/Program.cs $
- * $Date: 2013-01-06 06:58:46 -0700 (Sun, 06 Jan 2013) $
- * $Revision: 13 $
- * $Author: colin $
- * 
- */
-
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.IO;
-using System.Runtime.InteropServices;
-
-using iTunesLib;
-using System.Drawing;
-using System.Drawing.Imaging;
 using ConsoleTools;
+using iTunes.Binary;
+using MusicFileUtilities;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Processing;
 
-namespace FixArtwork
+namespace FixArtwork;
+
+internal static class Program
 {
+    private const long Threshold = 225 * 1024;
+    private const int MaximumDimension = 600;
+    private const int JpegQuality = 75;
 
-    class Program
+    private sealed record Options(string PlaylistName, string? LibraryPath, bool Apply);
+
+    private static int Main(string[] args)
     {
-
-        const long THRESHOLD = 225 * 1024;
-        const int SIZE = 600;
-
-        static ImageCodecInfo GetEncoder(ImageFormat format)
+        LogConsole.SwitchFile("FixArtwork.log");
+        try
         {
-            ImageCodecInfo[] codecs = ImageCodecInfo.GetImageDecoders();
-            foreach (ImageCodecInfo codec in codecs)
+            if (!TryParseArguments(args, out Options? options))
             {
-                if (codec.FormatID == format.Guid)
-                {
-                    return codec;
-                }
+                LogConsole.WriteLine("Usage: FixArtwork <playlist> [--library <file.itl>] [--apply]");
+                return 2;
             }
-            return null;
+
+            return Run(options!);
         }
-
-        static void Main(string[] args)
+        catch (Exception exception)
         {
-            LogConsole.SwitchFile("FixArtwork.log");
-
-            if (args.Length is < 1 or > 2 ||
-                (args.Length == 2 && !args[1].Equals("--apply", StringComparison.OrdinalIgnoreCase)))
-            {
-                LogConsole.WriteLine("Usage: FixArtwork <playlist> [--apply]");
-                LogConsole.End();
-                return;
-            }
-
-            bool apply = args.Length == 2;
-            iTunesApp app = new iTunesApp();
-
-            IITPlaylist lib = null;
-            foreach (IITSource s in app.Sources)
-            {
-                lib = s.Playlists.get_ItemByName(args[0]);
-                Marshal.FinalReleaseComObject(s);
-                if (lib != null)
-                    break;
-            }
-            if (lib == null)
-            {
-                LogConsole.WriteLine("Error: Playlist not found: " + args[0]);
-                Marshal.FinalReleaseComObject(app);
-                LogConsole.End();
-                return;
-            }
-
-            if (!apply)
-                LogConsole.WriteLine("Dry run: pass --apply to update iTunes artwork.");
-
-            int tracks = 0;
-            int artwork = 0;
-            int missing = 0;
-            int errors = 0;
-            int large = 0;
-   
-            foreach (IITTrack trk in lib.Tracks)
-            {
-                if (trk.Kind == ITTrackKind.ITTrackKindFile)
-                {
-                    IITFileOrCDTrack filetrk = trk as IITFileOrCDTrack;
-                    if (filetrk.VideoKind == ITVideoKind.ITVideoKindNone)
-                    {
-                        tracks++;
-                        IITArtworkCollection artcol = filetrk.Artwork;
-                        if (artcol.Count == 1)
-                        {
-                            string prefix = Path.Combine(Path.GetTempPath(), "mlt-fixart-" + Guid.NewGuid().ToString("N"));
-                            string artfile = null;
-                            string temp2 = prefix + "-2.jpg";
-                            string temp3 = prefix + "-3.jpg";
-                            IITArtwork art = null;
-                            Bitmap im = null;
-                            EncoderParameters encparms = null;
-                            try
-                            {
-                                art = artcol[1];
-                                string ext = (art.Format == ITArtworkFormat.ITArtworkFormatBMP) ? "bmp" :
-                                    (art.Format == ITArtworkFormat.ITArtworkFormatJPEG) ? "jpg" :
-                                    (art.Format == ITArtworkFormat.ITArtworkFormatPNG) ? "png" : "unknown";
-
-                                LogConsole.WriteLine(tracks.ToString() + " Artwork (" + ext + "): " + filetrk.Location);
-                                artfile = prefix + "." + ext;
-                                LogConsole.WriteLine("Saving Artwork: " + artfile);
-                                art.SaveArtworkToFile(artfile);
-
-                                FileStream artstream = File.OpenRead(artfile);
-                                long len = artstream.Length;
-                                long origlen = len;
-                                artstream.Close();
-
-                                if (true) // ((len > THRESHOLD)||(art.Format != ITArtworkFormat.ITArtworkFormatJPEG)||(art.IsDownloadedArtwork))
-                                {
-                                    LogConsole.WriteLine("Artwork Size: " + len);
-                                    im = new Bitmap(artfile);
-                                    LogConsole.WriteLine("Dimensions: " + im.Width + "x" + im.Height);
-
-                                    if ((len <= THRESHOLD) && (im.Width <= SIZE) && (im.Height <= SIZE) && (art.Format == ITArtworkFormat.ITArtworkFormatJPEG) && (art.IsDownloadedArtwork))
-                                    {
-                                        LogConsole.WriteLine("Downloaded Artwork");
-                                        im.Dispose();
-                                        large++;
-                                        if (apply)
-                                            art.SetArtworkFromFile(artfile);
-                                    }
-                                    else
-                                    {
-
-                                        ImageCodecInfo jpgenc = GetEncoder(ImageFormat.Jpeg);
-                                        encparms = new EncoderParameters(1);
-                                        encparms.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 75L);
-
-                                        im.Save(temp2, jpgenc, encparms);
- 
-                                        artstream = File.OpenRead(temp2);
-                                        len = artstream.Length;
-                                        artstream.Close();
-                                        LogConsole.WriteLine("Artwork Size: " + len);
-                                        if ((len > THRESHOLD)||(im.Width > SIZE)||(im.Height > SIZE))
-                                        {
-                                            LogConsole.WriteLine("Error: Still Over Threshold, Attempting Resize");
-
-                                            int newwidth = im.Width, newheight = im.Height;
-                                            bool resize = false;
-
-                                            if ((im.Width > SIZE) && (im.Width > im.Height))
-                                            {
-                                                newwidth = SIZE;
-                                                newheight = im.Height * SIZE / im.Width;
-                                                resize = true;
-                                            }
-                                            else if (im.Height > SIZE)
-                                            {
-                                                newheight = SIZE;
-                                                newwidth = im.Width * SIZE / im.Height;
-                                                resize = true;
-                                            }
-
-                                            if (resize)
-                                            {
-                                                Bitmap b = new Bitmap(newwidth, newheight);
-                                                using Graphics g = Graphics.FromImage(b);
-                                                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-                                                g.CompositingQuality = System.Drawing.Drawing2D.CompositingQuality.HighQuality;
-                                                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                                                g.DrawImage(im, new Rectangle(0, 0, newwidth, newheight));
-                                                im.Dispose();
-                                                im = b;
-                                            }
-
-                                            im.Save(temp3, jpgenc, encparms);
-                                            artstream = File.OpenRead(temp3);
-                                            len = artstream.Length;
-                                            artstream.Close();
-                                            LogConsole.WriteLine("Artwork Size: " + len);
-                                            if (len > THRESHOLD)
-                                            {
-                                                LogConsole.WriteLine("Error: Still Over Threshold");
-                                            }
-                                            else
-                                            {
-                                                LogConsole.WriteLine("Adding Artwork: temp3.jpg");
-                                                if (apply)
-                                                    art.SetArtworkFromFile(temp3);
-                                            }
-
-                                            large++;
-                                            File.Delete(temp3);
-                                        }
-                                        else if (art.IsDownloadedArtwork || (art.Format != ITArtworkFormat.ITArtworkFormatJPEG) || (origlen > THRESHOLD))
-                                        {
-                                            LogConsole.WriteLine("Adding Artwork: temp2.jpg");
-                                            if (apply)
-                                                art.SetArtworkFromFile(temp2);
-                                            large++;
-                                        }
-                                        File.Delete(temp2);
-
-                                        im.Dispose();
-
-                                    }
-
-                                  }
-
-                                LogConsole.WriteLine("Deleting Artwork : " + artfile);
-                                File.Delete(artfile);
-                                artwork++;
-
-                            }
-                            catch (Exception ex)
-                            {
-                                errors++;
-                                LogConsole.WriteLine("Problem With File: " + filetrk.Location);
-                                LogConsole.WriteLine(ex.Message + " (" + ex.GetType().FullName + ")");
-                            }
-                            finally
-                            {
-                                im?.Dispose();
-                                encparms?.Dispose();
-                                if (art != null)
-                                    Marshal.FinalReleaseComObject(art);
-                                foreach (string temp in new[] { artfile, temp2, temp3 })
-                                {
-                                    try
-                                    {
-                                        if (!string.IsNullOrEmpty(temp) && File.Exists(temp))
-                                            File.Delete(temp);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        LogConsole.WriteLine($"Unable to delete temporary file {temp}: {ex.Message}");
-                                    }
-                                }
-                            }
-                        }
-  
-                        else if (artcol.Count == 0)
-                        {
-                            LogConsole.WriteLine("Error: No Artwork: " + filetrk.Location);
-                            missing++;
-                        }
-                        else
-                        {
-                            LogConsole.WriteLine("Error: Multiple Artwork: " + filetrk.Location);
-                            errors++;
-                        }
-
-                        Marshal.FinalReleaseComObject(artcol);
-
-                    }
-                }
-
-                Marshal.FinalReleaseComObject(trk);
-            }
-
-            Marshal.FinalReleaseComObject(lib);
-            Marshal.FinalReleaseComObject(app);
-
-            LogConsole.WriteLine();
-            LogConsole.WriteLine("Summary:");
-            LogConsole.WriteLine("Total Tracks Processed:         " + tracks);
-            LogConsole.WriteLine("Tracks With Artwork:            " + artwork);
-            LogConsole.WriteLine("Tracks Without Artwork:         " + missing);
-            LogConsole.WriteLine("Tracks With Multiple Artwork:   " + errors);
-            LogConsole.WriteLine("Tracks With Fixed Artwork:      " + large);
-
+            LogConsole.WriteLine($"FixArtwork: {exception.Message}");
+            return 1;
+        }
+        finally
+        {
             LogConsole.End();
-            
         }
+    }
+
+    private static bool TryParseArguments(string[] args, out Options? options)
+    {
+        bool apply = false;
+        string? libraryPath = null;
+        var operands = new List<string>();
+
+        for (int index = 0; index < args.Length; index++)
+        {
+            if (args[index].Equals("--apply", StringComparison.OrdinalIgnoreCase))
+            {
+                apply = true;
+            }
+            else if (args[index].Equals("--library", StringComparison.OrdinalIgnoreCase) && ++index < args.Length)
+            {
+                libraryPath = args[index];
+            }
+            else if (args[index].StartsWith("--", StringComparison.Ordinal))
+            {
+                options = null;
+                return false;
+            }
+            else
+            {
+                operands.Add(args[index]);
+            }
+        }
+
+        options = operands.Count == 1 ? new Options(operands[0], libraryPath, apply) : null;
+        return options is not null;
+    }
+
+    private static int Run(Options options)
+    {
+        string libraryPath = ItlFileEditor.ResolveLibraryPath(options.LibraryPath);
+        if (options.Apply)
+            ItlFileEditor.EnsureItunesIsClosed();
+
+        ItlDocument document = ItlDocument.Load(libraryPath);
+        ItlRecord[] matchingPlaylists = [.. document.FindPlaylists(
+            options.PlaylistName, StringComparison.OrdinalIgnoreCase)];
+        if (matchingPlaylists.Length != 1)
+            throw new InvalidOperationException(
+                $"Expected one playlist named '{options.PlaylistName}', found {matchingPlaylists.Length}.");
+
+        if (!options.Apply)
+            LogConsole.WriteLine("Dry run: pass --apply to update embedded artwork and the ITL file caches.");
+
+        Dictionary<int, ItlRecord> tracksById = document.Tracks.ToDictionary(ItlDocument.TrackIdOf);
+        int tracks = 0;
+        int artwork = 0;
+        int missing = 0;
+        int errors = 0;
+        int fixedArtwork = 0;
+        bool libraryChanged = false;
+
+        foreach (int trackId in matchingPlaylists[0].Entries.Select(entry => entry.TrackId).Distinct())
+        {
+            if (!tracksById.TryGetValue(trackId, out ItlRecord? track) || track.GetHasVideo())
+                continue;
+
+            string? path = ItlLocation.ToLocalPath(track.GetString(ItlDataType.Location));
+            if (string.IsNullOrWhiteSpace(path))
+                continue;
+
+            tracks++;
+            try
+            {
+                LogConsole.WriteLine($"{tracks} Checking artwork: {path}");
+                IMediaFile mediaFile = MediaFile.GetFile(path);
+                IMetadataImage[] images = [.. mediaFile.Tags.SelectMany(tag => tag.GetImageMetadata())];
+                if (images.Length == 0)
+                {
+                    LogConsole.WriteLine($"Error: No embedded artwork: {path}");
+                    missing++;
+                    continue;
+                }
+                if (images.Length != 1)
+                {
+                    LogConsole.WriteLine($"Error: {images.Length} embedded artwork images: {path}");
+                    errors++;
+                    continue;
+                }
+
+                artwork++;
+                IMetadataImage source = images[0];
+                using Image image = Image.Load(source.Data);
+                bool needsResize = image.Width > MaximumDimension || image.Height > MaximumDimension;
+                bool isJpeg = source.ImageType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase) ||
+                              source.ImageType.Equals("jpeg", StringComparison.OrdinalIgnoreCase) ||
+                              source.ImageType.Equals("jpg", StringComparison.OrdinalIgnoreCase);
+                bool needsChange = needsResize || !isJpeg || source.Size > Threshold;
+
+                LogConsole.WriteLine(
+                    $"Artwork: {source.ImageType}, {image.Width}x{image.Height}, {source.Size:N0} bytes.");
+                if (!needsChange)
+                    continue;
+
+                if (needsResize)
+                {
+                    image.Mutate(context => context.Resize(new ResizeOptions
+                    {
+                        Mode = ResizeMode.Max,
+                        Size = new Size(MaximumDimension, MaximumDimension),
+                    }));
+                }
+
+                using var encodedStream = new MemoryStream();
+                image.Save(encodedStream, new JpegEncoder { Quality = JpegQuality });
+                byte[] encoded = encodedStream.ToArray();
+                LogConsole.WriteLine(
+                    $"Candidate: image/jpeg, {image.Width}x{image.Height}, {encoded.Length:N0} bytes.");
+                if (encoded.LongLength > Threshold)
+                {
+                    LogConsole.WriteLine($"Error: Candidate remains above {Threshold:N0} bytes; artwork was not changed.");
+                    errors++;
+                    continue;
+                }
+
+                if (!options.Apply)
+                {
+                    LogConsole.WriteLine("Would replace the embedded artwork.");
+                    fixedArtwork++;
+                    continue;
+                }
+
+                IArtworkWriter? writer = mediaFile.Tags.OfType<IArtworkWriter>().FirstOrDefault();
+                if (writer is null)
+                    throw new NotSupportedException("This media format does not support embedded-artwork writes.");
+
+                writer.SetImages([
+                    new ArtworkImage(ID3v2Util.APICType.FrontCover, "image/jpeg", string.Empty, encoded),
+                ]);
+                mediaFile.SaveTags();
+
+                // Reopen the file before touching the ITL cache. A successful write must be
+                // readable and contain exactly the single normalized image we requested.
+                IMediaFile verificationFile = MediaFile.GetFile(path);
+                IMetadataImage[] verified = [.. verificationFile.Tags.SelectMany(tag => tag.GetImageMetadata())];
+                if (verified.Length != 1 || verified[0].Size != encoded.Length)
+                    throw new InvalidDataException("Artwork verification after saving the media file failed.");
+                using (Image verifiedImage = Image.Load(verified[0].Data))
+                {
+                    if (verifiedImage.Width > MaximumDimension || verifiedImage.Height > MaximumDimension)
+                        throw new InvalidDataException("Saved artwork dimensions exceed the configured maximum.");
+                }
+
+                var fileInfo = new FileInfo(path);
+                track.SetArtworkCount(verified.Length);
+                track.SetSize((ulong)fileInfo.Length);
+                track.SetDateModified(fileInfo.LastWriteTimeUtc);
+                libraryChanged = true;
+                fixedArtwork++;
+                LogConsole.WriteLine("Embedded artwork replaced and verified.");
+            }
+            catch (Exception exception)
+            {
+                errors++;
+                LogConsole.WriteLine($"Problem with file: {path}");
+                LogConsole.WriteLine($"{exception.Message} ({exception.GetType().FullName})");
+            }
+        }
+
+        if (options.Apply && libraryChanged)
+        {
+            ItlFileEditor.SaveValidated(document, libraryPath);
+            LogConsole.WriteLine($"Saved ITL cache updates to '{libraryPath}'.");
+            LogConsole.WriteLine($"The previous ITL is retained as '{libraryPath}.bak'.");
+        }
+
+        LogConsole.WriteLine();
+        LogConsole.WriteLine("Summary:");
+        LogConsole.WriteLine($"Total Tracks Processed:         {tracks}");
+        LogConsole.WriteLine($"Tracks With Artwork:            {artwork}");
+        LogConsole.WriteLine($"Tracks Without Embedded Artwork:{missing,9}");
+        LogConsole.WriteLine($"Tracks With Errors:             {errors}");
+        LogConsole.WriteLine($"Tracks With Fixed Artwork:      {fixedArtwork}");
+        return errors == 0 ? 0 : 1;
     }
 }

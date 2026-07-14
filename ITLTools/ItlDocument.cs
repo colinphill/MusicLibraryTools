@@ -165,6 +165,12 @@ public sealed partial class ItlDocument
     public ItlRecord? FindTrack(int trackId) =>
         Tracks.FirstOrDefault(t => TrackIdOf(t) == trackId);
 
+    public static ulong TrackPersistentIdOf(ItlRecord track) =>
+        BinaryPrimitives.ReadUInt64LittleEndian(track.Header.AsSpan(128));
+
+    public ItlRecord? FindTrackByPersistentId(ulong persistentId) =>
+        Tracks.FirstOrDefault(track => TrackPersistentIdOf(track) == persistentId);
+
     /// <summary>
     /// Updates a track string. Native iTunes reuses the mhoh +16 key for an equal semantic value
     /// and allocates the next key for a new distinct value. Location and FileUrl instead carry
@@ -319,6 +325,9 @@ public sealed partial class ItlDocument
     public ItlRecord? FindPlaylist(string name) =>
         Playlists.FirstOrDefault(p => PlaylistNameOf(p) == name);
 
+    public IEnumerable<ItlRecord> FindPlaylists(string name, StringComparison comparison) =>
+        Playlists.Where(playlist => string.Equals(PlaylistNameOf(playlist), name, comparison));
+
     /// <summary>
     /// Adds a playlist by cloning a template. Pass a plain manual playlist: a smart playlist's
     /// criteria live in blobs we copy verbatim, and would come along with it.
@@ -382,6 +391,11 @@ public sealed partial class ItlDocument
             ?? Playlists.SelectMany(p => p.Entries).FirstOrDefault()
             ?? throw new InvalidOperationException("No mtph entry anywhere to use as a template.");
 
+        return AddToPlaylist(playlist, trackId, template);
+    }
+
+    private ItlEntry AddToPlaylist(ItlRecord playlist, int trackId, ItlEntry template)
+    {
         ItlEntry entry = template.Clone();
         entry.TrackId = trackId;
         entry.EntryId = NextId();
@@ -397,6 +411,55 @@ public sealed partial class ItlDocument
 
     public bool RemoveFromPlaylist(ItlRecord playlist, int trackId) =>
         playlist.Children.RemoveAll(c => c is ItlEntry e && e.TrackId == trackId) > 0;
+
+    /// <summary>
+    /// Replaces a playlist's complete membership after first resolving every requested track.
+    /// Duplicate track occurrences and caller order are retained. The fixed playlist header and
+    /// all non-membership children remain unchanged.
+    /// </summary>
+    public void ReplacePlaylistEntries(ItlRecord playlist, IEnumerable<int> trackIds)
+    {
+        ArgumentNullException.ThrowIfNull(playlist);
+        ArgumentNullException.ThrowIfNull(trackIds);
+        if (!Playlists.Contains(playlist))
+            throw new ArgumentException("The playlist does not belong to this document.", nameof(playlist));
+
+        int[] desired = [.. trackIds];
+        int? missing = desired.Where(trackId => FindTrack(trackId) is null)
+            .Select(trackId => (int?)trackId).FirstOrDefault();
+        if (missing.HasValue)
+            throw new ArgumentException($"Track {missing.Value} is not in this document.", nameof(trackIds));
+
+        // Resolve and clone an entry template before changing anything, keeping failure atomic even
+        // when this playlist contains the only mtph records in the document.
+        ItlEntry? template = playlist.Entries.FirstOrDefault()?.Clone()
+            ?? Playlists.SelectMany(candidate => candidate.Entries).FirstOrDefault()?.Clone();
+        if (desired.Length > 0 && template is null)
+            throw new InvalidOperationException("No mtph entry anywhere to use as a template.");
+
+        playlist.Children.RemoveAll(child => child is ItlEntry);
+        foreach (int trackId in desired)
+            AddToPlaylist(playlist, trackId, template!);
+    }
+
+    /// <summary>
+    /// Redirects each occurrence of one track in a playlist to another while preserving entry
+    /// identities and ordering. This is useful when consolidating byte-identical tracks.
+    /// </summary>
+    public int RedirectPlaylistEntries(ItlRecord playlist, int oldTrackId, int replacementTrackId)
+    {
+        ArgumentNullException.ThrowIfNull(playlist);
+        if (!Playlists.Contains(playlist))
+            throw new ArgumentException("The playlist does not belong to this document.", nameof(playlist));
+        if (FindTrack(replacementTrackId) is null)
+            throw new ArgumentException($"Replacement track {replacementTrackId} is not in this document.",
+                nameof(replacementTrackId));
+
+        ItlEntry[] matches = [.. playlist.Entries.Where(entry => entry.TrackId == oldTrackId)];
+        foreach (ItlEntry entry in matches)
+            entry.TrackId = replacementTrackId;
+        return matches.Length;
+    }
 
     private void AddToBuiltInTrackPlaylists(int trackId, int templateId)
     {
