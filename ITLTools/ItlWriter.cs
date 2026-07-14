@@ -162,7 +162,7 @@ public static class ItlWriter
             return;
 
         throw new InvalidOperationException(
-            "Type-514 playback state cannot be added, removed, or edited because its +108/+124 integrity token is not reproducible.");
+            "Type-514 playback state cannot be added, removed, or edited because its native update and key-identity semantics are not proven.");
     }
 
     private static byte[][] ReadPlaybackStateChunks(byte[] body)

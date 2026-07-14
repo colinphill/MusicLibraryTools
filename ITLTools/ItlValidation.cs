@@ -33,7 +33,7 @@ public sealed partial class ItlDocument
                 $"Envelope declares {Envelope.SectionCount} sections; document contains {Sections.Count}.");
 
         ValidateEnvelopeMirror();
-        ValidatePlaybackTokenMirror();
+        ValidatePlaybackDsidMirror();
         ValidateSmartPlaylists();
         ValidateMprhReferences();
 
@@ -167,7 +167,7 @@ public sealed partial class ItlDocument
             }
         }
 
-        void ValidatePlaybackTokenMirror()
+        void ValidatePlaybackDsidMirror()
         {
             ItlSectionNode? section = Sections.FirstOrDefault(candidate => candidate.Type == 12);
             byte[]? mhgh = section?.Raw;
@@ -180,8 +180,8 @@ public sealed partial class ItlDocument
 
             uint innerValue = BinaryPrimitives.ReadUInt32LittleEndian(mhgh.AsSpan(124));
             if (innerValue != Envelope.RawWord108)
-                Add("mhgh.playback-token", ItlValidationSeverity.Error,
-                    $"mhgh playback token is 0x{innerValue:X8}; outer envelope declares 0x{Envelope.RawWord108:X8}.");
+                Add("mhgh.playback-dsid", ItlValidationSeverity.Error,
+                    $"mhgh playback-state DSID is {innerValue}; outer envelope declares {Envelope.PlaybackStateDsid}.");
         }
 
         void ValidateSmartPlaylists()

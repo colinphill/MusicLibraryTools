@@ -19,7 +19,7 @@ public sealed record ItlResearchSnapshot(
     ItlMhghSnapshot? Mhgh,
     IReadOnlyList<ItlValidationIssue> Diagnostics)
 {
-    public const int CurrentSchemaVersion = 2;
+    public const int CurrentSchemaVersion = 3;
 
     /// <summary>Fixed type-15 records, when the library contains that optional section.</summary>
     public ItlMprhListSnapshot? Mprh { get; init; }
@@ -169,7 +169,15 @@ public sealed record ItlResearchSnapshot(
             playback is not null,
             playback?.Raw.Length,
             playback is null ? null : HexHash(playback.Raw),
-            playback is null ? null : CountPlaybackEntries(playback.Raw));
+            playback is null ? null : CountPlaybackEntries(playback.Raw))
+        {
+            PlaybackStateDsid = header.Length >= 132
+                ? BinaryPrimitives.ReadUInt64LittleEndian(header.AsSpan(124))
+                : null,
+            CachedAccountDsid = header.Length >= 220
+                ? BinaryPrimitives.ReadUInt64LittleEndian(header.AsSpan(212))
+                : null,
+        };
     }
 
     private static int? CountPlaybackEntries(byte[] payload)
@@ -221,6 +229,7 @@ public sealed record ItlEnvelopeSnapshot(
     DateTime? ModifiedDateUtc)
 {
     public uint NextLibraryChildId => RawWord88;
+    public uint PlaybackStateDsid => RawWord108;
 }
 
 public sealed record ItlEnvelopeMirrorSnapshot(
@@ -272,7 +281,11 @@ public sealed record ItlMhghSnapshot(
     bool HasPlaybackState,
     int? PlaybackPayloadLength,
     string? PlaybackPayloadSha256,
-    int? PlaybackEntryCount);
+    int? PlaybackEntryCount)
+{
+    public ulong? PlaybackStateDsid { get; init; }
+    public ulong? CachedAccountDsid { get; init; }
+}
 
 public sealed record ItlHeaderWordSnapshot(int Offset, uint Value, string HexValue);
 

@@ -37,8 +37,15 @@ public sealed class ItlEnvelope
     /// </summary>
     public uint NextLibraryChildId => RawWord88;
 
-    /// <summary>Integrity token mirrored at mhgh +124 for the optional type-514 playback-state plist.</summary>
+    /// <summary>Raw compatibility name for <see cref="PlaybackStateDsid"/>.</summary>
     public uint RawWord108 { get; init; }
+
+    /// <summary>
+    /// Apple Directory Services ID associated with the optional type-514 playback-state plist.
+    /// iTunes mirrors this value at mhgh +124. Native code reads the same account value through
+    /// its literal "dsid" key; it is an identity, not a checksum of the plist bytes.
+    /// </summary>
+    public uint PlaybackStateDsid => RawWord108;
 
     /// <summary>The library's base UTC offset in seconds, stored as a signed big-endian word.</summary>
     public int UtcOffsetSeconds { get; init; }

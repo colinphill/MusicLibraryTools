@@ -73,8 +73,29 @@ public sealed partial class ItlDocument
     public List<ItlRecord> Artists => RecordsOf(ArtistSectionType);
     public List<ItlRecord> Playlists => RecordsOf(PlaylistSectionType);
 
+    /// <summary>The full mhgh +124 DSID associated with the optional type-514 playback-state plist.</summary>
+    public ulong PlaybackStateDsid => ReadMhghUInt64(124);
+
+    /// <summary>
+    /// The account DSID cached at mhgh +212. Native iTunes initializes this from its active
+    /// account's `dsid` value and may retain it after removing the type-514 plist.
+    /// </summary>
+    public ulong CachedAccountDsid => ReadMhghUInt64(212);
+
     private List<ItlRecord> RecordsOf(int type) =>
         Sections.First(s => s.Type == type).List!.Records;
+
+    private ulong ReadMhghUInt64(int offset)
+    {
+        byte[]? mhgh = Sections.FirstOrDefault(section => section.Type == 12)?.Raw;
+        if (mhgh is null || mhgh.Length < offset + sizeof(ulong) ||
+            !mhgh.AsSpan(0, 4).SequenceEqual("mhgh"u8))
+            return 0;
+        int headerLength = BinaryPrimitives.ReadInt32LittleEndian(mhgh.AsSpan(4));
+        return headerLength < offset + sizeof(ulong)
+            ? 0
+            : BinaryPrimitives.ReadUInt64LittleEndian(mhgh.AsSpan(offset));
+    }
 
     private AggregateCounts CurrentCounts => new(Tracks.Count, Playlists.Count, Albums.Count, Artists.Count);
 

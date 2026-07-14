@@ -122,10 +122,17 @@ public static partial class ReverseEngineer
 
         XDocument document = XDocument.Parse(text[xmlStart..]);
         byte[] xmlBytes = state.Raw.AsSpan(xmlStart).ToArray();
-        Console.WriteLine($"envelope +108=0x{library.Envelope.RawWord108:X8}; " +
+        ulong activeDsid = mhgh.HeaderLength >= 132
+            ? BinaryPrimitives.ReadUInt64LittleEndian(body.AsSpan(mhgh.Offset + 124))
+            : 0;
+        ulong cachedDsid = mhgh.HeaderLength >= 220
+            ? BinaryPrimitives.ReadUInt64LittleEndian(body.AsSpan(mhgh.Offset + 212))
+            : 0;
+        Console.WriteLine($"playback-state DSID: envelope +108={library.Envelope.PlaybackStateDsid}, " +
+                          $"mhgh +124={activeDsid}, cached account mhgh +212={cachedDsid}; " +
                           $"payload crc32=0x{Crc32(state.Raw):X8} adler32=0x{Adler32(state.Raw):X8}; " +
                           $"xml crc32=0x{Crc32(xmlBytes):X8} adler32=0x{Adler32(xmlBytes):X8}");
-        TestPlaybackTokenCandidates(library, section, mhgh, stateChunk, state.Raw);
+        ReportLegacyDsidHashExclusions(library, section, mhgh, stateChunk, state.Raw);
         XElement playbackDict = document.Root!.Element("dict")!;
         SummarizePlaybackPlist(playbackDict);
         CorrelatePlaybackState(library, playbackDict);
@@ -385,7 +392,7 @@ public static partial class ReverseEngineer
         }
     }
 
-    private static void TestPlaybackTokenCandidates(
+    private static void ReportLegacyDsidHashExclusions(
         ItlLibrary library,
         ItlSection section,
         ItlChunk mhgh,
@@ -411,22 +418,22 @@ public static partial class ReverseEngineer
             ("payload + library-id BE", Join(payload, persistentIdBig)),
         ];
 
-        uint token = library.Envelope.RawWord108;
-        uint reversedToken = BinaryPrimitives.ReverseEndianness(token);
+        uint dsid = library.Envelope.PlaybackStateDsid;
+        uint reversedDsid = BinaryPrimitives.ReverseEndianness(dsid);
         var matches = new List<string>();
         foreach ((string rangeName, byte[] bytes) in ranges)
         {
             foreach ((string algorithm, uint value) in HashCandidates(bytes))
             {
-                if (value == token) matches.Add($"{rangeName}: {algorithm}");
-                else if (value == reversedToken) matches.Add($"{rangeName}: {algorithm} (byte-reversed)");
+                if (value == dsid) matches.Add($"{rangeName}: {algorithm}");
+                else if (value == reversedDsid) matches.Add($"{rangeName}: {algorithm} (byte-reversed)");
             }
         }
 
         if (matches.Count == 0)
-            Console.WriteLine("+108 token candidates: no standard 32-bit or truncated digest match");
+            Console.WriteLine("playback-state DSID: no accidental standard hash/digest match");
         else
-            foreach (string match in matches) Console.WriteLine($"+108 token candidate MATCH: {match}");
+            foreach (string match in matches) Console.WriteLine($"playback-state DSID accidental hash MATCH: {match}");
 
         static byte[] Join(byte[] left, byte[] right)
         {

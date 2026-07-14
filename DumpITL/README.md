@@ -25,7 +25,7 @@ the long-standing `BHUILuilfghuila3` key. Decoded chunks are little-endian.
 | `+88` | next native library child-object ID (`100` empty, `5915` full corpus) | preserve |
 | `+92` | maximum encrypted prefix | preserve |
 | `+100` | signed base UTC offset in seconds | preserve |
-| `+108` | type-514 playback-state token, actively mirrored at `mhgh +124` | preserve |
+| `+108` | account DSID associated with type-514 playback state; mirrored at `mhgh +124` | preserve |
 | `+112` | UTC Mac-epoch library modification time | patch outer and mirror when the body changes |
 
 Section 16 contains `mfdh`, a little-endian semantic mirror of the envelope. Its `+8` word is the
@@ -165,16 +165,20 @@ Native one-change and reverse experiments proved:
   separate proven allocation domain;
 - `+108` and its active `mhgh +124` mirror become zero when iTunes removes the type-514 playback-state
   plist and do not change during metadata or structural mutations. `mhgh +212` retains the prior
-  token after that native resave, so it is a historical or otherwise inactive copy. The token matches
-  none of CRC-32, CRC-32C, Adler-32,
+  value after that native resave. Static native-code inspection resolves these values as Apple
+  Directory Services IDs (DSIDs), not integrity hashes: the library object initializes `+212` from
+  the active iTunes account field, and that global field is consumed under the literal key `dsid`.
+  The library parser and serializer copy the full 64-bit `mhgh +124` and `+212` values directly;
+  the outer envelope stores the low 32-bit active DSID. As additional negative evidence, the corpus
+  DSID matches none of CRC-32, CRC-32C, Adler-32,
   FNV-1/FNV-1a, DJB2, SDBM, Jenkins, Murmur3, or truncated MD5/SHA values over the payload,
   enclosing `mhoh`, `mhgh`, section, or library-ID-salted variants in either byte order;
 - changing one type-514 record-version digit from `4` to the otherwise observed value `5`, without
-  changing payload length or the preserved `+108/+124` token, produced a structurally valid candidate
-  that iTunes rejected twice before exposing COM and left byte-identical. This is evidence that the
-  token protects the exact playback payload (or participates in equivalent paired integrity state),
-  rather than being a passive revision. The writer therefore rejects all type-514 additions, removals,
-  and byte edits until the token can be reproduced;
+  changing payload length or the preserved DSID, produced a structurally valid candidate that iTunes
+  rejected twice before exposing COM and left byte-identical. This proves the plist has native
+  semantic validation, but no longer implies a checksum relationship. The writer still rejects all
+  type-514 additions, removals, and byte edits until its key identities and valid update protocol are
+  proven;
 - `mhgh +233` changes from zero to one on the first native library mutation and then stays set;
 - metadata edits advance both library `+112` and track `mith +32`; iTunes may also refresh opaque
   search/index section 20 and track `+656` caches;
@@ -219,8 +223,8 @@ Native one-change and reverse experiments proved:
 
 Still unresolved:
 
-- the exact algorithm producing the type-514 playback-state token at `+108`/`mhgh +124`, and the
-  lifecycle of the retained copy at `mhgh +212`;
+- the valid native update protocol for type-514 playback state and the exact event that clears its
+  active DSID while retaining the account DSID at `mhgh +212`;
 - the semantic identity behind the 1,943 hexadecimal type-514 playback-state plist keys (they are
   not raw or reversed 16-byte windows in the fixed track header; five current identities match MD5
   of a video filename/title or `Artist - Title`, while the other entries appear stale or use another
@@ -293,17 +297,18 @@ The final reverse-engineering work should proceed in this order:
    video bookmarks, completed playback, play count, rating, and unplayed state all update ordinary
    track fields without creating type 514. Two reversible manual Loved-state runs additionally prove
    Loved is `mith +703` bit 1 and does not create type 514. Static evidence identifies the plist as
-   imported Apple device/Universal Playback Position state. Capturing a fresh payload/token pair now
+   imported Apple device/Universal Playback Position state. Capturing a fresh payload/DSID pair now
    requires a disposable iPhone/iPod sync or an independently supplied Play Data/PlayCounts artifact.
 4. **Decimal Store Item ID branch resolved; hexadecimal branch remains:** Derive the type-514 key identity with a one-track, one-variable matrix. Change title, artist,
    filename, path, persistent ID, numeric track ID, library persistent ID, and media kind separately.
    Test normalized byte encodings and common digest families, and also search the complete decoded
    body for source identity material. A mapping is proven only when the key changes predictably and
    returns when the source value is restored.
-5. Classify `+108`/`mhgh +124` from multiple controlled type-514 payload/token pairs. Test whether it
-   is a checksum of the binary plist, plist XML, enclosing `mhoh`, or surrounding `mhgh` ranges; a
-   revision or count; a random value; or a library-specific token. Until reproduced, preserve the
-   field and reject playback-state mutations that would require recomputing it.
+5. **`+108`/`mhgh +124` and `mhgh +212` resolved as DSIDs:** Native code copies the active iTunes
+   account value under the literal `dsid` key and caches it at the library field serialized to
+   `mhgh +212`; the corpus's active `+124` value and outer low-32-bit mirror are identical. Preserve
+   both identities. Continue rejecting type-514 mutations because the plist's valid update and
+   hexadecimal key-identity rules, rather than a token-recomputation algorithm, remain unproven.
 6. **Smart-playlist decoding, editing, typed construction, and safe creation completed:** Smart Info and
    recursive Smart Criteria decode and byte-exactly re-encode; string, integer, Boolean, date,
    relative-date, media/location-mask, playlist-reference, nested, and unknown raw values are typed
@@ -322,7 +327,7 @@ The final reverse-engineering work should proceed in this order:
    fixture and regression test for every proven rule, keep unresolved bytes opaque, and make an
    unsupported mutation fail before saving rather than synthesizing metadata.
 
-Completion criteria for these remaining areas are: `+108` has a safe preserve/recompute/reject policy; at least one
+Completion criteria for these remaining areas are: type-514 has a safe preserve/update/reject policy; at least one
 controlled playback entry is mapped to its track identity or conclusively shown to be blob-local;
 smart playlists decode and re-encode byte-identically, supported edits and template-based creation
 and manual conversion survive native resave, while unsupported rule forms fail before saving;

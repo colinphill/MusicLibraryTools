@@ -14,8 +14,9 @@ internal static class SyntheticLibrary
 
     public static byte[] CreateFileWithPlaybackState()
     {
-        byte[] body = CreateBody(includePlaybackState: true);
-        ItlEnvelope envelope = CreateEnvelope(body);
+        const uint playbackStateDsid = 0x0944ACB6;
+        byte[] body = CreateBody(includePlaybackState: true, playbackStateDsid: playbackStateDsid);
+        ItlEnvelope envelope = CreateEnvelope(body, playbackStateDsid);
         return ItlWriter.Build(envelope, body);
     }
 
@@ -25,7 +26,7 @@ internal static class SyntheticLibrary
         return ItlWriter.Build(CreateEnvelope(), body);
     }
 
-    public static ItlEnvelope CreateEnvelope(byte[]? originalBody = null)
+    public static ItlEnvelope CreateEnvelope(byte[]? originalBody = null, uint playbackStateDsid = 0)
     {
         byte[] header = new byte[144];
         "hdfm"u8.CopyTo(header);
@@ -40,6 +41,7 @@ internal static class SyntheticLibrary
         BinaryPrimitives.WriteInt32BigEndian(header.AsSpan(76), 99);
         BinaryPrimitives.WriteInt32BigEndian(header.AsSpan(84), 99);
         BinaryPrimitives.WriteInt32BigEndian(header.AsSpan(92), 0);
+        BinaryPrimitives.WriteUInt32BigEndian(header.AsSpan(108), playbackStateDsid);
         return new ItlEnvelope
         {
             Version = "1",
@@ -51,22 +53,32 @@ internal static class SyntheticLibrary
             PlaylistCount = 99,
             AlbumCount = 99,
             ArtistCount = 99,
+            RawWord108 = playbackStateDsid,
             RawHeader = header,
             Body = originalBody ?? [],
         };
     }
 
-    public static byte[] CreateBody(bool includePlaybackState = false, bool includeMprh = false)
+    public static byte[] CreateBody(
+        bool includePlaybackState = false,
+        bool includeMprh = false,
+        uint playbackStateDsid = 0)
     {
         byte[] mfdh = Chunk("mfdh", new byte[144], headerLength: 144);
+        BinaryPrimitives.WriteUInt32LittleEndian(mfdh.AsSpan(108), playbackStateDsid);
         byte[] playbackState = includePlaybackState
             ? Chunk("mhoh", "<plist><dict><key>version</key><string>4</string></dict></plist>"u8.ToArray(),
                 headerLength: 24)
             : [];
         if (playbackState.Length > 0)
             BinaryPrimitives.WriteInt32LittleEndian(playbackState.AsSpan(12), (int)ItlDataType.PlaybackStatePlist);
-        byte[] mhgh = Chunk("mhgh", playbackState, headerLength: 128,
+        byte[] mhgh = Chunk("mhgh", playbackState, headerLength: playbackStateDsid == 0 ? 128 : 220,
             countAt8: includePlaybackState ? 1 : 0);
+        if (playbackStateDsid != 0)
+        {
+            BinaryPrimitives.WriteUInt64LittleEndian(mhgh.AsSpan(124), playbackStateDsid);
+            BinaryPrimitives.WriteUInt64LittleEndian(mhgh.AsSpan(212), playbackStateDsid);
+        }
 
         byte[] albumHeader = RecordHeader("miah", 100, id: 3);
         byte[] artistHeader = RecordHeader("miih", 100, id: 4);

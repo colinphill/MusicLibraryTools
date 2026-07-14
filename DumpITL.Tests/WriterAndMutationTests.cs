@@ -46,9 +46,14 @@ public sealed class WriterAndMutationTests
     }
 
     [Fact]
-    public void BuildRejectsPlaybackStateMutationWithoutAReproducibleToken()
+    public void BuildRejectsPlaybackStateMutationWithoutProvenNativeSemantics()
     {
         ItlEnvelope envelope = ItlEnvelope.Parse(SyntheticLibrary.CreateFileWithPlaybackState());
+        ItlDocument document = ItlDocument.Parse(envelope);
+        Assert.Equal(0x0944ACB6u, envelope.PlaybackStateDsid);
+        Assert.Equal(0x0944ACB6ul, document.PlaybackStateDsid);
+        Assert.Equal(0x0944ACB6ul, document.CachedAccountDsid);
+
         byte[] body = (byte[])envelope.Body.Clone();
         byte[] marker = "<string>4</string>"u8.ToArray();
         int markerOffset = body.AsSpan().IndexOf(marker);
@@ -57,7 +62,7 @@ public sealed class WriterAndMutationTests
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
             () => ItlWriter.Build(envelope, body));
-        Assert.Contains("integrity token", exception.Message);
+        Assert.Contains("key-identity semantics", exception.Message);
     }
 
     [Fact]
@@ -114,7 +119,7 @@ public sealed class WriterAndMutationTests
 
         byte[] mhgh = document.Sections.Single(section => section.Type == 12).Raw!;
         BinaryPrimitives.WriteUInt32LittleEndian(mhgh.AsSpan(124), 1);
-        Assert.Contains(document.Validate(), issue => issue.Code == "mhgh.playback-token");
+        Assert.Contains(document.Validate(), issue => issue.Code == "mhgh.playback-dsid");
     }
 
     [Fact]
