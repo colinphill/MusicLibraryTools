@@ -74,7 +74,10 @@ Native one-change and reverse experiments proved:
 - `+88` stays unchanged across all of those operations and is not a required structural aggregate.
   Fresh reversible runs held it at `100` with exact binary playlist counts 99, 100, and 101; 101
   tracks sharing one album/artist; 101 distinct albums sharing one artist; and 101 distinct albums
-  and artists. Each candidate reopened and returned to its baseline entity counts;
+  and artists. A further 257-track run created 257 distinct albums and artists, crossed the 128 and
+  256 boundaries, and assigned per-type `mhoh +16` value keys through 257 while `+88` remained 100.
+  Each candidate reopened and returned to its baseline entity counts. This excludes `+88` from
+  modeled entity counts, tested capacity boundaries through 256, and semantic value-key high-water;
 - `+108` and its active `mhgh +124` mirror become zero when iTunes removes the type-514 playback-state
   plist and do not change during metadata or structural mutations. `mhgh +212` retains the prior
   token after that native resave, so it is a historical or otherwise inactive copy. The token matches
@@ -92,7 +95,12 @@ Native one-change and reverse experiments proved:
 - the preserved type-514 plist has 2,024 dictionaries containing bookmark time (`bktm`), played
   state (`hbpl`), play count (`plct`), timestamp (`tstm`), and record version. Eighty of its 81
   decimal outer keys resolve to current Store Item IDs at `mith +168/+428`; the remaining decimal
-  key is stale. Its other 1,943 keys are 32-character hexadecimal identities.
+  key is stale. Its other 1,943 keys are 32-character hexadecimal identities. Exhaustive whole-field
+  MD5 checks resolve only five current identities: four title keys (also episode/filename where equal)
+  and one `Artist - Title` key. Only one entry's `plct`/`tstm` pair aligns with current fixed playback
+  state, and none of the 50 nonzero `bktm` values exactly matches the controlled-bookmark word at
+  `mith +624` when rounded to milliseconds.
+  The bulk of this plist is therefore historical/device state or uses identities no longer present;
 
 Still unresolved:
 
@@ -148,12 +156,10 @@ The final reverse-engineering work should proceed in this order:
    envelope values, `mhgh` candidates, counts, IDs, validation diagnostics, and aligned byte diffs
    for every phase. Continue restoring the live-library hash and iTunes preference bytes in a
    `finally` block.
-2. **Aggregate boundary completed; semantic identity remains:** Characterize envelope `+88` with fresh libraries and reversible threshold experiments around
-   counts 1, 99, 100, and 101. Vary one dimension at a time: playlists; tracks sharing an
-   album/artist; tracks with distinct albums but one artist; and tracks with distinct albums and
-   artists. Delete back below each threshold and reopen/save. This should distinguish a capacity or
-   high-water value from an entity count or derived cache. Reproduce any apparent rule in a second
-   fresh library before modeling it.
+2. **Aggregate and key-allocation exclusions completed; semantic name remains:** Envelope `+88` is
+   proven unnecessary for structural writes and excluded from track, playlist, album, artist,
+   section, and semantic value-key counts, including reversible boundary runs through 257 entities.
+   Preserve it opaquely unless a future independent library exposes a repeatable semantic rule.
 3. **Ordinary playback paths tested; no plist generated:** Deliberately create a type-514 playback-state plist using longer audio and video fixtures. Test
    one native operation at a time: play/stop position, remembered bookmark, `BookmarkTime`, play
    count, rating, and loved state. Snapshot before and after each operation and its reversal so the

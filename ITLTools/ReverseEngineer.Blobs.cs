@@ -1,5 +1,6 @@
 using System.Text;
 using System.Buffers.Binary;
+using System.Globalization;
 using System.Numerics;
 using System.Security.Cryptography;
 using System.Xml.Linq;
@@ -124,12 +125,14 @@ public static partial class ReverseEngineer
         TestPlaybackTokenCandidates(library, section, mhgh, stateChunk, state.Raw);
         XElement playbackDict = document.Root!.Element("dict")!;
         SummarizePlaybackPlist(playbackDict);
+        CorrelatePlaybackState(library, playbackDict);
         string[] outerKeys = [.. playbackDict.Elements("key").Select(key => key.Value)];
         TestDecimalPlaybackKeys(library, outerKeys);
         string[] keys = [.. playbackDict.Elements("key").Select(k => k.Value)
             .Where(k => k.Length == 32 && k.All(Uri.IsHexDigit))];
         var keySet = keys.Select(key => key.ToLowerInvariant()).ToHashSet();
         TestCandidateHashes(library, keySet);
+        TestDataObjectHashes(library, keySet);
         var direct = new HashSet<(ulong, ulong)>();
         var reversed = new HashSet<(ulong, ulong)>();
         foreach (string key in keys)
@@ -159,6 +162,152 @@ public static partial class ReverseEngineer
         }
         if (!found)
             Console.WriteLine("  no raw or byte-reversed 128-bit key appears in a fixed track-header window");
+    }
+
+    private static void CorrelatePlaybackState(ItlLibrary library, XElement dictionary)
+    {
+        DateTime appleEpoch = new(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var tracksByState = library.Tracks
+            .Where(track => track.PlayDate is not null)
+            .GroupBy(track => (track.PlayCount, Seconds: new DateTimeOffset(track.PlayDate!.Value).ToUnixTimeSeconds()))
+            .ToDictionary(group => group.Key, group => group.ToArray());
+
+        XElement[] children = [.. dictionary.Elements()];
+        int usable = 0, unique = 0, ambiguous = 0, missing = 0;
+        int uniqueHex = 0, uniqueDecimal = 0;
+        var examples = new List<string>();
+        for (int index = 0; index + 1 < children.Length; index += 2)
+        {
+            if (children[index].Name != "key" || children[index + 1].Name != "dict")
+                continue;
+
+            string key = children[index].Value;
+            Dictionary<string, XElement> fields = PlistFields(children[index + 1]);
+            if (!fields.TryGetValue("plct", out XElement? playCountElement) ||
+                !int.TryParse(playCountElement.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int playCount) ||
+                !fields.TryGetValue("tstm", out XElement? timestampElement) ||
+                !double.TryParse(timestampElement.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double timestamp) ||
+                !double.IsFinite(timestamp))
+                continue;
+
+            usable++;
+            long stateSecond = new DateTimeOffset(appleEpoch.AddSeconds(timestamp)).ToUnixTimeSeconds();
+            ItlTrack[] matches = new long[] { -1L, 0L, 1L }
+                .SelectMany(delta => tracksByState.TryGetValue((playCount, stateSecond + delta), out ItlTrack[]? found)
+                    ? found
+                    : [])
+                .Distinct()
+                .ToArray();
+            if (matches.Length == 0)
+            {
+                missing++;
+                continue;
+            }
+            if (matches.Length > 1)
+            {
+                ambiguous++;
+                continue;
+            }
+
+            unique++;
+            if (key.Length == 32 && key.All(Uri.IsHexDigit)) uniqueHex++;
+            else if (uint.TryParse(key, NumberStyles.None, CultureInfo.InvariantCulture, out _)) uniqueDecimal++;
+            if (examples.Count < 8)
+            {
+                ItlTrack track = matches[0];
+                examples.Add($"{key} -> [{track.Id}] {track.Artist} - {track.Title} " +
+                             $"(plct={playCount}, tstm={timestamp:R})");
+            }
+        }
+
+        Console.WriteLine("playback-value correlations (plct plus tstm within one second of mith play state):");
+        Console.WriteLine($"  usable={usable:N0}, unique={unique:N0} (hex={uniqueHex:N0}, decimal={uniqueDecimal:N0}), " +
+                          $"ambiguous={ambiguous:N0}, unmatched={missing:N0}");
+        foreach (string example in examples) Console.WriteLine($"    {Clip(example, 120)}");
+        CorrelateBookmarkWords(library, children);
+
+        static Dictionary<string, XElement> PlistFields(XElement dictionaryElement)
+        {
+            XElement[] nested = [.. dictionaryElement.Elements()];
+            var result = new Dictionary<string, XElement>(StringComparer.Ordinal);
+            for (int nestedIndex = 0; nestedIndex + 1 < nested.Length; nestedIndex += 2)
+            {
+                if (nested[nestedIndex].Name == "key")
+                    result[nested[nestedIndex].Value] = nested[nestedIndex + 1];
+            }
+            return result;
+        }
+    }
+
+    private static void CorrelateBookmarkWords(ItlLibrary library, XElement[] plistChildren)
+    {
+        var states = new List<(string Key, int PlayCount, uint Milliseconds)>();
+        for (int index = 0; index + 1 < plistChildren.Length; index += 2)
+        {
+            if (plistChildren[index].Name != "key" || plistChildren[index + 1].Name != "dict")
+                continue;
+
+            XElement[] nested = [.. plistChildren[index + 1].Elements()];
+            XElement? bookmark = null, playCount = null;
+            for (int nestedIndex = 0; nestedIndex + 1 < nested.Length; nestedIndex += 2)
+            {
+                if (nested[nestedIndex].Name != "key") continue;
+                if (nested[nestedIndex].Value == "bktm") bookmark = nested[nestedIndex + 1];
+                else if (nested[nestedIndex].Value == "plct") playCount = nested[nestedIndex + 1];
+            }
+
+            if (bookmark is null || playCount is null ||
+                !double.TryParse(bookmark.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double seconds) ||
+                !int.TryParse(playCount.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int count) ||
+                !double.IsFinite(seconds) || seconds <= 0 || seconds * 1000 > uint.MaxValue)
+                continue;
+
+            states.Add((plistChildren[index].Value, count, (uint)Math.Round(seconds * 1000)));
+        }
+        if (states.Count == 0) return;
+
+        int headerLength = library.Tracks.Select(track => track.Header.Length).DefaultIfEmpty(0).Min();
+        var wantedValues = states.Select(state => state.Milliseconds).ToHashSet();
+        var results = new List<(int Offset, int Unique, int Ambiguous, int UniqueWithPlayCount)>();
+        for (int offset = 12; offset + 4 <= headerLength; offset += 4)
+        {
+            var tracksByValue = new Dictionary<uint, List<ItlTrack>>();
+            foreach (ItlTrack track in library.Tracks)
+            {
+                uint value = BinaryPrimitives.ReadUInt32LittleEndian(track.Header.AsSpan(offset));
+                if (!wantedValues.Contains(value)) continue;
+                if (!tracksByValue.TryGetValue(value, out List<ItlTrack>? tracks))
+                    tracksByValue[value] = tracks = [];
+                tracks.Add(track);
+            }
+
+            int unique = 0, ambiguous = 0, uniqueWithPlayCount = 0;
+            foreach ((_, int statePlayCount, uint milliseconds) in states)
+            {
+                if (!tracksByValue.TryGetValue(milliseconds, out List<ItlTrack>? tracks)) continue;
+                if (tracks.Count == 1) unique++;
+                else ambiguous++;
+                if (tracks.Count(track => track.PlayCount == statePlayCount) == 1) uniqueWithPlayCount++;
+            }
+            if (unique > 0 || uniqueWithPlayCount > 0)
+                results.Add((offset, unique, ambiguous, uniqueWithPlayCount));
+        }
+
+        Console.WriteLine($"bookmark word candidates ({states.Count:N0} nonzero bktm values, rounded to milliseconds; " +
+                          "chance matches are expected):");
+        if (results.Count == 0)
+        {
+            Console.WriteLine("  no aligned fixed-header word contains a playback bookmark value");
+            return;
+        }
+        foreach ((int offset, int unique, int ambiguous, int uniqueWithPlayCount) in results
+                 .OrderByDescending(result => result.UniqueWithPlayCount)
+                 .ThenByDescending(result => result.Unique)
+                 .Take(12))
+            Console.WriteLine($"  mith +{offset,-4} unique={unique,5:N0}, ambiguous={ambiguous,5:N0}, " +
+                              $"unique with plct={uniqueWithPlayCount,5:N0}");
+        if (results.All(result => result.Offset != 624))
+            Console.WriteLine("  mith +624, changed by controlled native bookmark edits, has no corpus match");
     }
 
     private static void SummarizePlaybackPlist(XElement dictionary)
@@ -470,6 +619,53 @@ public static partial class ReverseEngineer
             if (littleEndian) BinaryPrimitives.WriteUInt64LittleEndian(bytes, value);
             else BinaryPrimitives.WriteUInt64BigEndian(bytes, value);
             return bytes;
+        }
+    }
+
+    private static void TestDataObjectHashes(ItlLibrary library, HashSet<string> keys)
+    {
+        var matches = new Dictionary<(int Type, string Input), HashSet<(string Key, int TrackId)>>();
+        foreach (ItlTrack track in library.Tracks)
+        {
+            foreach (ItlDataObject field in track.DataObjects)
+            {
+                Test("mhoh body", field.Raw);
+                if (!field.IsString) continue;
+                Test("encoded payload", field.Payload);
+                Test("UTF-8 text", Encoding.UTF8.GetBytes(field.Text!));
+                Test("UTF-16LE text", Encoding.Unicode.GetBytes(field.Text!));
+                Test("UTF-8 text + NUL", [.. Encoding.UTF8.GetBytes(field.Text!), 0]);
+                Test("UTF-16LE text + NUL", [.. Encoding.Unicode.GetBytes(field.Text!), 0, 0]);
+
+                void Test(string input, byte[] bytes)
+                {
+                    string hash = Convert.ToHexString(MD5.HashData(bytes)).ToLowerInvariant();
+                    if (!keys.Contains(hash)) return;
+                    if (!matches.TryGetValue((field.Type, input), out HashSet<(string, int)>? found))
+                        matches[(field.Type, input)] = found = [];
+                    found.Add((hash, track.Id));
+                }
+            }
+        }
+
+        Console.WriteLine("all data-object MD5 correlations:");
+        if (matches.Count == 0)
+        {
+            Console.WriteLine("  no playback key hashes an entire mhoh body or encoded string payload");
+            return;
+        }
+        foreach (((int type, string input), HashSet<(string Key, int TrackId)> found) in matches
+                 .OrderByDescending(match => match.Value.Count)
+                 .ThenBy(match => match.Key.Type)
+                 .ThenBy(match => match.Key.Input))
+        {
+            Console.WriteLine($"  mhoh {type,-3} {input,-20} {found.Count,7:N0} track/key matches " +
+                              $"({found.Select(match => match.Key).Distinct().Count():N0} keys)");
+            foreach ((string key, int trackId) in found.Take(4))
+            {
+                ItlTrack track = library.Tracks.First(candidate => candidate.Id == trackId);
+                Console.WriteLine($"    {key} -> [{trackId}] {Clip($"{track.Artist} - {track.Title}", 88)}");
+            }
         }
     }
 

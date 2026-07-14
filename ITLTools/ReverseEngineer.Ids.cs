@@ -57,6 +57,33 @@ public static partial class ReverseEngineer
                 }
             }
         }
+
+        uint word88 = document.Envelope.RawWord88;
+        var keyRanges = groups
+            .SelectMany(group => group.Records.SelectMany(record => record.Fields.Select(field =>
+                (Owner: group.Label, field.Type,
+                 Key: BinaryPrimitives.ReadUInt32LittleEndian(field.Header.AsSpan(16))))))
+            .Where(item => item.Key != 0)
+            .GroupBy(item => (item.Owner, item.Type))
+            .Select(group => new
+            {
+                group.Key.Owner,
+                group.Key.Type,
+                Count = group.Count(),
+                Distinct = group.Select(item => item.Key).Distinct().Count(),
+                Minimum = group.Min(item => item.Key),
+                Maximum = group.Max(item => item.Key),
+            })
+            .OrderBy(range => Math.Abs((long)range.Maximum - word88))
+            .ThenBy(range => range.Owner)
+            .ThenBy(range => range.Type)
+            .ToArray();
+
+        Console.WriteLine($"\nchild-key ranges nearest envelope +88 ({word88:N0}):");
+        foreach (var range in keyRanges.Take(12))
+            Console.WriteLine($"  {range.Owner,-9} mhoh {range.Type,-3} count={range.Count,7:N0} " +
+                              $"distinct={range.Distinct,7:N0} min={range.Minimum,7:N0} max={range.Maximum,7:N0} " +
+                              $"delta={(long)range.Maximum - word88,7:+#;-#;0}");
     }
 
     public static void Memberships(ItlDocument document, int trackId)
