@@ -19,7 +19,10 @@ public sealed record ItlResearchSnapshot(
     ItlMhghSnapshot? Mhgh,
     IReadOnlyList<ItlValidationIssue> Diagnostics)
 {
-    public const int CurrentSchemaVersion = 1;
+    public const int CurrentSchemaVersion = 2;
+
+    /// <summary>Fixed type-15 records, when the library contains that optional section.</summary>
+    public ItlMprhListSnapshot? Mprh { get; init; }
 
     public static ItlResearchSnapshot Capture(string path)
     {
@@ -79,7 +82,36 @@ public sealed record ItlResearchSnapshot(
                 Sorted(entries.Select(entry => entry.EntryId)),
                 HexHashU64(document.Tracks.Select(record => record.GetPersistentId()))),
             CaptureMhgh(library),
-            document.Validate());
+            document.Validate())
+        {
+            Mprh = CaptureMprh(library),
+        };
+    }
+
+    private static ItlMprhListSnapshot? CaptureMprh(ItlLibrary library)
+    {
+        ItlSection? section = library.Sections.FirstOrDefault(candidate => candidate.Chunk.Type == 15);
+        if (section is null || section.InnerSignature != "mlrh")
+            return null;
+
+        byte[] body = library.Envelope.Body;
+        ItlChunk list = ItlChunk.Read(body, section.Chunk.BodyOffset);
+        IReadOnlyList<ItlFixedItem> items = ItlTraversal.WalkFixedItems(body, list, section.Chunk.EndOffset);
+        return new ItlMprhListSnapshot(
+            list.HeaderLength,
+            list.ItemCount,
+            HexHash(body.AsSpan(list.Offset, list.HeaderLength).ToArray()),
+            [.. items.Select((item, index) =>
+            {
+                ReadOnlySpan<byte> record = body.AsSpan(item.Offset, item.Length);
+                return new ItlMprhRecordSnapshot(
+                    index,
+                    BinaryPrimitives.ReadUInt32LittleEndian(record[8..]),
+                    BinaryPrimitives.ReadUInt32LittleEndian(record[12..]),
+                    BinaryPrimitives.ReadUInt32LittleEndian(record[16..]),
+                    BinaryPrimitives.ReadUInt32LittleEndian(record[20..]),
+                    HexHash(record.ToArray()));
+            })]);
     }
 
     private static ItlEnvelopeMirrorSnapshot? CaptureMirror(ItlLibrary library)
@@ -186,7 +218,10 @@ public sealed record ItlEnvelopeSnapshot(
     int UtcOffsetSeconds,
     uint RawWord108,
     uint ModifiedDateSeconds,
-    DateTime? ModifiedDateUtc);
+    DateTime? ModifiedDateUtc)
+{
+    public uint NextLibraryChildId => RawWord88;
+}
 
 public sealed record ItlEnvelopeMirrorSnapshot(
     uint TotalLength,
@@ -240,3 +275,22 @@ public sealed record ItlMhghSnapshot(
     int? PlaybackEntryCount);
 
 public sealed record ItlHeaderWordSnapshot(int Offset, uint Value, string HexValue);
+
+public sealed record ItlMprhListSnapshot(
+    int HeaderLength,
+    int ItemCount,
+    string HeaderSha256,
+    IReadOnlyList<ItlMprhRecordSnapshot> Records);
+
+public sealed record ItlMprhRecordSnapshot(
+    int Index,
+    uint Word8,
+    uint Word12,
+    uint Word16,
+    uint Word20,
+    string Sha256)
+{
+    public uint TimestampSeconds => Word8;
+    public uint EntryId => Word12;
+    public string PlaylistPersistentId => (((ulong)Word20 << 32) | Word16).ToString("X16");
+}

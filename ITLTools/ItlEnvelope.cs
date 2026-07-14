@@ -28,11 +28,16 @@ public sealed class ItlEnvelope
     public int AlbumCount { get; init; }
     public int ArtistCount { get; init; }
 
-    /// <summary>
-    /// Word 88 is a confirmed non-aggregate with unresolved semantics. Word 108 is the token
-    /// mirrored at mhgh +124 for the optional type-514 playback-state plist.
-    /// </summary>
+    /// <summary>Raw compatibility name for <see cref="NextLibraryChildId"/>.</summary>
     public uint RawWord88 { get; init; }
+
+    /// <summary>
+    /// Next native child-object identifier for the library object. iTunes initializes it to 100,
+    /// atomically increments it when attaching selected runtime children, and persists it at +88.
+    /// </summary>
+    public uint NextLibraryChildId => RawWord88;
+
+    /// <summary>Integrity token mirrored at mhgh +124 for the optional type-514 playback-state plist.</summary>
     public uint RawWord108 { get; init; }
 
     /// <summary>The library's base UTC offset in seconds, stored as a signed big-endian word.</summary>

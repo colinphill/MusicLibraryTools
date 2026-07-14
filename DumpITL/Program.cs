@@ -33,7 +33,7 @@ if (args.Length < 2)
           re keys|strings|flags|numbers <Library.xml>
           re map|ids <recordSignature>       inspect record headers
           re memberships <trackId>           list every playlist containing a track
-          re sections|plists|fk|childkeys|playlistheaders|mhgh|playback|links|aggregates|envelope
+          re sections|mprh|plists|fk|childkeys|playlistheaders|mhgh|playback|links|aggregates|envelope
           re blob|values <mhohType>          inspect data-object values
           re smart|predict|kinds <Library.xml>
 
@@ -152,7 +152,7 @@ switch (command)
         break;
 
     case "re":
-        int reRequired = args[2] is "sections" or "plists" or "fk" or "childkeys" or "playlistheaders" or "mhgh" or "playback" or "links" or "aggregates" or "envelope" ? 3 : 4;
+        int reRequired = args[2] is "sections" or "mprh" or "plists" or "fk" or "childkeys" or "playlistheaders" or "mhgh" or "playback" or "links" or "aggregates" or "envelope" ? 3 : 4;
         if (args.Length < reRequired)
         {
             Console.Error.WriteLine($"Reverse-engineering subcommand '{args[2]}' requires an additional argument.");
@@ -166,6 +166,7 @@ switch (command)
             case "flags": ReverseEngineer.Flags(ItlLibrary.Load(itl), args[3]); break;
             case "numbers": ReverseEngineer.Numbers(ItlLibrary.Load(itl), args[3]); break;
             case "sections": ReverseEngineer.Sections(ItlLibrary.Load(itl)); break;
+            case "mprh": ReverseEngineer.Mprh(ItlLibrary.Load(itl)); break;
             case "plists": ReverseEngineer.Plists(ItlLibrary.Load(itl)); break;
             case "blob": ReverseEngineer.Blob(ItlLibrary.Load(itl), int.Parse(args[3])); break;
             case "ids": ReverseEngineer.Ids(ItlLibrary.Load(itl), args[3]); break;

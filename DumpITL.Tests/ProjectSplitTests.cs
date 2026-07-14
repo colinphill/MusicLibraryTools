@@ -41,8 +41,9 @@ public sealed class ProjectSplitTests
 
             Assert.True(exitCode == 0, stderr);
             using JsonDocument json = JsonDocument.Parse(stdout);
-            Assert.Equal(1, json.RootElement.GetProperty("schemaVersion").GetInt32());
+            Assert.Equal(2, json.RootElement.GetProperty("schemaVersion").GetInt32());
             Assert.Equal(1, json.RootElement.GetProperty("parsedCounts").GetProperty("tracks").GetInt32());
+            Assert.Equal(JsonValueKind.Null, json.RootElement.GetProperty("mprh").ValueKind);
         }
         finally
         {

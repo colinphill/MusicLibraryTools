@@ -5,6 +5,73 @@ namespace iTunes.Binary;
 
 public static partial class ReverseEngineer
 {
+    /// <summary>Prints all fixed type-15 records without treating their +8 payload as a length.</summary>
+    public static void Mprh(ItlLibrary library)
+    {
+        ItlSection? section = library.Sections.FirstOrDefault(candidate => candidate.Chunk.Type == 15);
+        if (section is null)
+        {
+            Console.WriteLine("type-15 mlrh/mprh section is absent");
+            return;
+        }
+        if (section.InnerSignature != "mlrh")
+        {
+            Console.WriteLine($"type-15 section has unrecognized inner layout '{section.InnerSignature}'");
+            return;
+        }
+
+        byte[] body = library.Envelope.Body;
+        ItlDocument document = ItlDocument.Parse(library.Envelope);
+        ItlChunk list = ItlChunk.Read(body, section.Chunk.BodyOffset);
+        IReadOnlyList<ItlFixedItem> records = ItlTraversal.WalkFixedItems(body, list, section.Chunk.EndOffset);
+        Console.WriteLine($"type-15 {list.Signature}: {records.Count:N0} fixed {ItlTraversal.MprhLength}-byte records");
+        Console.WriteLine(" idx       +8 / Mac date          +12       persistent-id       model matches  payload GUID");
+        foreach (ItlFixedItem record in records)
+        {
+            ReadOnlySpan<byte> bytes = body.AsSpan(record.Offset, record.Length);
+            uint word12 = BinaryPrimitives.ReadUInt32LittleEndian(bytes[12..]);
+            uint word8 = BinaryPrimitives.ReadUInt32LittleEndian(bytes[8..]);
+            ulong persistentId = BinaryPrimitives.ReadUInt64LittleEndian(bytes[16..]);
+            var matches = new List<string>();
+            int trackMatches = library.Tracks.Count(track => track.PersistentId == persistentId);
+            ItlRecord[] matchingPlaylists = [.. document.Playlists.Where(playlist =>
+                BinaryPrimitives.ReadUInt64LittleEndian(
+                    playlist.Header.AsSpan(ItlDocument.PlaylistPersistentIdOffset)) == persistentId)];
+            int playlistMatches = matchingPlaylists.Length;
+            int entryMatches = document.Playlists.SelectMany(playlist => playlist.Entries)
+                .Count(entry => entry.PersistentId == persistentId);
+            if (trackMatches > 0) matches.Add($"track:{trackMatches}");
+            if (playlistMatches > 0)
+            {
+                string names = string.Join('|', matchingPlaylists.Select(ItlDocument.PlaylistNameOf));
+                string[] entryFields = [.. matchingPlaylists.SelectMany(playlist => playlist.Entries)
+                    .SelectMany(entry => new[]
+                    {
+                        entry.EntryId == word12 ? "entry-id" : null,
+                        entry.OrderKey == word12 ? "order-key" : null,
+                        entry.TrackId == word12 ? "track-id" : null,
+                    })
+                    .OfType<string>()
+                    .Distinct()];
+                matches.Add($"playlist:{names}" + (entryFields.Length == 0 ? "" : $"/{string.Join('|', entryFields)}"));
+            }
+            if (entryMatches > 0) matches.Add($"entry:{entryMatches}");
+
+            DateTime macDate = new DateTime(1904, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(word8);
+            Console.WriteLine($" {((record.Offset - list.HeaderEnd) / ItlTraversal.MprhLength),3}  " +
+                              $"{word8:X8} {macDate:yyyy-MM-dd HH:mm:ss}  {word12:X8}  " +
+                              $"{persistentId:X16}  {(matches.Count == 0 ? "none" : string.Join(',', matches)),-13}  " +
+                              $"{new Guid(bytes[8..24])}");
+            foreach (ItlEntry entry in matchingPlaylists.SelectMany(playlist => playlist.Entries)
+                         .Where(entry => entry.EntryId == word12))
+            {
+                ItlTrack? track = library.Tracks.FirstOrDefault(candidate => candidate.Id == entry.TrackId);
+                Console.WriteLine($"      -> track {entry.TrackId}, order {entry.OrderKey}, " +
+                                  $"'{track?.Artist} - {track?.Title}', added {track?.DateAdded:yyyy-MM-dd HH:mm:ss}");
+            }
+        }
+    }
+
     /// <summary>Dumps every section we do not model, trying to find structure inside it.</summary>
     public static void Sections(ItlLibrary library)
     {

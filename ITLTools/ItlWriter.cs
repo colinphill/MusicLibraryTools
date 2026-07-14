@@ -58,6 +58,7 @@ public static class ItlWriter
         byte[] bodyCopy = (byte[])body.Clone();
         byte[] headerCopy = (byte[])envelope.RawHeader.Clone();
         EnsurePlaybackStateUnchanged(envelope.Body, bodyCopy);
+        EnsureMprhReferencesResolve(bodyCopy);
         Aggregates aggregates = ReadAggregates(bodyCopy);
         bool bodyChanged = !body.AsSpan().SequenceEqual(envelope.Body);
         uint modifiedDate = bodyChanged
@@ -95,6 +96,60 @@ public static class ItlWriter
             BinaryPrimitives.WriteUInt32BigEndian(file.AsSpan(112), modifiedDate);
 
         return file;
+    }
+
+    /// <summary>
+    /// Type-15 records are timestamped references to playlist entries. Their native deletion
+    /// lifecycle is unproven, so a structural write must not leave one pointing at a removed entry.
+    /// </summary>
+    private static void EnsureMprhReferencesResolve(byte[] body)
+    {
+        var playlistEntries = new Dictionary<ulong, HashSet<uint>>();
+        var references = new List<(ulong PlaylistPersistentId, uint EntryId)>();
+
+        foreach (ItlChunk section in ItlChunk.Walk(body, 0, body.Length))
+        {
+            if (section.Type == 2)
+            {
+                ItlChunk list = ItlChunk.Read(body, section.BodyOffset);
+                if (list.Signature != "mlph") continue;
+                foreach (ItlChunk playlist in ItlChunk.Walk(body, list.HeaderEnd, section.EndOffset))
+                {
+                    if (playlist.Signature != "miph" ||
+                        playlist.HeaderLength < ItlDocument.PlaylistPersistentIdOffset + sizeof(ulong))
+                        continue;
+                    ulong persistentId = BinaryPrimitives.ReadUInt64LittleEndian(
+                        body.AsSpan(playlist.Offset + ItlDocument.PlaylistPersistentIdOffset));
+                    HashSet<uint> entries = playlistEntries.GetValueOrDefault(persistentId) ?? [];
+                    playlistEntries[persistentId] = entries;
+                    foreach (ItlChunk child in ItlChunk.Walk(body, playlist.BodyOffset, playlist.EndOffset))
+                    {
+                        if (child.Signature == "mtph" && child.HeaderLength >= 20)
+                            entries.Add(BinaryPrimitives.ReadUInt32LittleEndian(body.AsSpan(child.Offset + 16)));
+                    }
+                }
+            }
+            else if (section.Type == 15)
+            {
+                ItlChunk list = ItlChunk.Read(body, section.BodyOffset);
+                if (list.Signature != "mlrh") continue;
+                foreach (ItlFixedItem item in ItlTraversal.WalkFixedItems(body, list, section.EndOffset))
+                    references.Add((
+                        BinaryPrimitives.ReadUInt64LittleEndian(body.AsSpan(item.Offset + 16)),
+                        BinaryPrimitives.ReadUInt32LittleEndian(body.AsSpan(item.Offset + 12))));
+            }
+        }
+
+        foreach ((ulong playlistPersistentId, uint entryId) in references)
+        {
+            if (!playlistEntries.TryGetValue(playlistPersistentId, out HashSet<uint>? entries))
+                throw new InvalidOperationException(
+                    $"Type-15 mprh references missing playlist {playlistPersistentId:X16}; its mutation policy is unproven.");
+            if (!entries.Contains(entryId))
+                throw new InvalidOperationException(
+                    $"Type-15 mprh references missing playlist entry {entryId} in {playlistPersistentId:X16}; " +
+                    "its mutation policy is unproven.");
+        }
     }
 
     private static void EnsurePlaybackStateUnchanged(byte[] originalBody, byte[] candidateBody)

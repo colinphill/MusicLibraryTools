@@ -70,7 +70,10 @@ public static partial class ReverseEngineer
         foreach (ItlChunk child in ItlChunk.Walk(body, mhgh.HeaderEnd, section.Chunk.EndOffset))
         {
             ItlDataObject o = ItlDataObject.Parse(body, child);
-            Console.WriteLine($"\n  mhoh type {child.Type}, payload {o.Raw.Length:N0} bytes, string={o.IsString}");
+            uint key = child.HeaderLength >= 20
+                ? BinaryPrimitives.ReadUInt32LittleEndian(body.AsSpan(child.Offset + 16))
+                : 0;
+            Console.WriteLine($"\n  mhoh type {child.Type}, key {key}, payload {o.Raw.Length:N0} bytes, string={o.IsString}");
 
             if (o.IsString)
             {

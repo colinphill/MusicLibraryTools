@@ -22,7 +22,7 @@ the long-standing `BHUILuilfghuila3` key. Decoded chunks are little-endian.
 | `+72` | playlist count | patch outer and mirror |
 | `+76` | album count | patch outer and mirror |
 | `+84` | artist count | patch outer and mirror |
-| `+88` | unresolved non-aggregate (`100` empty, `5915` full corpus) | preserve |
+| `+88` | next native library child-object ID (`100` empty, `5915` full corpus) | preserve |
 | `+92` | maximum encrypted prefix | preserve |
 | `+100` | signed base UTC offset in seconds | preserve |
 | `+108` | type-514 playback-state token, actively mirrored at `mhgh +124` | preserve |
@@ -40,7 +40,9 @@ their `+8` word as an item count. Confirmed editable lists are `mlth/mith`, `mlp
 
 `mlrh` is the known exception to length-delimited record traversal: it contains exactly its declared
 number of fixed 24-byte `mprh` items, and each `mprh +8` word is payload rather than a length.
-Unknown sections remain opaque during writing.
+Each item is a timestamped playlist-entry reference: `+8` is a Mac-epoch timestamp, `+12` is an
+`mtph` entry ID, and the 64-bit value at `+16` is the owning playlist persistent ID. Unknown
+sections remain opaque during writing.
 
 Records cache `mhoh` child counts at `+12`; playlists cache `mtph` membership counts at `+16`.
 Strings use a 16-byte preamble and encoding 1 (UTF-16LE), 2 (UTF-8), or 3 (Latin-1). Empty strings
@@ -113,6 +115,12 @@ Native one-change and reverse experiments proved:
   256 boundaries, and assigned per-type `mhoh +16` value keys through 257 while `+88` remained 100.
   Each candidate reopened and returned to its baseline entity counts. This excludes `+88` from
   modeled entity counts, tested capacity boundaries through 256, and semantic value-key high-water;
+- static inspection resolves `+88` as a native per-parent child-object allocator. The library-object
+  constructor initializes the field to 100; attachment paths atomically fetch-and-increment it and
+  assign the returned ID to a child; the envelope serializer reads it directly and the loader
+  restores any nonzero stored value. `ItlEnvelope.NextLibraryChildId` exposes the semantic name while
+  `RawWord88` remains for compatibility. The writer preserves it because modeled record IDs use a
+  separate proven allocation domain;
 - `+108` and its active `mhgh +124` mirror become zero when iTunes removes the type-514 playback-state
   plist and do not change during metadata or structural mutations. `mhgh +212` retains the prior
   token after that native resave, so it is a historical or otherwise inactive copy. The token matches
@@ -151,24 +159,32 @@ Native one-change and reverse experiments proved:
   keys into track playback state. Independent libgpod source identifies Play Data/PlayCounts plists
   as iPhone/iPod synchronization input keyed by the device track's 64-bit persistent ID. This narrows
   type 514 to imported device/Universal Playback Position state rather than ordinary local playback;
+- all ten type-15 `mprh` records resolve to entries in the built-in Music playlist. Nine timestamps
+  were written seconds apart on 2022-06-06 and one on 2024-06-22. Across native no-op, metadata,
+  smart-rule, and rewrite saves, iTunes preserves each timestamp and playlist persistent ID while
+  rewriting `mprh +12` whenever it compacts the referenced `mtph` entry IDs. The validator now checks
+  both foreign keys, snapshots include all four payload words and hashes, and the writer rejects a
+  structural mutation that would leave a dangling record. The feature-level purpose of this small
+  timestamped Music-entry history remains unknown;
 
 Still unresolved:
 
-- the semantic name and allocation policy behind envelope `+88`;
 - the exact algorithm producing the type-514 playback-state token at `+108`/`mhgh +124`, and the
   lifecycle of the retained copy at `mhgh +212`;
 - the semantic identity behind the 1,943 hexadecimal type-514 playback-state plist keys (they are
   not raw or reversed 16-byte windows in the fixed track header; five current identities match MD5
   of a video filename/title or `Artist - Title`, while the other entries appear stale or use another
   branch; Store Item ID and StoreIdentifier hashes add no matches);
-- complete meanings of the ten `mprh` payload records and other opaque section types.
+- the feature-level purpose and creation/removal lifecycle of the ten timestamped `mprh` playlist
+  references, plus the meanings of other opaque section types.
 
 ## Commands
 
 Use `validate` for structural/referential checks, `compare` for structure-aligned before/after
 diffs, and `snapshot` for deterministic JSON containing envelope/mirror values, parsed counts,
 numeric IDs, section layout, `mhgh` candidates, playback-state hashes, and diagnostics. The `re`
-family inventories fields, sections, IDs, blobs, aggregates, and playback-state correlations. Run
+family inventories fields, sections, IDs, blobs, aggregates, `mprh` links, and playback-state
+correlations. Research snapshot schema 2 includes a nullable type-15 record matrix. Run
 the executable without arguments for the complete command list.
 
 Private corpus regressions use `DUMPITL_CORPUS_ITL` and `DUMPITL_CORPUS_XML`. Native acceptance uses
@@ -208,10 +224,10 @@ The final reverse-engineering work should proceed in this order:
    envelope values, `mhgh` candidates, counts, IDs, validation diagnostics, and aligned byte diffs
    for every phase. Continue restoring the live-library hash and iTunes preference bytes in a
    `finally` block.
-2. **Aggregate and key-allocation exclusions completed; semantic name remains:** Envelope `+88` is
-   proven unnecessary for structural writes and excluded from track, playlist, album, artist,
-   section, and semantic value-key counts, including reversible boundary runs through 257 entities.
-   Preserve it opaquely unless a future independent library exposes a repeatable semantic rule.
+2. **Envelope `+88` resolved:** Native code identifies it as the next child-object ID on the library
+   object, initialized to 100 and advanced with an atomic allocator. It is not any modeled entity,
+   section, or semantic value-key count; reversible boundary runs through 257 entities leave it
+   unchanged. The writer preserves this native runtime high-water counter.
 3. **Ordinary playback paths tested; no plist generated:** Play/stop position, remembered audio and
    video bookmarks, completed playback, play count, rating, and unplayed state all update ordinary
    track fields without creating type 514. Static evidence identifies the plist as imported Apple
@@ -240,8 +256,7 @@ The final reverse-engineering work should proceed in this order:
    fixture and regression test for every proven rule, keep unresolved bytes opaque, and make an
    unsupported mutation fail before saving rather than synthesizing metadata.
 
-Completion criteria for these remaining areas are: `+88` is identified or experimentally excluded
-from required writer aggregates; `+108` has a safe preserve/recompute/reject policy; at least one
+Completion criteria for these remaining areas are: `+108` has a safe preserve/recompute/reject policy; at least one
 controlled playback entry is mapped to its track identity or conclusively shown to be blob-local;
 smart playlists decode and re-encode byte-identically, supported edits and template-based creation
 survive native resave, and unsupported rule forms or manual-to-smart conversion fail before saving;

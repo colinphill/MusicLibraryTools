@@ -53,6 +53,22 @@ public sealed class FormatSafetyTests
     }
 
     [Fact]
+    public void MprhProbeHandlesAbsentSection()
+    {
+        ItlLibrary library = ItlLibrary.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+        TextWriter original = Console.Out;
+        using var output = new StringWriter();
+        try
+        {
+            Console.SetOut(output);
+            ReverseEngineer.Mprh(library);
+        }
+        finally { Console.SetOut(original); }
+
+        Assert.Contains("is absent", output.ToString());
+    }
+
+    [Fact]
     public void StringFieldsRoundTripAllEncodingsAndEmptyValues()
     {
         AssertField("", 1);

@@ -24,6 +24,7 @@ public sealed class WriterAndMutationTests
         Assert.Equal(1, result.PlaylistCount);
         Assert.Equal(1, result.AlbumCount);
         Assert.Equal(1, result.ArtistCount);
+        Assert.Equal(result.RawWord88, result.NextLibraryChildId);
         Assert.Equal(7, BinaryPrimitives.ReadInt32LittleEndian(result.Body.AsSpan(16 + 48)));
         Assert.Equal(1, BinaryPrimitives.ReadInt32LittleEndian(result.Body.AsSpan(16 + 68)));
         Assert.Equal(1, BinaryPrimitives.ReadInt32LittleEndian(result.Body.AsSpan(16 + 72)));
@@ -57,6 +58,24 @@ public sealed class WriterAndMutationTests
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
             () => ItlWriter.Build(envelope, body));
         Assert.Contains("integrity token", exception.Message);
+    }
+
+    [Fact]
+    public void WriterRejectsDanglingMprhPlaylistEntryReference()
+    {
+        ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFileWithMprh()));
+        Assert.DoesNotContain(document.Validate(), issue => issue.Code.StartsWith("mprh."));
+
+        Assert.True(document.RemoveTrack(1));
+        Assert.Contains(document.Validate(), issue => issue.Code == "mprh.entry-link");
+        string path = Path.Combine(Path.GetTempPath(), $"dumpitl-mprh-{Guid.NewGuid():N}.itl");
+        try
+        {
+            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => document.Save(path));
+            Assert.Contains("Type-15 mprh", exception.Message);
+            Assert.False(File.Exists(path));
+        }
+        finally { if (File.Exists(path)) File.Delete(path); }
     }
 
     [Fact]

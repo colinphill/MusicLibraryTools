@@ -19,6 +19,12 @@ internal static class SyntheticLibrary
         return ItlWriter.Build(envelope, body);
     }
 
+    public static byte[] CreateFileWithMprh()
+    {
+        byte[] body = CreateBody(includeMprh: true);
+        return ItlWriter.Build(CreateEnvelope(), body);
+    }
+
     public static ItlEnvelope CreateEnvelope(byte[]? originalBody = null)
     {
         byte[] header = new byte[144];
@@ -50,7 +56,7 @@ internal static class SyntheticLibrary
         };
     }
 
-    public static byte[] CreateBody(bool includePlaybackState = false)
+    public static byte[] CreateBody(bool includePlaybackState = false, bool includeMprh = false)
     {
         byte[] mfdh = Chunk("mfdh", new byte[144], headerLength: 144);
         byte[] playbackState = includePlaybackState
@@ -90,6 +96,14 @@ internal static class SyntheticLibrary
         BinaryPrimitives.WriteUInt32LittleEndian(playlistHeader.AsSpan(ItlDocument.PlaylistRecordIdOffset), 6);
         byte[] playlist = JoinRecord(playlistHeader, nameBytes, entry);
 
+        byte[] mprh = new byte[ItlTraversal.MprhLength];
+        "mprh"u8.CopyTo(mprh);
+        BinaryPrimitives.WriteInt32LittleEndian(mprh.AsSpan(4), ItlTraversal.MprhLength);
+        BinaryPrimitives.WriteUInt32LittleEndian(mprh.AsSpan(8), 0xE0000000);
+        BinaryPrimitives.WriteUInt32LittleEndian(mprh.AsSpan(12), 5);
+        BinaryPrimitives.WriteUInt64LittleEndian(mprh.AsSpan(16), 0x5555555555555555);
+        byte[] referenceSection = includeMprh ? Section(15, List("mlrh", mprh)) : [];
+
         return Join(
             Section(16, mfdh),
             Section(12, mhgh),
@@ -97,7 +111,8 @@ internal static class SyntheticLibrary
             Section(11, List("mlih", artistHeader)),
             Section(1, List("mlth", trackHeader)),
             Section(13, List("mlth", cloudHeader)),
-            Section(2, List("mlph", playlist)));
+            Section(2, List("mlph", playlist)),
+            referenceSection);
     }
 
     private static byte[] Section(int type, byte[] payload)

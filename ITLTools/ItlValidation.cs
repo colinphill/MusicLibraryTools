@@ -35,6 +35,7 @@ public sealed partial class ItlDocument
         ValidateEnvelopeMirror();
         ValidatePlaybackTokenMirror();
         ValidateSmartPlaylists();
+        ValidateMprhReferences();
 
         AggregateCounts current = CurrentCounts;
         if (current == _originalCounts)
@@ -222,6 +223,60 @@ public sealed partial class ItlDocument
                 criteria.Rules.SelectMany(rule => rule.NestedCriteria is null
                     ? [rule]
                     : new[] { rule }.Concat(Flatten(rule.NestedCriteria)));
+        }
+
+        void ValidateMprhReferences()
+        {
+            ItlSectionNode? section = Sections.FirstOrDefault(candidate => candidate.Type == 15);
+            if (section is null) return;
+            byte[]? raw = section.Raw;
+            if (raw is null)
+            {
+                Add("mprh.layout", ItlValidationSeverity.Error,
+                    "Type-15 section is unexpectedly modeled instead of preserving its mlrh payload.");
+                return;
+            }
+
+            try
+            {
+                ItlChunk list = ItlChunk.Read(raw, 0);
+                if (list.Signature != "mlrh")
+                {
+                    Add("mprh.layout", ItlValidationSeverity.Warning,
+                        $"Type-15 section has unrecognized inner layout '{list.Signature}'.");
+                    return;
+                }
+
+                var playlistsByPersistentId = new Dictionary<ulong, ItlRecord>();
+                foreach (ItlRecord playlist in Playlists)
+                {
+                    ulong persistentId = BinaryPrimitives.ReadUInt64LittleEndian(
+                        playlist.Header.AsSpan(PlaylistPersistentIdOffset));
+                    playlistsByPersistentId.TryAdd(persistentId, playlist);
+                }
+                IReadOnlyList<ItlFixedItem> records = ItlTraversal.WalkFixedItems(raw, list, raw.Length);
+                foreach ((ItlFixedItem record, int index) in records.Select((record, index) => (record, index)))
+                {
+                    ulong playlistPersistentId = BinaryPrimitives.ReadUInt64LittleEndian(raw.AsSpan(record.Offset + 16));
+                    uint entryId = BinaryPrimitives.ReadUInt32LittleEndian(raw.AsSpan(record.Offset + 12));
+                    if (!playlistsByPersistentId.TryGetValue(playlistPersistentId, out ItlRecord? playlist))
+                    {
+                        Add("mprh.playlist-link", ItlValidationSeverity.Error,
+                            $"Type-15 record {index} references missing playlist {playlistPersistentId:X16}.");
+                    }
+                    else if (!playlist.Entries.Any(entry => entry.EntryId == entryId))
+                    {
+                        Add("mprh.entry-link", ItlValidationSeverity.Error,
+                            $"Type-15 record {index} references missing entry {entryId} in playlist " +
+                            $"'{PlaylistNameOf(playlist)}'.");
+                    }
+                }
+            }
+            catch (InvalidDataException exception)
+            {
+                Add("mprh.layout", ItlValidationSeverity.Error,
+                    $"Type-15 section is malformed: {exception.Message}");
+            }
         }
 
         void CompareCount(string name, int envelopeValue, int actual)
