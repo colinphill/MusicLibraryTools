@@ -198,11 +198,23 @@ Native one-change and reverse experiments proved:
   state (`hbpl`), play count (`plct`), timestamp (`tstm`), and record version. Eighty of its 81
   decimal outer keys resolve to current Store Item IDs at `mith +168/+428`; the remaining decimal
   key is stale. Its other 1,943 keys are 32-character hexadecimal identities. Exhaustive whole-field
-  MD5 checks resolve only five current identities: four title keys (also episode/filename where equal)
-  and one `Artist - Title` key. Only one entry's `plct`/`tstm` pair aligns with current fixed playback
+  MD5 checks resolve only four distinct current identities, all video title keys (also filenames
+  where equal); several audio tracks produce one of the same digests because their `Artist - Title`
+  text equals that video title, rather than identifying another plist key. Only one entry's
+  `plct`/`tstm` pair aligns with current fixed playback
   state, and none of the 50 nonzero `bktm` values exactly matches the controlled-bookmark word at
   `mith +624` when rounded to milliseconds.
   The bulk of this plist is therefore historical/device state or uses identities no longer present;
+- static inspection resolves the type-514 key generator and importer. The generator first returns a
+  decimal Store Item ID when one exists. Otherwise it creates an MD5 context, feeds selected metadata
+  fields in order, and emits the 16-byte digest as 32 lowercase hexadecimal characters. Its ordinary
+  branch requires the track's name-like UTF-16 field and converts it plus as many as two optional
+  internal UTF-16 fields to UTF-8 before hashing. A special media-flag branch instead hashes two
+  8-bit fields after removing trailing spaces and collapsing duplicate `/` characters except the
+  pair in `://`. The importer uses the same helper: it hashes each plist key for lookup and then
+  directly compares it with the generated per-track key. The 80 live decimal matches and four
+  title/filename MD5 matches in the corpus independently validate both output branches. Exact public
+  names for the two optional ordinary fields and the two special-branch fields remain to be mapped;
 - static inspection of iTunes 12.13.10.3 places `plct`, `hpbl`, `hbpl`, `tstm`, and `bktm` beside
   `com.apple.upp`, `playedState`, `bookmarkTimeInMS`, and `Play Data.plist`. The corresponding import
   routine converts `bktm` seconds to the millisecond bookmark field and maps the other abbreviated
@@ -225,10 +237,8 @@ Still unresolved:
 
 - the valid native update protocol for type-514 playback state and the exact event that clears its
   active DSID while retaining the account DSID at `mhgh +212`;
-- the semantic identity behind the 1,943 hexadecimal type-514 playback-state plist keys (they are
-  not raw or reversed 16-byte windows in the fixed track header; five current identities match MD5
-  of a video filename/title or `Artist - Title`, while the other entries appear stale or use another
-  branch; Store Item ID and StoreIdentifier hashes add no matches);
+- the public/mhoh names of the secondary metadata inputs to the now-proven native MD5 playback-key
+  branches, and reconciliation of the predominantly stale 1,943-key corpus with historical metadata;
 - the exact eligibility meaning and downstream consumer of the newest-ten `mprh` playlist-entry
   history, plus the meanings of other opaque section types.
 
@@ -299,11 +309,11 @@ The final reverse-engineering work should proceed in this order:
    Loved is `mith +703` bit 1 and does not create type 514. Static evidence identifies the plist as
    imported Apple device/Universal Playback Position state. Capturing a fresh payload/DSID pair now
    requires a disposable iPhone/iPod sync or an independently supplied Play Data/PlayCounts artifact.
-4. **Decimal Store Item ID branch resolved; hexadecimal branch remains:** Derive the type-514 key identity with a one-track, one-variable matrix. Change title, artist,
-   filename, path, persistent ID, numeric track ID, library persistent ID, and media kind separately.
-   Test normalized byte encodings and common digest families, and also search the complete decoded
-   body for source identity material. A mapping is proven only when the key changes predictably and
-   returns when the source value is restored.
+4. **Playback key algorithm resolved; secondary field names remain:** Native code proves the decimal
+   Store Item ID branch and the lowercase-MD5 fallback described above. Use a one-track, one-variable
+   device-import matrix to assign public names to the optional UTF-16 fields and special normalized
+   8-bit fields. A field mapping is proven only when the generated key changes predictably and returns
+   when the source value is restored.
 5. **`+108`/`mhgh +124` and `mhgh +212` resolved as DSIDs:** Native code copies the active iTunes
    account value under the literal `dsid` key and caches it at the library field serialized to
    `mhgh +212`; the corpus's active `+124` value and outer low-32-bit mirror are identical. Preserve

@@ -93,7 +93,11 @@ public enum ItlDataType
     /// <summary>The library folder, stored as raw UTF-16 with no string preamble.</summary>
     LibraryFolderPath = 511,
 
-    /// <summary>A plist of per-track playback state keyed by a 128-bit id: bktm, hbpl, plct.</summary>
+    /// <summary>
+    /// Imported per-track playback state. Keys are decimal Store Item IDs when available;
+    /// otherwise native iTunes emits a lowercase MD5 identity derived from selected metadata.
+    /// Values contain bktm, hbpl, plct, tstm, and a record version.
+    /// </summary>
     PlaybackStatePlist = 514,
 
     // Podcast settings ("msph")

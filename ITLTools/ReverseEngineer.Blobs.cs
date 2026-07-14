@@ -140,6 +140,8 @@ public static partial class ReverseEngineer
         TestDecimalPlaybackKeys(library, outerKeys);
         string[] keys = [.. playbackDict.Elements("key").Select(k => k.Value)
             .Where(k => k.Length == 32 && k.All(Uri.IsHexDigit))];
+        Console.WriteLine("native key construction: decimal Store Item ID when present; otherwise lowercase MD5 " +
+                          "over normalized metadata fields (secondary internal field names remain unresolved)");
         var keySet = keys.Select(key => key.ToLowerInvariant()).ToHashSet();
         TestCandidateHashes(library, keySet);
         TestDataObjectHashes(library, keySet);
