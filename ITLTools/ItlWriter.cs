@@ -99,8 +99,9 @@ public static class ItlWriter
     }
 
     /// <summary>
-    /// Type-15 records are timestamped references to playlist entries. Their native deletion
-    /// lifecycle is unproven, so a structural write must not leave one pointing at a removed entry.
+    /// Type-15 records are a bounded native history of timestamped playlist-entry references. The
+    /// exact eligibility event and consumer remain unproven, so a structural write must not leave
+    /// one pointing at a removed entry or attempt to synthesize a replacement.
     /// </summary>
     private static void EnsureMprhReferencesResolve(byte[] body)
     {

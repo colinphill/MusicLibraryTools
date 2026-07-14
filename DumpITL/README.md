@@ -44,6 +44,14 @@ Each item is a timestamped playlist-entry reference: `+8` is a Mac-epoch timesta
 `mtph` entry ID, and the 64-bit value at `+16` is the owning playlist persistent ID. Unknown
 sections remain opaque during writing.
 
+Static inspection of iTunes 12.13.10.3 shows the corresponding in-memory elements are a timestamp
+and two live object links. The serializer resolves those links back to the current entry ID and
+owning playlist persistent ID, explaining why native ID compaction rewrites `+12` without changing
+the other values. The sole runtime producer de-duplicates a matching entry, drops oldest entries
+until fewer than ten remain, appends the current timestamp, excludes several special playlist
+classes, and marks the library dirty. It is therefore a newest-ten eligible playlist-entry history;
+the exact event eligibility and the UI or service consuming the history remain unknown.
+
 Records cache `mhoh` child counts at `+12`; playlists cache `mtph` membership counts at `+16`.
 Strings use a 16-byte preamble and encoding 1 (UTF-16LE), 2 (UTF-8), or 3 (Latin-1). Empty strings
 are valid zero-byte string payloads when the encoding word is recognized.
@@ -202,8 +210,9 @@ Native one-change and reverse experiments proved:
   smart-rule, and rewrite saves, iTunes preserves each timestamp and playlist persistent ID while
   rewriting `mprh +12` whenever it compacts the referenced `mtph` entry IDs. The validator now checks
   both foreign keys, snapshots include all four payload words and hashes, and the writer rejects a
-  structural mutation that would leave a dangling record. The feature-level purpose of this small
-  timestamped Music-entry history remains unknown;
+  structural mutation that would leave a dangling record. Native-code inspection further proves
+  this is a de-duplicated newest-ten history populated by one eligible playlist-insertion event
+  path; its exact eligibility meaning and downstream consumer remain unknown;
 - smart operator `0x0800` evaluates allowed/required media masks: `33/32` selected all 39 music
   videos and `1/32` selected none after native confirmation. Both criteria remained byte-identical
   to the XML export, so the operator is exposed as `AllowedAndRequiredBits`.
@@ -216,8 +225,8 @@ Still unresolved:
   not raw or reversed 16-byte windows in the fixed track header; five current identities match MD5
   of a video filename/title or `Artist - Title`, while the other entries appear stale or use another
   branch; Store Item ID and StoreIdentifier hashes add no matches);
-- the feature-level purpose and creation/removal lifecycle of the ten timestamped `mprh` playlist
-  references, plus the meanings of other opaque section types;
+- the exact eligibility meaning and downstream consumer of the newest-ten `mprh` playlist-entry
+  history, plus the meanings of other opaque section types;
 - the semantic name and positive track representation of Boolean smart field `0xA4`, used by the
   empty distinguished TV & Movies playlist. Native `is 1`/`is 0` probes selected 0/14 local videos,
   so resolving it now requires a purchased/cloud/system-video positive sample or native-code map.

@@ -42,7 +42,11 @@ public static class ItlTraversal
         return true;
     }
 
-    /// <summary>Walks the confirmed fixed 24-byte <c>mprh</c> records in an <c>mlrh</c> list.</summary>
+    /// <summary>
+    /// Walks the confirmed fixed 24-byte <c>mprh</c> records in an <c>mlrh</c> list. Native code
+    /// maintains this as a de-duplicated, newest-ten history, but traversal accepts the declared
+    /// count so older or newer format variants remain inspectable.
+    /// </summary>
     public static IReadOnlyList<ItlFixedItem> WalkFixedItems(byte[] body, ItlChunk list, int end)
     {
         if (!IsFixedSizeList(list))
