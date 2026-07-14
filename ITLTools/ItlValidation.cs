@@ -33,6 +33,7 @@ public sealed partial class ItlDocument
                 $"Envelope declares {Envelope.SectionCount} sections; document contains {Sections.Count}.");
 
         ValidateEnvelopeMirror();
+        ValidatePlaybackTokenMirror();
 
         AggregateCounts current = CurrentCounts;
         if (current == _originalCounts)
@@ -135,6 +136,11 @@ public sealed partial class ItlDocument
             CompareMirror("playlist", 72, Envelope.PlaylistCount);
             CompareMirror("album", 76, Envelope.AlbumCount);
             CompareMirror("artist", 84, Envelope.ArtistCount);
+            if (mirror.Length >= 116)
+            {
+                CompareMirrorWord("word88", 88, Envelope.RawWord88);
+                CompareMirrorWord("modified-date", 112, Envelope.ModifiedDateSeconds);
+            }
 
             int mirroredLength = BinaryPrimitives.ReadInt32LittleEndian(mirror.AsSpan(8));
             int expectedLength = Envelope.RawHeader.Length + Envelope.Body.Length;
@@ -149,6 +155,31 @@ public sealed partial class ItlDocument
                     Add($"mfdh.{name}-count", ItlValidationSeverity.Error,
                         $"mfdh {name} count is {innerValue}; outer envelope declares {outerValue}.");
             }
+
+            void CompareMirrorWord(string name, int offset, uint outerValue)
+            {
+                uint innerValue = BinaryPrimitives.ReadUInt32LittleEndian(mirror.AsSpan(offset));
+                if (innerValue != outerValue)
+                    Add($"mfdh.{name}", ItlValidationSeverity.Error,
+                        $"mfdh {name} is 0x{innerValue:X8}; outer envelope declares 0x{outerValue:X8}.");
+            }
+        }
+
+        void ValidatePlaybackTokenMirror()
+        {
+            ItlSectionNode? section = Sections.FirstOrDefault(candidate => candidate.Type == 12);
+            byte[]? mhgh = section?.Raw;
+            if (mhgh is null || mhgh.Length < 128 || System.Text.Encoding.ASCII.GetString(mhgh, 0, 4) != "mhgh")
+                return;
+
+            int headerLength = BinaryPrimitives.ReadInt32LittleEndian(mhgh.AsSpan(4));
+            if (headerLength < 128)
+                return;
+
+            uint innerValue = BinaryPrimitives.ReadUInt32LittleEndian(mhgh.AsSpan(124));
+            if (innerValue != Envelope.RawWord108)
+                Add("mhgh.playback-token", ItlValidationSeverity.Error,
+                    $"mhgh playback token is 0x{innerValue:X8}; outer envelope declares 0x{Envelope.RawWord108:X8}.");
         }
 
         void CompareCount(string name, int envelopeValue, int actual)

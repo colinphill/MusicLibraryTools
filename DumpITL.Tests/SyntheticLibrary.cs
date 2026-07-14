@@ -46,7 +46,7 @@ internal static class SyntheticLibrary
     public static byte[] CreateBody()
     {
         byte[] mfdh = Chunk("mfdh", new byte[144], headerLength: 144);
-        byte[] mhgh = Chunk("mhgh", [], headerLength: 12, countAt8: 0);
+        byte[] mhgh = Chunk("mhgh", [], headerLength: 128, countAt8: 0);
 
         byte[] albumHeader = RecordHeader("miah", 100, id: 3);
         byte[] artistHeader = RecordHeader("miih", 100, id: 4);

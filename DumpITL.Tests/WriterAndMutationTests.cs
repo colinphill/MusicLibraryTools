@@ -77,6 +77,10 @@ public sealed class WriterAndMutationTests
 
         ItlValidationIssue issue = Assert.Single(document.Validate(), issue => issue.Code == "mfdh.track-count");
         Assert.Equal(ItlValidationSeverity.Error, issue.Severity);
+
+        byte[] mhgh = document.Sections.Single(section => section.Type == 12).Raw!;
+        BinaryPrimitives.WriteUInt32LittleEndian(mhgh.AsSpan(124), 1);
+        Assert.Contains(document.Validate(), issue => issue.Code == "mhgh.playback-token");
     }
 
     [Fact]

@@ -25,11 +25,12 @@ the long-standing `BHUILuilfghuila3` key. Decoded chunks are little-endian.
 | `+88` | unresolved non-aggregate (`100` empty, `5915` full corpus) | preserve |
 | `+92` | maximum encrypted prefix | preserve |
 | `+100` | signed base UTC offset in seconds | preserve |
-| `+108` | type-514 playback-state token, mirrored at `mhgh +120` | preserve |
+| `+108` | type-514 playback-state token, actively mirrored at `mhgh +124` | preserve |
 | `+112` | UTC Mac-epoch library modification time | patch outer and mirror when the body changes |
 
 Section 16 contains `mfdh`, a little-endian semantic mirror of the envelope. Its `+8` word is the
-uncompressed total length including the outer header.
+uncompressed total length including the outer header. Not every same-numbered word is a mirror:
+in particular, `mfdh +108` is zero in the full corpus while outer `+108` is mirrored at `mhgh +124`.
 
 ## Chunk and list conventions
 
@@ -74,9 +75,12 @@ Native one-change and reverse experiments proved:
   Fresh reversible runs held it at `100` with exact binary playlist counts 99, 100, and 101; 101
   tracks sharing one album/artist; 101 distinct albums sharing one artist; and 101 distinct albums
   and artists. Each candidate reopened and returned to its baseline entity counts;
-- `+108` and `mhgh +120` become zero when iTunes removes the type-514 playback-state plist and do
-  not change during metadata or structural mutations; the token is not CRC-32 or Adler-32 of the
-  plist;
+- `+108` and its active `mhgh +124` mirror become zero when iTunes removes the type-514 playback-state
+  plist and do not change during metadata or structural mutations. `mhgh +212` retains the prior
+  token after that native resave, so it is a historical or otherwise inactive copy. The token matches
+  none of CRC-32, CRC-32C, Adler-32,
+  FNV-1/FNV-1a, DJB2, SDBM, Jenkins, Murmur3, or truncated MD5/SHA values over the payload,
+  enclosing `mhoh`, `mhgh`, section, or library-ID-salted variants in either byte order;
 - `mhgh +233` changes from zero to one on the first native library mutation and then stays set;
 - metadata edits advance both library `+112` and track `mith +32`; iTunes may also refresh opaque
   search/index section 20 and track `+656` caches;
@@ -93,7 +97,8 @@ Native one-change and reverse experiments proved:
 Still unresolved:
 
 - the semantic name and allocation policy behind envelope `+88`;
-- the exact algorithm producing the type-514 playback-state token at `+108`/`mhgh +120`;
+- the exact algorithm producing the type-514 playback-state token at `+108`/`mhgh +124`, and the
+  lifecycle of the retained copy at `mhgh +212`;
 - the semantic identity behind the 1,943 hexadecimal type-514 playback-state plist keys (they are
   not raw or reversed 16-byte windows in the fixed track header; five current identities match MD5
   of a video filename/title or `Artist - Title`, while the other entries appear stale or use another
@@ -158,7 +163,7 @@ The final reverse-engineering work should proceed in this order:
    Test normalized byte encodings and common digest families, and also search the complete decoded
    body for source identity material. A mapping is proven only when the key changes predictably and
    returns when the source value is restored.
-5. Classify `+108`/`mhgh +120` from multiple controlled type-514 payload/token pairs. Test whether it
+5. Classify `+108`/`mhgh +124` from multiple controlled type-514 payload/token pairs. Test whether it
    is a checksum of the binary plist, plist XML, enclosing `mhoh`, or surrounding `mhgh` ranges; a
    revision or count; a random value; or a library-specific token. Until reproduced, preserve the
    field and reject playback-state mutations that would require recomputing it.

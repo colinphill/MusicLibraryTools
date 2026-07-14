@@ -1,5 +1,6 @@
 using System.Text;
 using System.Buffers.Binary;
+using System.Numerics;
 using System.Security.Cryptography;
 using System.Xml.Linq;
 
@@ -97,14 +98,15 @@ public static partial class ReverseEngineer
         }
 
         ItlChunk mhgh = ItlChunk.Read(body, section.Chunk.BodyOffset);
-        ItlDataObject? state = ItlChunk.Walk(body, mhgh.HeaderEnd, section.Chunk.EndOffset)
-            .Where(c => c.Signature == "mhoh" && c.Type == (int)ItlDataType.PlaybackStatePlist)
-            .Select(c => ItlDataObject.Parse(body, c)).FirstOrDefault();
-        if (state is null)
+        ItlChunk[] stateChunks = [.. ItlChunk.Walk(body, mhgh.HeaderEnd, section.Chunk.EndOffset)
+            .Where(c => c.Signature == "mhoh" && c.Type == (int)ItlDataType.PlaybackStatePlist)];
+        if (stateChunks.Length == 0)
         {
             Console.WriteLine("mhgh has no playback-state plist");
             return;
         }
+        ItlChunk stateChunk = stateChunks[0];
+        ItlDataObject state = ItlDataObject.Parse(body, stateChunk);
 
         string text = Encoding.UTF8.GetString(state.Raw);
         int xmlStart = text.IndexOf("<?xml", StringComparison.Ordinal);
@@ -119,6 +121,7 @@ public static partial class ReverseEngineer
         Console.WriteLine($"envelope +108=0x{library.Envelope.RawWord108:X8}; " +
                           $"payload crc32=0x{Crc32(state.Raw):X8} adler32=0x{Adler32(state.Raw):X8}; " +
                           $"xml crc32=0x{Crc32(xmlBytes):X8} adler32=0x{Adler32(xmlBytes):X8}");
+        TestPlaybackTokenCandidates(library, section, mhgh, stateChunk, state.Raw);
         XElement playbackDict = document.Root!.Element("dict")!;
         SummarizePlaybackPlist(playbackDict);
         string[] outerKeys = [.. playbackDict.Elements("key").Select(key => key.Value)];
@@ -228,6 +231,178 @@ public static partial class ReverseEngineer
             if (current.Samples.Count < 4) current.Samples.Add(value);
             fields[(name, type)] = current;
         }
+    }
+
+    private static void TestPlaybackTokenCandidates(
+        ItlLibrary library,
+        ItlSection section,
+        ItlChunk mhgh,
+        ItlChunk stateChunk,
+        byte[] payload)
+    {
+        byte[] body = library.Envelope.Body;
+        byte[] persistentIdLittle = new byte[8];
+        byte[] persistentIdBig = new byte[8];
+        BinaryPrimitives.WriteUInt64LittleEndian(persistentIdLittle, library.Envelope.LibraryPersistentId);
+        BinaryPrimitives.WriteUInt64BigEndian(persistentIdBig, library.Envelope.LibraryPersistentId);
+
+        (string Name, byte[] Bytes)[] ranges =
+        [
+            ("payload", payload),
+            ("mhoh", body.AsSpan(stateChunk.Offset, stateChunk.TotalLength).ToArray()),
+            ("mhgh header", body.AsSpan(mhgh.Offset, mhgh.HeaderLength).ToArray()),
+            ("mhgh record", body.AsSpan(mhgh.Offset, section.Chunk.EndOffset - mhgh.Offset).ToArray()),
+            ("msdh section", body.AsSpan(section.Chunk.Offset, section.Chunk.TotalLength).ToArray()),
+            ("library-id LE + payload", Join(persistentIdLittle, payload)),
+            ("payload + library-id LE", Join(payload, persistentIdLittle)),
+            ("library-id BE + payload", Join(persistentIdBig, payload)),
+            ("payload + library-id BE", Join(payload, persistentIdBig)),
+        ];
+
+        uint token = library.Envelope.RawWord108;
+        uint reversedToken = BinaryPrimitives.ReverseEndianness(token);
+        var matches = new List<string>();
+        foreach ((string rangeName, byte[] bytes) in ranges)
+        {
+            foreach ((string algorithm, uint value) in HashCandidates(bytes))
+            {
+                if (value == token) matches.Add($"{rangeName}: {algorithm}");
+                else if (value == reversedToken) matches.Add($"{rangeName}: {algorithm} (byte-reversed)");
+            }
+        }
+
+        if (matches.Count == 0)
+            Console.WriteLine("+108 token candidates: no standard 32-bit or truncated digest match");
+        else
+            foreach (string match in matches) Console.WriteLine($"+108 token candidate MATCH: {match}");
+
+        static byte[] Join(byte[] left, byte[] right)
+        {
+            byte[] result = new byte[left.Length + right.Length];
+            left.CopyTo(result, 0);
+            right.CopyTo(result, left.Length);
+            return result;
+        }
+    }
+
+    private static IEnumerable<(string Name, uint Value)> HashCandidates(byte[] bytes)
+    {
+        yield return ("CRC-32", (uint)Crc32(bytes));
+        yield return ("CRC-32C", Crc32C(bytes));
+        yield return ("Adler-32", (uint)Adler32(bytes));
+        yield return ("FNV-1", Fnv1(bytes));
+        yield return ("FNV-1a", Fnv1A(bytes));
+        yield return ("DJB2", Djb2(bytes));
+        yield return ("SDBM", Sdbm(bytes));
+        yield return ("Jenkins", Jenkins(bytes));
+        yield return ("Murmur3", Murmur3(bytes));
+
+        foreach ((string name, byte[] digest) in new[]
+                 {
+                     ("MD5", MD5.HashData(bytes)),
+                     ("SHA-1", SHA1.HashData(bytes)),
+                     ("SHA-256", SHA256.HashData(bytes)),
+                 })
+        {
+            yield return ($"{name} first LE", BinaryPrimitives.ReadUInt32LittleEndian(digest));
+            yield return ($"{name} first BE", BinaryPrimitives.ReadUInt32BigEndian(digest));
+            yield return ($"{name} last LE", BinaryPrimitives.ReadUInt32LittleEndian(digest.AsSpan(digest.Length - 4)));
+            yield return ($"{name} last BE", BinaryPrimitives.ReadUInt32BigEndian(digest.AsSpan(digest.Length - 4)));
+        }
+    }
+
+    private static uint Crc32C(byte[] bytes)
+    {
+        uint crc = uint.MaxValue;
+        foreach (byte value in bytes)
+        {
+            crc ^= value;
+            for (int bit = 0; bit < 8; bit++)
+                crc = (crc >> 1) ^ (0x82F63B78u & (uint)-(int)(crc & 1));
+        }
+        return ~crc;
+    }
+
+    private static uint Fnv1(byte[] bytes)
+    {
+        uint hash = 2166136261;
+        foreach (byte value in bytes) hash = unchecked(hash * 16777619) ^ value;
+        return hash;
+    }
+
+    private static uint Fnv1A(byte[] bytes)
+    {
+        uint hash = 2166136261;
+        foreach (byte value in bytes) hash = unchecked((hash ^ value) * 16777619);
+        return hash;
+    }
+
+    private static uint Djb2(byte[] bytes)
+    {
+        uint hash = 5381;
+        foreach (byte value in bytes) hash = unchecked(hash * 33 + value);
+        return hash;
+    }
+
+    private static uint Sdbm(byte[] bytes)
+    {
+        uint hash = 0;
+        foreach (byte value in bytes) hash = unchecked(value + (hash << 6) + (hash << 16) - hash);
+        return hash;
+    }
+
+    private static uint Jenkins(byte[] bytes)
+    {
+        uint hash = 0;
+        foreach (byte value in bytes)
+        {
+            hash = unchecked(hash + value);
+            hash = unchecked(hash + (hash << 10));
+            hash ^= hash >> 6;
+        }
+        hash = unchecked(hash + (hash << 3));
+        hash ^= hash >> 11;
+        return unchecked(hash + (hash << 15));
+    }
+
+    private static uint Murmur3(byte[] bytes)
+    {
+        const uint c1 = 0xCC9E2D51;
+        const uint c2 = 0x1B873593;
+        uint hash = 0;
+        int position = 0;
+        while (position + 4 <= bytes.Length)
+        {
+            uint block = BinaryPrimitives.ReadUInt32LittleEndian(bytes.AsSpan(position));
+            block = unchecked(block * c1);
+            block = BitOperations.RotateLeft(block, 15);
+            block = unchecked(block * c2);
+            hash ^= block;
+            hash = BitOperations.RotateLeft(hash, 13);
+            hash = unchecked(hash * 5 + 0xE6546B64);
+            position += 4;
+        }
+
+        uint tail = 0;
+        int remaining = bytes.Length - position;
+        if (remaining >= 3) tail ^= (uint)bytes[position + 2] << 16;
+        if (remaining >= 2) tail ^= (uint)bytes[position + 1] << 8;
+        if (remaining >= 1)
+        {
+            tail ^= bytes[position];
+            tail = unchecked(tail * c1);
+            tail = BitOperations.RotateLeft(tail, 15);
+            tail = unchecked(tail * c2);
+            hash ^= tail;
+        }
+
+        hash ^= (uint)bytes.Length;
+        hash ^= hash >> 16;
+        hash = unchecked(hash * 0x85EBCA6B);
+        hash ^= hash >> 13;
+        hash = unchecked(hash * 0xC2B2AE35);
+        hash ^= hash >> 16;
+        return hash;
     }
 
     private static void TestCandidateHashes(ItlLibrary library, HashSet<string> keys)

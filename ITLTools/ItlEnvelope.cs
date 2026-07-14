@@ -30,7 +30,7 @@ public sealed class ItlEnvelope
 
     /// <summary>
     /// Word 88 is a confirmed non-aggregate with unresolved semantics. Word 108 is the token
-    /// mirrored at mhgh +120 for the optional type-514 playback-state plist.
+    /// mirrored at mhgh +124 for the optional type-514 playback-state plist.
     /// </summary>
     public uint RawWord88 { get; init; }
     public uint RawWord108 { get; init; }
