@@ -68,7 +68,7 @@ Playlist `mhoh` type 102 is the 112-byte big-endian Smart Info preference block.
 updating, rule matching, checked-only filtering, limit enable/unit/size, sort field, and sort
 direction. Type 101 is Smart Criteria: a recursive big-endian `SLst` rule set with a 136-byte header,
 56-byte rule headers, and typed values. Confirmed value families are UTF-16BE strings, 68-byte
-integer/boolean/date/media/cloud/location records, 8-byte playlist persistent IDs, and nested rule
+integer/boolean/date/media/cloud/location records, 68-byte playlist references, and nested rule
 sets. Field IDs and operator bits agree with the independently implemented
 [rclancey/itunes smart-playlist parser](https://github.com/rclancey/itunes/blob/master/loader/smart.go)
 and the older [libgpod smart-playlist documentation](https://tmz.fedorapeople.org/docs/libgpod/libgpod-Smart-Playlists.html).
@@ -86,8 +86,15 @@ nested rule `Genre contains "Country"`, and recalculated its membership. It also
 Info live-updating toggle and a factory-created `Play Count > 5` integer rule. The latter re-exported
 to XML with Smart Info and Smart Criteria byte-identical to the resaved ITL blobs. A built-in Music
 rule edit was accepted but regenerated to the canonical Music mask on save, proving distinguished
-built-ins are system-owned and should not be used as editable-rule templates. Remaining Windows-only
-unknowns in the corpus are field `0xA4` on TV & Movies and operator `0x0800` on Rentals.
+built-ins are system-owned and should not be used as editable-rule templates. The remaining
+Windows-only unknown in the corpus is field `0xA4` on TV & Movies.
+
+Operator `0x0800` is now modeled as `AllowedAndRequiredBits`. Two guarded native recalculations used
+the same user smart playlist and complementary media masks. Operands `33/32` selected exactly the
+39 music videos; operands `1/32` selected none. iTunes retained each rule and exported byte-identical
+criteria. Together with the independent libgpod description, this proves a media kind matches when
+it uses only bits from the first mask and intersects the second mask. Reopening alone preserved the
+old membership snapshot, while opening Edit Smart Playlist and clicking OK triggered recalculation.
 
 Native creation and reopen proved playlist-reference rules use a 68-byte comparison value rather
 than a bare 8-byte persistent ID. The referenced playlist ID is duplicated at value offsets `+0`
@@ -175,6 +182,9 @@ Native one-change and reverse experiments proved:
   both foreign keys, snapshots include all four payload words and hashes, and the writer rejects a
   structural mutation that would leave a dangling record. The feature-level purpose of this small
   timestamped Music-entry history remains unknown;
+- smart operator `0x0800` evaluates allowed/required media masks: `33/32` selected all 39 music
+  videos and `1/32` selected none after native confirmation. Both criteria remained byte-identical
+  to the XML export, so the operator is exposed as `AllowedAndRequiredBits`.
 
 Still unresolved:
 
@@ -185,15 +195,18 @@ Still unresolved:
   of a video filename/title or `Artist - Title`, while the other entries appear stale or use another
   branch; Store Item ID and StoreIdentifier hashes add no matches);
 - the feature-level purpose and creation/removal lifecycle of the ten timestamped `mprh` playlist
-  references, plus the meanings of other opaque section types.
+  references, plus the meanings of other opaque section types;
+- smart field `0xA4` used only by the empty distinguished TV & Movies playlist, and the fixed-header
+  flags required to convert an arbitrary manual playlist into a smart playlist.
 
 ## Commands
 
 Use `validate` for structural/referential checks, `compare` for structure-aligned before/after
 diffs, and `snapshot` for deterministic JSON containing envelope/mirror values, parsed counts,
 numeric IDs, section layout, `mhgh` candidates, playback-state hashes, and diagnostics. The `re`
-family inventories fields, sections, IDs, blobs, aggregates, `mprh` links, and playback-state
-correlations. Research snapshot schema 2 includes a nullable type-15 record matrix. Run
+family inventories fields, sections, IDs, blobs, aggregates, `mprh` links, playback-state
+correlations, and `smartmembers` membership/header candidates. Research snapshot schema 2 includes
+a nullable type-15 record matrix. Run
 the executable without arguments for the complete command list.
 
 Private corpus regressions use `DUMPITL_CORPUS_ITL` and `DUMPITL_CORPUS_XML`. Native acceptance uses
@@ -218,6 +231,8 @@ pre-tagged fixtures. Playback probes include `SetFirstTrackBookmark`, `SetFirstT
 clipboard. `ManualCreateSmartPlaylist` waits for one specifically named native smart playlist; the
 harness captures it, reopens it, removes it through COM, and records every phase. Pass
 `-ManualInstructions` to describe a one-variable native rule such as `Playlist is Cafe Disco`.
+`ManualRefreshSmartPlaylist` waits for confirming an existing rule to change its COM membership,
+which distinguishes native rule evaluation from a merely preserved membership snapshot.
 
 On iTunes 12.13.10.3, no-op and metadata-only rewrites of the full corpus opened successfully. In
 the disposable empty-library laboratory, writer-created playlists, tracks, albums, artists, foreign
@@ -261,8 +276,9 @@ The final reverse-engineering work should proceed in this order:
    new writer-created smart playlist cloned from a native smart template, with explicit initial
    membership; native creation proves the type 101/102 child keys are zero. A native
    playlist-reference capture established its 68-byte value layout, and the corrected typed factory
-   survived a native re-save with byte-identical XML blobs and membership. Continue one-variable
-   experiments for the two unknown Windows-only codes. Arbitrary manual-to-smart conversion remains
+   survived a native re-save with byte-identical XML blobs and membership. Complementary native
+   evaluations resolve operator `0x0800` as allowed/required media masks. Continue one-variable
+   experiments for field `0xA4`. Arbitrary manual-to-smart conversion remains
    unsupported until its header flags are proven.
 7. Promote findings into writer behavior only after repeated native evidence. Add a synthetic
    fixture and regression test for every proven rule, keep unresolved bytes opaque, and make an

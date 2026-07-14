@@ -13,7 +13,7 @@ param(
 
     [string]$RunName,
 
-    [ValidateSet('None', 'CreatePlaylist', 'CreatePlaylistsToCount', 'ManualCreateSmartPlaylist',
+    [ValidateSet('None', 'CreatePlaylist', 'CreatePlaylistsToCount', 'ManualCreateSmartPlaylist', 'ManualRefreshSmartPlaylist',
         'DeletePlaylist', 'SetFirstTrackName',
         'SetFirstTrackBookmark', 'SetFirstTrackPlayCount', 'SetFirstTrackRating',
         'SetFirstTrackUnplayed', 'PlayFirstTrackAtPosition', 'ImportFile', 'ImportFilesToCount',
@@ -365,6 +365,38 @@ function Invoke-ItunesExperiment(
             if ($null -eq $playlist) { throw "Timed out waiting for native smart playlist '$value'." }
             [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($playlist)
             Write-Host "Captured native smart playlist '$value'."
+        }
+        'ManualRefreshSmartPlaylist' {
+            if ([string]::IsNullOrWhiteSpace($value)) {
+                throw 'ManualRefreshSmartPlaylist requires -ExperimentValue containing the exact playlist name.'
+            }
+            $playlist = Find-ItunesPlaylist $application $value
+            if ($null -eq $playlist) { throw "Smart playlist '$value' was not found." }
+            try {
+                $tracks = $playlist.Tracks
+                try { $initialCount = [int]$tracks.Count }
+                finally { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($tracks) }
+            }
+            finally { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($playlist) }
+            Write-Host "In iTunes, select '$value', choose File > Edit Smart Playlist, and click OK without changing the rule."
+            Write-Host "The harness is waiting for its membership to change from $initialCount."
+            $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+            $currentCount = $initialCount
+            while ($currentCount -eq $initialCount -and [DateTime]::UtcNow -lt $deadline) {
+                Start-Sleep -Milliseconds 500
+                $playlist = Find-ItunesPlaylist $application $value
+                if ($null -eq $playlist) { continue }
+                try {
+                    $tracks = $playlist.Tracks
+                    try { $currentCount = [int]$tracks.Count }
+                    finally { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($tracks) }
+                }
+                finally { [void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($playlist) }
+            }
+            if ($currentCount -eq $initialCount) {
+                throw "Timed out waiting for smart playlist '$value' membership to change from $initialCount."
+            }
+            Write-Host "Smart playlist '$value' membership changed from $initialCount to $currentCount."
         }
         'DeletePlaylist' {
             if ([string]::IsNullOrWhiteSpace($value)) { throw 'DeletePlaylist requires -ExperimentValue.' }

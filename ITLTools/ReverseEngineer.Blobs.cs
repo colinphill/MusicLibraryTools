@@ -759,7 +759,7 @@ public static partial class ReverseEngineer
             ItlSmartPlaylist smart = playlist.Smart!;
             Console.WriteLine($"{Clip(name, 28),-28} {Compare(smart.Info.Raw, expected.Info),24}  " +
                               $"{Compare(smart.Criteria.Raw, expected.Criteria),26}");
-            Console.WriteLine($"  info: live={smart.Info.LiveUpdating} match={smart.Info.MatchRules} " +
+            Console.WriteLine($"  info: members={playlist.TrackIds.Count:N0} live={smart.Info.LiveUpdating} match={smart.Info.MatchRules} " +
                               $"checked={smart.Info.CheckedOnly} limit={smart.Info.HasLimit}" +
                               (smart.Info.HasLimit
                                   ? $" {smart.Info.LimitSize} {smart.Info.LimitUnit}, sort={smart.Info.SortField}, descending={smart.Info.Descending}"

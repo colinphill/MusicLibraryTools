@@ -63,7 +63,8 @@ public sealed class SmartPlaylistTests
         byte[] unknown = Enumerable.Range(0, 17).Select(value => (byte)value).ToArray();
         byte[] criteria = Criteria(ItlSmartConjunction.All,
             Rule(ItlSmartField.DateAdded, ItlSmartSign.PositiveInteger, ItlSmartOperator.Within, relative),
-            Rule((ItlSmartField)0xA4, ItlSmartSign.PositiveInteger, (ItlSmartOperator)0x0800, unknown));
+            Rule((ItlSmartField)0xA4, ItlSmartSign.PositiveInteger,
+                ItlSmartOperator.AllowedAndRequiredBits, unknown));
 
         ItlSmartPlaylist smart = ItlSmartPlaylist.Parse(new byte[112], criteria);
 
@@ -142,6 +143,22 @@ public sealed class SmartPlaylistTests
         Assert.Equal(1u, BinaryPrimitives.ReadUInt32BigEndian(parsed.Criteria.Rules[3].RawValue.AsSpan(44)));
         Assert.True(parsed.Info.HasLimit);
         Assert.Equal(50u, parsed.Info.LimitSize);
+    }
+
+    [Fact]
+    public void MediaKindFactoryPreservesDistinctExperimentalOperands()
+    {
+        ItlSmartRule rule = ItlSmartRule.CreateMediaKindValues(33, 32, ItlSmartOperator.AllowedAndRequiredBits);
+        ItlSmartPlaylist smart = ItlSmartPlaylist.Create(
+            ItlSmartCriteria.Create(ItlSmartConjunction.All, rule));
+
+        (byte[] info, byte[] criteria) = smart.Encode();
+        ItlSmartRule parsed = ItlSmartPlaylist.Parse(info, criteria).Criteria.Rules.Single();
+
+        Assert.Equal(ItlSmartField.MediaKind, parsed.Field);
+        Assert.Equal(ItlSmartOperator.AllowedAndRequiredBits, parsed.Operator);
+        Assert.Equal([33L, 32L, 0L], parsed.IntegerValues);
+        Assert.Equal(68, parsed.RawValue.Length);
     }
 
     [Fact]

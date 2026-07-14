@@ -31,6 +31,8 @@ public enum ItlSmartOperator : ushort
     Between = 0x0100,
     Within = 0x0200,
     BinaryAnd = 0x0400,
+    /// <summary>The value must use only the first mask's bits and intersect the second mask.</summary>
+    AllowedAndRequiredBits = 0x0800,
 }
 
 public enum ItlSmartField : uint
@@ -173,6 +175,15 @@ public sealed class ItlSmartRule
     public static ItlSmartRule CreateMediaKind(long mask, ItlSmartOperator operation = ItlSmartOperator.Is,
         bool negate = false) => CreateNumeric(
         ItlSmartField.MediaKind, operation, ItlSmartValueKind.MediaKind, [mask, mask, 0], negate);
+
+    /// <summary>
+    /// Creates a media-kind comparison with separate allowed and required masks. For
+    /// <see cref="ItlSmartOperator.AllowedAndRequiredBits"/>, a value must contain no bits outside
+    /// <paramref name="allowedMask"/> and must intersect <paramref name="requiredMask"/>.
+    /// </summary>
+    public static ItlSmartRule CreateMediaKindValues(long allowedMask, long requiredMask, ItlSmartOperator operation,
+        bool negate = false) => CreateNumeric(
+        ItlSmartField.MediaKind, operation, ItlSmartValueKind.MediaKind, [allowedMask, requiredMask, 0], negate);
 
     public static ItlSmartRule CreateLocation(long value, bool negate = false) => CreateNumeric(
         ItlSmartField.Location, ItlSmartOperator.BinaryAnd, ItlSmartValueKind.Location, [value, value, 0], negate);

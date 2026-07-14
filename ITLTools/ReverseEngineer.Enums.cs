@@ -5,6 +5,95 @@ namespace iTunes.Binary;
 public static partial class ReverseEngineer
 {
     /// <summary>
+    /// Correlates a materialized smart-playlist membership snapshot with otherwise opaque bytes in
+    /// the fixed track header. This does not claim that correlated bytes implement the criteria;
+    /// it ranks candidates for controlled native experiments.
+    /// </summary>
+    public static void SmartMembership(ItlLibrary library, string playlistName)
+    {
+        ItlPlaylist[] matches = [.. library.Playlists.Where(playlist =>
+            playlist.Smart is not null && string.Equals(playlist.Name, playlistName, StringComparison.OrdinalIgnoreCase))];
+        if (matches.Length == 0)
+        {
+            Console.WriteLine($"no smart playlist named '{playlistName}'");
+            return;
+        }
+        if (matches.Length > 1)
+        {
+            Console.WriteLine($"{matches.Length} smart playlists are named '{playlistName}'; use a unique name");
+            return;
+        }
+
+        ItlPlaylist playlist = matches[0];
+        var memberIds = playlist.TrackIds.ToHashSet();
+        ItlTrack[] members = [.. library.Tracks.Where(track => memberIds.Contains(track.Id))];
+        ItlTrack[] others = [.. library.Tracks.Where(track => !memberIds.Contains(track.Id))];
+        int missing = memberIds.Count - members.Select(track => track.Id).Distinct().Count();
+        Console.WriteLine($"{playlist.Name}: {playlist.TrackIds.Count:N0} entries, {memberIds.Count:N0} distinct IDs, " +
+                          $"{members.Length:N0} resolved tracks, {missing:N0} missing IDs");
+
+        if (members.Length == 0)
+        {
+            Console.WriteLine("no materialized members to correlate");
+            return;
+        }
+        if (others.Length == 0)
+        {
+            Console.WriteLine("every track is a member; there is no comparison population");
+            return;
+        }
+
+        int length = library.Tracks.Min(track => track.Header.Length);
+        var bytes = new List<(int Offset, byte[] Members, byte[] Others)>();
+        for (int offset = 12; offset < length; offset++)
+        {
+            byte[] memberValues = [.. members.Select(track => track.Header[offset]).Distinct().Order()];
+            byte[] otherValues = [.. others.Select(track => track.Header[offset]).Distinct().Order()];
+            if (!memberValues.Intersect(otherValues).Any())
+                bytes.Add((offset, memberValues, otherValues));
+        }
+
+        Console.WriteLine($"byte-value partitions: {bytes.Count:N0}");
+        foreach (var candidate in bytes.Take(32))
+            Console.WriteLine($"  +{candidate.Offset,-4} members={Values(candidate.Members)} others={Values(candidate.Others)}");
+        if (bytes.Count > 32)
+            Console.WriteLine($"  ... {bytes.Count - 32:N0} more");
+
+        var bits = new List<(int Offset, int Bit, bool Value, int FalsePositives)>();
+        for (int offset = 12; offset < length; offset++)
+        {
+            for (int bit = 0; bit < 8; bit++)
+            {
+                int mask = 1 << bit;
+                bool value = (members[0].Header[offset] & mask) != 0;
+                if (members.Any(track => ((track.Header[offset] & mask) != 0) != value))
+                    continue;
+                int falsePositives = others.Count(track => ((track.Header[offset] & mask) != 0) == value);
+                if (falsePositives != others.Length)
+                    bits.Add((offset, bit, value, falsePositives));
+            }
+        }
+
+        Console.WriteLine("strongest constant-bit candidates:");
+        foreach (var candidate in bits.OrderBy(candidate => candidate.FalsePositives)
+                                      .ThenBy(candidate => candidate.Offset)
+                                      .ThenBy(candidate => candidate.Bit)
+                                      .Take(32))
+        {
+            double rate = 100.0 * candidate.FalsePositives / others.Length;
+            Console.WriteLine($"  +{candidate.Offset,-4} bit {candidate.Bit} = {(candidate.Value ? 1 : 0)}  " +
+                              $"also true for {candidate.FalsePositives:N0}/{others.Length:N0} others ({rate:N2}%)");
+        }
+
+        static string Values(byte[] values)
+        {
+            const int limit = 12;
+            string text = string.Join(",", values.Take(limit));
+            return values.Length <= limit ? $"{{{text}}}" : $"{{{text},...}} ({values.Length} values)";
+        }
+    }
+
+    /// <summary>
     /// Some booleans are not bits but values of an enum: "Movie", "TV Show" and "Music Video" are
     /// all one media kind. Finds any byte whose *value* perfectly predicts each boolean, meaning no
     /// value of that byte appears on both a true and a false track.

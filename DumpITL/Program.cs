@@ -36,6 +36,7 @@ if (args.Length < 2)
           re sections|mprh|plists|fk|childkeys|playlistheaders|mhgh|playback|links|aggregates|envelope
           re blob|values <mhohType>          inspect data-object values
           re smart|predict|kinds <Library.xml>
+          re smartmembers <playlistName>     correlate a smart membership snapshot with track headers
 
         Write (prototype -- always work on a copy, with iTunes closed)
           roundtrip <out.itl>               re-encode unchanged, prove the body survives
@@ -46,6 +47,8 @@ if (args.Length < 2)
           smart-add <template> <name> <out.itl>     clone a smart playlist with factory criteria
           smart-ref-add <template> <referenced> <name> <out.itl>
                                              create a smart playlist referencing another playlist
+          smart-mask-probe <playlist> <first> <second> <out.itl>
+                                             write a differential media-kind operator 0x0800 probe
           demo <out.itl>                    exercise every add/remove/edit operation
         """);
     return 1;
@@ -58,7 +61,7 @@ int required = command switch
 {
     "probe" or "discover" or "plprobe" or "roundtrip" or "cloud" or "demo" or "verify" or "compare" => 3,
     "playlist-add" or "smart-add" or "track-add" or "track-add-new" => 5,
-    "smart-ref-add" => 6,
+    "smart-ref-add" or "smart-mask-probe" => 6,
     "re" => 3,
     "set" => 6,
     _ => 2,
@@ -146,6 +149,10 @@ switch (command)
         SmartReferenceAdd(itl, args[2], args[3], args[4], args[5]);
         break;
 
+    case "smart-mask-probe":
+        SmartMaskProbe(itl, args[2], ParseInteger(args[3]), ParseInteger(args[4]), args[5]);
+        break;
+
     case "track-add":
         TrackAdd(itl, args[2], args[3], args[4], addEntities: false);
         break;
@@ -184,6 +191,7 @@ switch (command)
             case "mhgh": ReverseEngineer.Mhgh(ItlLibrary.Load(itl)); break;
             case "playback": ReverseEngineer.PlaybackLinks(ItlLibrary.Load(itl)); break;
             case "smart": ReverseEngineer.Smart(ItlLibrary.Load(itl), args[3]); break;
+            case "smartmembers": ReverseEngineer.SmartMembership(ItlLibrary.Load(itl), args[3]); break;
             case "links": ReverseEngineer.Links(ItlLibrary.Load(itl)); break;
             case "predict": ReverseEngineer.Predict(ItlLibrary.Load(itl), args[3]); break;
             case "kinds": ReverseEngineer.Kinds(ItlLibrary.Load(itl), args[3]); break;
@@ -695,6 +703,37 @@ static void SmartReferenceAdd(string itl, string templateName, string referenced
                       $"referencing '{referencedName}' ({initialTrackIds.Length:N0} members)");
     Console.WriteLine($"wrote {outPath} ({new FileInfo(outPath).Length:N0} bytes)");
 }
+
+/// <summary>Writes a disposable, differentiating probe for native media-kind operator 0x0800.</summary>
+static void SmartMaskProbe(string itl, string playlistName, long first, long second, string outPath)
+{
+    ItlDocument document = ItlDocument.Load(itl);
+    ItlRecord playlist = document.FindPlaylist(playlistName)
+        ?? throw new InvalidOperationException($"No playlist named '{playlistName}'.");
+    ItlSmartPlaylist existing = ItlDocument.SmartPlaylistOf(playlist)
+        ?? throw new InvalidOperationException($"Playlist '{playlistName}' is not smart.");
+    ItlSmartCriteria criteria = ItlSmartCriteria.Create(ItlSmartConjunction.All,
+        ItlSmartRule.CreateNested(ItlSmartCriteria.Create(ItlSmartConjunction.Any,
+            ItlSmartRule.CreateMediaKind(1), ItlSmartRule.CreateMediaKind(32))),
+        ItlSmartRule.CreateNested(ItlSmartCriteria.Create(ItlSmartConjunction.All,
+            ItlSmartRule.CreateMediaKindValues(first, second, ItlSmartOperator.AllowedAndRequiredBits))));
+    document.SetSmartPlaylist(playlist, new ItlSmartPlaylist { Info = existing.Info, Criteria = criteria });
+    document.Save(outPath);
+
+    ItlDocument written = ItlDocument.Load(outPath);
+    IReadOnlyList<ItlValidationIssue> diagnostics = written.Validate();
+    foreach (ItlValidationIssue issue in diagnostics)
+        Console.WriteLine($"{issue.Severity,-7} {issue.Code}: {issue.Message}");
+    if (diagnostics.Any(issue => issue.Severity == ItlValidationSeverity.Error))
+        throw new InvalidDataException("The media-kind operator probe failed validation.");
+
+    Console.WriteLine($"changed smart playlist '{playlistName}' to operator 0x0800 operands {first}/{second}");
+    Console.WriteLine($"wrote {outPath} ({new FileInfo(outPath).Length:N0} bytes)");
+}
+
+static long ParseInteger(string value) => value.StartsWith("0x", StringComparison.OrdinalIgnoreCase)
+    ? Convert.ToInt64(value[2..], 16)
+    : long.Parse(value);
 
 /// <summary>Clones a track and points it at a real media file for native-iTunes research.</summary>
 static void TrackAdd(string itl, string mediaPath, string title, string outPath, bool addEntities)
