@@ -24,7 +24,8 @@ public static partial class ReverseEngineer
         ItlDocument document = ItlDocument.Parse(library.Envelope);
         ItlChunk list = ItlChunk.Read(body, section.Chunk.BodyOffset);
         IReadOnlyList<ItlFixedItem> records = ItlTraversal.WalkFixedItems(body, list, section.Chunk.EndOffset);
-        Console.WriteLine($"type-15 {list.Signature}: {records.Count:N0} fixed {ItlTraversal.MprhLength}-byte records");
+        Console.WriteLine($"type-15 {list.Signature}: {records.Count:N0} fixed {ItlTraversal.MprhLength}-byte " +
+                          "Windows Resume Playing history records");
         Console.WriteLine(" idx       +8 / Mac date          +12       persistent-id       model matches  payload GUID");
         foreach (ItlFixedItem record in records)
         {

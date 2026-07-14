@@ -47,10 +47,17 @@ sections remain opaque during writing.
 Static inspection of iTunes 12.13.10.3 shows the corresponding in-memory elements are a timestamp
 and two live object links. The serializer resolves those links back to the current entry ID and
 owning playlist persistent ID, explaining why native ID compaction rewrites `+12` without changing
-the other values. The sole runtime producer de-duplicates a matching entry, drops oldest entries
-until fewer than ten remain, appends the current timestamp, excludes several special playlist
-classes, and marks the library dirty. It is therefore a newest-ten eligible playlist-entry history;
-the exact event eligibility and the UI or service consuming the history remain unknown.
+the other values. The sole runtime producer is called from the playback-event handler. It requires
+two native eligibility bits, rejects another, excludes several special playlist classes,
+de-duplicates the current entry, drops oldest entries until fewer than ten remain, appends the
+current timestamp, and marks the library dirty.
+
+The consumer constructs the Windows taskbar Jump List's **Resume Playing** category. It instantiates
+the system `EnumerableObjectCollection` COM class, walks the history newest-first, and creates one
+shell link per surviving entry with `/PlayItem <playlist-id> <entry-id>`, the track title, and a
+media-kind icon. Invoking a link removes its old history instance before playback can refresh it.
+Thus `mprh` is the persistent Windows Resume Playing Jump List history, not a generic playlist-edit
+log. The human-readable meanings of the producer's internal eligibility bits remain unknown.
 
 Records cache `mhoh` child counts at `+12`; playlists cache `mtph` membership counts at `+16`.
 Strings use a 16-byte preamble and encoding 1 (UTF-16LE), 2 (UTF-8), or 3 (Latin-1). Empty strings
@@ -230,8 +237,9 @@ Native one-change and reverse experiments proved:
   rewriting `mprh +12` whenever it compacts the referenced `mtph` entry IDs. The validator now checks
   both foreign keys, snapshots include all four payload words and hashes, and the writer rejects a
   structural mutation that would leave a dangling record. Native-code inspection further proves
-  this is a de-duplicated newest-ten history populated by one eligible playlist-insertion event
-  path; its exact eligibility meaning and downstream consumer remain unknown;
+  this is the de-duplicated newest-ten Windows **Resume Playing** Jump List history populated by the
+  playback-event path. Native code creates `/PlayItem` shell links from these entries and removes an
+  old entry when its link is invoked. The exact names of its internal eligibility bits remain unknown;
 - smart operator `0x0800` evaluates allowed/required media masks: `33/32` selected all 39 music
   videos and `1/32` selected none after native confirmation. Both criteria remained byte-identical
   to the XML export, so the operator is exposed as `AllowedAndRequiredBits`.
@@ -242,8 +250,8 @@ Still unresolved:
   active DSID while retaining the account DSID at `mhgh +212`;
 - the precise media-flag selection rule for the podcast playback-key branch, and reconciliation of
   the predominantly stale 1,943-key corpus with historical metadata;
-- the exact eligibility meaning and downstream consumer of the newest-ten `mprh` playlist-entry
-  history, plus the meanings of other opaque section types.
+- the human-readable meanings of the native eligibility bits for the `mprh` Resume Playing history,
+  plus the meanings of other opaque section types.
 
 ## Commands
 

@@ -99,9 +99,10 @@ public static class ItlWriter
     }
 
     /// <summary>
-    /// Type-15 records are a bounded native history of timestamped playlist-entry references. The
-    /// exact eligibility event and consumer remain unproven, so a structural write must not leave
-    /// one pointing at a removed entry or attempt to synthesize a replacement.
+    /// Type-15 records are the bounded native Windows "Resume Playing" Jump List history of
+    /// timestamped playlist-entry references. The writer can preserve valid records, but cannot
+    /// infer every internal eligibility flag that iTunes applies to newly played entries. A
+    /// structural write must not leave one dangling or attempt to synthesize a replacement.
     /// </summary>
     private static void EnsureMprhReferencesResolve(byte[] body)
     {

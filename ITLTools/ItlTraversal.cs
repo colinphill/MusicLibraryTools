@@ -44,8 +44,8 @@ public static class ItlTraversal
 
     /// <summary>
     /// Walks the confirmed fixed 24-byte <c>mprh</c> records in an <c>mlrh</c> list. Native code
-    /// maintains this as a de-duplicated, newest-ten history, but traversal accepts the declared
-    /// count so older or newer format variants remain inspectable.
+    /// maintains this as the de-duplicated, newest-ten Windows "Resume Playing" Jump List history,
+    /// but traversal accepts the declared count so older or newer variants remain inspectable.
     /// </summary>
     public static IReadOnlyList<ItlFixedItem> WalkFixedItems(byte[] body, ItlChunk list, int end)
     {
