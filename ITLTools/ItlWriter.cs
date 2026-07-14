@@ -57,7 +57,9 @@ public static class ItlWriter
         int headerLength = envelope.RawHeader.Length;
         byte[] bodyCopy = (byte[])body.Clone();
         byte[] headerCopy = (byte[])envelope.RawHeader.Clone();
+        PatchMlqhCrossSectionOffsets(bodyCopy);
         EnsurePlaybackStateUnchanged(envelope.Body, bodyCopy);
+        EnsureMiqhReferencesResolve(bodyCopy, envelope.LibraryPersistentId);
         EnsureMprhReferencesResolve(bodyCopy);
         Aggregates aggregates = ReadAggregates(bodyCopy);
         bool bodyChanged = !body.AsSpan().SequenceEqual(envelope.Body);
@@ -96,6 +98,97 @@ public static class ItlWriter
             BinaryPrimitives.WriteUInt32BigEndian(file.AsSpan(112), modifiedDate);
 
         return file;
+    }
+
+    /// <summary>
+    /// Native iTunes rewrites the two absolute decoded-body anchors in an mlqh header on every
+    /// save. Repeated snapshots establish them as fixed positions relative to the type-13 msdh
+    /// section, even when preceding sections change size.
+    /// </summary>
+    private static void PatchMlqhCrossSectionOffsets(byte[] body)
+    {
+        ItlChunk? cloudSection = null;
+        ItlChunk? querySection = null;
+        foreach (ItlChunk section in ItlChunk.Walk(body, 0, body.Length))
+        {
+            if (section.Type == 13)
+                cloudSection = section;
+            else if (section.Type == 20)
+                querySection = section;
+        }
+
+        if (querySection is null)
+            return;
+        if (cloudSection is null)
+            throw new InvalidDataException("Type-20 mlqh section is present without its type-13 anchor section.");
+
+        ItlChunk mlqh = ItlChunk.Read(body, querySection.Value.BodyOffset);
+        if (mlqh.Signature != "mlqh" || mlqh.HeaderLength < 36)
+            throw new InvalidDataException("Type-20 section does not contain a complete mlqh header.");
+        BinaryPrimitives.WriteUInt64LittleEndian(body.AsSpan(mlqh.Offset + 20),
+            checked((ulong)cloudSection.Value.Offset + 0x90));
+        BinaryPrimitives.WriteUInt64LittleEndian(body.AsSpan(mlqh.Offset + 28),
+            checked((ulong)cloudSection.Value.Offset + 0xF0));
+    }
+
+    private static void EnsureMiqhReferencesResolve(byte[] body, ulong libraryPersistentId)
+    {
+        var trackPersistentIds = new HashSet<ulong>();
+        ItlChunk? querySection = null;
+        foreach (ItlChunk section in ItlChunk.Walk(body, 0, body.Length))
+        {
+            if (section.Type == 1)
+            {
+                ItlChunk list = ItlChunk.Read(body, section.BodyOffset);
+                if (list.Signature != "mlth")
+                    continue;
+                foreach (ItlChunk track in ItlChunk.Walk(body, list.HeaderEnd, section.EndOffset))
+                {
+                    if (track.Signature == "mith" && track.HeaderLength >= 136)
+                        trackPersistentIds.Add(BinaryPrimitives.ReadUInt64LittleEndian(body.AsSpan(track.Offset + 128)));
+                }
+            }
+            else if (section.Type == 20)
+                querySection = section;
+        }
+
+        if (querySection is null)
+            return;
+        ItlChunk mlqh = ItlChunk.Read(body, querySection.Value.BodyOffset);
+        if (mlqh.Signature != "mlqh" || mlqh.HeaderLength < 36)
+            throw new InvalidDataException("Type-20 section does not contain a complete mlqh header.");
+
+        ItlChunk[] children = [.. ItlChunk.Walk(body, mlqh.HeaderEnd, querySection.Value.EndOffset)];
+        ItlChunk[] metadata = [.. children.Where(child => child.Signature == "mhoh")];
+        ItlChunk[] references = [.. children.Where(child => child.Signature == "miqh")];
+        if (metadata.Length + references.Length != children.Length)
+            throw new InvalidDataException("mlqh contains an unsupported child record type.");
+        int declaredMetadataCount = BinaryPrimitives.ReadInt32LittleEndian(body.AsSpan(mlqh.Offset + 12));
+        int declaredReferenceCount = BinaryPrimitives.ReadInt32LittleEndian(body.AsSpan(mlqh.Offset + 16));
+        if (declaredMetadataCount != metadata.Length)
+            throw new InvalidDataException(
+                $"mlqh declares {declaredMetadataCount} metadata fields but contains {metadata.Length} mhoh records.");
+        if (declaredReferenceCount != references.Length)
+            throw new InvalidDataException(
+                $"mlqh declares {declaredReferenceCount} media references but contains {references.Length} miqh records.");
+
+        foreach ((ItlChunk reference, int index) in references.Select((reference, index) => (reference, index)))
+        {
+            if (reference.Signature != "miqh" || reference.HeaderLength < 140)
+                throw new InvalidDataException($"Type-20 media-reference record {index} has an unsupported layout.");
+            CheckLink(reference, index, 28, 36, "source");
+            CheckLink(reference, index, 124, 132, "mapped library");
+        }
+
+        void CheckLink(ItlChunk reference, int index, int libraryOffset, int trackOffset, string role)
+        {
+            ulong owner = BinaryPrimitives.ReadUInt64LittleEndian(body.AsSpan(reference.Offset + libraryOffset));
+            ulong track = BinaryPrimitives.ReadUInt64LittleEndian(body.AsSpan(reference.Offset + trackOffset));
+            if (owner == libraryPersistentId && track != 0 && !trackPersistentIds.Contains(track))
+                throw new InvalidOperationException(
+                    $"Type-20 miqh record {index} has a dangling {role} track reference {track:X16}; " +
+                    "its native removal policy is unproven.");
+        }
     }
 
     /// <summary>

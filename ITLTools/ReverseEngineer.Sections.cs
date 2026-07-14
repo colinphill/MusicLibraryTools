@@ -101,6 +101,8 @@ public static partial class ReverseEngineer
             ItlChunk inner = ItlChunk.Read(body, start);
             Console.WriteLine($"  inner '{inner.Signature}' hlen={inner.HeaderLength} word8={inner.SizeOrCount} word12={inner.Type}");
             Dump(body, start, Math.Min(inner.HeaderLength, 128), start);
+            if (inner.Signature == "mlqh")
+                DescribeMlqhOffsets(library, inner);
 
             if (ItlTraversal.IsFixedSizeList(inner))
             {
@@ -128,6 +130,7 @@ public static partial class ReverseEngineer
                 {
                     if (count++ >= 6) { Console.WriteLine("    ..."); break; }
                     Console.WriteLine($"    '{child.Signature}' hlen={child.HeaderLength} total={child.TotalLength} word12={child.Type}");
+                    DescribeUnknownRecordChildren(library, child);
                 }
                 if (count == 0)
                 {
@@ -136,6 +139,140 @@ public static partial class ReverseEngineer
                 }
             }
             Console.WriteLine();
+        }
+    }
+
+    private static void DescribeUnknownRecordChildren(ItlLibrary library, ItlChunk record)
+    {
+        byte[] body = library.Envelope.Body;
+        if (record.Signature == "mhoh" || record.BodyOffset >= record.EndOffset)
+            return;
+
+        try
+        {
+            var dataObjects = new List<ItlDataObject>();
+            int count = 0;
+            foreach (ItlChunk child in ItlChunk.Walk(body, record.BodyOffset, record.EndOffset))
+            {
+                if (count++ >= 6)
+                {
+                    Console.WriteLine("      ...");
+                    break;
+                }
+
+                string detail = $"type={child.Type}";
+                if (child.Signature == "mhoh")
+                {
+                    ItlDataObject data = ItlDataObject.Parse(body, child);
+                    dataObjects.Add(data);
+                    if (data.IsString)
+                        detail += $" text=\"{Clip(data.Text!, 70)}\"";
+                    else
+                        detail += $" blob={data.Raw.Length:N0} bytes";
+                }
+                Console.WriteLine($"      '{child.Signature}' hlen={child.HeaderLength} total={child.TotalLength} {detail}");
+            }
+
+            if (record.Signature == "miqh")
+                DescribeMiqhCorrelations(library, record, dataObjects);
+        }
+        catch (InvalidDataException exception)
+        {
+            Console.WriteLine($"      nested layout unrecognized: {exception.Message}");
+        }
+    }
+
+    private static void DescribeMiqhCorrelations(
+        ItlLibrary library,
+        ItlChunk record,
+        IReadOnlyList<ItlDataObject> dataObjects)
+    {
+        string? title = dataObjects.FirstOrDefault(data =>
+            data.Type == (int)ItlDataType.ReferencedTrackTitle && data.IsString)?.Text;
+        string? artistAlbum = dataObjects.FirstOrDefault(data =>
+            data.Type == (int)ItlDataType.ReferencedArtistAlbum && data.IsString)?.Text;
+        if (title is not null)
+        {
+            ItlTrack[] titleMatches = [.. library.Tracks.Where(track =>
+                string.Equals(track.Title, title, StringComparison.Ordinal))];
+            ItlTrack[] exactMatches = artistAlbum is null
+                ? titleMatches
+                : [.. titleMatches.Where(track =>
+                    string.Equals(ArtistAlbumDisplay(track), artistAlbum, StringComparison.Ordinal))];
+
+            Console.WriteLine($"      track correlation: {titleMatches.Length:N0} title match(es), " +
+                              $"{exactMatches.Length:N0} exact title/artist/album match(es)");
+            foreach (ItlTrack track in exactMatches.Take(6))
+            {
+                Console.WriteLine($"        track id={track.Id} pid={track.PersistentId:X16} " +
+                                  $"store={track.StoreItemId} added={track.DateAdded:yyyy-MM-dd} " +
+                                  $"'{track.Artist} — {track.Album}'");
+                Console.WriteLine($"          location={track.Location}");
+                DescribeMiqhTrackHeaderLinks(library.Envelope.Body, record, track);
+            }
+        }
+
+        var words = new List<string>();
+        for (int offset = 8; offset + sizeof(uint) <= record.HeaderLength; offset += sizeof(uint))
+        {
+            uint value = BinaryPrimitives.ReadUInt32LittleEndian(
+                library.Envelope.Body.AsSpan(record.Offset + offset));
+            if (value != 0)
+                words.Add($"+{offset}=0x{value:X8}");
+        }
+        Console.WriteLine($"      nonzero header words: {string.Join(' ', words)}");
+    }
+
+    private static void DescribeMiqhTrackHeaderLinks(byte[] body, ItlChunk record, ItlTrack track)
+    {
+        var links = new List<string>();
+        for (int recordOffset = 20; recordOffset + sizeof(ulong) <= record.HeaderLength; recordOffset += sizeof(uint))
+        {
+            ulong value = BinaryPrimitives.ReadUInt64LittleEndian(body.AsSpan(record.Offset + recordOffset));
+            if ((uint)value == 0 || (uint)(value >> 32) == 0)
+                continue;
+
+            for (int trackOffset = 8; trackOffset + sizeof(ulong) <= track.Header.Length; trackOffset++)
+            {
+                if (BinaryPrimitives.ReadUInt64LittleEndian(track.Header.AsSpan(trackOffset)) == value)
+                    links.Add($"miqh+{recordOffset}->mith+{trackOffset} (0x{value:X16})");
+            }
+        }
+
+        Console.WriteLine(links.Count == 0
+            ? "          no 64-bit miqh values occur in the matched mith header"
+            : $"          header links: {string.Join(", ", links)}");
+    }
+
+    private static string ArtistAlbumDisplay(ItlTrack track) => (track.Artist, track.Album) switch
+    {
+        ({ Length: > 0 } artist, { Length: > 0 } album) => $"{artist} — {album}",
+        ({ Length: > 0 } artist, _) => artist,
+        (_, { Length: > 0 } album) => album,
+        _ => "",
+    };
+
+    private static void DescribeMlqhOffsets(ItlLibrary library, ItlChunk list)
+    {
+        byte[] body = library.Envelope.Body;
+        if (list.HeaderLength < 36)
+            return;
+
+        uint declaredCount = BinaryPrimitives.ReadUInt32LittleEndian(body.AsSpan(list.Offset + 16));
+        Console.WriteLine($"  mlqh +16 declared item count: {declaredCount:N0}");
+        foreach (int fieldOffset in new[] { 20, 28 })
+        {
+            ulong candidate = BinaryPrimitives.ReadUInt64LittleEndian(body.AsSpan(list.Offset + fieldOffset));
+            if (candidate >= (ulong)body.Length)
+                continue;
+
+            ItlSection? owner = library.Sections.FirstOrDefault(section =>
+                candidate >= (ulong)section.Chunk.Offset && candidate < (ulong)section.Chunk.EndOffset);
+            string ownerText = owner is null
+                ? "outside a section"
+                : $"section type {owner.Chunk.Type} +0x{candidate - (ulong)owner.Chunk.Offset:X}";
+            Console.WriteLine($"  mlqh +{fieldOffset} -> decoded body 0x{candidate:X} ({ownerText})");
+            Dump(body, (int)candidate, Math.Min(32, body.Length - (int)candidate), (int)candidate);
         }
     }
 

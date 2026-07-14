@@ -114,6 +114,13 @@ public enum ItlDataType
     /// </summary>
     PlaybackStatePlist = 514,
 
+    // Media/playback reference ("miqh")
+    /// <summary>Cached title of the track named by a media-reference record.</summary>
+    ReferencedTrackTitle = 702,
+
+    /// <summary>Cached artist/album display text for a media-reference record.</summary>
+    ReferencedArtistAlbum = 703,
+
     // Podcast settings ("msph")
     PodcastSettingsPlist = 800,
 }

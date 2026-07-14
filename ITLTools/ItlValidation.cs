@@ -36,6 +36,7 @@ public sealed partial class ItlDocument
         ValidatePlaybackDsidMirror();
         ValidateSmartPlaylists();
         ValidateMprhReferences();
+        ValidateMlqhAnchors();
 
         AggregateCounts current = CurrentCounts;
         if (current == _originalCounts)
@@ -276,6 +277,97 @@ public sealed partial class ItlDocument
             {
                 Add("mprh.layout", ItlValidationSeverity.Error,
                     $"Type-15 section is malformed: {exception.Message}");
+            }
+        }
+
+        void ValidateMlqhAnchors()
+        {
+            int offset = 0;
+            int? cloudSectionOffset = null;
+            ItlSectionNode? querySection = null;
+            foreach (ItlSectionNode section in Sections)
+            {
+                if (section.Type == 13)
+                    cloudSectionOffset = offset;
+                else if (section.Type == 20)
+                    querySection = section;
+                offset += section.Length;
+            }
+
+            if (querySection is null)
+                return;
+            if (cloudSectionOffset is null)
+            {
+                Add("mlqh.anchor-section", ItlValidationSeverity.Error,
+                    "Type-20 mlqh media references are present without the type-13 anchor section.");
+                return;
+            }
+
+            byte[]? raw = querySection.Raw;
+            if (raw is null || raw.Length < 36 || !raw.AsSpan(0, 4).SequenceEqual("mlqh"u8) ||
+                BinaryPrimitives.ReadInt32LittleEndian(raw.AsSpan(4)) < 36)
+            {
+                Add("mlqh.layout", ItlValidationSeverity.Error,
+                    "Type-20 section does not contain a complete opaque mlqh header.");
+                return;
+            }
+
+            CheckAnchor(20, checked((ulong)cloudSectionOffset.Value + 0x90));
+            CheckAnchor(28, checked((ulong)cloudSectionOffset.Value + 0xF0));
+
+            try
+            {
+                int headerLength = BinaryPrimitives.ReadInt32LittleEndian(raw.AsSpan(4));
+                ItlChunk[] children = [.. ItlChunk.Walk(raw, headerLength, raw.Length)];
+                ItlChunk[] metadata = [.. children.Where(child => child.Signature == "mhoh")];
+                ItlChunk[] references = [.. children.Where(child => child.Signature == "miqh")];
+                if (metadata.Length + references.Length != children.Length)
+                    Add("mlqh.child-layout", ItlValidationSeverity.Error,
+                        "mlqh contains an unsupported child record type.");
+                int declaredMetadataCount = BinaryPrimitives.ReadInt32LittleEndian(raw.AsSpan(12));
+                int declaredReferenceCount = BinaryPrimitives.ReadInt32LittleEndian(raw.AsSpan(16));
+                if (declaredMetadataCount != metadata.Length)
+                    Add("mlqh.metadata-count", ItlValidationSeverity.Error,
+                        $"mlqh declares {declaredMetadataCount} metadata fields but contains {metadata.Length} mhoh records.");
+                if (declaredReferenceCount != references.Length)
+                    Add("mlqh.record-count", ItlValidationSeverity.Error,
+                        $"mlqh declares {declaredReferenceCount} media references but contains {references.Length} miqh records.");
+
+                HashSet<ulong> trackPersistentIds = Tracks.Select(track =>
+                    BinaryPrimitives.ReadUInt64LittleEndian(track.Header.AsSpan(128))).ToHashSet();
+                foreach ((ItlChunk reference, int index) in references.Select((reference, index) => (reference, index)))
+                {
+                    if (reference.Signature != "miqh" || reference.HeaderLength < 140)
+                    {
+                        Add("miqh.layout", ItlValidationSeverity.Error,
+                            $"Type-20 media-reference record {index} has an unsupported layout.");
+                        continue;
+                    }
+                    CheckTrackLink(reference, index, 28, 36, "source");
+                    CheckTrackLink(reference, index, 124, 132, "mapped");
+                }
+
+                void CheckTrackLink(ItlChunk reference, int index, int libraryOffset, int trackOffset, string role)
+                {
+                    ulong owner = BinaryPrimitives.ReadUInt64LittleEndian(raw.AsSpan(reference.Offset + libraryOffset));
+                    ulong track = BinaryPrimitives.ReadUInt64LittleEndian(raw.AsSpan(reference.Offset + trackOffset));
+                    if (owner == Envelope.LibraryPersistentId && track != 0 && !trackPersistentIds.Contains(track))
+                        Add($"miqh.{role}-track-link", ItlValidationSeverity.Error,
+                            $"Type-20 record {index} references missing current-library track {track:X16} as its {role}.");
+                }
+            }
+            catch (InvalidDataException exception)
+            {
+                Add("miqh.layout", ItlValidationSeverity.Error,
+                    $"Type-20 media-reference list is malformed: {exception.Message}");
+            }
+
+            void CheckAnchor(int fieldOffset, ulong expected)
+            {
+                ulong actual = BinaryPrimitives.ReadUInt64LittleEndian(raw.AsSpan(fieldOffset));
+                if (actual != expected)
+                    Add($"mlqh.anchor-{fieldOffset}", ItlValidationSeverity.Error,
+                        $"mlqh +{fieldOffset} is decoded-body offset 0x{actual:X}; expected 0x{expected:X}.");
             }
         }
 

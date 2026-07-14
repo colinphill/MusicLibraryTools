@@ -68,6 +68,28 @@ plus one. Playlist `miph +3392` is another globally unique numeric ID. Native iT
 these IDs and playlist-entry IDs on a later save, so the writer guarantees uniqueness and correct
 links rather than attempting to preserve native allocation gaps.
 
+### Type-20 media references
+
+Section 20 is an `mlqh` collection of `miqh` media/playback-reference records. Unlike ordinary list
+headers, `mlqh +8` is zero, `+12` counts optional list-level `mhoh` metadata, and `+16` counts the
+`miqh` records. The observed files have no list metadata. Its 64-bit values at `+20`
+and `+28` are absolute decoded-body anchors. Repeated native saves prove they are always the start
+of the type-13 `msdh` section plus `0x90` and `0xF0`, respectively; the latter can legitimately fall
+beyond a short empty type-13 section. The writer refreshes both anchors after layout changes and
+`Validate()` reports stale values and mismatched record counts.
+
+Each observed `miqh` has two cached display strings: type 702 is track title and type 703 is artist,
+album, or the combined `Artist — Album` display. The 128-bit identity beginning at `miqh +28`
+contains source-library and source-track persistent IDs. Bytes `+80/+84` are four-character source
+tags: corpus device records use `FILE`/`iPod`, while controlled local video playback uses
+`FILE`/`lib `. The corpus's optional identity at `+124/+132` contains the current library and mapped
+local-track persistent IDs, confirming that those two records map iPod sources to library tracks.
+`+72` is a Mac-epoch event timestamp where nonzero. Controlled video-position playback created a
+local record, and native resaves update another identifier at `+140`; the exact queue/import
+lifecycle and the remaining generated identifiers are not yet proven, so records stay opaque. The
+validator checks current-library source and mapped-track foreign keys, and the writer rejects a
+track removal that would leave one dangling rather than guessing the native record-removal policy.
+
 Track `mith +168` is the Apple Store/catalog item ID and is duplicated at `+428`. Eighty current
 tracks prove the mapping because type-514 uses the exact decimal value as its outer playback-state
 key; one additional decimal plist key is stale. This field is exposed read-only until native edit
@@ -187,11 +209,12 @@ Native one-change and reverse experiments proved:
   type-514 additions, removals, and byte edits until its key identities and valid update protocol are
   proven;
 - `mhgh +233` changes from zero to one on the first native library mutation and then stays set;
-- metadata edits advance both library `+112` and track `mith +32`; iTunes may also refresh opaque
-  search/index section 20 and track `+656` caches;
+- metadata edits advance both library `+112` and track `mith +32`; iTunes may also refresh track
+  `+656` caches and the proven cross-section anchors in media-reference section 20;
 - controlled audio and video bookmark changes update fixed `mith` fields but do not create type-514;
   direct play-count changes likewise stay in `mith`; and partial or completed video playback creates
-  or refreshes section 20 and advances `mhgh +252`, still without type-514 or `+108`. This suggests
+  or refreshes a type-20 local-library media reference and advances `mhgh +252`, still without
+  type-514 or `+108`. This suggests
   the preserved corpus plist is legacy or sync-specific state rather than current local playback
   state;
 - reversible rating and unplayed-state runs also leave type 514 absent. Rating changes `mith +108`;
@@ -251,7 +274,8 @@ Still unresolved:
 - the precise media-flag selection rule for the podcast playback-key branch, and reconciliation of
   the predominantly stale 1,943-key corpus with historical metadata;
 - the human-readable meanings of the native eligibility bits for the `mprh` Resume Playing history,
-  plus the meanings of other opaque section types.
+  the exact lifecycle/generated identifiers of type-20 media references, and the meanings of other
+  opaque section types.
 
 ## Commands
 
@@ -345,7 +369,12 @@ The final reverse-engineering work should proceed in this order:
    `is-ams-video`, now exposed as `AppleMediaServicesVideo`. Finally, a native re-save proves
    manual-to-smart conversion requires only the two zero-key blobs and no header edits;
    `SetSmartPlaylist` now supports it.
-7. Promote findings into writer behavior only after repeated native evidence. Add a synthetic
+7. **Type-20 media-reference structure partially resolved:** `mlqh +16` is the record count;
+   `+20/+28` are proven decoded-body anchors that the writer now refreshes; `miqh` source and optional
+   destination library/track identities, display fields, timestamps, and `FILE`/`iPod` versus
+   `FILE`/`lib ` tags are mapped. Use isolated local playback and disposable-device import/removal
+   snapshots to determine record retention, flags, and the generated identifier at `+140`.
+8. Promote findings into writer behavior only after repeated native evidence. Add a synthetic
    fixture and regression test for every proven rule, keep unresolved bytes opaque, and make an
    unsupported mutation fail before saving rather than synthesizing metadata.
 

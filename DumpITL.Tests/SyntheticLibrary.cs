@@ -62,6 +62,8 @@ internal static class SyntheticLibrary
     public static byte[] CreateBody(
         bool includePlaybackState = false,
         bool includeMprh = false,
+        bool includeMlqh = false,
+        bool includeMiqhReference = false,
         uint playbackStateDsid = 0)
     {
         byte[] mfdh = Chunk("mfdh", new byte[144], headerLength: 144);
@@ -115,6 +117,19 @@ internal static class SyntheticLibrary
         BinaryPrimitives.WriteUInt32LittleEndian(mprh.AsSpan(12), 5);
         BinaryPrimitives.WriteUInt64LittleEndian(mprh.AsSpan(16), 0x5555555555555555);
         byte[] referenceSection = includeMprh ? Section(15, List("mlrh", mprh)) : [];
+        byte[] mlqh = new byte[112];
+        "mlqh"u8.CopyTo(mlqh);
+        BinaryPrimitives.WriteInt32LittleEndian(mlqh.AsSpan(4), mlqh.Length);
+        BinaryPrimitives.WriteUInt64LittleEndian(mlqh.AsSpan(20), 0xDEAD);
+        BinaryPrimitives.WriteUInt64LittleEndian(mlqh.AsSpan(28), 0xBEEF);
+        byte[] miqh = RecordHeader("miqh", 228, id: 1);
+        BinaryPrimitives.WriteUInt64LittleEndian(miqh.AsSpan(28), 0x123456789ABCDEF0);
+        BinaryPrimitives.WriteUInt64LittleEndian(miqh.AsSpan(36), 0x1111111111111111);
+        if (includeMiqhReference)
+            BinaryPrimitives.WriteInt32LittleEndian(mlqh.AsSpan(16), 1);
+        byte[] querySection = includeMlqh || includeMiqhReference
+            ? Section(20, includeMiqhReference ? Join(mlqh, miqh) : mlqh)
+            : [];
 
         return Join(
             Section(16, mfdh),
@@ -123,6 +138,7 @@ internal static class SyntheticLibrary
             Section(11, List("mlih", artistHeader)),
             Section(1, List("mlth", trackHeader)),
             Section(13, List("mlth", cloudHeader)),
+            querySection,
             Section(2, List("mlph", playlist)),
             referenceSection);
     }

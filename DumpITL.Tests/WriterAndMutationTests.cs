@@ -71,6 +71,63 @@ public sealed class WriterAndMutationTests
     }
 
     [Fact]
+    public void BuildRefreshesMlqhCrossSectionOffsetsWithoutMutatingInput()
+    {
+        byte[] body = SyntheticLibrary.CreateBody(includeMlqh: true);
+        byte[] original = (byte[])body.Clone();
+
+        ItlEnvelope result = ItlEnvelope.Parse(ItlWriter.Build(SyntheticLibrary.CreateEnvelope(), body));
+
+        Assert.Equal(original, body);
+        ItlChunk[] sections = [.. ItlChunk.Walk(result.Body, 0, result.Body.Length)];
+        ItlChunk cloud = Assert.Single(sections, section => section.Type == 13);
+        ItlChunk query = Assert.Single(sections, section => section.Type == 20);
+        ItlChunk mlqh = ItlChunk.Read(result.Body, query.BodyOffset);
+        Assert.Equal((ulong)cloud.Offset + 0x90,
+            BinaryPrimitives.ReadUInt64LittleEndian(result.Body.AsSpan(mlqh.Offset + 20)));
+        Assert.Equal((ulong)cloud.Offset + 0xF0,
+            BinaryPrimitives.ReadUInt64LittleEndian(result.Body.AsSpan(mlqh.Offset + 28)));
+        Assert.DoesNotContain(ItlDocument.Parse(result).Validate(), issue => issue.Code.StartsWith("mlqh."));
+    }
+
+    [Fact]
+    public void MlqhAnchorsMayExtendPastAnEmptyType13Section()
+    {
+        ItlEnvelope source = ItlEnvelope.Parse(ItlWriter.Build(
+            SyntheticLibrary.CreateEnvelope(),
+            SyntheticLibrary.CreateBody(includeMlqh: true)));
+        ItlDocument document = ItlDocument.Parse(source);
+        Assert.True(document.RemoveTrack(1));
+
+        ItlEnvelope result = ItlEnvelope.Parse(ItlWriter.Build(source, document.Serialize()));
+
+        ItlChunk[] sections = [.. ItlChunk.Walk(result.Body, 0, result.Body.Length)];
+        ItlChunk cloud = Assert.Single(sections, section => section.Type == 13);
+        Assert.True(cloud.TotalLength < 0xF0);
+        ItlChunk query = Assert.Single(sections, section => section.Type == 20);
+        ItlChunk mlqh = ItlChunk.Read(result.Body, query.BodyOffset);
+        Assert.Equal((ulong)cloud.Offset + 0xF0,
+            BinaryPrimitives.ReadUInt64LittleEndian(result.Body.AsSpan(mlqh.Offset + 28)));
+    }
+
+    [Fact]
+    public void WriterRejectsDanglingMiqhCurrentLibraryTrackReference()
+    {
+        ItlEnvelope source = ItlEnvelope.Parse(ItlWriter.Build(
+            SyntheticLibrary.CreateEnvelope(),
+            SyntheticLibrary.CreateBody(includeMiqhReference: true)));
+        ItlDocument document = ItlDocument.Parse(source);
+        Assert.DoesNotContain(document.Validate(), issue => issue.Code.StartsWith("miqh."));
+
+        Assert.True(document.RemoveTrack(1));
+        Assert.Contains(document.Validate(), issue => issue.Code == "miqh.source-track-link");
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => ItlWriter.Build(source, document.Serialize()));
+        Assert.Contains("Type-20 miqh", exception.Message);
+        Assert.Contains("native removal policy is unproven", exception.Message);
+    }
+
+    [Fact]
     public void BuildRejectsPlaybackStateMutationWithoutProvenNativeSemantics()
     {
         ItlEnvelope envelope = ItlEnvelope.Parse(SyntheticLibrary.CreateFileWithPlaybackState());
