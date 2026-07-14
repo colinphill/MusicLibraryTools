@@ -22,6 +22,8 @@ param(
 
     [string]$ExperimentValue,
 
+    [string]$ManualInstructions,
+
     [int]$ExperimentTargetCount = -1,
 
     [switch]$ManualChooser,
@@ -349,7 +351,10 @@ function Invoke-ItunesExperiment(
             if ([string]::IsNullOrWhiteSpace($value)) {
                 throw 'ManualCreateSmartPlaylist requires -ExperimentValue containing the exact playlist name.'
             }
-            Write-Host 'Create one Smart Playlist in iTunes with: Media Kind is Music; limit 3 items by Random; Live updating enabled.'
+            $instructions = if ([string]::IsNullOrWhiteSpace($ManualInstructions)) {
+                'Media Kind is Music; limit 3 items by Random; Live updating enabled.'
+            } else { $ManualInstructions }
+            Write-Host "Create one Smart Playlist in iTunes with: $instructions"
             Write-Host "Name it exactly '$value'. The harness is waiting for it to appear."
             $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
             $playlist = $null

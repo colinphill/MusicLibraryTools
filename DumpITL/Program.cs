@@ -44,6 +44,8 @@ if (args.Length < 2)
           track-add-new <media> <title> <out.itl>     clone with a new album and artist
           playlist-add <template> <name> <out.itl>  clone one playlist for a disposable experiment
           smart-add <template> <name> <out.itl>     clone a smart playlist with factory criteria
+          smart-ref-add <template> <referenced> <name> <out.itl>
+                                             create a smart playlist referencing another playlist
           demo <out.itl>                    exercise every add/remove/edit operation
         """);
     return 1;
@@ -56,6 +58,7 @@ int required = command switch
 {
     "probe" or "discover" or "plprobe" or "roundtrip" or "cloud" or "demo" or "verify" or "compare" => 3,
     "playlist-add" or "smart-add" or "track-add" or "track-add-new" => 5,
+    "smart-ref-add" => 6,
     "re" => 3,
     "set" => 6,
     _ => 2,
@@ -137,6 +140,10 @@ switch (command)
 
     case "smart-add":
         SmartAdd(itl, args[2], args[3], args[4]);
+        break;
+
+    case "smart-ref-add":
+        SmartReferenceAdd(itl, args[2], args[3], args[4], args[5]);
         break;
 
     case "track-add":
@@ -654,6 +661,38 @@ static void SmartAdd(string itl, string templateName, string name, string outPat
         throw new InvalidDataException("The writer-created smart playlist failed validation.");
 
     Console.WriteLine($"added smart playlist '{name}' id={ItlDocument.PlaylistRecordIdOf(playlist)}");
+    Console.WriteLine($"wrote {outPath} ({new FileInfo(outPath).Length:N0} bytes)");
+}
+
+/// <summary>Creates a smart playlist whose sole criterion is membership in another playlist.</summary>
+static void SmartReferenceAdd(string itl, string templateName, string referencedName, string name, string outPath)
+{
+    ItlDocument document = ItlDocument.Load(itl);
+    ItlRecord template = document.FindPlaylist(templateName)
+        ?? throw new InvalidOperationException($"No smart template named '{templateName}'.");
+    ItlRecord referenced = document.FindPlaylist(referencedName)
+        ?? throw new InvalidOperationException($"No referenced playlist named '{referencedName}'.");
+    ulong persistentId = BinaryPrimitives.ReadUInt64LittleEndian(
+        referenced.Header.AsSpan(ItlDocument.PlaylistPersistentIdOffset));
+    ItlSmartPlaylist smart = ItlSmartPlaylist.Create(ItlSmartCriteria.Create(
+        ItlSmartConjunction.All,
+        ItlSmartRule.CreateNested(ItlSmartCriteria.Create(ItlSmartConjunction.Any,
+            ItlSmartRule.CreateMediaKind(1), ItlSmartRule.CreateMediaKind(32))),
+        ItlSmartRule.CreateNested(ItlSmartCriteria.Create(ItlSmartConjunction.All,
+            ItlSmartRule.CreatePlaylist(persistentId)))));
+    int[] initialTrackIds = [.. referenced.Entries.Select(entry => entry.TrackId).Distinct()];
+    ItlRecord playlist = document.AddSmartPlaylist(name, smart, template, initialTrackIds);
+    document.Save(outPath);
+
+    ItlDocument written = ItlDocument.Load(outPath);
+    IReadOnlyList<ItlValidationIssue> diagnostics = written.Validate();
+    foreach (ItlValidationIssue issue in diagnostics)
+        Console.WriteLine($"{issue.Severity,-7} {issue.Code}: {issue.Message}");
+    if (diagnostics.Any(issue => issue.Severity == ItlValidationSeverity.Error))
+        throw new InvalidDataException("The writer-created playlist-reference smart playlist failed validation.");
+
+    Console.WriteLine($"added smart playlist '{name}' id={ItlDocument.PlaylistRecordIdOf(playlist)} " +
+                      $"referencing '{referencedName}' ({initialTrackIds.Length:N0} members)");
     Console.WriteLine($"wrote {outPath} ({new FileInfo(outPath).Length:N0} bytes)");
 }
 

@@ -89,6 +89,15 @@ rule edit was accepted but regenerated to the canonical Music mask on save, prov
 built-ins are system-owned and should not be used as editable-rule templates. Remaining Windows-only
 unknowns in the corpus are field `0xA4` on TV & Movies and operator `0x0800` on Rentals.
 
+Native creation and reopen proved playlist-reference rules use a 68-byte comparison value rather
+than a bare 8-byte persistent ID. The referenced playlist ID is duplicated at value offsets `+0`
+and `+24`, with big-endian presence markers of one at `+20` and `+44`. The Windows UI also wraps the
+rule in its media-kind scope. The typed factory reproduces that value layout; an 8-byte candidate
+was deliberately retained as negative evidence after iTunes discarded its Smart Criteria. The
+corrected writer-created playlist-reference rule then opened and re-saved successfully: iTunes
+retained all 7 seeded members, and the resulting 112-byte Smart Info and 892-byte Smart Criteria
+were byte-identical to its XML export.
+
 A four-phase native creation experiment proved that new Smart Info and Smart Criteria fields both
 use child key zero. A writer-created smart playlist with the same nested media-kind rules was then
 opened and re-saved by iTunes with no validation diagnostics: its seeded track membership and smart
@@ -207,7 +216,8 @@ pre-tagged fixtures. Playback probes include `SetFirstTrackBookmark`, `SetFirstT
 `SetFirstTrackRating`, `SetFirstTrackUnplayed`, and
 `PlayFirstTrackAtPosition`. All manual chooser prompts place the disposable `.itl` path on the
 clipboard. `ManualCreateSmartPlaylist` waits for one specifically named native smart playlist; the
-harness captures it, reopens it, removes it through COM, and records every phase.
+harness captures it, reopens it, removes it through COM, and records every phase. Pass
+`-ManualInstructions` to describe a one-variable native rule such as `Playlist is Cafe Disco`.
 
 On iTunes 12.13.10.3, no-op and metadata-only rewrites of the full corpus opened successfully. In
 the disposable empty-library laboratory, writer-created playlists, tracks, albums, artists, foreign
@@ -249,9 +259,11 @@ The final reverse-engineering work should proceed in this order:
    or preserved. Native iTunes retained a length-changing string edit, a live-updating toggle, and a
    factory-created integer rule while regenerating membership. It also accepted and normalized a
    new writer-created smart playlist cloned from a native smart template, with explicit initial
-   membership; native creation proves the type 101/102 child keys are zero. Continue one-variable
-   experiments for the two unknown Windows-only codes and playlist-reference edits. Arbitrary
-   manual-to-smart conversion remains unsupported until its header flags are proven.
+   membership; native creation proves the type 101/102 child keys are zero. A native
+   playlist-reference capture established its 68-byte value layout, and the corrected typed factory
+   survived a native re-save with byte-identical XML blobs and membership. Continue one-variable
+   experiments for the two unknown Windows-only codes. Arbitrary manual-to-smart conversion remains
+   unsupported until its header flags are proven.
 7. Promote findings into writer behavior only after repeated native evidence. Add a synthetic
    fixture and regression test for every proven rule, keep unresolved bytes opaque, and make an
    unsupported mutation fail before saving rather than synthesizing metadata.

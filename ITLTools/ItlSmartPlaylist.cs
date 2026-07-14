@@ -213,16 +213,24 @@ public sealed class ItlSmartRule
         RawValue = new byte[68],
     };
 
-    public static ItlSmartRule CreatePlaylist(ulong persistentId, bool negate = false) => new()
+    public static ItlSmartRule CreatePlaylist(ulong persistentId, bool negate = false)
     {
-        Field = ItlSmartField.PlaylistPersistentId,
-        Sign = negate ? ItlSmartSign.NegativeInteger : ItlSmartSign.PositiveInteger,
-        Operator = ItlSmartOperator.Is,
-        HeaderPadding = new byte[44],
-        ValueKind = ItlSmartValueKind.Playlist,
-        PlaylistPersistentId = persistentId,
-        RawValue = new byte[8],
-    };
+        byte[] value = new byte[68];
+        BinaryPrimitives.WriteUInt64BigEndian(value, persistentId);
+        BinaryPrimitives.WriteUInt32BigEndian(value.AsSpan(20), 1);
+        BinaryPrimitives.WriteUInt64BigEndian(value.AsSpan(24), persistentId);
+        BinaryPrimitives.WriteUInt32BigEndian(value.AsSpan(44), 1);
+        return new ItlSmartRule
+        {
+            Field = ItlSmartField.PlaylistPersistentId,
+            Sign = negate ? ItlSmartSign.NegativeInteger : ItlSmartSign.PositiveInteger,
+            Operator = ItlSmartOperator.Is,
+            HeaderPadding = new byte[44],
+            ValueKind = ItlSmartValueKind.Playlist,
+            PlaylistPersistentId = persistentId,
+            RawValue = value,
+        };
+    }
 
     public static ItlSmartRule CreateNested(ItlSmartCriteria criteria)
     {
@@ -373,8 +381,14 @@ public sealed class ItlSmartPlaylist
             case ItlSmartValueKind.Playlist:
                 if (!rule.PlaylistPersistentId.HasValue)
                     throw new InvalidOperationException("Smart playlist-reference rule has no persistent ID.");
-                byte[] id = new byte[8];
+                byte[] id = rule.RawValue.Length >= 8 ? (byte[])rule.RawValue.Clone() : new byte[68];
                 BinaryPrimitives.WriteUInt64BigEndian(id, rule.PlaylistPersistentId.Value);
+                if (id.Length >= 68)
+                {
+                    BinaryPrimitives.WriteUInt32BigEndian(id.AsSpan(20), 1);
+                    BinaryPrimitives.WriteUInt64BigEndian(id.AsSpan(24), rule.PlaylistPersistentId.Value);
+                    BinaryPrimitives.WriteUInt32BigEndian(id.AsSpan(44), 1);
+                }
                 return id;
             case ItlSmartValueKind.Unknown:
                 return (byte[])rule.RawValue.Clone();

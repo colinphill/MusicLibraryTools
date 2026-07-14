@@ -791,7 +791,8 @@ public static partial class ReverseEngineer
                 string value = rule.ValueKind switch
                 {
                     ItlSmartValueKind.String => $"\"{Clip(rule.StringValue ?? "", 70)}\"",
-                    ItlSmartValueKind.Playlist => rule.PlaylistPersistentId?.ToString("X16") ?? "(missing)",
+                    ItlSmartValueKind.Playlist =>
+                        $"{rule.PlaylistPersistentId?.ToString("X16") ?? "(missing)"} raw={Convert.ToHexString(rule.RawValue)}",
                     ItlSmartValueKind.Date when rule.RelativeSeconds != 0 => $"relative {rule.RelativeSeconds:N0}s",
                     ItlSmartValueKind.Date when rule.DateValues.Count > 0 => string.Join(" .. ", rule.DateValues.Select(date => date.ToString("O"))),
                     ItlSmartValueKind.Unknown => Convert.ToHexString(rule.RawValue.AsSpan(0, Math.Min(24, rule.RawValue.Length))),

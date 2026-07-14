@@ -133,6 +133,13 @@ public sealed class SmartPlaylistTests
         Assert.Equal([5L, 5L, 0L], parsed.Criteria.Rules[1].IntegerValues);
         Assert.Equal(-604_800, parsed.Criteria.Rules[2].RelativeSeconds);
         Assert.Equal(0x1122334455667788UL, parsed.Criteria.Rules[3].PlaylistPersistentId);
+        Assert.Equal(68, parsed.Criteria.Rules[3].RawValue.Length);
+        Assert.Equal(0x1122334455667788UL,
+            BinaryPrimitives.ReadUInt64BigEndian(parsed.Criteria.Rules[3].RawValue));
+        Assert.Equal(1u, BinaryPrimitives.ReadUInt32BigEndian(parsed.Criteria.Rules[3].RawValue.AsSpan(20)));
+        Assert.Equal(0x1122334455667788UL,
+            BinaryPrimitives.ReadUInt64BigEndian(parsed.Criteria.Rules[3].RawValue.AsSpan(24)));
+        Assert.Equal(1u, BinaryPrimitives.ReadUInt32BigEndian(parsed.Criteria.Rules[3].RawValue.AsSpan(44)));
         Assert.True(parsed.Info.HasLimit);
         Assert.Equal(50u, parsed.Info.LimitSize);
     }
