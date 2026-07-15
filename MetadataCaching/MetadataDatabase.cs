@@ -435,6 +435,7 @@ namespace MetadataCaching
             }
 
             MetadataCache cache = new MetadataCache(buildSecondaryIndexes);
+            var sharedStrings = new Dictionary<string, string>(StringComparer.Ordinal);
 
             foreach (var path in paths)
             {
@@ -455,7 +456,7 @@ namespace MetadataCaching
                 while (reader.Read())
                 {
                     var ce = new MetadataCacheEntry(reader);
-                    ce.Strip();
+                    ce.Strip(sharedStrings);
                     var fullpath = Path.Combine(set.Path, reader.GetString(oAlbumPath), reader.GetString(oPath));
                     if (extensions is null || extensions.Count == 0)
                         cache.AddDBCacheEntry(fullpath, ce);

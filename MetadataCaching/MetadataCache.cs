@@ -104,6 +104,31 @@ namespace MetadataCaching
             _strippedalbum = stripre_.Replace(_album, "");
         }
 
+        internal void Strip(Dictionary<string, string> sharedStrings)
+        {
+            // SQLite materializes a new string object for each row even when thousands of tracks
+            // share an artist, album, codec, or release date. Canonicalize the low-cardinality
+            // values while the cache is built, then let the temporary dictionary go; the entries
+            // retain only one instance of each equal value. Titles are intentionally excluded
+            // because they are usually unique and would just enlarge the temporary lookup table.
+            _artist = Share(sharedStrings, _artist);
+            _albumartist = Share(sharedStrings, _albumartist);
+            _album = Share(sharedStrings, _album);
+            _codecname = Share(sharedStrings, _codecname);
+            _releasedate = Share(sharedStrings, _releasedate);
+            _strippedalbum = Share(sharedStrings, stripre_.Replace(_album, ""));
+        }
+
+        private static string Share(Dictionary<string, string> sharedStrings, string value)
+        {
+            if (value is null)
+                return null;
+            if (sharedStrings.TryGetValue(value, out string shared))
+                return shared;
+            sharedStrings.Add(value, value);
+            return value;
+        }
+
         public bool Touched => _touched;
 
         public string FormatPath(int length, int discnumlength)

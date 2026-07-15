@@ -48,6 +48,14 @@ namespace MusicFileUtilities.Tests
                         Assert.Equal("TestAlbum", e.Album);
                     });
                     Assert.NotEmpty(cache.AlbumCache);
+                    var cachedEntries = cache.FileCache.Values.ToArray();
+                    Assert.All(cachedEntries.Skip(1), entry =>
+                    {
+                        Assert.Same(cachedEntries[0].Artist, entry.Artist);
+                        Assert.Same(cachedEntries[0].AlbumArtist, entry.AlbumArtist);
+                        Assert.Same(cachedEntries[0].Album, entry.Album);
+                        Assert.Same(cachedEntries[0].StrippedAlbum, entry.StrippedAlbum);
+                    });
 
                     var leanCache = db.BuildCache(new[] { scanDir }, buildSecondaryIndexes: false);
                     Assert.Equal(3, leanCache.FileCache.Count);
