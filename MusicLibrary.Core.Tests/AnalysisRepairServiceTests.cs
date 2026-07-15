@@ -171,6 +171,87 @@ public sealed class AnalysisRepairServiceTests
     }
 
     [Fact]
+    public void PreviewText_TrimsEdgesWithoutCreatingAnAbsentAlbumArtist()
+    {
+        string folder = Path.Combine("library", "Artist", "Album");
+        var record = Track(Path.Combine(folder, "01.flac"), " Album ", " Artist ", null) with
+        {
+            AlbumArtist = " Artist ", // parser fallback; the explicit-presence flag remains false
+            Title = " Title ",
+        };
+
+        var plan = new AnalysisRepairService(new RecordingWriter()).PreviewTextNormalization([record]);
+
+        Assert.Equal(3, plan.Items.Count);
+        Assert.Contains(plan.Items, repair => repair.Field == TagFields.Artist && repair.After == "Artist");
+        Assert.Contains(plan.Items, repair => repair.Field == TagFields.Album && repair.After == "Album");
+        Assert.Contains(plan.Items, repair => repair.Field == TagFields.Title && repair.After == "Title");
+        Assert.DoesNotContain(plan.Items, repair => repair.Field == TagFields.AlbumArtist);
+    }
+
+    [Fact]
+    public void PreviewText_UsesStrictPeerMajorityForCaseAndWhitespaceVariants()
+    {
+        string folder = Path.Combine("library", "Artist", "Album");
+        var records = new[]
+        {
+            Track(Path.Combine(folder, "01.flac"), "Album", "The Beatles", "The Beatles"),
+            Track(Path.Combine(folder, "02.flac"), "Album", "The Beatles", "The Beatles"),
+            Track(Path.Combine(folder, "03.flac"), "Album", "the  beatles", "The Beatles"),
+        };
+
+        var plan = new AnalysisRepairService(new RecordingWriter()).PreviewTextNormalization(records);
+
+        var repair = Assert.Single(plan.Items);
+        Assert.Equal(records[2].Path, repair.Path);
+        Assert.Equal(TagFields.Artist, repair.Field);
+        Assert.Equal("the  beatles", repair.Before);
+        Assert.Equal("The Beatles", repair.After);
+    }
+
+    [Fact]
+    public void PreviewText_SkipsTiedCaseVariantsAndDirtyMajorities()
+    {
+        string tied = Path.Combine("library", "Tied");
+        string dirty = Path.Combine("library", "Dirty");
+        string plurality = Path.Combine("library", "Plurality");
+        var records = new[]
+        {
+            Track(Path.Combine(tied, "01.flac"), "Album", "Artist", "Artist"),
+            Track(Path.Combine(tied, "02.flac"), "Album", "artist", "Artist"),
+            Track(Path.Combine(dirty, "01.flac"), "Album", "The  Beatles", "Artist"),
+            Track(Path.Combine(dirty, "02.flac"), "Album", "The  Beatles", "Artist"),
+            Track(Path.Combine(dirty, "03.flac"), "Album", "The Beatles", "Artist"),
+            Track(Path.Combine(plurality, "01.flac"), "Album", "Beatles", "Artist"),
+            Track(Path.Combine(plurality, "02.flac"), "Album", "Beatles", "Artist"),
+            Track(Path.Combine(plurality, "03.flac"), "Album", "beatles", "Artist"),
+            Track(Path.Combine(plurality, "04.flac"), "Album", "BEATLES", "Artist"),
+        };
+
+        var plan = new AnalysisRepairService(new RecordingWriter()).PreviewTextNormalization(records);
+
+        Assert.Empty(plan.Items);
+    }
+
+    [Fact]
+    public void PreviewSafeRepairs_CombinesIndependentRepairTypes()
+    {
+        string folder = Path.Combine("library", "Artist", "Album");
+        var records = new[]
+        {
+            Track(Path.Combine(folder, "01 - One.flac"), "Album", " Artist ", null, 1, 2),
+            Track(Path.Combine(folder, "02 - Two.flac"), "Album", " Artist ", null),
+        };
+
+        var plan = new AnalysisRepairService(new RecordingWriter()).PreviewSafeRepairs(records);
+
+        Assert.Contains(plan.Items, repair => repair.Field == TagFields.AlbumArtist);
+        Assert.Contains(plan.Items, repair => repair.Field == TagFields.TrackNumber);
+        Assert.Contains(plan.Items, repair => repair.Field == TagFields.TotalTracks);
+        Assert.Contains(plan.Items, repair => repair.Field == TagFields.Artist && repair.After == "Artist");
+    }
+
+    [Fact]
     public async Task Apply_RejectsAnyChangedSourceBeforeWriting()
     {
         using var temp = new TempDirectory();
@@ -316,6 +397,38 @@ public sealed class AnalysisRepairServiceTests
         var cached = (await library.GetFileDetailsAsync(second, includeArtwork: false))!.Entry;
         Assert.Equal(2, cached.TrackNumber);
         Assert.Equal(2, cached.TrackTotal);
+    }
+
+    [Fact]
+    public async Task PreviewAndApply_NormalizesRealFileTextAndRefreshesTheCache()
+    {
+        using var temp = new TempDirectory();
+        string music = System.IO.Path.Combine(temp.Path, "music");
+        Directory.CreateDirectory(music);
+        string path = System.IO.Path.Combine(music, "track.flac");
+        File.Copy(MediaFixtures.Path_("sample.flac"), path);
+        var writer = Assert.IsAssignableFrom<IMetadataWriter>(MediaFile.GetFile(path));
+        writer.SetField(TagFields.Artist, " TestArtist ");
+        writer.Save();
+        string configPath = System.IO.Path.Combine(temp.Path, "library.xml");
+        new EditableLibraryConfig
+        {
+            DatabaseFile = "cache.db",
+            IndexTargets = [new IndexTargetEntry { Target = music }],
+        }.Save(configPath);
+        var settings = new AppSettings(System.IO.Path.Combine(temp.Path, "settings.json"));
+        settings.LoadConfig(configPath);
+        using var library = new LibraryService(settings);
+        await library.IndexAsync();
+        var service = new AnalysisRepairService(new TagWriteService(library));
+
+        var plan = service.PreviewTextNormalization(await library.GetAllRecordsAsync());
+        var result = await service.ApplyAsync(plan);
+
+        Assert.Equal(1, result.SavedCount);
+        Assert.Equal("TestArtist", MediaFile.GetFile(path).Tags.First().Artist);
+        Assert.Equal("TestArtist",
+            (await library.GetFileDetailsAsync(path, includeArtwork: false))!.Entry.Artist);
     }
 
     private static TrackRecord Track(

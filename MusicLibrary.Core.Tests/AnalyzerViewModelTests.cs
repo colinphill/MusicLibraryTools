@@ -193,6 +193,8 @@ public sealed class AnalyzerViewModelTests
             new("Fill missing album artists", []);
         public AnalysisRepairPlan PreviewNumberingAndTotals(IReadOnlyList<TrackRecord> records) =>
             new("Repair numbering and totals", []);
+        public AnalysisRepairPlan PreviewTextNormalization(IReadOnlyList<TrackRecord> records) =>
+            new("Normalize metadata text", []);
         public Task<BatchWriteResult> ApplyAsync(
             AnalysisRepairPlan plan, IProgress<int>? progress = null, CancellationToken ct = default) =>
             Task.FromResult(new BatchWriteResult([]));
@@ -209,6 +211,8 @@ public sealed class AnalyzerViewModelTests
         public AnalysisRepairPlan PreviewMissingAlbumArtists(IReadOnlyList<TrackRecord> records) =>
             throw new NotSupportedException();
         public AnalysisRepairPlan PreviewNumberingAndTotals(IReadOnlyList<TrackRecord> records) =>
+            throw new NotSupportedException();
+        public AnalysisRepairPlan PreviewTextNormalization(IReadOnlyList<TrackRecord> records) =>
             throw new NotSupportedException();
         public Task<BatchWriteResult> ApplyAsync(
             AnalysisRepairPlan plan, IProgress<int>? progress = null, CancellationToken ct = default) =>

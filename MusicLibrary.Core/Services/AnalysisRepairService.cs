@@ -12,6 +12,8 @@ public interface IAnalysisRepairService
 
     AnalysisRepairPlan PreviewNumberingAndTotals(IReadOnlyList<TrackRecord> records);
 
+    AnalysisRepairPlan PreviewTextNormalization(IReadOnlyList<TrackRecord> records);
+
     Task<BatchWriteResult> ApplyAsync(
         AnalysisRepairPlan plan,
         IProgress<int>? progress = null,
@@ -25,6 +27,8 @@ public interface IAnalysisRepairService
 /// </summary>
 public sealed class AnalysisRepairService(ITagWriteService writer) : IAnalysisRepairService
 {
+    private static readonly TagFields[] PeerTextFields =
+        [TagFields.Artist, TagFields.AlbumArtist, TagFields.Album];
     private static readonly Regex LeadingTrackNumber = new(
         @"^(?<number>\d{1,3})(?:\s*[-._]\s*|\s+|$)",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -37,6 +41,7 @@ public sealed class AnalysisRepairService(ITagWriteService writer) : IAnalysisRe
         ArgumentNullException.ThrowIfNull(records);
         var repairs = PreviewMissingAlbumArtists(records).Items
             .Concat(PreviewNumberingAndTotals(records).Items)
+            .Concat(PreviewTextNormalization(records).Items)
             .GroupBy(repair => (repair.Path, repair.Field), PathFieldComparer.Instance)
             .Select(group => group.First())
             .OrderBy(repair => repair.Path, StringComparer.CurrentCultureIgnoreCase)
@@ -120,6 +125,72 @@ public sealed class AnalysisRepairService(ITagWriteService writer) : IAnalysisRe
         return new AnalysisRepairPlan("Repair numbering and totals", repairs
             .GroupBy(repair => (repair.Path, repair.Field), PathFieldComparer.Instance)
             .Select(group => group.First())
+            .OrderBy(repair => repair.Path, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(repair => repair.Field)
+            .ToList());
+    }
+
+    public AnalysisRepairPlan PreviewTextNormalization(IReadOnlyList<TrackRecord> records)
+    {
+        ArgumentNullException.ThrowIfNull(records);
+        var repairs = new Dictionary<(string Path, TagFields Field), AnalysisTagRepair>(PathFieldComparer.Instance);
+
+        // Edge whitespace is independently wrong and needs no peer inference. Titles are limited to
+        // this rule because unrelated tracks can legitimately differ only by case.
+        foreach (var record in records)
+        {
+            foreach (var field in PeerTextFields.Append(TagFields.Title))
+            {
+                string? value = TextValue(record, field);
+                if (string.IsNullOrEmpty(value))
+                    continue;
+                string trimmed = value.Trim();
+                if (trimmed.Length > 0 && !StringComparer.Ordinal.Equals(value, trimmed))
+                    repairs[(record.Path, field)] = Repair(record, field, value, trimmed,
+                        "Removes leading or trailing whitespace from this tag value.");
+            }
+        }
+
+        // Within each physical album folder, resolve only whitespace/case variants of the same
+        // value, and only when one clean spelling has a strict peer majority. This never chooses
+        // between genuinely different artist/album values or propagates a repeated-space spelling.
+        foreach (var folder in records.GroupBy(
+                     record => Path.GetDirectoryName(record.Path) ?? "",
+                     StringComparer.OrdinalIgnoreCase))
+        {
+            foreach (var field in PeerTextFields)
+            {
+                var entries = folder
+                    .Select(record => (Record: record, Value: TextValue(record, field)))
+                    .Where(entry => !string.IsNullOrWhiteSpace(entry.Value))
+                    .Select(entry => (entry.Record, Value: entry.Value!));
+                foreach (var equivalent in entries.GroupBy(
+                             entry => CollapseWhitespace(entry.Value),
+                             StringComparer.CurrentCultureIgnoreCase))
+                {
+                    var spellings = equivalent
+                        .GroupBy(entry => entry.Value.Trim(), StringComparer.Ordinal)
+                        .Select(group => new { Value = group.Key, Count = group.Count() })
+                        .OrderByDescending(candidate => candidate.Count)
+                        .ThenBy(candidate => candidate.Value, StringComparer.CurrentCulture)
+                        .ToList();
+                    if (spellings.Count == 0 || spellings[0].Count * 2 <= equivalent.Count() ||
+                        !StringComparer.Ordinal.Equals(spellings[0].Value, CollapseWhitespace(spellings[0].Value)))
+                        continue;
+
+                    string canonical = spellings[0].Value;
+                    foreach (var entry in equivalent.Where(entry =>
+                                 !StringComparer.Ordinal.Equals(entry.Value, canonical)))
+                    {
+                        repairs[(entry.Record.Path, field)] = Repair(
+                            entry.Record, field, entry.Value, canonical,
+                            "Matches the clean spelling used by a strict majority of peers in this folder.");
+                    }
+                }
+            }
+        }
+
+        return new AnalysisRepairPlan("Normalize metadata text", repairs.Values
             .OrderBy(repair => repair.Path, StringComparer.CurrentCultureIgnoreCase)
             .ThenBy(repair => repair.Field)
             .ToList());
@@ -349,6 +420,34 @@ public sealed class AnalysisRepairService(ITagWriteService writer) : IAnalysisRe
         new(record.Path, field, before, after, reason, record.Length, record.LastWriteTime);
 
     private static string? NumberBefore(int? value) => value?.ToString();
+
+    private static string? TextValue(TrackRecord record, TagFields field) => field switch
+    {
+        TagFields.Artist => record.Artist,
+        TagFields.AlbumArtist => record.HasAlbumArtist ? record.AlbumArtist : null,
+        TagFields.Album => record.Album,
+        TagFields.Title => record.Title,
+        _ => null,
+    };
+
+    private static string CollapseWhitespace(string value)
+    {
+        var result = new System.Text.StringBuilder(value.Length);
+        bool pendingSpace = false;
+        foreach (char character in value.Trim())
+        {
+            if (char.IsWhiteSpace(character))
+            {
+                pendingSpace = result.Length > 0;
+                continue;
+            }
+            if (pendingSpace)
+                result.Append(' ');
+            result.Append(character);
+            pendingSpace = false;
+        }
+        return result.ToString();
+    }
 
     private static int? ParseLeadingNumber(string? name)
     {
