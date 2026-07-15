@@ -837,11 +837,23 @@
                     <TabItem Header="Ingest" DataContext="{Binding Ingest}" x:DataType="vm:IngestViewModel">
                         <Grid RowDefinitions="Auto,Auto,*" Margin="2,12,2,2">
                             <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,10">
-                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                <Grid ColumnDefinitions="Auto,*,Auto,220" ColumnSpacing="8"
+                                      DragDrop.AllowDrop="True"
+                                      DragDrop.DragOver="OnIngestSourceDragOver"
+                                      DragDrop.Drop="OnIngestSourceDrop">
                                     <TextBlock Grid.Column="0" Text="Source" VerticalAlignment="Center" Classes="muted"/>
                                     <TextBox Grid.Column="1" Text="{Binding SourceDirectory}"
-                                             ToolTip.Tip="{Binding SourceDirectory}"/>
+                                             ToolTip.Tip="Drop a source folder here, or enter its path"/>
                                     <Button Grid.Column="2" Content="Browse…" Command="{Binding BrowseSourceCommand}"/>
+                                    <ComboBox Grid.Column="3" ItemsSource="{Binding RecentSources}"
+                                              SelectedItem="{Binding SelectedRecentSource}"
+                                              PlaceholderText="Recent sources">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate x:DataType="sys:String">
+                                                <TextBlock Text="{Binding}" TextTrimming="CharacterEllipsis"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
                                 </Grid>
                                 <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="8">
                                     <TextBlock Grid.Column="0" Text="Config" VerticalAlignment="Center" Classes="muted"/>
@@ -851,7 +863,22 @@
                                     <Button Grid.Column="3" Content="New…" Command="{Binding NewConfigurationCommand}"/>
                                     <Button Grid.Column="4" Content="Edit…" Command="{Binding EditConfigurationCommand}"/>
                                 </Grid>
+                                <Grid ColumnDefinitions="Auto,220,*,Auto,Auto" ColumnSpacing="8">
+                                    <TextBlock Grid.Column="0" Text="Preset" VerticalAlignment="Center" Classes="muted"/>
+                                    <ComboBox Grid.Column="1" ItemsSource="{Binding Presets}"
+                                              SelectedItem="{Binding SelectedPreset}" PlaceholderText="Choose preset">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:IngestPreset">
+                                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
+                                    <TextBox Grid.Column="2" Text="{Binding PresetName}" PlaceholderText="Preset name"/>
+                                    <Button Grid.Column="3" Content="Save preset" Command="{Binding SavePresetCommand}"/>
+                                    <Button Grid.Column="4" Content="Delete" Command="{Binding DeletePresetCommand}"/>
+                                </Grid>
                                 <WrapPanel Classes="toolbarwrap" Margin="0,0,-8,-8">
+                                    <Button Content="Preflight" Command="{Binding PreflightCommand}"/>
                                     <Button Content="Preview" Command="{Binding PreviewCommand}"/>
                                     <Button Content="Apply" Classes="accent" Command="{Binding ApplyCommand}"/>
                                     <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
@@ -860,6 +887,19 @@
                                                  Width="180" VerticalAlignment="Center" IsVisible="{Binding IsApplying}"/>
                                 </WrapPanel>
                                 <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" Classes="muted"/>
+                                <ItemsControl ItemsSource="{Binding PreflightChecks}" IsVisible="{Binding HasPreflightChecks}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="models:IngestPreflightCheck">
+                                            <Grid ColumnDefinitions="90,*" ColumnSpacing="8" Margin="0,2">
+                                                <TextBlock Grid.Column="0" Text="{Binding Severity}" FontWeight="SemiBold"/>
+                                                <TextBlock Grid.Column="1" TextWrapping="Wrap">
+                                                    <Run Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                    <Run Text="{Binding Message, StringFormat=' â€” {0}'}"/>
+                                                </TextBlock>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </StackPanel>
                             <ItemsControl Grid.Row="1" ItemsSource="{Binding Conflicts}" Margin="0,0,0,8">
                                 <ItemsControl.ItemTemplate>

@@ -2,6 +2,20 @@ namespace MusicLibrary.Core.Models;
 
 public sealed record IngestRequest(string SourceDirectory, string ConfigurationPath);
 
+public enum IngestPreflightSeverity { Pass, Warning, Error }
+
+public sealed record IngestPreflightCheck(
+    string Name,
+    IngestPreflightSeverity Severity,
+    string Message);
+
+public sealed record IngestPreflightResult(IReadOnlyList<IngestPreflightCheck> Checks)
+{
+    public bool CanProceed => Checks.All(check => check.Severity != IngestPreflightSeverity.Error);
+    public int WarningCount => Checks.Count(check => check.Severity == IngestPreflightSeverity.Warning);
+    public int ErrorCount => Checks.Count(check => check.Severity == IngestPreflightSeverity.Error);
+}
+
 public sealed record IngestFileSummary(
     string Source,
     string SourceType,

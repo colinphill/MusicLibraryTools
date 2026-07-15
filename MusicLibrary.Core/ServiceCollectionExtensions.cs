@@ -21,6 +21,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDecodedAudioVerificationService, DecodedAudioVerificationService>();
         services.AddSingleton<IRepresentationRepairService, RepresentationRepairService>();
         services.AddSingleton<IIngestMusicService, IngestMusicService>();
+        services.AddSingleton<IIngestPreflightService, IngestPreflightService>();
         services.AddSingleton<LibraryService>();
         services.AddSingleton<ILibraryService>(sp => sp.GetRequiredService<LibraryService>());
         services.AddSingleton<ILibraryOrganizer>(sp => sp.GetRequiredService<LibraryService>());

@@ -10,6 +10,7 @@ using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using MusicLibrary.App.Services;
 using MusicLibrary.App.ViewModels;
@@ -53,6 +54,22 @@ public partial class MainWindow : Window
         };
         KeyDown += OnWindowKeyDown;
         Closing += (_, _) => PersistWorkspace();
+    }
+
+    private void OnIngestSourceDragOver(object? sender, DragEventArgs e)
+    {
+        e.DragEffects = e.DataTransfer.TryGetFiles()?.Any(item => item is IStorageFolder) == true
+            ? DragDropEffects.Copy
+            : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void OnIngestSourceDrop(object? sender, DragEventArgs e)
+    {
+        var folder = e.DataTransfer.TryGetFiles()?.OfType<IStorageFolder>().FirstOrDefault();
+        if (folder is not null && _vm is not null)
+            _vm.Ingest.SetDroppedSource(folder.Path.LocalPath);
+        e.Handled = true;
     }
 
     private void PersistWorkspace()

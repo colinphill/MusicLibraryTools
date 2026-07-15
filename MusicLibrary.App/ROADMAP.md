@@ -48,7 +48,7 @@ avoid eagerly reading artwork or media data that is already represented in the m
 
 ## 6. Ingest workflow
 
-- [ ] Named presets, recent source folders, drag-and-drop, and configuration preflight.
+- [x] Named presets, recent source folders, drag-and-drop, and configuration preflight.
 - [ ] Summary cards and filtering for albums, outputs, conflicts, and cleanup items.
 - [ ] Persistent ingest history plus interrupted-run recovery.
 
