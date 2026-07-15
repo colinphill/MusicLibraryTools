@@ -95,7 +95,9 @@ for the schema.
 Library indexing uses up to 16 concurrent metadata readers so high-latency SMB shares can
 overlap file opens. Set `MLT_INDEX_PARALLELISM` to a value from 1 through 64 to tune the global
 reader cap for a particular NAS; 8-16 is a sensible starting range, while higher values should
-be validated against the share rather than assumed to be faster.
+be validated against the share rather than assumed to be faster. Multiple scan roots are
+discovered concurrently under that same cap, and root-file snapshots from discovery are reused so
+each root directory is listed only once per indexing pass.
 
 ## Safe execution
 

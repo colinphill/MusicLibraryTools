@@ -21,8 +21,10 @@ namespace MusicFileUtilities.Tests
             string scanDir = Path.Combine(Path.GetTempPath(), "mlt_idx_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(scanDir);
             string dbPath = Path.Combine(scanDir, "cache.db");
+            string nestedDir = Path.Combine(scanDir, "artist", "album");
+            Directory.CreateDirectory(nestedDir);
             foreach (var f in Fixtures)
-                File.Copy(MediaFixtures.Path_(f), Path.Combine(scanDir, f));
+                File.Copy(MediaFixtures.Path_(f), Path.Combine(f == "sample.ogg" ? nestedDir : scanDir, f));
 
             int savedFiles = MetadataDatabase.IndexFilesPerBatch;
             int savedRows = MetadataDatabase.IndexMetaRowsPerInsert;

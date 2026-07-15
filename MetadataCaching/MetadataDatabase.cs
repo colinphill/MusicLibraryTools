@@ -609,99 +609,135 @@ namespace MetadataCaching
             {
                 try
                 {
-                // Split each scan set into per-subtree units: one non-recursive unit for files
-                // sitting directly in the set root, plus one recursive walker per top-level
-                // subdirectory. A single recursive enumerator serializes every directory-listing
-                // round-trip; independent subtree walkers let listing itself fan out across the
-                // share. All units share ONE global parallelism cap (a per-set cap multiplies by
-                // the set count — 12 sets x 32 threads once flooded the NAS with ~384 readers).
-                var units = new List<(string SetPath, long SetID, string Root, bool Recurse)>();
-                foreach (var scanpath in sets)
+                // Split each scan set into per-subtree units, and retain any music files observed
+                // while discovering those units. The old root-files unit listed every scan root a
+                // second time; on a high-latency share that repeated a potentially large directory
+                // query before doing useful work. A single recursive enumerator also serializes
+                // every nested listing round-trip, so independent subtree walkers let listing fan
+                // out across the share. All work shares ONE global parallelism cap (a per-set cap
+                // multiplies by the set count — 12 sets x 32 threads once flooded the NAS with
+                // ~384 readers).
+                int scanParallelism = Math.Clamp(ScanParallelism, 1, 64);
+                var scanParallelOptions = new ParallelOptions { MaxDegreeOfParallelism = scanParallelism };
+                var discoveredUnits = new ConcurrentBag<(string SetPath, long SetID, string Root, bool Recurse)>();
+                var discoveredRootFiles = new ConcurrentBag<(string SetPath, long SetID, string Name, DateTime Modified, long Size)>();
+
+                // Scan-set roots are independent network requests. Discover them concurrently so
+                // configurations with several shares/roots do not pay every initial listing wait
+                // in series. This phase uses the same cap as the readers below.
+                Parallel.ForEach(sets, scanParallelOptions, scanpath =>
                 {
-                    units.Add((scanpath.Path, scanpath.ID, scanpath.Path, false));
                     foreach (var entry in new MusicFileEnumerator(scanpath.Path, recurse: false))
+                    {
                         // Skip .itlp packages here too: a recursive unit rooted INSIDE the package
                         // would bypass the enumerator's recursion pruning.
                         if (entry.FileType == MFEType.Directory && !Path.GetFileName(entry.Name).Contains(".itlp", StringComparison.OrdinalIgnoreCase))
-                            units.Add((scanpath.Path, scanpath.ID, entry.Name, true));
-                }
+                            discoveredUnits.Add((scanpath.Path, scanpath.ID, entry.Name, true));
+                        else if (entry.FileType == MFEType.MusicFile)
+                            discoveredRootFiles.Add((scanpath.Path, scanpath.ID, entry.Name, entry.Modified, entry.Size));
+                    }
+                });
+                var units = discoveredUnits.ToArray();
+                var rootFiles = discoveredRootFiles.ToArray();
 
-                int scanParallelism = Math.Clamp(ScanParallelism, 1, 64);
-                var scanParallelOptions = new ParallelOptions { MaxDegreeOfParallelism = scanParallelism };
-                Parallel.ForEach(units, scanParallelOptions, (unit, loopstate) =>
+                void ProcessFile(
+                    string setPath,
+                    long setID,
+                    (string Name, DateTime Modified, long Size, MFEType FileType) file,
+                    ParallelLoopState loopstate)
                 {
-                    foreach (var file in new MusicFileEnumerator(unit.Root, unit.Recurse))
-                    {
-                       // Cooperative cancellation: stop the whole parallel walk at the next file
-                       // boundary. loopstate.Stop() lets Parallel.ForEach return normally so the
-                       // filequeue.CompleteAdding() below still runs (an exception here would leave
-                       // the consumer blocked forever).
-                       if (ct.IsCancellationRequested)
+                   // Cooperative cancellation: stop the whole parallel walk at the next file
+                   // boundary. loopstate.Stop() lets Parallel.For return normally so the
+                   // filequeue.CompleteAdding() below still runs (an exception here would leave
+                   // the consumer blocked forever).
+                   if (ct.IsCancellationRequested)
+                   {
+                       loopstate.Stop();
+                       return;
+                   }
+                   if (file.FileType != MFEType.MusicFile)
+                       return;
+                   var relativename = Path.GetRelativePath(setPath, file.Name);
+                   var key = (SetID: setID, RelativeName: relativename);
+                   var scan = false;
+                   var isAdded = false;
+                   var isModified = false;
+                   long id = -1;
+                   if (filesdict.TryGetValue(key, out var existing))
+                   {
+                       Interlocked.Exchange(ref existing.Hit, 1);
+                       if ((Math.Abs((file.Modified - existing.LastWriteTime).TotalMilliseconds) > 500.0) || (file.Size != existing.Length))
                        {
-                           loopstate.Stop();
-                           break;
-                       }
-                       if (file.FileType != MFEType.MusicFile)
-                           continue;
-                       var relativename = Path.GetRelativePath(unit.SetPath, file.Name);
-                       var key = (SetID: unit.SetID, RelativeName: relativename);
-                       var scan = false;
-                       var isAdded = false;
-                       var isModified = false;
-                       long id = -1;
-                       if (filesdict.TryGetValue(key, out var existing))
-                       {
-                           Interlocked.Exchange(ref existing.Hit, 1);
-                           if ((Math.Abs((file.Modified - existing.LastWriteTime).TotalMilliseconds) > 500.0) || (file.Size != existing.Length))
-                           {
-                               id = existing.ID;
-                               isModified = true;
-                               scan = true;
-                           }
-                           else
-                           {
-                               Interlocked.Increment(ref unchanged);
-                           }
+                           id = existing.ID;
+                           isModified = true;
+                           scan = true;
                        }
                        else
                        {
-                           scan = true;
-                           isAdded = true;
+                           Interlocked.Increment(ref unchanged);
                        }
-                       if (scan)
+                   }
+                   else
+                   {
+                       scan = true;
+                       isAdded = true;
+                   }
+                   if (scan)
+                   {
+                       try
                        {
-                           try
+                           filequeue.Add((id, setID, relativename, file.Size, file.Modified,
+                               MediaFile.GetFile(file.Name, readOnly: true, readArtwork: false)), pipelineCts.Token);
+                           if (isAdded)
+                               Interlocked.Increment(ref added);
+                           else if (isModified)
+                               Interlocked.Increment(ref modified);
+                           int done = Interlocked.Increment(ref scanned);
+                           // Console is internally locked; printing from every scan thread
+                           // every 100 files serializes them. A coarser cadence (and no
+                           // explicit Flush, which the console stream does anyway) avoids it.
+                           if ((done % 1000) == 0)
                            {
-                               filequeue.Add((id, unit.SetID, relativename, file.Size, file.Modified,
-                                   MediaFile.GetFile(file.Name, readOnly: true, readArtwork: false)), pipelineCts.Token);
-                               if (isAdded)
-                                   Interlocked.Increment(ref added);
-                               else if (isModified)
-                                   Interlocked.Increment(ref modified);
-                               int done = Interlocked.Increment(ref scanned);
-                               // Console is internally locked; printing from every scan thread
-                               // every 100 files serializes them. A coarser cadence (and no
-                               // explicit Flush, which the console stream does anyway) avoids it.
-                               if ((done % 1000) == 0)
-                               {
-                                   if (progress != null)
-                                       progress.Report(new IndexProgress(done, added, modified, unchanged));
-                                   else
-                                       Console.Write($"Scanned: {done}\r");
-                               }
-                           }
-                           catch (IOException ex)
-                           {
-                               Console.WriteLine($"IOException On File: {file.Name} - {ex.Message} (0x{ex.HResult:x})");
-                               Console.WriteLine(ex.StackTrace);
-                           }
-                           catch (Exception ex)
-                           {
-                               Console.WriteLine($"Unknown Exception On File: {file.Name} - {ex.Message}");
-                               Interlocked.Exchange(ref scanFailed, 1);
-                               loopstate.Stop();
+                               if (progress != null)
+                                   progress.Report(new IndexProgress(done, added, modified, unchanged));
+                               else
+                                   Console.Write($"Scanned: {done}\r");
                            }
                        }
+                       catch (IOException ex)
+                       {
+                           Console.WriteLine($"IOException On File: {file.Name} - {ex.Message} (0x{ex.HResult:x})");
+                           Console.WriteLine(ex.StackTrace);
+                       }
+                       catch (Exception ex)
+                       {
+                           Console.WriteLine($"Unknown Exception On File: {file.Name} - {ex.Message}");
+                           Interlocked.Exchange(ref scanFailed, 1);
+                           loopstate.Stop();
+                       }
+                   }
+                }
+
+                // Directory units come first so their longer-running recursive walks begin as
+                // soon as workers are available. Root files share the same work scheduler and
+                // reader cap, but use the snapshots captured during the one discovery listing.
+                Parallel.For(0, units.Length + rootFiles.Length, scanParallelOptions, (index, loopstate) =>
+                {
+                    if (index < units.Length)
+                    {
+                        var unit = units[index];
+                        foreach (var file in new MusicFileEnumerator(unit.Root, unit.Recurse))
+                        {
+                            ProcessFile(unit.SetPath, unit.SetID, file, loopstate);
+                            if (loopstate.IsStopped)
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        var file = rootFiles[index - units.Length];
+                        ProcessFile(file.SetPath, file.SetID,
+                            (file.Name, file.Modified, file.Size, MFEType.MusicFile), loopstate);
                     }
                 });
 
