@@ -444,7 +444,7 @@ namespace MusicFileUtilities
             return l.ToArray();
         }
 
-        public void FromByteArray(byte[] b)
+        public void FromByteArray(byte[] b, bool readArtwork = true)
         {
             int offset = 0;
             // All lengths are read from file bytes, so bounds-check every read; a corrupt
@@ -470,21 +470,30 @@ namespace MusicFileUtilities
                 offset += 4;
 
                 if (!CanRead(commentlength)) break;
-                string comment = Encoding.UTF8.GetString(b, offset, commentlength);
+                int separator = b.AsSpan(offset, commentlength).IndexOf((byte)'=');
+                if (separator < 0)
+                {
+                    offset += commentlength;
+                    continue;
+                }
+                string key = Encoding.UTF8.GetString(b, offset, separator).ToUpperInvariant();
+                int valueOffset = offset + separator + 1;
+                int valueLength = commentlength - separator - 1;
                 offset += commentlength;
 
-                string[] split = comment.Split(new char[] { '=' }, 2);
-                if (split.Length < 2)
-                    continue; // malformed comment with no '=' separator
-                split[0] = split[0].ToUpper();
-
-                if (split[0] == "METADATA_BLOCK_PICTURE")
+                if (key == "METADATA_BLOCK_PICTURE")
                 {
-                    try { Artworks.Add(new VorbisArtwork(Convert.FromBase64String(split[1]))); }
+                    try
+                    {
+                        if (readArtwork)
+                            Artworks.Add(new VorbisArtwork(Convert.FromBase64String(
+                                Encoding.UTF8.GetString(b, valueOffset, valueLength))));
+                    }
                     catch { /* skip a single malformed embedded picture */ }
                 }
                 else
-                    Comments.Add(new KeyValuePair<string, string>(split[0], split[1]));
+                    Comments.Add(new KeyValuePair<string, string>(
+                        key, Encoding.UTF8.GetString(b, valueOffset, valueLength)));
             }
             ParseStandardFields();
         }
@@ -587,6 +596,7 @@ namespace MusicFileUtilities
 
         private bool _gotinfo;
         private bool _gotcomments;
+        private readonly bool _readArtwork;
         internal bool LastSaveWasInPlace { get; private set; }
 
         private void ParsePage(byte[] page)
@@ -599,7 +609,7 @@ namespace MusicFileUtilities
             {
                 byte[] stripped = new byte[page.Length - 7];
                 Array.Copy(page, 7, stripped, 0, page.Length - 7);
-                FromByteArray(stripped);
+                FromByteArray(stripped, _readArtwork);
                 _gotcomments = true;
             }
             if (page[0] == 1) // Information Header
@@ -616,9 +626,10 @@ namespace MusicFileUtilities
             }
         }
 
-        public OggVorbisFile(string filename)
+        public OggVorbisFile(string filename, bool readArtwork = true)
         {
             Filename = filename;
+            _readArtwork = readArtwork;
 
             bool lastpage;
             // Accumulate a packet's pages here. This previously used Array.Resize per

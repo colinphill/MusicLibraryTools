@@ -205,6 +205,10 @@ at build time by `generate-fixtures.ps1` — **ffmpeg must be on the PATH** (or 
   exception-driven control flow on the hot path. Indexing opens MP4/M4A files in a read-only
   projection that discards unrelated sample-table payloads; tag-writing paths reopen the full
   editable atom tree so unknown data is still preserved on save.
+- New and modified cache entries defer embedded artwork bytes during the metadata pass. Artwork
+  signatures, thumbnails, and detail views hydrate only the requested files under the same bounded
+  reader cap, after verifying that size and timestamp still match the indexed source. Existing
+  databases migrate as already hydrated, avoiding an unexpected library-wide artwork rescan.
 - Format-specific readers avoid empty network work: MP3 jumps over declared ID3 padding, FLAC
   does not seek across a final padding block, and WavPack reads its APE tail tag without probing
   the file front or re-reading the optional header. DSF reads its fixed format header before making

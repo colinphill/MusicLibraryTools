@@ -60,6 +60,20 @@ namespace MusicFileUtilities
             }
         }
 
+        // Small skips stay inside FileStream's read-ahead buffer; large unneeded payloads seek so
+        // deferred artwork does not cross a network share during the metadata-only pass.
+        public static void SkipExactly(Stream source, long length)
+        {
+            if (length < 0)
+                throw new ArgumentOutOfRangeException(nameof(length));
+            if (length == 0)
+                return;
+            if (source.CanSeek && length > ParseReadBufferSize)
+                source.Seek(length, SeekOrigin.Current);
+            else
+                DiscardExactly(source, length);
+        }
+
         // Large, pooled transfers turn full tag rewrites into sustained sequential SMB I/O instead
         // of a stream of 64 KiB requests. A bounded-length variant is used by formats whose tag is
         // appended after an audio prefix.

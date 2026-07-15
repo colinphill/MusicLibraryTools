@@ -57,7 +57,7 @@ namespace MusicFileUtilities
         private static readonly uint [] samplerates_ = { 6000, 8000, 9600, 11025, 12000, 16000, 22050,
             24000, 32000, 44100, 48000, 64000, 88200, 96000, 192000, 44100 };
 
-        public WavPackFile(string filename)
+        public WavPackFile(string filename, bool readArtwork = true)
         {
             _filename = filename;
             using var s = Tools.OpenReadSequential(filename);
@@ -111,7 +111,7 @@ namespace MusicFileUtilities
                 break;
             }
             tag_ = new APETag();
-            if (!tag_.ReadTag(s, onlyAtEnd: true))
+            if (!tag_.ReadTag(s, onlyAtEnd: true, readArtwork: readArtwork))
                 tag_ = new APETag();
         }
 

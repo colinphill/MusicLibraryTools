@@ -1606,7 +1606,7 @@ namespace MusicFileUtilities
             return _frames.OfType<IdentifierFrame>().FirstOrDefault(f => f.FrameID == frameId && f.Key == key);
         }
 
-        protected void ReadTag(Stream s)
+        protected void ReadTag(Stream s, bool readArtwork = true)
         {
             if (s is FileStream fs)
                 _filename = fs.Name;
@@ -1690,9 +1690,17 @@ namespace MusicFileUtilities
                             framesize = (framesize * 256) + frame[7];
                         }
                         f.Flags = (((int)frame[8]) << 8) + (int)frame[9];
-                        f.Data = r.ReadBytes(framesize);
+                        bool isPicture = f.FrameID == "APIC";
+                        if (isPicture && !readArtwork)
+                            Tools.SkipExactly(r.BaseStream, framesize);
+                        else
+                            f.Data = r.ReadBytes(framesize);
 
-                        if ((f.FrameID == "TXXX") || (f.FrameID == "WXXX"))
+                        if (isPicture && !readArtwork)
+                        {
+                            // Hydrated separately from the read-only metadata scan.
+                        }
+                        else if ((f.FrameID == "TXXX") || (f.FrameID == "WXXX"))
                             _frames.Add(new UserStringFrame(f));
                         else if ((f.FrameID == "UFID") || (f.FrameID == "PRIV"))
                             _frames.Add(new IdentifierFrame(f));
@@ -1736,9 +1744,17 @@ namespace MusicFileUtilities
                         int framesize = frame[3];
                         framesize = (framesize * 256) + frame[4];
                         framesize = (framesize * 256) + frame[5];
-                        f.Data = r.ReadBytes(framesize);
+                        bool isPicture = f.FrameID == "PIC";
+                        if (isPicture && !readArtwork)
+                            Tools.SkipExactly(r.BaseStream, framesize);
+                        else
+                            f.Data = r.ReadBytes(framesize);
 
-                        if ((f.FrameID == "TXX") || (f.FrameID == "WXX"))
+                        if (isPicture && !readArtwork)
+                        {
+                            // Hydrated separately from the read-only metadata scan.
+                        }
+                        else if ((f.FrameID == "TXX") || (f.FrameID == "WXX"))
                             _frames.Add(new UserStringFrame(f));
                         else if (f.FrameID == "PIC")
                             _frames.Add(new PictureFrame(f));
@@ -1819,11 +1835,11 @@ namespace MusicFileUtilities
         }
 
 
-        public MP3File(string filename)
+        public MP3File(string filename, bool readArtwork = true)
         {
             using (FileStream s = Tools.OpenReadSequential(filename))
             {
-                ReadTag(s);
+                ReadTag(s, readArtwork);
                 // FileStream.Length is a syscall; don't pay it once per scanned byte while
                 // hunting for the first frame sync.
                 long length = s.Length;
@@ -2023,22 +2039,22 @@ namespace MusicFileUtilities
                 yield return this;
             }
         }
-        public DSFFile(string filename)
+        public DSFFile(string filename, bool readArtwork = true)
         {
             // ReadTag only runs when a metadata pointer is present, so set the filename here
             // too — otherwise a DSF with no existing tag can't be saved in place.
             _filename = filename;
             using FileStream s = Tools.OpenReadSequential(filename);
-            Parse(s);
+            Parse(s, readArtwork);
         }
 
         internal DSFFile(Stream stream, string filename)
         {
             _filename = filename;
-            Parse(stream);
+            Parse(stream, readArtwork: true);
         }
 
-        private void Parse(Stream s)
+        private void Parse(Stream s, bool readArtwork)
         {
             byte[] header = new byte[4];
             s.ReadExactly(header);
@@ -2069,7 +2085,7 @@ namespace MusicFileUtilities
             if (_tagoffset != 0)
             {
                 s.Seek(_tagoffset, SeekOrigin.Begin);
-                ReadTag(s);
+                ReadTag(s, readArtwork);
             }
         }
 

@@ -5,6 +5,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using Microsoft.Data.Sqlite;
 using Xunit;
 
 namespace MusicLibrary.Core.Tests;
@@ -225,5 +226,84 @@ public class DatabaseReadTests
         {
             try { Directory.Delete(work, recursive: true); } catch { }
         }
+    }
+
+    [Fact]
+    public async Task Index_DefersArtworkUntilItIsRequested()
+    {
+        var (work, _, config, song) = Setup("sample.flac");
+        try
+        {
+            byte[] cover = CreatePngBytes(96, 96, Color.Purple);
+            var media = MediaFile.GetFile(song);
+            ((IArtworkWriter)media.Tags.First()).SetFrontCover(cover, "image/png");
+            media.SaveTags();
+
+            var settings = new AppSettings(Path.Combine(work, "settings.json"));
+            settings.LoadConfig(config);
+            using var library = new LibraryService(settings);
+            await library.IndexAsync();
+
+            Assert.Equal(0L, ReadArtworkScanned(Path.Combine(work, "cache.db")));
+            Assert.NotNull(await library.GetFileDetailsAsync(song, includeArtwork: false));
+            Assert.Equal(0L, ReadArtworkScanned(Path.Combine(work, "cache.db")));
+
+            Assert.Equal(cover, await library.GetFirstImageAsync(song));
+            Assert.Equal(1L, ReadArtworkScanned(Path.Combine(work, "cache.db")));
+            Assert.Single((await library.GetFileDetailsAsync(song, includeArtwork: true))!.Images);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            try { Directory.Delete(work, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task DeferredArtworkRejectsAFileChangedSinceIndexing()
+    {
+        var (work, _, config, song) = Setup("sample.flac");
+        try
+        {
+            var media = MediaFile.GetFile(song);
+            ((IArtworkWriter)media.Tags.First()).SetFrontCover(
+                CreatePngBytes(64, 64, Color.Green), "image/png");
+            media.SaveTags();
+
+            var settings = new AppSettings(Path.Combine(work, "settings.json"));
+            settings.LoadConfig(config);
+            using var library = new LibraryService(settings);
+            await library.IndexAsync();
+            File.AppendAllText(song, "changed");
+
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(
+                () => library.GetFirstImageAsync(song));
+            Assert.Contains("changed since metadata indexing", error.Message);
+            Assert.Equal(0L, ReadArtworkScanned(Path.Combine(work, "cache.db")));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            try { Directory.Delete(work, recursive: true); } catch { }
+        }
+    }
+
+    private static byte[] CreatePngBytes(int width, int height, Color color)
+    {
+        using var image = new Image<Rgba32>(width, height);
+        image.Mutate(context => context.BackgroundColor(color));
+        using var stream = new MemoryStream();
+        image.Save(stream, new PngEncoder());
+        return stream.ToArray();
+    }
+
+    private static long ReadArtworkScanned(string databasePath)
+    {
+        using var connection = new SqliteConnection(
+            new SqliteConnectionStringBuilder { DataSource = databasePath }.ConnectionString);
+        connection.Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT ArtworkScanned FROM Files LIMIT 1";
+        return (long)command.ExecuteScalar()!;
     }
 }

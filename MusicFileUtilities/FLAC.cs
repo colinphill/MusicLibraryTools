@@ -119,21 +119,21 @@ namespace MusicFileUtilities
             DurationInFrames = (uint)(75 * samples / Samplerate);
         }
 
-        public FLACFile(string filename)
+        public FLACFile(string filename, bool readArtwork = true)
         {
             Filename = filename;
 
             using FileStream s = Tools.OpenReadSequential(filename);
-            Parse(s);
+            Parse(s, readArtwork);
         }
 
-        internal FLACFile(Stream stream, string filename)
+        internal FLACFile(Stream stream, string filename, bool readArtwork = true)
         {
             Filename = filename;
-            Parse(stream);
+            Parse(stream, readArtwork);
         }
 
-        private void Parse(Stream s)
+        private void Parse(Stream s, bool readArtwork)
         {
             byte[] si = null;
             byte [] b = new byte[4];
@@ -172,10 +172,15 @@ namespace MusicFileUtilities
                 }
                 else if (blockType == 6) // PICTURE
                 {
-                    byte[] p = new byte[len];
-                    s.ReadExactly(p);
-                    _originalPictureBlocks.Add(p);
-                    Artworks.Add(new VorbisArtwork(p));
+                    if (readArtwork)
+                    {
+                        byte[] p = new byte[len];
+                        s.ReadExactly(p);
+                        _originalPictureBlocks.Add(p);
+                        Artworks.Add(new VorbisArtwork(p));
+                    }
+                    else if (!isLast)
+                        Tools.SkipExactly(s, len);
                 }
                 else
                 {

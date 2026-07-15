@@ -503,7 +503,7 @@ namespace MusicFileUtilities
             return result.ToArray();
         }
 
-        public bool ReadTag(Stream s, bool onlyAtEnd = false)
+        public bool ReadTag(Stream s, bool onlyAtEnd = false, bool readArtwork = true)
         {
             long streamLength = s.Length;
             if (streamLength < 32)
@@ -565,6 +565,9 @@ namespace MusicFileUtilities
             // corrupt tag can't OOM or read out of bounds.
             if (tagsize < 0 || tagsize > streamLength - s.Position)
                 return false;
+            if (!readArtwork)
+                return ReadTextItemsWithoutArtwork(s, tagsize, itemcount);
+
             byte[] tag = new byte[tagsize];
             s.ReadExactly(tag);
             int offset = 0;
@@ -591,7 +594,7 @@ namespace MusicFileUtilities
                 }
                 else if ((itemflags & 6) == 2)
                 {
-                    if (itemkey.StartsWith("Cover Art", StringComparison.InvariantCultureIgnoreCase))
+                    if (readArtwork && itemkey.StartsWith("Cover Art", StringComparison.InvariantCultureIgnoreCase))
                         ArtworkItems.Add(new KeyValuePair<string, APEArtwork>(
                             itemkey, new APEArtwork(itemkey, tag, offset, itemlen)));
                     else
@@ -602,6 +605,51 @@ namespace MusicFileUtilities
                     }
                 }
                 offset += itemlen;
+            }
+
+            ParseStandardFields();
+            return true;
+        }
+
+        private bool ReadTextItemsWithoutArtwork(Stream stream, int tagSize, int itemCount)
+        {
+            long tagEnd = stream.Position + tagSize;
+            byte[] itemHeader = new byte[8];
+            for (int index = 0; index < itemCount; index++)
+            {
+                if (stream.Position + itemHeader.Length > tagEnd)
+                    break;
+                stream.ReadExactly(itemHeader);
+                int itemLength = Tools.Int32AtLE(itemHeader, 0);
+                int itemFlags = Tools.Int32AtLE(itemHeader, 4);
+                if (itemLength < 0)
+                    break;
+
+                var key = new StringBuilder();
+                while (stream.Position < tagEnd)
+                {
+                    int value = stream.ReadByte();
+                    if (value <= 0)
+                        break;
+                    key.Append((char)value);
+                }
+                if (stream.Position + itemLength > tagEnd)
+                    break;
+
+                if ((itemFlags & 6) == 0)
+                {
+                    byte[] value = new byte[itemLength];
+                    stream.ReadExactly(value);
+                    TextItems.AddRange(Encoding.UTF8.GetString(value)
+                        .Split(new char[] { '\0' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(text => new KeyValuePair<string, string>(key.ToString(), text)));
+                }
+                else
+                {
+                    // Binary items are not part of the metadata summary. In particular, large
+                    // Cover Art values are sought over and hydrated only when artwork is requested.
+                    Tools.SkipExactly(stream, itemLength);
+                }
             }
 
             ParseStandardFields();

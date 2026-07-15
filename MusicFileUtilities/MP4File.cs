@@ -1526,6 +1526,7 @@ namespace MusicFileUtilities
     public class ContainerAtom : Atom
     {
         internal bool PreserveUnknownData { get; set; } = true;
+        internal bool ReadArtworkData { get; set; } = true;
 
         public Atom this[int index]
         {
@@ -1545,6 +1546,7 @@ namespace MusicFileUtilities
             : base(ca)
         {
             PreserveUnknownData = ca.PreserveUnknownData;
+            ReadArtworkData = ca.ReadArtworkData;
         }
 
         public override void WriteAtom(Stream s)
@@ -1588,7 +1590,12 @@ namespace MusicFileUtilities
 
                 Atom sa = new Atom(s, this);
                 Atom parsedAtom = sa;
-                if (MP4Util.AtomTypes.TryGetValue(sa.Type, out Type Atom_type) ||
+                if (!ReadArtworkData && Type == "covr" && sa.Type == "data")
+                {
+                    parsedAtom = new DiscardedAtom(sa);
+                    _children.Add(parsedAtom);
+                }
+                else if (MP4Util.AtomTypes.TryGetValue(sa.Type, out Type Atom_type) ||
                     MP4Util.AtomTypes.TryGetValue(Type + "." + sa.Type, out Atom_type))
                 {
                     parsedAtom = (Atom_type == typeof(Atom)) ? sa : MP4Util.CreateAtom(Atom_type, sa, s);
@@ -1639,6 +1646,7 @@ namespace MusicFileUtilities
             : base(a)
         {
             PreserveUnknownData = a.ParentAtom?.PreserveUnknownData ?? true;
+            ReadArtworkData = a.ParentAtom?.ReadArtworkData ?? true;
             if (!defer)
                 InitChildren(s, null, 0);
         }
@@ -1790,15 +1798,17 @@ namespace MusicFileUtilities
 
     public class RootAtom : ContainerAtom
     {
-        public RootAtom(string path, bool preserveUnknownData = true)
+        public RootAtom(string path, bool preserveUnknownData = true, bool readArtworkData = true)
         {
             PreserveUnknownData = preserveUnknownData;
+            ReadArtworkData = readArtworkData;
             ReadFile(path);
         }
 
-        internal RootAtom(Stream stream, string path, bool preserveUnknownData = true)
+        internal RootAtom(Stream stream, string path, bool preserveUnknownData = true, bool readArtworkData = true)
         {
             PreserveUnknownData = preserveUnknownData;
+            ReadArtworkData = readArtworkData;
             ReadStream(stream, path);
         }
 
@@ -2231,8 +2241,7 @@ namespace MusicFileUtilities
                     var mapping = MP4Util.ImageMapping[ca.Type];
                     foreach (Atom childatom in ca.FindMultiplePath("data"))
                     {
-                        Atom_data da = childatom as Atom_data;
-                        if (da.IsImage)
+                        if (childatom is Atom_data da && da.IsImage)
                             yield return da;
                     }
                 }
@@ -2323,10 +2332,10 @@ namespace MusicFileUtilities
         {
         }
 
-        public MP4File(string filename, bool readOnly)
+        public MP4File(string filename, bool readOnly, bool readArtwork = true)
         {
             _readOnly = readOnly;
-            root_ = new RootAtom(filename, preserveUnknownData: !readOnly);
+            root_ = new RootAtom(filename, preserveUnknownData: !readOnly, readArtworkData: readArtwork);
             ParseCodecInfo();
             Atom_mvhd mvhd = root_.FindPath("moov.mvhd") as Atom_mvhd;
             DurationInFrames = mvhd.DurationInFrames;

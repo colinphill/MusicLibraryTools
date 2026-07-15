@@ -18,6 +18,7 @@ using System.Data;
 using System.Security.Cryptography;
 using System.Text;
 using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 
 [assembly: InternalsVisibleTo("MusicFileUtilities.Tests")]
 
@@ -180,7 +181,7 @@ namespace MetadataCaching
             "CREATE TABLE AlbumArtists (ID INTEGER PRIMARY KEY, Name TEXT UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE Albums (ID INTEGER PRIMARY KEY, ScanSetID BIGINT REFERENCES ScanSets (ID) NOT NULL, AlbumArtistID BIGINT NOT NULL REFERENCES AlbumArtists (ID), Name TEXT NOT NULL, Path TEXT NOT NULL);\r\n" +
             "CREATE TABLE Tracks (ID INTEGER PRIMARY KEY, ArtistID BIGINT REFERENCES Artists (ID) NOT NULL, AlbumID BIGINT REFERENCES Albums (ID) NOT NULL, Name TEXT NOT NULL, TrackNumber BIGINT, TrackTotal BIGINT, DiscNumber BIGINT, DiscTotal BIGINT, ReleaseDate TEXT);\r\n" +
-            "CREATE TABLE Files (ID INTEGER PRIMARY KEY, Path TEXT NOT NULL, FileSize BIGINT NOT NULL, LastWriteTime DATETIME NOT NULL, CodecName TEXT NOT NULL, CodecType TEXT NOT NULL, AverageBitrate BIGINT NOT NULL, MaxBitrate BIGINT NOT NULL, BitsPerSample BIGINT NOT NULL, SampleRate BIGINT NOT NULL, Channels BIGINT NOT NULL, DurationInFrames BIGINT NOT NULL, TagType TEXT NOT NULL);\r\n" +
+            "CREATE TABLE Files (ID INTEGER PRIMARY KEY, Path TEXT NOT NULL, FileSize BIGINT NOT NULL, LastWriteTime DATETIME NOT NULL, CodecName TEXT NOT NULL, CodecType TEXT NOT NULL, AverageBitrate BIGINT NOT NULL, MaxBitrate BIGINT NOT NULL, BitsPerSample BIGINT NOT NULL, SampleRate BIGINT NOT NULL, Channels BIGINT NOT NULL, DurationInFrames BIGINT NOT NULL, TagType TEXT NOT NULL, ArtworkScanned BIGINT NOT NULL);\r\n" +
             "CREATE TABLE Images (ID INTEGER PRIMARY KEY, Hash TEXT NOT NULL, ImageType TEXT NOT NULL, Width BIGINT NOT NULL, Height BIGINT NOT NULL, Size BIGINT NOT NULL, Data BLOB NOT NULL);\r\n" +
             "CREATE TABLE ImageMetadata (ID INTEGER PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, ImageID BIGINT REFERENCES Images (ID), Description TEXT NOT NULL, Category TEXT NOT NULL);\r\n" +
             "CREATE TABLE MetadataKeys (ID INTEGER PRIMARY KEY, \"Key\" TEXT UNIQUE NOT NULL);\r\n" +
@@ -211,7 +212,7 @@ namespace MetadataCaching
             "CREATE TABLE AlbumArtists (ID BIGINT IDENTITY PRIMARY KEY, Name NVARCHAR(512) UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE Albums (ID BIGINT IDENTITY PRIMARY KEY, ScanSetID BIGINT REFERENCES ScanSets (ID) NOT NULL, AlbumArtistID BIGINT NOT NULL REFERENCES AlbumArtists (ID), Name NVARCHAR(MAX) NOT NULL, Path NVARCHAR(MAX) NOT NULL);\r\n" +
             "CREATE TABLE Tracks (ID BIGINT PRIMARY KEY, ArtistID BIGINT REFERENCES Artists (ID) NOT NULL, AlbumID BIGINT REFERENCES Albums (ID) NOT NULL, Name NVARCHAR(MAX) NOT NULL, TrackNumber BIGINT, TrackTotal BIGINT, DiscNumber BIGINT, DiscTotal BIGINT, ReleaseDate NVARCHAR(MAX));\r\n" +
-            "CREATE TABLE Files (ID BIGINT IDENTITY PRIMARY KEY, Path NVARCHAR(512) NOT NULL, FileSize BIGINT NOT NULL, LastWriteTime DATETIME NOT NULL, CodecName NVARCHAR(MAX) NOT NULL, CodecType NVARCHAR(MAX) NOT NULL, AverageBitrate BIGINT NOT NULL, MaxBitrate BIGINT NOT NULL, BitsPerSample BIGINT NOT NULL, SampleRate BIGINT NOT NULL, Channels BIGINT NOT NULL, DurationInFrames BIGINT NOT NULL, TagType NVARCHAR(64) NOT NULL);\r\n" +
+            "CREATE TABLE Files (ID BIGINT IDENTITY PRIMARY KEY, Path NVARCHAR(512) NOT NULL, FileSize BIGINT NOT NULL, LastWriteTime DATETIME NOT NULL, CodecName NVARCHAR(MAX) NOT NULL, CodecType NVARCHAR(MAX) NOT NULL, AverageBitrate BIGINT NOT NULL, MaxBitrate BIGINT NOT NULL, BitsPerSample BIGINT NOT NULL, SampleRate BIGINT NOT NULL, Channels BIGINT NOT NULL, DurationInFrames BIGINT NOT NULL, TagType NVARCHAR(64) NOT NULL, ArtworkScanned BIGINT NOT NULL);\r\n" +
             "CREATE TABLE Images (ID BIGINT IDENTITY PRIMARY KEY, Hash VARCHAR(64), ImageType NVARCHAR(MAX) NOT NULL, Width BIGINT NOT NULL, Height BIGINT NOT NULL, Size BIGINT NOT NULL, Data VARBINARY(MAX) NOT NULL);\r\n" +
             "CREATE TABLE MetadataKeys (ID BIGINT IDENTITY PRIMARY KEY, \"Key\" NVARCHAR(512) UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE Metadata (ID BIGINT IDENTITY PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, KeyID BIGINT REFERENCES MetadataKeys (ID) NOT NULL, Value NVARCHAR(MAX) NOT NULL);\r\n" +
@@ -330,6 +331,14 @@ namespace MetadataCaching
             // indexes used by per-file refresh/detail queries for both new and existing databases.
             // SQLite can reuse freed pages without forcing an expensive VACUUM during startup.
             using var mcomm = res.conn_.CreateCommand();
+            mcomm.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Files') WHERE name = 'ArtworkScanned'";
+            if (Convert.ToInt64(mcomm.ExecuteScalar()) == 0)
+            {
+                // Existing caches already contain eagerly indexed artwork, so migrate their rows
+                // as resolved. New/modified files explicitly insert ArtworkScanned = 0 below.
+                mcomm.CommandText = "ALTER TABLE Files ADD COLUMN ArtworkScanned BIGINT NOT NULL DEFAULT 1";
+                mcomm.ExecuteNonQuery();
+            }
             mcomm.CommandText =
                 "DROP TABLE IF EXISTS KnownMetadata;\r\n" +
                 "CREATE INDEX IF NOT EXISTS AlbumsLookupIndex ON Albums (ScanSetID, Path, AlbumArtistID, Name);\r\n" +
@@ -590,10 +599,9 @@ namespace MetadataCaching
                 using (var reader = querycomm.ExecuteReader())
                     while (reader.Read())
                         albumsdict[(reader.GetInt64("ScanSetID"), reader.GetInt64("AlbumArtistID"), reader.GetString("Path"), reader.GetString("Name"))] = reader.GetInt64("ID");
-                querycomm.CommandText = "SELECT ID, Hash FROM Images";
-                using (var reader = querycomm.ExecuteReader())
-                    while (reader.Read())
-                        imagesdict[reader.GetString("Hash")] = reader.GetInt64("ID");
+                // Artwork is intentionally unresolved during this pass, so do not load the global
+                // image-hash table. On-demand hydration uses its indexed hash lookup only for the
+                // requested files.
             }
 
             int scanFailed = 0;
@@ -620,7 +628,7 @@ namespace MetadataCaching
 
                 int scanParallelism = Math.Clamp(ScanParallelism, 1, 64);
                 var scanParallelOptions = new ParallelOptions { MaxDegreeOfParallelism = scanParallelism };
-                Parallel.ForEach(units, scanParallelOptions, () => { return SHA256.Create(); }, (unit, loopstate, hash) =>
+                Parallel.ForEach(units, scanParallelOptions, (unit, loopstate) =>
                 {
                     foreach (var file in new MusicFileEnumerator(unit.Root, unit.Recurse))
                     {
@@ -664,7 +672,8 @@ namespace MetadataCaching
                        {
                            try
                            {
-                               filequeue.Add((id, unit.SetID, relativename, file.Size, file.Modified, MediaFile.GetFile(file.Name, hash, readOnly: true)), pipelineCts.Token);
+                               filequeue.Add((id, unit.SetID, relativename, file.Size, file.Modified,
+                                   MediaFile.GetFile(file.Name, readOnly: true, readArtwork: false)), pipelineCts.Token);
                                if (isAdded)
                                    Interlocked.Increment(ref added);
                                else if (isModified)
@@ -694,8 +703,7 @@ namespace MetadataCaching
                            }
                        }
                     }
-                    return hash;
-                }, (hash) => { hash.Dispose(); });
+                });
 
                 // Removal detection must wait until every unit of every set has finished marking
                 // hits, so it runs once here rather than per set. Only sets scanned in this call
@@ -792,8 +800,8 @@ namespace MetadataCaching
                     var channelsparam = filecomm.Parameters.Add("@Channels", DbType.Int64);
                     var durationinframesparam = filecomm.Parameters.Add("@DurationInFrames", DbType.Int64);
                     var tagtypeparam = filecomm.Parameters.Add("@TagType", DbType.String);
-                    filecomm.CommandText = "INSERT INTO Files (Path, FileSize, LastWriteTime, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames, TagType)" +
-                        " VALUES (@Path, @FileSize, @LastWriteTime, @CodecName, @CodecType, @AverageBitrate, @MaxBitrate, @BitsPerSample, @SampleRate, @Channels, @DurationInFrames, @TagType);\r\n" +
+                    filecomm.CommandText = "INSERT INTO Files (Path, FileSize, LastWriteTime, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames, TagType, ArtworkScanned)" +
+                        " VALUES (@Path, @FileSize, @LastWriteTime, @CodecName, @CodecType, @AverageBitrate, @MaxBitrate, @BitsPerSample, @SampleRate, @Channels, @DurationInFrames, @TagType, 0);\r\n" +
                         lastidsql_;
 
                     // SQLite metadata rows are written via buffered multi-row INSERTs (see
@@ -1157,6 +1165,9 @@ namespace MetadataCaching
         /// </summary>
         public FileDetails GetFileDetails(string fullPath, bool includeImages)
         {
+            if (includeImages)
+                EnsureArtworkHydrated([fullPath]);
+
             var (setId, albumPath, fileName) = DecomposePath(fullPath);
             if (setId < 0)
                 return null;
@@ -1229,6 +1240,7 @@ namespace MetadataCaching
         /// </summary>
         public List<string> GetImageSignatures(IReadOnlyList<string> fullPaths)
         {
+            EnsureArtworkHydrated(fullPaths);
             var result = Enumerable.Repeat("", fullPaths.Count).ToArray();
             const int pathsPerQuery = 200; // 800 parameters, below SQLite and SQL Server limits.
             for (int start = 0; start < fullPaths.Count; start += pathsPerQuery)
@@ -1270,6 +1282,7 @@ namespace MetadataCaching
         /// </summary>
         public List<byte[]> GetFirstImageData(IReadOnlyList<string> fullPaths)
         {
+            EnsureArtworkHydrated(fullPaths);
             var result = Enumerable.Repeat<byte[]>(null, fullPaths.Count).ToArray();
             const int pathsPerQuery = 200;
             for (int start = 0; start < fullPaths.Count; start += pathsPerQuery)
@@ -1294,6 +1307,124 @@ namespace MetadataCaching
                 }
             }
             return [.. result];
+        }
+
+        private sealed record ArtworkHydrationTarget(
+            long FileID,
+            string Path,
+            long Length,
+            DateTime LastWriteTime);
+
+        private void EnsureArtworkHydrated(IReadOnlyList<string> fullPaths)
+        {
+            if (fullPaths.Count == 0)
+                return;
+
+            var pathComparer = OperatingSystem.IsWindows()
+                ? StringComparer.OrdinalIgnoreCase
+                : StringComparer.Ordinal;
+            var targets = new List<ArtworkHydrationTarget>();
+            var uniquePaths = fullPaths.Distinct(pathComparer).ToList();
+            const int pathsPerQuery = 200;
+            for (int start = 0; start < uniquePaths.Count; start += pathsPerQuery)
+            {
+                using var command = conn_.CreateCommand();
+                int count = Math.Min(pathsPerQuery, uniquePaths.Count - start);
+                string requested = AddRequestedPaths(command, uniquePaths, start, count);
+                command.CommandText = requested +
+                    " SELECT r.RequestOrdinal, f.ID, f.FileSize, f.LastWriteTime" +
+                    " FROM Requested r" +
+                    " JOIN Albums a ON a.ScanSetID = r.ScanSetID AND a.Path = r.AlbumPath" +
+                    " JOIN Tracks t ON t.AlbumID = a.ID" +
+                    " JOIN Files f ON f.ID = t.ID AND f.Path = r.FileName" +
+                    " WHERE f.ArtworkScanned = 0";
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    int ordinal = reader.GetInt32(0);
+                    targets.Add(new ArtworkHydrationTarget(
+                        reader.GetInt64(1),
+                        uniquePaths[ordinal],
+                        reader.GetInt64(2),
+                        DateTime.SpecifyKind(reader.GetDateTime(3), DateTimeKind.Utc)));
+                }
+            }
+            if (targets.Count == 0)
+                return;
+
+            var hydrated = new (ArtworkHydrationTarget Target, IMediaFile File)[targets.Count];
+            foreach (var target in targets)
+                ValidateArtworkSource(target);
+            try
+            {
+                Parallel.For(
+                    0,
+                    targets.Count,
+                    new ParallelOptions { MaxDegreeOfParallelism = Math.Clamp(ScanParallelism, 1, 64) },
+                    index =>
+                    {
+                        var target = targets[index];
+                        using var sha = SHA256.Create();
+                        var file = MediaFile.GetFile(target.Path, sha, readOnly: true, readArtwork: true);
+                        ValidateArtworkSource(target);
+                        hydrated[index] = (target, file);
+                    });
+            }
+            catch (AggregateException exception)
+            {
+                var flattened = exception.Flatten();
+                if (flattened.InnerExceptions.Count == 1)
+                    ExceptionDispatchInfo.Capture(flattened.InnerExceptions[0]).Throw();
+                throw;
+            }
+
+            using var transaction = conn_.BeginTransaction();
+            try
+            {
+                var imageCache = new Dictionary<string, long>(StringComparer.Ordinal);
+                using var imageMetadata = transaction.CreateCommand();
+                imageMetadata.CommandText =
+                    "INSERT INTO ImageMetadata (FileID, ImageID, Description, Category) VALUES (@f, @i, @d, @c)";
+                var fileParameter = imageMetadata.Parameters.Add("@f", DbType.Int64);
+                var imageParameter = imageMetadata.Parameters.Add("@i", DbType.Int64);
+                var descriptionParameter = imageMetadata.Parameters.Add("@d", DbType.String);
+                var categoryParameter = imageMetadata.Parameters.Add("@c", DbType.String);
+
+                using var mark = transaction.CreateCommand();
+                mark.CommandText = "UPDATE Files SET ArtworkScanned = 1 WHERE ID = @id AND ArtworkScanned = 0";
+                var markParameter = mark.Parameters.Add("@id", DbType.Int64);
+
+                foreach (var (target, file) in hydrated)
+                {
+                    fileParameter.Value = target.FileID;
+                    foreach (var image in file.Tags.SelectMany(tag => tag.GetImageMetadata()))
+                    {
+                        imageParameter.Value = GetOrInsertImage(transaction, image, imageCache);
+                        descriptionParameter.Value = image.Description ?? "";
+                        categoryParameter.Value = image.Category ?? "";
+                        imageMetadata.ExecuteNonQuery();
+                    }
+                    markParameter.Value = target.FileID;
+                    if (mark.ExecuteNonQuery() != 1)
+                        throw new InvalidOperationException(
+                            $"Artwork cache state changed while hydrating: {target.Path}");
+                }
+                transaction.Commit();
+            }
+            catch
+            {
+                transaction.Rollback();
+                throw;
+            }
+        }
+
+        private static void ValidateArtworkSource(ArtworkHydrationTarget target)
+        {
+            var info = new FileInfo(target.Path);
+            if (!info.Exists || info.Length != target.Length ||
+                Math.Abs((info.LastWriteTimeUtc - target.LastWriteTime).TotalMilliseconds) > 500)
+                throw new InvalidOperationException(
+                    $"Source changed since metadata indexing; re-index before loading artwork: {target.Path}");
         }
 
         private string AddRequestedPaths(DbCommand cmd, IReadOnlyList<string> fullPaths, int start, int count)
@@ -1492,8 +1623,8 @@ namespace MetadataCaching
                 long fileId;
                 using (var fc = trans.CreateCommand())
                 {
-                    fc.CommandText = "INSERT INTO Files (Path, FileSize, LastWriteTime, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames, TagType)" +
-                        " VALUES (@Path, @FileSize, @LastWriteTime, @CodecName, @CodecType, @AverageBitrate, @MaxBitrate, @BitsPerSample, @SampleRate, @Channels, @DurationInFrames, @TagType);\r\n" + lastidsql_;
+                    fc.CommandText = "INSERT INTO Files (Path, FileSize, LastWriteTime, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames, TagType, ArtworkScanned)" +
+                        " VALUES (@Path, @FileSize, @LastWriteTime, @CodecName, @CodecType, @AverageBitrate, @MaxBitrate, @BitsPerSample, @SampleRate, @Channels, @DurationInFrames, @TagType, 1);\r\n" + lastidsql_;
                     fc.Parameters.Add("@Path", DbType.String).Value = fileName;
                     fc.Parameters.Add("@FileSize", DbType.Int64).Value = fi.Length;
                     fc.Parameters.Add("@LastWriteTime", DbType.DateTime).Value = fi.LastWriteTimeUtc;

@@ -24,6 +24,34 @@ public class ParserIoShapeTests
     }
 
     [Fact]
+    public void MetadataOnlyFlacSeeksOverLargePictureBlock()
+    {
+        byte[] picture = new VorbisArtwork
+        {
+            PictureType = ID3v2Util.APICType.FrontCover,
+            MimeType = "image/jpeg",
+            Description = "",
+            Width = 1000,
+            Height = 1000,
+            Depth = 24,
+            Data = new byte[512 * 1024],
+        }.ToByteArray();
+        using var bytes = new MemoryStream();
+        bytes.Write("fLaC"u8);
+        FLACFile.WriteMetaBlockHeader(bytes, 0, 34, isLast: false);
+        bytes.Write(new byte[34]);
+        FLACFile.WriteMetaBlockHeader(bytes, 6, picture.Length, isLast: false);
+        bytes.Write(picture);
+        FLACFile.WriteMetaBlockHeader(bytes, 1, 0, isLast: true);
+
+        using var stream = new CountingMemoryStream(bytes.ToArray());
+        var flac = new FLACFile(stream, "test.flac", readArtwork: false);
+
+        Assert.Empty(flac.GetImageMetadata());
+        Assert.Equal(1, stream.SeekCount);
+    }
+
+    [Fact]
     public void Mp4DoesNotSeekAfterFullyConsumedAtoms()
     {
         // moov(size 20) -> unknown child(size 12, four payload bytes). Both atoms finish exactly
@@ -103,6 +131,33 @@ public class ParserIoShapeTests
     }
 
     [Fact]
+    public void MetadataOnlyId3SeeksOverPictureAndContinuesWithTextFrames()
+    {
+        const int pictureSize = 256 * 1024;
+        const int titleSize = 2;
+        int tagSize = 10 + pictureSize + 10 + titleSize;
+        byte[] file = new byte[10 + tagSize];
+        Encoding.ASCII.GetBytes("ID3").CopyTo(file, 0);
+        file[3] = 3;
+        WriteSyncSafe(file, 6, tagSize);
+        Encoding.ASCII.GetBytes("APIC").CopyTo(file, 10);
+        WriteBigEndian(file, 14, pictureSize);
+        int titleHeader = 20 + pictureSize;
+        Encoding.ASCII.GetBytes("TIT2").CopyTo(file, titleHeader);
+        WriteBigEndian(file, titleHeader + 4, titleSize);
+        file[titleHeader + 10] = 0;
+        file[titleHeader + 11] = (byte)'X';
+
+        using var stream = new CountingMemoryStream(file);
+        var tag = new ReadableId3Tag();
+        tag.Read(stream, readArtwork: false);
+
+        Assert.Equal("X", tag.Title);
+        Assert.Empty(tag.GetImageMetadata());
+        Assert.Equal(1, stream.SeekCount);
+    }
+
+    [Fact]
     public void ApeEndOnlyReaderUsesFooterWithoutHeaderProbe()
     {
         var source = new APETag();
@@ -118,6 +173,25 @@ public class ParserIoShapeTests
         Assert.Equal(2, stream.SeekCount); // footer, then item data; no front/header probes
         Assert.Equal(128, parsed.AudioEndOffset);
         Assert.Equal("Tail Tag", parsed.Title);
+    }
+
+    [Fact]
+    public void MetadataOnlyApeSeeksOverLargeArtworkValue()
+    {
+        var source = new APETag();
+        source.SetField(TagFields.Title, "Tail Tag");
+        source.SetFrontCover(new byte[512 * 1024], "image/jpeg");
+        byte[] tagBytes = source.ToByteArray();
+        byte[] file = new byte[128 + tagBytes.Length];
+        tagBytes.CopyTo(file, 128);
+        using var stream = new CountingMemoryStream(file);
+        var parsed = new APETag();
+
+        Assert.True(parsed.ReadTag(stream, onlyAtEnd: true, readArtwork: false));
+
+        Assert.Equal("Tail Tag", parsed.Title);
+        Assert.Empty(parsed.GetImageMetadata());
+        Assert.Equal(3, stream.SeekCount); // footer, item start, then the large image value
     }
 
     [Fact]
@@ -155,9 +229,17 @@ public class ParserIoShapeTests
         bytes[offset + 3] = (byte)(value & 0x7f);
     }
 
+    private static void WriteBigEndian(byte[] bytes, int offset, int value)
+    {
+        bytes[offset] = (byte)(value >> 24);
+        bytes[offset + 1] = (byte)(value >> 16);
+        bytes[offset + 2] = (byte)(value >> 8);
+        bytes[offset + 3] = (byte)value;
+    }
+
     private sealed class ReadableId3Tag : ID3v2Tag
     {
-        public void Read(Stream stream) => ReadTag(stream);
+        public void Read(Stream stream, bool readArtwork = true) => ReadTag(stream, readArtwork);
     }
 
     private sealed class CountingMemoryStream(byte[] bytes) : MemoryStream(bytes)

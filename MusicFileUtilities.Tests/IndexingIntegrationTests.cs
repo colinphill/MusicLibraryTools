@@ -66,6 +66,8 @@ namespace MusicFileUtilities.Tests
                 Assert.True(ScalarLong(conn, "SELECT COUNT(*) FROM Metadata") > 0);
                 Assert.True(ScalarLong(conn, "SELECT COUNT(*) FROM Metadata WHERE Value = 'TestTitle'") >= 3);
                 Assert.Equal(0L, ScalarLong(conn, "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'KnownMetadata'"));
+                Assert.Equal(1L, ScalarLong(conn,
+                    "SELECT COUNT(*) FROM pragma_table_info('Files') WHERE name = 'ArtworkScanned'"));
                 Assert.Equal(3L, ScalarLong(conn,
                     "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name IN ('AlbumsLookupIndex', 'FilesPathIndex', 'ImagesHashIndex')"));
             }
@@ -92,7 +94,9 @@ namespace MusicFileUtilities.Tests
                 {
                     conn.Open();
                     using var command = conn.CreateCommand();
-                    command.CommandText = "DROP INDEX AlbumsLookupIndex; DROP INDEX FilesPathIndex; DROP INDEX ImagesHashIndex;";
+                    command.CommandText =
+                        "DROP INDEX AlbumsLookupIndex; DROP INDEX FilesPathIndex; DROP INDEX ImagesHashIndex;" +
+                        "ALTER TABLE Files DROP COLUMN ArtworkScanned;";
                     command.ExecuteNonQuery();
                 }
 
@@ -102,6 +106,8 @@ namespace MusicFileUtilities.Tests
                     conn.Open();
                     Assert.Equal(3L, ScalarLong(conn,
                         "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name IN ('AlbumsLookupIndex', 'FilesPathIndex', 'ImagesHashIndex')"));
+                    Assert.Equal(1L, ScalarLong(conn,
+                        "SELECT COUNT(*) FROM pragma_table_info('Files') WHERE name = 'ArtworkScanned'"));
                 }
             }
             finally

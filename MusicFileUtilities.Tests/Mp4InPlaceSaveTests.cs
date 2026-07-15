@@ -77,6 +77,11 @@ namespace MusicFileUtilities.Tests
             // Artwork reads back.
             var art = MediaFile.GetFile(tmp.Path).Tags.SelectMany(t => t.GetImageMetadata()).ToList();
             Assert.NotEmpty(art);
+
+            // The metadata-only projection still reads tags/codecs but leaves covr payloads deferred.
+            var metadataOnly = MediaFile.GetFile(tmp.Path, readOnly: true, readArtwork: false);
+            Assert.Empty(metadataOnly.Tags.SelectMany(t => t.GetImageMetadata()));
+            Assert.Equal("TestTitle", metadataOnly.Tags.First().Title);
         }
 
         // ---- shrink (remove field): tail truncates, audio still intact -----------------------

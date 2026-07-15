@@ -265,7 +265,11 @@ namespace MusicFileUtilities
      
     public class MediaFile
     {
-        public static IMediaFile GetFile(string path, HashAlgorithm hash = null, bool readOnly = false)
+        public static IMediaFile GetFile(
+            string path,
+            HashAlgorithm hash = null,
+            bool readOnly = false,
+            bool readArtwork = true)
         {
             string extension = Path.GetExtension(path).ToLower();
             // No File.Exists pre-check: on a network share it costs a full round-trip per file,
@@ -275,30 +279,30 @@ namespace MusicFileUtilities
             switch (extension)
             {
                 case ".wv":
-                    file = new WavPackFile(path);
+                    file = new WavPackFile(path, readArtwork);
                     break;
 
                 case ".mp3":
-                    file = new MP3File(path);
+                    file = new MP3File(path, readArtwork);
                     break;
 
                 case ".dsf":
-                    file = new DSFFile(path);
+                    file = new DSFFile(path, readArtwork);
                     break;
 
                 case ".m4a":
                 case ".mp4":
                 case ".m4p":
                 case ".m4r":
-                    file = new MP4File(path, readOnly);
+                    file = new MP4File(path, readOnly, readArtwork);
                     break;
 
                 case ".ogg":
-                    file = new OggVorbisFile(path);
+                    file = new OggVorbisFile(path, readArtwork);
                     break;
 
                 case ".flac":
-                    file = new FLACFile(path);
+                    file = new FLACFile(path, readArtwork);
                     break;
 
                 default:
