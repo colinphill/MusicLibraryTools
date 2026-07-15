@@ -1523,8 +1523,8 @@ namespace MusicFileUtilities
                 {
                     string sourcePath = _filename ?? target;
                     {
-                        using FileStream source = new FileStream(sourcePath, FileMode.Open, FileAccess.Read);
-                        using FileStream dest = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write);
+                        using FileStream source = Tools.OpenReadSequential(sourcePath);
+                        using FileStream dest = Tools.CreateWriteSequential(tempPath);
 
                         long oldTagEnd = (_tagsize == 0) ? 0 : (_tagsize + 10);
                         source.Seek(oldTagEnd, SeekOrigin.Begin);
@@ -2028,41 +2028,49 @@ namespace MusicFileUtilities
             // ReadTag only runs when a metadata pointer is present, so set the filename here
             // too — otherwise a DSF with no existing tag can't be saved in place.
             _filename = filename;
-            using (FileStream s = Tools.OpenReadSequential(filename))
+            using FileStream s = Tools.OpenReadSequential(filename);
+            Parse(s);
+        }
+
+        internal DSFFile(Stream stream, string filename)
+        {
+            _filename = filename;
+            Parse(stream);
+        }
+
+        private void Parse(Stream s)
+        {
+            byte[] header = new byte[4];
+            s.ReadExactly(header);
+            if (Encoding.ASCII.GetString(header, 0, 4) != "DSD ")
+                return;
+            Array.Resize(ref header, 28);
+            s.ReadExactly(header, 4, 24);
+            _tagoffset = BitConverter.ToInt64(header, 20);
+
+            // Parse the fixed header before jumping to tail metadata. The old order sought to the
+            // ID3 tag and then back to byte 28, costing an extra round trip on every tagged DSF.
+            byte[] fmtId = new byte[4];
+            s.ReadExactly(fmtId);
+            if (Encoding.ASCII.GetString(fmtId, 0, 4) != "fmt ")
+                return;
+            using (BinaryReader r = new BinaryReader(s, Encoding.ASCII, true))
             {
-                byte[] header = new byte[4];
-                s.ReadExactly(header);
-                if (Encoding.ASCII.GetString(header, 0, 4) != "DSD ")
-                    return;
-                Array.Resize(ref header, 28);
-                s.ReadExactly(header, 4, 24);
-                _tagoffset = BitConverter.ToInt64(header, 20);
-                if (_tagoffset != 0)
-                {
-                    s.Seek(_tagoffset, SeekOrigin.Begin);
-                    ReadTag(s);
-                    s.Seek(28, SeekOrigin.Begin);
-                }
-                // Read only the 4-byte "fmt " chunk id; the BinaryReader below continues from
-                // the chunk-size field. (Reusing the 28-byte buffer here consumed too much and
-                // misaligned every codec field.)
-                byte[] fmtId = new byte[4];
-                s.ReadExactly(fmtId);
-                if (Encoding.ASCII.GetString(fmtId, 0, 4) != "fmt ")
-                    return;
-                using (BinaryReader r = new BinaryReader(s, Encoding.ASCII, true))
-                {
-                    ulong chunksize = r.ReadUInt64();
-                    uint formatversion = r.ReadUInt32();
-                    uint formatid = r.ReadUInt32();
-                    uint channeltype = r.ReadUInt32();
-                    Channels = r.ReadUInt32();
-                    Samplerate = r.ReadUInt32();
-                    BitsPerSample = r.ReadUInt32();
-                    DurationInFrames = (uint)(75 * r.ReadUInt64() / Samplerate);
-                }
+                ulong chunksize = r.ReadUInt64();
+                uint formatversion = r.ReadUInt32();
+                uint formatid = r.ReadUInt32();
+                uint channeltype = r.ReadUInt32();
+                Channels = r.ReadUInt32();
+                Samplerate = r.ReadUInt32();
+                BitsPerSample = r.ReadUInt32();
+                DurationInFrames = (uint)(75 * r.ReadUInt64() / Samplerate);
             }
 
+            if (_tagoffset != 0)
+            {
+                s.Seek(_tagoffset, SeekOrigin.Begin);
+                ReadTag(s);
+            }
         }
 
         public uint DurationInFrames
@@ -2138,8 +2146,8 @@ namespace MusicFileUtilities
                 // Write to new path: copy audio, append tag, patch DSD header
                 string sourcePath = _filename ?? outputPath;
                 long audioEnd = _tagoffset > 0 ? _tagoffset : new FileInfo(sourcePath).Length;
-                using FileStream source = new FileStream(sourcePath, FileMode.Open, FileAccess.Read);
-                using FileStream dest = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
+                using FileStream source = Tools.OpenReadSequential(sourcePath);
+                using FileStream dest = Tools.CreateWriteSequential(outputPath, FileMode.Create);
                 Tools.CopyExactly(source, dest, audioEnd);
                 WriteHeader(dest);
                 foreach (var f in Frames)

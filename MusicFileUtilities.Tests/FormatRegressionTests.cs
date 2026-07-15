@@ -359,6 +359,26 @@ namespace MusicFileUtilities.Tests
         }
 
         [Fact]
+        public void FlacConsecutiveFullRewritesUseUpdatedAudioOffset()
+        {
+            using var source = MediaFixtures.Copy("sample.flac");
+            string firstPath = Path.Combine(Path.GetTempPath(), $"mlt_{Guid.NewGuid():N}.flac");
+            string secondPath = Path.Combine(Path.GetTempPath(), $"mlt_{Guid.NewGuid():N}.flac");
+            using var first = new MediaFixtures.TempMedia(firstPath);
+            using var second = new MediaFixtures.TempMedia(secondPath);
+            var flac = (FLACFile)MediaFile.GetFile(source.Path);
+            flac.SetField(TagFields.Title, "First full rewrite");
+
+            flac.Save(firstPath);
+            flac.SetField(TagFields.Title, "Second full rewrite");
+            flac.Save(secondPath);
+
+            var reopened = MediaFile.GetFile(secondPath);
+            Assert.Equal("Second full rewrite", reopened.Tags.Single().Title);
+            Assert.Equal(44_100u, reopened.Codecs.Single().Samplerate);
+        }
+
+        [Fact]
         public void UntaggedMp3SaveCreatesId3v23AndPreservesAudio()
         {
             byte[] tagged = File.ReadAllBytes(MediaFixtures.Path_("sample.mp3"));

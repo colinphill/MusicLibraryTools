@@ -120,6 +120,33 @@ public class ParserIoShapeTests
         Assert.Equal("Tail Tag", parsed.Title);
     }
 
+    [Fact]
+    public void DsfParsesFormatBeforeSingleTailTagSeek()
+    {
+        byte[] file = new byte[110];
+        Encoding.ASCII.GetBytes("DSD ").CopyTo(file, 0);
+        BitConverter.GetBytes(100L).CopyTo(file, 20); // metadata pointer
+        Encoding.ASCII.GetBytes("fmt ").CopyTo(file, 28);
+        BitConverter.GetBytes(52UL).CopyTo(file, 32);
+        BitConverter.GetBytes(1U).CopyTo(file, 40);       // format version
+        BitConverter.GetBytes(0U).CopyTo(file, 44);       // format id
+        BitConverter.GetBytes(2U).CopyTo(file, 48);       // channel type
+        BitConverter.GetBytes(2U).CopyTo(file, 52);       // channels
+        BitConverter.GetBytes(2_822_400U).CopyTo(file, 56);
+        BitConverter.GetBytes(1U).CopyTo(file, 60);       // bits per sample
+        BitConverter.GetBytes(2_822_400UL).CopyTo(file, 64);
+        Encoding.ASCII.GetBytes("ID3").CopyTo(file, 100);
+        file[103] = 3;
+
+        using var stream = new CountingMemoryStream(file);
+        var dsf = new DSFFile(stream, "test.dsf");
+
+        Assert.Equal(1, stream.SeekCount);
+        Assert.Equal(2_822_400u, dsf.Samplerate);
+        Assert.Equal(2u, dsf.Channels);
+        Assert.Equal(75u, dsf.DurationInFrames);
+    }
+
     private static void WriteSyncSafe(byte[] bytes, int offset, int value)
     {
         bytes[offset] = (byte)((value >> 21) & 0x7f);

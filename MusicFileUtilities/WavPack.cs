@@ -146,8 +146,8 @@ namespace MusicFileUtilities
                 try
                 {
                     {
-                        using FileStream source = new FileStream(sourcePath, FileMode.Open, FileAccess.Read);
-                        using FileStream dest = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write);
+                        using FileStream source = Tools.OpenReadSequential(sourcePath);
+                        using FileStream dest = Tools.CreateWriteSequential(tempPath);
                         Tools.CopyExactly(source, dest, copyLength);
                         dest.Write(tagBytes, 0, tagBytes.Length);
                         dest.Flush(flushToDisk: true);

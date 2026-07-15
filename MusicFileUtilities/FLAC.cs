@@ -58,6 +58,7 @@ namespace MusicFileUtilities
         private long _paddingAfterVcOffset = -1;
         private int _paddingAfterVcDataLen;
         private bool _paddingAfterVcIsLast;
+        private long _audioOffset = -1;
 
         internal bool LastSaveWasInPlace { get; private set; }
 
@@ -200,6 +201,8 @@ namespace MusicFileUtilities
                 }
 
                 last = isLast;
+                if (isLast)
+                    _audioOffset = checked(blockOffset + 4 + len);
                 previousWasVorbisComment = blockType == 4;
 
             }
@@ -335,28 +338,17 @@ namespace MusicFileUtilities
                     throw new InvalidOperationException("A FLAC metadata block cannot exceed 16,777,215 bytes.");
 
             string tempPath = Tools.CreateSiblingTempPath(target);
+            long newAudioOffset = 4 + blocks.Sum(block => 4L + block.Length);
             try
             {
                 string sourcePath = Filename ?? target;
                 {
-                    using FileStream source = new FileStream(sourcePath, FileMode.Open, FileAccess.Read);
-                    using FileStream dest = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write);
+                    using FileStream source = Tools.OpenReadSequential(sourcePath);
+                    using FileStream dest = Tools.CreateWriteSequential(tempPath);
 
-                    // Skip past original fLaC marker and all metadata blocks in source
-                    byte[] marker = new byte[4];
-                    source.ReadExactly(marker); // "fLaC"
-
-                    // Skip original metadata blocks
-                    bool lastSrc = false;
-                    while (!lastSrc)
-                    {
-                        byte[] hdr = new byte[4];
-                        source.ReadExactly(hdr);
-                        long len = ((long)hdr[1] << 16) | ((long)hdr[2] << 8) | hdr[3];
-                        lastSrc = (hdr[0] & 128) != 0;
-                        source.Seek(len, SeekOrigin.Current);
-                    }
-                    // source now positioned at start of audio data
+                    if (_audioOffset < 0)
+                        throw new InvalidDataException("The FLAC audio offset was not discovered during parsing.");
+                    source.Seek(_audioOffset, SeekOrigin.Begin);
 
                     // Write fLaC marker
                     dest.Write(Encoding.ASCII.GetBytes("fLaC"), 0, 4);
@@ -386,6 +378,7 @@ namespace MusicFileUtilities
                 throw;
             }
             Filename = target;
+            _audioOffset = newAudioOffset;
 
             // The metadata layout just changed wholesale; the cached VORBIS_COMMENT offset and
             // PICTURE bytes no longer describe the file. Disable the in-place fast path for any

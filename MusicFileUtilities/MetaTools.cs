@@ -40,6 +40,13 @@ namespace MusicFileUtilities
             return new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, ParseReadBufferSize, FileOptions.SequentialScan);
         }
 
+        public static FileStream CreateWriteSequential(string path, FileMode mode = FileMode.CreateNew)
+        {
+            return new FileStream(
+                path, mode, FileAccess.Write, FileShare.None,
+                ParseReadBufferSize, FileOptions.SequentialScan);
+        }
+
         // Consume a small unneeded payload without allocating it. Keeping the read sequential lets
         // FileStream retain its large read buffer; callers should seek instead for large ranges.
         public static void DiscardExactly(Stream source, long length)

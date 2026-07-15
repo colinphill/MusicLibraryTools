@@ -681,15 +681,16 @@ namespace MusicFileUtilities
             try
             {
                 {
-                    using FileStream source = new FileStream(Filename ?? target, FileMode.Open, FileAccess.Read);
-                    using FileStream dest = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write);
+                    using FileStream source = Tools.OpenReadSequential(Filename ?? target);
+                    using FileStream dest = Tools.CreateWriteSequential(tempPath);
+                    long sourceLength = source.Length;
 
                     int seqDelta = 0;
                     int state = 0; // 0=Looking, 1=Skipping old continuation pages, 2=Copying
                     int? editedSerial = null;
                     bool editedStreamEnded = false;
 
-                    while (source.Position < source.Length)
+                    while (source.Position < sourceLength)
                     {
                         byte[] hdr = new byte[27];
                         if (source.Read(hdr, 0, 27) < 27) break;

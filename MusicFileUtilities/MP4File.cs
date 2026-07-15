@@ -527,20 +527,13 @@ namespace MusicFileUtilities
             if (!(s is FileStream))
                 throw new InvalidOperationException();
             WriteHeader(s);
-            byte[] b = new byte[MP4Util.DEMAND_BLOCK_SIZE];
             long todo = (long)(_size - _headersize);
-            using FileStream ds = new FileStream(_demandpath, FileMode.Open, FileAccess.Read);
+            using FileStream ds = Tools.OpenReadSequential(_demandpath);
             ds.Seek(_offset, SeekOrigin.Begin);
             // Do not rebind the demand source while a staged rewrite is still fallible. RootAtom
             // commits this offset to the final destination only after the replacement rename.
             _pendingOffset = s.Position;
-            while (todo > 0)
-            {
-                int doing = (int)((todo > MP4Util.DEMAND_BLOCK_SIZE) ? MP4Util.DEMAND_BLOCK_SIZE : todo);
-                ds.ReadExactly(b, 0, doing);
-                s.Write(b, 0, doing);
-                todo -= doing;
-            }
+            Tools.CopyExactly(ds, s, todo);
         }
 
         internal void CommitRewrite(string path)
@@ -1893,7 +1886,7 @@ namespace MusicFileUtilities
                 }
 
                 tpath = Tools.CreateSiblingTempPath(path);
-                using (FileStream s = new FileStream(tpath, FileMode.CreateNew, FileAccess.Write))
+                using (FileStream s = Tools.CreateWriteSequential(tpath))
                 {
                     WriteAtom(s);
                     s.Flush(flushToDisk: true);
