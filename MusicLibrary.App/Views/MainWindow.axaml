@@ -416,6 +416,12 @@
                                 <Button Content="Cross-set check" Margin="0,0,8,8" Command="{Binding RunCheckSetsCommand}"/>
                                 <Button Content="Representations" Margin="0,0,8,8" Command="{Binding RunRepresentationsCommand}"
                                         ToolTip.Tip="Compare cached CD/high-resolution FLAC, purchased, and generated AAC counterparts"/>
+                                <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,8">
+                                    <Button Content="Verify decoded audio" Command="{Binding VerifyDecodedAudioCommand}"
+                                            ToolTip.Tip="Hash decoded PCM for compatible lossless representation pairs"/>
+                                    <TextBox Text="{Binding FfmpegPath}" Width="210" PlaceholderText="ffmpeg path"
+                                             ToolTip.Tip="ffmpeg executable used only for explicit decoded-audio verification"/>
+                                </StackPanel>
                                 <Button Content="Album matrix" Margin="0,0,8,8" Command="{Binding RunAlbumMatrixCommand}"/>
                                 <Button Content="Metadata repairs" Margin="0,0,8,8"
                                         Command="{Binding PreviewMetadataRepairsCommand}"/>

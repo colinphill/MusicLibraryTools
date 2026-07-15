@@ -18,6 +18,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IOperationJournalService, OperationJournalService>();
         services.AddSingleton<IIndexBenchmarkService, IndexBenchmarkService>();
         services.AddSingleton<IFfmpegRunner, FfmpegRunner>();
+        services.AddSingleton<IDecodedAudioVerificationService, DecodedAudioVerificationService>();
         services.AddSingleton<IIngestMusicService, IngestMusicService>();
         services.AddSingleton<LibraryService>();
         services.AddSingleton<ILibraryService>(sp => sp.GetRequiredService<LibraryService>());

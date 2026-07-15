@@ -184,6 +184,57 @@ public sealed class AnalyzerViewModelTests
         Assert.Same(viewModel.Matrices[0], Assert.Single(viewModel.SelectedRun.Matrices));
     }
 
+    [Fact]
+    public async Task Analyzer_RepresentationsHydratesArtworkOnlyForMatchedCandidates()
+    {
+        var cd = Track(@"Z:\FLAC\Album\01.flac", "AA", "Album", title: "Song", track: 1);
+        var purchased = Track(@"Z:\iTunes\purchased sync\Album\01.m4a", "AA", "Album",
+            CodecType.Lossy, "Song", 1);
+        var unrelated = Track(@"Z:\FLAC\Other\01.flac", "AA", "Other", title: "Other", track: 1);
+        var library = new StubLibrary([cd, purchased, unrelated]);
+        var viewModel = new AnalyzerViewModel(
+            library, new StubReconciler(), new StubRepairs(),
+            new AppSettings(Path.Combine(Path.GetTempPath(), $"analyzer-{Guid.NewGuid():N}.json")));
+
+        await viewModel.RunRepresentationsCommand.ExecuteAsync(null);
+
+        Assert.Equal(2, library.ArtworkPaths!.Count);
+        Assert.Contains(cd.Path, library.ArtworkPaths);
+        Assert.Contains(purchased.Path, library.ArtworkPaths);
+        Assert.DoesNotContain(unrelated.Path, library.ArtworkPaths);
+        Assert.Equal("Album representations", viewModel.SelectedRun!.Name);
+    }
+
+    [Fact]
+    public async Task Analyzer_DecodedVerificationIsExplicitAndUsesCompatiblePairs()
+    {
+        var cd = Track(@"Z:\FLAC\Album\01.flac", "AA", "Album", title: "Song", track: 1) with
+        {
+            SampleRate = 44_100, BitsPerSample = 16, Channels = 2,
+        };
+        var purchased = Track(@"Z:\iTunes\purchased sync\Album\01.m4a", "AA", "Album",
+            CodecType.Lossless, "Song", 1) with
+        {
+            SampleRate = 44_100, BitsPerSample = 16, Channels = 2,
+        };
+        var verifier = new TrackingDecodedAudio();
+        var viewModel = new AnalyzerViewModel(
+            new StubLibrary([cd, purchased]), new StubReconciler(), new StubRepairs(),
+            new AppSettings(Path.Combine(Path.GetTempPath(), $"analyzer-{Guid.NewGuid():N}.json")),
+            verifier);
+
+        await viewModel.RunRepresentationsCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.VerifyDecodedAudioCommand.CanExecute(null));
+        Assert.Equal(0, verifier.Calls);
+
+        await viewModel.VerifyDecodedAudioCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, verifier.Calls);
+        Assert.Single(verifier.Pairs!);
+        Assert.Equal("Decoded-audio verification", viewModel.SelectedRun!.Name);
+    }
+
     private static AnalyzerViewModel Create(IReadOnlyList<TrackRecord> records) =>
         new(new StubLibrary(records), new StubReconciler(), new StubRepairs(),
             new AppSettings(Path.Combine(Path.GetTempPath(), $"analyzer-{Guid.NewGuid():N}.json")));
@@ -210,6 +261,7 @@ public sealed class AnalyzerViewModelTests
 
     private sealed class StubLibrary(IReadOnlyList<TrackRecord> records) : ILibraryService
     {
+        public IReadOnlyList<string>? ArtworkPaths { get; private set; }
         public bool IsReady => true;
         public Task<IReadOnlyList<TrackRecord>> GetAllRecordsAsync(CancellationToken ct = default) =>
             Task.FromResult(records);
@@ -230,8 +282,12 @@ public sealed class AnalyzerViewModelTests
             IReadOnlyList<string> paths, CancellationToken ct = default) =>
             throw new NotSupportedException();
         public Task<IReadOnlyList<string>> GetImageSignaturesAsync(
-            IReadOnlyList<string> paths, CancellationToken ct = default) =>
-            throw new NotSupportedException();
+            IReadOnlyList<string> paths, CancellationToken ct = default)
+        {
+            ArtworkPaths = paths;
+            return Task.FromResult<IReadOnlyList<string>>(
+                Enumerable.Repeat("same-cover", paths.Count).ToList());
+        }
     }
 
     private sealed class StubReconciler : IArtistReconciler
@@ -242,6 +298,20 @@ public sealed class AnalyzerViewModelTests
             IReadOnlyList<string> paths, string from, string to,
             IProgress<int>? progress = null, CancellationToken ct = default) =>
             Task.FromResult(0);
+    }
+
+    private sealed class TrackingDecodedAudio : IDecodedAudioVerificationService
+    {
+        public int Calls { get; private set; }
+        public IReadOnlyList<DecodedAudioPair>? Pairs { get; private set; }
+        public Task<AnalysisReport> VerifyAsync(string ffmpegExecutable,
+            IReadOnlyList<DecodedAudioPair> pairs, IProgress<DecodedAudioProgress>? progress = null,
+            CancellationToken ct = default)
+        {
+            Calls++;
+            Pairs = pairs;
+            return Task.FromResult(new AnalysisReport("Decoded-audio verification", []));
+        }
     }
 
     private sealed class StubRepairs : IAnalysisRepairService

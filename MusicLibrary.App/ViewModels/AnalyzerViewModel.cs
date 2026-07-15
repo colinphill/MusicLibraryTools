@@ -18,10 +18,15 @@ public enum AnalysisResultView { Findings, Duplicates, Artists, Conflicts, Repai
 /// </summary>
 public partial class AnalyzerViewModel : ViewModelBase
 {
+    private const string FfmpegPreference = "Analyzer.FfmpegPath";
     private readonly ILibraryService _library;
     private readonly IArtistReconciler _reconciler;
     private readonly IAnalysisRepairService _repairs;
+    private readonly IDecodedAudioVerificationService? _decodedAudio;
+    private readonly IAppSettings _settings;
     private CancellationTokenSource? _cts;
+    private IReadOnlyList<TrackRecord> _representationRecords = [];
+    private IReadOnlyList<DecodedAudioPair> _decodedAudioPairs = [];
 
     [ObservableProperty]
     private bool _isBusy;
@@ -38,6 +43,10 @@ public partial class AnalyzerViewModel : ViewModelBase
     /// <summary>Fuzzy-distance threshold for the similar-artist check (AnalyzeMetadata's checkartists thresh).</summary>
     [ObservableProperty]
     private double _artistThreshold = 0.2;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(VerifyDecodedAudioCommand))]
+    private string _ffmpegPath = "ffmpeg";
 
     public ObservableCollection<AnalysisRunViewModel> Runs { get; } = [];
     public ObservableCollection<AnalysisProblemGroupViewModel> FindingGroups { get; } = [];
@@ -61,16 +70,26 @@ public partial class AnalyzerViewModel : ViewModelBase
     public event Action<IReadOnlyList<string>>? RepairsApplied;
 
     public AnalyzerViewModel(ILibraryService library, IArtistReconciler reconciler,
-        IAnalysisRepairService repairs, IAppSettings settings)
+        IAnalysisRepairService repairs, IAppSettings settings,
+        IDecodedAudioVerificationService? decodedAudio = null)
     {
         _library = library;
         _reconciler = reconciler;
         _repairs = repairs;
+        _decodedAudio = decodedAudio;
+        _settings = settings;
+        FfmpegPath = settings.GetPreference(FfmpegPreference) ??
+            (File.Exists(@"C:\ffmpeg\nonfree\ffmpeg.exe") ? @"C:\ffmpeg\nonfree\ffmpeg.exe" : "ffmpeg");
         settings.ConfigurationChanged += (_, _) =>
         {
             ClearRuns();
+            _representationRecords = [];
+            _decodedAudioPairs = [];
         };
     }
+
+    partial void OnFfmpegPathChanged(string value) =>
+        _settings.SetPreference(FfmpegPreference, string.IsNullOrWhiteSpace(value) ? null : value);
 
     partial void OnActiveViewChanged(AnalysisResultView value)
     {
@@ -159,14 +178,69 @@ public partial class AnalyzerViewModel : ViewModelBase
     });
 
     [RelayCommand(CanExecute = nameof(CanRun))]
-    private Task RunRepresentations() => RunOverRecords("Album representations", AnalysisResultView.Findings, (records, ct) =>
+    private async Task RunRepresentations()
     {
-        var report = RepresentationAnalyzer.Compare(records, ct);
-        string status = report.Count == 0
-            ? "Album representations: no missing or ambiguous counterparts found."
-            : $"Album representations: {report.Count:N0} missing/ambiguous counterpart finding(s).";
-        return (status, () => AddRun(AnalysisRunViewModel.ForFindings(report, records, status)));
-    });
+        using var scope = BeginRun("Album representations", AnalysisResultView.Findings);
+        try
+        {
+            var records = await _library.GetAllRecordsAsync(scope.Token);
+            _representationRecords = records;
+            _decodedAudioPairs = RepresentationAnalyzer.DecodedAudioCandidatePairs(records);
+            var report = await Task.Run(() => RepresentationAnalyzer.Compare(records, scope.Token), scope.Token);
+            var artworkPaths = RepresentationAnalyzer.ArtworkCandidatePaths(records);
+            IReadOnlyList<AnalysisFinding> artworkFindings = [];
+            if (artworkPaths.Count > 0)
+            {
+                StatusText = $"Comparing embedded artwork for {artworkPaths.Count:N0} matched counterpart file(s)…";
+                try
+                {
+                    var signatures = await _library.GetImageSignaturesAsync(artworkPaths, scope.Token);
+                    var signatureMap = artworkPaths.Zip(signatures)
+                        .ToDictionary(pair => pair.First, pair => pair.Second, StringComparer.OrdinalIgnoreCase);
+                    artworkFindings = RepresentationAnalyzer.CompareArtwork(records, signatureMap).Findings;
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex)
+                {
+                    artworkFindings = [new(artworkPaths[0],
+                        $"Artwork comparison could not hydrate all matched files: {ex.Message}",
+                        "Artwork comparison unavailable")];
+                }
+            }
+            var combined = new AnalysisReport(report.Name, [.. report.Findings, .. artworkFindings]);
+            string status = combined.Count == 0
+                ? "Album representations: no counterpart, metadata, duration, or artwork drift found."
+                : $"Album representations: {combined.Count:N0} finding(s).";
+            AddRun(AnalysisRunViewModel.ForFindings(combined, records, status));
+        }
+        catch (OperationCanceledException) { StatusText = "Album representation comparison cancelled."; }
+        catch (Exception ex) { StatusText = $"Album representation comparison failed: {ex.Message}"; }
+        finally { VerifyDecodedAudioCommand.NotifyCanExecuteChanged(); }
+    }
+
+    private bool CanVerifyDecodedAudio() => !IsBusy && _decodedAudio is not null &&
+        _decodedAudioPairs.Count > 0 && !string.IsNullOrWhiteSpace(FfmpegPath);
+
+    [RelayCommand(CanExecute = nameof(CanVerifyDecodedAudio))]
+    private async Task VerifyDecodedAudio()
+    {
+        if (_decodedAudio is null || _decodedAudioPairs.Count == 0)
+            return;
+        using var scope = BeginRun("decoded-audio verification", AnalysisResultView.Findings);
+        try
+        {
+            var progress = new Progress<DecodedAudioProgress>(item =>
+                StatusText = $"Decoding audio… {item.CompletedFiles:N0}/{item.TotalFiles:N0}: {item.Path}");
+            var report = await _decodedAudio.VerifyAsync(
+                FfmpegPath, _decodedAudioPairs, progress, scope.Token);
+            string status = report.Count == 0
+                ? $"Decoded-audio verification: {_decodedAudioPairs.Count:N0} compatible pair(s) match."
+                : $"Decoded-audio verification: {report.Count:N0} pair(s) differ.";
+            AddRun(AnalysisRunViewModel.ForFindings(report, _representationRecords, status));
+        }
+        catch (OperationCanceledException) { StatusText = "Decoded-audio verification cancelled."; }
+        catch (Exception ex) { StatusText = $"Decoded-audio verification failed: {ex.Message}"; }
+    }
 
     [RelayCommand(CanExecute = nameof(CanRun))]
     private async Task PreviewMetadataRepairs()
@@ -395,6 +469,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         PreviewConflictRepairsCommand.NotifyCanExecuteChanged();
         RunAlbumMatrixCommand.NotifyCanExecuteChanged();
         RunRepresentationsCommand.NotifyCanExecuteChanged();
+        VerifyDecodedAudioCommand.NotifyCanExecuteChanged();
         RunCheckSetsCommand.NotifyCanExecuteChanged();
         PreviewMetadataRepairsCommand.NotifyCanExecuteChanged();
         ApplyRepairsCommand.NotifyCanExecuteChanged();

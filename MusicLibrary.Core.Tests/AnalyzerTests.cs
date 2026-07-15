@@ -173,11 +173,13 @@ public class AnalyzerTests
 
         var report = RepresentationAnalyzer.Compare(records);
 
-        var finding = Assert.Single(report.Findings);
+        var finding = Assert.Single(report.Findings, item =>
+            item.Problem == "Missing representation counterpart");
         Assert.Equal(records[1].Path, finding.Path);
         Assert.Equal("Missing representation counterpart", finding.Problem);
         Assert.Contains("purchased audio", finding.Description);
         Assert.DoesNotContain(report.Findings, item => item.Path.Contains("Only"));
+        Assert.Single(report.Findings, item => item.Problem == "Representation track-count drift");
     }
 
     [Fact]
@@ -199,5 +201,83 @@ public class AnalyzerTests
             item.Problem == "Ambiguous representation counterpart"));
         Assert.DoesNotContain(report.Findings, item =>
             item.Problem == "Missing representation counterpart");
+    }
+
+    [Fact]
+    public void RepresentationsReportsMetadataDurationAndArtworkDriftForMatchedTracks()
+    {
+        var cd = Rec(@"Z:\FLAC\Album\01.flac", "Artist", "Album", "Song",
+            track: 1, total: 1) with
+        {
+            Artist = "Artist", ReleaseDate = "2020", DiscTotal = 1, DurationInSeconds = 180,
+        };
+        var high = Rec(@"Z:\hires\Album\01.flac", "Artist", "Album", "Song (Remastered)",
+            track: 1, total: 2, sr: 96_000, bps: 24) with
+        {
+            Artist = "Different Artist", ReleaseDate = "2021", DiscTotal = 2, DurationInSeconds = 185,
+        };
+
+        var report = RepresentationAnalyzer.Compare([cd, high]);
+        var candidates = RepresentationAnalyzer.ArtworkCandidatePaths([cd, high]);
+        var artwork = RepresentationAnalyzer.CompareArtwork([cd, high], new Dictionary<string, string>
+        {
+            [cd.Path] = "cover-a",
+            [high.Path] = "cover-b",
+        });
+
+        Assert.Contains(report.Findings, item => item.Problem == "Representation metadata drift" &&
+            item.Description.Contains("title"));
+        Assert.Contains(report.Findings, item => item.Problem == "Representation metadata drift" &&
+            item.Description.Contains("track total"));
+        Assert.Contains(report.Findings, item => item.Problem == "Representation duration drift");
+        Assert.Equal(2, candidates.Count);
+        Assert.Single(artwork.Findings, item => item.Problem == "Representation artwork drift");
+    }
+
+    [Fact]
+    public void RepresentationArtworkReportsMixedRoleBeforeCrossRoleDrift()
+    {
+        var cd1 = Rec(@"Z:\FLAC\Album\01.flac", "Artist", "Album", "One", track: 1);
+        var cd2 = Rec(@"Z:\FLAC\Album\02.flac", "Artist", "Album", "Two", track: 2);
+        var high1 = Rec(@"Z:\hires\Album\01.flac", "Artist", "Album", "One", track: 1,
+            sr: 96_000, bps: 24);
+        var high2 = Rec(@"Z:\hires\Album\02.flac", "Artist", "Album", "Two", track: 2,
+            sr: 96_000, bps: 24);
+        var records = new[] { cd1, cd2, high1, high2 };
+        var signatures = new Dictionary<string, string>
+        {
+            [cd1.Path] = "a", [cd2.Path] = "b", [high1.Path] = "a", [high2.Path] = "a",
+        };
+
+        var report = RepresentationAnalyzer.CompareArtwork(records, signatures);
+
+        Assert.Single(report.Findings);
+        Assert.Equal("Mixed representation artwork", report.Findings[0].Problem);
+    }
+
+    [Fact]
+    public void DecodedAudioCandidatesRequireCompatibleKnownLosslessGeometry()
+    {
+        var cd = Rec(@"Z:\FLAC\Album\01.flac", "Artist", "Album", "One", track: 1) with
+        {
+            Channels = 2,
+        };
+        var purchasedAlac = Rec(@"Z:\iTunes\purchased sync\Album\01.m4a",
+            "Artist", "Album", "One", track: 1) with
+        {
+            Channels = 2,
+        };
+        var high = Rec(@"Z:\hires\Album\01.flac", "Artist", "Album", "One", track: 1,
+            sr: 96_000, bps: 24) with
+        {
+            Channels = 2,
+        };
+
+        var pairs = RepresentationAnalyzer.DecodedAudioCandidatePairs([cd, purchasedAlac, high]);
+
+        var pair = Assert.Single(pairs);
+        Assert.Equal(cd.Path, pair.FirstPath);
+        Assert.Equal(purchasedAlac.Path, pair.SecondPath);
+        Assert.DoesNotContain(high.Path, new[] { pair.FirstPath, pair.SecondPath });
     }
 }

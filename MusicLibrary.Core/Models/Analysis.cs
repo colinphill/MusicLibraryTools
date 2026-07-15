@@ -83,6 +83,10 @@ public sealed record AnalysisReport(string Name, IReadOnlyList<AnalysisFinding> 
     public int Count => Findings.Count;
 }
 
+public sealed record DecodedAudioPair(string FirstPath, string SecondPath, string Description);
+
+public sealed record DecodedAudioProgress(int CompletedFiles, int TotalFiles, string Path);
+
 /// <summary>One display cell in an album metadata matrix.</summary>
 public sealed record AnalysisMatrixCell(string? Value, bool IsInconsistent = false, string? Reason = null)
 {
