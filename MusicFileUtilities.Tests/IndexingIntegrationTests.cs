@@ -49,6 +49,7 @@ namespace MusicFileUtilities.Tests
                     });
                     Assert.NotEmpty(cache.AlbumCache);
                     var cachedEntries = cache.FileCache.Values.ToArray();
+                    Assert.False(cache.FileCache[Path.Combine(scanDir, "sample.flac")].HasAlbumArtist);
                     Assert.All(cachedEntries.Skip(1), entry =>
                     {
                         Assert.Same(cachedEntries[0].Artist, entry.Artist);
@@ -78,6 +79,8 @@ namespace MusicFileUtilities.Tests
                 Assert.Equal(0L, ScalarLong(conn, "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'KnownMetadata'"));
                 Assert.Equal(1L, ScalarLong(conn,
                     "SELECT COUNT(*) FROM pragma_table_info('Files') WHERE name = 'ArtworkScanned'"));
+                Assert.Equal(1L, ScalarLong(conn,
+                    "SELECT COUNT(*) FROM pragma_table_info('Files') WHERE name = 'HasAlbumArtist'"));
                 Assert.Equal(3L, ScalarLong(conn,
                     "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name IN ('AlbumsLookupIndex', 'FilesPathIndex', 'ImagesHashIndex')"));
             }
@@ -106,7 +109,8 @@ namespace MusicFileUtilities.Tests
                     using var command = conn.CreateCommand();
                     command.CommandText =
                         "DROP INDEX AlbumsLookupIndex; DROP INDEX FilesPathIndex; DROP INDEX ImagesHashIndex;" +
-                        "ALTER TABLE Files DROP COLUMN ArtworkScanned;";
+                        "ALTER TABLE Files DROP COLUMN ArtworkScanned;" +
+                        "ALTER TABLE Files DROP COLUMN HasAlbumArtist;";
                     command.ExecuteNonQuery();
                 }
 
@@ -118,7 +122,47 @@ namespace MusicFileUtilities.Tests
                         "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name IN ('AlbumsLookupIndex', 'FilesPathIndex', 'ImagesHashIndex')"));
                     Assert.Equal(1L, ScalarLong(conn,
                         "SELECT COUNT(*) FROM pragma_table_info('Files') WHERE name = 'ArtworkScanned'"));
+                    Assert.Equal(1L, ScalarLong(conn,
+                        "SELECT COUNT(*) FROM pragma_table_info('Files') WHERE name = 'HasAlbumArtist'"));
                 }
+            }
+            finally
+            {
+                SqliteConnection.ClearAllPools();
+                try { Directory.Delete(directory, true); } catch { /* best effort */ }
+            }
+        }
+
+        [Fact]
+        public void ExistingDatabaseMigrationRestoresExplicitAlbumArtistPresence()
+        {
+            string directory = Path.Combine(Path.GetTempPath(), "mlt_idx_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            string song = Path.Combine(directory, "sample.flac");
+            string dbPath = Path.Combine(directory, "cache.db");
+            File.Copy(MediaFixtures.Path_("sample.flac"), song);
+            var media = MediaFile.GetFile(song);
+            var writer = Assert.IsAssignableFrom<IMetadataWriter>(media);
+            writer.SetField(TagFields.AlbumArtist, "Explicit Artist");
+            writer.Save();
+
+            try
+            {
+                using (var db = MetadataDatabase.OpenDatabase("sqlite:" + dbPath))
+                {
+                    db.IndexFiles([directory], ct: TestContext.Current.CancellationToken);
+                    Assert.True(db.BuildCache([directory]).FileCache[song].HasAlbumArtist);
+                }
+                using (var conn = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = dbPath }.ConnectionString))
+                {
+                    conn.Open();
+                    using var command = conn.CreateCommand();
+                    command.CommandText = "ALTER TABLE Files DROP COLUMN HasAlbumArtist";
+                    command.ExecuteNonQuery();
+                }
+
+                using var migrated = MetadataDatabase.OpenDatabase("sqlite:" + dbPath);
+                Assert.True(migrated.BuildCache([directory]).FileCache[song].HasAlbumArtist);
             }
             finally
             {

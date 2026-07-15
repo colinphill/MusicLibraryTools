@@ -25,6 +25,8 @@ namespace MetadataCaching
         private int? _tracknumber = null;
         private int? _tracktotal = null;
         private DateTime _lastwritetime;
+        private long _length;
+        private bool _hasalbumartist;
         private bool _touched = false;
         private CodecType _codectype = CodecType.Lossy;
         private string _codecname = "";
@@ -50,6 +52,7 @@ namespace MetadataCaching
             _album = mp.Album;
             _artist = mp.Artist;
             _albumartist = mp.AlbumArtist;
+            _hasalbumartist = mp.HasAlbumArtist;
             _tracknumber = mp.TrackNumber;
             _tracktotal = mp.TrackTotal;
             _discnumber = mp.DiscNumber;
@@ -82,12 +85,14 @@ namespace MetadataCaching
         public string StrippedAlbum => _strippedalbum;
         public string Artist => _artist;
         public string AlbumArtist => _albumartist;
+        public bool HasAlbumArtist => _hasalbumartist;
         public int? TrackNumber => _tracknumber;
         public int? TrackTotal => _tracktotal;
         public int? DiscNumber => _discnumber;
         public int? DiscTotal => _disctotal;
         public string ReleaseDate => _releasedate;
         public DateTime LastWriteTime => _lastwritetime;
+        public long Length => _length;
         public int DurationInSeconds => _durationinseconds;
         public void Touch()
         {

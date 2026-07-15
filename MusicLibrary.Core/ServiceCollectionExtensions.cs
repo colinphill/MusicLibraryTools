@@ -14,6 +14,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITagWriteService, TagWriteService>();
         services.AddSingleton<IArtworkService, ArtworkService>();
         services.AddSingleton<IArtistReconciler, ArtistReconciler>();
+        services.AddSingleton<IAnalysisRepairService, AnalysisRepairService>();
         services.AddSingleton<IFfmpegRunner, FfmpegRunner>();
         services.AddSingleton<IIngestMusicService, IngestMusicService>();
         services.AddSingleton<LibraryService>();

@@ -100,6 +100,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                         Path = path,
                         Artist = e.Artist,
                         AlbumArtist = e.AlbumArtist,
+                        HasAlbumArtist = e.HasAlbumArtist,
                         Album = e.Album,
                         StrippedAlbum = e.StrippedAlbum,
                         Title = e.Title,
@@ -115,6 +116,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                         AverageBitRate = e.AverageBitRate,
                         Channels = e.Channels,
                         DurationInSeconds = e.DurationInSeconds,
+                        Length = e.Length,
                         LastWriteTime = e.LastWriteTime,
                     });
                 }

@@ -15,8 +15,9 @@ avoid eagerly reading artwork or media data that is already represented in the m
 
 - [ ] Keep analysis results instead of replacing the previous run.
 - [ ] Group findings by problem and album, with completed/ignored/deferred state.
-- [ ] Preview and apply batch repairs for missing or inconsistent album artist, numbering, totals,
-      multi-disc naming, whitespace, and casing.
+- [x] Preview and apply stale-checked repairs for safely inferable missing Album Artist values.
+- [ ] Extend batch repairs to conflicting album artists, numbering, totals, multi-disc naming,
+      whitespace, and casing.
 - [ ] Add an album metadata matrix with inconsistent cells highlighted.
 
 ## 3. Quarantine and recovery

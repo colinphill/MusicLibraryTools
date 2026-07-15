@@ -8,6 +8,7 @@ public sealed record TrackRecord
     public required string Path { get; init; }
     public string? Artist { get; init; }
     public string? AlbumArtist { get; init; }
+    public bool HasAlbumArtist { get; init; }
     public string? Album { get; init; }
     public string? StrippedAlbum { get; init; }
     public string? Title { get; init; }
@@ -23,12 +24,29 @@ public sealed record TrackRecord
     public uint AverageBitRate { get; init; }
     public uint Channels { get; init; }
     public int DurationInSeconds { get; init; }
+    public long Length { get; init; }
     public DateTime LastWriteTime { get; init; }
 
     /// <summary>Best available "album artist" for grouping (AlbumArtist, else Artist).</summary>
     public string EffectiveAlbumArtist =>
         !string.IsNullOrWhiteSpace(AlbumArtist) ? AlbumArtist! :
         !string.IsNullOrWhiteSpace(Artist) ? Artist! : "Unknown Artist";
+}
+
+/// <summary>One cache-derived tag correction shown to the user before any file is changed.</summary>
+public sealed record AnalysisTagRepair(
+    string Path,
+    TagFields Field,
+    string? Before,
+    string After,
+    string Reason,
+    long SourceLength,
+    DateTime SourceLastWriteTimeUtc);
+
+/// <summary>A stale-checked set of homogeneous analysis repairs.</summary>
+public sealed record AnalysisRepairPlan(string Name, IReadOnlyList<AnalysisTagRepair> Items)
+{
+    public bool CanApply => Items.Count > 0;
 }
 
 /// <summary>One finding within an analyzer report; deep-links back to a file.</summary>

@@ -55,6 +55,11 @@ public partial class MainWindowViewModel : ViewModelBase
         // Selection lives entirely in the details grid now. The grid's multi-selection drives the
         // editor / inspector / artwork panes; an analyzer finding steers the grid to highlight a row.
         Analyzer.OpenRequested += Open;
+        Analyzer.RepairsApplied += async _ =>
+        {
+            await Table.ReloadAsync();
+            await Inspector.ReloadAsync();
+        };
         // Re-scan finished → refresh the grid so new/changed files show up.
         Library.IndexCompleted += () => _ = Table.ReloadAsync();
         // Organize already re-syncs the cache to the moves; refresh the grid to show the new locations.

@@ -353,6 +353,8 @@
                                 <Button Content="Lossy files" Margin="0,0,8,8" Command="{Binding RunLossyCommand}"/>
                                 <Button Content="Duplicates" Margin="0,0,8,8" Command="{Binding RunDuplicatesCommand}"/>
                                 <Button Content="Cross-set check" Margin="0,0,8,8" Command="{Binding RunCheckSetsCommand}"/>
+                                <Button Content="Album artist repairs" Margin="0,0,8,8"
+                                        Command="{Binding PreviewAlbumArtistRepairsCommand}"/>
                                 <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,8" VerticalAlignment="Center">
                                     <Button Content="Similar artists" Command="{Binding RunSimilarArtistsCommand}"/>
                                     <TextBlock Text="threshold" Classes="muted" VerticalAlignment="Center"/>
@@ -487,6 +489,48 @@
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
                                 </ScrollViewer>
+
+                                <!-- Previewable, stale-checked metadata repairs -->
+                                <Grid IsVisible="{Binding ShowRepairs}" RowDefinitions="Auto,*">
+                                    <WrapPanel Grid.Row="0" Classes="toolbarwrap" Margin="0,0,-8,4">
+                                        <Button Content="Apply selected" Classes="accent"
+                                                Command="{Binding ApplyRepairsCommand}"/>
+                                        <TextBlock Text="Only unambiguous repairs are proposed; changed files require a new preview."
+                                                   Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                    </WrapPanel>
+                                    <ScrollViewer Grid.Row="1">
+                                        <ItemsControl ItemsSource="{Binding RepairItems}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:AnalysisRepairItemViewModel">
+                                                    <Border Classes="card" Margin="0,0,0,8" Padding="12">
+                                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                                            <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}"
+                                                                      IsEnabled="{Binding !IsApplied}"
+                                                                      VerticalAlignment="Top"/>
+                                                            <StackPanel Grid.Column="1" Spacing="3">
+                                                                <TextBlock FontWeight="SemiBold" TextWrapping="Wrap">
+                                                                    <Run Text="{Binding Field}"/>
+                                                                    <Run Text="{Binding Before, StringFormat='  {0} → '}"/>
+                                                                    <Run Text="{Binding After}"/>
+                                                                </TextBlock>
+                                                                <TextBlock Text="{Binding Reason}" TextWrapping="Wrap"/>
+                                                                <Button HorizontalAlignment="Left" HorizontalContentAlignment="Left"
+                                                                        Background="Transparent" Padding="0,2"
+                                                                        Command="{Binding $parent[TabItem].((vm:AnalyzerViewModel)DataContext).OpenCommand}"
+                                                                        CommandParameter="{Binding Path}">
+                                                                    <TextBlock Text="{Binding Path}" Classes="caption" TextWrapping="Wrap"/>
+                                                                </Button>
+                                                                <TextBlock Text="{Binding ResultText}" FontWeight="SemiBold"
+                                                                           Foreground="{DynamicResource AccentBrush}"
+                                                                           IsVisible="{Binding ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Grid>
                             </Grid>
                         </Grid>
                     </TabItem>

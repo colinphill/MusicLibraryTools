@@ -7,18 +7,21 @@ using MusicLibrary.Core.Services;
 namespace MusicLibrary.App.ViewModels;
 
 /// <summary>Which result section the Analyze tab is currently showing.</summary>
-public enum AnalysisResultView { Findings, Duplicates, Artists }
+public enum AnalysisResultView { Findings, Duplicates, Artists, Repairs }
 
 /// <summary>
 /// Library-wide analysis. Each analysis type is run by its own button (inconsistencies, lossy files,
 /// duplicates, similar artists, cross-set check); results replace the previous run. Selecting a
-/// finding/track opens that file; similar-artist clusters can be merged in place.
+/// finding/track opens that file; similar-artist clusters can be merged in place. Conservative tag
+/// repairs use a separate preview/select/apply surface and reject sources changed since preview.
 /// </summary>
 public partial class AnalyzerViewModel : ViewModelBase
 {
     private readonly ILibraryService _library;
     private readonly IArtistReconciler _reconciler;
+    private readonly IAnalysisRepairService _repairs;
     private CancellationTokenSource? _cts;
+    private AnalysisRepairPlan? _repairPlan;
 
     [ObservableProperty]
     private bool _isBusy;
@@ -36,20 +39,30 @@ public partial class AnalyzerViewModel : ViewModelBase
     public ObservableCollection<AnalysisReport> Reports { get; } = [];
     public ObservableCollection<DuplicateGroup> Duplicates { get; } = [];
     public ObservableCollection<ArtistGroupViewModel> ArtistGroups { get; } = [];
+    public ObservableCollection<AnalysisRepairItemViewModel> RepairItems { get; } = [];
 
     // Section visibility (bound in XAML; ActiveView drives which one shows).
     public bool ShowFindings => ActiveView == AnalysisResultView.Findings;
     public bool ShowDuplicates => ActiveView == AnalysisResultView.Duplicates;
     public bool ShowArtists => ActiveView == AnalysisResultView.Artists;
+    public bool ShowRepairs => ActiveView == AnalysisResultView.Repairs;
 
     /// <summary>Raised with a file path when the user opens a finding/track.</summary>
     public event Action<string>? OpenRequested;
+    public event Action<IReadOnlyList<string>>? RepairsApplied;
 
-    public AnalyzerViewModel(ILibraryService library, IArtistReconciler reconciler, IAppSettings settings)
+    public AnalyzerViewModel(ILibraryService library, IArtistReconciler reconciler,
+        IAnalysisRepairService repairs, IAppSettings settings)
     {
         _library = library;
         _reconciler = reconciler;
-        settings.ConfigurationChanged += (_, _) => NotifyCommands();
+        _repairs = repairs;
+        settings.ConfigurationChanged += (_, _) =>
+        {
+            _repairPlan = null;
+            RepairItems.Clear();
+            NotifyCommands();
+        };
     }
 
     partial void OnActiveViewChanged(AnalysisResultView value)
@@ -57,6 +70,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowFindings));
         OnPropertyChanged(nameof(ShowDuplicates));
         OnPropertyChanged(nameof(ShowArtists));
+        OnPropertyChanged(nameof(ShowRepairs));
     }
 
     private bool CanRun() => _library.IsReady && !IsBusy;
@@ -92,6 +106,80 @@ public partial class AnalyzerViewModel : ViewModelBase
         return (groups.Count == 0 ? "No similar artist names found." : $"{groups.Count:N0} cluster(s) of similar artist names.",
                 () => { ArtistGroups.Clear(); foreach (var g in groups) ArtistGroups.Add(new ArtistGroupViewModel(_reconciler, g)); });
     });
+
+    [RelayCommand(CanExecute = nameof(CanRun))]
+    private async Task PreviewAlbumArtistRepairs()
+    {
+        _repairPlan = null;
+        RepairItems.Clear();
+        using var scope = BeginRun("Album artist repairs", AnalysisResultView.Repairs);
+        try
+        {
+            var records = await _library.GetAllRecordsAsync(scope.Token);
+            var plan = await Task.Run(() => _repairs.PreviewMissingAlbumArtists(records), scope.Token);
+            _repairPlan = plan;
+            RepairItems.Clear();
+            foreach (var item in plan.Items)
+            {
+                var viewModel = new AnalysisRepairItemViewModel(item);
+                viewModel.SelectionChanged += () => ApplyRepairsCommand.NotifyCanExecuteChanged();
+                RepairItems.Add(viewModel);
+            }
+            StatusText = plan.Items.Count == 0
+                ? "No safely inferable missing album artists were found."
+                : $"Previewed {plan.Items.Count:N0} missing album-artist repair(s). Review, then apply selected.";
+        }
+        catch (OperationCanceledException) { StatusText = "Album artist repair preview cancelled."; }
+        catch (Exception ex) { StatusText = $"Album artist repair preview failed: {ex.Message}"; }
+        finally { ApplyRepairsCommand.NotifyCanExecuteChanged(); }
+    }
+
+    private bool CanApplyRepairs() => !IsBusy && _repairPlan is not null &&
+        RepairItems.Any(item => item.IsSelected && !item.IsApplied);
+
+    [RelayCommand(CanExecute = nameof(CanApplyRepairs))]
+    private async Task ApplyRepairs()
+    {
+        if (_repairPlan is null)
+            return;
+        var selected = RepairItems.Where(item => item.IsSelected && !item.IsApplied).ToList();
+        if (selected.Count == 0)
+            return;
+
+        using var scope = BeginRun("Apply album artist repairs", AnalysisResultView.Repairs);
+        try
+        {
+            var selectedPlan = _repairPlan with { Items = selected.Select(item => item.Repair).ToList() };
+            var progress = new Progress<int>(done =>
+                StatusText = $"Applying album artist repairs… {done:N0}/{selected.Count:N0}");
+            var result = await _repairs.ApplyAsync(selectedPlan, progress, scope.Token);
+            var byPath = result.Files.ToDictionary(file => file.Path, StringComparer.OrdinalIgnoreCase);
+            foreach (var item in selected)
+            {
+                if (!byPath.TryGetValue(item.Path, out var file))
+                    continue;
+                item.ResultText = file.Outcome switch
+                {
+                    WriteOutcome.Saved => "Applied",
+                    WriteOutcome.Skipped => "Already correct",
+                    _ => file.Error ?? "Failed",
+                };
+                item.IsApplied = file.Outcome is WriteOutcome.Saved or WriteOutcome.Skipped;
+                if (item.IsApplied)
+                    item.IsSelected = false;
+            }
+            StatusText = $"Album artist repairs: {result.Summary}.";
+            var changed = result.Files
+                .Where(file => file.Outcome == WriteOutcome.Saved)
+                .Select(file => file.Path)
+                .ToList();
+            if (changed.Count > 0)
+                RepairsApplied?.Invoke(changed);
+        }
+        catch (OperationCanceledException) { StatusText = "Album artist repair apply cancelled."; }
+        catch (Exception ex) { StatusText = $"Album artist repair apply failed: {ex.Message}"; }
+        finally { ApplyRepairsCommand.NotifyCanExecuteChanged(); }
+    }
 
     [RelayCommand(CanExecute = nameof(CanRun))]
     private async Task RunCheckSets()
@@ -162,6 +250,8 @@ public partial class AnalyzerViewModel : ViewModelBase
         RunDuplicatesCommand.NotifyCanExecuteChanged();
         RunSimilarArtistsCommand.NotifyCanExecuteChanged();
         RunCheckSetsCommand.NotifyCanExecuteChanged();
+        PreviewAlbumArtistRepairsCommand.NotifyCanExecuteChanged();
+        ApplyRepairsCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand]
@@ -173,4 +263,24 @@ public partial class AnalyzerViewModel : ViewModelBase
         if (!string.IsNullOrEmpty(path))
             OpenRequested?.Invoke(path);
     }
+}
+
+public partial class AnalysisRepairItemViewModel : ViewModelBase
+{
+    public AnalysisTagRepair Repair { get; }
+    public string Path => Repair.Path;
+    public string Field => Repair.Field.ToString();
+    public string Before => string.IsNullOrWhiteSpace(Repair.Before) ? "(missing)" : Repair.Before;
+    public string After => Repair.After;
+    public string Reason => Repair.Reason;
+
+    [ObservableProperty] private bool _isSelected = true;
+    [ObservableProperty] private bool _isApplied;
+    [ObservableProperty] private string? _resultText;
+
+    public event Action? SelectionChanged;
+
+    public AnalysisRepairItemViewModel(AnalysisTagRepair repair) => Repair = repair;
+
+    partial void OnIsSelectedChanged(bool value) => SelectionChanged?.Invoke();
 }

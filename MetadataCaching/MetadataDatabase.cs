@@ -36,6 +36,8 @@ namespace MetadataCaching
         public MetadataCacheEntry(DbDataReader reader)
         {
             _lastwritetime = DateTime.SpecifyKind(reader.GetDateTime(1), DateTimeKind.Utc);
+            _length = reader.GetInt64("FileSize");
+            _hasalbumartist = reader.GetInt64("HasAlbumArtist") != 0;
             _codecname = reader.GetString("CodecName");
             _codectype = (CodecType)Enum.Parse(typeof(CodecType), reader.GetString("CodecType"));
             _averagebitrate = (uint)reader.GetInt64("AverageBitrate");
@@ -181,7 +183,7 @@ namespace MetadataCaching
             "CREATE TABLE AlbumArtists (ID INTEGER PRIMARY KEY, Name TEXT UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE Albums (ID INTEGER PRIMARY KEY, ScanSetID BIGINT REFERENCES ScanSets (ID) NOT NULL, AlbumArtistID BIGINT NOT NULL REFERENCES AlbumArtists (ID), Name TEXT NOT NULL, Path TEXT NOT NULL);\r\n" +
             "CREATE TABLE Tracks (ID INTEGER PRIMARY KEY, ArtistID BIGINT REFERENCES Artists (ID) NOT NULL, AlbumID BIGINT REFERENCES Albums (ID) NOT NULL, Name TEXT NOT NULL, TrackNumber BIGINT, TrackTotal BIGINT, DiscNumber BIGINT, DiscTotal BIGINT, ReleaseDate TEXT);\r\n" +
-            "CREATE TABLE Files (ID INTEGER PRIMARY KEY, Path TEXT NOT NULL, FileSize BIGINT NOT NULL, LastWriteTime DATETIME NOT NULL, CodecName TEXT NOT NULL, CodecType TEXT NOT NULL, AverageBitrate BIGINT NOT NULL, MaxBitrate BIGINT NOT NULL, BitsPerSample BIGINT NOT NULL, SampleRate BIGINT NOT NULL, Channels BIGINT NOT NULL, DurationInFrames BIGINT NOT NULL, TagType TEXT NOT NULL, ArtworkScanned BIGINT NOT NULL);\r\n" +
+            "CREATE TABLE Files (ID INTEGER PRIMARY KEY, Path TEXT NOT NULL, FileSize BIGINT NOT NULL, LastWriteTime DATETIME NOT NULL, CodecName TEXT NOT NULL, CodecType TEXT NOT NULL, AverageBitrate BIGINT NOT NULL, MaxBitrate BIGINT NOT NULL, BitsPerSample BIGINT NOT NULL, SampleRate BIGINT NOT NULL, Channels BIGINT NOT NULL, DurationInFrames BIGINT NOT NULL, TagType TEXT NOT NULL, ArtworkScanned BIGINT NOT NULL, HasAlbumArtist BIGINT NOT NULL);\r\n" +
             "CREATE TABLE Images (ID INTEGER PRIMARY KEY, Hash TEXT NOT NULL, ImageType TEXT NOT NULL, Width BIGINT NOT NULL, Height BIGINT NOT NULL, Size BIGINT NOT NULL, Data BLOB NOT NULL);\r\n" +
             "CREATE TABLE ImageMetadata (ID INTEGER PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, ImageID BIGINT REFERENCES Images (ID), Description TEXT NOT NULL, Category TEXT NOT NULL);\r\n" +
             "CREATE TABLE MetadataKeys (ID INTEGER PRIMARY KEY, \"Key\" TEXT UNIQUE NOT NULL);\r\n" +
@@ -212,7 +214,7 @@ namespace MetadataCaching
             "CREATE TABLE AlbumArtists (ID BIGINT IDENTITY PRIMARY KEY, Name NVARCHAR(512) UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE Albums (ID BIGINT IDENTITY PRIMARY KEY, ScanSetID BIGINT REFERENCES ScanSets (ID) NOT NULL, AlbumArtistID BIGINT NOT NULL REFERENCES AlbumArtists (ID), Name NVARCHAR(MAX) NOT NULL, Path NVARCHAR(MAX) NOT NULL);\r\n" +
             "CREATE TABLE Tracks (ID BIGINT PRIMARY KEY, ArtistID BIGINT REFERENCES Artists (ID) NOT NULL, AlbumID BIGINT REFERENCES Albums (ID) NOT NULL, Name NVARCHAR(MAX) NOT NULL, TrackNumber BIGINT, TrackTotal BIGINT, DiscNumber BIGINT, DiscTotal BIGINT, ReleaseDate NVARCHAR(MAX));\r\n" +
-            "CREATE TABLE Files (ID BIGINT IDENTITY PRIMARY KEY, Path NVARCHAR(512) NOT NULL, FileSize BIGINT NOT NULL, LastWriteTime DATETIME NOT NULL, CodecName NVARCHAR(MAX) NOT NULL, CodecType NVARCHAR(MAX) NOT NULL, AverageBitrate BIGINT NOT NULL, MaxBitrate BIGINT NOT NULL, BitsPerSample BIGINT NOT NULL, SampleRate BIGINT NOT NULL, Channels BIGINT NOT NULL, DurationInFrames BIGINT NOT NULL, TagType NVARCHAR(64) NOT NULL, ArtworkScanned BIGINT NOT NULL);\r\n" +
+            "CREATE TABLE Files (ID BIGINT IDENTITY PRIMARY KEY, Path NVARCHAR(512) NOT NULL, FileSize BIGINT NOT NULL, LastWriteTime DATETIME NOT NULL, CodecName NVARCHAR(MAX) NOT NULL, CodecType NVARCHAR(MAX) NOT NULL, AverageBitrate BIGINT NOT NULL, MaxBitrate BIGINT NOT NULL, BitsPerSample BIGINT NOT NULL, SampleRate BIGINT NOT NULL, Channels BIGINT NOT NULL, DurationInFrames BIGINT NOT NULL, TagType NVARCHAR(64) NOT NULL, ArtworkScanned BIGINT NOT NULL, HasAlbumArtist BIGINT NOT NULL);\r\n" +
             "CREATE TABLE Images (ID BIGINT IDENTITY PRIMARY KEY, Hash VARCHAR(64), ImageType NVARCHAR(MAX) NOT NULL, Width BIGINT NOT NULL, Height BIGINT NOT NULL, Size BIGINT NOT NULL, Data VARBINARY(MAX) NOT NULL);\r\n" +
             "CREATE TABLE MetadataKeys (ID BIGINT IDENTITY PRIMARY KEY, \"Key\" NVARCHAR(512) UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE Metadata (ID BIGINT IDENTITY PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, KeyID BIGINT REFERENCES MetadataKeys (ID) NOT NULL, Value NVARCHAR(MAX) NOT NULL);\r\n" +
@@ -339,6 +341,17 @@ namespace MetadataCaching
                 mcomm.CommandText = "ALTER TABLE Files ADD COLUMN ArtworkScanned BIGINT NOT NULL DEFAULT 1";
                 mcomm.ExecuteNonQuery();
             }
+            mcomm.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Files') WHERE name = 'HasAlbumArtist'";
+            if (Convert.ToInt64(mcomm.ExecuteScalar()) == 0)
+            {
+                mcomm.CommandText = "ALTER TABLE Files ADD COLUMN HasAlbumArtist BIGINT NOT NULL DEFAULT 0";
+                mcomm.ExecuteNonQuery();
+                mcomm.CommandText =
+                    "UPDATE Files SET HasAlbumArtist = 1 WHERE EXISTS (" +
+                    "SELECT 1 FROM Metadata m JOIN MetadataKeys k ON m.KeyID = k.ID " +
+                    "WHERE m.FileID = Files.ID AND k.\"Key\" = 'AlbumArtist' AND m.Value <> '')";
+                mcomm.ExecuteNonQuery();
+            }
             mcomm.CommandText =
                 "DROP TABLE IF EXISTS KnownMetadata;\r\n" +
                 "CREATE INDEX IF NOT EXISTS AlbumsLookupIndex ON Albums (ScanSetID, Path, AlbumArtistID, Name);\r\n" +
@@ -450,7 +463,7 @@ namespace MetadataCaching
                         .Where(e => e.Length != 0)
                         .ToHashSet(StringComparer.OrdinalIgnoreCase);
                 using var querycomm = conn_.CreateCommand();
-                querycomm.CommandText = "SELECT Path, LastWriteTime, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames, Artist, AlbumArtist, Album, TrackNumber, TrackTotal, DiscNumber, DiscTotal, ReleaseDate, Track, AlbumPath FROM MetadataSummaryView WHERE ScanSetID = " + set.ID;
+                querycomm.CommandText = "SELECT Path, LastWriteTime, FileSize, HasAlbumArtist, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames, Artist, AlbumArtist, Album, TrackNumber, TrackTotal, DiscNumber, DiscTotal, ReleaseDate, Track, AlbumPath FROM MetadataSummaryView WHERE ScanSetID = " + set.ID;
                 using var reader = querycomm.ExecuteReader();
                 int oAlbumPath = reader.GetOrdinal("AlbumPath"), oPath = reader.GetOrdinal("Path");
                 while (reader.Read())
@@ -837,8 +850,9 @@ namespace MetadataCaching
                     var channelsparam = filecomm.Parameters.Add("@Channels", DbType.Int64);
                     var durationinframesparam = filecomm.Parameters.Add("@DurationInFrames", DbType.Int64);
                     var tagtypeparam = filecomm.Parameters.Add("@TagType", DbType.String);
-                    filecomm.CommandText = "INSERT INTO Files (Path, FileSize, LastWriteTime, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames, TagType, ArtworkScanned)" +
-                        " VALUES (@Path, @FileSize, @LastWriteTime, @CodecName, @CodecType, @AverageBitrate, @MaxBitrate, @BitsPerSample, @SampleRate, @Channels, @DurationInFrames, @TagType, 0);\r\n" +
+                    var hasalbumartistparam = filecomm.Parameters.Add("@HasAlbumArtist", DbType.Int64);
+                    filecomm.CommandText = "INSERT INTO Files (Path, FileSize, LastWriteTime, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames, TagType, ArtworkScanned, HasAlbumArtist)" +
+                        " VALUES (@Path, @FileSize, @LastWriteTime, @CodecName, @CodecType, @AverageBitrate, @MaxBitrate, @BitsPerSample, @SampleRate, @Channels, @DurationInFrames, @TagType, 0, @HasAlbumArtist);\r\n" +
                         lastidsql_;
 
                     // SQLite metadata rows are written via buffered multi-row INSERTs (see
@@ -993,6 +1007,7 @@ namespace MetadataCaching
                         channelsparam.Value = cp.Channels;
                         durationinframesparam.Value = cp.DurationInFrames;
                         tagtypeparam.Value = mp.TagType;
+                        hasalbumartistparam.Value = mp.HasAlbumArtist ? 1 : 0;
 
                         trackidparam.Value = imagefileidparam.Value = fileid = (long)filecomm.ExecuteScalar();
                         trackcomm.ExecuteNonQuery();
@@ -1215,7 +1230,7 @@ namespace MetadataCaching
             using (var cmd = conn_.CreateCommand())
             {
                 // Column order matches BuildCache so the MetadataCacheEntry(reader) ordinal reads line up.
-                cmd.CommandText = "SELECT Path, LastWriteTime, CodecName, CodecType, AverageBitrate, MaxBitrate," +
+                cmd.CommandText = "SELECT Path, LastWriteTime, FileSize, HasAlbumArtist, CodecName, CodecType, AverageBitrate, MaxBitrate," +
                     " BitsPerSample, SampleRate, Channels, DurationInFrames, Artist, AlbumArtist, Album," +
                     " TrackNumber, TrackTotal, DiscNumber, DiscTotal, ReleaseDate, Track, TagType, ID" +
                     " FROM MetadataSummaryView WHERE ScanSetID = @set AND AlbumPath = @album AND Path = @file LIMIT 1";
@@ -1660,8 +1675,8 @@ namespace MetadataCaching
                 long fileId;
                 using (var fc = trans.CreateCommand())
                 {
-                    fc.CommandText = "INSERT INTO Files (Path, FileSize, LastWriteTime, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames, TagType, ArtworkScanned)" +
-                        " VALUES (@Path, @FileSize, @LastWriteTime, @CodecName, @CodecType, @AverageBitrate, @MaxBitrate, @BitsPerSample, @SampleRate, @Channels, @DurationInFrames, @TagType, 1);\r\n" + lastidsql_;
+                    fc.CommandText = "INSERT INTO Files (Path, FileSize, LastWriteTime, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames, TagType, ArtworkScanned, HasAlbumArtist)" +
+                        " VALUES (@Path, @FileSize, @LastWriteTime, @CodecName, @CodecType, @AverageBitrate, @MaxBitrate, @BitsPerSample, @SampleRate, @Channels, @DurationInFrames, @TagType, 1, @HasAlbumArtist);\r\n" + lastidsql_;
                     fc.Parameters.Add("@Path", DbType.String).Value = fileName;
                     fc.Parameters.Add("@FileSize", DbType.Int64).Value = fi.Length;
                     fc.Parameters.Add("@LastWriteTime", DbType.DateTime).Value = fi.LastWriteTimeUtc;
@@ -1674,6 +1689,7 @@ namespace MetadataCaching
                     fc.Parameters.Add("@Channels", DbType.Int64).Value = (long)cp.Channels;
                     fc.Parameters.Add("@DurationInFrames", DbType.Int64).Value = (long)cp.DurationInFrames;
                     fc.Parameters.Add("@TagType", DbType.String).Value = mp.TagType;
+                    fc.Parameters.Add("@HasAlbumArtist", DbType.Int64).Value = mp.HasAlbumArtist ? 1 : 0;
                     fileId = Convert.ToInt64(fc.ExecuteScalar());
                 }
 

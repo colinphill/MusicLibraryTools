@@ -52,6 +52,8 @@ public class DatabaseReadTests
             Assert.NotNull(details);
             Assert.Equal("TestTitle", details!.Entry.Title);
             Assert.Equal("TestArtist", details.Entry.Artist);
+            Assert.Equal(new FileInfo(song).Length, details.Entry.Length);
+            Assert.Equal(new FileInfo(song).Length, Assert.Single(await library.GetAllRecordsAsync()).Length);
 
             // Genre is not a structured column — its presence proves GetKnownMetadata() was persisted
             // to the canonical Metadata table and read back from the cache.
