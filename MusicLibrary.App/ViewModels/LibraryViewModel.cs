@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MetadataCaching;
+using MusicLibrary.App.Services;
 using MusicLibrary.Core.Services;
 using System.Diagnostics;
 
@@ -13,9 +14,11 @@ namespace MusicLibrary.App.ViewModels;
 /// </summary>
 public partial class LibraryViewModel : ViewModelBase
 {
+    private const string ScheduledScanMinutesPreference = "Index.ScheduledScanMinutes";
     private readonly ILibraryService _library;
     private readonly IIndexBenchmarkService _benchmarks;
     private readonly IAppSettings _settings;
+    private readonly IScheduledScanService? _scheduledScans;
     private CancellationTokenSource? _indexCts;
 
     [ObservableProperty]
@@ -34,6 +37,12 @@ public partial class LibraryViewModel : ViewModelBase
 
     [ObservableProperty]
     private int _readerParallelism = 16;
+
+    [ObservableProperty]
+    private int _scheduledScanMinutes;
+
+    [ObservableProperty]
+    private string _scheduledScanText = "Automatic delta scans are off.";
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(UseBenchmarkRecommendationCommand))]
@@ -61,14 +70,18 @@ public partial class LibraryViewModel : ViewModelBase
     public LibraryViewModel(
         ILibraryService library,
         IIndexBenchmarkService benchmarks,
-        IAppSettings settings)
+        IAppSettings settings,
+        IScheduledScanService? scheduledScans = null)
     {
         _library = library;
         _benchmarks = benchmarks;
         _settings = settings;
+        _scheduledScans = scheduledScans;
         if (int.TryParse(settings.GetPreference(IndexBenchmarkService.ReaderParallelismPreference),
                 out int parallelism))
             ReaderParallelism = Math.Clamp(parallelism, 1, 64);
+        if (int.TryParse(settings.GetPreference(ScheduledScanMinutesPreference), out int minutes))
+            ScheduledScanMinutes = Math.Clamp(minutes, 0, 1440);
         // A newly-loaded config flips IsReady; re-evaluate the Index button's CanExecute and kick off
         // an index automatically so the cache reflects the just-loaded library without a manual click.
         _settings.ConfigurationChanged += (_, _) =>
@@ -86,6 +99,35 @@ public partial class LibraryViewModel : ViewModelBase
             return;
         _settings.SetPreference(IndexBenchmarkService.ReaderParallelismPreference,
             value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    partial void OnScheduledScanMinutesChanged(int value)
+    {
+        if (value is < 0 or > 1440)
+            return;
+        _settings.SetPreference(ScheduledScanMinutesPreference,
+            value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        if (_scheduledScans is null)
+            return;
+        TimeSpan? interval = value == 0 ? null : TimeSpan.FromMinutes(value);
+        _scheduledScans.Configure(interval, RunScheduledScanAsync);
+        ScheduledScanText = value == 0
+            ? "Automatic delta scans are off."
+            : $"Delta scan every {value:N0} minute(s); unchanged files use the cache.";
+    }
+
+    private async Task RunScheduledScanAsync()
+    {
+        if (!IndexCommand.CanExecute(null))
+        {
+            ScheduledScanText = $"Scheduled delta scan skipped because another operation was active; " +
+                $"the next attempt remains every {ScheduledScanMinutes:N0} minute(s).";
+            return;
+        }
+        ScheduledScanText = "Running scheduled delta scan…";
+        await IndexCommand.ExecuteAsync(null);
+        ScheduledScanText = $"Last scheduled delta scan finished {DateTime.Now:g}; " +
+            $"next interval {ScheduledScanMinutes:N0} minute(s).";
     }
 
     private bool CanIndex() => _library.IsReady && !IsBusy;

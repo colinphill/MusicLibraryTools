@@ -113,6 +113,11 @@
                                    Increment="1" Width="82" FormatString="0"
                                    IsEnabled="{Binding !Library.IsBusy}"
                                    ToolTip.Tip="Global cap on concurrent metadata readers"/>
+                    <TextBlock Text="Auto min" VerticalAlignment="Center" Classes="muted"/>
+                    <NumericUpDown Value="{Binding Library.ScheduledScanMinutes}" Minimum="0" Maximum="1440"
+                                   Increment="5" Width="82" FormatString="0"
+                                   IsEnabled="{Binding !Library.IsBusy}"
+                                   ToolTip.Tip="{Binding Library.ScheduledScanText}"/>
                     <Button Content="Benchmark readers" Command="{Binding Library.BenchmarkReadersCommand}"
                             ToolTip.Tip="Read a bounded metadata sample from each configured root; makes no changes"/>
                     <Button Content="Use recommendation" Command="{Binding Library.UseBenchmarkRecommendationCommand}"

@@ -111,6 +111,9 @@ uses the lowest of those recommendations.
 Each index attempt also records per-root health and the last fully successful scan. If a share is
 offline or a subtree cannot be completely enumerated, indexing continues for healthy roots and
 does not interpret unvisited cached files as removals.
+The app can also schedule cache-aware delta scans with the **Auto min** control (`0` disables them);
+targeted reindex remains available from selected Library rows, and cached browsing continues while
+a configured share is offline.
 
 ## Safe execution
 

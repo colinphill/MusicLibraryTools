@@ -38,7 +38,7 @@ avoid eagerly reading artwork or media data that is already represented in the m
 - [x] Report enumeration, metadata, database, and artwork phases with throughput and elapsed time.
 - [x] Expose bounded reader parallelism and provide a per-root concurrency benchmark.
 - [x] Record per-root scan health and last successful scan; distinguish unavailable roots from removals.
-- [ ] Support cached/offline browsing, targeted reindexing, and scheduled delta scans.
+- [x] Support cached/offline browsing, targeted reindexing, and scheduled delta scans.
 
 ## 5. Album and representation health
 
