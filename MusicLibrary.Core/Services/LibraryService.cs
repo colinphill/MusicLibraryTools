@@ -406,6 +406,22 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         return result with { CacheErrors = cacheErrors };
     }
 
+    public async Task<IReadOnlyList<ScanRootHealth>> GetScanRootHealthAsync(CancellationToken ct = default)
+    {
+        if (!IsReady)
+            return [];
+        await _gate.WaitAsync(ct);
+        try
+        {
+            var db = GetDatabase(GetContext());
+            return await Task.Run(db.GetScanRootHealth, ct);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     private static string? BeginOrganizeJournal(
         IReadOnlyList<string> baseDirectories,
         IReadOnlyList<PlannedMove> moves)

@@ -46,9 +46,14 @@ public partial class LibraryViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(HasBenchmarkDetails))]
     private string? _benchmarkDetails;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasRootHealthDetails))]
+    private string? _rootHealthDetails;
+
     public bool IsBusy => IsIndexing || IsBenchmarking;
     public bool HasBenchmarkRecommendation => BenchmarkRecommendation is not null;
     public bool HasBenchmarkDetails => !string.IsNullOrWhiteSpace(BenchmarkDetails);
+    public bool HasRootHealthDetails => !string.IsNullOrWhiteSpace(RootHealthDetails);
 
     /// <summary>Raised after a successful (or cancelled) index so views can refresh from the cache.</summary>
     public event Action? IndexCompleted;
@@ -109,10 +114,30 @@ public partial class LibraryViewModel : ViewModelBase
         }
         finally
         {
+            await RefreshRootHealthAsync();
             IsIndexing = false;
             _indexCts?.Dispose();
             _indexCts = null;
             IndexCompleted?.Invoke();
+        }
+    }
+
+    private async Task RefreshRootHealthAsync()
+    {
+        try
+        {
+            var health = await _library.GetScanRootHealthAsync();
+            RootHealthDetails = health.Count == 0 ? null : DescribeRootHealth(health);
+            int unavailable = health.Count(root => root.State == ScanRootState.Unavailable);
+            int degraded = health.Count(root => root.State == ScanRootState.Degraded);
+            if (unavailable > 0)
+                StatusText += $" {unavailable:N0} root(s) unavailable; cached entries were retained.";
+            if (degraded > 0)
+                StatusText += $" {degraded:N0} root(s) completed with warnings; review Root health.";
+        }
+        catch
+        {
+            // Index outcome remains primary; health is supplemental and can refresh next scan.
         }
     }
 
@@ -190,6 +215,18 @@ public partial class LibraryViewModel : ViewModelBase
             : "Reader benchmark completed without a usable recommendation.";
         return heading + Environment.NewLine + string.Join(Environment.NewLine, lines);
     }
+
+    public static string DescribeRootHealth(IReadOnlyList<ScanRootHealth> roots) =>
+        string.Join(Environment.NewLine, roots.Select(root =>
+        {
+            string attempt = root.LastAttemptUtc is DateTime attempted
+                ? attempted.ToLocalTime().ToString("g") : "never";
+            string success = root.LastSuccessUtc is DateTime succeeded
+                ? succeeded.ToLocalTime().ToString("g") : "never";
+            string error = string.IsNullOrWhiteSpace(root.Error) ? "" : $" — {root.Error}";
+            return $"{root.Root}: {root.State}; last attempt {attempt}; last success {success}; " +
+                $"{root.Enumerated:N0} enumerated, {root.MetadataRead:N0} metadata read{error}";
+        }));
 
     public static string DescribeProgress(IndexProgress progress)
     {

@@ -48,6 +48,11 @@ namespace MusicFileUtilities.Tests
                         Assert.Equal("TestAlbum", e.Album);
                     });
                     Assert.NotEmpty(cache.AlbumCache);
+                    var health = Assert.Single(db.GetScanRootHealth());
+                    Assert.Equal(ScanRootState.Healthy, health.State);
+                    Assert.NotNull(health.LastSuccessUtc);
+                    Assert.Equal(3, health.Enumerated);
+                    Assert.Equal(3, health.MetadataRead);
                     var cachedEntries = cache.FileCache.Values.ToArray();
                     Assert.False(cache.FileCache[Path.Combine(scanDir, "sample.flac")].HasAlbumArtist);
                     Assert.All(cachedEntries.Skip(1), entry =>

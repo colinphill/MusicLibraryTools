@@ -41,6 +41,24 @@ namespace MetadataCaching
         Completed,
     }
 
+    public enum ScanRootState
+    {
+        Never,
+        Healthy,
+        Degraded,
+        Unavailable,
+        Cancelled,
+    }
+
+    public sealed record ScanRootHealth(
+        string Root,
+        ScanRootState State,
+        DateTime? LastAttemptUtc,
+        DateTime? LastSuccessUtc,
+        int Enumerated,
+        int MetadataRead,
+        string Error);
+
     public readonly record struct IndexProgress(int Scanned, int Added, int Modified, int Unchanged)
     {
         public IndexPhase Phase { get; init; }
@@ -198,11 +216,89 @@ namespace MetadataCaching
             public int Hit;
         }
 
+        private sealed class RootScanStats
+        {
+            public int Enumerated;
+            public int MetadataRead;
+        }
+
+        public IReadOnlyList<ScanRootHealth> GetScanRootHealth()
+        {
+            var results = new List<ScanRootHealth>();
+            using var command = conn_.CreateCommand();
+            command.CommandText =
+                "SELECT s.Path, h.State, h.LastAttemptUtc, h.LastSuccessUtc, h.Enumerated, h.MetadataRead, h.Error " +
+                "FROM ScanSets s LEFT JOIN ScanHealth h ON h.ScanSetID = s.ID ORDER BY s.Path";
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                var state = reader.IsDBNull(1) || !Enum.TryParse<ScanRootState>(reader.GetString(1), out var parsed)
+                    ? ScanRootState.Never : parsed;
+                results.Add(new(
+                    reader.GetString(0), state,
+                    reader.IsDBNull(2) ? null : DateTime.SpecifyKind(reader.GetDateTime(2), DateTimeKind.Utc),
+                    reader.IsDBNull(3) ? null : DateTime.SpecifyKind(reader.GetDateTime(3), DateTimeKind.Utc),
+                    reader.IsDBNull(4) ? 0 : Convert.ToInt32(reader.GetInt64(4)),
+                    reader.IsDBNull(5) ? 0 : Convert.ToInt32(reader.GetInt64(5)),
+                    reader.IsDBNull(6) ? null : reader.GetString(6)));
+            }
+            return results;
+        }
+
+        private void WriteScanHealth(
+            IReadOnlyList<(string Path, long ID)> sets,
+            ConcurrentDictionary<long, (ScanRootState State, string Error)> errors,
+            ConcurrentDictionary<long, RootScanStats> stats,
+            bool cancelled)
+        {
+            DateTime attempt = DateTime.UtcNow;
+            using var transaction = conn_.BeginTransaction();
+            using var command = transaction.CreateCommand();
+#if SQLITE
+            command.CommandText =
+                "INSERT INTO ScanHealth (ScanSetID, LastAttemptUtc, LastSuccessUtc, State, Error, Enumerated, MetadataRead) " +
+                "VALUES (@id, @attempt, @success, @state, @error, @enumerated, @read) " +
+                "ON CONFLICT(ScanSetID) DO UPDATE SET LastAttemptUtc=excluded.LastAttemptUtc, " +
+                "LastSuccessUtc=CASE WHEN excluded.State='Healthy' THEN excluded.LastAttemptUtc ELSE ScanHealth.LastSuccessUtc END, " +
+                "State=excluded.State, Error=excluded.Error, Enumerated=excluded.Enumerated, MetadataRead=excluded.MetadataRead";
+#else
+            command.CommandText =
+                "UPDATE ScanHealth SET LastAttemptUtc=@attempt, LastSuccessUtc=CASE WHEN @state='Healthy' THEN @attempt ELSE LastSuccessUtc END, " +
+                "State=@state, Error=@error, Enumerated=@enumerated, MetadataRead=@read WHERE ScanSetID=@id; " +
+                "IF @@ROWCOUNT=0 INSERT INTO ScanHealth (ScanSetID, LastAttemptUtc, LastSuccessUtc, State, Error, Enumerated, MetadataRead) " +
+                "VALUES (@id, @attempt, @success, @state, @error, @enumerated, @read);";
+#endif
+            var id = command.Parameters.Add("@id", DbType.Int64);
+            var attemptParameter = command.Parameters.Add("@attempt", DbType.DateTime);
+            var success = command.Parameters.Add("@success", DbType.DateTime);
+            var stateParameter = command.Parameters.Add("@state", DbType.String);
+            var error = command.Parameters.Add("@error", DbType.String);
+            var enumeratedParameter = command.Parameters.Add("@enumerated", DbType.Int64);
+            var read = command.Parameters.Add("@read", DbType.Int64);
+            foreach (var set in sets)
+            {
+                var rootStats = stats.GetOrAdd(set.ID, _ => new());
+                var state = cancelled ? ScanRootState.Cancelled
+                    : errors.TryGetValue(set.ID, out var failure) ? failure.State
+                    : ScanRootState.Healthy;
+                id.Value = set.ID;
+                attemptParameter.Value = attempt;
+                success.Value = state == ScanRootState.Healthy ? attempt : DBNull.Value;
+                stateParameter.Value = state.ToString();
+                error.Value = errors.TryGetValue(set.ID, out failure) ? failure.Error : DBNull.Value;
+                enumeratedParameter.Value = Volatile.Read(ref rootStats.Enumerated);
+                read.Value = Volatile.Read(ref rootStats.MetadataRead);
+                command.ExecuteNonQuery();
+            }
+            transaction.Commit();
+        }
+
 #if SQLITE
         private static readonly string[] sqlitecreationsql_ = {
             "PRAGMA foreign_keys = off;\r\n",
 
             "CREATE TABLE ScanSets (ID INTEGER PRIMARY KEY, Path TEXT UNIQUE NOT NULL);\r\n" +
+            "CREATE TABLE ScanHealth (ScanSetID INTEGER PRIMARY KEY REFERENCES ScanSets (ID) ON DELETE CASCADE, LastAttemptUtc DATETIME NOT NULL, LastSuccessUtc DATETIME, State TEXT NOT NULL, Error TEXT, Enumerated BIGINT NOT NULL, MetadataRead BIGINT NOT NULL);\r\n" +
             "CREATE TABLE Artists (ID INTEGER PRIMARY KEY, Name TEXT UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE AlbumArtists (ID INTEGER PRIMARY KEY, Name TEXT UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE Albums (ID INTEGER PRIMARY KEY, ScanSetID BIGINT REFERENCES ScanSets (ID) NOT NULL, AlbumArtistID BIGINT NOT NULL REFERENCES AlbumArtists (ID), Name TEXT NOT NULL, Path TEXT NOT NULL);\r\n" +
@@ -234,6 +330,7 @@ namespace MetadataCaching
 #if SQLSERVER
         private static readonly string[] sqlservercreationsql_ = {
             "CREATE TABLE ScanSets (ID BIGINT IDENTITY PRIMARY KEY, Path NVARCHAR(512) UNIQUE NOT NULL);\r\n" +
+            "CREATE TABLE ScanHealth (ScanSetID BIGINT PRIMARY KEY REFERENCES ScanSets (ID) ON DELETE CASCADE, LastAttemptUtc DATETIME2 NOT NULL, LastSuccessUtc DATETIME2, State NVARCHAR(32) NOT NULL, Error NVARCHAR(MAX), Enumerated BIGINT NOT NULL, MetadataRead BIGINT NOT NULL);\r\n" +
             "CREATE TABLE Artists (ID BIGINT IDENTITY PRIMARY KEY, Name NVARCHAR(512) UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE AlbumArtists (ID BIGINT IDENTITY PRIMARY KEY, Name NVARCHAR(512) UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE Albums (ID BIGINT IDENTITY PRIMARY KEY, ScanSetID BIGINT REFERENCES ScanSets (ID) NOT NULL, AlbumArtistID BIGINT NOT NULL REFERENCES AlbumArtists (ID), Name NVARCHAR(MAX) NOT NULL, Path NVARCHAR(MAX) NOT NULL);\r\n" +
@@ -378,6 +475,7 @@ namespace MetadataCaching
             }
             mcomm.CommandText =
                 "DROP TABLE IF EXISTS KnownMetadata;\r\n" +
+                "CREATE TABLE IF NOT EXISTS ScanHealth (ScanSetID INTEGER PRIMARY KEY REFERENCES ScanSets (ID) ON DELETE CASCADE, LastAttemptUtc DATETIME NOT NULL, LastSuccessUtc DATETIME, State TEXT NOT NULL, Error TEXT, Enumerated BIGINT NOT NULL, MetadataRead BIGINT NOT NULL);\r\n" +
                 "CREATE INDEX IF NOT EXISTS AlbumsLookupIndex ON Albums (ScanSetID, Path, AlbumArtistID, Name);\r\n" +
                 "CREATE INDEX IF NOT EXISTS FilesPathIndex ON Files (Path);\r\n" +
                 "CREATE INDEX IF NOT EXISTS ImagesHashIndex ON Images (Hash);";
@@ -452,6 +550,16 @@ namespace MetadataCaching
                     trans.Rollback();
                     throw;
                 }
+            }
+
+            using (var migration = res.conn_.CreateCommand())
+            {
+                migration.CommandText =
+                    "IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ScanHealth') " +
+                    "CREATE TABLE ScanHealth (ScanSetID BIGINT PRIMARY KEY REFERENCES ScanSets (ID) ON DELETE CASCADE, " +
+                    "LastAttemptUtc DATETIME2 NOT NULL, LastSuccessUtc DATETIME2, State NVARCHAR(32) NOT NULL, " +
+                    "Error NVARCHAR(MAX), Enumerated BIGINT NOT NULL, MetadataRead BIGINT NOT NULL)";
+                migration.ExecuteNonQuery();
             }
 
             return res;
@@ -621,6 +729,17 @@ namespace MetadataCaching
 
             using var filequeue = new BlockingCollection<(long ID, long Set, string FileName, long Length, DateTime LastWriteTime, IMediaFile File)>(IndexFileQueueBound);
             using var pipelineCts = new CancellationTokenSource();
+            var rootStats = new ConcurrentDictionary<long, RootScanStats>();
+            var rootErrors = new ConcurrentDictionary<long, (ScanRootState State, string Error)>();
+            var removalUnsafeSets = new ConcurrentDictionary<long, byte>();
+
+            void MarkRootError(long setId, ScanRootState state, string error, bool removalUnsafe)
+            {
+                rootErrors.AddOrUpdate(setId, (state, error), (_, existing) =>
+                    existing.State == ScanRootState.Unavailable ? existing : (state, error));
+                if (removalUnsafe)
+                    removalUnsafeSets[setId] = 0;
+            }
 
             var fileKeyComparer = new ScanFileKeyComparer();
             var filesdict = new ConcurrentDictionary<(long ScanSetID, string Path), ExistingIndexedFile>(fileKeyComparer);
@@ -676,7 +795,6 @@ namespace MetadataCaching
             ReportPhase(IndexPhase.Preparing, preparingClock, filesdict.Count,
                 $"Loaded {filesdict.Count:N0} cached file row(s)");
 
-            int scanFailed = 0;
             var metadatareadtask = Task.Run(() =>
             {
                 var enumerationClock = Stopwatch.StartNew();
@@ -703,14 +821,21 @@ namespace MetadataCaching
                     $"Discovering {sets.Count:N0} configured root(s)");
                 Parallel.ForEach(sets, scanParallelOptions, scanpath =>
                 {
-                    foreach (var entry in new MusicFileEnumerator(scanpath.Path, recurse: false))
+                    try
                     {
-                        // Skip .itlp packages here too: a recursive unit rooted INSIDE the package
-                        // would bypass the enumerator's recursion pruning.
-                        if (entry.FileType == MFEType.Directory && !Path.GetFileName(entry.Name).Contains(".itlp", StringComparison.OrdinalIgnoreCase))
-                            discoveredUnits.Add((scanpath.Path, scanpath.ID, entry.Name, true));
-                        else if (entry.FileType == MFEType.MusicFile)
-                            discoveredRootFiles.Add((scanpath.Path, scanpath.ID, entry.Name, entry.Modified, entry.Size));
+                        foreach (var entry in new MusicFileEnumerator(scanpath.Path, recurse: false))
+                        {
+                            // Skip .itlp packages here too: a recursive unit rooted INSIDE the package
+                            // would bypass the enumerator's recursion pruning.
+                            if (entry.FileType == MFEType.Directory && !Path.GetFileName(entry.Name).Contains(".itlp", StringComparison.OrdinalIgnoreCase))
+                                discoveredUnits.Add((scanpath.Path, scanpath.ID, entry.Name, true));
+                            else if (entry.FileType == MFEType.MusicFile)
+                                discoveredRootFiles.Add((scanpath.Path, scanpath.ID, entry.Name, entry.Modified, entry.Size));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MarkRootError(scanpath.ID, ScanRootState.Unavailable, ex.Message, removalUnsafe: true);
                     }
                 });
                 var units = discoveredUnits.ToArray();
@@ -734,6 +859,8 @@ namespace MetadataCaching
                    if (file.FileType != MFEType.MusicFile)
                        return;
                    int found = Interlocked.Increment(ref enumerated);
+                   var stats = rootStats.GetOrAdd(setID, _ => new());
+                   Interlocked.Increment(ref stats.Enumerated);
                    if ((found % 250) == 0)
                        ReportPhase(IndexPhase.Enumeration, enumerationClock, found,
                            "Enumerating music files", setPath);
@@ -774,6 +901,7 @@ namespace MetadataCaching
                            else if (isModified)
                                Interlocked.Increment(ref modified);
                            int done = Interlocked.Increment(ref scanned);
+                           Interlocked.Increment(ref stats.MetadataRead);
                            // Console is internally locked; printing from every scan thread
                            // every 100 files serializes them. A coarser cadence (and no
                            // explicit Flush, which the console stream does anyway) avoids it.
@@ -790,12 +918,12 @@ namespace MetadataCaching
                        {
                            Console.WriteLine($"IOException On File: {file.Name} - {ex.Message} (0x{ex.HResult:x})");
                            Console.WriteLine(ex.StackTrace);
+                           MarkRootError(setID, ScanRootState.Degraded, ex.Message, removalUnsafe: false);
                        }
                        catch (Exception ex)
                        {
                            Console.WriteLine($"Unknown Exception On File: {file.Name} - {ex.Message}");
-                           Interlocked.Exchange(ref scanFailed, 1);
-                           loopstate.Stop();
+                           MarkRootError(setID, ScanRootState.Degraded, ex.Message, removalUnsafe: false);
                        }
                    }
                 }
@@ -808,11 +936,18 @@ namespace MetadataCaching
                     if (index < units.Length)
                     {
                         var unit = units[index];
-                        foreach (var file in new MusicFileEnumerator(unit.Root, unit.Recurse))
+                        try
                         {
-                            ProcessFile(unit.SetPath, unit.SetID, file, loopstate);
-                            if (loopstate.IsStopped)
-                                break;
+                            foreach (var file in new MusicFileEnumerator(unit.Root, unit.Recurse))
+                            {
+                                ProcessFile(unit.SetPath, unit.SetID, file, loopstate);
+                                if (loopstate.IsStopped)
+                                    break;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            MarkRootError(unit.SetID, ScanRootState.Degraded, ex.Message, removalUnsafe: true);
                         }
                     }
                     else
@@ -829,10 +964,12 @@ namespace MetadataCaching
                 // by the deletemissingsets path instead.
                 // Skip removal detection on cancel: a partial walk didn't visit every file, so
                 // unhit entries don't mean "deleted" — they mean "not reached yet".
-                if (!ct.IsCancellationRequested && Volatile.Read(ref scanFailed) == 0)
+                if (!ct.IsCancellationRequested)
                 {
                     var scannedsets = new HashSet<long>(sets.Select(s => s.ID));
-                    foreach (var file in filesdict.Where(kv => Volatile.Read(ref kv.Value.Hit) == 0 && scannedsets.Contains(kv.Key.ScanSetID)))
+                    foreach (var file in filesdict.Where(kv => Volatile.Read(ref kv.Value.Hit) == 0 &&
+                                 scannedsets.Contains(kv.Key.ScanSetID) &&
+                                 !removalUnsafeSets.ContainsKey(kv.Key.ScanSetID)))
                     {
                         filequeue.Add((file.Value.ID, file.Key.ScanSetID, null, 0, DateTime.MinValue, null), pipelineCts.Token);
                         removed++;
@@ -1188,6 +1325,7 @@ namespace MetadataCaching
             }
 
             await metadatareadtask;
+            WriteScanHealth(sets, rootErrors, rootStats, ct.IsCancellationRequested);
 
             var finalizingClock = Stopwatch.StartNew();
             ReportPhase(IndexPhase.Finalizing, finalizingClock, 0,

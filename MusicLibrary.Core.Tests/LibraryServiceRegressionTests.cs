@@ -88,6 +88,50 @@ public sealed class LibraryServiceRegressionTests
     }
 
     [Fact]
+    public async Task OfflineRootDoesNotAbortHealthyRootOrRemoveItsCachedFilesAndRetainsLastSuccess()
+    {
+        using var temp = new TempDirectory();
+        var healthyRoot = temp.CreateDirectory("healthy");
+        var offlineRoot = temp.CreateDirectory("offline");
+        var first = temp.CopyFixture(healthyRoot, "first.flac");
+        var cachedOffline = temp.CopyFixture(offlineRoot, "offline.flac");
+        var config = temp.WriteConfig("library.xml", "cache.db",
+            new IndexTargetEntry { Target = healthyRoot },
+            new IndexTargetEntry { Target = offlineRoot });
+        var settings = new AppSettings(temp.File("settings.json"));
+        settings.LoadConfig(config);
+        using var library = new LibraryService(settings);
+        await library.IndexAsync();
+        var firstHealth = await library.GetScanRootHealthAsync();
+        Assert.All(firstHealth, root =>
+        {
+            Assert.Equal(ScanRootState.Healthy, root.State);
+            Assert.NotNull(root.LastSuccessUtc);
+        });
+        DateTime offlineSuccess = Assert.Single(firstHealth,
+            root => root.Root == offlineRoot).LastSuccessUtc!.Value;
+
+        Directory.Move(offlineRoot, offlineRoot + "-disconnected");
+        var second = temp.CopyFixture(healthyRoot, "second.flac");
+
+        var result = await library.IndexAsync();
+        var records = await library.GetAllRecordsAsync();
+        var health = await library.GetScanRootHealthAsync();
+
+        Assert.Equal(1, result.Added);
+        Assert.Contains(records, record => record.Path == first);
+        Assert.Contains(records, record => record.Path == second);
+        Assert.Contains(records, record => record.Path == cachedOffline);
+        var healthy = Assert.Single(health, root => root.Root == healthyRoot);
+        Assert.Equal(ScanRootState.Healthy, healthy.State);
+        Assert.Equal(2, healthy.Enumerated);
+        var unavailable = Assert.Single(health, root => root.Root == offlineRoot);
+        Assert.Equal(ScanRootState.Unavailable, unavailable.State);
+        Assert.Equal(offlineSuccess, unavailable.LastSuccessUtc);
+        Assert.NotNull(unavailable.Error);
+    }
+
+    [Fact]
     public async Task RelativeSqlitePrefix_ResolvesBesideConfig()
     {
         using var temp = new TempDirectory();

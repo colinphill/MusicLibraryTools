@@ -45,4 +45,20 @@ public sealed class LibraryIndexProgressTests
         Assert.Contains("deferred", status);
         Assert.DoesNotContain("files/s", status);
     }
+
+    [Fact]
+    public void RootHealthStatusDistinguishesUnavailableFromLastSuccessfulScan()
+    {
+        string status = LibraryViewModel.DescribeRootHealth(
+        [
+            new ScanRootHealth("Z:\\Music", ScanRootState.Unavailable,
+                new DateTime(2026, 7, 15, 12, 0, 0, DateTimeKind.Utc),
+                new DateTime(2026, 7, 14, 12, 0, 0, DateTimeKind.Utc),
+                0, 0, "The network path was not found"),
+        ]);
+
+        Assert.Contains("Unavailable", status);
+        Assert.Contains("last success", status);
+        Assert.Contains("network path", status);
+    }
 }

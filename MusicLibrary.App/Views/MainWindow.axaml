@@ -127,6 +127,16 @@
                             </Flyout>
                         </Button.Flyout>
                     </Button>
+                    <Button Content="Root health…" IsVisible="{Binding Library.HasRootHealthDetails}">
+                        <Button.Flyout>
+                            <Flyout>
+                                <ScrollViewer MaxHeight="420" MaxWidth="760">
+                                    <TextBlock Text="{Binding Library.RootHealthDetails}" TextWrapping="Wrap"
+                                               Width="720" Margin="8"/>
+                                </ScrollViewer>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
                     <Button Content="Cancel" Command="{Binding Library.CancelIndexCommand}"
                             IsVisible="{Binding Library.IsBusy}"/>
                     <ProgressBar IsIndeterminate="True" Width="60"

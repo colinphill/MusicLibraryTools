@@ -108,6 +108,9 @@ MusicLibrary.App exposes this cap beside **Index library** and includes a bounde
 per-root benchmark. The benchmark reads disjoint metadata samples without artwork or database writes and recommends
 the smallest reader count within 5% of each root's measured peak; its conservative all-root setting
 uses the lowest of those recommendations.
+Each index attempt also records per-root health and the last fully successful scan. If a share is
+offline or a subtree cannot be completely enumerated, indexing continues for healthy roots and
+does not interpret unvisited cached files as removals.
 
 ## Safe execution
 

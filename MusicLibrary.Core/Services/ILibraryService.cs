@@ -20,6 +20,10 @@ public interface ILibraryService
     Task<(int Added, int Modified, int Removed, int Unchanged)> IndexAsync(
         IProgress<IndexProgress>? progress = null, CancellationToken ct = default);
 
+    /// <summary>Last attempt/success and current availability for every cached scan root.</summary>
+    Task<IReadOnlyList<ScanRootHealth>> GetScanRootHealthAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<ScanRootHealth>>([]);
+
     /// <summary>Build a browsable tree snapshot from the current cache, grouped as requested.</summary>
     Task<LibrarySnapshot> BuildSnapshotAsync(LibraryGrouping grouping = LibraryGrouping.AlbumArtist, CancellationToken ct = default);
 
