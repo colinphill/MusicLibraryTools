@@ -2,6 +2,7 @@ using MetadataCaching;
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
 using MusicLibraryTools;
+using System.Text;
 
 namespace MusicLibrary.Core.Services;
 
@@ -340,6 +341,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         var baseDirs = GetRoots(config);
         bool deleteNonMusic = config["DeleteNonMusic"].Length != 0;
         bool keepFolderImages = config["KeepFolderImages"].Length != 0;
+        string? journalPath = BeginOrganizeJournal(baseDirs, moves);
 
         // Successful (source → destination) pairs, so we can sync the cache to exactly the moves that
         // happened — even if the operation is cancelled partway.
@@ -364,6 +366,8 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                         File.Move(move.Source, move.Destination);
                         relocated.Add((move.Source, move.Destination));
                         moved++;
+                        TryAppendOrganizeJournal(journalPath,
+                            $"MOVE\tORGANIZE\t{move.Source}\t{move.Destination}");
                     }
                     catch (OperationCanceledException) when (ct.IsCancellationRequested)
                     {
@@ -372,6 +376,8 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                     catch (Exception ex)
                     {
                         errors.Add((move.Source, ex.Message));
+                        TryAppendOrganizeJournal(journalPath,
+                            $"MOVE_FAILED\tORGANIZE\t{move.Source}\t{move.Destination}\t{ex.Message}");
                     }
                     progress?.Report(++done);
                 }
@@ -383,6 +389,8 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                     catch { /* cleanup is best-effort */ }
                 }
 
+                TryAppendOrganizeJournal(journalPath, "COMMIT\tORGANIZE");
+
                 return new OrganizeResult(moved, errors);
             }, ct);
         }
@@ -393,6 +401,44 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
             cacheErrors = await SyncMovesToCacheAsync(relocated, context);
         }
         return result with { CacheErrors = cacheErrors };
+    }
+
+    private static string? BeginOrganizeJournal(
+        IReadOnlyList<string> baseDirectories,
+        IReadOnlyList<PlannedMove> moves)
+    {
+        if (moves.Count == 0 || baseDirectories.Count == 0)
+            return null;
+        string container = baseDirectories[0]
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
+            ".OrganizeFiles-recovery";
+        string run = Path.Combine(container, DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff"));
+        if (Directory.Exists(run))
+            run += "-" + Guid.NewGuid().ToString("N");
+        string journal = Path.Combine(run, "journal.tsv");
+        WriteOrganizeJournal(journal,
+            ["BEGIN\tORGANIZE", .. moves.Select(move =>
+                $"PLAN_MOVE\tORGANIZE\t{move.Source}\t{move.Destination}")]);
+        return journal;
+    }
+
+    private static void TryAppendOrganizeJournal(string? path, string line)
+    {
+        if (path is null)
+            return;
+        try { WriteOrganizeJournal(path, [line]); }
+        catch { /* A recorded plan still identifies the run as interrupted and recoverable. */ }
+    }
+
+    private static void WriteOrganizeJournal(string path, IEnumerable<string> lines)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        using var stream = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Read);
+        using var writer = new StreamWriter(stream, new UTF8Encoding(false));
+        foreach (string line in lines)
+            writer.WriteLine(line);
+        writer.Flush();
+        stream.Flush(flushToDisk: true);
     }
 
     private static readonly StringComparer FilePathComparer =

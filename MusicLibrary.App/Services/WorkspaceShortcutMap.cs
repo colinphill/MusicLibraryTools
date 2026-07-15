@@ -27,6 +27,7 @@ public static class WorkspaceShortcutMap
             {
                 Key.D1 => 0, Key.D2 => 1, Key.D3 => 2, Key.D4 => 3,
                 Key.D5 => 4, Key.D6 => 5, Key.D7 => 6,
+                Key.D8 => 7,
                 _ => null,
             };
             if (tab is int index)

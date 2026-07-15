@@ -10,6 +10,7 @@ public sealed class WorkspaceShortcutTests
     [InlineData(Key.D1, 0)]
     [InlineData(Key.D4, 3)]
     [InlineData(Key.D7, 6)]
+    [InlineData(Key.D8, 7)]
     public void ControlNumberSelectsWorkspace(Key key, int tab)
     {
         var shortcut = WorkspaceShortcutMap.Resolve(key, KeyModifiers.Control);

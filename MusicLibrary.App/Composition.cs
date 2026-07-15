@@ -36,6 +36,7 @@ public static class Composition
         services.AddSingleton<IngestViewModel>();
         services.AddSingleton<ArtworkViewModel>();
         services.AddSingleton<DetailsGridViewModel>();
+        services.AddSingleton<OperationsViewModel>();
 
         return services.BuildServiceProvider();
     }

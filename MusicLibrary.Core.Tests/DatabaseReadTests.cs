@@ -114,6 +114,11 @@ public class DatabaseReadTests
             Assert.True(result.Moved > 0);
             Assert.True(File.Exists(dest));
 
+            var operation = Assert.Single((await new OperationJournalService().DiscoverAsync([Path.GetDirectoryName(song)!])).Runs);
+            Assert.Equal("OrganizeFiles", operation.ToolName);
+            Assert.Equal(OperationJournalState.Completed, operation.State);
+            Assert.Equal(1, operation.AffectedItemCount);
+
             // The cache is synced automatically: the old path is gone and the new path is indexed.
             Assert.Null(await library.GetFileDetailsAsync(song, includeArtwork: false));
             Assert.NotNull(await library.GetFileDetailsAsync(dest, includeArtwork: false));

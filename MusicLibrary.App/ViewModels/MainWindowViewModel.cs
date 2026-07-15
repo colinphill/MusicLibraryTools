@@ -9,7 +9,7 @@ namespace MusicLibrary.App.ViewModels;
 public partial class MainWindowViewModel : ViewModelBase
 {
     private const string SelectedTabPreference = "MainWindow.SelectedTab";
-    public const int WorkspaceTabCount = 7;
+    public const int WorkspaceTabCount = 8;
     private readonly IThumbnailProvider _thumbnails;
     private readonly IAppSettings _settings;
 
@@ -25,6 +25,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public IngestViewModel Ingest { get; }
     public ArtworkViewModel Artwork { get; }
     public DetailsGridViewModel Table { get; }
+    public OperationsViewModel Operations { get; }
     public IWorkspaceStateService WorkspaceState { get; }
 
     public MainWindowViewModel(
@@ -37,6 +38,7 @@ public partial class MainWindowViewModel : ViewModelBase
         IngestViewModel ingest,
         ArtworkViewModel artwork,
         DetailsGridViewModel table,
+        OperationsViewModel operations,
         IThumbnailProvider thumbnails,
         IAppSettings appSettings,
         IWorkspaceStateService workspaceState)
@@ -55,6 +57,7 @@ public partial class MainWindowViewModel : ViewModelBase
         Ingest = ingest;
         Artwork = artwork;
         Table = table;
+        Operations = operations;
         WorkspaceState = workspaceState;
 
         // Selection lives entirely in the details grid now. The grid's multi-selection drives the
@@ -141,6 +144,7 @@ public partial class MainWindowViewModel : ViewModelBase
             4 => Analyzer.CancelCommand,
             5 => Ingest.CancelCommand,
             6 => Organize.CancelCommand,
+            7 => Operations.CancelCommand,
             _ => null,
         };
         command?.Execute(null);

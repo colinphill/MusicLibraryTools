@@ -83,7 +83,7 @@
                             <Flyout>
                                 <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
                                       ColumnSpacing="18" RowSpacing="7" Margin="6">
-                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Ctrl+1 … Ctrl+7" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Ctrl+1 … Ctrl+8" FontWeight="SemiBold"/>
                                     <TextBlock Grid.Row="0" Grid.Column="1" Text="Switch workspace"/>
                                     <TextBlock Grid.Row="1" Grid.Column="0" Text="Ctrl+PgUp / PgDn" FontWeight="SemiBold"/>
                                     <TextBlock Grid.Row="1" Grid.Column="1" Text="Previous / next workspace"/>
@@ -866,6 +866,58 @@
                                                 <TextBlock Text="{Binding Source}" Classes="caption" TextWrapping="Wrap"/>
                                                 <TextBlock Text="{Binding Destination, StringFormat='→ {0}'}" TextWrapping="Wrap"/>
                                             </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
+                    </TabItem>
+
+                    <!-- Read-only inventory of quarantine and recovery operations -->
+                    <TabItem Header="Operations" DataContext="{Binding Operations}" x:DataType="vm:OperationsViewModel">
+                        <Grid RowDefinitions="Auto,*" Margin="2,12,2,2">
+                            <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,10">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                    <TextBlock Grid.Column="0" Text="Additional root" VerticalAlignment="Center"
+                                               Classes="muted"/>
+                                    <TextBox Grid.Column="1" Text="{Binding SearchRoot}"
+                                             PlaceholderText="Optional source, sync, or device root"
+                                             ToolTip.Tip="Configured library, sync, playlist, and ingest roots are included automatically"/>
+                                    <Button Grid.Column="2" Content="Browse…" Command="{Binding BrowseRootCommand}"/>
+                                </Grid>
+                                <WrapPanel Classes="toolbarwrap" Margin="0,0,-8,-8">
+                                    <Button Content="Scan operations" Classes="accent" Command="{Binding RefreshCommand}"/>
+                                    <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
+                                    <ProgressBar IsIndeterminate="True" Width="70" VerticalAlignment="Center"
+                                                 IsVisible="{Binding IsBusy}"/>
+                                </WrapPanel>
+                                <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" Classes="muted"/>
+                            </StackPanel>
+
+                            <ScrollViewer Grid.Row="1">
+                                <ItemsControl ItemsSource="{Binding Runs}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:OperationRunViewModel">
+                                            <Border Classes="card" Margin="0,0,0,8" Padding="12">
+                                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+                                                    <StackPanel Grid.Column="0" MinWidth="140" Spacing="3">
+                                                        <TextBlock Text="{Binding ToolName}" Classes="h2"/>
+                                                        <TextBlock Text="{Binding Kind}" Classes="muted"/>
+                                                        <TextBlock Text="{Binding Created}" Classes="caption"/>
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="1" Spacing="4">
+                                                        <TextBlock Text="{Binding State}" FontWeight="SemiBold" TextWrapping="Wrap"
+                                                                   IsVisible="{Binding !IsInterrupted}"/>
+                                                        <TextBlock Text="{Binding State}" FontWeight="SemiBold" TextWrapping="Wrap"
+                                                                   Foreground="#D94A4A" IsVisible="{Binding IsInterrupted}"/>
+                                                        <TextBlock Text="{Binding AffectedItems}" Classes="muted"/>
+                                                        <TextBlock Text="{Binding RunPath}" Classes="caption" TextWrapping="Wrap"
+                                                                   ToolTip.Tip="{Binding RunPath}"/>
+                                                        <TextBlock Text="{Binding Journal}" Classes="caption" TextWrapping="Wrap"
+                                                                   ToolTip.Tip="{Binding Journal}"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
