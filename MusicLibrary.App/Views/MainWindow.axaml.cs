@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using Avalonia;
 using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
@@ -10,6 +11,7 @@ using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using MusicLibrary.App.Services;
 using MusicLibrary.App.ViewModels;
 using MusicLibrary.Core.Services;
 
@@ -18,9 +20,12 @@ namespace MusicLibrary.App.Views;
 public partial class MainWindow : Window
 {
     private readonly DataGrid? _detailsGrid;
+    private readonly TextBox? _filterTextBox;
     private DetailsGridViewModel? _table;
     private MainWindowViewModel? _vm;
     private bool _syncingGrid;
+    private bool _restoringWindowState;
+    private WindowWorkspaceState? _normalWindowState;
 
     // Maps each built grid column back to its details-column key, for persisting the layout.
     private readonly Dictionary<DataGridColumn, string> _columnKeys = new();
@@ -30,6 +35,7 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         _detailsGrid = this.FindControl<DataGrid>("DetailsGrid");
+        _filterTextBox = this.FindControl<TextBox>("LibraryFilterTextBox");
         if (_detailsGrid is not null)
         {
             _detailsGrid.SelectionChanged += OnGridSelectionChanged;
@@ -37,8 +43,121 @@ public partial class MainWindow : Window
         }
 
         DataContextChanged += (_, _) => Hook();
-        // Persist the final column layout (order + widths) when the window closes.
-        Closing += (_, _) => PersistColumnLayout();
+        Opened += (_, _) => RestoreWindowWorkspace();
+        PositionChanged += (_, _) => CaptureNormalWindowState();
+        SizeChanged += (_, _) => CaptureNormalWindowState();
+        PropertyChanged += (_, e) =>
+        {
+            if (e.Property == WindowStateProperty)
+                CaptureNormalWindowState();
+        };
+        KeyDown += OnWindowKeyDown;
+        Closing += (_, _) => PersistWorkspace();
+    }
+
+    private void PersistWorkspace()
+    {
+        PersistColumnLayout();
+        _table?.SaveWorkspaceState();
+        if (_vm is null)
+            return;
+        CaptureNormalWindowState();
+        if (_normalWindowState is { } state)
+            _vm.WorkspaceState.SaveWindowState(state with { Maximized = WindowState == WindowState.Maximized });
+    }
+
+    private void RestoreWindowWorkspace()
+    {
+        if (_vm?.WorkspaceState.LoadWindowState() is not { } state)
+        {
+            CaptureNormalWindowState();
+            return;
+        }
+
+        _restoringWindowState = true;
+        try
+        {
+            var screens = Screens.All;
+            var screen = screens.FirstOrDefault(candidate =>
+                    WindowWorkspacePlacementCalculator.IsMeaningfullyVisible(
+                        state, candidate.WorkingArea, candidate.Scaling))
+                ?? Screens.Primary
+                ?? screens.FirstOrDefault();
+            if (screen is null)
+                return;
+
+            var area = screen.WorkingArea;
+            var placement = WindowWorkspacePlacementCalculator.Fit(
+                state, area, screen.Scaling, MinWidth, MinHeight);
+
+            WindowState = WindowState.Normal;
+            Width = placement.Width;
+            Height = placement.Height;
+            Position = new PixelPoint(placement.X, placement.Y);
+            _normalWindowState = state with
+            {
+                Width = placement.Width,
+                Height = placement.Height,
+                X = placement.X,
+                Y = placement.Y,
+                Maximized = false,
+            };
+            if (state.Maximized)
+                WindowState = WindowState.Maximized;
+        }
+        finally
+        {
+            _restoringWindowState = false;
+        }
+    }
+
+    private void CaptureNormalWindowState()
+    {
+        if (_restoringWindowState || WindowState != WindowState.Normal || Bounds.Width < MinWidth || Bounds.Height < MinHeight)
+            return;
+        _normalWindowState = new WindowWorkspaceState(
+            WorkspaceStateService.CurrentVersion,
+            Bounds.Width,
+            Bounds.Height,
+            Position.X,
+            Position.Y,
+            false);
+    }
+
+    private void OnWindowKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (_vm is null)
+            return;
+        var shortcut = WorkspaceShortcutMap.Resolve(e.Key, e.KeyModifiers);
+        switch (shortcut.Kind)
+        {
+            case WorkspaceShortcutKind.SelectTab:
+                _vm.SelectTabCommand.Execute(shortcut.Argument);
+                e.Handled = true;
+                return;
+            case WorkspaceShortcutKind.MoveTab:
+                _vm.MoveTabCommand.Execute(shortcut.Argument);
+                break;
+            case WorkspaceShortcutKind.FocusFilter:
+                _vm.SelectTabCommand.Execute(0);
+                Dispatcher.UIThread.Post(() => _filterTextBox?.Focus(), DispatcherPriority.Input);
+                break;
+            case WorkspaceShortcutKind.ReloadLibrary:
+                _vm.ReloadLibraryCommand.Execute(null);
+                break;
+            case WorkspaceShortcutKind.IndexLibrary:
+                _vm.IndexLibraryCommand.Execute(null);
+                break;
+            case WorkspaceShortcutKind.SaveActiveEditor:
+                _vm.SaveActiveEditorCommand.Execute(null);
+                break;
+            case WorkspaceShortcutKind.CancelActiveOperation:
+                _vm.CancelActiveOperationCommand.Execute(null);
+                break;
+            default:
+                return;
+        }
+        e.Handled = true;
     }
 
     // Capture the grid's current visible columns in display order, with their pixel widths, and hand

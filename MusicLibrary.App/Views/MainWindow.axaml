@@ -78,12 +78,36 @@
                     <Button Content="Edit…" Command="{Binding Settings.EditConfigCommand}"/>
                     <Button Content="Clear recent" Command="{Binding Settings.ClearRecentCommand}"
                             ToolTip.Tip="Forget the recent-configuration history"/>
+                    <Button Content="Shortcuts">
+                        <Button.Flyout>
+                            <Flyout>
+                                <Grid ColumnDefinitions="Auto,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                                      ColumnSpacing="18" RowSpacing="7" Margin="6">
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Ctrl+1 … Ctrl+7" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="Switch workspace"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="Ctrl+PgUp / PgDn" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="Previous / next workspace"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="Ctrl+F" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="Focus Library filter"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="Ctrl+R" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="Reload cached Library rows"/>
+                                    <TextBlock Grid.Row="4" Grid.Column="0" Text="Ctrl+I" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="4" Grid.Column="1" Text="Index library"/>
+                                    <TextBlock Grid.Row="5" Grid.Column="0" Text="Ctrl+S" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="5" Grid.Column="1" Text="Save Tag Editor / Artwork"/>
+                                    <TextBlock Grid.Row="6" Grid.Column="0" Text="Esc" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="6" Grid.Column="1" Text="Cancel active operation"/>
+                                </Grid>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
                 </WrapPanel>
                 </Grid>
 
                 <!-- Library indexing (browsing/selection happens in the Library table below). -->
                 <WrapPanel Grid.Row="1" Classes="toolbarwrap" Margin="0,10,-8,-8">
-                    <Button Content="Index library" Classes="accent" Command="{Binding Library.IndexCommand}"/>
+                    <Button Content="Index library" Classes="accent" Command="{Binding Library.IndexCommand}"
+                            ToolTip.Tip="Index library (Ctrl+I)"/>
                     <Button Content="Cancel" Command="{Binding Library.CancelIndexCommand}"
                             IsVisible="{Binding Library.IsIndexing}"/>
                     <ProgressBar IsIndeterminate="True" Width="60"
@@ -103,7 +127,8 @@
                     <TabItem Header="Library" DataContext="{Binding Table}" x:DataType="vm:DetailsGridViewModel">
                         <Grid RowDefinitions="Auto,*" Margin="2,12,2,2">
                             <WrapPanel Grid.Row="0" Classes="toolbarwrap" Margin="0,0,-8,2">
-                                <Button Content="Reload" Classes="accent" Command="{Binding LoadCommand}"/>
+                                <Button Content="Reload" Classes="accent" Command="{Binding LoadCommand}"
+                                        ToolTip.Tip="Reload cached rows (Ctrl+R)"/>
                                 <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
                                 <ProgressBar IsIndeterminate="True" Width="60" VerticalAlignment="Center"
                                              IsVisible="{Binding IsBusy}"/>
@@ -141,8 +166,8 @@
                                 <ComboBox ItemsSource="{Binding FilterScopes}"
                                           SelectedItem="{Binding SelectedScope}" Width="170"
                                           ToolTip.Tip="Filter in which column"/>
-                                <TextBox Text="{Binding FilterText}" Width="240"
-                                         PlaceholderText="Filter (realtime)…"/>
+                                <TextBox Name="LibraryFilterTextBox" Text="{Binding FilterText}" Width="240"
+                                         PlaceholderText="Filter (realtime)…" ToolTip.Tip="Focus filter (Ctrl+F)"/>
                                 <TextBlock Text="{Binding StatusText}" Classes="muted" MaxWidth="320"
                                            TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding StatusText}"/>
                             </WrapPanel>
@@ -200,7 +225,8 @@
                             </ScrollViewer>
 
                             <WrapPanel Grid.Row="2" Classes="toolbarwrap" Margin="0,12,-8,-8">
-                                <Button Content="Save" Classes="accent" Command="{Binding SaveCommand}"/>
+                                <Button Content="Save" Classes="accent" Command="{Binding SaveCommand}"
+                                        ToolTip.Tip="Save tag edits (Ctrl+S)"/>
                                 <Button Content="Revert" Command="{Binding RevertCommand}"/>
                                 <Button Content="Edit all fields…" Command="{Binding EditAllFieldsCommand}"/>
                                 <TextBlock Text="{Binding ResultMessage}" Classes="muted" TextWrapping="Wrap"
@@ -292,7 +318,8 @@
                             <WrapPanel Grid.Row="0" Classes="toolbarwrap" Margin="0,0,-8,0">
                                 <Button Content="Add image…" Classes="accent" Command="{Binding AddCommand}"/>
                                 <Button Content="Scrub all" Command="{Binding ScrubAllCommand}"/>
-                                <Button Content="Save" Command="{Binding SaveCommand}"/>
+                                <Button Content="Save" Command="{Binding SaveCommand}"
+                                        ToolTip.Tip="Save artwork changes (Ctrl+S)"/>
                                 <TextBlock Text="Max px" VerticalAlignment="Center" Classes="muted"/>
                                 <NumericUpDown Value="{Binding MaxDimension}" Minimum="0" Maximum="4000"
                                                Increment="100" Width="120" FormatString="0"/>

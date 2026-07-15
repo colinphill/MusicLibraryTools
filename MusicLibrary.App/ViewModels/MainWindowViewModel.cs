@@ -1,5 +1,6 @@
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using MusicLibrary.App.Services;
 using MusicLibrary.Core.Services;
 
@@ -8,6 +9,7 @@ namespace MusicLibrary.App.ViewModels;
 public partial class MainWindowViewModel : ViewModelBase
 {
     private const string SelectedTabPreference = "MainWindow.SelectedTab";
+    public const int WorkspaceTabCount = 7;
     private readonly IThumbnailProvider _thumbnails;
     private readonly IAppSettings _settings;
 
@@ -23,6 +25,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public IngestViewModel Ingest { get; }
     public ArtworkViewModel Artwork { get; }
     public DetailsGridViewModel Table { get; }
+    public IWorkspaceStateService WorkspaceState { get; }
 
     public MainWindowViewModel(
         SettingsViewModel settings,
@@ -35,12 +38,13 @@ public partial class MainWindowViewModel : ViewModelBase
         ArtworkViewModel artwork,
         DetailsGridViewModel table,
         IThumbnailProvider thumbnails,
-        IAppSettings appSettings)
+        IAppSettings appSettings,
+        IWorkspaceStateService workspaceState)
     {
         _thumbnails = thumbnails;
         _settings = appSettings;
         if (int.TryParse(appSettings.GetPreference(SelectedTabPreference), NumberStyles.None,
-                CultureInfo.InvariantCulture, out int selectedTab) && selectedTab is >= 0 and <= 6)
+                CultureInfo.InvariantCulture, out int selectedTab) && selectedTab is >= 0 and < WorkspaceTabCount)
             _selectedTabIndex = selectedTab;
         Settings = settings;
         Library = library;
@@ -51,6 +55,7 @@ public partial class MainWindowViewModel : ViewModelBase
         Ingest = ingest;
         Artwork = artwork;
         Table = table;
+        WorkspaceState = workspaceState;
 
         // Selection lives entirely in the details grid now. The grid's multi-selection drives the
         // editor / inspector / artwork panes; an analyzer finding steers the grid to highlight a row.
@@ -82,6 +87,64 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnSelectedTabIndexChanged(int value)
         => _settings.SetPreference(SelectedTabPreference, value.ToString(CultureInfo.InvariantCulture));
+
+    [RelayCommand]
+    private void SelectTab(int index)
+    {
+        if (index is >= 0 and < WorkspaceTabCount)
+            SelectedTabIndex = index;
+    }
+
+    [RelayCommand]
+    private void MoveTab(int offset)
+    {
+        int next = (SelectedTabIndex + offset) % WorkspaceTabCount;
+        if (next < 0) next += WorkspaceTabCount;
+        SelectedTabIndex = next;
+    }
+
+    [RelayCommand]
+    private void ReloadLibrary()
+    {
+        if (Table.LoadCommand.CanExecute(null))
+            Table.LoadCommand.Execute(null);
+    }
+
+    [RelayCommand]
+    private void IndexLibrary()
+    {
+        if (Library.IndexCommand.CanExecute(null))
+            Library.IndexCommand.Execute(null);
+    }
+
+    [RelayCommand]
+    private void SaveActiveEditor()
+    {
+        var command = SelectedTabIndex switch
+        {
+            1 => Editor.SaveCommand,
+            3 => Artwork.SaveCommand,
+            _ => null,
+        };
+        if (command?.CanExecute(null) == true)
+            command.Execute(null);
+    }
+
+    [RelayCommand]
+    private void CancelActiveOperation()
+    {
+        // Indexing is global and may continue while another workspace is visible.
+        Library.CancelIndexCommand.Execute(null);
+        var command = SelectedTabIndex switch
+        {
+            0 => Table.CancelCommand,
+            4 => Analyzer.CancelCommand,
+            5 => Ingest.CancelCommand,
+            6 => Organize.CancelCommand,
+            _ => null,
+        };
+        command?.Execute(null);
+    }
 
     private int _selectionGen;
 

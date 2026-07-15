@@ -64,6 +64,43 @@ public sealed class LibraryViewPersistenceTests
     }
 
     [Fact]
+    public void CurrentUnsavedFilterWorkspace_RoundTripsOnExplicitWindowSave()
+    {
+        using var temp = new TempDirectory();
+        string statePath = Path.Combine(temp.Path, "settings.json");
+        var viewModel = Create(new AppSettings(statePath));
+        viewModel.SelectedFilterMode = FilterMode.Glob;
+        viewModel.SelectedScope = viewModel.FilterScopes.Single(scope => scope.Key == "Album");
+        viewModel.FilterText = "*deluxe*";
+
+        viewModel.SaveWorkspaceState();
+
+        var restored = Create(new AppSettings(statePath));
+        Assert.Equal(FilterMode.Glob, restored.SelectedFilterMode);
+        Assert.Equal("Album", restored.SelectedScope?.Key);
+        Assert.Equal("*deluxe*", restored.FilterText);
+        Assert.Null(restored.SelectedSavedView);
+    }
+
+    [Fact]
+    public void SelectedSavedViewIdentity_RoundTripsWithWorkspace()
+    {
+        using var temp = new TempDirectory();
+        string statePath = Path.Combine(temp.Path, "settings.json");
+        var viewModel = Create(new AppSettings(statePath));
+        viewModel.SavedViewName = "Current work";
+        viewModel.FilterText = "artist";
+        viewModel.SaveCurrentView();
+        viewModel.SaveWorkspaceState();
+
+        var restored = Create(new AppSettings(statePath));
+
+        Assert.Equal("Current work", restored.SelectedSavedView?.Name);
+        Assert.Equal("Current work", restored.SavedViewName);
+        Assert.Equal("artist", restored.FilterText);
+    }
+
+    [Fact]
     public async Task ReindexSelection_DeduplicatesPathsAndReloadsRows()
     {
         using var temp = new TempDirectory();

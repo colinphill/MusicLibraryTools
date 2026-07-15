@@ -23,6 +23,7 @@ public static class Composition
         services.AddSingleton<DialogService>();
         services.AddSingleton<IDialogService>(sp => sp.GetRequiredService<DialogService>());
         services.AddSingleton<IThumbnailProvider, ThumbnailProvider>();
+        services.AddSingleton<IWorkspaceStateService, WorkspaceStateService>();
 
         // ViewModels.
         services.AddSingleton<MainWindowViewModel>();

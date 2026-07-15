@@ -9,7 +9,7 @@ avoid eagerly reading artwork or media data that is already represented in the m
 - [x] Named Library views that preserve filters, filter scope, columns, and widths.
 - [x] Preserve typed grid sorting in named views and across reloads.
 - [x] Library row actions: open Details, edit tags/artwork, reindex, reveal in Explorer, and copy path.
-- [ ] Consistent keyboard shortcuts and persistent workspace state.
+- [x] Consistent, discoverable keyboard shortcuts plus persistent tab, filter, grid, and window state.
 
 ## 2. Actionable library health
 

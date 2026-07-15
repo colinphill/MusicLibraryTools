@@ -22,6 +22,12 @@ public sealed record SavedLibraryView(
     public LibrarySortLayout? Sort { get; init; }
 }
 
+public sealed record LibraryWorkspaceState(
+    string? FilterText,
+    FilterMode FilterMode,
+    string? ScopeKey,
+    string? SelectedViewName);
+
 /// <summary>
 /// A tabular details view of every track with user-selectable columns, realtime filtering
 /// (substring / glob / regex), and click-to-sort columns. Rows are held in a
@@ -33,6 +39,7 @@ public partial class DetailsGridViewModel : ViewModelBase
     private const string ColumnLayoutKey = "table.columns";
     private const string SortLayoutKey = "table.sort";
     private const string SavedViewsKey = "table.savedViews";
+    private const string WorkspaceStateKey = "table.workspace.v1";
 
     private readonly ILibraryService _library;
     private readonly IReindexService _reindex;
@@ -122,6 +129,7 @@ public partial class DetailsGridViewModel : ViewModelBase
         LoadSortLayout();
         RebuildScopes();
         LoadSavedViews();
+        LoadWorkspaceState();
     }
 
     /// <summary>The saved (absolute) width for a column, or null to size it automatically.</summary>
@@ -249,6 +257,50 @@ public partial class DetailsGridViewModel : ViewModelBase
             // A bad UI preference should not prevent browsing the library.
         }
     }
+
+    private void LoadWorkspaceState()
+    {
+        string? json = _settings.GetPreference(WorkspaceStateKey);
+        if (string.IsNullOrWhiteSpace(json))
+            return;
+        try
+        {
+            var state = JsonSerializer.Deserialize<LibraryWorkspaceState>(json);
+            if (state is null || !Enum.IsDefined(state.FilterMode))
+                return;
+
+            _applyingSavedView = true;
+            try
+            {
+                SelectedFilterMode = state.FilterMode;
+                FilterText = state.FilterText;
+                SelectedScope = FilterScopes.FirstOrDefault(scope => scope.Key == state.ScopeKey) ?? FilterScopes[0];
+                SelectedSavedView = string.IsNullOrWhiteSpace(state.SelectedViewName)
+                    ? null
+                    : SavedViews.FirstOrDefault(view =>
+                        string.Equals(view.Name, state.SelectedViewName, StringComparison.OrdinalIgnoreCase));
+                if (SelectedSavedView is not null)
+                    SavedViewName = SelectedSavedView.Name;
+            }
+            finally
+            {
+                _applyingSavedView = false;
+            }
+            ApplyFilter();
+        }
+        catch
+        {
+            // Ignore obsolete or corrupt workspace state.
+        }
+    }
+
+    /// <summary>Persist the current, possibly unsaved filter workspace when the window closes.</summary>
+    public void SaveWorkspaceState() =>
+        _settings.SetPreference(WorkspaceStateKey, JsonSerializer.Serialize(new LibraryWorkspaceState(
+            FilterText,
+            SelectedFilterMode,
+            SelectedScope?.Key,
+            SelectedSavedView?.Name)));
 
     private bool IsUsableSavedView(SavedLibraryView view) =>
         !string.IsNullOrWhiteSpace(view.Name) &&
