@@ -21,7 +21,6 @@ public partial class AnalyzerViewModel : ViewModelBase
     private readonly IArtistReconciler _reconciler;
     private readonly IAnalysisRepairService _repairs;
     private CancellationTokenSource? _cts;
-    private AnalysisRepairPlan? _repairPlan;
 
     [ObservableProperty]
     private bool _isBusy;
@@ -32,14 +31,19 @@ public partial class AnalyzerViewModel : ViewModelBase
     [ObservableProperty]
     private AnalysisResultView _activeView = AnalysisResultView.Findings;
 
+    [ObservableProperty]
+    private AnalysisRunViewModel? _selectedRun;
+
     /// <summary>Fuzzy-distance threshold for the similar-artist check (AnalyzeMetadata's checkartists thresh).</summary>
     [ObservableProperty]
     private double _artistThreshold = 0.2;
 
-    public ObservableCollection<AnalysisReport> Reports { get; } = [];
+    public ObservableCollection<AnalysisRunViewModel> Runs { get; } = [];
+    public ObservableCollection<AnalysisProblemGroupViewModel> FindingGroups { get; } = [];
     public ObservableCollection<DuplicateGroup> Duplicates { get; } = [];
     public ObservableCollection<ArtistGroupViewModel> ArtistGroups { get; } = [];
     public ObservableCollection<AnalysisRepairItemViewModel> RepairItems { get; } = [];
+    public bool HasRuns => Runs.Count > 0;
 
     // Section visibility (bound in XAML; ActiveView drives which one shows).
     public bool ShowFindings => ActiveView == AnalysisResultView.Findings;
@@ -59,9 +63,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         _repairs = repairs;
         settings.ConfigurationChanged += (_, _) =>
         {
-            _repairPlan = null;
-            RepairItems.Clear();
-            NotifyCommands();
+            ClearRuns();
         };
     }
 
@@ -73,74 +75,99 @@ public partial class AnalyzerViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowRepairs));
     }
 
+    partial void OnSelectedRunChanged(AnalysisRunViewModel? value)
+    {
+        FindingGroups.Clear();
+        Duplicates.Clear();
+        ArtistGroups.Clear();
+        RepairItems.Clear();
+
+        if (value is not null)
+        {
+            ActiveView = value.View;
+            foreach (var group in value.FindingGroups) FindingGroups.Add(group);
+            foreach (var group in value.Duplicates) Duplicates.Add(group);
+            foreach (var group in value.ArtistGroups) ArtistGroups.Add(group);
+            foreach (var item in value.RepairItems) RepairItems.Add(item);
+            StatusText = value.Summary;
+        }
+        else
+        {
+            StatusText = "Choose an analysis to run.";
+        }
+
+        NotifyCommands();
+    }
+
     private bool CanRun() => _library.IsReady && !IsBusy;
 
     [RelayCommand(CanExecute = nameof(CanRun))]
     private Task RunInconsistencies() => RunOverRecords("Inconsistencies", AnalysisResultView.Findings, (records, ct) =>
     {
         var report = LibraryAnalyzer.Inconsistencies(records);
-        return (report.Count == 0 ? "Inconsistencies: none found." : $"Inconsistencies: {report.Count:N0} finding(s).",
-                () => ShowReport(report));
+        string status = report.Count == 0 ? "Inconsistencies: none found." : $"Inconsistencies: {report.Count:N0} finding(s).";
+        return (status, () => AddRun(AnalysisRunViewModel.ForFindings(report, records, status)));
     });
 
     [RelayCommand(CanExecute = nameof(CanRun))]
     private Task RunLossy() => RunOverRecords("Lossy files", AnalysisResultView.Findings, (records, ct) =>
     {
         var report = LibraryAnalyzer.Lossless(records);
-        return (report.Count == 0 ? "No lossy files." : $"Lossy files: {report.Count:N0}.",
-                () => ShowReport(report));
+        string status = report.Count == 0 ? "No lossy files." : $"Lossy files: {report.Count:N0}.";
+        return (status, () => AddRun(AnalysisRunViewModel.ForFindings(report, records, status)));
     });
 
     [RelayCommand(CanExecute = nameof(CanRun))]
     private Task RunDuplicates() => RunOverRecords("Duplicates", AnalysisResultView.Duplicates, (records, ct) =>
     {
         var dupes = DuplicateFinder.Find(records, ct);
-        return (dupes.Count == 0 ? "No duplicates found." : $"{dupes.Count:N0} duplicate group(s).",
-                () => { Duplicates.Clear(); foreach (var d in dupes) Duplicates.Add(d); });
+        string status = dupes.Count == 0 ? "No duplicates found." : $"{dupes.Count:N0} duplicate group(s).";
+        return (status, () => AddRun(AnalysisRunViewModel.ForDuplicates("Duplicates", dupes, status)));
     });
 
     [RelayCommand(CanExecute = nameof(CanRun))]
     private Task RunSimilarArtists() => RunOverRecords("Similar artists", AnalysisResultView.Artists, (records, ct) =>
     {
         var groups = _reconciler.FindSimilarArtists(records, ArtistThreshold, ct);
-        return (groups.Count == 0 ? "No similar artist names found." : $"{groups.Count:N0} cluster(s) of similar artist names.",
-                () => { ArtistGroups.Clear(); foreach (var g in groups) ArtistGroups.Add(new ArtistGroupViewModel(_reconciler, g)); });
+        string status = groups.Count == 0 ? "No similar artist names found." : $"{groups.Count:N0} cluster(s) of similar artist names.";
+        return (status, () => AddRun(AnalysisRunViewModel.ForArtists(
+            "Similar artists",
+            groups.Select(group => new ArtistGroupViewModel(_reconciler, group)).ToList(),
+            status)));
     });
 
     [RelayCommand(CanExecute = nameof(CanRun))]
     private async Task PreviewAlbumArtistRepairs()
     {
-        _repairPlan = null;
-        RepairItems.Clear();
         using var scope = BeginRun("Album artist repairs", AnalysisResultView.Repairs);
         try
         {
             var records = await _library.GetAllRecordsAsync(scope.Token);
             var plan = await Task.Run(() => _repairs.PreviewMissingAlbumArtists(records), scope.Token);
-            _repairPlan = plan;
-            RepairItems.Clear();
+            var repairItems = new List<AnalysisRepairItemViewModel>(plan.Items.Count);
             foreach (var item in plan.Items)
             {
                 var viewModel = new AnalysisRepairItemViewModel(item);
                 viewModel.SelectionChanged += () => ApplyRepairsCommand.NotifyCanExecuteChanged();
-                RepairItems.Add(viewModel);
+                repairItems.Add(viewModel);
             }
-            StatusText = plan.Items.Count == 0
+            string status = plan.Items.Count == 0
                 ? "No safely inferable missing album artists were found."
                 : $"Previewed {plan.Items.Count:N0} missing album-artist repair(s). Review, then apply selected.";
+            AddRun(AnalysisRunViewModel.ForRepairs(plan, repairItems, status));
         }
         catch (OperationCanceledException) { StatusText = "Album artist repair preview cancelled."; }
         catch (Exception ex) { StatusText = $"Album artist repair preview failed: {ex.Message}"; }
         finally { ApplyRepairsCommand.NotifyCanExecuteChanged(); }
     }
 
-    private bool CanApplyRepairs() => !IsBusy && _repairPlan is not null &&
+    private bool CanApplyRepairs() => !IsBusy && SelectedRun?.RepairPlan is not null &&
         RepairItems.Any(item => item.IsSelected && !item.IsApplied);
 
     [RelayCommand(CanExecute = nameof(CanApplyRepairs))]
     private async Task ApplyRepairs()
     {
-        if (_repairPlan is null)
+        if (SelectedRun?.RepairPlan is not { } repairPlan)
             return;
         var selected = RepairItems.Where(item => item.IsSelected && !item.IsApplied).ToList();
         if (selected.Count == 0)
@@ -149,7 +176,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         using var scope = BeginRun("Apply album artist repairs", AnalysisResultView.Repairs);
         try
         {
-            var selectedPlan = _repairPlan with { Items = selected.Select(item => item.Repair).ToList() };
+            var selectedPlan = repairPlan with { Items = selected.Select(item => item.Repair).ToList() };
             var progress = new Progress<int>(done =>
                 StatusText = $"Applying album artist repairs… {done:N0}/{selected.Count:N0}");
             var result = await _repairs.ApplyAsync(selectedPlan, progress, scope.Token);
@@ -187,11 +214,12 @@ public partial class AnalyzerViewModel : ViewModelBase
         using var scope = BeginRun("Cross-set check", AnalysisResultView.Findings);
         try
         {
+            var records = await _library.GetAllRecordsAsync(scope.Token);
             var report = await _library.CheckSetsAsync(scope.Token);
-            ShowReport(report);
-            StatusText = report.Count == 0
+            string status = report.Count == 0
                 ? "Cross-set check: no differences (needs 2+ configured sets to compare)."
                 : $"Cross-set check: {report.Count:N0} finding(s).";
+            AddRun(AnalysisRunViewModel.ForFindings(report, records, status));
         }
         catch (OperationCanceledException) { StatusText = "Cross-set check cancelled."; }
         catch (Exception ex) { StatusText = $"Cross-set check failed: {ex.Message}"; }
@@ -218,7 +246,10 @@ public partial class AnalyzerViewModel : ViewModelBase
     private RunScope BeginRun(string label, AnalysisResultView view)
     {
         IsBusy = true;
-        ActiveView = view;
+        // Keep the selected retained result visible while another analysis runs. With no history
+        // yet, show the destination surface so the first run still has a natural empty state.
+        if (SelectedRun is null)
+            ActiveView = view;
         StatusText = $"Running {label}…";
         _cts = new CancellationTokenSource();
         NotifyCommands();
@@ -237,10 +268,38 @@ public partial class AnalyzerViewModel : ViewModelBase
         }
     }
 
-    private void ShowReport(AnalysisReport report)
+    private void AddRun(AnalysisRunViewModel run)
     {
-        Reports.Clear();
-        Reports.Add(report);
+        Runs.Insert(0, run);
+        OnPropertyChanged(nameof(HasRuns));
+        SelectedRun = run;
+        RemoveRunCommand.NotifyCanExecuteChanged();
+        ClearRunsCommand.NotifyCanExecuteChanged();
+    }
+
+    private bool CanRemoveRun() => !IsBusy && SelectedRun is not null;
+
+    [RelayCommand(CanExecute = nameof(CanRemoveRun))]
+    private void RemoveRun()
+    {
+        if (SelectedRun is null)
+            return;
+        int index = Runs.IndexOf(SelectedRun);
+        Runs.Remove(SelectedRun);
+        SelectedRun = Runs.Count == 0 ? null : Runs[Math.Min(index, Runs.Count - 1)];
+        OnPropertyChanged(nameof(HasRuns));
+        NotifyCommands();
+    }
+
+    private bool CanClearRuns() => !IsBusy && Runs.Count > 0;
+
+    [RelayCommand(CanExecute = nameof(CanClearRuns))]
+    private void ClearRuns()
+    {
+        Runs.Clear();
+        SelectedRun = null;
+        OnPropertyChanged(nameof(HasRuns));
+        NotifyCommands();
     }
 
     private void NotifyCommands()
@@ -252,6 +311,8 @@ public partial class AnalyzerViewModel : ViewModelBase
         RunCheckSetsCommand.NotifyCanExecuteChanged();
         PreviewAlbumArtistRepairsCommand.NotifyCanExecuteChanged();
         ApplyRepairsCommand.NotifyCanExecuteChanged();
+        RemoveRunCommand.NotifyCanExecuteChanged();
+        ClearRunsCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand]

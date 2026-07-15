@@ -174,7 +174,8 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                             ct.ThrowIfCancellationRequested();
                             if (!other.Albums.TryGetValue(entry.Album ?? "", out var albumFiles))
                             {
-                                findings.Add(new AnalysisFinding(path, $"missing from set {other.Set}"));
+                                findings.Add(new AnalysisFinding(path, $"missing from set {other.Set}",
+                                    "Missing counterpart"));
                                 continue;
                             }
 
@@ -187,9 +188,12 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                                 .ToList();
 
                             if (matches.Count == 0)
-                                findings.Add(new AnalysisFinding(path, $"missing from set {other.Set}"));
+                                findings.Add(new AnalysisFinding(path, $"missing from set {other.Set}",
+                                    "Missing counterpart"));
                             else if (matches.Count > 1)
-                                findings.Add(new AnalysisFinding(path, $"ambiguous match in set {other.Set} ({matches.Count})"));
+                                findings.Add(new AnalysisFinding(path,
+                                    $"ambiguous match in set {other.Set} ({matches.Count})",
+                                    "Ambiguous counterpart"));
                         }
                     }
                 }

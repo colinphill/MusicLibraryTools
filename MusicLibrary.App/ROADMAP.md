@@ -13,8 +13,8 @@ avoid eagerly reading artwork or media data that is already represented in the m
 
 ## 2. Actionable library health
 
-- [ ] Keep analysis results instead of replacing the previous run.
-- [ ] Group findings by problem and album, with completed/ignored/deferred state.
+- [x] Keep typed analysis results in an in-session history instead of replacing the previous run.
+- [x] Group findings by problem and album, with completed/ignored/deferred state.
 - [x] Preview and apply stale-checked repairs for safely inferable missing Album Artist values.
 - [ ] Extend batch repairs to conflicting album artists, numbering, totals, multi-disc naming,
       whitespace, and casing.

@@ -346,7 +346,7 @@
 
                     <!-- Library-wide analysis: each type runs on its own button -->
                     <TabItem Header="Analyze" DataContext="{Binding Analyzer}" x:DataType="vm:AnalyzerViewModel">
-                        <Grid RowDefinitions="Auto,Auto,*" Margin="2,12,2,2">
+                        <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="2,12,2,2">
                             <WrapPanel Grid.Row="0" Margin="0,0,0,4">
                                 <Button Content="Inconsistencies" Classes="accent" Margin="0,0,8,8"
                                         Command="{Binding RunInconsistenciesCommand}"/>
@@ -370,31 +370,70 @@
                             <TextBlock Grid.Row="1" Text="{Binding StatusText}" Classes="muted" Margin="0,0,0,8"
                                        TextWrapping="Wrap"/>
 
-                            <Grid Grid.Row="2">
+                            <WrapPanel Grid.Row="2" Classes="toolbarwrap" Margin="0,0,-8,8"
+                                       IsVisible="{Binding HasRuns}">
+                                <TextBlock Text="Results" Classes="muted" VerticalAlignment="Center"/>
+                                <ComboBox ItemsSource="{Binding Runs}" SelectedItem="{Binding SelectedRun}"
+                                          MinWidth="300" MaxWidth="520">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:AnalysisRunViewModel">
+                                            <TextBlock Text="{Binding DisplayLabel}" TextTrimming="CharacterEllipsis"/>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <Button Content="Remove result" Command="{Binding RemoveRunCommand}"/>
+                                <Button Content="Clear results" Command="{Binding ClearRunsCommand}"/>
+                            </WrapPanel>
+
+                            <Grid Grid.Row="3">
                                 <!-- Findings (inconsistencies / lossy / cross-set) -->
                                 <ScrollViewer IsVisible="{Binding ShowFindings}">
-                                    <ItemsControl ItemsSource="{Binding Reports}">
+                                    <ItemsControl ItemsSource="{Binding FindingGroups}">
                                         <ItemsControl.ItemTemplate>
-                                            <DataTemplate x:DataType="models:AnalysisReport">
+                                            <DataTemplate x:DataType="vm:AnalysisProblemGroupViewModel">
                                                 <Expander Margin="0,0,0,8" HorizontalAlignment="Stretch" IsExpanded="True">
                                                     <Expander.Header>
                                                         <TextBlock>
-                                                            <Run Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                            <Run Text="{Binding Problem}" FontWeight="SemiBold"/>
                                                             <Run Text="{Binding Count, StringFormat=' ({0})'}"/>
+                                                            <Run Text="{Binding ActiveCount, StringFormat=' · {0} active'}"
+                                                                 Foreground="{DynamicResource AppTextMuted}"/>
                                                         </TextBlock>
                                                     </Expander.Header>
-                                                    <ItemsControl ItemsSource="{Binding Findings}">
+                                                    <ItemsControl ItemsSource="{Binding Albums}" Margin="10,0,0,0">
                                                         <ItemsControl.ItemTemplate>
-                                                            <DataTemplate x:DataType="models:AnalysisFinding">
-                                                                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                                                        Background="Transparent" Padding="8,4" CornerRadius="6"
-                                                                        Command="{Binding $parent[TabItem].((vm:AnalyzerViewModel)DataContext).OpenCommand}"
-                                                                        CommandParameter="{Binding Path}">
-                                                                    <StackPanel>
-                                                                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
-                                                                        <TextBlock Text="{Binding Path}" Classes="caption" TextWrapping="Wrap"/>
-                                                                    </StackPanel>
-                                                                </Button>
+                                                            <DataTemplate x:DataType="vm:AnalysisAlbumGroupViewModel">
+                                                                <Expander Margin="0,2" HorizontalAlignment="Stretch" IsExpanded="True">
+                                                                    <Expander.Header>
+                                                                        <TextBlock>
+                                                                            <Run Text="{Binding Album}" FontWeight="SemiBold"/>
+                                                                            <Run Text="{Binding Count, StringFormat=' ({0})'}"/>
+                                                                            <Run Text="{Binding ActiveCount, StringFormat=' · {0} active'}"
+                                                                                 Foreground="{DynamicResource AppTextMuted}"/>
+                                                                        </TextBlock>
+                                                                    </Expander.Header>
+                                                                    <ItemsControl ItemsSource="{Binding Findings}" Margin="10,0,0,0">
+                                                                        <ItemsControl.ItemTemplate>
+                                                                            <DataTemplate x:DataType="vm:AnalysisFindingViewModel">
+                                                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                                                    <Button Grid.Column="0" HorizontalAlignment="Stretch"
+                                                                                            HorizontalContentAlignment="Left"
+                                                                                            Background="Transparent" Padding="8,4" CornerRadius="6"
+                                                                                            Command="{Binding $parent[TabItem].((vm:AnalyzerViewModel)DataContext).OpenCommand}"
+                                                                                            CommandParameter="{Binding Path}">
+                                                                                        <StackPanel>
+                                                                                            <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
+                                                                                            <TextBlock Text="{Binding Path}" Classes="caption" TextWrapping="Wrap"/>
+                                                                                        </StackPanel>
+                                                                                    </Button>
+                                                                                    <ComboBox Grid.Column="1" Width="120" VerticalAlignment="Center"
+                                                                                              ItemsSource="{Binding Dispositions}"
+                                                                                              SelectedItem="{Binding Disposition}"/>
+                                                                                </Grid>
+                                                                            </DataTemplate>
+                                                                        </ItemsControl.ItemTemplate>
+                                                                    </ItemsControl>
+                                                                </Expander>
                                                             </DataTemplate>
                                                         </ItemsControl.ItemTemplate>
                                                     </ItemsControl>

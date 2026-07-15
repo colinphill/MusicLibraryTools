@@ -50,7 +50,7 @@ public sealed record AnalysisRepairPlan(string Name, IReadOnlyList<AnalysisTagRe
 }
 
 /// <summary>One finding within an analyzer report; deep-links back to a file.</summary>
-public sealed record AnalysisFinding(string Path, string Description);
+public sealed record AnalysisFinding(string Path, string Description, string? Problem = null);
 
 /// <summary>The output of one analyzer.</summary>
 public sealed record AnalysisReport(string Name, IReadOnlyList<AnalysisFinding> Findings)
