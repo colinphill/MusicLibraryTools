@@ -69,6 +69,25 @@ public sealed class LibraryServiceRegressionTests
     }
 
     [Fact]
+    public async Task IndexUsesThePersistedBoundedReaderParallelism()
+    {
+        using var temp = new TempDirectory();
+        var root = temp.CreateDirectory("music");
+        temp.CopyFixture(root, "song.flac");
+        var config = temp.WriteConfig("library.xml", "cache.db", new IndexTargetEntry { Target = root });
+        var settings = new AppSettings(temp.File("settings.json"));
+        settings.SetPreference(IndexBenchmarkService.ReaderParallelismPreference, "3");
+        settings.LoadConfig(config);
+        using var library = new LibraryService(settings);
+        var reports = new CollectingProgress();
+
+        await library.IndexAsync(reports);
+
+        Assert.NotEmpty(reports.Values);
+        Assert.All(reports.Values, report => Assert.Equal(3, report.ReaderParallelism));
+    }
+
+    [Fact]
     public async Task RelativeSqlitePrefix_ResolvesBesideConfig()
     {
         using var temp = new TempDirectory();
@@ -201,6 +220,20 @@ public sealed class LibraryServiceRegressionTests
         {
             Entered.Set();
             Release.Wait(TimeSpan.FromSeconds(10));
+        }
+    }
+
+    private sealed class CollectingProgress : IProgress<IndexProgress>
+    {
+        private readonly object sync = new();
+        private readonly List<IndexProgress> values = [];
+        public IReadOnlyList<IndexProgress> Values
+        {
+            get { lock (sync) return values.ToList(); }
+        }
+        public void Report(IndexProgress value)
+        {
+            lock (sync) values.Add(value);
         }
     }
 

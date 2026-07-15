@@ -104,6 +104,10 @@ reader cap for a particular NAS; 8-16 is a sensible starting range, while higher
 be validated against the share rather than assumed to be faster. Multiple scan roots are
 discovered concurrently under that same cap, and root-file snapshots from discovery are reused so
 each root directory is listed only once per indexing pass.
+MusicLibrary.App exposes this cap beside **Index library** and includes a bounded, read-only
+per-root benchmark. The benchmark reads disjoint metadata samples without artwork or database writes and recommends
+the smallest reader count within 5% of each root's measured peak; its conservative all-root setting
+uses the lowest of those recommendations.
 
 ## Safe execution
 

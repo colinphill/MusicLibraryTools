@@ -52,6 +52,7 @@ namespace MetadataCaching
         public string Root { get; init; }
         public string Detail { get; init; }
         public bool ArtworkDeferred { get; init; }
+        public int ReaderParallelism { get; init; }
     }
 
     public partial class MetadataCacheEntry
@@ -564,6 +565,7 @@ namespace MetadataCaching
                     Root = root,
                     Detail = detail,
                     ArtworkDeferred = artworkDeferred,
+                    ReaderParallelism = Math.Clamp(ScanParallelism, 1, 64),
                 });
             }
 

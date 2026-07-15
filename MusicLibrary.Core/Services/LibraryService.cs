@@ -49,6 +49,9 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
             var context = GetContext();
             var roots = GetRoots(context.Configuration);
             var db = GetDatabase(context);
+            if (int.TryParse(_settings.GetPreference(IndexBenchmarkService.ReaderParallelismPreference),
+                    out int parallelism))
+                db.ScanParallelism = Math.Clamp(parallelism, 1, 64);
             var result = await Task.Run(() => db.IndexFiles(roots, deletemissingsets: false, progress, ct), ct);
             // MetadataDatabase deliberately commits and returns partial work on cancellation. Surface
             // the cancellation to callers after that safe partial commit instead of calling it success.
