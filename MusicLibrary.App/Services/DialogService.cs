@@ -65,4 +65,44 @@ public sealed class DialogService : IDialogService
         yes.Click += (_, _) => dialog.Close(true); no.Click += (_, _) => dialog.Close(false);
         return await dialog.ShowDialog<bool>(Owner);
     }
+
+    public async Task<bool> ConfirmRestoreAsync(OperationRestorePlan plan)
+    {
+        if (Owner is null || !plan.CanApply) return false;
+        var restore = new Button { Content = $"Restore {plan.Actions.Count:N0} item(s)", Classes = { "accent" } };
+        var cancel = new Button { Content = "Cancel" };
+        var buttons = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8 };
+        buttons.Children.Add(restore); buttons.Children.Add(cancel);
+        var panel = new StackPanel { Margin = new Avalonia.Thickness(18), Spacing = 10 };
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"Restore {plan.Actions.Count:N0} selected item(s) to their original paths?",
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            FontWeight = Avalonia.Media.FontWeight.SemiBold,
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = plan.CollisionCount == 0
+                ? "No destination collisions were present when this preview was created."
+                : $"{plan.CollisionCount:N0} existing destination(s) will be preserved in the restore rollback area.",
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = "Every source and destination will be revalidated before the first move. A failure rolls back completed restore actions.",
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+        });
+        panel.Children.Add(buttons);
+        var dialog = new Window
+        {
+            Title = "Confirm restore",
+            Width = 620,
+            SizeToContent = SizeToContent.Height,
+            Content = panel,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
+        restore.Click += (_, _) => dialog.Close(true);
+        cancel.Click += (_, _) => dialog.Close(false);
+        return await dialog.ShowDialog<bool>(Owner);
+    }
 }

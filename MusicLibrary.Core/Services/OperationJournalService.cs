@@ -13,6 +13,16 @@ public interface IOperationJournalService
     Task<OperationBrowseResult> BrowseAsync(
         OperationJournalSummary run,
         CancellationToken ct = default);
+
+    Task<OperationRestorePlan> PreviewRestoreAsync(
+        OperationJournalSummary run,
+        IReadOnlyList<OperationFileEntry> entries,
+        CancellationToken ct = default);
+
+    Task<OperationRestoreResult> ApplyRestoreAsync(
+        OperationRestorePlan plan,
+        IProgress<int>? progress = null,
+        CancellationToken ct = default);
 }
 
 /// <summary>
@@ -24,6 +34,10 @@ public sealed class OperationJournalService : IOperationJournalService
     private static readonly Regex ContainerName = new(
         @"^(?<base>.+)\.(?<tool>IngestMusic|SortDownloads|OrganizeFiles|CrossSyncMusic|AndroidSync|UpdateCarCard|UpdateSmartStorage)(?<suffix>-quarantine|-recovery)$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private readonly IFileMutationCoordinator _mutations;
+
+    public OperationJournalService(IFileMutationCoordinator? mutations = null) =>
+        _mutations = mutations ?? FileMutationCoordinator.Shared;
 
     public Task<OperationJournalDiscoveryResult> DiscoverAsync(
         IReadOnlyList<string> searchRoots,
@@ -39,6 +53,189 @@ public sealed class OperationJournalService : IOperationJournalService
     {
         ArgumentNullException.ThrowIfNull(run);
         return Task.Run(() => Browse(run, ct), ct);
+    }
+
+    public Task<OperationRestorePlan> PreviewRestoreAsync(
+        OperationJournalSummary run,
+        IReadOnlyList<OperationFileEntry> entries,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+        ArgumentNullException.ThrowIfNull(entries);
+        return Task.Run(() => PreviewRestore(run, entries, ct), ct);
+    }
+
+    public async Task<OperationRestoreResult> ApplyRestoreAsync(
+        OperationRestorePlan plan,
+        IProgress<int>? progress = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        if (!plan.CanApply)
+            return new(0, 0);
+
+        var paths = plan.Actions.SelectMany(action => new[]
+        {
+            action.SourcePath, action.DestinationPath, action.CollisionBackupPath,
+        }).ToList();
+        using var lease = await _mutations.AcquireAsync(paths, ct);
+        foreach (var action in plan.Actions)
+        {
+            ct.ThrowIfCancellationRequested();
+            ValidateSnapshot(action.SourcePath, action.SourceSnapshot, "restore source");
+            ValidateSnapshot(action.DestinationPath, action.DestinationSnapshot, "restore destination");
+            if (File.Exists(action.CollisionBackupPath) || Directory.Exists(action.CollisionBackupPath))
+                throw new InvalidOperationException($"Restore collision backup already exists: {action.CollisionBackupPath}");
+        }
+
+        WriteRestoreJournal(plan.RestoreJournalPath,
+            ["BEGIN\tRESTORE", .. plan.Actions.Select(action =>
+                $"PLAN_RESTORE\t{action.SourcePath}\t{action.DestinationPath}\t{action.CollisionBackupPath}")]);
+        var completed = new List<OperationRestoreAction>();
+        try
+        {
+            foreach (var action in plan.Actions)
+            {
+                ct.ThrowIfCancellationRequested();
+                bool collisionMoved = false;
+                try
+                {
+                    if (action.DestinationSnapshot.Exists)
+                    {
+                        MovePath(action.DestinationPath, action.CollisionBackupPath);
+                        collisionMoved = true;
+                    }
+                    MovePath(action.SourcePath, action.DestinationPath);
+                }
+                catch
+                {
+                    if (collisionMoved && !Exists(action.DestinationPath) && Exists(action.CollisionBackupPath))
+                        MovePath(action.CollisionBackupPath, action.DestinationPath);
+                    throw;
+                }
+                completed.Add(action);
+                WriteRestoreJournal(plan.RestoreJournalPath,
+                    [$"RESTORE\t{action.SourcePath}\t{action.DestinationPath}\t{action.CollisionBackupPath}"]);
+                progress?.Report(completed.Count);
+            }
+            WriteRestoreJournal(plan.RestoreJournalPath, ["COMMIT\tRESTORE"]);
+            return new(completed.Count, completed.Count(action => action.DestinationSnapshot.Exists));
+        }
+        catch
+        {
+            bool rollbackComplete = true;
+            foreach (var action in completed.AsEnumerable().Reverse())
+            {
+                try
+                {
+                    if (Exists(action.DestinationPath) && !Exists(action.SourcePath))
+                        MovePath(action.DestinationPath, action.SourcePath);
+                    if (Exists(action.CollisionBackupPath) && !Exists(action.DestinationPath))
+                        MovePath(action.CollisionBackupPath, action.DestinationPath);
+                }
+                catch { rollbackComplete = false; }
+            }
+            TryWriteRestoreJournal(plan.RestoreJournalPath,
+                rollbackComplete ? "ROLLBACK\tRESTORE" : "ROLLBACK_FAILED\tRESTORE");
+            throw;
+        }
+    }
+
+    private static OperationRestorePlan PreviewRestore(
+        OperationJournalSummary run,
+        IReadOnlyList<OperationFileEntry> entries,
+        CancellationToken ct)
+    {
+        string restoreRoot = Path.Combine(run.RunPath, ".MusicLibrary.App-restore",
+            DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff") + "-" + Guid.NewGuid().ToString("N"));
+        var eligible = entries
+            .Where(entry => entry.Kind is OperationEntryKind.Quarantined or OperationEntryKind.Moved or
+                    OperationEntryKind.Planned && entry.CurrentPath is not null)
+            .Where(entry => entry.CurrentPath is not null && Exists(entry.CurrentPath))
+            .ToList();
+        // A selected directory and one of its selected descendants cannot both be moved. Prefer
+        // leaf entries; keep only empty/directly selected directories with no selected descendant.
+        var sources = eligible.Select(entry => entry.CurrentPath!).ToHashSet(PathComparer);
+        var destinations = eligible.Select(entry => entry.OriginalPath).ToHashSet(PathComparer);
+        eligible = eligible.Where(entry => !entry.IsDirectory || !sources.Any(source =>
+                !PathComparer.Equals(source, entry.CurrentPath!) && IsDescendant(source, entry.CurrentPath!)) &&
+            !destinations.Any(destination => !PathComparer.Equals(destination, entry.OriginalPath) &&
+                IsDescendant(destination, entry.OriginalPath)))
+            .ToList();
+
+        var actions = new List<OperationRestoreAction>();
+        foreach (var entry in eligible
+                     .GroupBy(entry => entry.OriginalPath, PathComparer)
+                     .Select(group => group.First())
+                     .OrderBy(entry => entry.OriginalPath, PathComparer))
+        {
+            ct.ThrowIfCancellationRequested();
+            string backup = Path.Combine(restoreRoot, "collisions",
+                Guid.NewGuid().ToString("N") + "-" + Path.GetFileName(entry.OriginalPath));
+            actions.Add(new(
+                entry.CurrentPath!, entry.OriginalPath, backup,
+                Snapshot(entry.CurrentPath!), Snapshot(entry.OriginalPath), entry.Kind));
+        }
+        return new(run, Path.Combine(restoreRoot, "restore.tsv"), actions,
+            entries.Count - actions.Count);
+    }
+
+    private static OperationPathSnapshot Snapshot(string path)
+    {
+        if (File.Exists(path))
+        {
+            var file = new FileInfo(path);
+            return new(true, false, file.Length, file.LastWriteTimeUtc);
+        }
+        if (Directory.Exists(path))
+        {
+            var directory = new DirectoryInfo(path);
+            return new(true, true, 0, directory.LastWriteTimeUtc);
+        }
+        return new(false, false, 0, default);
+    }
+
+    private static void ValidateSnapshot(string path, OperationPathSnapshot expected, string label)
+    {
+        var current = Snapshot(path);
+        bool matches = current.Exists == expected.Exists && current.IsDirectory == expected.IsDirectory &&
+            (!current.Exists || current.IsDirectory || current.Length == expected.Length) &&
+            (!current.Exists || Math.Abs((current.LastWriteTimeUtc - expected.LastWriteTimeUtc).TotalMilliseconds) <= 500);
+        if (!matches)
+            throw new InvalidOperationException($"{label} changed since preview: {path}. Preview again before restoring.");
+    }
+
+    private static bool Exists(string path) => File.Exists(path) || Directory.Exists(path);
+
+    private static bool IsDescendant(string path, string parent)
+    {
+        string prefix = Path.TrimEndingDirectorySeparator(Path.GetFullPath(parent)) + Path.DirectorySeparatorChar;
+        return Path.GetFullPath(path).StartsWith(prefix, PathComparison);
+    }
+
+    private static void MovePath(string source, string destination)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+        if (Directory.Exists(source))
+            Directory.Move(source, destination);
+        else
+            File.Move(source, destination);
+    }
+
+    private static void WriteRestoreJournal(string path, IEnumerable<string> lines)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        using var stream = new FileStream(path, FileMode.Append, FileAccess.Write, FileShare.Read);
+        using var writer = new StreamWriter(stream, new System.Text.UTF8Encoding(false));
+        foreach (string line in lines) writer.WriteLine(line);
+        writer.Flush();
+        stream.Flush(flushToDisk: true);
+    }
+
+    private static void TryWriteRestoreJournal(string path, string line)
+    {
+        try { WriteRestoreJournal(path, [line]); }
+        catch { }
     }
 
     private static OperationBrowseResult Browse(OperationJournalSummary run, CancellationToken ct)
@@ -167,6 +364,10 @@ public sealed class OperationJournalService : IOperationJournalService
                 if (PathComparer.Equals(current, Path.Combine(runPath, "journal.tsv")))
                     continue;
                 string relative = Path.GetRelativePath(runPath, current);
+                if (relative.Equals(".MusicLibrary.App-restore", StringComparison.OrdinalIgnoreCase) ||
+                    relative.StartsWith(".MusicLibrary.App-restore" + Path.DirectorySeparatorChar,
+                        StringComparison.OrdinalIgnoreCase))
+                    continue;
                 string original = Path.Combine(originalRoot, relative);
                 if (entries.TryGetValue(original, out var recorded) &&
                     recorded.Kind != OperationEntryKind.Planned && recorded.CurrentPath is not null)
@@ -416,4 +617,6 @@ public sealed class OperationJournalService : IOperationJournalService
 
     private static readonly StringComparer PathComparer =
         OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+    private static readonly StringComparison PathComparison =
+        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 }

@@ -54,3 +54,29 @@ public sealed record OperationBrowseResult(
     string OriginalRoot,
     IReadOnlyList<OperationFileEntry> Entries,
     IReadOnlyList<string> Warnings);
+
+public sealed record OperationPathSnapshot(
+    bool Exists,
+    bool IsDirectory,
+    long Length,
+    DateTime LastWriteTimeUtc);
+
+public sealed record OperationRestoreAction(
+    string SourcePath,
+    string DestinationPath,
+    string CollisionBackupPath,
+    OperationPathSnapshot SourceSnapshot,
+    OperationPathSnapshot DestinationSnapshot,
+    OperationEntryKind OriginalKind);
+
+public sealed record OperationRestorePlan(
+    OperationJournalSummary Run,
+    string RestoreJournalPath,
+    IReadOnlyList<OperationRestoreAction> Actions,
+    int SkippedCount)
+{
+    public int CollisionCount => Actions.Count(action => action.DestinationSnapshot.Exists);
+    public bool CanApply => Actions.Count > 0;
+}
+
+public sealed record OperationRestoreResult(int RestoredCount, int CollisionBackupCount);

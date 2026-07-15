@@ -929,10 +929,18 @@
                             <Grid Grid.Row="1" IsVisible="{Binding ShowBrowser}" RowDefinitions="Auto,*">
                                 <WrapPanel Grid.Row="0" Classes="toolbarwrap" Margin="0,0,-8,8">
                                     <Button Content="Back to operations" Command="{Binding CloseBrowserCommand}"/>
+                                    <Button Content="Select restorable" Command="{Binding SelectAllRestorableCommand}"/>
+                                    <Button Content="Clear selection" Command="{Binding ClearRestoreSelectionCommand}"/>
+                                    <Button Content="Preview restore" Command="{Binding PreviewRestoreCommand}"/>
+                                    <Button Content="Apply restore" Classes="accent" Command="{Binding ApplyRestoreCommand}"
+                                            IsVisible="{Binding ShowRestorePreview}"/>
                                     <TextBlock VerticalAlignment="Center" Classes="muted">
                                         <Run Text="{Binding SelectedRun.ToolName}" FontWeight="SemiBold"/>
                                         <Run Text=" — original hierarchy"/>
                                     </TextBlock>
+                                    <TextBlock Text="{Binding RestorePreviewText}" VerticalAlignment="Center"
+                                               Classes="muted" TextWrapping="Wrap"
+                                               IsVisible="{Binding ShowRestorePreview}"/>
                                 </WrapPanel>
                                 <TreeView Grid.Row="1" ItemsSource="{Binding RootNodes}"
                                           Background="Transparent">
@@ -941,6 +949,8 @@
                                                           ItemsSource="{Binding Children}">
                                             <StackPanel Margin="2" Spacing="2">
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <CheckBox IsChecked="{Binding IsSelected}"
+                                                              IsVisible="{Binding CanRestore}"/>
                                                     <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
                                                     <TextBlock Text="{Binding StateText}" Classes="muted"
                                                                IsVisible="{Binding HasEntry}"/>

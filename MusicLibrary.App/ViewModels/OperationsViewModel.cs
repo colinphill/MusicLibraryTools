@@ -13,6 +13,7 @@ public partial class OperationsViewModel : ViewModelBase
     private const string SearchRootPreference = "Operations.SearchRoot";
     private readonly IOperationJournalService _journals;
     private readonly IFileDialogService _files;
+    private readonly IDialogService _dialogs;
     private readonly IAppSettings _settings;
     private CancellationTokenSource? _cts;
 
@@ -22,6 +23,8 @@ public partial class OperationsViewModel : ViewModelBase
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RefreshCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenRunCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewRestoreCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ApplyRestoreCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -33,16 +36,26 @@ public partial class OperationsViewModel : ViewModelBase
     [ObservableProperty]
     private OperationRunViewModel? _selectedRun;
 
+    [ObservableProperty]
+    private bool _showRestorePreview;
+
+    [ObservableProperty]
+    private string? _restorePreviewText;
+
+    private OperationRestorePlan? _restorePlan;
+
     public ObservableCollection<OperationRunViewModel> Runs { get; } = [];
     public ObservableCollection<OperationEntryNodeViewModel> RootNodes { get; } = [];
 
     public OperationsViewModel(
         IOperationJournalService journals,
         IFileDialogService files,
+        IDialogService dialogs,
         IAppSettings settings)
     {
         _journals = journals;
         _files = files;
+        _dialogs = dialogs;
         _settings = settings;
         SearchRoot = settings.GetPreference(SearchRootPreference);
     }
@@ -80,6 +93,7 @@ public partial class OperationsViewModel : ViewModelBase
             RootNodes.Clear();
             SelectedRun = null;
             ShowBrowser = false;
+            InvalidateRestorePreview();
             foreach (var run in result.Runs)
                 Runs.Add(new OperationRunViewModel(run));
             int interrupted = result.Runs.Count(run => run.State == OperationJournalState.Interrupted);
@@ -119,9 +133,12 @@ public partial class OperationsViewModel : ViewModelBase
         {
             var browse = await _journals.BrowseAsync(run.Summary, _cts.Token);
             RootNodes.Clear();
-            RootNodes.Add(OperationEntryNodeViewModel.Build(browse));
+            var root = OperationEntryNodeViewModel.Build(browse);
+            root.SelectionChanged += OnRestoreSelectionChanged;
+            RootNodes.Add(root);
             SelectedRun = run;
             ShowBrowser = true;
+            InvalidateRestorePreview();
             StatusText = $"{browse.Entries.Count:N0} operation item(s) in their original hierarchy"
                 + (browse.Warnings.Count == 0 ? "." : $"; {browse.Warnings.Count:N0} item(s) could not be read.");
         }
@@ -147,7 +164,103 @@ public partial class OperationsViewModel : ViewModelBase
         ShowBrowser = false;
         SelectedRun = null;
         RootNodes.Clear();
+        InvalidateRestorePreview();
         StatusText = $"Showing {Runs.Count:N0} discovered operation run(s).";
+    }
+
+    private void OnRestoreSelectionChanged()
+    {
+        InvalidateRestorePreview();
+        PreviewRestoreCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand]
+    private void SelectAllRestorable()
+    {
+        foreach (var root in RootNodes)
+            root.SetSelection(true);
+        PreviewRestoreCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand]
+    private void ClearRestoreSelection()
+    {
+        foreach (var root in RootNodes)
+            root.SetSelection(false);
+        PreviewRestoreCommand.NotifyCanExecuteChanged();
+    }
+
+    private bool CanPreviewRestore() => !IsBusy && SelectedRun is not null &&
+        RootNodes.SelectMany(root => root.SelectedEntries()).Any();
+
+    [RelayCommand(CanExecute = nameof(CanPreviewRestore))]
+    private async Task PreviewRestoreAsync()
+    {
+        if (SelectedRun is null)
+            return;
+        var entries = RootNodes.SelectMany(root => root.SelectedEntries()).ToList();
+        IsBusy = true;
+        _cts = new CancellationTokenSource();
+        try
+        {
+            _restorePlan = await _journals.PreviewRestoreAsync(SelectedRun.Summary, entries, _cts.Token);
+            ShowRestorePreview = _restorePlan.CanApply;
+            RestorePreviewText = _restorePlan.CanApply
+                ? $"Restore preview: {_restorePlan.Actions.Count:N0} item(s), " +
+                  $"{_restorePlan.CollisionCount:N0} destination collision(s), " +
+                  $"{_restorePlan.SkippedCount:N0} skipped."
+                : "No selected entries are currently recoverable.";
+            StatusText = RestorePreviewText;
+        }
+        catch (OperationCanceledException) { StatusText = "Restore preview cancelled."; }
+        catch (Exception ex) { StatusText = $"Restore preview failed: {ex.Message}"; }
+        finally
+        {
+            _cts?.Dispose(); _cts = null; IsBusy = false;
+            ApplyRestoreCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    private bool CanApplyRestore() => !IsBusy && _restorePlan?.CanApply == true;
+
+    [RelayCommand(CanExecute = nameof(CanApplyRestore))]
+    private async Task ApplyRestoreAsync()
+    {
+        if (_restorePlan is not { } plan || SelectedRun is null ||
+            !await _dialogs.ConfirmRestoreAsync(plan))
+            return;
+        IsBusy = true;
+        _cts = new CancellationTokenSource();
+        try
+        {
+            var progress = new Progress<int>(count =>
+                StatusText = $"Restoring… {count:N0}/{plan.Actions.Count:N0}");
+            var result = await _journals.ApplyRestoreAsync(plan, progress, _cts.Token);
+            var browse = await _journals.BrowseAsync(SelectedRun.Summary, CancellationToken.None);
+            RootNodes.Clear();
+            var root = OperationEntryNodeViewModel.Build(browse);
+            root.SelectionChanged += OnRestoreSelectionChanged;
+            RootNodes.Add(root);
+            InvalidateRestorePreview();
+            StatusText = $"Restored {result.RestoredCount:N0} item(s); " +
+                $"preserved {result.CollisionBackupCount:N0} collision(s).";
+        }
+        catch (OperationCanceledException) { StatusText = "Restore cancelled and completed actions were rolled back."; }
+        catch (Exception ex) { StatusText = $"Restore failed and completed actions were rolled back: {ex.Message}"; }
+        finally
+        {
+            _cts?.Dispose(); _cts = null; IsBusy = false;
+            PreviewRestoreCommand.NotifyCanExecuteChanged();
+            ApplyRestoreCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    private void InvalidateRestorePreview()
+    {
+        _restorePlan = null;
+        ShowRestorePreview = false;
+        RestorePreviewText = null;
+        ApplyRestoreCommand.NotifyCanExecuteChanged();
     }
 
     internal IReadOnlyList<string> CollectSearchRoots()
@@ -199,7 +312,7 @@ public sealed class OperationRunViewModel
     public OperationRunViewModel(OperationJournalSummary summary) => Summary = summary;
 }
 
-public sealed class OperationEntryNodeViewModel
+public partial class OperationEntryNodeViewModel : ViewModelBase
 {
     public string Name { get; }
     public string OriginalPath { get; }
@@ -209,6 +322,13 @@ public sealed class OperationEntryNodeViewModel
     public bool IsDirectory { get; private set; }
     public List<OperationEntryNodeViewModel> Children { get; } = [];
     public bool HasEntry => Kind is not null;
+    public bool CanRestore => HasEntry && Exists && CurrentPath is not null &&
+        Kind is OperationEntryKind.Quarantined or OperationEntryKind.Moved or OperationEntryKind.Planned;
+
+    [ObservableProperty]
+    private bool _isSelected;
+
+    public event Action? SelectionChanged;
     public string StateText => Kind switch
     {
         OperationEntryKind.Quarantined => Exists ? "Quarantined" : "Quarantine copy missing",
@@ -224,6 +344,26 @@ public sealed class OperationEntryNodeViewModel
     {
         Name = name;
         OriginalPath = originalPath;
+    }
+
+    partial void OnIsSelectedChanged(bool value) => SelectionChanged?.Invoke();
+
+    public void SetSelection(bool selected)
+    {
+        if (CanRestore)
+            IsSelected = selected;
+        foreach (var child in Children)
+            child.SetSelection(selected);
+    }
+
+    public IEnumerable<OperationFileEntry> SelectedEntries()
+    {
+        if (IsSelected && CanRestore)
+            yield return new OperationFileEntry(
+                OriginalPath, CurrentPath, Name, Kind!.Value, Exists, IsDirectory);
+        foreach (var child in Children)
+            foreach (var entry in child.SelectedEntries())
+                yield return entry;
     }
 
     public static OperationEntryNodeViewModel Build(OperationBrowseResult browse)
@@ -261,6 +401,7 @@ public sealed class OperationEntryNodeViewModel
             if (child is null)
             {
                 child = new OperationEntryNodeViewModel(part, path) { IsDirectory = true };
+                child.SelectionChanged += () => SelectionChanged?.Invoke();
                 parent.Children.Add(child);
             }
             parent = child;

@@ -191,6 +191,97 @@ public sealed class OperationJournalServiceTests
         Assert.Equal(OperationEntryKind.Moved, entry.Kind);
     }
 
+    [Fact]
+    public async Task RestorePreservesDestinationCollisionAndMovesQuarantineBack()
+    {
+        using var temp = new TempDirectory();
+        string root = temp.Directory("incoming");
+        string run = temp.Directory("incoming.IngestMusic-quarantine", "20260715-190000000");
+        string source = Path.Combine(run, "song.flac");
+        string destination = Path.Combine(root, "song.flac");
+        File.WriteAllText(source, "quarantined original");
+        File.WriteAllText(destination, "new collision");
+        var summary = Summary("IngestMusic", OperationJournalKind.Ingest, run);
+        var entry = Entry(source, destination, OperationEntryKind.Quarantined);
+        var service = new OperationJournalService();
+
+        var plan = await service.PreviewRestoreAsync(summary, [entry]);
+        var result = await service.ApplyRestoreAsync(plan);
+
+        Assert.Equal(1, plan.CollisionCount);
+        Assert.Equal(1, result.RestoredCount);
+        Assert.Equal("quarantined original", File.ReadAllText(destination));
+        Assert.False(File.Exists(source));
+        var action = Assert.Single(plan.Actions);
+        Assert.Equal("new collision", File.ReadAllText(action.CollisionBackupPath));
+        Assert.Equal("COMMIT\tRESTORE", File.ReadLines(plan.RestoreJournalPath).Last());
+    }
+
+    [Fact]
+    public async Task RestoreRejectsAChangedSourceBeforeMovingAnything()
+    {
+        using var temp = new TempDirectory();
+        string root = temp.Directory("incoming");
+        string run = temp.Directory("incoming.IngestMusic-quarantine", "20260715-200000000");
+        string source = Path.Combine(run, "song.flac");
+        string destination = Path.Combine(root, "song.flac");
+        File.WriteAllText(source, "original");
+        var service = new OperationJournalService();
+        var plan = await service.PreviewRestoreAsync(
+            Summary("IngestMusic", OperationJournalKind.Ingest, run),
+            [Entry(source, destination, OperationEntryKind.Quarantined)]);
+        File.AppendAllText(source, " changed");
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => service.ApplyRestoreAsync(plan));
+
+        Assert.Contains("changed since preview", error.Message);
+        Assert.True(File.Exists(source));
+        Assert.False(File.Exists(destination));
+        Assert.False(File.Exists(plan.RestoreJournalPath));
+    }
+
+    [Fact]
+    public async Task RestoreRollsBackEarlierMovesWhenALaterActionFails()
+    {
+        using var temp = new TempDirectory();
+        string root = temp.Directory("incoming");
+        string run = temp.Directory("incoming.IngestMusic-quarantine", "20260715-210000000");
+        string firstSource = Path.Combine(run, "a.flac");
+        string secondSource = Path.Combine(run, "b.flac");
+        File.WriteAllText(firstSource, "first");
+        File.WriteAllText(secondSource, "second");
+        string firstDestination = Path.Combine(root, "a.flac");
+        string blocker = Path.Combine(root, "z-blocker");
+        File.WriteAllText(blocker, "not a directory");
+        string secondDestination = Path.Combine(blocker, "b.flac");
+        var service = new OperationJournalService();
+        var plan = await service.PreviewRestoreAsync(
+            Summary("IngestMusic", OperationJournalKind.Ingest, run),
+            [
+                Entry(firstSource, firstDestination, OperationEntryKind.Quarantined),
+                Entry(secondSource, secondDestination, OperationEntryKind.Quarantined),
+            ]);
+
+        await Assert.ThrowsAnyAsync<IOException>(() => service.ApplyRestoreAsync(plan));
+
+        Assert.True(File.Exists(firstSource));
+        Assert.True(File.Exists(secondSource));
+        Assert.False(File.Exists(firstDestination));
+        Assert.Equal("ROLLBACK\tRESTORE", File.ReadLines(plan.RestoreJournalPath).Last());
+    }
+
+    private static OperationJournalSummary Summary(
+        string tool,
+        OperationJournalKind kind,
+        string run) =>
+        new(tool, kind, OperationJournalState.Completed, run, null, DateTimeOffset.UtcNow, null);
+
+    private static OperationFileEntry Entry(
+        string source,
+        string destination,
+        OperationEntryKind kind) =>
+        new(destination, source, Path.GetFileName(destination), kind, true, false);
+
     private sealed class TempDirectory : IDisposable
     {
         public string Path { get; } = System.IO.Path.Combine(

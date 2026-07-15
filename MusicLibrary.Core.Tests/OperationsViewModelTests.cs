@@ -21,7 +21,7 @@ public sealed class OperationsViewModelTests
             Path.Combine(device, "run"), Path.Combine(device, "run", "journal.tsv"),
             DateTimeOffset.UtcNow, 12);
         var journals = new RecordingJournals(new([summary], []));
-        var viewModel = new OperationsViewModel(journals, new StubFiles(), settings)
+        var viewModel = new OperationsViewModel(journals, new StubFiles(), new StubDialogs(), settings)
         {
             SearchRoot = device,
         };
@@ -45,7 +45,7 @@ public sealed class OperationsViewModelTests
             "IngestMusic", OperationJournalKind.Ingest, OperationJournalState.Completed,
             temp.Path, null, DateTimeOffset.UtcNow, null);
         var journals = new RecordingJournals(new([summary], ["offline"]));
-        var viewModel = new OperationsViewModel(journals, new StubFiles(), settings)
+        var viewModel = new OperationsViewModel(journals, new StubFiles(), new StubDialogs(), settings)
         {
             SearchRoot = temp.Path,
         };
@@ -76,7 +76,7 @@ public sealed class OperationsViewModelTests
         var journals = new RecordingJournals(
             new([summary], []),
             new(originalRoot, [entry], []));
-        var viewModel = new OperationsViewModel(journals, new StubFiles(), settings)
+        var viewModel = new OperationsViewModel(journals, new StubFiles(), new StubDialogs(), settings)
         {
             SearchRoot = originalRoot,
         };
@@ -97,12 +97,53 @@ public sealed class OperationsViewModelTests
         Assert.Equal(entry.CurrentPath, file.CurrentPath);
     }
 
+    [Fact]
+    public async Task RestoreRequiresSelectionThenPreviewBeforeApply()
+    {
+        using var temp = new TempDirectory();
+        var settings = new AppSettings(Path.Combine(temp.Path, "settings.json"));
+        string originalRoot = Path.Combine(temp.Path, "incoming");
+        var summary = new OperationJournalSummary(
+            "IngestMusic", OperationJournalKind.Ingest, OperationJournalState.Completed,
+            Path.Combine(temp.Path, "run"), null, DateTimeOffset.UtcNow, 1);
+        var recoverable = new OperationFileEntry(
+            Path.Combine(originalRoot, "song.flac"), Path.Combine(temp.Path, "run", "song.flac"),
+            "song.flac", OperationEntryKind.Quarantined, true, false);
+        var created = new OperationFileEntry(
+            Path.Combine(originalRoot, "created.flac"), Path.Combine(originalRoot, "created.flac"),
+            "created.flac", OperationEntryKind.Created, true, false);
+        var journals = new RecordingJournals(
+            new([summary], []), new(originalRoot, [recoverable, created], []));
+        var viewModel = new OperationsViewModel(journals, new StubFiles(), new StubDialogs(), settings)
+        {
+            SearchRoot = originalRoot,
+        };
+        await viewModel.RefreshCommand.ExecuteAsync(null);
+        await viewModel.OpenRunCommand.ExecuteAsync(Assert.Single(viewModel.Runs));
+
+        Assert.False(viewModel.PreviewRestoreCommand.CanExecute(null));
+        viewModel.SelectAllRestorableCommand.Execute(null);
+        Assert.True(viewModel.PreviewRestoreCommand.CanExecute(null));
+
+        await viewModel.PreviewRestoreCommand.ExecuteAsync(null);
+        Assert.True(viewModel.ShowRestorePreview);
+        Assert.Single(journals.PreviewEntries!);
+        Assert.Equal(recoverable.OriginalPath, journals.PreviewEntries![0].OriginalPath);
+
+        await viewModel.ApplyRestoreCommand.ExecuteAsync(null);
+        Assert.Equal(1, journals.ApplyCalls);
+        Assert.False(viewModel.ShowRestorePreview);
+        Assert.Contains("Restored 1 item", viewModel.StatusText);
+    }
+
     private sealed class RecordingJournals(
         OperationJournalDiscoveryResult result,
         OperationBrowseResult? browse = null) : IOperationJournalService
     {
         public IReadOnlyList<string>? Roots { get; private set; }
         public int BrowseCalls { get; private set; }
+        public IReadOnlyList<OperationFileEntry>? PreviewEntries { get; private set; }
+        public int ApplyCalls { get; private set; }
 
         public Task<OperationJournalDiscoveryResult> DiscoverAsync(
             IReadOnlyList<string> searchRoots,
@@ -119,6 +160,30 @@ public sealed class OperationsViewModelTests
             BrowseCalls++;
             return Task.FromResult(browse ?? new OperationBrowseResult(run.RunPath, [], []));
         }
+
+        public Task<OperationRestorePlan> PreviewRestoreAsync(
+            OperationJournalSummary run,
+            IReadOnlyList<OperationFileEntry> entries,
+            CancellationToken ct = default)
+        {
+            PreviewEntries = entries;
+            var actions = entries.Select(entry => new OperationRestoreAction(
+                entry.CurrentPath!, entry.OriginalPath,
+                Path.Combine(run.RunPath, "collision-" + Path.GetFileName(entry.OriginalPath)),
+                new(true, false, 1, DateTime.UtcNow),
+                new(false, false, 0, default), entry.Kind)).ToList();
+            return Task.FromResult(new OperationRestorePlan(
+                run, Path.Combine(run.RunPath, "restore.tsv"), actions, 0));
+        }
+
+        public Task<OperationRestoreResult> ApplyRestoreAsync(
+            OperationRestorePlan plan,
+            IProgress<int>? progress = null,
+            CancellationToken ct = default)
+        {
+            ApplyCalls++;
+            return Task.FromResult(new OperationRestoreResult(plan.Actions.Count, plan.CollisionCount));
+        }
     }
 
     private sealed class StubFiles : IFileDialogService
@@ -129,6 +194,15 @@ public sealed class OperationsViewModelTests
         public Task<string?> PickSaveFileAsync(string title, string? suggestedName = null,
             string? defaultExtension = null, IReadOnlyList<FilePickerFilter>? filters = null) =>
             Task.FromResult<string?>(null);
+    }
+
+    private sealed class StubDialogs : IDialogService
+    {
+        public Task<bool> ShowFieldsEditorAsync(IReadOnlyList<string> paths) => Task.FromResult(false);
+        public Task<string?> ShowConfigEditorAsync(string? existingPath) => Task.FromResult<string?>(null);
+        public Task<string?> ShowIngestConfigEditorAsync(string? existingPath) => Task.FromResult<string?>(null);
+        public Task<bool> ConfirmCdDerivationAsync(IngestApprovalItem item) => Task.FromResult(false);
+        public Task<bool> ConfirmRestoreAsync(OperationRestorePlan plan) => Task.FromResult(true);
     }
 
     private sealed class TempDirectory : IDisposable

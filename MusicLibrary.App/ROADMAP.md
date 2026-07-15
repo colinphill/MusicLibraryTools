@@ -29,6 +29,9 @@ avoid eagerly reading artwork or media data that is already represented in the m
 - [x] Discover ingest, organize, sync, and device-operation journals and folder-only quarantines.
 - [x] Lazily browse operation items and quarantined files in their reconstructed original hierarchy.
 - [ ] Restore a run or selected files, identify interrupted operations, and purge by retention policy.
+  - [x] Preview and transactionally restore selected or all recoverable moved/quarantined entries.
+  - [x] Identify incomplete journals and surface interrupted operations prominently.
+  - [ ] Add retention-aware purge with explicit dry-run review and collision-backup handling.
 
 ## 4. Network-aware indexing
 

@@ -14,4 +14,6 @@ public interface IDialogService
     Task<string?> ShowIngestConfigEditorAsync(string? existingPath);
 
     Task<bool> ConfirmCdDerivationAsync(IngestApprovalItem item);
+
+    Task<bool> ConfirmRestoreAsync(OperationRestorePlan plan);
 }
