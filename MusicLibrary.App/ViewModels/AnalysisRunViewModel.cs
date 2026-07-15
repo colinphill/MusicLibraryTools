@@ -26,6 +26,7 @@ public sealed class AnalysisRunViewModel : ViewModelBase
     public IReadOnlyList<AnalysisProblemGroupViewModel> FindingGroups { get; }
     public IReadOnlyList<DuplicateGroup> Duplicates { get; }
     public IReadOnlyList<ArtistGroupViewModel> ArtistGroups { get; }
+    public IReadOnlyList<AnalysisConflictGroupViewModel> ConflictGroups { get; }
     public IReadOnlyList<AnalysisRepairItemViewModel> RepairItems { get; }
     public IReadOnlyList<AlbumMetadataMatrix> Matrices { get; }
     public AnalysisRepairPlan? RepairPlan { get; }
@@ -42,6 +43,7 @@ public sealed class AnalysisRunViewModel : ViewModelBase
         IReadOnlyList<AnalysisProblemGroupViewModel>? findingGroups = null,
         IReadOnlyList<DuplicateGroup>? duplicates = null,
         IReadOnlyList<ArtistGroupViewModel>? artistGroups = null,
+        IReadOnlyList<AnalysisConflictGroupViewModel>? conflictGroups = null,
         IReadOnlyList<AnalysisRepairItemViewModel>? repairItems = null,
         AnalysisRepairPlan? repairPlan = null,
         IReadOnlyList<AlbumMetadataMatrix>? matrices = null)
@@ -54,6 +56,7 @@ public sealed class AnalysisRunViewModel : ViewModelBase
         FindingGroups = findingGroups ?? [];
         Duplicates = duplicates ?? [];
         ArtistGroups = artistGroups ?? [];
+        ConflictGroups = conflictGroups ?? [];
         RepairItems = repairItems ?? [];
         RepairPlan = repairPlan;
         Matrices = matrices ?? [];
@@ -80,6 +83,12 @@ public sealed class AnalysisRunViewModel : ViewModelBase
         IReadOnlyList<ArtistGroupViewModel> groups,
         string summary) =>
         new(name, summary, AnalysisResultView.Artists, groups.Count, artistGroups: groups);
+
+    public static AnalysisRunViewModel ForConflicts(
+        IReadOnlyList<AnalysisConflictGroupViewModel> groups,
+        string summary) =>
+        new("Album artist conflicts", summary, AnalysisResultView.Conflicts, groups.Count,
+            conflictGroups: groups);
 
     public static AnalysisRunViewModel ForRepairs(
         AnalysisRepairPlan plan,

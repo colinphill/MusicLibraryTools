@@ -7,13 +7,14 @@ using MusicLibrary.Core.Services;
 namespace MusicLibrary.App.ViewModels;
 
 /// <summary>Which result section the Analyze tab is currently showing.</summary>
-public enum AnalysisResultView { Findings, Duplicates, Artists, Repairs, Matrix }
+public enum AnalysisResultView { Findings, Duplicates, Artists, Conflicts, Repairs, Matrix }
 
 /// <summary>
 /// Library-wide analysis. Each analysis type is run by its own button (inconsistencies, lossy files,
-/// duplicates, similar artists, cross-set check); results replace the previous run. Selecting a
-/// finding/track opens that file; similar-artist clusters can be merged in place. Conservative tag
-/// repairs use a separate preview/select/apply surface and reject sources changed since preview.
+/// duplicates, similar artists, cross-set check); typed results are retained for the session.
+/// Selecting a finding/track opens that file; similar-artist clusters can be merged in place.
+/// Conservative and user-directed tag repairs share a preview/select/apply surface and reject
+/// sources changed since preview.
 /// </summary>
 public partial class AnalyzerViewModel : ViewModelBase
 {
@@ -42,6 +43,7 @@ public partial class AnalyzerViewModel : ViewModelBase
     public ObservableCollection<AnalysisProblemGroupViewModel> FindingGroups { get; } = [];
     public ObservableCollection<DuplicateGroup> Duplicates { get; } = [];
     public ObservableCollection<ArtistGroupViewModel> ArtistGroups { get; } = [];
+    public ObservableCollection<AnalysisConflictGroupViewModel> ConflictGroups { get; } = [];
     public ObservableCollection<AnalysisRepairItemViewModel> RepairItems { get; } = [];
     public ObservableCollection<AlbumMetadataMatrix> Matrices { get; } = [];
     public bool HasRuns => Runs.Count > 0;
@@ -50,6 +52,7 @@ public partial class AnalyzerViewModel : ViewModelBase
     public bool ShowFindings => ActiveView == AnalysisResultView.Findings;
     public bool ShowDuplicates => ActiveView == AnalysisResultView.Duplicates;
     public bool ShowArtists => ActiveView == AnalysisResultView.Artists;
+    public bool ShowConflicts => ActiveView == AnalysisResultView.Conflicts;
     public bool ShowRepairs => ActiveView == AnalysisResultView.Repairs;
     public bool ShowMatrix => ActiveView == AnalysisResultView.Matrix;
 
@@ -74,6 +77,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowFindings));
         OnPropertyChanged(nameof(ShowDuplicates));
         OnPropertyChanged(nameof(ShowArtists));
+        OnPropertyChanged(nameof(ShowConflicts));
         OnPropertyChanged(nameof(ShowRepairs));
         OnPropertyChanged(nameof(ShowMatrix));
     }
@@ -83,6 +87,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         FindingGroups.Clear();
         Duplicates.Clear();
         ArtistGroups.Clear();
+        ConflictGroups.Clear();
         RepairItems.Clear();
         Matrices.Clear();
 
@@ -92,6 +97,7 @@ public partial class AnalyzerViewModel : ViewModelBase
             foreach (var group in value.FindingGroups) FindingGroups.Add(group);
             foreach (var group in value.Duplicates) Duplicates.Add(group);
             foreach (var group in value.ArtistGroups) ArtistGroups.Add(group);
+            foreach (var group in value.ConflictGroups) ConflictGroups.Add(group);
             foreach (var item in value.RepairItems) RepairItems.Add(item);
             foreach (var matrix in value.Matrices) Matrices.Add(matrix);
             StatusText = value.Summary;
@@ -175,6 +181,56 @@ public partial class AnalyzerViewModel : ViewModelBase
         catch (OperationCanceledException) { StatusText = "Metadata repair preview cancelled."; }
         catch (Exception ex) { StatusText = $"Metadata repair preview failed: {ex.Message}"; }
         finally { ApplyRepairsCommand.NotifyCanExecuteChanged(); }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRun))]
+    private async Task FindAlbumArtistConflicts()
+    {
+        using var scope = BeginRun("Album artist conflicts", AnalysisResultView.Conflicts);
+        try
+        {
+            var records = await _library.GetAllRecordsAsync(scope.Token);
+            var conflicts = await Task.Run(() => _repairs.FindAlbumArtistConflicts(records), scope.Token);
+            var groups = conflicts.Select(conflict =>
+            {
+                var group = new AnalysisConflictGroupViewModel(conflict);
+                group.SelectionChanged += () => PreviewConflictRepairsCommand.NotifyCanExecuteChanged();
+                return group;
+            }).ToList();
+            string status = groups.Count == 0
+                ? "No conflicting album artists were found."
+                : $"Found {groups.Count:N0} album(s) with conflicting album artists. Choose canonical values to continue.";
+            AddRun(AnalysisRunViewModel.ForConflicts(groups, status));
+        }
+        catch (OperationCanceledException) { StatusText = "Album artist conflict search cancelled."; }
+        catch (Exception ex) { StatusText = $"Album artist conflict search failed: {ex.Message}"; }
+        finally { PreviewConflictRepairsCommand.NotifyCanExecuteChanged(); }
+    }
+
+    private bool CanPreviewConflictRepairs() => !IsBusy &&
+        ConflictGroups.Any(group => group.SelectedOption is not null);
+
+    [RelayCommand(CanExecute = nameof(CanPreviewConflictRepairs))]
+    private void PreviewConflictRepairs()
+    {
+        var resolutions = ConflictGroups
+            .Where(group => group.SelectedOption is not null)
+            .Select(group => new AnalysisConflictResolution(group.Conflict, group.SelectedOption!.Value))
+            .ToList();
+        if (resolutions.Count == 0)
+            return;
+
+        var plan = _repairs.PreviewConflictRepairs(resolutions);
+        var items = plan.Items.Select(item =>
+        {
+            var viewModel = new AnalysisRepairItemViewModel(item);
+            viewModel.SelectionChanged += () => ApplyRepairsCommand.NotifyCanExecuteChanged();
+            return viewModel;
+        }).ToList();
+        string status = plan.Items.Count == 0
+            ? "The selected canonical values already match every file."
+            : $"Previewed {plan.Items.Count:N0} user-directed repair(s). Review, then apply selected.";
+        AddRun(AnalysisRunViewModel.ForRepairs(plan, items, status));
     }
 
     private bool CanApplyRepairs() => !IsBusy && SelectedRun?.RepairPlan is not null &&
@@ -325,6 +381,8 @@ public partial class AnalyzerViewModel : ViewModelBase
         RunLossyCommand.NotifyCanExecuteChanged();
         RunDuplicatesCommand.NotifyCanExecuteChanged();
         RunSimilarArtistsCommand.NotifyCanExecuteChanged();
+        FindAlbumArtistConflictsCommand.NotifyCanExecuteChanged();
+        PreviewConflictRepairsCommand.NotifyCanExecuteChanged();
         RunAlbumMatrixCommand.NotifyCanExecuteChanged();
         RunCheckSetsCommand.NotifyCanExecuteChanged();
         PreviewMetadataRepairsCommand.NotifyCanExecuteChanged();
@@ -362,4 +420,44 @@ public partial class AnalysisRepairItemViewModel : ViewModelBase
     public AnalysisRepairItemViewModel(AnalysisTagRepair repair) => Repair = repair;
 
     partial void OnIsSelectedChanged(bool value) => SelectionChanged?.Invoke();
+}
+
+public partial class AnalysisConflictGroupViewModel : ViewModelBase
+{
+    public AnalysisTagConflict Conflict { get; }
+    public string Album => Conflict.Album;
+    public string Directory => Conflict.Directory;
+    public string Field => Conflict.Field.ToString();
+    public int FileCount => Conflict.Targets.Count;
+    public int MissingCount => Conflict.Targets.Count(target => string.IsNullOrWhiteSpace(target.Before));
+    public IReadOnlyList<AnalysisConflictOptionViewModel> Options { get; }
+
+    [ObservableProperty]
+    private AnalysisConflictOptionViewModel? _selectedOption;
+
+    public event Action? SelectionChanged;
+
+    public AnalysisConflictGroupViewModel(AnalysisTagConflict conflict)
+    {
+        Conflict = conflict;
+        Options = conflict.Options.Select(option => new AnalysisConflictOptionViewModel(
+            option,
+            conflict.Targets
+                .Where(target => !string.IsNullOrWhiteSpace(target.Before) &&
+                    StringComparer.CurrentCultureIgnoreCase.Equals(target.Before.Trim(), option.Value))
+                .Select(target => target.Path)
+                .ToList()))
+            .ToList();
+    }
+
+    partial void OnSelectedOptionChanged(AnalysisConflictOptionViewModel? value) => SelectionChanged?.Invoke();
+}
+
+public sealed class AnalysisConflictOptionViewModel(
+    AnalysisConflictOption option,
+    IReadOnlyList<string> paths)
+{
+    public string Value => option.Value;
+    public int FileCount => option.FileCount;
+    public IReadOnlyList<string> Paths => paths;
 }

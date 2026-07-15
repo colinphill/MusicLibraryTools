@@ -49,6 +49,31 @@ public sealed record AnalysisRepairPlan(string Name, IReadOnlyList<AnalysisTagRe
     public bool CanApply => Items.Count > 0;
 }
 
+/// <summary>One existing value the user can choose while resolving an ambiguous tag conflict.</summary>
+public sealed record AnalysisConflictOption(string Value, int FileCount);
+
+/// <summary>A file that will be included if the user chooses a canonical value for its conflict.</summary>
+public sealed record AnalysisConflictTarget(
+    string Path,
+    string? Before,
+    long SourceLength,
+    DateTime SourceLastWriteTimeUtc);
+
+/// <summary>
+/// A cache-derived album-level conflict. Options are existing values only; no value is inferred.
+/// </summary>
+public sealed record AnalysisTagConflict(
+    string Album,
+    string Directory,
+    TagFields Field,
+    IReadOnlyList<AnalysisConflictOption> Options,
+    IReadOnlyList<AnalysisConflictTarget> Targets);
+
+/// <summary>An explicit user choice for one ambiguous conflict.</summary>
+public sealed record AnalysisConflictResolution(
+    AnalysisTagConflict Conflict,
+    string SelectedValue);
+
 /// <summary>One finding within an analyzer report; deep-links back to a file.</summary>
 public sealed record AnalysisFinding(string Path, string Description, string? Problem = null);
 

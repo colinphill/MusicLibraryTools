@@ -126,6 +126,51 @@ public sealed class AnalyzerViewModelTests
     }
 
     [Fact]
+    public async Task Analyzer_ConflictChoiceCreatesASeparateRepairPreview()
+    {
+        var records = new[]
+        {
+            Track("one.flac", "First Artist", "Album"),
+            Track("two.flac", "Second Artist", "Album"),
+        };
+        var conflict = new AnalysisTagConflict(
+            "Album",
+            "library",
+            TagFields.AlbumArtist,
+            [new("First Artist", 1), new("Second Artist", 1)],
+            [
+                new(records[0].Path, "First Artist", 100, DateTime.UtcNow),
+                new(records[1].Path, "Second Artist", 100, DateTime.UtcNow),
+            ]);
+        var repairs = new TrackingConflictRepairs(conflict);
+        var viewModel = new AnalyzerViewModel(
+            new StubLibrary(records), new StubReconciler(), repairs,
+            new AppSettings(Path.Combine(Path.GetTempPath(), $"analyzer-{Guid.NewGuid():N}.json")));
+
+        await viewModel.FindAlbumArtistConflictsCommand.ExecuteAsync(null);
+
+        Assert.Equal(AnalysisResultView.Conflicts, viewModel.ActiveView);
+        var conflictRun = Assert.Single(viewModel.Runs);
+        var group = Assert.Single(viewModel.ConflictGroups);
+        Assert.Null(group.SelectedOption);
+        Assert.False(viewModel.PreviewConflictRepairsCommand.CanExecute(null));
+
+        group.SelectedOption = group.Options[1];
+        Assert.True(viewModel.PreviewConflictRepairsCommand.CanExecute(null));
+        viewModel.PreviewConflictRepairsCommand.Execute(null);
+
+        Assert.Equal(2, viewModel.Runs.Count);
+        Assert.Equal(AnalysisResultView.Repairs, viewModel.ActiveView);
+        var item = Assert.Single(viewModel.RepairItems);
+        Assert.Equal("Second Artist", item.After);
+        Assert.Same(conflictRun, viewModel.Runs[1]);
+        Assert.Equal("Second Artist", Assert.Single(repairs.Resolutions!).SelectedValue);
+
+        viewModel.SelectedRun = conflictRun;
+        Assert.Same(group.Options[1], Assert.Single(viewModel.ConflictGroups).SelectedOption);
+    }
+
+    [Fact]
     public async Task Analyzer_AlbumMatrixIsRetainedAsATypedRun()
     {
         var record = Track("track.flac", "AA", "Album") with { TrackTotal = null };
@@ -209,6 +254,9 @@ public sealed class AnalyzerViewModelTests
             new("Repair numbering and totals", []);
         public AnalysisRepairPlan PreviewTextNormalization(IReadOnlyList<TrackRecord> records) =>
             new("Normalize metadata text", []);
+        public IReadOnlyList<AnalysisTagConflict> FindAlbumArtistConflicts(IReadOnlyList<TrackRecord> records) => [];
+        public AnalysisRepairPlan PreviewConflictRepairs(IReadOnlyList<AnalysisConflictResolution> resolutions) =>
+            new("Resolve album artist conflicts", []);
         public Task<BatchWriteResult> ApplyAsync(
             AnalysisRepairPlan plan, IProgress<int>? progress = null, CancellationToken ct = default) =>
             Task.FromResult(new BatchWriteResult([]));
@@ -222,6 +270,41 @@ public sealed class AnalyzerViewModelTests
             SafePreviewCalls++;
             return plan;
         }
+        public AnalysisRepairPlan PreviewMissingAlbumArtists(IReadOnlyList<TrackRecord> records) =>
+            throw new NotSupportedException();
+        public AnalysisRepairPlan PreviewNumberingAndTotals(IReadOnlyList<TrackRecord> records) =>
+            throw new NotSupportedException();
+        public AnalysisRepairPlan PreviewTextNormalization(IReadOnlyList<TrackRecord> records) =>
+            throw new NotSupportedException();
+        public IReadOnlyList<AnalysisTagConflict> FindAlbumArtistConflicts(IReadOnlyList<TrackRecord> records) =>
+            throw new NotSupportedException();
+        public AnalysisRepairPlan PreviewConflictRepairs(IReadOnlyList<AnalysisConflictResolution> resolutions) =>
+            throw new NotSupportedException();
+        public Task<BatchWriteResult> ApplyAsync(
+            AnalysisRepairPlan plan, IProgress<int>? progress = null, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+    }
+
+    private sealed class TrackingConflictRepairs(AnalysisTagConflict conflict) : IAnalysisRepairService
+    {
+        public IReadOnlyList<AnalysisConflictResolution>? Resolutions { get; private set; }
+
+        public IReadOnlyList<AnalysisTagConflict> FindAlbumArtistConflicts(IReadOnlyList<TrackRecord> records) =>
+            [conflict];
+
+        public AnalysisRepairPlan PreviewConflictRepairs(IReadOnlyList<AnalysisConflictResolution> resolutions)
+        {
+            Resolutions = resolutions;
+            var resolution = Assert.Single(resolutions);
+            var target = resolution.Conflict.Targets[0];
+            return new AnalysisRepairPlan("Resolve album artist conflicts", [
+                new(target.Path, TagFields.AlbumArtist, target.Before, resolution.SelectedValue,
+                    "User selected", target.SourceLength, target.SourceLastWriteTimeUtc),
+            ]);
+        }
+
+        public AnalysisRepairPlan PreviewSafeRepairs(IReadOnlyList<TrackRecord> records) =>
+            throw new NotSupportedException();
         public AnalysisRepairPlan PreviewMissingAlbumArtists(IReadOnlyList<TrackRecord> records) =>
             throw new NotSupportedException();
         public AnalysisRepairPlan PreviewNumberingAndTotals(IReadOnlyList<TrackRecord> records) =>

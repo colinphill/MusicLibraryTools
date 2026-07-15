@@ -383,6 +383,9 @@
                                 <Button Content="Album matrix" Margin="0,0,8,8" Command="{Binding RunAlbumMatrixCommand}"/>
                                 <Button Content="Metadata repairs" Margin="0,0,8,8"
                                         Command="{Binding PreviewMetadataRepairsCommand}"/>
+                                <Button Content="Album artist conflicts" Margin="0,0,8,8"
+                                        Command="{Binding FindAlbumArtistConflictsCommand}"
+                                        ToolTip.Tip="Choose canonical values for ambiguous album artists"/>
                                 <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,8" VerticalAlignment="Center">
                                     <Button Content="Similar artists" Command="{Binding RunSimilarArtistsCommand}"/>
                                     <TextBlock Text="threshold" Classes="muted" VerticalAlignment="Center"/>
@@ -557,12 +560,87 @@
                                     </ItemsControl>
                                 </ScrollViewer>
 
+                                <!-- Explicit choices for ambiguous album-artist values -->
+                                <Grid IsVisible="{Binding ShowConflicts}" RowDefinitions="Auto,*">
+                                    <WrapPanel Grid.Row="0" Classes="toolbarwrap" Margin="0,0,-8,4">
+                                        <Button Content="Create repair preview" Classes="accent"
+                                                Command="{Binding PreviewConflictRepairsCommand}"/>
+                                        <TextBlock Text="Choose an existing canonical value for any album you want to repair. Nothing is selected automatically."
+                                                   Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                    </WrapPanel>
+                                    <ScrollViewer Grid.Row="1">
+                                        <ItemsControl ItemsSource="{Binding ConflictGroups}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:AnalysisConflictGroupViewModel">
+                                                    <Border Classes="card" Margin="0,0,0,8" Padding="12">
+                                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                                            <StackPanel Grid.Column="0" Spacing="3">
+                                                                <TextBlock Text="{Binding Album}" Classes="h2" TextWrapping="Wrap"/>
+                                                                <TextBlock Text="{Binding Directory}" Classes="caption" TextWrapping="Wrap"/>
+                                                                <TextBlock Classes="muted">
+                                                                    <Run Text="{Binding FileCount, StringFormat='{}{0} files · '}"/>
+                                                                    <Run Text="{Binding Options.Count, StringFormat='{}{0} existing values · '}"/>
+                                                                    <Run Text="{Binding MissingCount, StringFormat='{}{0} missing'}"/>
+                                                                </TextBlock>
+                                                                <ItemsControl ItemsSource="{Binding Options}" Margin="0,3,0,0">
+                                                                    <ItemsControl.ItemTemplate>
+                                                                        <DataTemplate x:DataType="vm:AnalysisConflictOptionViewModel">
+                                                                            <Expander HorizontalAlignment="Stretch" Padding="6,2">
+                                                                                <Expander.Header>
+                                                                                    <TextBlock>
+                                                                                        <Run Text="{Binding Value}" FontWeight="SemiBold"/>
+                                                                                        <Run Text="{Binding FileCount, StringFormat='  ({0} files)'}"
+                                                                                             Foreground="{DynamicResource AppTextMuted}"/>
+                                                                                    </TextBlock>
+                                                                                </Expander.Header>
+                                                                                <ItemsControl ItemsSource="{Binding Paths}">
+                                                                                    <ItemsControl.ItemTemplate>
+                                                                                        <DataTemplate x:DataType="sys:String">
+                                                                                            <Button HorizontalAlignment="Stretch"
+                                                                                                    HorizontalContentAlignment="Left"
+                                                                                                    Background="Transparent" Padding="4,2"
+                                                                                                    Command="{Binding $parent[TabItem].((vm:AnalyzerViewModel)DataContext).OpenCommand}"
+                                                                                                    CommandParameter="{Binding}">
+                                                                                                <TextBlock Text="{Binding}" Classes="caption" TextWrapping="Wrap"/>
+                                                                                            </Button>
+                                                                                        </DataTemplate>
+                                                                                    </ItemsControl.ItemTemplate>
+                                                                                </ItemsControl>
+                                                                            </Expander>
+                                                                        </DataTemplate>
+                                                                    </ItemsControl.ItemTemplate>
+                                                                </ItemsControl>
+                                                            </StackPanel>
+                                                            <StackPanel Grid.Column="1" MinWidth="240" Spacing="4">
+                                                                <TextBlock Text="Canonical album artist" Classes="muted"/>
+                                                                <ComboBox ItemsSource="{Binding Options}"
+                                                                          SelectedItem="{Binding SelectedOption}"
+                                                                          PlaceholderText="Choose a value…">
+                                                                    <ComboBox.ItemTemplate>
+                                                                        <DataTemplate x:DataType="vm:AnalysisConflictOptionViewModel">
+                                                                            <TextBlock>
+                                                                                <Run Text="{Binding Value}"/>
+                                                                                <Run Text="{Binding FileCount, StringFormat='  ({0} files)'}"
+                                                                                     Foreground="{DynamicResource AppTextMuted}"/>
+                                                                            </TextBlock>
+                                                                        </DataTemplate>
+                                                                    </ComboBox.ItemTemplate>
+                                                                </ComboBox>
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Grid>
+
                                 <!-- Previewable, stale-checked metadata repairs -->
                                 <Grid IsVisible="{Binding ShowRepairs}" RowDefinitions="Auto,*">
                                     <WrapPanel Grid.Row="0" Classes="toolbarwrap" Margin="0,0,-8,4">
                                         <Button Content="Apply selected" Classes="accent"
                                                 Command="{Binding ApplyRepairsCommand}"/>
-                                        <TextBlock Text="Only unambiguous tag repairs are proposed; changed files require a new preview."
+                                        <TextBlock Text="Automatic repairs are unambiguous; explicit conflict choices use the same stale-checked preview."
                                                    Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                     </WrapPanel>
                                     <ScrollViewer Grid.Row="1">

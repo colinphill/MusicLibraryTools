@@ -14,6 +14,10 @@ public interface IAnalysisRepairService
 
     AnalysisRepairPlan PreviewTextNormalization(IReadOnlyList<TrackRecord> records);
 
+    IReadOnlyList<AnalysisTagConflict> FindAlbumArtistConflicts(IReadOnlyList<TrackRecord> records);
+
+    AnalysisRepairPlan PreviewConflictRepairs(IReadOnlyList<AnalysisConflictResolution> resolutions);
+
     Task<BatchWriteResult> ApplyAsync(
         AnalysisRepairPlan plan,
         IProgress<int>? progress = null,
@@ -193,6 +197,93 @@ public sealed class AnalysisRepairService(ITagWriteService writer) : IAnalysisRe
         return new AnalysisRepairPlan("Normalize metadata text", repairs.Values
             .OrderBy(repair => repair.Path, StringComparer.CurrentCultureIgnoreCase)
             .ThenBy(repair => repair.Field)
+            .ToList());
+    }
+
+    public IReadOnlyList<AnalysisTagConflict> FindAlbumArtistConflicts(IReadOnlyList<TrackRecord> records)
+    {
+        ArgumentNullException.ThrowIfNull(records);
+        var conflicts = new List<AnalysisTagConflict>();
+
+        foreach (var album in records
+                     .Where(record => !string.IsNullOrWhiteSpace(record.Album))
+                     .GroupBy(record => (
+                         Directory: AlbumPackageRoot(record.Path),
+                         Album: record.Album!.Trim()), AlbumFolderComparer.Instance))
+        {
+            var options = album
+                .Where(record => record.HasAlbumArtist && !string.IsNullOrWhiteSpace(record.AlbumArtist))
+                .Select(record => record.AlbumArtist!.Trim())
+                .GroupBy(value => value, StringComparer.CurrentCultureIgnoreCase)
+                .Select(group => new AnalysisConflictOption(
+                    group.GroupBy(value => value, StringComparer.Ordinal)
+                        .OrderByDescending(spelling => spelling.Count())
+                        .ThenBy(spelling => spelling.Key, StringComparer.CurrentCulture)
+                        .First().Key,
+                    group.Count()))
+                .OrderByDescending(option => option.FileCount)
+                .ThenBy(option => option.Value, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+            if (options.Count < 2)
+                continue;
+
+            var targets = album
+                .Select(record => new AnalysisConflictTarget(
+                    record.Path,
+                    record.HasAlbumArtist ? record.AlbumArtist : null,
+                    record.Length,
+                    record.LastWriteTime))
+                .OrderBy(target => target.Path, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+            conflicts.Add(new AnalysisTagConflict(
+                album.Key.Album,
+                album.Key.Directory,
+                TagFields.AlbumArtist,
+                options,
+                targets));
+        }
+
+        return conflicts
+            .OrderBy(conflict => conflict.Directory, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(conflict => conflict.Album, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
+    public AnalysisRepairPlan PreviewConflictRepairs(IReadOnlyList<AnalysisConflictResolution> resolutions)
+    {
+        ArgumentNullException.ThrowIfNull(resolutions);
+        var repairs = new List<AnalysisTagRepair>();
+        foreach (var resolution in resolutions)
+        {
+            ArgumentNullException.ThrowIfNull(resolution.Conflict);
+            string selected = resolution.SelectedValue?.Trim() ?? "";
+            var option = resolution.Conflict.Options.FirstOrDefault(candidate =>
+                StringComparer.CurrentCultureIgnoreCase.Equals(candidate.Value, selected));
+            if (option is null)
+                throw new ArgumentException(
+                    $"'{resolution.SelectedValue}' is not an existing value for {resolution.Conflict.Album}.",
+                    nameof(resolutions));
+
+            string canonical = option.Value;
+            string reason = $"User selected this canonical value from {resolution.Conflict.Options.Count} existing album-artist values.";
+            foreach (var target in resolution.Conflict.Targets.Where(target =>
+                         !StringComparer.Ordinal.Equals(target.Before, canonical)))
+            {
+                repairs.Add(new AnalysisTagRepair(
+                    target.Path,
+                    resolution.Conflict.Field,
+                    target.Before,
+                    canonical,
+                    reason,
+                    target.SourceLength,
+                    target.SourceLastWriteTimeUtc));
+            }
+        }
+
+        return new AnalysisRepairPlan("Resolve album artist conflicts", repairs
+            .GroupBy(repair => (repair.Path, repair.Field), PathFieldComparer.Instance)
+            .Select(group => group.Single())
+            .OrderBy(repair => repair.Path, StringComparer.CurrentCultureIgnoreCase)
             .ToList());
     }
 

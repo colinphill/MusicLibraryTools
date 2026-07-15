@@ -64,6 +64,135 @@ public sealed class AnalysisRepairServiceTests
     }
 
     [Fact]
+    public void AlbumArtistConflicts_GroupMultiDiscPackagesWithoutChoosingAValue()
+    {
+        string album = Path.Combine("library", "Artist", "Album");
+        var records = new[]
+        {
+            Track(Path.Combine(album, "Disc 1", "01.flac"), "Album", "Guest", "First Artist"),
+            Track(Path.Combine(album, "Disc 1", "02.flac"), "Album", "Guest", "Second Artist"),
+            Track(Path.Combine(album, "Disc 2", "01.flac"), "Album", "Guest", "First Artist"),
+            Track(Path.Combine(album, "Disc 2", "02.flac"), "Album", "Guest", null),
+        };
+        var service = new AnalysisRepairService(new RecordingWriter());
+
+        var conflict = Assert.Single(service.FindAlbumArtistConflicts(records));
+
+        Assert.Equal("Album", conflict.Album);
+        Assert.Equal(album, conflict.Directory);
+        Assert.Equal(TagFields.AlbumArtist, conflict.Field);
+        Assert.Equal(4, conflict.Targets.Count);
+        Assert.Collection(conflict.Options,
+            option =>
+            {
+                Assert.Equal("First Artist", option.Value);
+                Assert.Equal(2, option.FileCount);
+            },
+            option =>
+            {
+                Assert.Equal("Second Artist", option.Value);
+                Assert.Equal(1, option.FileCount);
+            });
+    }
+
+    [Fact]
+    public void AlbumArtistConflicts_IgnoreCaseOnlyVariants()
+    {
+        string folder = Path.Combine("library", "Artist", "Album");
+        var records = new[]
+        {
+            Track(Path.Combine(folder, "01.flac"), "Album", "Artist", "Canonical Artist"),
+            Track(Path.Combine(folder, "02.flac"), "Album", "Artist", "canonical artist"),
+        };
+
+        var conflicts = new AnalysisRepairService(new RecordingWriter())
+            .FindAlbumArtistConflicts(records);
+
+        Assert.Empty(conflicts);
+    }
+
+    [Fact]
+    public void ConflictRepairPreview_ChangesOnlyFilesThatDifferFromTheExplicitChoice()
+    {
+        string folder = Path.Combine("library", "Artist", "Album");
+        var records = new[]
+        {
+            Track(Path.Combine(folder, "01.flac"), "Album", "Guest", "First Artist"),
+            Track(Path.Combine(folder, "02.flac"), "Album", "Guest", "Second Artist"),
+            Track(Path.Combine(folder, "03.flac"), "Album", "Guest", null),
+        };
+        var service = new AnalysisRepairService(new RecordingWriter());
+        var conflict = Assert.Single(service.FindAlbumArtistConflicts(records));
+
+        var plan = service.PreviewConflictRepairs([
+            new AnalysisConflictResolution(conflict, "Second Artist"),
+        ]);
+
+        Assert.Equal("Resolve album artist conflicts", plan.Name);
+        Assert.Equal(2, plan.Items.Count);
+        Assert.DoesNotContain(plan.Items, repair => repair.Path == records[1].Path);
+        Assert.All(plan.Items, repair =>
+        {
+            Assert.Equal(TagFields.AlbumArtist, repair.Field);
+            Assert.Equal("Second Artist", repair.After);
+            Assert.Contains("User selected", repair.Reason);
+        });
+        Assert.Contains(plan.Items, repair => repair.Path == records[2].Path && repair.Before is null);
+    }
+
+    [Fact]
+    public void ConflictRepairPreview_RejectsValuesNotPresentInTheConflict()
+    {
+        string folder = Path.Combine("library", "Artist", "Album");
+        var records = new[]
+        {
+            Track(Path.Combine(folder, "01.flac"), "Album", "Artist", "First"),
+            Track(Path.Combine(folder, "02.flac"), "Album", "Artist", "Second"),
+        };
+        var service = new AnalysisRepairService(new RecordingWriter());
+        var conflict = Assert.Single(service.FindAlbumArtistConflicts(records));
+
+        Assert.Throws<ArgumentException>(() => service.PreviewConflictRepairs([
+            new AnalysisConflictResolution(conflict, "Invented value"),
+        ]));
+    }
+
+    [Fact]
+    public async Task ConflictRepairPreview_PreservesSnapshotsForStaleCheckedApply()
+    {
+        using var temp = new TempDirectory();
+        string first = temp.File("first.flac", "first");
+        string second = temp.File("second.flac", "second");
+        var firstInfo = new FileInfo(first);
+        var secondInfo = new FileInfo(second);
+        var records = new[]
+        {
+            Track(first, "Album", "Artist", "First") with
+            {
+                Length = firstInfo.Length,
+                LastWriteTime = firstInfo.LastWriteTimeUtc,
+            },
+            Track(second, "Album", "Artist", "Second") with
+            {
+                Length = secondInfo.Length,
+                LastWriteTime = secondInfo.LastWriteTimeUtc,
+            },
+        };
+        var writer = new RecordingWriter();
+        var service = new AnalysisRepairService(writer);
+        var conflict = Assert.Single(service.FindAlbumArtistConflicts(records));
+        var plan = service.PreviewConflictRepairs([
+            new AnalysisConflictResolution(conflict, "Second"),
+        ]);
+        File.AppendAllText(first, " changed");
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => service.ApplyAsync(plan));
+
+        Assert.Contains("Source changed since the repair preview", error.Message);
+        Assert.Empty(writer.Calls);
+    }
+
+    [Fact]
     public void PreviewNumbering_UsesCalibratedFilenameAndPeerTotal()
     {
         string folder = Path.Combine("library", "Artist", "Album");
