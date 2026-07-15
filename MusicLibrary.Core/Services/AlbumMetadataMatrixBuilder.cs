@@ -60,8 +60,6 @@ public static class AlbumMetadataMatrixBuilder
         MarkDifferingText(records.Where(record => record.HasAlbumArtist),
             record => record.AlbumArtist, MatrixField.AlbumArtist,
             "Album Artist values differ within this album package.", Mark);
-        MarkDifferingText(records, record => record.Album, MatrixField.Album,
-            "Album values differ within this album package.", Mark);
         var datedRecords = records.Where(record => !string.IsNullOrWhiteSpace(record.ReleaseDate)).ToList();
         if (datedRecords.Count > 0)
         {
@@ -77,15 +75,49 @@ public static class AlbumMetadataMatrixBuilder
                 ? record.DiscNumber.Value
                 : ParseDiscFolder(record.Path) ?? 1,
             PathComparer);
+        bool discLocationConflict = false;
         foreach (var record in records)
         {
             int? folderDisc = ParseDiscFolder(record.Path);
             if (record.DiscNumber is > 0 && folderDisc is > 0 && record.DiscNumber != folderDisc)
+            {
+                discLocationConflict = true;
                 Mark(record, MatrixField.DiscNumber, "Disc tag conflicts with the explicit disc folder.");
+            }
         }
 
         var distinctDiscs = effectiveDiscs.Values.Distinct().Order().ToList();
         bool multiDisc = distinctDiscs.Count > 1 || records.Any(record => record.DiscTotal is > 1);
+        bool canonicalDiscNamesKnown = !discLocationConflict && distinctDiscs.Count >= 2 &&
+            IsCompleteSequence(distinctDiscs);
+        if (canonicalDiscNamesKnown)
+        {
+            var baseNames = records
+                .Where(record => !string.IsNullOrWhiteSpace(record.Album))
+                .Select(record => StripDiscSuffix(record.Album!))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            if (baseNames.Count != 1)
+            {
+                foreach (var record in records.Where(record => !string.IsNullOrWhiteSpace(record.Album)))
+                    Mark(record, MatrixField.Album, "Base album names differ within this multi-disc package.");
+            }
+            else
+            {
+                foreach (var record in records.Where(record => !string.IsNullOrWhiteSpace(record.Album)))
+                {
+                    string expected = $"{baseNames[0]} (Disc {effectiveDiscs[record.Path]})";
+                    if (!StringComparer.Ordinal.Equals(record.Album, expected))
+                        Mark(record, MatrixField.Album,
+                            $"Album name should be '{expected}' for this multi-disc package.");
+                }
+            }
+        }
+        else
+        {
+            MarkDifferingText(records, record => record.Album, MatrixField.Album,
+                "Album values differ within this album package.", Mark);
+        }
         if (multiDisc)
         {
             foreach (var record in records.Where(record => record.DiscNumber is null or <= 0))

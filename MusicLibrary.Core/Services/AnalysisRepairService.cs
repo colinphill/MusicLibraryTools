@@ -14,6 +14,8 @@ public interface IAnalysisRepairService
 
     AnalysisRepairPlan PreviewTextNormalization(IReadOnlyList<TrackRecord> records);
 
+    AnalysisRepairPlan PreviewMultiDiscAlbumNames(IReadOnlyList<TrackRecord> records);
+
     IReadOnlyList<AnalysisTagConflict> FindAlbumArtistConflicts(IReadOnlyList<TrackRecord> records);
 
     AnalysisRepairPlan PreviewConflictRepairs(IReadOnlyList<AnalysisConflictResolution> resolutions);
@@ -39,12 +41,16 @@ public sealed class AnalysisRepairService(ITagWriteService writer) : IAnalysisRe
     private static readonly Regex DiscFolderNumber = new(
         @"^(?:cd|disc|disk)\s*[-._ ]?\s*(?<number>\d{1,2})(?:\D|$)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private static readonly Regex DiscAlbumSuffix = new(
+        @"^(?<album>.+?)\s+\(Disc\s+(?<number>\d+)\)$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     public AnalysisRepairPlan PreviewSafeRepairs(IReadOnlyList<TrackRecord> records)
     {
         ArgumentNullException.ThrowIfNull(records);
         var repairs = PreviewMissingAlbumArtists(records).Items
             .Concat(PreviewNumberingAndTotals(records).Items)
+            .Concat(PreviewMultiDiscAlbumNames(records).Items)
             .Concat(PreviewTextNormalization(records).Items)
             .GroupBy(repair => (repair.Path, repair.Field), PathFieldComparer.Instance)
             .Select(group => group.First())
@@ -197,6 +203,61 @@ public sealed class AnalysisRepairService(ITagWriteService writer) : IAnalysisRe
         return new AnalysisRepairPlan("Normalize metadata text", repairs.Values
             .OrderBy(repair => repair.Path, StringComparer.CurrentCultureIgnoreCase)
             .ThenBy(repair => repair.Field)
+            .ToList());
+    }
+
+    public AnalysisRepairPlan PreviewMultiDiscAlbumNames(IReadOnlyList<TrackRecord> records)
+    {
+        ArgumentNullException.ThrowIfNull(records);
+        var repairs = new List<AnalysisTagRepair>();
+        var packages = records
+            .Where(record => !string.IsNullOrWhiteSpace(record.Album))
+            .GroupBy(record => (
+                Directory: AlbumPackageRoot(record.Path),
+                Album: StripDiscSuffix(record.Album!)), AlbumFolderComparer.Instance);
+
+        foreach (var package in packages)
+        {
+            var entries = package.Select(record => new
+            {
+                Record = record,
+                FolderDisc = ParseDiscFolder(Path.GetFileName(Path.GetDirectoryName(record.Path))),
+            }).ToList();
+            if (entries.Any(entry => entry.Record.DiscNumber is > 0 && entry.FolderDisc is > 0 &&
+                    entry.Record.DiscNumber != entry.FolderDisc))
+                continue;
+
+            var effectiveDiscs = entries
+                .Select(entry => entry.Record.DiscNumber is > 0
+                    ? entry.Record.DiscNumber
+                    : entry.FolderDisc)
+                .ToList();
+            if (effectiveDiscs.Any(disc => disc is null or <= 0))
+                continue;
+            var distinctDiscs = effectiveDiscs.Select(disc => disc!.Value).Distinct().Order().ToList();
+            if (distinctDiscs.Count < 2 || !IsCompleteSequence(distinctDiscs))
+                continue;
+
+            var baseNames = entries.Select(entry => StripDiscSuffix(entry.Record.Album!))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+            if (baseNames.Count != 1 || string.IsNullOrWhiteSpace(baseNames[0]))
+                continue;
+            string baseName = baseNames[0];
+
+            for (int index = 0; index < entries.Count; index++)
+            {
+                var record = entries[index].Record;
+                string expected = $"{baseName} (Disc {effectiveDiscs[index]!.Value})";
+                if (StringComparer.Ordinal.Equals(record.Album, expected))
+                    continue;
+                repairs.Add(Repair(record, TagFields.Album, record.Album, expected,
+                    "Matches the canonical album name for this complete, unambiguous multi-disc package."));
+            }
+        }
+
+        return new AnalysisRepairPlan("Normalize multi-disc album names", repairs
+            .OrderBy(repair => repair.Path, StringComparer.CurrentCultureIgnoreCase)
             .ToList());
     }
 
@@ -554,6 +615,12 @@ public sealed class AnalysisRepairService(ITagWriteService writer) : IAnalysisRe
         return match.Success && int.TryParse(match.Groups["number"].Value, out int number) && number > 0
             ? number
             : null;
+    }
+
+    private static string StripDiscSuffix(string value)
+    {
+        var match = DiscAlbumSuffix.Match(value.Trim());
+        return match.Success ? match.Groups["album"].Value.Trim() : value.Trim();
     }
 
     private static string AlbumPackageRoot(string path)

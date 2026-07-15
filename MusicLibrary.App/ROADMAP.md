@@ -16,12 +16,12 @@ avoid eagerly reading artwork or media data that is already represented in the m
 - [x] Keep typed analysis results in an in-session history instead of replacing the previous run.
 - [x] Group findings by problem and album, with completed/ignored/deferred state.
 - [x] Preview and apply stale-checked repairs for safely inferable missing Album Artist values.
-- [ ] Extend batch repairs to conflicting album artists, numbering, totals, multi-disc naming,
+- [x] Extend batch repairs to conflicting album artists, numbering, totals, multi-disc naming,
       whitespace, and casing.
   - [x] Infer calibrated filename track numbers, peer/sequence totals, and explicit disc-folder numbers.
   - [x] Normalize edge whitespace and strict-majority case/spacing variants without guessing on ties.
   - [x] Add user-directed album-artist conflict resolution.
-  - [ ] Add multi-disc naming repairs.
+  - [x] Normalize complete, unambiguous multi-disc packages to `Album (Disc N)` names.
 - [x] Add a cache-only album metadata matrix with inconsistent cells highlighted and file links.
 
 ## 3. Quarantine and recovery

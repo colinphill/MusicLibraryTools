@@ -300,6 +300,79 @@ public sealed class AnalysisRepairServiceTests
     }
 
     [Fact]
+    public void PreviewMultiDiscNames_UsesACompleteDiscTagSequence()
+    {
+        string album = Path.Combine("library", "Artist", "Album");
+        var records = new[]
+        {
+            Track(Path.Combine(album, "01.flac"), "Album", "Artist", "Artist", discNumber: 1, discTotal: 2),
+            Track(Path.Combine(album, "02.flac"), "Album", "Artist", "Artist", discNumber: 2, discTotal: 2),
+        };
+
+        var plan = new AnalysisRepairService(new RecordingWriter()).PreviewMultiDiscAlbumNames(records);
+
+        Assert.Equal(2, plan.Items.Count);
+        Assert.Contains(plan.Items, repair => repair.Path == records[0].Path && repair.After == "Album (Disc 1)");
+        Assert.Contains(plan.Items, repair => repair.Path == records[1].Path && repair.After == "Album (Disc 2)");
+        Assert.All(plan.Items, repair => Assert.Equal(TagFields.Album, repair.Field));
+    }
+
+    [Fact]
+    public void PreviewMultiDiscNames_UsesCompleteExplicitFoldersAndCorrectsWrongSuffixes()
+    {
+        string album = Path.Combine("library", "Artist", "Album");
+        var records = new[]
+        {
+            Track(Path.Combine(album, "Disc 1", "01.flac"), "Album (Disc 9)", "Artist", "Artist"),
+            Track(Path.Combine(album, "Disc 2", "01.flac"), "Album (Disc 9)", "Artist", "Artist"),
+        };
+
+        var plan = new AnalysisRepairService(new RecordingWriter()).PreviewMultiDiscAlbumNames(records);
+
+        Assert.Equal(["Album (Disc 1)", "Album (Disc 2)"], plan.Items.Select(repair => repair.After));
+    }
+
+    [Fact]
+    public void PreviewMultiDiscNames_SkipsGapsTagFolderConflictsAndAmbiguousBaseNames()
+    {
+        var service = new AnalysisRepairService(new RecordingWriter());
+        string gap = Path.Combine("library", "Gap");
+        string conflict = Path.Combine("library", "Conflict");
+        string ambiguous = Path.Combine("library", "Ambiguous");
+
+        Assert.Empty(service.PreviewMultiDiscAlbumNames([
+            Track(Path.Combine(gap, "one.flac"), "Album", "Artist", "Artist", discNumber: 1),
+            Track(Path.Combine(gap, "three.flac"), "Album", "Artist", "Artist", discNumber: 3),
+        ]).Items);
+        Assert.Empty(service.PreviewMultiDiscAlbumNames([
+            Track(Path.Combine(conflict, "Disc 1", "one.flac"), "Album", "Artist", "Artist", discNumber: 2),
+            Track(Path.Combine(conflict, "Disc 2", "two.flac"), "Album", "Artist", "Artist", discNumber: 2),
+        ]).Items);
+        Assert.Empty(service.PreviewMultiDiscAlbumNames([
+            Track(Path.Combine(ambiguous, "one.flac"), "Album", "Artist", "Artist", discNumber: 1),
+            Track(Path.Combine(ambiguous, "two.flac"), "album", "Artist", "Artist", discNumber: 2),
+        ]).Items);
+    }
+
+    [Fact]
+    public void SafePreview_PrefersCanonicalDiscNameOverIntermediateWhitespaceRepair()
+    {
+        string album = Path.Combine("library", "Artist", "Album");
+        var records = new[]
+        {
+            Track(Path.Combine(album, "one.flac"), " Album ", "Artist", "Artist", discNumber: 1),
+            Track(Path.Combine(album, "two.flac"), "Album", "Artist", "Artist", discNumber: 2),
+        };
+
+        var plan = new AnalysisRepairService(new RecordingWriter()).PreviewSafeRepairs(records);
+
+        Assert.Contains(plan.Items, repair =>
+            repair.Path == records[0].Path && repair.Field == TagFields.Album && repair.After == "Album (Disc 1)");
+        Assert.DoesNotContain(plan.Items, repair =>
+            repair.Path == records[0].Path && repair.Field == TagFields.Album && repair.After == "Album");
+    }
+
+    [Fact]
     public void PreviewText_TrimsEdgesWithoutCreatingAnAbsentAlbumArtist()
     {
         string folder = Path.Combine("library", "Artist", "Album");

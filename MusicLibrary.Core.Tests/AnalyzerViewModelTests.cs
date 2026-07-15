@@ -254,6 +254,8 @@ public sealed class AnalyzerViewModelTests
             new("Repair numbering and totals", []);
         public AnalysisRepairPlan PreviewTextNormalization(IReadOnlyList<TrackRecord> records) =>
             new("Normalize metadata text", []);
+        public AnalysisRepairPlan PreviewMultiDiscAlbumNames(IReadOnlyList<TrackRecord> records) =>
+            new("Normalize multi-disc album names", []);
         public IReadOnlyList<AnalysisTagConflict> FindAlbumArtistConflicts(IReadOnlyList<TrackRecord> records) => [];
         public AnalysisRepairPlan PreviewConflictRepairs(IReadOnlyList<AnalysisConflictResolution> resolutions) =>
             new("Resolve album artist conflicts", []);
@@ -275,6 +277,8 @@ public sealed class AnalyzerViewModelTests
         public AnalysisRepairPlan PreviewNumberingAndTotals(IReadOnlyList<TrackRecord> records) =>
             throw new NotSupportedException();
         public AnalysisRepairPlan PreviewTextNormalization(IReadOnlyList<TrackRecord> records) =>
+            throw new NotSupportedException();
+        public AnalysisRepairPlan PreviewMultiDiscAlbumNames(IReadOnlyList<TrackRecord> records) =>
             throw new NotSupportedException();
         public IReadOnlyList<AnalysisTagConflict> FindAlbumArtistConflicts(IReadOnlyList<TrackRecord> records) =>
             throw new NotSupportedException();
@@ -310,6 +314,8 @@ public sealed class AnalyzerViewModelTests
         public AnalysisRepairPlan PreviewNumberingAndTotals(IReadOnlyList<TrackRecord> records) =>
             throw new NotSupportedException();
         public AnalysisRepairPlan PreviewTextNormalization(IReadOnlyList<TrackRecord> records) =>
+            throw new NotSupportedException();
+        public AnalysisRepairPlan PreviewMultiDiscAlbumNames(IReadOnlyList<TrackRecord> records) =>
             throw new NotSupportedException();
         public Task<BatchWriteResult> ApplyAsync(
             AnalysisRepairPlan plan, IProgress<int>? progress = null, CancellationToken ct = default) =>

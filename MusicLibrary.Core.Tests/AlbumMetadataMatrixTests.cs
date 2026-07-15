@@ -59,7 +59,7 @@ public sealed class AlbumMetadataMatrixTests
     }
 
     [Fact]
-    public void ExplicitDiscFoldersAreOneMatrixAndExposeMultiDiscNaming()
+    public void CanonicallyNamedExplicitDiscFoldersProduceNoMatrix()
     {
         string album = Path.Combine("Artist", "Album");
         var records = new[]
@@ -74,13 +74,30 @@ public sealed class AlbumMetadataMatrixTests
             },
         };
 
+        Assert.Empty(AlbumMetadataMatrixBuilder.Build(records));
+    }
+
+    [Fact]
+    public void MatrixHighlightsIncorrectMultiDiscAlbumSuffixes()
+    {
+        string album = Path.Combine("Artist", "Album");
+        var records = new[]
+        {
+            Track(Path.Combine(album, "Disc 1", "01.flac"), 1, 1, "One") with
+            {
+                Album = "Album", DiscNumber = 1, DiscTotal = 2,
+            },
+            Track(Path.Combine(album, "Disc 2", "01.flac"), 1, 1, "Two") with
+            {
+                Album = "Album (Disc 9)", DiscNumber = 2, DiscTotal = 2,
+            },
+        };
+
         var matrix = Assert.Single(AlbumMetadataMatrixBuilder.Build(records));
 
-        Assert.Equal(2, matrix.Rows.Count);
-        Assert.Equal(album, matrix.Root);
         Assert.All(matrix.Rows, row => Assert.True(row.Album.IsInconsistent));
-        Assert.All(matrix.Rows, row => Assert.False(row.DiscNumber.IsInconsistent));
-        Assert.All(matrix.Rows, row => Assert.False(row.DiscTotal.IsInconsistent));
+        Assert.Contains("Album (Disc 1)", matrix.Rows[0].Album.Reason);
+        Assert.Contains("Album (Disc 2)", matrix.Rows[1].Album.Reason);
     }
 
     [Fact]
