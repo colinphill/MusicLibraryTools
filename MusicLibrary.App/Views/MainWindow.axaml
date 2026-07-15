@@ -835,7 +835,7 @@
 
                     <!-- Ingest incoming FLAC / ALAC albums -->
                     <TabItem Header="Ingest" DataContext="{Binding Ingest}" x:DataType="vm:IngestViewModel">
-                        <Grid RowDefinitions="Auto,Auto,*" Margin="2,12,2,2">
+                        <Grid RowDefinitions="Auto,*" Margin="2,12,2,2">
                             <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,10">
                                 <Grid ColumnDefinitions="Auto,*,Auto,220" ColumnSpacing="8"
                                       DragDrop.AllowDrop="True"
@@ -900,15 +900,38 @@
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
+                                <Grid ColumnDefinitions="*,*,*,*,Auto" ColumnSpacing="8"
+                                      IsVisible="{Binding HasPreviewSummary}">
+                                    <Border Grid.Column="0" Classes="card" Padding="10">
+                                        <StackPanel>
+                                            <TextBlock Text="Albums" Classes="caption"/>
+                                            <TextBlock Text="{Binding AlbumCount}" Classes="h2"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Column="1" Classes="card" Padding="10">
+                                        <StackPanel>
+                                            <TextBlock Text="Outputs" Classes="caption"/>
+                                            <TextBlock Text="{Binding OutputCount}" Classes="h2"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Column="2" Classes="card" Padding="10">
+                                        <StackPanel>
+                                            <TextBlock Text="Conflicts" Classes="caption"/>
+                                            <TextBlock Text="{Binding ConflictCount}" Classes="h2"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Grid.Column="3" Classes="card" Padding="10">
+                                        <StackPanel>
+                                            <TextBlock Text="Cleanup" Classes="caption"/>
+                                            <TextBlock Text="{Binding CleanupCount}" Classes="h2"/>
+                                        </StackPanel>
+                                    </Border>
+                                    <ComboBox Grid.Column="4" ItemsSource="{Binding PreviewFilters}"
+                                              SelectedItem="{Binding SelectedPreviewFilter}"
+                                              MinWidth="130" VerticalAlignment="Center"/>
+                                </Grid>
                             </StackPanel>
-                            <ItemsControl Grid.Row="1" ItemsSource="{Binding Conflicts}" Margin="0,0,0,8">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="models:IngestConflict">
-                                        <TextBlock Text="{Binding Message}" Foreground="#D94A4A" TextWrapping="Wrap"/>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            <ScrollViewer Grid.Row="2">
+                            <ScrollViewer Grid.Row="1">
                                 <ItemsControl ItemsSource="{Binding Files}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:IngestFileItemViewModel">

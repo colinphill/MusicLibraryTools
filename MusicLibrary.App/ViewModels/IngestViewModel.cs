@@ -9,6 +9,7 @@ using MusicLibrary.Core.Services;
 namespace MusicLibrary.App.ViewModels;
 
 public sealed record IngestPreset(string Name, string SourceDirectory, string ConfigurationPath);
+public enum IngestPreviewFilter { All, Albums, Outputs, Conflicts, Cleanup }
 
 public partial class IngestViewModel : ViewModelBase
 {
@@ -26,6 +27,7 @@ public partial class IngestViewModel : ViewModelBase
     private CancellationTokenSource? _cts;
     private IngestPlan? _plan;
     private bool _applyingPreset;
+    private readonly List<IngestFileItemViewModel> _allFiles = [];
 
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(PreviewCommand)),
      NotifyCanExecuteChangedFor(nameof(PreflightCommand)), NotifyCanExecuteChangedFor(nameof(SavePresetCommand))]
@@ -54,12 +56,25 @@ public partial class IngestViewModel : ViewModelBase
     private IngestPreset? _selectedPreset;
     [ObservableProperty]
     private string? _selectedRecentSource;
+    [ObservableProperty]
+    private IngestPreviewFilter _selectedPreviewFilter;
+    [ObservableProperty]
+    private bool _hasPreviewSummary;
+    [ObservableProperty]
+    private int _albumCount;
+    [ObservableProperty]
+    private int _outputCount;
+    [ObservableProperty]
+    private int _conflictCount;
+    [ObservableProperty]
+    private int _cleanupCount;
 
     public ObservableCollection<IngestFileItemViewModel> Files { get; } = [];
     public ObservableCollection<IngestConflict> Conflicts { get; } = [];
     public ObservableCollection<IngestPreset> Presets { get; } = [];
     public ObservableCollection<string> RecentSources { get; } = [];
     public ObservableCollection<IngestPreflightCheck> PreflightChecks { get; } = [];
+    public IReadOnlyList<IngestPreviewFilter> PreviewFilters { get; } = Enum.GetValues<IngestPreviewFilter>();
     public bool HasPreflightChecks => PreflightChecks.Count > 0;
     public event Action? IngestCompleted;
 
@@ -108,6 +123,8 @@ public partial class IngestViewModel : ViewModelBase
         if (!string.IsNullOrWhiteSpace(value))
             SourceDirectory = value;
     }
+
+    partial void OnSelectedPreviewFilterChanged(IngestPreviewFilter value) => RefilterFiles();
 
     private void InvalidatePreview()
     {
@@ -245,15 +262,33 @@ public partial class IngestViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanPreview))]
     private async Task PreviewAsync()
     {
-        IsBusy = true; IsPreviewing = true; HasApplicablePreview = false; _plan = null; Files.Clear(); Conflicts.Clear();
+        IsBusy = true; IsPreviewing = true; HasApplicablePreview = false; _plan = null;
+        _allFiles.Clear(); Files.Clear(); Conflicts.Clear(); HasPreviewSummary = false;
         _cts = new CancellationTokenSource();
         try
         {
             StatusText = "Scanning and planning…";
             var plan = await _service.PreviewAsync(new IngestRequest(SourceDirectory!, ConfigurationPath!), _cts.Token);
             _plan = plan;
-            foreach (var file in plan.Files) Files.Add(new IngestFileItemViewModel(file));
-            foreach (var conflict in plan.Conflicts) Conflicts.Add(conflict);
+            foreach (var file in plan.Files)
+            {
+                bool cleanup = file.SourceType.Equals("Unsupported/non-audio", StringComparison.OrdinalIgnoreCase);
+                _allFiles.Add(new IngestFileItemViewModel(file, isAlbum: !cleanup,
+                    isCleanup: cleanup));
+            }
+            foreach (var output in plan.Albums.SelectMany(album => album.Outputs))
+                _allFiles.Add(IngestFileItemViewModel.ForOutput(output));
+            foreach (var conflict in plan.Conflicts)
+            {
+                Conflicts.Add(conflict);
+                _allFiles.Add(IngestFileItemViewModel.ForConflict(conflict));
+            }
+            AlbumCount = plan.Albums.Count;
+            OutputCount = plan.Albums.Sum(album => album.Outputs.Count);
+            ConflictCount = plan.Conflicts.Count;
+            CleanupCount = plan.IgnoredFileSnapshots.Count + plan.SourceDirectories.Count;
+            HasPreviewSummary = true;
+            RefilterFiles();
             HasApplicablePreview = plan.CanApply;
             _settings.SetPreference(SourcePreference, plan.Request.SourceDirectory);
             _settings.SetPreference(ConfigPreference, plan.Request.ConfigurationPath);
@@ -279,7 +314,7 @@ public partial class IngestViewModel : ViewModelBase
     {
         if (_plan is null) return;
         IsBusy = true; IsApplying = true; ApplyProgress = 0; ApplyProgressMaximum = 1; _cts = new CancellationTokenSource();
-        foreach (var file in Files) file.ResetProgress();
+        foreach (var file in _allFiles) file.ResetProgress();
         try
         {
             var decisions = new List<IngestApprovalDecision>();
@@ -299,7 +334,8 @@ public partial class IngestViewModel : ViewModelBase
                 ApplyProgress = p.CompletedItems;
                 StatusText = $"{p.Operation}: {p.Album} ({p.CompletedItems}/{p.TotalItems})";
                 if (p.SourcePath is not null && p.FileState is { } state)
-                    Files.FirstOrDefault(file => string.Equals(file.Source, p.SourcePath, StringComparison.OrdinalIgnoreCase))
+                    _allFiles.FirstOrDefault(file => !file.IsConflict &&
+                        string.Equals(file.Source, p.SourcePath, StringComparison.OrdinalIgnoreCase))
                         ?.SetProgress(state, p.Operation);
             });
             var result = await _service.ApplyAsync(_plan, decisions, progress, _cts.Token);
@@ -349,6 +385,20 @@ public partial class IngestViewModel : ViewModelBase
             SelectedPreset = null;
     }
 
+    private void RefilterFiles()
+    {
+        Files.Clear();
+        foreach (var item in _allFiles.Where(item => SelectedPreviewFilter switch
+                 {
+                     IngestPreviewFilter.Albums => item.IsAlbum,
+                     IngestPreviewFilter.Outputs => item.IsOutput,
+                     IngestPreviewFilter.Conflicts => item.IsConflict,
+                     IngestPreviewFilter.Cleanup => item.IsCleanup,
+                     _ => true,
+                 }))
+            Files.Add(item);
+    }
+
     private void LoadPresets()
     {
         try
@@ -394,16 +444,38 @@ public partial class IngestViewModel : ViewModelBase
     }
 }
 
-public partial class IngestFileItemViewModel(IngestFileSummary file) : ViewModelBase
+public partial class IngestFileItemViewModel : ViewModelBase
 {
-    public string Source => file.Source;
-    public string SourceType => file.SourceType;
-    public string Summary => file.Summary;
+    private readonly IngestFileSummary _file;
+    public string Source => _file.Source;
+    public string SourceType => _file.SourceType;
+    public string Summary => _file.Summary;
+    public bool IsAlbum { get; }
+    public bool IsOutput { get; }
+    public bool IsCleanup { get; }
+    public bool IsConflict { get; }
 
     [ObservableProperty]
     private bool _isComplete;
     [ObservableProperty]
     private string? _progressText;
+
+    public IngestFileItemViewModel(IngestFileSummary file, bool isAlbum = false,
+        bool isOutput = false, bool isCleanup = false, bool isConflict = false)
+    {
+        _file = file;
+        IsAlbum = isAlbum;
+        IsOutput = isOutput;
+        IsCleanup = isCleanup;
+        IsConflict = isConflict;
+    }
+
+    public static IngestFileItemViewModel ForConflict(IngestConflict conflict) => new(
+        new IngestFileSummary(conflict.Path, "Conflict", conflict.Message), isConflict: true);
+
+    public static IngestFileItemViewModel ForOutput(IngestOutputPlan output) => new(
+        new IngestFileSummary(output.SourcePath, $"{output.Kind} output",
+            $"Destination â†’ {output.DestinationPath}"), isOutput: true);
 
     public void ResetProgress()
     {

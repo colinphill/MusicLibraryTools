@@ -10,6 +10,68 @@ namespace MusicLibrary.Core.Tests;
 public sealed class IngestViewModelTests
 {
     [Fact]
+    public async Task PreviewBuildsSummaryCountsAndCategoryFilters()
+    {
+        var track = new IngestTrackPlan
+        {
+            Identity = "track", SourcePath = "source.flac", Title = "Song", Artist = "Artist",
+            AlbumArtist = "Artist", Album = "Album", TrackNumber = 1, TrackTotal = 1,
+            OriginalDiscNumber = 1, SampleRate = 44_100, BitsPerSample = 16, Channels = 2,
+            DurationInSeconds = 180, IsAlac = false, IsHighResolution = false,
+        };
+        var outputs = new[]
+        {
+            new IngestOutputPlan { Identity = "track", Kind = IngestOutputKind.CdFlac, Metadata = track,
+                SourcePath = track.SourcePath, DestinationPath = "cd.flac" },
+            new IngestOutputPlan { Identity = "track", Kind = IngestOutputKind.Aac, Metadata = track,
+                SourcePath = track.SourcePath, DestinationPath = "aac.m4a" },
+        };
+        var configuration = new IngestMusicConfiguration
+        {
+            FfmpegPath = "ffmpeg", AacDestination = "aac", CdDestination = "cd",
+            PairedCdDestination = "paired", HighResolutionDestination = "hires",
+        };
+        var plan = new IngestPlan
+        {
+            Request = new("source", "config.xml"), Configuration = configuration,
+            Albums = [new IngestAlbumPlan { Key = "album", Display = "Artist â€” Album",
+                Tracks = [track], Outputs = outputs, Sources = [], HasHighResolution = false }],
+            Files = [new("source.flac", "CD FLAC", "Create outputs"),
+                new("cover.jpg", "Unsupported/non-audio", "Quarantine")],
+            RequiredApprovals = [],
+            Conflicts = [new("album", "source.flac", "Duplicate track")],
+            IgnoredFiles = ["cover.jpg"],
+            IgnoredFileSnapshots = [new("cover.jpg", 10, DateTime.UtcNow)],
+            SourceDirectories = ["source", "source/subfolder"],
+        };
+        string state = Path.Combine(Path.GetTempPath(), $"ingest-summary-{Guid.NewGuid():N}.json");
+        try
+        {
+            var viewModel = new IngestViewModel(new StubIngest(plan), new StubFiles(), new StubDialogs(),
+                new AppSettings(state), new StubLibrary());
+            viewModel.SourceDirectory = "source";
+            viewModel.ConfigurationPath = "config.xml";
+
+            await viewModel.PreviewCommand.ExecuteAsync(null);
+
+            Assert.Equal(1, viewModel.AlbumCount);
+            Assert.Equal(2, viewModel.OutputCount);
+            Assert.Equal(1, viewModel.ConflictCount);
+            Assert.Equal(3, viewModel.CleanupCount);
+            viewModel.SelectedPreviewFilter = IngestPreviewFilter.Outputs;
+            Assert.Equal(2, viewModel.Files.Count);
+            Assert.All(viewModel.Files, item => Assert.True(item.IsOutput));
+            viewModel.SelectedPreviewFilter = IngestPreviewFilter.Conflicts;
+            Assert.Single(viewModel.Files);
+            Assert.True(viewModel.Files[0].IsConflict);
+        }
+        finally
+        {
+            if (File.Exists(state)) File.Delete(state);
+        }
+    }
+
+    [Fact]
     public async Task PresetsRecentDropsAndPreflightPersistAsWorkflowState()
     {
         string root = Path.Combine(Path.GetTempPath(), $"ingest-vm-{Guid.NewGuid():N}");
@@ -65,10 +127,10 @@ public sealed class IngestViewModelTests
         }
     }
 
-    private sealed class StubIngest : IIngestMusicService
+    private sealed class StubIngest(IngestPlan? plan = null) : IIngestMusicService
     {
         public Task<IngestPlan> PreviewAsync(IngestRequest request, CancellationToken ct = default) =>
-            throw new NotSupportedException();
+            plan is null ? throw new NotSupportedException() : Task.FromResult(plan);
         public Task<IngestResult> ApplyAsync(IngestPlan plan,
             IReadOnlyList<IngestApprovalDecision> approvals, IProgress<IngestProgress>? progress = null,
             CancellationToken ct = default) => throw new NotSupportedException();
