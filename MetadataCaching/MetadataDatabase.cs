@@ -126,7 +126,7 @@ namespace MetadataCaching
         // large library; tests lower them to exercise the multi-commit and multi-row-flush paths
         // without huge inputs.
         internal static int IndexFilesPerBatch = 2000;
-        internal static int IndexMetaRowsPerInsert = 500;
+        internal static int IndexMetaRowsPerInsert = 1000;
 
         // Scan-side tunables. IndexScanParallelism is the GLOBAL cap on concurrent subtree
         // scanners across all scan sets (per-set caps multiply by the set count and can
