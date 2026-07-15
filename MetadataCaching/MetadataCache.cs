@@ -333,7 +333,8 @@ namespace MetadataCaching
             var bag = new ConcurrentBag<(string FileName, MetadataCacheEntry Entry)>();
             Parallel.ForEach(filestoscan, (file) =>
             {
-                bag.Add((file.FileName, new MetadataCacheEntry(MediaFile.GetFile(file.FileName), file.LastModifiedTime)));
+                bag.Add((file.FileName, new MetadataCacheEntry(
+                    MediaFile.GetFile(file.FileName, readOnly: true), file.LastModifiedTime)));
             });
             foreach (var entry in bag)
             {

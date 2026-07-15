@@ -17,13 +17,29 @@ namespace MusicFileUtilities
         private int _picdataoffset = -1; // offset of the picture payload within _rawvalue
         private string _category;
         private byte[] _rawvalue;
+        private byte[] _rawsource;
+        private int _rawsourceoffset;
+        private int _rawsourcelength;
         private int _width;
         private int _height;
         private bool _dimsComputed;
 
         // The original APE item value (filename\0picdata), kept so Save() can round-trip the
         // artwork byte-for-byte instead of dropping it. See [[ape-artwork-save-dataloss]].
-        public byte[] RawValue => _rawvalue;
+        public byte[] RawValue
+        {
+            get
+            {
+                if (_rawvalue == null)
+                {
+                    _rawvalue = new byte[_rawsourcelength];
+                    Array.Copy(_rawsource, _rawsourceoffset, _rawvalue, 0, _rawsourcelength);
+                    _rawsource = null;
+                    _rawsourceoffset = 0;
+                }
+                return _rawvalue;
+            }
+        }
         public string Key => _category;
 
         // The picture payload is copied out of RawValue lazily (RawValue is retained for the
@@ -35,10 +51,16 @@ namespace MusicFileUtilities
             {
                 if (_picdata == null && _picdataoffset >= 0)
                 {
-                    int datalen = Math.Max(0, _rawvalue.Length - _picdataoffset);
+                    int rawLength = _rawvalue?.Length ?? _rawsourcelength;
+                    int datalen = Math.Max(0, rawLength - _picdataoffset);
                     _picdata = new byte[datalen];
                     if (datalen > 0)
-                        Array.Copy(_rawvalue, _picdataoffset, _picdata, 0, datalen);
+                        Array.Copy(
+                            _rawvalue ?? _rawsource,
+                            _rawvalue != null ? _picdataoffset : _rawsourceoffset + _picdataoffset,
+                            _picdata,
+                            0,
+                            datalen);
                 }
                 return _picdata;
             }
@@ -52,7 +74,11 @@ namespace MusicFileUtilities
             _dimsComputed = true;
             ReadOnlySpan<byte> picdata = _picdata != null
                 ? _picdata
-                : (_picdataoffset >= 0 && _picdataoffset < _rawvalue.Length ? _rawvalue.AsSpan(_picdataoffset) : default);
+                : _rawvalue != null
+                    ? (_picdataoffset >= 0 && _picdataoffset < _rawvalue.Length ? _rawvalue.AsSpan(_picdataoffset) : default)
+                    : (_picdataoffset >= 0 && _picdataoffset < _rawsourcelength
+                        ? _rawsource.AsSpan(_rawsourceoffset + _picdataoffset, _rawsourcelength - _picdataoffset)
+                        : default);
             if (!picdata.IsEmpty)
             {
                 var img = ImageFile.GetImageDimensions(picdata);
@@ -66,18 +92,33 @@ namespace MusicFileUtilities
         string IMetadataImage.ImageType => _mimetype;
         int IMetadataImage.Width { get { EnsureDimensions(); return _width; } }
         int IMetadataImage.Height { get { EnsureDimensions(); return _height; } }
-        int IMetadataImage.Size => _picdata?.Length ?? (_picdataoffset >= 0 ? Math.Max(0, _rawvalue.Length - _picdataoffset) : 0);
+        int IMetadataImage.Size => _picdata?.Length ??
+            (_picdataoffset >= 0 ? Math.Max(0, (_rawvalue?.Length ?? _rawsourcelength) - _picdataoffset) : 0);
         byte[] IMetadataImage.Data => PicData;
 
         public APEArtwork(string key, byte[] value)
+            : this(key, value, 0, value.Length)
         {
+            // A standalone value is already the exact item payload; no slice materialization is
+            // needed if this artwork is subsequently saved.
             _rawvalue = value;
+            _rawsource = null;
+            _rawsourceoffset = 0;
+        }
+
+        internal APEArtwork(string key, byte[] source, int sourceOffset, int sourceLength)
+        {
+            _rawsource = source;
+            _rawsourceoffset = sourceOffset;
+            _rawsourcelength = sourceLength;
+            ReadOnlySpan<byte> value = source.AsSpan(sourceOffset, sourceLength);
             string filename = "";
             int offset = 0;
             // Bounded: a binary item with no null terminator must not run off the end.
             while (offset < value.Length && value[offset] != 0)
                 filename += (char)value[offset++];
-            offset++; // skip the null separator
+            if (offset < value.Length)
+                offset++; // skip the null separator
             _picdataoffset = offset;
             string ext = Path.GetExtension(filename).ToLower();
             _mimetype = ext.Length > 1 ? ext.Substring(1) : "";
@@ -105,7 +146,12 @@ namespace MusicFileUtilities
             // hash it would copy every cover on every scan.
             Hash = Convert.ToBase64String(_picdata != null
                 ? hash.ComputeHash(_picdata)
-                : hash.ComputeHash(_rawvalue, _picdataoffset, Math.Max(0, _rawvalue.Length - _picdataoffset)));
+                : _rawvalue != null
+                    ? hash.ComputeHash(_rawvalue, _picdataoffset, Math.Max(0, _rawvalue.Length - _picdataoffset))
+                    : hash.ComputeHash(
+                        _rawsource,
+                        _rawsourceoffset + _picdataoffset,
+                        Math.Max(0, _rawsourcelength - _picdataoffset)));
         }
 
     }
@@ -457,44 +503,57 @@ namespace MusicFileUtilities
             return result.ToArray();
         }
 
-        public bool ReadTag(Stream s)
+        public bool ReadTag(Stream s, bool onlyAtEnd = false)
         {
             long streamLength = s.Length;
             if (streamLength < 32)
                 return false;
             byte[] preamble = new byte[8];
             byte[] headerfooter = new byte[24];
-            s.Seek(0, SeekOrigin.Begin);
-            s.ReadExactly(preamble);
-            if (Encoding.ASCII.GetString(preamble) == "APETAGEX")
-                s.ReadExactly(headerfooter);
-            else
+            bool foundAtStart = false;
+            if (!onlyAtEnd)
+            {
+                s.Seek(0, SeekOrigin.Begin);
+                s.ReadExactly(preamble);
+                foundAtStart = preamble.AsSpan().SequenceEqual("APETAGEX"u8);
+                if (foundAtStart)
+                    s.ReadExactly(headerfooter);
+            }
+            if (!foundAtStart)
             {
                 s.Seek(-32, SeekOrigin.End);
                 s.ReadExactly(preamble);
-                if (Encoding.ASCII.GetString(preamble) == "APETAGEX")
+                if (preamble.AsSpan().SequenceEqual("APETAGEX"u8))
                     s.ReadExactly(headerfooter);
                 else
                     return false;
                 int sizeFromFooter = Tools.Int32AtLE(headerfooter, 4);
+                if (sizeFromFooter < 32 || sizeFromFooter > streamLength)
+                    return false;
                 // Audio ends where the APE tag block starts.
-                // The size field covers items + footer (32). Check for a leading header.
+                // The size field covers items + footer (32). For a WavPack/end-only read, trust
+                // the standardized header-present flag and avoid another remote seek/read.
                 long footerPos = streamLength - 32;
                 long itemsStart = footerPos - (sizeFromFooter - 32);
-                // Check if a header precedes the items
-                if (itemsStart >= 32)
+                int flags = Tools.Int32AtLE(headerfooter, 12);
+                if (onlyAtEnd)
+                {
+                    int headerLength = ((uint)flags & 0x80000000u) != 0 ? 32 : 0;
+                    if (itemsStart < headerLength)
+                        return false;
+                    AudioEndOffset = itemsStart - headerLength;
+                }
+                else if (itemsStart >= 32)
                 {
                     s.Seek(itemsStart - 32, SeekOrigin.Begin);
                     byte[] maybePreamble = new byte[8];
                     s.ReadExactly(maybePreamble);
-                    AudioEndOffset = Encoding.ASCII.GetString(maybePreamble) == "APETAGEX"
+                    AudioEndOffset = maybePreamble.AsSpan().SequenceEqual("APETAGEX"u8)
                         ? itemsStart - 32
                         : itemsStart;
                 }
                 else
                     AudioEndOffset = itemsStart;
-                if (sizeFromFooter < 0 || sizeFromFooter > streamLength)
-                    return false;
                 s.Seek(-sizeFromFooter, SeekOrigin.End);
             }
             // NOTE: in the header-first branch above, AudioEndOffset stays -1 (we can't infer the
@@ -532,12 +591,15 @@ namespace MusicFileUtilities
                 }
                 else if ((itemflags & 6) == 2)
                 {
-                    byte[] bindata = new byte[itemlen];
-                    Array.Copy(tag, offset, bindata, 0, itemlen);
                     if (itemkey.StartsWith("Cover Art", StringComparison.InvariantCultureIgnoreCase))
-                        ArtworkItems.Add(new KeyValuePair<string, APEArtwork>(itemkey, new APEArtwork(itemkey, bindata)));
+                        ArtworkItems.Add(new KeyValuePair<string, APEArtwork>(
+                            itemkey, new APEArtwork(itemkey, tag, offset, itemlen)));
                     else
+                    {
+                        byte[] bindata = new byte[itemlen];
+                        Array.Copy(tag, offset, bindata, 0, itemlen);
                         BinaryItems.Add(new KeyValuePair<string, byte[]>(itemkey, bindata));
+                    }
                 }
                 offset += itemlen;
             }

@@ -130,7 +130,7 @@ public sealed class MediaFileService : IMediaFileService
         {
             // Pass a hash so embedded artwork gets hashed during the single parse pass.
             using var sha = SHA256.Create();
-            var file = MediaFile.GetFile(path, includeArtwork ? sha : null);
+            var file = MediaFile.GetFile(path, includeArtwork ? sha : null, readOnly: true);
             var tag = file.Tags.FirstOrDefault();
             var codec = file.Codecs.FirstOrDefault();
 

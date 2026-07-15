@@ -265,7 +265,7 @@ namespace MusicFileUtilities
      
     public class MediaFile
     {
-        public static IMediaFile GetFile(string path, HashAlgorithm hash = null)
+        public static IMediaFile GetFile(string path, HashAlgorithm hash = null, bool readOnly = false)
         {
             string extension = Path.GetExtension(path).ToLower();
             // No File.Exists pre-check: on a network share it costs a full round-trip per file,
@@ -290,7 +290,7 @@ namespace MusicFileUtilities
                 case ".mp4":
                 case ".m4p":
                 case ".m4r":
-                    file = new MP4File(path);
+                    file = new MP4File(path, readOnly);
                     break;
 
                 case ".ogg":

@@ -123,7 +123,17 @@ namespace MusicFileUtilities
             Filename = filename;
 
             using FileStream s = Tools.OpenReadSequential(filename);
+            Parse(s);
+        }
 
+        internal FLACFile(Stream stream, string filename)
+        {
+            Filename = filename;
+            Parse(stream);
+        }
+
+        private void Parse(Stream s)
+        {
             byte[] si = null;
             byte [] b = new byte[4];
             s.ReadExactly(b);
@@ -141,6 +151,7 @@ namespace MusicFileUtilities
                 len = (len << 8) | b[3];
 
                 byte blockType = (byte)(b[0] & 127);
+                bool isLast = (b[0] & 128) == 128;
                 long blockOffset = s.Position - 4;
 
                 if (blockType == 0) // STREAMINFO
@@ -168,11 +179,12 @@ namespace MusicFileUtilities
                 else
                 {
                     // PADDING has no semantic payload. On a network share, skip it instead of
-                    // transferring and retaining bytes that a rewrite may safely regenerate.
+                    // transferring and retaining bytes that a rewrite may safely regenerate. A
+                    // final padding block needs no seek at all: no later byte is parsed.
                     byte[] raw = null;
-                    if (blockType == 1)
+                    if (blockType == 1 && !isLast)
                         s.Seek(len, SeekOrigin.Current);
-                    else
+                    else if (blockType != 1)
                     {
                         raw = new byte[len];
                         s.ReadExactly(raw);
@@ -187,7 +199,7 @@ namespace MusicFileUtilities
                     }
                 }
 
-                last = ((b[0] & 128) == 128);
+                last = isLast;
                 previousWasVorbisComment = blockType == 4;
 
             }

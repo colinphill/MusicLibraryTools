@@ -656,7 +656,7 @@ namespace MetadataCaching
                        {
                            try
                            {
-                               filequeue.Add((id, unit.SetID, relativename, file.Size, file.Modified, MediaFile.GetFile(file.Name, hash)), pipelineCts.Token);
+                               filequeue.Add((id, unit.SetID, relativename, file.Size, file.Modified, MediaFile.GetFile(file.Name, hash, readOnly: true)), pipelineCts.Token);
                                if (isAdded)
                                    Interlocked.Increment(ref added);
                                else if (isModified)
@@ -1345,7 +1345,7 @@ namespace MetadataCaching
         {
             IMediaFile file;
             using (var sha = SHA256.Create())
-                file = MediaFile.GetFile(fullPath, sha);
+                file = MediaFile.GetFile(fullPath, sha, readOnly: true);
 
             return ReindexFileCore(fullPath, file);
         }

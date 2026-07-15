@@ -229,14 +229,6 @@ namespace MusicFileUtilities
             AtomTypes.Add("mp4a.esds", typeof(Atom_mp4a_esds));
         }
 
-        public static bool LoadData
-        {
-            get
-            {
-                return true;
-            }
-        }
-
         // Direct construction for the known atom types. Activator.CreateInstance resolves the
         // (Atom, Stream) constructor by reflection on every atom, which dominates parse CPU
         // on a library scan; this keeps the AtomTypes registry but bypasses reflection for
@@ -1525,8 +1517,23 @@ namespace MusicFileUtilities
         }
     }
 
+    // Placeholder used by read-only MP4 scans for atom payloads that are irrelevant to codec and
+    // tag projection. The containing parser advances past the bytes without retaining them.
+    internal sealed class DiscardedAtom : Atom
+    {
+        public DiscardedAtom(Atom atom)
+            : base(atom)
+        {
+        }
+
+        public override void WriteAtom(Stream stream) =>
+            throw new InvalidOperationException("A read-only MP4 parse cannot be written.");
+    }
+
     public class ContainerAtom : Atom
     {
+        internal bool PreserveUnknownData { get; set; } = true;
+
         public Atom this[int index]
         {
             get
@@ -1544,6 +1551,7 @@ namespace MusicFileUtilities
         public ContainerAtom(ContainerAtom ca)
             : base(ca)
         {
+            PreserveUnknownData = ca.PreserveUnknownData;
         }
 
         public override void WriteAtom(Stream s)
@@ -1580,34 +1588,52 @@ namespace MusicFileUtilities
         protected void InitChildren(Stream s, Type forced_subatom, long offset)
         {
             long pos = s.Position;
-            while (s.Position < ((pos - (long)_headersize - offset) + (long)_size))
+            long containerEnd = (pos - (long)_headersize - offset) + (long)_size;
+            while (s.Position < containerEnd)
             {
                 long spos = s.Position;
 
                 Atom sa = new Atom(s, this);
+                Atom parsedAtom = sa;
                 if (MP4Util.AtomTypes.TryGetValue(sa.Type, out Type Atom_type) ||
                     MP4Util.AtomTypes.TryGetValue(Type + "." + sa.Type, out Atom_type))
                 {
-                    Atom sa2 = (Atom_type == typeof(Atom)) ? sa : MP4Util.CreateAtom(Atom_type, sa, s);
-                    _children.Add(sa2);
+                    parsedAtom = (Atom_type == typeof(Atom)) ? sa : MP4Util.CreateAtom(Atom_type, sa, s);
+                    _children.Add(parsedAtom);
                 }
                 else if (forced_subatom != null)
                 {
-                    Atom sa2 = MP4Util.CreateAtom(forced_subatom, sa, s);
-                    _children.Add(sa2);
+                    parsedAtom = MP4Util.CreateAtom(forced_subatom, sa, s);
+                    _children.Add(parsedAtom);
                 }
                 else
                 {
-                    if (MP4Util.LoadData)
+                    if (PreserveUnknownData)
                     {
-                        Atom sa2 = new DataAtom(sa, s);
-                        _children.Add(sa2);
+                        parsedAtom = new DataAtom(sa, s);
+                        _children.Add(parsedAtom);
                     }
                     else
-                        _children.Add(sa);
+                    {
+                        parsedAtom = new DiscardedAtom(sa);
+                        _children.Add(parsedAtom);
+                    }
                 }
 
-                s.Seek(spos + sa.Size, SeekOrigin.Begin);
+                long atomEnd = checked(spos + sa.Size);
+                // Most typed/data atoms consume their complete payload. Seeking to the position
+                // we're already at can invalidate FileStream's large read buffer, multiplying SMB
+                // round-trips. A final deferred child needs no seek because parsing ends here.
+                if (atomEnd >= containerEnd)
+                    break;
+                if (s.Position != atomEnd)
+                {
+                    long remaining = atomEnd - s.Position;
+                    if (parsedAtom is DiscardedAtom && remaining is > 0 and <= Tools.ParseReadBufferSize)
+                        Tools.DiscardExactly(s, remaining);
+                    else
+                        s.Seek(atomEnd, SeekOrigin.Begin);
+                }
             }
         }
 
@@ -1619,6 +1645,7 @@ namespace MusicFileUtilities
         public ContainerAtom(Atom a, Stream s, bool defer)
             : base(a)
         {
+            PreserveUnknownData = a.ParentAtom?.PreserveUnknownData ?? true;
             if (!defer)
                 InitChildren(s, null, 0);
         }
@@ -1770,9 +1797,16 @@ namespace MusicFileUtilities
 
     public class RootAtom : ContainerAtom
     {
-        public RootAtom(string path)
+        public RootAtom(string path, bool preserveUnknownData = true)
         {
+            PreserveUnknownData = preserveUnknownData;
             ReadFile(path);
+        }
+
+        internal RootAtom(Stream stream, string path, bool preserveUnknownData = true)
+        {
+            PreserveUnknownData = preserveUnknownData;
+            ReadStream(stream, path);
         }
 
         private string _associatedpath;
@@ -1788,26 +1822,45 @@ namespace MusicFileUtilities
         public void ReadFile(string path)
         {
             using Stream s = Tools.OpenReadSequential(path);
+            ReadStream(s, path);
+        }
 
+        private void ReadStream(Stream s, string path)
+        {
             long length = s.Length;
             while (s.Position < length)
             {
                 long pos = s.Position;
 
                 Atom a = new Atom(s, this);
+                Atom parsedAtom = a;
                 if (MP4Util.AtomTypes.TryGetValue(a.Type, out Type Atom_type))
                 {
-                    a = (Atom_type == typeof(Atom)) ? a : MP4Util.CreateAtom(Atom_type, a, s);
+                    parsedAtom = (Atom_type == typeof(Atom)) ? a : MP4Util.CreateAtom(Atom_type, a, s);
                 }
-                else if (MP4Util.LoadData)
-                    a = new DataAtom(a, s);
-                Children.Add(a);
+                else if (PreserveUnknownData)
+                    parsedAtom = new DataAtom(a, s);
+                else
+                    parsedAtom = new DiscardedAtom(a);
+                Children.Add(parsedAtom);
 
-                s.Seek(pos + a.Size, SeekOrigin.Begin);
+                long atomEnd = checked(pos + a.Size);
+                // Avoid no-op seeks after fully read atoms, and don't seek across a final deferred
+                // atom when no subsequent bytes need parsing.
+                if (atomEnd >= length)
+                    break;
+                if (s.Position != atomEnd)
+                {
+                    long remaining = atomEnd - s.Position;
+                    if (parsedAtom is DiscardedAtom && remaining is > 0 and <= Tools.ParseReadBufferSize)
+                        Tools.DiscardExactly(s, remaining);
+                    else
+                        s.Seek(atomEnd, SeekOrigin.Begin);
+                }
             }
 
             _associatedpath = path;
-         }
+        }
 
         // Payload bytes reserved for the in-place edit pad seeded into moov on a full rewrite.
         // ~2KB covers typical text-tag churn; larger edits (artwork) simply fall back to a rewrite.
@@ -2265,6 +2318,7 @@ namespace MusicFileUtilities
         public uint DurationInSeconds => DurationInFrames / 75;
 
         private RootAtom root_;
+        private readonly bool _readOnly;
 
         public RootAtom Root
         {
@@ -2272,8 +2326,14 @@ namespace MusicFileUtilities
         }
 
         public MP4File(string filename)
+            : this(filename, readOnly: false)
         {
-            root_ = new RootAtom(filename);
+        }
+
+        public MP4File(string filename, bool readOnly)
+        {
+            _readOnly = readOnly;
+            root_ = new RootAtom(filename, preserveUnknownData: !readOnly);
             ParseCodecInfo();
             Atom_mvhd mvhd = root_.FindPath("moov.mvhd") as Atom_mvhd;
             DurationInFrames = mvhd.DurationInFrames;
@@ -2518,6 +2578,8 @@ namespace MusicFileUtilities
 
         public void Save(string outputPath = null)
         {
+            if (_readOnly)
+                throw new InvalidOperationException("This MP4 was opened read-only; reopen it without readOnly before writing tags.");
             // Fast path: overwrite an existing file in place without copying the audio payload when
             // the layout makes it provably safe (see RootAtom.TrySaveInPlace). Otherwise rebuild.
             if (outputPath == null && root_.TrySaveInPlace())

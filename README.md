@@ -200,7 +200,12 @@ at build time by `generate-fixtures.ps1` — **ffmpeg must be on the PATH** (or 
   save, and no dependency drift.
 - Parsing is optimized for scanning huge libraries over a network share: large sequential
   read buffers, minimal per-file round trips, lazy artwork decoding, and no reflection or
-  exception-driven control flow on the hot path.
+  exception-driven control flow on the hot path. Indexing opens MP4/M4A files in a read-only
+  projection that discards unrelated sample-table payloads; tag-writing paths reopen the full
+  editable atom tree so unknown data is still preserved on save.
+- Format-specific readers avoid empty network work: MP3 jumps over declared ID3 padding, FLAC
+  does not seek across a final padding block, and WavPack reads its APE tail tag without probing
+  the file front or re-reading the optional header.
 - Saves are conservative: unknown tag frames/atoms/blocks are preserved, artwork
   round-trips byte-for-byte, and in-place fast paths fall back to full rewrites whenever
   structure changes.

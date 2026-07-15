@@ -96,7 +96,7 @@ internal static class Program
             {
                 try
                 {
-                    var provider = MediaFile.GetFile(file).Tags.First();
+                    var provider = MediaFile.GetFile(file, readOnly: true).Tags.First();
                     var artwork = provider.GetImageMetadata().FirstOrDefault();
                     if (artwork is null || artwork.Data.Length == 0)
                         continue;

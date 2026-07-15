@@ -40,6 +40,19 @@ namespace MusicFileUtilities
             return new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, ParseReadBufferSize, FileOptions.SequentialScan);
         }
 
+        // Consume a small unneeded payload without allocating it. Keeping the read sequential lets
+        // FileStream retain its large read buffer; callers should seek instead for large ranges.
+        public static void DiscardExactly(Stream source, long length)
+        {
+            Span<byte> buffer = stackalloc byte[8192];
+            while (length > 0)
+            {
+                int count = (int)Math.Min(length, buffer.Length);
+                source.ReadExactly(buffer[..count]);
+                length -= count;
+            }
+        }
+
         // Large, pooled transfers turn full tag rewrites into sustained sequential SMB I/O instead
         // of a stream of 64 KiB requests. A bounded-length variant is used by formats whose tag is
         // appended after an audio prefix.

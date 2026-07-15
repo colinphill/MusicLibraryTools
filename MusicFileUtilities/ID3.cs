@@ -1763,6 +1763,18 @@ namespace MusicFileUtilities
             }
             if (doclose)
                 r.Close();
+
+            // Frame parsing stops at the first padding frame. Jump directly to the declared tag
+            // end instead of making MP3File scan the remaining padding one byte at a time. This is
+            // especially important over SMB, where a large padded tag otherwise transfers data
+            // that carries no metadata. ID3v2.4's optional footer sits after the declared body.
+            if (s.CanSeek)
+            {
+                long tagEnd = tagStart + 10L + _tagsize +
+                    ((_headerversion == 4 && (_flags & 0x10) != 0) ? 10L : 0L);
+                if (tagEnd <= s.Length && s.Position != tagEnd)
+                    s.Seek(tagEnd, SeekOrigin.Begin);
+            }
             ParseStandardFields();
         }
 

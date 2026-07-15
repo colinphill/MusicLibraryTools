@@ -107,7 +107,7 @@ internal static class Program
             WorkItem item = work[index];
             try
             {
-                IMediaFile mediaFile = MediaFile.GetFile(item.Path);
+                IMediaFile mediaFile = MediaFile.GetFile(item.Path, readOnly: true);
                 IMetadataImage[] images = [.. mediaFile.Tags.SelectMany(tag => tag.GetImageMetadata())];
                 if (images.Length == 1)
                 {

@@ -175,7 +175,7 @@ internal static class Program
 
                 // Reopen the file before touching the ITL cache. A successful write must be
                 // readable and contain exactly the single normalized image we requested.
-                IMediaFile verificationFile = MediaFile.GetFile(path);
+                IMediaFile verificationFile = MediaFile.GetFile(path, readOnly: true);
                 IMetadataImage[] verified = [.. verificationFile.Tags.SelectMany(tag => tag.GetImageMetadata())];
                 if (verified.Length != 1 || verified[0].Size != encoded.Length)
                     throw new InvalidDataException("Artwork verification after saving the media file failed.");

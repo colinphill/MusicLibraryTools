@@ -259,7 +259,7 @@ namespace BackSyncPlaylists
                         {
                             Console.WriteLine(plfile);
 
-                            var mp = MediaFile.GetFile(plfile).Tags.First();
+                            var mp = MediaFile.GetFile(plfile, readOnly: true).Tags.First();
 
                             string[] sourceArtists = new[] { mp.Artist, mp.AlbumArtist }
                                 .Where(value => !string.IsNullOrWhiteSpace(value))

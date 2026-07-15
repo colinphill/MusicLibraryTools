@@ -111,7 +111,7 @@ namespace MusicFileUtilities
                 break;
             }
             tag_ = new APETag();
-            if (!tag_.ReadTag(s))
+            if (!tag_.ReadTag(s, onlyAtEnd: true))
                 tag_ = new APETag();
         }
 

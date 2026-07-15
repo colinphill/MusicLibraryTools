@@ -72,7 +72,7 @@ public sealed class ItlMapper
 
                 if (newFiles.Length == 0)
                 {
-                    IMetadataProvider provider = MediaFile.GetFile(localPath).Tags.First();
+                    IMetadataProvider provider = MediaFile.GetFile(localPath, readOnly: true).Tags.First();
                     newFiles = [.. Candidates(provider.Artist, provider.Album)
                         .Concat(string.IsNullOrWhiteSpace(provider.AlbumArtist)
                             ? []
