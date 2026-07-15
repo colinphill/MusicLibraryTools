@@ -894,12 +894,12 @@
                                 <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" Classes="muted"/>
                             </StackPanel>
 
-                            <ScrollViewer Grid.Row="1">
+                            <ScrollViewer Grid.Row="1" IsVisible="{Binding !ShowBrowser}">
                                 <ItemsControl ItemsSource="{Binding Runs}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:OperationRunViewModel">
                                             <Border Classes="card" Margin="0,0,0,8" Padding="12">
-                                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="14">
+                                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
                                                     <StackPanel Grid.Column="0" MinWidth="140" Spacing="3">
                                                         <TextBlock Text="{Binding ToolName}" Classes="h2"/>
                                                         <TextBlock Text="{Binding Kind}" Classes="muted"/>
@@ -916,12 +916,43 @@
                                                         <TextBlock Text="{Binding Journal}" Classes="caption" TextWrapping="Wrap"
                                                                    ToolTip.Tip="{Binding Journal}"/>
                                                     </StackPanel>
+                                                    <Button Grid.Column="2" Content="Browse" VerticalAlignment="Center"
+                                                            Command="{Binding $parent[TabItem].((vm:OperationsViewModel)DataContext).OpenRunCommand}"
+                                                            CommandParameter="{Binding}"/>
                                                 </Grid>
                                             </Border>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </ScrollViewer>
+
+                            <Grid Grid.Row="1" IsVisible="{Binding ShowBrowser}" RowDefinitions="Auto,*">
+                                <WrapPanel Grid.Row="0" Classes="toolbarwrap" Margin="0,0,-8,8">
+                                    <Button Content="Back to operations" Command="{Binding CloseBrowserCommand}"/>
+                                    <TextBlock VerticalAlignment="Center" Classes="muted">
+                                        <Run Text="{Binding SelectedRun.ToolName}" FontWeight="SemiBold"/>
+                                        <Run Text=" — original hierarchy"/>
+                                    </TextBlock>
+                                </WrapPanel>
+                                <TreeView Grid.Row="1" ItemsSource="{Binding RootNodes}"
+                                          Background="Transparent">
+                                    <TreeView.ItemTemplate>
+                                        <TreeDataTemplate x:DataType="vm:OperationEntryNodeViewModel"
+                                                          ItemsSource="{Binding Children}">
+                                            <StackPanel Margin="2" Spacing="2">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="{Binding StateText}" Classes="muted"
+                                                               IsVisible="{Binding HasEntry}"/>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding CurrentPath}" Classes="caption"
+                                                           TextWrapping="Wrap" ToolTip.Tip="{Binding CurrentPath}"
+                                                           IsVisible="{Binding HasEntry}"/>
+                                            </StackPanel>
+                                        </TreeDataTemplate>
+                                    </TreeView.ItemTemplate>
+                                </TreeView>
+                            </Grid>
                         </Grid>
                     </TabItem>
                 </TabControl>

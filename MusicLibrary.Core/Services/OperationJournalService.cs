@@ -9,6 +9,10 @@ public interface IOperationJournalService
     Task<OperationJournalDiscoveryResult> DiscoverAsync(
         IReadOnlyList<string> searchRoots,
         CancellationToken ct = default);
+
+    Task<OperationBrowseResult> BrowseAsync(
+        OperationJournalSummary run,
+        CancellationToken ct = default);
 }
 
 /// <summary>
@@ -28,6 +32,201 @@ public sealed class OperationJournalService : IOperationJournalService
         ArgumentNullException.ThrowIfNull(searchRoots);
         return Task.Run(() => Discover(searchRoots, ct), ct);
     }
+
+    public Task<OperationBrowseResult> BrowseAsync(
+        OperationJournalSummary run,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(run);
+        return Task.Run(() => Browse(run, ct), ct);
+    }
+
+    private static OperationBrowseResult Browse(OperationJournalSummary run, CancellationToken ct)
+    {
+        string container = ContainerForRun(run.RunPath);
+        var match = ContainerName.Match(Path.GetFileName(container));
+        string originalRoot = match.Success
+            ? Path.Combine(Path.GetDirectoryName(container) ?? "", match.Groups["base"].Value)
+            : Path.GetDirectoryName(container) ?? container;
+        var warnings = new List<string>();
+        var entries = new Dictionary<string, OperationFileEntry>(PathComparer);
+
+        if (run.JournalPath is not null && File.Exists(run.JournalPath))
+        {
+            try
+            {
+                string[] lines = File.ReadAllLines(run.JournalPath);
+                if (run.ToolName == "UpdateCarCard")
+                    ReadDeviceEntries(lines, originalRoot, entries, warnings, ct);
+                else
+                    ReadMutationEntries(lines, originalRoot, entries, ct);
+            }
+            catch (Exception ex)
+            {
+                warnings.Add($"Could not read journal '{run.JournalPath}': {ex.Message}");
+            }
+        }
+
+        // Quarantine tools preserve relative paths physically. Walk only after this run is opened;
+        // journal-only organize/device operations avoid an unrelated recursive scan.
+        if (run.JournalPath is null || run.ToolName is "IngestMusic" or "SortDownloads" or
+            "CrossSyncMusic" or "AndroidSync" or "UpdateSmartStorage")
+            ReadPhysicalEntries(run.RunPath, originalRoot, entries, warnings, ct);
+
+        return new OperationBrowseResult(
+            originalRoot,
+            entries.Values.OrderBy(entry => entry.RelativePath, PathComparer).ToList(),
+            warnings);
+    }
+
+    private static void ReadMutationEntries(
+        string[] lines,
+        string originalRoot,
+        Dictionary<string, OperationFileEntry> entries,
+        CancellationToken ct)
+    {
+        foreach (string line in lines)
+        {
+            ct.ThrowIfCancellationRequested();
+            string[] fields = line.Split('\t');
+            if (fields.Length == 0)
+                continue;
+            switch (fields[0])
+            {
+                case "QUARANTINE" when fields.Length > 3:
+                case "STAGE_DELETE" when fields.Length > 3:
+                    Put(entries, originalRoot, fields[2], fields[3], OperationEntryKind.Quarantined);
+                    break;
+                case "DELETE" when fields.Length > 2:
+                    Put(entries, originalRoot, fields[2], null, OperationEntryKind.Deleted);
+                    break;
+                case "MOVE" when fields.Length > 3:
+                    Put(entries, originalRoot, fields[2], fields[3], OperationEntryKind.Moved);
+                    break;
+                case "INSTALL" when fields.Length > 2:
+                    Put(entries, originalRoot, fields[2], fields[2], OperationEntryKind.Created);
+                    break;
+                case "PLAN_QUARANTINE" when fields.Length > 3:
+                    PutPlanIfAbsent(entries, originalRoot, fields[2], fields[3], OperationEntryKind.Quarantined);
+                    break;
+                case "PLAN_DELETE" when fields.Length > 2:
+                    PutPlanIfAbsent(entries, originalRoot, fields[2], null, OperationEntryKind.Deleted);
+                    break;
+                case "PLAN_MOVE" when fields.Length > 3:
+                    PutPlanIfAbsent(entries, originalRoot, fields[2], fields[3], OperationEntryKind.Moved);
+                    break;
+                case "PLAN_INSTALL" when fields.Length > 2:
+                    PutPlanIfAbsent(entries, originalRoot, fields[2], fields[2], OperationEntryKind.Created);
+                    break;
+            }
+        }
+    }
+
+    private static void ReadDeviceEntries(
+        string[] lines,
+        string originalRoot,
+        Dictionary<string, OperationFileEntry> entries,
+        List<string> warnings,
+        CancellationToken ct)
+    {
+        foreach (string line in lines)
+        {
+            ct.ThrowIfCancellationRequested();
+            string[] fields = line.Split('\t');
+            if (fields.Length < 2 || fields[0] is not ("MOVE" or "CREATE"))
+                continue;
+            try
+            {
+                string first = Decode(fields[1]);
+                string? second = fields.Length > 2 && fields[2].Length > 0 ? Decode(fields[2]) : null;
+                if (fields[0] == "CREATE" && entries.ContainsKey(first))
+                    continue; // Preserve the preceding backup MOVE for a replaced destination.
+                Put(entries, originalRoot, first, fields[0] == "MOVE" ? second : first,
+                    fields[0] == "MOVE" ? OperationEntryKind.Moved : OperationEntryKind.Created);
+            }
+            catch (Exception ex)
+            {
+                warnings.Add($"Could not decode a {fields[0]} journal entry: {ex.Message}");
+            }
+        }
+    }
+
+    private static void ReadPhysicalEntries(
+        string runPath,
+        string originalRoot,
+        Dictionary<string, OperationFileEntry> entries,
+        List<string> warnings,
+        CancellationToken ct)
+    {
+        try
+        {
+            foreach (string current in Directory.EnumerateFileSystemEntries(
+                         runPath, "*", SearchOption.AllDirectories))
+            {
+                ct.ThrowIfCancellationRequested();
+                if (PathComparer.Equals(current, Path.Combine(runPath, "journal.tsv")))
+                    continue;
+                string relative = Path.GetRelativePath(runPath, current);
+                string original = Path.Combine(originalRoot, relative);
+                if (entries.TryGetValue(original, out var recorded) &&
+                    recorded.Kind != OperationEntryKind.Planned && recorded.CurrentPath is not null)
+                    continue;
+                bool directory = Directory.Exists(current);
+                entries[original] = new OperationFileEntry(
+                    original, current, relative, OperationEntryKind.Quarantined, true, directory);
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            warnings.Add($"Could not browse '{runPath}': {ex.Message}");
+        }
+    }
+
+    private static void Put(
+        Dictionary<string, OperationFileEntry> entries,
+        string originalRoot,
+        string original,
+        string? current,
+        OperationEntryKind kind)
+    {
+        bool exists = current is not null && (File.Exists(current) || Directory.Exists(current));
+        bool directory = current is not null && Directory.Exists(current);
+        entries[original] = new OperationFileEntry(
+            original, current, Relative(originalRoot, original), kind, exists, directory);
+    }
+
+    private static void PutPlanIfAbsent(
+        Dictionary<string, OperationFileEntry> entries,
+        string originalRoot,
+        string original,
+        string? current,
+        OperationEntryKind completedKind)
+    {
+        if (entries.ContainsKey(original))
+            return;
+        bool moved = current is not null && (File.Exists(current) || Directory.Exists(current)) &&
+            !File.Exists(original) && !Directory.Exists(original);
+        Put(entries, originalRoot, original, current,
+            moved ? completedKind : OperationEntryKind.Planned);
+    }
+
+    private static string Relative(string root, string path)
+    {
+        try { return Path.GetRelativePath(root, path); }
+        catch { return path; }
+    }
+
+    private static string ContainerForRun(string runPath)
+    {
+        string full = Path.GetFullPath(runPath);
+        if (ContainerName.IsMatch(Path.GetFileName(full)))
+            return full;
+        string? parent = Path.GetDirectoryName(full);
+        return parent is not null && ContainerName.IsMatch(Path.GetFileName(parent)) ? parent : full;
+    }
+
+    private static string Decode(string value) =>
+        System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(value));
 
     private static OperationJournalDiscoveryResult Discover(
         IReadOnlyList<string> searchRoots,

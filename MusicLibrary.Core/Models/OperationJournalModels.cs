@@ -30,3 +30,27 @@ public sealed record OperationJournalSummary(
 public sealed record OperationJournalDiscoveryResult(
     IReadOnlyList<OperationJournalSummary> Runs,
     IReadOnlyList<string> Warnings);
+
+public enum OperationEntryKind
+{
+    Quarantined,
+    Moved,
+    Created,
+    Deleted,
+    Planned,
+    Unknown,
+}
+
+/// <summary>One journaled or physically discovered item mapped back to its original path.</summary>
+public sealed record OperationFileEntry(
+    string OriginalPath,
+    string? CurrentPath,
+    string RelativePath,
+    OperationEntryKind Kind,
+    bool Exists,
+    bool IsDirectory);
+
+public sealed record OperationBrowseResult(
+    string OriginalRoot,
+    IReadOnlyList<OperationFileEntry> Entries,
+    IReadOnlyList<string> Warnings);

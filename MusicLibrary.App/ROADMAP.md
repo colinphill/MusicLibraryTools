@@ -27,7 +27,7 @@ avoid eagerly reading artwork or media data that is already represented in the m
 ## 3. Quarantine and recovery
 
 - [x] Discover ingest, organize, sync, and device-operation journals and folder-only quarantines.
-- [ ] Browse operations and quarantined files in their original hierarchy.
+- [x] Lazily browse operation items and quarantined files in their reconstructed original hierarchy.
 - [ ] Restore a run or selected files, identify interrupted operations, and purge by retention policy.
 
 ## 4. Network-aware indexing

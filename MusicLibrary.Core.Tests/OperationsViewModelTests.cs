@@ -56,9 +56,53 @@ public sealed class OperationsViewModelTests
         Assert.Contains("1 root(s) could not be scanned", viewModel.StatusText);
     }
 
-    private sealed class RecordingJournals(OperationJournalDiscoveryResult result) : IOperationJournalService
+    [Fact]
+    public async Task RunContentsRemainLazyUntilBrowseAndBuildTheOriginalHierarchy()
+    {
+        using var temp = new TempDirectory();
+        var settings = new AppSettings(Path.Combine(temp.Path, "settings.json"));
+        string originalRoot = Path.Combine(temp.Path, "incoming");
+        var summary = new OperationJournalSummary(
+            "IngestMusic", OperationJournalKind.Ingest, OperationJournalState.Completed,
+            Path.Combine(temp.Path, "run"), Path.Combine(temp.Path, "run", "journal.tsv"),
+            DateTimeOffset.UtcNow, 1);
+        var entry = new OperationFileEntry(
+            Path.Combine(originalRoot, "Artist", "Album", "song.flac"),
+            Path.Combine(temp.Path, "run", "Artist", "Album", "song.flac"),
+            Path.Combine("Artist", "Album", "song.flac"),
+            OperationEntryKind.Quarantined,
+            true,
+            false);
+        var journals = new RecordingJournals(
+            new([summary], []),
+            new(originalRoot, [entry], []));
+        var viewModel = new OperationsViewModel(journals, new StubFiles(), settings)
+        {
+            SearchRoot = originalRoot,
+        };
+
+        await viewModel.RefreshCommand.ExecuteAsync(null);
+        Assert.Equal(0, journals.BrowseCalls);
+
+        await viewModel.OpenRunCommand.ExecuteAsync(Assert.Single(viewModel.Runs));
+
+        Assert.Equal(1, journals.BrowseCalls);
+        Assert.True(viewModel.ShowBrowser);
+        var root = Assert.Single(viewModel.RootNodes);
+        var artist = Assert.Single(root.Children);
+        var album = Assert.Single(artist.Children);
+        var file = Assert.Single(album.Children);
+        Assert.Equal("song.flac", file.Name);
+        Assert.Equal("Quarantined", file.StateText);
+        Assert.Equal(entry.CurrentPath, file.CurrentPath);
+    }
+
+    private sealed class RecordingJournals(
+        OperationJournalDiscoveryResult result,
+        OperationBrowseResult? browse = null) : IOperationJournalService
     {
         public IReadOnlyList<string>? Roots { get; private set; }
+        public int BrowseCalls { get; private set; }
 
         public Task<OperationJournalDiscoveryResult> DiscoverAsync(
             IReadOnlyList<string> searchRoots,
@@ -66,6 +110,14 @@ public sealed class OperationsViewModelTests
         {
             Roots = searchRoots;
             return Task.FromResult(result);
+        }
+
+        public Task<OperationBrowseResult> BrowseAsync(
+            OperationJournalSummary run,
+            CancellationToken ct = default)
+        {
+            BrowseCalls++;
+            return Task.FromResult(browse ?? new OperationBrowseResult(run.RunPath, [], []));
         }
     }
 
