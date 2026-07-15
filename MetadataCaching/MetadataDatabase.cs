@@ -119,6 +119,7 @@ namespace MetadataCaching
     {
         private DbConnection conn_;
         private string lastidsql_;
+        private List<(string Path, long ID)> scanSetsCache_;
 
         // Indexer write-batching tunables. Defaults bound the WAL / per-statement overhead on a
         // large library; tests lower them to exercise the multi-commit and multi-row-flush paths
@@ -526,6 +527,7 @@ namespace MetadataCaching
                     .GroupBy(s => Path.TrimEndingDirectorySeparator(s.Path), StringComparer.InvariantCultureIgnoreCase)
                     .Select(g => (Path.TrimEndingDirectorySeparator(g.First().Path), g.First().ID)));
                 missedsets.AddRange(dbsets.Where(s => !s.Hit).Select(s => (s.ID)));
+                scanSetsCache_ = null;
             }
 
             int added = 0, modified = 0, removed = 0, unchanged = 0, scanned = 0;
@@ -1125,6 +1127,7 @@ namespace MetadataCaching
                     setcomm.ExecuteNonQuery();
                 }
                 deltrans.Commit();
+                scanSetsCache_ = null;
             }
 
             if ((modified != 0) || (removed != 0))
@@ -1148,13 +1151,16 @@ namespace MetadataCaching
 
         private List<(string Path, long ID)> LoadScanSets()
         {
+            if (scanSetsCache_ is not null)
+                return scanSetsCache_;
+
             var sets = new List<(string Path, long ID)>();
             using var cmd = conn_.CreateCommand();
             cmd.CommandText = "SELECT Path, ID FROM ScanSets";
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
                 sets.Add((reader.GetString(0), reader.GetInt64(1)));
-            return sets;
+            return scanSetsCache_ = sets;
         }
 
         // Split a full path into (scan set, album-relative directory, filename), matching how the
@@ -1206,24 +1212,27 @@ namespace MetadataCaching
         /// </summary>
         public FileDetails GetFileDetails(string fullPath, bool includeImages)
         {
-            var id = ResolveFileId(fullPath);
-            if (id is null)
+            var (setId, albumPath, fileName) = DecomposePath(fullPath);
+            if (setId < 0)
                 return null;
-            long fid = id.Value;
 
             var details = new FileDetails { Path = fullPath };
+            long fid;
 
             using (var cmd = conn_.CreateCommand())
             {
                 // Column order matches BuildCache so the MetadataCacheEntry(reader) ordinal reads line up.
                 cmd.CommandText = "SELECT Path, LastWriteTime, CodecName, CodecType, AverageBitrate, MaxBitrate," +
                     " BitsPerSample, SampleRate, Channels, DurationInFrames, Artist, AlbumArtist, Album," +
-                    " TrackNumber, TrackTotal, DiscNumber, DiscTotal, ReleaseDate, Track, TagType" +
-                    " FROM MetadataSummaryView WHERE ID = @id";
-                cmd.Parameters.Add("@id", DbType.Int64).Value = fid;
+                    " TrackNumber, TrackTotal, DiscNumber, DiscTotal, ReleaseDate, Track, TagType, ID" +
+                    " FROM MetadataSummaryView WHERE ScanSetID = @set AND AlbumPath = @album AND Path = @file LIMIT 1";
+                cmd.Parameters.Add("@set", DbType.Int64).Value = setId;
+                cmd.Parameters.Add("@album", DbType.String).Value = albumPath;
+                cmd.Parameters.Add("@file", DbType.String).Value = fileName;
                 using var reader = cmd.ExecuteReader();
                 if (!reader.Read())
                     return null;
+                fid = reader.GetInt64("ID");
                 details.Entry = new MetadataCacheEntry(reader);
                 details.TagType = reader.GetString("TagType");
             }
@@ -1234,16 +1243,14 @@ namespace MetadataCaching
                 cmd.Parameters.Add("@id", DbType.Int64).Value = fid;
                 using var reader = cmd.ExecuteReader();
                 while (reader.Read())
-                    details.KnownFields.Add(new KeyValuePair<string, string>(reader.GetString(0), reader.GetString(1)));
-            }
-
-            using (var cmd = conn_.CreateCommand())
-            {
-                cmd.CommandText = "SELECT k.\"Key\", m.Value FROM Metadata m JOIN MetadataKeys k ON m.KeyID = k.ID WHERE m.FileID = @id";
-                cmd.Parameters.Add("@id", DbType.Int64).Value = fid;
-                using var reader = cmd.ExecuteReader();
-                while (reader.Read())
-                    details.TextFields.Add(new KeyValuePair<string, string>(reader.GetString(0), reader.GetString(1)));
+                {
+                    var field = new KeyValuePair<string, string>(reader.GetString(0), reader.GetString(1));
+                    details.KnownFields.Add(field);
+                    // GetTextMetadata() is currently the TagFields.ToString() projection of
+                    // GetKnownMetadata() for every parser. Preserve the public raw/text collection
+                    // without querying the duplicate Metadata rows a second time.
+                    details.TextFields.Add(field);
+                }
             }
 
             if (includeImages)
@@ -1277,40 +1284,89 @@ namespace MetadataCaching
         /// </summary>
         public List<string> GetImageSignatures(IReadOnlyList<string> fullPaths)
         {
-            var result = new List<string>(fullPaths.Count);
-            using var cmd = conn_.CreateCommand();
-            cmd.CommandText = "SELECT i.Hash FROM ImageMetadata im JOIN Images i ON im.ImageID = i.ID WHERE im.FileID = @id ORDER BY i.Hash";
-            var idparam = cmd.Parameters.Add("@id", DbType.Int64);
-            foreach (var path in fullPaths)
+            var result = Enumerable.Repeat("", fullPaths.Count).ToArray();
+            const int pathsPerQuery = 200; // 800 parameters, below SQLite and SQL Server limits.
+            for (int start = 0; start < fullPaths.Count; start += pathsPerQuery)
             {
-                var id = ResolveFileId(path);
-                if (id is null)
+                int count = Math.Min(pathsPerQuery, fullPaths.Count - start);
+                using var cmd = conn_.CreateCommand();
+                string requested = AddRequestedPaths(cmd, fullPaths, start, count);
+                cmd.CommandText = requested +
+                    " SELECT r.RequestOrdinal, i.Hash FROM Requested r" +
+                    " LEFT JOIN Albums a ON a.ScanSetID = r.ScanSetID AND a.Path = r.AlbumPath" +
+                    " LEFT JOIN Tracks t ON t.AlbumID = a.ID" +
+                    " LEFT JOIN Files f ON f.ID = t.ID AND f.Path = r.FileName" +
+                    " LEFT JOIN ImageMetadata im ON im.FileID = f.ID" +
+                    " LEFT JOIN Images i ON i.ID = im.ImageID" +
+                    " ORDER BY r.RequestOrdinal, i.Hash";
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
                 {
-                    result.Add("");
-                    continue;
+                    int ordinal = reader.GetInt32(0);
+                    if (!reader.IsDBNull(1))
+                    {
+                        string hash = reader.GetString(1);
+                        result[ordinal] = result[ordinal].Length == 0 ? hash : result[ordinal] + "|" + hash;
+                    }
                 }
-                idparam.Value = id.Value;
-                var hashes = new List<string>();
-                using (var reader = cmd.ExecuteReader())
-                    while (reader.Read())
-                        hashes.Add(reader.GetString(0));
-                result.Add(string.Join("|", hashes));
             }
-            return result;
+            return [.. result];
         }
 
         /// <summary>The bytes of a file's first embedded image (for thumbnails), or null if none.</summary>
         public byte[] GetFirstImageData(string fullPath)
         {
-            var id = ResolveFileId(fullPath);
-            if (id is null)
-                return null;
+            return GetFirstImageData([fullPath])[0];
+        }
 
-            using var cmd = conn_.CreateCommand();
-            cmd.CommandText = "SELECT i.Data FROM ImageMetadata im JOIN Images i ON im.ImageID = i.ID WHERE im.FileID = @id LIMIT 1";
-            cmd.Parameters.Add("@id", DbType.Int64).Value = id.Value;
-            var r = cmd.ExecuteScalar();
-            return (r is null || r is DBNull) ? null : (byte[])r;
+        /// <summary>
+        /// Batch form used by virtualized thumbnail grids. It resolves paths and image rows in one
+        /// query per 200 paths instead of issuing two commands for every visible cell.
+        /// </summary>
+        public List<byte[]> GetFirstImageData(IReadOnlyList<string> fullPaths)
+        {
+            var result = Enumerable.Repeat<byte[]>(null, fullPaths.Count).ToArray();
+            const int pathsPerQuery = 200;
+            for (int start = 0; start < fullPaths.Count; start += pathsPerQuery)
+            {
+                int count = Math.Min(pathsPerQuery, fullPaths.Count - start);
+                using var cmd = conn_.CreateCommand();
+                string requested = AddRequestedPaths(cmd, fullPaths, start, count);
+                cmd.CommandText = requested +
+                    " SELECT r.RequestOrdinal, i.Data FROM Requested r" +
+                    " LEFT JOIN Albums a ON a.ScanSetID = r.ScanSetID AND a.Path = r.AlbumPath" +
+                    " LEFT JOIN Tracks t ON t.AlbumID = a.ID" +
+                    " LEFT JOIN Files f ON f.ID = t.ID AND f.Path = r.FileName" +
+                    " LEFT JOIN ImageMetadata im ON im.FileID = f.ID" +
+                    " LEFT JOIN Images i ON i.ID = im.ImageID" +
+                    " ORDER BY r.RequestOrdinal, im.ID";
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    int ordinal = reader.GetInt32(0);
+                    if (result[ordinal] is null && !reader.IsDBNull(1))
+                        result[ordinal] = (byte[])reader[1];
+                }
+            }
+            return [.. result];
+        }
+
+        private string AddRequestedPaths(DbCommand cmd, IReadOnlyList<string> fullPaths, int start, int count)
+        {
+            var sql = new StringBuilder("WITH Requested(RequestOrdinal, ScanSetID, AlbumPath, FileName) AS (VALUES ");
+            for (int i = 0; i < count; i++)
+            {
+                int ordinal = start + i;
+                var (setId, albumPath, fileName) = DecomposePath(fullPaths[ordinal]);
+                if (i > 0)
+                    sql.Append(',');
+                sql.Append("(@o").Append(i).Append(",@s").Append(i).Append(",@a").Append(i).Append(",@f").Append(i).Append(')');
+                cmd.Parameters.Add("@o" + i, DbType.Int32).Value = ordinal;
+                cmd.Parameters.Add("@s" + i, DbType.Int64).Value = setId;
+                cmd.Parameters.Add("@a" + i, DbType.String).Value = albumPath ?? "";
+                cmd.Parameters.Add("@f" + i, DbType.String).Value = fileName ?? "";
+            }
+            return sql.Append(')').ToString();
         }
 
         /// <summary>
@@ -1374,6 +1430,50 @@ namespace MetadataCaching
 
         private bool ReindexFileCore(string fullPath, IMediaFile file)
         {
+            using var trans = conn_.BeginTransaction();
+            try
+            {
+                bool result = ReindexFileCore(fullPath, file, trans);
+                trans.Commit();
+                return result;
+            }
+            catch
+            {
+                trans.Rollback();
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Refresh several already-saved files in one transaction. Used after bounded-parallel tag
+        /// writes so SQLite does one commit/fsync for the batch rather than one per track.
+        /// </summary>
+        public int ReindexFiles(IReadOnlyList<(string Path, IMediaFile File)> files)
+        {
+            using (var sha = SHA256.Create())
+                foreach (var file in files)
+                    foreach (var image in file.File.Tags.SelectMany(t => t.GetImageMetadata()))
+                        image.HashImage(sha);
+
+            using var trans = conn_.BeginTransaction();
+            try
+            {
+                int indexed = 0;
+                foreach (var file in files)
+                    if (ReindexFileCore(file.Path, file.File, trans))
+                        indexed++;
+                trans.Commit();
+                return indexed;
+            }
+            catch
+            {
+                trans.Rollback();
+                throw;
+            }
+        }
+
+        private bool ReindexFileCore(string fullPath, IMediaFile file, DbTransaction trans)
+        {
             var (setId, albumPath, fileName) = DecomposePath(fullPath);
             if (setId < 0)
                 return false;
@@ -1395,9 +1495,6 @@ namespace MetadataCaching
             string album = KnownValue(TagFields.Album) ?? "";
             string title = KnownValue(TagFields.Title) ?? "";
 
-            using var trans = conn_.BeginTransaction();
-            try
-            {
                 // Remove any existing rows for this file first.
                 using (var find = trans.CreateCommand())
                 {
@@ -1502,14 +1599,7 @@ namespace MetadataCaching
                     imc.ExecuteNonQuery();
                 }
 
-                trans.Commit();
                 return true;
-            }
-            catch
-            {
-                trans.Rollback();
-                throw;
-            }
         }
 
         private long GetOrInsert(DbTransaction trans, string table, string column, string value)

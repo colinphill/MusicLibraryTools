@@ -149,11 +149,14 @@ namespace MusicFileUtilities.Tests
         {
             using var tmp = MediaFixtures.Copy("sample.ogg");
             byte[] setupBefore = ReadOggPackets(tmp.Path).Single(p => IsVorbisHeaderPacket(p, 5));
+            long lengthBefore = new FileInfo(tmp.Path).Length;
 
-            var mf = MediaFile.GetFile(tmp.Path);
+            var mf = (OggVorbisFile)MediaFile.GetFile(tmp.Path);
             Setter(mf)(TagFields.Title, "New Title");
             mf.SaveTags();
 
+            Assert.True(mf.LastSaveWasInPlace);
+            Assert.Equal(lengthBefore, new FileInfo(tmp.Path).Length);
             var packets = ReadOggPackets(tmp.Path);
             Assert.True(IsVorbisHeaderPacket(packets[0], 1)); // identification header
             byte[] setupAfter = packets.Single(p => IsVorbisHeaderPacket(p, 5));

@@ -1,5 +1,7 @@
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
+using System.Runtime.ExceptionServices;
+using System.Threading.Channels;
 
 namespace MusicLibrary.Core.Services;
 
@@ -31,6 +33,42 @@ public sealed class TagWriteService : ITagWriteService
             var results = new FileWriteResult[paths.Count];
             int nextIndex = -1;
             int done = 0;
+            Channel<(int Index, string Path, IMediaFile File)>? reindexQueue = null;
+            Task reindexTask = Task.CompletedTask;
+
+            if (_reindex is not null)
+            {
+                reindexQueue = Channel.CreateBounded<(int, string, IMediaFile)>(new BoundedChannelOptions(64)
+                {
+                    SingleReader = true,
+                    FullMode = BoundedChannelFullMode.Wait,
+                });
+                reindexTask = RefreshCacheAsync(reindexQueue.Reader);
+            }
+
+            async Task RefreshCacheAsync(ChannelReader<(int Index, string Path, IMediaFile File)> reader)
+            {
+                await foreach (var first in reader.ReadAllAsync())
+                {
+                    var batch = new List<(int Index, string Path, IMediaFile File)>(32) { first };
+                    // Briefly yield so concurrently completed network writes share one DB commit.
+                    await Task.Delay(2);
+                    while (batch.Count < 32 && reader.TryRead(out var next))
+                        batch.Add(next);
+
+                    try
+                    {
+                        await _reindex!.ReindexFilesAsync(
+                            batch.Select(item => (item.Path, item.File)).ToArray(),
+                            CancellationToken.None);
+                    }
+                    catch (Exception ex)
+                    {
+                        foreach (var item in batch)
+                            results[item.Index] = results[item.Index] with { CacheError = ex.Message };
+                    }
+                }
+            }
 
             async Task Worker()
             {
@@ -44,27 +82,30 @@ public sealed class TagWriteService : ITagWriteService
                     string path = paths[index];
                     using var mutation = await _mutations.AcquireAsync(path, ct);
                     var applied = ApplyToFile(path, edits);
-                    var result = applied.Result;
-                    // Once the disk commit succeeds, cancellation must not strand a stale cache or
-                    // turn that committed write into an apparent failure. Cache errors are separate.
-                    if (result.Outcome == WriteOutcome.Saved && applied.SavedFile is not null && _reindex is not null)
-                    {
-                        try
-                        {
-                            await _reindex.ReindexFileAsync(path, applied.SavedFile, CancellationToken.None);
-                        }
-                        catch (Exception ex)
-                        {
-                            result = result with { CacheError = ex.Message };
-                        }
-                    }
-                    results[index] = result;
+                    results[index] = applied.Result;
+                    if (applied.Result.Outcome == WriteOutcome.Saved && applied.SavedFile is not null && reindexQueue is not null)
+                        await reindexQueue.Writer.WriteAsync((index, path, applied.SavedFile), CancellationToken.None);
                     progress?.Report(Interlocked.Increment(ref done));
                 }
             }
 
             int workerCount = Math.Min(_maxParallelism, paths.Count);
-            await Task.WhenAll(Enumerable.Range(0, workerCount).Select(_ => Worker()));
+            Exception? workerError = null;
+            try
+            {
+                await Task.WhenAll(Enumerable.Range(0, workerCount).Select(_ => Worker()));
+            }
+            catch (Exception ex)
+            {
+                // Files committed before cancellation/failure must still reach the cache.
+                workerError = ex;
+            }
+
+            reindexQueue?.Writer.TryComplete();
+            await reindexTask;
+
+            if (workerError is not null)
+                ExceptionDispatchInfo.Capture(workerError).Throw();
             return new BatchWriteResult(results);
         }, ct);
 

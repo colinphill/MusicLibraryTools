@@ -149,6 +149,33 @@ public class DatabaseReadTests
     }
 
     [Fact]
+    public async Task BatchEditingTags_ReindexesAllFilesInOneCacheOperation()
+    {
+        var (work, music, config, first) = Setup("sample.flac");
+        string second = Path.Combine(music, "second.flac");
+        File.Copy(first, second);
+        try
+        {
+            var settings = new AppSettings(Path.Combine(work, "settings.json"));
+            settings.LoadConfig(config);
+            using var library = new LibraryService(settings);
+            await library.IndexAsync();
+
+            var writer = new TagWriteService(library, maxParallelism: 2);
+            var result = await writer.ApplyAsync(
+                [first, second], [new TagEdit(TagFields.Album, "Batch album")]);
+
+            Assert.Equal(2, result.SavedCount);
+            Assert.Equal("Batch album", (await library.GetFileDetailsAsync(first, false))!.Entry.Album);
+            Assert.Equal("Batch album", (await library.GetFileDetailsAsync(second, false))!.Entry.Album);
+        }
+        finally
+        {
+            try { Directory.Delete(work, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public async Task EditingArtwork_ReindexesImageIntoCache()
     {
         var (work, _, config, song) = Setup("sample.flac");
@@ -178,6 +205,18 @@ public class DatabaseReadTests
             var bytes = await library.GetFirstImageAsync(song);
             Assert.NotNull(bytes);
             Assert.True(bytes!.Length > 0);
+
+            string missing = Path.Combine(Path.GetDirectoryName(song)!, "missing.flac");
+            var batch = await library.GetFirstImagesAsync([song, missing, song]);
+            Assert.Equal(3, batch.Count);
+            Assert.Equal(bytes, batch[0]);
+            Assert.Null(batch[1]);
+            Assert.Equal(bytes, batch[2]);
+
+            var signatures = await library.GetImageSignaturesAsync([song, missing, song]);
+            Assert.NotEmpty(signatures[0]);
+            Assert.Equal("", signatures[1]);
+            Assert.Equal(signatures[0], signatures[2]);
 
             var details = await library.GetFileDetailsAsync(song, includeArtwork: true);
             Assert.Single(details!.Images);

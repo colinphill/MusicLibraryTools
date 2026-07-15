@@ -42,6 +42,12 @@ public interface ILibraryService
     Task<byte[]?> GetFirstImageAsync(string path, CancellationToken ct = default);
 
     /// <summary>
+    /// Batch form for virtualized grids. The returned list has the same order and length as
+    /// <paramref name="paths"/>, with null entries for files without cached artwork.
+    /// </summary>
+    Task<IReadOnlyList<byte[]?>> GetFirstImagesAsync(IReadOnlyList<string> paths, CancellationToken ct = default);
+
+    /// <summary>
     /// A per-path signature of each file's embedded-image hashes (order-independent; "" for none),
     /// for cheaply detecting whether a selection's artwork is uniform. Same order as the input.
     /// </summary>

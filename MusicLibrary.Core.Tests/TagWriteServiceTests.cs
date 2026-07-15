@@ -206,6 +206,23 @@ public class TagWriteServiceTests
         Assert.Empty(reindex.Paths);
     }
 
+    [Fact]
+    public async Task Batch_UsesBatchedParsedCacheRefresh()
+    {
+        using var first = MediaFixtures.Copy("sample.flac");
+        using var second = MediaFixtures.Copy("sample.mp3");
+        var reindex = new BatchRecordingReindexService();
+        var writer = new TagWriteService(reindex, maxParallelism: 2);
+
+        var result = await writer.ApplyAsync(
+            [first.Path, second.Path], [new TagEdit(TagFields.Title, "Batched refresh")]);
+
+        Assert.Equal(2, result.SavedCount);
+        Assert.Equal(0, reindex.SingleCalls);
+        Assert.Equal(2, reindex.Batches.SelectMany(batch => batch).Count());
+        Assert.All(reindex.Batches.SelectMany(batch => batch), item => Assert.NotNull(item.File));
+    }
+
     private sealed class ThrowingReindexService : IReindexService
     {
         public CancellationToken ReceivedToken { get; private set; }
@@ -259,6 +276,26 @@ public class TagWriteServiceTests
         {
             ParsedCalls++;
             SavedFile = savedFile;
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class BatchRecordingReindexService : IReindexService
+    {
+        public int SingleCalls { get; private set; }
+        public List<IReadOnlyList<(string Path, IMediaFile File)>> Batches { get; } = [];
+
+        public Task ReindexFileAsync(string path, CancellationToken ct = default)
+        {
+            SingleCalls++;
+            return Task.CompletedTask;
+        }
+
+        public Task ReindexFilesAsync(
+            IReadOnlyList<(string Path, IMediaFile File)> files,
+            CancellationToken ct = default)
+        {
+            Batches.Add(files);
             return Task.CompletedTask;
         }
     }

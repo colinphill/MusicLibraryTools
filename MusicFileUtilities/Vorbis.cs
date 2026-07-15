@@ -587,6 +587,7 @@ namespace MusicFileUtilities
 
         private bool _gotinfo;
         private bool _gotcomments;
+        internal bool LastSaveWasInPlace { get; private set; }
 
         private void ParsePage(byte[] page)
         {
@@ -657,6 +658,7 @@ namespace MusicFileUtilities
 
         public void SaveTags(string outputPath = null)
         {
+            LastSaveWasInPlace = false;
             string target = outputPath ?? Filename
                 ?? throw new InvalidOperationException("No filename associated with this file.");
 
@@ -668,6 +670,12 @@ namespace MusicFileUtilities
             newPacket[4] = (byte)'b'; newPacket[5] = (byte)'i'; newPacket[6] = (byte)'s';
             Array.Copy(commentData, 0, newPacket, 7, commentData.Length);
             newPacket[7 + commentData.Length] = 0x01; // framing bit
+
+            if (outputPath == null && TrySaveCommentInPlace(newPacket))
+            {
+                LastSaveWasInPlace = true;
+                return;
+            }
 
             string tempPath = Tools.CreateSiblingTempPath(target);
             try
@@ -789,6 +797,96 @@ namespace MusicFileUtilities
                 throw;
             }
             Filename = target;
+        }
+
+        private sealed record InPlaceCommentPage(
+            long Offset, byte[] Header, byte[] Segments, byte[] Data, int CommentBytes);
+
+        // Same-length packets retain exactly the same Ogg lacing and page sequence. Patch only the
+        // comment bytes and page CRCs; setup/audio packets sharing those pages remain untouched.
+        private bool TrySaveCommentInPlace(byte[] newPacket)
+        {
+            if (Filename is null)
+                return false;
+
+            using FileStream stream = new FileStream(
+                Filename, FileMode.Open, FileAccess.ReadWrite, FileShare.Read,
+                Tools.ParseReadBufferSize, FileOptions.RandomAccess);
+            var pages = new List<InPlaceCommentPage>();
+            int? editedSerial = null;
+            int oldPacketLength = 0;
+            bool complete = false;
+
+            while (stream.Position < stream.Length)
+            {
+                long pageOffset = stream.Position;
+                byte[] header = new byte[27];
+                if (stream.Read(header, 0, header.Length) != header.Length)
+                    return false;
+                if (header[0] != (byte)'O' || header[1] != (byte)'g' || header[2] != (byte)'g' || header[3] != (byte)'S')
+                    return false;
+
+                byte[] segments = new byte[header[26]];
+                stream.ReadExactly(segments);
+                int dataLength = 0;
+                foreach (byte segment in segments)
+                    dataLength += segment;
+                byte[] data = new byte[dataLength];
+                stream.ReadExactly(data);
+
+                bool continuation = (header[5] & 1) != 0;
+                int serial = OggReadInt32LE(header, 14);
+                if (editedSerial is null)
+                {
+                    if (continuation || data.Length < 7 || data[0] != 0x03 ||
+                        data[1] != (byte)'v' || data[2] != (byte)'o' || data[3] != (byte)'r' ||
+                        data[4] != (byte)'b' || data[5] != (byte)'i' || data[6] != (byte)'s')
+                        continue;
+                    editedSerial = serial;
+                }
+                else if (serial != editedSerial.Value)
+                {
+                    // Pages from an interleaved logical stream are unrelated to this packet.
+                    continue;
+                }
+                else if (!continuation)
+                {
+                    return false;
+                }
+
+                var (ends, _, bytesUsed) = MeasureFirstPacket(segments, segments.Length);
+                oldPacketLength += bytesUsed;
+                if (oldPacketLength > newPacket.Length)
+                    return false;
+                pages.Add(new InPlaceCommentPage(pageOffset, header, segments, data, bytesUsed));
+                if (ends)
+                {
+                    complete = true;
+                    break;
+                }
+            }
+
+            if (!complete || oldPacketLength != newPacket.Length)
+                return false;
+
+            int packetOffset = 0;
+            foreach (var page in pages)
+            {
+                Array.Copy(newPacket, packetOffset, page.Data, 0, page.CommentBytes);
+                packetOffset += page.CommentBytes;
+                page.Header[22] = page.Header[23] = page.Header[24] = page.Header[25] = 0;
+                uint crc = OggCRC(page.Header, 0, page.Header.Length);
+                crc = OggCRC(page.Segments, 0, page.Segments.Length, crc);
+                crc = OggCRC(page.Data, 0, page.Data.Length, crc);
+                OggWriteUInt32LE(page.Header, 22, crc);
+
+                stream.Seek(page.Offset, SeekOrigin.Begin);
+                stream.Write(page.Header, 0, page.Header.Length);
+                stream.Write(page.Segments, 0, page.Segments.Length);
+                stream.Write(page.Data, 0, page.Data.Length);
+            }
+            stream.Flush(flushToDisk: true);
+            return true;
         }
 
         // Walks the lacing values of a page's FIRST packet: how many segments and bytes it

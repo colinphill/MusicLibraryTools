@@ -35,6 +35,9 @@ public sealed class ThumbnailProvider : IThumbnailProvider
     private readonly Dictionary<string, LinkedListNode<string>> _lruNodes = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, int> _versions = new(StringComparer.OrdinalIgnoreCase);
     private readonly LinkedList<string> _lru = new();
+    private readonly object _rawBatchGate = new();
+    private readonly Dictionary<string, TaskCompletionSource<byte[]?>> _pendingRaw = new(StringComparer.OrdinalIgnoreCase);
+    private bool _rawBatchScheduled;
 
     public ThumbnailProvider(ILibraryService library, IArtworkService artwork)
     {
@@ -99,7 +102,7 @@ public sealed class ThumbnailProvider : IThumbnailProvider
     {
         try
         {
-            var raw = await _library.GetFirstImageAsync(path);
+            var raw = await GetRawDataAsync(path);
             byte[]? data = null;
             if (raw is { Length: > 0 })
             {
@@ -122,6 +125,58 @@ public sealed class ThumbnailProvider : IThumbnailProvider
                 if (GetVersionLocked(path) == version)
                     AddCachedLocked(path, null);
             return null;
+        }
+    }
+
+    private Task<byte[]?> GetRawDataAsync(string path)
+    {
+        lock (_rawBatchGate)
+        {
+            if (_pendingRaw.TryGetValue(path, out var existing))
+                return existing.Task;
+
+            var pending = new TaskCompletionSource<byte[]?>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _pendingRaw[path] = pending;
+            if (!_rawBatchScheduled)
+            {
+                _rawBatchScheduled = true;
+                _ = FlushRawBatchesAsync();
+            }
+            return pending.Task;
+        }
+    }
+
+    private async Task FlushRawBatchesAsync()
+    {
+        // Let all cells created in the current UI turn join one database request.
+        await Task.Yield();
+        while (true)
+        {
+            KeyValuePair<string, TaskCompletionSource<byte[]?>>[] batch;
+            lock (_rawBatchGate)
+            {
+                batch = _pendingRaw.Take(64).ToArray();
+                foreach (var item in batch)
+                    _pendingRaw.Remove(item.Key);
+                if (batch.Length == 0)
+                {
+                    _rawBatchScheduled = false;
+                    return;
+                }
+            }
+
+            try
+            {
+                var paths = batch.Select(item => item.Key).ToArray();
+                var images = await _library.GetFirstImagesAsync(paths);
+                for (int i = 0; i < batch.Length; i++)
+                    batch[i].Value.TrySetResult(i < images.Count ? images[i] : null);
+            }
+            catch (Exception ex)
+            {
+                foreach (var item in batch)
+                    item.Value.TrySetException(ex);
+            }
         }
     }
 

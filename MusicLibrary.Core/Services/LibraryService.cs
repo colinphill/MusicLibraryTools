@@ -408,6 +408,22 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         }
     }
 
+    public async Task<IReadOnlyList<byte[]?>> GetFirstImagesAsync(IReadOnlyList<string> paths, CancellationToken ct = default)
+    {
+        if (!IsReady || paths.Count == 0)
+            return [];
+        await _gate.WaitAsync(ct);
+        try
+        {
+            var db = GetDatabase(GetContext());
+            return await Task.Run(() => (IReadOnlyList<byte[]?>)db.GetFirstImageData(paths), ct);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     public async Task ReindexFileAsync(string path, IMediaFile savedFile, CancellationToken ct = default)
     {
         if (!IsReady)
@@ -417,6 +433,24 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         {
             var db = GetDatabase(GetContext());
             await Task.Run(() => db.ReindexFile(path, savedFile), ct);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
+    public async Task ReindexFilesAsync(
+        IReadOnlyList<(string Path, IMediaFile File)> files,
+        CancellationToken ct = default)
+    {
+        if (!IsReady || files.Count == 0)
+            return;
+        await _gate.WaitAsync(ct);
+        try
+        {
+            var db = GetDatabase(GetContext());
+            await Task.Run(() => db.ReindexFiles(files), ct);
         }
         finally
         {

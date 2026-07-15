@@ -18,4 +18,16 @@ public interface IReindexService
     /// </summary>
     Task ReindexFileAsync(string path, IMediaFile savedFile, CancellationToken ct = default)
         => ReindexFileAsync(path, ct);
+
+    /// <summary>
+    /// Refresh several saved parser objects as one cache operation. Implementations without a
+    /// batch path retain correctness by falling back to the single-file overload.
+    /// </summary>
+    async Task ReindexFilesAsync(
+        IReadOnlyList<(string Path, IMediaFile File)> files,
+        CancellationToken ct = default)
+    {
+        foreach (var file in files)
+            await ReindexFileAsync(file.Path, file.File, ct);
+    }
 }
