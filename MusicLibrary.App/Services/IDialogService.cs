@@ -16,4 +16,6 @@ public interface IDialogService
     Task<bool> ConfirmCdDerivationAsync(IngestApprovalItem item);
 
     Task<bool> ConfirmRestoreAsync(OperationRestorePlan plan);
+
+    Task<bool> ConfirmPurgeAsync(OperationPurgePlan plan);
 }

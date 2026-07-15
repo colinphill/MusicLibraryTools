@@ -23,6 +23,17 @@ public interface IOperationJournalService
         OperationRestorePlan plan,
         IProgress<int>? progress = null,
         CancellationToken ct = default);
+
+    Task<OperationPurgePlan> PreviewPurgeAsync(
+        IReadOnlyList<OperationJournalSummary> runs,
+        int retentionDays,
+        DateTimeOffset? nowUtc = null,
+        CancellationToken ct = default);
+
+    Task<OperationPurgeResult> ApplyPurgeAsync(
+        OperationPurgePlan plan,
+        IProgress<int>? progress = null,
+        CancellationToken ct = default);
 }
 
 /// <summary>
@@ -139,6 +150,222 @@ public sealed class OperationJournalService : IOperationJournalService
                 rollbackComplete ? "ROLLBACK\tRESTORE" : "ROLLBACK_FAILED\tRESTORE");
             throw;
         }
+    }
+
+    public Task<OperationPurgePlan> PreviewPurgeAsync(
+        IReadOnlyList<OperationJournalSummary> runs,
+        int retentionDays,
+        DateTimeOffset? nowUtc = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(runs);
+        if (retentionDays < 1)
+            throw new ArgumentOutOfRangeException(nameof(retentionDays), "Retention must be at least one day.");
+        return Task.Run(() => PreviewPurge(runs, retentionDays, nowUtc ?? DateTimeOffset.UtcNow, ct), ct);
+    }
+
+    public async Task<OperationPurgeResult> ApplyPurgeAsync(
+        OperationPurgePlan plan,
+        IProgress<int>? progress = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        if (!plan.CanApply)
+            return new(0, 0, 0);
+
+        var paths = plan.Runs.SelectMany(run => new[] { run.Run.RunPath, run.StagingPath }).ToList();
+        using var lease = await _mutations.AcquireAsync(paths, ct);
+
+        // Validate every run before making the first change. This prevents a partial purge when any
+        // reviewed run has received, lost, or changed a file since preview.
+        foreach (var run in plan.Runs)
+        {
+            ct.ThrowIfCancellationRequested();
+            ValidatePurgeManifest(run, ct);
+            if (Exists(run.StagingPath))
+                throw new InvalidOperationException($"Purge staging path already exists: {run.StagingPath}");
+        }
+
+        var staged = new List<OperationPurgeRun>();
+        try
+        {
+            foreach (var run in plan.Runs)
+            {
+                ct.ThrowIfCancellationRequested();
+                Directory.CreateDirectory(Path.GetDirectoryName(run.StagingPath)!);
+                Directory.Move(run.Run.RunPath, run.StagingPath);
+                staged.Add(run);
+            }
+            // Close the validation-to-rename race before reaching the irreversible delete phase.
+            foreach (var run in staged)
+            {
+                ct.ThrowIfCancellationRequested();
+                ValidatePurgeManifest(run, run.StagingPath, ct);
+            }
+        }
+        catch
+        {
+            foreach (var run in staged.AsEnumerable().Reverse())
+            {
+                try
+                {
+                    if (Directory.Exists(run.StagingPath) && !Exists(run.Run.RunPath))
+                        Directory.Move(run.StagingPath, run.Run.RunPath);
+                }
+                catch { }
+            }
+            throw;
+        }
+
+        int deleted = 0;
+        foreach (var run in staged)
+        {
+            // Staging is the commit point. Do not honor cancellation between staged deletions or
+            // leave reviewed runs hidden in the staging area.
+            DeleteStagedRun(run);
+            deleted++;
+            progress?.Report(deleted);
+        }
+        foreach (string previewRoot in staged.Select(run => Path.GetDirectoryName(run.StagingPath)!)
+                     .Distinct(PathComparer))
+            TryDeleteEmptyStagingParents(previewRoot);
+        return new(deleted, plan.Runs.Take(deleted).Sum(run => run.FileCount),
+            plan.Runs.Take(deleted).Sum(run => run.TotalBytes));
+    }
+
+    private static OperationPurgePlan PreviewPurge(
+        IReadOnlyList<OperationJournalSummary> runs,
+        int retentionDays,
+        DateTimeOffset nowUtc,
+        CancellationToken ct)
+    {
+        DateTimeOffset cutoff = nowUtc.ToUniversalTime().AddDays(-retentionDays);
+        int interrupted = 0, unsafeRuns = 0, newer = 0;
+        var purgeRuns = new List<OperationPurgeRun>();
+        string previewId = DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff") + "-" + Guid.NewGuid().ToString("N");
+
+        foreach (var run in runs.DistinctBy(run => Path.GetFullPath(run.RunPath), PathComparer))
+        {
+            ct.ThrowIfCancellationRequested();
+            if (run.State == OperationJournalState.Interrupted)
+            {
+                interrupted++;
+                continue;
+            }
+            if (run.CreatedAtUtc > cutoff)
+            {
+                newer++;
+                continue;
+            }
+            string fullRun = Path.TrimEndingDirectorySeparator(Path.GetFullPath(run.RunPath));
+            string container = Path.TrimEndingDirectorySeparator(ContainerForRun(fullRun));
+            if (PathComparer.Equals(fullRun, container) || !Directory.Exists(fullRun))
+            {
+                unsafeRuns++;
+                continue;
+            }
+            string staging = Path.Combine(container, ".MusicLibrary.App-purge-staging", previewId,
+                Path.GetFileName(fullRun) + "-" + Guid.NewGuid().ToString("N"));
+            purgeRuns.Add(new(run, staging, CapturePurgeManifest(fullRun, ct)));
+        }
+        return new(retentionDays, cutoff, purgeRuns, interrupted, unsafeRuns, newer);
+    }
+
+    private static IReadOnlyList<OperationPurgeManifestEntry> CapturePurgeManifest(
+        string root,
+        CancellationToken ct)
+    {
+        if (!Directory.Exists(root))
+            throw new InvalidOperationException($"Operation run no longer exists: {root}");
+        var entries = new List<OperationPurgeManifestEntry>();
+        var pending = new Stack<string>();
+        pending.Push(root);
+        while (pending.Count > 0)
+        {
+            string directory = pending.Pop();
+            foreach (string path in Directory.EnumerateFileSystemEntries(directory))
+            {
+                ct.ThrowIfCancellationRequested();
+                var attributes = File.GetAttributes(path);
+                bool isDirectory = attributes.HasFlag(FileAttributes.Directory);
+                bool isReparse = attributes.HasFlag(FileAttributes.ReparsePoint);
+                string relative = Path.GetRelativePath(root, path);
+                if (isDirectory)
+                {
+                    entries.Add(new(relative, true, isReparse, 0, default));
+                    if (!isReparse)
+                        pending.Push(path);
+                }
+                else
+                {
+                    var file = new FileInfo(path);
+                    entries.Add(new(relative, false, isReparse, file.Length, file.LastWriteTimeUtc));
+                }
+            }
+        }
+        return entries.OrderBy(entry => entry.RelativePath, PathComparer).ToList();
+    }
+
+    private static void ValidatePurgeManifest(OperationPurgeRun run, CancellationToken ct) =>
+        ValidatePurgeManifest(run, run.Run.RunPath, ct);
+
+    private static void ValidatePurgeManifest(OperationPurgeRun run, string path, CancellationToken ct)
+    {
+        IReadOnlyList<OperationPurgeManifestEntry> current;
+        try { current = CapturePurgeManifest(path, ct); }
+        catch (OperationCanceledException) { throw; }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException(
+                $"Operation run changed since purge preview: {run.Run.RunPath}. Preview again before purging.", ex);
+        }
+        if (current.Count != run.Manifest.Count || !current.Zip(run.Manifest).All(pair =>
+                PathComparer.Equals(pair.First.RelativePath, pair.Second.RelativePath) &&
+                pair.First.IsDirectory == pair.Second.IsDirectory &&
+                pair.First.IsReparsePoint == pair.Second.IsReparsePoint &&
+                (pair.First.IsDirectory || pair.First.Length == pair.Second.Length) &&
+                (pair.First.IsDirectory || Math.Abs((pair.First.LastWriteTimeUtc -
+                    pair.Second.LastWriteTimeUtc).TotalMilliseconds) <= 500)))
+            throw new InvalidOperationException(
+                $"Operation run changed since purge preview: {run.Run.RunPath}. Preview again before purging.");
+    }
+
+    private static void DeleteStagedRun(OperationPurgeRun run)
+    {
+        // The manifest deliberately does not traverse reparse points. Delete leaves and links first,
+        // then ordinary directories from deepest to shallowest, so purge cannot cross a junction.
+        foreach (var entry in run.Manifest.Where(entry => !entry.IsDirectory || entry.IsReparsePoint)
+                     .OrderByDescending(entry => entry.RelativePath.Length))
+        {
+            string path = Path.Combine(run.StagingPath, entry.RelativePath);
+            if (entry.IsDirectory)
+                Directory.Delete(path);
+            else
+            {
+                File.SetAttributes(path, FileAttributes.Normal);
+                File.Delete(path);
+            }
+        }
+        foreach (var entry in run.Manifest.Where(entry => entry.IsDirectory && !entry.IsReparsePoint)
+                     .OrderByDescending(entry => entry.RelativePath.Length))
+            Directory.Delete(Path.Combine(run.StagingPath, entry.RelativePath));
+        Directory.Delete(run.StagingPath);
+    }
+
+    private static void TryDeleteEmptyStagingParents(string previewRoot)
+    {
+        try
+        {
+            if (Directory.Exists(previewRoot) && !Directory.EnumerateFileSystemEntries(previewRoot).Any())
+                Directory.Delete(previewRoot);
+            string? stagingRoot = Path.GetDirectoryName(previewRoot);
+            if (stagingRoot is not null &&
+                Path.GetFileName(stagingRoot).Equals(".MusicLibrary.App-purge-staging",
+                    StringComparison.OrdinalIgnoreCase) &&
+                Directory.Exists(stagingRoot) && !Directory.EnumerateFileSystemEntries(stagingRoot).Any())
+                Directory.Delete(stagingRoot);
+        }
+        catch { }
     }
 
     private static OperationRestorePlan PreviewRestore(
@@ -477,6 +704,8 @@ public sealed class OperationJournalService : IOperationJournalService
             foreach (string run in runDirectories.Distinct(PathComparer))
             {
                 ct.ThrowIfCancellationRequested();
+                if (Path.GetFileName(run).StartsWith(".MusicLibrary.App-", StringComparison.OrdinalIgnoreCase))
+                    continue;
                 if (!TryGetRunTime(run, out var created) && !File.Exists(Path.Combine(run, "journal.tsv")))
                     continue;
                 runs.Add(ReadSummary(tool, run, created));

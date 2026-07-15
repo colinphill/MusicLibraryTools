@@ -270,6 +270,84 @@ public sealed class OperationJournalServiceTests
         Assert.Equal("ROLLBACK\tRESTORE", File.ReadLines(plan.RestoreJournalPath).Last());
     }
 
+    [Fact]
+    public async Task PurgePreviewFiltersByAgeProtectsInterruptedRunsAndCountsRestoreBackups()
+    {
+        using var temp = new TempDirectory();
+        string container = temp.Directory("incoming.IngestMusic-quarantine");
+        string eligiblePath = temp.Directory("incoming.IngestMusic-quarantine", "20260101-000000000");
+        string interruptedPath = temp.Directory("incoming.IngestMusic-quarantine", "20260102-000000000");
+        string newerPath = temp.Directory("incoming.IngestMusic-quarantine", "20260710-000000000");
+        File.WriteAllText(Path.Combine(eligiblePath, "song.flac"), "audio");
+        string restore = Path.Combine(eligiblePath, ".MusicLibrary.App-restore", "one", "collisions");
+        Directory.CreateDirectory(restore);
+        File.WriteAllText(Path.Combine(restore, "existing.flac"), "collision");
+        var now = new DateTimeOffset(2026, 7, 15, 0, 0, 0, TimeSpan.Zero);
+        OperationJournalSummary Make(string path, OperationJournalState state, DateTimeOffset created) =>
+            new("IngestMusic", OperationJournalKind.Ingest, state, path, null, created, null);
+        var service = new OperationJournalService();
+
+        var plan = await service.PreviewPurgeAsync(
+            [
+                Make(eligiblePath, OperationJournalState.Completed, now.AddDays(-100)),
+                Make(interruptedPath, OperationJournalState.Interrupted, now.AddDays(-100)),
+                Make(newerPath, OperationJournalState.Completed, now.AddDays(-5)),
+            ], 30, now);
+
+        var run = Assert.Single(plan.Runs);
+        Assert.Equal(eligiblePath, run.Run.RunPath);
+        Assert.Equal(2, plan.FileCount);
+        Assert.Equal(1, plan.RestoreBackupFileCount);
+        Assert.Equal(1, plan.ProtectedInterruptedCount);
+        Assert.Equal(1, plan.NewerCount);
+        Assert.StartsWith(Path.Combine(container, ".MusicLibrary.App-purge-staging"), run.StagingPath);
+    }
+
+    [Fact]
+    public async Task PurgeRejectsAChangedManifestBeforeMovingAnyRun()
+    {
+        using var temp = new TempDirectory();
+        string first = temp.Directory("incoming.IngestMusic-quarantine", "20260101-000000000");
+        string second = temp.Directory("incoming.IngestMusic-quarantine", "20260102-000000000");
+        File.WriteAllText(Path.Combine(first, "a.flac"), "a");
+        File.WriteAllText(Path.Combine(second, "b.flac"), "b");
+        var old = DateTimeOffset.UtcNow.AddDays(-100);
+        OperationJournalSummary Make(string path) =>
+            new("IngestMusic", OperationJournalKind.Ingest, OperationJournalState.Completed,
+                path, null, old, null);
+        var service = new OperationJournalService();
+        var plan = await service.PreviewPurgeAsync([Make(first), Make(second)], 30);
+        File.WriteAllText(Path.Combine(second, "new.flac"), "changed");
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(() => service.ApplyPurgeAsync(plan));
+
+        Assert.Contains("changed since purge preview", error.Message);
+        Assert.True(Directory.Exists(first));
+        Assert.True(Directory.Exists(second));
+        Assert.All(plan.Runs, run => Assert.False(Directory.Exists(run.StagingPath)));
+    }
+
+    [Fact]
+    public async Task PurgeDeletesTheReviewedRunAndDiscoveryIgnoresItsStagingContainer()
+    {
+        using var temp = new TempDirectory();
+        string source = temp.Directory("incoming");
+        string run = temp.Directory("incoming.IngestMusic-quarantine", "20260101-000000000");
+        File.WriteAllText(Path.Combine(run, "song.flac"), "audio");
+        var summary = new OperationJournalSummary(
+            "IngestMusic", OperationJournalKind.Ingest, OperationJournalState.Completed,
+            run, null, DateTimeOffset.UtcNow.AddDays(-100), null);
+        var service = new OperationJournalService();
+        var plan = await service.PreviewPurgeAsync([summary], 30);
+
+        var result = await service.ApplyPurgeAsync(plan);
+
+        Assert.Equal(1, result.RunsDeleted);
+        Assert.Equal(1, result.FilesDeleted);
+        Assert.False(Directory.Exists(run));
+        Assert.Empty((await service.DiscoverAsync([source])).Runs);
+    }
+
     private static OperationJournalSummary Summary(
         string tool,
         OperationJournalKind kind,

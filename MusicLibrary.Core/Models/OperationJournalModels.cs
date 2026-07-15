@@ -80,3 +80,43 @@ public sealed record OperationRestorePlan(
 }
 
 public sealed record OperationRestoreResult(int RestoredCount, int CollisionBackupCount);
+
+/// <summary>One filesystem item captured by an explicit operation-retention preview.</summary>
+public sealed record OperationPurgeManifestEntry(
+    string RelativePath,
+    bool IsDirectory,
+    bool IsReparsePoint,
+    long Length,
+    DateTime LastWriteTimeUtc);
+
+public sealed record OperationPurgeRun(
+    OperationJournalSummary Run,
+    string StagingPath,
+    IReadOnlyList<OperationPurgeManifestEntry> Manifest)
+{
+    public int FileCount => Manifest.Count(entry => !entry.IsDirectory);
+    public int DirectoryCount => Manifest.Count(entry => entry.IsDirectory);
+    public long TotalBytes => Manifest.Sum(entry => entry.Length);
+    public int RestoreBackupFileCount => Manifest.Count(entry => !entry.IsDirectory &&
+        (entry.RelativePath.Equals(".MusicLibrary.App-restore", StringComparison.OrdinalIgnoreCase) ||
+         entry.RelativePath.StartsWith(".MusicLibrary.App-restore" + Path.DirectorySeparatorChar,
+             StringComparison.OrdinalIgnoreCase)));
+}
+
+/// <summary>A no-write retention review. Apply revalidates every manifest before staging a run.</summary>
+public sealed record OperationPurgePlan(
+    int RetentionDays,
+    DateTimeOffset CutoffUtc,
+    IReadOnlyList<OperationPurgeRun> Runs,
+    int ProtectedInterruptedCount,
+    int ProtectedUnsafeCount,
+    int NewerCount)
+{
+    public int FileCount => Runs.Sum(run => run.FileCount);
+    public int DirectoryCount => Runs.Sum(run => run.DirectoryCount);
+    public long TotalBytes => Runs.Sum(run => run.TotalBytes);
+    public int RestoreBackupFileCount => Runs.Sum(run => run.RestoreBackupFileCount);
+    public bool CanApply => Runs.Count > 0;
+}
+
+public sealed record OperationPurgeResult(int RunsDeleted, int FilesDeleted, long BytesDeleted);

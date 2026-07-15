@@ -31,7 +31,7 @@ avoid eagerly reading artwork or media data that is already represented in the m
 - [ ] Restore a run or selected files, identify interrupted operations, and purge by retention policy.
   - [x] Preview and transactionally restore selected or all recoverable moved/quarantined entries.
   - [x] Identify incomplete journals and surface interrupted operations prominently.
-  - [ ] Add retention-aware purge with explicit dry-run review and collision-backup handling.
+  - [x] Add retention-aware purge with explicit dry-run review and collision-backup handling.
 
 ## 4. Network-aware indexing
 

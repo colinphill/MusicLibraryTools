@@ -7,10 +7,11 @@ using MusicLibrary.Core.Services;
 
 namespace MusicLibrary.App.ViewModels;
 
-/// <summary>Read-only discovery surface for mutation journals and quarantine runs.</summary>
+/// <summary>Discovers, browses, restores, and retention-purges mutation journals and quarantine runs.</summary>
 public partial class OperationsViewModel : ViewModelBase
 {
     private const string SearchRootPreference = "Operations.SearchRoot";
+    private const string RetentionDaysPreference = "Operations.RetentionDays";
     private readonly IOperationJournalService _journals;
     private readonly IFileDialogService _files;
     private readonly IDialogService _dialogs;
@@ -25,7 +26,12 @@ public partial class OperationsViewModel : ViewModelBase
     [NotifyCanExecuteChangedFor(nameof(OpenRunCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewRestoreCommand))]
     [NotifyCanExecuteChangedFor(nameof(ApplyRestoreCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewPurgeCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ApplyPurgeCommand))]
     private bool _isBusy;
+
+    [ObservableProperty]
+    private int _retentionDays = 90;
 
     [ObservableProperty]
     private string _statusText = "Scan configured roots or choose a device/folder to discover recovery operations.";
@@ -44,6 +50,14 @@ public partial class OperationsViewModel : ViewModelBase
 
     private OperationRestorePlan? _restorePlan;
 
+    [ObservableProperty]
+    private bool _showPurgePreview;
+
+    [ObservableProperty]
+    private string? _purgePreviewText;
+
+    private OperationPurgePlan? _purgePlan;
+
     public ObservableCollection<OperationRunViewModel> Runs { get; } = [];
     public ObservableCollection<OperationEntryNodeViewModel> RootNodes { get; } = [];
 
@@ -58,10 +72,21 @@ public partial class OperationsViewModel : ViewModelBase
         _dialogs = dialogs;
         _settings = settings;
         SearchRoot = settings.GetPreference(SearchRootPreference);
+        if (int.TryParse(settings.GetPreference(RetentionDaysPreference), out int days))
+            RetentionDays = Math.Clamp(days, 1, 3650);
     }
 
     partial void OnSearchRootChanged(string? value) =>
         _settings.SetPreference(SearchRootPreference, string.IsNullOrWhiteSpace(value) ? null : value);
+
+    partial void OnRetentionDaysChanged(int value)
+    {
+        if (value < 1)
+            return;
+        _settings.SetPreference(RetentionDaysPreference, value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        InvalidatePurgePreview();
+        PreviewPurgeCommand.NotifyCanExecuteChanged();
+    }
 
     [RelayCommand]
     private async Task BrowseRootAsync()
@@ -94,11 +119,13 @@ public partial class OperationsViewModel : ViewModelBase
             SelectedRun = null;
             ShowBrowser = false;
             InvalidateRestorePreview();
+            InvalidatePurgePreview();
             foreach (var run in result.Runs)
                 Runs.Add(new OperationRunViewModel(run));
             int interrupted = result.Runs.Count(run => run.State == OperationJournalState.Interrupted);
             StatusText = $"Found {result.Runs.Count:N0} operation run(s); {interrupted:N0} interrupted"
                 + (result.Warnings.Count == 0 ? "." : $"; {result.Warnings.Count:N0} root(s) could not be scanned.");
+            PreviewPurgeCommand.NotifyCanExecuteChanged();
         }
         catch (OperationCanceledException)
         {
@@ -261,6 +288,100 @@ public partial class OperationsViewModel : ViewModelBase
         ShowRestorePreview = false;
         RestorePreviewText = null;
         ApplyRestoreCommand.NotifyCanExecuteChanged();
+    }
+
+    private bool CanPreviewPurge() => !IsBusy && Runs.Count > 0 && RetentionDays >= 1;
+
+    [RelayCommand(CanExecute = nameof(CanPreviewPurge))]
+    private async Task PreviewPurgeAsync()
+    {
+        IsBusy = true;
+        _cts = new CancellationTokenSource();
+        StatusText = $"Inventorying operation runs older than {RetentionDays:N0} day(s)…";
+        try
+        {
+            _purgePlan = await _journals.PreviewPurgeAsync(
+                Runs.Select(run => run.Summary).ToList(), RetentionDays, null, _cts.Token);
+            ShowPurgePreview = true;
+            PurgePreviewText = DescribePurgePlan(_purgePlan);
+            StatusText = PurgePreviewText;
+        }
+        catch (OperationCanceledException) { StatusText = "Purge preview cancelled."; }
+        catch (Exception ex) { StatusText = $"Purge preview failed: {ex.Message}"; }
+        finally
+        {
+            _cts?.Dispose(); _cts = null; IsBusy = false;
+            ApplyPurgeCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    private bool CanApplyPurge() => !IsBusy && _purgePlan?.CanApply == true;
+
+    [RelayCommand(CanExecute = nameof(CanApplyPurge))]
+    private async Task ApplyPurgeAsync()
+    {
+        if (_purgePlan is not { CanApply: true } plan ||
+            !await _dialogs.ConfirmPurgeAsync(plan))
+            return;
+        IsBusy = true;
+        _cts = new CancellationTokenSource();
+        try
+        {
+            var progress = new Progress<int>(count =>
+                StatusText = $"Purging… {count:N0}/{plan.Runs.Count:N0} run(s)");
+            var result = await _journals.ApplyPurgeAsync(plan, progress, _cts.Token);
+            var deleted = plan.Runs.Select(run => run.Run.RunPath)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var run in Runs.Where(run => deleted.Contains(run.RunPath)).ToList())
+                Runs.Remove(run);
+            InvalidatePurgePreview();
+            StatusText = $"Purged {result.RunsDeleted:N0} run(s), {result.FilesDeleted:N0} file(s), " +
+                $"and {FormatBytes(result.BytesDeleted)}.";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Purge cancelled. Runs not yet irreversibly deleted may remain in purge staging.";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Purge stopped: {ex.Message}";
+        }
+        finally
+        {
+            _cts?.Dispose(); _cts = null; IsBusy = false;
+            PreviewPurgeCommand.NotifyCanExecuteChanged();
+            ApplyPurgeCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    private void InvalidatePurgePreview()
+    {
+        _purgePlan = null;
+        ShowPurgePreview = false;
+        PurgePreviewText = null;
+        ApplyPurgeCommand.NotifyCanExecuteChanged();
+    }
+
+    private static string DescribePurgePlan(OperationPurgePlan plan)
+    {
+        string eligible = plan.CanApply
+            ? $"Purge preview: {plan.Runs.Count:N0} run(s), {plan.FileCount:N0} file(s), {FormatBytes(plan.TotalBytes)}"
+            : "Purge preview: no runs are old enough to purge";
+        string backups = plan.RestoreBackupFileCount > 0
+            ? $", including {plan.RestoreBackupFileCount:N0} restore-collision backup file(s)"
+            : "";
+        return eligible + backups + $". Protected {plan.ProtectedInterruptedCount:N0} interrupted run(s); " +
+            $"{plan.NewerCount:N0} run(s) remain within retention" +
+            (plan.ProtectedUnsafeCount == 0 ? "." : $"; {plan.ProtectedUnsafeCount:N0} unsafe run root(s) were excluded.");
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        double value = bytes;
+        int unit = 0;
+        while (value >= 1024 && unit < units.Length - 1) { value /= 1024; unit++; }
+        return $"{value:0.##} {units[unit]}";
     }
 
     internal IReadOnlyList<string> CollectSearchRoots()

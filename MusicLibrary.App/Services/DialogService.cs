@@ -105,4 +105,44 @@ public sealed class DialogService : IDialogService
         cancel.Click += (_, _) => dialog.Close(false);
         return await dialog.ShowDialog<bool>(Owner);
     }
+
+    public async Task<bool> ConfirmPurgeAsync(OperationPurgePlan plan)
+    {
+        if (Owner is null || !plan.CanApply) return false;
+        var purge = new Button { Content = $"Permanently purge {plan.Runs.Count:N0} run(s)", Classes = { "accent" } };
+        var cancel = new Button { Content = "Cancel" };
+        var buttons = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 8 };
+        buttons.Children.Add(purge); buttons.Children.Add(cancel);
+        var panel = new StackPanel { Margin = new Avalonia.Thickness(18), Spacing = 10 };
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"Permanently delete {plan.Runs.Count:N0} operation run(s) older than " +
+                $"{plan.RetentionDays:N0} day(s)?",
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            FontWeight = Avalonia.Media.FontWeight.SemiBold,
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"This removes {plan.FileCount:N0} file(s), including " +
+                $"{plan.RestoreBackupFileCount:N0} restore-collision backup file(s). Interrupted runs are protected.",
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = "This cannot be undone. Every reviewed run will be revalidated before the first run is staged for deletion.",
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+        });
+        panel.Children.Add(buttons);
+        var dialog = new Window
+        {
+            Title = "Confirm permanent purge",
+            Width = 620,
+            SizeToContent = SizeToContent.Height,
+            Content = panel,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
+        purge.Click += (_, _) => dialog.Close(true);
+        cancel.Click += (_, _) => dialog.Close(false);
+        return await dialog.ShowDialog<bool>(Owner);
+    }
 }

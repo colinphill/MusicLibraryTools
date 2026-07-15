@@ -873,7 +873,7 @@
                         </Grid>
                     </TabItem>
 
-                    <!-- Read-only inventory of quarantine and recovery operations -->
+                    <!-- Inventory, restore, and retention management for quarantine/recovery operations -->
                     <TabItem Header="Operations" DataContext="{Binding Operations}" x:DataType="vm:OperationsViewModel">
                         <Grid RowDefinitions="Auto,*" Margin="2,12,2,2">
                             <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,10">
@@ -887,10 +887,21 @@
                                 </Grid>
                                 <WrapPanel Classes="toolbarwrap" Margin="0,0,-8,-8">
                                     <Button Content="Scan operations" Classes="accent" Command="{Binding RefreshCommand}"/>
+                                    <TextBlock Text="Keep runs (days)" VerticalAlignment="Center" Classes="muted"/>
+                                    <NumericUpDown Value="{Binding RetentionDays}" Minimum="1" Maximum="3650"
+                                                   Increment="1" Width="92" FormatString="0"
+                                                   ToolTip.Tip="Interrupted operations are always protected"/>
+                                    <Button Content="Preview purge" Command="{Binding PreviewPurgeCommand}"
+                                            ToolTip.Tip="Inventory old completed/quarantine runs without deleting anything"/>
+                                    <Button Content="Apply purge" Classes="accent" Command="{Binding ApplyPurgeCommand}"
+                                            IsVisible="{Binding ShowPurgePreview}"
+                                            ToolTip.Tip="Permanently delete the runs in the current preview"/>
                                     <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
                                     <ProgressBar IsIndeterminate="True" Width="70" VerticalAlignment="Center"
                                                  IsVisible="{Binding IsBusy}"/>
                                 </WrapPanel>
+                                <TextBlock Text="{Binding PurgePreviewText}" TextWrapping="Wrap" Classes="muted"
+                                           IsVisible="{Binding ShowPurgePreview}"/>
                                 <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" Classes="muted"/>
                             </StackPanel>
 

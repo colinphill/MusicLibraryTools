@@ -136,6 +136,40 @@ public sealed class OperationsViewModelTests
         Assert.Contains("Restored 1 item", viewModel.StatusText);
     }
 
+    [Fact]
+    public async Task PurgeRequiresPreviewPersistsRetentionAndRemovesAppliedRuns()
+    {
+        using var temp = new TempDirectory();
+        var settings = new AppSettings(Path.Combine(temp.Path, "settings.json"));
+        var summary = new OperationJournalSummary(
+            "IngestMusic", OperationJournalKind.Ingest, OperationJournalState.Completed,
+            Path.Combine(temp.Path, "container", "run"), null,
+            DateTimeOffset.UtcNow.AddDays(-100), 1);
+        var journals = new RecordingJournals(new([summary], []));
+        var viewModel = new OperationsViewModel(journals, new StubFiles(), new StubDialogs(), settings)
+        {
+            SearchRoot = temp.Path,
+        };
+        await viewModel.RefreshCommand.ExecuteAsync(null);
+        viewModel.RetentionDays = 45;
+
+        Assert.False(viewModel.ApplyPurgeCommand.CanExecute(null));
+        Assert.True(viewModel.PreviewPurgeCommand.CanExecute(null));
+        await viewModel.PreviewPurgeCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.ShowPurgePreview);
+        Assert.True(viewModel.ApplyPurgeCommand.CanExecute(null));
+        Assert.Equal(45, journals.PreviewRetentionDays);
+        Assert.Equal("45", settings.GetPreference("Operations.RetentionDays"));
+
+        await viewModel.ApplyPurgeCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, journals.PurgeApplyCalls);
+        Assert.Empty(viewModel.Runs);
+        Assert.False(viewModel.ShowPurgePreview);
+        Assert.Contains("Purged 1 run", viewModel.StatusText);
+    }
+
     private sealed class RecordingJournals(
         OperationJournalDiscoveryResult result,
         OperationBrowseResult? browse = null) : IOperationJournalService
@@ -144,6 +178,8 @@ public sealed class OperationsViewModelTests
         public int BrowseCalls { get; private set; }
         public IReadOnlyList<OperationFileEntry>? PreviewEntries { get; private set; }
         public int ApplyCalls { get; private set; }
+        public int? PreviewRetentionDays { get; private set; }
+        public int PurgeApplyCalls { get; private set; }
 
         public Task<OperationJournalDiscoveryResult> DiscoverAsync(
             IReadOnlyList<string> searchRoots,
@@ -184,6 +220,30 @@ public sealed class OperationsViewModelTests
             ApplyCalls++;
             return Task.FromResult(new OperationRestoreResult(plan.Actions.Count, plan.CollisionCount));
         }
+
+        public Task<OperationPurgePlan> PreviewPurgeAsync(
+            IReadOnlyList<OperationJournalSummary> runs,
+            int retentionDays,
+            DateTimeOffset? nowUtc = null,
+            CancellationToken ct = default)
+        {
+            PreviewRetentionDays = retentionDays;
+            var purgeRuns = runs.Select(run => new OperationPurgeRun(
+                run,
+                Path.Combine(Path.GetDirectoryName(run.RunPath)!, ".MusicLibrary.App-purge-staging", "run"),
+                [new("song.flac", false, false, 5, DateTime.UtcNow)])).ToList();
+            return Task.FromResult(new OperationPurgePlan(
+                retentionDays, DateTimeOffset.UtcNow.AddDays(-retentionDays), purgeRuns, 0, 0, 0));
+        }
+
+        public Task<OperationPurgeResult> ApplyPurgeAsync(
+            OperationPurgePlan plan,
+            IProgress<int>? progress = null,
+            CancellationToken ct = default)
+        {
+            PurgeApplyCalls++;
+            return Task.FromResult(new OperationPurgeResult(plan.Runs.Count, plan.FileCount, plan.TotalBytes));
+        }
     }
 
     private sealed class StubFiles : IFileDialogService
@@ -203,6 +263,7 @@ public sealed class OperationsViewModelTests
         public Task<string?> ShowIngestConfigEditorAsync(string? existingPath) => Task.FromResult<string?>(null);
         public Task<bool> ConfirmCdDerivationAsync(IngestApprovalItem item) => Task.FromResult(false);
         public Task<bool> ConfirmRestoreAsync(OperationRestorePlan plan) => Task.FromResult(true);
+        public Task<bool> ConfirmPurgeAsync(OperationPurgePlan plan) => Task.FromResult(true);
     }
 
     private sealed class TempDirectory : IDisposable
