@@ -21,7 +21,7 @@ avoid eagerly reading artwork or media data that is already represented in the m
   - [x] Infer calibrated filename track numbers, peer/sequence totals, and explicit disc-folder numbers.
   - [x] Normalize edge whitespace and strict-majority case/spacing variants without guessing on ties.
   - [ ] Add user-directed conflict resolution and multi-disc naming repairs.
-- [ ] Add an album metadata matrix with inconsistent cells highlighted.
+- [x] Add a cache-only album metadata matrix with inconsistent cells highlighted and file links.
 
 ## 3. Quarantine and recovery
 

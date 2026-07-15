@@ -58,6 +58,40 @@ public sealed record AnalysisReport(string Name, IReadOnlyList<AnalysisFinding> 
     public int Count => Findings.Count;
 }
 
+/// <summary>One display cell in an album metadata matrix.</summary>
+public sealed record AnalysisMatrixCell(string? Value, bool IsInconsistent = false, string? Reason = null)
+{
+    public string Display => string.IsNullOrWhiteSpace(Value) ? "(missing)" : Value;
+}
+
+/// <summary>Cached metadata for one file, annotated with album/disc invariant violations.</summary>
+public sealed record AlbumMetadataRow(
+    string Path,
+    AnalysisMatrixCell DiscNumber,
+    AnalysisMatrixCell TrackNumber,
+    AnalysisMatrixCell TrackTotal,
+    AnalysisMatrixCell DiscTotal,
+    AnalysisMatrixCell Artist,
+    AnalysisMatrixCell AlbumArtist,
+    AnalysisMatrixCell Album,
+    AnalysisMatrixCell ReleaseDate,
+    AnalysisMatrixCell Title)
+{
+    public int InconsistentCellCount =>
+        new[] { DiscNumber, TrackNumber, TrackTotal, DiscTotal, Artist, AlbumArtist, Album, ReleaseDate, Title }
+            .Count(cell => cell.IsInconsistent);
+}
+
+/// <summary>An album package matrix containing only cache-derived values.</summary>
+public sealed record AlbumMetadataMatrix(
+    string Root,
+    string DisplayName,
+    IReadOnlyList<AlbumMetadataRow> Rows)
+{
+    public int TrackCount => Rows.Count;
+    public int InconsistentCellCount => Rows.Sum(row => row.InconsistentCellCount);
+}
+
 /// <summary>A group of files considered duplicates of each other.</summary>
 public sealed record DuplicateGroup(string Key, IReadOnlyList<TrackRecord> Tracks);
 

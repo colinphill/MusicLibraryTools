@@ -21,6 +21,8 @@
                     <SolidColorBrush x:Key="AppDisabledBg" Color="#292932"/>
                     <SolidColorBrush x:Key="AppDisabledStroke" Color="#3A3A46"/>
                     <SolidColorBrush x:Key="AppDisabledText" Color="#777784"/>
+                    <SolidColorBrush x:Key="AppWarningBg" Color="#49351F"/>
+                    <SolidColorBrush x:Key="AppWarningStroke" Color="#C58A43"/>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Light">
                     <SolidColorBrush x:Key="AppWindowBg" Color="#F3F3F7"/>
@@ -35,6 +37,8 @@
                     <SolidColorBrush x:Key="AppDisabledBg" Color="#E8E8EE"/>
                     <SolidColorBrush x:Key="AppDisabledStroke" Color="#D2D2DB"/>
                     <SolidColorBrush x:Key="AppDisabledText" Color="#8B8B96"/>
+                    <SolidColorBrush x:Key="AppWarningBg" Color="#FFF1D8"/>
+                    <SolidColorBrush x:Key="AppWarningStroke" Color="#C07A20"/>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
@@ -100,6 +104,17 @@
         <Setter Property="TextWrapping" Value="NoWrap"/>
         <Setter Property="Height" Value="34"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="Border.matrixcell">
+        <Setter Property="Padding" Value="7,5"/>
+        <Setter Property="MinHeight" Value="30"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AppDivider}"/>
+        <Setter Property="BorderThickness" Value="0,0,1,1"/>
+    </Style>
+    <Style Selector="Border.matrixcell.inconsistent">
+        <Setter Property="Background" Value="{DynamicResource AppWarningBg}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AppWarningStroke}"/>
     </Style>
     <Style Selector="ComboBox">
         <Setter Property="CornerRadius" Value="8"/>

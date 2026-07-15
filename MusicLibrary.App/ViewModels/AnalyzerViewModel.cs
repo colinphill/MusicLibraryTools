@@ -7,7 +7,7 @@ using MusicLibrary.Core.Services;
 namespace MusicLibrary.App.ViewModels;
 
 /// <summary>Which result section the Analyze tab is currently showing.</summary>
-public enum AnalysisResultView { Findings, Duplicates, Artists, Repairs }
+public enum AnalysisResultView { Findings, Duplicates, Artists, Repairs, Matrix }
 
 /// <summary>
 /// Library-wide analysis. Each analysis type is run by its own button (inconsistencies, lossy files,
@@ -43,6 +43,7 @@ public partial class AnalyzerViewModel : ViewModelBase
     public ObservableCollection<DuplicateGroup> Duplicates { get; } = [];
     public ObservableCollection<ArtistGroupViewModel> ArtistGroups { get; } = [];
     public ObservableCollection<AnalysisRepairItemViewModel> RepairItems { get; } = [];
+    public ObservableCollection<AlbumMetadataMatrix> Matrices { get; } = [];
     public bool HasRuns => Runs.Count > 0;
 
     // Section visibility (bound in XAML; ActiveView drives which one shows).
@@ -50,6 +51,7 @@ public partial class AnalyzerViewModel : ViewModelBase
     public bool ShowDuplicates => ActiveView == AnalysisResultView.Duplicates;
     public bool ShowArtists => ActiveView == AnalysisResultView.Artists;
     public bool ShowRepairs => ActiveView == AnalysisResultView.Repairs;
+    public bool ShowMatrix => ActiveView == AnalysisResultView.Matrix;
 
     /// <summary>Raised with a file path when the user opens a finding/track.</summary>
     public event Action<string>? OpenRequested;
@@ -73,6 +75,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowDuplicates));
         OnPropertyChanged(nameof(ShowArtists));
         OnPropertyChanged(nameof(ShowRepairs));
+        OnPropertyChanged(nameof(ShowMatrix));
     }
 
     partial void OnSelectedRunChanged(AnalysisRunViewModel? value)
@@ -81,6 +84,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         Duplicates.Clear();
         ArtistGroups.Clear();
         RepairItems.Clear();
+        Matrices.Clear();
 
         if (value is not null)
         {
@@ -89,6 +93,7 @@ public partial class AnalyzerViewModel : ViewModelBase
             foreach (var group in value.Duplicates) Duplicates.Add(group);
             foreach (var group in value.ArtistGroups) ArtistGroups.Add(group);
             foreach (var item in value.RepairItems) RepairItems.Add(item);
+            foreach (var matrix in value.Matrices) Matrices.Add(matrix);
             StatusText = value.Summary;
         }
         else
@@ -134,6 +139,17 @@ public partial class AnalyzerViewModel : ViewModelBase
             "Similar artists",
             groups.Select(group => new ArtistGroupViewModel(_reconciler, group)).ToList(),
             status)));
+    });
+
+    [RelayCommand(CanExecute = nameof(CanRun))]
+    private Task RunAlbumMatrix() => RunOverRecords("Album metadata matrix", AnalysisResultView.Matrix, (records, ct) =>
+    {
+        var matrices = AlbumMetadataMatrixBuilder.Build(records);
+        string status = matrices.Count == 0
+            ? "Album metadata matrix: no inconsistent albums found."
+            : $"Album metadata matrix: {matrices.Count:N0} album(s), " +
+              $"{matrices.Sum(matrix => matrix.InconsistentCellCount):N0} inconsistent cell(s).";
+        return (status, () => AddRun(AnalysisRunViewModel.ForMatrices(matrices, status)));
     });
 
     [RelayCommand(CanExecute = nameof(CanRun))]
@@ -309,6 +325,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         RunLossyCommand.NotifyCanExecuteChanged();
         RunDuplicatesCommand.NotifyCanExecuteChanged();
         RunSimilarArtistsCommand.NotifyCanExecuteChanged();
+        RunAlbumMatrixCommand.NotifyCanExecuteChanged();
         RunCheckSetsCommand.NotifyCanExecuteChanged();
         PreviewMetadataRepairsCommand.NotifyCanExecuteChanged();
         ApplyRepairsCommand.NotifyCanExecuteChanged();

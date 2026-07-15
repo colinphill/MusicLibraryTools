@@ -125,6 +125,20 @@ public sealed class AnalyzerViewModelTests
         Assert.Single(viewModel.RepairItems);
     }
 
+    [Fact]
+    public async Task Analyzer_AlbumMatrixIsRetainedAsATypedRun()
+    {
+        var record = Track("track.flac", "AA", "Album") with { TrackTotal = null };
+        var viewModel = Create([record]);
+
+        await viewModel.RunAlbumMatrixCommand.ExecuteAsync(null);
+
+        Assert.Equal(AnalysisResultView.Matrix, viewModel.ActiveView);
+        Assert.Equal("Album metadata matrix", viewModel.SelectedRun!.Name);
+        Assert.Single(viewModel.Matrices);
+        Assert.Same(viewModel.Matrices[0], Assert.Single(viewModel.SelectedRun.Matrices));
+    }
+
     private static AnalyzerViewModel Create(IReadOnlyList<TrackRecord> records) =>
         new(new StubLibrary(records), new StubReconciler(), new StubRepairs(),
             new AppSettings(Path.Combine(Path.GetTempPath(), $"analyzer-{Guid.NewGuid():N}.json")));

@@ -27,6 +27,7 @@ public sealed class AnalysisRunViewModel : ViewModelBase
     public IReadOnlyList<DuplicateGroup> Duplicates { get; }
     public IReadOnlyList<ArtistGroupViewModel> ArtistGroups { get; }
     public IReadOnlyList<AnalysisRepairItemViewModel> RepairItems { get; }
+    public IReadOnlyList<AlbumMetadataMatrix> Matrices { get; }
     public AnalysisRepairPlan? RepairPlan { get; }
     public int Count { get; }
 
@@ -42,7 +43,8 @@ public sealed class AnalysisRunViewModel : ViewModelBase
         IReadOnlyList<DuplicateGroup>? duplicates = null,
         IReadOnlyList<ArtistGroupViewModel>? artistGroups = null,
         IReadOnlyList<AnalysisRepairItemViewModel>? repairItems = null,
-        AnalysisRepairPlan? repairPlan = null)
+        AnalysisRepairPlan? repairPlan = null,
+        IReadOnlyList<AlbumMetadataMatrix>? matrices = null)
     {
         Name = name;
         Summary = summary;
@@ -54,6 +56,7 @@ public sealed class AnalysisRunViewModel : ViewModelBase
         ArtistGroups = artistGroups ?? [];
         RepairItems = repairItems ?? [];
         RepairPlan = repairPlan;
+        Matrices = matrices ?? [];
 
         foreach (var group in FindingGroups)
             group.PropertyChanged += FindingGroupChanged;
@@ -84,6 +87,12 @@ public sealed class AnalysisRunViewModel : ViewModelBase
         string summary) =>
         new(plan.Name, summary, AnalysisResultView.Repairs, items.Count,
             repairItems: items, repairPlan: plan);
+
+    public static AnalysisRunViewModel ForMatrices(
+        IReadOnlyList<AlbumMetadataMatrix> matrices,
+        string summary) =>
+        new("Album metadata matrix", summary, AnalysisResultView.Matrix, matrices.Count,
+            matrices: matrices);
 
     private void FindingGroupChanged(object? sender, PropertyChangedEventArgs e)
     {
