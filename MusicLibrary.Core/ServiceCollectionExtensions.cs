@@ -16,6 +16,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IArtistReconciler, ArtistReconciler>();
         services.AddSingleton<IAnalysisRepairService, AnalysisRepairService>();
         services.AddSingleton<IOperationJournalService, OperationJournalService>();
+        services.AddSingleton<IUnifiedJobService, UnifiedJobService>();
         services.AddSingleton<IIndexBenchmarkService, IndexBenchmarkService>();
         services.AddSingleton<IFfmpegRunner, FfmpegRunner>();
         services.AddSingleton<IDecodedAudioVerificationService, DecodedAudioVerificationService>();

@@ -1036,6 +1036,52 @@
                     <TabItem Header="Operations" DataContext="{Binding Operations}" x:DataType="vm:OperationsViewModel">
                         <Grid RowDefinitions="Auto,*" Margin="2,12,2,2">
                             <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,10">
+                                <Expander Header="Run library jobs" HorizontalAlignment="Stretch">
+                                    <StackPanel Spacing="7" Margin="8,6,0,6">
+                                        <Grid ColumnDefinitions="220,*,Auto" ColumnSpacing="8">
+                                            <ComboBox Grid.Column="0" ItemsSource="{Binding JobCatalog}"
+                                                      SelectedItem="{Binding SelectedJob}">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="models:UnifiedJobDescriptor">
+                                                        <TextBlock Text="{Binding Name}"/>
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+                                            <TextBox Grid.Column="1" Text="{Binding JobExecutableDirectory}"
+                                                     PlaceholderText="Directory containing tool executables"/>
+                                            <Button Grid.Column="2" Content="Browseâ€¦" Command="{Binding BrowseJobDirectoryCommand}"/>
+                                        </Grid>
+                                        <TextBlock Text="{Binding SelectedJob.Description}" Classes="muted" TextWrapping="Wrap"/>
+                                        <TextBox Text="{Binding JobArguments}" PlaceholderText="Arguments (quote paths containing spaces)"/>
+                                        <WrapPanel Classes="toolbarwrap" Margin="0,0,-8,0">
+                                            <Button Content="Preview job" Command="{Binding PreviewJobCommand}"/>
+                                            <Button Content="Apply job" Classes="accent" Command="{Binding ApplyJobCommand}"
+                                                    IsVisible="{Binding HasJobPreview}"/>
+                                            <TextBlock Text="{Binding JobStatus}" Classes="muted" VerticalAlignment="Center"
+                                                       TextWrapping="Wrap"/>
+                                        </WrapPanel>
+                                        <TextBox Text="{Binding JobOutput}" IsReadOnly="True" AcceptsReturn="True"
+                                                 TextWrapping="NoWrap" MinHeight="80" MaxHeight="180"
+                                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                                 ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                                 IsVisible="{Binding HasJobPreview}"/>
+                                        <Expander Header="Job history" HorizontalAlignment="Stretch">
+                                            <ItemsControl ItemsSource="{Binding JobHistory}" Margin="8,4,0,0">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:UnifiedJobHistoryItem">
+                                                        <Grid ColumnDefinitions="140,180,120,*" ColumnSpacing="8" Margin="0,2">
+                                                            <TextBlock Grid.Column="0" Text="{Binding Created}" Classes="caption"/>
+                                                            <TextBlock Grid.Column="1" Text="{Binding JobName}" FontWeight="SemiBold"/>
+                                                            <TextBlock Grid.Column="2" Text="{Binding State}"/>
+                                                            <TextBlock Grid.Column="3" Text="{Binding Output}" Classes="caption"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </Expander>
+                                    </StackPanel>
+                                </Expander>
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
                                     <TextBlock Grid.Column="0" Text="Additional root" VerticalAlignment="Center"
                                                Classes="muted"/>

@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MusicLibrary.App.Services;
@@ -7,15 +8,31 @@ using MusicLibrary.Core.Services;
 
 namespace MusicLibrary.App.ViewModels;
 
+public sealed record UnifiedJobHistoryItem(
+    string JobName,
+    bool Applied,
+    bool Success,
+    DateTimeOffset CreatedAt,
+    double ElapsedSeconds,
+    string Output)
+{
+    public string State => Success ? (Applied ? "Applied" : "Preview passed") : (Applied ? "Apply failed" : "Preview failed");
+    public string Created => CreatedAt.ToLocalTime().ToString("g");
+    public string Elapsed => $"{ElapsedSeconds:0.##}s";
+}
+
 /// <summary>Discovers, browses, restores, and retention-purges mutation journals and quarantine runs.</summary>
 public partial class OperationsViewModel : ViewModelBase
 {
     private const string SearchRootPreference = "Operations.SearchRoot";
     private const string RetentionDaysPreference = "Operations.RetentionDays";
+    private const string JobDirectoryPreference = "Operations.JobDirectory";
+    private const string JobHistoryPreference = "Operations.JobHistory";
     private readonly IOperationJournalService _journals;
     private readonly IFileDialogService _files;
     private readonly IDialogService _dialogs;
     private readonly IAppSettings _settings;
+    private readonly IUnifiedJobService? _jobs;
     private CancellationTokenSource? _cts;
 
     [ObservableProperty]
@@ -28,6 +45,8 @@ public partial class OperationsViewModel : ViewModelBase
     [NotifyCanExecuteChangedFor(nameof(ApplyRestoreCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewPurgeCommand))]
     [NotifyCanExecuteChangedFor(nameof(ApplyPurgeCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewJobCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ApplyJobCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -57,23 +76,60 @@ public partial class OperationsViewModel : ViewModelBase
     private string? _purgePreviewText;
 
     private OperationPurgePlan? _purgePlan;
+    private UnifiedJobPlan? _jobPlan;
+
+    [ObservableProperty]
+    private UnifiedJobDescriptor? _selectedJob;
+    [ObservableProperty]
+    private string _jobExecutableDirectory = AppContext.BaseDirectory;
+    [ObservableProperty]
+    private string _jobArguments = "";
+    [ObservableProperty]
+    private string _jobStatus = "Choose a job and enter its arguments, then Preview.";
+    [ObservableProperty]
+    private string _jobOutput = "";
+    [ObservableProperty]
+    private bool _hasJobPreview;
 
     public ObservableCollection<OperationRunViewModel> Runs { get; } = [];
     public ObservableCollection<OperationEntryNodeViewModel> RootNodes { get; } = [];
+    public ObservableCollection<UnifiedJobHistoryItem> JobHistory { get; } = [];
+    public IReadOnlyList<UnifiedJobDescriptor> JobCatalog => _jobs?.Catalog ?? [];
 
     public OperationsViewModel(
         IOperationJournalService journals,
         IFileDialogService files,
         IDialogService dialogs,
-        IAppSettings settings)
+        IAppSettings settings,
+        IUnifiedJobService? jobs = null)
     {
         _journals = journals;
         _files = files;
         _dialogs = dialogs;
         _settings = settings;
+        _jobs = jobs;
         SearchRoot = settings.GetPreference(SearchRootPreference);
         if (int.TryParse(settings.GetPreference(RetentionDaysPreference), out int days))
             RetentionDays = Math.Clamp(days, 1, 3650);
+        JobExecutableDirectory = settings.GetPreference(JobDirectoryPreference) ?? AppContext.BaseDirectory;
+        LoadJobHistory();
+        SelectedJob = JobCatalog.FirstOrDefault();
+    }
+
+    partial void OnSelectedJobChanged(UnifiedJobDescriptor? value)
+    {
+        InvalidateJobPreview();
+        if (value is not null && string.IsNullOrWhiteSpace(JobArguments) &&
+            value.Id is "playlist-sync" or "cross-library-sync" or "car-card" &&
+            !string.IsNullOrWhiteSpace(_settings.ConfigPath))
+            JobArguments = Quote(_settings.ConfigPath!);
+    }
+
+    partial void OnJobArgumentsChanged(string value) => InvalidateJobPreview();
+    partial void OnJobExecutableDirectoryChanged(string value)
+    {
+        _settings.SetPreference(JobDirectoryPreference, string.IsNullOrWhiteSpace(value) ? null : value);
+        InvalidateJobPreview();
     }
 
     partial void OnSearchRootChanged(string? value) =>
@@ -95,6 +151,102 @@ public partial class OperationsViewModel : ViewModelBase
         if (path is not null)
             SearchRoot = path;
     }
+
+    [RelayCommand]
+    private async Task BrowseJobDirectoryAsync()
+    {
+        string? path = await _files.PickFolderAsync("Select directory containing MusicLibraryTools executables");
+        if (path is not null) JobExecutableDirectory = path;
+    }
+
+    private bool CanPreviewJob() => !IsBusy && _jobs is not null && SelectedJob is not null &&
+        !string.IsNullOrWhiteSpace(JobExecutableDirectory);
+
+    [RelayCommand(CanExecute = nameof(CanPreviewJob))]
+    private async Task PreviewJobAsync()
+    {
+        if (_jobs is null || SelectedJob is null)
+            return;
+        IsBusy = true;
+        _cts = new CancellationTokenSource();
+        JobOutput = "";
+        JobStatus = $"Previewing {SelectedJob.Name}â€¦";
+        try
+        {
+            var progress = new Progress<string>(line => JobStatus = line);
+            _jobPlan = await _jobs.PreviewAsync(SelectedJob, JobExecutableDirectory,
+                JobArguments, progress, _cts.Token);
+            HasJobPreview = true;
+            JobOutput = _jobPlan.PreviewOutput;
+            JobStatus = _jobPlan.PreviewExitCode == 0
+                ? $"Preview completed. Review output before applying."
+                : $"Preview exited with code {_jobPlan.PreviewExitCode}.";
+            AddJobHistory(new(SelectedJob.Name, false, _jobPlan.PreviewExitCode == 0,
+                _jobPlan.CreatedAtUtc, 0, TrimOutput(JobOutput)));
+        }
+        catch (OperationCanceledException) { JobStatus = "Job preview cancelled."; }
+        catch (Exception ex) { JobStatus = $"Job preview failed: {ex.Message}"; }
+        finally
+        {
+            _cts?.Dispose(); _cts = null; IsBusy = false;
+            ApplyJobCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    private bool CanApplyJob() => !IsBusy && _jobPlan?.CanApply == true && HasJobPreview;
+
+    [RelayCommand(CanExecute = nameof(CanApplyJob))]
+    private async Task ApplyJobAsync()
+    {
+        if (_jobs is null || _jobPlan is not { CanApply: true } plan)
+            return;
+        IsBusy = true;
+        _cts = new CancellationTokenSource();
+        JobOutput = "";
+        try
+        {
+            var progress = new Progress<string>(line => JobStatus = line);
+            var result = await _jobs.ApplyAsync(plan, progress, _cts.Token);
+            JobOutput = result.Output;
+            JobStatus = result.Success ? $"{plan.Job.Name} applied successfully."
+                : $"Apply exited with code {result.ExitCode}. Review the output and operation journal.";
+            AddJobHistory(new(plan.Job.Name, true, result.Success, DateTimeOffset.UtcNow,
+                result.Elapsed.TotalSeconds, TrimOutput(result.Output)));
+            InvalidateJobPreview(clearOutput: false);
+        }
+        catch (OperationCanceledException) { JobStatus = "Job apply cancelled; inspect Operations for a recovery journal."; }
+        catch (Exception ex) { JobStatus = $"Job apply failed: {ex.Message}"; }
+        finally { _cts?.Dispose(); _cts = null; IsBusy = false; }
+    }
+
+    private void InvalidateJobPreview(bool clearOutput = true)
+    {
+        _jobPlan = null;
+        HasJobPreview = false;
+        if (clearOutput) JobOutput = "";
+        ApplyJobCommand.NotifyCanExecuteChanged();
+    }
+
+    private void LoadJobHistory()
+    {
+        try
+        {
+            foreach (var item in JsonSerializer.Deserialize<List<UnifiedJobHistoryItem>>(
+                         _settings.GetPreference(JobHistoryPreference) ?? "[]") ?? [])
+                JobHistory.Add(item);
+        }
+        catch { }
+    }
+
+    private void AddJobHistory(UnifiedJobHistoryItem item)
+    {
+        JobHistory.Insert(0, item);
+        while (JobHistory.Count > 30) JobHistory.RemoveAt(JobHistory.Count - 1);
+        _settings.SetPreference(JobHistoryPreference, JsonSerializer.Serialize(JobHistory));
+    }
+
+    private static string TrimOutput(string output) => output.Length <= 20_000 ? output : output[^20_000..];
+    private static string Quote(string value) => value.Contains(' ') ? $"\"{value}\"" : value;
 
     private bool CanRefresh() => !IsBusy;
 

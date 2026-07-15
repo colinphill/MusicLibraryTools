@@ -60,6 +60,6 @@ avoid eagerly reading artwork or media data that is already represented in the m
 
 ## 8. Unified operations
 
-- [ ] Bring playlist sync, cross-library sync, device updates, artwork repair, redundancy cleanup,
+- [x] Bring playlist sync, cross-library sync, device updates, artwork repair, redundancy cleanup,
       and iTunes validation into a shared preview/apply job interface.
-- [ ] Reuse common progress, cancellation, journaling, quarantine, recovery, and history components.
+- [x] Reuse common progress, cancellation, journaling, quarantine, recovery, and history components.

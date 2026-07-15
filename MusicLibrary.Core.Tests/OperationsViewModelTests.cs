@@ -9,6 +9,30 @@ namespace MusicLibrary.Core.Tests;
 public sealed class OperationsViewModelTests
 {
     [Fact]
+    public async Task UnifiedJobRequiresPreviewAndPersistsPreviewAndApplyHistory()
+    {
+        using var temp = new TempDirectory();
+        var settings = new AppSettings(Path.Combine(temp.Path, "settings.json"));
+        var jobs = new StubJobs();
+        var viewModel = new OperationsViewModel(
+            new RecordingJournals(new([], [])), new StubFiles(), new StubDialogs(), settings, jobs)
+        {
+            JobExecutableDirectory = temp.Path,
+            JobArguments = "config.xml",
+        };
+
+        Assert.False(viewModel.ApplyJobCommand.CanExecute(null));
+        await viewModel.PreviewJobCommand.ExecuteAsync(null);
+        Assert.True(viewModel.ApplyJobCommand.CanExecute(null));
+        await viewModel.ApplyJobCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, jobs.PreviewCalls);
+        Assert.Equal(1, jobs.ApplyCalls);
+        Assert.Equal(2, viewModel.JobHistory.Count);
+        Assert.Equal("Applied", viewModel.JobHistory[0].State);
+    }
+
+    [Fact]
     public async Task RefreshIncludesRememberedIngestAndAdditionalRootsAndProjectsRuns()
     {
         using var temp = new TempDirectory();
@@ -254,6 +278,28 @@ public sealed class OperationsViewModelTests
         public Task<string?> PickSaveFileAsync(string title, string? suggestedName = null,
             string? defaultExtension = null, IReadOnlyList<FilePickerFilter>? filters = null) =>
             Task.FromResult<string?>(null);
+    }
+
+    private sealed class StubJobs : IUnifiedJobService
+    {
+        private readonly UnifiedJobDescriptor _job = new("test", "Test sync", "test.exe", "Test",
+            UnifiedJobApplyMode.ApplyFlag, []);
+        public IReadOnlyList<UnifiedJobDescriptor> Catalog => [_job];
+        public int PreviewCalls { get; private set; }
+        public int ApplyCalls { get; private set; }
+        public Task<UnifiedJobPlan> PreviewAsync(UnifiedJobDescriptor job, string executableDirectory,
+            string arguments, IProgress<string>? progress = null, CancellationToken ct = default)
+        {
+            PreviewCalls++;
+            return Task.FromResult(new UnifiedJobPlan(job, Path.Combine(executableDirectory, job.ExecutableName),
+                [arguments], 1, DateTime.UtcNow, 0, "preview", DateTimeOffset.UtcNow));
+        }
+        public Task<UnifiedJobResult> ApplyAsync(UnifiedJobPlan plan,
+            IProgress<string>? progress = null, CancellationToken ct = default)
+        {
+            ApplyCalls++;
+            return Task.FromResult(new UnifiedJobResult(0, "applied", TimeSpan.FromSeconds(1)));
+        }
     }
 
     private sealed class StubDialogs : IDialogService
