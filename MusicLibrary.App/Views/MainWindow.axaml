@@ -354,6 +354,10 @@
                                 <Button Content="Scrub all" Command="{Binding ScrubAllCommand}"/>
                                 <Button Content="Save" Command="{Binding SaveCommand}"
                                         ToolTip.Tip="Save artwork changes (Ctrl+S)"/>
+                                <Button Content="Preview normalization" Command="{Binding PreviewNormalizationCommand}"
+                                        ToolTip.Tip="Re-encode the chosen canonical image and calculate projected batch size"/>
+                                <Button Content="Apply normalization" Classes="accent"
+                                        Command="{Binding ApplyNormalizationCommand}"/>
                                 <TextBlock Text="Max px" VerticalAlignment="Center" Classes="muted"/>
                                 <NumericUpDown Value="{Binding MaxDimension}" Minimum="0" Maximum="4000"
                                                Increment="100" Width="120" FormatString="0"/>
@@ -369,6 +373,9 @@
                                            Foreground="{DynamicResource SystemFillColorCriticalBrush}"
                                            IsVisible="{Binding !SupportsWrite}"/>
                                 <TextBlock Text="{Binding StatusMessage}" Classes="muted" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding NormalizationPreviewText}" TextWrapping="Wrap"
+                                           FontWeight="SemiBold" Foreground="{DynamicResource AccentBrush}"
+                                           IsVisible="{Binding HasNormalizationPreview}"/>
                             </StackPanel>
 
                             <ScrollViewer Grid.Row="2">
@@ -393,6 +400,12 @@
                                                                Foreground="{DynamicResource AccentBrush}"
                                                                IsVisible="{Binding Usage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                                     <TextBlock Text="{Binding Caption}" TextWrapping="Wrap" Classes="caption"/>
+                                                    <TextBlock Text="Canonical album image" FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource AccentBrush}"
+                                                               IsVisible="{Binding IsCanonical}"/>
+                                                    <Button Content="Use as canonical" HorizontalAlignment="Stretch"
+                                                            Command="{Binding $parent[ItemsControl].((vm:ArtworkViewModel)DataContext).SelectCanonicalCommand}"
+                                                            CommandParameter="{Binding}"/>
                                                     <Button Content="Remove" HorizontalAlignment="Stretch"
                                                             Command="{Binding $parent[ItemsControl].((vm:ArtworkViewModel)DataContext).RemoveCommand}"
                                                             CommandParameter="{Binding}"/>

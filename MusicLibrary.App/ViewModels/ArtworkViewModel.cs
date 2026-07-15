@@ -21,6 +21,7 @@ public partial class ArtworkSlot : ObservableObject
 
     /// <summary>For a multi-selection, how many of the selected files carry this image (else null).</summary>
     [ObservableProperty] private string? _usage;
+    [ObservableProperty] private bool _isCanonical;
 
     public ArtworkSlot(ID3v2Util.APICType type, byte[] data, string mimeType)
     {
@@ -50,6 +51,9 @@ public partial class ArtworkViewModel : ViewModelBase
     // The current multi-selection. The gallery is loaded from the first (representative) file, and a
     // Save writes the whole image set to every target — e.g. re-cover a whole album at once.
     private IReadOnlyList<string> _targets = [];
+    private long _loadedArtworkBytes;
+    private int _loadedArtworkFiles;
+    private ArtworkInput? _normalizationInput;
 
     [ObservableProperty] private string? _currentPath;
     [ObservableProperty] private bool _supportsWrite;
@@ -61,6 +65,8 @@ public partial class ArtworkViewModel : ViewModelBase
 
     /// <summary>Max dimension in px for resize on add/scrub (0 = keep original size).</summary>
     [ObservableProperty] private int _maxDimension = 1000;
+    [ObservableProperty] private string? _normalizationPreviewText;
+    [ObservableProperty] private bool _hasNormalizationPreview;
 
     public ObservableCollection<ArtworkSlot> Images { get; } = [];
 
@@ -95,6 +101,8 @@ public partial class ArtworkViewModel : ViewModelBase
         await ReloadAsync(gen);
     }
 
+    partial void OnMaxDimensionChanged(int value) => InvalidateNormalizationPreview();
+
     // Loads the artwork across the selection: the gallery holds the DISTINCT images (deduped by hash),
     // each badged with how many selected files carry it, plus an aggregate uniform/mixed summary. A
     // Save writes the shown set to every selected file.
@@ -104,6 +112,9 @@ public partial class ArtworkViewModel : ViewModelBase
             slot.Preview?.Dispose();
         Images.Clear();
         TargetSummary = null;
+        _loadedArtworkBytes = 0;
+        _loadedArtworkFiles = 0;
+        InvalidateNormalizationPreview();
 
         if (_targets.Count == 0)
             return;
@@ -124,9 +135,11 @@ public partial class ArtworkViewModel : ViewModelBase
             if (!result.Success)
                 continue;
             loaded++;
+            _loadedArtworkFiles++;
+            _loadedArtworkBytes += result.Value!.Artwork.Sum(image => (long)image.Size);
 
             var set = new HashSet<string>();
-            foreach (var art in result.Value!.Artwork)
+            foreach (var art in result.Value.Artwork)
             {
                 var key = string.IsNullOrEmpty(art.Hash) ? Guid.NewGuid().ToString("N") : art.Hash;
                 if (set.Add(key) && !distinct.ContainsKey(key))
@@ -153,6 +166,8 @@ public partial class ArtworkViewModel : ViewModelBase
                 slot.Usage = $"in {count} of {loaded} file(s)";
             Images.Add(slot);
         }
+        if (Images.Count == 1)
+            Images[0].IsCanonical = true;
 
         if (total > 1)
         {
@@ -162,9 +177,94 @@ public partial class ArtworkViewModel : ViewModelBase
                 ? $"{scope} selected — all share this artwork. Save writes it to every file."
                 : $"{scope} selected — {distinct.Count} different image(s) across them (badged below). Save sets every file to the images shown.";
         }
+        NotifyCommands();
     }
 
     private bool CanEdit() => SupportsWrite && !IsBusy && CurrentPath is not null;
+
+    [RelayCommand]
+    private void SelectCanonical(ArtworkSlot? slot)
+    {
+        if (slot is null)
+            return;
+        foreach (var image in Images)
+            image.IsCanonical = ReferenceEquals(image, slot);
+        InvalidateNormalizationPreview();
+        StatusMessage = "Canonical image selected. Preview normalization before applying.";
+        NotifyCommands();
+    }
+
+    private bool CanPreviewNormalization() => CanEdit() && Images.Any(image => image.IsCanonical);
+
+    [RelayCommand(CanExecute = nameof(CanPreviewNormalization))]
+    private async Task PreviewNormalizationAsync()
+    {
+        var canonical = Images.FirstOrDefault(image => image.IsCanonical);
+        if (canonical is null)
+            return;
+        IsBusy = true;
+        NotifyCommands();
+        try
+        {
+            var prepared = await _artwork.PrepareFromBytesAsync(canonical.Data, MaxDimension);
+            if (prepared is null)
+            {
+                StatusMessage = "The selected canonical image could not be decoded.";
+                return;
+            }
+            _normalizationInput = new ArtworkInput(canonical.Type, prepared.MimeType, prepared.Data);
+            long estimatedCurrent = _loadedArtworkFiles == 0 ? 0
+                : (long)Math.Round((double)_loadedArtworkBytes / _loadedArtworkFiles * _targets.Count);
+            long projected = (long)prepared.Data.Length * _targets.Count;
+            long savings = estimatedCurrent - projected;
+            string estimate = _loadedArtworkFiles < _targets.Count ? "Estimated " : "";
+            NormalizationPreviewText = $"{estimate}normalization preview: {_targets.Count:N0} file(s), " +
+                $"one {prepared.MimeType} {prepared.Width:N0}x{prepared.Height:N0} image each, " +
+                $"{FormatBytes(projected)} projected ({DescribeSavings(savings)}).";
+            HasNormalizationPreview = true;
+            StatusMessage = "Normalization preview ready. No files have changed.";
+        }
+        finally
+        {
+            IsBusy = false;
+            NotifyCommands();
+        }
+    }
+
+    private bool CanApplyNormalization() => CanEdit() && HasNormalizationPreview && _normalizationInput is not null;
+
+    [RelayCommand(CanExecute = nameof(CanApplyNormalization))]
+    private async Task ApplyNormalizationAsync()
+    {
+        if (_normalizationInput is not { } input)
+            return;
+        IsBusy = true;
+        NotifyCommands();
+        try
+        {
+            int saved = 0;
+            string? firstError = null;
+            foreach (string path in _targets)
+            {
+                var result = await _artwork.SaveImagesAsync(path, [input]);
+                if (result.Success) saved++;
+                else firstError ??= result.Error;
+            }
+            StatusMessage = saved == _targets.Count
+                ? $"Normalized artwork across {saved:N0} file(s)."
+                : $"Normalized {saved:N0}/{_targets.Count:N0} file(s). {firstError}";
+            if (saved > 0)
+            {
+                await ReloadAsync();
+                ArtworkChanged?.Invoke(_targets.ToList());
+            }
+        }
+        finally
+        {
+            IsBusy = false;
+            NotifyCommands();
+        }
+    }
 
     [RelayCommand(CanExecute = nameof(CanEdit))]
     private async Task AddAsync()
@@ -204,6 +304,7 @@ public partial class ArtworkViewModel : ViewModelBase
     {
         slot.Preview?.Dispose();
         Images.Remove(slot);
+        InvalidateNormalizationPreview();
         StatusMessage = "Removed — Save to write.";
     }
 
@@ -307,5 +408,29 @@ public partial class ArtworkViewModel : ViewModelBase
         AddCommand.NotifyCanExecuteChanged();
         ScrubAllCommand.NotifyCanExecuteChanged();
         SaveCommand.NotifyCanExecuteChanged();
+        PreviewNormalizationCommand.NotifyCanExecuteChanged();
+        ApplyNormalizationCommand.NotifyCanExecuteChanged();
+    }
+
+    private void InvalidateNormalizationPreview()
+    {
+        _normalizationInput = null;
+        HasNormalizationPreview = false;
+        NormalizationPreviewText = null;
+        PreviewNormalizationCommand.NotifyCanExecuteChanged();
+        ApplyNormalizationCommand.NotifyCanExecuteChanged();
+    }
+
+    private static string DescribeSavings(long savings) => savings >= 0
+        ? $"save {FormatBytes(savings)}"
+        : $"increase by {FormatBytes(-savings)}";
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB"];
+        double value = bytes;
+        int unit = 0;
+        while (value >= 1024 && unit < units.Length - 1) { value /= 1024; unit++; }
+        return $"{value:0.##} {units[unit]}";
     }
 }

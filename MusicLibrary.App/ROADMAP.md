@@ -55,8 +55,8 @@ avoid eagerly reading artwork or media data that is already represented in the m
 ## 7. Artwork health
 
 - [x] Cache-first audit for missing, mixed, oversized, unreadable, or duplicate artwork.
-- [ ] Select a canonical album image and preview batch normalization or size savings.
-- [ ] Hydrate full artwork only for visible or selected results.
+- [x] Select a canonical album image and preview batch normalization or size savings.
+- [x] Hydrate full artwork only for visible or selected results.
 
 ## 8. Unified operations
 
