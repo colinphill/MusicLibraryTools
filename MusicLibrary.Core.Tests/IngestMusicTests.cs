@@ -176,6 +176,80 @@ public class IngestMusicTests
         Assert.False(Directory.Exists(tree.Path("incoming", "artwork")));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Apply_RemoveNonMusicWithoutMusicFilesRunsSelectedDisposition(bool deleteSources)
+    {
+        using var tree = new TempTree();
+        string notes = tree.TestFile("incoming", "artwork", "notes.txt");
+        string empty = tree.Dir("incoming", "empty");
+        string configPath = tree.Config();
+        var config = IngestMusicConfiguration.Load(configPath) with
+        {
+            RemoveNonMusicAfterIngest = true,
+            DeleteSourcesAfterIngest = deleteSources,
+        };
+        config.Save(configPath);
+        var fake = new FakeFfmpeg();
+        var service = new IngestMusicService(fake);
+
+        var plan = await service.PreviewAsync(new(tree.Path("incoming"), configPath));
+        var result = await service.ApplyAsync(plan, []);
+
+        Assert.True(plan.CanApply);
+        Assert.Empty(plan.Albums);
+        Assert.Empty(plan.Conflicts);
+        Assert.False(result.Cancelled);
+        Assert.Empty(result.Albums);
+        Assert.Equal(0, fake.PreflightCalls);
+        Assert.False(File.Exists(notes));
+        Assert.False(Directory.Exists(tree.Path("incoming", "artwork")));
+        Assert.False(Directory.Exists(empty));
+        string quarantine = tree.Path("incoming") + ".IngestMusic-quarantine";
+        if (deleteSources)
+            Assert.Empty(Directory.EnumerateFiles(quarantine, "notes.txt", SearchOption.AllDirectories));
+        else
+        {
+            Assert.Single(Directory.EnumerateFiles(quarantine, "notes.txt", SearchOption.AllDirectories));
+            Assert.Single(Directory.EnumerateDirectories(quarantine, "empty", SearchOption.AllDirectories));
+        }
+    }
+
+    [Fact]
+    public async Task Apply_RemoveNonMusicCanCleanAnEmptyFolderWithoutMusicOrOtherFiles()
+    {
+        using var tree = new TempTree();
+        string empty = tree.Dir("incoming", "empty");
+        string configPath = tree.Config();
+        var config = IngestMusicConfiguration.Load(configPath) with { RemoveNonMusicAfterIngest = true };
+        config.Save(configPath);
+        var fake = new FakeFfmpeg();
+        var service = new IngestMusicService(fake);
+
+        var plan = await service.PreviewAsync(new(tree.Path("incoming"), configPath));
+        var result = await service.ApplyAsync(plan, []);
+
+        Assert.True(plan.CanApply);
+        Assert.False(result.Cancelled);
+        Assert.Equal(0, fake.PreflightCalls);
+        Assert.False(Directory.Exists(empty));
+        string quarantine = tree.Path("incoming") + ".IngestMusic-quarantine";
+        Assert.Single(Directory.EnumerateDirectories(quarantine, "empty", SearchOption.AllDirectories));
+    }
+
+    [Fact]
+    public async Task Preview_WithoutMusicOrEnabledCleanupCannotApply()
+    {
+        using var tree = new TempTree();
+        tree.TestFile("incoming", "notes.txt");
+
+        var plan = await new IngestMusicService(new FakeFfmpeg()).PreviewAsync(
+            new(tree.Path("incoming"), tree.Config()));
+
+        Assert.False(plan.CanApply);
+    }
+
     [Fact]
     public async Task Apply_RemoveNonMusicRejectsAFileChangedSincePreview()
     {

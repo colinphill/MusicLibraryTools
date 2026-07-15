@@ -325,17 +325,21 @@ public sealed class IngestMusicService : IIngestMusicService
         IProgress<IngestProgress>? progress = null, CancellationToken ct = default)
     {
         if (!plan.CanApply)
-            return new IngestResult([], true, "The preview contains conflicts or no importable albums.");
+            return new IngestResult([], true, "The preview contains conflicts or no applicable ingest or cleanup work.");
         var decisions = approvals.GroupBy(a => a.AlbumKey).ToDictionary(g => g.Key, g => g.Last().Approved, StringComparer.OrdinalIgnoreCase);
         foreach (var required in plan.RequiredApprovals)
             if (!decisions.TryGetValue(required.AlbumKey, out bool approved) || !approved)
                 return new IngestResult([], true, $"CD-quality derivation was not approved for {required.AlbumDisplay}; nothing was changed.");
 
-        if (plan.ItunesLibrarySnapshot is not null)
+        bool hasAlbums = plan.Albums.Count > 0;
+        if (hasAlbums && plan.ItunesLibrarySnapshot is not null)
             ItlFileEditor.EnsureItunesIsClosed();
         EnsureFresh(plan);
-        await _ffmpeg.PreflightAsync(plan.Configuration.FfmpegPath, plan.Configuration.AacEncoder, ct);
-        EnsureFresh(plan);
+        if (hasAlbums)
+        {
+            await _ffmpeg.PreflightAsync(plan.Configuration.FfmpegPath, plan.Configuration.AacEncoder, ct);
+            EnsureFresh(plan);
+        }
 
         string runId = DateTime.UtcNow.ToString("yyyyMMdd-HHmmssfff");
         string quarantineRoot = plan.Request.SourceDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
@@ -788,7 +792,7 @@ public sealed class IngestMusicService : IIngestMusicService
         foreach (var source in plan.Albums.SelectMany(a => a.Sources)) EnsureFresh(source);
         if (plan.Configuration.RemoveNonMusicAfterIngest)
             foreach (var source in plan.IgnoredFileSnapshots) EnsureFresh(source);
-        if (plan.ItunesLibrarySnapshot is not null)
+        if (plan.Albums.Count > 0 && plan.ItunesLibrarySnapshot is not null)
             EnsureFresh(plan.ItunesLibrarySnapshot);
     }
 

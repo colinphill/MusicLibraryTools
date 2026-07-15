@@ -130,8 +130,13 @@ public partial class IngestViewModel : ViewModelBase
             _settings.SetPreference(SourcePreference, plan.Request.SourceDirectory);
             _settings.SetPreference(ConfigPreference, plan.Request.ConfigurationPath);
             StatusText = plan.CanApply
-                ? $"{plan.Albums.Count} albums, {plan.Files.Count} source files, {plan.RequiredApprovals.Count} derivation approvals. Review, then Apply."
-                : $"Preview has {plan.Conflicts.Count} conflicts and cannot be applied.";
+                ? plan.Albums.Count == 0
+                    ? $"No music albums found. {plan.IgnoredFileSnapshots.Count} non-music files and "
+                      + $"{plan.SourceDirectories.Count} source folders are ready for cleanup. Review, then Apply."
+                    : $"{plan.Albums.Count} albums, {plan.Files.Count} source files, {plan.RequiredApprovals.Count} derivation approvals. Review, then Apply."
+                : plan.Conflicts.Count > 0
+                    ? $"Preview has {plan.Conflicts.Count} conflicts and cannot be applied."
+                    : "No importable music albums or enabled non-music cleanup items were found.";
         }
         catch (OperationCanceledException) { StatusText = "Preview cancelled."; }
         catch (Exception ex) { StatusText = $"Preview failed: {ex.Message}"; }
@@ -182,9 +187,11 @@ public partial class IngestViewModel : ViewModelBase
             else
             {
                 StatusText = result.Cancelled ? result.Message ?? "Cancelled."
-                    : $"Installed {result.Installed} files; {result.Failed} albums failed."
-                      + (!_library.IsReady && result.Albums.Any(a => a.Success)
-                          ? " No library configuration is loaded, so re-indexing was skipped." : "");
+                    : _plan.Albums.Count == 0
+                        ? "Non-music cleanup completed."
+                        : $"Installed {result.Installed} files; {result.Failed} albums failed."
+                          + (!_library.IsReady && result.Albums.Any(a => a.Success)
+                              ? " No library configuration is loaded, so re-indexing was skipped." : "");
                 if (!result.Cancelled) IngestCompleted?.Invoke();
             }
             HasApplicablePreview = false; _plan = null;

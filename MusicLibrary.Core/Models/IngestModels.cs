@@ -73,7 +73,9 @@ public sealed record IngestPlan
     public IReadOnlyList<string> SourceDirectories { get; init; } = [];
     public IngestFileSnapshot? ItunesLibrarySnapshot { get; init; }
     public DateTime CreatedUtc { get; init; } = DateTime.UtcNow;
-    public bool CanApply => Conflicts.Count == 0 && Albums.Count > 0;
+    public bool CanApply => Conflicts.Count == 0 &&
+        (Albums.Count > 0 || Configuration.RemoveNonMusicAfterIngest &&
+            (IgnoredFileSnapshots.Count > 0 || SourceDirectories.Count > 0));
 }
 
 public enum IngestFileProgressState { InProgress, Completed, Failed }
