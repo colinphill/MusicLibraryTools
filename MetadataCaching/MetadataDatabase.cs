@@ -187,6 +187,9 @@ namespace MetadataCaching
             "CREATE TABLE Metadata (ID INTEGER PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, KeyID BIGINT REFERENCES MetadataKeys (ID) NOT NULL, Value TEXT NOT NULL);\r\n" +
             "CREATE INDEX AlbumsAlbumArtistIDIndex ON Albums (AlbumArtistID ASC);\r\n" +
             "CREATE INDEX AlbumsScanSetIDIndex ON Albums (ScanSetID ASC);\r\n" +
+            "CREATE INDEX AlbumsLookupIndex ON Albums (ScanSetID ASC, Path ASC, AlbumArtistID ASC, Name ASC);\r\n" +
+            "CREATE INDEX FilesPathIndex ON Files (Path ASC);\r\n" +
+            "CREATE INDEX ImagesHashIndex ON Images (Hash ASC);\r\n" +
             "CREATE INDEX ImageMetadataFileIDIndex ON ImageMetadata (FileID ASC);\r\n" +
             "CREATE INDEX MetadataKeyIDIndex ON Metadata (KeyID ASC);\r\n" +
             "CREATE INDEX MetadataFileIDIndex ON Metadata (FileID ASC);\r\n" +
@@ -323,10 +326,15 @@ namespace MetadataCaching
             pcomm.ExecuteNonQuery();
 
             // Metadata already stores the TagFields name/value projection used by the app. Older
-            // builds duplicated every row into KnownMetadata; discard that redundant table. SQLite
-            // can reuse the freed pages without forcing an expensive VACUUM during startup.
+            // builds duplicated every row into KnownMetadata; discard that redundant table. Add
+            // indexes used by per-file refresh/detail queries for both new and existing databases.
+            // SQLite can reuse freed pages without forcing an expensive VACUUM during startup.
             using var mcomm = res.conn_.CreateCommand();
-            mcomm.CommandText = "DROP TABLE IF EXISTS KnownMetadata;";
+            mcomm.CommandText =
+                "DROP TABLE IF EXISTS KnownMetadata;\r\n" +
+                "CREATE INDEX IF NOT EXISTS AlbumsLookupIndex ON Albums (ScanSetID, Path, AlbumArtistID, Name);\r\n" +
+                "CREATE INDEX IF NOT EXISTS FilesPathIndex ON Files (Path);\r\n" +
+                "CREATE INDEX IF NOT EXISTS ImagesHashIndex ON Images (Hash);";
             mcomm.ExecuteNonQuery();
 
             return res;
@@ -1394,9 +1402,10 @@ namespace MetadataCaching
             using var trans = conn_.BeginTransaction();
             try
             {
+                var lookups = ReindexLookupCache.Load(trans);
                 int indexed = 0;
                 foreach (var file in files)
-                    if (ReindexFileCore(file.Path, file.File, trans))
+                    if (ReindexFileCore(file.Path, file.File, trans, lookups))
                         indexed++;
                 trans.Commit();
                 return indexed;
@@ -1408,7 +1417,31 @@ namespace MetadataCaching
             }
         }
 
-        private bool ReindexFileCore(string fullPath, IMediaFile file, DbTransaction trans)
+        private sealed class ReindexLookupCache
+        {
+            public Dictionary<string, long> Artists { get; } = new(StringComparer.Ordinal);
+            public Dictionary<string, long> AlbumArtists { get; } = new(StringComparer.Ordinal);
+            public Dictionary<(long ScanSetID, long AlbumArtistID, string Path, string Name), long> Albums { get; } = new();
+            public Dictionary<string, long> Images { get; } = new(StringComparer.Ordinal);
+            public Dictionary<string, long> MetadataKeys { get; } = new(StringComparer.Ordinal);
+
+            public static ReindexLookupCache Load(DbTransaction trans)
+            {
+                var result = new ReindexLookupCache();
+                using var command = trans.CreateCommand();
+                command.CommandText = "SELECT ID, \"Key\" FROM MetadataKeys";
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                    result.MetadataKeys[reader.GetString(1)] = reader.GetInt64(0);
+                return result;
+            }
+        }
+
+        private bool ReindexFileCore(
+            string fullPath,
+            IMediaFile file,
+            DbTransaction trans,
+            ReindexLookupCache lookups = null)
         {
             var (setId, albumPath, fileName) = DecomposePath(fullPath);
             if (setId < 0)
@@ -1452,9 +1485,9 @@ namespace MetadataCaching
                     }
                 }
 
-                long artistId = GetOrInsert(trans, "Artists", "Name", artist);
-                long albumArtistId = GetOrInsert(trans, "AlbumArtists", "Name", albumArtist);
-                long albumId = GetOrInsertAlbum(trans, setId, albumArtistId, albumPath, album);
+                long artistId = GetOrInsert(trans, "Artists", "Name", artist, lookups?.Artists);
+                long albumArtistId = GetOrInsert(trans, "AlbumArtists", "Name", albumArtist, lookups?.AlbumArtists);
+                long albumId = GetOrInsertAlbum(trans, setId, albumArtistId, albumPath, album, lookups?.Albums);
 
                 long fileId;
                 using (var fc = trans.CreateCommand())
@@ -1501,7 +1534,12 @@ namespace MetadataCaching
                     fileParam.Value = fileId;
                     foreach (var kv in knownMetadata)
                     {
-                        keyParam.Value = GetOrInsert(trans, "MetadataKeys", "\"Key\"", kv.Key.ToString());
+                        keyParam.Value = GetOrInsert(
+                            trans,
+                            "MetadataKeys",
+                            "\"Key\"",
+                            kv.Key.ToString(),
+                            lookups?.MetadataKeys);
                         valueParam.Value = kv.Value ?? "";
                         mc.ExecuteNonQuery();
                     }
@@ -1509,7 +1547,7 @@ namespace MetadataCaching
 
                 foreach (var image in mp.GetImageMetadata())
                 {
-                    long imageId = GetOrInsertImage(trans, image);
+                    long imageId = GetOrInsertImage(trans, image, lookups?.Images);
                     using var imc = trans.CreateCommand();
                     imc.CommandText = "INSERT INTO ImageMetadata (FileID, ImageID, Description, Category) VALUES (@f, @i, @d, @c)";
                     imc.Parameters.Add("@f", DbType.Int64).Value = fileId;
@@ -1522,63 +1560,118 @@ namespace MetadataCaching
                 return true;
         }
 
-        private long GetOrInsert(DbTransaction trans, string table, string column, string value)
+        private long GetOrInsert(
+            DbTransaction trans,
+            string table,
+            string column,
+            string value,
+            Dictionary<string, long> cache = null)
         {
+            value ??= "";
+            if (cache is not null && cache.TryGetValue(value, out long cached))
+                return cached;
+
+            long id;
             using (var sel = trans.CreateCommand())
             {
                 sel.CommandText = $"SELECT ID FROM {table} WHERE {column} = @v LIMIT 1";
-                sel.Parameters.Add("@v", DbType.String).Value = value ?? "";
+                sel.Parameters.Add("@v", DbType.String).Value = value;
                 var found = sel.ExecuteScalar();
                 if (found is not null && found is not DBNull)
-                    return Convert.ToInt64(found);
+                {
+                    id = Convert.ToInt64(found);
+                    if (cache is not null)
+                        cache[value] = id;
+                    return id;
+                }
             }
             using var ins = trans.CreateCommand();
             ins.CommandText = $"INSERT INTO {table} ({column}) VALUES (@v);\r\n" + lastidsql_;
-            ins.Parameters.Add("@v", DbType.String).Value = value ?? "";
-            return Convert.ToInt64(ins.ExecuteScalar());
+            ins.Parameters.Add("@v", DbType.String).Value = value;
+            id = Convert.ToInt64(ins.ExecuteScalar());
+            if (cache is not null)
+                cache[value] = id;
+            return id;
         }
 
-        private long GetOrInsertAlbum(DbTransaction trans, long setId, long albumArtistId, string albumPath, string name)
+        private long GetOrInsertAlbum(
+            DbTransaction trans,
+            long setId,
+            long albumArtistId,
+            string albumPath,
+            string name,
+            Dictionary<(long ScanSetID, long AlbumArtistID, string Path, string Name), long> cache = null)
         {
+            albumPath ??= "";
+            name ??= "";
+            var key = (setId, albumArtistId, albumPath, name);
+            if (cache is not null && cache.TryGetValue(key, out long cached))
+                return cached;
+
+            long id;
             using (var sel = trans.CreateCommand())
             {
                 sel.CommandText = "SELECT ID FROM Albums WHERE ScanSetID = @s AND AlbumArtistID = @aa AND Path = @p AND Name = @n LIMIT 1";
                 sel.Parameters.Add("@s", DbType.Int64).Value = setId;
                 sel.Parameters.Add("@aa", DbType.Int64).Value = albumArtistId;
-                sel.Parameters.Add("@p", DbType.String).Value = albumPath ?? "";
-                sel.Parameters.Add("@n", DbType.String).Value = name ?? "";
+                sel.Parameters.Add("@p", DbType.String).Value = albumPath;
+                sel.Parameters.Add("@n", DbType.String).Value = name;
                 var found = sel.ExecuteScalar();
                 if (found is not null && found is not DBNull)
-                    return Convert.ToInt64(found);
+                {
+                    id = Convert.ToInt64(found);
+                    if (cache is not null)
+                        cache[key] = id;
+                    return id;
+                }
             }
             using var ins = trans.CreateCommand();
             ins.CommandText = "INSERT INTO Albums (ScanSetID, AlbumArtistID, Path, Name) VALUES (@s, @aa, @p, @n);\r\n" + lastidsql_;
             ins.Parameters.Add("@s", DbType.Int64).Value = setId;
             ins.Parameters.Add("@aa", DbType.Int64).Value = albumArtistId;
-            ins.Parameters.Add("@p", DbType.String).Value = albumPath ?? "";
-            ins.Parameters.Add("@n", DbType.String).Value = name ?? "";
-            return Convert.ToInt64(ins.ExecuteScalar());
+            ins.Parameters.Add("@p", DbType.String).Value = albumPath;
+            ins.Parameters.Add("@n", DbType.String).Value = name;
+            id = Convert.ToInt64(ins.ExecuteScalar());
+            if (cache is not null)
+                cache[key] = id;
+            return id;
         }
 
-        private long GetOrInsertImage(DbTransaction trans, IMetadataImage image)
+        private long GetOrInsertImage(
+            DbTransaction trans,
+            IMetadataImage image,
+            Dictionary<string, long> cache = null)
         {
+            string hash = image.Hash ?? "";
+            if (cache is not null && cache.TryGetValue(hash, out long cached))
+                return cached;
+
+            long id;
             using (var sel = trans.CreateCommand())
             {
                 sel.CommandText = "SELECT ID FROM Images WHERE Hash = @h LIMIT 1";
-                sel.Parameters.Add("@h", DbType.String).Value = image.Hash;
+                sel.Parameters.Add("@h", DbType.String).Value = hash;
                 var found = sel.ExecuteScalar();
                 if (found is not null && found is not DBNull)
-                    return Convert.ToInt64(found);
+                {
+                    id = Convert.ToInt64(found);
+                    if (cache is not null)
+                        cache[hash] = id;
+                    return id;
+                }
             }
             using var ins = trans.CreateCommand();
             ins.CommandText = "INSERT INTO Images (Hash, ImageType, Width, Height, Size, Data) VALUES (@h, @t, @w, @ht, @s, @d);\r\n" + lastidsql_;
-            ins.Parameters.Add("@h", DbType.String).Value = image.Hash;
+            ins.Parameters.Add("@h", DbType.String).Value = hash;
             ins.Parameters.Add("@t", DbType.String).Value = image.ImageType;
             ins.Parameters.Add("@w", DbType.Int64).Value = (long)image.Width;
             ins.Parameters.Add("@ht", DbType.Int64).Value = (long)image.Height;
             ins.Parameters.Add("@s", DbType.Int64).Value = (long)image.Size;
             ins.Parameters.Add("@d", DbType.Object).Value = image.Data;
-            return Convert.ToInt64(ins.ExecuteScalar());
+            id = Convert.ToInt64(ins.ExecuteScalar());
+            if (cache is not null)
+                cache[hash] = id;
+            return id;
         }
 
         public virtual void Dispose()

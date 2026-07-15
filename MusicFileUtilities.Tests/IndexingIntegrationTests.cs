@@ -66,6 +66,8 @@ namespace MusicFileUtilities.Tests
                 Assert.True(ScalarLong(conn, "SELECT COUNT(*) FROM Metadata") > 0);
                 Assert.True(ScalarLong(conn, "SELECT COUNT(*) FROM Metadata WHERE Value = 'TestTitle'") >= 3);
                 Assert.Equal(0L, ScalarLong(conn, "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'KnownMetadata'"));
+                Assert.Equal(3L, ScalarLong(conn,
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name IN ('AlbumsLookupIndex', 'FilesPathIndex', 'ImagesHashIndex')"));
             }
             finally
             {
@@ -73,6 +75,39 @@ namespace MusicFileUtilities.Tests
                 MetadataDatabase.IndexMetaRowsPerInsert = savedRows;
                 SqliteConnection.ClearAllPools();
                 try { Directory.Delete(scanDir, true); } catch { /* best effort */ }
+            }
+        }
+
+        [Fact]
+        public void OpenDatabaseRestoresPerformanceIndexesOnExistingDatabase()
+        {
+            string directory = Path.Combine(Path.GetTempPath(), "mlt_idx_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            string dbPath = Path.Combine(directory, "cache.db");
+
+            try
+            {
+                using (MetadataDatabase.OpenDatabase("sqlite:" + dbPath)) { }
+                using (var conn = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = dbPath }.ConnectionString))
+                {
+                    conn.Open();
+                    using var command = conn.CreateCommand();
+                    command.CommandText = "DROP INDEX AlbumsLookupIndex; DROP INDEX FilesPathIndex; DROP INDEX ImagesHashIndex;";
+                    command.ExecuteNonQuery();
+                }
+
+                using (MetadataDatabase.OpenDatabase("sqlite:" + dbPath)) { }
+                using (var conn = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = dbPath }.ConnectionString))
+                {
+                    conn.Open();
+                    Assert.Equal(3L, ScalarLong(conn,
+                        "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name IN ('AlbumsLookupIndex', 'FilesPathIndex', 'ImagesHashIndex')"));
+                }
+            }
+            finally
+            {
+                SqliteConnection.ClearAllPools();
+                try { Directory.Delete(directory, true); } catch { /* best effort */ }
             }
         }
 

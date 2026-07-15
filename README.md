@@ -210,6 +210,9 @@ at build time by `generate-fixtures.ps1` — **ffmpeg must be on the PATH** (or 
 - Full tag rewrites use large sequential input/output buffers and pooled copy storage. FLAC reuses
   its parsed audio offset, MP4 streams deferred media without a per-rewrite megabyte allocation,
   and Ogg caches the source length instead of querying it for every page.
+- Batched cache refreshes reuse artist, album, artwork, and metadata-key lookups for the whole
+  transaction. Existing SQLite caches are automatically upgraded with indexes for album/path,
+  file-path, and artwork-hash lookups.
 - Saves are conservative: unknown tag frames/atoms/blocks are preserved, artwork
   round-trips byte-for-byte, and in-place fast paths fall back to full rewrites whenever
   structure changes.
