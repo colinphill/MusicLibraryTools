@@ -18,6 +18,8 @@ avoid eagerly reading artwork or media data that is already represented in the m
 - [x] Preview and apply stale-checked repairs for safely inferable missing Album Artist values.
 - [ ] Extend batch repairs to conflicting album artists, numbering, totals, multi-disc naming,
       whitespace, and casing.
+  - [x] Infer calibrated filename track numbers, peer/sequence totals, and explicit disc-folder numbers.
+  - [ ] Add user-directed conflict resolution plus multi-disc naming, whitespace, and casing repairs.
 - [ ] Add an album metadata matrix with inconsistent cells highlighted.
 
 ## 3. Quarantine and recovery

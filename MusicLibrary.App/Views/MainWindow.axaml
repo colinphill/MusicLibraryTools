@@ -353,8 +353,8 @@
                                 <Button Content="Lossy files" Margin="0,0,8,8" Command="{Binding RunLossyCommand}"/>
                                 <Button Content="Duplicates" Margin="0,0,8,8" Command="{Binding RunDuplicatesCommand}"/>
                                 <Button Content="Cross-set check" Margin="0,0,8,8" Command="{Binding RunCheckSetsCommand}"/>
-                                <Button Content="Album artist repairs" Margin="0,0,8,8"
-                                        Command="{Binding PreviewAlbumArtistRepairsCommand}"/>
+                                <Button Content="Metadata repairs" Margin="0,0,8,8"
+                                        Command="{Binding PreviewMetadataRepairsCommand}"/>
                                 <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,8" VerticalAlignment="Center">
                                     <Button Content="Similar artists" Command="{Binding RunSimilarArtistsCommand}"/>
                                     <TextBlock Text="threshold" Classes="muted" VerticalAlignment="Center"/>
@@ -534,7 +534,7 @@
                                     <WrapPanel Grid.Row="0" Classes="toolbarwrap" Margin="0,0,-8,4">
                                         <Button Content="Apply selected" Classes="accent"
                                                 Command="{Binding ApplyRepairsCommand}"/>
-                                        <TextBlock Text="Only unambiguous repairs are proposed; changed files require a new preview."
+                                        <TextBlock Text="Only unambiguous tag repairs are proposed; changed files require a new preview."
                                                    Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                     </WrapPanel>
                                     <ScrollViewer Grid.Row="1">

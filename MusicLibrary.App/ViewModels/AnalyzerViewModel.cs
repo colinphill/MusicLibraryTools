@@ -137,13 +137,13 @@ public partial class AnalyzerViewModel : ViewModelBase
     });
 
     [RelayCommand(CanExecute = nameof(CanRun))]
-    private async Task PreviewAlbumArtistRepairs()
+    private async Task PreviewMetadataRepairs()
     {
-        using var scope = BeginRun("Album artist repairs", AnalysisResultView.Repairs);
+        using var scope = BeginRun("Metadata repair preview", AnalysisResultView.Repairs);
         try
         {
             var records = await _library.GetAllRecordsAsync(scope.Token);
-            var plan = await Task.Run(() => _repairs.PreviewMissingAlbumArtists(records), scope.Token);
+            var plan = await Task.Run(() => _repairs.PreviewSafeRepairs(records), scope.Token);
             var repairItems = new List<AnalysisRepairItemViewModel>(plan.Items.Count);
             foreach (var item in plan.Items)
             {
@@ -152,12 +152,12 @@ public partial class AnalyzerViewModel : ViewModelBase
                 repairItems.Add(viewModel);
             }
             string status = plan.Items.Count == 0
-                ? "No safely inferable missing album artists were found."
-                : $"Previewed {plan.Items.Count:N0} missing album-artist repair(s). Review, then apply selected.";
+                ? "No safely inferable metadata repairs were found."
+                : $"Previewed {plan.Items.Count:N0} metadata repair(s). Review, then apply selected.";
             AddRun(AnalysisRunViewModel.ForRepairs(plan, repairItems, status));
         }
-        catch (OperationCanceledException) { StatusText = "Album artist repair preview cancelled."; }
-        catch (Exception ex) { StatusText = $"Album artist repair preview failed: {ex.Message}"; }
+        catch (OperationCanceledException) { StatusText = "Metadata repair preview cancelled."; }
+        catch (Exception ex) { StatusText = $"Metadata repair preview failed: {ex.Message}"; }
         finally { ApplyRepairsCommand.NotifyCanExecuteChanged(); }
     }
 
@@ -172,13 +172,14 @@ public partial class AnalyzerViewModel : ViewModelBase
         var selected = RepairItems.Where(item => item.IsSelected && !item.IsApplied).ToList();
         if (selected.Count == 0)
             return;
+        int selectedFiles = selected.Select(item => item.Path).Distinct(StringComparer.OrdinalIgnoreCase).Count();
 
-        using var scope = BeginRun("Apply album artist repairs", AnalysisResultView.Repairs);
+        using var scope = BeginRun("Apply metadata repairs", AnalysisResultView.Repairs);
         try
         {
             var selectedPlan = repairPlan with { Items = selected.Select(item => item.Repair).ToList() };
             var progress = new Progress<int>(done =>
-                StatusText = $"Applying album artist repairs… {done:N0}/{selected.Count:N0}");
+                StatusText = $"Applying metadata repairs… {done:N0}/{selectedFiles:N0} file(s)");
             var result = await _repairs.ApplyAsync(selectedPlan, progress, scope.Token);
             var byPath = result.Files.ToDictionary(file => file.Path, StringComparer.OrdinalIgnoreCase);
             foreach (var item in selected)
@@ -195,7 +196,7 @@ public partial class AnalyzerViewModel : ViewModelBase
                 if (item.IsApplied)
                     item.IsSelected = false;
             }
-            StatusText = $"Album artist repairs: {result.Summary}.";
+            StatusText = $"Metadata repairs: {result.Summary}.";
             var changed = result.Files
                 .Where(file => file.Outcome == WriteOutcome.Saved)
                 .Select(file => file.Path)
@@ -203,8 +204,8 @@ public partial class AnalyzerViewModel : ViewModelBase
             if (changed.Count > 0)
                 RepairsApplied?.Invoke(changed);
         }
-        catch (OperationCanceledException) { StatusText = "Album artist repair apply cancelled."; }
-        catch (Exception ex) { StatusText = $"Album artist repair apply failed: {ex.Message}"; }
+        catch (OperationCanceledException) { StatusText = "Metadata repair apply cancelled."; }
+        catch (Exception ex) { StatusText = $"Metadata repair apply failed: {ex.Message}"; }
         finally { ApplyRepairsCommand.NotifyCanExecuteChanged(); }
     }
 
@@ -309,7 +310,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         RunDuplicatesCommand.NotifyCanExecuteChanged();
         RunSimilarArtistsCommand.NotifyCanExecuteChanged();
         RunCheckSetsCommand.NotifyCanExecuteChanged();
-        PreviewAlbumArtistRepairsCommand.NotifyCanExecuteChanged();
+        PreviewMetadataRepairsCommand.NotifyCanExecuteChanged();
         ApplyRepairsCommand.NotifyCanExecuteChanged();
         RemoveRunCommand.NotifyCanExecuteChanged();
         ClearRunsCommand.NotifyCanExecuteChanged();

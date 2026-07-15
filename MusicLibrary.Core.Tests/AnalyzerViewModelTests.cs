@@ -107,6 +107,24 @@ public sealed class AnalyzerViewModelTests
         Assert.False(viewModel.HasRuns);
     }
 
+    [Fact]
+    public async Task Analyzer_MetadataRepairPreviewUsesTheCombinedSafePlan()
+    {
+        var record = Track("track.flac", "AA", "Album");
+        var repairs = new TrackingRepairs(new AnalysisRepairPlan("Safe metadata repairs", [
+            new(record.Path, TagFields.TotalTracks, null, "10", "reason", 100, DateTime.UtcNow),
+        ]));
+        var viewModel = new AnalyzerViewModel(
+            new StubLibrary([record]), new StubReconciler(), repairs,
+            new AppSettings(Path.Combine(Path.GetTempPath(), $"analyzer-{Guid.NewGuid():N}.json")));
+
+        await viewModel.PreviewMetadataRepairsCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, repairs.SafePreviewCalls);
+        Assert.Equal("Safe metadata repairs", viewModel.SelectedRun!.Name);
+        Assert.Single(viewModel.RepairItems);
+    }
+
     private static AnalyzerViewModel Create(IReadOnlyList<TrackRecord> records) =>
         new(new StubLibrary(records), new StubReconciler(), new StubRepairs(),
             new AppSettings(Path.Combine(Path.GetTempPath(), $"analyzer-{Guid.NewGuid():N}.json")));
@@ -169,10 +187,31 @@ public sealed class AnalyzerViewModelTests
 
     private sealed class StubRepairs : IAnalysisRepairService
     {
+        public AnalysisRepairPlan PreviewSafeRepairs(IReadOnlyList<TrackRecord> records) =>
+            new("Safe metadata repairs", []);
         public AnalysisRepairPlan PreviewMissingAlbumArtists(IReadOnlyList<TrackRecord> records) =>
             new("Fill missing album artists", []);
+        public AnalysisRepairPlan PreviewNumberingAndTotals(IReadOnlyList<TrackRecord> records) =>
+            new("Repair numbering and totals", []);
         public Task<BatchWriteResult> ApplyAsync(
             AnalysisRepairPlan plan, IProgress<int>? progress = null, CancellationToken ct = default) =>
             Task.FromResult(new BatchWriteResult([]));
+    }
+
+    private sealed class TrackingRepairs(AnalysisRepairPlan plan) : IAnalysisRepairService
+    {
+        public int SafePreviewCalls { get; private set; }
+        public AnalysisRepairPlan PreviewSafeRepairs(IReadOnlyList<TrackRecord> records)
+        {
+            SafePreviewCalls++;
+            return plan;
+        }
+        public AnalysisRepairPlan PreviewMissingAlbumArtists(IReadOnlyList<TrackRecord> records) =>
+            throw new NotSupportedException();
+        public AnalysisRepairPlan PreviewNumberingAndTotals(IReadOnlyList<TrackRecord> records) =>
+            throw new NotSupportedException();
+        public Task<BatchWriteResult> ApplyAsync(
+            AnalysisRepairPlan plan, IProgress<int>? progress = null, CancellationToken ct = default) =>
+            throw new NotSupportedException();
     }
 }

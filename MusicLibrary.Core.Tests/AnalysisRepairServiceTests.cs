@@ -64,6 +64,113 @@ public sealed class AnalysisRepairServiceTests
     }
 
     [Fact]
+    public void PreviewNumbering_UsesCalibratedFilenameAndPeerTotal()
+    {
+        string folder = Path.Combine("library", "Artist", "Album");
+        var records = new[]
+        {
+            Track(Path.Combine(folder, "01 - One.flac"), "Album", "Artist", "Artist", 1),
+            Track(Path.Combine(folder, "02 - Two.flac"), "Album", "Artist", "Artist"),
+            Track(Path.Combine(folder, "03 - Three.flac"), "Album", "Artist", "Artist", 3, 3),
+        };
+
+        var plan = new AnalysisRepairService(new RecordingWriter()).PreviewNumberingAndTotals(records);
+
+        Assert.Contains(plan.Items, repair =>
+            repair.Path == records[1].Path && repair.Field == TagFields.TrackNumber && repair.After == "2");
+        Assert.Equal(2, plan.Items.Count(repair => repair.Field == TagFields.TotalTracks));
+        Assert.All(plan.Items.Where(repair => repair.Field == TagFields.TotalTracks),
+            repair => Assert.Equal("3", repair.After));
+    }
+
+    [Fact]
+    public void PreviewNumbering_SkipsUncalibratedOrAmbiguousFilenames()
+    {
+        string folder = Path.Combine("library", "Artist", "Album");
+        var records = new[]
+        {
+            Track(Path.Combine(folder, "01 - One.flac"), "Album", "Artist", "Artist", 1),
+            Track(Path.Combine(folder, "bonus.flac"), "Album", "Artist", "Artist"),
+        };
+
+        var plan = new AnalysisRepairService(new RecordingWriter()).PreviewNumberingAndTotals(records);
+
+        Assert.Empty(plan.Items);
+    }
+
+    [Fact]
+    public void PreviewTotals_RepairsOnlyValuesProvenInvalidByTheTrackSequence()
+    {
+        string folder = Path.Combine("library", "Artist", "Album");
+        var records = new[]
+        {
+            Track(Path.Combine(folder, "01.flac"), "Album", "Artist", "Artist", 1, 2),
+            Track(Path.Combine(folder, "02.flac"), "Album", "Artist", "Artist", 2, 3),
+            Track(Path.Combine(folder, "03.flac"), "Album", "Artist", "Artist", 3, 3),
+        };
+
+        var plan = new AnalysisRepairService(new RecordingWriter()).PreviewNumberingAndTotals(records);
+
+        var repair = Assert.Single(plan.Items);
+        Assert.Equal(records[0].Path, repair.Path);
+        Assert.Equal(TagFields.TotalTracks, repair.Field);
+        Assert.Equal("2", repair.Before);
+        Assert.Equal("3", repair.After);
+    }
+
+    [Fact]
+    public void PreviewTotals_SkipsConflictingPlausibleTotals()
+    {
+        string folder = Path.Combine("library", "Artist", "Album");
+        var records = new[]
+        {
+            Track(Path.Combine(folder, "01.flac"), "Album", "Artist", "Artist", 1, 2),
+            Track(Path.Combine(folder, "02.flac"), "Album", "Artist", "Artist", 2, 3),
+        };
+
+        var plan = new AnalysisRepairService(new RecordingWriter()).PreviewNumberingAndTotals(records);
+
+        Assert.Empty(plan.Items);
+    }
+
+    [Fact]
+    public void PreviewDiscs_UsesACompleteSetOfExplicitDiscFolders()
+    {
+        string album = Path.Combine("library", "Artist", "Album");
+        var records = new[]
+        {
+            Track(Path.Combine(album, "Disc 1", "01.flac"), "Album", "Artist", "Artist", 1),
+            Track(Path.Combine(album, "Disc 2", "01.flac"), "Album", "Artist", "Artist", 1),
+        };
+
+        var plan = new AnalysisRepairService(new RecordingWriter()).PreviewNumberingAndTotals(records);
+
+        Assert.Equal(2, plan.Items.Count(repair => repair.Field == TagFields.DiscNumber));
+        Assert.Equal(2, plan.Items.Count(repair => repair.Field == TagFields.TotalDiscs));
+        Assert.Contains(plan.Items, repair =>
+            repair.Path == records[0].Path && repair.Field == TagFields.DiscNumber && repair.After == "1");
+        Assert.Contains(plan.Items, repair =>
+            repair.Path == records[1].Path && repair.Field == TagFields.DiscNumber && repair.After == "2");
+        Assert.All(plan.Items.Where(repair => repair.Field == TagFields.TotalDiscs),
+            repair => Assert.Equal("2", repair.After));
+    }
+
+    [Fact]
+    public void PreviewDiscs_SkipsIncompleteDiscFolderSequences()
+    {
+        string album = Path.Combine("library", "Artist", "Album");
+        var records = new[]
+        {
+            Track(Path.Combine(album, "Disc 1", "01.flac"), "Album", "Artist", "Artist", 1),
+            Track(Path.Combine(album, "Disc 3", "01.flac"), "Album", "Artist", "Artist", 1),
+        };
+
+        var plan = new AnalysisRepairService(new RecordingWriter()).PreviewNumberingAndTotals(records);
+
+        Assert.Empty(plan.Items);
+    }
+
+    [Fact]
     public async Task Apply_RejectsAnyChangedSourceBeforeWriting()
     {
         using var temp = new TempDirectory();
@@ -114,6 +221,32 @@ public sealed class AnalysisRepairServiceTests
     }
 
     [Fact]
+    public async Task Apply_WritesAllSelectedFieldsForAFileInOnePass()
+    {
+        using var temp = new TempDirectory();
+        string path = temp.File("track.flac", "content");
+        var info = new FileInfo(path);
+        var plan = Plan(
+            new AnalysisTagRepair(path, TagFields.TrackNumber, null, "2", "reason",
+                info.Length, info.LastWriteTimeUtc),
+            new AnalysisTagRepair(path, TagFields.TotalTracks, null, "10", "reason",
+                info.Length, info.LastWriteTimeUtc));
+        var writer = new RecordingWriter();
+        int progress = 0;
+
+        var result = await new AnalysisRepairService(writer).ApplyAsync(
+            plan, new InlineProgress(value => progress = value));
+
+        Assert.Equal(1, result.SavedCount);
+        var call = Assert.Single(writer.Calls);
+        Assert.Equal(path, Assert.Single(call.Paths));
+        Assert.Equal(2, call.Edits.Count);
+        Assert.Contains(call.Edits, edit => edit == new TagEdit(TagFields.TrackNumber, "2"));
+        Assert.Contains(call.Edits, edit => edit == new TagEdit(TagFields.TotalTracks, "10"));
+        Assert.Equal(1, progress);
+    }
+
+    [Fact]
     public async Task PreviewAndApply_RepairsARealIndexedFileAndRefreshesTheCache()
     {
         using var temp = new TempDirectory();
@@ -143,14 +276,62 @@ public sealed class AnalysisRepairServiceTests
         Assert.Equal("TestArtist", (await library.GetFileDetailsAsync(path, includeArtwork: false))!.Entry.AlbumArtist);
     }
 
+    [Fact]
+    public async Task PreviewAndApply_WritesNumberAndTotalTogetherAndRefreshesTheCache()
+    {
+        using var temp = new TempDirectory();
+        string music = System.IO.Path.Combine(temp.Path, "music");
+        Directory.CreateDirectory(music);
+        string first = System.IO.Path.Combine(music, "01 - First.flac");
+        string second = System.IO.Path.Combine(music, "02 - Second.flac");
+        File.Copy(MediaFixtures.Path_("sample.flac"), first);
+        File.Copy(MediaFixtures.Path_("sample.flac"), second);
+        var firstWriter = Assert.IsAssignableFrom<IMetadataWriter>(MediaFile.GetFile(first));
+        firstWriter.SetField(TagFields.TrackNumber, "1");
+        firstWriter.SetField(TagFields.TotalTracks, "2");
+        firstWriter.Save();
+        var secondWriter = Assert.IsAssignableFrom<IMetadataWriter>(MediaFile.GetFile(second));
+        secondWriter.SetField(TagFields.TrackNumber, null!);
+        secondWriter.SetField(TagFields.TotalTracks, null!);
+        secondWriter.Save();
+        string configPath = System.IO.Path.Combine(temp.Path, "library.xml");
+        new EditableLibraryConfig
+        {
+            DatabaseFile = "cache.db",
+            IndexTargets = [new IndexTargetEntry { Target = music }],
+        }.Save(configPath);
+        var settings = new AppSettings(System.IO.Path.Combine(temp.Path, "settings.json"));
+        settings.LoadConfig(configPath);
+        using var library = new LibraryService(settings);
+        await library.IndexAsync();
+        var service = new AnalysisRepairService(new TagWriteService(library));
+
+        var plan = service.PreviewNumberingAndTotals(await library.GetAllRecordsAsync());
+        var result = await service.ApplyAsync(plan);
+
+        Assert.Equal(1, result.SavedCount);
+        var parsed = MediaFile.GetFile(second).Tags.First();
+        Assert.Equal(2, parsed.TrackNumber);
+        Assert.Equal(2, parsed.TrackTotal);
+        var cached = (await library.GetFileDetailsAsync(second, includeArtwork: false))!.Entry;
+        Assert.Equal(2, cached.TrackNumber);
+        Assert.Equal(2, cached.TrackTotal);
+    }
+
     private static TrackRecord Track(
-        string path, string album, string artist, string? albumArtist) => new()
+        string path, string album, string artist, string? albumArtist,
+        int? trackNumber = null, int? trackTotal = null,
+        int? discNumber = null, int? discTotal = null) => new()
     {
         Path = path,
         Album = album,
         Artist = artist,
         AlbumArtist = albumArtist,
         HasAlbumArtist = albumArtist is not null,
+        TrackNumber = trackNumber,
+        TrackTotal = trackTotal,
+        DiscNumber = discNumber,
+        DiscTotal = discTotal,
         Length = 10,
         LastWriteTime = DateTime.UtcNow,
     };
