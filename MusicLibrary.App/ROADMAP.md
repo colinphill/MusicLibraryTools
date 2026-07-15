@@ -35,7 +35,7 @@ avoid eagerly reading artwork or media data that is already represented in the m
 
 ## 4. Network-aware indexing
 
-- [ ] Report enumeration, metadata, database, and artwork phases with throughput and elapsed time.
+- [x] Report enumeration, metadata, database, and artwork phases with throughput and elapsed time.
 - [ ] Expose bounded reader parallelism and provide a per-root concurrency benchmark.
 - [ ] Record per-root scan health and last successful scan; distinguish unavailable roots from removals.
 - [ ] Support cached/offline browsing, targeted reindexing, and scheduled delta scans.

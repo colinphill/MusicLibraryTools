@@ -113,7 +113,7 @@
                     <ProgressBar IsIndeterminate="True" Width="60"
                                  IsVisible="{Binding Library.IsIndexing}"/>
                     <TextBlock Text="{Binding Library.StatusText}" Classes="muted"
-                               MaxWidth="520" TextTrimming="CharacterEllipsis"
+                               MaxWidth="900" TextWrapping="Wrap"
                                ToolTip.Tip="{Binding Library.StatusText}"/>
                 </WrapPanel>
             </Grid>

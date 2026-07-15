@@ -94,6 +94,56 @@ namespace MusicFileUtilities.Tests
         }
 
         [Fact]
+        public void IndexProgressReportsStreamingPhasesThroughputAndDeferredArtwork()
+        {
+            string scanDir = Path.Combine(Path.GetTempPath(), "mlt_idx_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(scanDir);
+            string dbPath = Path.Combine(scanDir, "cache.db");
+            File.Copy(MediaFixtures.Path_("sample.flac"), Path.Combine(scanDir, "sample.flac"));
+            var progress = new CollectingProgress();
+
+            try
+            {
+                using var db = MetadataDatabase.OpenDatabase("sqlite:" + dbPath);
+                db.IndexFiles([scanDir], progress: progress, ct: TestContext.Current.CancellationToken);
+
+                var reports = progress.Snapshot();
+                Assert.Contains(reports, item => item.Phase == IndexPhase.Preparing);
+                Assert.Contains(reports, item => item.Phase == IndexPhase.Enumeration);
+                Assert.Contains(reports, item => item.Phase == IndexPhase.Metadata);
+                Assert.Contains(reports, item => item.Phase == IndexPhase.Database);
+                Assert.Contains(reports, item => item.Phase == IndexPhase.Artwork && item.ArtworkDeferred);
+                var completed = Assert.Single(reports, item => item.Phase == IndexPhase.Completed);
+                Assert.Equal(1, completed.Enumerated);
+                Assert.Equal(1, completed.Scanned);
+                Assert.Equal(1, completed.DatabaseProcessed);
+                Assert.True(completed.Elapsed >= TimeSpan.Zero);
+                Assert.All(reports, item => Assert.True(item.FilesPerSecond >= 0));
+            }
+            finally
+            {
+                SqliteConnection.ClearAllPools();
+                try { Directory.Delete(scanDir, true); } catch { }
+            }
+        }
+
+        private sealed class CollectingProgress : IProgress<IndexProgress>
+        {
+            private readonly object sync = new();
+            private readonly List<IndexProgress> reports = [];
+
+            public void Report(IndexProgress value)
+            {
+                lock (sync) reports.Add(value);
+            }
+
+            public IReadOnlyList<IndexProgress> Snapshot()
+            {
+                lock (sync) return reports.ToList();
+            }
+        }
+
+        [Fact]
         public void OpenDatabaseRestoresPerformanceIndexesOnExistingDatabase()
         {
             string directory = Path.Combine(Path.GetTempPath(), "mlt_idx_" + Guid.NewGuid().ToString("N"));

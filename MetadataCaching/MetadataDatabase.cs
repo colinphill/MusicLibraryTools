@@ -19,6 +19,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Runtime.CompilerServices;
 using System.Runtime.ExceptionServices;
+using System.Diagnostics;
 
 [assembly: InternalsVisibleTo("MusicFileUtilities.Tests")]
 
@@ -29,7 +30,29 @@ namespace MetadataCaching
     /// A snapshot of indexing progress, reported periodically from <see cref="MetadataDatabase.IndexFilesAsync"/>
     /// so a GUI can show a live count without the library writing to the console.
     /// </summary>
-    public readonly record struct IndexProgress(int Scanned, int Added, int Modified, int Unchanged);
+    public enum IndexPhase
+    {
+        Preparing,
+        Enumeration,
+        Metadata,
+        Database,
+        Artwork,
+        Finalizing,
+        Completed,
+    }
+
+    public readonly record struct IndexProgress(int Scanned, int Added, int Modified, int Unchanged)
+    {
+        public IndexPhase Phase { get; init; }
+        public int Enumerated { get; init; }
+        public int DatabaseProcessed { get; init; }
+        public TimeSpan Elapsed { get; init; }
+        public TimeSpan PhaseElapsed { get; init; }
+        public double FilesPerSecond { get; init; }
+        public string Root { get; init; }
+        public string Detail { get; init; }
+        public bool ArtworkDeferred { get; init; }
+    }
 
     public partial class MetadataCacheEntry
     {
@@ -512,6 +535,39 @@ namespace MetadataCaching
         // is skipped on cancel so a partial scan never deletes files it simply hadn't reached.
         public async Task<(int Added, int Modified, int Removed, int Unchanged)> IndexFilesAsync(IEnumerable<string> paths, bool deletemissingsets = false, IProgress<IndexProgress> progress = null, CancellationToken ct = default)
         {
+            int added = 0, modified = 0, removed = 0, unchanged = 0, scanned = 0;
+            int enumerated = 0, databaseProcessed = 0;
+            var indexClock = Stopwatch.StartNew();
+            var preparingClock = Stopwatch.StartNew();
+
+            void ReportPhase(
+                IndexPhase phase,
+                Stopwatch phaseClock,
+                int phaseItems,
+                string detail,
+                string root = null,
+                bool artworkDeferred = false)
+            {
+                if (progress is null)
+                    return;
+                double seconds = phaseClock.Elapsed.TotalSeconds;
+                progress.Report(new IndexProgress(
+                    Volatile.Read(ref scanned), Volatile.Read(ref added), Volatile.Read(ref modified),
+                    Volatile.Read(ref unchanged))
+                {
+                    Phase = phase,
+                    Enumerated = Volatile.Read(ref enumerated),
+                    DatabaseProcessed = Volatile.Read(ref databaseProcessed),
+                    Elapsed = indexClock.Elapsed,
+                    PhaseElapsed = phaseClock.Elapsed,
+                    FilesPerSecond = seconds > 0 ? phaseItems / seconds : 0,
+                    Root = root,
+                    Detail = detail,
+                    ArtworkDeferred = artworkDeferred,
+                });
+            }
+
+            ReportPhase(IndexPhase.Preparing, preparingClock, 0, "Loading cache scan sets");
             var sets = new List<(string Path, long ID)>();
             var missedsets = new List<long>();
 
@@ -560,8 +616,6 @@ namespace MetadataCaching
                 missedsets.AddRange(dbsets.Where(s => !s.Hit).Select(s => (s.ID)));
                 scanSetsCache_ = null;
             }
-
-            int added = 0, modified = 0, removed = 0, unchanged = 0, scanned = 0;
 
             using var filequeue = new BlockingCollection<(long ID, long Set, string FileName, long Length, DateTime LastWriteTime, IMediaFile File)>(IndexFileQueueBound);
             using var pipelineCts = new CancellationTokenSource();
@@ -617,10 +671,14 @@ namespace MetadataCaching
                 // image-hash table. On-demand hydration uses its indexed hash lookup only for the
                 // requested files.
             }
+            ReportPhase(IndexPhase.Preparing, preparingClock, filesdict.Count,
+                $"Loaded {filesdict.Count:N0} cached file row(s)");
 
             int scanFailed = 0;
             var metadatareadtask = Task.Run(() =>
             {
+                var enumerationClock = Stopwatch.StartNew();
+                var metadataClock = Stopwatch.StartNew();
                 try
                 {
                 // Split each scan set into per-subtree units, and retain any music files observed
@@ -639,6 +697,8 @@ namespace MetadataCaching
                 // Scan-set roots are independent network requests. Discover them concurrently so
                 // configurations with several shares/roots do not pay every initial listing wait
                 // in series. This phase uses the same cap as the readers below.
+                ReportPhase(IndexPhase.Enumeration, enumerationClock, 0,
+                    $"Discovering {sets.Count:N0} configured root(s)");
                 Parallel.ForEach(sets, scanParallelOptions, scanpath =>
                 {
                     foreach (var entry in new MusicFileEnumerator(scanpath.Path, recurse: false))
@@ -671,6 +731,10 @@ namespace MetadataCaching
                    }
                    if (file.FileType != MFEType.MusicFile)
                        return;
+                   int found = Interlocked.Increment(ref enumerated);
+                   if ((found % 250) == 0)
+                       ReportPhase(IndexPhase.Enumeration, enumerationClock, found,
+                           "Enumerating music files", setPath);
                    var relativename = Path.GetRelativePath(setPath, file.Name);
                    var key = (SetID: setID, RelativeName: relativename);
                    var scan = false;
@@ -700,8 +764,9 @@ namespace MetadataCaching
                    {
                        try
                        {
+                           var parsed = MediaFile.GetFile(file.Name, readOnly: true, readArtwork: false);
                            filequeue.Add((id, setID, relativename, file.Size, file.Modified,
-                               MediaFile.GetFile(file.Name, readOnly: true, readArtwork: false)), pipelineCts.Token);
+                               parsed), pipelineCts.Token);
                            if (isAdded)
                                Interlocked.Increment(ref added);
                            else if (isModified)
@@ -710,10 +775,11 @@ namespace MetadataCaching
                            // Console is internally locked; printing from every scan thread
                            // every 100 files serializes them. A coarser cadence (and no
                            // explicit Flush, which the console stream does anyway) avoids it.
-                           if ((done % 1000) == 0)
+                           if ((done % 250) == 0)
                            {
                                if (progress != null)
-                                   progress.Report(new IndexProgress(done, added, modified, unchanged));
+                                   ReportPhase(IndexPhase.Metadata, metadataClock, done,
+                                       "Reading changed and new file metadata", setPath);
                                else
                                    Console.Write($"Scanned: {done}\r");
                            }
@@ -772,7 +838,12 @@ namespace MetadataCaching
                 }
 
                 if (progress != null)
-                    progress.Report(new IndexProgress(scanned, added, modified, unchanged));
+                {
+                    ReportPhase(IndexPhase.Enumeration, enumerationClock, enumerated,
+                        "Enumeration complete");
+                    ReportPhase(IndexPhase.Metadata, metadataClock, scanned,
+                        "Metadata reads complete");
+                }
                 else
                     Console.WriteLine($"Scanned: {scanned}");
                 }
@@ -789,6 +860,8 @@ namespace MetadataCaching
             int FilesPerBatch = IndexFilesPerBatch;
             int MetaRowsPerInsert = IndexMetaRowsPerInsert;
             var metabuffer = new List<(long FileID, long KeyID, string Value)>();
+            var databaseClock = Stopwatch.StartNew();
+            ReportPhase(IndexPhase.Database, databaseClock, 0, "Preparing the cache writer");
 
             DbTransaction trans = null;
             try
@@ -947,7 +1020,13 @@ namespace MetadataCaching
                         }
 
                         if (file.File is null)
+                        {
+                            int done = Interlocked.Increment(ref databaseProcessed);
+                            if ((done % 250) == 0)
+                                ReportPhase(IndexPhase.Database, databaseClock, done,
+                                    "Applying cache removals and metadata updates");
                             continue;
+                        }
 
                         long fileid;
 
@@ -1064,6 +1143,11 @@ namespace MetadataCaching
                             imagemetacomm.ExecuteNonQuery();
                         }
 
+                        int written = Interlocked.Increment(ref databaseProcessed);
+                        if ((written % 250) == 0)
+                            ReportPhase(IndexPhase.Database, databaseClock, written,
+                                "Writing metadata to the cache");
+
                         if (++filesInBatch >= FilesPerBatch)
                         {
                             FlushMetadata();
@@ -1086,6 +1170,8 @@ namespace MetadataCaching
                     }
 #endif
                     trans.Commit();
+                    ReportPhase(IndexPhase.Database, databaseClock, databaseProcessed,
+                        "Database writes committed");
             }
             catch
             {
@@ -1100,6 +1186,12 @@ namespace MetadataCaching
             }
 
             await metadatareadtask;
+
+            var finalizingClock = Stopwatch.StartNew();
+            ReportPhase(IndexPhase.Finalizing, finalizingClock, 0,
+                ct.IsCancellationRequested
+                    ? "Preserving the safely committed partial scan"
+                    : "Reconciling removals and pruning unused cache rows");
 
             if (deletemissingsets && (missedsets.Count != 0))
             {
@@ -1146,6 +1238,16 @@ namespace MetadataCaching
                     "DELETE FROM Images WHERE ID NOT IN (SELECT DISTINCT ImageID FROM ImageMetadata)";
                 comm.ExecuteNonQuery();
                 prunetrans.Commit();
+            }
+
+            if (!ct.IsCancellationRequested)
+            {
+                var artworkClock = Stopwatch.StartNew();
+                ReportPhase(IndexPhase.Artwork, artworkClock, 0,
+                    "Artwork is deferred and hydrates only when viewed or audited",
+                    artworkDeferred: true);
+                ReportPhase(IndexPhase.Completed, indexClock, enumerated,
+                    "Index complete");
             }
 
             return (added, modified, removed, unchanged);

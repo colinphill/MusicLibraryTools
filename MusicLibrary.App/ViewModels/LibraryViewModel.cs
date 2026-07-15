@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MetadataCaching;
 using MusicLibrary.Core.Services;
+using System.Diagnostics;
 
 namespace MusicLibrary.App.ViewModels;
 
@@ -44,13 +45,14 @@ public partial class LibraryViewModel : ViewModelBase
         IsIndexing = true;
         IndexCommand.NotifyCanExecuteChanged();
         _indexCts = new CancellationTokenSource();
-        var progress = new Progress<IndexProgress>(p =>
-            StatusText = $"Indexing… {p.Scanned:N0} scanned (+{p.Added} ~{p.Modified})");
+        var clock = Stopwatch.StartNew();
+        var progress = new Progress<IndexProgress>(p => StatusText = DescribeProgress(p));
 
         try
         {
             var (added, modified, removed, unchanged) = await _library.IndexAsync(progress, _indexCts.Token);
-            StatusText = $"Indexed: +{added} added, ~{modified} modified, -{removed} removed, {unchanged} unchanged";
+            StatusText = $"Indexed in {FormatDuration(clock.Elapsed)}: +{added} added, " +
+                $"~{modified} modified, -{removed} removed, {unchanged} unchanged. Artwork remains lazy.";
         }
         catch (OperationCanceledException)
         {
@@ -72,4 +74,39 @@ public partial class LibraryViewModel : ViewModelBase
 
     [RelayCommand]
     private void CancelIndex() => _indexCts?.Cancel();
+
+    public static string DescribeProgress(IndexProgress progress)
+    {
+        string phase = progress.Phase switch
+        {
+            IndexPhase.Preparing => "Preparing",
+            IndexPhase.Enumeration => "Enumerating",
+            IndexPhase.Metadata => "Reading metadata",
+            IndexPhase.Database => "Updating database",
+            IndexPhase.Artwork => "Artwork",
+            IndexPhase.Finalizing => "Finalizing",
+            IndexPhase.Completed => "Complete",
+            _ => "Indexing",
+        };
+        string count = progress.Phase switch
+        {
+            IndexPhase.Enumeration => $"{progress.Enumerated:N0} found",
+            IndexPhase.Metadata => $"{progress.Scanned:N0} read",
+            IndexPhase.Database => $"{progress.DatabaseProcessed:N0} applied",
+            IndexPhase.Completed => $"{progress.Enumerated:N0} found, {progress.Scanned:N0} read",
+            _ => "",
+        };
+        string rate = progress.Phase is IndexPhase.Enumeration or IndexPhase.Metadata or IndexPhase.Database
+            ? $"{progress.FilesPerSecond:N1} files/s"
+            : "";
+        string timing = $"stage {FormatDuration(progress.PhaseElapsed)}, total {FormatDuration(progress.Elapsed)}";
+        return string.Join(" • ", new[]
+        {
+            $"{phase}: {progress.Detail}", count, rate, timing,
+        }.Where(part => !string.IsNullOrWhiteSpace(part)));
+    }
+
+    private static string FormatDuration(TimeSpan elapsed) => elapsed.TotalMinutes >= 1
+        ? $"{(int)elapsed.TotalMinutes}:{elapsed.Seconds:00}"
+        : $"{elapsed.TotalSeconds:0.0}s";
 }
