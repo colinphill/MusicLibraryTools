@@ -41,6 +41,12 @@ Embedded artwork is parsed, hashed, measured, and preserved byte-for-byte across
   library (file properties, tags, artwork hashes) so tools query instead of re-parsing, and
   maps iTunes library data onto indexed files.
 
+### Desktop app
+
+- **MusicLibrary.App** — an Avalonia library browser and editor for indexing, cached filtering,
+  tag and artwork editing, analysis, ingest, and organization. The prioritized application backlog
+  is tracked in [`MusicLibrary.App/ROADMAP.md`](MusicLibrary.App/ROADMAP.md).
+
 ### Tools
 
 Sync and devices:

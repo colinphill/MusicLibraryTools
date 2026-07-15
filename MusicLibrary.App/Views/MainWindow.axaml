@@ -122,6 +122,20 @@
                                         </Flyout>
                                     </Button.Flyout>
                                 </Button>
+                                <ComboBox ItemsSource="{Binding SavedViews}"
+                                          SelectedItem="{Binding SelectedSavedView}"
+                                          Width="160" PlaceholderText="Saved views">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:SavedLibraryView">
+                                            <TextBlock Text="{Binding Name}"/>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <TextBox Text="{Binding SavedViewName}" Width="150"
+                                         PlaceholderText="View name"/>
+                                <Button Content="Save view" Click="OnSaveLibraryView"
+                                        IsEnabled="{Binding CanSaveView}"/>
+                                <Button Content="Delete view" Command="{Binding DeleteSavedViewCommand}"/>
                                 <ComboBox ItemsSource="{Binding FilterModes}"
                                           SelectedItem="{Binding SelectedFilterMode}" Width="120"/>
                                 <ComboBox ItemsSource="{Binding FilterScopes}"
@@ -142,7 +156,19 @@
                                           CanUserResizeColumns="True"
                                           CanUserReorderColumns="True"
                                           RowHeight="48"
-                                          IsReadOnly="True"/>
+                                          IsReadOnly="True">
+                                    <DataGrid.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Open Details" Click="OnOpenDetails"/>
+                                            <MenuItem Header="Edit tags" Click="OnEditTags"/>
+                                            <MenuItem Header="Edit artwork" Click="OnEditArtwork"/>
+                                            <Separator/>
+                                            <MenuItem Header="Reindex selection" Click="OnReindexSelection"/>
+                                            <MenuItem Header="Reveal first file" Click="OnRevealSelection"/>
+                                            <MenuItem Header="Copy path(s)" Click="OnCopyPaths"/>
+                                        </ContextMenu>
+                                    </DataGrid.ContextMenu>
+                                </DataGrid>
                             </Border>
                         </Grid>
                     </TabItem>

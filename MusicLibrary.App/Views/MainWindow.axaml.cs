@@ -1,6 +1,10 @@
+using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Data;
+using Avalonia.Input;
+using Avalonia.Input.Platform;
+using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using MusicLibrary.App.ViewModels;
@@ -71,11 +75,74 @@ public partial class MainWindow : Window
         if (_syncingGrid || _detailsGrid is null || _vm is null)
             return;
 
-        var paths = _detailsGrid.SelectedItems
-            .OfType<DetailsRow>()
-            .Select(r => r.Path)
-            .ToList();
-        _vm.OnGridSelectionChanged(paths);
+        _vm.OnGridSelectionChanged(SelectedPaths());
+    }
+
+    private IReadOnlyList<string> SelectedPaths() => _detailsGrid?.SelectedItems
+        .OfType<DetailsRow>()
+        .Select(row => row.Path)
+        .ToList() ?? [];
+
+    private void OnSaveLibraryView(object? sender, RoutedEventArgs e)
+    {
+        PersistColumnLayout();
+        _table?.SaveCurrentView();
+    }
+
+    private void OnOpenDetails(object? sender, RoutedEventArgs e) => OpenSelectionTab(2);
+    private void OnEditTags(object? sender, RoutedEventArgs e) => OpenSelectionTab(1);
+    private void OnEditArtwork(object? sender, RoutedEventArgs e) => OpenSelectionTab(3);
+
+    private void OpenSelectionTab(int index)
+    {
+        if (_vm is not null && SelectedPaths().Count > 0)
+            _vm.SelectedTabIndex = index;
+    }
+
+    private async void OnReindexSelection(object? sender, RoutedEventArgs e)
+    {
+        if (_table is not null)
+            await _table.ReindexPathsAsync(SelectedPaths());
+    }
+
+    private async void OnCopyPaths(object? sender, RoutedEventArgs e)
+    {
+        var paths = SelectedPaths();
+        var clipboard = TopLevel.GetTopLevel(this)?.Clipboard;
+        if (paths.Count > 0 && clipboard is not null)
+        {
+            try { await clipboard.SetValueAsync(DataFormat.Text, string.Join(Environment.NewLine, paths)); }
+            catch { /* Clipboard availability is platform/session dependent. */ }
+        }
+    }
+
+    private void OnRevealSelection(object? sender, RoutedEventArgs e)
+    {
+        string? path = SelectedPaths().FirstOrDefault();
+        if (path is null)
+            return;
+
+        var start = new ProcessStartInfo { UseShellExecute = false };
+        if (OperatingSystem.IsWindows())
+        {
+            start.FileName = "explorer.exe";
+            start.ArgumentList.Add("/select,");
+            start.ArgumentList.Add(path);
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            start.FileName = "open";
+            start.ArgumentList.Add("-R");
+            start.ArgumentList.Add(path);
+        }
+        else
+        {
+            start.FileName = "xdg-open";
+            start.ArgumentList.Add(Path.GetDirectoryName(path) ?? path);
+        }
+
+        try { Process.Start(start); }
+        catch { /* The shell integration is optional; keep the app usable if it is unavailable. */ }
     }
 
     // Mirror an external selection (from the tree) into the grid, without echoing back.

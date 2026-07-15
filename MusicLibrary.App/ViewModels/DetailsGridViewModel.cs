@@ -7,6 +7,15 @@ using MusicLibrary.Core.Services;
 
 namespace MusicLibrary.App.ViewModels;
 
+public sealed record LibraryColumnLayout(string Key, double? Width);
+
+public sealed record SavedLibraryView(
+    string Name,
+    string? FilterText,
+    FilterMode FilterMode,
+    string? ScopeKey,
+    IReadOnlyList<LibraryColumnLayout> Columns);
+
 /// <summary>
 /// A tabular details view of every track with user-selectable columns, realtime filtering
 /// (substring / glob / regex), and click-to-sort columns. Rows are held in a
@@ -16,8 +25,10 @@ namespace MusicLibrary.App.ViewModels;
 public partial class DetailsGridViewModel : ViewModelBase
 {
     private const string ColumnLayoutKey = "table.columns";
+    private const string SavedViewsKey = "table.savedViews";
 
     private readonly ILibraryService _library;
+    private readonly IReindexService _reindex;
     private readonly IAppSettings _settings;
     private List<DetailsRow> _allRows = [];
     private PatternMatcher _matcher = PatternMatcher.Create(null, FilterMode.Substring);
@@ -25,10 +36,9 @@ public partial class DetailsGridViewModel : ViewModelBase
 
     // The persisted column layout: visible columns, in display order, with their (absolute) widths.
     // A column absent from this list is hidden. Updated on toggle/reorder/resize and saved immediately.
-    private List<ColumnLayout> _layout = [];
+    private List<LibraryColumnLayout> _layout = [];
     private bool _loadingLayout;
-
-    private sealed record ColumnLayout(string Key, double? Width);
+    private bool _applyingSavedView;
 
     [ObservableProperty]
     private bool _isBusy;
@@ -51,7 +61,19 @@ public partial class DetailsGridViewModel : ViewModelBase
     [ObservableProperty]
     private FilterScopeOption? _selectedScope;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanSaveView))]
+    private string? _savedViewName;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(DeleteSavedViewCommand))]
+    private SavedLibraryView? _selectedSavedView;
+
     public ObservableCollection<ColumnToggle> Columns { get; } = [];
+
+    public ObservableCollection<SavedLibraryView> SavedViews { get; } = [];
+
+    public bool CanSaveView => !string.IsNullOrWhiteSpace(SavedViewName);
 
     /// <summary>Which column the filter applies to; the first entry (Key = null) means all visible.</summary>
     public ObservableCollection<FilterScopeOption> FilterScopes { get; } = [];
@@ -68,9 +90,10 @@ public partial class DetailsGridViewModel : ViewModelBase
     public DetailsRow? RowForPath(string path) =>
         _allRows.FirstOrDefault(r => string.Equals(r.Path, path, StringComparison.OrdinalIgnoreCase));
 
-    public DetailsGridViewModel(ILibraryService library, IAppSettings settings)
+    public DetailsGridViewModel(ILibraryService library, IReindexService reindex, IAppSettings settings)
     {
         _library = library;
+        _reindex = reindex;
         _settings = settings;
         // The grid is the primary browse surface, so it auto-populates whenever a config loads.
         settings.ConfigurationChanged += async (_, _) =>
@@ -86,6 +109,7 @@ public partial class DetailsGridViewModel : ViewModelBase
         }
         LoadColumnLayout();
         RebuildScopes();
+        LoadSavedViews();
     }
 
     /// <summary>The saved (absolute) width for a column, or null to size it automatically.</summary>
@@ -125,14 +149,14 @@ public partial class DetailsGridViewModel : ViewModelBase
         }
     }
 
-    private List<ColumnLayout> ReadSavedLayout()
+    private List<LibraryColumnLayout> ReadSavedLayout()
     {
         var json = _settings.GetPreference(ColumnLayoutKey);
         if (string.IsNullOrEmpty(json))
             return [];
         try
         {
-            var parsed = JsonSerializer.Deserialize<List<ColumnLayout>>(json) ?? [];
+            var parsed = JsonSerializer.Deserialize<List<LibraryColumnLayout>>(json) ?? [];
             // Drop any keys that no longer exist in the catalog.
             return parsed.Where(l => Columns.Any(c => c.Key == l.Key)).ToList();
         }
@@ -150,10 +174,10 @@ public partial class DetailsGridViewModel : ViewModelBase
         return -1;
     }
 
-    private List<ColumnLayout> CurrentVisibleLayout()
+    private List<LibraryColumnLayout> CurrentVisibleLayout()
     {
         var widths = _layout.ToDictionary(l => l.Key, l => l.Width);
-        return VisibleColumns.Select(c => new ColumnLayout(c.Key, widths.GetValueOrDefault(c.Key))).ToList();
+        return VisibleColumns.Select(c => new LibraryColumnLayout(c.Key, widths.GetValueOrDefault(c.Key))).ToList();
     }
 
     private void SaveColumnLayout() => _settings.SetPreference(ColumnLayoutKey, JsonSerializer.Serialize(_layout));
@@ -164,8 +188,125 @@ public partial class DetailsGridViewModel : ViewModelBase
     /// </summary>
     public void SaveGridLayout(IReadOnlyList<(string Key, double? Width)> orderedVisible)
     {
-        _layout = orderedVisible.Select(o => new ColumnLayout(o.Key, o.Width)).ToList();
+        _layout = orderedVisible.Select(o => new LibraryColumnLayout(o.Key, o.Width)).ToList();
         SaveColumnLayout();
+    }
+
+    private void LoadSavedViews()
+    {
+        string? json = _settings.GetPreference(SavedViewsKey);
+        if (string.IsNullOrWhiteSpace(json))
+            return;
+        try
+        {
+            var views = JsonSerializer.Deserialize<List<SavedLibraryView>>(json) ?? [];
+            foreach (var view in views.Where(IsUsableSavedView))
+                SavedViews.Add(view);
+        }
+        catch
+        {
+            // A bad UI preference should not prevent browsing the library.
+        }
+    }
+
+    private bool IsUsableSavedView(SavedLibraryView view) =>
+        !string.IsNullOrWhiteSpace(view.Name) &&
+        view.Columns.Count > 0 &&
+        view.Columns.All(layout => Columns.Any(column => column.Key == layout.Key));
+
+    private void PersistSavedViews() =>
+        _settings.SetPreference(SavedViewsKey, JsonSerializer.Serialize(SavedViews));
+
+    /// <summary>
+    /// Save the current filter and the most recently captured grid layout. The view calls
+    /// <see cref="SaveGridLayout"/> immediately before this method so resized widths are current.
+    /// Saving an existing name replaces it in place.
+    /// </summary>
+    public void SaveCurrentView()
+    {
+        string name = SavedViewName?.Trim() ?? "";
+        if (name.Length == 0)
+            return;
+
+        var saved = new SavedLibraryView(
+            name,
+            FilterText,
+            SelectedFilterMode,
+            SelectedScope?.Key,
+            _layout.ToList());
+        int existing = -1;
+        for (int index = 0; index < SavedViews.Count; index++)
+        {
+            if (string.Equals(SavedViews[index].Name, name, StringComparison.OrdinalIgnoreCase))
+            {
+                existing = index;
+                break;
+            }
+        }
+        if (existing >= 0)
+            SavedViews[existing] = saved;
+        else
+            SavedViews.Add(saved);
+        PersistSavedViews();
+
+        _applyingSavedView = true;
+        try { SelectedSavedView = saved; }
+        finally { _applyingSavedView = false; }
+        StatusText = $"Saved library view ‘{name}’.";
+    }
+
+    [RelayCommand(CanExecute = nameof(CanDeleteSavedView))]
+    private void DeleteSavedView()
+    {
+        if (SelectedSavedView is not { } selected)
+            return;
+        SavedViews.Remove(selected);
+        SelectedSavedView = null;
+        PersistSavedViews();
+        StatusText = $"Deleted library view ‘{selected.Name}’.";
+    }
+
+    private bool CanDeleteSavedView() => SelectedSavedView is not null;
+
+    partial void OnSelectedSavedViewChanged(SavedLibraryView? value)
+    {
+        if (value is null || _applyingSavedView)
+            return;
+        ApplySavedView(value);
+    }
+
+    private void ApplySavedView(SavedLibraryView saved)
+    {
+        _applyingSavedView = true;
+        _loadingLayout = true;
+        try
+        {
+            SavedViewName = saved.Name;
+            _layout = saved.Columns.ToList();
+            var keys = saved.Columns.Select(layout => layout.Key).ToList();
+            foreach (var column in Columns)
+                column.IsSelected = keys.Contains(column.Key);
+            for (int index = 0; index < keys.Count; index++)
+            {
+                int current = IndexOfKey(keys[index]);
+                if (current >= 0 && current != index)
+                    Columns.Move(current, index);
+            }
+
+            RebuildSearchText();
+            RebuildScopes();
+            SelectedFilterMode = saved.FilterMode;
+            FilterText = saved.FilterText;
+            SelectedScope = FilterScopes.FirstOrDefault(scope => scope.Key == saved.ScopeKey) ?? FilterScopes[0];
+            SaveColumnLayout();
+            VisibleColumnsChanged?.Invoke();
+            ApplyFilter();
+        }
+        finally
+        {
+            _loadingLayout = false;
+            _applyingSavedView = false;
+        }
     }
 
     // The scope list offers "All visible columns" plus each currently visible column, so the filter
@@ -225,6 +366,48 @@ public partial class DetailsGridViewModel : ViewModelBase
             await LoadAsync();
     }
 
+    /// <summary>Refresh selected cache entries from their source files, then reload the table.</summary>
+    public async Task ReindexPathsAsync(IReadOnlyList<string> paths)
+    {
+        var distinct = paths.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (!_library.IsReady || IsBusy || distinct.Count == 0)
+            return;
+
+        IsBusy = true;
+        LoadCommand.NotifyCanExecuteChanged();
+        _cts = new CancellationTokenSource();
+        int completed = 0;
+        string? outcome = null;
+        try
+        {
+            foreach (string path in distinct)
+            {
+                _cts.Token.ThrowIfCancellationRequested();
+                StatusText = $"Reindexing selected files… {completed:N0}/{distinct.Count:N0}";
+                await _reindex.ReindexFileAsync(path, _cts.Token);
+                completed++;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            outcome = $"Reindex cancelled after {completed:N0} file(s).";
+        }
+        catch (Exception ex)
+        {
+            outcome = $"Reindex failed after {completed:N0} file(s): {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+            _cts?.Dispose();
+            _cts = null;
+            LoadCommand.NotifyCanExecuteChanged();
+        }
+
+        await LoadAsync();
+        StatusText = outcome ?? $"Reindexed {completed:N0} selected file(s).";
+    }
+
     [RelayCommand]
     private void Cancel() => _cts?.Cancel();
 
@@ -237,15 +420,36 @@ public partial class DetailsGridViewModel : ViewModelBase
         return _matcher.IsMatch(text);
     }
 
-    partial void OnFilterTextChanged(string? value) => ApplyFilter();
-    partial void OnSelectedFilterModeChanged(FilterMode value) => ApplyFilter();
-    partial void OnSelectedScopeChanged(FilterScopeOption? value) => ApplyFilter();
+    partial void OnFilterTextChanged(string? value)
+    {
+        MarkSavedViewCustomized();
+        ApplyFilter();
+    }
+
+    partial void OnSelectedFilterModeChanged(FilterMode value)
+    {
+        MarkSavedViewCustomized();
+        ApplyFilter();
+    }
+
+    partial void OnSelectedScopeChanged(FilterScopeOption? value)
+    {
+        MarkSavedViewCustomized();
+        ApplyFilter();
+    }
+
+    private void MarkSavedViewCustomized()
+    {
+        if (!_applyingSavedView && SelectedSavedView is not null)
+            SelectedSavedView = null;
+    }
 
     private void OnColumnsChanged()
     {
         if (_loadingLayout)
             return;          // bulk toggle changes while restoring the saved layout
 
+        MarkSavedViewCustomized();
         _layout = CurrentVisibleLayout();   // visibility changed → refresh + persist the layout
         SaveColumnLayout();
 
