@@ -115,7 +115,9 @@ CD-quality FLAC counterpart, apply asks for confirmation album-by-album before d
 declined album cancels the whole run. Transcodes are staged and validated, source files are moved to
 a sibling `.IngestMusic-quarantine` tree only after an album commits by default, and ffmpeg jobs run
 in parallel up to the machine's CPU-core count. Set `DeleteSourcesAfterIngest` to `true` to delete
-successfully committed sources instead. Start from
+successfully committed sources instead. Set `RemoveNonMusicAfterIngest` to `true` to apply that same
+delete/quarantine disposition to unsupported and non-audio files after every album succeeds, and to
+remove emptied folders from the incoming tree. Start from
 [`IngestMusicConfiguration.example.xml`](IngestMusic/IngestMusicConfiguration.example.xml), then run:
 
 ```

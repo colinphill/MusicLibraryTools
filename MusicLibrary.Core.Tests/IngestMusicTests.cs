@@ -112,6 +112,84 @@ public class IngestMusicTests
     }
 
     [Fact]
+    public async Task Preview_RemoveNonMusicShowsSelectedDisposition()
+    {
+        using var tree = new TempTree();
+        tree.FileFromFixture("incoming", "one.flac", "sample.flac");
+        string notes = tree.TestFile("incoming", "artwork", "notes.txt");
+        string configPath = tree.Config();
+        var config = IngestMusicConfiguration.Load(configPath) with { RemoveNonMusicAfterIngest = true };
+        config.Save(configPath);
+
+        var plan = await new IngestMusicService(new FakeFfmpeg()).PreviewAsync(
+            new(tree.Path("incoming"), configPath));
+
+        var ignored = Assert.Single(plan.Files, file => file.Source == notes);
+        Assert.Equal("Unsupported/non-audio", ignored.SourceType);
+        Assert.Contains("Quarantine after successful ingest", ignored.Summary);
+        Assert.Single(plan.IgnoredFileSnapshots);
+        Assert.Contains(tree.Path("incoming", "artwork"), plan.SourceDirectories);
+    }
+
+    [Fact]
+    public async Task Apply_RemoveNonMusicQuarantinesFilesAndRemovesEmptiedSourceFolders()
+    {
+        using var tree = new TempTree();
+        string source = tree.FileFromFixture(Path.Combine("incoming", "album"), "one.flac", "sample.flac");
+        string notes = tree.TestFile("incoming", "artwork", "notes.txt");
+        string empty = tree.Dir("incoming", "empty");
+        var plan = WithNonMusicCleanup(ManualPlan(tree, [source], requireApproval: false), tree, notes);
+
+        var result = await new IngestMusicService(new FakeFfmpeg()).ApplyAsync(plan, []);
+
+        Assert.Equal(0, result.Failed);
+        Assert.False(File.Exists(notes));
+        Assert.False(Directory.Exists(tree.Path("incoming", "album")));
+        Assert.False(Directory.Exists(tree.Path("incoming", "artwork")));
+        Assert.False(Directory.Exists(empty));
+        string quarantine = tree.Path("incoming") + ".IngestMusic-quarantine";
+        Assert.Single(Directory.EnumerateFiles(quarantine, "notes.txt", SearchOption.AllDirectories));
+        Assert.Single(Directory.EnumerateDirectories(quarantine, "empty", SearchOption.AllDirectories));
+    }
+
+    [Fact]
+    public async Task Apply_RemoveNonMusicDeletesFilesWhenDeleteDispositionIsSelected()
+    {
+        using var tree = new TempTree();
+        string source = tree.FileFromFixture(Path.Combine("incoming", "album"), "one.flac", "sample.flac");
+        string notes = tree.TestFile("incoming", "artwork", "notes.txt");
+        var plan = WithNonMusicCleanup(ManualPlan(tree, [source], requireApproval: false), tree, notes);
+        plan = plan with { Configuration = plan.Configuration with { DeleteSourcesAfterIngest = true } };
+
+        var result = await new IngestMusicService(new FakeFfmpeg()).ApplyAsync(plan, []);
+
+        Assert.Equal(0, result.Failed);
+        Assert.False(File.Exists(notes));
+        string quarantine = tree.Path("incoming") + ".IngestMusic-quarantine";
+        Assert.Empty(Directory.EnumerateFiles(quarantine, "notes.txt", SearchOption.AllDirectories));
+        Assert.False(Directory.Exists(tree.Path("incoming", "artwork")));
+    }
+
+    [Fact]
+    public async Task Apply_RemoveNonMusicRejectsAFileChangedSincePreview()
+    {
+        using var tree = new TempTree();
+        string source = tree.FileFromFixture("incoming", "one.flac", "sample.flac");
+        string notes = tree.TestFile("incoming", "notes.txt");
+        var plan = WithNonMusicCleanup(ManualPlan(tree, [source], requireApproval: false), tree, notes);
+        System.IO.File.AppendAllText(notes, "changed");
+        var ffmpeg = new FakeFfmpeg();
+
+        var error = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => new IngestMusicService(ffmpeg).ApplyAsync(plan, []));
+
+        Assert.Contains("Source changed since preview", error.Message);
+        Assert.Equal(0, ffmpeg.PreflightCalls);
+        Assert.True(File.Exists(source));
+        Assert.True(File.Exists(notes));
+    }
+
+    [Fact]
     public void Configuration_RejectsMissingDestination()
     {
         using var tree = new TempTree();
@@ -131,13 +209,30 @@ public class IngestMusicTests
             CdDestination = tree.Path("cd-out"), PairedCdDestination = tree.Path("paired-out"),
             HighResolutionDestination = tree.Path("hires-out"), LengthLimit = 180,
             DiscNumLengthLimit = 160, AacEncoder = "libfdk_aac", AacBitrateKbps = 256,
-            DeleteSourcesAfterIngest = true, ItunesLibraryPath = tree.Path("library.itl"),
+            DeleteSourcesAfterIngest = true, RemoveNonMusicAfterIngest = true,
+            ItunesLibraryPath = tree.Path("library.itl"),
         };
 
         expected.Save(path);
         var actual = IngestMusicConfiguration.Load(path);
 
         Assert.Equal(expected, actual);
+    }
+
+    private static IngestPlan WithNonMusicCleanup(IngestPlan plan, TempTree tree, params string[] files)
+    {
+        var snapshots = files.Select(path =>
+        {
+            var file = new FileInfo(path);
+            return new IngestFileSnapshot(file.FullName, file.Length, file.LastWriteTimeUtc);
+        }).ToList();
+        return plan with
+        {
+            Configuration = plan.Configuration with { RemoveNonMusicAfterIngest = true },
+            IgnoredFiles = files,
+            IgnoredFileSnapshots = snapshots,
+            SourceDirectories = Directory.EnumerateDirectories(tree.Path("incoming"), "*", SearchOption.AllDirectories).ToList(),
+        };
     }
 
     private static IngestPlan ManualPlan(TempTree tree, IReadOnlyList<string> sources, bool requireApproval)
@@ -217,6 +312,13 @@ public class IngestMusicTests
         {
             string path = System.IO.Path.Combine(Dir(dir), name);
             File.Copy(System.IO.Path.Combine(AppContext.BaseDirectory, "TestFiles", fixture), path);
+            return path;
+        }
+        public string TestFile(params string[] parts)
+        {
+            string path = Path(parts);
+            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
+            System.IO.File.WriteAllText(path, "test");
             return path;
         }
         public string Config()

@@ -15,4 +15,7 @@
   <AacBitrateKbps>256</AacBitrateKbps>
   <!-- The default false moves successfully ingested sources to the quarantine directory. -->
   <DeleteSourcesAfterIngest>false</DeleteSourcesAfterIngest>
+  <!-- Also apply the selected delete/quarantine behavior to unsupported/non-audio files and
+       remove emptied folders from the incoming tree. The default false leaves them untouched. -->
+  <RemoveNonMusicAfterIngest>false</RemoveNonMusicAfterIngest>
 </IngestMusicConfiguration>

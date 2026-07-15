@@ -16,6 +16,7 @@ public sealed record IngestMusicConfiguration
     public string AacEncoder { get; init; } = "libfdk_aac";
     public int AacBitrateKbps { get; init; } = 256;
     public bool DeleteSourcesAfterIngest { get; init; }
+    public bool RemoveNonMusicAfterIngest { get; init; }
 
     public static IngestMusicConfiguration Load(string path)
     {
@@ -57,6 +58,7 @@ public sealed record IngestMusicConfiguration
             AacEncoder = ((string?)root.Element("AacEncoder") ?? "libfdk_aac").Trim(),
             AacBitrateKbps = Positive("AacBitrateKbps", 256),
             DeleteSourcesAfterIngest = (bool?)root.Element("DeleteSourcesAfterIngest") ?? false,
+            RemoveNonMusicAfterIngest = (bool?)root.Element("RemoveNonMusicAfterIngest") ?? false,
         };
     }
 
@@ -83,7 +85,8 @@ public sealed record IngestMusicConfiguration
                 new XElement("DiscNumLengthLimit", DiscNumLengthLimit),
                 new XElement("AacEncoder", AacEncoder),
                 new XElement("AacBitrateKbps", AacBitrateKbps),
-                new XElement("DeleteSourcesAfterIngest", DeleteSourcesAfterIngest)));
+                new XElement("DeleteSourcesAfterIngest", DeleteSourcesAfterIngest),
+                new XElement("RemoveNonMusicAfterIngest", RemoveNonMusicAfterIngest)));
         AtomicFile.Write(path, document.Save);
     }
 }

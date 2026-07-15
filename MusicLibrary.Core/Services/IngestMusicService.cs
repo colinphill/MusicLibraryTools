@@ -245,7 +245,18 @@ public sealed class IngestMusicService : IIngestMusicService
         }
 
         foreach (string file in ignored)
-            files.Add(new IngestFileSummary(file, "Ignored", "Source → Leave unchanged (unsupported or non-audio file)"));
+            files.Add(new IngestFileSummary(file, "Unsupported/non-audio",
+                config.RemoveNonMusicAfterIngest
+                    ? PlanSourceDisposition(config)
+                    : "Source → Leave unchanged"));
+
+        var ignoredSnapshots = ignored.Select(path =>
+        {
+            var file = new FileInfo(path);
+            return new IngestFileSnapshot(file.FullName, file.Length, file.LastWriteTimeUtc);
+        }).ToList();
+        var sourceDirectories = Directory.EnumerateDirectories(sourceRoot, "*", SearchOption.AllDirectories)
+            .Select(Path.GetFullPath).ToList();
 
         return new IngestPlan
         {
@@ -256,6 +267,8 @@ public sealed class IngestMusicService : IIngestMusicService
             RequiredApprovals = approvals,
             Conflicts = conflicts,
             IgnoredFiles = ignored,
+            IgnoredFileSnapshots = ignoredSnapshots,
+            SourceDirectories = sourceDirectories,
             ItunesLibrarySnapshot = itunesLibrarySnapshot,
         };
     }
@@ -281,7 +294,10 @@ public sealed class IngestMusicService : IIngestMusicService
             + ".IngestMusic-quarantine" + Path.DirectorySeparatorChar + runId;
         var results = new List<IngestAlbumResult>();
         int completed = 0;
-        int total = plan.Albums.Sum(a => a.Outputs.Count + 1);
+        bool cleanupNonMusic = plan.Configuration.RemoveNonMusicAfterIngest &&
+            (plan.IgnoredFileSnapshots.Count > 0 || plan.SourceDirectories.Count > 0);
+        int cleanupItems = cleanupNonMusic ? plan.IgnoredFileSnapshots.Count + 1 : 0;
+        int total = plan.Albums.Sum(a => a.Outputs.Count + 1) + cleanupItems;
         foreach (var album in plan.Albums)
         {
             ct.ThrowIfCancellationRequested();
@@ -320,7 +336,115 @@ public sealed class IngestMusicService : IIngestMusicService
             completed += album.Outputs.Count + 1;
             progress?.Report(new IngestProgress(album.Display, "Complete", completed, total));
         }
+        if (cleanupNonMusic && results.All(result => result.Success))
+        {
+            ct.ThrowIfCancellationRequested();
+            progress?.Report(new IngestProgress("Non-music cleanup", "Preparing", completed, total));
+            RemoveNonMusic(plan, quarantineRoot, path =>
+            {
+                completed++;
+                progress?.Report(new IngestProgress("Non-music cleanup", "Source complete", completed, total,
+                    path, IngestFileProgressState.Completed));
+            }, ct);
+            completed++;
+            progress?.Report(new IngestProgress("Non-music cleanup", "Empty folders removed", completed, total));
+        }
         return new IngestResult(results, false);
+    }
+
+    private static void RemoveNonMusic(IngestPlan plan, string quarantineRoot, Action<string> fileCompleted,
+        CancellationToken ct)
+    {
+        foreach (var source in plan.IgnoredFileSnapshots) EnsureFresh(source);
+        var plannedMoves = plan.IgnoredFileSnapshots.Select(source =>
+        {
+            string relative = Path.GetRelativePath(plan.Request.SourceDirectory, source.Path);
+            return (Original: source.Path, Quarantine: Path.Combine(quarantineRoot, relative));
+        }).ToList();
+        var moved = new List<(string Original, string Quarantine)>();
+        string journalPath = Path.Combine(quarantineRoot, "journal.tsv");
+        bool journalStarted = false;
+        try
+        {
+            WriteJournal(journalPath,
+                ["BEGIN\tNON_MUSIC_CLEANUP",
+                 .. plannedMoves.Select(move => plan.Configuration.DeleteSourcesAfterIngest
+                     ? $"PLAN_DELETE\tNON_MUSIC\t{move.Original}"
+                     : $"PLAN_QUARANTINE\tNON_MUSIC\t{move.Original}\t{move.Quarantine}")]);
+            journalStarted = true;
+
+            foreach (var move in plannedMoves)
+            {
+                ct.ThrowIfCancellationRequested();
+                Directory.CreateDirectory(Path.GetDirectoryName(move.Quarantine)!);
+                if (File.Exists(move.Quarantine))
+                    throw new IOException($"Quarantine collision: {move.Quarantine}");
+                File.Move(move.Original, move.Quarantine);
+                moved.Add(move);
+            }
+
+            if (!plan.Configuration.DeleteSourcesAfterIngest)
+            {
+                foreach (string directory in plan.SourceDirectories.OrderBy(path => path.Length))
+                {
+                    ct.ThrowIfCancellationRequested();
+                    string relative = Path.GetRelativePath(plan.Request.SourceDirectory, directory);
+                    Directory.CreateDirectory(Path.Combine(quarantineRoot, relative));
+                }
+            }
+
+            foreach (string directory in plan.SourceDirectories.OrderByDescending(path => path.Length))
+            {
+                ct.ThrowIfCancellationRequested();
+                try { if (Directory.Exists(directory)) Directory.Delete(directory); }
+                catch (IOException) { /* A new or unprocessed entry keeps this source folder in place. */ }
+            }
+
+            WriteJournal(journalPath,
+                [.. moved.Select(move => plan.Configuration.DeleteSourcesAfterIngest
+                     ? $"STAGE_DELETE\tNON_MUSIC\t{move.Original}\t{move.Quarantine}"
+                     : $"QUARANTINE\tNON_MUSIC\t{move.Original}\t{move.Quarantine}"),
+                 "COMMIT\tNON_MUSIC_CLEANUP"]);
+
+            if (plan.Configuration.DeleteSourcesAfterIngest)
+            {
+                foreach (var move in moved)
+                {
+                    try
+                    {
+                        File.SetAttributes(move.Quarantine, FileAttributes.Normal);
+                        File.Delete(move.Quarantine);
+                        WriteJournal(journalPath, [$"DELETE\tNON_MUSIC\t{move.Original}"]);
+                        DeleteEmptyParents(Path.GetDirectoryName(move.Quarantine), quarantineRoot);
+                    }
+                    catch (Exception ex)
+                    {
+                        try { WriteJournal(journalPath, [$"DELETE_FAILED\tNON_MUSIC\t{move.Quarantine}\t{ex.Message}"]); } catch { }
+                    }
+                }
+            }
+            foreach (var move in moved) fileCompleted(move.Original);
+        }
+        catch
+        {
+            foreach (var move in moved.AsEnumerable().Reverse())
+            {
+                try
+                {
+                    if (File.Exists(move.Quarantine) && !File.Exists(move.Original))
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(move.Original)!);
+                        File.Move(move.Quarantine, move.Original);
+                    }
+                }
+                catch { }
+            }
+            foreach (string directory in plan.SourceDirectories.OrderBy(path => path.Length))
+                try { Directory.CreateDirectory(directory); } catch { }
+            if (journalStarted)
+                try { WriteJournal(journalPath, ["ROLLBACK\tNON_MUSIC_CLEANUP"]); } catch { }
+            throw;
+        }
     }
 
     private async Task<int> ApplyAlbumAsync(IngestPlan plan, IngestAlbumPlan album, string quarantineRoot, string runId,
@@ -614,6 +738,8 @@ public sealed class IngestMusicService : IIngestMusicService
     private static void EnsureFresh(IngestPlan plan)
     {
         foreach (var source in plan.Albums.SelectMany(a => a.Sources)) EnsureFresh(source);
+        if (plan.Configuration.RemoveNonMusicAfterIngest)
+            foreach (var source in plan.IgnoredFileSnapshots) EnsureFresh(source);
         if (plan.ItunesLibrarySnapshot is not null)
             EnsureFresh(plan.ItunesLibrarySnapshot);
     }

@@ -87,5 +87,10 @@ static void PrintPlan(IngestPlan plan)
             Console.WriteLine($"  {line}");
     }
     if (plan.IgnoredFiles.Count > 0)
-        Console.WriteLine($"Ignored and left untouched: {plan.IgnoredFiles.Count}");
+        Console.WriteLine(plan.Configuration.RemoveNonMusicAfterIngest
+            ? $"Unsupported/non-audio files scheduled for {DisposalName(plan.Configuration)}: {plan.IgnoredFiles.Count}"
+            : $"Unsupported/non-audio files left untouched: {plan.IgnoredFiles.Count}");
 }
+
+static string DisposalName(IngestMusicConfiguration configuration)
+    => configuration.DeleteSourcesAfterIngest ? "deletion" : "quarantine";

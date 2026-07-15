@@ -69,6 +69,8 @@ public sealed record IngestPlan
     public required IReadOnlyList<IngestApprovalItem> RequiredApprovals { get; init; }
     public required IReadOnlyList<IngestConflict> Conflicts { get; init; }
     public required IReadOnlyList<string> IgnoredFiles { get; init; }
+    public IReadOnlyList<IngestFileSnapshot> IgnoredFileSnapshots { get; init; } = [];
+    public IReadOnlyList<string> SourceDirectories { get; init; } = [];
     public IngestFileSnapshot? ItunesLibrarySnapshot { get; init; }
     public DateTime CreatedUtc { get; init; } = DateTime.UtcNow;
     public bool CanApply => Conflicts.Count == 0 && Albums.Count > 0;
