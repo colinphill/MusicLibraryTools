@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using MetadataCaching;
 using MusicLibrary.App.ViewModels;
 using MusicLibrary.Core.Models;
@@ -18,7 +19,8 @@ public sealed class LibraryViewPersistenceTests
         foreach (var column in viewModel.Columns)
             column.IsSelected = column.Key is "Artist" or "Album";
         viewModel.SaveGridLayout(
-            [("Album", 245), ("Artist", 180)]);
+            [("Album", 245), ("Artist", 180)],
+            new LibrarySortLayout("Album", ListSortDirection.Descending));
         viewModel.SelectedFilterMode = FilterMode.Regex;
         viewModel.SelectedScope = viewModel.FilterScopes.Single(scope => scope.Key == "Artist");
         viewModel.FilterText = "^(Miles|Coltrane)$";
@@ -28,6 +30,8 @@ public sealed class LibraryViewPersistenceTests
 
         var restored = Create(new AppSettings(statePath));
         var saved = Assert.Single(restored.SavedViews);
+        LibrarySortLayout? appliedSort = null;
+        restored.SortLayoutChanged += sort => appliedSort = sort;
         restored.SelectedSavedView = saved;
         Assert.Equal("Jazz artists", restored.SavedViewName);
         Assert.Equal("^(Miles|Coltrane)$", restored.FilterText);
@@ -36,6 +40,8 @@ public sealed class LibraryViewPersistenceTests
         Assert.Equal(["Album", "Artist"], restored.VisibleColumns.Select(column => column.Key));
         Assert.Equal(245, restored.WidthFor("Album"));
         Assert.Equal(180, restored.WidthFor("Artist"));
+        Assert.Equal(new LibrarySortLayout("Album", ListSortDirection.Descending), saved.Sort);
+        Assert.Equal(saved.Sort, appliedSort);
     }
 
     [Fact]

@@ -1,4 +1,6 @@
+using System.ComponentModel;
 using System.Diagnostics;
+using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Controls.Templates;
 using Avalonia.Data;
@@ -7,6 +9,7 @@ using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Threading;
 using MusicLibrary.App.ViewModels;
 using MusicLibrary.Core.Services;
 
@@ -28,7 +31,10 @@ public partial class MainWindow : Window
 
         _detailsGrid = this.FindControl<DataGrid>("DetailsGrid");
         if (_detailsGrid is not null)
+        {
             _detailsGrid.SelectionChanged += OnGridSelectionChanged;
+            _detailsGrid.Sorting += OnGridSorting;
+        }
 
         DataContextChanged += (_, _) => Hook();
         // Persist the final column layout (order + widths) when the window closes.
@@ -49,7 +55,41 @@ public partial class MainWindow : Window
             .ToList();
 
         if (ordered.Count > 0)
-            _table.SaveGridLayout(ordered);
+            _table.SaveGridLayout(ordered, CurrentSortLayout());
+    }
+
+    private LibrarySortLayout? CurrentSortLayout()
+    {
+        var description = _table?.View?.SortDescriptions.FirstOrDefault();
+        return description is DataGridComparerSortDescription
+            {
+                SourceComparer: DetailsRowComparer comparer,
+            }
+            ? new LibrarySortLayout(comparer.Key, description.Direction)
+            : null;
+    }
+
+    private void OnGridSorting(object? sender, DataGridColumnEventArgs e)
+    {
+        // Sorting is raised before the DataGrid updates its collection view. Capture on the next
+        // dispatcher pass so saved views see the resulting direction (including "not sorted").
+        Dispatcher.UIThread.Post(
+            () => _table?.SaveSortLayout(CurrentSortLayout()),
+            DispatcherPriority.Background);
+    }
+
+    private void ApplySortLayout(LibrarySortLayout? sort)
+    {
+        if (_table?.View is not { } view)
+            return;
+
+        view.SortDescriptions.Clear();
+        if (sort is null)
+            return;
+
+        var column = _columnKeys.FirstOrDefault(pair => pair.Value == sort.Key).Key;
+        if (column?.CustomSortComparer is { } comparer)
+            view.SortDescriptions.Add(new DataGridComparerSortDescription(comparer, sort.Direction));
     }
 
     private void Hook()
@@ -58,13 +98,17 @@ public partial class MainWindow : Window
             return;
 
         if (_table is not null)
+        {
             _table.VisibleColumnsChanged -= RebuildDetailsColumns;
+            _table.SortLayoutChanged -= ApplySortLayout;
+        }
         if (_vm is not null)
             _vm.SelectGridRequested -= SelectGridRows;
 
         _vm = vm;
         _table = vm.Table;
         _table.VisibleColumnsChanged += RebuildDetailsColumns;
+        _table.SortLayoutChanged += ApplySortLayout;
         _vm.SelectGridRequested += SelectGridRows;
         RebuildDetailsColumns();
     }

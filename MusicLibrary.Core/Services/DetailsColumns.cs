@@ -95,6 +95,7 @@ public sealed class DetailsRowComparer : IComparer
 {
     private readonly string _key;
     public DetailsRowComparer(string key) => _key = key;
+    public string Key => _key;
 
     public int Compare(object? x, object? y)
     {

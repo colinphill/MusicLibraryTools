@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Text.Json;
 using Avalonia.Collections;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -9,12 +10,17 @@ namespace MusicLibrary.App.ViewModels;
 
 public sealed record LibraryColumnLayout(string Key, double? Width);
 
+public sealed record LibrarySortLayout(string Key, ListSortDirection Direction);
+
 public sealed record SavedLibraryView(
     string Name,
     string? FilterText,
     FilterMode FilterMode,
     string? ScopeKey,
-    IReadOnlyList<LibraryColumnLayout> Columns);
+    IReadOnlyList<LibraryColumnLayout> Columns)
+{
+    public LibrarySortLayout? Sort { get; init; }
+}
 
 /// <summary>
 /// A tabular details view of every track with user-selectable columns, realtime filtering
@@ -25,6 +31,7 @@ public sealed record SavedLibraryView(
 public partial class DetailsGridViewModel : ViewModelBase
 {
     private const string ColumnLayoutKey = "table.columns";
+    private const string SortLayoutKey = "table.sort";
     private const string SavedViewsKey = "table.savedViews";
 
     private readonly ILibraryService _library;
@@ -37,6 +44,7 @@ public partial class DetailsGridViewModel : ViewModelBase
     // The persisted column layout: visible columns, in display order, with their (absolute) widths.
     // A column absent from this list is hidden. Updated on toggle/reorder/resize and saved immediately.
     private List<LibraryColumnLayout> _layout = [];
+    private LibrarySortLayout? _sortLayout;
     private bool _loadingLayout;
     private bool _applyingSavedView;
 
@@ -83,6 +91,9 @@ public partial class DetailsGridViewModel : ViewModelBase
     /// <summary>Raised when the set of visible columns changes so the view can rebuild grid columns.</summary>
     public event Action? VisibleColumnsChanged;
 
+    /// <summary>Raised after a view/layout change so the window can apply the typed grid comparer.</summary>
+    public event Action<LibrarySortLayout?>? SortLayoutChanged;
+
     public IReadOnlyList<(string Key, string Header)> VisibleColumns =>
         Columns.Where(c => c.IsSelected).Select(c => (c.Key, c.Header)).ToList();
 
@@ -108,6 +119,7 @@ public partial class DetailsGridViewModel : ViewModelBase
             Columns.Add(toggle);
         }
         LoadColumnLayout();
+        LoadSortLayout();
         RebuildScopes();
         LoadSavedViews();
     }
@@ -186,10 +198,39 @@ public partial class DetailsGridViewModel : ViewModelBase
     /// Record the grid's current column layout (display order + widths for the visible columns) and
     /// persist it. Called from the view when columns are reordered/resized or the window closes.
     /// </summary>
-    public void SaveGridLayout(IReadOnlyList<(string Key, double? Width)> orderedVisible)
+    public void SaveGridLayout(IReadOnlyList<(string Key, double? Width)> orderedVisible,
+        LibrarySortLayout? sort = null)
     {
         _layout = orderedVisible.Select(o => new LibraryColumnLayout(o.Key, o.Width)).ToList();
+        SaveSortLayout(sort);
         SaveColumnLayout();
+    }
+
+    private void LoadSortLayout()
+    {
+        string? json = _settings.GetPreference(SortLayoutKey);
+        if (string.IsNullOrWhiteSpace(json))
+            return;
+        try
+        {
+            var sort = JsonSerializer.Deserialize<LibrarySortLayout>(json);
+            if (sort is not null && Columns.Any(column => column.Key == sort.Key))
+                _sortLayout = sort;
+        }
+        catch
+        {
+            // Ignore obsolete or corrupt workspace state.
+        }
+    }
+
+    /// <summary>Record a sort change reported by the grid and persist it as workspace state.</summary>
+    public void SaveSortLayout(LibrarySortLayout? sort)
+    {
+        if (_sortLayout == sort)
+            return;
+        MarkSavedViewCustomized();
+        _sortLayout = sort;
+        _settings.SetPreference(SortLayoutKey, sort is null ? null : JsonSerializer.Serialize(sort));
     }
 
     private void LoadSavedViews()
@@ -233,7 +274,10 @@ public partial class DetailsGridViewModel : ViewModelBase
             FilterText,
             SelectedFilterMode,
             SelectedScope?.Key,
-            _layout.ToList());
+            _layout.ToList())
+        {
+            Sort = _sortLayout,
+        };
         int existing = -1;
         for (int index = 0; index < SavedViews.Count; index++)
         {
@@ -283,6 +327,7 @@ public partial class DetailsGridViewModel : ViewModelBase
         {
             SavedViewName = saved.Name;
             _layout = saved.Columns.ToList();
+            _sortLayout = saved.Sort;
             var keys = saved.Columns.Select(layout => layout.Key).ToList();
             foreach (var column in Columns)
                 column.IsSelected = keys.Contains(column.Key);
@@ -299,7 +344,10 @@ public partial class DetailsGridViewModel : ViewModelBase
             FilterText = saved.FilterText;
             SelectedScope = FilterScopes.FirstOrDefault(scope => scope.Key == saved.ScopeKey) ?? FilterScopes[0];
             SaveColumnLayout();
+            _settings.SetPreference(SortLayoutKey,
+                _sortLayout is null ? null : JsonSerializer.Serialize(_sortLayout));
             VisibleColumnsChanged?.Invoke();
+            SortLayoutChanged?.Invoke(_sortLayout);
             ApplyFilter();
         }
         finally
@@ -341,6 +389,7 @@ public partial class DetailsGridViewModel : ViewModelBase
             View = view;
             ApplyFilter();
             VisibleColumnsChanged?.Invoke();
+            SortLayoutChanged?.Invoke(_sortLayout);
         }
         catch (OperationCanceledException)
         {
@@ -451,6 +500,11 @@ public partial class DetailsGridViewModel : ViewModelBase
 
         MarkSavedViewCustomized();
         _layout = CurrentVisibleLayout();   // visibility changed → refresh + persist the layout
+        if (_sortLayout is not null && !VisibleColumns.Any(column => column.Key == _sortLayout.Key))
+        {
+            SaveSortLayout(null);
+            SortLayoutChanged?.Invoke(null);
+        }
         SaveColumnLayout();
 
         RebuildSearchText();

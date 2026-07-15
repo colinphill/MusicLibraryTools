@@ -7,7 +7,7 @@ avoid eagerly reading artwork or media data that is already represented in the m
 ## 1. Daily library workflow
 
 - [x] Named Library views that preserve filters, filter scope, columns, and widths.
-- [ ] Preserve grid sorting in named views.
+- [x] Preserve typed grid sorting in named views and across reloads.
 - [x] Library row actions: open Details, edit tags/artwork, reindex, reveal in Explorer, and copy path.
 - [ ] Consistent keyboard shortcuts and persistent workspace state.
 
