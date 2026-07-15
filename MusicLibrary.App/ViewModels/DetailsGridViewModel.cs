@@ -113,12 +113,8 @@ public partial class DetailsGridViewModel : ViewModelBase
         _library = library;
         _reindex = reindex;
         _settings = settings;
-        // The grid is the primary browse surface, so it auto-populates whenever a config loads.
-        settings.ConfigurationChanged += async (_, _) =>
-        {
-            LoadCommand.NotifyCanExecuteChanged();
-            await ReloadAsync();
-        };
+        // MainWindowViewModel sequences the initial cached load ahead of automatic indexing.
+        settings.ConfigurationChanged += (_, _) => LoadCommand.NotifyCanExecuteChanged();
         foreach (var col in DetailsColumns.All)
         {
             var toggle = new ColumnToggle(col.Key, col.Header, DetailsColumns.DefaultVisible.Contains(col.Key));

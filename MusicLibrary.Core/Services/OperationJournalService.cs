@@ -528,6 +528,9 @@ public sealed class OperationJournalService : IOperationJournalService
                     Put(entries, originalRoot, fields[2], fields[3], OperationEntryKind.Moved);
                     break;
                 case "INSTALL" when fields.Length > 2:
+                    if (entries.TryGetValue(fields[2], out var prior) &&
+                        prior.Kind == OperationEntryKind.Quarantined)
+                        break; // A replacement's recoverable backup is more useful than its install.
                     Put(entries, originalRoot, fields[2], fields[2], OperationEntryKind.Created);
                     break;
                 case "PLAN_QUARANTINE" when fields.Length > 3:

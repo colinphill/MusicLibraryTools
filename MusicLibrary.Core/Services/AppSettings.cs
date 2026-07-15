@@ -89,15 +89,24 @@ public sealed class AppSettings : IAppSettings
         {
             if (string.IsNullOrWhiteSpace(target.Value))
                 throw new InvalidDataException("<IndexTarget> cannot be empty.");
-            if (target.Attribute("Set") is { } setAttribute &&
-                (!int.TryParse(setAttribute.Value, out var set) || set < 0))
-                throw new InvalidDataException($"Invalid IndexTarget Set value '{setAttribute.Value}'.");
+            if (target.Attribute("Set") is { } setAttribute)
+                _ = LibraryConfiguration.ParseScanSets(setAttribute.Value);
         }
 
         // Eagerly materialize the deferred parser API so malformed target attributes fail before
         // the active configuration is replaced and remembered.
         var configuration = new LibraryConfiguration(path);
-        _ = configuration.IndexLocations.ToList();
+        var indexLocations = configuration.IndexLocations.ToList();
+        var playlistTargets = configuration.PlaylistTargets;
+        var configuredSets = indexLocations.SelectMany(location => location.Sets).ToHashSet();
+        foreach (var target in playlistTargets)
+        {
+            int[] unknownSets = target.Sets.Where(set => !configuredSets.Contains(set)).ToArray();
+            if (unknownSets.Length > 0)
+                throw new InvalidDataException(
+                    $"Playlist target '{target.Target}' references scan set(s) with no IndexTarget: " +
+                    string.Join(",", unknownSets));
+        }
         _ = configuration.DatabaseFile;
         return configuration;
     }

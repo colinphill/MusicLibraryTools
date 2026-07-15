@@ -7,25 +7,30 @@ namespace MusicLibrary.Core.Tests;
 public sealed class UnifiedJobServiceTests
 {
     [Fact]
-    public void CatalogCoversMutableAndReadOnlyLibraryOperations()
+    public void CatalogContainsOnlyOperationsBackedByTypedCoreServices()
     {
         var catalog = new UnifiedJobService().Catalog;
 
-        foreach (string id in new[]
-                 {
-                     "playlist-sync", "cross-library-sync", "android-sync", "car-card",
-                     "smart-storage", "artwork-repair", "redundancies", "itunes-validation",
-                 })
-            Assert.Contains(catalog, job => job.Id == id);
+        Assert.Equal(
+            ["playlist-sync", "artwork-normalization", "device-sync", "smart-storage", "car-card", "cross-library-sync", "redundancies", "itunes-validation"],
+            catalog.Select(job => job.Id).ToArray());
+        Assert.Equal(UnifiedJobApplyMode.ApplyFlag,
+            catalog.Single(job => job.Id == "playlist-sync").ApplyMode);
         Assert.Equal(UnifiedJobApplyMode.ReadOnly,
             catalog.Single(job => job.Id == "itunes-validation").ApplyMode);
+        Assert.Equal(UnifiedJobApplyMode.ApplyFlag,
+            catalog.Single(job => job.Id == "artwork-normalization").ApplyMode);
     }
 
     [Fact]
-    public void ArgumentParserPreservesQuotedPathsAndRejectsUnmatchedQuotes()
+    public void CatalogCarriesPresentationMetadataButNoExecutionArguments()
     {
-        Assert.Equal([@"C:\Music Library\library.xml", "--max-removals", "20"],
-            UnifiedJobService.ParseArguments("\"C:\\Music Library\\library.xml\" --max-removals 20"));
-        Assert.Throws<ArgumentException>(() => UnifiedJobService.ParseArguments("\"unfinished"));
+        foreach (UnifiedJobDescriptor descriptor in new UnifiedJobService().Catalog)
+        {
+            Assert.False(string.IsNullOrWhiteSpace(descriptor.Name));
+            Assert.False(string.IsNullOrWhiteSpace(descriptor.Description));
+            Assert.DoesNotContain(".exe", descriptor.ArgumentsHint,
+                StringComparison.OrdinalIgnoreCase);
+        }
     }
 }

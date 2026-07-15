@@ -51,12 +51,12 @@ public partial class AnalyzerViewModel : ViewModelBase
     private string _ffmpegPath = "ffmpeg";
 
     public ObservableCollection<AnalysisRunViewModel> Runs { get; } = [];
-    public ObservableCollection<AnalysisProblemGroupViewModel> FindingGroups { get; } = [];
-    public ObservableCollection<DuplicateGroup> Duplicates { get; } = [];
-    public ObservableCollection<ArtistGroupViewModel> ArtistGroups { get; } = [];
-    public ObservableCollection<AnalysisConflictGroupViewModel> ConflictGroups { get; } = [];
-    public ObservableCollection<AnalysisRepairItemViewModel> RepairItems { get; } = [];
-    public ObservableCollection<AlbumMetadataMatrix> Matrices { get; } = [];
+    public IReadOnlyList<AnalysisProblemGroupViewModel> FindingGroups => SelectedRun?.FindingGroups ?? [];
+    public IReadOnlyList<DuplicateGroup> Duplicates => SelectedRun?.Duplicates ?? [];
+    public IReadOnlyList<ArtistGroupViewModel> ArtistGroups => SelectedRun?.ArtistGroups ?? [];
+    public IReadOnlyList<AnalysisConflictGroupViewModel> ConflictGroups => SelectedRun?.ConflictGroups ?? [];
+    public IReadOnlyList<AnalysisRepairItemViewModel> RepairItems => SelectedRun?.RepairItems ?? [];
+    public IReadOnlyList<AlbumMetadataMatrix> Matrices => SelectedRun?.Matrices ?? [];
     public bool HasRuns => Runs.Count > 0;
 
     // Section visibility (bound in XAML; ActiveView drives which one shows).
@@ -107,22 +107,16 @@ public partial class AnalyzerViewModel : ViewModelBase
 
     partial void OnSelectedRunChanged(AnalysisRunViewModel? value)
     {
-        FindingGroups.Clear();
-        Duplicates.Clear();
-        ArtistGroups.Clear();
-        ConflictGroups.Clear();
-        RepairItems.Clear();
-        Matrices.Clear();
+        OnPropertyChanged(nameof(FindingGroups));
+        OnPropertyChanged(nameof(Duplicates));
+        OnPropertyChanged(nameof(ArtistGroups));
+        OnPropertyChanged(nameof(ConflictGroups));
+        OnPropertyChanged(nameof(RepairItems));
+        OnPropertyChanged(nameof(Matrices));
 
         if (value is not null)
         {
             ActiveView = value.View;
-            foreach (var group in value.FindingGroups) FindingGroups.Add(group);
-            foreach (var group in value.Duplicates) Duplicates.Add(group);
-            foreach (var group in value.ArtistGroups) ArtistGroups.Add(group);
-            foreach (var group in value.ConflictGroups) ConflictGroups.Add(group);
-            foreach (var item in value.RepairItems) RepairItems.Add(item);
-            foreach (var matrix in value.Matrices) Matrices.Add(matrix);
             StatusText = value.Summary;
         }
         else
@@ -140,7 +134,7 @@ public partial class AnalyzerViewModel : ViewModelBase
     {
         var report = LibraryAnalyzer.Inconsistencies(records);
         string status = report.Count == 0 ? "Inconsistencies: none found." : $"Inconsistencies: {report.Count:N0} finding(s).";
-        return (status, () => AddRun(AnalysisRunViewModel.ForFindings(report, records, status)));
+        return (status, AnalysisRunViewModel.ForFindings(report, records, status));
     });
 
     [RelayCommand(CanExecute = nameof(CanRun))]
@@ -148,7 +142,7 @@ public partial class AnalyzerViewModel : ViewModelBase
     {
         var report = LibraryAnalyzer.Lossless(records);
         string status = report.Count == 0 ? "No lossy files." : $"Lossy files: {report.Count:N0}.";
-        return (status, () => AddRun(AnalysisRunViewModel.ForFindings(report, records, status)));
+        return (status, AnalysisRunViewModel.ForFindings(report, records, status));
     });
 
     [RelayCommand(CanExecute = nameof(CanRun))]
@@ -156,7 +150,7 @@ public partial class AnalyzerViewModel : ViewModelBase
     {
         var dupes = DuplicateFinder.Find(records, ct);
         string status = dupes.Count == 0 ? "No duplicates found." : $"{dupes.Count:N0} duplicate group(s).";
-        return (status, () => AddRun(AnalysisRunViewModel.ForDuplicates("Duplicates", dupes, status)));
+        return (status, AnalysisRunViewModel.ForDuplicates("Duplicates", dupes, status));
     });
 
     [RelayCommand(CanExecute = nameof(CanRun))]
@@ -164,10 +158,10 @@ public partial class AnalyzerViewModel : ViewModelBase
     {
         var groups = _reconciler.FindSimilarArtists(records, ArtistThreshold, ct);
         string status = groups.Count == 0 ? "No similar artist names found." : $"{groups.Count:N0} cluster(s) of similar artist names.";
-        return (status, () => AddRun(AnalysisRunViewModel.ForArtists(
+        return (status, AnalysisRunViewModel.ForArtists(
             "Similar artists",
             groups.Select(group => new ArtistGroupViewModel(_reconciler, group)).ToList(),
-            status)));
+            status));
     });
 
     [RelayCommand(CanExecute = nameof(CanRun))]
@@ -178,7 +172,7 @@ public partial class AnalyzerViewModel : ViewModelBase
             ? "Album metadata matrix: no inconsistent albums found."
             : $"Album metadata matrix: {matrices.Count:N0} album(s), " +
               $"{matrices.Sum(matrix => matrix.InconsistentCellCount):N0} inconsistent cell(s).";
-        return (status, () => AddRun(AnalysisRunViewModel.ForMatrices(matrices, status)));
+        return (status, AnalysisRunViewModel.ForMatrices(matrices, status));
     });
 
     [RelayCommand(CanExecute = nameof(CanRun))]
@@ -189,14 +183,18 @@ public partial class AnalyzerViewModel : ViewModelBase
         {
             var records = await _library.GetAllRecordsAsync(scope.Token);
             var artwork = await _library.GetArtworkAuditFilesAsync(scope.Token);
-            var report = await Task.Run(() => ArtworkHealthAnalyzer.Analyze(records, artwork, scope.Token), scope.Token);
-            int deferred = report.Findings.Count(finding => finding.Problem == "Artwork scan deferred");
-            int actionable = report.Count - deferred;
-            string status = report.Count == 0
-                ? "Artwork health: no cached issues found."
-                : $"Artwork health: {actionable:N0} cached issue(s), {deferred:N0} file(s) still deferred. " +
-                  "No image blobs were loaded.";
-            AddRun(AnalysisRunViewModel.ForFindings(report, records, status));
+            var result = await Task.Run(() =>
+            {
+                var report = ArtworkHealthAnalyzer.Analyze(records, artwork, scope.Token);
+                int deferred = report.Findings.Count(finding => finding.Problem == "Artwork scan deferred");
+                int actionable = report.Count - deferred;
+                string status = report.Count == 0
+                    ? "Artwork health: no cached issues found."
+                    : $"Artwork health: {actionable:N0} cached issue(s), {deferred:N0} file(s) still deferred. " +
+                      "No image blobs were loaded.";
+                return (Status: status, Run: AnalysisRunViewModel.ForFindings(report, records, status));
+            }, scope.Token);
+            AddRun(result.Run);
         }
         catch (OperationCanceledException) { StatusText = "Artwork health audit cancelled."; }
         catch (Exception ex) { StatusText = $"Artwork health audit failed: {ex.Message}"; }
@@ -209,10 +207,13 @@ public partial class AnalyzerViewModel : ViewModelBase
         try
         {
             var records = await _library.GetAllRecordsAsync(scope.Token);
+            var prepared = await Task.Run(() => (
+                Pairs: RepresentationAnalyzer.DecodedAudioCandidatePairs(records),
+                Report: RepresentationAnalyzer.Compare(records, scope.Token),
+                ArtworkPaths: RepresentationAnalyzer.ArtworkCandidatePaths(records)), scope.Token);
             _representationRecords = records;
-            _decodedAudioPairs = RepresentationAnalyzer.DecodedAudioCandidatePairs(records);
-            var report = await Task.Run(() => RepresentationAnalyzer.Compare(records, scope.Token), scope.Token);
-            var artworkPaths = RepresentationAnalyzer.ArtworkCandidatePaths(records);
+            _decodedAudioPairs = prepared.Pairs;
+            var artworkPaths = prepared.ArtworkPaths;
             IReadOnlyList<AnalysisFinding> artworkFindings = [];
             if (artworkPaths.Count > 0)
             {
@@ -220,9 +221,12 @@ public partial class AnalyzerViewModel : ViewModelBase
                 try
                 {
                     var signatures = await _library.GetImageSignaturesAsync(artworkPaths, scope.Token);
-                    var signatureMap = artworkPaths.Zip(signatures)
-                        .ToDictionary(pair => pair.First, pair => pair.Second, StringComparer.OrdinalIgnoreCase);
-                    artworkFindings = RepresentationAnalyzer.CompareArtwork(records, signatureMap).Findings;
+                    artworkFindings = await Task.Run(() =>
+                    {
+                        var signatureMap = artworkPaths.Zip(signatures)
+                            .ToDictionary(pair => pair.First, pair => pair.Second, StringComparer.OrdinalIgnoreCase);
+                        return RepresentationAnalyzer.CompareArtwork(records, signatureMap).Findings;
+                    }, scope.Token);
                 }
                 catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
@@ -232,11 +236,16 @@ public partial class AnalyzerViewModel : ViewModelBase
                         "Artwork comparison unavailable")];
                 }
             }
-            var combined = new AnalysisReport(report.Name, [.. report.Findings, .. artworkFindings]);
-            string status = combined.Count == 0
-                ? "Album representations: no counterpart, metadata, duration, or artwork drift found."
-                : $"Album representations: {combined.Count:N0} finding(s).";
-            AddRun(AnalysisRunViewModel.ForFindings(combined, records, status));
+            var result = await Task.Run(() =>
+            {
+                var combined = new AnalysisReport(prepared.Report.Name,
+                    [.. prepared.Report.Findings, .. artworkFindings]);
+                string status = combined.Count == 0
+                    ? "Album representations: no counterpart, metadata, duration, or artwork drift found."
+                    : $"Album representations: {combined.Count:N0} finding(s).";
+                return (Status: status, Run: AnalysisRunViewModel.ForFindings(combined, records, status));
+            }, scope.Token);
+            AddRun(result.Run);
         }
         catch (OperationCanceledException) { StatusText = "Album representation comparison cancelled."; }
         catch (Exception ex) { StatusText = $"Album representation comparison failed: {ex.Message}"; }
@@ -261,7 +270,9 @@ public partial class AnalyzerViewModel : ViewModelBase
             string status = report.Count == 0
                 ? $"Decoded-audio verification: {_decodedAudioPairs.Count:N0} compatible pair(s) match."
                 : $"Decoded-audio verification: {report.Count:N0} pair(s) differ.";
-            AddRun(AnalysisRunViewModel.ForFindings(report, _representationRecords, status));
+            var run = await Task.Run(
+                () => AnalysisRunViewModel.ForFindings(report, _representationRecords, status), scope.Token);
+            AddRun(run);
         }
         catch (OperationCanceledException) { StatusText = "Decoded-audio verification cancelled."; }
         catch (Exception ex) { StatusText = $"Decoded-audio verification failed: {ex.Message}"; }
@@ -280,42 +291,43 @@ public partial class AnalyzerViewModel : ViewModelBase
             var records = await _library.GetAllRecordsAsync(scope.Token);
             var preview = await _representationRepairs.PreviewAsync(
                 records, _settings.GetPreference(IngestConfigurationPreference), scope.Token);
-
-            var findings = preview.FileActions.Select(action => new AnalysisFinding(
-                    action.SourcePath,
-                    $"{action.Description} Destination: {action.DestinationPath}",
-                    action.Kind switch
-                    {
-                        RepresentationRepairKind.DeriveCdFlac => "Derive missing CD FLAC",
-                        RepresentationRepairKind.DeriveAac => "Derive missing AAC",
-                        _ => "Organize representation",
-                    }))
-                .Concat(preview.Warnings.Select(warning => new AnalysisFinding(
-                    records.FirstOrDefault()?.Path ?? "", warning, "Preview unavailable")))
-                .ToList();
-
-            if (findings.Count > 0)
+            var runs = await Task.Run(() =>
             {
-                string actionStatus = $"Representation file repairs: {preview.FileActions.Count:N0} action(s), " +
-                    $"{preview.Warnings.Count:N0} warning(s). No files were changed.";
-                AddRun(AnalysisRunViewModel.ForFindings(
-                    new AnalysisReport("Representation file repairs", findings), records, actionStatus));
-            }
+                var projected = new List<AnalysisRunViewModel>(2);
+                var findings = preview.FileActions.Select(action => new AnalysisFinding(
+                        action.SourcePath,
+                        $"{action.Description} Destination: {action.DestinationPath}",
+                        action.Kind switch
+                        {
+                            RepresentationRepairKind.DeriveCdFlac => "Derive missing CD FLAC",
+                            RepresentationRepairKind.DeriveAac => "Derive missing AAC",
+                            _ => "Organize representation",
+                        }))
+                    .Concat(preview.Warnings.Select(warning => new AnalysisFinding(
+                        records.FirstOrDefault()?.Path ?? "", warning, "Preview unavailable")))
+                    .ToList();
 
-            if (preview.MetadataCopies.Items.Count > 0)
-            {
-                var items = preview.MetadataCopies.Items.Select(item =>
+                if (findings.Count > 0)
                 {
-                    var viewModel = new AnalysisRepairItemViewModel(item);
-                    viewModel.SelectionChanged += () => ApplyRepairsCommand.NotifyCanExecuteChanged();
-                    return viewModel;
-                }).ToList();
-                string metadataStatus = $"Representation metadata: {items.Count:N0} copy operation(s). " +
-                    "Review the source role in each reason, then apply selected.";
-                AddRun(AnalysisRunViewModel.ForRepairs(preview.MetadataCopies, items, metadataStatus));
-            }
+                    string actionStatus = $"Representation file repairs: {preview.FileActions.Count:N0} action(s), " +
+                        $"{preview.Warnings.Count:N0} warning(s). No files were changed.";
+                    projected.Add(AnalysisRunViewModel.ForFindings(
+                        new AnalysisReport("Representation file repairs", findings), records, actionStatus));
+                }
 
-            if (findings.Count == 0 && preview.MetadataCopies.Items.Count == 0)
+                if (preview.MetadataCopies.Items.Count > 0)
+                {
+                    var items = preview.MetadataCopies.Items.Select(CreateRepairItem).ToList();
+                    string metadataStatus = $"Representation metadata: {items.Count:N0} copy operation(s). " +
+                        "Review the source role in each reason, then apply selected.";
+                    projected.Add(AnalysisRunViewModel.ForRepairs(preview.MetadataCopies, items, metadataStatus));
+                }
+                return projected;
+            }, scope.Token);
+
+            foreach (var run in runs)
+                AddRun(run);
+            if (runs.Count == 0)
                 StatusText = "No representation derivation, metadata-copy, or organization repairs were found.";
         }
         catch (OperationCanceledException) { StatusText = "Representation repair preview cancelled."; }
@@ -330,18 +342,16 @@ public partial class AnalyzerViewModel : ViewModelBase
         try
         {
             var records = await _library.GetAllRecordsAsync(scope.Token);
-            var plan = await Task.Run(() => _repairs.PreviewSafeRepairs(records), scope.Token);
-            var repairItems = new List<AnalysisRepairItemViewModel>(plan.Items.Count);
-            foreach (var item in plan.Items)
+            var run = await Task.Run(() =>
             {
-                var viewModel = new AnalysisRepairItemViewModel(item);
-                viewModel.SelectionChanged += () => ApplyRepairsCommand.NotifyCanExecuteChanged();
-                repairItems.Add(viewModel);
-            }
-            string status = plan.Items.Count == 0
-                ? "No safely inferable metadata repairs were found."
-                : $"Previewed {plan.Items.Count:N0} metadata repair(s). Review, then apply selected.";
-            AddRun(AnalysisRunViewModel.ForRepairs(plan, repairItems, status));
+                var plan = _repairs.PreviewSafeRepairs(records);
+                var repairItems = plan.Items.Select(CreateRepairItem).ToList();
+                string status = plan.Items.Count == 0
+                    ? "No safely inferable metadata repairs were found."
+                    : $"Previewed {plan.Items.Count:N0} metadata repair(s). Review, then apply selected.";
+                return AnalysisRunViewModel.ForRepairs(plan, repairItems, status);
+            }, scope.Token);
+            AddRun(run);
         }
         catch (OperationCanceledException) { StatusText = "Metadata repair preview cancelled."; }
         catch (Exception ex) { StatusText = $"Metadata repair preview failed: {ex.Message}"; }
@@ -355,17 +365,20 @@ public partial class AnalyzerViewModel : ViewModelBase
         try
         {
             var records = await _library.GetAllRecordsAsync(scope.Token);
-            var conflicts = await Task.Run(() => _repairs.FindAlbumArtistConflicts(records), scope.Token);
-            var groups = conflicts.Select(conflict =>
+            var run = await Task.Run(() =>
             {
-                var group = new AnalysisConflictGroupViewModel(conflict);
-                group.SelectionChanged += () => PreviewConflictRepairsCommand.NotifyCanExecuteChanged();
-                return group;
-            }).ToList();
-            string status = groups.Count == 0
-                ? "No conflicting album artists were found."
-                : $"Found {groups.Count:N0} album(s) with conflicting album artists. Choose canonical values to continue.";
-            AddRun(AnalysisRunViewModel.ForConflicts(groups, status));
+                var groups = _repairs.FindAlbumArtistConflicts(records).Select(conflict =>
+                {
+                    var group = new AnalysisConflictGroupViewModel(conflict);
+                    group.SelectionChanged += () => PreviewConflictRepairsCommand.NotifyCanExecuteChanged();
+                    return group;
+                }).ToList();
+                string status = groups.Count == 0
+                    ? "No conflicting album artists were found."
+                    : $"Found {groups.Count:N0} album(s) with conflicting album artists. Choose canonical values to continue.";
+                return AnalysisRunViewModel.ForConflicts(groups, status);
+            }, scope.Token);
+            AddRun(run);
         }
         catch (OperationCanceledException) { StatusText = "Album artist conflict search cancelled."; }
         catch (Exception ex) { StatusText = $"Album artist conflict search failed: {ex.Message}"; }
@@ -376,7 +389,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         ConflictGroups.Any(group => group.SelectedOption is not null);
 
     [RelayCommand(CanExecute = nameof(CanPreviewConflictRepairs))]
-    private void PreviewConflictRepairs()
+    private async Task PreviewConflictRepairs()
     {
         var resolutions = ConflictGroups
             .Where(group => group.SelectedOption is not null)
@@ -384,18 +397,23 @@ public partial class AnalyzerViewModel : ViewModelBase
             .ToList();
         if (resolutions.Count == 0)
             return;
-
-        var plan = _repairs.PreviewConflictRepairs(resolutions);
-        var items = plan.Items.Select(item =>
+        using var scope = BeginRun("conflict repair preview", AnalysisResultView.Repairs);
+        try
         {
-            var viewModel = new AnalysisRepairItemViewModel(item);
-            viewModel.SelectionChanged += () => ApplyRepairsCommand.NotifyCanExecuteChanged();
-            return viewModel;
-        }).ToList();
-        string status = plan.Items.Count == 0
-            ? "The selected canonical values already match every file."
-            : $"Previewed {plan.Items.Count:N0} user-directed repair(s). Review, then apply selected.";
-        AddRun(AnalysisRunViewModel.ForRepairs(plan, items, status));
+            var run = await Task.Run(() =>
+            {
+                var plan = _repairs.PreviewConflictRepairs(resolutions);
+                var items = plan.Items.Select(CreateRepairItem).ToList();
+                string status = plan.Items.Count == 0
+                    ? "The selected canonical values already match every file."
+                    : $"Previewed {plan.Items.Count:N0} user-directed repair(s). Review, then apply selected.";
+                return AnalysisRunViewModel.ForRepairs(plan, items, status);
+            }, scope.Token);
+            AddRun(run);
+        }
+        catch (OperationCanceledException) { StatusText = "Conflict repair preview cancelled."; }
+        catch (Exception ex) { StatusText = $"Conflict repair preview failed: {ex.Message}"; }
+        finally { ApplyRepairsCommand.NotifyCanExecuteChanged(); }
     }
 
     private bool CanApplyRepairs() => !IsBusy && SelectedRun?.RepairPlan is not null &&
@@ -457,23 +475,25 @@ public partial class AnalyzerViewModel : ViewModelBase
             string status = report.Count == 0
                 ? "Cross-set check: no differences (needs 2+ configured sets to compare)."
                 : $"Cross-set check: {report.Count:N0} finding(s).";
-            AddRun(AnalysisRunViewModel.ForFindings(report, records, status));
+            var run = await Task.Run(
+                () => AnalysisRunViewModel.ForFindings(report, records, status), scope.Token);
+            AddRun(run);
         }
         catch (OperationCanceledException) { StatusText = "Cross-set check cancelled."; }
         catch (Exception ex) { StatusText = $"Cross-set check failed: {ex.Message}"; }
     }
 
     // Shared runner for the analyses that operate on the flat record list: fetch records, run `body`
-    // off the UI thread, then apply its result on the UI thread and set the status.
+    // off the UI thread, including result projection, then publish one completed snapshot.
     private async Task RunOverRecords(string label, AnalysisResultView view,
-        Func<IReadOnlyList<TrackRecord>, CancellationToken, (string Status, Action Apply)> body)
+        Func<IReadOnlyList<TrackRecord>, CancellationToken, (string Status, AnalysisRunViewModel Run)> body)
     {
         using var scope = BeginRun(label, view);
         try
         {
             var records = await _library.GetAllRecordsAsync(scope.Token);
-            var (status, apply) = await Task.Run(() => body(records, scope.Token), scope.Token);
-            apply();
+            var (status, run) = await Task.Run(() => body(records, scope.Token), scope.Token);
+            AddRun(run);
             StatusText = status;
         }
         catch (OperationCanceledException) { StatusText = $"{label} cancelled."; }
@@ -513,6 +533,13 @@ public partial class AnalyzerViewModel : ViewModelBase
         SelectedRun = run;
         RemoveRunCommand.NotifyCanExecuteChanged();
         ClearRunsCommand.NotifyCanExecuteChanged();
+    }
+
+    private AnalysisRepairItemViewModel CreateRepairItem(AnalysisTagRepair item)
+    {
+        var viewModel = new AnalysisRepairItemViewModel(item);
+        viewModel.SelectionChanged += () => ApplyRepairsCommand.NotifyCanExecuteChanged();
+        return viewModel;
     }
 
     private bool CanRemoveRun() => !IsBusy && SelectedRun is not null;

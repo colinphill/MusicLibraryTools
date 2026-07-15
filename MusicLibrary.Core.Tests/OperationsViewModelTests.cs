@@ -13,12 +13,16 @@ public sealed class OperationsViewModelTests
     {
         using var temp = new TempDirectory();
         var settings = new AppSettings(Path.Combine(temp.Path, "settings.json"));
-        var jobs = new StubJobs();
+        var jobs = new UnifiedJobService();
+        var crossSync = new StubCrossLibrarySyncService();
         var viewModel = new OperationsViewModel(
-            new RecordingJournals(new([], [])), new StubFiles(), new StubDialogs(), settings, jobs)
+            new RecordingJournals(new([], [])), new StubFiles(), new StubDialogs(), settings,
+            jobs, crossSync)
         {
-            JobExecutableDirectory = temp.Path,
-            JobArguments = "config.xml",
+            SelectedJob = jobs.Catalog.Single(job => job.Id == "cross-library-sync"),
+            JobConfigurationPath = "config.xml",
+            JobLibraryPath = "library.itl",
+            JobMaxRemovals = 7,
         };
 
         Assert.False(viewModel.ApplyJobCommand.CanExecute(null));
@@ -26,8 +30,11 @@ public sealed class OperationsViewModelTests
         Assert.True(viewModel.ApplyJobCommand.CanExecute(null));
         await viewModel.ApplyJobCommand.ExecuteAsync(null);
 
-        Assert.Equal(1, jobs.PreviewCalls);
-        Assert.Equal(1, jobs.ApplyCalls);
+        Assert.Equal(1, crossSync.PreviewCalls);
+        Assert.Equal(new CrossLibrarySyncRequest("config.xml", "library.itl", 7),
+            crossSync.LastRequest);
+        Assert.Equal(1, crossSync.ApplyCalls);
+        Assert.Same(crossSync.PreviewedPlan, crossSync.AppliedPlan);
         Assert.Equal(2, viewModel.JobHistory.Count);
         Assert.Equal("Applied", viewModel.JobHistory[0].State);
     }
@@ -280,25 +287,32 @@ public sealed class OperationsViewModelTests
             Task.FromResult<string?>(null);
     }
 
-    private sealed class StubJobs : IUnifiedJobService
+    private sealed class StubCrossLibrarySyncService : ICrossLibrarySyncService
     {
-        private readonly UnifiedJobDescriptor _job = new("test", "Test sync", "test.exe", "Test",
-            UnifiedJobApplyMode.ApplyFlag, []);
-        public IReadOnlyList<UnifiedJobDescriptor> Catalog => [_job];
         public int PreviewCalls { get; private set; }
         public int ApplyCalls { get; private set; }
-        public Task<UnifiedJobPlan> PreviewAsync(UnifiedJobDescriptor job, string executableDirectory,
-            string arguments, IProgress<string>? progress = null, CancellationToken ct = default)
+        public CrossLibrarySyncPlan? PreviewedPlan { get; private set; }
+        public CrossLibrarySyncPlan? AppliedPlan { get; private set; }
+        public CrossLibrarySyncRequest? LastRequest { get; private set; }
+
+        public Task<CrossLibrarySyncPlan> PreviewAsync(CrossLibrarySyncRequest request,
+            IProgress<OperationProgress>? progress = null, CancellationToken ct = default)
         {
             PreviewCalls++;
-            return Task.FromResult(new UnifiedJobPlan(job, Path.Combine(executableDirectory, job.ExecutableName),
-                [arguments], 1, DateTime.UtcNow, 0, "preview", DateTimeOffset.UtcNow));
+            LastRequest = request;
+            var mutations = new FileMutationPlan("CrossSyncMusic", "target", "recovery", [], [],
+                DateTimeOffset.UtcNow);
+            PreviewedPlan = new(request, "target", [], 0, 0, mutations, []);
+            return Task.FromResult(PreviewedPlan);
         }
-        public Task<UnifiedJobResult> ApplyAsync(UnifiedJobPlan plan,
-            IProgress<string>? progress = null, CancellationToken ct = default)
+
+        public Task<CrossLibrarySyncResult> ApplyAsync(CrossLibrarySyncPlan plan,
+            IProgress<OperationProgress>? progress = null, CancellationToken ct = default)
         {
             ApplyCalls++;
-            return Task.FromResult(new UnifiedJobResult(0, "applied", TimeSpan.FromSeconds(1)));
+            AppliedPlan = plan;
+            return Task.FromResult(new CrossLibrarySyncResult(0, 0,
+                new FileMutationSummary(0, 0, 0, null, []), []));
         }
     }
 

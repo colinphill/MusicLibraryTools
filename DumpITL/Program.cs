@@ -132,7 +132,13 @@ switch (command)
         break;
 
     case "validate":
-        exitCode = ValidateDocument(itl);
+        var validation = await new MusicLibrary.Core.Services.ItunesValidationService()
+            .ValidateAsync(itl);
+        foreach (ItlValidationIssue issue in validation.Issues)
+            Console.WriteLine($"{issue.Severity,-7} {issue.Code,-30} {issue.Message}");
+        Console.WriteLine($"validation: {validation.ErrorCount} error(s), " +
+            $"{validation.WarningCount} warning(s)");
+        exitCode = validation.IsValid ? 0 : 4;
         break;
 
     case "snapshot":
@@ -266,18 +272,6 @@ static void WriteSnapshot(string path, string? outputPath)
     Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
     File.WriteAllText(outputPath, json, new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     Console.WriteLine($"snapshot written to {outputPath}");
-}
-
-static int ValidateDocument(string path)
-{
-    ItlDocument document = ItlDocument.Load(path);
-    IReadOnlyList<ItlValidationIssue> issues = document.Validate();
-    foreach (ItlValidationIssue issue in issues)
-        Console.WriteLine($"{issue.Severity,-7} {issue.Code,-30} {issue.Message}");
-
-    int errors = issues.Count(i => i.Severity == ItlValidationSeverity.Error);
-    Console.WriteLine($"validation: {errors} error(s), {issues.Count(i => i.Severity == ItlValidationSeverity.Warning)} warning(s)");
-    return errors == 0 ? 0 : 4;
 }
 
 static void Info(ItlLibrary library)

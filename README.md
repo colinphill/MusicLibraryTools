@@ -98,6 +98,20 @@ library root(s), index locations, sync targets, playlist targets, the cache data
 (default `cache.db`), and length limits. See `LibraryConfiguration` in MusicFileUtilities
 for the schema.
 
+Playlist exports are repeatable and select their source library by logical scan set. Every target
+requires both a `Type` (`m3u` or `wpl`) and at least one `Set`; multiple sets form a union:
+
+```xml
+<IndexTarget Set="1">Z:\iTunes\FLAC</IndexTarget>
+<IndexTarget Set="2">Z:\iTunes\Purchased Sync</IndexTarget>
+<PlaylistTarget Type="wpl" Set="1">Z:\iTunes\Playlists\Lossless</PlaylistTarget>
+<PlaylistTarget Type="m3u" Set="1,2">Z:\iTunes\Playlists\Combined</PlaylistTarget>
+```
+
+`CrossSyncPlaylists` processes every configured playlist target in one invocation. The former
+standalone `<PlaylistType>` element is no longer used. Every referenced playlist set must occur on
+at least one `IndexTarget`; unknown sets are rejected before indexing or creating destination folders.
+
 Library indexing uses up to 16 concurrent metadata readers so high-latency SMB shares can
 overlap file opens. Set `MLT_INDEX_PARALLELISM` to a value from 1 through 64 to tune the global
 reader cap for a particular NAS; 8-16 is a sensible starting range, while higher values should

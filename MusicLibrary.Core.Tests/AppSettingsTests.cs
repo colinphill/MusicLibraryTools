@@ -49,6 +49,43 @@ public sealed class AppSettingsTests
         Assert.Null(settings.Configuration);
     }
 
+    [Theory]
+    [InlineData("<PlaylistTarget Type=\"m3u\">Z:\\Playlists</PlaylistTarget>")]
+    [InlineData("<PlaylistTarget Set=\"1\">Z:\\Playlists</PlaylistTarget><PlaylistType>m3u</PlaylistType>")]
+    [InlineData("<PlaylistTarget Type=\"unknown\" Set=\"1\">Z:\\Playlists</PlaylistTarget>")]
+    [InlineData("<PlaylistTarget Type=\"m3u\" Set=\"1\">Z:\\Playlists</PlaylistTarget>")]
+    [InlineData("<PlaylistType>m3u</PlaylistType>")]
+    public void InvalidPlaylistTarget_IsRejectedDuringLoad(string playlistXml)
+    {
+        using var temp = new TempDirectory();
+        var config = Path.Combine(temp.Path, "bad-playlist.xml");
+        File.WriteAllText(config,
+            "<LibraryConfiguration><DatabaseFile>cache.db</DatabaseFile>" + playlistXml +
+            "</LibraryConfiguration>");
+
+        var settings = new AppSettings(Path.Combine(temp.Path, "settings.json"));
+
+        Assert.Throws<InvalidDataException>(() => settings.LoadConfig(config));
+        Assert.Null(settings.Configuration);
+    }
+
+    [Fact]
+    public void MultipleIndexAndPlaylistSets_AreAcceptedDuringLoad()
+    {
+        using var temp = new TempDirectory();
+        var config = Path.Combine(temp.Path, "multi-set.xml");
+        File.WriteAllText(config,
+            "<LibraryConfiguration><DatabaseFile>cache.db</DatabaseFile>" +
+            $"<IndexTarget Set=\"1,2\">{System.Security.SecurityElement.Escape(temp.Path)}</IndexTarget>" +
+            "<PlaylistTarget Type=\"m3u\" Set=\"1,2\">Z:\\Playlists</PlaylistTarget>" +
+            "</LibraryConfiguration>");
+
+        var settings = new AppSettings(Path.Combine(temp.Path, "settings.json"));
+        settings.LoadConfig(config);
+
+        Assert.Equal([1, 2], Assert.Single(settings.Configuration!.PlaylistTargets).Sets);
+    }
+
     [Fact]
     public void AtomicWriters_ReplaceFilesAndLeaveNoTemporarySiblings()
     {

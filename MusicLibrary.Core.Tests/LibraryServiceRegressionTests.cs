@@ -219,8 +219,8 @@ public sealed class LibraryServiceRegressionTests
             [new TagEdit(TagFields.Title, "Extra"), new TagEdit(TagFields.TrackNumber, "4")]);
 
         var config = temp.WriteConfig("sets.xml", "sets.db",
-            new IndexTargetEntry { Target = firstRoot, Set = 1, Filter = " *.FLAC " },
-            new IndexTargetEntry { Target = secondRoot, Set = 2, Filter = "*.flac" });
+            new IndexTargetEntry { Target = firstRoot, Sets = [1], Filter = " *.FLAC " },
+            new IndexTargetEntry { Target = secondRoot, Sets = [2], Filter = "*.flac" });
         var settings = new AppSettings(temp.File("settings.json"));
         settings.LoadConfig(config);
         using var library = new LibraryService(settings);
@@ -241,8 +241,8 @@ public sealed class LibraryServiceRegressionTests
         var first = temp.CopyFixture(firstRoot, "song.flac");
         var second = temp.CopyFixture(secondRoot, "song.flac");
         var config = temp.WriteConfig("sets.xml", "sets.db",
-            new IndexTargetEntry { Target = firstRoot, Set = 1 },
-            new IndexTargetEntry { Target = secondRoot, Set = 2 });
+            new IndexTargetEntry { Target = firstRoot, Sets = [1] },
+            new IndexTargetEntry { Target = secondRoot, Sets = [2] });
         var settings = new AppSettings(temp.File("settings.json"));
         settings.LoadConfig(config);
         var library = new LibraryService(settings);

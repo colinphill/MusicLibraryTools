@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MusicLibrary.App.Services;
 using MusicLibrary.Core.Services;
+using MusicLibraryTools;
 
 namespace MusicLibrary.App.ViewModels;
 
@@ -11,8 +12,16 @@ public partial class IndexTargetRow : ObservableObject
 {
     [ObservableProperty] private string _target = "";
     [ObservableProperty] private string? _offset;
-    [ObservableProperty] private int _set;
+    [ObservableProperty] private string? _sets;
     [ObservableProperty] private string? _filter;
+}
+
+/// <summary>An editable repeatable playlist export destination.</summary>
+public partial class PlaylistTargetRow : ObservableObject
+{
+    [ObservableProperty] private string _target = "";
+    [ObservableProperty] private string _type = "m3u";
+    [ObservableProperty] private string? _sets;
 }
 
 /// <summary>
@@ -27,12 +36,11 @@ public partial class ConfigDialogViewModel : ViewModelBase
     [ObservableProperty] private int _lengthLimit = 255;
     [ObservableProperty] private int _discNumLengthLimit = 255;
     [ObservableProperty] private string? _syncTarget;
-    [ObservableProperty] private string? _playlistTarget;
-    [ObservableProperty] private string? _playlistType;
     [ObservableProperty] private string? _currentPath;
     [ObservableProperty] private string? _statusMessage;
 
     public ObservableCollection<IndexTargetRow> IndexTargets { get; } = [];
+    public ObservableCollection<PlaylistTargetRow> PlaylistTargets { get; } = [];
 
     public string Title => CurrentPath is null ? "New library configuration" : $"Edit configuration — {System.IO.Path.GetFileName(CurrentPath)}";
 
@@ -57,10 +65,21 @@ public partial class ConfigDialogViewModel : ViewModelBase
             LengthLimit = config.LengthLimit;
             DiscNumLengthLimit = config.DiscNumLengthLimit;
             SyncTarget = config.SyncTarget;
-            PlaylistTarget = config.PlaylistTarget;
-            PlaylistType = config.PlaylistType;
             foreach (var t in config.IndexTargets)
-                IndexTargets.Add(new IndexTargetRow { Target = t.Target, Offset = t.Offset, Set = t.Set, Filter = t.Filter });
+                IndexTargets.Add(new IndexTargetRow
+                {
+                    Target = t.Target,
+                    Offset = t.Offset,
+                    Sets = t.Sets.Count == 0 ? null : string.Join(",", t.Sets),
+                    Filter = t.Filter,
+                });
+            foreach (var target in config.PlaylistTargets)
+                PlaylistTargets.Add(new PlaylistTargetRow
+                {
+                    Target = target.Target,
+                    Type = target.Type,
+                    Sets = target.Sets.Count == 0 ? null : string.Join(",", target.Sets),
+                });
             CurrentPath = path;
         }
         catch (Exception ex)
@@ -77,9 +96,23 @@ public partial class ConfigDialogViewModel : ViewModelBase
     private void RemoveTarget(IndexTargetRow row) => IndexTargets.Remove(row);
 
     [RelayCommand]
+    private void AddPlaylistTarget() => PlaylistTargets.Add(new PlaylistTargetRow());
+
+    [RelayCommand]
+    private void RemovePlaylistTarget(PlaylistTargetRow row) => PlaylistTargets.Remove(row);
+
+    [RelayCommand]
     private async Task BrowseTargetAsync(IndexTargetRow row)
     {
         var folder = await _dialogs.PickFolderAsync("Choose a scan root");
+        if (folder is not null)
+            row.Target = folder;
+    }
+
+    [RelayCommand]
+    private async Task BrowsePlaylistTargetAsync(PlaylistTargetRow row)
+    {
+        var folder = await _dialogs.PickFolderAsync("Choose a playlist export folder");
         if (folder is not null)
             row.Target = folder;
     }
@@ -105,11 +138,24 @@ public partial class ConfigDialogViewModel : ViewModelBase
                 LengthLimit = LengthLimit,
                 DiscNumLengthLimit = DiscNumLengthLimit,
                 SyncTarget = SyncTarget,
-                PlaylistTarget = PlaylistTarget,
-                PlaylistType = PlaylistType,
                 IndexTargets = IndexTargets
                     .Where(t => !string.IsNullOrWhiteSpace(t.Target))
-                    .Select(t => new IndexTargetEntry { Target = t.Target, Offset = t.Offset, Set = t.Set, Filter = t.Filter })
+                    .Select(t => new IndexTargetEntry
+                    {
+                        Target = t.Target,
+                        Offset = t.Offset,
+                        Sets = [.. LibraryConfiguration.ParseScanSets(t.Sets)],
+                        Filter = t.Filter,
+                    })
+                    .ToList(),
+                PlaylistTargets = PlaylistTargets
+                    .Where(t => !string.IsNullOrWhiteSpace(t.Target))
+                    .Select(t => new PlaylistTargetEntry
+                    {
+                        Target = t.Target,
+                        Type = t.Type,
+                        Sets = [.. LibraryConfiguration.ParseScanSets(t.Sets)],
+                    })
                     .ToList(),
             };
             config.Save(path);

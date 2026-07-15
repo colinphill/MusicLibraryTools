@@ -10,9 +10,22 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<IAppSettings, AppSettings>();
         services.AddSingleton<IFileMutationCoordinator, FileMutationCoordinator>();
+        services.AddSingleton<IFileInventoryService, FileInventoryService>();
+        services.AddSingleton<IFileMutationPlanExecutor, FileMutationPlanExecutor>();
+        services.AddSingleton<ILibraryOperationContextFactory, LibraryOperationContextFactory>();
+        services.AddSingleton<ICrossLibrarySyncService, CrossLibrarySyncService>();
+        services.AddSingleton<IPlaylistExportService, PlaylistExportService>();
+        services.AddSingleton<IItunesValidationService, ItunesValidationService>();
+        services.AddSingleton<IRedundancyAnalysisService, RedundancyAnalysisService>();
         services.AddSingleton<IMediaFileService, MediaFileService>();
         services.AddSingleton<ITagWriteService, TagWriteService>();
         services.AddSingleton<IArtworkService, ArtworkService>();
+        services.AddSingleton<IArtworkNormalizationService, ArtworkNormalizationService>();
+        services.AddSingleton<IFileTreeEndpointFactory, FileTreeEndpointFactory>();
+        services.AddSingleton<IDeviceSyncService, DeviceSyncService>();
+        services.AddSingleton<ISmartStorageLibraryLoader, SmartStorageLibraryLoader>();
+        services.AddSingleton<ISmartStorageService, SmartStorageService>();
+        services.AddSingleton<ICarCardService, CarCardService>();
         services.AddSingleton<IArtistReconciler, ArtistReconciler>();
         services.AddSingleton<IAnalysisRepairService, AnalysisRepairService>();
         services.AddSingleton<IOperationJournalService, OperationJournalService>();

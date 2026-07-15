@@ -37,7 +37,7 @@ namespace ConsoleTools
 
         public static void End()
         {
-            _w.Close();
+            Close();
         }
 
         private static void CheckOpen()
@@ -106,7 +106,7 @@ namespace ConsoleTools
 
         public static void Close()
         {
-            _w.Close();
+            _w?.Close();
             _w = null;
         }
 

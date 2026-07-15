@@ -47,7 +47,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         try
         {
             var context = GetContext();
-            var roots = GetRoots(context.Configuration);
+            var roots = GetScanRootDefinitions(context.Configuration);
             var db = GetDatabase(context);
             if (int.TryParse(_settings.GetPreference(IndexBenchmarkService.ReaderParallelismPreference),
                     out int parallelism))
@@ -144,7 +144,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
             return await Task.Run(() =>
             {
                 var locations = config.IndexLocations.ToList();
-                var setIds = locations.Select(l => l.Set).Distinct().OrderBy(s => s).ToList();
+                var setIds = locations.SelectMany(l => l.Sets).Distinct().OrderBy(s => s).ToList();
                 if (setIds.Count < 2)
                     return new AnalysisReport("Cross-set check", []);
 
@@ -155,7 +155,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                 foreach (var setId in setIds)
                 {
                     var files = new Dictionary<string, MetadataCacheEntry>(FilePathComparer);
-                    foreach (var location in locations.Where(l => l.Set == setId))
+                    foreach (var location in locations.Where(l => l.Sets.Contains(setId)))
                     {
                         var extensions = ParseExtensionFilter(location.Filter);
                         foreach (var (path, entry) in db.BuildCache([location.Target], buildSecondaryIndexes: false).FileCache)
@@ -682,7 +682,16 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         => values.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v)) ?? values[^1] ?? "";
 
     private static List<string> GetRoots(LibraryConfiguration config)
-        => config.IndexLocations.Select(l => l.Target).ToList();
+        => config.IndexLocations.Select(l => l.Target)
+            .Distinct(FilePathComparer).ToList();
+
+    private static List<ScanRootDefinition> GetScanRootDefinitions(LibraryConfiguration config)
+        => config.IndexLocations
+            .GroupBy(location => Path.TrimEndingDirectorySeparator(location.Target), FilePathComparer)
+            .Select(group => new ScanRootDefinition(
+                group.First().Target,
+                group.SelectMany(location => location.Sets).Distinct().OrderBy(set => set).ToArray()))
+            .ToList();
 
     private MetadataDatabase GetDatabase(LibraryContext context)
     {

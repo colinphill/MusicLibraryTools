@@ -5,17 +5,15 @@ public enum UnifiedJobApplyMode { ApplyFlag, ReadOnly }
 public sealed record UnifiedJobDescriptor(
     string Id,
     string Name,
-    string ExecutableName,
     string Description,
     UnifiedJobApplyMode ApplyMode,
-    IReadOnlyList<string> PrefixArguments);
+    IReadOnlyList<string> PrefixArguments,
+    string ArgumentsHint,
+    int RequiredLeadingArguments);
 
 public sealed record UnifiedJobPlan(
     UnifiedJobDescriptor Job,
-    string ExecutablePath,
     IReadOnlyList<string> Arguments,
-    long ExecutableLength,
-    DateTime ExecutableLastWriteTimeUtc,
     int PreviewExitCode,
     string PreviewOutput,
     DateTimeOffset CreatedAtUtc)

@@ -57,7 +57,16 @@ namespace MetadataCaching
         DateTime? LastSuccessUtc,
         int Enumerated,
         int MetadataRead,
-        string Error);
+        string Error)
+    {
+        public IReadOnlyList<int> Sets { get; init; } = [];
+    }
+
+    /// <summary>
+    /// An indexed root and its optional logical scan-set memberships. Membership affects logical
+    /// grouping only; the root is indexed even when <see cref="Sets"/> is empty.
+    /// </summary>
+    public sealed record ScanRootDefinition(string Path, IReadOnlyList<int> Sets);
 
     public readonly record struct IndexProgress(int Scanned, int Added, int Modified, int Unchanged)
     {
@@ -224,25 +233,58 @@ namespace MetadataCaching
 
         public IReadOnlyList<ScanRootHealth> GetScanRootHealth()
         {
+            var memberships = LoadScanSetMemberships();
             var results = new List<ScanRootHealth>();
             using var command = conn_.CreateCommand();
             command.CommandText =
-                "SELECT s.Path, h.State, h.LastAttemptUtc, h.LastSuccessUtc, h.Enumerated, h.MetadataRead, h.Error " +
+                "SELECT s.ID, s.Path, h.State, h.LastAttemptUtc, h.LastSuccessUtc, h.Enumerated, h.MetadataRead, h.Error " +
                 "FROM ScanSets s LEFT JOIN ScanHealth h ON h.ScanSetID = s.ID ORDER BY s.Path";
             using var reader = command.ExecuteReader();
             while (reader.Read())
             {
-                var state = reader.IsDBNull(1) || !Enum.TryParse<ScanRootState>(reader.GetString(1), out var parsed)
+                var state = reader.IsDBNull(2) || !Enum.TryParse<ScanRootState>(reader.GetString(2), out var parsed)
                     ? ScanRootState.Never : parsed;
                 results.Add(new(
-                    reader.GetString(0), state,
-                    reader.IsDBNull(2) ? null : DateTime.SpecifyKind(reader.GetDateTime(2), DateTimeKind.Utc),
+                    reader.GetString(1), state,
                     reader.IsDBNull(3) ? null : DateTime.SpecifyKind(reader.GetDateTime(3), DateTimeKind.Utc),
-                    reader.IsDBNull(4) ? 0 : Convert.ToInt32(reader.GetInt64(4)),
+                    reader.IsDBNull(4) ? null : DateTime.SpecifyKind(reader.GetDateTime(4), DateTimeKind.Utc),
                     reader.IsDBNull(5) ? 0 : Convert.ToInt32(reader.GetInt64(5)),
-                    reader.IsDBNull(6) ? null : reader.GetString(6)));
+                    reader.IsDBNull(6) ? 0 : Convert.ToInt32(reader.GetInt64(6)),
+                    reader.IsDBNull(7) ? null : reader.GetString(7))
+                {
+                    Sets = memberships.GetValueOrDefault(reader.GetInt64(0)) ?? [],
+                });
             }
             return results;
+        }
+
+        /// <summary>Return every indexed root with its current logical scan-set memberships.</summary>
+        public IReadOnlyList<ScanRootDefinition> GetScanRoots()
+        {
+            var memberships = LoadScanSetMemberships();
+            var roots = new List<ScanRootDefinition>();
+            using var command = conn_.CreateCommand();
+            command.CommandText = "SELECT ID, Path FROM ScanSets ORDER BY Path";
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+                roots.Add(new(reader.GetString(1), memberships.GetValueOrDefault(reader.GetInt64(0)) ?? []));
+            return roots;
+        }
+
+        private Dictionary<long, IReadOnlyList<int>> LoadScanSetMemberships()
+        {
+            var mutable = new Dictionary<long, List<int>>();
+            using var command = conn_.CreateCommand();
+            command.CommandText = "SELECT ScanSetID, SetNumber FROM ScanSetMemberships ORDER BY ScanSetID, SetNumber";
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                long id = reader.GetInt64(0);
+                if (!mutable.TryGetValue(id, out var sets))
+                    mutable[id] = sets = [];
+                sets.Add(Convert.ToInt32(reader.GetInt64(1)));
+            }
+            return mutable.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<int>)pair.Value);
         }
 
         private void WriteScanHealth(
@@ -298,6 +340,7 @@ namespace MetadataCaching
             "PRAGMA foreign_keys = off;\r\n",
 
             "CREATE TABLE ScanSets (ID INTEGER PRIMARY KEY, Path TEXT UNIQUE NOT NULL);\r\n" +
+            "CREATE TABLE ScanSetMemberships (ScanSetID INTEGER NOT NULL REFERENCES ScanSets (ID) ON DELETE CASCADE, SetNumber BIGINT NOT NULL, PRIMARY KEY (ScanSetID, SetNumber));\r\n" +
             "CREATE TABLE ScanHealth (ScanSetID INTEGER PRIMARY KEY REFERENCES ScanSets (ID) ON DELETE CASCADE, LastAttemptUtc DATETIME NOT NULL, LastSuccessUtc DATETIME, State TEXT NOT NULL, Error TEXT, Enumerated BIGINT NOT NULL, MetadataRead BIGINT NOT NULL);\r\n" +
             "CREATE TABLE Artists (ID INTEGER PRIMARY KEY, Name TEXT UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE AlbumArtists (ID INTEGER PRIMARY KEY, Name TEXT UNIQUE NOT NULL);\r\n" +
@@ -309,6 +352,7 @@ namespace MetadataCaching
             "CREATE TABLE MetadataKeys (ID INTEGER PRIMARY KEY, \"Key\" TEXT UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE Metadata (ID INTEGER PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, KeyID BIGINT REFERENCES MetadataKeys (ID) NOT NULL, Value TEXT NOT NULL);\r\n" +
             "CREATE INDEX AlbumsAlbumArtistIDIndex ON Albums (AlbumArtistID ASC);\r\n" +
+            "CREATE INDEX ScanSetMembershipsSetNumberIndex ON ScanSetMemberships (SetNumber ASC);\r\n" +
             "CREATE INDEX AlbumsScanSetIDIndex ON Albums (ScanSetID ASC);\r\n" +
             "CREATE INDEX AlbumsLookupIndex ON Albums (ScanSetID ASC, Path ASC, AlbumArtistID ASC, Name ASC);\r\n" +
             "CREATE INDEX FilesPathIndex ON Files (Path ASC);\r\n" +
@@ -330,6 +374,7 @@ namespace MetadataCaching
 #if SQLSERVER
         private static readonly string[] sqlservercreationsql_ = {
             "CREATE TABLE ScanSets (ID BIGINT IDENTITY PRIMARY KEY, Path NVARCHAR(512) UNIQUE NOT NULL);\r\n" +
+            "CREATE TABLE ScanSetMemberships (ScanSetID BIGINT NOT NULL REFERENCES ScanSets (ID) ON DELETE CASCADE, SetNumber BIGINT NOT NULL, PRIMARY KEY (ScanSetID, SetNumber));\r\n" +
             "CREATE TABLE ScanHealth (ScanSetID BIGINT PRIMARY KEY REFERENCES ScanSets (ID) ON DELETE CASCADE, LastAttemptUtc DATETIME2 NOT NULL, LastSuccessUtc DATETIME2, State NVARCHAR(32) NOT NULL, Error NVARCHAR(MAX), Enumerated BIGINT NOT NULL, MetadataRead BIGINT NOT NULL);\r\n" +
             "CREATE TABLE Artists (ID BIGINT IDENTITY PRIMARY KEY, Name NVARCHAR(512) UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE AlbumArtists (ID BIGINT IDENTITY PRIMARY KEY, Name NVARCHAR(512) UNIQUE NOT NULL);\r\n" +
@@ -341,6 +386,7 @@ namespace MetadataCaching
             "CREATE TABLE Metadata (ID BIGINT IDENTITY PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, KeyID BIGINT REFERENCES MetadataKeys (ID) NOT NULL, Value NVARCHAR(MAX) NOT NULL);\r\n" +
             "CREATE TABLE ImageMetadata (ID BIGINT IDENTITY PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, ImageID BIGINT REFERENCES Images (ID) NOT NULL, Description NVARCHAR(MAX) NOT NULL, Category NVARCHAR(MAX) NOT NULL);\r\n" +
             "CREATE INDEX AlbumsAlbumArtistIDIndex ON Albums (AlbumArtistID ASC);\r\n" +
+            "CREATE INDEX ScanSetMembershipsSetNumberIndex ON ScanSetMemberships (SetNumber ASC);\r\n" +
             "CREATE INDEX AlbumsScanSetIDIndex ON Albums (ScanSetID ASC);\r\n" +
             "CREATE INDEX ImageMetadataFileIDIndex ON ImageMetadata (FileID ASC);\r\n" +
             "CREATE INDEX MetadataKeyIDIndex ON Metadata (KeyID ASC);\r\n" +
@@ -475,7 +521,9 @@ namespace MetadataCaching
             }
             mcomm.CommandText =
                 "DROP TABLE IF EXISTS KnownMetadata;\r\n" +
+                "CREATE TABLE IF NOT EXISTS ScanSetMemberships (ScanSetID INTEGER NOT NULL REFERENCES ScanSets (ID) ON DELETE CASCADE, SetNumber BIGINT NOT NULL, PRIMARY KEY (ScanSetID, SetNumber));\r\n" +
                 "CREATE TABLE IF NOT EXISTS ScanHealth (ScanSetID INTEGER PRIMARY KEY REFERENCES ScanSets (ID) ON DELETE CASCADE, LastAttemptUtc DATETIME NOT NULL, LastSuccessUtc DATETIME, State TEXT NOT NULL, Error TEXT, Enumerated BIGINT NOT NULL, MetadataRead BIGINT NOT NULL);\r\n" +
+                "CREATE INDEX IF NOT EXISTS ScanSetMembershipsSetNumberIndex ON ScanSetMemberships (SetNumber);\r\n" +
                 "CREATE INDEX IF NOT EXISTS AlbumsLookupIndex ON Albums (ScanSetID, Path, AlbumArtistID, Name);\r\n" +
                 "CREATE INDEX IF NOT EXISTS FilesPathIndex ON Files (Path);\r\n" +
                 "CREATE INDEX IF NOT EXISTS ImagesHashIndex ON Images (Hash);";
@@ -555,10 +603,17 @@ namespace MetadataCaching
             using (var migration = res.conn_.CreateCommand())
             {
                 migration.CommandText =
+                    "IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ScanSetMemberships') " +
+                    "CREATE TABLE ScanSetMemberships (ScanSetID BIGINT NOT NULL REFERENCES ScanSets (ID) ON DELETE CASCADE, " +
+                    "SetNumber BIGINT NOT NULL, PRIMARY KEY (ScanSetID, SetNumber)); " +
                     "IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ScanHealth') " +
                     "CREATE TABLE ScanHealth (ScanSetID BIGINT PRIMARY KEY REFERENCES ScanSets (ID) ON DELETE CASCADE, " +
                     "LastAttemptUtc DATETIME2 NOT NULL, LastSuccessUtc DATETIME2, State NVARCHAR(32) NOT NULL, " +
                     "Error NVARCHAR(MAX), Enumerated BIGINT NOT NULL, MetadataRead BIGINT NOT NULL)";
+                migration.ExecuteNonQuery();
+                migration.CommandText =
+                    "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'ScanSetMembershipsSetNumberIndex') " +
+                    "CREATE INDEX ScanSetMembershipsSetNumberIndex ON ScanSetMemberships (SetNumber)";
                 migration.ExecuteNonQuery();
             }
 
@@ -632,9 +687,51 @@ namespace MetadataCaching
                 buildSecondaryIndexes);
         }
 
+        /// <summary>
+        /// Build a cache from all indexed roots belonging to any requested logical scan set.
+        /// Roots with no memberships are intentionally excluded.
+        /// </summary>
+        public MetadataCache BuildCacheForSets(
+            IEnumerable<int> setNumbers,
+            bool buildSecondaryIndexes = true)
+        {
+            var numbers = setNumbers.Distinct().ToArray();
+            if (numbers.Length == 0)
+                return new MetadataCache(buildSecondaryIndexes);
+
+            using var command = conn_.CreateCommand();
+            var sql = new StringBuilder(
+                "SELECT DISTINCT s.Path FROM ScanSets s JOIN ScanSetMemberships m ON m.ScanSetID = s.ID WHERE m.SetNumber IN (");
+            for (int index = 0; index < numbers.Length; index++)
+            {
+                if (index > 0)
+                    sql.Append(',');
+                string name = "@set" + index;
+                sql.Append(name);
+                command.Parameters.Add(name, DbType.Int64).Value = numbers[index];
+            }
+            command.CommandText = sql.Append(") ORDER BY s.Path").ToString();
+            var paths = new List<string>();
+            using (var reader = command.ExecuteReader())
+                while (reader.Read())
+                    paths.Add(reader.GetString(0));
+            return BuildCache(paths, buildSecondaryIndexes);
+        }
+
         public (int Added, int Modified, int Removed, int Unchanged) IndexFiles(IEnumerable<string> paths, bool deletemissingsets = false, IProgress<IndexProgress> progress = null, CancellationToken ct = default)
         {
-            return IndexFilesAsync(paths, deletemissingsets, progress, ct).GetAwaiter().GetResult();
+            return IndexFiles(
+                paths.Select(path => new ScanRootDefinition(path, [])),
+                deletemissingsets, progress, ct);
+        }
+
+        public (int Added, int Modified, int Removed, int Unchanged) IndexFiles(
+            IEnumerable<ScanRootDefinition> roots,
+            bool deletemissingsets = false,
+            IProgress<IndexProgress> progress = null,
+            CancellationToken ct = default)
+        {
+            return IndexFilesAsync(roots, deletemissingsets, progress, ct).GetAwaiter().GetResult();
         }
 
         // progress (optional): when supplied, periodic IndexProgress snapshots are reported instead
@@ -642,7 +739,19 @@ namespace MetadataCaching
         // cooperative cancellation — the file walk stops at the next file boundary; whatever was
         // already queued is still committed (the DB is a self-healing cache), and removal detection
         // is skipped on cancel so a partial scan never deletes files it simply hadn't reached.
-        public async Task<(int Added, int Modified, int Removed, int Unchanged)> IndexFilesAsync(IEnumerable<string> paths, bool deletemissingsets = false, IProgress<IndexProgress> progress = null, CancellationToken ct = default)
+        public Task<(int Added, int Modified, int Removed, int Unchanged)> IndexFilesAsync(
+            IEnumerable<string> paths,
+            bool deletemissingsets = false,
+            IProgress<IndexProgress> progress = null,
+            CancellationToken ct = default) =>
+            IndexFilesAsync(paths.Select(path => new ScanRootDefinition(path, [])),
+                deletemissingsets, progress, ct);
+
+        public async Task<(int Added, int Modified, int Removed, int Unchanged)> IndexFilesAsync(
+            IEnumerable<ScanRootDefinition> roots,
+            bool deletemissingsets = false,
+            IProgress<IndexProgress> progress = null,
+            CancellationToken ct = default)
         {
             int added = 0, modified = 0, removed = 0, unchanged = 0, scanned = 0;
             int enumerated = 0, databaseProcessed = 0;
@@ -683,9 +792,18 @@ namespace MetadataCaching
 
             using (var setscomm = conn_.CreateCommand())
             {
-                // Materialized: this is re-enumerated once per ScanSets row below, and `paths`
-                // itself may be a deferred query from the caller.
-                var modpaths = paths.Select(Path.TrimEndingDirectorySeparator).ToList();
+                // Materialize and merge duplicate root declarations. A root may appear more than
+                // once in configuration so its logical memberships are the union of every row.
+                var requestedRoots = roots
+                    .Select(root => new ScanRootDefinition(
+                        Path.TrimEndingDirectorySeparator(root.Path),
+                        (root.Sets ?? []).Distinct().OrderBy(set => set).ToArray()))
+                    .GroupBy(root => root.Path, StringComparer.InvariantCultureIgnoreCase)
+                    .Select(group => new ScanRootDefinition(
+                        group.First().Path,
+                        group.SelectMany(root => root.Sets).Distinct().OrderBy(set => set).ToArray()))
+                    .ToList();
+                var modpaths = requestedRoots.Select(root => root.Path).ToList();
                 var dbsets = new List<(string Path, long ID, bool Hit)>();
                 var missing = new List<string>();
                 setscomm.CommandText = "SELECT Path, ID FROM ScanSets";
@@ -724,6 +842,33 @@ namespace MetadataCaching
                     .GroupBy(s => Path.TrimEndingDirectorySeparator(s.Path), StringComparer.InvariantCultureIgnoreCase)
                     .Select(g => (Path.TrimEndingDirectorySeparator(g.First().Path), g.First().ID)));
                 missedsets.AddRange(dbsets.Where(s => !s.Hit).Select(s => (s.ID)));
+
+                var requestedByPath = requestedRoots.ToDictionary(
+                    root => root.Path, root => root.Sets, StringComparer.InvariantCultureIgnoreCase);
+                using (var transaction = conn_.BeginTransaction())
+                using (var deleteMemberships = transaction.CreateCommand())
+                using (var insertMembership = transaction.CreateCommand())
+                {
+                    deleteMemberships.CommandText =
+                        "DELETE FROM ScanSetMemberships WHERE ScanSetID = @ScanSetID";
+                    var deleteId = deleteMemberships.Parameters.Add("@ScanSetID", DbType.Int64);
+                    insertMembership.CommandText =
+                        "INSERT INTO ScanSetMemberships (ScanSetID, SetNumber) VALUES (@ScanSetID, @SetNumber)";
+                    var insertId = insertMembership.Parameters.Add("@ScanSetID", DbType.Int64);
+                    var setNumber = insertMembership.Parameters.Add("@SetNumber", DbType.Int64);
+                    foreach (var root in sets)
+                    {
+                        deleteId.Value = root.ID;
+                        deleteMemberships.ExecuteNonQuery();
+                        foreach (int membership in requestedByPath[root.Path])
+                        {
+                            insertId.Value = root.ID;
+                            setNumber.Value = membership;
+                            insertMembership.ExecuteNonQuery();
+                        }
+                    }
+                    transaction.Commit();
+                }
                 scanSetsCache_ = null;
             }
 

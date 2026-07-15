@@ -91,6 +91,16 @@ public partial class MainWindowViewModel : ViewModelBase
             await Table.ReloadAsync();
             await Inspector.ReloadAsync();
         };
+        _settings.ConfigurationChanged += OnConfigurationChanged;
+    }
+
+    private async void OnConfigurationChanged(object? sender, EventArgs e)
+    {
+        // Return to the event loop while the cache is read in the background. This gives the opened
+        // window a chance to paint and makes the cached library usable before network roots are scanned.
+        await Table.ReloadAsync();
+        await Task.Yield();
+        await Library.StartAutomaticIndexAsync();
     }
 
     partial void OnSelectedTabIndexChanged(int value)

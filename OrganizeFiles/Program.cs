@@ -37,7 +37,7 @@ namespace OrganizeFiles
             LogConsole.WriteLine("Indexing...");
 
             using MetadataDatabase db = MetadataDatabase.OpenDatabase(config.DatabaseFile); // TBD Dispose
-            db.IndexFiles(config.IndexLocations.Select(l => l.Target));
+            db.IndexFiles(config.IndexLocations.Select(l => new ScanRootDefinition(l.Target, l.Sets)));
 
             var planned = new List<(string Source, string Destination)>();
             var claimed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

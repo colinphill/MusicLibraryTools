@@ -1,274 +1,98 @@
-﻿/* 
- * SVN Information:
- * 
- * $HeadURL: file:///Z:/SVN_Repositories/MusicLibraryTools/trunk/CrossSyncPlaylists/Program.cs $
- * $Date: 2014-09-26 05:47:24 -0600 (Fri, 26 Sep 2014) $
- * $Revision: 18 $
- * $Author: colin $
- * 
- */
-
+#nullable enable
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Xml.Linq;
-using System.Xml;
-using System.IO;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
+using System.Threading.Tasks;
+using MusicLibrary.Core.Models;
+using MusicLibrary.Core.Services;
 
-using MusicFileUtilities;
-using iTunes.Binary;
-using ConsoleTools;
-using MusicLibraryTools;
-using MetadataCaching;
+return await CrossSyncPlaylistsCommand.RunAsync(args);
 
-namespace CrossSyncPlaylists
+internal static class CrossSyncPlaylistsCommand
 {
-    
-    class Program
+    public static async Task<int> RunAsync(string[] args)
     {
-        static int MAX_PLAYLIST_COUNT = 500;
-        const int SONOS_NAME_PAD = 100;
-               
-        static string FixPath(string item)
+        if (!TryParse(args, out PlaylistExportRequest? request, out bool apply, out bool check))
         {
-            string fix = item;
-            foreach (char c in Path.GetInvalidFileNameChars())
-                fix = fix.Replace(c, '_');
-            foreach (char c in Path.GetInvalidPathChars())
-                fix = fix.Replace(c, '_');
-            fix = fix.Trim();
-            if (fix.EndsWith("."))
-                fix = fix.Remove(fix.Length - 1);
-            return fix;
+            Console.Error.WriteLine(
+                "Usage: CrossSyncPlaylists <libraryconfiguration.xml> [clean|check] " +
+                "[--library <file.itl>] [--apply]");
+            return 2;
         }
 
-        static void WriteAtomically(string path, byte[] data)
+        var coordinator = new FileMutationCoordinator();
+        IPlaylistExportService service = new PlaylistExportService(
+            new LibraryOperationContextFactory(), new FileInventoryService(),
+            new FileMutationPlanExecutor(coordinator));
+        var progress = new Progress<OperationProgress>(value =>
         {
-            string temp = Path.Combine(Path.GetDirectoryName(path)!, $".{Path.GetFileName(path)}.{Guid.NewGuid():N}.tmp");
-            try
+            if (!string.IsNullOrWhiteSpace(value.Message)) Console.Error.WriteLine(value.Message);
+        });
+
+        try
+        {
+            PlaylistExportPlan plan = await service.PreviewAsync(request!, progress);
+            foreach (OperationIssue issue in plan.Issues)
+                Console.WriteLine($"{issue.Severity,-11} {issue.Code}: {issue.Message}" +
+                    (issue.Path is null ? "" : " [" + issue.Path + "]"));
+            foreach (PlaylistExportTargetPlan target in plan.Targets)
+                Console.WriteLine($"Target {target.Target}: {target.Files.Count:N0} playlist(s), " +
+                    $"{target.MissingTrackCount:N0} missing track mapping(s).");
+            if (!check)
+                foreach (FileMutationAction action in plan.MutationPlan.Actions)
+                    Console.WriteLine($"{action.Kind,-16} {action.DestinationPath}");
+
+            if (check || !apply)
             {
-                using (var stream = new FileStream(temp, FileMode.CreateNew, FileAccess.Write, FileShare.None,
-                    64 * 1024, FileOptions.WriteThrough))
-                {
-                    stream.Write(data, 0, data.Length);
-                    stream.Flush(flushToDisk: true);
-                }
-                File.Move(temp, path, true);
+                if (!check) Console.WriteLine("Preview only; pass --apply to execute this exact plan.");
+                return plan.CanApply ? 0 : 4;
             }
-            finally
+            if (!plan.CanApply)
             {
-                if (File.Exists(temp))
-                    File.Delete(temp);
+                Console.Error.WriteLine("Apply refused because the reviewed plan contains blockers.");
+                return 4;
             }
+
+            PlaylistExportResult result = await service.ApplyAsync(plan, progress);
+            Console.WriteLine($"Applied {result.PlaylistCount:N0} playlist(s): " +
+                $"{result.Mutations.Copied:N0} created, {result.Mutations.Replaced:N0} replaced, " +
+                $"{result.Mutations.Quarantined:N0} quarantined.");
+            if (result.Mutations.JournalPath is not null)
+                Console.WriteLine("Recovery journal: " + result.Mutations.JournalPath);
+            return 0;
         }
-
-        static void Main(string[] args)
+        catch (OperationCanceledException)
         {
-            LogConsole.SwitchFile("CrossSyncPlaylists.log");
-
-            if (args.Length == 0)
-            {
-                LogConsole.WriteLine("Usage: CrossSyncPlaylists <libraryconfiguration.xml> [clean|check] [--apply]");
-                LogConsole.Close();
-                return;
-            }
-
-            LibraryConfiguration config = new LibraryConfiguration(args[0]);
-
-            /*if (!LibraryConfiguration.Valid)
-            {
-                LogConsole.WriteLine("Invalid Library Configuration File");
-                return;
-            }*/
-
-            bool apply = args.Skip(1).Any(a => a.Equals("--apply", StringComparison.OrdinalIgnoreCase));
-            if (apply)
-                Directory.CreateDirectory(config.PlaylistTargetFolder);
-            else
-                LogConsole.WriteLine("Dry run: pass --apply to write playlist files.");
-
-            //string destplaylistfolder = @"z:/iTunes/Lossless/WPL/";
-            //string rootlibpath = @"z:/iTunes/AAC/";
-            //string newrootpath = @"z:/iTunes/Lossless/";
-            //string m3uoffset = @"../";
-            //string syncdir = "Purchased Sync";
-            //string indexdir = @"z:/iTunes/Lossless/Purchased Sync";
-
-            // TODO: Cull Cached Metadata Without Matching Files
-
-            LogConsole.WriteLine("Indexing Files...");
-
-            using MetadataDatabase db = MetadataDatabase.OpenDatabase(config.DatabaseFile); // TBD Dispose
-            db.IndexFiles(config.IndexLocations.Select(l => l.Target));
-            var cache = db.BuildCache(config.IndexLocations.Select(l => l.Target));
-
-            LogConsole.WriteLine("Total Parsed Files: " + cache.FileCache.Count);
-
-            LogConsole.WriteLine("Loading iTunes Library...");
-
-            ItlLibrary lib = ItlLibrary.Load(ItlFileEditor.ResolveLibraryPath());
-            Dictionary<int, ItlTrack> tracksById = lib.Tracks.ToDictionary(track => track.Id);
-
-            LogConsole.WriteLine("iTunes Library Size: " + lib.Tracks.Count.ToString() + "  Playlist Count: " + lib.Playlists.Count);
-
-            bool clean = args.Skip(1).Any(a => a.Equals("clean", StringComparison.OrdinalIgnoreCase));
-            var desiredFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var claimedOutputs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            LogConsole.WriteLine("Mapping Library...");
-
-            ItlMapper mapper = new ItlMapper(lib, cache);
-
-            int missing = 0;
-
-            if (args.Skip(1).Any(a => a.Equals("check", StringComparison.OrdinalIgnoreCase)))
-            {
-                foreach (var track in mapper.MissingTracks)
-                {
-                    Console.WriteLine("FNF: " + tracksById[track].LocalPath);
-                    missing++;
-                }
-                LogConsole.WriteLine("Total FNF: " + missing.ToString());
-                LogConsole.Close();
-                return;
-            }
-
-            foreach (ItlPlaylist pl in lib.Playlists)
-            {
-                int count = 0;
-                if (pl.TrackIds.Count > MAX_PLAYLIST_COUNT)
-                    continue;
-                 
-                LogConsole.WriteLine("Converting Playlist: " + pl.DisplayName);
-
-                string plfilename = (config.PlaylistType.ToLower() == "wpl") ? Path.Combine(config.PlaylistTargetFolder, FixPath(pl.DisplayName).PadRight(SONOS_NAME_PAD) + ".wpl") :
-                    Path.Combine(config.PlaylistTargetFolder, FixPath(pl.DisplayName) + ".m3u");
-                if (!claimedOutputs.Add(Path.GetFullPath(plfilename)))
-                {
-                    LogConsole.WriteLine("Skipping playlist with colliding sanitized name: " + pl.DisplayName);
-                    continue;
-                }
-
-                MemoryStream ms = new MemoryStream();
-                //StreamWriter m3uw = new StreamWriter(ms, Encoding.GetEncoding(28591));
-                StreamWriter m3uw = new StreamWriter(ms, Encoding.UTF8);
-                //m3uw.NewLine = "\n";
-
-                m3uw.WriteLine("#EXTM3U");
-
-                XElement seqel;
-                XAttribute countat;
-                XDocument pd = new XDocument();
-                pd.Add(
-                    new XProcessingInstruction("wpl", "version=\"1.0\""),
-                    new XElement("smil",
-                        new XElement("head",
-                            new XElement("meta",
-                                new XAttribute("name", "Generator"),
-                                new XAttribute("content", "CrossSyncPlaylists")),
-                            new XElement("meta",
-                                new XAttribute("name", "ItemCount"),
-                                countat = new XAttribute("content", "")),
-                            new XElement("title", pl.DisplayName)),
-                            new XElement("body",
-                                seqel = new XElement("seq"))));
-              
-                foreach (int item in pl.TrackIds)
-                {
-                    string filepath = null;
-
-                    ItlTrack track = tracksById[item];
-                    string kind = track.Kind ?? string.Empty;
-                    if (track.HasVideo || string.IsNullOrWhiteSpace(track.LocalPath) ||
-                        kind.Contains("protected", StringComparison.OrdinalIgnoreCase) ||
-                        kind.Contains("book", StringComparison.OrdinalIgnoreCase) ||
-                        kind.Contains("audible", StringComparison.OrdinalIgnoreCase) ||
-                        kind.Contains("document", StringComparison.OrdinalIgnoreCase) ||
-                        kind.Contains("app", StringComparison.OrdinalIgnoreCase) ||
-                        kind.Contains("tone", StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    try
-                    {
-                        filepath = mapper[item];
-                    }
-                    catch 
-                    {
-                        LogConsole.WriteLine("FNF: " + track.LocalPath);
-                        missing++;
-                    }
-                 
-                    if (!string.IsNullOrWhiteSpace(filepath))
-                    {
-                        int duration = cache[filepath].DurationInSeconds;
-                        if (duration == 0)
-                            duration = -1;
-                        foreach (var iloc in config.IndexLocations)
-                        {
-                            if (filepath.Replace('\\', '/').StartsWith(iloc.Target.Replace('\\', '/') + "/", StringComparison.InvariantCultureIgnoreCase))
-                                filepath = iloc.Offset + filepath.Remove(0, iloc.Target.Length).Replace('\\','/');
-                        }
-                        seqel.Add(new XElement("media", new XAttribute("src", filepath)));
-                        m3uw.WriteLine("#EXTINF:" + duration + "," +
-                            (track.Artist ?? string.Empty).Replace("-", "") + " - " +
-                            (track.Title ?? string.Empty).Replace("-", ""));
-                        m3uw.WriteLine(filepath);
-                        count++;
-                    }
-
-                }
-
-                if (count != 0)
-                {
-                    countat.Value = count.ToString();
-                    XmlWriterSettings settings = new XmlWriterSettings();
-                    settings.OmitXmlDeclaration = true;
-                    settings.Indent = true;
-                    settings.CloseOutput = false;
-                    byte[] output;
-                    if (config.PlaylistType.Equals("wpl", StringComparison.InvariantCultureIgnoreCase))
-                    {
-                        using var wpl = new MemoryStream();
-                        using (XmlWriter xw = XmlWriter.Create(wpl, settings))
-                            pd.Save(xw);
-                        output = wpl.ToArray();
-                    }
-                    else
-                    {
-                        m3uw.Flush();
-                        output = ms.ToArray();
-                    }
-                    if (apply)
-                        WriteAtomically(plfilename, output);
-                    else
-                        LogConsole.WriteLine("Would update: " + plfilename);
-                    desiredFiles.Add(Path.GetFullPath(plfilename));
-                }
-                m3uw.Dispose();
-                ms.Dispose();
-            }
-
-            if (clean && apply)
-            {
-                LogConsole.WriteLine("Removing obsolete playlists...");
-                foreach (string file in Directory.GetFiles(config.PlaylistTargetFolder, "*.*"))
-                    if ((Path.GetExtension(file).Equals(".m3u", StringComparison.OrdinalIgnoreCase) ||
-                         Path.GetExtension(file).Equals(".wpl", StringComparison.OrdinalIgnoreCase)) &&
-                        !desiredFiles.Contains(Path.GetFullPath(file)))
-                        File.Delete(file);
-            }
-            else if (clean)
-                LogConsole.WriteLine("Would remove obsolete managed .m3u/.wpl files when run with --apply.");
-
-            LogConsole.WriteLine("Total FNF: " + missing.ToString());
-
-            LogConsole.Close();
-
-
+            Console.Error.WriteLine("Playlist export cancelled.");
+            return 130;
+        }
+        catch (Exception error)
+        {
+            Console.Error.WriteLine("Playlist export failed: " + error.Message);
+            return 1;
         }
     }
-}
 
+    private static bool TryParse(string[] args, out PlaylistExportRequest? request,
+        out bool apply, out bool check)
+    {
+        request = null;
+        apply = false;
+        check = false;
+        if (args.Length == 0 || args[0].StartsWith("--", StringComparison.Ordinal))
+            return false;
+        bool clean = false;
+        string? library = null;
+        for (int index = 1; index < args.Length; index++)
+        {
+            string argument = args[index];
+            if (argument.Equals("clean", StringComparison.OrdinalIgnoreCase)) clean = true;
+            else if (argument.Equals("check", StringComparison.OrdinalIgnoreCase)) check = true;
+            else if (argument.Equals("--apply", StringComparison.OrdinalIgnoreCase)) apply = true;
+            else if (argument.Equals("--library", StringComparison.OrdinalIgnoreCase) &&
+                     index + 1 < args.Length) library = args[++index];
+            else return false;
+        }
+        request = new(args[0], library, clean);
+        return true;
+    }
+}

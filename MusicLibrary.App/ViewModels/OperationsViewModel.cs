@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Text;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -26,13 +28,20 @@ public partial class OperationsViewModel : ViewModelBase
 {
     private const string SearchRootPreference = "Operations.SearchRoot";
     private const string RetentionDaysPreference = "Operations.RetentionDays";
-    private const string JobDirectoryPreference = "Operations.JobDirectory";
     private const string JobHistoryPreference = "Operations.JobHistory";
     private readonly IOperationJournalService _journals;
     private readonly IFileDialogService _files;
     private readonly IDialogService _dialogs;
     private readonly IAppSettings _settings;
     private readonly IUnifiedJobService? _jobs;
+    private readonly ICrossLibrarySyncService? _crossLibrarySync;
+    private readonly IPlaylistExportService? _playlistExport;
+    private readonly IRedundancyAnalysisService? _redundancyAnalysis;
+    private readonly IItunesValidationService? _itunesValidation;
+    private readonly IArtworkNormalizationService? _artworkNormalization;
+    private readonly IDeviceSyncService? _deviceSync;
+    private readonly ISmartStorageService? _smartStorage;
+    private readonly ICarCardService? _carCard;
     private CancellationTokenSource? _cts;
 
     [ObservableProperty]
@@ -77,61 +86,170 @@ public partial class OperationsViewModel : ViewModelBase
 
     private OperationPurgePlan? _purgePlan;
     private UnifiedJobPlan? _jobPlan;
+    private CrossLibrarySyncPlan? _crossLibrarySyncPlan;
+    private PlaylistExportPlan? _playlistExportPlan;
+    private ArtworkNormalizationPlan? _artworkNormalizationPlan;
+    private DeviceSyncPlan? _deviceSyncPlan;
+    private SmartStoragePlan? _smartStoragePlan;
+    private CarCardPlan? _carCardPlan;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowJobApply))]
+    [NotifyPropertyChangedFor(nameof(ShowConfigurationPath))]
+    [NotifyPropertyChangedFor(nameof(ShowLibraryPath))]
+    [NotifyPropertyChangedFor(nameof(ShowPlaylistName))]
+    [NotifyPropertyChangedFor(nameof(ShowDevicePaths))]
+    [NotifyPropertyChangedFor(nameof(ShowDestinationPath))]
+    [NotifyPropertyChangedFor(nameof(ShowValidationPath))]
+    [NotifyPropertyChangedFor(nameof(ShowRemovalLimit))]
+    [NotifyPropertyChangedFor(nameof(ShowInitialize))]
+    [NotifyPropertyChangedFor(nameof(ShowClean))]
+    [NotifyPropertyChangedFor(nameof(ShowRebalance))]
+    [NotifyPropertyChangedFor(nameof(ShowFixErrors))]
+    [NotifyPropertyChangedFor(nameof(ShowRemap))]
     private UnifiedJobDescriptor? _selectedJob;
     [ObservableProperty]
-    private string _jobExecutableDirectory = AppContext.BaseDirectory;
-    [ObservableProperty]
-    private string _jobArguments = "";
-    [ObservableProperty]
-    private string _jobStatus = "Choose a job and enter its arguments, then Preview.";
+    private string _jobStatus = "Choose a job, supply any required arguments, then Preview.";
     [ObservableProperty]
     private string _jobOutput = "";
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowJobApply))]
     private bool _hasJobPreview;
+
+    [ObservableProperty] private string _jobConfigurationPath = "";
+    [ObservableProperty] private string _jobLibraryPath = "";
+    [ObservableProperty] private string _jobPlaylistName = "";
+    [ObservableProperty] private string _jobSourcePath = "";
+    [ObservableProperty] private string _jobDestinationPath = "";
+    [ObservableProperty] private string _jobValidationPath = "";
+    [ObservableProperty] private int _jobMaxRemovals;
+    [ObservableProperty] private bool _jobInitialize;
+    [ObservableProperty] private bool _jobClean;
+    [ObservableProperty] private bool _jobRebalance;
+    [ObservableProperty] private bool _jobFixErrors;
+    [ObservableProperty] private bool _jobRemap;
 
     public ObservableCollection<OperationRunViewModel> Runs { get; } = [];
     public ObservableCollection<OperationEntryNodeViewModel> RootNodes { get; } = [];
     public ObservableCollection<UnifiedJobHistoryItem> JobHistory { get; } = [];
     public IReadOnlyList<UnifiedJobDescriptor> JobCatalog => _jobs?.Catalog ?? [];
+    public bool ShowJobApply => HasJobPreview &&
+        SelectedJob?.ApplyMode == UnifiedJobApplyMode.ApplyFlag;
+    private bool JobIs(params string[] ids) => SelectedJob is not null && ids.Contains(SelectedJob.Id);
+    public bool ShowConfigurationPath => JobIs("playlist-sync", "cross-library-sync", "car-card");
+    public bool ShowLibraryPath => JobIs("playlist-sync", "cross-library-sync", "car-card",
+        "smart-storage", "artwork-normalization", "redundancies");
+    public bool ShowPlaylistName => JobIs("artwork-normalization");
+    public bool ShowDevicePaths => JobIs("device-sync");
+    public bool ShowDestinationPath => JobIs("smart-storage");
+    public bool ShowValidationPath => JobIs("itunes-validation");
+    public bool ShowRemovalLimit => JobIs("cross-library-sync", "device-sync", "smart-storage", "car-card");
+    public bool ShowInitialize => JobIs("smart-storage", "car-card");
+    public bool ShowClean => JobIs("playlist-sync");
+    public bool ShowRebalance => JobIs("car-card");
+    public bool ShowFixErrors => JobIs("car-card");
+    public bool ShowRemap => JobIs("device-sync");
 
     public OperationsViewModel(
         IOperationJournalService journals,
         IFileDialogService files,
         IDialogService dialogs,
         IAppSettings settings,
-        IUnifiedJobService? jobs = null)
+        IUnifiedJobService? jobs = null,
+        ICrossLibrarySyncService? crossLibrarySync = null,
+        IPlaylistExportService? playlistExport = null,
+        IRedundancyAnalysisService? redundancyAnalysis = null,
+        IItunesValidationService? itunesValidation = null,
+        IArtworkNormalizationService? artworkNormalization = null,
+        IDeviceSyncService? deviceSync = null,
+        ISmartStorageService? smartStorage = null,
+        ICarCardService? carCard = null)
     {
         _journals = journals;
         _files = files;
         _dialogs = dialogs;
         _settings = settings;
         _jobs = jobs;
+        _crossLibrarySync = crossLibrarySync;
+        _playlistExport = playlistExport;
+        _redundancyAnalysis = redundancyAnalysis;
+        _itunesValidation = itunesValidation;
+        _artworkNormalization = artworkNormalization;
+        _deviceSync = deviceSync;
+        _smartStorage = smartStorage;
+        _carCard = carCard;
         SearchRoot = settings.GetPreference(SearchRootPreference);
         if (int.TryParse(settings.GetPreference(RetentionDaysPreference), out int days))
             RetentionDays = Math.Clamp(days, 1, 3650);
-        JobExecutableDirectory = settings.GetPreference(JobDirectoryPreference) ?? AppContext.BaseDirectory;
         LoadJobHistory();
         SelectedJob = JobCatalog.FirstOrDefault();
+        _settings.ConfigurationChanged += (_, _) => PopulateDefaultJobInputs();
     }
 
     partial void OnSelectedJobChanged(UnifiedJobDescriptor? value)
     {
         InvalidateJobPreview();
-        if (value is not null && string.IsNullOrWhiteSpace(JobArguments) &&
-            value.Id is "playlist-sync" or "cross-library-sync" or "car-card" &&
-            !string.IsNullOrWhiteSpace(_settings.ConfigPath))
-            JobArguments = Quote(_settings.ConfigPath!);
+        PopulateDefaultJobInputs();
     }
 
-    partial void OnJobArgumentsChanged(string value) => InvalidateJobPreview();
-    partial void OnJobExecutableDirectoryChanged(string value)
+    private void PopulateDefaultJobInputs()
     {
-        _settings.SetPreference(JobDirectoryPreference, string.IsNullOrWhiteSpace(value) ? null : value);
-        InvalidateJobPreview();
+        if (ShowConfigurationPath && string.IsNullOrWhiteSpace(JobConfigurationPath) &&
+            !string.IsNullOrWhiteSpace(_settings.ConfigPath))
+            JobConfigurationPath = _settings.ConfigPath!;
     }
 
+    partial void OnJobConfigurationPathChanged(string value) => InvalidateJobPreview();
+    partial void OnJobLibraryPathChanged(string value) => InvalidateJobPreview();
+    partial void OnJobPlaylistNameChanged(string value) => InvalidateJobPreview();
+    partial void OnJobSourcePathChanged(string value) => InvalidateJobPreview();
+    partial void OnJobDestinationPathChanged(string value) => InvalidateJobPreview();
+    partial void OnJobValidationPathChanged(string value) => InvalidateJobPreview();
+    partial void OnJobMaxRemovalsChanged(int value) => InvalidateJobPreview();
+    partial void OnJobInitializeChanged(bool value) => InvalidateJobPreview();
+    partial void OnJobCleanChanged(bool value) => InvalidateJobPreview();
+    partial void OnJobRebalanceChanged(bool value) => InvalidateJobPreview();
+    partial void OnJobFixErrorsChanged(bool value) => InvalidateJobPreview();
+    partial void OnJobRemapChanged(bool value) => InvalidateJobPreview();
+
+    [RelayCommand]
+    private async Task BrowseJobConfigurationAsync()
+    {
+        string? path = await _files.PickOpenFileAsync("Select library configuration",
+            [new("XML configuration", ["*.xml"])]);
+        if (path is not null) JobConfigurationPath = path;
+    }
+
+    [RelayCommand]
+    private async Task BrowseJobLibraryAsync()
+    {
+        string? path = await _files.PickOpenFileAsync("Select iTunes library",
+            [new("iTunes library", ["*.itl"])]);
+        if (path is not null) JobLibraryPath = path;
+    }
+
+    [RelayCommand]
+    private async Task BrowseJobSourceAsync()
+    {
+        string? path = await _files.PickFolderAsync("Select device-sync source");
+        if (path is not null) JobSourcePath = path;
+    }
+
+    [RelayCommand]
+    private async Task BrowseJobDestinationAsync()
+    {
+        string? path = await _files.PickFolderAsync(SelectedJob?.Id == "device-sync"
+            ? "Select device-sync destination" : "Select smart-storage destination");
+        if (path is not null) JobDestinationPath = path;
+    }
+
+    [RelayCommand]
+    private async Task BrowseJobValidationAsync()
+    {
+        string? path = await _files.PickOpenFileAsync("Select iTunes library to validate",
+            [new("iTunes library", ["*.itl"])]);
+        if (path is not null) JobValidationPath = path;
+    }
     partial void OnSearchRootChanged(string? value) =>
         _settings.SetPreference(SearchRootPreference, string.IsNullOrWhiteSpace(value) ? null : value);
 
@@ -152,15 +270,7 @@ public partial class OperationsViewModel : ViewModelBase
             SearchRoot = path;
     }
 
-    [RelayCommand]
-    private async Task BrowseJobDirectoryAsync()
-    {
-        string? path = await _files.PickFolderAsync("Select directory containing MusicLibraryTools executables");
-        if (path is not null) JobExecutableDirectory = path;
-    }
-
-    private bool CanPreviewJob() => !IsBusy && _jobs is not null && SelectedJob is not null &&
-        !string.IsNullOrWhiteSpace(JobExecutableDirectory);
+    private bool CanPreviewJob() => !IsBusy && _jobs is not null && SelectedJob is not null;
 
     [RelayCommand(CanExecute = nameof(CanPreviewJob))]
     private async Task PreviewJobAsync()
@@ -170,12 +280,117 @@ public partial class OperationsViewModel : ViewModelBase
         IsBusy = true;
         _cts = new CancellationTokenSource();
         JobOutput = "";
-        JobStatus = $"Previewing {SelectedJob.Name}â€¦";
+        JobStatus = $"Previewing {SelectedJob.Name}…";
         try
         {
-            var progress = new Progress<string>(line => JobStatus = line);
-            _jobPlan = await _jobs.PreviewAsync(SelectedJob, JobExecutableDirectory,
-                JobArguments, progress, _cts.Token);
+            if (SelectedJob.Id == "cross-library-sync" && _crossLibrarySync is not null)
+            {
+                IReadOnlyList<string> parsed = [];
+                CrossLibrarySyncRequest request = new(Required(JobConfigurationPath,
+                    "A library configuration path is required."), Optional(JobLibraryPath),
+                    JobMaxRemovals);
+                var typedProgress = new Progress<OperationProgress>(value =>
+                    JobStatus = value.Message ?? value.Phase.ToString());
+                _crossLibrarySyncPlan = await _crossLibrarySync.PreviewAsync(
+                    request, typedProgress, _cts.Token);
+                int exitCode = _crossLibrarySyncPlan.CanApply ? 0 : 4;
+                _jobPlan = new(SelectedJob, parsed, exitCode,
+                    RenderCrossLibrarySyncPlan(_crossLibrarySyncPlan), DateTimeOffset.UtcNow);
+            }
+            else if (SelectedJob.Id == "playlist-sync" && _playlistExport is not null)
+            {
+                IReadOnlyList<string> parsed = [];
+                PlaylistExportRequest request = new(Required(JobConfigurationPath,
+                    "A library configuration path is required."), Optional(JobLibraryPath), JobClean);
+                var typedProgress = new Progress<OperationProgress>(value =>
+                    JobStatus = value.Message ?? value.Phase.ToString());
+                _playlistExportPlan = await _playlistExport.PreviewAsync(
+                    request, typedProgress, _cts.Token);
+                int exitCode = _playlistExportPlan.CanApply ? 0 : 4;
+                _jobPlan = new(SelectedJob, parsed, exitCode,
+                    RenderPlaylistExportPlan(_playlistExportPlan), DateTimeOffset.UtcNow);
+            }
+            else if (SelectedJob.Id == "artwork-normalization" && _artworkNormalization is not null)
+            {
+                IReadOnlyList<string> parsed = [];
+                ArtworkNormalizationRequest request = new(Required(JobPlaylistName,
+                    "An iTunes playlist name is required."), Optional(JobLibraryPath));
+                var typedProgress = new Progress<OperationProgress>(value =>
+                    JobStatus = value.Message ?? value.Phase.ToString());
+                _artworkNormalizationPlan = await _artworkNormalization.PreviewAsync(
+                    request, typedProgress, _cts.Token);
+                int exitCode = _artworkNormalizationPlan.CanApply ? 0 : 4;
+                _jobPlan = new(SelectedJob, parsed, exitCode,
+                    RenderArtworkNormalizationPlan(_artworkNormalizationPlan), DateTimeOffset.UtcNow);
+            }
+            else if (SelectedJob.Id == "device-sync" && _deviceSync is not null)
+            {
+                IReadOnlyList<string> parsed = [];
+                DeviceSyncRequest request = new(Required(JobSourcePath, "A source path is required."),
+                    Required(JobDestinationPath, "A destination path is required."), JobRemap,
+                    JobMaxRemovals);
+                var typedProgress = new Progress<OperationProgress>(value =>
+                    JobStatus = value.Message ?? value.Phase.ToString());
+                _deviceSyncPlan = await _deviceSync.PreviewAsync(request, typedProgress, _cts.Token);
+                int exitCode = _deviceSyncPlan.CanApply ? 0 : 4;
+                _jobPlan = new(SelectedJob, parsed, exitCode,
+                    RenderDeviceSyncPlan(_deviceSyncPlan), DateTimeOffset.UtcNow);
+            }
+            else if (SelectedJob.Id == "smart-storage" && _smartStorage is not null)
+            {
+                IReadOnlyList<string> parsed = [];
+                SmartStorageRequest request = new(Required(JobDestinationPath,
+                    "A smart-storage destination is required."), JobInitialize, JobMaxRemovals,
+                    Optional(JobLibraryPath));
+                var typedProgress = new Progress<OperationProgress>(value =>
+                    JobStatus = value.Message ?? value.Phase.ToString());
+                _smartStoragePlan = await _smartStorage.PreviewAsync(
+                    request, typedProgress, _cts.Token);
+                int exitCode = _smartStoragePlan.CanApply ? 0 : 4;
+                _jobPlan = new(SelectedJob, parsed, exitCode,
+                    RenderSmartStoragePlan(_smartStoragePlan), DateTimeOffset.UtcNow);
+            }
+            else if (SelectedJob.Id == "car-card" && _carCard is not null)
+            {
+                IReadOnlyList<string> parsed = [];
+                CarCardRequest request = new(Required(JobConfigurationPath,
+                    "A library configuration path is required."), JobRebalance, JobFixErrors,
+                    JobInitialize, JobMaxRemovals, Optional(JobLibraryPath));
+                var typedProgress = new Progress<OperationProgress>(value =>
+                    JobStatus = value.Message ?? value.Phase.ToString());
+                _carCardPlan = await _carCard.PreviewAsync(request, typedProgress, _cts.Token);
+                int exitCode = _carCardPlan.CanApply ? 0 : 4;
+                _jobPlan = new(SelectedJob, parsed, exitCode,
+                    RenderCarCardPlan(_carCardPlan), DateTimeOffset.UtcNow);
+            }
+            else if (SelectedJob.Id == "redundancies" && _redundancyAnalysis is not null)
+            {
+                IReadOnlyList<string> parsed = [];
+                string? library = Optional(JobLibraryPath);
+                var typedProgress = new Progress<OperationProgress>(value =>
+                    JobStatus = value.Message ?? value.Phase.ToString());
+                RedundancyAnalysisResult result = await _redundancyAnalysis.AnalyzeAsync(
+                    library, typedProgress, _cts.Token);
+                _jobPlan = new(SelectedJob, parsed, 0, RenderRedundancyResult(result),
+                    DateTimeOffset.UtcNow);
+            }
+            else if (SelectedJob.Id == "itunes-validation" && _itunesValidation is not null)
+            {
+                IReadOnlyList<string> parsed = [];
+                string validationPath = Required(JobValidationPath,
+                    "An iTunes Library.itl path is required.");
+                var typedProgress = new Progress<OperationProgress>(value =>
+                    JobStatus = value.Message ?? value.Phase.ToString());
+                ItunesValidationResult result = await _itunesValidation.ValidateAsync(
+                    validationPath, typedProgress, _cts.Token);
+                _jobPlan = new(SelectedJob, parsed, result.IsValid ? 0 : 4,
+                    RenderValidationResult(result), DateTimeOffset.UtcNow);
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"No typed service is available for '{SelectedJob.Name}'.");
+            }
             HasJobPreview = true;
             JobOutput = _jobPlan.PreviewOutput;
             JobStatus = _jobPlan.PreviewExitCode == 0
@@ -205,8 +420,79 @@ public partial class OperationsViewModel : ViewModelBase
         JobOutput = "";
         try
         {
-            var progress = new Progress<string>(line => JobStatus = line);
-            var result = await _jobs.ApplyAsync(plan, progress, _cts.Token);
+            UnifiedJobResult result;
+            if (plan.Job.Id == "cross-library-sync" && _crossLibrarySync is not null &&
+                _crossLibrarySyncPlan is { CanApply: true } typedPlan)
+            {
+                var clock = Stopwatch.StartNew();
+                var typedProgress = new Progress<OperationProgress>(value =>
+                    JobStatus = value.Message ?? value.Phase.ToString());
+                CrossLibrarySyncResult typedResult = await _crossLibrarySync.ApplyAsync(
+                    typedPlan, typedProgress, _cts.Token);
+                clock.Stop();
+                string output = RenderCrossLibrarySyncResult(typedResult);
+                result = new(0, output, clock.Elapsed);
+            }
+            else if (plan.Job.Id == "playlist-sync" && _playlistExport is not null &&
+                     _playlistExportPlan is { CanApply: true } playlistPlan)
+            {
+                var clock = Stopwatch.StartNew();
+                var typedProgress = new Progress<OperationProgress>(value =>
+                    JobStatus = value.Message ?? value.Phase.ToString());
+                PlaylistExportResult typedResult = await _playlistExport.ApplyAsync(
+                    playlistPlan, typedProgress, _cts.Token);
+                clock.Stop();
+                result = new(0, RenderPlaylistExportResult(typedResult), clock.Elapsed);
+            }
+            else if (plan.Job.Id == "artwork-normalization" && _artworkNormalization is not null &&
+                     _artworkNormalizationPlan is { CanApply: true } artworkPlan)
+            {
+                var clock = Stopwatch.StartNew();
+                var typedProgress = new Progress<OperationProgress>(value =>
+                    JobStatus = value.Message ?? value.Phase.ToString());
+                ArtworkNormalizationResult typedResult = await _artworkNormalization.ApplyAsync(
+                    artworkPlan, typedProgress, _cts.Token);
+                clock.Stop();
+                result = new(0, RenderArtworkNormalizationResult(typedResult), clock.Elapsed);
+            }
+            else if (plan.Job.Id == "device-sync" && _deviceSync is not null &&
+                     _deviceSyncPlan is { CanApply: true } devicePlan)
+            {
+                var clock = Stopwatch.StartNew();
+                var typedProgress = new Progress<OperationProgress>(value =>
+                    JobStatus = value.Message ?? value.Phase.ToString());
+                DeviceSyncResult typedResult = await _deviceSync.ApplyAsync(
+                    devicePlan, typedProgress, _cts.Token);
+                clock.Stop();
+                result = new(0, RenderDeviceSyncResult(typedResult), clock.Elapsed);
+            }
+            else if (plan.Job.Id == "smart-storage" && _smartStorage is not null &&
+                     _smartStoragePlan is { CanApply: true } smartPlan)
+            {
+                var clock = Stopwatch.StartNew();
+                var typedProgress = new Progress<OperationProgress>(value =>
+                    JobStatus = value.Message ?? value.Phase.ToString());
+                SmartStorageResult typedResult = await _smartStorage.ApplyAsync(
+                    smartPlan, typedProgress, _cts.Token);
+                clock.Stop();
+                result = new(0, RenderSmartStorageResult(typedResult), clock.Elapsed);
+            }
+            else if (plan.Job.Id == "car-card" && _carCard is not null &&
+                     _carCardPlan is { CanApply: true } carCardPlan)
+            {
+                var clock = Stopwatch.StartNew();
+                var typedProgress = new Progress<OperationProgress>(value =>
+                    JobStatus = value.Message ?? value.Phase.ToString());
+                CarCardResult typedResult = await _carCard.ApplyAsync(
+                    carCardPlan, typedProgress, _cts.Token);
+                clock.Stop();
+                result = new(0, RenderCarCardResult(typedResult), clock.Elapsed);
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"No typed apply service is available for '{plan.Job.Name}'.");
+            }
             JobOutput = result.Output;
             JobStatus = result.Success ? $"{plan.Job.Name} applied successfully."
                 : $"Apply exited with code {result.ExitCode}. Review the output and operation journal.";
@@ -222,6 +508,12 @@ public partial class OperationsViewModel : ViewModelBase
     private void InvalidateJobPreview(bool clearOutput = true)
     {
         _jobPlan = null;
+        _crossLibrarySyncPlan = null;
+        _playlistExportPlan = null;
+        _artworkNormalizationPlan = null;
+        _deviceSyncPlan = null;
+        _smartStoragePlan = null;
+        _carCardPlan = null;
         HasJobPreview = false;
         if (clearOutput) JobOutput = "";
         ApplyJobCommand.NotifyCanExecuteChanged();
@@ -246,7 +538,159 @@ public partial class OperationsViewModel : ViewModelBase
     }
 
     private static string TrimOutput(string output) => output.Length <= 20_000 ? output : output[^20_000..];
-    private static string Quote(string value) => value.Contains(' ') ? $"\"{value}\"" : value;
+    private static string Required(string value, string message) =>
+        string.IsNullOrWhiteSpace(value) ? throw new ArgumentException(message) : value.Trim();
+    private static string? Optional(string value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static string RenderCrossLibrarySyncPlan(CrossLibrarySyncPlan plan)
+    {
+        var output = new StringBuilder();
+        foreach (OperationIssue issue in plan.Issues)
+            output.AppendLine($"{issue.Severity,-11} {issue.Code}: {issue.Message}" +
+                (issue.Path is null ? "" : " [" + issue.Path + "]"));
+        foreach (FileMutationAction action in plan.MutationPlan.Actions)
+            output.AppendLine($"{action.Kind,-10} {action.SourcePath} -> {action.DestinationPath}");
+        output.AppendLine($"Plan: {plan.Files.Count:N0} desired, {plan.UnchangedCount:N0} unchanged, " +
+            $"{plan.StaleCount:N0} stale, {plan.MutationPlan.Actions.Count:N0} mutations.");
+        return output.ToString();
+    }
+
+    private static string RenderCrossLibrarySyncResult(CrossLibrarySyncResult result) =>
+        $"Applied: {result.Mutations.Copied:N0} copied, {result.Mutations.Replaced:N0} replaced, " +
+        $"{result.Mutations.Quarantined:N0} quarantined, {result.UnchangedCount:N0} unchanged." +
+        (result.Mutations.JournalPath is null ? "" :
+            Environment.NewLine + "Recovery journal: " + result.Mutations.JournalPath);
+
+    private static string RenderArtworkNormalizationPlan(ArtworkNormalizationPlan plan)
+    {
+        var output = new StringBuilder();
+        foreach (OperationIssue issue in plan.Issues)
+            output.AppendLine($"{issue.Severity,-11} {issue.Code}: {issue.Message}" +
+                (issue.Path is null ? "" : " [" + issue.Path + "]"));
+        foreach (ArtworkNormalizationItem item in plan.Items)
+            output.AppendLine($"REPLACE    {item.Path}: {item.Current.MimeType}, " +
+                $"{item.Current.Width}x{item.Current.Height}, {item.Current.Size:N0} bytes -> " +
+                $"image/jpeg, {item.Proposed.Width}x{item.Proposed.Height}, " +
+                $"{item.Proposed.Size:N0} bytes");
+        output.AppendLine($"Plan: {plan.ScannedTrackCount:N0} tracks inspected, " +
+            $"{plan.UnchangedCount:N0} already valid, {plan.Items.Count:N0} media files to replace.");
+        return output.ToString();
+    }
+
+    private static string RenderArtworkNormalizationResult(ArtworkNormalizationResult result) =>
+        $"Applied: {result.UpdatedFileCount:N0} media files and " +
+        $"{result.UpdatedTrackCount:N0} ITL track caches updated." +
+        (result.JournalPath is null ? "" :
+            Environment.NewLine + "Recovery journal: " + result.JournalPath);
+
+    private static string RenderDeviceSyncPlan(DeviceSyncPlan plan)
+    {
+        var output = new StringBuilder();
+        foreach (OperationIssue issue in plan.Issues)
+            output.AppendLine($"{issue.Severity,-11} {issue.Code}: {issue.Message}" +
+                (issue.Path is null ? "" : " [" + issue.Path + "]"));
+        foreach (DeviceSyncAction action in plan.Actions)
+            output.AppendLine($"{action.Kind,-20} {action.RelativePath}");
+        output.AppendLine($"Plan: {plan.Actions.Count:N0} action(s), " +
+            $"{plan.UnchangedFileCount:N0} unchanged file(s), {plan.RemovalCount:N0} removal(s).");
+        return output.ToString();
+    }
+
+    private static string RenderDeviceSyncResult(DeviceSyncResult result) =>
+        $"Applied: {result.CreatedDirectoryCount:N0} directories created, " +
+        $"{result.CopiedFileCount:N0} files copied, {result.ReplacedFileCount:N0} replaced, " +
+        $"{result.QuarantinedCount:N0} quarantined." +
+        (result.JournalPath is null ? "" :
+            Environment.NewLine + "Recovery journal: " + result.JournalPath);
+
+    private static string RenderSmartStoragePlan(SmartStoragePlan plan)
+    {
+        var output = new StringBuilder();
+        foreach (OperationIssue issue in plan.Issues)
+            output.AppendLine($"{issue.Severity,-11} {issue.Code}: {issue.Message}" +
+                (issue.Path is null ? "" : " [" + issue.Path + "]"));
+        foreach (FileMutationAction action in plan.MutationPlan.Actions)
+            output.AppendLine($"{action.Kind,-16} {action.DestinationPath}");
+        output.AppendLine($"Plan: {plan.LibraryTrackCount:N0} tracks, " +
+            $"{plan.InstalledTrackCount:N0} installs, {plan.UnchangedTrackCount:N0} unchanged, " +
+            $"{plan.StaleTrackCount:N0} stale, {plan.PlaylistCount:N0} playlists, " +
+            $"{plan.ArtworkCount:N0} artwork items.");
+        return output.ToString();
+    }
+
+    private static string RenderSmartStorageResult(SmartStorageResult result) =>
+        $"Applied {result.LibraryTrackCount:N0} tracks, {result.PlaylistCount:N0} playlists, " +
+        $"and {result.ArtworkCount:N0} artwork items: {result.Mutations.Copied:N0} created, " +
+        $"{result.Mutations.Replaced:N0} replaced, {result.Mutations.Quarantined:N0} quarantined." +
+        (result.Mutations.JournalPath is null ? "" :
+            Environment.NewLine + "Recovery journal: " + result.Mutations.JournalPath);
+
+    private static string RenderCarCardPlan(CarCardPlan plan)
+    {
+        var output = new StringBuilder();
+        foreach (OperationIssue issue in plan.Issues)
+            output.AppendLine($"{issue.Severity,-11} {issue.Code}: {issue.Message}" +
+                (issue.Path is null ? "" : " [" + issue.Path + "]"));
+        foreach (FileMutationAction action in plan.MutationPlan.Actions)
+            output.AppendLine($"{action.Kind,-16} {action.DestinationPath}");
+        output.AppendLine($"Plan: {plan.LibraryTrackCount:N0} tracks, " +
+            $"{plan.InstalledTrackCount:N0} installs, {plan.UnchangedTrackCount:N0} unchanged, " +
+            $"{plan.RemovedTrackCount:N0} removals, {plan.PlaylistCount:N0} playlists.");
+        return output.ToString();
+    }
+
+    private static string RenderCarCardResult(CarCardResult result) =>
+        $"Applied {result.LibraryTrackCount:N0} tracks and {result.PlaylistCount:N0} playlists: " +
+        $"{result.Mutations.Copied:N0} created, {result.Mutations.Replaced:N0} replaced, " +
+        $"{result.Mutations.Quarantined:N0} quarantined." +
+        (result.Mutations.JournalPath is null ? "" :
+            Environment.NewLine + "Recovery journal: " + result.Mutations.JournalPath);
+
+    private static string RenderPlaylistExportPlan(PlaylistExportPlan plan)
+    {
+        var output = new StringBuilder();
+        foreach (OperationIssue issue in plan.Issues)
+            output.AppendLine($"{issue.Severity,-11} {issue.Code}: {issue.Message}" +
+                (issue.Path is null ? "" : " [" + issue.Path + "]"));
+        foreach (PlaylistExportTargetPlan target in plan.Targets)
+            output.AppendLine($"Target {target.Target}: {target.Files.Count:N0} playlist(s), " +
+                $"{target.MissingTrackCount:N0} missing mapping(s).");
+        foreach (FileMutationAction action in plan.MutationPlan.Actions)
+            output.AppendLine($"{action.Kind,-16} {action.DestinationPath}");
+        return output.ToString();
+    }
+
+    private static string RenderPlaylistExportResult(PlaylistExportResult result) =>
+        $"Applied {result.PlaylistCount:N0} playlist(s): {result.Mutations.Copied:N0} created, " +
+        $"{result.Mutations.Replaced:N0} replaced, " +
+        $"{result.Mutations.Quarantined:N0} quarantined." +
+        (result.Mutations.JournalPath is null ? "" :
+            Environment.NewLine + "Recovery journal: " + result.Mutations.JournalPath);
+
+    private static string RenderRedundancyResult(RedundancyAnalysisResult result)
+    {
+        var output = new StringBuilder();
+        foreach (RedundancyGroup group in result.Groups)
+        {
+            foreach (RedundancyTrack track in group.Tracks)
+                output.AppendLine($"{track.Artist} - {track.Title} ({track.Album}) [{track.Path}]");
+            output.AppendLine();
+        }
+        output.AppendLine($"{result.Groups.Count:N0} redundancy group(s) among " +
+            $"{result.ScannedTrackCount:N0} local tracks.");
+        return output.ToString();
+    }
+
+    private static string RenderValidationResult(ItunesValidationResult result)
+    {
+        var output = new StringBuilder();
+        foreach (var issue in result.Issues)
+            output.AppendLine($"{issue.Severity,-7} {issue.Code,-30} {issue.Message}");
+        output.AppendLine($"validation: {result.ErrorCount} error(s), " +
+            $"{result.WarningCount} warning(s)");
+        return output.ToString();
+    }
 
     private bool CanRefresh() => !IsBusy;
 

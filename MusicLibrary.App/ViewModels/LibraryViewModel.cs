@@ -82,16 +82,20 @@ public partial class LibraryViewModel : ViewModelBase
             ReaderParallelism = Math.Clamp(parallelism, 1, 64);
         if (int.TryParse(settings.GetPreference(ScheduledScanMinutesPreference), out int minutes))
             ScheduledScanMinutes = Math.Clamp(minutes, 0, 1440);
-        // A newly-loaded config flips IsReady; re-evaluate the Index button's CanExecute and kick off
-        // an index automatically so the cache reflects the just-loaded library without a manual click.
+        // A newly-loaded config flips IsReady. The main window first restores cached browsing, then
+        // calls StartAutomaticIndexAsync after the UI has had an opportunity to render.
         _settings.ConfigurationChanged += (_, _) =>
         {
             IndexCommand.NotifyCanExecuteChanged();
             BenchmarkReadersCommand.NotifyCanExecuteChanged();
-            if (IndexCommand.CanExecute(null))
-                IndexCommand.Execute(null);
+            StatusText = "Loading the cached library; automatic indexing will follow.";
         };
     }
+
+    /// <summary>Start the deferred scan once startup has restored the responsive cached view.</summary>
+    public Task StartAutomaticIndexAsync() => IndexCommand.CanExecute(null)
+        ? IndexCommand.ExecuteAsync(null)
+        : Task.CompletedTask;
 
     partial void OnReaderParallelismChanged(int value)
     {

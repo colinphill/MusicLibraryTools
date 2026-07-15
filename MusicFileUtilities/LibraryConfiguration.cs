@@ -21,6 +21,25 @@ using System.Xml.Linq;
 namespace MusicLibraryTools
 {
 
+    /// <summary>
+    /// One configured index root. A root can participate in any number of logical comparison sets;
+    /// the empty collection means it is indexed but is not a member of a logical set.
+    /// </summary>
+    public sealed record LibraryIndexLocation(
+        string Target,
+        string Offset,
+        IReadOnlyList<int> Sets,
+        string Filter);
+
+    /// <summary>
+    /// One playlist export destination. Every destination must select at least one logical scan
+    /// set so an export can never accidentally use the entire indexed library.
+    /// </summary>
+    public sealed record LibraryPlaylistTarget(
+        string Target,
+        string Type,
+        IReadOnlyList<int> Sets);
+
     public enum MFEType { Directory, MusicFile, Other }
 
     public class MusicFileEnumerator : FileSystemEnumerator<(string Name, DateTime Modified, long Size, MFEType FileType)>, IEnumerable<(string Name, DateTime Modified, long Size, MFEType FileType)>
@@ -74,13 +93,65 @@ namespace MusicLibraryTools
         
         public string CrossSyncTargetLibraryPath => root_.Element("SyncTarget").Value;
 
-        public IEnumerable<(string Target, string Offset, int Set, string Filter)> IndexLocations => root_.Elements("IndexTarget").Select(e => (e.Value, e.Attributes("Offset").FirstOrDefault()?.Value, 
-            int.Parse(e.Attributes("Set").Select(a => a.Value).DefaultIfEmpty("0").FirstOrDefault()),
-            e.Attributes("Filter").Select(a => a.Value).DefaultIfEmpty(null).FirstOrDefault()));
+        public IEnumerable<LibraryIndexLocation> IndexLocations => root_.Elements("IndexTarget").Select(e =>
+            new LibraryIndexLocation(
+                e.Value,
+                e.Attributes("Offset").FirstOrDefault()?.Value,
+                ParseScanSets(e.Attributes("Set").FirstOrDefault()?.Value),
+                e.Attributes("Filter").FirstOrDefault()?.Value));
 
-        public string PlaylistTargetFolder => root_.Element("PlaylistTarget").Value;
+        /// <summary>Parse a comma, semicolon, or whitespace separated logical-set list.</summary>
+        public static IReadOnlyList<int> ParseScanSets(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return [];
 
-        public string PlaylistType => root_.Element("PlaylistType").Value;
+            var sets = value.Split([',', ';', ' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
+                .Select(part => int.TryParse(part, System.Globalization.NumberStyles.Integer,
+                    System.Globalization.CultureInfo.InvariantCulture, out int set) && set >= 0
+                    ? set
+                    : throw new InvalidDataException($"Invalid scan-set value '{part}'."))
+                .Distinct()
+                .OrderBy(set => set)
+                .ToArray();
+            return sets;
+        }
+
+        public IReadOnlyList<LibraryPlaylistTarget> PlaylistTargets
+        {
+            get
+            {
+                if (root_.Element("PlaylistType") is not null)
+                    throw new InvalidDataException(
+                        "<PlaylistType> is obsolete; add a Type attribute to each <PlaylistTarget>.");
+                return root_.Elements("PlaylistTarget").Select(ParsePlaylistTarget).ToArray();
+            }
+        }
+
+        private static LibraryPlaylistTarget ParsePlaylistTarget(XElement element)
+        {
+            string target = element.Value?.Trim();
+            if (string.IsNullOrWhiteSpace(target))
+                throw new InvalidDataException("<PlaylistTarget> cannot be empty.");
+
+            string type = ((string)element.Attribute("Type"))?.Trim().ToLowerInvariant();
+            if (type is not ("m3u" or "wpl"))
+                throw new InvalidDataException(
+                    $"PlaylistTarget '{target}' must have a Type attribute of 'm3u' or 'wpl'.");
+
+            var sets = ParseScanSets((string)element.Attribute("Set"));
+            if (sets.Count == 0)
+                throw new InvalidDataException(
+                    $"PlaylistTarget '{target}' must select at least one scan set with its Set attribute.");
+
+            return new LibraryPlaylistTarget(target, type, sets);
+        }
+
+        [Obsolete("Use PlaylistTargets; playlist export configurations may contain multiple targets.")]
+        public string PlaylistTargetFolder => PlaylistTargets.First().Target;
+
+        [Obsolete("Use PlaylistTargets; Type is now an attribute of each PlaylistTarget.")]
+        public string PlaylistType => PlaylistTargets.First().Type;
 
         public string DatabaseFile
         {

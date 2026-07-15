@@ -5,7 +5,6 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ITLTools\ITLTools.csproj" />
-    <ProjectReference Include="..\MusicFileUtilities\MusicFileUtilities.csproj" />
+    <ProjectReference Include="..\MusicLibrary.Core\MusicLibrary.Core.csproj" />
   </ItemGroup>
 </Project>

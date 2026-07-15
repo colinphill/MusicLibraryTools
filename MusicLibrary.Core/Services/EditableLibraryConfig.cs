@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using MusicLibraryTools;
 
 namespace MusicLibrary.Core.Services;
 
@@ -7,8 +8,16 @@ public sealed class IndexTargetEntry
 {
     public string Target { get; set; } = "";
     public string? Offset { get; set; }
-    public int Set { get; set; }
+    public List<int> Sets { get; set; } = [];
     public string? Filter { get; set; }
+}
+
+/// <summary>One repeatable playlist export destination.</summary>
+public sealed class PlaylistTargetEntry
+{
+    public string Target { get; set; } = "";
+    public string Type { get; set; } = "m3u";
+    public List<int> Sets { get; set; } = [];
 }
 
 /// <summary>
@@ -22,8 +31,7 @@ public sealed class EditableLibraryConfig
     public int LengthLimit { get; set; } = 255;
     public int DiscNumLengthLimit { get; set; } = 255;
     public string? SyncTarget { get; set; }
-    public string? PlaylistTarget { get; set; }
-    public string? PlaylistType { get; set; }
+    public List<PlaylistTargetEntry> PlaylistTargets { get; set; } = [];
     public List<IndexTargetEntry> IndexTargets { get; set; } = [];
 
     // Top-level elements we don't model explicitly, kept so a save doesn't drop them.
@@ -44,8 +52,6 @@ public sealed class EditableLibraryConfig
         {
             DatabaseFile = (string?)root.Element("DatabaseFile") ?? "cache.db",
             SyncTarget = (string?)root.Element("SyncTarget"),
-            PlaylistTarget = (string?)root.Element("PlaylistTarget"),
-            PlaylistType = (string?)root.Element("PlaylistType"),
         };
 
         if (int.TryParse((string?)root.Element("LengthLimit"), out var ll)) config.LengthLimit = ll;
@@ -57,8 +63,21 @@ public sealed class EditableLibraryConfig
             {
                 Target = e.Value,
                 Offset = (string?)e.Attribute("Offset"),
-                Set = int.TryParse((string?)e.Attribute("Set"), out var s) ? s : 0,
+                Sets = [.. LibraryConfiguration.ParseScanSets((string?)e.Attribute("Set"))],
                 Filter = (string?)e.Attribute("Filter"),
+            });
+        }
+
+        // Preserve the old standalone PlaylistType value in the editor so a legacy row is easy to
+        // migrate. Saving always writes Type and Set attributes on each PlaylistTarget.
+        string? legacyPlaylistType = (string?)root.Element("PlaylistType");
+        foreach (var e in root.Elements("PlaylistTarget"))
+        {
+            config.PlaylistTargets.Add(new PlaylistTargetEntry
+            {
+                Target = e.Value,
+                Type = (string?)e.Attribute("Type") ?? legacyPlaylistType ?? "m3u",
+                Sets = [.. LibraryConfiguration.ParseScanSets((string?)e.Attribute("Set"))],
             });
         }
 
@@ -81,14 +100,38 @@ public sealed class EditableLibraryConfig
                 continue;
             var e = new XElement("IndexTarget", t.Target);
             if (!string.IsNullOrEmpty(t.Offset)) e.SetAttributeValue("Offset", t.Offset);
-            if (t.Set != 0) e.SetAttributeValue("Set", t.Set);
+            if (t.Sets.Count > 0) e.SetAttributeValue("Set", string.Join(",", t.Sets.Distinct().Order()));
             if (!string.IsNullOrEmpty(t.Filter)) e.SetAttributeValue("Filter", t.Filter);
             root.Add(e);
         }
 
         if (!string.IsNullOrWhiteSpace(SyncTarget)) root.Add(new XElement("SyncTarget", SyncTarget));
-        if (!string.IsNullOrWhiteSpace(PlaylistTarget)) root.Add(new XElement("PlaylistTarget", PlaylistTarget));
-        if (!string.IsNullOrWhiteSpace(PlaylistType)) root.Add(new XElement("PlaylistType", PlaylistType));
+        var configuredSets = IndexTargets.SelectMany(indexTarget => indexTarget.Sets).ToHashSet();
+        foreach (var target in PlaylistTargets)
+        {
+            if (string.IsNullOrWhiteSpace(target.Target))
+                continue;
+            string type = target.Type?.Trim().ToLowerInvariant() ?? "";
+            if (type is not ("m3u" or "wpl"))
+                throw new InvalidDataException(
+                    $"Playlist target '{target.Target}' must have a type of 'm3u' or 'wpl'.");
+            if (target.Sets.Count == 0)
+                throw new InvalidDataException(
+                    $"Playlist target '{target.Target}' must select at least one scan set.");
+            if (target.Sets.Any(set => set < 0))
+                throw new InvalidDataException(
+                    $"Playlist target '{target.Target}' contains a negative scan set.");
+            int[] unknownSets = target.Sets.Where(set => !configuredSets.Contains(set)).ToArray();
+            if (unknownSets.Length > 0)
+                throw new InvalidDataException(
+                    $"Playlist target '{target.Target}' references scan set(s) with no IndexTarget: " +
+                    string.Join(",", unknownSets));
+
+            root.Add(new XElement("PlaylistTarget",
+                new XAttribute("Type", type),
+                new XAttribute("Set", string.Join(",", target.Sets.Distinct().Order())),
+                target.Target));
+        }
 
         root.Add(new XElement("LengthLimit", LengthLimit));
         root.Add(new XElement("DiscNumLengthLimit", DiscNumLengthLimit));

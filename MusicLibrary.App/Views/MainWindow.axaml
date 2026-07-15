@@ -110,12 +110,12 @@
                             ToolTip.Tip="Index library (Ctrl+I)"/>
                     <TextBlock Text="Readers" VerticalAlignment="Center" Classes="muted"/>
                     <NumericUpDown Value="{Binding Library.ReaderParallelism}" Minimum="1" Maximum="64"
-                                   Increment="1" Width="82" FormatString="0"
+                                   Increment="1" Width="112" FormatString="0"
                                    IsEnabled="{Binding !Library.IsBusy}"
                                    ToolTip.Tip="Global cap on concurrent metadata readers"/>
                     <TextBlock Text="Auto min" VerticalAlignment="Center" Classes="muted"/>
                     <NumericUpDown Value="{Binding Library.ScheduledScanMinutes}" Minimum="0" Maximum="1440"
-                                   Increment="5" Width="82" FormatString="0"
+                                   Increment="5" Width="112" FormatString="0"
                                    IsEnabled="{Binding !Library.IsBusy}"
                                    ToolTip.Tip="{Binding Library.ScheduledScanText}"/>
                     <Button Content="Benchmark readers" Command="{Binding Library.BenchmarkReadersCommand}"
@@ -478,11 +478,11 @@
 
                             <Grid Grid.Row="3">
                                 <!-- Findings (inconsistencies / lossy / cross-set) -->
-                                <ScrollViewer IsVisible="{Binding ShowFindings}">
-                                    <ItemsControl ItemsSource="{Binding FindingGroups}">
-                                        <ItemsControl.ItemTemplate>
+                                <ListBox IsVisible="{Binding ShowFindings}" ItemsSource="{Binding FindingGroups}"
+                                         Classes="analysisresults">
+                                        <ListBox.ItemTemplate>
                                             <DataTemplate x:DataType="vm:AnalysisProblemGroupViewModel">
-                                                <Expander Margin="0,0,0,8" HorizontalAlignment="Stretch" IsExpanded="True">
+                                                <Expander Margin="0,0,0,8" HorizontalAlignment="Stretch">
                                                     <Expander.Header>
                                                         <TextBlock>
                                                             <Run Text="{Binding Problem}" FontWeight="SemiBold"/>
@@ -494,7 +494,7 @@
                                                     <ItemsControl ItemsSource="{Binding Albums}" Margin="10,0,0,0">
                                                         <ItemsControl.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:AnalysisAlbumGroupViewModel">
-                                                                <Expander Margin="0,2" HorizontalAlignment="Stretch" IsExpanded="True">
+                                                                <Expander Margin="0,2" HorizontalAlignment="Stretch">
                                                                     <Expander.Header>
                                                                         <TextBlock>
                                                                             <Run Text="{Binding Album}" FontWeight="SemiBold"/>
@@ -530,14 +530,13 @@
                                                     </ItemsControl>
                                                 </Expander>
                                             </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </ScrollViewer>
+                                        </ListBox.ItemTemplate>
+                                </ListBox>
 
                                 <!-- Duplicates -->
-                                <ScrollViewer IsVisible="{Binding ShowDuplicates}">
-                                    <ItemsControl ItemsSource="{Binding Duplicates}">
-                                        <ItemsControl.ItemTemplate>
+                                <ListBox IsVisible="{Binding ShowDuplicates}" ItemsSource="{Binding Duplicates}"
+                                         Classes="analysisresults">
+                                        <ListBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:DuplicateGroup">
                                                 <Border Classes="card" Margin="0,0,0,10" Padding="12">
                                                     <StackPanel Spacing="2">
@@ -561,14 +560,13 @@
                                                     </StackPanel>
                                                 </Border>
                                             </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </ScrollViewer>
+                                        </ListBox.ItemTemplate>
+                                </ListBox>
 
                                 <!-- Similar artists (merge in place) -->
-                                <ScrollViewer IsVisible="{Binding ShowArtists}">
-                                    <ItemsControl ItemsSource="{Binding ArtistGroups}">
-                                        <ItemsControl.ItemTemplate>
+                                <ListBox IsVisible="{Binding ShowArtists}" ItemsSource="{Binding ArtistGroups}"
+                                         Classes="analysisresults">
+                                        <ListBox.ItemTemplate>
                                             <DataTemplate x:DataType="vm:ArtistGroupViewModel">
                                                 <Border Classes="card" Margin="0,0,0,10" Padding="12">
                                                     <StackPanel Spacing="8">
@@ -616,9 +614,8 @@
                                                     </StackPanel>
                                                 </Border>
                                             </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </ScrollViewer>
+                                        </ListBox.ItemTemplate>
+                                </ListBox>
 
                                 <!-- Explicit choices for ambiguous album-artist values -->
                                 <Grid IsVisible="{Binding ShowConflicts}" RowDefinitions="Auto,*">
@@ -628,9 +625,9 @@
                                         <TextBlock Text="Choose an existing canonical value for any album you want to repair. Nothing is selected automatically."
                                                    Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                     </WrapPanel>
-                                    <ScrollViewer Grid.Row="1">
-                                        <ItemsControl ItemsSource="{Binding ConflictGroups}">
-                                            <ItemsControl.ItemTemplate>
+                                    <ListBox Grid.Row="1" ItemsSource="{Binding ConflictGroups}"
+                                             Classes="analysisresults">
+                                            <ListBox.ItemTemplate>
                                                 <DataTemplate x:DataType="vm:AnalysisConflictGroupViewModel">
                                                     <Border Classes="card" Margin="0,0,0,8" Padding="12">
                                                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
@@ -690,9 +687,8 @@
                                                         </Grid>
                                                     </Border>
                                                 </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </ScrollViewer>
+                                            </ListBox.ItemTemplate>
+                                    </ListBox>
                                 </Grid>
 
                                 <!-- Previewable, stale-checked metadata repairs -->
@@ -703,9 +699,9 @@
                                         <TextBlock Text="Automatic repairs are unambiguous; explicit conflict choices use the same stale-checked preview."
                                                    Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                     </WrapPanel>
-                                    <ScrollViewer Grid.Row="1">
-                                        <ItemsControl ItemsSource="{Binding RepairItems}">
-                                            <ItemsControl.ItemTemplate>
+                                    <ListBox Grid.Row="1" ItemsSource="{Binding RepairItems}"
+                                             Classes="analysisresults">
+                                            <ListBox.ItemTemplate>
                                                 <DataTemplate x:DataType="vm:AnalysisRepairItemViewModel">
                                                     <Border Classes="card" Margin="0,0,0,8" Padding="12">
                                                         <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
@@ -732,14 +728,13 @@
                                                         </Grid>
                                                     </Border>
                                                 </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </ScrollViewer>
+                                            </ListBox.ItemTemplate>
+                                    </ListBox>
                                 </Grid>
 
                                 <!-- Cache-only album metadata matrices; highlighted cells violate an invariant. -->
                                 <ListBox IsVisible="{Binding ShowMatrix}" ItemsSource="{Binding Matrices}"
-                                         Background="Transparent"
+                                         Classes="analysisresults"
                                          ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                         <ListBox.Styles>
                                             <Style Selector="ListBoxItem">
@@ -748,7 +743,7 @@
                                         </ListBox.Styles>
                                         <ListBox.ItemTemplate>
                                             <DataTemplate x:DataType="models:AlbumMetadataMatrix">
-                                                <Expander Margin="0,0,0,10" HorizontalAlignment="Stretch" IsExpanded="True">
+                                                <Expander Margin="0,0,0,10" HorizontalAlignment="Stretch">
                                                     <Expander.Header>
                                                         <StackPanel>
                                                             <TextBlock FontWeight="SemiBold">
@@ -909,7 +904,7 @@
                                                 <TextBlock Grid.Column="0" Text="{Binding Severity}" FontWeight="SemiBold"/>
                                                 <TextBlock Grid.Column="1" TextWrapping="Wrap">
                                                     <Run Text="{Binding Name}" FontWeight="SemiBold"/>
-                                                    <Run Text="{Binding Message, StringFormat=' â€” {0}'}"/>
+                                                    <Run Text="{Binding Message, StringFormat=' — {0}'}"/>
                                                 </TextBlock>
                                             </Grid>
                                         </DataTemplate>
@@ -952,7 +947,7 @@
                                             <ProgressBar IsIndeterminate="True" Width="60" VerticalAlignment="Center"
                                                          IsVisible="{Binding IsHistoryBusy}"/>
                                             <TextBlock Classes="muted" VerticalAlignment="Center">
-                                                <Run Text="{Binding History.Count, StringFormat='{}{0} runs Â· '}"/>
+                                                <Run Text="{Binding History.Count, StringFormat='{}{0} runs · '}"/>
                                                 <Run Text="{Binding InterruptedHistoryCount, StringFormat='{}{0} interrupted'}"/>
                                             </TextBlock>
                                         </WrapPanel>
@@ -1038,8 +1033,10 @@
                             <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,10">
                                 <Expander Header="Run library jobs" HorizontalAlignment="Stretch">
                                     <StackPanel Spacing="7" Margin="8,6,0,6">
-                                        <Grid ColumnDefinitions="220,*,Auto" ColumnSpacing="8">
-                                            <ComboBox Grid.Column="0" ItemsSource="{Binding JobCatalog}"
+                                        <Grid ColumnDefinitions="145,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="5">
+                                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Job" Classes="muted"
+                                                       VerticalAlignment="Center"/>
+                                            <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding JobCatalog}"
                                                       SelectedItem="{Binding SelectedJob}">
                                                 <ComboBox.ItemTemplate>
                                                     <DataTemplate x:DataType="models:UnifiedJobDescriptor">
@@ -1047,16 +1044,95 @@
                                                     </DataTemplate>
                                                 </ComboBox.ItemTemplate>
                                             </ComboBox>
-                                            <TextBox Grid.Column="1" Text="{Binding JobExecutableDirectory}"
-                                                     PlaceholderText="Directory containing tool executables"/>
-                                            <Button Grid.Column="2" Content="Browseâ€¦" Command="{Binding BrowseJobDirectoryCommand}"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedJob.Description}"
+                                                       Classes="muted" TextWrapping="Wrap"/>
                                         </Grid>
-                                        <TextBlock Text="{Binding SelectedJob.Description}" Classes="muted" TextWrapping="Wrap"/>
-                                        <TextBox Text="{Binding JobArguments}" PlaceholderText="Arguments (quote paths containing spaces)"/>
+                                        <Grid ColumnDefinitions="145,*,Auto" ColumnSpacing="8"
+                                              IsVisible="{Binding ShowConfigurationPath}">
+                                            <TextBlock Grid.Column="0" Text="Configuration" Classes="muted"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBox Grid.Column="1" Text="{Binding JobConfigurationPath}"
+                                                     PlaceholderText="LibraryConfiguration.xml"/>
+                                            <Button Grid.Column="2" Content="Browse..."
+                                                    Command="{Binding BrowseJobConfigurationCommand}"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="145,*,Auto" ColumnSpacing="8"
+                                              IsVisible="{Binding ShowLibraryPath}">
+                                            <TextBlock Grid.Column="0" Text="iTunes library" Classes="muted"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBox Grid.Column="1" Text="{Binding JobLibraryPath}"
+                                                     PlaceholderText="Optional; uses the default library when empty"/>
+                                            <Button Grid.Column="2" Content="Browse..."
+                                                    Command="{Binding BrowseJobLibraryCommand}"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="145,*" ColumnSpacing="8"
+                                              IsVisible="{Binding ShowPlaylistName}">
+                                            <TextBlock Grid.Column="0" Text="Playlist" Classes="muted"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBox Grid.Column="1" Text="{Binding JobPlaylistName}"
+                                                     PlaceholderText="iTunes playlist name"/>
+                                        </Grid>
+                                        <StackPanel Spacing="7" IsVisible="{Binding ShowDevicePaths}">
+                                            <Grid ColumnDefinitions="145,*,Auto" ColumnSpacing="8">
+                                                <TextBlock Grid.Column="0" Text="Source" Classes="muted"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBox Grid.Column="1" Text="{Binding JobSourcePath}"
+                                                         PlaceholderText="Local folder or adb: path"/>
+                                                <Button Grid.Column="2" Content="Browse..."
+                                                        Command="{Binding BrowseJobSourceCommand}"/>
+                                            </Grid>
+                                            <Grid ColumnDefinitions="145,*,Auto" ColumnSpacing="8">
+                                                <TextBlock Grid.Column="0" Text="Destination" Classes="muted"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBox Grid.Column="1" Text="{Binding JobDestinationPath}"
+                                                         PlaceholderText="Local folder or adb: path"/>
+                                                <Button Grid.Column="2" Content="Browse..."
+                                                        Command="{Binding BrowseJobDestinationCommand}"/>
+                                            </Grid>
+                                        </StackPanel>
+                                        <Grid ColumnDefinitions="145,*,Auto" ColumnSpacing="8"
+                                              IsVisible="{Binding ShowDestinationPath}">
+                                            <TextBlock Grid.Column="0" Text="Destination" Classes="muted"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBox Grid.Column="1" Text="{Binding JobDestinationPath}"
+                                                     PlaceholderText="Smart-storage folder"/>
+                                            <Button Grid.Column="2" Content="Browse..."
+                                                    Command="{Binding BrowseJobDestinationCommand}"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="145,*,Auto" ColumnSpacing="8"
+                                              IsVisible="{Binding ShowValidationPath}">
+                                            <TextBlock Grid.Column="0" Text="Library to validate" Classes="muted"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBox Grid.Column="1" Text="{Binding JobValidationPath}"
+                                                     PlaceholderText="iTunes Library.itl"/>
+                                            <Button Grid.Column="2" Content="Browse..."
+                                                    Command="{Binding BrowseJobValidationCommand}"/>
+                                        </Grid>
+                                        <WrapPanel Classes="toolbarwrap" Margin="145,0,-8,0">
+                                            <CheckBox Content="Initialize target" IsChecked="{Binding JobInitialize}"
+                                                      IsVisible="{Binding ShowInitialize}"/>
+                                            <CheckBox Content="Clean obsolete playlists" IsChecked="{Binding JobClean}"
+                                                      IsVisible="{Binding ShowClean}"/>
+                                            <CheckBox Content="Rebalance paths" IsChecked="{Binding JobRebalance}"
+                                                      IsVisible="{Binding ShowRebalance}"/>
+                                            <CheckBox Content="Repair missing target files" IsChecked="{Binding JobFixErrors}"
+                                                      IsVisible="{Binding ShowFixErrors}"/>
+                                            <CheckBox Content="Remap paths" IsChecked="{Binding JobRemap}"
+                                                      IsVisible="{Binding ShowRemap}"/>
+                                            <StackPanel Orientation="Horizontal" Spacing="7"
+                                                        IsVisible="{Binding ShowRemovalLimit}">
+                                                <TextBlock Text="Maximum removals" Classes="muted"
+                                                           VerticalAlignment="Center"/>
+                                                <NumericUpDown Value="{Binding JobMaxRemovals}" Minimum="0"
+                                                               Maximum="10000000" Increment="1" Width="150"
+                                                               FormatString="0"
+                                                               ToolTip.Tip="0 blocks any removal"/>
+                                            </StackPanel>
+                                        </WrapPanel>
                                         <WrapPanel Classes="toolbarwrap" Margin="0,0,-8,0">
                                             <Button Content="Preview job" Command="{Binding PreviewJobCommand}"/>
                                             <Button Content="Apply job" Classes="accent" Command="{Binding ApplyJobCommand}"
-                                                    IsVisible="{Binding HasJobPreview}"/>
+                                                    IsVisible="{Binding ShowJobApply}"/>
                                             <TextBlock Text="{Binding JobStatus}" Classes="muted" VerticalAlignment="Center"
                                                        TextWrapping="Wrap"/>
                                         </WrapPanel>
@@ -1094,7 +1170,7 @@
                                     <Button Content="Scan operations" Classes="accent" Command="{Binding RefreshCommand}"/>
                                     <TextBlock Text="Keep runs (days)" VerticalAlignment="Center" Classes="muted"/>
                                     <NumericUpDown Value="{Binding RetentionDays}" Minimum="1" Maximum="3650"
-                                                   Increment="1" Width="92" FormatString="0"
+                                                   Increment="1" Width="120" FormatString="0"
                                                    ToolTip.Tip="Interrupted operations are always protected"/>
                                     <Button Content="Preview purge" Command="{Binding PreviewPurgeCommand}"
                                             ToolTip.Tip="Inventory old completed/quarantine runs without deleting anything"/>

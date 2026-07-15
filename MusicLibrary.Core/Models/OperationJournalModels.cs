@@ -59,7 +59,17 @@ public sealed record OperationPathSnapshot(
     bool Exists,
     bool IsDirectory,
     long Length,
-    DateTime LastWriteTimeUtc);
+    DateTime LastWriteTimeUtc)
+{
+    /// <summary>
+    /// Optional normalized path for plans that validate snapshots independently of a containing
+    /// action. Older restore plans keep the path on their action and leave this unset.
+    /// </summary>
+    public string? Path { get; init; }
+
+    public static OperationPathSnapshot Missing(string path) =>
+        new(false, false, 0, DateTime.MinValue) { Path = System.IO.Path.GetFullPath(path) };
+}
 
 public sealed record OperationRestoreAction(
     string SourcePath,

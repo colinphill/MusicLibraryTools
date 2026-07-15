@@ -221,7 +221,7 @@ public partial class IngestViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasPreflightChecks));
         try
         {
-            StatusText = "Checking ingest configuration and external toolsâ€¦";
+            StatusText = "Checking ingest configuration and external tools…";
             var result = await _preflight.CheckAsync(
                 new IngestRequest(SourceDirectory!, ConfigurationPath!), _cts.Token);
             foreach (var check in result.Checks)
@@ -258,7 +258,7 @@ public partial class IngestViewModel : ViewModelBase
         IsHistoryBusy = true;
         try
         {
-            HistoryStatus = $"Searching {roots.Count:N0} source root(s) for ingest journalsâ€¦";
+            HistoryStatus = $"Searching {roots.Count:N0} source root(s) for ingest journals…";
             var result = await _journals.DiscoverAsync(roots);
             History.Clear();
             foreach (var run in result.Runs.Where(run => run.Kind == OperationJournalKind.Ingest).Take(50))
@@ -509,7 +509,7 @@ public sealed class IngestHistoryItemViewModel(OperationJournalSummary summary)
     public string State => Summary.State switch
     {
         OperationJournalState.Completed => "Completed",
-        OperationJournalState.Interrupted => "Interrupted â€” recovery available",
+        OperationJournalState.Interrupted => "Interrupted — recovery available",
         OperationJournalState.RolledBack => "Rolled back",
         _ => "Quarantine present",
     };
@@ -550,7 +550,7 @@ public partial class IngestFileItemViewModel : ViewModelBase
 
     public static IngestFileItemViewModel ForOutput(IngestOutputPlan output) => new(
         new IngestFileSummary(output.SourcePath, $"{output.Kind} output",
-            $"Destination â†’ {output.DestinationPath}"), isOutput: true);
+            $"Destination → {output.DestinationPath}"), isOutput: true);
 
     public void ResetProgress()
     {

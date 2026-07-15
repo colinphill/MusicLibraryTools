@@ -257,6 +257,86 @@ namespace MusicFileUtilities.Tests
         }
 
         [Fact]
+        public void ScanRootsSupportMultipleLogicalSetsOrNoLogicalSet()
+        {
+            string directory = Path.Combine(Path.GetTempPath(), "mlt_idx_" + Guid.NewGuid().ToString("N"));
+            string firstRoot = Path.Combine(directory, "first");
+            string unassignedRoot = Path.Combine(directory, "unassigned");
+            Directory.CreateDirectory(firstRoot);
+            Directory.CreateDirectory(unassignedRoot);
+            string firstFile = Path.Combine(firstRoot, "first.flac");
+            string unassignedFile = Path.Combine(unassignedRoot, "unassigned.flac");
+            File.Copy(MediaFixtures.Path_("sample.flac"), firstFile);
+            File.Copy(MediaFixtures.Path_("sample.flac"), unassignedFile);
+            string dbPath = Path.Combine(directory, "cache.db");
+
+            try
+            {
+                using var db = MetadataDatabase.OpenDatabase("sqlite:" + dbPath);
+                db.IndexFiles([
+                    new ScanRootDefinition(firstRoot, [1, 2]),
+                    new ScanRootDefinition(unassignedRoot, []),
+                ], ct: TestContext.Current.CancellationToken);
+
+                var roots = db.GetScanRoots();
+                Assert.Equal([1, 2], roots.Single(root => root.Path == firstRoot).Sets);
+                Assert.Empty(roots.Single(root => root.Path == unassignedRoot).Sets);
+                Assert.Equal([1, 2], db.GetScanRootHealth().Single(root => root.Root == firstRoot).Sets);
+                Assert.True(db.BuildCacheForSets([1]).FileCache.ContainsKey(firstFile));
+                Assert.False(db.BuildCacheForSets([1]).FileCache.ContainsKey(unassignedFile));
+                Assert.True(db.BuildCache([unassignedRoot]).FileCache.ContainsKey(unassignedFile));
+
+                var second = db.IndexFiles([
+                    new ScanRootDefinition(firstRoot, [2, 3]),
+                    new ScanRootDefinition(unassignedRoot, []),
+                ], ct: TestContext.Current.CancellationToken);
+
+                Assert.Equal(2, second.Unchanged);
+                Assert.Empty(db.BuildCacheForSets([1]).FileCache);
+                Assert.True(db.BuildCacheForSets([2]).FileCache.ContainsKey(firstFile));
+                Assert.True(db.BuildCacheForSets([3]).FileCache.ContainsKey(firstFile));
+                Assert.Equal([2, 3], db.GetScanRoots().Single(root => root.Path == firstRoot).Sets);
+            }
+            finally
+            {
+                SqliteConnection.ClearAllPools();
+                try { Directory.Delete(directory, true); } catch { }
+            }
+        }
+
+        [Fact]
+        public void ExistingDatabaseMigrationAddsLogicalSetMembershipTable()
+        {
+            string directory = Path.Combine(Path.GetTempPath(), "mlt_idx_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            string dbPath = Path.Combine(directory, "cache.db");
+            try
+            {
+                using (MetadataDatabase.OpenDatabase("sqlite:" + dbPath)) { }
+                using (var connection = new SqliteConnection(
+                           new SqliteConnectionStringBuilder { DataSource = dbPath }.ConnectionString))
+                {
+                    connection.Open();
+                    using var command = connection.CreateCommand();
+                    command.CommandText = "DROP TABLE ScanSetMemberships";
+                    command.ExecuteNonQuery();
+                }
+
+                using (MetadataDatabase.OpenDatabase("sqlite:" + dbPath)) { }
+                using var migrated = new SqliteConnection(
+                    new SqliteConnectionStringBuilder { DataSource = dbPath }.ConnectionString);
+                migrated.Open();
+                Assert.Equal(1L, ScalarLong(migrated,
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='ScanSetMemberships'"));
+            }
+            finally
+            {
+                SqliteConnection.ClearAllPools();
+                try { Directory.Delete(directory, true); } catch { }
+            }
+        }
+
+        [Fact]
         public async Task WriterFailureUnblocksBoundedProducer()
         {
             string scanDir = Path.Combine(Path.GetTempPath(), "mlt_idx_" + Guid.NewGuid().ToString("N"));

@@ -46,7 +46,7 @@ namespace AnalyzeMetadata
             LogConsole.WriteLine("Indexing Files...");
 
             using MetadataDatabase db = MetadataDatabase.OpenDatabase(config.DatabaseFile); // TBD Dispose
-            db.IndexFiles(config.IndexLocations.Select(l => l.Target).Distinct());
+            db.IndexFiles(config.IndexLocations.Select(l => new ScanRootDefinition(l.Target, l.Sets)));
 
             var cache = db.BuildCache(config.IndexLocations.Select(l => l.Target).Distinct());
             LogConsole.WriteLine("Total Parsed Files: " + cache.FileCache.Count);
@@ -111,7 +111,7 @@ namespace AnalyzeMetadata
 
             if (args.Skip(1).Any(s => s.ToLower() == "checksets"))
             {
-                var caches = config.IndexLocations.Select(l => l.Set).Distinct().OrderBy(s => s).Select(s => (Set : s, Cache : db.BuildCache(config.IndexLocations.Where(l => l.Set == s).Select(l => (l.Target, l.Filter?.Split(",;|".ToCharArray(), StringSplitOptions.RemoveEmptyEntries)))))).ToList();
+                var caches = config.IndexLocations.SelectMany(l => l.Sets).Distinct().OrderBy(s => s).Select(s => (Set : s, Cache : db.BuildCache(config.IndexLocations.Where(l => l.Sets.Contains(s)).Select(l => (l.Target, l.Filter?.Split(",;|".ToCharArray(), StringSplitOptions.RemoveEmptyEntries)))))).ToList();
                 foreach (var tcache in caches)
                 {
                     Console.WriteLine("Checking Cache Set: " + tcache.Set + " (" + tcache.Cache.FileCache.Count + ")");

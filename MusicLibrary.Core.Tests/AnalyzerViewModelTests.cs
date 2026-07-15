@@ -157,7 +157,7 @@ public sealed class AnalyzerViewModelTests
 
         group.SelectedOption = group.Options[1];
         Assert.True(viewModel.PreviewConflictRepairsCommand.CanExecute(null));
-        viewModel.PreviewConflictRepairsCommand.Execute(null);
+        await viewModel.PreviewConflictRepairsCommand.ExecuteAsync(null);
 
         Assert.Equal(2, viewModel.Runs.Count);
         Assert.Equal(AnalysisResultView.Repairs, viewModel.ActiveView);
@@ -168,6 +168,24 @@ public sealed class AnalyzerViewModelTests
 
         viewModel.SelectedRun = conflictRun;
         Assert.Same(group.Options[1], Assert.Single(viewModel.ConflictGroups).SelectedOption);
+    }
+
+    [Fact]
+    public async Task Analyzer_SelectedResultUsesTheRetainedSnapshotDirectly()
+    {
+        var viewModel = Create([
+            Track("one.mp3", "AA", "Album", CodecType.Lossy, "One", 1),
+            Track("two.mp3", "AA", "Album", CodecType.Lossy, "Two", 2),
+        ]);
+
+        await viewModel.RunLossyCommand.ExecuteAsync(null);
+
+        Assert.Same(viewModel.SelectedRun!.FindingGroups, viewModel.FindingGroups);
+        Assert.Empty(viewModel.Duplicates);
+        Assert.Empty(viewModel.ArtistGroups);
+        Assert.Empty(viewModel.ConflictGroups);
+        Assert.Empty(viewModel.RepairItems);
+        Assert.Empty(viewModel.Matrices);
     }
 
     [Fact]
