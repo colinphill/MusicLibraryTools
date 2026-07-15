@@ -185,6 +185,19 @@ public partial class OperationsViewModel : ViewModelBase
         }
     }
 
+    public async Task OpenRunFromHistoryAsync(OperationJournalSummary summary)
+    {
+        ArgumentNullException.ThrowIfNull(summary);
+        var run = Runs.FirstOrDefault(item =>
+            StringComparer.OrdinalIgnoreCase.Equals(item.RunPath, summary.RunPath));
+        if (run is null)
+        {
+            run = new OperationRunViewModel(summary);
+            Runs.Insert(0, run);
+        }
+        await OpenRunAsync(run);
+    }
+
     [RelayCommand]
     private void CloseBrowser()
     {

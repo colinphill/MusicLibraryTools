@@ -930,6 +930,42 @@
                                               SelectedItem="{Binding SelectedPreviewFilter}"
                                               MinWidth="130" VerticalAlignment="Center"/>
                                 </Grid>
+                                <Expander Header="Ingest history and recovery" HorizontalAlignment="Stretch">
+                                    <StackPanel Spacing="6" Margin="8,4,0,4">
+                                        <WrapPanel Classes="toolbarwrap" Margin="0,0,-8,0">
+                                            <Button Content="Refresh history" Command="{Binding RefreshHistoryCommand}"/>
+                                            <ProgressBar IsIndeterminate="True" Width="60" VerticalAlignment="Center"
+                                                         IsVisible="{Binding IsHistoryBusy}"/>
+                                            <TextBlock Classes="muted" VerticalAlignment="Center">
+                                                <Run Text="{Binding History.Count, StringFormat='{}{0} runs Â· '}"/>
+                                                <Run Text="{Binding InterruptedHistoryCount, StringFormat='{}{0} interrupted'}"/>
+                                            </TextBlock>
+                                        </WrapPanel>
+                                        <TextBlock Text="{Binding HistoryStatus}" Classes="muted" TextWrapping="Wrap"/>
+                                        <ScrollViewer MaxHeight="220" IsVisible="{Binding HasHistory}">
+                                            <ItemsControl ItemsSource="{Binding History}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:IngestHistoryItemViewModel">
+                                                        <Grid ColumnDefinitions="Auto,150,*,Auto" ColumnSpacing="10" Margin="0,3">
+                                                            <TextBlock Grid.Column="0" Text="{Binding Created}" Classes="caption"
+                                                                       VerticalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="1" Text="{Binding State}" TextWrapping="Wrap"
+                                                                       FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                            <StackPanel Grid.Column="2">
+                                                                <TextBlock Text="{Binding AffectedItems}"/>
+                                                                <TextBlock Text="{Binding RunPath}" Classes="caption"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                            </StackPanel>
+                                                            <Button Grid.Column="3" Content="Browse / recover"
+                                                                    Command="{Binding $parent[TabItem].((vm:IngestViewModel)DataContext).OpenHistoryCommand}"
+                                                                    CommandParameter="{Binding}"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </ScrollViewer>
+                                    </StackPanel>
+                                </Expander>
                             </StackPanel>
                             <ScrollViewer Grid.Row="1">
                                 <ItemsControl ItemsSource="{Binding Files}">

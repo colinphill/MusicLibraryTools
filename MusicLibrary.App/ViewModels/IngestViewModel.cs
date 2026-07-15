@@ -24,6 +24,7 @@ public partial class IngestViewModel : ViewModelBase
     private readonly IAppSettings _settings;
     private readonly ILibraryService _library;
     private readonly IIngestPreflightService? _preflight;
+    private readonly IOperationJournalService? _journals;
     private CancellationTokenSource? _cts;
     private IngestPlan? _plan;
     private bool _applyingPreset;
@@ -68,21 +69,32 @@ public partial class IngestViewModel : ViewModelBase
     private int _conflictCount;
     [ObservableProperty]
     private int _cleanupCount;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RefreshHistoryCommand))]
+    private bool _isHistoryBusy;
+    [ObservableProperty]
+    private string _historyStatus = "Refresh to discover persistent ingest journals and interrupted runs.";
 
     public ObservableCollection<IngestFileItemViewModel> Files { get; } = [];
     public ObservableCollection<IngestConflict> Conflicts { get; } = [];
     public ObservableCollection<IngestPreset> Presets { get; } = [];
     public ObservableCollection<string> RecentSources { get; } = [];
     public ObservableCollection<IngestPreflightCheck> PreflightChecks { get; } = [];
+    public ObservableCollection<IngestHistoryItemViewModel> History { get; } = [];
     public IReadOnlyList<IngestPreviewFilter> PreviewFilters { get; } = Enum.GetValues<IngestPreviewFilter>();
     public bool HasPreflightChecks => PreflightChecks.Count > 0;
+    public bool HasHistory => History.Count > 0;
+    public int InterruptedHistoryCount => History.Count(item => item.IsInterrupted);
     public event Action? IngestCompleted;
+    public event Action<OperationJournalSummary>? RecoveryRequested;
 
     public IngestViewModel(IIngestMusicService service, IFileDialogService files, IDialogService dialogs,
-        IAppSettings settings, ILibraryService library, IIngestPreflightService? preflight = null)
+        IAppSettings settings, ILibraryService library, IIngestPreflightService? preflight = null,
+        IOperationJournalService? journals = null)
     {
         _service = service; _files = files; _dialogs = dialogs; _settings = settings; _library = library;
         _preflight = preflight;
+        _journals = journals;
         LoadPresets();
         LoadRecentSources();
         SourceDirectory = settings.GetPreference(SourcePreference);
@@ -226,6 +238,50 @@ public partial class IngestViewModel : ViewModelBase
         finally { FinishBusy(); }
     }
 
+    private bool CanRefreshHistory() => _journals is not null && !IsHistoryBusy;
+
+    [RelayCommand(CanExecute = nameof(CanRefreshHistory))]
+    private async Task RefreshHistoryAsync()
+    {
+        if (_journals is null)
+            return;
+        var roots = RecentSources.Append(SourceDirectory)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(path => path!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (roots.Count == 0)
+        {
+            HistoryStatus = "Choose a source folder before refreshing ingest history.";
+            return;
+        }
+        IsHistoryBusy = true;
+        try
+        {
+            HistoryStatus = $"Searching {roots.Count:N0} source root(s) for ingest journalsâ€¦";
+            var result = await _journals.DiscoverAsync(roots);
+            History.Clear();
+            foreach (var run in result.Runs.Where(run => run.Kind == OperationJournalKind.Ingest).Take(50))
+                History.Add(new IngestHistoryItemViewModel(run));
+            OnPropertyChanged(nameof(HasHistory));
+            OnPropertyChanged(nameof(InterruptedHistoryCount));
+            HistoryStatus = $"{History.Count:N0} ingest run(s); {InterruptedHistoryCount:N0} interrupted"
+                + (result.Warnings.Count == 0 ? "." : $"; {result.Warnings.Count:N0} root warning(s).");
+        }
+        catch (Exception ex)
+        {
+            HistoryStatus = $"Ingest history refresh failed: {ex.Message}";
+        }
+        finally { IsHistoryBusy = false; }
+    }
+
+    [RelayCommand]
+    private void OpenHistory(IngestHistoryItemViewModel? item)
+    {
+        if (item is not null)
+            RecoveryRequested?.Invoke(item.Summary);
+    }
+
     private bool CanSavePreset() => !string.IsNullOrWhiteSpace(PresetName) &&
         !string.IsNullOrWhiteSpace(SourceDirectory) && !string.IsNullOrWhiteSpace(ConfigurationPath);
 
@@ -360,6 +416,8 @@ public partial class IngestViewModel : ViewModelBase
                 if (!result.Cancelled) IngestCompleted?.Invoke();
             }
             HasApplicablePreview = false; _plan = null;
+            if (!result.Cancelled && _journals is not null)
+                await RefreshHistoryAsync();
         }
         catch (OperationCanceledException) { StatusText = "Cancelled; any album already committed remains safely journaled."; }
         catch (Exception ex) { StatusText = $"Apply failed: {ex.Message}"; }
@@ -442,6 +500,23 @@ public partial class IngestViewModel : ViewModelBase
         _settings.SetPreference(RecentSourcesPreference, JsonSerializer.Serialize(RecentSources));
         SelectedRecentSource = fullPath;
     }
+}
+
+public sealed class IngestHistoryItemViewModel(OperationJournalSummary summary)
+{
+    public OperationJournalSummary Summary { get; } = summary;
+    public string Created => Summary.CreatedAtUtc.ToLocalTime().ToString("g");
+    public string State => Summary.State switch
+    {
+        OperationJournalState.Completed => "Completed",
+        OperationJournalState.Interrupted => "Interrupted â€” recovery available",
+        OperationJournalState.RolledBack => "Rolled back",
+        _ => "Quarantine present",
+    };
+    public bool IsInterrupted => Summary.State == OperationJournalState.Interrupted;
+    public string AffectedItems => Summary.AffectedItemCount is int count
+        ? $"{count:N0} item(s)" : "Open for item details";
+    public string RunPath => Summary.RunPath;
 }
 
 public partial class IngestFileItemViewModel : ViewModelBase

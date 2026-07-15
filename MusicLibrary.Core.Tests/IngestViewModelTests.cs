@@ -10,6 +10,43 @@ namespace MusicLibrary.Core.Tests;
 public sealed class IngestViewModelTests
 {
     [Fact]
+    public async Task HistoryFiltersIngestRunsAndRaisesRecoveryNavigation()
+    {
+        string source = Directory.CreateDirectory(Path.Combine(
+            Path.GetTempPath(), $"ingest-history-{Guid.NewGuid():N}")).FullName;
+        string state = Path.Combine(source, "settings.json");
+        try
+        {
+            var interrupted = new OperationJournalSummary("IngestMusic", OperationJournalKind.Ingest,
+                OperationJournalState.Interrupted, Path.Combine(source, "run"), "journal.tsv",
+                DateTimeOffset.UtcNow, 2);
+            var organize = new OperationJournalSummary("OrganizeFiles", OperationJournalKind.Organize,
+                OperationJournalState.Completed, Path.Combine(source, "organize"), "journal.tsv",
+                DateTimeOffset.UtcNow, 1);
+            var journals = new StubJournals([interrupted, organize]);
+            var viewModel = new IngestViewModel(new StubIngest(), new StubFiles(), new StubDialogs(),
+                new AppSettings(state), new StubLibrary(), journals: journals)
+            {
+                SourceDirectory = source,
+            };
+
+            await viewModel.RefreshHistoryCommand.ExecuteAsync(null);
+
+            var item = Assert.Single(viewModel.History);
+            Assert.True(item.IsInterrupted);
+            Assert.Equal(1, viewModel.InterruptedHistoryCount);
+            OperationJournalSummary? requested = null;
+            viewModel.RecoveryRequested += run => requested = run;
+            viewModel.OpenHistoryCommand.Execute(item);
+            Assert.Same(interrupted, requested);
+        }
+        finally
+        {
+            Directory.Delete(source, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task PreviewBuildsSummaryCountsAndCategoryFilters()
     {
         var track = new IngestTrackPlan
@@ -125,6 +162,26 @@ public sealed class IngestViewModelTests
                 new("Configuration", IngestPreflightSeverity.Pass, "Ready"),
             ]));
         }
+    }
+
+    private sealed class StubJournals(IReadOnlyList<OperationJournalSummary> runs) : IOperationJournalService
+    {
+        public Task<OperationJournalDiscoveryResult> DiscoverAsync(IReadOnlyList<string> searchRoots,
+            CancellationToken ct = default) => Task.FromResult(new OperationJournalDiscoveryResult(runs, []));
+        public Task<OperationBrowseResult> BrowseAsync(OperationJournalSummary run,
+            CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<OperationRestorePlan> PreviewRestoreAsync(OperationJournalSummary run,
+            IReadOnlyList<OperationFileEntry> entries, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+        public Task<OperationRestoreResult> ApplyRestoreAsync(OperationRestorePlan plan,
+            IProgress<int>? progress = null, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+        public Task<OperationPurgePlan> PreviewPurgeAsync(IReadOnlyList<OperationJournalSummary> runs,
+            int retentionDays, DateTimeOffset? nowUtc = null, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+        public Task<OperationPurgeResult> ApplyPurgeAsync(OperationPurgePlan plan,
+            IProgress<int>? progress = null, CancellationToken ct = default) =>
+            throw new NotSupportedException();
     }
 
     private sealed class StubIngest(IngestPlan? plan = null) : IIngestMusicService

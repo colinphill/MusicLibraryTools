@@ -50,7 +50,7 @@ avoid eagerly reading artwork or media data that is already represented in the m
 
 - [x] Named presets, recent source folders, drag-and-drop, and configuration preflight.
 - [x] Summary cards and filtering for albums, outputs, conflicts, and cleanup items.
-- [ ] Persistent ingest history plus interrupted-run recovery.
+- [x] Persistent ingest history plus interrupted-run recovery.
 
 ## 7. Artwork health
 

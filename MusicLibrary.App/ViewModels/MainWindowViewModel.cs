@@ -73,6 +73,11 @@ public partial class MainWindowViewModel : ViewModelBase
         // Organize already re-syncs the cache to the moves; refresh the grid to show the new locations.
         Organize.MovesApplied += () => _ = Table.ReloadAsync();
         Ingest.IngestCompleted += () => _ = Table.ReloadAsync();
+        Ingest.RecoveryRequested += run =>
+        {
+            SelectedTabIndex = 7;
+            _ = Operations.OpenRunFromHistoryAsync(run);
+        };
         Editor.TagsChanged += async _ =>
         {
             await Table.ReloadAsync();
