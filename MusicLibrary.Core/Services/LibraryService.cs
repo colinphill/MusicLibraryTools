@@ -70,7 +70,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
             var db = GetDatabase(context);
             return await Task.Run(() =>
             {
-                var cache = db.BuildCache(roots);
+                var cache = db.BuildCache(roots, buildSecondaryIndexes: false);
                 return Project(cache, grouping, ct);
             }, ct);
         }
@@ -90,7 +90,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
             var db = GetDatabase(context);
             return await Task.Run(() =>
             {
-                var cache = db.BuildCache(roots);
+                var cache = db.BuildCache(roots, buildSecondaryIndexes: false);
                 var records = new List<TrackRecord>(cache.FileCache.Count);
                 foreach (var (path, e) in cache.FileCache)
                 {
@@ -152,7 +152,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                     foreach (var location in locations.Where(l => l.Set == setId))
                     {
                         var extensions = ParseExtensionFilter(location.Filter);
-                        foreach (var (path, entry) in db.BuildCache([location.Target]).FileCache)
+                        foreach (var (path, entry) in db.BuildCache([location.Target], buildSecondaryIndexes: false).FileCache)
                         {
                             ct.ThrowIfCancellationRequested();
                             if (extensions is null || extensions.Contains(Path.GetExtension(path)))
@@ -281,7 +281,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                 var moves = new List<PlannedMove>();
                 foreach (var baseDir in baseDirs)
                 {
-                    var cache = db.BuildCache([baseDir]);
+                    var cache = db.BuildCache([baseDir], buildSecondaryIndexes: false);
                     // Track destinations already claimed in this preview so two sources don't plan
                     // the same target (the console tool relied on File.Move happening between checks).
                     var claimed = new HashSet<string>(FilePathComparer);

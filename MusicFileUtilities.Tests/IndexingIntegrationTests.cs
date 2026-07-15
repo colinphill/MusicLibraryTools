@@ -45,6 +45,13 @@ namespace MusicFileUtilities.Tests
                         Assert.Equal("TestArtist", e.Artist);
                         Assert.Equal("TestAlbum", e.Album);
                     });
+                    Assert.NotEmpty(cache.AlbumCache);
+
+                    var leanCache = db.BuildCache(new[] { scanDir }, buildSecondaryIndexes: false);
+                    Assert.Equal(3, leanCache.FileCache.Count);
+                    Assert.Empty(leanCache.AlbumCache);
+                    Assert.Empty(leanCache.ArtistCache);
+                    Assert.Empty(leanCache.AlbumArtistCache);
 
                     // Re-indexing the untouched files marks them all unchanged.
                     var res2 = db.IndexFiles(new[] { scanDir }, ct: TestContext.Current.CancellationToken);
@@ -58,6 +65,7 @@ namespace MusicFileUtilities.Tests
                 Assert.Equal(3L, ScalarLong(conn, "SELECT COUNT(*) FROM Files"));
                 Assert.True(ScalarLong(conn, "SELECT COUNT(*) FROM Metadata") > 0);
                 Assert.True(ScalarLong(conn, "SELECT COUNT(*) FROM Metadata WHERE Value = 'TestTitle'") >= 3);
+                Assert.Equal(0L, ScalarLong(conn, "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'KnownMetadata'"));
             }
             finally
             {

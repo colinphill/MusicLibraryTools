@@ -167,7 +167,7 @@ The artwork tools read the library selected by `--library <file.itl>`, then `ITU
 standard iTunes library location. Examples:
 
 ```
-DumpArtworkSizes "My Playlist" --library "C:\Music\iTunes Library.itl" --output ArtworkSizes.dat
+DumpArtworkSizes "My Playlist" --library "C:\Music\iTunes Library.itl" --output ArtworkSizes.dat --parallelism 16
 FixArtwork "My Playlist" --library "C:\Music\iTunes Library.itl"
 FixArtwork "My Playlist" --library "C:\Music\iTunes Library.itl" --apply
 ```
@@ -176,6 +176,11 @@ FixArtwork "My Playlist" --library "C:\Music\iTunes Library.itl" --apply
 downloaded artwork cache is reported as missing. Apply mode requires iTunes to be closed, verifies
 each rewritten media file, updates the corresponding `.itl` size/date/artwork caches, validates the
 library, and retains the previous `.itl` as `<library>.bak`.
+
+`DumpArtworkSizes` inspects distinct albums concurrently (16 readers by default); use
+`--parallelism` to tune the global cap for a network share. `ArtworkScrubber` likewise accepts a
+fourth positional parallelism argument and processes different folders concurrently while retaining
+the input order within each folder.
 
 ```
 dotnet test MusicFileUtilities.Tests/MusicFileUtilities.Tests.csproj

@@ -213,8 +213,6 @@ namespace MetadataCaching
             "CREATE TABLE MetadataKeys (ID BIGINT IDENTITY PRIMARY KEY, \"Key\" NVARCHAR(512) UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE Metadata (ID BIGINT IDENTITY PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, KeyID BIGINT REFERENCES MetadataKeys (ID) NOT NULL, Value NVARCHAR(MAX) NOT NULL);\r\n" +
             "CREATE TABLE ImageMetadata (ID BIGINT IDENTITY PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, ImageID BIGINT REFERENCES Images (ID) NOT NULL, Description NVARCHAR(MAX) NOT NULL, Category NVARCHAR(MAX) NOT NULL);\r\n" +
-            "CREATE TABLE KnownMetadata (ID BIGINT IDENTITY PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, Field NVARCHAR(128) NOT NULL, Value NVARCHAR(MAX) NOT NULL);\r\n" +
-            "CREATE INDEX KnownMetadataFileIDIndex ON KnownMetadata (FileID ASC);\r\n" +
             "CREATE INDEX AlbumsAlbumArtistIDIndex ON Albums (AlbumArtistID ASC);\r\n" +
             "CREATE INDEX AlbumsScanSetIDIndex ON Albums (ScanSetID ASC);\r\n" +
             "CREATE INDEX ImageMetadataFileIDIndex ON ImageMetadata (FileID ASC);\r\n" +
@@ -324,13 +322,11 @@ namespace MetadataCaching
             pcomm.CommandText = "PRAGMA foreign_keys = on;\r\nPRAGMA journal_mode = WAL;\r\npragma synchronous = normal;\r\n";
             pcomm.ExecuteNonQuery();
 
-            // Migration (safe on both new and existing DBs): the KnownMetadata table stores the
-            // normalized GetKnownMetadata() (TagFields) per file so the app can read the strongly-typed
-            // known fields straight from the cache instead of re-parsing the file.
+            // Metadata already stores the TagFields name/value projection used by the app. Older
+            // builds duplicated every row into KnownMetadata; discard that redundant table. SQLite
+            // can reuse the freed pages without forcing an expensive VACUUM during startup.
             using var mcomm = res.conn_.CreateCommand();
-            mcomm.CommandText =
-                "CREATE TABLE IF NOT EXISTS KnownMetadata (ID INTEGER PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, Field TEXT NOT NULL, Value TEXT NOT NULL);\r\n" +
-                "CREATE INDEX IF NOT EXISTS KnownMetadataFileIDIndex ON KnownMetadata (FileID ASC);\r\n";
+            mcomm.CommandText = "DROP TABLE IF EXISTS KnownMetadata;";
             mcomm.ExecuteNonQuery();
 
             return res;
@@ -408,7 +404,9 @@ namespace MetadataCaching
         }
 #endif
 
-        public MetadataCache BuildCache(IEnumerable<(string Path, string[] Extensions)> paths)
+        public MetadataCache BuildCache(
+            IEnumerable<(string Path, string[] Extensions)> paths,
+            bool buildSecondaryIndexes = true)
         {
             var dbsets = new List<(string Path, long ID)>();
             using (var setscomm = conn_.CreateCommand())
@@ -419,7 +417,7 @@ namespace MetadataCaching
                     dbsets.Add((reader.GetString("Path"), reader.GetInt64("ID")));
             }
 
-            MetadataCache cache = new MetadataCache();
+            MetadataCache cache = new MetadataCache(buildSecondaryIndexes);
 
             foreach (var path in paths)
             {
@@ -464,9 +462,11 @@ namespace MetadataCaching
             return extension;
         }
 
-        public MetadataCache BuildCache(IEnumerable<string> paths)
+        public MetadataCache BuildCache(IEnumerable<string> paths, bool buildSecondaryIndexes = true)
         {
-            return BuildCache(paths.Select<string, (string Path, string[] Extensions)>(p => (p, null)));
+            return BuildCache(
+                paths.Select<string, (string Path, string[] Extensions)>(p => (p, null)),
+                buildSecondaryIndexes);
         }
 
         public (int Added, int Modified, int Removed, int Unchanged) IndexFiles(IEnumerable<string> paths, bool deletemissingsets = false, IProgress<IndexProgress> progress = null, CancellationToken ct = default)
@@ -723,7 +723,6 @@ namespace MetadataCaching
             int FilesPerBatch = IndexFilesPerBatch;
             int MetaRowsPerInsert = IndexMetaRowsPerInsert;
             var metabuffer = new List<(long FileID, long KeyID, string Value)>();
-            var knownmetabuffer = new List<(long FileID, string Field, string Value)>();
 
             DbTransaction trans = null;
             try
@@ -731,11 +730,11 @@ namespace MetadataCaching
                 trans = conn_.BeginTransaction();
                 using DbCommand delcomm = trans.CreateCommand(), filecomm = trans.CreateCommand(), metacomm = trans.CreateCommand(), imagecomm = trans.CreateCommand(),
                     keycomm = trans.CreateCommand(), artistcomm = trans.CreateCommand(), albumartistcomm = trans.CreateCommand(), albumcomm = trans.CreateCommand(),
-                    trackcomm = trans.CreateCommand(), imagemetacomm = trans.CreateCommand(), metabatchcomm = trans.CreateCommand(), knownmetabatchcomm = trans.CreateCommand();
+                    trackcomm = trans.CreateCommand(), imagemetacomm = trans.CreateCommand(), metabatchcomm = trans.CreateCommand();
 
                 // After a batch commit, every command bound to the old transaction must be
                 // re-pointed at the new one.
-                DbCommand[] batchcommands = { delcomm, filecomm, metacomm, imagecomm, keycomm, artistcomm, albumartistcomm, albumcomm, trackcomm, imagemetacomm, metabatchcomm, knownmetabatchcomm };
+                DbCommand[] batchcommands = { delcomm, filecomm, metacomm, imagecomm, keycomm, artistcomm, albumartistcomm, albumcomm, trackcomm, imagemetacomm, metabatchcomm };
 
                     artistcomm.CommandText = "INSERT INTO Artists (Name) VALUES (@Name);\r\n" + lastidsql_;
                     var artistparam = artistcomm.Parameters.Add("@Name", DbType.String);
@@ -766,7 +765,6 @@ namespace MetadataCaching
                     metadatafields.Columns.Add("Value", typeof(string));
 
                     delcomm.CommandText = "DELETE FROM Metadata WHERE FileID = @ID;\r\n" +
-                        "DELETE FROM KnownMetadata WHERE FileID = @ID;\r\n" +
                         "DELETE FROM ImageMetadata WHERE FileID = @ID;\r\n" +
                         "DELETE FROM Files WHERE ID = @ID;\r\n" +
                         "DELETE FROM Tracks WHERE ID = @ID";
@@ -821,7 +819,6 @@ namespace MetadataCaching
                     // Reusable full-size multi-row metadata INSERT (item 7). A short remainder
                     // chunk is built on demand inside FlushMetadata.
                     var metabatchparams = new DbParameter[MetaRowsPerInsert * 3];
-                    var knownmetabatchparams = new DbParameter[MetaRowsPerInsert * 3];
                     {
                         var sb = new StringBuilder("INSERT INTO Metadata (FileID, KeyID, Value) VALUES ");
                         for (int i = 0; i < MetaRowsPerInsert; i++)
@@ -833,18 +830,6 @@ namespace MetadataCaching
                             var vp = metabatchcomm.CreateParameter(); vp.ParameterName = "@v" + i; metabatchcomm.Parameters.Add(vp); metabatchparams[i * 3 + 2] = vp;
                         }
                         metabatchcomm.CommandText = sb.ToString();
-                    }
-                    {
-                        var sb = new StringBuilder("INSERT INTO KnownMetadata (FileID, Field, Value) VALUES ");
-                        for (int i = 0; i < MetaRowsPerInsert; i++)
-                        {
-                            if (i > 0) sb.Append(',');
-                            sb.Append("(@kf").Append(i).Append(",@field").Append(i).Append(",@kv").Append(i).Append(')');
-                            var fp = knownmetabatchcomm.CreateParameter(); fp.ParameterName = "@kf" + i; knownmetabatchcomm.Parameters.Add(fp); knownmetabatchparams[i * 3] = fp;
-                            var kp = knownmetabatchcomm.CreateParameter(); kp.ParameterName = "@field" + i; knownmetabatchcomm.Parameters.Add(kp); knownmetabatchparams[i * 3 + 1] = kp;
-                            var vp = knownmetabatchcomm.CreateParameter(); vp.ParameterName = "@kv" + i; knownmetabatchcomm.Parameters.Add(vp); knownmetabatchparams[i * 3 + 2] = vp;
-                        }
-                        knownmetabatchcomm.CommandText = sb.ToString();
                     }
 
                     void FlushMetadata()
@@ -883,44 +868,6 @@ namespace MetadataCaching
                             start += count;
                         }
                         metabuffer.Clear();
-                    }
-
-                    void FlushKnownMetadata()
-                    {
-                        int total = knownmetabuffer.Count, start = 0;
-                        while (start < total)
-                        {
-                            int count = Math.Min(MetaRowsPerInsert, total - start);
-                            if (count == MetaRowsPerInsert)
-                            {
-                                for (int i = 0; i < count; i++)
-                                {
-                                    var row = knownmetabuffer[start + i];
-                                    knownmetabatchparams[i * 3].Value = row.FileID;
-                                    knownmetabatchparams[i * 3 + 1].Value = row.Field;
-                                    knownmetabatchparams[i * 3 + 2].Value = row.Value;
-                                }
-                                knownmetabatchcomm.ExecuteNonQuery();
-                            }
-                            else
-                            {
-                                using var cmd = trans.CreateCommand();
-                                var sb = new StringBuilder("INSERT INTO KnownMetadata (FileID, Field, Value) VALUES ");
-                                for (int i = 0; i < count; i++)
-                                {
-                                    if (i > 0) sb.Append(',');
-                                    sb.Append("(@f").Append(i).Append(",@field").Append(i).Append(",@v").Append(i).Append(')');
-                                    var row = knownmetabuffer[start + i];
-                                    var fp = cmd.CreateParameter(); fp.ParameterName = "@f" + i; fp.Value = row.FileID; cmd.Parameters.Add(fp);
-                                    var kp = cmd.CreateParameter(); kp.ParameterName = "@field" + i; kp.Value = row.Field; cmd.Parameters.Add(kp);
-                                    var vp = cmd.CreateParameter(); vp.ParameterName = "@v" + i; vp.Value = row.Value; cmd.Parameters.Add(vp);
-                                }
-                                cmd.CommandText = sb.ToString();
-                                cmd.ExecuteNonQuery();
-                            }
-                            start += count;
-                        }
-                        knownmetabuffer.Clear();
                     }
 
                     int filesInBatch = 0;
@@ -1030,14 +977,6 @@ namespace MetadataCaching
                         if (metabuffer.Count >= 4000)
                             FlushMetadata();
 
-                        // Normalized known fields (TagFields), so the app can read strongly-typed
-                        // metadata straight from the cache without re-parsing the file.
-                        foreach (var kv in knownMetadata)
-                            knownmetabuffer.Add((fileid, kv.Key.ToString(), kv.Value ?? ""));
-
-                        if (knownmetabuffer.Count >= 4000)
-                            FlushKnownMetadata();
-
                         foreach (var image in mp.GetImageMetadata())
                         {
                             string hash = image.Hash;
@@ -1060,7 +999,6 @@ namespace MetadataCaching
                         if (++filesInBatch >= FilesPerBatch)
                         {
                             FlushMetadata();
-                            FlushKnownMetadata();
                             trans.Commit();
                             trans.Dispose();
                             trans = conn_.BeginTransaction();
@@ -1071,7 +1009,6 @@ namespace MetadataCaching
                     }
 
                     FlushMetadata();
-                    FlushKnownMetadata();
 #if SQLSERVER
                     if ((metacomm is SqlCommand) && (metadatafields.Rows.Count != 0))
                     {
@@ -1239,7 +1176,7 @@ namespace MetadataCaching
 
             using (var cmd = conn_.CreateCommand())
             {
-                cmd.CommandText = "SELECT Field, Value FROM KnownMetadata WHERE FileID = @id";
+                cmd.CommandText = "SELECT k.\"Key\", m.Value FROM Metadata m JOIN MetadataKeys k ON m.KeyID = k.ID WHERE m.FileID = @id";
                 cmd.Parameters.Add("@id", DbType.Int64).Value = fid;
                 using var reader = cmd.ExecuteReader();
                 while (reader.Read())
@@ -1384,7 +1321,6 @@ namespace MetadataCaching
             {
                 using var del = trans.CreateCommand();
                 del.CommandText = "DELETE FROM Metadata WHERE FileID = @id;\r\n" +
-                    "DELETE FROM KnownMetadata WHERE FileID = @id;\r\n" +
                     "DELETE FROM ImageMetadata WHERE FileID = @id;\r\n" +
                     "DELETE FROM Files WHERE ID = @id;\r\n" +
                     "DELETE FROM Tracks WHERE ID = @id";
@@ -1508,7 +1444,6 @@ namespace MetadataCaching
                     {
                         using var del = trans.CreateCommand();
                         del.CommandText = "DELETE FROM Metadata WHERE FileID = @id;\r\n" +
-                            "DELETE FROM KnownMetadata WHERE FileID = @id;\r\n" +
                             "DELETE FROM ImageMetadata WHERE FileID = @id;\r\n" +
                             "DELETE FROM Files WHERE ID = @id;\r\n" +
                             "DELETE FROM Tracks WHERE ID = @id";
@@ -1569,21 +1504,6 @@ namespace MetadataCaching
                         keyParam.Value = GetOrInsert(trans, "MetadataKeys", "\"Key\"", kv.Key.ToString());
                         valueParam.Value = kv.Value ?? "";
                         mc.ExecuteNonQuery();
-                    }
-                }
-
-                using (var kc = trans.CreateCommand())
-                {
-                    kc.CommandText = "INSERT INTO KnownMetadata (FileID, Field, Value) VALUES (@f, @field, @v)";
-                    var fileParam = kc.Parameters.Add("@f", DbType.Int64);
-                    var fieldParam = kc.Parameters.Add("@field", DbType.String);
-                    var valueParam = kc.Parameters.Add("@v", DbType.String);
-                    fileParam.Value = fileId;
-                    foreach (var kv in knownMetadata)
-                    {
-                        fieldParam.Value = kv.Key.ToString();
-                        valueParam.Value = kv.Value ?? "";
-                        kc.ExecuteNonQuery();
                     }
                 }
 

@@ -130,6 +130,7 @@ namespace MetadataCaching
         private Dictionary<string, List<string>> _albumcache = new Dictionary<string, List<string>>();
         private Dictionary<string, List<string>> _albumartistcache = new Dictionary<string, List<string>>();
         private Dictionary<string, List<string>> _artistcache = new Dictionary<string, List<string>>();
+        private readonly bool _buildSecondaryIndexes;
 
         public Dictionary<string, MetadataCacheEntry> FileCache
         {
@@ -155,9 +156,9 @@ namespace MetadataCaching
             }
         }
 
-        public MetadataCache()
+        public MetadataCache(bool buildSecondaryIndexes = true)
         {
-
+            _buildSecondaryIndexes = buildSecondaryIndexes;
         }
 
         public Dictionary<string, List<string>> AlbumArtistCache
@@ -215,6 +216,8 @@ namespace MetadataCaching
         internal void AddDBCacheEntry(string file, MetadataCacheEntry ce)
         {
             _filecache.Add(file, ce);
+            if (!_buildSecondaryIndexes)
+                return;
             if (!_albumcache.ContainsKey(ce.Album))
                 _albumcache.Add(ce.Album, new List<string>());
             if (!_artistcache.ContainsKey(ce.Artist))

@@ -51,9 +51,8 @@ public sealed class MediaFileService : IMediaFileService
     {
         var e = d.Entry;
 
-        // Known fields come from the cache. A database indexed before the KnownMetadata table existed
-        // won't have them yet, so fall back to synthesizing the standard fields from the structured
-        // columns (a full re-index restores the complete set, including Genre/Composer/etc.).
+        // Known fields come from the canonical Metadata rows. Very old or partially built caches may
+        // lack them, so fall back to synthesizing standard fields from the structured columns.
         var knownFields = d.KnownFields
             .Select(kv => new TagFieldValue(ParseField(kv.Key), kv.Value))
             .Where(f => f.Field != TagFields.NullField)
@@ -107,8 +106,7 @@ public sealed class MediaFileService : IMediaFileService
     private static TagFields ParseField(string name)
         => Enum.TryParse<TagFields>(name, out var field) ? field : TagFields.NullField;
 
-    // Reconstruct the standard known fields from the structured cache columns, for databases that
-    // predate the KnownMetadata table.
+    // Reconstruct standard fields from the structured cache columns for old/partial databases.
     private static List<TagFieldValue> SynthesizeStandardFields(MetadataCacheEntry e)
     {
         var fields = new List<TagFieldValue>();

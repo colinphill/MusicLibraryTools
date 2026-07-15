@@ -6,7 +6,11 @@ namespace DumpArtworkSizes;
 
 internal static class Program
 {
-    private sealed record Options(string PlaylistName, string? LibraryPath, string OutputPath);
+    private sealed record Options(string PlaylistName, string? LibraryPath, string OutputPath, int Parallelism);
+
+    private sealed record WorkItem(int TrackNumber, string Path, string Artist, string Album);
+
+    private sealed record InspectionResult(string? ReportLine, string? Message, bool NoArtwork, bool Error);
 
     private static int Main(string[] args)
     {
@@ -16,7 +20,7 @@ internal static class Program
             if (!TryParseArguments(args, out Options? options))
             {
                 LogConsole.WriteLine(
-                    "Usage: DumpArtworkSizes <playlist> [--library <file.itl>] [--output <report.dat>]");
+                    "Usage: DumpArtworkSizes <playlist> [--library <file.itl>] [--output <report.dat>] [--parallelism <1-64>]");
                 return 2;
             }
 
@@ -37,6 +41,7 @@ internal static class Program
     {
         string? libraryPath = null;
         string outputPath = "ArtworkSizes.dat";
+        int parallelism = 16;
         var operands = new List<string>();
 
         for (int index = 0; index < args.Length; index++)
@@ -45,6 +50,9 @@ internal static class Program
                 libraryPath = args[index];
             else if (args[index].Equals("--output", StringComparison.OrdinalIgnoreCase) && ++index < args.Length)
                 outputPath = args[index];
+            else if (args[index].Equals("--parallelism", StringComparison.OrdinalIgnoreCase) &&
+                     ++index < args.Length && int.TryParse(args[index], out int parsedParallelism))
+                parallelism = parsedParallelism;
             else if (args[index].StartsWith("--", StringComparison.Ordinal))
             {
                 options = null;
@@ -54,8 +62,8 @@ internal static class Program
                 operands.Add(args[index]);
         }
 
-        options = operands.Count == 1
-            ? new Options(operands[0], libraryPath, Path.GetFullPath(outputPath))
+        options = operands.Count == 1 && parallelism is >= 1 and <= 64
+            ? new Options(operands[0], libraryPath, Path.GetFullPath(outputPath), parallelism)
             : null;
         return options is not null;
     }
@@ -70,11 +78,9 @@ internal static class Program
                 $"Expected one playlist named '{options.PlaylistName}', found {matchingPlaylists.Length}.");
 
         Dictionary<int, ItlTrack> tracksById = library.Tracks.ToDictionary(track => track.Id);
-        using var writer = new StreamWriter(options.OutputPath);
         int tracks = 0;
-        int noArtwork = 0;
-        int errors = 0;
         var albums = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var work = new List<WorkItem>();
 
         foreach (int trackId in matchingPlaylists[0].TrackIds)
         {
@@ -92,30 +98,57 @@ internal static class Program
             if (!albums.Add(artist + "\0" + album))
                 continue;
 
-            LogConsole.WriteLine($"{tracks}) Checking track: {path}");
+            work.Add(new WorkItem(tracks, path, artist, album));
+        }
+
+        var results = new InspectionResult[work.Count];
+        Parallel.For(0, work.Count, new ParallelOptions { MaxDegreeOfParallelism = options.Parallelism }, index =>
+        {
+            WorkItem item = work[index];
             try
             {
-                IMediaFile mediaFile = MediaFile.GetFile(path);
+                IMediaFile mediaFile = MediaFile.GetFile(item.Path);
                 IMetadataImage[] images = [.. mediaFile.Tags.SelectMany(tag => tag.GetImageMetadata())];
                 if (images.Length == 1)
                 {
                     IMetadataImage image = images[0];
-                    writer.WriteLine($"{artist}|{album}|{image.Width}|{image.Height}|{image.Size}");
+                    results[index] = new InspectionResult(
+                        $"{item.Artist}|{item.Album}|{image.Width}|{image.Height}|{image.Size}", null, false, false);
                 }
                 else
                 {
-                    writer.WriteLine($"{artist}|{album}|0|0");
-                    noArtwork++;
-                    LogConsole.WriteLine(images.Length == 0
-                        ? "No embedded artwork."
-                        : $"Expected one embedded artwork image, found {images.Length}.");
+                    results[index] = new InspectionResult(
+                        $"{item.Artist}|{item.Album}|0|0",
+                        images.Length == 0
+                            ? "No embedded artwork."
+                            : $"Expected one embedded artwork image, found {images.Length}.",
+                        true,
+                        false);
                 }
             }
             catch (Exception exception)
             {
-                errors++;
-                LogConsole.WriteLine($"Unable to inspect '{path}': {exception.Message}");
+                results[index] = new InspectionResult(
+                    null, $"Unable to inspect '{item.Path}': {exception.Message}", false, true);
             }
+        });
+
+        int noArtwork = 0;
+        int errors = 0;
+        using var writer = new StreamWriter(options.OutputPath);
+        for (int index = 0; index < work.Count; index++)
+        {
+            WorkItem item = work[index];
+            InspectionResult result = results[index];
+            LogConsole.WriteLine($"{item.TrackNumber}) Checking track: {item.Path}");
+            if (result.ReportLine is not null)
+                writer.WriteLine(result.ReportLine);
+            if (result.Message is not null)
+                LogConsole.WriteLine(result.Message);
+            if (result.NoArtwork)
+                noArtwork++;
+            if (result.Error)
+                errors++;
         }
 
         LogConsole.WriteLine($"Analyzed Tracks: {tracks}");

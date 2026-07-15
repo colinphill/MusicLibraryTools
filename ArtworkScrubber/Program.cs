@@ -41,20 +41,24 @@ internal static class Program
 
     private static int Main(string[] args)
     {
-        if (args.Length is < 1 or > 3 ||
+        if (args.Length is < 1 or > 4 ||
             (args.Length > 1 && !int.TryParse(args[1], out _)) ||
-            (args.Length > 2 && !int.TryParse(args[2], out _)))
+            (args.Length > 2 && !int.TryParse(args[2], out _)) ||
+            (args.Length > 3 && !int.TryParse(args[3], out _)))
         {
-            Console.Error.WriteLine("Usage: ArtworkScrubber <results.csv> [max-dimension=600] [jpeg-quality=75]");
+            Console.Error.WriteLine(
+                "Usage: ArtworkScrubber <results.csv> [max-dimension=600] [jpeg-quality=75] [parallelism=16]");
             return 2;
         }
 
         string csv = Path.GetFullPath(args[0]);
         int maxDimension = args.Length > 1 ? int.Parse(args[1]) : 600;
         int quality = args.Length > 2 ? int.Parse(args[2]) : 75;
-        if (!File.Exists(csv) || maxDimension <= 0 || quality is < 1 or > 100)
+        int parallelism = args.Length > 3 ? int.Parse(args[3]) : 16;
+        if (!File.Exists(csv) || maxDimension <= 0 || quality is < 1 or > 100 || parallelism is < 1 or > 64)
         {
-            Console.Error.WriteLine("The CSV must exist, max dimension must be positive, and quality must be 1-100.");
+            Console.Error.WriteLine(
+                "The CSV must exist, max dimension must be positive, quality must be 1-100, and parallelism must be 1-64.");
             return 2;
         }
 
@@ -79,44 +83,54 @@ internal static class Program
             }
         }
 
-        foreach (var file in files)
+        // Different album folders are independent, so overlap their opens and metadata reads on
+        // high-latency shares. Files in the same folder deliberately stay ordered: the previous
+        // behavior allowed each usable image to replace folder.jpg, leaving the last one in place.
+        var pathComparer = OperatingSystem.IsWindows()
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
+        var folderGroups = files.GroupBy(file => Path.GetDirectoryName(file) ?? string.Empty, pathComparer);
+        Parallel.ForEach(folderGroups, new ParallelOptions { MaxDegreeOfParallelism = parallelism }, group =>
         {
-            try
+            foreach (string file in group)
             {
-                var provider = MediaFile.GetFile(file).Tags.First();
-                var artwork = provider.GetImageMetadata().FirstOrDefault();
-                if (artwork is null || artwork.Data.Length == 0)
-                    continue;
-
-                using var image = Image.Load(artwork.Data);
-                if (image.Width > maxDimension || image.Height > maxDimension)
-                {
-                    image.Mutate(x => x.Resize(new ResizeOptions
-                    {
-                        Mode = ResizeMode.Max,
-                        Size = new Size(maxDimension, maxDimension),
-                    }));
-                }
-
-                string output = Path.Combine(Path.GetDirectoryName(file)!, "folder.jpg");
-                string temp = Path.Combine(Path.GetDirectoryName(output)!, $".folder.{Guid.NewGuid():N}.tmp");
                 try
                 {
-                    image.Save(temp, new JpegEncoder { Quality = quality });
-                    File.Move(temp, output, overwrite: true);
+                    var provider = MediaFile.GetFile(file).Tags.First();
+                    var artwork = provider.GetImageMetadata().FirstOrDefault();
+                    if (artwork is null || artwork.Data.Length == 0)
+                        continue;
+
+                    using var image = Image.Load(artwork.Data);
+                    if (image.Width > maxDimension || image.Height > maxDimension)
+                    {
+                        image.Mutate(x => x.Resize(new ResizeOptions
+                        {
+                            Mode = ResizeMode.Max,
+                            Size = new Size(maxDimension, maxDimension),
+                        }));
+                    }
+
+                    string output = Path.Combine(Path.GetDirectoryName(file)!, "folder.jpg");
+                    string temp = Path.Combine(Path.GetDirectoryName(output)!, $".folder.{Guid.NewGuid():N}.tmp");
+                    try
+                    {
+                        image.Save(temp, new JpegEncoder { Quality = quality });
+                        File.Move(temp, output, overwrite: true);
+                    }
+                    finally
+                    {
+                        if (File.Exists(temp))
+                            File.Delete(temp);
+                    }
                 }
-                finally
+                catch (Exception ex)
                 {
-                    if (File.Exists(temp))
-                        File.Delete(temp);
+                    Interlocked.Increment(ref failures);
+                    Console.Error.WriteLine($"{file}: {ex.Message}");
                 }
             }
-            catch (Exception ex)
-            {
-                failures++;
-                Console.Error.WriteLine($"{file}: {ex.Message}");
-            }
-        }
+        });
 
         return failures == 0 ? 0 : 1;
     }

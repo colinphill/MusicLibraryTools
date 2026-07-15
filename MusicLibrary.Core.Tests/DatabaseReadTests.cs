@@ -37,7 +37,7 @@ public class DatabaseReadTests
     }
 
     [Fact]
-    public async Task Index_StoresKnownMetadata_AndReadsItBack()
+    public async Task Index_StoresNormalizedMetadata_AndReadsItBack()
     {
         var (work, _, config, song) = Setup("sample.flac");
         try
@@ -53,7 +53,7 @@ public class DatabaseReadTests
             Assert.Equal("TestArtist", details.Entry.Artist);
 
             // Genre is not a structured column — its presence proves GetKnownMetadata() was persisted
-            // to the KnownMetadata table and read back from the cache.
+            // to the canonical Metadata table and read back from the cache.
             Assert.Contains(details.KnownFields, k => k.Key == nameof(TagFields.Genre) && k.Value == "Rock");
             Assert.NotEmpty(details.TextFields);
         }
