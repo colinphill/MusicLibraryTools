@@ -159,6 +159,16 @@ public partial class AnalyzerViewModel : ViewModelBase
     });
 
     [RelayCommand(CanExecute = nameof(CanRun))]
+    private Task RunRepresentations() => RunOverRecords("Album representations", AnalysisResultView.Findings, (records, ct) =>
+    {
+        var report = RepresentationAnalyzer.Compare(records, ct);
+        string status = report.Count == 0
+            ? "Album representations: no missing or ambiguous counterparts found."
+            : $"Album representations: {report.Count:N0} missing/ambiguous counterpart finding(s).";
+        return (status, () => AddRun(AnalysisRunViewModel.ForFindings(report, records, status)));
+    });
+
+    [RelayCommand(CanExecute = nameof(CanRun))]
     private async Task PreviewMetadataRepairs()
     {
         using var scope = BeginRun("Metadata repair preview", AnalysisResultView.Repairs);
@@ -384,6 +394,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         FindAlbumArtistConflictsCommand.NotifyCanExecuteChanged();
         PreviewConflictRepairsCommand.NotifyCanExecuteChanged();
         RunAlbumMatrixCommand.NotifyCanExecuteChanged();
+        RunRepresentationsCommand.NotifyCanExecuteChanged();
         RunCheckSetsCommand.NotifyCanExecuteChanged();
         PreviewMetadataRepairsCommand.NotifyCanExecuteChanged();
         ApplyRepairsCommand.NotifyCanExecuteChanged();

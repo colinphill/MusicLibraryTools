@@ -414,6 +414,8 @@
                                 <Button Content="Lossy files" Margin="0,0,8,8" Command="{Binding RunLossyCommand}"/>
                                 <Button Content="Duplicates" Margin="0,0,8,8" Command="{Binding RunDuplicatesCommand}"/>
                                 <Button Content="Cross-set check" Margin="0,0,8,8" Command="{Binding RunCheckSetsCommand}"/>
+                                <Button Content="Representations" Margin="0,0,8,8" Command="{Binding RunRepresentationsCommand}"
+                                        ToolTip.Tip="Compare cached CD/high-resolution FLAC, purchased, and generated AAC counterparts"/>
                                 <Button Content="Album matrix" Margin="0,0,8,8" Command="{Binding RunAlbumMatrixCommand}"/>
                                 <Button Content="Metadata repairs" Margin="0,0,8,8"
                                         Command="{Binding PreviewMetadataRepairsCommand}"/>

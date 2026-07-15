@@ -158,4 +158,46 @@ public class AnalyzerTests
 
         Assert.Empty(DuplicateFinder.Find(records));
     }
+
+    [Fact]
+    public void RepresentationsFindsMissingPurchasedTrackWithoutFlaggingSingleRoleAlbums()
+    {
+        var records = new[]
+        {
+            Rec(@"Z:\FLAC\Artist\Album\01.flac", "Artist", "Album", "One", track: 1),
+            Rec(@"Z:\FLAC\Artist\Album\02.flac", "Artist", "Album", "Two", track: 2),
+            Rec(@"Z:\iTunes\purchased sync\Artist\Album\01.m4a", "artist", "album", "One",
+                track: 1, codec: CodecType.Lossy),
+            Rec(@"Z:\FLAC\Artist\Only\01.flac", "Artist", "Only", "Solo", track: 1),
+        };
+
+        var report = RepresentationAnalyzer.Compare(records);
+
+        var finding = Assert.Single(report.Findings);
+        Assert.Equal(records[1].Path, finding.Path);
+        Assert.Equal("Missing representation counterpart", finding.Problem);
+        Assert.Contains("purchased audio", finding.Description);
+        Assert.DoesNotContain(report.Findings, item => item.Path.Contains("Only"));
+    }
+
+    [Fact]
+    public void RepresentationsClassifiesHighResolutionFlacAndReportsAmbiguousCandidates()
+    {
+        var high = Rec(@"Z:\hires\Album\01.flac", "Artist", "Album", "One",
+            track: 1, sr: 96_000, bps: 24);
+        var records = new[]
+        {
+            high,
+            Rec(@"Z:\FLAC\Album\01.flac", "Artist", "Album", "One", track: 1),
+            Rec(@"Z:\FLAC\Album\01-copy.flac", "Artist", "Album", "One", track: 1),
+        };
+
+        var report = RepresentationAnalyzer.Compare(records);
+
+        Assert.Equal(LibraryRepresentation.HighResolutionFlac, RepresentationAnalyzer.Classify(high));
+        Assert.Equal(2, report.Findings.Count(item =>
+            item.Problem == "Ambiguous representation counterpart"));
+        Assert.DoesNotContain(report.Findings, item =>
+            item.Problem == "Missing representation counterpart");
+    }
 }
