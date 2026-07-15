@@ -110,6 +110,19 @@ public sealed record RepresentationRepairPreview(
     IReadOnlyList<RepresentationRepairAction> FileActions,
     IReadOnlyList<string> Warnings);
 
+public sealed record ArtworkAuditImage(
+    string Hash,
+    string ImageType,
+    string Category,
+    int Width,
+    int Height,
+    int Size);
+
+public sealed record ArtworkAuditFile(
+    string Path,
+    bool ArtworkScanned,
+    IReadOnlyList<ArtworkAuditImage> Images);
+
 /// <summary>One display cell in an album metadata matrix.</summary>
 public sealed record AnalysisMatrixCell(string? Value, bool IsInconsistent = false, string? Reason = null)
 {

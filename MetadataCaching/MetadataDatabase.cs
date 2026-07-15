@@ -1564,6 +1564,53 @@ namespace MetadataCaching
             return [.. result];
         }
 
+        /// <summary>
+        /// Return artwork scan state and cached image metadata without selecting image blobs or
+        /// hydrating deferred files.
+        /// </summary>
+        public List<FileArtworkSummary> GetArtworkSummaries()
+        {
+            using var cmd = conn_.CreateCommand();
+            cmd.CommandText =
+                "SELECT s.Path, a.Path, f.Path, f.ArtworkScanned, im.Category, i.ImageType, i.Width, i.Height, i.Size, i.Hash" +
+                " FROM Files f" +
+                " JOIN Tracks t ON t.ID = f.ID" +
+                " JOIN Albums a ON a.ID = t.AlbumID" +
+                " JOIN ScanSets s ON s.ID = a.ScanSetID" +
+                " LEFT JOIN ImageMetadata im ON im.FileID = f.ID" +
+                " LEFT JOIN Images i ON i.ID = im.ImageID" +
+                " ORDER BY s.Path, a.Path, f.Path, im.ID";
+            var summaries = new List<FileArtworkSummary>();
+            FileArtworkSummary current = null;
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                string path = Path.Combine(reader.GetString(0), reader.GetString(1), reader.GetString(2));
+                if (current is null || !StringComparer.InvariantCultureIgnoreCase.Equals(current.Path, path))
+                {
+                    current = new FileArtworkSummary
+                    {
+                        Path = path,
+                        ArtworkScanned = reader.GetInt64(3) != 0,
+                    };
+                    summaries.Add(current);
+                }
+                if (!reader.IsDBNull(9))
+                {
+                    current.Images.Add(new FileArtworkMetadata
+                    {
+                        Category = reader.IsDBNull(4) ? "" : reader.GetString(4),
+                        ImageType = reader.IsDBNull(5) ? "" : reader.GetString(5),
+                        Width = reader.IsDBNull(6) ? 0 : (int)reader.GetInt64(6),
+                        Height = reader.IsDBNull(7) ? 0 : (int)reader.GetInt64(7),
+                        Size = reader.IsDBNull(8) ? 0 : (int)reader.GetInt64(8),
+                        Hash = reader.GetString(9),
+                    });
+                }
+            }
+            return summaries;
+        }
+
         /// <summary>The bytes of a file's first embedded image (for thumbnails), or null if none.</summary>
         public byte[] GetFirstImageData(string fullPath)
         {
@@ -2133,5 +2180,22 @@ namespace MetadataCaching
         public int Height { get; set; }
         public int Size { get; set; }
         public byte[] Data { get; set; }
+    }
+
+    public sealed class FileArtworkSummary
+    {
+        public string Path { get; set; }
+        public bool ArtworkScanned { get; set; }
+        public List<FileArtworkMetadata> Images { get; } = new();
+    }
+
+    public sealed class FileArtworkMetadata
+    {
+        public string Category { get; set; }
+        public string ImageType { get; set; }
+        public string Hash { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public int Size { get; set; }
     }
 }

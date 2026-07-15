@@ -1,0 +1,81 @@
+using MusicLibrary.Core.Models;
+
+namespace MusicLibrary.Core.Services;
+
+/// <summary>Cache-only artwork health analysis. It never requests or decodes image blobs.</summary>
+public static class ArtworkHealthAnalyzer
+{
+    public const int OversizedByteThreshold = 2 * 1024 * 1024;
+    public const int OversizedDimensionThreshold = 2_000;
+
+    public static AnalysisReport Analyze(
+        IReadOnlyList<TrackRecord> records,
+        IReadOnlyList<ArtworkAuditFile> artwork,
+        CancellationToken ct = default)
+    {
+        var findings = new List<AnalysisFinding>();
+        var byPath = artwork.ToDictionary(file => file.Path, PathComparer);
+
+        foreach (var record in records)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (!byPath.TryGetValue(record.Path, out var file) || !file.ArtworkScanned)
+            {
+                findings.Add(new(record.Path,
+                    "Artwork metadata is deferred. Hydrate this file when it is selected for review.",
+                    "Artwork scan deferred"));
+                continue;
+            }
+            if (file.Images.Count == 0)
+            {
+                findings.Add(new(record.Path, "No embedded artwork is cached for this file.", "Missing artwork"));
+                continue;
+            }
+            foreach (var image in file.Images)
+            {
+                if (string.IsNullOrWhiteSpace(image.Hash) || string.IsNullOrWhiteSpace(image.ImageType) ||
+                    image.Width <= 0 || image.Height <= 0 || image.Size <= 0)
+                    findings.Add(new(record.Path,
+                        $"Cached image metadata is invalid ({image.ImageType}, {image.Width}x{image.Height}, {image.Size:N0} bytes).",
+                        "Unreadable artwork"));
+                if (image.Size > OversizedByteThreshold || image.Width > OversizedDimensionThreshold ||
+                    image.Height > OversizedDimensionThreshold)
+                    findings.Add(new(record.Path,
+                        $"Embedded {image.ImageType} is {image.Width:N0}x{image.Height:N0} and {image.Size:N0} bytes.",
+                        "Oversized artwork"));
+            }
+            foreach (var duplicate in file.Images.Where(image => !string.IsNullOrWhiteSpace(image.Hash))
+                         .GroupBy(image => image.Hash, StringComparer.Ordinal).Where(group => group.Count() > 1))
+                findings.Add(new(record.Path,
+                    $"The same embedded image appears {duplicate.Count():N0} times in this file.",
+                    "Duplicate embedded artwork"));
+        }
+
+        foreach (var album in records.GroupBy(AlbumKey))
+        {
+            var scanned = album.Select(record => (Record: record, Artwork: byPath.GetValueOrDefault(record.Path)))
+                .Where(item => item.Artwork?.ArtworkScanned == true).ToList();
+            if (scanned.Count < 2)
+                continue;
+            var signatures = scanned.Select(item => Signature(item.Artwork!)).Distinct(StringComparer.Ordinal).ToList();
+            if (signatures.Count > 1)
+                findings.Add(new(scanned[0].Record.Path,
+                    $"Album tracks use {signatures.Count:N0} distinct embedded-artwork sets.",
+                    "Mixed album artwork"));
+        }
+
+        return new("Artwork health", findings
+            .OrderBy(finding => finding.Problem, StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(finding => finding.Path, StringComparer.CurrentCultureIgnoreCase)
+            .ToList());
+    }
+
+    private static string Signature(ArtworkAuditFile file) => string.Join("|", file.Images
+        .Select(image => image.Hash).OrderBy(hash => hash, StringComparer.Ordinal));
+    private static string AlbumKey(TrackRecord record) =>
+        Normalize(record.EffectiveAlbumArtist) + "\0" + Normalize(record.StrippedAlbum ?? record.Album);
+    private static string Normalize(string? value) => string.Join(' ', (value ?? "").Trim()
+        .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)).ToUpperInvariant();
+    private static StringComparer PathComparer => OperatingSystem.IsWindows()
+        ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+}

@@ -426,6 +426,8 @@
                                              ToolTip.Tip="ffmpeg executable used only for explicit decoded-audio verification"/>
                                 </StackPanel>
                                 <Button Content="Album matrix" Margin="0,0,8,8" Command="{Binding RunAlbumMatrixCommand}"/>
+                                <Button Content="Artwork health" Margin="0,0,8,8" Command="{Binding RunArtworkHealthCommand}"
+                                        ToolTip.Tip="Audit cached artwork metadata without loading image blobs or scanning deferred files"/>
                                 <Button Content="Metadata repairs" Margin="0,0,8,8"
                                         Command="{Binding PreviewMetadataRepairsCommand}"/>
                                 <Button Content="Album artist conflicts" Margin="0,0,8,8"

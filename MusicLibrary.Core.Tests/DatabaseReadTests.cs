@@ -130,6 +130,31 @@ public class DatabaseReadTests
     }
 
     [Fact]
+    public async Task ArtworkAuditReadDoesNotHydrateDeferredImageData()
+    {
+        var (work, _, config, song) = Setup("sample.flac");
+        try
+        {
+            var settings = new AppSettings(Path.Combine(work, "settings.json"));
+            settings.LoadConfig(config);
+            using var library = new LibraryService(settings);
+            await library.IndexAsync();
+
+            var before = Assert.Single(await library.GetArtworkAuditFilesAsync());
+            Assert.Equal(song, before.Path);
+            Assert.False(before.ArtworkScanned);
+
+            _ = await library.GetFirstImageAsync(song);
+            var after = Assert.Single(await library.GetArtworkAuditFilesAsync());
+            Assert.True(after.ArtworkScanned);
+        }
+        finally
+        {
+            try { Directory.Delete(work, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public async Task Organize_NonNormalizedSourcesStillReceiveDistinctDestinations()
     {
         var (work, music, config, song) = Setup("sample.flac");

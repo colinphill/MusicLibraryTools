@@ -56,4 +56,8 @@ public interface ILibraryService
     /// for cheaply detecting whether a selection's artwork is uniform. Same order as the input.
     /// </summary>
     Task<IReadOnlyList<string>> GetImageSignaturesAsync(IReadOnlyList<string> paths, CancellationToken ct = default);
+
+    /// <summary>Cached artwork metadata only; never hydrates deferred artwork or selects image blobs.</summary>
+    Task<IReadOnlyList<ArtworkAuditFile>> GetArtworkAuditFilesAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<ArtworkAuditFile>>([]);
 }

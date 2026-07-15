@@ -185,6 +185,21 @@ public sealed class AnalyzerViewModelTests
     }
 
     [Fact]
+    public async Task Analyzer_ArtworkHealthUsesMetadataAuditWithoutHydratingImages()
+    {
+        var library = new StubLibrary([Track("track.flac", "AA", "Album")]);
+        var viewModel = new AnalyzerViewModel(
+            library, new StubReconciler(), new StubRepairs(),
+            new AppSettings(Path.Combine(Path.GetTempPath(), $"analyzer-{Guid.NewGuid():N}.json")));
+
+        await viewModel.RunArtworkHealthCommand.ExecuteAsync(null);
+
+        Assert.Equal("Artwork health", viewModel.SelectedRun!.Name);
+        Assert.Null(library.ArtworkPaths);
+        Assert.Contains(viewModel.FindingGroups, group => group.Problem == "Artwork scan deferred");
+    }
+
+    [Fact]
     public async Task Analyzer_RepresentationsHydratesArtworkOnlyForMatchedCandidates()
     {
         var cd = Track(@"Z:\FLAC\Album\01.flac", "AA", "Album", title: "Song", track: 1);

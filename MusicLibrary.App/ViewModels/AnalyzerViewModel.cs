@@ -182,6 +182,27 @@ public partial class AnalyzerViewModel : ViewModelBase
     });
 
     [RelayCommand(CanExecute = nameof(CanRun))]
+    private async Task RunArtworkHealth()
+    {
+        using var scope = BeginRun("Artwork health", AnalysisResultView.Findings);
+        try
+        {
+            var records = await _library.GetAllRecordsAsync(scope.Token);
+            var artwork = await _library.GetArtworkAuditFilesAsync(scope.Token);
+            var report = await Task.Run(() => ArtworkHealthAnalyzer.Analyze(records, artwork, scope.Token), scope.Token);
+            int deferred = report.Findings.Count(finding => finding.Problem == "Artwork scan deferred");
+            int actionable = report.Count - deferred;
+            string status = report.Count == 0
+                ? "Artwork health: no cached issues found."
+                : $"Artwork health: {actionable:N0} cached issue(s), {deferred:N0} file(s) still deferred. " +
+                  "No image blobs were loaded.";
+            AddRun(AnalysisRunViewModel.ForFindings(report, records, status));
+        }
+        catch (OperationCanceledException) { StatusText = "Artwork health audit cancelled."; }
+        catch (Exception ex) { StatusText = $"Artwork health audit failed: {ex.Message}"; }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRun))]
     private async Task RunRepresentations()
     {
         using var scope = BeginRun("Album representations", AnalysisResultView.Findings);
@@ -528,6 +549,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         FindAlbumArtistConflictsCommand.NotifyCanExecuteChanged();
         PreviewConflictRepairsCommand.NotifyCanExecuteChanged();
         RunAlbumMatrixCommand.NotifyCanExecuteChanged();
+        RunArtworkHealthCommand.NotifyCanExecuteChanged();
         RunRepresentationsCommand.NotifyCanExecuteChanged();
         PreviewRepresentationRepairsCommand.NotifyCanExecuteChanged();
         VerifyDecodedAudioCommand.NotifyCanExecuteChanged();

@@ -422,6 +422,26 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         }
     }
 
+    public async Task<IReadOnlyList<ArtworkAuditFile>> GetArtworkAuditFilesAsync(CancellationToken ct = default)
+    {
+        if (!IsReady)
+            return [];
+        await _gate.WaitAsync(ct);
+        try
+        {
+            var db = GetDatabase(GetContext());
+            return await Task.Run(() => (IReadOnlyList<ArtworkAuditFile>)db.GetArtworkSummaries()
+                .Select(file => new ArtworkAuditFile(
+                    file.Path,
+                    file.ArtworkScanned,
+                    file.Images.Select(image => new ArtworkAuditImage(
+                        image.Hash, image.ImageType, image.Category,
+                        image.Width, image.Height, image.Size)).ToList()))
+                .ToList(), ct);
+        }
+        finally { _gate.Release(); }
+    }
+
     private static string? BeginOrganizeJournal(
         IReadOnlyList<string> baseDirectories,
         IReadOnlyList<PlannedMove> moves)
