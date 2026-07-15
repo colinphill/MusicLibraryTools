@@ -22,7 +22,7 @@ namespace MusicFileUtilities
     public static class MP4Util
     {
 
-        public const int DEMAND_BLOCK_SIZE = 0x10000;
+        public const int DEMAND_BLOCK_SIZE = 0x100000;
         
         public static Dictionary<string, Type> AtomTypes = new Dictionary<string, Type>();
 

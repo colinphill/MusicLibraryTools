@@ -175,6 +175,37 @@ public class TagWriteServiceTests
         Assert.All(reindex.Tokens, token => Assert.False(token.CanBeCanceled));
     }
 
+    [Fact]
+    public async Task SavedFile_UsesParsedObjectForCacheRefresh()
+    {
+        using var media = MediaFixtures.Copy("sample.flac");
+        var reindex = new ParsedRecordingReindexService();
+        var writer = new TagWriteService(reindex);
+
+        var result = await writer.ApplyAsync(
+            [media.Path], [new TagEdit(TagFields.Title, "No second parse")]);
+
+        Assert.Equal(1, result.SavedCount);
+        Assert.Equal(1, reindex.ParsedCalls);
+        Assert.Equal(0, reindex.ReparseCalls);
+        Assert.NotNull(reindex.SavedFile);
+    }
+
+    [Fact]
+    public async Task ExistingValue_SkipsPhysicalWriteAndReindex()
+    {
+        using var media = MediaFixtures.Copy("sample.flac");
+        var reindex = new RecordingReindexService();
+        var writer = new TagWriteService(reindex);
+
+        var result = await writer.ApplyAsync(
+            [media.Path], [new TagEdit(TagFields.Title, "TestTitle")]);
+
+        Assert.Equal(0, result.SavedCount);
+        Assert.Equal(WriteOutcome.Skipped, Assert.Single(result.Files).Outcome);
+        Assert.Empty(reindex.Paths);
+    }
+
     private sealed class ThrowingReindexService : IReindexService
     {
         public CancellationToken ReceivedToken { get; private set; }
@@ -208,6 +239,26 @@ public class TagWriteServiceTests
         {
             Paths.Add(path);
             Tokens.Add(ct);
+            return Task.CompletedTask;
+        }
+    }
+
+    private sealed class ParsedRecordingReindexService : IReindexService
+    {
+        public int ReparseCalls { get; private set; }
+        public int ParsedCalls { get; private set; }
+        public IMediaFile? SavedFile { get; private set; }
+
+        public Task ReindexFileAsync(string path, CancellationToken ct = default)
+        {
+            ReparseCalls++;
+            return Task.CompletedTask;
+        }
+
+        public Task ReindexFileAsync(string path, IMediaFile savedFile, CancellationToken ct = default)
+        {
+            ParsedCalls++;
+            SavedFile = savedFile;
             return Task.CompletedTask;
         }
     }

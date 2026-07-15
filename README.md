@@ -92,6 +92,11 @@ library root(s), index locations, sync targets, playlist targets, the cache data
 (default `cache.db`), and length limits. See `LibraryConfiguration` in MusicFileUtilities
 for the schema.
 
+Library indexing uses up to 16 concurrent metadata readers so high-latency SMB shares can
+overlap file opens. Set `MLT_INDEX_PARALLELISM` to a value from 1 through 64 to tune the global
+reader cap for a particular NAS; 8-16 is a sensible starting range, while higher values should
+be validated against the share rather than assumed to be faster.
+
 ## Safe execution
 
 High-impact sync, organization, iTunes, and device commands now default to a dry run or refuse to

@@ -43,7 +43,7 @@ namespace MusicFileUtilities
 
         // Raw bytes of metadata blocks other than Vorbis comment (type 4) and picture (type 6),
         // captured during parsing so Save() can rewrite the file faithfully.
-        private List<(byte Type, byte[] Data)> _otherMetaBlocks = new();
+        private List<(byte Type, byte[] Data, int Length)> _otherMetaBlocks = new();
         private byte[] _streamInfoData = null;
 
         // Raw PICTURE block bytes exactly as read from disk. Save() compares these against the
@@ -55,6 +55,11 @@ namespace MusicFileUtilities
         private long _vcBlockOffset = -1;   // file offset of the block's 4-byte header
         private int _vcBlockDataLen = 0;    // data length of the block as parsed
         private bool _vcIsLast = false;     // whether the block had the last-block bit
+        private long _paddingAfterVcOffset = -1;
+        private int _paddingAfterVcDataLen;
+        private bool _paddingAfterVcIsLast;
+
+        internal bool LastSaveWasInPlace { get; private set; }
 
         public string CodecName => "FLAC";
 
@@ -94,7 +99,7 @@ namespace MusicFileUtilities
 
         public uint DurationInSeconds => DurationInFrames / 75;
 
-        private void ParseStreamInfo(byte [] si, long length, long framessize)
+        private void ParseStreamInfo(byte [] si, long length)
         {
             Samplerate = (((uint)Tools.UInt16AtBE(si, 10)) << 4) | (uint)(si[12] >> 4);
             Channels = (uint)(((si[12] >> 1) & 7) + 1);
@@ -126,6 +131,7 @@ namespace MusicFileUtilities
                 throw new InvalidDataException();
 
             bool last = false;
+            bool previousWasVorbisComment = false;
             while (!last)
             {
                 s.ReadExactly(b);
@@ -135,6 +141,7 @@ namespace MusicFileUtilities
                 len = (len << 8) | b[3];
 
                 byte blockType = (byte)(b[0] & 127);
+                long blockOffset = s.Position - 4;
 
                 if (blockType == 0) // STREAMINFO
                 {
@@ -160,17 +167,33 @@ namespace MusicFileUtilities
                 }
                 else
                 {
-                    byte[] raw = new byte[len];
-                    s.ReadExactly(raw);
-                    _otherMetaBlocks.Add((blockType, raw));
+                    // PADDING has no semantic payload. On a network share, skip it instead of
+                    // transferring and retaining bytes that a rewrite may safely regenerate.
+                    byte[] raw = null;
+                    if (blockType == 1)
+                        s.Seek(len, SeekOrigin.Current);
+                    else
+                    {
+                        raw = new byte[len];
+                        s.ReadExactly(raw);
+                    }
+                    _otherMetaBlocks.Add((blockType, raw, (int)len));
+
+                    if (blockType == 1 && previousWasVorbisComment)
+                    {
+                        _paddingAfterVcOffset = blockOffset;
+                        _paddingAfterVcDataLen = (int)len;
+                        _paddingAfterVcIsLast = (b[0] & 128) == 128;
+                    }
                 }
 
                 last = ((b[0] & 128) == 128);
+                previousWasVorbisComment = blockType == 4;
 
             }
 
             if (si != null)
-                ParseStreamInfo(si, s.Length, s.Length - s.Position);
+                ParseStreamInfo(si, s.Length);
 
         }
 
@@ -201,6 +224,7 @@ namespace MusicFileUtilities
 
         public void Save(string outputPath = null)
         {
+            LastSaveWasInPlace = false;
             string target = outputPath ?? Filename
                 ?? throw new InvalidOperationException("No filename associated with this file.");
 
@@ -230,28 +254,72 @@ namespace MusicFileUtilities
                     if (leftover > 0)
                         fs.Write(new byte[leftover], 0, leftover);
                 }
+                LastSaveWasInPlace = true;
+                return;
+            }
+
+            // A VORBIS_COMMENT may grow into the immediately following PADDING block without
+            // moving the audio stream. The four-byte padding header is part of the reclaimable
+            // span; preserve any remainder as a smaller padding block when possible.
+            if (outputPath == null && _vcBlockOffset >= 0 && _paddingAfterVcOffset == _vcBlockOffset + 4 + _vcBlockDataLen &&
+                newVCData.Length > _vcBlockDataLen &&
+                newVCData.Length <= _vcBlockDataLen + 4 + _paddingAfterVcDataLen && ArtworksMatchDisk())
+            {
+                int available = _vcBlockDataLen + 4 + _paddingAfterVcDataLen;
+                int leftover = available - newVCData.Length;
+                bool regionIsLast = _paddingAfterVcIsLast;
+                using FileStream fs = new FileStream(Filename, FileMode.Open, FileAccess.ReadWrite);
+                fs.Seek(_vcBlockOffset, SeekOrigin.Begin);
+                if (leftover >= 4)
+                {
+                    WriteMetaBlockHeader(fs, 4, newVCData.Length, isLast: false);
+                    fs.Write(newVCData, 0, newVCData.Length);
+                    _paddingAfterVcOffset = fs.Position;
+                    WriteMetaBlockHeader(fs, 1, leftover - 4, isLast: regionIsLast);
+                    _paddingAfterVcDataLen = leftover - 4;
+                    _paddingAfterVcIsLast = regionIsLast;
+                    _vcBlockDataLen = newVCData.Length;
+                    _vcIsLast = false;
+                }
+                else
+                {
+                    // With fewer than four bytes left there is no room for another metadata
+                    // header. Absorb the gap into the comment block as harmless trailing bytes.
+                    WriteMetaBlockHeader(fs, 4, available, isLast: regionIsLast);
+                    fs.Write(newVCData, 0, newVCData.Length);
+                    if (leftover > 0)
+                        fs.Write(new byte[leftover], 0, leftover);
+                    _vcBlockDataLen = available;
+                    _vcIsLast = regionIsLast;
+                    _paddingAfterVcOffset = -1;
+                    _paddingAfterVcDataLen = 0;
+                }
+                LastSaveWasInPlace = true;
                 return;
             }
 
             // Build list of serialized metadata blocks: (type, data)
             // Order: STREAMINFO first, then other preserved blocks, then VORBIS_COMMENT, then PICTUREs
-            var blocks = new List<(byte Type, byte[] Data)>();
+            var blocks = new List<(byte Type, byte[] Data, int Length)>();
 
             if (_streamInfoData != null)
-                blocks.Add((0, _streamInfoData));
+                blocks.Add((0, _streamInfoData, _streamInfoData.Length));
 
             foreach (var block in _otherMetaBlocks)
                 blocks.Add(block);
 
-            blocks.Add((4, newVCData));
+            blocks.Add((4, newVCData, newVCData.Length));
 
             foreach (VorbisArtwork art in Artworks)
-                blocks.Add((6, art.ToByteArray()));
+            {
+                byte[] data = art.ToByteArray();
+                blocks.Add((6, data, data.Length));
+            }
 
             // FLAC metadata block lengths are exactly 24 bits. Truncating a larger length in
             // the header while writing all bytes makes the excess bytes look like audio data.
-            foreach (var (_, data) in blocks)
-                if (data.Length > 0xFFFFFF)
+            foreach (var (_, _, length) in blocks)
+                if (length > 0xFFFFFF)
                     throw new InvalidOperationException("A FLAC metadata block cannot exceed 16,777,215 bytes.");
 
             string tempPath = Tools.CreateSiblingTempPath(target);
@@ -285,17 +353,16 @@ namespace MusicFileUtilities
                     for (int i = 0; i < blocks.Count; i++)
                     {
                         bool isLast = (i == blocks.Count - 1);
-                        var (type, data) = blocks[i];
-                        int blockLen = data.Length;
+                        var (type, data, blockLen) = blocks[i];
                         WriteMetaBlockHeader(dest, type, blockLen, isLast);
-                        dest.Write(data, 0, data.Length);
+                        if (data is not null)
+                            dest.Write(data, 0, data.Length);
+                        else
+                            dest.Seek(blockLen, SeekOrigin.Current);
                     }
 
                     // Copy audio data
-                    byte[] buffer = new byte[65536];
-                    int read;
-                    while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
-                        dest.Write(buffer, 0, read);
+                    Tools.CopyToEnd(source, dest);
                     dest.Flush(flushToDisk: true);
                 }
 

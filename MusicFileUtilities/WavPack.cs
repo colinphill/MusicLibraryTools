@@ -148,16 +148,7 @@ namespace MusicFileUtilities
                     {
                         using FileStream source = new FileStream(sourcePath, FileMode.Open, FileAccess.Read);
                         using FileStream dest = new FileStream(tempPath, FileMode.CreateNew, FileAccess.Write);
-                        byte[] buffer = new byte[65536];
-                        long remaining = copyLength;
-                        int read;
-                        while (remaining > 0 && (read = source.Read(buffer, 0, (int)Math.Min(buffer.Length, remaining))) > 0)
-                        {
-                            dest.Write(buffer, 0, read);
-                            remaining -= read;
-                        }
-                        if (remaining != 0)
-                            throw new EndOfStreamException("The WavPack source changed while it was being saved.");
+                        Tools.CopyExactly(source, dest, copyLength);
                         dest.Write(tagBytes, 0, tagBytes.Length);
                         dest.Flush(flushToDisk: true);
                     }

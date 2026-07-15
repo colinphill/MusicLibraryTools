@@ -131,8 +131,22 @@ namespace MetadataCaching
         // swamp a NAS). IndexFileQueueBound caps parsed-but-unwritten files so parsing
         // can't run arbitrarily far ahead of the SQLite writer (parsed files hold artwork
         // bytes, so an unbounded queue can balloon to GBs on a big scan).
-        internal static int IndexScanParallelism = 8;
+        internal static int IndexScanParallelism = GetDefaultIndexScanParallelism();
         internal static int IndexFileQueueBound = 256;
+
+        /// <summary>
+        /// Global cap on concurrent filesystem/metadata readers used by this database instance.
+        /// Network shares generally benefit from overlapping more opens than local disks. Set
+        /// <c>MLT_INDEX_PARALLELISM</c> to override the default (16, clamped to 1-64), or set this
+        /// property directly before calling <see cref="IndexFilesAsync"/>.
+        /// </summary>
+        public int ScanParallelism { get; set; } = IndexScanParallelism;
+
+        private static int GetDefaultIndexScanParallelism()
+        {
+            string configured = Environment.GetEnvironmentVariable("MLT_INDEX_PARALLELISM");
+            return int.TryParse(configured, out int value) ? Math.Clamp(value, 1, 64) : 16;
+        }
 
         private sealed class ScanFileKeyComparer : IEqualityComparer<(long ScanSetID, string Path)>
         {
@@ -146,6 +160,14 @@ namespace MetadataCaching
 
             public int GetHashCode((long ScanSetID, string Path) value) =>
                 HashCode.Combine(value.ScanSetID, PathComparer.GetHashCode(value.Path));
+        }
+
+        private sealed class ExistingIndexedFile(long id, long length, DateTime lastWriteTime)
+        {
+            public long ID { get; } = id;
+            public long Length { get; } = length;
+            public DateTime LastWriteTime { get; } = lastWriteTime;
+            public int Hit;
         }
 
 #if SQLITE
@@ -512,8 +534,7 @@ namespace MetadataCaching
             using var pipelineCts = new CancellationTokenSource();
 
             var fileKeyComparer = new ScanFileKeyComparer();
-            var filesdict = new ConcurrentDictionary<(long ScanSetID, string Path), (long ID, long Length, DateTime LastWriteTime)>(fileKeyComparer);
-            var fileshitdict = new ConcurrentDictionary<(long ScanSetID, string Path), bool>(fileKeyComparer);
+            var filesdict = new ConcurrentDictionary<(long ScanSetID, string Path), ExistingIndexedFile>(fileKeyComparer);
             var metadatakeysdict = new Dictionary<string, long>();
             var artistsdict = new Dictionary<string, long>();
             var albumartistsdict = new Dictionary<string, long>();
@@ -522,7 +543,8 @@ namespace MetadataCaching
 
             using (var querycomm = conn_.CreateCommand())
             {
-                querycomm.CommandText = "SELECT ID, ScanSetID, Path, FileSize, LastWriteTime, AlbumPath FROM MetadataSummaryView";
+                querycomm.CommandText = "SELECT f.ID, a.ScanSetID, f.Path, f.FileSize, f.LastWriteTime, a.Path AS AlbumPath" +
+                    " FROM Files f JOIN Tracks t ON f.ID = t.ID JOIN Albums a ON t.AlbumID = a.ID";
                 using var reader = querycomm.ExecuteReader();
                 // Resolve ordinals once instead of a name->ordinal lookup per column per row;
                 // this loop walks the entire library.
@@ -532,8 +554,9 @@ namespace MetadataCaching
                 while (reader.Read())
                 {
                     var key = (reader.GetInt64(oSet), Path.Combine(reader.GetString(oAlbumPath), reader.GetString(oPath)));
-                    filesdict[key] = (reader.GetInt64(oId), reader.GetInt64(oSize), DateTime.SpecifyKind(reader.GetDateTime(oLwt), DateTimeKind.Utc));
-                    fileshitdict[key] = false;
+                    filesdict[key] = new ExistingIndexedFile(
+                        reader.GetInt64(oId), reader.GetInt64(oSize),
+                        DateTime.SpecifyKind(reader.GetDateTime(oLwt), DateTimeKind.Utc));
                 }
             }
 
@@ -585,7 +608,8 @@ namespace MetadataCaching
                             units.Add((scanpath.Path, scanpath.ID, entry.Name, true));
                 }
 
-                var scanParallelOptions = new ParallelOptions { MaxDegreeOfParallelism = IndexScanParallelism };
+                int scanParallelism = Math.Clamp(ScanParallelism, 1, 64);
+                var scanParallelOptions = new ParallelOptions { MaxDegreeOfParallelism = scanParallelism };
                 Parallel.ForEach(units, scanParallelOptions, () => { return SHA256.Create(); }, (unit, loopstate, hash) =>
                 {
                     foreach (var file in new MusicFileEnumerator(unit.Root, unit.Recurse))
@@ -607,13 +631,12 @@ namespace MetadataCaching
                        var isAdded = false;
                        var isModified = false;
                        long id = -1;
-                       if (filesdict.ContainsKey(key))
+                       if (filesdict.TryGetValue(key, out var existing))
                        {
-                           fileshitdict[key] = true;
-                           var (ID, Length, LastWriteTime) = filesdict[key];
-                           if ((Math.Abs((file.Modified - LastWriteTime).TotalMilliseconds) > 500.0) || (file.Size != Length))
+                           Interlocked.Exchange(ref existing.Hit, 1);
+                           if ((Math.Abs((file.Modified - existing.LastWriteTime).TotalMilliseconds) > 500.0) || (file.Size != existing.Length))
                            {
-                               id = ID;
+                               id = existing.ID;
                                isModified = true;
                                scan = true;
                            }
@@ -673,9 +696,9 @@ namespace MetadataCaching
                 if (!ct.IsCancellationRequested && Volatile.Read(ref scanFailed) == 0)
                 {
                     var scannedsets = new HashSet<long>(sets.Select(s => s.ID));
-                    foreach (var file in fileshitdict.Where(kv => !kv.Value && scannedsets.Contains(kv.Key.ScanSetID)).Select(kv => kv.Key))
+                    foreach (var file in filesdict.Where(kv => Volatile.Read(ref kv.Value.Hit) == 0 && scannedsets.Contains(kv.Key.ScanSetID)))
                     {
-                        filequeue.Add((filesdict[file].ID, file.ScanSetID, null, 0, DateTime.MinValue, null), pipelineCts.Token);
+                        filequeue.Add((file.Value.ID, file.Key.ScanSetID, null, 0, DateTime.MinValue, null), pipelineCts.Token);
                         removed++;
                     }
                 }
@@ -698,6 +721,7 @@ namespace MetadataCaching
             int FilesPerBatch = IndexFilesPerBatch;
             int MetaRowsPerInsert = IndexMetaRowsPerInsert;
             var metabuffer = new List<(long FileID, long KeyID, string Value)>();
+            var knownmetabuffer = new List<(long FileID, string Field, string Value)>();
 
             DbTransaction trans = null;
             try
@@ -705,11 +729,11 @@ namespace MetadataCaching
                 trans = conn_.BeginTransaction();
                 using DbCommand delcomm = trans.CreateCommand(), filecomm = trans.CreateCommand(), metacomm = trans.CreateCommand(), imagecomm = trans.CreateCommand(),
                     keycomm = trans.CreateCommand(), artistcomm = trans.CreateCommand(), albumartistcomm = trans.CreateCommand(), albumcomm = trans.CreateCommand(),
-                    trackcomm = trans.CreateCommand(), imagemetacomm = trans.CreateCommand(), metabatchcomm = trans.CreateCommand(), knownmetacomm = trans.CreateCommand();
+                    trackcomm = trans.CreateCommand(), imagemetacomm = trans.CreateCommand(), metabatchcomm = trans.CreateCommand(), knownmetabatchcomm = trans.CreateCommand();
 
                 // After a batch commit, every command bound to the old transaction must be
                 // re-pointed at the new one.
-                DbCommand[] batchcommands = { delcomm, filecomm, metacomm, imagecomm, keycomm, artistcomm, albumartistcomm, albumcomm, trackcomm, imagemetacomm, metabatchcomm, knownmetacomm };
+                DbCommand[] batchcommands = { delcomm, filecomm, metacomm, imagecomm, keycomm, artistcomm, albumartistcomm, albumcomm, trackcomm, imagemetacomm, metabatchcomm, knownmetabatchcomm };
 
                     artistcomm.CommandText = "INSERT INTO Artists (Name) VALUES (@Name);\r\n" + lastidsql_;
                     var artistparam = artistcomm.Parameters.Add("@Name", DbType.String);
@@ -784,11 +808,6 @@ namespace MetadataCaching
                     var descriptionparam = imagemetacomm.Parameters.Add("@Description", DbType.String);
                     var categoryparam = imagemetacomm.Parameters.Add("@Category", DbType.String);
 
-                    knownmetacomm.CommandText = "INSERT INTO KnownMetadata (FileID, Field, Value) VALUES (@FileID, @Field, @Value)";
-                    var knownfileidparam = knownmetacomm.Parameters.Add("@FileID", DbType.Int64);
-                    var knownfieldparam = knownmetacomm.Parameters.Add("@Field", DbType.String);
-                    var knownvalueparam = knownmetacomm.Parameters.Add("@Value", DbType.String);
-
                     imagecomm.CommandText = "INSERT INTO Images (Hash, ImageType, Width, Height, Size, Data) VALUES (@Hash, @ImageType, @Width, @Height, @Size, @Data);\r\n" + lastidsql_;
                     var imagehashparam = imagecomm.Parameters.Add("@Hash", DbType.String);
                     var imagetypeparam = imagecomm.Parameters.Add("@ImageType", DbType.String);
@@ -800,6 +819,7 @@ namespace MetadataCaching
                     // Reusable full-size multi-row metadata INSERT (item 7). A short remainder
                     // chunk is built on demand inside FlushMetadata.
                     var metabatchparams = new DbParameter[MetaRowsPerInsert * 3];
+                    var knownmetabatchparams = new DbParameter[MetaRowsPerInsert * 3];
                     {
                         var sb = new StringBuilder("INSERT INTO Metadata (FileID, KeyID, Value) VALUES ");
                         for (int i = 0; i < MetaRowsPerInsert; i++)
@@ -811,6 +831,18 @@ namespace MetadataCaching
                             var vp = metabatchcomm.CreateParameter(); vp.ParameterName = "@v" + i; metabatchcomm.Parameters.Add(vp); metabatchparams[i * 3 + 2] = vp;
                         }
                         metabatchcomm.CommandText = sb.ToString();
+                    }
+                    {
+                        var sb = new StringBuilder("INSERT INTO KnownMetadata (FileID, Field, Value) VALUES ");
+                        for (int i = 0; i < MetaRowsPerInsert; i++)
+                        {
+                            if (i > 0) sb.Append(',');
+                            sb.Append("(@kf").Append(i).Append(",@field").Append(i).Append(",@kv").Append(i).Append(')');
+                            var fp = knownmetabatchcomm.CreateParameter(); fp.ParameterName = "@kf" + i; knownmetabatchcomm.Parameters.Add(fp); knownmetabatchparams[i * 3] = fp;
+                            var kp = knownmetabatchcomm.CreateParameter(); kp.ParameterName = "@field" + i; knownmetabatchcomm.Parameters.Add(kp); knownmetabatchparams[i * 3 + 1] = kp;
+                            var vp = knownmetabatchcomm.CreateParameter(); vp.ParameterName = "@kv" + i; knownmetabatchcomm.Parameters.Add(vp); knownmetabatchparams[i * 3 + 2] = vp;
+                        }
+                        knownmetabatchcomm.CommandText = sb.ToString();
                     }
 
                     void FlushMetadata()
@@ -849,6 +881,44 @@ namespace MetadataCaching
                             start += count;
                         }
                         metabuffer.Clear();
+                    }
+
+                    void FlushKnownMetadata()
+                    {
+                        int total = knownmetabuffer.Count, start = 0;
+                        while (start < total)
+                        {
+                            int count = Math.Min(MetaRowsPerInsert, total - start);
+                            if (count == MetaRowsPerInsert)
+                            {
+                                for (int i = 0; i < count; i++)
+                                {
+                                    var row = knownmetabuffer[start + i];
+                                    knownmetabatchparams[i * 3].Value = row.FileID;
+                                    knownmetabatchparams[i * 3 + 1].Value = row.Field;
+                                    knownmetabatchparams[i * 3 + 2].Value = row.Value;
+                                }
+                                knownmetabatchcomm.ExecuteNonQuery();
+                            }
+                            else
+                            {
+                                using var cmd = trans.CreateCommand();
+                                var sb = new StringBuilder("INSERT INTO KnownMetadata (FileID, Field, Value) VALUES ");
+                                for (int i = 0; i < count; i++)
+                                {
+                                    if (i > 0) sb.Append(',');
+                                    sb.Append("(@f").Append(i).Append(",@field").Append(i).Append(",@v").Append(i).Append(')');
+                                    var row = knownmetabuffer[start + i];
+                                    var fp = cmd.CreateParameter(); fp.ParameterName = "@f" + i; fp.Value = row.FileID; cmd.Parameters.Add(fp);
+                                    var kp = cmd.CreateParameter(); kp.ParameterName = "@field" + i; kp.Value = row.Field; cmd.Parameters.Add(kp);
+                                    var vp = cmd.CreateParameter(); vp.ParameterName = "@v" + i; vp.Value = row.Value; cmd.Parameters.Add(vp);
+                                }
+                                cmd.CommandText = sb.ToString();
+                                cmd.ExecuteNonQuery();
+                            }
+                            start += count;
+                        }
+                        knownmetabuffer.Clear();
                     }
 
                     int filesInBatch = 0;
@@ -925,13 +995,18 @@ namespace MetadataCaching
                         trackidparam.Value = imagefileidparam.Value = fileid = (long)filecomm.ExecuteScalar();
                         trackcomm.ExecuteNonQuery();
 
-                        foreach (var kv in mp.GetTextMetadata())
+                        // Every parser's text metadata is the TagFields name/value projection of
+                        // GetKnownMetadata(). Materialize it once: several tag implementations do
+                        // non-trivial mapping work on every enumeration.
+                        var knownMetadata = mp.GetKnownMetadata().ToArray();
+                        foreach (var kv in knownMetadata)
                         {
-                            if (!metadatakeysdict.TryGetValue(kv.Key, out var keyid))
+                            string key = kv.Key.ToString();
+                            if (!metadatakeysdict.TryGetValue(key, out var keyid))
                             {
-                                keyparam.Value = kv.Key;
+                                keyparam.Value = key;
                                 keyid = (long)keycomm.ExecuteScalar();
-                                metadatakeysdict.Add(kv.Key, keyid);
+                                metadatakeysdict.Add(key, keyid);
                             }
 #if SQLSERVER
                             if (metacomm is SqlCommand)
@@ -955,13 +1030,11 @@ namespace MetadataCaching
 
                         // Normalized known fields (TagFields), so the app can read strongly-typed
                         // metadata straight from the cache without re-parsing the file.
-                        knownfileidparam.Value = fileid;
-                        foreach (var kv in mp.GetKnownMetadata())
-                        {
-                            knownfieldparam.Value = kv.Key.ToString();
-                            knownvalueparam.Value = kv.Value ?? "";
-                            knownmetacomm.ExecuteNonQuery();
-                        }
+                        foreach (var kv in knownMetadata)
+                            knownmetabuffer.Add((fileid, kv.Key.ToString(), kv.Value ?? ""));
+
+                        if (knownmetabuffer.Count >= 4000)
+                            FlushKnownMetadata();
 
                         foreach (var image in mp.GetImageMetadata())
                         {
@@ -985,6 +1058,7 @@ namespace MetadataCaching
                         if (++filesInBatch >= FilesPerBatch)
                         {
                             FlushMetadata();
+                            FlushKnownMetadata();
                             trans.Commit();
                             trans.Dispose();
                             trans = conn_.BeginTransaction();
@@ -995,6 +1069,7 @@ namespace MetadataCaching
                     }
 
                     FlushMetadata();
+                    FlushKnownMetadata();
 #if SQLSERVER
                     if ((metacomm is SqlCommand) && (metadatafields.Rows.Count != 0))
                     {
@@ -1276,17 +1351,49 @@ namespace MetadataCaching
         /// </summary>
         public bool ReindexFile(string fullPath)
         {
-            var (setId, albumPath, fileName) = DecomposePath(fullPath);
-            if (setId < 0)
-                return false;
-
             IMediaFile file;
             using (var sha = SHA256.Create())
                 file = MediaFile.GetFile(fullPath, sha);
 
+            return ReindexFileCore(fullPath, file);
+        }
+
+        /// <summary>
+        /// Refresh a file from the already parsed object that was just saved. Artwork hashes are
+        /// computed from its in-memory payloads, avoiding another open/read across the scan share.
+        /// </summary>
+        public bool ReindexFile(string fullPath, IMediaFile savedFile)
+        {
+            ArgumentNullException.ThrowIfNull(savedFile);
+            using (var sha = SHA256.Create())
+                foreach (var image in savedFile.Tags.SelectMany(t => t.GetImageMetadata()))
+                    image.HashImage(sha);
+
+            return ReindexFileCore(fullPath, savedFile);
+        }
+
+        private bool ReindexFileCore(string fullPath, IMediaFile file)
+        {
+            var (setId, albumPath, fileName) = DecomposePath(fullPath);
+            if (setId < 0)
+                return false;
+
             var mp = file.Tags.First();
             var cp = file.Codecs.First();
             var fi = new FileInfo(fullPath);
+            var knownMetadata = mp.GetKnownMetadata().ToArray();
+
+            string KnownValue(TagFields field) =>
+                knownMetadata.FirstOrDefault(kv => kv.Key == field).Value;
+            int? KnownInt(TagFields field) =>
+                int.TryParse(KnownValue(field), out int value) ? value : null;
+
+            string artist = KnownValue(TagFields.Artist) ?? "";
+            string albumArtist = KnownValue(TagFields.AlbumArtist);
+            if (string.IsNullOrEmpty(albumArtist))
+                albumArtist = artist;
+            string album = KnownValue(TagFields.Album) ?? "";
+            string title = KnownValue(TagFields.Title) ?? "";
 
             using var trans = conn_.BeginTransaction();
             try
@@ -1313,9 +1420,9 @@ namespace MetadataCaching
                     }
                 }
 
-                long artistId = GetOrInsert(trans, "Artists", "Name", mp.Artist);
-                long albumArtistId = GetOrInsert(trans, "AlbumArtists", "Name", mp.AlbumArtist);
-                long albumId = GetOrInsertAlbum(trans, setId, albumArtistId, albumPath, mp.Album);
+                long artistId = GetOrInsert(trans, "Artists", "Name", artist);
+                long albumArtistId = GetOrInsert(trans, "AlbumArtists", "Name", albumArtist);
+                long albumId = GetOrInsertAlbum(trans, setId, albumArtistId, albumPath, album);
 
                 long fileId;
                 using (var fc = trans.CreateCommand())
@@ -1344,34 +1451,43 @@ namespace MetadataCaching
                     tc.Parameters.Add("@ID", DbType.Int64).Value = fileId;
                     tc.Parameters.Add("@ArtistID", DbType.Int64).Value = artistId;
                     tc.Parameters.Add("@AlbumID", DbType.Int64).Value = albumId;
-                    tc.Parameters.Add("@Name", DbType.String).Value = mp.Title ?? "";
-                    tc.Parameters.Add("@TrackNumber", DbType.Int64).Value = (object)(long?)mp.TrackNumber ?? DBNull.Value;
-                    tc.Parameters.Add("@TrackTotal", DbType.Int64).Value = (object)(long?)mp.TrackTotal ?? DBNull.Value;
-                    tc.Parameters.Add("@DiscNumber", DbType.Int64).Value = (object)(long?)mp.DiscNumber ?? DBNull.Value;
-                    tc.Parameters.Add("@DiscTotal", DbType.Int64).Value = (object)(long?)mp.DiscTotal ?? DBNull.Value;
-                    tc.Parameters.Add("@ReleaseDate", DbType.String).Value = (object)mp.ReleaseDate ?? DBNull.Value;
+                    tc.Parameters.Add("@Name", DbType.String).Value = title;
+                    tc.Parameters.Add("@TrackNumber", DbType.Int64).Value = (object)(long?)KnownInt(TagFields.TrackNumber) ?? DBNull.Value;
+                    tc.Parameters.Add("@TrackTotal", DbType.Int64).Value = (object)(long?)KnownInt(TagFields.TotalTracks) ?? DBNull.Value;
+                    tc.Parameters.Add("@DiscNumber", DbType.Int64).Value = (object)(long?)KnownInt(TagFields.DiscNumber) ?? DBNull.Value;
+                    tc.Parameters.Add("@DiscTotal", DbType.Int64).Value = (object)(long?)KnownInt(TagFields.TotalDiscs) ?? DBNull.Value;
+                    tc.Parameters.Add("@ReleaseDate", DbType.String).Value = (object)KnownValue(TagFields.Date) ?? DBNull.Value;
                     tc.ExecuteNonQuery();
                 }
 
-                foreach (var kv in mp.GetTextMetadata())
+                using (var mc = trans.CreateCommand())
                 {
-                    long keyId = GetOrInsert(trans, "MetadataKeys", "\"Key\"", kv.Key);
-                    using var mc = trans.CreateCommand();
                     mc.CommandText = "INSERT INTO Metadata (FileID, KeyID, Value) VALUES (@f, @k, @v)";
-                    mc.Parameters.Add("@f", DbType.Int64).Value = fileId;
-                    mc.Parameters.Add("@k", DbType.Int64).Value = keyId;
-                    mc.Parameters.Add("@v", DbType.String).Value = kv.Value ?? "";
-                    mc.ExecuteNonQuery();
+                    var fileParam = mc.Parameters.Add("@f", DbType.Int64);
+                    var keyParam = mc.Parameters.Add("@k", DbType.Int64);
+                    var valueParam = mc.Parameters.Add("@v", DbType.String);
+                    fileParam.Value = fileId;
+                    foreach (var kv in knownMetadata)
+                    {
+                        keyParam.Value = GetOrInsert(trans, "MetadataKeys", "\"Key\"", kv.Key.ToString());
+                        valueParam.Value = kv.Value ?? "";
+                        mc.ExecuteNonQuery();
+                    }
                 }
 
-                foreach (var kv in mp.GetKnownMetadata())
+                using (var kc = trans.CreateCommand())
                 {
-                    using var kc = trans.CreateCommand();
                     kc.CommandText = "INSERT INTO KnownMetadata (FileID, Field, Value) VALUES (@f, @field, @v)";
-                    kc.Parameters.Add("@f", DbType.Int64).Value = fileId;
-                    kc.Parameters.Add("@field", DbType.String).Value = kv.Key.ToString();
-                    kc.Parameters.Add("@v", DbType.String).Value = kv.Value ?? "";
-                    kc.ExecuteNonQuery();
+                    var fileParam = kc.Parameters.Add("@f", DbType.Int64);
+                    var fieldParam = kc.Parameters.Add("@field", DbType.String);
+                    var valueParam = kc.Parameters.Add("@v", DbType.String);
+                    fileParam.Value = fileId;
+                    foreach (var kv in knownMetadata)
+                    {
+                        fieldParam.Value = kv.Key.ToString();
+                        valueParam.Value = kv.Value ?? "";
+                        kc.ExecuteNonQuery();
+                    }
                 }
 
                 foreach (var image in mp.GetImageMetadata())

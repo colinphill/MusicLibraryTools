@@ -17,6 +17,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
+using System.Buffers;
 using MusicLibraryTools;
 
 // GenerateAssemblyInfo is disabled for this project, so the MSBuild <InternalsVisibleTo>
@@ -32,10 +33,50 @@ namespace MusicFileUtilities
         // many small reads, and over SMB each unbuffered read is a network round-trip. One
         // 128KB read replaces dozens of 4KB ones; locally the cost is just a bigger buffer.
         internal const int ParseReadBufferSize = 128 * 1024;
+        internal const int RewriteCopyBufferSize = 1024 * 1024;
 
         public static FileStream OpenReadSequential(string path)
         {
             return new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, ParseReadBufferSize, FileOptions.SequentialScan);
+        }
+
+        // Large, pooled transfers turn full tag rewrites into sustained sequential SMB I/O instead
+        // of a stream of 64 KiB requests. A bounded-length variant is used by formats whose tag is
+        // appended after an audio prefix.
+        public static void CopyToEnd(Stream source, Stream destination)
+        {
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(RewriteCopyBufferSize);
+            try
+            {
+                int read;
+                while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
+                    destination.Write(buffer, 0, read);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+        }
+
+        public static void CopyExactly(Stream source, Stream destination, long length)
+        {
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(RewriteCopyBufferSize);
+            try
+            {
+                long remaining = length;
+                while (remaining > 0)
+                {
+                    int read = source.Read(buffer, 0, (int)Math.Min(buffer.Length, remaining));
+                    if (read == 0)
+                        throw new EndOfStreamException("The source changed while it was being copied.");
+                    destination.Write(buffer, 0, read);
+                    remaining -= read;
+                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
         }
 
         // Full metadata rewrites are staged beside the destination so the final rename stays on

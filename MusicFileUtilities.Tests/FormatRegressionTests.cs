@@ -330,6 +330,35 @@ namespace MusicFileUtilities.Tests
         }
 
         [Fact]
+        public void FlacCommentGrowthConsumesAdjacentPaddingInPlace()
+        {
+            byte[] padded = AddFlacPaddingAfterComment(
+                File.ReadAllBytes(MediaFixtures.Path_("sample.flac")), 4096);
+            string path = Path.Combine(Path.GetTempPath(), $"mlt_{Guid.NewGuid():N}.flac");
+            File.WriteAllBytes(path, padded);
+            using var temp = new MediaFixtures.TempMedia(path);
+            long originalLength = new FileInfo(path).Length;
+
+            var flac = (FLACFile)MediaFile.GetFile(path);
+            string title = new string('T', 2048);
+            flac.SetField(TagFields.Title, title);
+            flac.Save();
+
+            Assert.True(flac.LastSaveWasInPlace);
+            Assert.Equal(originalLength, new FileInfo(path).Length);
+            Assert.Equal(title, MediaFile.GetFile(path).Tags.Single().Title);
+
+            // The parser keeps only the padding length, so also exercise a later full rewrite
+            // and verify that regenerated zero padding still yields a valid FLAC.
+            string rewrittenPath = Path.Combine(Path.GetTempPath(), $"mlt_{Guid.NewGuid():N}.flac");
+            using var rewritten = new MediaFixtures.TempMedia(rewrittenPath);
+            flac.Save(rewrittenPath);
+            Assert.False(flac.LastSaveWasInPlace);
+            Assert.Equal(title, MediaFile.GetFile(rewrittenPath).Tags.Single().Title);
+            Assert.Equal(44100u, MediaFile.GetFile(rewrittenPath).Codecs.Single().Samplerate);
+        }
+
+        [Fact]
         public void UntaggedMp3SaveCreatesId3v23AndPreservesAudio()
         {
             byte[] tagged = File.ReadAllBytes(MediaFixtures.Path_("sample.mp3"));
@@ -406,6 +435,39 @@ namespace MusicFileUtilities.Tests
             while (!last);
 
             using var output = new MemoryStream();
+            output.Write("fLaC"u8);
+            for (int i = 0; i < blocks.Count; i++)
+            {
+                FLACFile.WriteMetaBlockHeader(output, blocks[i].Type, blocks[i].Data.Length, i == blocks.Count - 1);
+                output.Write(blocks[i].Data);
+            }
+            output.Write(source, offset, source.Length - offset);
+            return output.ToArray();
+        }
+
+        private static byte[] AddFlacPaddingAfterComment(byte[] source, int paddingLength)
+        {
+            Assert.Equal("fLaC", Encoding.ASCII.GetString(source, 0, 4));
+            var blocks = new List<(byte Type, byte[] Data)>();
+            int offset = 4;
+            bool last;
+            do
+            {
+                byte header = source[offset++];
+                int length = (source[offset] << 16) | (source[offset + 1] << 8) | source[offset + 2];
+                offset += 3;
+                byte type = (byte)(header & 0x7f);
+                blocks.Add((type, source.AsSpan(offset, length).ToArray()));
+                offset += length;
+                last = (header & 0x80) != 0;
+            }
+            while (!last);
+
+            int commentIndex = blocks.FindIndex(b => b.Type == 4);
+            Assert.True(commentIndex >= 0);
+            blocks.Insert(commentIndex + 1, (1, new byte[paddingLength]));
+
+            using var output = new MemoryStream(source.Length + paddingLength + 4);
             output.Write("fLaC"u8);
             for (int i = 0; i < blocks.Count; i++)
             {

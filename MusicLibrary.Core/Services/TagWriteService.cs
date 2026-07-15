@@ -8,14 +8,17 @@ public sealed class TagWriteService : ITagWriteService
 {
     private readonly IReindexService? _reindex;
     private readonly IFileMutationCoordinator _mutations;
+    private readonly int _maxParallelism;
 
     // The reindex service is optional so this service can be constructed standalone (unit tests).
     public TagWriteService(
         IReindexService? reindex = null,
-        IFileMutationCoordinator? mutations = null)
+        IFileMutationCoordinator? mutations = null,
+        int maxParallelism = 4)
     {
         _reindex = reindex;
         _mutations = mutations ?? FileMutationCoordinator.Shared;
+        _maxParallelism = Math.Clamp(maxParallelism, 1, 16);
     }
 
     public Task<BatchWriteResult> ApplyAsync(
@@ -25,33 +28,49 @@ public sealed class TagWriteService : ITagWriteService
         CancellationToken ct = default)
         => Task.Run(async () =>
         {
-            var results = new List<FileWriteResult>(paths.Count);
+            var results = new FileWriteResult[paths.Count];
+            int nextIndex = -1;
             int done = 0;
-            foreach (var path in paths)
+
+            async Task Worker()
             {
-                ct.ThrowIfCancellationRequested();
-                using var mutation = await _mutations.AcquireAsync(path, ct);
-                var result = ApplyToFile(path, edits);
-                // Once the disk commit succeeds, cancellation must not strand a stale cache or turn
-                // that committed write into an apparent failure. Cache errors are reported separately.
-                if (result.Outcome == WriteOutcome.Saved && _reindex is not null)
+                while (true)
                 {
-                    try
+                    int index = Interlocked.Increment(ref nextIndex);
+                    if (index >= paths.Count)
+                        return;
+
+                    ct.ThrowIfCancellationRequested();
+                    string path = paths[index];
+                    using var mutation = await _mutations.AcquireAsync(path, ct);
+                    var applied = ApplyToFile(path, edits);
+                    var result = applied.Result;
+                    // Once the disk commit succeeds, cancellation must not strand a stale cache or
+                    // turn that committed write into an apparent failure. Cache errors are separate.
+                    if (result.Outcome == WriteOutcome.Saved && applied.SavedFile is not null && _reindex is not null)
                     {
-                        await _reindex.ReindexFileAsync(path, CancellationToken.None);
+                        try
+                        {
+                            await _reindex.ReindexFileAsync(path, applied.SavedFile, CancellationToken.None);
+                        }
+                        catch (Exception ex)
+                        {
+                            result = result with { CacheError = ex.Message };
+                        }
                     }
-                    catch (Exception ex)
-                    {
-                        result = result with { CacheError = ex.Message };
-                    }
+                    results[index] = result;
+                    progress?.Report(Interlocked.Increment(ref done));
                 }
-                results.Add(result);
-                progress?.Report(++done);
             }
+
+            int workerCount = Math.Min(_maxParallelism, paths.Count);
+            await Task.WhenAll(Enumerable.Range(0, workerCount).Select(_ => Worker()));
             return new BatchWriteResult(results);
         }, ct);
 
-    private static FileWriteResult ApplyToFile(string path, IReadOnlyList<TagEdit> edits)
+    private sealed record ApplyResult(FileWriteResult Result, IMediaFile? SavedFile = null);
+
+    private static ApplyResult ApplyToFile(string path, IReadOnlyList<TagEdit> edits)
     {
         try
         {
@@ -72,14 +91,24 @@ public sealed class TagWriteService : ITagWriteService
             else if (file.Tags.FirstOrDefault() is VorbisComments tagVorbis)
                 setField = (f, v) => tagVorbis.SetField(f, v);
             else
-                return new FileWriteResult { Path = path, Outcome = WriteOutcome.Failed, Error = "Tag format is read-only." };
+                return new(new FileWriteResult { Path = path, Outcome = WriteOutcome.Failed, Error = "Tag format is read-only." });
 
             var unsupported = new List<TagFields>();
             int applied = 0;
+            var provider = file.Tags.First();
             foreach (var edit in edits)
             {
                 try
                 {
+                    // Avoid a network write when the requested normalized value is already the
+                    // file's sole value (or the requested removal is already absent).
+                    var existing = provider.GetKnownMetadata()
+                        .Where(kv => kv.Key == edit.Field)
+                        .Select(kv => kv.Value)
+                        .ToArray();
+                    if (edit.Value is null ? existing.Length == 0 : existing.Length == 1 && existing[0] == edit.Value)
+                        continue;
+
                     // SetField(field, null) removes the field.
                     setField(edit.Field, edit.Value);
                     applied++;
@@ -93,25 +122,25 @@ public sealed class TagWriteService : ITagWriteService
 
             if (applied == 0)
             {
-                return new FileWriteResult
+                return new(new FileWriteResult
                 {
                     Path = path,
                     Outcome = WriteOutcome.Skipped,
                     UnsupportedFields = unsupported,
-                };
+                });
             }
 
             file.SaveTags();
-            return new FileWriteResult
+            return new(new FileWriteResult
             {
                 Path = path,
                 Outcome = WriteOutcome.Saved,
                 UnsupportedFields = unsupported,
-            };
+            }, file);
         }
         catch (Exception ex)
         {
-            return new FileWriteResult { Path = path, Outcome = WriteOutcome.Failed, Error = ex.Message };
+            return new(new FileWriteResult { Path = path, Outcome = WriteOutcome.Failed, Error = ex.Message });
         }
     }
 }

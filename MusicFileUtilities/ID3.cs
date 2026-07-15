@@ -1536,10 +1536,7 @@ namespace MusicFileUtilities
                             f.Write(dest);
                         dest.Write(pad, 0, pad.Length);
 
-                        byte[] buffer = new byte[65536];
-                        int read;
-                        while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
-                            dest.Write(buffer, 0, read);
+                        Tools.CopyToEnd(source, dest);
                         dest.Flush(flushToDisk: true);
                     }
 
@@ -2131,14 +2128,7 @@ namespace MusicFileUtilities
                 long audioEnd = _tagoffset > 0 ? _tagoffset : new FileInfo(sourcePath).Length;
                 using FileStream source = new FileStream(sourcePath, FileMode.Open, FileAccess.Read);
                 using FileStream dest = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
-                byte[] buffer = new byte[65536];
-                long remaining = audioEnd;
-                int read;
-                while (remaining > 0 && (read = source.Read(buffer, 0, (int)Math.Min(buffer.Length, remaining))) > 0)
-                {
-                    dest.Write(buffer, 0, read);
-                    remaining -= read;
-                }
+                Tools.CopyExactly(source, dest, audioEnd);
                 WriteHeader(dest);
                 foreach (var f in Frames)
                     f.Write(dest);

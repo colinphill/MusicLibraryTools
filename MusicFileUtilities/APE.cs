@@ -459,9 +459,9 @@ namespace MusicFileUtilities
 
         public bool ReadTag(Stream s)
         {
-            if (s.Length < 32)
+            long streamLength = s.Length;
+            if (streamLength < 32)
                 return false;
-            s.Seek(0, SeekOrigin.Begin);
             byte[] preamble = new byte[8];
             byte[] headerfooter = new byte[24];
             s.Seek(0, SeekOrigin.Begin);
@@ -479,7 +479,7 @@ namespace MusicFileUtilities
                 int sizeFromFooter = Tools.Int32AtLE(headerfooter, 4);
                 // Audio ends where the APE tag block starts.
                 // The size field covers items + footer (32). Check for a leading header.
-                long footerPos = s.Length - 32;
+                long footerPos = streamLength - 32;
                 long itemsStart = footerPos - (sizeFromFooter - 32);
                 // Check if a header precedes the items
                 if (itemsStart >= 32)
@@ -493,7 +493,7 @@ namespace MusicFileUtilities
                 }
                 else
                     AudioEndOffset = itemsStart;
-                if (sizeFromFooter < 0 || sizeFromFooter > s.Length)
+                if (sizeFromFooter < 0 || sizeFromFooter > streamLength)
                     return false;
                 s.Seek(-sizeFromFooter, SeekOrigin.End);
             }
@@ -504,7 +504,7 @@ namespace MusicFileUtilities
             int itemcount = Tools.Int32AtLE(headerfooter, 8);
             // Item count/sizes come from the file; validate before allocating/indexing so a
             // corrupt tag can't OOM or read out of bounds.
-            if (tagsize < 0 || tagsize > s.Length - s.Position)
+            if (tagsize < 0 || tagsize > streamLength - s.Position)
                 return false;
             byte[] tag = new byte[tagsize];
             s.ReadExactly(tag);

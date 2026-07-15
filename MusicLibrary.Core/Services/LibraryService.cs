@@ -408,6 +408,22 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         }
     }
 
+    public async Task ReindexFileAsync(string path, IMediaFile savedFile, CancellationToken ct = default)
+    {
+        if (!IsReady)
+            return;
+        await _gate.WaitAsync(ct);
+        try
+        {
+            var db = GetDatabase(GetContext());
+            await Task.Run(() => db.ReindexFile(path, savedFile), ct);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     private static HashSet<string>? ParseExtensionFilter(string? filter)
     {
         if (string.IsNullOrWhiteSpace(filter))
