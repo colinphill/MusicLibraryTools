@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
 using MusicFileUtilities;
+using MusicLibraryTools;
 using MusicLibrary.Core.Models;
 using iTunes.Binary;
 
@@ -13,13 +14,24 @@ public sealed class IngestMusicService : IIngestMusicService
         @"^(?<album>.+?)\s+\(Disc\s+(?<disc>\d+)\)$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private readonly IFfmpegRunner _ffmpeg;
+    private readonly int _previewParallelism;
 
-    public IngestMusicService(IFfmpegRunner ffmpeg) => _ffmpeg = ffmpeg;
+    public IngestMusicService(IFfmpegRunner ffmpeg, int? previewParallelism = null)
+    {
+        _ffmpeg = ffmpeg;
+        _previewParallelism = Math.Clamp(previewParallelism ?? GetDefaultPreviewParallelism(), 1, 64);
+    }
+
+    private static int GetDefaultPreviewParallelism()
+    {
+        string? configured = Environment.GetEnvironmentVariable("MLT_INGEST_PARALLELISM");
+        return int.TryParse(configured, out int value) ? value : 16;
+    }
 
     public Task<IngestPlan> PreviewAsync(IngestRequest request, CancellationToken ct = default)
         => Task.Run(() => Preview(request, ct), ct);
 
-    private static IngestPlan Preview(IngestRequest request, CancellationToken ct)
+    private IngestPlan Preview(IngestRequest request, CancellationToken ct)
     {
         string sourceRoot = Path.GetFullPath(request.SourceDirectory);
         if (!Directory.Exists(sourceRoot))
@@ -43,67 +55,63 @@ public sealed class IngestMusicService : IIngestMusicService
             throw new InvalidDataException("The source directory must not overlap an ingestion destination.");
         if (destinations.SelectMany((a, i) => destinations.Skip(i + 1).Select(b => (a, b))).Any(p => PathsOverlap(p.a, p.b)))
             throw new InvalidDataException("Ingestion destination directories must not overlap each other.");
-        var conflicts = new List<IngestConflict>();
-        var ignored = new List<string>();
-        var scanned = new List<ScannedTrack>();
-
-        foreach (string path in Directory.EnumerateFiles(sourceRoot, "*", SearchOption.AllDirectories))
+        var sourceDirectories = new List<string>();
+        var scanFiles = new List<PreviewFile>();
+        // One buffered traversal supplies paths, size/timestamp snapshots, and the directory list.
+        // The previous implementation walked the whole tree once for files, once for directories,
+        // then issued a FileInfo metadata request for every file -- particularly costly over SMB.
+        foreach (var entry in new MusicFileEnumerator(sourceRoot, skipItlpPackages: false))
         {
             ct.ThrowIfCancellationRequested();
-            string extension = Path.GetExtension(path);
+            if (entry.FileType == MFEType.Directory)
+            {
+                sourceDirectories.Add(entry.Name);
+                continue;
+            }
+
+            string extension = Path.GetExtension(entry.Name);
+            var snapshot = new IngestFileSnapshot(entry.Name, entry.Size, entry.Modified);
             if (!extension.Equals(".flac", StringComparison.OrdinalIgnoreCase) &&
                 !extension.Equals(".m4a", StringComparison.OrdinalIgnoreCase))
             {
-                ignored.Add(path);
+                scanFiles.Add(new PreviewFile(snapshot, Supported: false));
                 continue;
             }
-            try
-            {
-                var media = MediaFile.GetFile(path);
-                var tag = media.Tags.FirstOrDefault() ?? throw new InvalidDataException("No metadata tag was found.");
-                var codec = media.Codecs.FirstOrDefault() ?? throw new InvalidDataException("No audio stream was found.");
-                bool alac = codec.CodecName.Equals("ALAC", StringComparison.OrdinalIgnoreCase);
-                if (extension.Equals(".m4a", StringComparison.OrdinalIgnoreCase) && !alac)
-                {
-                    ignored.Add(path);
-                    continue;
-                }
-                if (codec.CodecType != CodecType.Lossless)
-                {
-                    ignored.Add(path);
-                    continue;
-                }
-                string artist = (tag.Artist ?? "").Trim();
-                string albumArtist = (tag.AlbumArtist ?? "").Trim();
-                string album = (tag.Album ?? "").Trim();
-                string title = (tag.Title ?? "").Trim();
-                if (string.IsNullOrWhiteSpace(albumArtist)) albumArtist = artist;
-                string? compilationValue = tag.GetKnownMetadata()
-                    .FirstOrDefault(field => field.Key == TagFields.Compilation).Value;
-                bool compilation = compilationValue is not null &&
-                    (compilationValue.Equals("1", StringComparison.OrdinalIgnoreCase) ||
-                     compilationValue.Equals("true", StringComparison.OrdinalIgnoreCase) ||
-                     compilationValue.Equals("yes", StringComparison.OrdinalIgnoreCase));
-                if (string.IsNullOrWhiteSpace(artist) || string.IsNullOrWhiteSpace(albumArtist) ||
-                    string.IsNullOrWhiteSpace(album) || string.IsNullOrWhiteSpace(title) || tag.TrackNumber is null)
-                    throw new InvalidDataException("Artist, album artist, album, title, and track number are required.");
-                if (codec.Channels != 2)
-                    throw new InvalidDataException($"Only stereo input is supported (found {codec.Channels} channels).");
-                if (codec.Samplerate < 44100 || codec.BitsPerSample < 16)
-                    throw new InvalidDataException($"Below-CD-quality input is unsupported ({codec.Samplerate} Hz/{codec.BitsPerSample}-bit).");
 
-                var suffix = DiscSuffix.Match(album);
-                string baseAlbum = suffix.Success ? suffix.Groups["album"].Value.Trim() : album;
-                scanned.Add(new ScannedTrack(
-                    path, artist, albumArtist, baseAlbum, title, tag.TrackNumber.Value,
-                    tag.DiscNumber, codec.Samplerate, codec.BitsPerSample, codec.Channels,
-                    codec.DurationInSeconds, alac, compilation, new FileInfo(path)));
-            }
-            catch (Exception ex)
-            {
-                conflicts.Add(new IngestConflict(path, path, ex.Message));
-            }
+            scanFiles.Add(new PreviewFile(snapshot, Supported: true));
         }
+
+        var scanResults = new PreviewFileResult[scanFiles.Count];
+        var supportedIndexes = new List<int>(scanFiles.Count);
+        for (int index = 0; index < scanFiles.Count; index++)
+        {
+            if (scanFiles[index].Supported)
+                supportedIndexes.Add(index);
+            else
+                scanResults[index] = PreviewFileResult.Ignored(scanFiles[index].Snapshot);
+        }
+
+        // Parsing is independent per file. Bound the global reader count so high-latency opens can
+        // overlap without allowing a large incoming tree to flood the share or retain unbounded tag
+        // buffers. Results are written by index and merged below in original enumeration order.
+        Parallel.ForEach(
+            supportedIndexes,
+            new ParallelOptions { MaxDegreeOfParallelism = _previewParallelism, CancellationToken = ct },
+            index => scanResults[index] = ScanPreviewFile(scanFiles[index].Snapshot));
+
+        var conflicts = new List<IngestConflict>();
+        var ignoredSnapshots = new List<IngestFileSnapshot>();
+        var scanned = new List<ScannedTrack>();
+        foreach (var result in scanResults)
+        {
+            if (result.Track is not null)
+                scanned.Add(result.Track);
+            else if (result.Conflict is not null)
+                conflicts.Add(result.Conflict);
+            else if (result.IgnoredSnapshot is not null)
+                ignoredSnapshots.Add(result.IgnoredSnapshot);
+        }
+        var ignored = ignoredSnapshots.Select(snapshot => snapshot.Path).ToList();
 
         var albums = new List<IngestAlbumPlan>();
         var files = new List<IngestFileSummary>();
@@ -201,7 +209,7 @@ public sealed class IngestMusicService : IIngestMusicService
                 outputs.Add(Output(selectedCd, IngestOutputKind.Aac, selectedCd.SourcePath, aacDestination));
             }
 
-            var snapshots = sourceTracks.Select(t => new IngestFileSnapshot(t.Path, t.File.Length, t.File.LastWriteTimeUtc)).ToList();
+            var snapshots = sourceTracks.Select(t => t.Snapshot).ToList();
             var album = new IngestAlbumPlan
             {
                 Key = group.Key,
@@ -250,14 +258,6 @@ public sealed class IngestMusicService : IIngestMusicService
                     ? PlanSourceDisposition(config)
                     : "Source → Leave unchanged"));
 
-        var ignoredSnapshots = ignored.Select(path =>
-        {
-            var file = new FileInfo(path);
-            return new IngestFileSnapshot(file.FullName, file.Length, file.LastWriteTimeUtc);
-        }).ToList();
-        var sourceDirectories = Directory.EnumerateDirectories(sourceRoot, "*", SearchOption.AllDirectories)
-            .Select(Path.GetFullPath).ToList();
-
         return new IngestPlan
         {
             Request = request with { SourceDirectory = sourceRoot, ConfigurationPath = Path.GetFullPath(request.ConfigurationPath) },
@@ -271,6 +271,54 @@ public sealed class IngestMusicService : IIngestMusicService
             SourceDirectories = sourceDirectories,
             ItunesLibrarySnapshot = itunesLibrarySnapshot,
         };
+    }
+
+    private static PreviewFileResult ScanPreviewFile(IngestFileSnapshot snapshot)
+    {
+        string path = snapshot.Path;
+        string extension = Path.GetExtension(path);
+        try
+        {
+            // Preview never saves this object. Read-only MP4 parsing skips unrelated atom payloads
+            // while preserving the same codec/tag projection used to build the plan.
+            var media = MediaFile.GetFile(path, readOnly: true);
+            var tag = media.Tags.FirstOrDefault() ?? throw new InvalidDataException("No metadata tag was found.");
+            var codec = media.Codecs.FirstOrDefault() ?? throw new InvalidDataException("No audio stream was found.");
+            bool alac = codec.CodecName.Equals("ALAC", StringComparison.OrdinalIgnoreCase);
+            if (extension.Equals(".m4a", StringComparison.OrdinalIgnoreCase) && !alac)
+                return PreviewFileResult.Ignored(snapshot);
+            if (codec.CodecType != CodecType.Lossless)
+                return PreviewFileResult.Ignored(snapshot);
+            string artist = (tag.Artist ?? "").Trim();
+            string albumArtist = (tag.AlbumArtist ?? "").Trim();
+            string album = (tag.Album ?? "").Trim();
+            string title = (tag.Title ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(albumArtist)) albumArtist = artist;
+            string? compilationValue = tag.GetKnownMetadata()
+                .FirstOrDefault(field => field.Key == TagFields.Compilation).Value;
+            bool compilation = compilationValue is not null &&
+                (compilationValue.Equals("1", StringComparison.OrdinalIgnoreCase) ||
+                 compilationValue.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                 compilationValue.Equals("yes", StringComparison.OrdinalIgnoreCase));
+            if (string.IsNullOrWhiteSpace(artist) || string.IsNullOrWhiteSpace(albumArtist) ||
+                string.IsNullOrWhiteSpace(album) || string.IsNullOrWhiteSpace(title) || tag.TrackNumber is null)
+                throw new InvalidDataException("Artist, album artist, album, title, and track number are required.");
+            if (codec.Channels != 2)
+                throw new InvalidDataException($"Only stereo input is supported (found {codec.Channels} channels).");
+            if (codec.Samplerate < 44100 || codec.BitsPerSample < 16)
+                throw new InvalidDataException($"Below-CD-quality input is unsupported ({codec.Samplerate} Hz/{codec.BitsPerSample}-bit).");
+
+            var suffix = DiscSuffix.Match(album);
+            string baseAlbum = suffix.Success ? suffix.Groups["album"].Value.Trim() : album;
+            return PreviewFileResult.Scanned(new ScannedTrack(
+                path, artist, albumArtist, baseAlbum, title, tag.TrackNumber.Value,
+                tag.DiscNumber, codec.Samplerate, codec.BitsPerSample, codec.Channels,
+                codec.DurationInSeconds, alac, compilation, snapshot));
+        }
+        catch (Exception ex)
+        {
+            return PreviewFileResult.Failed(new IngestConflict(path, path, ex.Message));
+        }
     }
 
     public async Task<IngestResult> ApplyAsync(IngestPlan plan, IReadOnlyList<IngestApprovalDecision> approvals,
@@ -836,7 +884,19 @@ public sealed class IngestMusicService : IIngestMusicService
         stream.Flush(flushToDisk: true);
     }
 
+    private sealed record PreviewFile(IngestFileSnapshot Snapshot, bool Supported);
+
+    private sealed record PreviewFileResult(
+        ScannedTrack? Track,
+        IngestConflict? Conflict,
+        IngestFileSnapshot? IgnoredSnapshot)
+    {
+        public static PreviewFileResult Scanned(ScannedTrack track) => new(track, null, null);
+        public static PreviewFileResult Failed(IngestConflict conflict) => new(null, conflict, null);
+        public static PreviewFileResult Ignored(IngestFileSnapshot snapshot) => new(null, null, snapshot);
+    }
+
     private sealed record ScannedTrack(string Path, string Artist, string AlbumArtist, string BaseAlbum,
         string Title, int TrackNumber, int? DiscNumber, uint SampleRate, uint BitsPerSample,
-        uint Channels, uint Duration, bool IsAlac, bool Compilation, FileInfo File);
+        uint Channels, uint Duration, bool IsAlac, bool Compilation, IngestFileSnapshot Snapshot);
 }

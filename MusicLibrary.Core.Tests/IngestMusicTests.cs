@@ -117,6 +117,7 @@ public class IngestMusicTests
         using var tree = new TempTree();
         tree.FileFromFixture("incoming", "one.flac", "sample.flac");
         string notes = tree.TestFile("incoming", "artwork", "notes.txt");
+        string packagedNotes = tree.TestFile("incoming", "bundle.itlp", "notes.txt");
         string configPath = tree.Config();
         var config = IngestMusicConfiguration.Load(configPath) with { RemoveNonMusicAfterIngest = true };
         config.Save(configPath);
@@ -127,8 +128,13 @@ public class IngestMusicTests
         var ignored = Assert.Single(plan.Files, file => file.Source == notes);
         Assert.Equal("Unsupported/non-audio", ignored.SourceType);
         Assert.Contains("Quarantine after successful ingest", ignored.Summary);
-        Assert.Single(plan.IgnoredFileSnapshots);
+        Assert.Equal(2, plan.IgnoredFileSnapshots.Count);
+        Assert.Contains(plan.IgnoredFileSnapshots, snapshot =>
+            snapshot.Path == notes && snapshot.Length == new FileInfo(notes).Length &&
+            snapshot.LastWriteTimeUtc == new FileInfo(notes).LastWriteTimeUtc);
+        Assert.Contains(plan.IgnoredFileSnapshots, snapshot => snapshot.Path == packagedNotes);
         Assert.Contains(tree.Path("incoming", "artwork"), plan.SourceDirectories);
+        Assert.Contains(tree.Path("incoming", "bundle.itlp"), plan.SourceDirectories);
     }
 
     [Fact]

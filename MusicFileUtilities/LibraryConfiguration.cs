@@ -25,11 +25,17 @@ namespace MusicLibraryTools
 
     public class MusicFileEnumerator : FileSystemEnumerator<(string Name, DateTime Modified, long Size, MFEType FileType)>, IEnumerable<(string Name, DateTime Modified, long Size, MFEType FileType)>
     {
+        private readonly bool _skipItlpPackages;
+
         // The 64KB buffer sizes each directory-query round-trip; the default is small enough
         // that large folders take several round-trips per directory on a network share.
         // recurse:false enumerates just the immediate children (used to split a scan root
         // into per-subtree units).
-        public MusicFileEnumerator(string directory, bool recurse = true) : base(directory, new EnumerationOptions { RecurseSubdirectories = recurse, BufferSize = 64 * 1024 }) { }
+        public MusicFileEnumerator(string directory, bool recurse = true, bool skipItlpPackages = true)
+            : base(directory, new EnumerationOptions { RecurseSubdirectories = recurse, BufferSize = 64 * 1024 })
+        {
+            _skipItlpPackages = skipItlpPackages;
+        }
 
         public IEnumerator<(string Name, DateTime Modified, long Size, MFEType FileType)> GetEnumerator()
         {
@@ -43,7 +49,7 @@ namespace MusicLibraryTools
 
         protected override bool ShouldRecurseIntoEntry(ref FileSystemEntry entry)
         {
-            return (!entry.FileName.Contains(".itlp", StringComparison.OrdinalIgnoreCase));
+            return !_skipItlpPackages || !entry.FileName.Contains(".itlp", StringComparison.OrdinalIgnoreCase);
         }
 
         protected override (string Name, DateTime Modified, long Size, MFEType FileType) TransformEntry(ref FileSystemEntry entry)

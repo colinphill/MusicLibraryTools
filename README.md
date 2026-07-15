@@ -119,7 +119,9 @@ also use `ITUNES_ITL` and the same default `.itl` location. `ITUNES_XML` is no l
 CD-quality FLAC counterpart, apply asks for confirmation album-by-album before doing any work; one
 declined album cancels the whole run. Transcodes are staged and validated, source files are moved to
 a sibling `.IngestMusic-quarantine` tree only after an album commits by default, and ffmpeg jobs run
-in parallel up to the machine's CPU-core count. Set `DeleteSourcesAfterIngest` to `true` to delete
+in parallel up to the machine's CPU-core count. Preview uses one buffered directory walk and up to 16
+concurrent metadata readers so network opens overlap; set `MLT_INGEST_PARALLELISM` to tune that cap
+(1-64) for a particular share. Set `DeleteSourcesAfterIngest` to `true` to delete
 successfully committed sources instead. Set `RemoveNonMusicAfterIngest` to `true` to apply that same
 delete/quarantine disposition to unsupported and non-audio files after every album succeeds, and to
 remove emptied folders from the incoming tree. Start from
