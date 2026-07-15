@@ -235,6 +235,33 @@ public sealed class AnalyzerViewModelTests
         Assert.Equal("Decoded-audio verification", viewModel.SelectedRun!.Name);
     }
 
+    [Fact]
+    public async Task Analyzer_RepresentationRepairPreviewRetainsActionsAndSelectableMetadata()
+    {
+        var record = Track(@"Z:\FLAC\Album\01.flac", "AA", "Album", title: "Song", track: 1);
+        var metadata = new AnalysisRepairPlan("Copy representation metadata", [
+            new(record.Path, TagFields.Title, "Old", "Song", "Copy from high-resolution FLAC",
+                100, DateTime.UtcNow),
+        ]);
+        var previewer = new StubRepresentationRepairs(new RepresentationRepairPreview(
+            metadata,
+            [new(RepresentationRepairKind.DeriveAac, record.Path, @"Z:\AAC\Album\01.m4a", "Encode AAC.")],
+            []));
+        var settings = new AppSettings(Path.Combine(Path.GetTempPath(), $"analyzer-{Guid.NewGuid():N}.json"));
+        settings.SetPreference("Ingest.ConfigurationPath", @"C:\config\ingest.xml");
+        var viewModel = new AnalyzerViewModel(
+            new StubLibrary([record]), new StubReconciler(), new StubRepairs(), settings,
+            representationRepairs: previewer);
+
+        await viewModel.PreviewRepresentationRepairsCommand.ExecuteAsync(null);
+
+        Assert.Equal(@"C:\config\ingest.xml", previewer.ConfigurationPath);
+        Assert.Equal(2, viewModel.Runs.Count);
+        Assert.Equal("Copy representation metadata", viewModel.SelectedRun!.Name);
+        Assert.Single(viewModel.RepairItems);
+        Assert.Contains(viewModel.Runs, run => run.Name == "Representation file repairs");
+    }
+
     private static AnalyzerViewModel Create(IReadOnlyList<TrackRecord> records) =>
         new(new StubLibrary(records), new StubReconciler(), new StubRepairs(),
             new AppSettings(Path.Combine(Path.GetTempPath(), $"analyzer-{Guid.NewGuid():N}.json")));
@@ -311,6 +338,18 @@ public sealed class AnalyzerViewModelTests
             Calls++;
             Pairs = pairs;
             return Task.FromResult(new AnalysisReport("Decoded-audio verification", []));
+        }
+    }
+
+    private sealed class StubRepresentationRepairs(RepresentationRepairPreview preview)
+        : IRepresentationRepairService
+    {
+        public string? ConfigurationPath { get; private set; }
+        public Task<RepresentationRepairPreview> PreviewAsync(IReadOnlyList<TrackRecord> records,
+            string? ingestConfigurationPath, CancellationToken ct = default)
+        {
+            ConfigurationPath = ingestConfigurationPath;
+            return Task.FromResult(preview);
         }
     }
 

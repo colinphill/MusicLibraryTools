@@ -87,6 +87,29 @@ public sealed record DecodedAudioPair(string FirstPath, string SecondPath, strin
 
 public sealed record DecodedAudioProgress(int CompletedFiles, int TotalFiles, string Path);
 
+public enum RepresentationRepairKind
+{
+    DeriveCdFlac,
+    DeriveAac,
+    Organize,
+}
+
+/// <summary>A cache-derived file operation shown for review; preview never changes the filesystem.</summary>
+public sealed record RepresentationRepairAction(
+    RepresentationRepairKind Kind,
+    string SourcePath,
+    string DestinationPath,
+    string Description);
+
+/// <summary>
+/// Representation repair opportunities split between immediately stale-checkable tag edits and
+/// file operations that require a later apply workflow.
+/// </summary>
+public sealed record RepresentationRepairPreview(
+    AnalysisRepairPlan MetadataCopies,
+    IReadOnlyList<RepresentationRepairAction> FileActions,
+    IReadOnlyList<string> Warnings);
+
 /// <summary>One display cell in an album metadata matrix.</summary>
 public sealed record AnalysisMatrixCell(string? Value, bool IsInconsistent = false, string? Reason = null)
 {

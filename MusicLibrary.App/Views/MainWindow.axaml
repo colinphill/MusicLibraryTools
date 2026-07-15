@@ -416,6 +416,9 @@
                                 <Button Content="Cross-set check" Margin="0,0,8,8" Command="{Binding RunCheckSetsCommand}"/>
                                 <Button Content="Representations" Margin="0,0,8,8" Command="{Binding RunRepresentationsCommand}"
                                         ToolTip.Tip="Compare cached CD/high-resolution FLAC, purchased, and generated AAC counterparts"/>
+                                <Button Content="Representation repairs" Margin="0,0,8,8"
+                                        Command="{Binding PreviewRepresentationRepairsCommand}"
+                                        ToolTip.Tip="Preview counterpart metadata copies, missing derived files, and canonical organization"/>
                                 <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,8">
                                     <Button Content="Verify decoded audio" Command="{Binding VerifyDecodedAudioCommand}"
                                             ToolTip.Tip="Hash decoded PCM for compatible lossless representation pairs"/>

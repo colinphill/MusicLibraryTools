@@ -19,10 +19,12 @@ public enum AnalysisResultView { Findings, Duplicates, Artists, Conflicts, Repai
 public partial class AnalyzerViewModel : ViewModelBase
 {
     private const string FfmpegPreference = "Analyzer.FfmpegPath";
+    private const string IngestConfigurationPreference = "Ingest.ConfigurationPath";
     private readonly ILibraryService _library;
     private readonly IArtistReconciler _reconciler;
     private readonly IAnalysisRepairService _repairs;
     private readonly IDecodedAudioVerificationService? _decodedAudio;
+    private readonly IRepresentationRepairService? _representationRepairs;
     private readonly IAppSettings _settings;
     private CancellationTokenSource? _cts;
     private IReadOnlyList<TrackRecord> _representationRecords = [];
@@ -71,12 +73,14 @@ public partial class AnalyzerViewModel : ViewModelBase
 
     public AnalyzerViewModel(ILibraryService library, IArtistReconciler reconciler,
         IAnalysisRepairService repairs, IAppSettings settings,
-        IDecodedAudioVerificationService? decodedAudio = null)
+        IDecodedAudioVerificationService? decodedAudio = null,
+        IRepresentationRepairService? representationRepairs = null)
     {
         _library = library;
         _reconciler = reconciler;
         _repairs = repairs;
         _decodedAudio = decodedAudio;
+        _representationRepairs = representationRepairs;
         _settings = settings;
         FfmpegPath = settings.GetPreference(FfmpegPreference) ??
             (File.Exists(@"C:\ffmpeg\nonfree\ffmpeg.exe") ? @"C:\ffmpeg\nonfree\ffmpeg.exe" : "ffmpeg");
@@ -240,6 +244,62 @@ public partial class AnalyzerViewModel : ViewModelBase
         }
         catch (OperationCanceledException) { StatusText = "Decoded-audio verification cancelled."; }
         catch (Exception ex) { StatusText = $"Decoded-audio verification failed: {ex.Message}"; }
+    }
+
+    private bool CanPreviewRepresentationRepairs() => CanRun() && _representationRepairs is not null;
+
+    [RelayCommand(CanExecute = nameof(CanPreviewRepresentationRepairs))]
+    private async Task PreviewRepresentationRepairs()
+    {
+        if (_representationRepairs is null)
+            return;
+        using var scope = BeginRun("representation repair preview", AnalysisResultView.Findings);
+        try
+        {
+            var records = await _library.GetAllRecordsAsync(scope.Token);
+            var preview = await _representationRepairs.PreviewAsync(
+                records, _settings.GetPreference(IngestConfigurationPreference), scope.Token);
+
+            var findings = preview.FileActions.Select(action => new AnalysisFinding(
+                    action.SourcePath,
+                    $"{action.Description} Destination: {action.DestinationPath}",
+                    action.Kind switch
+                    {
+                        RepresentationRepairKind.DeriveCdFlac => "Derive missing CD FLAC",
+                        RepresentationRepairKind.DeriveAac => "Derive missing AAC",
+                        _ => "Organize representation",
+                    }))
+                .Concat(preview.Warnings.Select(warning => new AnalysisFinding(
+                    records.FirstOrDefault()?.Path ?? "", warning, "Preview unavailable")))
+                .ToList();
+
+            if (findings.Count > 0)
+            {
+                string actionStatus = $"Representation file repairs: {preview.FileActions.Count:N0} action(s), " +
+                    $"{preview.Warnings.Count:N0} warning(s). No files were changed.";
+                AddRun(AnalysisRunViewModel.ForFindings(
+                    new AnalysisReport("Representation file repairs", findings), records, actionStatus));
+            }
+
+            if (preview.MetadataCopies.Items.Count > 0)
+            {
+                var items = preview.MetadataCopies.Items.Select(item =>
+                {
+                    var viewModel = new AnalysisRepairItemViewModel(item);
+                    viewModel.SelectionChanged += () => ApplyRepairsCommand.NotifyCanExecuteChanged();
+                    return viewModel;
+                }).ToList();
+                string metadataStatus = $"Representation metadata: {items.Count:N0} copy operation(s). " +
+                    "Review the source role in each reason, then apply selected.";
+                AddRun(AnalysisRunViewModel.ForRepairs(preview.MetadataCopies, items, metadataStatus));
+            }
+
+            if (findings.Count == 0 && preview.MetadataCopies.Items.Count == 0)
+                StatusText = "No representation derivation, metadata-copy, or organization repairs were found.";
+        }
+        catch (OperationCanceledException) { StatusText = "Representation repair preview cancelled."; }
+        catch (Exception ex) { StatusText = $"Representation repair preview failed: {ex.Message}"; }
+        finally { ApplyRepairsCommand.NotifyCanExecuteChanged(); }
     }
 
     [RelayCommand(CanExecute = nameof(CanRun))]
@@ -469,6 +529,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         PreviewConflictRepairsCommand.NotifyCanExecuteChanged();
         RunAlbumMatrixCommand.NotifyCanExecuteChanged();
         RunRepresentationsCommand.NotifyCanExecuteChanged();
+        PreviewRepresentationRepairsCommand.NotifyCanExecuteChanged();
         VerifyDecodedAudioCommand.NotifyCanExecuteChanged();
         RunCheckSetsCommand.NotifyCanExecuteChanged();
         PreviewMetadataRepairsCommand.NotifyCanExecuteChanged();

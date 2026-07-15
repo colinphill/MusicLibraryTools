@@ -44,7 +44,7 @@ avoid eagerly reading artwork or media data that is already represented in the m
 
 - [x] Compare CD FLAC, paired/high-resolution FLAC, purchased, and generated AAC representations.
 - [x] Find missing counterparts and metadata, track-count, duration, artwork, or decoded-audio drift.
-- [ ] Preview derivation, metadata-copy, and organization repairs.
+- [x] Preview derivation, metadata-copy, and organization repairs.
 
 ## 6. Ingest workflow
 
