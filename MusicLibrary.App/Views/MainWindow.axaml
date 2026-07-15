@@ -9,7 +9,7 @@
         x:Class="MusicLibrary.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/logo.ico"
-        Width="1280" Height="820" MinWidth="1040" MinHeight="620"
+        Width="1280" Height="820" MinWidth="760" MinHeight="500"
         Background="{DynamicResource AppWindowBg}"
         Title="Music Library">
 
@@ -17,11 +17,12 @@
 
         <!-- ===== Header ===== -->
         <Border Grid.Row="0" Classes="toolbar">
-            <Grid ColumnDefinitions="Auto,Auto,*,Auto">
-                <StackPanel Grid.Column="0" Classes="toolbarrow" Spacing="12">
-                    <Border Classes="chip" Width="68" Height="68" CornerRadius="18">
+            <Grid RowDefinitions="Auto,Auto">
+                <Grid Grid.Row="0" ColumnDefinitions="Auto,*">
+                    <StackPanel Grid.Column="0" Classes="toolbarrow" Spacing="12">
+                        <Border Classes="chip" Width="56" Height="56" CornerRadius="15">
                         <!-- Brand mark: the full "lossless" waveform + verified metadata tag rows, from the app icon. -->
-                        <Viewbox Width="52" Height="52" Stretch="Uniform"
+                        <Viewbox Width="43" Height="43" Stretch="Uniform"
                                  HorizontalAlignment="Center" VerticalAlignment="Center">
                             <Canvas Width="256" Height="256">
                                 <!-- Lossless: full, symmetric waveform -->
@@ -41,28 +42,20 @@
                                 <Path Data="M156,231 l3,3 l6,-8" Stroke="#5A4BD6" StrokeThickness="2.6" StrokeLineCap="Round" StrokeJoin="Round"/>
                             </Canvas>
                         </Viewbox>
-                    </Border>
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="Music Library" Classes="h1"/>
-                        <TextBlock Text="{Binding Settings.StatusMessage}" Classes="caption"
-                                   MaxWidth="420" TextTrimming="CharacterEllipsis"/>
+                        </Border>
+                        <StackPanel VerticalAlignment="Center" MaxWidth="260">
+                            <TextBlock Text="Music Library" Classes="h1"/>
+                            <TextBlock Text="{Binding Settings.StatusMessage}" Classes="caption"
+                                       TextTrimming="CharacterEllipsis"
+                                       ToolTip.Tip="{Binding Settings.StatusMessage}"/>
+                        </StackPanel>
                     </StackPanel>
-                </StackPanel>
 
-                <!-- Library indexing (browsing/selection happens in the Library table below) -->
-                <StackPanel Grid.Column="1" Classes="toolbarrow" Margin="28,0,0,0" VerticalAlignment="Center">
-                    <Button Content="Index" Classes="accent" Command="{Binding Library.IndexCommand}"/>
-                    <Button Content="Cancel" Command="{Binding Library.CancelIndexCommand}"
-                            IsVisible="{Binding Library.IsIndexing}"/>
-                    <ProgressBar IsIndeterminate="True" Width="60" VerticalAlignment="Center"
-                                 IsVisible="{Binding Library.IsIndexing}"/>
-                    <TextBlock Text="{Binding Library.StatusText}" Classes="muted" VerticalAlignment="Center"
-                               MaxWidth="360" TextTrimming="CharacterEllipsis"/>
-                </StackPanel>
-
-                <StackPanel Grid.Column="3" Classes="toolbarrow">
+                <!-- Configuration actions wrap instead of disappearing past the right edge. -->
+                <WrapPanel Grid.Column="1" Classes="toolbarwrap" HorizontalAlignment="Right"
+                           Margin="24,0,-8,-8">
                     <TextBlock Text="Config" Classes="h2" VerticalAlignment="Center"/>
-                    <ComboBox Width="180" PlaceholderText="No configuration loaded"
+                    <ComboBox Width="170" PlaceholderText="No configuration loaded"
                               ItemsSource="{Binding Settings.RecentConfigs}"
                               SelectedItem="{Binding Settings.SelectedRecent}"
                               ToolTip.Tip="{Binding Settings.ConfigPath}">
@@ -85,7 +78,20 @@
                     <Button Content="Edit…" Command="{Binding Settings.EditConfigCommand}"/>
                     <Button Content="Clear recent" Command="{Binding Settings.ClearRecentCommand}"
                             ToolTip.Tip="Forget the recent-configuration history"/>
-                </StackPanel>
+                </WrapPanel>
+                </Grid>
+
+                <!-- Library indexing (browsing/selection happens in the Library table below). -->
+                <WrapPanel Grid.Row="1" Classes="toolbarwrap" Margin="0,10,-8,-8">
+                    <Button Content="Index library" Classes="accent" Command="{Binding Library.IndexCommand}"/>
+                    <Button Content="Cancel" Command="{Binding Library.CancelIndexCommand}"
+                            IsVisible="{Binding Library.IsIndexing}"/>
+                    <ProgressBar IsIndeterminate="True" Width="60"
+                                 IsVisible="{Binding Library.IsIndexing}"/>
+                    <TextBlock Text="{Binding Library.StatusText}" Classes="muted"
+                               MaxWidth="520" TextTrimming="CharacterEllipsis"
+                               ToolTip.Tip="{Binding Library.StatusText}"/>
+                </WrapPanel>
             </Grid>
         </Border>
 
@@ -96,7 +102,7 @@
                     <!-- Library: the primary browse + selection surface (auto-populates) -->
                     <TabItem Header="Library" DataContext="{Binding Table}" x:DataType="vm:DetailsGridViewModel">
                         <Grid RowDefinitions="Auto,*" Margin="2,12,2,2">
-                            <StackPanel Grid.Row="0" Classes="toolbarrow" Margin="0,0,0,10">
+                            <WrapPanel Grid.Row="0" Classes="toolbarwrap" Margin="0,0,-8,2">
                                 <Button Content="Reload" Classes="accent" Command="{Binding LoadCommand}"/>
                                 <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
                                 <ProgressBar IsIndeterminate="True" Width="60" VerticalAlignment="Center"
@@ -123,8 +129,9 @@
                                           ToolTip.Tip="Filter in which column"/>
                                 <TextBox Text="{Binding FilterText}" Width="240"
                                          PlaceholderText="Filter (realtime)…"/>
-                                <TextBlock Text="{Binding StatusText}" VerticalAlignment="Center" Classes="muted"/>
-                            </StackPanel>
+                                <TextBlock Text="{Binding StatusText}" Classes="muted" MaxWidth="320"
+                                           TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding StatusText}"/>
+                            </WrapPanel>
 
                             <Border Grid.Row="1" CornerRadius="8" ClipToBounds="True"
                                     BorderThickness="1" BorderBrush="{DynamicResource AppDivider}">
@@ -145,9 +152,10 @@
                         <Grid RowDefinitions="Auto,*,Auto" Margin="2,10,2,2" DataContext="{Binding Editor}"
                               x:DataType="vm:TagEditorViewModel">
                             <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,12">
-                                <TextBlock Text="{Binding TargetSummary}" FontWeight="SemiBold" FontSize="15"/>
+                                <TextBlock Text="{Binding TargetSummary}" FontWeight="SemiBold" FontSize="15"
+                                           TextWrapping="Wrap"/>
                                 <TextBlock Text="Blank a field and Save to clear it. Only edited fields are written."
-                                           Classes="muted"/>
+                                           Classes="muted" TextWrapping="Wrap"/>
                             </StackPanel>
 
                             <ScrollViewer Grid.Row="1" IsEnabled="{Binding HasTargets}">
@@ -165,12 +173,13 @@
                                 </ItemsControl>
                             </ScrollViewer>
 
-                            <StackPanel Grid.Row="2" Classes="toolbarrow" Margin="0,12,0,0">
+                            <WrapPanel Grid.Row="2" Classes="toolbarwrap" Margin="0,12,-8,-8">
                                 <Button Content="Save" Classes="accent" Command="{Binding SaveCommand}"/>
                                 <Button Content="Revert" Command="{Binding RevertCommand}"/>
                                 <Button Content="Edit all fields…" Command="{Binding EditAllFieldsCommand}"/>
-                                <TextBlock Text="{Binding ResultMessage}" VerticalAlignment="Center" Classes="muted"/>
-                            </StackPanel>
+                                <TextBlock Text="{Binding ResultMessage}" Classes="muted" TextWrapping="Wrap"
+                                           MaxWidth="420"/>
+                            </WrapPanel>
                         </Grid>
                     </TabItem>
 
@@ -184,10 +193,12 @@
                                        TextWrapping="Wrap"
                                        IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
-                            <Grid Grid.Row="1" ColumnDefinitions="300,*"
+                            <Grid Grid.Row="1" ColumnDefinitions="280,*"
                                   IsVisible="{Binding HasContent}">
-                                <StackPanel Grid.Column="0" Spacing="10" Margin="0,0,16,0">
-                                    <Border Width="280" Height="280" HorizontalAlignment="Left" CornerRadius="10"
+                                <ScrollViewer Grid.Column="0" HorizontalScrollBarVisibility="Disabled"
+                                              Margin="0,0,16,0">
+                                <StackPanel Spacing="10">
+                                    <Border Width="260" Height="260" HorizontalAlignment="Left" CornerRadius="10"
                                             ClipToBounds="True"
                                             Background="{DynamicResource AppInsetBg}">
                                         <Panel>
@@ -201,7 +212,7 @@
                                             </StackPanel>
                                         </Panel>
                                     </Border>
-                                    <TextBlock Text="{Binding ArtworkCaption}" Classes="caption"/>
+                                    <TextBlock Text="{Binding ArtworkCaption}" Classes="caption" TextWrapping="Wrap"/>
                                     <StackPanel Spacing="3" Margin="0,4,0,0">
                                         <TextBlock Text="{Binding HeaderTitle}" FontSize="17" FontWeight="Bold" TextWrapping="Wrap"/>
                                         <TextBlock Text="{Binding HeaderArtist}" TextWrapping="Wrap"/>
@@ -209,6 +220,7 @@
                                         <TextBlock Text="{Binding HeaderInfo}" Classes="caption" Margin="0,6,0,0"/>
                                     </StackPanel>
                                 </StackPanel>
+                                </ScrollViewer>
 
                                 <TabControl Grid.Column="1">
                                     <TabItem Header="Known fields">
@@ -216,8 +228,9 @@
                                             <ItemsControl ItemsSource="{Binding KnownFields}">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate x:DataType="vm:AggregatedField">
-                                                        <Grid ColumnDefinitions="220,*" Margin="0,3">
-                                                            <TextBlock Grid.Column="0" Text="{Binding Name}" Classes="muted"/>
+                                                        <Grid ColumnDefinitions="180,*" Margin="0,3">
+                                                            <TextBlock Grid.Column="0" Text="{Binding Name}" Classes="muted"
+                                                                       TextWrapping="Wrap" Margin="0,0,8,0"/>
                                                             <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap"
                                                                        FontStyle="{Binding IsMixed, Converter={x:Static vm:MixedFontStyleConverter.Instance}}"/>
                                                         </Grid>
@@ -231,8 +244,9 @@
                                             <ItemsControl ItemsSource="{Binding TextFields}">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate x:DataType="vm:AggregatedField">
-                                                        <Grid ColumnDefinitions="220,*" Margin="0,3">
-                                                            <TextBlock Grid.Column="0" Text="{Binding Name}" Classes="muted"/>
+                                                        <Grid ColumnDefinitions="180,*" Margin="0,3">
+                                                            <TextBlock Grid.Column="0" Text="{Binding Name}" Classes="muted"
+                                                                       TextWrapping="Wrap" Margin="0,0,8,0"/>
                                                             <TextBlock Grid.Column="1" Text="{Binding Value}" TextWrapping="Wrap"
                                                                        FontStyle="{Binding IsMixed, Converter={x:Static vm:MixedFontStyleConverter.Instance}}"/>
                                                         </Grid>
@@ -249,7 +263,7 @@
                     <!-- Artwork gallery for the focused file -->
                     <TabItem Header="Artwork" DataContext="{Binding Artwork}" x:DataType="vm:ArtworkViewModel">
                         <Grid RowDefinitions="Auto,Auto,*" Margin="2,12,2,2">
-                            <StackPanel Grid.Row="0" Classes="toolbarrow" Margin="0,0,0,8">
+                            <WrapPanel Grid.Row="0" Classes="toolbarwrap" Margin="0,0,-8,0">
                                 <Button Content="Add image…" Classes="accent" Command="{Binding AddCommand}"/>
                                 <Button Content="Scrub all" Command="{Binding ScrubAllCommand}"/>
                                 <Button Content="Save" Command="{Binding SaveCommand}"/>
@@ -258,16 +272,16 @@
                                                Increment="100" Width="120" FormatString="0"/>
                                 <ProgressBar IsIndeterminate="True" Width="70" VerticalAlignment="Center"
                                              IsVisible="{Binding IsBusy}"/>
-                            </StackPanel>
+                            </WrapPanel>
 
                             <StackPanel Grid.Row="1" Margin="0,0,0,8" Spacing="2">
                                 <TextBlock Text="{Binding TargetSummary}" FontWeight="SemiBold"
-                                           Foreground="{DynamicResource AccentBrush}"
+                                           TextWrapping="Wrap" Foreground="{DynamicResource AccentBrush}"
                                            IsVisible="{Binding TargetSummary, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                 <TextBlock Text="This file's format doesn't support artwork writing."
                                            Foreground="{DynamicResource SystemFillColorCriticalBrush}"
                                            IsVisible="{Binding !SupportsWrite}"/>
-                                <TextBlock Text="{Binding StatusMessage}" Classes="muted"/>
+                                <TextBlock Text="{Binding StatusMessage}" Classes="muted" TextWrapping="Wrap"/>
                             </StackPanel>
 
                             <ScrollViewer Grid.Row="2">
@@ -317,7 +331,7 @@
                                     <Button Content="Similar artists" Command="{Binding RunSimilarArtistsCommand}"/>
                                     <TextBlock Text="threshold" Classes="muted" VerticalAlignment="Center"/>
                                     <NumericUpDown Value="{Binding ArtistThreshold}" Minimum="0" Maximum="100"
-                                                   Increment="0.05" FormatString="0.00" Width="200"
+                                                   Increment="0.05" FormatString="0.00" Width="120"
                                                    ToolTip.Tip="Fuzzy-distance threshold for the artist check (0 = identical only)"/>
                                 </StackPanel>
                                 <Button Content="Cancel" Margin="0,0,8,8" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
@@ -325,7 +339,8 @@
                                              IsVisible="{Binding IsBusy}"/>
                             </WrapPanel>
 
-                            <TextBlock Grid.Row="1" Text="{Binding StatusText}" Classes="muted" Margin="0,0,0,8"/>
+                            <TextBlock Grid.Row="1" Text="{Binding StatusText}" Classes="muted" Margin="0,0,0,8"
+                                       TextWrapping="Wrap"/>
 
                             <Grid Grid.Row="2">
                                 <!-- Findings (inconsistencies / lossy / cross-set) -->
@@ -348,8 +363,8 @@
                                                                         Command="{Binding $parent[TabItem].((vm:AnalyzerViewModel)DataContext).OpenCommand}"
                                                                         CommandParameter="{Binding Path}">
                                                                     <StackPanel>
-                                                                        <TextBlock Text="{Binding Description}"/>
-                                                                        <TextBlock Text="{Binding Path}" Classes="caption"/>
+                                                                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
+                                                                        <TextBlock Text="{Binding Path}" Classes="caption" TextWrapping="Wrap"/>
                                                                     </StackPanel>
                                                                 </Button>
                                                             </DataTemplate>
@@ -376,7 +391,7 @@
                                                                             Background="Transparent" Padding="8,4" CornerRadius="6"
                                                                             Command="{Binding $parent[TabItem].((vm:AnalyzerViewModel)DataContext).OpenCommand}"
                                                                             CommandParameter="{Binding Path}">
-                                                                        <TextBlock>
+                                                                        <TextBlock TextWrapping="Wrap">
                                                                             <Run Text="{Binding CodecName}" FontWeight="SemiBold"/>
                                                                             <Run Text="{Binding SampleRate, StringFormat=' {0}Hz · '}"/>
                                                                             <Run Text="{Binding Path}"/>
@@ -429,7 +444,7 @@
                                                             </ItemsControl.ItemTemplate>
                                                         </ItemsControl>
 
-                                                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                                                        <WrapPanel Classes="toolbarwrap" Margin="0,4,-8,-8">
                                                             <TextBlock Text="Merge to:" VerticalAlignment="Center" Classes="muted"/>
                                                             <TextBox Text="{Binding CanonicalName}" Width="280"
                                                                      IsEnabled="{Binding !IsMerged}"/>
@@ -437,8 +452,8 @@
                                                                     Command="{Binding MergeCommand}"/>
                                                             <ProgressBar IsIndeterminate="True" Width="60" VerticalAlignment="Center"
                                                                          IsVisible="{Binding IsBusy}"/>
-                                                        </StackPanel>
-                                                        <TextBlock Text="{Binding Status}" Classes="muted"
+                                                        </WrapPanel>
+                                                        <TextBlock Text="{Binding Status}" Classes="muted" TextWrapping="Wrap"
                                                                    IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                                     </StackPanel>
                                                 </Border>
@@ -456,24 +471,26 @@
                             <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,10">
                                 <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
                                     <TextBlock Grid.Column="0" Text="Source" VerticalAlignment="Center" Classes="muted"/>
-                                    <TextBox Grid.Column="1" Text="{Binding SourceDirectory}"/>
+                                    <TextBox Grid.Column="1" Text="{Binding SourceDirectory}"
+                                             ToolTip.Tip="{Binding SourceDirectory}"/>
                                     <Button Grid.Column="2" Content="Browse…" Command="{Binding BrowseSourceCommand}"/>
                                 </Grid>
                                 <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="8">
                                     <TextBlock Grid.Column="0" Text="Config" VerticalAlignment="Center" Classes="muted"/>
-                                    <TextBox Grid.Column="1" Text="{Binding ConfigurationPath}"/>
+                                    <TextBox Grid.Column="1" Text="{Binding ConfigurationPath}"
+                                             ToolTip.Tip="{Binding ConfigurationPath}"/>
                                     <Button Grid.Column="2" Content="Browse…" Command="{Binding BrowseConfigurationCommand}"/>
                                     <Button Grid.Column="3" Content="New…" Command="{Binding NewConfigurationCommand}"/>
                                     <Button Grid.Column="4" Content="Edit…" Command="{Binding EditConfigurationCommand}"/>
                                 </Grid>
-                                <StackPanel Classes="toolbarrow">
+                                <WrapPanel Classes="toolbarwrap" Margin="0,0,-8,-8">
                                     <Button Content="Preview" Command="{Binding PreviewCommand}"/>
                                     <Button Content="Apply" Classes="accent" Command="{Binding ApplyCommand}"/>
                                     <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
                                     <ProgressBar IsIndeterminate="True" Width="70" VerticalAlignment="Center" IsVisible="{Binding IsPreviewing}"/>
                                     <ProgressBar Minimum="0" Maximum="{Binding ApplyProgressMaximum}" Value="{Binding ApplyProgress}"
                                                  Width="180" VerticalAlignment="Center" IsVisible="{Binding IsApplying}"/>
-                                </StackPanel>
+                                </WrapPanel>
                                 <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" Classes="muted"/>
                             </StackPanel>
                             <ItemsControl Grid.Row="1" ItemsSource="{Binding Conflicts}" Margin="0,0,0,8">
@@ -490,7 +507,7 @@
                                             <StackPanel Margin="0,6">
                                                 <TextBlock Text="{Binding SourceType}" FontWeight="SemiBold"
                                                            TextDecorations="{Binding IsComplete, Converter={x:Static vm:StrikeConverter.Instance}}"/>
-                                                <TextBlock Text="{Binding Source}" Classes="caption"
+                                                <TextBlock Text="{Binding Source}" Classes="caption" TextWrapping="Wrap"
                                                            TextDecorations="{Binding IsComplete, Converter={x:Static vm:StrikeConverter.Instance}}"/>
                                                 <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Margin="12,3,0,0"
                                                            TextDecorations="{Binding IsComplete, Converter={x:Static vm:StrikeConverter.Instance}}"/>
@@ -508,13 +525,13 @@
                     <TabItem Header="Organize" DataContext="{Binding Organize}" x:DataType="vm:OrganizeViewModel">
                         <Grid RowDefinitions="Auto,*" Margin="2,12,2,2">
                             <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,10">
-                                <StackPanel Classes="toolbarrow">
+                                <WrapPanel Classes="toolbarwrap" Margin="0,0,-8,-8">
                                     <Button Content="Preview" Command="{Binding PreviewCommand}"/>
                                     <Button Content="Apply moves" Classes="accent" Command="{Binding ApplyCommand}"/>
                                     <Button Content="Cancel" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
                                     <ProgressBar IsIndeterminate="True" Width="70" VerticalAlignment="Center"
                                                  IsVisible="{Binding IsBusy}"/>
-                                </StackPanel>
+                                </WrapPanel>
                                 <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" Classes="muted"/>
                             </StackPanel>
 
@@ -523,8 +540,8 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="models:PlannedMove">
                                             <StackPanel Margin="0,4">
-                                                <TextBlock Text="{Binding Source}" Classes="caption"/>
-                                                <TextBlock Text="{Binding Destination, StringFormat='→ {0}'}"/>
+                                                <TextBlock Text="{Binding Source}" Classes="caption" TextWrapping="Wrap"/>
+                                                <TextBlock Text="{Binding Destination, StringFormat='→ {0}'}" TextWrapping="Wrap"/>
                                             </StackPanel>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>

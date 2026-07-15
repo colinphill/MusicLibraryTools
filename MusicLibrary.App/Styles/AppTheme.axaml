@@ -18,6 +18,9 @@
                     <SolidColorBrush x:Key="AppText" Color="#ECECF1"/>
                     <SolidColorBrush x:Key="AppTextMuted" Color="#A6A6B4"/>
                     <SolidColorBrush x:Key="AppTextFaint" Color="#7C7C8C"/>
+                    <SolidColorBrush x:Key="AppDisabledBg" Color="#292932"/>
+                    <SolidColorBrush x:Key="AppDisabledStroke" Color="#3A3A46"/>
+                    <SolidColorBrush x:Key="AppDisabledText" Color="#777784"/>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Light">
                     <SolidColorBrush x:Key="AppWindowBg" Color="#F3F3F7"/>
@@ -29,6 +32,9 @@
                     <SolidColorBrush x:Key="AppText" Color="#1B1B22"/>
                     <SolidColorBrush x:Key="AppTextMuted" Color="#55555F"/>
                     <SolidColorBrush x:Key="AppTextFaint" Color="#86868F"/>
+                    <SolidColorBrush x:Key="AppDisabledBg" Color="#E8E8EE"/>
+                    <SolidColorBrush x:Key="AppDisabledStroke" Color="#D2D2DB"/>
+                    <SolidColorBrush x:Key="AppDisabledText" Color="#8B8B96"/>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
@@ -87,9 +93,13 @@
     <Style Selector="Button">
         <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="Padding" Value="14,7"/>
+        <Setter Property="MinHeight" Value="34"/>
     </Style>
     <Style Selector="TextBox">
         <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="TextWrapping" Value="NoWrap"/>
+        <Setter Property="Height" Value="34"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
     <Style Selector="ComboBox">
         <Setter Property="CornerRadius" Value="8"/>
@@ -113,6 +123,29 @@
         <Setter Property="Background" Value="{DynamicResource AccentBrushDark}"/>
         <Setter Property="Foreground" Value="White"/>
         <Setter Property="BorderBrush" Value="{DynamicResource AccentBrushDark}"/>
+    </Style>
+    <!-- Accent selectors are more specific than Fluent's disabled selector, so explicitly remove
+         the purple fill and contrast. Disabled primary actions should read as unavailable even
+         when viewed peripherally, not merely as a slightly dimmer purple button. -->
+    <Style Selector="Button:disabled">
+        <Setter Property="Opacity" Value="0.62"/>
+    </Style>
+    <Style Selector="Button.accent:disabled">
+        <Setter Property="Opacity" Value="1"/>
+    </Style>
+    <Style Selector="Button.accent:disabled /template/ ContentPresenter#PART_ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource AppDisabledBg}"/>
+        <Setter Property="Foreground" Value="{DynamicResource AppDisabledText}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AppDisabledStroke}"/>
+    </Style>
+    <Style Selector="TextBox:disabled">
+        <Setter Property="Opacity" Value="0.62"/>
+    </Style>
+    <Style Selector="ComboBox:disabled">
+        <Setter Property="Opacity" Value="0.62"/>
+    </Style>
+    <Style Selector="NumericUpDown:disabled">
+        <Setter Property="Opacity" Value="0.62"/>
     </Style>
 
     <!-- ===== Tabs: clean, spaced ===== -->
@@ -161,6 +194,37 @@
     <Style Selector="StackPanel.toolbarrow">
         <Setter Property="Orientation" Value="Horizontal"/>
         <Setter Property="Spacing" Value="8"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- Responsive toolbar helper. Child margins provide both horizontal spacing and a clean row
+         gap when the panel wraps at a constrained window width. -->
+    <Style Selector="WrapPanel.toolbarwrap">
+        <Setter Property="Orientation" Value="Horizontal"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="WrapPanel.toolbarwrap > Button">
+        <Setter Property="Margin" Value="0,0,8,8"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="WrapPanel.toolbarwrap > ComboBox">
+        <Setter Property="Margin" Value="0,0,8,8"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="WrapPanel.toolbarwrap > TextBox">
+        <Setter Property="Margin" Value="0,0,8,8"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="WrapPanel.toolbarwrap > NumericUpDown">
+        <Setter Property="Margin" Value="0,0,8,8"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="WrapPanel.toolbarwrap > ProgressBar">
+        <Setter Property="Margin" Value="0,0,8,8"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="WrapPanel.toolbarwrap > TextBlock">
+        <Setter Property="Margin" Value="0,0,8,8"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
 </Styles>
