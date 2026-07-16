@@ -3,12 +3,18 @@ using MusicLibraryTools;
 
 namespace MusicLibrary.Core.Services;
 
-/// <summary>One &lt;IndexTarget&gt; row: a scan root plus its optional Offset/Set/Filter attributes.</summary>
+public sealed class IndexTargetSetEntry
+{
+    public string Name { get; set; } = "";
+    public string? Offset { get; set; }
+}
+
+/// <summary>One scan root and its set-specific playlist path mappings.</summary>
 public sealed class IndexTargetEntry
 {
     public string Target { get; set; } = "";
-    public string? Offset { get; set; }
-    public List<int> Sets { get; set; } = [];
+    public string? DefaultOffset { get; set; }
+    public List<IndexTargetSetEntry> Memberships { get; set; } = [];
     public string? Filter { get; set; }
 }
 
@@ -17,7 +23,7 @@ public sealed class PlaylistTargetEntry
 {
     public string Target { get; set; } = "";
     public string Type { get; set; } = "m3u";
-    public List<int> Sets { get; set; } = [];
+    public List<string> Sets { get; set; } = [];
 }
 
 /// <summary>
@@ -28,6 +34,8 @@ public sealed class PlaylistTargetEntry
 public sealed class EditableLibraryConfig
 {
     public string DatabaseFile { get; set; } = "cache.db";
+    public string? ItunesLibraryPath { get; set; }
+    public string FfmpegPath { get; set; } = "ffmpeg";
     public int LengthLimit { get; set; } = 255;
     public int DiscNumLengthLimit { get; set; } = 255;
     public string? SyncTarget { get; set; }
@@ -39,7 +47,7 @@ public sealed class EditableLibraryConfig
 
     private static readonly HashSet<string> Known = new(StringComparer.Ordinal)
     {
-        "DatabaseFile", "LengthLimit", "DiscNumLengthLimit",
+        "DatabaseFile", "ItunesLibrary", "FfmpegPath", "LengthLimit", "DiscNumLengthLimit",
         "SyncTarget", "PlaylistTarget", "PlaylistType", "IndexTarget",
     };
 
@@ -51,20 +59,27 @@ public sealed class EditableLibraryConfig
         var config = new EditableLibraryConfig
         {
             DatabaseFile = (string?)root.Element("DatabaseFile") ?? "cache.db",
+            ItunesLibraryPath = (string?)root.Element("ItunesLibrary"),
+            FfmpegPath = (string?)root.Element("FfmpegPath") ?? "ffmpeg",
             SyncTarget = (string?)root.Element("SyncTarget"),
         };
 
         if (int.TryParse((string?)root.Element("LengthLimit"), out var ll)) config.LengthLimit = ll;
         if (int.TryParse((string?)root.Element("DiscNumLengthLimit"), out var dl)) config.DiscNumLengthLimit = dl;
 
-        foreach (var e in root.Elements("IndexTarget"))
+        var parsed = new LibraryConfiguration(path);
+        foreach (LibraryIndexLocation location in parsed.IndexLocations)
         {
             config.IndexTargets.Add(new IndexTargetEntry
             {
-                Target = e.Value,
-                Offset = (string?)e.Attribute("Offset"),
-                Sets = [.. LibraryConfiguration.ParseScanSets((string?)e.Attribute("Set"))],
-                Filter = (string?)e.Attribute("Filter"),
+                Target = location.Target,
+                DefaultOffset = location.DefaultOffset,
+                Memberships = location.Memberships.Select(membership => new IndexTargetSetEntry
+                {
+                    Name = membership.Name,
+                    Offset = membership.Offset,
+                }).ToList(),
+                Filter = location.Filter,
             });
         }
 
@@ -93,20 +108,38 @@ public sealed class EditableLibraryConfig
         var root = new XElement("LibraryConfiguration");
 
         root.Add(new XElement("DatabaseFile", DatabaseFile));
+        if (!string.IsNullOrWhiteSpace(ItunesLibraryPath))
+            root.Add(new XElement("ItunesLibrary", ItunesLibraryPath.Trim()));
+        root.Add(new XElement("FfmpegPath",
+            string.IsNullOrWhiteSpace(FfmpegPath) ? "ffmpeg" : FfmpegPath.Trim()));
 
         foreach (var t in IndexTargets)
         {
             if (string.IsNullOrWhiteSpace(t.Target))
                 continue;
-            var e = new XElement("IndexTarget", t.Target);
-            if (!string.IsNullOrEmpty(t.Offset)) e.SetAttributeValue("Offset", t.Offset);
-            if (t.Sets.Count > 0) e.SetAttributeValue("Set", string.Join(",", t.Sets.Distinct().Order()));
+            var e = new XElement("IndexTarget", new XAttribute("Path", t.Target.Trim()));
+            if (!string.IsNullOrWhiteSpace(t.DefaultOffset))
+                e.SetAttributeValue("Offset", t.DefaultOffset.Trim());
             if (!string.IsNullOrEmpty(t.Filter)) e.SetAttributeValue("Filter", t.Filter);
+            var seen = new HashSet<string>(LibraryConfiguration.ScanSetComparer);
+            foreach (IndexTargetSetEntry membership in t.Memberships)
+            {
+                string name = LibraryConfiguration.ParseScanSetName(membership.Name);
+                if (!seen.Add(name))
+                    throw new InvalidDataException(
+                        $"Index target '{t.Target}' contains duplicate scan set '{name}'.");
+                var set = new XElement("Set", new XAttribute("Name", name));
+                if (!string.IsNullOrWhiteSpace(membership.Offset))
+                    set.SetAttributeValue("Offset", membership.Offset.Trim());
+                e.Add(set);
+            }
             root.Add(e);
         }
 
         if (!string.IsNullOrWhiteSpace(SyncTarget)) root.Add(new XElement("SyncTarget", SyncTarget));
-        var configuredSets = IndexTargets.SelectMany(indexTarget => indexTarget.Sets).ToHashSet();
+        var configuredSets = IndexTargets.SelectMany(indexTarget => indexTarget.Memberships)
+            .Select(membership => LibraryConfiguration.ParseScanSetName(membership.Name))
+            .ToHashSet(LibraryConfiguration.ScanSetComparer);
         foreach (var target in PlaylistTargets)
         {
             if (string.IsNullOrWhiteSpace(target.Target))
@@ -118,10 +151,10 @@ public sealed class EditableLibraryConfig
             if (target.Sets.Count == 0)
                 throw new InvalidDataException(
                     $"Playlist target '{target.Target}' must select at least one scan set.");
-            if (target.Sets.Any(set => set < 0))
-                throw new InvalidDataException(
-                    $"Playlist target '{target.Target}' contains a negative scan set.");
-            int[] unknownSets = target.Sets.Where(set => !configuredSets.Contains(set)).ToArray();
+            string[] normalizedSets = target.Sets.Select(LibraryConfiguration.ParseScanSetName)
+                .Distinct(LibraryConfiguration.ScanSetComparer)
+                .OrderBy(set => set, LibraryConfiguration.ScanSetComparer).ToArray();
+            string[] unknownSets = normalizedSets.Where(set => !configuredSets.Contains(set)).ToArray();
             if (unknownSets.Length > 0)
                 throw new InvalidDataException(
                     $"Playlist target '{target.Target}' references scan set(s) with no IndexTarget: " +
@@ -129,9 +162,11 @@ public sealed class EditableLibraryConfig
 
             root.Add(new XElement("PlaylistTarget",
                 new XAttribute("Type", type),
-                new XAttribute("Set", string.Join(",", target.Sets.Distinct().Order())),
+                new XAttribute("Set", string.Join(",", normalizedSets)),
                 target.Target));
         }
+
+        ValidatePlaylistOffsets();
 
         root.Add(new XElement("LengthLimit", LengthLimit));
         root.Add(new XElement("DiscNumLengthLimit", DiscNumLengthLimit));
@@ -141,5 +176,32 @@ public sealed class EditableLibraryConfig
 
         var document = new XDocument(root);
         AtomicFile.Write(path, document.Save);
+    }
+
+    private void ValidatePlaylistOffsets()
+    {
+        foreach (PlaylistTargetEntry target in PlaylistTargets.Where(target =>
+                     !string.IsNullOrWhiteSpace(target.Target)))
+        {
+            var selected = target.Sets.ToHashSet(LibraryConfiguration.ScanSetComparer);
+            foreach (var roots in IndexTargets.Where(root => !string.IsNullOrWhiteSpace(root.Target))
+                         .GroupBy(root => Path.TrimEndingDirectorySeparator(root.Target),
+                             OperatingSystem.IsWindows()
+                                 ? StringComparer.OrdinalIgnoreCase
+                                 : StringComparer.Ordinal))
+            {
+                string[] offsets = roots.SelectMany(root => root.Memberships
+                        .Where(membership => selected.Contains(membership.Name))
+                        .Select(membership => string.IsNullOrWhiteSpace(membership.Offset)
+                            ? root.DefaultOffset ?? ""
+                            : membership.Offset))
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray();
+                if (offsets.Length > 1)
+                    throw new InvalidDataException(
+                        $"Playlist target '{target.Target}' selects scan sets with different offsets " +
+                        $"for index target '{roots.Key}'. Select one mapping or make their offsets equal.");
+            }
+        }
     }
 }

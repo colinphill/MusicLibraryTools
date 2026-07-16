@@ -274,28 +274,28 @@ namespace MusicFileUtilities.Tests
             {
                 using var db = MetadataDatabase.OpenDatabase("sqlite:" + dbPath);
                 db.IndexFiles([
-                    new ScanRootDefinition(firstRoot, [1, 2]),
+                    new ScanRootDefinition(firstRoot, ["Primary", "Portable2"]),
                     new ScanRootDefinition(unassignedRoot, []),
                 ], ct: TestContext.Current.CancellationToken);
 
                 var roots = db.GetScanRoots();
-                Assert.Equal([1, 2], roots.Single(root => root.Path == firstRoot).Sets);
+                Assert.Equal(["Portable2", "Primary"], roots.Single(root => root.Path == firstRoot).Sets);
                 Assert.Empty(roots.Single(root => root.Path == unassignedRoot).Sets);
-                Assert.Equal([1, 2], db.GetScanRootHealth().Single(root => root.Root == firstRoot).Sets);
-                Assert.True(db.BuildCacheForSets([1]).FileCache.ContainsKey(firstFile));
-                Assert.False(db.BuildCacheForSets([1]).FileCache.ContainsKey(unassignedFile));
+                Assert.Equal(["Portable2", "Primary"], db.GetScanRootHealth().Single(root => root.Root == firstRoot).Sets);
+                Assert.True(db.BuildCacheForSets(["primary"]).FileCache.ContainsKey(firstFile));
+                Assert.False(db.BuildCacheForSets(["Primary"]).FileCache.ContainsKey(unassignedFile));
                 Assert.True(db.BuildCache([unassignedRoot]).FileCache.ContainsKey(unassignedFile));
 
                 var second = db.IndexFiles([
-                    new ScanRootDefinition(firstRoot, [2, 3]),
+                    new ScanRootDefinition(firstRoot, ["Portable2", "Archive3"]),
                     new ScanRootDefinition(unassignedRoot, []),
                 ], ct: TestContext.Current.CancellationToken);
 
                 Assert.Equal(2, second.Unchanged);
-                Assert.Empty(db.BuildCacheForSets([1]).FileCache);
-                Assert.True(db.BuildCacheForSets([2]).FileCache.ContainsKey(firstFile));
-                Assert.True(db.BuildCacheForSets([3]).FileCache.ContainsKey(firstFile));
-                Assert.Equal([2, 3], db.GetScanRoots().Single(root => root.Path == firstRoot).Sets);
+                Assert.Empty(db.BuildCacheForSets(["Primary"]).FileCache);
+                Assert.True(db.BuildCacheForSets(["portable2"]).FileCache.ContainsKey(firstFile));
+                Assert.True(db.BuildCacheForSets(["Archive3"]).FileCache.ContainsKey(firstFile));
+                Assert.Equal(["Archive3", "Portable2"], db.GetScanRoots().Single(root => root.Path == firstRoot).Sets);
             }
             finally
             {
@@ -305,7 +305,7 @@ namespace MusicFileUtilities.Tests
         }
 
         [Fact]
-        public void ExistingDatabaseMigrationAddsLogicalSetMembershipTable()
+        public void ExistingNumericMembershipsMigrateToTextWithoutRescanning()
         {
             string directory = Path.Combine(Path.GetTempPath(), "mlt_idx_" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(directory);
@@ -318,7 +318,12 @@ namespace MusicFileUtilities.Tests
                 {
                     connection.Open();
                     using var command = connection.CreateCommand();
-                    command.CommandText = "DROP TABLE ScanSetMemberships";
+                    command.CommandText =
+                        "DROP TABLE ScanSetMemberships;" +
+                        "CREATE TABLE ScanSetMemberships (ScanSetID INTEGER NOT NULL REFERENCES ScanSets (ID) ON DELETE CASCADE, " +
+                        "SetNumber INTEGER NOT NULL, PRIMARY KEY (ScanSetID, SetNumber));" +
+                        "INSERT INTO ScanSets (Path) VALUES ('Z:\\Legacy');" +
+                        "INSERT INTO ScanSetMemberships (ScanSetID, SetNumber) VALUES (last_insert_rowid(), 42);";
                     command.ExecuteNonQuery();
                 }
 
@@ -328,6 +333,11 @@ namespace MusicFileUtilities.Tests
                 migrated.Open();
                 Assert.Equal(1L, ScalarLong(migrated,
                     "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='ScanSetMemberships'"));
+                Assert.Equal(1L, ScalarLong(migrated,
+                    "SELECT COUNT(*) FROM pragma_table_info('ScanSetMemberships') WHERE name='SetName'"));
+                using var setName = migrated.CreateCommand();
+                setName.CommandText = "SELECT SetName FROM ScanSetMemberships";
+                Assert.Equal("42", (string)setName.ExecuteScalar()!);
             }
             finally
             {

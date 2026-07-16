@@ -9,6 +9,27 @@ namespace MusicLibrary.Core.Tests;
 public sealed class OperationsViewModelTests
 {
     [Fact]
+    public void ConfiguredItunesLibraryPrefillsApplicableJobs()
+    {
+        using var temp = new TempDirectory();
+        string library = Path.Combine(temp.Path, "iTunes Library.itl");
+        string configPath = Path.Combine(temp.Path, "library.xml");
+        new EditableLibraryConfig { ItunesLibraryPath = library }.Save(configPath);
+        var settings = new AppSettings(Path.Combine(temp.Path, "settings.json"));
+        settings.LoadConfig(configPath);
+        var jobs = new UnifiedJobService();
+
+        var viewModel = new OperationsViewModel(
+            new RecordingJournals(new([], [])), new StubFiles(), new StubDialogs(), settings, jobs)
+        {
+            SelectedJob = jobs.Catalog.Single(job => job.Id == "playlist-sync"),
+        };
+
+        Assert.Equal(library, viewModel.JobLibraryPath);
+        Assert.Equal(configPath, viewModel.JobConfigurationPath);
+    }
+
+    [Fact]
     public async Task UnifiedJobRequiresPreviewAndPersistsPreviewAndApplyHistory()
     {
         using var temp = new TempDirectory();

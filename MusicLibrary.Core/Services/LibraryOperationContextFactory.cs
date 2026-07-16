@@ -56,7 +56,8 @@ public sealed class LibraryOperationContextFactory : ILibraryOperationContextFac
                 MetadataCache cache = database.BuildCache(
                     locations.Select(location => location.Target).Distinct(PathComparer));
 
-                string resolvedLibraryPath = ItlFileEditor.ResolveLibraryPath(itunesLibraryPath);
+                string resolvedLibraryPath = ItlFileEditor.ResolveLibraryPath(
+                    itunesLibraryPath ?? configuration.ItunesLibraryPath);
                 progress?.Report(new(OperationPhase.LoadingLibrary,
                     CurrentPath: resolvedLibraryPath, Message: "Loading iTunes library"));
                 ItlLibrary library = ItlLibrary.Load(resolvedLibraryPath);

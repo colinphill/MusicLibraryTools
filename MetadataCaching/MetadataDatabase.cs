@@ -59,14 +59,14 @@ namespace MetadataCaching
         int MetadataRead,
         string Error)
     {
-        public IReadOnlyList<int> Sets { get; init; } = [];
+        public IReadOnlyList<string> Sets { get; init; } = [];
     }
 
     /// <summary>
     /// An indexed root and its optional logical scan-set memberships. Membership affects logical
     /// grouping only; the root is indexed even when <see cref="Sets"/> is empty.
     /// </summary>
-    public sealed record ScanRootDefinition(string Path, IReadOnlyList<int> Sets);
+    public sealed record ScanRootDefinition(string Path, IReadOnlyList<string> Sets);
 
     public readonly record struct IndexProgress(int Scanned, int Added, int Modified, int Unchanged)
     {
@@ -271,20 +271,20 @@ namespace MetadataCaching
             return roots;
         }
 
-        private Dictionary<long, IReadOnlyList<int>> LoadScanSetMemberships()
+        private Dictionary<long, IReadOnlyList<string>> LoadScanSetMemberships()
         {
-            var mutable = new Dictionary<long, List<int>>();
+            var mutable = new Dictionary<long, List<string>>();
             using var command = conn_.CreateCommand();
-            command.CommandText = "SELECT ScanSetID, SetNumber FROM ScanSetMemberships ORDER BY ScanSetID, SetNumber";
+            command.CommandText = "SELECT ScanSetID, SetName FROM ScanSetMemberships ORDER BY ScanSetID, SetName";
             using var reader = command.ExecuteReader();
             while (reader.Read())
             {
                 long id = reader.GetInt64(0);
                 if (!mutable.TryGetValue(id, out var sets))
                     mutable[id] = sets = [];
-                sets.Add(Convert.ToInt32(reader.GetInt64(1)));
+                sets.Add(reader.GetString(1));
             }
-            return mutable.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<int>)pair.Value);
+            return mutable.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<string>)pair.Value);
         }
 
         private void WriteScanHealth(
@@ -340,7 +340,7 @@ namespace MetadataCaching
             "PRAGMA foreign_keys = off;\r\n",
 
             "CREATE TABLE ScanSets (ID INTEGER PRIMARY KEY, Path TEXT UNIQUE NOT NULL);\r\n" +
-            "CREATE TABLE ScanSetMemberships (ScanSetID INTEGER NOT NULL REFERENCES ScanSets (ID) ON DELETE CASCADE, SetNumber BIGINT NOT NULL, PRIMARY KEY (ScanSetID, SetNumber));\r\n" +
+            "CREATE TABLE ScanSetMemberships (ScanSetID INTEGER NOT NULL REFERENCES ScanSets (ID) ON DELETE CASCADE, SetName TEXT COLLATE NOCASE NOT NULL, PRIMARY KEY (ScanSetID, SetName));\r\n" +
             "CREATE TABLE ScanHealth (ScanSetID INTEGER PRIMARY KEY REFERENCES ScanSets (ID) ON DELETE CASCADE, LastAttemptUtc DATETIME NOT NULL, LastSuccessUtc DATETIME, State TEXT NOT NULL, Error TEXT, Enumerated BIGINT NOT NULL, MetadataRead BIGINT NOT NULL);\r\n" +
             "CREATE TABLE Artists (ID INTEGER PRIMARY KEY, Name TEXT UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE AlbumArtists (ID INTEGER PRIMARY KEY, Name TEXT UNIQUE NOT NULL);\r\n" +
@@ -352,7 +352,7 @@ namespace MetadataCaching
             "CREATE TABLE MetadataKeys (ID INTEGER PRIMARY KEY, \"Key\" TEXT UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE Metadata (ID INTEGER PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, KeyID BIGINT REFERENCES MetadataKeys (ID) NOT NULL, Value TEXT NOT NULL);\r\n" +
             "CREATE INDEX AlbumsAlbumArtistIDIndex ON Albums (AlbumArtistID ASC);\r\n" +
-            "CREATE INDEX ScanSetMembershipsSetNumberIndex ON ScanSetMemberships (SetNumber ASC);\r\n" +
+            "CREATE INDEX ScanSetMembershipsSetNameIndex ON ScanSetMemberships (SetName ASC);\r\n" +
             "CREATE INDEX AlbumsScanSetIDIndex ON Albums (ScanSetID ASC);\r\n" +
             "CREATE INDEX AlbumsLookupIndex ON Albums (ScanSetID ASC, Path ASC, AlbumArtistID ASC, Name ASC);\r\n" +
             "CREATE INDEX FilesPathIndex ON Files (Path ASC);\r\n" +
@@ -374,7 +374,7 @@ namespace MetadataCaching
 #if SQLSERVER
         private static readonly string[] sqlservercreationsql_ = {
             "CREATE TABLE ScanSets (ID BIGINT IDENTITY PRIMARY KEY, Path NVARCHAR(512) UNIQUE NOT NULL);\r\n" +
-            "CREATE TABLE ScanSetMemberships (ScanSetID BIGINT NOT NULL REFERENCES ScanSets (ID) ON DELETE CASCADE, SetNumber BIGINT NOT NULL, PRIMARY KEY (ScanSetID, SetNumber));\r\n" +
+            "CREATE TABLE ScanSetMemberships (ScanSetID BIGINT NOT NULL REFERENCES ScanSets (ID) ON DELETE CASCADE, SetName NVARCHAR(128) COLLATE Latin1_General_100_CI_AS NOT NULL, PRIMARY KEY (ScanSetID, SetName));\r\n" +
             "CREATE TABLE ScanHealth (ScanSetID BIGINT PRIMARY KEY REFERENCES ScanSets (ID) ON DELETE CASCADE, LastAttemptUtc DATETIME2 NOT NULL, LastSuccessUtc DATETIME2, State NVARCHAR(32) NOT NULL, Error NVARCHAR(MAX), Enumerated BIGINT NOT NULL, MetadataRead BIGINT NOT NULL);\r\n" +
             "CREATE TABLE Artists (ID BIGINT IDENTITY PRIMARY KEY, Name NVARCHAR(512) UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE AlbumArtists (ID BIGINT IDENTITY PRIMARY KEY, Name NVARCHAR(512) UNIQUE NOT NULL);\r\n" +
@@ -386,7 +386,7 @@ namespace MetadataCaching
             "CREATE TABLE Metadata (ID BIGINT IDENTITY PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, KeyID BIGINT REFERENCES MetadataKeys (ID) NOT NULL, Value NVARCHAR(MAX) NOT NULL);\r\n" +
             "CREATE TABLE ImageMetadata (ID BIGINT IDENTITY PRIMARY KEY, FileID BIGINT REFERENCES Files (ID) NOT NULL, ImageID BIGINT REFERENCES Images (ID) NOT NULL, Description NVARCHAR(MAX) NOT NULL, Category NVARCHAR(MAX) NOT NULL);\r\n" +
             "CREATE INDEX AlbumsAlbumArtistIDIndex ON Albums (AlbumArtistID ASC);\r\n" +
-            "CREATE INDEX ScanSetMembershipsSetNumberIndex ON ScanSetMemberships (SetNumber ASC);\r\n" +
+            "CREATE INDEX ScanSetMembershipsSetNameIndex ON ScanSetMemberships (SetName ASC);\r\n" +
             "CREATE INDEX AlbumsScanSetIDIndex ON Albums (ScanSetID ASC);\r\n" +
             "CREATE INDEX ImageMetadataFileIDIndex ON ImageMetadata (FileID ASC);\r\n" +
             "CREATE INDEX MetadataKeyIDIndex ON Metadata (KeyID ASC);\r\n" +
@@ -520,10 +520,28 @@ namespace MetadataCaching
                 mcomm.ExecuteNonQuery();
             }
             mcomm.CommandText =
+                "SELECT COUNT(*) FROM pragma_table_info('ScanSetMemberships') WHERE name = 'SetNumber'";
+            if (Convert.ToInt64(mcomm.ExecuteScalar()) != 0)
+            {
+                // Preserve legacy numeric memberships as textual identifiers without rescanning.
+                using var membershipMigration = res.conn_.BeginTransaction();
+                using var migrate = membershipMigration.CreateCommand();
+                migrate.CommandText =
+                    "CREATE TABLE ScanSetMemberships_New (ScanSetID INTEGER NOT NULL REFERENCES ScanSets (ID) ON DELETE CASCADE, " +
+                    "SetName TEXT COLLATE NOCASE NOT NULL, PRIMARY KEY (ScanSetID, SetName));" +
+                    "INSERT INTO ScanSetMemberships_New (ScanSetID, SetName) " +
+                    "SELECT ScanSetID, CAST(SetNumber AS TEXT) FROM ScanSetMemberships;" +
+                    "DROP TABLE ScanSetMemberships;" +
+                    "ALTER TABLE ScanSetMemberships_New RENAME TO ScanSetMemberships;";
+                migrate.ExecuteNonQuery();
+                membershipMigration.Commit();
+            }
+            mcomm.CommandText =
                 "DROP TABLE IF EXISTS KnownMetadata;\r\n" +
-                "CREATE TABLE IF NOT EXISTS ScanSetMemberships (ScanSetID INTEGER NOT NULL REFERENCES ScanSets (ID) ON DELETE CASCADE, SetNumber BIGINT NOT NULL, PRIMARY KEY (ScanSetID, SetNumber));\r\n" +
+                "CREATE TABLE IF NOT EXISTS ScanSetMemberships (ScanSetID INTEGER NOT NULL REFERENCES ScanSets (ID) ON DELETE CASCADE, SetName TEXT COLLATE NOCASE NOT NULL, PRIMARY KEY (ScanSetID, SetName));\r\n" +
                 "CREATE TABLE IF NOT EXISTS ScanHealth (ScanSetID INTEGER PRIMARY KEY REFERENCES ScanSets (ID) ON DELETE CASCADE, LastAttemptUtc DATETIME NOT NULL, LastSuccessUtc DATETIME, State TEXT NOT NULL, Error TEXT, Enumerated BIGINT NOT NULL, MetadataRead BIGINT NOT NULL);\r\n" +
-                "CREATE INDEX IF NOT EXISTS ScanSetMembershipsSetNumberIndex ON ScanSetMemberships (SetNumber);\r\n" +
+                "DROP INDEX IF EXISTS ScanSetMembershipsSetNumberIndex;\r\n" +
+                "CREATE INDEX IF NOT EXISTS ScanSetMembershipsSetNameIndex ON ScanSetMemberships (SetName);\r\n" +
                 "CREATE INDEX IF NOT EXISTS AlbumsLookupIndex ON Albums (ScanSetID, Path, AlbumArtistID, Name);\r\n" +
                 "CREATE INDEX IF NOT EXISTS FilesPathIndex ON Files (Path);\r\n" +
                 "CREATE INDEX IF NOT EXISTS ImagesHashIndex ON Images (Hash);";
@@ -605,15 +623,20 @@ namespace MetadataCaching
                 migration.CommandText =
                     "IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ScanSetMemberships') " +
                     "CREATE TABLE ScanSetMemberships (ScanSetID BIGINT NOT NULL REFERENCES ScanSets (ID) ON DELETE CASCADE, " +
-                    "SetNumber BIGINT NOT NULL, PRIMARY KEY (ScanSetID, SetNumber)); " +
+                    "SetName NVARCHAR(128) COLLATE Latin1_General_100_CI_AS NOT NULL, PRIMARY KEY (ScanSetID, SetName)); " +
                     "IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ScanHealth') " +
                     "CREATE TABLE ScanHealth (ScanSetID BIGINT PRIMARY KEY REFERENCES ScanSets (ID) ON DELETE CASCADE, " +
                     "LastAttemptUtc DATETIME2 NOT NULL, LastSuccessUtc DATETIME2, State NVARCHAR(32) NOT NULL, " +
                     "Error NVARCHAR(MAX), Enumerated BIGINT NOT NULL, MetadataRead BIGINT NOT NULL)";
                 migration.ExecuteNonQuery();
                 migration.CommandText =
-                    "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'ScanSetMembershipsSetNumberIndex') " +
-                    "CREATE INDEX ScanSetMembershipsSetNumberIndex ON ScanSetMemberships (SetNumber)";
+                    "IF COL_LENGTH('ScanSetMemberships', 'SetNumber') IS NOT NULL BEGIN " +
+                    "CREATE TABLE ScanSetMemberships_New (ScanSetID BIGINT NOT NULL REFERENCES ScanSets (ID) ON DELETE CASCADE, " +
+                    "SetName NVARCHAR(128) COLLATE Latin1_General_100_CI_AS NOT NULL, PRIMARY KEY (ScanSetID, SetName)); " +
+                    "INSERT INTO ScanSetMemberships_New (ScanSetID, SetName) SELECT ScanSetID, CONVERT(NVARCHAR(128), SetNumber) FROM ScanSetMemberships; " +
+                    "DROP TABLE ScanSetMemberships; EXEC sp_rename 'ScanSetMemberships_New', 'ScanSetMemberships'; END; " +
+                    "IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'ScanSetMembershipsSetNameIndex') " +
+                    "CREATE INDEX ScanSetMembershipsSetNameIndex ON ScanSetMemberships (SetName)";
                 migration.ExecuteNonQuery();
             }
 
@@ -692,23 +715,24 @@ namespace MetadataCaching
         /// Roots with no memberships are intentionally excluded.
         /// </summary>
         public MetadataCache BuildCacheForSets(
-            IEnumerable<int> setNumbers,
+            IEnumerable<string> setNames,
             bool buildSecondaryIndexes = true)
         {
-            var numbers = setNumbers.Distinct().ToArray();
-            if (numbers.Length == 0)
+            var names = setNames.Select(LibraryConfiguration.ParseScanSetName)
+                .Distinct(LibraryConfiguration.ScanSetComparer).ToArray();
+            if (names.Length == 0)
                 return new MetadataCache(buildSecondaryIndexes);
 
             using var command = conn_.CreateCommand();
             var sql = new StringBuilder(
-                "SELECT DISTINCT s.Path FROM ScanSets s JOIN ScanSetMemberships m ON m.ScanSetID = s.ID WHERE m.SetNumber IN (");
-            for (int index = 0; index < numbers.Length; index++)
+                "SELECT DISTINCT s.Path FROM ScanSets s JOIN ScanSetMemberships m ON m.ScanSetID = s.ID WHERE m.SetName IN (");
+            for (int index = 0; index < names.Length; index++)
             {
                 if (index > 0)
                     sql.Append(',');
                 string name = "@set" + index;
                 sql.Append(name);
-                command.Parameters.Add(name, DbType.Int64).Value = numbers[index];
+                command.Parameters.Add(name, DbType.String).Value = names[index];
             }
             command.CommandText = sql.Append(") ORDER BY s.Path").ToString();
             var paths = new List<string>();
@@ -797,11 +821,15 @@ namespace MetadataCaching
                 var requestedRoots = roots
                     .Select(root => new ScanRootDefinition(
                         Path.TrimEndingDirectorySeparator(root.Path),
-                        (root.Sets ?? []).Distinct().OrderBy(set => set).ToArray()))
+                        (root.Sets ?? []).Select(LibraryConfiguration.ParseScanSetName)
+                        .Distinct(LibraryConfiguration.ScanSetComparer)
+                        .OrderBy(set => set, LibraryConfiguration.ScanSetComparer).ToArray()))
                     .GroupBy(root => root.Path, StringComparer.InvariantCultureIgnoreCase)
                     .Select(group => new ScanRootDefinition(
                         group.First().Path,
-                        group.SelectMany(root => root.Sets).Distinct().OrderBy(set => set).ToArray()))
+                        group.SelectMany(root => root.Sets)
+                            .Distinct(LibraryConfiguration.ScanSetComparer)
+                            .OrderBy(set => set, LibraryConfiguration.ScanSetComparer).ToArray()))
                     .ToList();
                 var modpaths = requestedRoots.Select(root => root.Path).ToList();
                 var dbsets = new List<(string Path, long ID, bool Hit)>();
@@ -853,17 +881,17 @@ namespace MetadataCaching
                         "DELETE FROM ScanSetMemberships WHERE ScanSetID = @ScanSetID";
                     var deleteId = deleteMemberships.Parameters.Add("@ScanSetID", DbType.Int64);
                     insertMembership.CommandText =
-                        "INSERT INTO ScanSetMemberships (ScanSetID, SetNumber) VALUES (@ScanSetID, @SetNumber)";
+                        "INSERT INTO ScanSetMemberships (ScanSetID, SetName) VALUES (@ScanSetID, @SetName)";
                     var insertId = insertMembership.Parameters.Add("@ScanSetID", DbType.Int64);
-                    var setNumber = insertMembership.Parameters.Add("@SetNumber", DbType.Int64);
+                    var setName = insertMembership.Parameters.Add("@SetName", DbType.String);
                     foreach (var root in sets)
                     {
                         deleteId.Value = root.ID;
                         deleteMemberships.ExecuteNonQuery();
-                        foreach (int membership in requestedByPath[root.Path])
+                        foreach (string membership in requestedByPath[root.Path])
                         {
                             insertId.Value = root.ID;
-                            setNumber.Value = membership;
+                            setName.Value = membership;
                             insertMembership.ExecuteNonQuery();
                         }
                     }

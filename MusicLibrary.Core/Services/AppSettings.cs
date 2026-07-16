@@ -85,28 +85,44 @@ public sealed class AppSettings : IAppSettings
         ValidatePositiveInteger(root, "LengthLimit");
         ValidatePositiveInteger(root, "DiscNumLengthLimit");
 
-        foreach (var target in root.Elements("IndexTarget"))
-        {
-            if (string.IsNullOrWhiteSpace(target.Value))
-                throw new InvalidDataException("<IndexTarget> cannot be empty.");
-            if (target.Attribute("Set") is { } setAttribute)
-                _ = LibraryConfiguration.ParseScanSets(setAttribute.Value);
-        }
-
         // Eagerly materialize the deferred parser API so malformed target attributes fail before
         // the active configuration is replaced and remembered.
         var configuration = new LibraryConfiguration(path);
         var indexLocations = configuration.IndexLocations.ToList();
         var playlistTargets = configuration.PlaylistTargets;
-        var configuredSets = indexLocations.SelectMany(location => location.Sets).ToHashSet();
+        var configuredSets = indexLocations.SelectMany(location => location.Sets)
+            .ToHashSet(LibraryConfiguration.ScanSetComparer);
         foreach (var target in playlistTargets)
         {
-            int[] unknownSets = target.Sets.Where(set => !configuredSets.Contains(set)).ToArray();
+            string[] unknownSets = target.Sets.Where(set => !configuredSets.Contains(set)).ToArray();
             if (unknownSets.Length > 0)
                 throw new InvalidDataException(
                     $"Playlist target '{target.Target}' references scan set(s) with no IndexTarget: " +
                     string.Join(",", unknownSets));
+
+            var selectedSets = target.Sets.ToHashSet(LibraryConfiguration.ScanSetComparer);
+            foreach (var group in indexLocations.GroupBy(
+                         location => Path.TrimEndingDirectorySeparator(location.Target),
+                         OperatingSystem.IsWindows()
+                             ? StringComparer.OrdinalIgnoreCase
+                             : StringComparer.Ordinal))
+            {
+                int offsetCount = group.SelectMany(location => location.Memberships
+                        .Where(membership => selectedSets.Contains(membership.Name))
+                        .Select(membership => membership.Offset ?? location.DefaultOffset))
+                    .Distinct(StringComparer.Ordinal)
+                    .Take(2)
+                    .Count();
+                if (offsetCount > 1)
+                    throw new InvalidDataException(
+                        $"Playlist target '{target.Target}' selects scan sets with different offsets " +
+                        $"for index target '{group.Key}'.");
+            }
         }
+        if (configuration.ItunesLibraryPath is { } library &&
+            !Path.GetExtension(library).Equals(".itl", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("<ItunesLibrary> must identify an .itl file.");
+        _ = configuration.FfmpegPath;
         _ = configuration.DatabaseFile;
         return configuration;
     }

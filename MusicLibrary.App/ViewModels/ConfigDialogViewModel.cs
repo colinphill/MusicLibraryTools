@@ -11,9 +11,15 @@ namespace MusicLibrary.App.ViewModels;
 public partial class IndexTargetRow : ObservableObject
 {
     [ObservableProperty] private string _target = "";
-    [ObservableProperty] private string? _offset;
-    [ObservableProperty] private string? _sets;
+    [ObservableProperty] private string? _defaultOffset;
     [ObservableProperty] private string? _filter;
+    public ObservableCollection<IndexTargetSetRow> Memberships { get; } = [];
+}
+
+public partial class IndexTargetSetRow : ObservableObject
+{
+    [ObservableProperty] private string _name = "";
+    [ObservableProperty] private string? _offset;
 }
 
 /// <summary>An editable repeatable playlist export destination.</summary>
@@ -33,6 +39,8 @@ public partial class ConfigDialogViewModel : ViewModelBase
     private readonly IFileDialogService _dialogs;
 
     [ObservableProperty] private string _databaseFile = "cache.db";
+    [ObservableProperty] private string? _itunesLibraryPath;
+    [ObservableProperty] private string _ffmpegPath = "ffmpeg";
     [ObservableProperty] private int _lengthLimit = 255;
     [ObservableProperty] private int _discNumLengthLimit = 255;
     [ObservableProperty] private string? _syncTarget;
@@ -62,17 +70,27 @@ public partial class ConfigDialogViewModel : ViewModelBase
         {
             var config = EditableLibraryConfig.Load(path);
             DatabaseFile = config.DatabaseFile;
+            ItunesLibraryPath = config.ItunesLibraryPath;
+            FfmpegPath = config.FfmpegPath;
             LengthLimit = config.LengthLimit;
             DiscNumLengthLimit = config.DiscNumLengthLimit;
             SyncTarget = config.SyncTarget;
             foreach (var t in config.IndexTargets)
-                IndexTargets.Add(new IndexTargetRow
+            {
+                var row = new IndexTargetRow
                 {
                     Target = t.Target,
-                    Offset = t.Offset,
-                    Sets = t.Sets.Count == 0 ? null : string.Join(",", t.Sets),
+                    DefaultOffset = t.DefaultOffset,
                     Filter = t.Filter,
-                });
+                };
+                foreach (IndexTargetSetEntry membership in t.Memberships)
+                    row.Memberships.Add(new IndexTargetSetRow
+                    {
+                        Name = membership.Name,
+                        Offset = membership.Offset,
+                    });
+                IndexTargets.Add(row);
+            }
             foreach (var target in config.PlaylistTargets)
                 PlaylistTargets.Add(new PlaylistTargetRow
                 {
@@ -94,6 +112,16 @@ public partial class ConfigDialogViewModel : ViewModelBase
 
     [RelayCommand]
     private void RemoveTarget(IndexTargetRow row) => IndexTargets.Remove(row);
+
+    [RelayCommand]
+    private void AddSet(IndexTargetRow row) => row.Memberships.Add(new IndexTargetSetRow());
+
+    [RelayCommand]
+    private void RemoveSet(IndexTargetSetRow row)
+    {
+        foreach (IndexTargetRow target in IndexTargets)
+            if (target.Memberships.Remove(row)) return;
+    }
 
     [RelayCommand]
     private void AddPlaylistTarget() => PlaylistTargets.Add(new PlaylistTargetRow());
@@ -118,6 +146,22 @@ public partial class ConfigDialogViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private async Task BrowseItunesLibraryAsync()
+    {
+        string? path = await _dialogs.PickOpenFileAsync("Select iTunes library",
+            [new FilePickerFilter("iTunes library", ["*.itl"])]);
+        if (path is not null) ItunesLibraryPath = path;
+    }
+
+    [RelayCommand]
+    private async Task BrowseFfmpegAsync()
+    {
+        string? path = await _dialogs.PickOpenFileAsync("Select ffmpeg executable",
+            [new FilePickerFilter("Executable", ["*.exe", "*"])]);
+        if (path is not null) FfmpegPath = path;
+    }
+
+    [RelayCommand]
     private async Task SaveAsync() => await SaveToAsync(CurrentPath);
 
     [RelayCommand]
@@ -135,6 +179,9 @@ public partial class ConfigDialogViewModel : ViewModelBase
             var config = new EditableLibraryConfig
             {
                 DatabaseFile = string.IsNullOrWhiteSpace(DatabaseFile) ? "cache.db" : DatabaseFile,
+                ItunesLibraryPath = string.IsNullOrWhiteSpace(ItunesLibraryPath)
+                    ? null : ItunesLibraryPath.Trim(),
+                FfmpegPath = string.IsNullOrWhiteSpace(FfmpegPath) ? "ffmpeg" : FfmpegPath.Trim(),
                 LengthLimit = LengthLimit,
                 DiscNumLengthLimit = DiscNumLengthLimit,
                 SyncTarget = SyncTarget,
@@ -143,8 +190,15 @@ public partial class ConfigDialogViewModel : ViewModelBase
                     .Select(t => new IndexTargetEntry
                     {
                         Target = t.Target,
-                        Offset = t.Offset,
-                        Sets = [.. LibraryConfiguration.ParseScanSets(t.Sets)],
+                        DefaultOffset = t.DefaultOffset,
+                        Memberships = t.Memberships
+                            .Where(membership => !string.IsNullOrWhiteSpace(membership.Name))
+                            .Select(membership => new IndexTargetSetEntry
+                            {
+                                Name = membership.Name.Trim(),
+                                Offset = string.IsNullOrWhiteSpace(membership.Offset)
+                                    ? null : membership.Offset.Trim(),
+                            }).ToList(),
                         Filter = t.Filter,
                     })
                     .ToList(),

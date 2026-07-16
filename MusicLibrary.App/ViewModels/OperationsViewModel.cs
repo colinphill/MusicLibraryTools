@@ -128,6 +128,7 @@ public partial class OperationsViewModel : ViewModelBase
     [ObservableProperty] private bool _jobRebalance;
     [ObservableProperty] private bool _jobFixErrors;
     [ObservableProperty] private bool _jobRemap;
+    private string? _defaultLibraryPath;
 
     public ObservableCollection<OperationRunViewModel> Runs { get; } = [];
     public ObservableCollection<OperationEntryNodeViewModel> RootNodes { get; } = [];
@@ -197,6 +198,13 @@ public partial class OperationsViewModel : ViewModelBase
         if (ShowConfigurationPath && string.IsNullOrWhiteSpace(JobConfigurationPath) &&
             !string.IsNullOrWhiteSpace(_settings.ConfigPath))
             JobConfigurationPath = _settings.ConfigPath!;
+
+        string? configuredLibrary = _settings.Configuration?.ItunesLibraryPath;
+        if (!string.IsNullOrWhiteSpace(configuredLibrary) &&
+            (string.IsNullOrWhiteSpace(JobLibraryPath) ||
+             string.Equals(JobLibraryPath, _defaultLibraryPath, StringComparison.OrdinalIgnoreCase)))
+            JobLibraryPath = configuredLibrary;
+        _defaultLibraryPath = configuredLibrary;
     }
 
     partial void OnJobConfigurationPathChanged(string value) => InvalidateJobPreview();

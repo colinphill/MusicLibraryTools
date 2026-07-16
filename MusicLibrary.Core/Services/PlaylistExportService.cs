@@ -23,7 +23,7 @@ public sealed record PlaylistExportFile(
 public sealed record PlaylistExportTargetPlan(
     string Target,
     string Type,
-    IReadOnlyList<int> Sets,
+    IReadOnlyList<string> Sets,
     IReadOnlyList<PlaylistExportFile> Files,
     int MissingTrackCount);
 
@@ -88,10 +88,11 @@ public sealed class PlaylistExportService : IPlaylistExportService
             issues.Add(new("missing-targets", OperationIssueSeverity.Blocker,
                 "At least one PlaylistTarget is required."));
 
-        var configuredSets = context.IndexLocations.SelectMany(location => location.Sets).ToHashSet();
+        var configuredSets = context.IndexLocations.SelectMany(location => location.Sets)
+            .ToHashSet(LibraryConfiguration.ScanSetComparer);
         foreach (LibraryPlaylistTarget target in targets)
         {
-            int[] unknown = target.Sets.Where(set => !configuredSets.Contains(set)).ToArray();
+            string[] unknown = target.Sets.Where(set => !configuredSets.Contains(set)).ToArray();
             if (unknown.Length > 0)
                 issues.Add(new("unknown-set", OperationIssueSeverity.Blocker,
                     "Playlist target references scan set(s) with no IndexTarget: " +
@@ -118,11 +119,8 @@ public sealed class PlaylistExportService : IPlaylistExportService
         foreach (LibraryPlaylistTarget target in targets)
         {
             ct.ThrowIfCancellationRequested();
-            var targetSet = target.Sets.ToHashSet();
-            LibraryIndexLocation[] locations = context.IndexLocations
-                .Where(location => location.Sets.Any(targetSet.Contains))
-                .OrderByDescending(location => location.Target.Length)
-                .ToArray();
+            ResolvedPlaylistLocation[] locations = ResolveLocations(target, context.IndexLocations,
+                issues);
             MetadataCache targetCache = SelectCache(context.Cache, locations);
             var mapper = new ItlMapper(context.ItunesLibrary, targetCache);
             var files = new List<PlaylistExportFile>();
@@ -202,7 +200,7 @@ public sealed class PlaylistExportService : IPlaylistExportService
     }
 
     private static RenderedPlaylist? Render(ItlPlaylist playlist, LibraryPlaylistTarget target,
-        IReadOnlyList<LibraryIndexLocation> locations, MetadataCache cache, ItlMapper mapper,
+        IReadOnlyList<ResolvedPlaylistLocation> locations, MetadataCache cache, ItlMapper mapper,
         IReadOnlyDictionary<int, ItlTrack> tracksById, List<OperationIssue> issues, ref int missing)
     {
         using var m3uStream = new MemoryStream();
@@ -288,25 +286,63 @@ public sealed class PlaylistExportService : IPlaylistExportService
     }
 
     private static MetadataCache SelectCache(MetadataCache source,
-        IReadOnlyList<LibraryIndexLocation> locations)
+        IReadOnlyList<ResolvedPlaylistLocation> locations)
     {
         var selected = new MetadataCache(buildSecondaryIndexes: false);
         foreach (var pair in source.FileCache)
-            if (locations.Any(location => IsWithin(pair.Key, location.Target)))
+            if (locations.Any(location => IsWithin(pair.Key, location.Location.Target)))
                 selected.FileCache[pair.Key] = pair.Value;
         return selected;
     }
 
-    private static string Remap(string path, IReadOnlyList<LibraryIndexLocation> locations)
+    private static string Remap(string path, IReadOnlyList<ResolvedPlaylistLocation> locations)
     {
         string normalized = path.Replace('\\', '/');
-        foreach (LibraryIndexLocation location in locations)
+        foreach (ResolvedPlaylistLocation location in locations)
         {
-            string root = location.Target.TrimEnd('\\', '/').Replace('\\', '/');
+            string root = location.Location.Target.TrimEnd('\\', '/').Replace('\\', '/');
             if (normalized.StartsWith(root + "/", StringComparison.OrdinalIgnoreCase))
-                return location.Offset + normalized[root.Length..];
+            {
+                string suffix = normalized[root.Length..];
+                return string.IsNullOrEmpty(location.Offset)
+                    ? suffix
+                    : location.Offset.TrimEnd('/', '\\') + "/" + suffix.TrimStart('/');
+            }
         }
         return normalized;
+    }
+
+    private static ResolvedPlaylistLocation[] ResolveLocations(LibraryPlaylistTarget target,
+        IEnumerable<LibraryIndexLocation> configuredLocations, List<OperationIssue> issues)
+    {
+        var selected = target.Sets.ToHashSet(LibraryConfiguration.ScanSetComparer);
+        var resolved = new List<ResolvedPlaylistLocation>();
+        foreach (IGrouping<string, LibraryIndexLocation> group in configuredLocations.GroupBy(
+                     location => Path.TrimEndingDirectorySeparator(location.Target), PathComparer))
+        {
+            var matches = group.SelectMany(location => location.Memberships
+                    .Where(membership => selected.Contains(membership.Name))
+                    .Select(membership => new
+                    {
+                        Location = location,
+                        Offset = membership.Offset ?? location.DefaultOffset,
+                    }))
+                .ToArray();
+            string?[] offsets = matches.Select(match => match.Offset)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+            if (offsets.Length == 0)
+                continue;
+            if (offsets.Length > 1)
+            {
+                issues.Add(new("ambiguous-set-offset", OperationIssueSeverity.Blocker,
+                    $"Playlist target selects scan sets with different offsets for index target '{group.Key}'.",
+                    target.Target));
+                continue;
+            }
+            resolved.Add(new(matches[0].Location, offsets[0]));
+        }
+        return resolved.OrderByDescending(item => item.Location.Target.Length).ToArray();
     }
 
     private static bool IsWithin(string path, string root)
@@ -345,6 +381,7 @@ public sealed class PlaylistExportService : IPlaylistExportService
         ImmutableArray<byte> Content, int TrackCount);
     private sealed record GeneratedPlaylist(string Path,
         ImmutableArray<byte> Content, int TargetIndex);
+    private sealed record ResolvedPlaylistLocation(LibraryIndexLocation Location, string? Offset);
 
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase

@@ -10,6 +10,37 @@ namespace MusicLibrary.Core.Tests;
 public sealed class AnalyzerViewModelTests
 {
     [Fact]
+    public void ConfiguredFfmpegIsTheDefaultButAnExplicitSessionOverrideWins()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), $"analyzer-config-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            string first = Path.Combine(directory, "first.xml");
+            string second = Path.Combine(directory, "second.xml");
+            File.WriteAllText(first,
+                "<LibraryConfiguration><DatabaseFile>cache.db</DatabaseFile>" +
+                "<FfmpegPath>configured-ffmpeg</FfmpegPath></LibraryConfiguration>");
+            File.WriteAllText(second,
+                "<LibraryConfiguration><DatabaseFile>cache.db</DatabaseFile>" +
+                "<FfmpegPath>replacement-ffmpeg</FfmpegPath></LibraryConfiguration>");
+            var settings = new AppSettings(Path.Combine(directory, "settings.json"));
+            settings.LoadConfig(first);
+            var viewModel = new AnalyzerViewModel(
+                new StubLibrary([]), new StubReconciler(), new StubRepairs(), settings);
+
+            Assert.Equal("configured-ffmpeg", viewModel.FfmpegPath);
+            viewModel.FfmpegPath = "session-override";
+            settings.LoadConfig(second);
+            Assert.Equal("session-override", viewModel.FfmpegPath);
+        }
+        finally
+        {
+            try { Directory.Delete(directory, true); } catch { }
+        }
+    }
+
+    [Fact]
     public void FindingRun_GroupsByProblemAndAlbumAndTracksDisposition()
     {
         var records = new[]

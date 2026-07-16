@@ -3,10 +3,10 @@
         xmlns:vm="using:MusicLibrary.App.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="720" d:DesignHeight="620"
+        mc:Ignorable="d" d:DesignWidth="820" d:DesignHeight="700"
         x:Class="MusicLibrary.App.Views.ConfigDialog"
         x:DataType="vm:ConfigDialogViewModel"
-        Width="720" Height="620" MinWidth="640" MinHeight="460"
+        Width="820" Height="700" MinWidth="700" MinHeight="520"
         WindowStartupLocation="CenterOwner"
         Title="{Binding Title}">
 
@@ -15,12 +15,21 @@
         <TextBlock Grid.Row="0" Text="{Binding Title}" Classes="h1" Margin="0,0,0,14"
                    TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Title}"/>
 
-        <Grid Grid.Row="1" ColumnDefinitions="150,*,90,110" RowDefinitions="Auto,Auto" Margin="0,0,0,10">
+        <Grid Grid.Row="1" ColumnDefinitions="150,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto"
+              RowSpacing="6" ColumnSpacing="6" Margin="0,0,0,10">
             <TextBlock Grid.Row="0" Grid.Column="0" Text="Cache DB file:" VerticalAlignment="Center"/>
-            <TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding DatabaseFile}"
+            <TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding DatabaseFile}"
                      PlaceholderText="cache.db (relative to this config)" ToolTip.Tip="{Binding DatabaseFile}"/>
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="Length limits:" VerticalAlignment="Center" Margin="0,6,0,0"/>
-            <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="iTunes library:" VerticalAlignment="Center"/>
+            <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ItunesLibraryPath}"
+                     PlaceholderText="Optional .itl path" ToolTip.Tip="{Binding ItunesLibraryPath}"/>
+            <Button Grid.Row="1" Grid.Column="2" Content="Browse..." Command="{Binding BrowseItunesLibraryCommand}"/>
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="ffmpeg:" VerticalAlignment="Center"/>
+            <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding FfmpegPath}"
+                     PlaceholderText="ffmpeg or executable path" ToolTip.Tip="{Binding FfmpegPath}"/>
+            <Button Grid.Row="2" Grid.Column="2" Content="Browse..." Command="{Binding BrowseFfmpegCommand}"/>
+            <TextBlock Grid.Row="3" Grid.Column="0" Text="Length limits:" VerticalAlignment="Center"/>
+            <StackPanel Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="Path" VerticalAlignment="Center"/>
                 <NumericUpDown Value="{Binding LengthLimit}" Minimum="1" Maximum="4096" Width="120" FormatString="0"/>
                 <TextBlock Text="Disc" VerticalAlignment="Center"/>
@@ -38,22 +47,48 @@
                     <ItemsControl ItemsSource="{Binding IndexTargets}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:IndexTargetRow">
-                                <Grid ColumnDefinitions="*,Auto,180,120,Auto" Margin="0,3" ColumnSpacing="6">
-                                    <TextBox Grid.Column="0" Text="{Binding Target}" PlaceholderText="Folder path"
-                                             ToolTip.Tip="{Binding Target}"/>
-                                    <Button Grid.Column="1" Content="Browse"
-                                            Command="{Binding $parent[Window].((vm:ConfigDialogViewModel)DataContext).BrowseTargetCommand}"
-                                            CommandParameter="{Binding}"/>
-                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                        <TextBlock Text="Sets" VerticalAlignment="Center" Classes="muted"/>
-                                        <TextBox Text="{Binding Sets}" Width="130" PlaceholderText="none"
-                                                 ToolTip.Tip="Optional comma-separated logical scan sets"/>
+                                <Border BorderBrush="{DynamicResource AppDivider}" BorderThickness="0,0,0,1"
+                                        Padding="0,4,0,8" Margin="0,0,0,4">
+                                    <StackPanel Spacing="6">
+                                        <Grid ColumnDefinitions="*,Auto,130,170,Auto" ColumnSpacing="6">
+                                            <TextBox Grid.Column="0" Text="{Binding Target}" PlaceholderText="Folder path"
+                                                     ToolTip.Tip="{Binding Target}"/>
+                                            <Button Grid.Column="1" Content="Browse"
+                                                    Command="{Binding $parent[Window].((vm:ConfigDialogViewModel)DataContext).BrowseTargetCommand}"
+                                                    CommandParameter="{Binding}"/>
+                                            <TextBox Grid.Column="2" Text="{Binding Filter}" PlaceholderText="Filter"/>
+                                            <TextBox Grid.Column="3" Text="{Binding DefaultOffset}"
+                                                     PlaceholderText="Default offset"
+                                                     ToolTip.Tip="Used by every set below unless that set supplies an override"/>
+                                            <Button Grid.Column="4" Content="Remove root"
+                                                    Command="{Binding $parent[Window].((vm:ConfigDialogViewModel)DataContext).RemoveTargetCommand}"
+                                                    CommandParameter="{Binding}"/>
+                                        </Grid>
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="Set memberships" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                            <TextBlock Text="The default offset above applies to every set without an override."
+                                                       Classes="muted" VerticalAlignment="Center"/>
+                                            <Button Content="Add set"
+                                                    Command="{Binding $parent[Window].((vm:ConfigDialogViewModel)DataContext).AddSetCommand}"
+                                                    CommandParameter="{Binding}"/>
+                                        </StackPanel>
+                                        <ItemsControl ItemsSource="{Binding Memberships}" Margin="18,0,0,0">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:IndexTargetSetRow">
+                                                    <Grid ColumnDefinitions="180,*,Auto" ColumnSpacing="6" Margin="0,2">
+                                                        <TextBox Grid.Column="0" Text="{Binding Name}"
+                                                                 PlaceholderText="Alphanumeric set name"/>
+                                                        <TextBox Grid.Column="1" Text="{Binding Offset}"
+                                                                 PlaceholderText="Optional offset override"/>
+                                                        <Button Grid.Column="2" Content="Remove"
+                                                                Command="{Binding $parent[Window].((vm:ConfigDialogViewModel)DataContext).RemoveSetCommand}"
+                                                                CommandParameter="{Binding}"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
                                     </StackPanel>
-                                    <TextBox Grid.Column="3" Text="{Binding Filter}" PlaceholderText="Filter"/>
-                                    <Button Grid.Column="4" Content="Remove"
-                                            Command="{Binding $parent[Window].((vm:ConfigDialogViewModel)DataContext).RemoveTargetCommand}"
-                                            CommandParameter="{Binding}"/>
-                                </Grid>
+                                </Border>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
@@ -92,7 +127,7 @@
                                                     VerticalAlignment="Center">
                                             <TextBlock Text="Sets" Classes="muted" VerticalAlignment="Center"/>
                                             <TextBox Text="{Binding Sets}" Width="130" PlaceholderText="required"
-                                                     ToolTip.Tip="Required comma-separated logical scan sets"/>
+                                                     ToolTip.Tip="Required comma-separated alphanumeric scan-set names"/>
                                         </StackPanel>
                                         <Button Grid.Column="4" Content="Remove"
                                                 Command="{Binding $parent[Window].((vm:ConfigDialogViewModel)DataContext).RemovePlaylistTargetCommand}"

@@ -83,7 +83,26 @@ public sealed class AppSettingsTests
         var settings = new AppSettings(Path.Combine(temp.Path, "settings.json"));
         settings.LoadConfig(config);
 
-        Assert.Equal([1, 2], Assert.Single(settings.Configuration!.PlaylistTargets).Sets);
+        Assert.Equal(["1", "2"], Assert.Single(settings.Configuration!.PlaylistTargets).Sets);
+    }
+
+    [Fact]
+    public void PlaylistTargetWithConflictingOffsetsForOneRoot_IsRejectedDuringLoad()
+    {
+        using var temp = new TempDirectory();
+        var config = Path.Combine(temp.Path, "conflicting-offsets.xml");
+        string root = System.Security.SecurityElement.Escape(temp.Path)!;
+        File.WriteAllText(config,
+            "<LibraryConfiguration><DatabaseFile>cache.db</DatabaseFile>" +
+            $"<IndexTarget Path=\"{root}\"><Set Name=\"One\" Offset=\"/one\"/>" +
+            "<Set Name=\"Two\" Offset=\"/two\"/></IndexTarget>" +
+            "<PlaylistTarget Type=\"m3u\" Set=\"One,Two\">Z:\\Playlists</PlaylistTarget>" +
+            "</LibraryConfiguration>");
+
+        var settings = new AppSettings(Path.Combine(temp.Path, "settings.json"));
+
+        var error = Assert.Throws<InvalidDataException>(() => settings.LoadConfig(config));
+        Assert.Contains("different offsets", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

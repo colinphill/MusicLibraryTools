@@ -64,23 +64,66 @@ public sealed class PlaylistExportServiceTests
             action => File.Exists(action.DestinationPath));
     }
 
+    [Fact]
+    public async Task PerSetOffsetOverridesTheIndexRootDefault()
+    {
+        using var workspace = new TempDirectory();
+        var service = CreateService(CreateContext(workspace.Path, overrideOffset: true));
+
+        PlaylistExportPlan plan = await service.PreviewAsync(
+            new(Path.Combine(workspace.Path, "library.xml")),
+            ct: TestContext.Current.CancellationToken);
+
+        Assert.True(plan.CanApply);
+        FileMutationAction write = Assert.Single(plan.MutationPlan.Actions,
+            action => action.DestinationPath.EndsWith("Favorites.m3u",
+                StringComparison.OrdinalIgnoreCase));
+        string text = Encoding.UTF8.GetString(write.Content.AsSpan()).Replace('\\', '/');
+        Assert.Contains("../override/track.flac", text);
+    }
+
+    [Fact]
+    public async Task ConflictingOffsetsForSelectedSetsBlockTheExport()
+    {
+        using var workspace = new TempDirectory();
+        var service = CreateService(CreateContext(workspace.Path, conflictingOffsets: true));
+
+        PlaylistExportPlan plan = await service.PreviewAsync(
+            new(Path.Combine(workspace.Path, "library.xml")),
+            ct: TestContext.Current.CancellationToken);
+
+        Assert.False(plan.CanApply);
+        Assert.Contains(plan.Issues, issue => issue.Code == "ambiguous-set-offset" &&
+            issue.Severity == OperationIssueSeverity.Blocker);
+    }
+
     private static PlaylistExportService CreateService(LibraryOperationContext context) =>
         new(new StubContextFactory(context), new FileInventoryService(),
             new FileMutationPlanExecutor(new FileMutationCoordinator()));
 
-    private static LibraryOperationContext CreateContext(string workspace)
+    private static LibraryOperationContext CreateContext(string workspace,
+        bool overrideOffset = false, bool conflictingOffsets = false)
     {
         string sourceRoot = Directory.CreateDirectory(Path.Combine(workspace, "source")).FullName;
         string targetRoot = Path.Combine(workspace, "playlists");
         string source = Path.Combine(sourceRoot, "track.flac");
         File.Copy(MediaFixtures.Path_("sample.flac"), source);
         string configPath = Path.Combine(workspace, "library.xml");
+        var indexTarget = new XElement("IndexTarget",
+            new XAttribute("Path", sourceRoot),
+            new XAttribute("Offset", "../default"),
+            new XElement("Set", new XAttribute("Name", "Primary"),
+                overrideOffset || conflictingOffsets
+                    ? new XAttribute("Offset", overrideOffset ? "../override" : "../one")
+                    : null));
+        if (conflictingOffsets)
+            indexTarget.Add(new XElement("Set", new XAttribute("Name", "Car2"),
+                new XAttribute("Offset", "../two")));
         new XDocument(new XElement("LibraryConfiguration",
             new XElement("DatabaseFile", Path.Combine(workspace, "cache.db")),
-            new XElement("IndexTarget", new XAttribute("Set", "1"),
-                new XAttribute("Offset", "../"), sourceRoot),
+            indexTarget,
             new XElement("PlaylistTarget", new XAttribute("Type", "m3u"),
-                new XAttribute("Set", "1"), targetRoot),
+                new XAttribute("Set", conflictingOffsets ? "Primary,Car2" : "Primary"), targetRoot),
             new XElement("LengthLimit", "255"),
             new XElement("DiscNumLengthLimit", "255"))).Save(configPath);
         var configuration = new LibraryConfiguration(configPath);

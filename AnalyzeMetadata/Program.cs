@@ -111,15 +111,22 @@ namespace AnalyzeMetadata
 
             if (args.Skip(1).Any(s => s.ToLower() == "checksets"))
             {
-                var caches = config.IndexLocations.SelectMany(l => l.Sets).Distinct().OrderBy(s => s).Select(s => (Set : s, Cache : db.BuildCache(config.IndexLocations.Where(l => l.Sets.Contains(s)).Select(l => (l.Target, l.Filter?.Split(",;|".ToCharArray(), StringSplitOptions.RemoveEmptyEntries)))))).ToList();
+                var caches = config.IndexLocations.SelectMany(l => l.Sets)
+                    .Distinct(LibraryConfiguration.ScanSetComparer)
+                    .OrderBy(s => s, LibraryConfiguration.ScanSetComparer)
+                    .Select(s => (Set : s, Cache : db.BuildCache(config.IndexLocations
+                        .Where(l => l.Sets.Contains(s, LibraryConfiguration.ScanSetComparer))
+                        .Select(l => (l.Target, l.Filter?.Split(",;|".ToCharArray(), StringSplitOptions.RemoveEmptyEntries))))))
+                    .ToList();
                 foreach (var tcache in caches)
                 {
                     Console.WriteLine("Checking Cache Set: " + tcache.Set + " (" + tcache.Cache.FileCache.Count + ")");
-                    foreach (var ocache in caches.Where(c => c.Set != tcache.Set))
+                    foreach (var ocache in caches.Where(c =>
+                                 !LibraryConfiguration.ScanSetComparer.Equals(c.Set, tcache.Set)))
                     {
                         var ofiles = ocache.Cache.FileCache;
-                        var bag = new ConcurrentBag<(int Set, string Key)>();
-                        var dupebag = new ConcurrentBag<(int Set, string Key, string[] Possibles)>();
+                        var bag = new ConcurrentBag<(string Set, string Key)>();
+                        var dupebag = new ConcurrentBag<(string Set, string Key, string[] Possibles)>();
                         var hitbag = new ConcurrentBag<(string Key1, string Key2)>();
                         Parallel.ForEach(tcache.Cache.FileCache, (file) =>
                         {

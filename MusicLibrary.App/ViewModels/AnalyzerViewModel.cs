@@ -26,6 +26,8 @@ public partial class AnalyzerViewModel : ViewModelBase
     private readonly IDecodedAudioVerificationService? _decodedAudio;
     private readonly IRepresentationRepairService? _representationRepairs;
     private readonly IAppSettings _settings;
+    private bool _settingFfmpegDefault;
+    private bool _hasFfmpegOverride;
     private CancellationTokenSource? _cts;
     private IReadOnlyList<TrackRecord> _representationRecords = [];
     private IReadOnlyList<DecodedAudioPair> _decodedAudioPairs = [];
@@ -82,18 +84,41 @@ public partial class AnalyzerViewModel : ViewModelBase
         _decodedAudio = decodedAudio;
         _representationRepairs = representationRepairs;
         _settings = settings;
-        FfmpegPath = settings.GetPreference(FfmpegPreference) ??
-            (File.Exists(@"C:\ffmpeg\nonfree\ffmpeg.exe") ? @"C:\ffmpeg\nonfree\ffmpeg.exe" : "ffmpeg");
+        ApplyFfmpegDefault();
         settings.ConfigurationChanged += (_, _) =>
         {
+            if (!_hasFfmpegOverride)
+                ApplyFfmpegDefault();
             ClearRuns();
             _representationRecords = [];
             _decodedAudioPairs = [];
         };
     }
 
-    partial void OnFfmpegPathChanged(string value) =>
+    partial void OnFfmpegPathChanged(string value)
+    {
+        if (_settingFfmpegDefault)
+            return;
+        _hasFfmpegOverride = true;
         _settings.SetPreference(FfmpegPreference, string.IsNullOrWhiteSpace(value) ? null : value);
+    }
+
+    private void ApplyFfmpegDefault()
+    {
+        _settingFfmpegDefault = true;
+        try
+        {
+            FfmpegPath = _settings.Configuration?.FfmpegPath ??
+                _settings.GetPreference(FfmpegPreference) ??
+                (File.Exists(@"C:\ffmpeg\nonfree\ffmpeg.exe")
+                    ? @"C:\ffmpeg\nonfree\ffmpeg.exe"
+                    : "ffmpeg");
+        }
+        finally
+        {
+            _settingFfmpegDefault = false;
+        }
+    }
 
     partial void OnActiveViewChanged(AnalysisResultView value)
     {

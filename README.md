@@ -95,22 +95,36 @@ Organization:
 
 Most tools take a library configuration XML path as their first argument. It defines the
 library root(s), index locations, sync targets, playlist targets, the cache database file
-(default `cache.db`), and length limits. See `LibraryConfiguration` in MusicFileUtilities
+(default `cache.db`), the iTunes `.itl` and ffmpeg paths, and length limits. See `LibraryConfiguration` in MusicFileUtilities
 for the schema.
 
-Playlist exports are repeatable and select their source library by logical scan set. Every target
-requires both a `Type` (`m3u` or `wpl`) and at least one `Set`; multiple sets form a union:
+Playlist exports are repeatable and select their source library by logical scan set. Set names are
+case-insensitive ASCII letters and digits. Every target requires both a `Type` (`m3u` or `wpl`) and
+at least one `Set`; multiple sets form a union:
 
 ```xml
-<IndexTarget Set="1">Z:\iTunes\FLAC</IndexTarget>
-<IndexTarget Set="2">Z:\iTunes\Purchased Sync</IndexTarget>
-<PlaylistTarget Type="wpl" Set="1">Z:\iTunes\Playlists\Lossless</PlaylistTarget>
-<PlaylistTarget Type="m3u" Set="1,2">Z:\iTunes\Playlists\Combined</PlaylistTarget>
+<ItunesLibrary>C:\Users\me\Music\iTunes Library.itl</ItunesLibrary>
+<FfmpegPath>C:\ffmpeg\ffmpeg.exe</FfmpegPath>
+
+<IndexTarget Path="Z:\iTunes\FLAC" Offset="../Music">
+  <Set Name="Lossless"/>
+  <Set Name="Car"/>
+  <Set Name="Archive" Offset="../Archive/FLAC"/>
+</IndexTarget>
+<IndexTarget Path="Z:\iTunes\Purchased Sync">
+  <Set Name="Car" Offset="../Music/Purchased"/>
+</IndexTarget>
+<PlaylistTarget Type="wpl" Set="Lossless">Z:\iTunes\Playlists\Lossless</PlaylistTarget>
+<PlaylistTarget Type="m3u" Set="Car">Z:\iTunes\Playlists\Car</PlaylistTarget>
 ```
 
 `CrossSyncPlaylists` processes every configured playlist target in one invocation. The former
 standalone `<PlaylistType>` element is no longer used. Every referenced playlist set must occur on
 at least one `IndexTarget`; unknown sets are rejected before indexing or creating destination folders.
+An `IndexTarget` can belong to several sets or none. Its `Offset` is the common playlist-path mapping
+for all child sets; a child `Set` can override it. Selecting two different resolved offsets for the
+same root is rejected as ambiguous. Legacy numeric `Set` attributes remain readable and are migrated
+to textual names in the cache database without a rescan.
 
 Library indexing uses up to 16 concurrent metadata readers so high-latency SMB shares can
 overlap file opens. Set `MLT_INDEX_PARALLELISM` to a value from 1 through 64 to tune the global

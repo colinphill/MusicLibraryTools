@@ -144,7 +144,9 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
             return await Task.Run(() =>
             {
                 var locations = config.IndexLocations.ToList();
-                var setIds = locations.SelectMany(l => l.Sets).Distinct().OrderBy(s => s).ToList();
+                var setIds = locations.SelectMany(l => l.Sets)
+                    .Distinct(LibraryConfiguration.ScanSetComparer)
+                    .OrderBy(s => s, LibraryConfiguration.ScanSetComparer).ToList();
                 if (setIds.Count < 2)
                     return new AnalysisReport("Cross-set check", []);
 
@@ -155,7 +157,8 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                 foreach (var setId in setIds)
                 {
                     var files = new Dictionary<string, MetadataCacheEntry>(FilePathComparer);
-                    foreach (var location in locations.Where(l => l.Sets.Contains(setId)))
+                    foreach (var location in locations.Where(l =>
+                                 l.Sets.Contains(setId, LibraryConfiguration.ScanSetComparer)))
                     {
                         var extensions = ParseExtensionFilter(location.Filter);
                         foreach (var (path, entry) in db.BuildCache([location.Target], buildSecondaryIndexes: false).FileCache)
@@ -171,7 +174,8 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                 var findings = new List<AnalysisFinding>();
                 foreach (var target in caches)
                 {
-                    foreach (var other in caches.Where(c => c.Set != target.Set))
+                    foreach (var other in caches.Where(c =>
+                                 !LibraryConfiguration.ScanSetComparer.Equals(c.Set, target.Set)))
                     {
                         foreach (var (path, entry) in target.Files)
                         {
@@ -485,11 +489,11 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
 
     private sealed class SetComparisonCache
     {
-        public int Set { get; }
+        public string Set { get; }
         public IReadOnlyDictionary<string, MetadataCacheEntry> Files { get; }
         public IReadOnlyDictionary<string, List<MetadataCacheEntry>> Albums { get; }
 
-        public SetComparisonCache(int set, Dictionary<string, MetadataCacheEntry> files)
+        public SetComparisonCache(string set, Dictionary<string, MetadataCacheEntry> files)
         {
             Set = set;
             Files = files;
@@ -690,7 +694,9 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
             .GroupBy(location => Path.TrimEndingDirectorySeparator(location.Target), FilePathComparer)
             .Select(group => new ScanRootDefinition(
                 group.First().Target,
-                group.SelectMany(location => location.Sets).Distinct().OrderBy(set => set).ToArray()))
+                group.SelectMany(location => location.Sets)
+                    .Distinct(LibraryConfiguration.ScanSetComparer)
+                    .OrderBy(set => set, LibraryConfiguration.ScanSetComparer).ToArray()))
             .ToList();
 
     private MetadataDatabase GetDatabase(LibraryContext context)
