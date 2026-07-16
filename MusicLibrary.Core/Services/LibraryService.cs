@@ -219,24 +219,51 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                         foreach (var (path, entry) in target.Files)
                         {
                             ct.ThrowIfCancellationRequested();
-                            if (!other.Albums.TryGetValue(entry.Album ?? "", out var albumFiles))
-                            {
-                                findings.Add(new AnalysisFinding(path, $"missing from set {other.Set}",
-                                    "Missing counterpart"));
-                                continue;
-                            }
-
-                            var matches = albumFiles
-                                .Where(f =>
-                                    (SameText(f.AlbumArtist, entry.AlbumArtist) || SameText(f.Artist, entry.Artist)) &&
-                                    f.TrackNumber == entry.TrackNumber &&
-                                    (f.DiscNumber ?? 1) == (entry.DiscNumber ?? 1) &&
-                                    SameText(f.Title, entry.Title))
+                            var matches = other.Albums
+                                .GetValueOrDefault(entry.Album ?? "", [])
+                                .Where(candidate => ExactSetMatch(entry, candidate.Entry))
                                 .ToList();
 
                             if (matches.Count == 0)
-                                findings.Add(new AnalysisFinding(path, $"missing from set {other.Set}",
-                                    "Missing counterpart"));
+                            {
+                                var nearMatches = other.NearMatches(entry)
+                                    .Select(candidate => new
+                                    {
+                                        Candidate = candidate,
+                                        Differences = SetDifferences(entry, candidate.Entry),
+                                    })
+                                    .Where(candidate => candidate.Differences.Count == 1)
+                                    .OrderBy(candidate => candidate.Candidate.Path,
+                                        StringComparer.CurrentCultureIgnoreCase)
+                                    .ToList();
+
+                                if (nearMatches.Count == 1)
+                                {
+                                    var near = nearMatches[0];
+                                    findings.Add(new AnalysisFinding(path,
+                                        NearMatchDescription(
+                                            other.Set,
+                                            near.Candidate,
+                                            near.Differences[0]),
+                                        "Near counterpart mismatch"));
+                                }
+                                else if (nearMatches.Count > 1)
+                                {
+                                    findings.Add(new AnalysisFinding(path,
+                                        AmbiguousNearMatchDescription(other.Set, nearMatches
+                                            .Select(near => (
+                                                near.Candidate,
+                                                Difference: near.Differences[0]))
+                                            .ToList()),
+                                        "Ambiguous near counterpart"));
+                                }
+                                else
+                                {
+                                    findings.Add(new AnalysisFinding(path,
+                                        $"missing from set {other.Set}",
+                                        "Missing counterpart"));
+                                }
+                            }
                             else if (matches.Count > 1)
                                 findings.Add(new AnalysisFinding(path,
                                     $"ambiguous match in set {other.Set} ({matches.Count})",
@@ -685,17 +712,171 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
     {
         public string Set { get; }
         public IReadOnlyDictionary<string, MetadataCacheEntry> Files { get; }
-        public IReadOnlyDictionary<string, List<MetadataCacheEntry>> Albums { get; }
+        public IReadOnlyDictionary<string, List<SetComparisonFile>> Albums { get; }
+        private IReadOnlyDictionary<SetComparisonKey, List<SetComparisonFile>> NearIndexes { get; }
 
         public SetComparisonCache(string set, Dictionary<string, MetadataCacheEntry> files)
         {
             Set = set;
             Files = files;
-            Albums = files.Values
-                .GroupBy(e => e.Album ?? "", StringComparer.OrdinalIgnoreCase)
+            SetComparisonFile[] entries = files
+                .Select(file => new SetComparisonFile(file.Key, file.Value))
+                .ToArray();
+            Albums = entries
+                .GroupBy(file => file.Entry.Album ?? "", StringComparer.OrdinalIgnoreCase)
                 .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
+            NearIndexes = entries
+                .SelectMany(file => NearMatchKeys(file.Entry)
+                    .Select(key => (Key: key, File: file)))
+                .GroupBy(item => item.Key)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group.Select(item => item.File).ToList());
+        }
+
+        public IReadOnlyList<SetComparisonFile> NearMatches(MetadataCacheEntry entry)
+        {
+            var matches = new Dictionary<string, SetComparisonFile>(FilePathComparer);
+            foreach (SetComparisonKey key in NearMatchKeys(entry))
+            {
+                if (!NearIndexes.TryGetValue(key, out var candidates))
+                    continue;
+                foreach (SetComparisonFile candidate in candidates)
+                    matches[candidate.Path] = candidate;
+            }
+            return matches.Values.ToList();
         }
     }
+
+    private sealed record SetComparisonFile(string Path, MetadataCacheEntry Entry);
+
+    private enum SetComparisonField
+    {
+        Album,
+        Performer,
+        DiscNumber,
+        TrackNumber,
+        Title,
+    }
+
+    private readonly record struct SetComparisonKey(
+        SetComparisonField Omitted,
+        string Album,
+        string Performer,
+        int DiscNumber,
+        int? TrackNumber,
+        string Title);
+
+    private sealed record SetComparisonDifference(
+        SetComparisonField Field,
+        string SourceValue,
+        string CounterpartValue);
+
+    private static IEnumerable<SetComparisonKey> NearMatchKeys(MetadataCacheEntry entry)
+    {
+        foreach (SetComparisonField omitted in Enum.GetValues<SetComparisonField>())
+        {
+            string[] performers = omitted == SetComparisonField.Performer
+                ? [""]
+                : PerformerKeys(entry);
+            foreach (string performer in performers)
+            {
+                yield return new SetComparisonKey(
+                    omitted,
+                    omitted == SetComparisonField.Album ? "" : NormalizeSetText(entry.Album),
+                    performer,
+                    omitted == SetComparisonField.DiscNumber ? 0 : entry.DiscNumber ?? 1,
+                    omitted == SetComparisonField.TrackNumber ? null : entry.TrackNumber,
+                    omitted == SetComparisonField.Title ? "" : NormalizeSetText(entry.Title));
+            }
+        }
+    }
+
+    private static string[] PerformerKeys(MetadataCacheEntry entry) =>
+        new[] { NormalizeSetText(entry.AlbumArtist), NormalizeSetText(entry.Artist) }
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+    private static string NormalizeSetText(string? value) => (value ?? "").ToUpperInvariant();
+
+    private static bool ExactSetMatch(MetadataCacheEntry source, MetadataCacheEntry candidate) =>
+        SameText(source.Album, candidate.Album) &&
+        SamePerformer(source, candidate) &&
+        source.TrackNumber == candidate.TrackNumber &&
+        (source.DiscNumber ?? 1) == (candidate.DiscNumber ?? 1) &&
+        SameText(source.Title, candidate.Title);
+
+    private static bool SamePerformer(MetadataCacheEntry left, MetadataCacheEntry right) =>
+        SameText(left.AlbumArtist, right.AlbumArtist) ||
+        SameText(left.Artist, right.Artist);
+
+    private static IReadOnlyList<SetComparisonDifference> SetDifferences(
+        MetadataCacheEntry source,
+        MetadataCacheEntry counterpart)
+    {
+        var differences = new List<SetComparisonDifference>(5);
+        if (!SameText(source.Album, counterpart.Album))
+            differences.Add(new(SetComparisonField.Album,
+                DisplaySetText(source.Album), DisplaySetText(counterpart.Album)));
+        if (!SamePerformer(source, counterpart))
+            differences.Add(new(SetComparisonField.Performer,
+                DisplayPerformer(source), DisplayPerformer(counterpart)));
+        if ((source.DiscNumber ?? 1) != (counterpart.DiscNumber ?? 1))
+            differences.Add(new(SetComparisonField.DiscNumber,
+                DisplayDisc(source.DiscNumber), DisplayDisc(counterpart.DiscNumber)));
+        if (source.TrackNumber != counterpart.TrackNumber)
+            differences.Add(new(SetComparisonField.TrackNumber,
+                DisplayNumber(source.TrackNumber), DisplayNumber(counterpart.TrackNumber)));
+        if (!SameText(source.Title, counterpart.Title))
+            differences.Add(new(SetComparisonField.Title,
+                DisplaySetText(source.Title), DisplaySetText(counterpart.Title)));
+        return differences;
+    }
+
+    private static string NearMatchDescription(
+        string set,
+        SetComparisonFile counterpart,
+        SetComparisonDifference difference) =>
+        $"Near match in set {set}: {SetFieldName(difference.Field)} differs — " +
+        $"{difference.SourceValue} vs {difference.CounterpartValue}. " +
+        $"Counterpart: {counterpart.Path}";
+
+    private static string AmbiguousNearMatchDescription(
+        string set,
+        IReadOnlyList<(SetComparisonFile Candidate, SetComparisonDifference Difference)> candidates) =>
+        $"Ambiguous near match in set {set} ({candidates.Count}): " +
+        string.Join("; ", candidates.Select(candidate =>
+            $"{SetFieldName(candidate.Difference.Field)} " +
+            $"{candidate.Difference.SourceValue} vs {candidate.Difference.CounterpartValue} " +
+            $"at {candidate.Candidate.Path}"));
+
+    private static string SetFieldName(SetComparisonField field) => field switch
+    {
+        SetComparisonField.Album => "album",
+        SetComparisonField.Performer => "artist identity",
+        SetComparisonField.DiscNumber => "disc number",
+        SetComparisonField.TrackNumber => "track number",
+        SetComparisonField.Title => "title",
+        _ => field.ToString(),
+    };
+
+    private static string DisplaySetText(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "(missing)" : $"“{value}”";
+
+    private static string DisplayPerformer(MetadataCacheEntry entry)
+    {
+        string albumArtist = DisplaySetText(entry.AlbumArtist);
+        string artist = DisplaySetText(entry.Artist);
+        return SameText(entry.AlbumArtist, entry.Artist) || string.IsNullOrWhiteSpace(entry.AlbumArtist)
+            ? artist
+            : $"album artist {albumArtist}, artist {artist}";
+    }
+
+    private static string DisplayDisc(int? value) =>
+        value is null ? "(missing; treated as 1)" : value.Value.ToString();
+
+    private static string DisplayNumber(int? value) =>
+        value?.ToString() ?? "(missing)";
 
     public async Task<IReadOnlyList<byte[]?>> GetFirstImagesAsync(IReadOnlyList<string> paths, CancellationToken ct = default)
     {

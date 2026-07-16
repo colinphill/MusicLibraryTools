@@ -243,19 +243,26 @@ public sealed class LibraryServiceRegressionTests
     }
 
     [Fact]
-    public async Task CheckSets_RejectsSoleCandidateWithDifferentTitle()
+    public async Task CheckSets_ReportsUniqueTitleOnlyNearMatchWithExactDifference()
     {
         using var temp = new TempDirectory();
         var (library, first, second) = await CreateTwoSetLibrary(temp);
         using (library)
         {
-            await new TagWriteService(library).ApplyAsync(
+            var writer = new TagWriteService(library);
+            await writer.ApplyAsync(
+                [first], [new TagEdit(TagFields.Title, "Canonical title")]);
+            await writer.ApplyAsync(
                 [second], [new TagEdit(TagFields.Title, "Different recording")]);
 
             var report = await library.CheckSetsAsync();
 
-            Assert.Contains(report.Findings, f => f.Path == first);
-            Assert.Contains(report.Findings, f => f.Path == second);
+            AnalysisFinding finding = Assert.Single(report.Findings, f => f.Path == first);
+            Assert.Equal("Near counterpart mismatch", finding.Problem);
+            Assert.Contains("title differs", finding.Description);
+            Assert.Contains("“Canonical title”", finding.Description);
+            Assert.Contains("“Different recording”", finding.Description);
+            Assert.Contains(second, finding.Description);
         }
     }
 
@@ -267,14 +274,144 @@ public sealed class LibraryServiceRegressionTests
         using (library)
         {
             var writer = new TagWriteService(library);
-            await writer.ApplyAsync([first], [new TagEdit(TagFields.DiscNumber, "1")]);
             await writer.ApplyAsync([second], [new TagEdit(TagFields.DiscNumber, "2")]);
 
             var report = await library.CheckSetsAsync();
 
-            Assert.Contains(report.Findings, f => f.Path == first);
-            Assert.Contains(report.Findings, f => f.Path == second);
+            AnalysisFinding finding = Assert.Single(report.Findings, f => f.Path == first);
+            Assert.Equal("Near counterpart mismatch", finding.Problem);
+            Assert.Contains("disc number differs", finding.Description);
+            Assert.Contains("(missing; treated as 1)", finding.Description);
+            Assert.Contains("2", finding.Description);
         }
+    }
+
+    [Fact]
+    public async Task CheckSets_TwoFieldDifferenceRemainsMissingCounterpart()
+    {
+        using var temp = new TempDirectory();
+        var (library, first, second) = await CreateTwoSetLibrary(temp);
+        using (library)
+        {
+            await new TagWriteService(library).ApplyAsync(
+                [second],
+                [
+                    new TagEdit(TagFields.Title, "Different recording"),
+                    new TagEdit(TagFields.TrackNumber, "9"),
+                ]);
+
+            var report = await library.CheckSetsAsync();
+
+            AnalysisFinding finding = Assert.Single(report.Findings, f => f.Path == first);
+            Assert.Equal("Missing counterpart", finding.Problem);
+            Assert.DoesNotContain("Near match", finding.Description);
+        }
+    }
+
+    [Theory]
+    [InlineData("album", "album differs")]
+    [InlineData("performer", "artist identity differs")]
+    [InlineData("track", "track number differs")]
+    public async Task CheckSets_DescribesOtherSingleFieldDifferences(
+        string difference,
+        string expectedDescription)
+    {
+        using var temp = new TempDirectory();
+        var (library, first, second) = await CreateTwoSetLibrary(temp);
+        using (library)
+        {
+            IReadOnlyList<TagEdit> edits = difference switch
+            {
+                "album" => [new(TagFields.Album, "Different album")],
+                "performer" =>
+                [
+                    new(TagFields.AlbumArtist, "Different artist"),
+                    new(TagFields.Artist, "Different artist"),
+                ],
+                "track" => [new(TagFields.TrackNumber, "9")],
+                _ => throw new ArgumentOutOfRangeException(nameof(difference)),
+            };
+            await new TagWriteService(library).ApplyAsync([second], edits);
+
+            AnalysisReport report = await library.CheckSetsAsync();
+
+            AnalysisFinding finding = Assert.Single(report.Findings, f => f.Path == first);
+            Assert.Equal("Near counterpart mismatch", finding.Problem);
+            Assert.Contains(expectedDescription, finding.Description);
+            Assert.Contains(second, finding.Description);
+        }
+    }
+
+    [Fact]
+    public async Task CheckSets_MultipleOneFieldCandidatesAreAmbiguousNearMatches()
+    {
+        using var temp = new TempDirectory();
+        string firstRoot = temp.CreateDirectory("set1");
+        string secondRoot = temp.CreateDirectory("set2");
+        string source = temp.CopyFixture(firstRoot, "song.flac");
+        string candidateOne = temp.CopyFixture(secondRoot, "one.flac");
+        string candidateTwo = temp.CopyFixture(secondRoot, "two.flac");
+        await new TagWriteService().ApplyAsync(
+            [candidateOne], [new TagEdit(TagFields.Title, "Alternate one")]);
+        await new TagWriteService().ApplyAsync(
+            [candidateTwo], [new TagEdit(TagFields.Title, "Alternate two")]);
+        string config = temp.WriteConfig("sets.xml", "sets.db",
+            new IndexTargetEntry
+            {
+                Target = firstRoot,
+                Memberships = [new() { Name = "1" }],
+            },
+            new IndexTargetEntry
+            {
+                Target = secondRoot,
+                Memberships = [new() { Name = "2" }],
+            });
+        var settings = new AppSettings(temp.File("settings.json"));
+        settings.LoadConfig(config);
+        using var library = new LibraryService(settings);
+        await library.IndexAsync();
+
+        AnalysisReport report = await library.CheckSetsAsync();
+
+        AnalysisFinding finding = Assert.Single(report.Findings, f => f.Path == source);
+        Assert.Equal("Ambiguous near counterpart", finding.Problem);
+        Assert.Contains("title", finding.Description);
+        Assert.Contains(candidateOne, finding.Description);
+        Assert.Contains(candidateTwo, finding.Description);
+    }
+
+    [Fact]
+    public async Task CheckSets_ExactMatchTakesPrecedenceOverNearCandidate()
+    {
+        using var temp = new TempDirectory();
+        string firstRoot = temp.CreateDirectory("set1");
+        string secondRoot = temp.CreateDirectory("set2");
+        string source = temp.CopyFixture(firstRoot, "song.flac");
+        temp.CopyFixture(secondRoot, "exact.flac");
+        string near = temp.CopyFixture(secondRoot, "near.flac");
+        await new TagWriteService().ApplyAsync(
+            [near], [new TagEdit(TagFields.Title, "Alternate title")]);
+        string config = temp.WriteConfig("sets.xml", "sets.db",
+            new IndexTargetEntry
+            {
+                Target = firstRoot,
+                Memberships = [new() { Name = "1" }],
+            },
+            new IndexTargetEntry
+            {
+                Target = secondRoot,
+                Memberships = [new() { Name = "2" }],
+            });
+        var settings = new AppSettings(temp.File("settings.json"));
+        settings.LoadConfig(config);
+        using var library = new LibraryService(settings);
+        await library.IndexAsync();
+
+        AnalysisReport report = await library.CheckSetsAsync();
+
+        Assert.DoesNotContain(report.Findings, finding => finding.Path == source);
+        Assert.Contains(report.Findings, finding =>
+            finding.Path == near && finding.Problem == "Near counterpart mismatch");
     }
 
     [Fact]

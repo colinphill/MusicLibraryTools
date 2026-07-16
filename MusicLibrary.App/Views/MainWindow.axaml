@@ -720,45 +720,193 @@
                                     </ListBox>
                                 </Grid>
 
+                                <!-- Applicable representation derivation and organization actions -->
+                                <Grid IsVisible="{Binding ShowRepresentationRepairs}"
+                                      RowDefinitions="Auto,Auto,*">
+                                    <WrapPanel Grid.Row="0" Classes="toolbarwrap" Margin="0,0,-8,4">
+                                        <Button Content="Apply active" Classes="accent"
+                                                Command="{Binding ApplyRepresentationRepairsCommand}"/>
+                                        <TextBlock Text="Derivations run before organization. Sources and destinations are stale-checked before mutation."
+                                                   Classes="muted" VerticalAlignment="Center"
+                                                   TextWrapping="Wrap"/>
+                                    </WrapPanel>
+                                    <ItemsControl Grid.Row="1" ItemsSource="{Binding RepresentationWarnings}"
+                                                  Margin="0,0,0,6">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="sys:String">
+                                                <Border Classes="card" Padding="8" Margin="0,0,0,4"
+                                                        BorderBrush="{DynamicResource AppWarningStroke}">
+                                                    <TextBlock Text="{Binding}" TextWrapping="Wrap"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <TreeView Grid.Row="2" ItemsSource="{Binding RepresentationActionGroups}"
+                                              Background="Transparent">
+                                        <TreeView.DataTemplates>
+                                            <TreeDataTemplate x:DataType="vm:RepresentationRepairCategoryGroupViewModel"
+                                                              ItemsSource="{Binding Artists}">
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                    <TextBlock VerticalAlignment="Center">
+                                                        <Run Text="{Binding Category}" FontWeight="SemiBold"/>
+                                                        <Run Text="{Binding Count, StringFormat=' ({0})'}"/>
+                                                        <Run Text="{Binding ActiveCount, StringFormat=' · {0} active'}"
+                                                             Foreground="{DynamicResource AppTextMuted}"/>
+                                                    </TextBlock>
+                                                    <ComboBox Grid.Column="1" Width="120"
+                                                              ItemsSource="{Binding Dispositions}"
+                                                              SelectedItem="{Binding Disposition}"/>
+                                                </Grid>
+                                            </TreeDataTemplate>
+                                            <TreeDataTemplate x:DataType="vm:RepresentationRepairArtistGroupViewModel"
+                                                              ItemsSource="{Binding Albums}">
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                    <TextBlock VerticalAlignment="Center">
+                                                        <Run Text="{Binding Artist}" FontWeight="SemiBold"/>
+                                                        <Run Text="{Binding Count, StringFormat=' ({0})'}"/>
+                                                        <Run Text="{Binding ActiveCount, StringFormat=' · {0} active'}"
+                                                             Foreground="{DynamicResource AppTextMuted}"/>
+                                                    </TextBlock>
+                                                    <ComboBox Grid.Column="1" Width="120"
+                                                              ItemsSource="{Binding Dispositions}"
+                                                              SelectedItem="{Binding Disposition}"/>
+                                                </Grid>
+                                            </TreeDataTemplate>
+                                            <TreeDataTemplate x:DataType="vm:RepresentationRepairAlbumGroupViewModel"
+                                                              ItemsSource="{Binding Items}">
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                    <TextBlock VerticalAlignment="Center">
+                                                        <Run Text="{Binding Album}" FontWeight="SemiBold"/>
+                                                        <Run Text="{Binding Count, StringFormat=' ({0})'}"/>
+                                                        <Run Text="{Binding ActiveCount, StringFormat=' · {0} active'}"
+                                                             Foreground="{DynamicResource AppTextMuted}"/>
+                                                    </TextBlock>
+                                                    <ComboBox Grid.Column="1" Width="120"
+                                                              ItemsSource="{Binding Dispositions}"
+                                                              SelectedItem="{Binding Disposition}"/>
+                                                </Grid>
+                                            </TreeDataTemplate>
+                                            <DataTemplate x:DataType="vm:RepresentationRepairActionItemViewModel">
+                                                <Border Classes="card" Margin="0,0,0,8" Padding="12">
+                                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                                        <StackPanel Spacing="3">
+                                                            <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
+                                                            <Button HorizontalAlignment="Left"
+                                                                    HorizontalContentAlignment="Left"
+                                                                    Background="Transparent" Padding="0,2"
+                                                                    Command="{Binding $parent[TabItem].((vm:AnalyzerViewModel)DataContext).OpenCommand}"
+                                                                    CommandParameter="{Binding SourcePath}">
+                                                                <TextBlock Text="{Binding SourcePath}"
+                                                                           Classes="caption"
+                                                                           TextWrapping="Wrap"/>
+                                                            </Button>
+                                                            <TextBlock Classes="caption" TextWrapping="Wrap">
+                                                                <Run Text="Destination: "/>
+                                                                <Run Text="{Binding DestinationPath}"/>
+                                                            </TextBlock>
+                                                            <TextBlock Text="{Binding ResultText}"
+                                                                       FontWeight="SemiBold"
+                                                                       Foreground="{DynamicResource AccentBrush}"
+                                                                       IsVisible="{Binding ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                                        </StackPanel>
+                                                        <ComboBox Grid.Column="1" Width="120"
+                                                                  VerticalAlignment="Top"
+                                                                  IsEnabled="{Binding !IsApplied}"
+                                                                  ItemsSource="{Binding Dispositions}"
+                                                                  SelectedItem="{Binding Disposition}"/>
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </TreeView.DataTemplates>
+                                    </TreeView>
+                                </Grid>
+
                                 <!-- Previewable, stale-checked metadata repairs -->
                                 <Grid IsVisible="{Binding ShowRepairs}" RowDefinitions="Auto,*">
                                     <WrapPanel Grid.Row="0" Classes="toolbarwrap" Margin="0,0,-8,4">
-                                        <Button Content="Apply selected" Classes="accent"
+                                        <Button Content="Apply active" Classes="accent"
                                                 Command="{Binding ApplyRepairsCommand}"/>
                                         <TextBlock Text="Automatic repairs are unambiguous; explicit conflict choices use the same stale-checked preview."
                                                    Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                     </WrapPanel>
-                                    <ListBox Grid.Row="1" ItemsSource="{Binding RepairItems}"
-                                             Classes="analysisresults">
-                                            <ListBox.ItemTemplate>
+                                    <TreeView Grid.Row="1" ItemsSource="{Binding RepairGroups}"
+                                              Background="Transparent">
+                                            <TreeView.DataTemplates>
+                                                <TreeDataTemplate x:DataType="vm:AnalysisRepairCategoryGroupViewModel"
+                                                                  ItemsSource="{Binding Artists}">
+                                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                        <TextBlock VerticalAlignment="Center">
+                                                            <Run Text="{Binding Category}" FontWeight="SemiBold"/>
+                                                            <Run Text="{Binding Count, StringFormat=' ({0})'}"/>
+                                                            <Run Text="{Binding ActiveCount, StringFormat=' · {0} active'}"
+                                                                 Foreground="{DynamicResource AppTextMuted}"/>
+                                                        </TextBlock>
+                                                        <ComboBox Grid.Column="1" Width="120"
+                                                                  ItemsSource="{Binding Dispositions}"
+                                                                  SelectedItem="{Binding Disposition}"/>
+                                                    </Grid>
+                                                </TreeDataTemplate>
+                                                <TreeDataTemplate x:DataType="vm:AnalysisRepairArtistGroupViewModel"
+                                                                  ItemsSource="{Binding Albums}">
+                                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                        <TextBlock VerticalAlignment="Center">
+                                                            <Run Text="{Binding Artist}" FontWeight="SemiBold"/>
+                                                            <Run Text="{Binding Count, StringFormat=' ({0})'}"/>
+                                                            <Run Text="{Binding ActiveCount, StringFormat=' · {0} active'}"
+                                                                 Foreground="{DynamicResource AppTextMuted}"/>
+                                                        </TextBlock>
+                                                        <ComboBox Grid.Column="1" Width="120"
+                                                                  ItemsSource="{Binding Dispositions}"
+                                                                  SelectedItem="{Binding Disposition}"/>
+                                                    </Grid>
+                                                </TreeDataTemplate>
+                                                <TreeDataTemplate x:DataType="vm:AnalysisRepairAlbumGroupViewModel"
+                                                                  ItemsSource="{Binding Items}">
+                                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                        <TextBlock VerticalAlignment="Center">
+                                                            <Run Text="{Binding Album}" FontWeight="SemiBold"/>
+                                                            <Run Text="{Binding Count, StringFormat=' ({0})'}"/>
+                                                            <Run Text="{Binding ActiveCount, StringFormat=' · {0} active'}"
+                                                                 Foreground="{DynamicResource AppTextMuted}"/>
+                                                        </TextBlock>
+                                                        <ComboBox Grid.Column="1" Width="120"
+                                                                  ItemsSource="{Binding Dispositions}"
+                                                                  SelectedItem="{Binding Disposition}"/>
+                                                    </Grid>
+                                                </TreeDataTemplate>
                                                 <DataTemplate x:DataType="vm:AnalysisRepairItemViewModel">
                                                     <Border Classes="card" Margin="0,0,0,8" Padding="12">
-                                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                                            <CheckBox Grid.Column="0" IsChecked="{Binding IsSelected}"
-                                                                      IsEnabled="{Binding !IsApplied}"
-                                                                      VerticalAlignment="Top"/>
-                                                            <StackPanel Grid.Column="1" Spacing="3">
+                                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                                            <StackPanel Grid.Column="0" Spacing="3">
                                                                 <TextBlock FontWeight="SemiBold" TextWrapping="Wrap">
                                                                     <Run Text="{Binding Field}"/>
                                                                     <Run Text="{Binding Before, StringFormat='  {0} → '}"/>
                                                                     <Run Text="{Binding After}"/>
                                                                 </TextBlock>
                                                                 <TextBlock Text="{Binding Reason}" TextWrapping="Wrap"/>
+                                                                <TextBlock Text="{Binding BlockingReason}" TextWrapping="Wrap"
+                                                                           Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                                                                           IsVisible="{Binding BlockingReason, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                                                 <Button HorizontalAlignment="Left" HorizontalContentAlignment="Left"
                                                                         Background="Transparent" Padding="0,2"
                                                                         Command="{Binding $parent[TabItem].((vm:AnalyzerViewModel)DataContext).OpenCommand}"
                                                                         CommandParameter="{Binding Path}">
-                                                                    <TextBlock Text="{Binding Path}" Classes="caption" TextWrapping="Wrap"/>
+                                                                    <TextBlock Text="{Binding DisplayPath}" Classes="caption" TextWrapping="Wrap"/>
                                                                 </Button>
                                                                 <TextBlock Text="{Binding ResultText}" FontWeight="SemiBold"
                                                                            Foreground="{DynamicResource AccentBrush}"
                                                                            IsVisible="{Binding ResultText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                                             </StackPanel>
+                                                            <ComboBox Grid.Column="1" Width="120"
+                                                                      VerticalAlignment="Top"
+                                                                      IsEnabled="{Binding CanChangeDisposition}"
+                                                                      ItemsSource="{Binding Dispositions}"
+                                                                      SelectedItem="{Binding Disposition}"/>
                                                         </Grid>
                                                     </Border>
                                                 </DataTemplate>
-                                            </ListBox.ItemTemplate>
-                                    </ListBox>
+                                            </TreeView.DataTemplates>
+                                    </TreeView>
                                 </Grid>
 
                                 <!-- Cache-only album metadata matrices; highlighted cells violate an invariant. -->

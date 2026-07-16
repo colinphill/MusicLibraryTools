@@ -1,5 +1,6 @@
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
+using MusicLibraryTools;
 using System.Text.RegularExpressions;
 
 namespace MusicLibrary.Core.Services;
@@ -24,6 +25,29 @@ public interface IAnalysisRepairService
         AnalysisRepairPlan plan,
         IProgress<int>? progress = null,
         CancellationToken ct = default);
+
+    async Task<AnalysisRepairApplyResult> ApplyReviewedAsync(
+        AnalysisRepairPlan plan,
+        IProgress<int>? progress = null,
+        CancellationToken ct = default)
+    {
+        BatchWriteResult result = await ApplyAsync(plan, progress, ct);
+        var byPath = result.Files
+            .GroupBy(file => file.Path, PathComparer)
+            .ToDictionary(group => group.Key, group => group.Last(), PathComparer);
+        return new AnalysisRepairApplyResult(plan.Items.Select(repair =>
+        {
+            if (!byPath.TryGetValue(repair.Path, out FileWriteResult? file))
+                return new AnalysisRepairItemResult(
+                    repair, WriteOutcome.Failed, "No result was returned for this repair.");
+            return new AnalysisRepairItemResult(
+                repair, file.Outcome, file.Error, file.Path, file.CacheError);
+        }).ToList());
+    }
+
+    private static StringComparer PathComparer => OperatingSystem.IsWindows()
+        ? StringComparer.OrdinalIgnoreCase
+        : StringComparer.Ordinal;
 }
 
 /// <summary>
@@ -31,10 +55,18 @@ public interface IAnalysisRepairService
 /// delegating the actual tag writes. Repairs are proposed only when album peers, calibrated file
 /// names, or explicit disc folders establish one unambiguous value.
 /// </summary>
-public sealed class AnalysisRepairService(ITagWriteService writer) : IAnalysisRepairService
+public sealed class AnalysisRepairService : IAnalysisRepairService
 {
+    private static readonly StringComparer FilePathComparer = OperatingSystem.IsWindows()
+        ? StringComparer.OrdinalIgnoreCase
+        : StringComparer.Ordinal;
+    private static readonly StringComparison FilePathComparison = OperatingSystem.IsWindows()
+        ? StringComparison.OrdinalIgnoreCase
+        : StringComparison.Ordinal;
     private static readonly TagFields[] PeerTextFields =
         [TagFields.Artist, TagFields.AlbumArtist, TagFields.Album];
+    private static readonly TagFields[] DirectTextFields =
+        [TagFields.Artist, TagFields.AlbumArtist, TagFields.Album, TagFields.Title, TagFields.Date];
     private static readonly Regex LeadingTrackNumber = new(
         @"^(?<number>\d{1,3})(?:\s*[-._]\s*|\s+|$)",
         RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -44,6 +76,19 @@ public sealed class AnalysisRepairService(ITagWriteService writer) : IAnalysisRe
     private static readonly Regex DiscAlbumSuffix = new(
         @"^(?<album>.+?)\s+\(Disc\s+(?<number>\d+)\)$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+    private readonly ITagWriteService _writer;
+    private readonly ILibraryOrganizer? _organizer;
+    private readonly IAppSettings? _settings;
+
+    public AnalysisRepairService(
+        ITagWriteService writer,
+        ILibraryOrganizer? organizer = null,
+        IAppSettings? settings = null)
+    {
+        _writer = writer;
+        _organizer = organizer;
+        _settings = settings;
+    }
 
     public AnalysisRepairPlan PreviewSafeRepairs(IReadOnlyList<TrackRecord> records)
     {
@@ -56,6 +101,7 @@ public sealed class AnalysisRepairService(ITagWriteService writer) : IAnalysisRe
             .Select(group => group.First())
             .OrderBy(repair => repair.Path, StringComparer.CurrentCultureIgnoreCase)
             .ThenBy(repair => repair.Field)
+            .Concat(PreviewPathNormalization(records))
             .ToList();
         return new AnalysisRepairPlan("Safe metadata repairs", repairs);
     }
@@ -145,19 +191,33 @@ public sealed class AnalysisRepairService(ITagWriteService writer) : IAnalysisRe
         ArgumentNullException.ThrowIfNull(records);
         var repairs = new Dictionary<(string Path, TagFields Field), AnalysisTagRepair>(PathFieldComparer.Instance);
 
-        // Edge whitespace is independently wrong and needs no peer inference. Titles are limited to
-        // this rule because unrelated tracks can legitimately differ only by case.
+        // Non-breaking spaces and edge whitespace are independently wrong and need no peer
+        // inference. Titles and dates are limited to these deterministic rules because unrelated
+        // tracks can legitimately differ in their other spelling details.
         foreach (var record in records)
         {
-            foreach (var field in PeerTextFields.Append(TagFields.Title))
+            foreach (var field in DirectTextFields)
             {
                 string? value = TextValue(record, field);
                 if (string.IsNullOrEmpty(value))
                     continue;
-                string trimmed = value.Trim();
-                if (trimmed.Length > 0 && !StringComparer.Ordinal.Equals(value, trimmed))
-                    repairs[(record.Path, field)] = Repair(record, field, value, trimmed,
-                        "Removes leading or trailing whitespace from this tag value.");
+                bool containsNbsp = value.Contains('\u00A0');
+                bool hasEdgeWhitespace =
+                    !StringComparer.Ordinal.Equals(value, value.Trim());
+                string normalized = value.Replace('\u00A0', ' ').Trim();
+                if (normalized.Length > 0 && !StringComparer.Ordinal.Equals(value, normalized))
+                {
+                    string reason = (containsNbsp, hasEdgeWhitespace) switch
+                    {
+                        (true, true) =>
+                            "Replaces non-breaking spaces with normal spaces and removes edge whitespace.",
+                        (true, false) =>
+                            "Replaces non-breaking spaces with normal spaces in this tag value.",
+                        _ => "Removes leading or trailing whitespace from this tag value.",
+                    };
+                    repairs[(record.Path, field)] = Repair(
+                        record, field, value, normalized, reason);
+                }
             }
         }
 
@@ -204,6 +264,117 @@ public sealed class AnalysisRepairService(ITagWriteService writer) : IAnalysisRe
             .OrderBy(repair => repair.Path, StringComparer.CurrentCultureIgnoreCase)
             .ThenBy(repair => repair.Field)
             .ToList());
+    }
+
+    private IReadOnlyList<AnalysisTagRepair> PreviewPathNormalization(
+        IReadOnlyList<TrackRecord> records)
+    {
+        LibraryIndexLocation[] locations = _settings?.Configuration?.IndexLocations.ToArray() ?? [];
+        var repairs = new List<AnalysisTagRepair>();
+
+        foreach (TrackRecord record in records.Where(record => record.Path.Contains('\u00A0')))
+        {
+            try
+            {
+                string source = Path.GetFullPath(record.Path);
+                LibraryIndexLocation? location = locations
+                    .Where(candidate => IsWithinOrEqual(source, candidate.Target))
+                    .OrderByDescending(candidate =>
+                        Path.TrimEndingDirectorySeparator(Path.GetFullPath(candidate.Target)).Length)
+                    .FirstOrDefault();
+                string destination;
+                string? blockingReason = null;
+
+                if (location is null)
+                {
+                    destination = source.Replace('\u00A0', ' ');
+                    blockingReason = locations.Length == 0
+                        ? "Load a library configuration before applying path repairs."
+                        : "The file is not beneath a configured index target.";
+                }
+                else
+                {
+                    string root = Path.TrimEndingDirectorySeparator(
+                        Path.GetFullPath(location.Target));
+                    string relative = Path.GetRelativePath(root, source);
+                    destination = Path.GetFullPath(
+                        Path.Combine(root, relative.Replace('\u00A0', ' ')));
+                    if (!LibraryOrganizationPolicy.IsPathEligible(source, locations))
+                    {
+                        blockingReason =
+                            "Path changes are disabled by this IndexTarget's Organize setting.";
+                    }
+                }
+
+                OperationPathSnapshot expectedDestination = CapturePathSnapshot(destination);
+                if (FilePathComparer.Equals(source, destination))
+                {
+                    blockingReason = AppendReason(blockingReason,
+                        "The non-breaking space is in the configured library root, which this repair does not rename.");
+                }
+                if (expectedDestination.Exists)
+                {
+                    blockingReason = AppendReason(blockingReason,
+                        $"Destination already exists: {destination}");
+                }
+
+                repairs.Add(new AnalysisTagRepair(
+                    record.Path,
+                    TagFields.NullField,
+                    record.Path,
+                    destination,
+                    "Replaces non-breaking spaces in this file path with normal spaces.",
+                    record.Length,
+                    record.LastWriteTime,
+                    AnalysisRepairKind.Path,
+                    expectedDestination,
+                    blockingReason));
+            }
+            catch (Exception ex)
+            {
+                repairs.Add(new AnalysisTagRepair(
+                    record.Path,
+                    TagFields.NullField,
+                    record.Path,
+                    record.Path.Replace('\u00A0', ' '),
+                    "Replaces non-breaking spaces in this file path with normal spaces.",
+                    record.Length,
+                    record.LastWriteTime,
+                    AnalysisRepairKind.Path,
+                    BlockingReason: ex.Message));
+            }
+        }
+
+        var duplicateDestinations = repairs
+            .GroupBy(repair => repair.After, FilePathComparer)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToHashSet(FilePathComparer);
+        var sources = repairs.Select(repair => TryFullPath(repair.Path))
+            .Where(path => path is not null)
+            .Select(path => path!)
+            .ToHashSet(FilePathComparer);
+
+        return repairs.Select(repair =>
+        {
+            string? blockingReason = repair.BlockingReason;
+            if (duplicateDestinations.Contains(repair.After))
+            {
+                blockingReason = AppendReason(blockingReason,
+                    $"Multiple files would use the same destination: {repair.After}");
+            }
+            string? source = TryFullPath(repair.Path);
+            if (source is not null &&
+                !FilePathComparer.Equals(source, repair.After) &&
+                sources.Contains(repair.After))
+            {
+                blockingReason = AppendReason(blockingReason,
+                    $"The destination is another source in this repair preview: {repair.After}");
+            }
+            return repair with { BlockingReason = blockingReason };
+        })
+        .OrderBy(repair => repair.Path, StringComparer.CurrentCultureIgnoreCase)
+        .ToList();
     }
 
     public AnalysisRepairPlan PreviewMultiDiscAlbumNames(IReadOnlyList<TrackRecord> records)
@@ -488,6 +659,136 @@ public sealed class AnalysisRepairService(ITagWriteService writer) : IAnalysisRe
         }
     }
 
+    public async Task<AnalysisRepairApplyResult> ApplyReviewedAsync(
+        AnalysisRepairPlan plan,
+        IProgress<int>? progress = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        var results = new Dictionary<AnalysisTagRepair, AnalysisRepairItemResult>();
+        AnalysisTagRepair[] blocked = plan.Items.Where(repair => !repair.CanApply).ToArray();
+        foreach (AnalysisTagRepair repair in blocked)
+        {
+            results[repair] = new AnalysisRepairItemResult(
+                repair, WriteOutcome.Failed, repair.BlockingReason);
+        }
+
+        AnalysisTagRepair[] pathRepairs = plan.Items
+            .Where(repair => repair.CanApply && repair.Kind == AnalysisRepairKind.Path)
+            .ToArray();
+        var movedPaths = new Dictionary<string, string>(FilePathComparer);
+        if (pathRepairs.Length > 0)
+        {
+            if (_organizer is null)
+            {
+                foreach (AnalysisTagRepair repair in pathRepairs)
+                {
+                    results[repair] = new AnalysisRepairItemResult(
+                        repair, WriteOutcome.Failed,
+                        "Path repair support is unavailable in this application context.");
+                }
+            }
+            else
+            {
+                try
+                {
+                    var moves = pathRepairs.Select(repair => new PlannedMove(
+                        repair.Path,
+                        repair.After,
+                        SourcePathSnapshot(repair),
+                        repair.ExpectedDestination)).ToList();
+                    OrganizeResult organized = await _organizer.ApplyMovesAsync(moves, null, ct);
+                    var errors = organized.Errors.ToDictionary(
+                        error => error.Source, error => error.Error, FilePathComparer);
+                    var cacheErrors = organized.CacheErrors.ToDictionary(
+                        error => error.Source, error => error.Error, FilePathComparer);
+                    foreach (AnalysisTagRepair repair in pathRepairs)
+                    {
+                        if (errors.TryGetValue(repair.Path, out string? error))
+                        {
+                            results[repair] = new AnalysisRepairItemResult(
+                                repair, WriteOutcome.Failed, error);
+                            continue;
+                        }
+
+                        movedPaths[repair.Path] = repair.After;
+                        cacheErrors.TryGetValue(repair.Path, out string? cacheError);
+                        results[repair] = new AnalysisRepairItemResult(
+                            repair, WriteOutcome.Saved, AppliedPath: repair.After,
+                            CacheError: cacheError);
+                    }
+                }
+                catch (OperationCanceledException) { throw; }
+                catch (Exception ex)
+                {
+                    foreach (AnalysisTagRepair repair in pathRepairs)
+                    {
+                        results[repair] = new AnalysisRepairItemResult(
+                            repair, WriteOutcome.Failed, ex.Message);
+                    }
+                }
+            }
+            progress?.Report(results.Count);
+        }
+
+        var tagRepairs = plan.Items
+            .Where(repair => repair.CanApply && repair.Kind == AnalysisRepairKind.Tag)
+            .Select(repair =>
+            {
+                string appliedPath = movedPaths.GetValueOrDefault(repair.Path, repair.Path);
+                return (Original: repair, Rebased: repair with { Path = appliedPath });
+            })
+            .ToList();
+        if (tagRepairs.Count > 0)
+        {
+            var tagPlan = new AnalysisRepairPlan(
+                plan.Name, tagRepairs.Select(item => item.Rebased).ToList());
+            try
+            {
+                // Once a reviewed rename has committed, finish its rebased tag edits even if the
+                // user cancels. Returning midway would leave the successful path repair hidden by
+                // the command-level cancellation message.
+                CancellationToken tagToken =
+                    movedPaths.Count > 0 ? CancellationToken.None : ct;
+                BatchWriteResult tagResult = await ApplyAsync(tagPlan, null, tagToken);
+                var byPath = tagResult.Files
+                    .GroupBy(file => file.Path, FilePathComparer)
+                    .ToDictionary(group => group.Key, group => group.Last(), FilePathComparer);
+                foreach (var item in tagRepairs)
+                {
+                    if (!byPath.TryGetValue(item.Rebased.Path, out FileWriteResult? file))
+                    {
+                        results[item.Original] = new AnalysisRepairItemResult(
+                            item.Original, WriteOutcome.Failed,
+                            "No result was returned for this tag repair.",
+                            item.Rebased.Path);
+                        continue;
+                    }
+                    results[item.Original] = new AnalysisRepairItemResult(
+                        item.Original, file.Outcome, file.Error, item.Rebased.Path, file.CacheError);
+                }
+            }
+            catch (OperationCanceledException) when (movedPaths.Count == 0)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                foreach (var item in tagRepairs)
+                {
+                    results[item.Original] = new AnalysisRepairItemResult(
+                        item.Original, WriteOutcome.Failed, ex.Message, item.Rebased.Path);
+                }
+            }
+            progress?.Report(results.Count);
+        }
+
+        return new AnalysisRepairApplyResult(plan.Items
+            .Where(results.ContainsKey)
+            .Select(repair => results[repair])
+            .ToList());
+    }
+
     public async Task<BatchWriteResult> ApplyAsync(
         AnalysisRepairPlan plan,
         IProgress<int>? progress = null,
@@ -496,8 +797,12 @@ public sealed class AnalysisRepairService(ITagWriteService writer) : IAnalysisRe
         ArgumentNullException.ThrowIfNull(plan);
         if (!plan.CanApply)
             return new BatchWriteResult([]);
+        if (plan.Items.Any(repair => repair.Kind != AnalysisRepairKind.Tag))
+            throw new InvalidOperationException(
+                "Path repairs must be applied through the reviewed metadata repair workflow.");
 
         var files = plan.Items
+            .Where(repair => repair.CanApply)
             .GroupBy(repair => repair.Path, StringComparer.OrdinalIgnoreCase)
             .Select(group =>
             {
@@ -543,7 +848,7 @@ public sealed class AnalysisRepairService(ITagWriteService writer) : IAnalysisRe
             ct.ThrowIfCancellationRequested();
             int completedBeforeGroup = completed;
             var groupProgress = new DelegateProgress(done => progress?.Report(completedBeforeGroup + done));
-            var result = await writer.ApplyAsync(
+            var result = await _writer.ApplyAsync(
                 group.Select(file => file.Path).ToList(),
                 group.Key,
                 groupProgress,
@@ -579,6 +884,7 @@ public sealed class AnalysisRepairService(ITagWriteService writer) : IAnalysisRe
         TagFields.AlbumArtist => record.HasAlbumArtist ? record.AlbumArtist : null,
         TagFields.Album => record.Album,
         TagFields.Title => record.Title,
+        TagFields.Date => record.ReleaseDate,
         _ => null,
     };
 
@@ -599,6 +905,46 @@ public sealed class AnalysisRepairService(ITagWriteService writer) : IAnalysisRe
             pendingSpace = false;
         }
         return result.ToString();
+    }
+
+    private static OperationPathSnapshot SourcePathSnapshot(AnalysisTagRepair repair) =>
+        new(true, false, repair.SourceLength, repair.SourceLastWriteTimeUtc)
+        {
+            Path = Path.GetFullPath(repair.Path),
+        };
+
+    private static OperationPathSnapshot CapturePathSnapshot(string path)
+    {
+        string fullPath = Path.GetFullPath(path);
+        if (File.Exists(fullPath))
+        {
+            var file = new FileInfo(fullPath);
+            return new(true, false, file.Length, file.LastWriteTimeUtc) { Path = fullPath };
+        }
+        if (Directory.Exists(fullPath))
+        {
+            var directory = new DirectoryInfo(fullPath);
+            return new(true, true, 0, directory.LastWriteTimeUtc) { Path = fullPath };
+        }
+        return OperationPathSnapshot.Missing(fullPath);
+    }
+
+    private static bool IsWithinOrEqual(string path, string root)
+    {
+        string normalizedPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+        string normalizedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+        return FilePathComparer.Equals(normalizedPath, normalizedRoot) ||
+               normalizedPath.StartsWith(
+                   normalizedRoot + Path.DirectorySeparatorChar, FilePathComparison);
+    }
+
+    private static string AppendReason(string? existing, string reason) =>
+        string.IsNullOrWhiteSpace(existing) ? reason : $"{existing} {reason}";
+
+    private static string? TryFullPath(string path)
+    {
+        try { return Path.GetFullPath(path); }
+        catch { return null; }
     }
 
     private static int? ParseLeadingNumber(string? name)

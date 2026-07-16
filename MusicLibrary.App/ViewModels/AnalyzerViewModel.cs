@@ -7,7 +7,16 @@ using MusicLibrary.Core.Services;
 namespace MusicLibrary.App.ViewModels;
 
 /// <summary>Which result section the Analyze tab is currently showing.</summary>
-public enum AnalysisResultView { Findings, Duplicates, Artists, Conflicts, Repairs, Matrix }
+public enum AnalysisResultView
+{
+    Findings,
+    Duplicates,
+    Artists,
+    Conflicts,
+    Repairs,
+    RepresentationRepairs,
+    Matrix,
+}
 
 /// <summary>
 /// Library-wide analysis. Each analysis type is run by its own button (inconsistencies, lossy files,
@@ -52,6 +61,14 @@ public partial class AnalyzerViewModel : ViewModelBase
     public IReadOnlyList<ArtistGroupViewModel> ArtistGroups => SelectedRun?.ArtistGroups ?? [];
     public IReadOnlyList<AnalysisConflictGroupViewModel> ConflictGroups => SelectedRun?.ConflictGroups ?? [];
     public IReadOnlyList<AnalysisRepairItemViewModel> RepairItems => SelectedRun?.RepairItems ?? [];
+    public IReadOnlyList<AnalysisRepairCategoryGroupViewModel> RepairGroups =>
+        SelectedRun?.RepairGroups ?? [];
+    public IReadOnlyList<RepresentationRepairActionItemViewModel> RepresentationActionItems =>
+        SelectedRun?.RepresentationActionItems ?? [];
+    public IReadOnlyList<RepresentationRepairCategoryGroupViewModel> RepresentationActionGroups =>
+        SelectedRun?.RepresentationActionGroups ?? [];
+    public IReadOnlyList<string> RepresentationWarnings =>
+        SelectedRun?.RepresentationWarnings ?? [];
     public IReadOnlyList<AlbumMetadataMatrix> Matrices => SelectedRun?.Matrices ?? [];
     public bool HasRuns => Runs.Count > 0;
 
@@ -61,6 +78,8 @@ public partial class AnalyzerViewModel : ViewModelBase
     public bool ShowArtists => ActiveView == AnalysisResultView.Artists;
     public bool ShowConflicts => ActiveView == AnalysisResultView.Conflicts;
     public bool ShowRepairs => ActiveView == AnalysisResultView.Repairs;
+    public bool ShowRepresentationRepairs =>
+        ActiveView == AnalysisResultView.RepresentationRepairs;
     public bool ShowMatrix => ActiveView == AnalysisResultView.Matrix;
 
     /// <summary>Raised with a file path when the user opens a finding/track.</summary>
@@ -94,6 +113,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowArtists));
         OnPropertyChanged(nameof(ShowConflicts));
         OnPropertyChanged(nameof(ShowRepairs));
+        OnPropertyChanged(nameof(ShowRepresentationRepairs));
         OnPropertyChanged(nameof(ShowMatrix));
     }
 
@@ -104,6 +124,10 @@ public partial class AnalyzerViewModel : ViewModelBase
         OnPropertyChanged(nameof(ArtistGroups));
         OnPropertyChanged(nameof(ConflictGroups));
         OnPropertyChanged(nameof(RepairItems));
+        OnPropertyChanged(nameof(RepairGroups));
+        OnPropertyChanged(nameof(RepresentationActionItems));
+        OnPropertyChanged(nameof(RepresentationActionGroups));
+        OnPropertyChanged(nameof(RepresentationWarnings));
         OnPropertyChanged(nameof(Matrices));
 
         if (value is not null)
@@ -277,7 +301,9 @@ public partial class AnalyzerViewModel : ViewModelBase
     {
         if (_representationRepairs is null)
             return;
-        using var scope = BeginRun("representation repair preview", AnalysisResultView.Findings);
+        using var scope = BeginRun(
+            "representation repair preview",
+            AnalysisResultView.RepresentationRepairs);
         try
         {
             var records = await _library.GetAllRecordsAsync(scope.Token);
@@ -286,25 +312,12 @@ public partial class AnalyzerViewModel : ViewModelBase
             var runs = await Task.Run(() =>
             {
                 var projected = new List<AnalysisRunViewModel>(2);
-                var findings = preview.FileActions.Select(action => new AnalysisFinding(
-                        action.SourcePath,
-                        $"{action.Description} Destination: {action.DestinationPath}",
-                        action.Kind switch
-                        {
-                            RepresentationRepairKind.DeriveCdFlac => "Derive missing CD FLAC",
-                            RepresentationRepairKind.DeriveAac => "Derive missing AAC",
-                            _ => "Organize representation",
-                        }))
-                    .Concat(preview.Warnings.Select(warning => new AnalysisFinding(
-                        records.FirstOrDefault()?.Path ?? "", warning, "Preview unavailable")))
-                    .ToList();
-
-                if (findings.Count > 0)
+                if (preview.FileActions.Count > 0 || preview.Warnings.Count > 0)
                 {
                     string actionStatus = $"Representation file repairs: {preview.FileActions.Count:N0} action(s), " +
                         $"{preview.Warnings.Count:N0} warning(s). No files were changed.";
-                    projected.Add(AnalysisRunViewModel.ForFindings(
-                        new AnalysisReport("Representation file repairs", findings), records, actionStatus));
+                    projected.Add(AnalysisRunViewModel.ForRepresentationRepairs(
+                        preview.FileActions, preview.Warnings, records, actionStatus));
                 }
 
                 if (preview.MetadataCopies.Items.Count > 0)
@@ -312,7 +325,8 @@ public partial class AnalyzerViewModel : ViewModelBase
                     var items = preview.MetadataCopies.Items.Select(CreateRepairItem).ToList();
                     string metadataStatus = $"Representation metadata: {items.Count:N0} copy operation(s). " +
                         "Review the source role in each reason, then apply selected.";
-                    projected.Add(AnalysisRunViewModel.ForRepairs(preview.MetadataCopies, items, metadataStatus));
+                    projected.Add(AnalysisRunViewModel.ForRepairs(
+                        preview.MetadataCopies, items, records, metadataStatus));
                 }
                 return projected;
             }, scope.Token);
@@ -324,7 +338,11 @@ public partial class AnalyzerViewModel : ViewModelBase
         }
         catch (OperationCanceledException) { StatusText = "Representation repair preview cancelled."; }
         catch (Exception ex) { StatusText = $"Representation repair preview failed: {ex.Message}"; }
-        finally { ApplyRepairsCommand.NotifyCanExecuteChanged(); }
+        finally
+        {
+            ApplyRepairsCommand.NotifyCanExecuteChanged();
+            ApplyRepresentationRepairsCommand.NotifyCanExecuteChanged();
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanRun))]
@@ -338,10 +356,13 @@ public partial class AnalyzerViewModel : ViewModelBase
             {
                 var plan = _repairs.PreviewSafeRepairs(records);
                 var repairItems = plan.Items.Select(CreateRepairItem).ToList();
+                int applicable = plan.Items.Count(item => item.CanApply);
                 string status = plan.Items.Count == 0
                     ? "No safely inferable metadata repairs were found."
-                    : $"Previewed {plan.Items.Count:N0} metadata repair(s). Review, then apply selected.";
-                return AnalysisRunViewModel.ForRepairs(plan, repairItems, status);
+                    : applicable == 0
+                        ? $"Found {plan.Items.Count:N0} metadata repair opportunity(s), but none can be applied. Review the warnings."
+                        : $"Previewed {plan.Items.Count:N0} metadata repair(s), {applicable:N0} applicable. Review, then apply active.";
+                return AnalysisRunViewModel.ForRepairs(plan, repairItems, records, status);
             }, scope.Token);
             AddRun(run);
         }
@@ -392,6 +413,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         using var scope = BeginRun("conflict repair preview", AnalysisResultView.Repairs);
         try
         {
+            var records = await _library.GetAllRecordsAsync(scope.Token);
             var run = await Task.Run(() =>
             {
                 var plan = _repairs.PreviewConflictRepairs(resolutions);
@@ -399,7 +421,7 @@ public partial class AnalyzerViewModel : ViewModelBase
                 string status = plan.Items.Count == 0
                     ? "The selected canonical values already match every file."
                     : $"Previewed {plan.Items.Count:N0} user-directed repair(s). Review, then apply selected.";
-                return AnalysisRunViewModel.ForRepairs(plan, items, status);
+                return AnalysisRunViewModel.ForRepairs(plan, items, records, status);
             }, scope.Token);
             AddRun(run);
         }
@@ -409,44 +431,48 @@ public partial class AnalyzerViewModel : ViewModelBase
     }
 
     private bool CanApplyRepairs() => !IsBusy && SelectedRun?.RepairPlan is not null &&
-        RepairItems.Any(item => item.IsSelected && !item.IsApplied);
+        RepairItems.Any(item => item.IsActive);
 
     [RelayCommand(CanExecute = nameof(CanApplyRepairs))]
     private async Task ApplyRepairs()
     {
         if (SelectedRun?.RepairPlan is not { } repairPlan)
             return;
-        var selected = RepairItems.Where(item => item.IsSelected && !item.IsApplied).ToList();
+        var selected = RepairItems.Where(item => item.IsActive).ToList();
         if (selected.Count == 0)
             return;
-        int selectedFiles = selected.Select(item => item.Path).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+        int selectedRepairs = selected.Count;
 
         using var scope = BeginRun("Apply metadata repairs", AnalysisResultView.Repairs);
         try
         {
             var selectedPlan = repairPlan with { Items = selected.Select(item => item.Repair).ToList() };
             var progress = new Progress<int>(done =>
-                StatusText = $"Applying metadata repairs… {done:N0}/{selectedFiles:N0} file(s)");
-            var result = await _repairs.ApplyAsync(selectedPlan, progress, scope.Token);
-            var byPath = result.Files.ToDictionary(file => file.Path, StringComparer.OrdinalIgnoreCase);
+                StatusText = $"Applying metadata repairs… {done:N0}/{selectedRepairs:N0} repair(s)");
+            AnalysisRepairApplyResult result =
+                await _repairs.ApplyReviewedAsync(selectedPlan, progress, scope.Token);
+            var byRepair = result.Items.ToDictionary(item => item.Repair);
             foreach (var item in selected)
             {
-                if (!byPath.TryGetValue(item.Path, out var file))
+                if (!byRepair.TryGetValue(item.Repair, out AnalysisRepairItemResult? applied))
                     continue;
-                item.ResultText = file.Outcome switch
+                item.ResultText = applied.Outcome switch
                 {
                     WriteOutcome.Saved => "Applied",
                     WriteOutcome.Skipped => "Already correct",
-                    _ => file.Error ?? "Failed",
+                    _ => applied.Error ?? "Failed",
                 };
-                item.IsApplied = file.Outcome is WriteOutcome.Saved or WriteOutcome.Skipped;
+                if (applied.CacheError is not null)
+                    item.ResultText += $"; cache refresh failed: {applied.CacheError}";
+                item.IsApplied = applied.Outcome is WriteOutcome.Saved or WriteOutcome.Skipped;
                 if (item.IsApplied)
-                    item.IsSelected = false;
+                    item.Disposition = AnalysisRepairDisposition.Completed;
             }
             StatusText = $"Metadata repairs: {result.Summary}.";
-            var changed = result.Files
-                .Where(file => file.Outcome == WriteOutcome.Saved)
-                .Select(file => file.Path)
+            var changed = result.Items
+                .Where(item => item.Outcome == WriteOutcome.Saved)
+                .Select(item => item.AppliedPath ?? item.Repair.Path)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList();
             if (changed.Count > 0)
                 RepairsApplied?.Invoke(changed);
@@ -454,6 +480,75 @@ public partial class AnalyzerViewModel : ViewModelBase
         catch (OperationCanceledException) { StatusText = "Metadata repair apply cancelled."; }
         catch (Exception ex) { StatusText = $"Metadata repair apply failed: {ex.Message}"; }
         finally { ApplyRepairsCommand.NotifyCanExecuteChanged(); }
+    }
+
+    private bool CanApplyRepresentationRepairs() =>
+        !IsBusy &&
+        _representationRepairs is not null &&
+        RepresentationActionItems.Any(item => item.IsActive);
+
+    [RelayCommand(CanExecute = nameof(CanApplyRepresentationRepairs))]
+    private async Task ApplyRepresentationRepairs()
+    {
+        if (_representationRepairs is null)
+            return;
+        var active = RepresentationActionItems.Where(item => item.IsActive).ToList();
+        if (active.Count == 0)
+            return;
+
+        using var scope = BeginRun(
+            "Apply representation file repairs",
+            AnalysisResultView.RepresentationRepairs);
+        try
+        {
+            var progress = new Progress<RepresentationRepairProgress>(value =>
+                StatusText =
+                    $"Applying representation repairsâ€¦ {value.Completed:N0}/{value.Total:N0}: " +
+                    Path.GetFileName(value.SourcePath));
+            RepresentationRepairApplyResult result =
+                await _representationRepairs.ApplyAsync(
+                    active.Select(item => item.Action).ToList(),
+                    _settings.Configuration,
+                    progress,
+                    scope.Token);
+
+            var byAction = result.Results
+                .GroupBy(item => item.Action)
+                .ToDictionary(group => group.Key, group => group.Last());
+            foreach (var item in active)
+            {
+                if (!byAction.TryGetValue(item.Action, out RepresentationRepairActionResult? applied))
+                    continue;
+                item.ResultText = applied.Outcome switch
+                {
+                    RepresentationRepairOutcome.Applied => applied.Error ?? "Applied",
+                    RepresentationRepairOutcome.Skipped => "Skipped",
+                    _ => applied.Error ?? "Failed",
+                };
+                item.IsApplied = applied.Outcome == RepresentationRepairOutcome.Applied;
+                if (item.IsApplied)
+                    item.Disposition = AnalysisRepairDisposition.Completed;
+            }
+
+            StatusText = result.Cancelled
+                ? $"Representation repairs cancelled after {result.Applied:N0} action(s)."
+                : $"Representation repairs: {result.Applied:N0} applied, " +
+                  $"{result.Failed:N0} failed.";
+            if (result.ChangedPaths.Count > 0)
+                RepairsApplied?.Invoke(result.ChangedPaths);
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Representation repair apply cancelled.";
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Representation repair apply failed: {ex.Message}";
+        }
+        finally
+        {
+            ApplyRepresentationRepairsCommand.NotifyCanExecuteChanged();
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanRun))]
@@ -520,6 +615,9 @@ public partial class AnalyzerViewModel : ViewModelBase
 
     private void AddRun(AnalysisRunViewModel run)
     {
+        foreach (var action in run.RepresentationActionItems)
+            action.StateChanged += () =>
+                ApplyRepresentationRepairsCommand.NotifyCanExecuteChanged();
         Runs.Insert(0, run);
         OnPropertyChanged(nameof(HasRuns));
         SelectedRun = run;
@@ -530,7 +628,7 @@ public partial class AnalyzerViewModel : ViewModelBase
     private AnalysisRepairItemViewModel CreateRepairItem(AnalysisTagRepair item)
     {
         var viewModel = new AnalysisRepairItemViewModel(item);
-        viewModel.SelectionChanged += () => ApplyRepairsCommand.NotifyCanExecuteChanged();
+        viewModel.StateChanged += () => ApplyRepairsCommand.NotifyCanExecuteChanged();
         return viewModel;
     }
 
@@ -575,6 +673,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         RunCheckSetsCommand.NotifyCanExecuteChanged();
         PreviewMetadataRepairsCommand.NotifyCanExecuteChanged();
         ApplyRepairsCommand.NotifyCanExecuteChanged();
+        ApplyRepresentationRepairsCommand.NotifyCanExecuteChanged();
         RemoveRunCommand.NotifyCanExecuteChanged();
         ClearRunsCommand.NotifyCanExecuteChanged();
     }
@@ -594,20 +693,44 @@ public partial class AnalysisRepairItemViewModel : ViewModelBase
 {
     public AnalysisTagRepair Repair { get; }
     public string Path => Repair.Path;
-    public string Field => Repair.Field.ToString();
-    public string Before => string.IsNullOrWhiteSpace(Repair.Before) ? "(missing)" : Repair.Before;
-    public string After => Repair.After;
+    public string DisplayPath => ShowWhitespace(Repair.Path);
+    public string Field => Repair.Kind == AnalysisRepairKind.Path
+        ? "Path"
+        : Repair.Field.ToString();
+    public string Before => string.IsNullOrEmpty(Repair.Before)
+        ? "(missing)"
+        : ShowWhitespace(Repair.Before);
+    public string After => ShowWhitespace(Repair.After);
     public string Reason => Repair.Reason;
+    public string? BlockingReason => Repair.BlockingReason;
+    public bool CanChangeDisposition => Repair.CanApply && !IsApplied;
+    public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
+        Enum.GetValues<AnalysisRepairDisposition>()
+            .Where(value => value != AnalysisRepairDisposition.Mixed)
+            .ToArray();
+    public bool IsActive =>
+        Repair.CanApply && Disposition == AnalysisRepairDisposition.Active && !IsApplied;
 
-    [ObservableProperty] private bool _isSelected = true;
-    [ObservableProperty] private bool _isApplied;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsActive))]
+    private AnalysisRepairDisposition _disposition;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsActive))]
+    [NotifyPropertyChangedFor(nameof(CanChangeDisposition))]
+    private bool _isApplied;
+
     [ObservableProperty] private string? _resultText;
 
-    public event Action? SelectionChanged;
+    public event Action? StateChanged;
 
     public AnalysisRepairItemViewModel(AnalysisTagRepair repair) => Repair = repair;
 
-    partial void OnIsSelectedChanged(bool value) => SelectionChanged?.Invoke();
+    partial void OnDispositionChanged(AnalysisRepairDisposition value) => StateChanged?.Invoke();
+    partial void OnIsAppliedChanged(bool value) => StateChanged?.Invoke();
+
+    private static string ShowWhitespace(string value) =>
+        value.Replace("\u00A0", "⟦NBSP⟧", StringComparison.Ordinal);
 }
 
 public partial class AnalysisConflictGroupViewModel : ViewModelBase

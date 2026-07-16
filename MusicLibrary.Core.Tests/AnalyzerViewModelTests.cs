@@ -111,6 +111,47 @@ public sealed class AnalyzerViewModelTests
     }
 
     [Fact]
+    public void RepresentationRepairRun_PropagatesBranchDispositionsAndCalculatesMixedState()
+    {
+        var records = new[]
+        {
+            Track(@"Z:\FLAC\First\01.flac", "AA", "First"),
+            Track(@"Z:\FLAC\Second\01.flac", "BB", "Second"),
+        };
+        var run = AnalysisRunViewModel.ForRepresentationRepairs(
+            [
+                new(RepresentationRepairKind.DeriveAac, records[0].Path,
+                    @"Z:\AAC\First\01.m4a", "Encode first."),
+                new(RepresentationRepairKind.DeriveAac, records[1].Path,
+                    @"Z:\AAC\Second\01.m4a", "Encode second."),
+                new(RepresentationRepairKind.Organize, records[0].Path,
+                    @"Z:\FLAC\AA\First\01.flac", "Organize first."),
+            ],
+            [],
+            records,
+            "3 actions");
+
+        var aac = run.RepresentationActionGroups.Single(
+            group => group.Category == "Derive missing AAC");
+        Assert.Equal(2, aac.ActiveCount);
+        var firstAlbum = Assert.Single(
+            aac.Artists.Single(artist => artist.Artist == "AA").Albums);
+
+        firstAlbum.Disposition = AnalysisRepairDisposition.Deferred;
+
+        Assert.Equal(AnalysisRepairDisposition.Mixed, aac.Disposition);
+        Assert.Equal(1, aac.ActiveCount);
+
+        aac.Disposition = AnalysisRepairDisposition.Ignored;
+
+        Assert.Equal(AnalysisRepairDisposition.Ignored, aac.Disposition);
+        Assert.Equal(0, aac.ActiveCount);
+        Assert.All(aac.Artists.SelectMany(artist => artist.Albums)
+            .SelectMany(album => album.Items),
+            item => Assert.Equal(AnalysisRepairDisposition.Ignored, item.Disposition));
+    }
+
+    [Fact]
     public async Task Analyzer_RetainsRunsAndRestoresEachTypedResult()
     {
         var records = new[]
@@ -196,6 +237,49 @@ public sealed class AnalyzerViewModelTests
         Assert.Equal(1, repairs.SafePreviewCalls);
         Assert.Equal("Safe metadata repairs", viewModel.SelectedRun!.Name);
         Assert.Single(viewModel.RepairItems);
+    }
+
+    [Fact]
+    public void MetadataRepairRun_GroupsPathRepairsAndMakesBlockedLeavesInactive()
+    {
+        var record = Track(@"Z:\FLAC\Artist\Album\One Song.flac", "Artist", "Album");
+        var pathRepair = new AnalysisTagRepair(
+            record.Path,
+            TagFields.NullField,
+            record.Path,
+            @"Z:\FLAC\Artist\Album\One Song.flac",
+            "Replace non-breaking spaces.",
+            100,
+            DateTime.UtcNow,
+            AnalysisRepairKind.Path,
+            OperationPathSnapshot.Missing(@"Z:\FLAC\Artist\Album\One Song.flac"));
+        var blockedRepair = pathRepair with
+        {
+            Path = @"Z:\FLAC\Artist\Album\Two Song.flac",
+            Before = @"Z:\FLAC\Artist\Album\Two Song.flac",
+            After = @"Z:\FLAC\Artist\Album\Two Song.flac",
+            BlockingReason = "Destination already exists.",
+        };
+        var items = new[]
+        {
+            new AnalysisRepairItemViewModel(pathRepair),
+            new AnalysisRepairItemViewModel(blockedRepair),
+        };
+
+        AnalysisRunViewModel run = AnalysisRunViewModel.ForRepairs(
+            new AnalysisRepairPlan("Safe metadata repairs", [pathRepair, blockedRepair]),
+            items,
+            [record],
+            "2 repairs");
+
+        var category = Assert.Single(run.RepairGroups);
+        Assert.Equal("Path", category.Category);
+        Assert.Equal(2, category.Count);
+        Assert.Equal(1, category.ActiveCount);
+        Assert.Contains("⟦NBSP⟧", items[0].Before);
+        Assert.True(items[0].CanChangeDisposition);
+        Assert.False(items[1].CanChangeDisposition);
+        Assert.False(items[1].IsActive);
     }
 
     [Fact]
@@ -342,23 +426,34 @@ public sealed class AnalyzerViewModelTests
     }
 
     [Fact]
-    public async Task Analyzer_RepresentationRepairPreviewRetainsActionsAndSelectableMetadata()
+    public async Task Analyzer_RepresentationRepairPreviewGroupsMetadataByCategoryArtistAndAlbum()
     {
-        var record = Track(@"Z:\FLAC\Album\01.flac", "AA", "Album", title: "Song", track: 1);
+        var records = new[]
+        {
+            Track(@"Z:\FLAC\First\01.flac", "AA", "First", title: "One", track: 1),
+            Track(@"Z:\FLAC\First\02.flac", "AA", "First", title: "Two", track: 2),
+            Track(@"Z:\FLAC\Second\01.flac", "BB", "Second", title: "Three", track: 1),
+        };
         var metadata = new AnalysisRepairPlan("Copy representation metadata", [
-            new(record.Path, TagFields.Title, "Old", "Song", "Copy from high-resolution FLAC",
+            new(records[0].Path, TagFields.Title, "Old One", "One", "Copy from high-resolution FLAC",
+                100, DateTime.UtcNow),
+            new(records[1].Path, TagFields.Title, "Old Two", "Two", "Copy from high-resolution FLAC",
+                100, DateTime.UtcNow),
+            new(records[2].Path, TagFields.Title, "Old Three", "Three", "Copy from CD FLAC",
+                100, DateTime.UtcNow),
+            new(records[0].Path, TagFields.Album, "Old First", "First", "Copy from high-resolution FLAC",
                 100, DateTime.UtcNow),
         ]);
         var previewer = new StubRepresentationRepairs(new RepresentationRepairPreview(
             metadata,
-            [new(RepresentationRepairKind.DeriveAac, record.Path, @"Z:\AAC\Album\01.m4a", "Encode AAC.")],
+            [new(RepresentationRepairKind.DeriveAac, records[0].Path, @"Z:\AAC\First\01.m4a", "Encode AAC.")],
             []));
         var settings = new AppSettings(Path.Combine(Path.GetTempPath(), $"analyzer-{Guid.NewGuid():N}.json"));
         string configPath = Path.Combine(Path.GetTempPath(), $"analyzer-config-{Guid.NewGuid():N}.xml");
         new EditableLibraryConfig().Save(configPath);
         settings.LoadConfig(configPath);
         var viewModel = new AnalyzerViewModel(
-            new StubLibrary([record]), new StubReconciler(), new StubRepairs(), settings,
+            new StubLibrary(records), new StubReconciler(), new StubRepairs(), settings,
             representationRepairs: previewer);
 
         await viewModel.PreviewRepresentationRepairsCommand.ExecuteAsync(null);
@@ -366,8 +461,45 @@ public sealed class AnalyzerViewModelTests
         Assert.Same(settings.Configuration, previewer.Configuration);
         Assert.Equal(2, viewModel.Runs.Count);
         Assert.Equal("Copy representation metadata", viewModel.SelectedRun!.Name);
-        Assert.Single(viewModel.RepairItems);
-        Assert.Contains(viewModel.Runs, run => run.Name == "Representation file repairs");
+        Assert.Equal(4, viewModel.RepairItems.Count);
+        Assert.Same(viewModel.SelectedRun.RepairGroups, viewModel.RepairGroups);
+        Assert.Equal(["Album", "Title"], viewModel.RepairGroups.Select(group => group.Category));
+        var titles = viewModel.RepairGroups.Single(group => group.Category == "Title");
+        Assert.Equal(["AA", "BB"], titles.Artists.Select(artist => artist.Artist));
+        var first = Assert.Single(titles.Artists.Single(artist => artist.Artist == "AA").Albums);
+        Assert.Equal("First", first.Album);
+        Assert.Equal(2, first.Count);
+        Assert.Equal(2, first.ActiveCount);
+
+        first.Items[0].Disposition = AnalysisRepairDisposition.Deferred;
+
+        Assert.Equal(1, first.ActiveCount);
+        Assert.Equal(AnalysisRepairDisposition.Mixed, first.Disposition);
+        Assert.Equal(1, titles.Artists.Single(artist => artist.Artist == "AA").ActiveCount);
+        Assert.Equal(2, titles.ActiveCount);
+
+        titles.Disposition = AnalysisRepairDisposition.Ignored;
+
+        Assert.All(titles.Artists.SelectMany(artist => artist.Albums)
+            .SelectMany(album => album.Items),
+            item => Assert.Equal(AnalysisRepairDisposition.Ignored, item.Disposition));
+
+        var fileRun = viewModel.Runs.Single(run => run.Name == "Representation file repairs");
+        viewModel.SelectedRun = fileRun;
+        var category = Assert.Single(viewModel.RepresentationActionGroups);
+        category.Disposition = AnalysisRepairDisposition.Deferred;
+        Assert.All(viewModel.RepresentationActionItems,
+            item => Assert.Equal(AnalysisRepairDisposition.Deferred, item.Disposition));
+        Assert.False(viewModel.ApplyRepresentationRepairsCommand.CanExecute(null));
+
+        category.Disposition = AnalysisRepairDisposition.Active;
+        Assert.True(viewModel.ApplyRepresentationRepairsCommand.CanExecute(null));
+        await viewModel.ApplyRepresentationRepairsCommand.ExecuteAsync(null);
+
+        Assert.Single(previewer.AppliedActions!);
+        Assert.Equal(AnalysisRepairDisposition.Completed,
+            Assert.Single(viewModel.RepresentationActionItems).Disposition);
+        Assert.Equal("Applied", Assert.Single(viewModel.RepresentationActionItems).ResultText);
     }
 
     private static AnalyzerViewModel Create(IReadOnlyList<TrackRecord> records) =>
@@ -453,11 +585,25 @@ public sealed class AnalyzerViewModelTests
         : IRepresentationRepairService
     {
         public LibraryConfiguration? Configuration { get; private set; }
+        public IReadOnlyList<RepresentationRepairAction>? AppliedActions { get; private set; }
         public Task<RepresentationRepairPreview> PreviewAsync(IReadOnlyList<TrackRecord> records,
             LibraryConfiguration? configuration, CancellationToken ct = default)
         {
             Configuration = configuration;
             return Task.FromResult(preview);
+        }
+
+        public Task<RepresentationRepairApplyResult> ApplyAsync(
+            IReadOnlyList<RepresentationRepairAction> actions,
+            LibraryConfiguration? configuration,
+            IProgress<RepresentationRepairProgress>? progress = null,
+            CancellationToken ct = default)
+        {
+            AppliedActions = actions;
+            Configuration = configuration;
+            return Task.FromResult(new RepresentationRepairApplyResult(
+                actions.Select(action => new RepresentationRepairActionResult(
+                    action, RepresentationRepairOutcome.Applied)).ToList()));
         }
     }
 

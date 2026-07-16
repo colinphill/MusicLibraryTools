@@ -14,6 +14,19 @@ public enum AnalysisFindingDisposition
 }
 
 /// <summary>
+/// Review state for an applicable repair. Mixed is calculated for tree branches and is never
+/// assigned to a leaf.
+/// </summary>
+public enum AnalysisRepairDisposition
+{
+    Active,
+    Completed,
+    Deferred,
+    Ignored,
+    Mixed,
+}
+
+/// <summary>
 /// An immutable analysis result snapshot. The contained finding and action view models remain
 /// mutable so review state survives while the user navigates between runs.
 /// </summary>
@@ -28,6 +41,10 @@ public sealed class AnalysisRunViewModel : ViewModelBase
     public IReadOnlyList<ArtistGroupViewModel> ArtistGroups { get; }
     public IReadOnlyList<AnalysisConflictGroupViewModel> ConflictGroups { get; }
     public IReadOnlyList<AnalysisRepairItemViewModel> RepairItems { get; }
+    public IReadOnlyList<AnalysisRepairCategoryGroupViewModel> RepairGroups { get; }
+    public IReadOnlyList<RepresentationRepairActionItemViewModel> RepresentationActionItems { get; }
+    public IReadOnlyList<RepresentationRepairCategoryGroupViewModel> RepresentationActionGroups { get; }
+    public IReadOnlyList<string> RepresentationWarnings { get; }
     public IReadOnlyList<AlbumMetadataMatrix> Matrices { get; }
     public AnalysisRepairPlan? RepairPlan { get; }
     public int Count { get; }
@@ -45,6 +62,10 @@ public sealed class AnalysisRunViewModel : ViewModelBase
         IReadOnlyList<ArtistGroupViewModel>? artistGroups = null,
         IReadOnlyList<AnalysisConflictGroupViewModel>? conflictGroups = null,
         IReadOnlyList<AnalysisRepairItemViewModel>? repairItems = null,
+        IReadOnlyList<AnalysisRepairCategoryGroupViewModel>? repairGroups = null,
+        IReadOnlyList<RepresentationRepairActionItemViewModel>? representationActionItems = null,
+        IReadOnlyList<RepresentationRepairCategoryGroupViewModel>? representationActionGroups = null,
+        IReadOnlyList<string>? representationWarnings = null,
         AnalysisRepairPlan? repairPlan = null,
         IReadOnlyList<AlbumMetadataMatrix>? matrices = null)
     {
@@ -58,6 +79,10 @@ public sealed class AnalysisRunViewModel : ViewModelBase
         ArtistGroups = artistGroups ?? [];
         ConflictGroups = conflictGroups ?? [];
         RepairItems = repairItems ?? [];
+        RepairGroups = repairGroups ?? [];
+        RepresentationActionItems = representationActionItems ?? [];
+        RepresentationActionGroups = representationActionGroups ?? [];
+        RepresentationWarnings = representationWarnings ?? [];
         RepairPlan = repairPlan;
         Matrices = matrices ?? [];
 
@@ -93,9 +118,28 @@ public sealed class AnalysisRunViewModel : ViewModelBase
     public static AnalysisRunViewModel ForRepairs(
         AnalysisRepairPlan plan,
         IReadOnlyList<AnalysisRepairItemViewModel> items,
+        IReadOnlyList<TrackRecord> records,
         string summary) =>
         new(plan.Name, summary, AnalysisResultView.Repairs, items.Count,
-            repairItems: items, repairPlan: plan);
+            repairItems: items,
+            repairGroups: AnalysisRepairCategoryGroupViewModel.Build(items, records),
+            repairPlan: plan);
+
+    public static AnalysisRunViewModel ForRepresentationRepairs(
+        IReadOnlyList<RepresentationRepairAction> actions,
+        IReadOnlyList<string> warnings,
+        IReadOnlyList<TrackRecord> records,
+        string summary)
+    {
+        var items = actions.Select(action =>
+            new RepresentationRepairActionItemViewModel(action)).ToList();
+        return new("Representation file repairs", summary,
+            AnalysisResultView.RepresentationRepairs, actions.Count,
+            representationActionItems: items,
+            representationActionGroups:
+                RepresentationRepairCategoryGroupViewModel.Build(items, records),
+            representationWarnings: warnings);
+    }
 
     public static AnalysisRunViewModel ForMatrices(
         IReadOnlyList<AlbumMetadataMatrix> matrices,
@@ -108,6 +152,496 @@ public sealed class AnalysisRunViewModel : ViewModelBase
         if (e.PropertyName == nameof(AnalysisProblemGroupViewModel.ActiveCount))
             OnPropertyChanged(nameof(ActiveFindingCount));
     }
+}
+
+/// <summary>Metadata repairs for one field, divided into artists and albums.</summary>
+public sealed class AnalysisRepairCategoryGroupViewModel : ViewModelBase
+{
+    private AnalysisRepairDisposition _disposition;
+    private bool _propagating;
+
+    public string Category { get; }
+    public IReadOnlyList<AnalysisRepairArtistGroupViewModel> Artists { get; }
+    public int Count => Artists.Sum(artist => artist.Count);
+    public int ActiveCount => Artists.Sum(artist => artist.ActiveCount);
+    public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
+        Enum.GetValues<AnalysisRepairDisposition>();
+
+    public AnalysisRepairDisposition Disposition
+    {
+        get => _disposition;
+        set
+        {
+            if (value == AnalysisRepairDisposition.Mixed || _propagating)
+                return;
+            _propagating = true;
+            foreach (var artist in Artists)
+                artist.Disposition = value;
+            _propagating = false;
+            RefreshState();
+        }
+    }
+
+    private AnalysisRepairCategoryGroupViewModel(
+        string category,
+        IReadOnlyList<AnalysisRepairArtistGroupViewModel> artists)
+    {
+        Category = category;
+        Artists = artists;
+        foreach (var artist in Artists)
+            artist.PropertyChanged += ArtistChanged;
+        _disposition = Aggregate(Artists.Select(artist => artist.Disposition));
+    }
+
+    public static IReadOnlyList<AnalysisRepairCategoryGroupViewModel> Build(
+        IReadOnlyList<AnalysisRepairItemViewModel> items,
+        IReadOnlyList<TrackRecord> records)
+    {
+        var recordsByPath = records
+            .GroupBy(record => record.Path, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+
+        return items
+            .Select(item =>
+            {
+                TrackRecord? record = recordsByPath.GetValueOrDefault(item.Path);
+                return new
+                {
+                    Item = item,
+                    Artist = record?.EffectiveAlbumArtist ?? "Unknown Artist",
+                    Album = AlbumLabel(item.Path, record),
+                };
+            })
+            .GroupBy(entry => entry.Item.Field, StringComparer.CurrentCultureIgnoreCase)
+            .OrderBy(group => group.Key, StringComparer.CurrentCultureIgnoreCase)
+            .Select(category => new AnalysisRepairCategoryGroupViewModel(
+                category.Key,
+                category.GroupBy(entry => entry.Artist, StringComparer.CurrentCultureIgnoreCase)
+                    .OrderBy(artist => artist.Key, StringComparer.CurrentCultureIgnoreCase)
+                    .Select(artist => new AnalysisRepairArtistGroupViewModel(
+                        artist.Key,
+                        artist.GroupBy(entry => entry.Album, StringComparer.CurrentCultureIgnoreCase)
+                            .OrderBy(album => album.Key, StringComparer.CurrentCultureIgnoreCase)
+                            .Select(album => new AnalysisRepairAlbumGroupViewModel(
+                                album.Key,
+                                album.Select(entry => entry.Item)
+                                    .OrderBy(item => item.Path, StringComparer.CurrentCultureIgnoreCase)
+                                    .ThenBy(item => item.Field, StringComparer.CurrentCultureIgnoreCase)
+                                    .ToList()))
+                            .ToList()))
+                    .ToList()))
+            .ToList();
+    }
+
+    private static string AlbumLabel(string path, TrackRecord? record)
+    {
+        if (record is not null)
+        {
+            string? album = !string.IsNullOrWhiteSpace(record.StrippedAlbum)
+                ? record.StrippedAlbum
+                : record.Album;
+            return string.IsNullOrWhiteSpace(album) ? "Unknown Album" : album;
+        }
+
+        string? directory = Path.GetDirectoryName(path);
+        string? folder = string.IsNullOrWhiteSpace(directory) ? null : Path.GetFileName(directory);
+        return string.IsNullOrWhiteSpace(folder) ? "Unknown Album" : folder;
+    }
+
+    private void ArtistChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(AnalysisRepairArtistGroupViewModel.ActiveCount) or
+            nameof(AnalysisRepairArtistGroupViewModel.Disposition))
+            RefreshState();
+    }
+
+    private void RefreshState()
+    {
+        SetProperty(ref _disposition,
+            Aggregate(Artists.Select(artist => artist.Disposition)),
+            nameof(Disposition));
+        OnPropertyChanged(nameof(ActiveCount));
+    }
+
+    internal static AnalysisRepairDisposition Aggregate(
+        IEnumerable<AnalysisRepairDisposition> dispositions)
+    {
+        AnalysisRepairDisposition[] values = dispositions.Distinct().ToArray();
+        return values.Length == 1 ? values[0] : AnalysisRepairDisposition.Mixed;
+    }
+}
+
+/// <summary>Metadata repairs for one artist within a field category.</summary>
+public sealed class AnalysisRepairArtistGroupViewModel : ViewModelBase
+{
+    private AnalysisRepairDisposition _disposition;
+    private bool _propagating;
+
+    public string Artist { get; }
+    public IReadOnlyList<AnalysisRepairAlbumGroupViewModel> Albums { get; }
+    public int Count => Albums.Sum(album => album.Count);
+    public int ActiveCount => Albums.Sum(album => album.ActiveCount);
+    public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
+        Enum.GetValues<AnalysisRepairDisposition>();
+
+    public AnalysisRepairDisposition Disposition
+    {
+        get => _disposition;
+        set
+        {
+            if (value == AnalysisRepairDisposition.Mixed || _propagating)
+                return;
+            _propagating = true;
+            foreach (var album in Albums)
+                album.Disposition = value;
+            _propagating = false;
+            RefreshState();
+        }
+    }
+
+    public AnalysisRepairArtistGroupViewModel(
+        string artist,
+        IReadOnlyList<AnalysisRepairAlbumGroupViewModel> albums)
+    {
+        Artist = artist;
+        Albums = albums;
+        foreach (var album in Albums)
+            album.PropertyChanged += AlbumChanged;
+        _disposition = AnalysisRepairCategoryGroupViewModel.Aggregate(
+            Albums.Select(album => album.Disposition));
+    }
+
+    private void AlbumChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(AnalysisRepairAlbumGroupViewModel.ActiveCount) or
+            nameof(AnalysisRepairAlbumGroupViewModel.Disposition))
+            RefreshState();
+    }
+
+    private void RefreshState()
+    {
+        SetProperty(ref _disposition,
+            AnalysisRepairCategoryGroupViewModel.Aggregate(
+                Albums.Select(album => album.Disposition)),
+            nameof(Disposition));
+        OnPropertyChanged(nameof(ActiveCount));
+    }
+}
+
+/// <summary>Metadata repairs for one album within an artist and field category.</summary>
+public sealed class AnalysisRepairAlbumGroupViewModel : ViewModelBase
+{
+    private AnalysisRepairDisposition _disposition;
+    private bool _propagating;
+
+    public string Album { get; }
+    public IReadOnlyList<AnalysisRepairItemViewModel> Items { get; }
+    public int Count => Items.Count;
+    public int ActiveCount => Items.Count(item => item.IsActive);
+    public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
+        Enum.GetValues<AnalysisRepairDisposition>();
+
+    public AnalysisRepairDisposition Disposition
+    {
+        get => _disposition;
+        set
+        {
+            if (value == AnalysisRepairDisposition.Mixed || _propagating)
+                return;
+            _propagating = true;
+            foreach (var item in Items.Where(item => !item.IsApplied))
+                item.Disposition = value;
+            _propagating = false;
+            RefreshState();
+        }
+    }
+
+    public AnalysisRepairAlbumGroupViewModel(
+        string album,
+        IReadOnlyList<AnalysisRepairItemViewModel> items)
+    {
+        Album = album;
+        Items = items;
+        foreach (var item in Items)
+            item.PropertyChanged += ItemChanged;
+        _disposition = AnalysisRepairCategoryGroupViewModel.Aggregate(
+            Items.Select(item => item.Disposition));
+    }
+
+    private void ItemChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(AnalysisRepairItemViewModel.Disposition) or
+            nameof(AnalysisRepairItemViewModel.IsApplied) or
+            nameof(AnalysisRepairItemViewModel.IsActive))
+            RefreshState();
+    }
+
+    private void RefreshState()
+    {
+        SetProperty(ref _disposition,
+            AnalysisRepairCategoryGroupViewModel.Aggregate(
+                Items.Select(item => item.Disposition)),
+            nameof(Disposition));
+        OnPropertyChanged(nameof(ActiveCount));
+    }
+}
+
+public sealed class RepresentationRepairCategoryGroupViewModel : ViewModelBase
+{
+    private AnalysisRepairDisposition _disposition;
+    private bool _propagating;
+
+    public string Category { get; }
+    public IReadOnlyList<RepresentationRepairArtistGroupViewModel> Artists { get; }
+    public int Count => Artists.Sum(artist => artist.Count);
+    public int ActiveCount => Artists.Sum(artist => artist.ActiveCount);
+    public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
+        Enum.GetValues<AnalysisRepairDisposition>();
+
+    public AnalysisRepairDisposition Disposition
+    {
+        get => _disposition;
+        set
+        {
+            if (value == AnalysisRepairDisposition.Mixed || _propagating)
+                return;
+            _propagating = true;
+            foreach (var artist in Artists)
+                artist.Disposition = value;
+            _propagating = false;
+            RefreshState();
+        }
+    }
+
+    private RepresentationRepairCategoryGroupViewModel(
+        string category,
+        IReadOnlyList<RepresentationRepairArtistGroupViewModel> artists)
+    {
+        Category = category;
+        Artists = artists;
+        foreach (var artist in Artists)
+            artist.PropertyChanged += ArtistChanged;
+        _disposition = AnalysisRepairCategoryGroupViewModel.Aggregate(
+            Artists.Select(artist => artist.Disposition));
+    }
+
+    public static IReadOnlyList<RepresentationRepairCategoryGroupViewModel> Build(
+        IReadOnlyList<RepresentationRepairActionItemViewModel> items,
+        IReadOnlyList<TrackRecord> records)
+    {
+        var recordsByPath = records
+            .GroupBy(record => record.Path, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(),
+                StringComparer.OrdinalIgnoreCase);
+
+        return items
+            .Select(item =>
+            {
+                TrackRecord? record = recordsByPath.GetValueOrDefault(item.SourcePath);
+                return new
+                {
+                    Item = item,
+                    Artist = record?.EffectiveAlbumArtist ?? "Unknown Artist",
+                    Album = AlbumLabel(item.SourcePath, record),
+                };
+            })
+            .GroupBy(entry => entry.Item.Category, StringComparer.CurrentCultureIgnoreCase)
+            .OrderBy(group => group.Key, StringComparer.CurrentCultureIgnoreCase)
+            .Select(category => new RepresentationRepairCategoryGroupViewModel(
+                category.Key,
+                category.GroupBy(entry => entry.Artist, StringComparer.CurrentCultureIgnoreCase)
+                    .OrderBy(artist => artist.Key, StringComparer.CurrentCultureIgnoreCase)
+                    .Select(artist => new RepresentationRepairArtistGroupViewModel(
+                        artist.Key,
+                        artist.GroupBy(entry => entry.Album, StringComparer.CurrentCultureIgnoreCase)
+                            .OrderBy(album => album.Key, StringComparer.CurrentCultureIgnoreCase)
+                            .Select(album => new RepresentationRepairAlbumGroupViewModel(
+                                album.Key,
+                                album.Select(entry => entry.Item)
+                                    .OrderBy(item => item.SourcePath,
+                                        StringComparer.CurrentCultureIgnoreCase)
+                                    .ToList()))
+                            .ToList()))
+                    .ToList()))
+            .ToList();
+    }
+
+    private static string AlbumLabel(string path, TrackRecord? record)
+    {
+        string? album = record is null
+            ? Path.GetFileName(Path.GetDirectoryName(path))
+            : !string.IsNullOrWhiteSpace(record.StrippedAlbum)
+                ? record.StrippedAlbum
+                : record.Album;
+        return string.IsNullOrWhiteSpace(album) ? "Unknown Album" : album;
+    }
+
+    private void ArtistChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(RepresentationRepairArtistGroupViewModel.ActiveCount) or
+            nameof(RepresentationRepairArtistGroupViewModel.Disposition))
+            RefreshState();
+    }
+
+    private void RefreshState()
+    {
+        SetProperty(ref _disposition,
+            AnalysisRepairCategoryGroupViewModel.Aggregate(
+                Artists.Select(artist => artist.Disposition)),
+            nameof(Disposition));
+        OnPropertyChanged(nameof(ActiveCount));
+    }
+}
+
+public sealed class RepresentationRepairArtistGroupViewModel : ViewModelBase
+{
+    private AnalysisRepairDisposition _disposition;
+    private bool _propagating;
+
+    public string Artist { get; }
+    public IReadOnlyList<RepresentationRepairAlbumGroupViewModel> Albums { get; }
+    public int Count => Albums.Sum(album => album.Count);
+    public int ActiveCount => Albums.Sum(album => album.ActiveCount);
+    public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
+        Enum.GetValues<AnalysisRepairDisposition>();
+
+    public AnalysisRepairDisposition Disposition
+    {
+        get => _disposition;
+        set
+        {
+            if (value == AnalysisRepairDisposition.Mixed || _propagating)
+                return;
+            _propagating = true;
+            foreach (var album in Albums)
+                album.Disposition = value;
+            _propagating = false;
+            RefreshState();
+        }
+    }
+
+    public RepresentationRepairArtistGroupViewModel(
+        string artist,
+        IReadOnlyList<RepresentationRepairAlbumGroupViewModel> albums)
+    {
+        Artist = artist;
+        Albums = albums;
+        foreach (var album in Albums)
+            album.PropertyChanged += AlbumChanged;
+        _disposition = AnalysisRepairCategoryGroupViewModel.Aggregate(
+            Albums.Select(album => album.Disposition));
+    }
+
+    private void AlbumChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(RepresentationRepairAlbumGroupViewModel.ActiveCount) or
+            nameof(RepresentationRepairAlbumGroupViewModel.Disposition))
+            RefreshState();
+    }
+
+    private void RefreshState()
+    {
+        SetProperty(ref _disposition,
+            AnalysisRepairCategoryGroupViewModel.Aggregate(
+                Albums.Select(album => album.Disposition)),
+            nameof(Disposition));
+        OnPropertyChanged(nameof(ActiveCount));
+    }
+}
+
+public sealed class RepresentationRepairAlbumGroupViewModel : ViewModelBase
+{
+    private AnalysisRepairDisposition _disposition;
+    private bool _propagating;
+
+    public string Album { get; }
+    public IReadOnlyList<RepresentationRepairActionItemViewModel> Items { get; }
+    public int Count => Items.Count;
+    public int ActiveCount => Items.Count(item => item.IsActive);
+    public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
+        Enum.GetValues<AnalysisRepairDisposition>();
+
+    public AnalysisRepairDisposition Disposition
+    {
+        get => _disposition;
+        set
+        {
+            if (value == AnalysisRepairDisposition.Mixed || _propagating)
+                return;
+            _propagating = true;
+            foreach (var item in Items.Where(item => !item.IsApplied))
+                item.Disposition = value;
+            _propagating = false;
+            RefreshState();
+        }
+    }
+
+    public RepresentationRepairAlbumGroupViewModel(
+        string album,
+        IReadOnlyList<RepresentationRepairActionItemViewModel> items)
+    {
+        Album = album;
+        Items = items;
+        foreach (var item in Items)
+            item.PropertyChanged += ItemChanged;
+        _disposition = AnalysisRepairCategoryGroupViewModel.Aggregate(
+            Items.Select(item => item.Disposition));
+    }
+
+    private void ItemChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(RepresentationRepairActionItemViewModel.Disposition) or
+            nameof(RepresentationRepairActionItemViewModel.IsApplied) or
+            nameof(RepresentationRepairActionItemViewModel.IsActive))
+            RefreshState();
+    }
+
+    private void RefreshState()
+    {
+        SetProperty(ref _disposition,
+            AnalysisRepairCategoryGroupViewModel.Aggregate(
+                Items.Select(item => item.Disposition)),
+            nameof(Disposition));
+        OnPropertyChanged(nameof(ActiveCount));
+    }
+}
+
+public partial class RepresentationRepairActionItemViewModel : ViewModelBase
+{
+    public RepresentationRepairAction Action { get; }
+    public string SourcePath => Action.SourcePath;
+    public string DestinationPath => Action.DestinationPath;
+    public string Description => Action.Description;
+    public string Category => Action.Kind switch
+    {
+        RepresentationRepairKind.DeriveCdFlac => "Derive missing CD FLAC",
+        RepresentationRepairKind.DeriveAac => "Derive missing AAC",
+        _ => "Organize representation",
+    };
+    public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
+        Enum.GetValues<AnalysisRepairDisposition>()
+            .Where(value => value != AnalysisRepairDisposition.Mixed)
+            .ToArray();
+    public bool IsActive => Disposition == AnalysisRepairDisposition.Active && !IsApplied;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsActive))]
+    private AnalysisRepairDisposition _disposition;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsActive))]
+    private bool _isApplied;
+
+    [ObservableProperty]
+    private string? _resultText;
+
+    public event Action? StateChanged;
+
+    public RepresentationRepairActionItemViewModel(RepresentationRepairAction action) =>
+        Action = action;
+
+    partial void OnDispositionChanged(AnalysisRepairDisposition value) => StateChanged?.Invoke();
+    partial void OnIsAppliedChanged(bool value) => StateChanged?.Invoke();
 }
 
 /// <summary>All findings for one problem, divided into artists and albums.</summary>

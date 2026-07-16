@@ -412,6 +412,123 @@ public sealed class AnalysisRepairServiceTests
     }
 
     [Fact]
+    public void PreviewText_ReplacesNonBreakingSpacesInEveryCachedWritableTextField()
+    {
+        string folder = Path.Combine("library", "Artist", "Album");
+        var record = Track(
+            Path.Combine(folder, "01.flac"),
+            "\u00A0The\u00A0Album\u00A0",
+            "The\u00A0Artist",
+            "The\u00A0Album Artist") with
+        {
+            Title = "One\u00A0  Two",
+            ReleaseDate = "2024\u00A0Edition",
+        };
+
+        AnalysisRepairPlan plan =
+            new AnalysisRepairService(new RecordingWriter()).PreviewTextNormalization([record]);
+
+        Assert.Contains(plan.Items, repair =>
+            repair.Field == TagFields.Artist && repair.After == "The Artist");
+        Assert.Contains(plan.Items, repair =>
+            repair.Field == TagFields.AlbumArtist && repair.After == "The Album Artist");
+        Assert.Contains(plan.Items, repair =>
+            repair.Field == TagFields.Album && repair.After == "The Album");
+        Assert.Contains(plan.Items, repair =>
+            repair.Field == TagFields.Title && repair.After == "One   Two");
+        Assert.Contains(plan.Items, repair =>
+            repair.Field == TagFields.Date && repair.After == "2024 Edition");
+        Assert.All(plan.Items, repair =>
+            Assert.Contains("non-breaking spaces", repair.Reason, StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public void SafePreview_OffersLiteralPathRepairAndBlocksExistingDestination()
+    {
+        using var temp = new TempDirectory();
+        string music = System.IO.Path.Combine(temp.Path, "music");
+        Directory.CreateDirectory(music);
+        string source = System.IO.Path.Combine(music, "One\u00A0Song.flac");
+        string destination = System.IO.Path.Combine(music, "One Song.flac");
+        File.WriteAllText(source, "source");
+        var sourceInfo = new FileInfo(source);
+        string configPath = System.IO.Path.Combine(temp.Path, "library.xml");
+        new EditableLibraryConfig
+        {
+            DatabaseFile = "cache.db",
+            IndexTargets = [new IndexTargetEntry { Target = music }],
+        }.Save(configPath);
+        var settings = new AppSettings(System.IO.Path.Combine(temp.Path, "settings.json"));
+        settings.LoadConfig(configPath);
+        var record = Track(source, "Album", "Artist", "Artist") with
+        {
+            Length = sourceInfo.Length,
+            LastWriteTime = sourceInfo.LastWriteTimeUtc,
+        };
+        var service = new AnalysisRepairService(new RecordingWriter(), settings: settings);
+
+        AnalysisTagRepair available = Assert.Single(
+            service.PreviewSafeRepairs([record]).Items,
+            repair => repair.Kind == AnalysisRepairKind.Path);
+
+        Assert.Equal(destination, available.After);
+        Assert.True(available.CanApply);
+        Assert.NotNull(available.ExpectedDestination);
+        Assert.False(available.ExpectedDestination!.Exists);
+
+        File.WriteAllText(destination, "collision");
+        AnalysisTagRepair blocked = Assert.Single(
+            service.PreviewSafeRepairs([record]).Items,
+            repair => repair.Kind == AnalysisRepairKind.Path);
+
+        Assert.False(blocked.CanApply);
+        Assert.Contains("Destination already exists", blocked.BlockingReason);
+    }
+
+    [Fact]
+    public void SafePreview_BlocksDuplicatePathDestinationsAndDisabledOrganization()
+    {
+        using var temp = new TempDirectory();
+        string music = System.IO.Path.Combine(temp.Path, "music");
+        Directory.CreateDirectory(music);
+        string first = System.IO.Path.Combine(music, "One\u00A0 Song.flac");
+        string second = System.IO.Path.Combine(music, "One \u00A0Song.flac");
+        File.WriteAllText(first, "first");
+        File.WriteAllText(second, "second");
+        string configPath = System.IO.Path.Combine(temp.Path, "library.xml");
+        new EditableLibraryConfig
+        {
+            DatabaseFile = "cache.db",
+            IndexTargets = [new IndexTargetEntry { Target = music, Organize = false }],
+        }.Save(configPath);
+        var settings = new AppSettings(System.IO.Path.Combine(temp.Path, "settings.json"));
+        settings.LoadConfig(configPath);
+        TrackRecord Record(string path)
+        {
+            var info = new FileInfo(path);
+            return Track(path, "Album", "Artist", "Artist") with
+            {
+                Length = info.Length,
+                LastWriteTime = info.LastWriteTimeUtc,
+            };
+        }
+        var service = new AnalysisRepairService(new RecordingWriter(), settings: settings);
+
+        AnalysisTagRepair[] paths = service.PreviewSafeRepairs(
+                [Record(first), Record(second)])
+            .Items.Where(repair => repair.Kind == AnalysisRepairKind.Path)
+            .ToArray();
+
+        Assert.Equal(2, paths.Length);
+        Assert.All(paths, repair =>
+        {
+            Assert.False(repair.CanApply);
+            Assert.Contains("Organize setting", repair.BlockingReason);
+            Assert.Contains("same destination", repair.BlockingReason);
+        });
+    }
+
+    [Fact]
     public void PreviewText_SkipsTiedCaseVariantsAndDirtyMajorities()
     {
         string tied = Path.Combine("library", "Tied");
@@ -631,6 +748,48 @@ public sealed class AnalysisRepairServiceTests
         Assert.Equal("TestArtist", MediaFile.GetFile(path).Tags.First().Artist);
         Assert.Equal("TestArtist",
             (await library.GetFileDetailsAsync(path, includeArtwork: false))!.Entry.Artist);
+    }
+
+    [Fact]
+    public async Task ReviewedApply_RenamesPathThenAppliesRebasedTagRepair()
+    {
+        using var temp = new TempDirectory();
+        string music = System.IO.Path.Combine(temp.Path, "music");
+        Directory.CreateDirectory(music);
+        string source = System.IO.Path.Combine(music, "One\u00A0Song.flac");
+        string destination = System.IO.Path.Combine(music, "One Song.flac");
+        File.Copy(MediaFixtures.Path_("sample.flac"), source);
+        var metadata = Assert.IsAssignableFrom<IMetadataWriter>(MediaFile.GetFile(source));
+        metadata.SetField(TagFields.Artist, "Test\u00A0Artist");
+        metadata.Save();
+        string configPath = System.IO.Path.Combine(temp.Path, "library.xml");
+        new EditableLibraryConfig
+        {
+            DatabaseFile = "cache.db",
+            IndexTargets = [new IndexTargetEntry { Target = music }],
+        }.Save(configPath);
+        var settings = new AppSettings(System.IO.Path.Combine(temp.Path, "settings.json"));
+        settings.LoadConfig(configPath);
+        using var library = new LibraryService(settings);
+        await library.IndexAsync();
+        var service = new AnalysisRepairService(
+            new TagWriteService(library), library, settings);
+        AnalysisRepairPlan preview = service.PreviewSafeRepairs(
+            await library.GetAllRecordsAsync());
+        var selected = preview.Items.Where(repair =>
+            repair.Kind == AnalysisRepairKind.Path ||
+            repair.Field == TagFields.Artist).ToList();
+
+        AnalysisRepairApplyResult result = await service.ApplyReviewedAsync(
+            preview with { Items = selected });
+
+        Assert.Equal(2, result.SavedCount);
+        Assert.False(File.Exists(source));
+        Assert.True(File.Exists(destination));
+        Assert.Equal("Test Artist", MediaFile.GetFile(destination).Tags.First().Artist);
+        Assert.Equal("Test Artist",
+            (await library.GetFileDetailsAsync(destination, includeArtwork: false))!.Entry.Artist);
+        Assert.All(result.Items, item => Assert.Equal(destination, item.AppliedPath));
     }
 
     private static TrackRecord Track(

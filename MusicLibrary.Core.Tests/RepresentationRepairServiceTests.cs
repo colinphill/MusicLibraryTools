@@ -82,6 +82,97 @@ public sealed class RepresentationRepairServiceTests
         Assert.Contains(preview.Warnings, warning => warning.Contains("offline", StringComparison.OrdinalIgnoreCase));
     }
 
+    [Fact]
+    public async Task Apply_DerivesOutputsBeforeOrganizingTheirSource()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"representation-apply-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            LibraryConfiguration configuration = CreateConfiguration(root);
+            string source = Path.Combine(root, "hires", "01.flac");
+            Directory.CreateDirectory(Path.GetDirectoryName(source)!);
+            File.Copy(MediaFixtures.Path_("sample.flac"), source);
+            var record = TrackFromFile(source, "Title", 96_000, 24);
+            string organized = Path.Combine(root, "hires", "Artist", "Album", "01 Title.flac");
+            var order = new List<string>();
+            var organizer = new ApplyingOrganizer(
+                [new PlannedMove(source, organized,
+                    Snapshot(source), OperationPathSnapshot.Missing(organized))],
+                order);
+            var ffmpeg = new RecordingFfmpeg(order);
+            var reindex = new RecordingReindex();
+            var service = new RepresentationRepairService(
+                organizer, ffmpeg, reindex: reindex);
+
+            RepresentationRepairPreview preview =
+                await service.PreviewAsync([record], configuration);
+            RepresentationRepairApplyResult result =
+                await service.ApplyAsync(preview.FileActions, configuration);
+
+            Assert.Equal(3, result.Applied);
+            Assert.Equal(
+                ["DeriveCdFlac", "DeriveAac", "Organize"],
+                order);
+            Assert.True(File.Exists(organized));
+            Assert.Single(Directory.GetFiles(Path.Combine(root, "paired"), "*.flac",
+                SearchOption.AllDirectories));
+            Assert.Single(Directory.GetFiles(Path.Combine(root, "aac"), "*.m4a",
+                SearchOption.AllDirectories));
+            Assert.StartsWith(Path.Combine(root, "paired"), ffmpeg.AacInput!,
+                StringComparison.OrdinalIgnoreCase);
+            Assert.Equal(2, reindex.Paths.Count);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task Apply_RejectsStaleSourcesAndOccupiedDestinationsBeforeFfmpeg()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"representation-stale-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            LibraryConfiguration configuration = CreateConfiguration(root);
+            string source = Path.Combine(root, "hires", "01.flac");
+            Directory.CreateDirectory(Path.GetDirectoryName(source)!);
+            File.Copy(MediaFixtures.Path_("sample.flac"), source);
+            var record = TrackFromFile(source, "Title", 96_000, 24);
+            var ffmpeg = new RecordingFfmpeg([]);
+            var service = new RepresentationRepairService(new StubOrganizer([]), ffmpeg);
+            RepresentationRepairPreview preview =
+                await service.PreviewAsync([record], configuration);
+            var derivations = preview.FileActions
+                .Where(action => action.Kind != RepresentationRepairKind.Organize)
+                .ToList();
+
+            File.AppendAllText(source, "changed");
+            Directory.CreateDirectory(Path.GetDirectoryName(derivations[1].DestinationPath)!);
+            File.WriteAllText(derivations[1].DestinationPath, "occupied");
+            RepresentationRepairAction collision = derivations[1] with
+            {
+                ExpectedSource = Snapshot(source),
+            };
+
+            RepresentationRepairApplyResult result =
+                await service.ApplyAsync([derivations[0], collision], configuration);
+
+            Assert.Equal(2, result.Failed);
+            Assert.Empty(ffmpeg.Order);
+            Assert.Contains(result.Results,
+                item => item.Error!.Contains("Source changed", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(result.Results,
+                item => item.Error!.Contains("Destination", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
     private static TrackRecord Track(string path, string title, uint sampleRate, uint bitsPerSample) => new()
     {
         Path = path,
@@ -104,6 +195,26 @@ public sealed class RepresentationRepairServiceTests
         Length = 123,
         LastWriteTime = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
     };
+
+    private static TrackRecord TrackFromFile(
+        string path, string title, uint sampleRate, uint bitsPerSample)
+    {
+        FileInfo info = new(path);
+        return Track(path, title, sampleRate, bitsPerSample) with
+        {
+            Length = info.Length,
+            LastWriteTime = info.LastWriteTimeUtc,
+        };
+    }
+
+    private static OperationPathSnapshot Snapshot(string path)
+    {
+        FileInfo info = new(path);
+        return new(true, false, info.Length, info.LastWriteTimeUtc)
+        {
+            Path = Path.GetFullPath(path),
+        };
+    }
 
     private static LibraryConfiguration CreateConfiguration(string root)
     {
@@ -137,5 +248,79 @@ public sealed class RepresentationRepairServiceTests
         public Task<OrganizeResult> ApplyMovesAsync(IReadOnlyList<PlannedMove> moves,
             IProgress<int>? progress = null, CancellationToken ct = default) =>
             throw new NotSupportedException();
+    }
+
+    private sealed class ApplyingOrganizer(
+        IReadOnlyList<PlannedMove> moves,
+        List<string> order) : ILibraryOrganizer
+    {
+        public Task<IReadOnlyList<PlannedMove>> PreviewMovesAsync(CancellationToken ct = default) =>
+            Task.FromResult(moves);
+
+        public Task<OrganizeResult> ApplyMovesAsync(
+            IReadOnlyList<PlannedMove> selected,
+            IProgress<int>? progress = null,
+            CancellationToken ct = default)
+        {
+            order.Add("Organize");
+            int completed = 0;
+            foreach (PlannedMove move in selected)
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(move.Destination)!);
+                File.Move(move.Source, move.Destination);
+                progress?.Report(++completed);
+            }
+            return Task.FromResult(new OrganizeResult(selected.Count, []));
+        }
+    }
+
+    private sealed class RecordingFfmpeg(List<string> order) : IFfmpegRunner
+    {
+        public List<string> Order => order;
+        public string? AacInput { get; private set; }
+
+        public Task PreflightAsync(
+            string executable, string requiredEncoder, CancellationToken ct = default) =>
+            Task.CompletedTask;
+
+        public Task ConvertAlacToFlacAsync(
+            string executable, string input, string output, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task DeriveCdFlacAsync(
+            string executable, string input, string output, CancellationToken ct = default)
+        {
+            order.Add("DeriveCdFlac");
+            File.Copy(MediaFixtures.Path_("sample.flac"), output);
+            return Task.CompletedTask;
+        }
+
+        public Task EncodeAacAsync(
+            string executable,
+            string encoder,
+            int bitrateKbps,
+            string input,
+            string output,
+            CancellationToken ct = default)
+        {
+            order.Add("DeriveAac");
+            AacInput = input;
+            File.Copy(MediaFixtures.Path_("sample_aac.m4a"), output);
+            return Task.CompletedTask;
+        }
+
+        public Task<string> ComputeDecodedAudioHashAsync(
+            string executable, string input, CancellationToken ct = default) =>
+            Task.FromResult("SHA256=test");
+    }
+
+    private sealed class RecordingReindex : IReindexService
+    {
+        public List<string> Paths { get; } = [];
+        public Task ReindexFileAsync(string path, CancellationToken ct = default)
+        {
+            Paths.Add(path);
+            return Task.CompletedTask;
+        }
     }
 }

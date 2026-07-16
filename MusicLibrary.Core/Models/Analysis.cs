@@ -33,7 +33,13 @@ public sealed record TrackRecord
         !string.IsNullOrWhiteSpace(Artist) ? Artist! : "Unknown Artist";
 }
 
-/// <summary>One cache-derived tag correction shown to the user before any file is changed.</summary>
+public enum AnalysisRepairKind
+{
+    Tag,
+    Path,
+}
+
+/// <summary>One cache-derived correction shown to the user before any file is changed.</summary>
 public sealed record AnalysisTagRepair(
     string Path,
     TagFields Field,
@@ -41,12 +47,37 @@ public sealed record AnalysisTagRepair(
     string After,
     string Reason,
     long SourceLength,
-    DateTime SourceLastWriteTimeUtc);
+    DateTime SourceLastWriteTimeUtc,
+    AnalysisRepairKind Kind = AnalysisRepairKind.Tag,
+    OperationPathSnapshot? ExpectedDestination = null,
+    string? BlockingReason = null)
+{
+    public bool CanApply => string.IsNullOrWhiteSpace(BlockingReason);
+}
 
-/// <summary>A stale-checked set of homogeneous analysis repairs.</summary>
+/// <summary>A stale-checked set of reviewed analysis repairs.</summary>
 public sealed record AnalysisRepairPlan(string Name, IReadOnlyList<AnalysisTagRepair> Items)
 {
-    public bool CanApply => Items.Count > 0;
+    public bool CanApply => Items.Any(item => item.CanApply);
+}
+
+public sealed record AnalysisRepairItemResult(
+    AnalysisTagRepair Repair,
+    WriteOutcome Outcome,
+    string? Error = null,
+    string? AppliedPath = null,
+    string? CacheError = null);
+
+public sealed record AnalysisRepairApplyResult(IReadOnlyList<AnalysisRepairItemResult> Items)
+{
+    public int SavedCount => Items.Count(item => item.Outcome == WriteOutcome.Saved);
+    public int SkippedCount => Items.Count(item => item.Outcome == WriteOutcome.Skipped);
+    public int FailedCount => Items.Count(item => item.Outcome == WriteOutcome.Failed);
+    public int CacheFailedCount => Items.Count(item => item.CacheError is not null);
+
+    public string Summary =>
+        $"{SavedCount} applied, {SkippedCount} skipped, {FailedCount} failed" +
+        (CacheFailedCount == 0 ? "" : $", {CacheFailedCount} cache refresh failed");
 }
 
 /// <summary>One existing value the user can choose while resolving an ambiguous tag conflict.</summary>
@@ -127,7 +158,39 @@ public sealed record RepresentationRepairAction(
     RepresentationRepairKind Kind,
     string SourcePath,
     string DestinationPath,
-    string Description);
+    string Description,
+    OperationPathSnapshot? ExpectedSource = null,
+    OperationPathSnapshot? ExpectedDestination = null);
+
+public enum RepresentationRepairOutcome
+{
+    Applied,
+    Skipped,
+    Failed,
+}
+
+public sealed record RepresentationRepairActionResult(
+    RepresentationRepairAction Action,
+    RepresentationRepairOutcome Outcome,
+    string? Error = null);
+
+public sealed record RepresentationRepairProgress(
+    int Completed,
+    int Total,
+    string SourcePath,
+    RepresentationRepairKind Kind);
+
+public sealed record RepresentationRepairApplyResult(
+    IReadOnlyList<RepresentationRepairActionResult> Results,
+    bool Cancelled = false)
+{
+    public int Applied => Results.Count(result => result.Outcome == RepresentationRepairOutcome.Applied);
+    public int Failed => Results.Count(result => result.Outcome == RepresentationRepairOutcome.Failed);
+    public IReadOnlyList<string> ChangedPaths => Results
+        .Where(result => result.Outcome == RepresentationRepairOutcome.Applied)
+        .Select(result => result.Action.DestinationPath)
+        .ToList();
+}
 
 /// <summary>
 /// Representation repair opportunities split between immediately stale-checkable tag edits and
