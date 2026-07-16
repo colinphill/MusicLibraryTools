@@ -16,15 +16,18 @@ public sealed class IngestMusicService : IIngestMusicService
     private readonly IFfmpegRunner _ffmpeg;
     private readonly IAppSettings? _settings;
     private readonly int _previewParallelism;
+    private readonly IItunesMediaMutationService _itunes;
 
     public IngestMusicService(
         IFfmpegRunner ffmpeg,
         IAppSettings? settings = null,
-        int? previewParallelism = null)
+        int? previewParallelism = null,
+        IItunesMediaMutationService? itunes = null)
     {
         _ffmpeg = ffmpeg;
         _settings = settings;
         _previewParallelism = Math.Clamp(previewParallelism ?? GetDefaultPreviewParallelism(), 1, 64);
+        _itunes = itunes ?? new ItunesMediaMutationService(settings);
     }
 
     private static int GetDefaultPreviewParallelism()
@@ -577,6 +580,17 @@ public sealed class IngestMusicService : IIngestMusicService
                 string relative = Path.GetRelativePath(plan.Request.SourceDirectory, source.Path);
                 return (Original: source.Path, Quarantine: Path.Combine(quarantineRoot, relative));
             }).ToList();
+            string[] mutationCandidates =
+            [
+                .. album.Outputs.Select(output => output.DestinationPath),
+                .. plannedQuarantine.Select(move => move.Original),
+            ];
+            await using IItunesMediaMutationSession itunesSession =
+                await _itunes.BeginAsync(
+                    mutationCandidates,
+                    backupFiles: false,
+                    plan.Configuration.ItunesLibraryPath,
+                    ct);
             WriteJournal(journalPath,
                 [$"BEGIN\t{album.Key}",
                  .. album.Outputs.Where(o => !File.Exists(o.DestinationPath)).Select(o => $"PLAN_INSTALL\t{album.Key}\t{o.DestinationPath}"),
@@ -614,7 +628,15 @@ public sealed class IngestMusicService : IIngestMusicService
                   $"COMMIT\t{album.Key}"];
             if (!string.IsNullOrWhiteSpace(plan.Configuration.ItunesLibraryPath))
             {
-                UpdateItunesLibrary(plan.Configuration.ItunesLibraryPath, album);
+                await itunesSession.CommitAsync(
+                [
+                    .. album.Outputs
+                        .Where(output => output.Kind == IngestOutputKind.Aac)
+                        .Select(output => ItunesMediaMutation.Add(output.DestinationPath)),
+                    .. quarantined.Select(move =>
+                        ItunesMediaMutation.Remove(move.Original)),
+                ], CancellationToken.None);
+                await itunesSession.CompleteAsync(CancellationToken.None);
                 libraryCommitted = true;
                 // The library replacement is the final commit point. A journal failure after it
                 // must not roll back files that the now-committed library references.
@@ -804,36 +826,6 @@ public sealed class IngestMusicService : IIngestMusicService
             foreach (var source in plan.IgnoredFileSnapshots) EnsureFresh(source);
         if (plan.Albums.Count > 0 && plan.ItunesLibrarySnapshot is not null)
             EnsureFresh(plan.ItunesLibrarySnapshot);
-    }
-
-    private static void UpdateItunesLibrary(string libraryPath, IngestAlbumPlan album)
-    {
-        ItlDocument document = ItlDocument.Load(libraryPath);
-        int before = document.Tracks.Count;
-        foreach (IngestOutputPlan output in album.Outputs.Where(output => output.Kind == IngestOutputKind.Aac))
-        {
-            IMediaFile media = MediaFile.GetFile(output.DestinationPath);
-            ICodecProvider codec = media.Codecs.First();
-            IMetadataProvider tag = media.Tags.First();
-            string? genre = tag.GetKnownMetadata().FirstOrDefault(field => field.Key == TagFields.Genre).Value;
-            document.ImportAacTrack(new ItlAacTrackImport
-            {
-                Path = output.DestinationPath,
-                Title = output.Metadata.Title,
-                Artist = output.Metadata.Artist,
-                AlbumArtist = output.Metadata.AlbumArtist,
-                Album = output.Metadata.Album,
-                Genre = genre,
-                TrackNumber = output.Metadata.TrackNumber,
-                TrackCount = output.Metadata.TrackTotal,
-                Duration = TimeSpan.FromSeconds(codec.DurationInSeconds),
-                BitRate = checked((int)Math.Round(codec.AverageBitrate / 1000d)),
-                ArtworkCount = media.Tags.Sum(candidate => candidate.GetImageMetadata().Count()),
-                Compilation = output.Metadata.Compilation,
-            });
-        }
-        if (document.Tracks.Count != before)
-            ItlFileEditor.SaveValidated(document, libraryPath);
     }
 
     private static void EnsureFresh(IngestFileSnapshot source)

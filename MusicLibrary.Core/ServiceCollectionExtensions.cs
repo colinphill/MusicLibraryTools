@@ -10,6 +10,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<IAppSettings, AppSettings>();
         services.AddSingleton<IFileMutationCoordinator, FileMutationCoordinator>();
+        services.AddSingleton<IItunesMediaMutationService, ItunesMediaMutationService>();
         services.AddSingleton<IFileInventoryService, FileInventoryService>();
         services.AddSingleton<IFileMutationPlanExecutor, FileMutationPlanExecutor>();
         services.AddSingleton<ILibraryOperationContextFactory, LibraryOperationContextFactory>();

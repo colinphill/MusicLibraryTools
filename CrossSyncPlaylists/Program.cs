@@ -19,10 +19,13 @@ internal static class CrossSyncPlaylistsCommand
             return 2;
         }
 
+        PlaylistExportRequest parsedRequest = request!;
         var coordinator = new FileMutationCoordinator();
+        var settings = new CommandLineAppSettings(parsedRequest.ConfigurationPath!);
+        var itunes = new ItunesMediaMutationService(settings);
         IPlaylistExportService service = new PlaylistExportService(
             new LibraryOperationContextFactory(), new FileInventoryService(),
-            new FileMutationPlanExecutor(coordinator));
+            new FileMutationPlanExecutor(coordinator, itunes));
         var progress = new Progress<OperationProgress>(value =>
         {
             if (!string.IsNullOrWhiteSpace(value.Message)) Console.Error.WriteLine(value.Message);
@@ -30,7 +33,7 @@ internal static class CrossSyncPlaylistsCommand
 
         try
         {
-            PlaylistExportPlan plan = await service.PreviewAsync(request!, progress);
+            PlaylistExportPlan plan = await service.PreviewAsync(parsedRequest, progress);
             foreach (OperationIssue issue in plan.Issues)
                 Console.WriteLine($"{issue.Severity,-11} {issue.Code}: {issue.Message}" +
                     (issue.Path is null ? "" : " [" + issue.Path + "]"));

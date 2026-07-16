@@ -21,15 +21,17 @@ public static class Program
         try
         {
             var inventories = new FileInventoryService();
+            var settings = new CommandLineAppSettings(options!.ConfigurationPath);
+            var itunes = new ItunesMediaMutationService(settings);
             var service = new CarCardService(new LibraryOperationContextFactory(), inventories,
-                new FileMutationPlanExecutor());
+                new FileMutationPlanExecutor(itunes: itunes));
             var progress = new Progress<OperationProgress>(value =>
             {
                 if (!string.IsNullOrWhiteSpace(value.Message))
                     Console.WriteLine(value.CurrentPath is null ? value.Message :
                         $"{value.Message}: {value.CurrentPath}");
             });
-            CarCardPlan plan = await service.PreviewAsync(new(options!.ConfigurationPath,
+            CarCardPlan plan = await service.PreviewAsync(new(options.ConfigurationPath,
                 options.Rebalance, options.FixErrors, options.Initialize, options.MaxRemovals,
                 options.LibraryPath), progress);
             RenderPlan(plan);

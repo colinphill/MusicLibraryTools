@@ -173,6 +173,16 @@ when it must create a playlist that does not already exist.
 Read-only library consumers such as the cross-sync, redundancy, car-card, and smart-storage tools
 also use `ITUNES_ITL` and the same default `.itl` location. `ITUNES_XML` is no longer supported.
 
+When `LibraryConfiguration` contains `ItunesLibrary`, Core filesystem operations also keep that
+binary library synchronized with files changed inside its recorded iTunes Media Folder. Tag and
+artwork writes refresh file-derived track fields; organization and recovery preserve track identity
+while relocating paths; ingest and sync imports/removes tracks as files enter or leave the folder.
+The media change and `.itl` save share a recovery transaction, and iTunes must be closed before a
+write can commit. Normal indexing also reconciles externally modified tracked files from cached
+size/timestamp data without reopening every unchanged file. Missing tracked files, untracked
+additions, duplicate references, and possible renames are listed under **iTunes Media…** for review
+rather than making an unsafe identity guess.
+
 `IngestMusic` previews by default and requires `--apply`. If a high-resolution track has no
 CD-quality FLAC counterpart, apply asks for confirmation album-by-album before doing any work; one
 declined album cancels the whole run. Transcodes are staged and validated, source files are moved to

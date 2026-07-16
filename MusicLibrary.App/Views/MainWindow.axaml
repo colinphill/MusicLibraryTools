@@ -142,6 +142,16 @@
                             </Flyout>
                         </Button.Flyout>
                     </Button>
+                    <Button Content="iTunes Media…" IsVisible="{Binding Library.HasItunesMediaDetails}">
+                        <Button.Flyout>
+                            <Flyout>
+                                <ScrollViewer MaxHeight="520" MaxWidth="900">
+                                    <TextBlock Text="{Binding Library.ItunesMediaDetails}" TextWrapping="Wrap"
+                                               Width="860" Margin="8"/>
+                                </ScrollViewer>
+                            </Flyout>
+                        </Button.Flyout>
+                    </Button>
                     <Button Content="Cancel" Command="{Binding Library.CancelIndexCommand}"
                             IsVisible="{Binding Library.IsBusy}"/>
                     <ProgressBar IsIndeterminate="True" Width="60"

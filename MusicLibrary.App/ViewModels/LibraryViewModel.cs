@@ -59,10 +59,15 @@ public partial class LibraryViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(HasRootHealthDetails))]
     private string? _rootHealthDetails;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasItunesMediaDetails))]
+    private string? _itunesMediaDetails;
+
     public bool IsBusy => IsIndexing || IsBenchmarking;
     public bool HasBenchmarkRecommendation => BenchmarkRecommendation is not null;
     public bool HasBenchmarkDetails => !string.IsNullOrWhiteSpace(BenchmarkDetails);
     public bool HasRootHealthDetails => !string.IsNullOrWhiteSpace(RootHealthDetails);
+    public bool HasItunesMediaDetails => !string.IsNullOrWhiteSpace(ItunesMediaDetails);
 
     /// <summary>Raised after a successful (or cancelled) index so views can refresh from the cache.</summary>
     public event Action? IndexCompleted;
@@ -149,6 +154,22 @@ public partial class LibraryViewModel : ViewModelBase
             var (added, modified, removed, unchanged) = await _library.IndexAsync(progress, _indexCts.Token);
             StatusText = $"Indexed in {FormatDuration(clock.Elapsed)}: +{added} added, " +
                 $"~{modified} modified, -{removed} removed, {unchanged} unchanged. Artwork remains lazy.";
+            ItunesMediaReconciliationResult itunes =
+                await _library.GetLastItunesReconciliationAsync(_indexCts.Token);
+            ItunesMediaDetails = DescribeItunesMediaReconciliation(itunes);
+            if (itunes.Configured)
+            {
+                if (itunes.Error is not null)
+                    StatusText += $" iTunes synchronization pending: {itunes.Error}";
+                else
+                {
+                    if (itunes.ChangedFiles > 0)
+                        StatusText += $" Updated {itunes.UpdatedTracks:N0} iTunes track record(s) " +
+                                      $"for {itunes.ChangedFiles:N0} changed file(s).";
+                    if (itunes.Issues.Count > 0)
+                        StatusText += $" {itunes.Issues.Count:N0} iTunes Media item(s) need review.";
+                }
+            }
         }
         catch (OperationCanceledException)
         {
@@ -273,6 +294,32 @@ public partial class LibraryViewModel : ViewModelBase
             return $"{root.Root}: {root.State}; last attempt {attempt}; last success {success}; " +
                 $"{root.Enumerated:N0} enumerated, {root.MetadataRead:N0} metadata read{error}";
         }));
+
+    public static string? DescribeItunesMediaReconciliation(
+        ItunesMediaReconciliationResult result)
+    {
+        if (!result.Configured)
+            return null;
+        var lines = new List<string>
+        {
+            $"Library: {result.LibraryPath ?? "(unavailable)"}",
+            $"Media Folder: {result.MediaFolder ?? "(unavailable)"}",
+        };
+        if (result.Error is not null)
+            lines.Add("Synchronization pending: " + result.Error);
+        else
+        {
+            lines.Add($"Last reconciliation: {result.ChangedFiles:N0} changed file(s), " +
+                      $"{result.UpdatedTracks:N0} updated track record(s), " +
+                      $"{result.Issues.Count:N0} review item(s).");
+            lines.AddRange(result.Warnings.Select(warning => "Warning: " + warning));
+            lines.AddRange(result.Issues.Select(issue =>
+                issue.RelatedPath is null
+                    ? $"{issue.Kind}: {issue.Path} — {issue.Message}"
+                    : $"{issue.Kind}: {issue.Path} -> {issue.RelatedPath} — {issue.Message}"));
+        }
+        return string.Join(Environment.NewLine, lines);
+    }
 
     public static string DescribeProgress(IndexProgress progress)
     {

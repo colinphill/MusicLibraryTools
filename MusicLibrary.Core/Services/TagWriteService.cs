@@ -1,7 +1,6 @@
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
 using System.Runtime.ExceptionServices;
-using System.Threading.Channels;
 
 namespace MusicLibrary.Core.Services;
 
@@ -11,16 +10,19 @@ public sealed class TagWriteService : ITagWriteService
     private readonly IReindexService? _reindex;
     private readonly IFileMutationCoordinator _mutations;
     private readonly int _maxParallelism;
+    private readonly IItunesMediaMutationService? _itunes;
 
     // The reindex service is optional so this service can be constructed standalone (unit tests).
     public TagWriteService(
         IReindexService? reindex = null,
         IFileMutationCoordinator? mutations = null,
-        int maxParallelism = 4)
+        int maxParallelism = 4,
+        IItunesMediaMutationService? itunes = null)
     {
         _reindex = reindex;
         _mutations = mutations ?? FileMutationCoordinator.Shared;
         _maxParallelism = Math.Clamp(maxParallelism, 1, 16);
+        _itunes = itunes;
     }
 
     public Task<BatchWriteResult> ApplyAsync(
@@ -31,44 +33,14 @@ public sealed class TagWriteService : ITagWriteService
         => Task.Run(async () =>
         {
             var results = new FileWriteResult[paths.Count];
+            var savedFiles = new IMediaFile?[paths.Count];
             int nextIndex = -1;
             int done = 0;
-            Channel<(int Index, string Path, IMediaFile File)>? reindexQueue = null;
-            Task reindexTask = Task.CompletedTask;
-
-            if (_reindex is not null)
-            {
-                reindexQueue = Channel.CreateBounded<(int, string, IMediaFile)>(new BoundedChannelOptions(64)
-                {
-                    SingleReader = true,
-                    FullMode = BoundedChannelFullMode.Wait,
-                });
-                reindexTask = RefreshCacheAsync(reindexQueue.Reader);
-            }
-
-            async Task RefreshCacheAsync(ChannelReader<(int Index, string Path, IMediaFile File)> reader)
-            {
-                await foreach (var first in reader.ReadAllAsync())
-                {
-                    var batch = new List<(int Index, string Path, IMediaFile File)>(32) { first };
-                    // Briefly yield so concurrently completed network writes share one DB commit.
-                    await Task.Delay(2);
-                    while (batch.Count < 32 && reader.TryRead(out var next))
-                        batch.Add(next);
-
-                    try
-                    {
-                        await _reindex!.ReindexFilesAsync(
-                            batch.Select(item => (item.Path, item.File)).ToArray(),
-                            CancellationToken.None);
-                    }
-                    catch (Exception ex)
-                    {
-                        foreach (var item in batch)
-                            results[item.Index] = results[item.Index] with { CacheError = ex.Message };
-                    }
-                }
-            }
+            string[] mutationPaths = paths.Distinct(PathComparer).ToArray();
+            using IDisposable lease = await _mutations.AcquireAsync(mutationPaths, ct);
+            await using IItunesMediaMutationSession? itunesSession = _itunes is null
+                ? null
+                : await _itunes.BeginAsync(mutationPaths, backupFiles: true, ct);
 
             async Task Worker()
             {
@@ -80,11 +52,9 @@ public sealed class TagWriteService : ITagWriteService
 
                     ct.ThrowIfCancellationRequested();
                     string path = paths[index];
-                    using var mutation = await _mutations.AcquireAsync(path, ct);
                     var applied = ApplyToFile(path, edits);
                     results[index] = applied.Result;
-                    if (applied.Result.Outcome == WriteOutcome.Saved && applied.SavedFile is not null && reindexQueue is not null)
-                        await reindexQueue.Writer.WriteAsync((index, path, applied.SavedFile), CancellationToken.None);
+                    savedFiles[index] = applied.SavedFile;
                     progress?.Report(Interlocked.Increment(ref done));
                 }
             }
@@ -101,13 +71,47 @@ public sealed class TagWriteService : ITagWriteService
                 workerError = ex;
             }
 
-            reindexQueue?.Writer.TryComplete();
-            await reindexTask;
+            if (itunesSession is not null)
+            {
+                ItunesMediaMutation[] mutations = results
+                    .Select((result, index) => (result, index))
+                    .Where(item => item.result?.Outcome == WriteOutcome.Saved)
+                    .Select(item => ItunesMediaMutation.Refresh(paths[item.index]))
+                    .ToArray();
+                await itunesSession.CommitAsync(mutations, CancellationToken.None);
+                await itunesSession.CompleteAsync(CancellationToken.None);
+            }
+
+            if (_reindex is not null)
+            {
+                var changed = savedFiles
+                    .Select((file, index) => (file, index))
+                    .Where(item => item.file is not null)
+                    .ToArray();
+                foreach (var batch in changed.Chunk(32))
+                {
+                    try
+                    {
+                        await _reindex.ReindexFilesAsync(
+                            batch.Select(item => (paths[item.index], item.file!)).ToArray(),
+                            CancellationToken.None);
+                    }
+                    catch (Exception ex)
+                    {
+                        foreach (var item in batch)
+                            results[item.index] = results[item.index] with { CacheError = ex.Message };
+                    }
+                }
+            }
 
             if (workerError is not null)
                 ExceptionDispatchInfo.Capture(workerError).Throw();
             return new BatchWriteResult(results);
         }, ct);
+
+    private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
+        ? StringComparer.OrdinalIgnoreCase
+        : StringComparer.Ordinal;
 
     private sealed record ApplyResult(FileWriteResult Result, IMediaFile? SavedFile = null);
 

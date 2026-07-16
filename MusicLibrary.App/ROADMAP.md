@@ -39,6 +39,8 @@ avoid eagerly reading artwork or media data that is already represented in the m
 - [x] Expose bounded reader parallelism and provide a per-root concurrency benchmark.
 - [x] Record per-root scan health and last successful scan; distinguish unavailable roots from removals.
 - [x] Support cached/offline browsing, targeted reindexing, and scheduled delta scans.
+- [x] Reconcile externally changed files with a configured binary iTunes library after indexing,
+      while surfacing ambiguous additions, removals, duplicates, and rename candidates for review.
 
 ## 5. Album and representation health
 

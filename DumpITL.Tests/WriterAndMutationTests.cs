@@ -108,6 +108,105 @@ public sealed class WriterAndMutationTests
     }
 
     [Fact]
+    public void MediaRefreshAndRelocationPreserveTrackIdentityAndPlaylistMembership()
+    {
+        string oldPath = Path.Combine(Path.GetTempPath(), $"itl-old-{Guid.NewGuid():N}.mp3");
+        string newPath = Path.Combine(Path.GetTempPath(), $"itl-new-{Guid.NewGuid():N}.mp3");
+        ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+        ItlRecord track = document.Tracks.Single();
+        document.SetTrackString(track, ItlDataType.Location, oldPath);
+        document.SetTrackString(track, ItlDataType.FileUrl, new Uri(oldPath).AbsoluteUri);
+        int trackId = track.GetTrackId();
+        ulong persistentId = track.GetPersistentId();
+        uint playlistEntryId = document.Playlists.Single().Entries.Single().EntryId;
+
+        IReadOnlyList<ItlRecord> relocated = document.RelocateTracks(oldPath, newPath);
+        document.RefreshLocalTrack(track, newPath, new ItlLocalTrackMetadata
+        {
+            Title = "Changed title",
+            Artist = "Track artist",
+            AlbumArtist = "Album artist",
+            Album = "Changed album",
+            Genre = "Rock",
+            TrackNumber = 4,
+            TrackCount = 9,
+            DiscNumber = 2,
+            DiscCount = 3,
+            Year = 2026,
+            Bpm = 123,
+            Duration = TimeSpan.FromSeconds(201),
+            BitRateKbps = 320,
+            ArtworkCount = 2,
+            Compilation = true,
+            Gapless = true,
+        }, 123456, new DateTime(2026, 7, 16, 12, 0, 0, DateTimeKind.Utc));
+
+        Assert.Single(relocated);
+        Assert.Equal(trackId, track.GetTrackId());
+        Assert.Equal(persistentId, track.GetPersistentId());
+        Assert.Equal(newPath, track.GetString(ItlDataType.Location));
+        Assert.Equal("Changed title", track.GetString(ItlDataType.Title));
+        Assert.Equal(4, track.GetTrackNumber());
+        Assert.Equal(9, track.GetTrackCount());
+        Assert.Equal(2, track.GetDiscNumber());
+        Assert.Equal(3, track.GetDiscCount());
+        Assert.Equal(2026, track.GetYear());
+        Assert.Equal(123, track.GetBpm());
+        Assert.Equal(123456ul, track.GetSize());
+        Assert.True(track.GetCompilation());
+        Assert.True(track.GetPartOfGaplessAlbum());
+        Assert.Equal(playlistEntryId, document.Playlists.Single().Entries.Single().EntryId);
+        Assert.Contains(document.Albums,
+            album => ItlDocument.RecordIdOf(album) == track.GetAlbumId());
+        Assert.Contains(document.Artists,
+            artist => ItlDocument.RecordIdOf(artist) == track.GetArtistId());
+        Assert.DoesNotContain(document.Validate(),
+            issue => issue.Severity == ItlValidationSeverity.Error);
+    }
+
+    [Fact]
+    public void GenericLocalImportUsesSameExtensionTemplateAndBuiltInMemberships()
+    {
+        string templatePath = Path.Combine(Path.GetTempPath(), "template.mp3");
+        string importedPath = Path.Combine(Path.GetTempPath(), $"import-{Guid.NewGuid():N}.mp3");
+        File.WriteAllBytes(importedPath, [1, 2, 3, 4]);
+        try
+        {
+            ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+            ItlRecord template = document.Tracks.Single();
+            document.SetTrackString(template, ItlDataType.Location, templatePath);
+            document.SetTrackString(template, ItlDataType.FileUrl, new Uri(templatePath).AbsoluteUri);
+            document.SetTrackString(template, ItlDataType.Kind, "MPEG audio file");
+            document.SetTrackString(template, ItlDataType.Comment, "template-only");
+
+            ItlRecord imported = document.ImportLocalTrack(importedPath, new ItlLocalTrackMetadata
+            {
+                Title = "Imported MP3",
+                Artist = "Artist",
+                AlbumArtist = "Artist",
+                Album = "Album",
+                Duration = TimeSpan.FromSeconds(100),
+                BitRateKbps = 192,
+                TrackNumber = 1,
+                TrackCount = 1,
+            }, new FileInfo(importedPath).Length, File.GetLastWriteTimeUtc(importedPath));
+
+            Assert.NotSame(template, imported);
+            Assert.Equal(importedPath, imported.GetString(ItlDataType.Location));
+            Assert.Equal("Imported MP3", imported.GetString(ItlDataType.Title));
+            Assert.Null(imported.GetString(ItlDataType.Comment));
+            Assert.Contains(document.Playlists.Single().Entries,
+                entry => entry.TrackId == imported.GetTrackId());
+            Assert.DoesNotContain(document.Validate(),
+                issue => issue.Severity == ItlValidationSeverity.Error);
+        }
+        finally
+        {
+            File.Delete(importedPath);
+        }
+    }
+
+    [Fact]
     public void PlaybackStateOrdinaryKeyUsesStoreIdOrTitleArtistAlbumMd5()
     {
         Assert.Equal("123456789", ItlPlaybackStateKey.ForOrdinaryMetadata(123456789, "ignored"));

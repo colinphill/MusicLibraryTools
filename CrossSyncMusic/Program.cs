@@ -19,16 +19,19 @@ internal static class CrossSyncMusicCommand
             return 2;
         }
 
+        CrossLibrarySyncRequest parsedRequest = request!;
         var coordinator = new FileMutationCoordinator();
+        var settings = new CommandLineAppSettings(parsedRequest.ConfigurationPath!);
+        var itunes = new ItunesMediaMutationService(settings);
         ICrossLibrarySyncService service = new CrossLibrarySyncService(
             new LibraryOperationContextFactory(),
             new FileInventoryService(),
-            new FileMutationPlanExecutor(coordinator));
+            new FileMutationPlanExecutor(coordinator, itunes));
         var progress = new Progress<OperationProgress>(ReportProgress);
 
         try
         {
-            CrossLibrarySyncPlan plan = await service.PreviewAsync(request!, progress);
+            CrossLibrarySyncPlan plan = await service.PreviewAsync(parsedRequest, progress);
             RenderPlan(plan);
             if (!apply)
             {

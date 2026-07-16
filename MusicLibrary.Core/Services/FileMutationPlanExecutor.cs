@@ -19,9 +19,15 @@ public interface IFileMutationPlanExecutor
 public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
 {
     private readonly IFileMutationCoordinator _coordinator;
+    private readonly IItunesMediaMutationService? _itunes;
 
-    public FileMutationPlanExecutor(IFileMutationCoordinator? coordinator = null) =>
+    public FileMutationPlanExecutor(
+        IFileMutationCoordinator? coordinator = null,
+        IItunesMediaMutationService? itunes = null)
+    {
         _coordinator = coordinator ?? FileMutationCoordinator.Shared;
+        _itunes = itunes;
+    }
 
     public async Task<FileMutationSummary> ApplyAsync(
         FileMutationPlan plan,
@@ -41,6 +47,9 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
             .Distinct(PathComparer)
             .ToArray();
         using var lease = await _coordinator.AcquireAsync(paths, ct).ConfigureAwait(false);
+        await using IItunesMediaMutationSession? itunesSession = _itunes is null
+            ? null
+            : await _itunes.BeginAsync(paths, backupFiles: false, ct).ConfigureAwait(false);
 
         // Revalidate after acquiring the in-process mutation lease and still before the first write.
         ValidateAll(plan.Actions, ct);
@@ -94,7 +103,14 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
                 }
             }
 
+            if (itunesSession is not null)
+                await itunesSession.CommitAsync(
+                    plan.Actions.Select(ToItunesMutation).ToArray(),
+                    CancellationToken.None).ConfigureAwait(false);
+
             await WriteJournalAsync(journal, journalStream, $"COMMIT\t{operationId}", ct);
+            if (itunesSession is not null)
+                await itunesSession.CompleteAsync(CancellationToken.None).ConfigureAwait(false);
             progress?.Report(new(OperationPhase.Completed, plan.Actions.Count, plan.Actions.Count,
                 Message: "Mutation plan completed"));
             return new(copied, replaced, quarantined, journalPath, plan.Issues);
@@ -349,6 +365,18 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
             $"PLAN_QUARANTINE\tSTALE\t{action.SourcePath}\t{action.DestinationPath}",
         _ => throw new ArgumentOutOfRangeException(nameof(action.Kind)),
     };
+
+    private static ItunesMediaMutation ToItunesMutation(FileMutationAction action) =>
+        action.Kind switch
+        {
+            FileMutationKind.Copy or FileMutationKind.Write =>
+                ItunesMediaMutation.Add(action.DestinationPath),
+            FileMutationKind.Replace or FileMutationKind.ReplaceGenerated =>
+                ItunesMediaMutation.Refresh(action.DestinationPath),
+            FileMutationKind.Quarantine =>
+                ItunesMediaMutation.Remove(action.SourcePath),
+            _ => throw new ArgumentOutOfRangeException(nameof(action.Kind)),
+        };
 
     private static string BackupPath(string recoveryRoot, string destination)
     {

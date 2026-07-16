@@ -17,10 +17,15 @@ static async Task<int> RunAsync(string[] args)
     try
     {
         string configurationPath = Path.GetFullPath(operands[1]);
-        if (System.Xml.Linq.XDocument.Load(configurationPath).Root?.Name.LocalName ==
-            "LibraryConfiguration")
+        bool usesLibraryConfiguration =
+            System.Xml.Linq.XDocument.Load(configurationPath).Root?.Name.LocalName ==
+            "LibraryConfiguration";
+        IItunesMediaMutationService? itunes = null;
+        if (usesLibraryConfiguration)
         {
-            using var library = new LibraryService(configurationPath);
+            var settings = new CommandLineAppSettings(configurationPath);
+            itunes = new ItunesMediaMutationService(settings);
+            using var library = new LibraryService(settings, itunes: itunes);
             Console.Error.WriteLine("Indexing the configured library cache...");
             await library.IndexForOperationAsync();
         }
@@ -31,7 +36,7 @@ static async Task<int> RunAsync(string[] args)
                 "LibraryConfiguration to use the shared library cache.");
         }
 
-        IIngestMusicService service = new IngestMusicService(new FfmpegRunner());
+        IIngestMusicService service = new IngestMusicService(new FfmpegRunner(), itunes: itunes);
         var plan = await service.PreviewAsync(new IngestRequest(operands[0], configurationPath));
         PrintPlan(plan);
         if (!plan.CanApply)

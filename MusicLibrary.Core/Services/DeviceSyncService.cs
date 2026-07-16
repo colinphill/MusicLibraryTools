@@ -285,9 +285,16 @@ public sealed class DeviceSyncService : IDeviceSyncService
     private static readonly string[] RemappedRoots =
         ["FLAC", "FLAC2", "HiResPCM", "HiResDSD", "HiResWV", "Lossy"];
     private readonly IFileTreeEndpointFactory _endpoints;
+    private readonly IItunesMediaMutationService? _itunes;
     private readonly SemaphoreSlim _applyGate = new(1, 1);
 
-    public DeviceSyncService(IFileTreeEndpointFactory endpoints) => _endpoints = endpoints;
+    public DeviceSyncService(
+        IFileTreeEndpointFactory endpoints,
+        IItunesMediaMutationService? itunes = null)
+    {
+        _endpoints = endpoints;
+        _itunes = itunes;
+    }
 
     public async Task<DeviceSyncPlan> PreviewAsync(DeviceSyncRequest request,
         IProgress<OperationProgress>? progress = null, CancellationToken ct = default)
@@ -341,6 +348,20 @@ public sealed class DeviceSyncService : IDeviceSyncService
         if (plan.Actions.Count == 0)
             return new(0, 0, 0, 0, null, plan.Issues);
 
+        ItunesMediaMutation[] itunesMutations = plan.Destination.Kind == FileTreeEndpointKind.Local
+            ? BuildItunesMutations(plan).ToArray()
+            : [];
+        string[] mutationPaths = itunesMutations.SelectMany(mutation =>
+                new[] { mutation.OriginalPath, mutation.CurrentPath })
+            .Where(path => path is not null)
+            .Select(path => path!)
+            .Distinct(PathComparer)
+            .ToArray();
+        await using IItunesMediaMutationSession? itunesSession =
+            _itunes is null || mutationPaths.Length == 0
+                ? null
+                : await _itunes.BeginAsync(mutationPaths, backupFiles: false, ct)
+                    .ConfigureAwait(false);
         await destination.CreateDirectoryAsync(plan.RecoveryRoot, ct).ConfigureAwait(false);
         string journalPath = Combine(plan.Destination, plan.RecoveryRoot, "journal.tsv");
         string operationId = Guid.NewGuid().ToString("N");
@@ -401,8 +422,13 @@ public sealed class DeviceSyncService : IDeviceSyncService
                         break;
                 }
             }
+            if (itunesSession is not null)
+                await itunesSession.CommitAsync(itunesMutations, CancellationToken.None)
+                    .ConfigureAwait(false);
             await destination.AppendJournalLinesAsync(journalPath, [$"COMMIT\t{operationId}"], ct)
                 .ConfigureAwait(false);
+            if (itunesSession is not null)
+                await itunesSession.CompleteAsync(CancellationToken.None).ConfigureAwait(false);
             progress?.Report(new(OperationPhase.Completed, plan.Actions.Count, plan.Actions.Count,
                 Message: "Device synchronization completed"));
             return new(directories, copied, replaced, quarantined, journalPath, plan.Issues);
@@ -427,6 +453,41 @@ public sealed class DeviceSyncService : IDeviceSyncService
                 throw new AggregateException("Device synchronization failed and rollback was incomplete.",
                     [applyError, .. errors]);
             throw;
+        }
+    }
+
+    private static IEnumerable<ItunesMediaMutation> BuildItunesMutations(DeviceSyncPlan plan)
+    {
+        foreach (DeviceSyncAction action in plan.Actions)
+        {
+            string path = Combine(plan.Destination, plan.Destination.Root, action.RelativePath);
+            switch (action.Kind)
+            {
+                case DeviceSyncMutationKind.CopyFile:
+                    yield return ItunesMediaMutation.Add(path);
+                    break;
+                case DeviceSyncMutationKind.ReplaceFile:
+                    yield return ItunesMediaMutation.Refresh(path);
+                    break;
+                case DeviceSyncMutationKind.QuarantineFile:
+                    yield return ItunesMediaMutation.Remove(path);
+                    break;
+                case DeviceSyncMutationKind.QuarantineDirectory:
+                    foreach (FileTreeEntry file in plan.DestinationSnapshot.Entries.Values.Where(
+                                 entry => !entry.IsDirectory &&
+                                          (PathComparer.Equals(entry.RelativePath,
+                                               action.RelativePath) ||
+                                           entry.RelativePath.StartsWith(
+                                               action.RelativePath.TrimEnd('/') + "/",
+                                               OperatingSystem.IsWindows()
+                                                   ? StringComparison.OrdinalIgnoreCase
+                                                   : StringComparison.Ordinal))))
+                    {
+                        yield return ItunesMediaMutation.Remove(Combine(
+                            plan.Destination, plan.Destination.Root, file.RelativePath));
+                    }
+                    break;
+            }
         }
     }
 

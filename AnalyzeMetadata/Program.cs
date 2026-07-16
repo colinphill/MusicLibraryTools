@@ -21,7 +21,9 @@ public static class Program
                 argument.StartsWith("thresh", StringComparison.OrdinalIgnoreCase) &&
                 int.TryParse(argument[6..], out _));
 
-            using var library = new LibraryService(args[0]);
+            var settings = new CommandLineAppSettings(args[0]);
+            var itunes = new ItunesMediaMutationService(settings);
+            using var library = new LibraryService(settings, itunes: itunes);
             Console.WriteLine("Indexing Files...");
             var indexProgress = new Progress<OperationProgress>(value =>
             {
@@ -56,7 +58,7 @@ public static class Program
                 RenderReport(LibraryAnalyzer.HighResolutionAudio(records));
 
             if (checks.Contains("checkartists"))
-                await AnalyzeArtistsAsync(library, records, offerArtistRepairs);
+                await AnalyzeArtistsAsync(library, itunes, records, offerArtistRepairs);
 
             return 0;
         }
@@ -123,12 +125,13 @@ public static class Program
 
     private static async Task AnalyzeArtistsAsync(
         LibraryService library,
+        IItunesMediaMutationService itunes,
         IReadOnlyList<TrackRecord> records,
         bool offerRepairs)
     {
         var reconciler = new ArtistReconciler(
             new MediaFileService(library),
-            new TagWriteService(library));
+            new TagWriteService(library, itunes: itunes));
         IReadOnlyList<SimilarArtistGroup> exactGroups =
             reconciler.FindSimilarArtists(records, threshold: 0);
         foreach (SimilarArtistGroup group in exactGroups)

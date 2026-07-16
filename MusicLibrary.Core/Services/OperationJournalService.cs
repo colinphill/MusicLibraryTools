@@ -46,9 +46,15 @@ public sealed class OperationJournalService : IOperationJournalService
         @"^(?<base>.+)\.(?<tool>IngestMusic|SortDownloads|OrganizeFiles|CrossSyncMusic|AndroidSync|UpdateCarCard|UpdateSmartStorage)(?<suffix>-quarantine|-recovery)$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private readonly IFileMutationCoordinator _mutations;
+    private readonly IItunesMediaMutationService? _itunes;
 
-    public OperationJournalService(IFileMutationCoordinator? mutations = null) =>
+    public OperationJournalService(
+        IFileMutationCoordinator? mutations = null,
+        IItunesMediaMutationService? itunes = null)
+    {
         _mutations = mutations ?? FileMutationCoordinator.Shared;
+        _itunes = itunes;
+    }
 
     public Task<OperationJournalDiscoveryResult> DiscoverAsync(
         IReadOnlyList<string> searchRoots,
@@ -85,10 +91,15 @@ public sealed class OperationJournalService : IOperationJournalService
         if (!plan.CanApply)
             return new(0, 0);
 
+        ItunesMediaMutation[] itunesMutations = ExpandRestoreMutations(plan.Actions).ToArray();
         var paths = plan.Actions.SelectMany(action => new[]
         {
             action.SourcePath, action.DestinationPath, action.CollisionBackupPath,
-        }).ToList();
+        }).Concat(itunesMutations.SelectMany(mutation =>
+                new[] { mutation.OriginalPath, mutation.CurrentPath }))
+            .Where(path => path is not null)
+            .Select(path => path!)
+            .ToList();
         using var lease = await _mutations.AcquireAsync(paths, ct);
         foreach (var action in plan.Actions)
         {
@@ -98,6 +109,9 @@ public sealed class OperationJournalService : IOperationJournalService
             if (File.Exists(action.CollisionBackupPath) || Directory.Exists(action.CollisionBackupPath))
                 throw new InvalidOperationException($"Restore collision backup already exists: {action.CollisionBackupPath}");
         }
+        await using IItunesMediaMutationSession? itunesSession = _itunes is null
+            ? null
+            : await _itunes.BeginAsync(paths, backupFiles: false, ct);
 
         WriteRestoreJournal(plan.RestoreJournalPath,
             ["BEGIN\tRESTORE", .. plan.Actions.Select(action =>
@@ -129,7 +143,11 @@ public sealed class OperationJournalService : IOperationJournalService
                     [$"RESTORE\t{action.SourcePath}\t{action.DestinationPath}\t{action.CollisionBackupPath}"]);
                 progress?.Report(completed.Count);
             }
+            if (itunesSession is not null)
+                await itunesSession.CommitAsync(itunesMutations, CancellationToken.None);
             WriteRestoreJournal(plan.RestoreJournalPath, ["COMMIT\tRESTORE"]);
+            if (itunesSession is not null)
+                await itunesSession.CompleteAsync(CancellationToken.None);
             return new(completed.Count, completed.Count(action => action.DestinationSnapshot.Exists));
         }
         catch
@@ -149,6 +167,29 @@ public sealed class OperationJournalService : IOperationJournalService
             TryWriteRestoreJournal(plan.RestoreJournalPath,
                 rollbackComplete ? "ROLLBACK\tRESTORE" : "ROLLBACK_FAILED\tRESTORE");
             throw;
+        }
+    }
+
+    private static IEnumerable<ItunesMediaMutation> ExpandRestoreMutations(
+        IReadOnlyList<OperationRestoreAction> actions)
+    {
+        foreach (OperationRestoreAction action in actions)
+        {
+            if (action.SourceSnapshot.IsDirectory)
+            {
+                foreach (string source in Directory.EnumerateFiles(
+                             action.SourcePath, "*", SearchOption.AllDirectories))
+                {
+                    string destination = Path.Combine(action.DestinationPath,
+                        Path.GetRelativePath(action.SourcePath, source));
+                    yield return ItunesMediaMutation.Relocate(source, destination);
+                }
+            }
+            else
+            {
+                yield return ItunesMediaMutation.Relocate(
+                    action.SourcePath, action.DestinationPath);
+            }
         }
     }
 

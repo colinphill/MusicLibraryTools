@@ -68,6 +68,11 @@ namespace MetadataCaching
     /// </summary>
     public sealed record ScanRootDefinition(string Path, IReadOnlyList<string> Sets);
 
+    public sealed record IndexedFileSnapshot(
+        string Path,
+        long Length,
+        DateTime LastWriteTimeUtc);
+
     public readonly record struct IndexProgress(int Scanned, int Added, int Modified, int Unchanged)
     {
         public IndexPhase Phase { get; init; }
@@ -708,6 +713,57 @@ namespace MetadataCaching
             return BuildCache(
                 paths.Select<string, (string Path, string[] Extensions)>(p => (p, null)),
                 buildSecondaryIndexes);
+        }
+
+        /// <summary>
+        /// Reads only path, size, and modification time for indexed files. This is intentionally
+        /// lighter than <see cref="BuildCache(IEnumerable{string}, bool)"/> for consumers that only
+        /// need filesystem identity, such as iTunes library reconciliation.
+        /// </summary>
+        public IReadOnlyList<IndexedFileSnapshot> GetIndexedFileSnapshots(
+            IEnumerable<string> paths)
+        {
+            var dbsets = new List<(string Path, long ID)>();
+            using (var setsCommand = conn_.CreateCommand())
+            {
+                setsCommand.CommandText = "SELECT Path, ID FROM ScanSets";
+                using var reader = setsCommand.ExecuteReader();
+                while (reader.Read())
+                    dbsets.Add((reader.GetString("Path"), reader.GetInt64("ID")));
+            }
+
+            var result = new List<IndexedFileSnapshot>();
+            foreach (string path in paths.Distinct(
+                         OperatingSystem.IsWindows()
+                             ? StringComparer.OrdinalIgnoreCase
+                             : StringComparer.Ordinal))
+            {
+                string requestedPath = Path.TrimEndingDirectorySeparator(path);
+                var set = dbsets.FirstOrDefault(candidate =>
+                    Path.TrimEndingDirectorySeparator(candidate.Path).Equals(
+                        requestedPath, StringComparison.InvariantCultureIgnoreCase));
+                if (set == default)
+                    continue;
+
+                using var command = conn_.CreateCommand();
+                command.CommandText =
+                    "SELECT Path, AlbumPath, LastWriteTime, FileSize " +
+                    "FROM MetadataSummaryView WHERE ScanSetID = " + set.ID;
+                using var reader = command.ExecuteReader();
+                int pathOrdinal = reader.GetOrdinal("Path");
+                int albumPathOrdinal = reader.GetOrdinal("AlbumPath");
+                int modifiedOrdinal = reader.GetOrdinal("LastWriteTime");
+                int sizeOrdinal = reader.GetOrdinal("FileSize");
+                while (reader.Read())
+                {
+                    string fullPath = Path.Combine(set.Path,
+                        reader.GetString(albumPathOrdinal), reader.GetString(pathOrdinal));
+                    result.Add(new(fullPath, reader.GetInt64(sizeOrdinal),
+                        DateTime.SpecifyKind(reader.GetDateTime(modifiedOrdinal),
+                            DateTimeKind.Utc)));
+                }
+            }
+            return result;
         }
 
         /// <summary>

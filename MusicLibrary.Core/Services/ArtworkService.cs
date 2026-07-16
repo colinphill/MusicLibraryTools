@@ -11,14 +11,17 @@ public sealed class ArtworkService : IArtworkService
 {
     private readonly IReindexService? _reindex;
     private readonly IFileMutationCoordinator _mutations;
+    private readonly IItunesMediaMutationService? _itunes;
 
     // The reindex service is optional so this service can be constructed standalone (unit tests).
     public ArtworkService(
         IReindexService? reindex = null,
-        IFileMutationCoordinator? mutations = null)
+        IFileMutationCoordinator? mutations = null,
+        IItunesMediaMutationService? itunes = null)
     {
         _reindex = reindex;
         _mutations = mutations ?? FileMutationCoordinator.Shared;
+        _itunes = itunes;
     }
 
     // Every audio format the toolkit tags can carry embedded artwork, so writability is decided by
@@ -40,16 +43,14 @@ public sealed class ArtworkService : IArtworkService
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
         catch (Exception ex) { return ArtworkOpResult.Fail(ex.Message); }
 
-        using var mutation = await _mutations.AcquireAsync(musicPath, ct);
-        var saved = await Task.Run(() => ApplyCover(
-            musicPath, prepared.Jpeg, prepared.Width, prepared.Height), ct);
-        return await ReindexIfSaved(saved, musicPath);
+        return await ApplyItunesAwareAsync(musicPath,
+            () => Task.Run(() => ApplyCover(
+                musicPath, prepared.Jpeg, prepared.Width, prepared.Height), ct), ct);
     }
 
     public async Task<ArtworkOpResult> ScrubAsync(string musicPath, int maxDimension, int quality = 90, CancellationToken ct = default)
     {
-        using var mutation = await _mutations.AcquireAsync(musicPath, ct);
-        var saved = await Task.Run(() =>
+        return await ApplyItunesAwareAsync(musicPath, () => Task.Run(() =>
         {
             try
             {
@@ -65,14 +66,12 @@ public sealed class ArtworkService : IArtworkService
             {
                 return Failed(ex.Message);
             }
-        }, ct);
-        return await ReindexIfSaved(saved, musicPath);
+        }, ct), ct);
     }
 
     public async Task<ArtworkOpResult> RemoveAsync(string musicPath, CancellationToken ct = default)
     {
-        using var mutation = await _mutations.AcquireAsync(musicPath, ct);
-        var saved = await Task.Run(() =>
+        return await ApplyItunesAwareAsync(musicPath, () => Task.Run(() =>
         {
             try
             {
@@ -87,8 +86,7 @@ public sealed class ArtworkService : IArtworkService
             {
                 return Failed(ex.Message);
             }
-        }, ct);
-        return await ReindexIfSaved(saved, musicPath);
+        }, ct), ct);
     }
 
     public Task<PreparedImage?> PrepareFromFileAsync(string imagePath, int maxDimension = 0, CancellationToken ct = default)
@@ -115,8 +113,7 @@ public sealed class ArtworkService : IArtworkService
 
     public async Task<ArtworkOpResult> SaveImagesAsync(string musicPath, IReadOnlyList<ArtworkInput> images, CancellationToken ct = default)
     {
-        using var mutation = await _mutations.AcquireAsync(musicPath, ct);
-        var saved = await Task.Run(() =>
+        return await ApplyItunesAwareAsync(musicPath, () => Task.Run(() =>
         {
             try
             {
@@ -153,14 +150,32 @@ public sealed class ArtworkService : IArtworkService
             {
                 return Failed(ex.Message);
             }
-        }, ct);
-        return await ReindexIfSaved(saved, musicPath);
+        }, ct), ct);
     }
 
     private sealed record SavedArtworkResult(ArtworkOpResult Result, IMediaFile? SavedFile = null);
 
     private static SavedArtworkResult Failed(string error) => new(ArtworkOpResult.Fail(error));
     private static SavedArtworkResult Succeeded(ArtworkOpResult result, IMediaFile file) => new(result, file);
+
+    private async Task<ArtworkOpResult> ApplyItunesAwareAsync(
+        string musicPath,
+        Func<Task<SavedArtworkResult>> write,
+        CancellationToken ct)
+    {
+        using IDisposable mutation = await _mutations.AcquireAsync(musicPath, ct);
+        await using IItunesMediaMutationSession? itunesSession = _itunes is null
+            ? null
+            : await _itunes.BeginAsync([musicPath], backupFiles: true, ct);
+        SavedArtworkResult saved = await write().ConfigureAwait(false);
+        if (saved.Result.Success && itunesSession is not null)
+        {
+            await itunesSession.CommitAsync(
+                [ItunesMediaMutation.Refresh(musicPath)], CancellationToken.None);
+            await itunesSession.CompleteAsync(CancellationToken.None);
+        }
+        return await ReindexIfSaved(saved, musicPath);
+    }
 
     // Keep the cache in sync with what we just wrote to disk.
     private async Task<ArtworkOpResult> ReindexIfSaved(SavedArtworkResult saved, string musicPath)

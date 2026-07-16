@@ -11,6 +11,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
 {
     private readonly IAppSettings _settings;
     private readonly IFileMutationCoordinator _mutations;
+    private readonly IItunesMediaMutationService? _itunes;
 
     // The MetadataDatabase wraps a single DbConnection and is not safe for concurrent use, so every
     // operation goes through this gate. One instance is opened lazily and reopened if the config changes.
@@ -18,19 +19,28 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
     private MetadataDatabase? _db;
     private long _openedForVersion = -1;
     private string? _openedDatabaseSpec;
+    private ItunesMediaReconciliationResult _lastItunesReconciliation =
+        ItunesMediaReconciliationResult.NotConfigured;
 
-    public LibraryService(IAppSettings settings, IFileMutationCoordinator? mutations = null)
+    public LibraryService(
+        IAppSettings settings,
+        IFileMutationCoordinator? mutations = null,
+        IItunesMediaMutationService? itunes = null)
     {
         _settings = settings;
         _mutations = mutations ?? FileMutationCoordinator.Shared;
+        _itunes = itunes ?? new ItunesMediaMutationService(settings);
     }
 
     /// <summary>
     /// Creates a non-persisting service instance for command-line workflows. The configuration is
     /// loaded directly and no application recent-file or preference state is read or written.
     /// </summary>
-    public LibraryService(string configurationPath, IFileMutationCoordinator? mutations = null)
-        : this(new CommandLineAppSettings(configurationPath), mutations)
+    public LibraryService(
+        string configurationPath,
+        IFileMutationCoordinator? mutations = null,
+        IItunesMediaMutationService? itunes = null)
+        : this(new CommandLineAppSettings(configurationPath), mutations, itunes)
     {
     }
 
@@ -65,6 +75,26 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
             // MetadataDatabase deliberately commits and returns partial work on cancellation. Surface
             // the cancellation to callers after that safe partial commit instead of calling it success.
             ct.ThrowIfCancellationRequested();
+            if (_itunes is not null && context.Configuration.ItunesLibraryPath is not null)
+            {
+                progress?.Report(new IndexProgress
+                {
+                    Phase = IndexPhase.Finalizing,
+                    Detail = "Reconciling changed files with the configured iTunes library",
+                });
+                IReadOnlyList<IndexedFileSnapshot> files =
+                    await Task.Run(() => db.GetIndexedFileSnapshots(
+                        roots.Select(root => root.Path)), ct).ConfigureAwait(false);
+                _lastItunesReconciliation = await _itunes.ReconcileAsync(
+                    files.Select(file => new ItunesMediaIndexedFile(
+                        file.Path, file.Length, file.LastWriteTimeUtc)).ToArray(),
+                    roots.Select(root => root.Path).ToArray(),
+                    ct).ConfigureAwait(false);
+            }
+            else
+            {
+                _lastItunesReconciliation = ItunesMediaReconciliationResult.NotConfigured;
+            }
             return result;
         }
         finally
@@ -377,6 +407,9 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
             .ToArray();
         using IDisposable lease = await _mutations.AcquireAsync(mutationPaths, ct);
         ValidateOrganizationPlan(moves, ct);
+        await using IItunesMediaMutationSession? itunesSession = _itunes is null
+            ? null
+            : await _itunes.BeginAsync(mutationPaths, backupFiles: false, ct);
         string? journalPath = BeginOrganizeJournal(baseDirs, moves);
 
         // Successful (source → destination) pairs, so we can sync the cache to exactly the moves that
@@ -398,6 +431,15 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                     progress?.Report(++done);
                 }
             }, ct);
+
+            if (itunesSession is not null)
+                await itunesSession.CommitAsync(relocated
+                    .Select(move => ItunesMediaMutation.Relocate(
+                        move.Source, move.Destination))
+                    .ToArray(), CancellationToken.None);
+            TryAppendOrganizeJournal(journalPath, "COMMIT\tORGANIZE");
+            if (itunesSession is not null)
+                await itunesSession.CompleteAsync(CancellationToken.None);
         }
         catch (Exception operationError)
         {
@@ -448,8 +490,6 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                 // Cleanup is best-effort and does not invalidate completed, journaled moves.
             }
         }
-        TryAppendOrganizeJournal(journalPath, "COMMIT\tORGANIZE");
-
         IReadOnlyList<(string Source, string Error)> cacheErrors =
             await SyncMovesToCacheAsync(relocated, context);
         return new OrganizeResult(relocated.Count, [])
@@ -457,6 +497,13 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
             CacheErrors = cacheErrors,
             JournalPath = journalPath,
         };
+    }
+
+    public Task<ItunesMediaReconciliationResult> GetLastItunesReconciliationAsync(
+        CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        return Task.FromResult(_lastItunesReconciliation);
     }
 
     public async Task<LibraryOperationCacheSnapshot> GetOperationCacheSnapshotAsync(
@@ -881,30 +928,6 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
             path = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(configPath))!, path);
 
         return prefix + path;
-    }
-
-    private sealed class CommandLineAppSettings : IAppSettings
-    {
-        private readonly AppConfigurationSnapshot _snapshot;
-
-        public CommandLineAppSettings(string configurationPath)
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(configurationPath);
-            string fullPath = Path.GetFullPath(configurationPath);
-            _snapshot = new(fullPath, new LibraryConfiguration(fullPath), 1);
-        }
-
-        public string? ConfigPath => _snapshot.ConfigPath;
-        public LibraryConfiguration? Configuration => _snapshot.Configuration;
-        public AppConfigurationSnapshot GetSnapshot() => _snapshot;
-        public event EventHandler? ConfigurationChanged { add { } remove { } }
-        public void LoadConfig(string path) =>
-            throw new NotSupportedException("Command-line library settings are immutable.");
-        public string? GetRememberedConfigPath() => null;
-        public IReadOnlyList<string> RecentConfigPaths => [];
-        public void ClearRecentConfigs() { }
-        public string? GetPreference(string key) => null;
-        public void SetPreference(string key, string? value) { }
     }
 
     public void Dispose()

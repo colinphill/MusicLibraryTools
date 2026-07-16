@@ -77,6 +77,34 @@ public class IngestMusicTests
     }
 
     [Fact]
+    public async Task Apply_UsesMutationServiceWithThePlansExplicitItunesLibrary()
+    {
+        using var tree = new TempTree();
+        string source = tree.FileFromFixture("incoming", "one.flac", "sample.flac");
+        string libraryPath = tree.Path("legacy-selected.itl");
+        IngestPlan plan = ManualPlan(tree, [source], requireApproval: false);
+        plan = plan with
+        {
+            Configuration = plan.Configuration with { ItunesLibraryPath = libraryPath },
+        };
+        var itunes = new RecordingItunesMutationService();
+
+        IngestResult result = await new IngestMusicService(
+            new FakeFfmpeg(), itunes: itunes).ApplyAsync(plan, []);
+
+        Assert.Equal(0, result.Failed);
+        Assert.Equal(libraryPath, itunes.LibraryPath);
+        Assert.Contains(itunes.Mutations, mutation =>
+            mutation.Kind == ItunesMediaMutationKind.Add &&
+            mutation.CurrentPath == plan.Albums.Single().Outputs.Single(
+                output => output.Kind == IngestOutputKind.Aac).DestinationPath);
+        Assert.Contains(itunes.Mutations, mutation =>
+            mutation.Kind == ItunesMediaMutationKind.Remove &&
+            mutation.OriginalPath == source);
+        Assert.True(itunes.Completed);
+    }
+
+    [Fact]
     public async Task Apply_ReportsDeterminateOutputProgress()
     {
         using var tree = new TempTree();
@@ -380,6 +408,57 @@ public class IngestMusicTests
     private sealed class InlineProgress(Action<IngestProgress> report) : IProgress<IngestProgress>
     {
         public void Report(IngestProgress value) => report(value);
+    }
+
+    private sealed class RecordingItunesMutationService :
+        IItunesMediaMutationService,
+        IItunesMediaMutationSession
+    {
+        public string? LibraryPath { get; private set; }
+        public string? MediaFolder => null;
+        public bool Active => true;
+        public bool Completed { get; private set; }
+        public IReadOnlyList<ItunesMediaMutation> Mutations { get; private set; } = [];
+
+        public Task<IItunesMediaMutationSession> BeginAsync(
+            IReadOnlyCollection<string> candidatePaths,
+            bool backupFiles,
+            CancellationToken ct = default) =>
+            throw new Xunit.Sdk.XunitException(
+                "Ingest must select the ITL from its resolved plan.");
+
+        public Task<IItunesMediaMutationSession> BeginAsync(
+            IReadOnlyCollection<string> candidatePaths,
+            bool backupFiles,
+            string? libraryPath,
+            CancellationToken ct = default)
+        {
+            LibraryPath = libraryPath;
+            return Task.FromResult<IItunesMediaMutationSession>(this);
+        }
+
+        public Task<ItunesMediaReconciliationResult> ReconcileAsync(
+            IReadOnlyCollection<ItunesMediaIndexedFile> indexedFiles,
+            IReadOnlyCollection<string> indexedRoots,
+            CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task<ItunesMediaMutationResult> CommitAsync(
+            IReadOnlyList<ItunesMediaMutation> mutations,
+            CancellationToken ct = default)
+        {
+            Mutations = mutations;
+            return Task.FromResult(new ItunesMediaMutationResult(
+                true, 0, 0, 1, 1, LibraryPath, null, null, []));
+        }
+
+        public Task CompleteAsync(CancellationToken ct = default)
+        {
+            Completed = true;
+            return Task.CompletedTask;
+        }
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 
     private sealed class TempTree : IDisposable

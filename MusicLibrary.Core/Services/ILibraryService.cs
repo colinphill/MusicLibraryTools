@@ -21,6 +21,14 @@ public interface ILibraryService
     Task<(int Added, int Modified, int Removed, int Unchanged)> IndexAsync(
         IProgress<IndexProgress>? progress = null, CancellationToken ct = default);
 
+    /// <summary>
+    /// Outcome of the most recent index-time reconciliation with the configured binary iTunes
+    /// library. A configured library can report review items without making unsafe identity guesses.
+    /// </summary>
+    Task<ItunesMediaReconciliationResult> GetLastItunesReconciliationAsync(
+        CancellationToken ct = default) =>
+        Task.FromResult(ItunesMediaReconciliationResult.NotConfigured);
+
     /// <summary>Last attempt/success and current availability for every cached scan root.</summary>
     Task<IReadOnlyList<ScanRootHealth>> GetScanRootHealthAsync(CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<ScanRootHealth>>([]);
