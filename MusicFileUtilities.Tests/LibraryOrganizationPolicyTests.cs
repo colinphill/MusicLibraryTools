@@ -41,4 +41,21 @@ public sealed class LibraryOrganizationPolicyTests
             Path.Combine(excluded, "song.m4a"), locations));
         Assert.Empty(LibraryOrganizationPolicy.CleanupRoots(locations));
     }
+
+    [Fact]
+    public void DuplicateRootCannotMixNamingConventions()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "organization-policy");
+        LibraryIndexLocation[] locations =
+        [
+            new(root, null, [new("Lossless", null)], null),
+            new(root, null, [new("Portable", null)], null,
+                UseItunesCanonicalNaming: true),
+        ];
+
+        var error = Assert.Throws<InvalidDataException>(
+            () => LibraryOrganizationPolicy.EligibleTargets(locations));
+
+        Assert.Contains("ItunesCanonicalNaming", error.Message);
+    }
 }

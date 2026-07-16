@@ -112,7 +112,7 @@ at least one `Set`; multiple sets form a union:
   <Set Name="Archive" Offset="../Archive/FLAC"/>
 </IndexTarget>
 <IndexTarget Path="Z:\iTunes\Purchased Sync" Organize="false"
-             SyncTarget="true">
+             SyncTarget="true" ItunesCanonicalNaming="true">
   <Set Name="Car" Offset="../Music/Purchased"/>
 </IndexTarget>
 <SyncPlaylist>Favorites</SyncPlaylist>
@@ -137,6 +137,10 @@ to textual names in the cache database without a rescan.
 Set `Organize="false"` on an `IndexTarget` to keep it indexed and available to browsing, analysis,
 sync, and playlist export while excluding its files from organization previews, moves, and recursive
 empty-folder cleanup. The attribute defaults to `true`.
+Set `ItunesCanonicalNaming="true"` when an `IndexTarget` is an iTunes Media folder. Organization
+previews, organization repairs in Analyze, and applied moves then use iTunes's `Music`, artist (or
+`Compilations`), album, 40-character component, and collision-suffix rules instead of the internal
+library naming convention.
 
 Library indexing uses up to 16 concurrent metadata readers so high-latency SMB shares can
 overlap file opens. Set `MLT_INDEX_PARALLELISM` to a value from 1 through 64 to tune the global

@@ -27,6 +27,7 @@ namespace MetadataCaching
         private DateTime _lastwritetime;
         private long _length;
         private bool _hasalbumartist;
+        private bool _compilation;
         private bool _touched = false;
         private CodecType _codectype = CodecType.Lossy;
         private string _codecname = "";
@@ -53,6 +54,8 @@ namespace MetadataCaching
             _artist = mp.Artist;
             _albumartist = mp.AlbumArtist;
             _hasalbumartist = mp.HasAlbumArtist;
+            _compilation = mp.GetKnownMetadata().Any(item =>
+                item.Key == TagFields.Compilation && IsTrue(item.Value));
             _tracknumber = mp.TrackNumber;
             _tracktotal = mp.TrackTotal;
             _discnumber = mp.DiscNumber;
@@ -86,6 +89,7 @@ namespace MetadataCaching
         public string Artist => _artist;
         public string AlbumArtist => _albumartist;
         public bool HasAlbumArtist => _hasalbumartist;
+        public bool Compilation => _compilation;
         public int? TrackNumber => _tracknumber;
         public int? TrackTotal => _tracktotal;
         public int? DiscNumber => _discnumber;
@@ -94,6 +98,12 @@ namespace MetadataCaching
         public DateTime LastWriteTime => _lastwritetime;
         public long Length => _length;
         public int DurationInSeconds => _durationinseconds;
+
+        private static bool IsTrue(string value) =>
+            value is not null &&
+            (value.Equals("1", StringComparison.OrdinalIgnoreCase) ||
+             value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+             value.Equals("yes", StringComparison.OrdinalIgnoreCase));
         public void Touch()
         {
             _touched = true;

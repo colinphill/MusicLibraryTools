@@ -17,6 +17,7 @@ public sealed class IndexTargetEntry
     public List<IndexTargetSetEntry> Memberships { get; set; } = [];
     public string? Filter { get; set; }
     public bool Organize { get; set; } = true;
+    public bool UseItunesCanonicalNaming { get; set; }
     public LibraryIngestRole IngestRole { get; set; }
     public bool IsSyncTarget { get; set; }
 }
@@ -87,6 +88,7 @@ public sealed class EditableLibraryConfig
                 Target = location.Target,
                 DefaultOffset = location.DefaultOffset,
                 Organize = location.Organize,
+                UseItunesCanonicalNaming = location.UseItunesCanonicalNaming,
                 IngestRole = location.IngestRole,
                 IsSyncTarget = location.IsSyncTarget,
                 Memberships = location.Memberships.Select(membership => new IndexTargetSetEntry
@@ -157,6 +159,8 @@ public sealed class EditableLibraryConfig
                 e.SetAttributeValue("Offset", t.DefaultOffset.Trim());
             if (!string.IsNullOrEmpty(t.Filter)) e.SetAttributeValue("Filter", t.Filter);
             if (!t.Organize) e.SetAttributeValue("Organize", false);
+            if (t.UseItunesCanonicalNaming)
+                e.SetAttributeValue("ItunesCanonicalNaming", true);
             if (t.IngestRole != LibraryIngestRole.None)
                 e.SetAttributeValue("IngestRole", t.IngestRole);
             if (t.IsSyncTarget)

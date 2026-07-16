@@ -327,15 +327,15 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
             var context = GetContext();
             var config = context.Configuration;
             var locations = config.IndexLocations.ToList();
-            var baseDirs = LibraryOrganizationPolicy.EligibleRoots(locations);
+            var targets = LibraryOrganizationPolicy.EligibleTargets(locations);
             var (lengthLimit, discLimit) = GetLimits(config);
             var db = GetDatabase(context);
             return await Task.Run(() =>
             {
                 var moves = new List<PlannedMove>();
-                foreach (var baseDir in baseDirs)
+                foreach (var target in targets)
                 {
-                    var cache = db.BuildCache([baseDir], buildSecondaryIndexes: false);
+                    var cache = db.BuildCache([target.Target], buildSecondaryIndexes: false);
                     // Track destinations already claimed in this preview so two sources don't plan
                     // the same target (the console tool relied on File.Move happening between checks).
                     var claimed = new HashSet<string>(FilePathComparer);
@@ -344,7 +344,8 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                         ct.ThrowIfCancellationRequested();
                         if (!LibraryOrganizationPolicy.IsPathEligible(source, locations))
                             continue;
-                        var dest = CanonicalPath(baseDir, entry, source, lengthLimit, discLimit, claimed);
+                        var dest = CanonicalPath(target, entry, source,
+                            lengthLimit, discLimit, claimed);
                         if (dest is not null)
                         {
                             claimed.Add(dest);
@@ -365,21 +366,22 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         }
     }
 
-    // Mirrors OrganizeFiles: canonical path via FormatPath, Unicode-normalized, with _N collision
-    // suffixes. Returns null when the file is already in place (no move needed).
-    private static string? CanonicalPath(string baseDir, MetadataCacheEntry entry, string source,
+    // Returns null when the file is already in place. Internal naming uses _N collision suffixes;
+    // iTunes naming uses the native space-N convention.
+    private static string? CanonicalPath(LibraryIndexLocation target,
+        MetadataCacheEntry entry, string source,
         int lengthLimit, int discLimit, HashSet<string> claimed)
     {
-        var ext = Path.GetExtension(source);
-        var tgt = Path.Combine(baseDir, entry.FormatPath(lengthLimit, discLimit) + ext).Normalize();
+        string tgt = LibraryCanonicalPath.Initial(target, entry, source, lengthLimit, discLimit);
 
         if (FilePathComparer.Equals(source, tgt) && source.IsNormalized())
             return null; // already canonical
 
-        int index = 2;
+        int index = target.UseItunesCanonicalNaming ? 1 : 2;
         while ((File.Exists(tgt) && !FilePathComparer.Equals(source, tgt)) || claimed.Contains(tgt))
         {
-            tgt = Path.Combine(baseDir, entry.FormatPath(lengthLimit, discLimit) + $"_{index++}" + ext).Normalize();
+            tgt = LibraryCanonicalPath.Collision(target, entry, source,
+                lengthLimit, discLimit, index++);
             if (FilePathComparer.Equals(source, tgt) && source.IsNormalized())
                 return null; // the numbered target is the file itself
         }

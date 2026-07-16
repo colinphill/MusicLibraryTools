@@ -33,6 +33,7 @@ public class EditableLibraryConfigTests
                         Organize = false,
                         IngestRole = LibraryIngestRole.Cd,
                         IsSyncTarget = true,
+                        UseItunesCanonicalNaming = true,
                         Memberships =
                         [
                             new() { Name = "Lossless" },
@@ -78,6 +79,8 @@ public class EditableLibraryConfigTests
             Assert.Equal(LibraryIngestRole.HiRes, reloaded.IndexTargets[1].IngestRole);
             Assert.True(reloaded.IndexTargets[0].IsSyncTarget);
             Assert.False(reloaded.IndexTargets[1].IsSyncTarget);
+            Assert.True(reloaded.IndexTargets[0].UseItunesCanonicalNaming);
+            Assert.False(reloaded.IndexTargets[1].UseItunesCanonicalNaming);
             Assert.Equal(2, reloaded.PlaylistTargets.Count);
             Assert.Equal(@"Z:\WPL", reloaded.PlaylistTargets[0].Target);
             Assert.Equal("wpl", reloaded.PlaylistTargets[0].Type);
@@ -91,6 +94,9 @@ public class EditableLibraryConfigTests
                 (string?)xml.Root.Elements("IndexTarget").First().Attribute("Organize"));
             Assert.Equal("true",
                 (string?)xml.Root.Elements("IndexTarget").First().Attribute("SyncTarget"));
+            Assert.Equal("true",
+                (string?)xml.Root.Elements("IndexTarget").First()
+                    .Attribute("ItunesCanonicalNaming"));
             Assert.Null(xml.Root.Element("SyncTarget"));
             Assert.Equal(["Favorites", "Road Trip"],
                 xml.Root.Elements("SyncPlaylist").Select(element => element.Value));

@@ -56,6 +56,17 @@ public sealed class WriterAndMutationTests
     }
 
     [Fact]
+    public void CanonicalMediaPathOmitsPrefixWhenTrackNumberIsMissing()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "iTunes Media");
+        string path = ItlMediaOrganization.CanonicalMusicPath(root, "Artist", "Artist",
+            "Album", (int?)null, "Title", compilation: false, extension: ".flac");
+
+        Assert.Equal(Path.Combine(Path.GetFullPath(root), "Music", "Artist",
+            "Album", "Title.flac"), path);
+    }
+
+    [Fact]
     public void AacImportReplacesTemplateMetadataAndLinksEntities()
     {
         string media = Path.Combine(Path.GetTempPath(), $"itl-import-{Guid.NewGuid():N}.m4a");

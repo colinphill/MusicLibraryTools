@@ -89,11 +89,13 @@ namespace MetadataCaching
 
     public partial class MetadataCacheEntry
     {
-        public MetadataCacheEntry(DbDataReader reader)
+        public MetadataCacheEntry(DbDataReader reader, bool? compilation = null)
         {
-            _lastwritetime = DateTime.SpecifyKind(reader.GetDateTime(1), DateTimeKind.Utc);
+            _lastwritetime = DateTime.SpecifyKind(
+                reader.GetDateTime(reader.GetOrdinal("LastWriteTime")), DateTimeKind.Utc);
             _length = reader.GetInt64("FileSize");
             _hasalbumartist = reader.GetInt64("HasAlbumArtist") != 0;
+            _compilation = compilation ?? reader.GetInt64("Compilation") != 0;
             _codecname = reader.GetString("CodecName");
             _codectype = (CodecType)Enum.Parse(typeof(CodecType), reader.GetString("CodecType"));
             _averagebitrate = (uint)reader.GetInt64("AverageBitrate");
@@ -664,6 +666,19 @@ namespace MetadataCaching
 
             MetadataCache cache = new MetadataCache(buildSecondaryIndexes);
             var sharedStrings = new Dictionary<string, string>(StringComparer.Ordinal);
+            var compilationFiles = new HashSet<long>();
+            using (var compilationCommand = conn_.CreateCommand())
+            {
+                // Resolve this sparse flag once. A correlated EXISTS here previously repeated a
+                // Metadata lookup for every cached track and made large-library startup appear hung.
+                compilationCommand.CommandText =
+                    "SELECT m.FileID FROM Metadata m WHERE m.KeyID = " +
+                    "(SELECT ID FROM MetadataKeys WHERE \"Key\" = 'Compilation') " +
+                    "AND LOWER(m.Value) IN ('1','true','yes')";
+                using var compilationReader = compilationCommand.ExecuteReader();
+                while (compilationReader.Read())
+                    compilationFiles.Add(compilationReader.GetInt64(0));
+            }
 
             foreach (var path in paths)
             {
@@ -678,12 +693,17 @@ namespace MetadataCaching
                         .Where(e => e.Length != 0)
                         .ToHashSet(StringComparer.OrdinalIgnoreCase);
                 using var querycomm = conn_.CreateCommand();
-                querycomm.CommandText = "SELECT Path, LastWriteTime, FileSize, HasAlbumArtist, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames, Artist, AlbumArtist, Album, TrackNumber, TrackTotal, DiscNumber, DiscTotal, ReleaseDate, Track, AlbumPath FROM MetadataSummaryView WHERE ScanSetID = " + set.ID;
+                querycomm.CommandText = "SELECT ID, Path, LastWriteTime, FileSize, HasAlbumArtist, " +
+                    "CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, " +
+                    "Channels, DurationInFrames, Artist, AlbumArtist, Album, TrackNumber, TrackTotal, " +
+                    "DiscNumber, DiscTotal, ReleaseDate, Track, AlbumPath " +
+                    "FROM MetadataSummaryView WHERE ScanSetID = " + set.ID;
                 using var reader = querycomm.ExecuteReader();
                 int oAlbumPath = reader.GetOrdinal("AlbumPath"), oPath = reader.GetOrdinal("Path");
                 while (reader.Read())
                 {
-                    var ce = new MetadataCacheEntry(reader);
+                    var ce = new MetadataCacheEntry(
+                        reader, compilationFiles.Contains(reader.GetInt64("ID")));
                     ce.Strip(sharedStrings);
                     var fullpath = Path.Combine(set.Path, reader.GetString(oAlbumPath), reader.GetString(oPath));
                     if (extensions is null || extensions.Count == 0)
@@ -1700,8 +1720,11 @@ namespace MetadataCaching
 
             using (var cmd = conn_.CreateCommand())
             {
-                // Column order matches BuildCache so the MetadataCacheEntry(reader) ordinal reads line up.
-                cmd.CommandText = "SELECT Path, LastWriteTime, FileSize, HasAlbumArtist, CodecName, CodecType, AverageBitrate, MaxBitrate," +
+                cmd.CommandText = "SELECT Path, LastWriteTime, FileSize, HasAlbumArtist," +
+                    " CASE WHEN EXISTS (SELECT 1 FROM Metadata m JOIN MetadataKeys k ON k.ID = m.KeyID" +
+                    " WHERE m.FileID = MetadataSummaryView.ID AND k.\"Key\" = 'Compilation'" +
+                    " AND LOWER(m.Value) IN ('1','true','yes')) THEN 1 ELSE 0 END AS Compilation," +
+                    " CodecName, CodecType, AverageBitrate, MaxBitrate," +
                     " BitsPerSample, SampleRate, Channels, DurationInFrames, Artist, AlbumArtist, Album," +
                     " TrackNumber, TrackTotal, DiscNumber, DiscTotal, ReleaseDate, Track, TagType, ID" +
                     " FROM MetadataSummaryView WHERE ScanSetID = @set AND AlbumPath = @album AND Path = @file LIMIT 1";

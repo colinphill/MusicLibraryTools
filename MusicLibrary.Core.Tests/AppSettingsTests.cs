@@ -66,6 +66,24 @@ public sealed class AppSettingsTests
         Assert.Null(settings.Configuration);
     }
 
+    [Fact]
+    public void InvalidIndexTargetItunesCanonicalNamingFlag_IsRejectedDuringLoad()
+    {
+        using var temp = new TempDirectory();
+        var config = Path.Combine(temp.Path, "bad-itunes-naming.xml");
+        File.WriteAllText(config,
+            "<LibraryConfiguration><DatabaseFile>cache.db</DatabaseFile>" +
+            $"<IndexTarget ItunesCanonicalNaming=\"sometimes\">" +
+            $"{System.Security.SecurityElement.Escape(temp.Path)}</IndexTarget>" +
+            "</LibraryConfiguration>");
+        var settings = new AppSettings(Path.Combine(temp.Path, "settings.json"));
+
+        var error = Assert.Throws<InvalidDataException>(() => settings.LoadConfig(config));
+
+        Assert.Contains("ItunesCanonicalNaming", error.Message);
+        Assert.Null(settings.Configuration);
+    }
+
     [Theory]
     [InlineData("<PlaylistTarget Type=\"m3u\">Z:\\Playlists</PlaylistTarget>")]
     [InlineData("<PlaylistTarget Set=\"1\">Z:\\Playlists</PlaylistTarget><PlaylistType>m3u</PlaylistType>")]

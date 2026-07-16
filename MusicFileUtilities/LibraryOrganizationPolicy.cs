@@ -11,12 +11,25 @@ namespace MusicLibraryTools;
 /// </summary>
 public static class LibraryOrganizationPolicy
 {
-    public static IReadOnlyList<string> EligibleRoots(
+    public static IReadOnlyList<LibraryIndexLocation> EligibleTargets(
         IEnumerable<LibraryIndexLocation> locations) =>
         locations
             .GroupBy(location => Path.TrimEndingDirectorySeparator(location.Target), PathComparer)
             .Where(group => group.All(location => location.Organize))
-            .Select(group => group.First().Target)
+            .Select(group =>
+            {
+                LibraryIndexLocation[] targets = group.ToArray();
+                if (targets.Select(target => target.UseItunesCanonicalNaming).Distinct().Count() > 1)
+                    throw new InvalidDataException(
+                        $"IndexTarget '{targets[0].Target}' has conflicting ItunesCanonicalNaming values.");
+                return targets[0];
+            })
+            .ToArray();
+
+    public static IReadOnlyList<string> EligibleRoots(
+        IEnumerable<LibraryIndexLocation> locations) =>
+        EligibleTargets(locations)
+            .Select(target => target.Target)
             .ToArray();
 
     public static bool IsPathEligible(

@@ -15,6 +15,7 @@ public partial class IndexTargetRow : ObservableObject
     [ObservableProperty] private string? _defaultOffset;
     [ObservableProperty] private string? _filter;
     [ObservableProperty] private bool _organize = true;
+    [ObservableProperty] private bool _useItunesCanonicalNaming;
     [ObservableProperty] private LibraryIngestRole _ingestRole;
     [ObservableProperty] private bool _isSyncTarget;
     public ObservableCollection<IndexTargetSetRow> Memberships { get; } = [];
@@ -101,6 +102,7 @@ public partial class ConfigDialogViewModel : ViewModelBase
                     DefaultOffset = t.DefaultOffset,
                     Filter = t.Filter,
                     Organize = t.Organize,
+                    UseItunesCanonicalNaming = t.UseItunesCanonicalNaming,
                     IngestRole = t.IngestRole,
                     IsSyncTarget = t.IsSyncTarget,
                 };
@@ -280,6 +282,7 @@ public partial class ConfigDialogViewModel : ViewModelBase
                         Target = t.Target,
                         DefaultOffset = t.DefaultOffset,
                         Organize = t.Organize,
+                        UseItunesCanonicalNaming = t.UseItunesCanonicalNaming,
                         IngestRole = t.IngestRole,
                         IsSyncTarget = t.IsSyncTarget,
                         Memberships = t.Memberships

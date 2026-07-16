@@ -18,7 +18,7 @@ namespace MusicLibrary.Core.Tests;
 public class DatabaseReadTests
 {
     private static (string Work, string Music, string Config, string Song) Setup(
-        string fixture, bool organize = true)
+        string fixture, bool organize = true, bool useItunesCanonicalNaming = false)
     {
         var work = Path.Combine(Path.GetTempPath(), "mldb_" + Guid.NewGuid().ToString("N"));
         var music = Path.Combine(work, "music");
@@ -32,7 +32,15 @@ public class DatabaseReadTests
             DatabaseFile = "cache.db",
             LengthLimit = 255,
             DiscNumLengthLimit = 255,
-            IndexTargets = [new IndexTargetEntry { Target = music, Organize = organize }],
+            IndexTargets =
+            [
+                new IndexTargetEntry
+                {
+                    Target = music,
+                    Organize = organize,
+                    UseItunesCanonicalNaming = useItunesCanonicalNaming,
+                },
+            ],
         }.Save(config);
 
         return (work, music, config, song);
@@ -150,6 +158,64 @@ public class DatabaseReadTests
             Assert.Contains("disabled", error.Message, StringComparison.OrdinalIgnoreCase);
             Assert.True(File.Exists(song));
             Assert.False(File.Exists(move.Destination));
+        }
+        finally
+        {
+            try { Directory.Delete(work, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task ItunesCanonicalNaming_IsUsedByOrganizationAndAnalysis()
+    {
+        var (work, music, config, song) = Setup(
+            "sample.flac", useItunesCanonicalNaming: true);
+        try
+        {
+            var settings = new AppSettings(Path.Combine(work, "settings.json"));
+            settings.LoadConfig(config);
+            using var library = new LibraryService(settings);
+            await library.IndexAsync();
+
+            string expected = Path.Combine(music, "Music", "TestArtist",
+                "TestAlbum", "03 TestTitle.flac");
+            PlannedMove move = Assert.Single(await library.PreviewMovesAsync());
+            Assert.Equal(expected, move.Destination);
+
+            IReadOnlyList<TrackRecord> records = await library.GetAllRecordsAsync();
+            RepresentationRepairPreview analysis =
+                await new RepresentationRepairService(library)
+                    .PreviewAsync(records, settings.Configuration);
+            Assert.Contains(analysis.FileActions, action =>
+                action.Kind == RepresentationRepairKind.Organize &&
+                action.SourcePath == song &&
+                action.DestinationPath == expected);
+        }
+        finally
+        {
+            try { Directory.Delete(work, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task ItunesCanonicalNaming_LoadsCompilationFlagWithoutPerTrackMetadataQueries()
+    {
+        var (work, music, config, song) = Setup(
+            "sample.flac", useItunesCanonicalNaming: true);
+        try
+        {
+            var settings = new AppSettings(Path.Combine(work, "settings.json"));
+            settings.LoadConfig(config);
+            using var library = new LibraryService(settings);
+            await library.IndexAsync();
+            BatchWriteResult write = await new TagWriteService(library).ApplyAsync(
+                [song], [new TagEdit(TagFields.Compilation, "1")]);
+            Assert.Equal(1, write.SavedCount);
+
+            PlannedMove move = Assert.Single(await library.PreviewMovesAsync());
+
+            Assert.Equal(Path.Combine(music, "Music", "Compilations",
+                "TestAlbum", "03 TestTitle.flac"), move.Destination);
         }
         finally
         {

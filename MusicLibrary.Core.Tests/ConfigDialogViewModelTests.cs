@@ -22,7 +22,12 @@ public sealed class ConfigDialogViewModelTests
                 IndexTargets =
                 [
                     new() { Target = Path.Combine(root, "source") },
-                    new() { Target = Path.Combine(root, "portable"), IsSyncTarget = true },
+                    new()
+                    {
+                        Target = Path.Combine(root, "portable"),
+                        IsSyncTarget = true,
+                        UseItunesCanonicalNaming = true,
+                    },
                 ],
                 SyncPlaylists = ["Favorites", "Recently Added"],
             }.Save(path);
@@ -31,6 +36,8 @@ public sealed class ConfigDialogViewModelTests
 
             Assert.Equal(Path.Combine(root, "portable"),
                 Assert.Single(viewModel.IndexTargets, target => target.IsSyncTarget).Target);
+            Assert.True(Assert.Single(viewModel.IndexTargets,
+                target => target.IsSyncTarget).UseItunesCanonicalNaming);
             Assert.Equal(["Favorites", "Recently Added"],
                 viewModel.SyncPlaylists.Select(playlist => playlist.Name));
         }

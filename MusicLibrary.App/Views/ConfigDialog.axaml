@@ -87,6 +87,9 @@
                                             <CheckBox Content="Include in organization"
                                                       IsChecked="{Binding Organize}"
                                                       ToolTip.Tip="Clear to keep this root indexed while excluding it from organization operations"/>
+                                            <CheckBox Content="Use iTunes canonical naming"
+                                                      IsChecked="{Binding UseItunesCanonicalNaming}"
+                                                      ToolTip.Tip="Treat this IndexTarget as an iTunes Media folder and organize files below Music using iTunes component and filename rules"/>
                                             <RadioButton Content="Cross-library sync target"
                                                          GroupName="CrossLibrarySyncTarget"
                                                          IsChecked="{Binding IsSyncTarget}"

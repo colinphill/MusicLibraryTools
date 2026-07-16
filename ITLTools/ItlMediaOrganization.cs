@@ -9,11 +9,24 @@ public static class ItlMediaOrganization
     public static string CanonicalMusicPath(string mediaFolder, string? albumArtist, string? artist,
         string album, int trackNumber, string title, bool compilation, string extension = ".m4a")
     {
+        if (trackNumber <= 0)
+            throw new ArgumentOutOfRangeException(nameof(trackNumber));
+        return CanonicalMusicPath(mediaFolder, albumArtist, artist, album,
+            (int?)trackNumber, title, compilation, extension);
+    }
+
+    /// <summary>
+    /// Returns the native iTunes music path when a cached track has no track number. iTunes omits
+    /// the numeric prefix in that case rather than making the file impossible to organize.
+    /// </summary>
+    public static string CanonicalMusicPath(string mediaFolder, string? albumArtist, string? artist,
+        string album, int? trackNumber, string title, bool compilation, string extension = ".m4a")
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(mediaFolder);
         ArgumentException.ThrowIfNullOrWhiteSpace(album);
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
         if (trackNumber <= 0)
-            throw new ArgumentOutOfRangeException(nameof(trackNumber));
+            trackNumber = null;
         if (string.IsNullOrWhiteSpace(extension))
             throw new ArgumentException("An extension is required.", nameof(extension));
         if (!extension.StartsWith('.'))
@@ -29,7 +42,8 @@ public static class ItlMediaOrganization
         string albumFolder = Component(album);
         // Native iTunes' 40-character filename limit includes the extension. Collision suffixes
         // are appended later and may make an otherwise truncated filename longer than 40.
-        string fileName = Component($"{trackNumber:D2} {title}", ComponentLengthLimit - extension.Length) + extension;
+        string stem = trackNumber is null ? title : $"{trackNumber:D2} {title}";
+        string fileName = Component(stem, ComponentLengthLimit - extension.Length) + extension;
         return Path.Combine(Path.GetFullPath(mediaFolder), "Music", artistFolder, albumFolder, fileName);
     }
 

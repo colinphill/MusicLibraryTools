@@ -52,7 +52,8 @@ namespace MusicLibraryTools
         string? Filter,
         bool Organize = true,
         LibraryIngestRole IngestRole = LibraryIngestRole.None,
-        bool IsSyncTarget = false)
+        bool IsSyncTarget = false,
+        bool UseItunesCanonicalNaming = false)
     {
         public IReadOnlyList<string> Sets { get; } =
             Memberships.Select(membership => membership.Name).ToArray();
@@ -194,7 +195,8 @@ namespace MusicLibraryTools
                 CleanOptional((string?)element.Attribute("Filter")),
                 ParseOptionalBoolean(element, "Organize", defaultValue: true),
                 ParseIngestRole((string?)element.Attribute("IngestRole")),
-                ParseOptionalBoolean(element, "SyncTarget", defaultValue: false));
+                ParseOptionalBoolean(element, "SyncTarget", defaultValue: false),
+                ParseOptionalBoolean(element, "ItunesCanonicalNaming", defaultValue: false));
         }
 
         private static LibraryIngestRole ParseIngestRole(string? value)
