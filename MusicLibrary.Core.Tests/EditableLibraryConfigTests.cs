@@ -24,7 +24,7 @@ public class EditableLibraryConfigTests
                 AacBitrateKbps = 320,
                 DeleteSourcesAfterIngest = true,
                 RemoveNonMusicAfterIngest = true,
-                SyncTarget = @"\\nas\music",
+                SyncPlaylists = ["Favorites", "Road Trip"],
                 IndexTargets =
                 [
                     new IndexTargetEntry
@@ -32,6 +32,7 @@ public class EditableLibraryConfigTests
                         Target = @"Z:\FLAC", DefaultOffset = "/Music", Filter = "*.flac",
                         Organize = false,
                         IngestRole = LibraryIngestRole.Cd,
+                        IsSyncTarget = true,
                         Memberships =
                         [
                             new() { Name = "Lossless" },
@@ -62,7 +63,7 @@ public class EditableLibraryConfigTests
             Assert.Equal(320, reloaded.AacBitrateKbps);
             Assert.True(reloaded.DeleteSourcesAfterIngest);
             Assert.True(reloaded.RemoveNonMusicAfterIngest);
-            Assert.Equal(@"\\nas\music", reloaded.SyncTarget);
+            Assert.Equal(["Favorites", "Road Trip"], reloaded.SyncPlaylists);
             Assert.Equal(2, reloaded.IndexTargets.Count);
             Assert.Equal(@"Z:\FLAC", reloaded.IndexTargets[0].Target);
             Assert.Equal(["Lossless", "Car3"], reloaded.IndexTargets[0].Memberships.Select(set => set.Name));
@@ -75,6 +76,8 @@ public class EditableLibraryConfigTests
             Assert.True(reloaded.IndexTargets[1].Organize);
             Assert.Equal(LibraryIngestRole.Cd, reloaded.IndexTargets[0].IngestRole);
             Assert.Equal(LibraryIngestRole.HiRes, reloaded.IndexTargets[1].IngestRole);
+            Assert.True(reloaded.IndexTargets[0].IsSyncTarget);
+            Assert.False(reloaded.IndexTargets[1].IsSyncTarget);
             Assert.Equal(2, reloaded.PlaylistTargets.Count);
             Assert.Equal(@"Z:\WPL", reloaded.PlaylistTargets[0].Target);
             Assert.Equal("wpl", reloaded.PlaylistTargets[0].Type);
@@ -86,6 +89,11 @@ public class EditableLibraryConfigTests
             Assert.Equal(@"Z:\FLAC", (string?)xml.Root.Elements("IndexTarget").First().Attribute("Path"));
             Assert.Equal("false",
                 (string?)xml.Root.Elements("IndexTarget").First().Attribute("Organize"));
+            Assert.Equal("true",
+                (string?)xml.Root.Elements("IndexTarget").First().Attribute("SyncTarget"));
+            Assert.Null(xml.Root.Element("SyncTarget"));
+            Assert.Equal(["Favorites", "Road Trip"],
+                xml.Root.Elements("SyncPlaylist").Select(element => element.Value));
             Assert.Equal(2, xml.Root.Elements("IndexTarget").First().Elements("Set").Count());
             Assert.All(xml.Root.Elements("PlaylistTarget"), target =>
             {
@@ -134,6 +142,67 @@ public class EditableLibraryConfigTests
             Assert.Equal(@"Z:\Playlists", playlistTarget.Target);
             Assert.Equal("wpl", playlistTarget.Type);
             Assert.Equal(["Car4", "Desktop2"], playlistTarget.Sets);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void LegacyStandaloneSyncTargetMigratesToFlaggedIndexTarget()
+    {
+        string path = Path.Combine(Path.GetTempPath(), "cfg_" + Guid.NewGuid().ToString("N") + ".xml");
+        try
+        {
+            File.WriteAllText(path,
+                "<LibraryConfiguration>" +
+                "<IndexTarget Path=\"source\" />" +
+                "<SyncTarget>portable</SyncTarget>" +
+                "<SyncPlaylist>Favorites</SyncPlaylist>" +
+                "</LibraryConfiguration>");
+
+            EditableLibraryConfig editable = EditableLibraryConfig.Load(path);
+            IndexTargetEntry syncTarget =
+                Assert.Single(editable.IndexTargets, target => target.IsSyncTarget);
+            Assert.Equal("portable", syncTarget.Target);
+            Assert.Equal(["Favorites"], editable.SyncPlaylists);
+
+            editable.Save(path);
+
+            var xml = System.Xml.Linq.XDocument.Load(path);
+            Assert.Null(xml.Root!.Element("SyncTarget"));
+            Assert.Equal("true", (string?)xml.Root.Elements("IndexTarget")
+                .Single(element => (string?)element.Attribute("Path") == "portable")
+                .Attribute("SyncTarget"));
+            var configuration = new LibraryConfiguration(path);
+            Assert.Equal("portable", configuration.CrossSyncTargetLibraryPath);
+            Assert.Equal(["Favorites"], configuration.SyncPlaylists);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void SaveRejectsMoreThanOneSyncTarget()
+    {
+        string path = Path.Combine(Path.GetTempPath(), "cfg_" + Guid.NewGuid().ToString("N") + ".xml");
+        try
+        {
+            var configuration = new EditableLibraryConfig
+            {
+                IndexTargets =
+                [
+                    new() { Target = "first", IsSyncTarget = true },
+                    new() { Target = "second", IsSyncTarget = true },
+                ],
+            };
+
+            InvalidDataException error =
+                Assert.Throws<InvalidDataException>(() => configuration.Save(path));
+            Assert.Contains("only one", error.Message, StringComparison.OrdinalIgnoreCase);
         }
         finally
         {

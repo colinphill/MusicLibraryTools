@@ -79,10 +79,15 @@ public sealed class CrossLibrarySyncService : ICrossLibrarySyncService
         LibraryOperationContext context = await _contexts.CreateAsync(
             request.ConfigurationPath, request.ItunesLibraryPath, progress, ct).ConfigureAwait(false);
         var issues = new List<OperationIssue>();
-        string[] configuredTargets = context.Configuration["SyncTarget"];
-        if (configuredTargets.Length != 1 || string.IsNullOrWhiteSpace(configuredTargets[0]))
-            return BlockedPlan(request, "", "missing-target", "Exactly one SyncTarget is required.");
-        string configuredTarget = configuredTargets[0];
+        string configuredTarget;
+        try
+        {
+            configuredTarget = context.Configuration.CrossSyncTargetLibraryPath;
+        }
+        catch (InvalidDataException error)
+        {
+            return BlockedPlan(request, "", "missing-target", error.Message);
+        }
 
         string targetRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(configuredTarget));
         string? filesystemRoot = Path.GetPathRoot(targetRoot);
@@ -90,15 +95,15 @@ public sealed class CrossLibrarySyncService : ICrossLibrarySyncService
                 targetRoot, Path.TrimEndingDirectorySeparator(filesystemRoot)))
             issues.Add(new("filesystem-root", OperationIssueSeverity.Blocker,
                 "A filesystem root cannot be used as the synchronization target.", targetRoot));
-        foreach (var source in context.IndexLocations.Where(location => PathsOverlap(
-                     targetRoot, location.Target)))
+        foreach (var source in context.IndexLocations.Where(location =>
+                     !location.IsSyncTarget && PathsOverlap(targetRoot, location.Target)))
             issues.Add(new("source-overlap", OperationIssueSeverity.Blocker,
                 "The synchronization target overlaps an indexed source root.", source.Target));
         if (issues.Any(issue => issue.Severity == OperationIssueSeverity.Blocker))
             return EmptyPlan(request, targetRoot, issues);
 
-        string[] requestedPlaylists = context.Configuration["SyncPlaylist"];
-        if (requestedPlaylists.Length == 0)
+        IReadOnlyList<string> requestedPlaylists = context.Configuration.SyncPlaylists;
+        if (requestedPlaylists.Count == 0)
             issues.Add(new("missing-playlists", OperationIssueSeverity.Blocker,
                 "At least one SyncPlaylist entry is required."));
         var playlists = requestedPlaylists

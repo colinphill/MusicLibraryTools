@@ -155,10 +155,13 @@
 
         <!-- ===== Body ===== -->
         <Border Grid.Row="1" Classes="card" Padding="0" Margin="14">
-            <TabControl Margin="14,4,14,14" SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}">
+            <TabControl Classes="workspace-tabs"
+                        Margin="14,4,14,14"
+                        SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}">
 
                     <!-- Library: the primary browse + selection surface (auto-populates) -->
-                    <TabItem Header="Library" DataContext="{Binding Table}" x:DataType="vm:DetailsGridViewModel">
+                    <TabItem Header="Library" Classes="workspace-tab"
+                             DataContext="{Binding Table}" x:DataType="vm:DetailsGridViewModel">
                         <Grid RowDefinitions="Auto,*" Margin="2,12,2,2">
                             <WrapPanel Grid.Row="0" Classes="toolbarwrap" Margin="0,0,-8,2">
                                 <Button Content="Reload" Classes="accent" Command="{Binding LoadCommand}"
@@ -253,7 +256,7 @@
                     </TabItem>
 
                     <!-- Tag Editor (single + batch) -->
-                    <TabItem Header="Tag Editor">
+                    <TabItem Header="Tag Editor" Classes="workspace-tab">
                         <Grid RowDefinitions="Auto,*,Auto" Margin="2,10,2,2" DataContext="{Binding Editor}"
                               x:DataType="vm:TagEditorViewModel">
                             <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,12">
@@ -290,7 +293,8 @@
                     </TabItem>
 
                     <!-- Read-only details of the focused file (representative when multi-selected) -->
-                    <TabItem Header="Details" DataContext="{Binding Inspector}" x:DataType="vm:FileInspectorViewModel">
+                    <TabItem Header="Details" Classes="workspace-tab"
+                             DataContext="{Binding Inspector}" x:DataType="vm:FileInspectorViewModel">
                         <Grid Margin="2,12,2,2" RowDefinitions="Auto,*">
                             <TextBlock Grid.Row="0" Text="{Binding MultiSelectionNote}" Classes="muted" Margin="0,0,0,8"
                                        IsVisible="{Binding MultiSelectionNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
@@ -367,7 +371,8 @@
                     </TabItem>
 
                     <!-- Artwork gallery for the focused file -->
-                    <TabItem Header="Artwork" DataContext="{Binding Artwork}" x:DataType="vm:ArtworkViewModel">
+                    <TabItem Header="Artwork" Classes="workspace-tab"
+                             DataContext="{Binding Artwork}" x:DataType="vm:ArtworkViewModel">
                         <Grid RowDefinitions="Auto,Auto,*" Margin="2,12,2,2">
                             <WrapPanel Grid.Row="0" Classes="toolbarwrap" Margin="0,0,-8,0">
                                 <Button Content="Add image…" Classes="accent" Command="{Binding AddCommand}"/>
@@ -439,7 +444,8 @@
                     </TabItem>
 
                     <!-- Library-wide analysis: each type runs on its own button -->
-                    <TabItem Header="Analyze" DataContext="{Binding Analyzer}" x:DataType="vm:AnalyzerViewModel">
+                    <TabItem Header="Analyze" Classes="workspace-tab"
+                             DataContext="{Binding Analyzer}" x:DataType="vm:AnalyzerViewModel">
                         <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="2,12,2,2">
                             <WrapPanel Grid.Row="0" Margin="0,0,0,4">
                                 <Button Content="Inconsistencies" Classes="accent" Margin="0,0,8,8"
@@ -861,7 +867,8 @@
                     </TabItem>
 
                     <!-- Ingest incoming FLAC / ALAC albums -->
-                    <TabItem Header="Ingest" DataContext="{Binding Ingest}" x:DataType="vm:IngestViewModel">
+                    <TabItem Header="Ingest" Classes="workspace-tab"
+                             DataContext="{Binding Ingest}" x:DataType="vm:IngestViewModel">
                         <Grid RowDefinitions="*,Auto" Margin="2,12,2,2">
                             <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto"
                                           HorizontalScrollBarVisibility="Disabled"
@@ -1021,7 +1028,8 @@
                     </TabItem>
 
                     <!-- Organize / Rename (preview → confirm → apply) -->
-                    <TabItem Header="Organize" DataContext="{Binding Organize}" x:DataType="vm:OrganizeViewModel">
+                    <TabItem Header="Organize" Classes="workspace-tab"
+                             DataContext="{Binding Organize}" x:DataType="vm:OrganizeViewModel">
                         <Grid RowDefinitions="Auto,*" Margin="2,12,2,2">
                             <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,10">
                                 <WrapPanel Classes="toolbarwrap" Margin="0,0,-8,-8">
@@ -1050,7 +1058,8 @@
                     </TabItem>
 
                     <!-- Inventory, restore, and retention management for quarantine/recovery operations -->
-                    <TabItem Header="Operations" DataContext="{Binding Operations}" x:DataType="vm:OperationsViewModel">
+                    <TabItem Header="Operations" Classes="workspace-tab"
+                             DataContext="{Binding Operations}" x:DataType="vm:OperationsViewModel">
                         <Grid RowDefinitions="*,Auto" Margin="2,12,2,2">
                             <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto"
                                           HorizontalScrollBarVisibility="Disabled"

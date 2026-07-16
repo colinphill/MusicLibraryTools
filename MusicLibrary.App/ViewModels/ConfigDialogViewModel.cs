@@ -16,6 +16,7 @@ public partial class IndexTargetRow : ObservableObject
     [ObservableProperty] private string? _filter;
     [ObservableProperty] private bool _organize = true;
     [ObservableProperty] private LibraryIngestRole _ingestRole;
+    [ObservableProperty] private bool _isSyncTarget;
     public ObservableCollection<IndexTargetSetRow> Memberships { get; } = [];
 }
 
@@ -31,6 +32,11 @@ public partial class PlaylistTargetRow : ObservableObject
     [ObservableProperty] private string _target = "";
     [ObservableProperty] private string _type = "m3u";
     [ObservableProperty] private string? _sets;
+}
+
+public partial class SyncPlaylistRow : ObservableObject
+{
+    [ObservableProperty] private string _name = "";
 }
 
 /// <summary>
@@ -50,11 +56,11 @@ public partial class ConfigDialogViewModel : ViewModelBase
     [ObservableProperty] private int _aacBitrateKbps = 256;
     [ObservableProperty] private bool _deleteSourcesAfterIngest;
     [ObservableProperty] private bool _removeNonMusicAfterIngest;
-    [ObservableProperty] private string? _syncTarget;
     [ObservableProperty] private string? _currentPath;
     [ObservableProperty] private string? _statusMessage;
 
     public ObservableCollection<IndexTargetRow> IndexTargets { get; } = [];
+    public ObservableCollection<SyncPlaylistRow> SyncPlaylists { get; } = [];
     public ObservableCollection<PlaylistTargetRow> PlaylistTargets { get; } = [];
     public IReadOnlyList<LibraryIngestRole> IngestRoles { get; } =
         Enum.GetValues<LibraryIngestRole>();
@@ -87,7 +93,6 @@ public partial class ConfigDialogViewModel : ViewModelBase
             AacBitrateKbps = config.AacBitrateKbps;
             DeleteSourcesAfterIngest = config.DeleteSourcesAfterIngest;
             RemoveNonMusicAfterIngest = config.RemoveNonMusicAfterIngest;
-            SyncTarget = config.SyncTarget;
             foreach (var t in config.IndexTargets)
             {
                 var row = new IndexTargetRow
@@ -97,6 +102,7 @@ public partial class ConfigDialogViewModel : ViewModelBase
                     Filter = t.Filter,
                     Organize = t.Organize,
                     IngestRole = t.IngestRole,
+                    IsSyncTarget = t.IsSyncTarget,
                 };
                 foreach (IndexTargetSetEntry membership in t.Memberships)
                     row.Memberships.Add(new IndexTargetSetRow
@@ -106,6 +112,8 @@ public partial class ConfigDialogViewModel : ViewModelBase
                     });
                 IndexTargets.Add(row);
             }
+            foreach (string playlist in config.SyncPlaylists)
+                SyncPlaylists.Add(new SyncPlaylistRow { Name = playlist });
             foreach (var target in config.PlaylistTargets)
                 PlaylistTargets.Add(new PlaylistTargetRow
                 {
@@ -129,6 +137,13 @@ public partial class ConfigDialogViewModel : ViewModelBase
     private void RemoveTarget(IndexTargetRow row) => IndexTargets.Remove(row);
 
     [RelayCommand]
+    private void ClearSyncTarget()
+    {
+        foreach (IndexTargetRow target in IndexTargets)
+            target.IsSyncTarget = false;
+    }
+
+    [RelayCommand]
     private void AddSet(IndexTargetRow row) => row.Memberships.Add(new IndexTargetSetRow());
 
     [RelayCommand]
@@ -143,6 +158,12 @@ public partial class ConfigDialogViewModel : ViewModelBase
 
     [RelayCommand]
     private void RemovePlaylistTarget(PlaylistTargetRow row) => PlaylistTargets.Remove(row);
+
+    [RelayCommand]
+    private void AddSyncPlaylist() => SyncPlaylists.Add(new SyncPlaylistRow());
+
+    [RelayCommand]
+    private void RemoveSyncPlaylist(SyncPlaylistRow row) => SyncPlaylists.Remove(row);
 
     [RelayCommand]
     private async Task BrowseTargetAsync(IndexTargetRow row)
@@ -252,7 +273,6 @@ public partial class ConfigDialogViewModel : ViewModelBase
                 AacBitrateKbps = AacBitrateKbps,
                 DeleteSourcesAfterIngest = DeleteSourcesAfterIngest,
                 RemoveNonMusicAfterIngest = RemoveNonMusicAfterIngest,
-                SyncTarget = SyncTarget,
                 IndexTargets = IndexTargets
                     .Where(t => !string.IsNullOrWhiteSpace(t.Target))
                     .Select(t => new IndexTargetEntry
@@ -261,6 +281,7 @@ public partial class ConfigDialogViewModel : ViewModelBase
                         DefaultOffset = t.DefaultOffset,
                         Organize = t.Organize,
                         IngestRole = t.IngestRole,
+                        IsSyncTarget = t.IsSyncTarget,
                         Memberships = t.Memberships
                             .Where(membership => !string.IsNullOrWhiteSpace(membership.Name))
                             .Select(membership => new IndexTargetSetEntry
@@ -271,6 +292,10 @@ public partial class ConfigDialogViewModel : ViewModelBase
                             }).ToList(),
                         Filter = t.Filter,
                     })
+                    .ToList(),
+                SyncPlaylists = SyncPlaylists
+                    .Where(playlist => !string.IsNullOrWhiteSpace(playlist.Name))
+                    .Select(playlist => playlist.Name.Trim())
                     .ToList(),
                 PlaylistTargets = PlaylistTargets
                     .Where(t => !string.IsNullOrWhiteSpace(t.Target))

@@ -1,6 +1,7 @@
 using MusicLibrary.App.Services;
 using MusicLibrary.App.ViewModels;
 using MusicLibrary.Core.Models;
+using MusicLibrary.Core.Services;
 using MusicLibraryTools;
 using Xunit;
 
@@ -8,6 +9,37 @@ namespace MusicLibrary.Core.Tests;
 
 public sealed class ConfigDialogViewModelTests
 {
+    [Fact]
+    public void LoadsSyncTargetSelectionAndSyncPlaylistRows()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"sync-editor-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            string path = Path.Combine(root, "library.xml");
+            new EditableLibraryConfig
+            {
+                IndexTargets =
+                [
+                    new() { Target = Path.Combine(root, "source") },
+                    new() { Target = Path.Combine(root, "portable"), IsSyncTarget = true },
+                ],
+                SyncPlaylists = ["Favorites", "Recently Added"],
+            }.Save(path);
+
+            var viewModel = new ConfigDialogViewModel(new ImportFileDialogs(path), path);
+
+            Assert.Equal(Path.Combine(root, "portable"),
+                Assert.Single(viewModel.IndexTargets, target => target.IsSyncTarget).Target);
+            Assert.Equal(["Favorites", "Recently Added"],
+                viewModel.SyncPlaylists.Select(playlist => playlist.Name));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
     [Fact]
     public async Task ImportLegacyIngestConfigurationAssignsIndexTargetRolesAndBehavior()
     {

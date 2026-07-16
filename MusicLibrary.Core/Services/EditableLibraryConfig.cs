@@ -18,6 +18,7 @@ public sealed class IndexTargetEntry
     public string? Filter { get; set; }
     public bool Organize { get; set; } = true;
     public LibraryIngestRole IngestRole { get; set; }
+    public bool IsSyncTarget { get; set; }
 }
 
 /// <summary>One repeatable playlist export destination.</summary>
@@ -44,7 +45,7 @@ public sealed class EditableLibraryConfig
     public int AacBitrateKbps { get; set; } = 256;
     public bool DeleteSourcesAfterIngest { get; set; }
     public bool RemoveNonMusicAfterIngest { get; set; }
-    public string? SyncTarget { get; set; }
+    public List<string> SyncPlaylists { get; set; } = [];
     public List<PlaylistTargetEntry> PlaylistTargets { get; set; } = [];
     public List<IndexTargetEntry> IndexTargets { get; set; } = [];
 
@@ -54,7 +55,8 @@ public sealed class EditableLibraryConfig
     private static readonly HashSet<string> Known = new(StringComparer.Ordinal)
     {
         "DatabaseFile", "ItunesLibrary", "FfmpegPath", "LengthLimit", "DiscNumLengthLimit",
-        "SyncTarget", "PlaylistTarget", "PlaylistType", "IndexTarget", "IngestSettings",
+        "SyncTarget", "SyncPlaylist", "PlaylistTarget", "PlaylistType", "IndexTarget",
+        "IngestSettings",
     };
 
     public static EditableLibraryConfig Load(string path)
@@ -67,7 +69,6 @@ public sealed class EditableLibraryConfig
             DatabaseFile = (string?)root.Element("DatabaseFile") ?? "cache.db",
             ItunesLibraryPath = (string?)root.Element("ItunesLibrary"),
             FfmpegPath = (string?)root.Element("FfmpegPath") ?? "ffmpeg",
-            SyncTarget = (string?)root.Element("SyncTarget"),
         };
 
         if (int.TryParse((string?)root.Element("LengthLimit"), out var ll)) config.LengthLimit = ll;
@@ -87,6 +88,7 @@ public sealed class EditableLibraryConfig
                 DefaultOffset = location.DefaultOffset,
                 Organize = location.Organize,
                 IngestRole = location.IngestRole,
+                IsSyncTarget = location.IsSyncTarget,
                 Memberships = location.Memberships.Select(membership => new IndexTargetSetEntry
                 {
                     Name = membership.Name,
@@ -95,6 +97,26 @@ public sealed class EditableLibraryConfig
                 Filter = location.Filter,
             });
         }
+
+        // Opening and saving a legacy standalone SyncTarget migrates it to an IndexTarget flag.
+        string? legacySyncTarget = CleanOptional((string?)root.Element("SyncTarget"));
+        if (legacySyncTarget is not null &&
+            !config.IndexTargets.Any(target => target.IsSyncTarget))
+        {
+            IndexTargetEntry? target = config.IndexTargets.FirstOrDefault(candidate =>
+                PathComparer.Equals(
+                    Path.TrimEndingDirectorySeparator(candidate.Target),
+                    Path.TrimEndingDirectorySeparator(legacySyncTarget)));
+            if (target is null)
+            {
+                target = new IndexTargetEntry { Target = legacySyncTarget };
+                config.IndexTargets.Add(target);
+            }
+            target.IsSyncTarget = true;
+        }
+        config.SyncPlaylists.AddRange(root.Elements("SyncPlaylist")
+            .Select(element => element.Value.Trim())
+            .Where(value => value.Length > 0));
 
         // Preserve the old standalone PlaylistType value in the editor so a legacy row is easy to
         // migrate. Saving always writes Type and Set attributes on each PlaylistTarget.
@@ -137,6 +159,8 @@ public sealed class EditableLibraryConfig
             if (!t.Organize) e.SetAttributeValue("Organize", false);
             if (t.IngestRole != LibraryIngestRole.None)
                 e.SetAttributeValue("IngestRole", t.IngestRole);
+            if (t.IsSyncTarget)
+                e.SetAttributeValue("SyncTarget", true);
             var seen = new HashSet<string>(LibraryConfiguration.ScanSetComparer);
             foreach (IndexTargetSetEntry membership in t.Memberships)
             {
@@ -152,7 +176,18 @@ public sealed class EditableLibraryConfig
             root.Add(e);
         }
 
-        if (!string.IsNullOrWhiteSpace(SyncTarget)) root.Add(new XElement("SyncTarget", SyncTarget));
+        IndexTargetEntry[] syncTargets = IndexTargets
+            .Where(target => !string.IsNullOrWhiteSpace(target.Target) && target.IsSyncTarget)
+            .ToArray();
+        if (syncTargets.Length > 1)
+            throw new InvalidDataException(
+                "Only one IndexTarget may be selected as the cross-library sync target.");
+        foreach (string playlist in SyncPlaylists
+                     .Select(value => value?.Trim() ?? "")
+                     .Where(value => value.Length > 0)
+                     .Distinct(StringComparer.OrdinalIgnoreCase))
+            root.Add(new XElement("SyncPlaylist", playlist));
+
         var configuredSets = IndexTargets.SelectMany(indexTarget => indexTarget.Memberships)
             .Select(membership => LibraryConfiguration.ParseScanSetName(membership.Name))
             .ToHashSet(LibraryConfiguration.ScanSetComparer);
@@ -240,4 +275,11 @@ public sealed class EditableLibraryConfig
             }
         }
     }
+
+    private static string? CleanOptional(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static StringComparer PathComparer => OperatingSystem.IsWindows()
+        ? StringComparer.OrdinalIgnoreCase
+        : StringComparer.Ordinal;
 }

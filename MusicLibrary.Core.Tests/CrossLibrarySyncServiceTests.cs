@@ -108,7 +108,9 @@ public sealed class CrossLibrarySyncServiceTests
         new XDocument(new XElement("LibraryConfiguration",
             new XElement("DatabaseFile", Path.Combine(workspace, "cache.db")),
             new XElement("IndexTarget", new XAttribute("Set", "1"), sourceRoot),
-            new XElement("SyncTarget", targetRoot),
+            new XElement("IndexTarget",
+                new XAttribute("Path", targetRoot),
+                new XAttribute("SyncTarget", true)),
             new XElement("SyncPlaylist", "Test Sync"),
             new XElement("LengthLimit", "255"),
             new XElement("DiscNumLengthLimit", "255"))).Save(configPath);

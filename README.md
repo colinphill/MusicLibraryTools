@@ -111,12 +111,21 @@ at least one `Set`; multiple sets form a union:
   <Set Name="Car"/>
   <Set Name="Archive" Offset="../Archive/FLAC"/>
 </IndexTarget>
-<IndexTarget Path="Z:\iTunes\Purchased Sync" Organize="false">
+<IndexTarget Path="Z:\iTunes\Purchased Sync" Organize="false"
+             SyncTarget="true">
   <Set Name="Car" Offset="../Music/Purchased"/>
 </IndexTarget>
+<SyncPlaylist>Favorites</SyncPlaylist>
+<SyncPlaylist>Recently Added</SyncPlaylist>
 <PlaylistTarget Type="wpl" Set="Lossless">Z:\iTunes\Playlists\Lossless</PlaylistTarget>
 <PlaylistTarget Type="m3u" Set="Car">Z:\iTunes\Playlists\Car</PlaylistTarget>
 ```
+
+`CrossSyncMusic` uses the single `IndexTarget` marked `SyncTarget="true"` as its destination and
+projects the repeatable `SyncPlaylist` entries into that tree. The configuration editor exposes
+both the target selection and the playlist-name collection. A legacy standalone `<SyncTarget>`
+element remains readable; opening and saving it in the editor migrates the path to a flagged
+`IndexTarget`.
 
 `CrossSyncPlaylists` processes every configured playlist target in one invocation. The former
 standalone `<PlaylistType>` element is no longer used. Every referenced playlist set must occur on

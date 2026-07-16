@@ -51,7 +51,8 @@ namespace MusicLibraryTools
         IReadOnlyList<LibraryIndexSetMembership> Memberships,
         string? Filter,
         bool Organize = true,
-        LibraryIngestRole IngestRole = LibraryIngestRole.None)
+        LibraryIngestRole IngestRole = LibraryIngestRole.None,
+        bool IsSyncTarget = false)
     {
         public IReadOnlyList<string> Sets { get; } =
             Memberships.Select(membership => membership.Name).ToArray();
@@ -130,8 +131,30 @@ namespace MusicLibraryTools
                 ?? throw new InvalidDataException("Missing <LibraryConfiguration> root element.");
         }
         
-        public string CrossSyncTargetLibraryPath => root_.Element("SyncTarget")?.Value
-            ?? throw new InvalidDataException("Missing <SyncTarget> element.");
+        public LibraryIndexLocation? CrossSyncTarget
+        {
+            get
+            {
+                LibraryIndexLocation[] targets = IndexLocations
+                    .Where(location => location.IsSyncTarget)
+                    .ToArray();
+                if (targets.Length > 1)
+                    throw new InvalidDataException(
+                        "Only one <IndexTarget> may have SyncTarget=\"true\".");
+                return targets.SingleOrDefault();
+            }
+        }
+
+        public string CrossSyncTargetLibraryPath =>
+            CrossSyncTarget?.Target ??
+            CleanOptional((string?)root_.Element("SyncTarget")) ??
+            throw new InvalidDataException(
+                "Missing an <IndexTarget SyncTarget=\"true\"> synchronization destination.");
+
+        public IReadOnlyList<string> SyncPlaylists => root_.Elements("SyncPlaylist")
+            .Select(element => element.Value.Trim())
+            .Where(value => value.Length > 0)
+            .ToArray();
 
         public IEnumerable<LibraryIndexLocation> IndexLocations =>
             root_.Elements("IndexTarget").Select(ParseIndexLocation);
@@ -170,7 +193,8 @@ namespace MusicLibraryTools
             return new(target, defaultOffset, memberships,
                 CleanOptional((string?)element.Attribute("Filter")),
                 ParseOptionalBoolean(element, "Organize", defaultValue: true),
-                ParseIngestRole((string?)element.Attribute("IngestRole")));
+                ParseIngestRole((string?)element.Attribute("IngestRole")),
+                ParseOptionalBoolean(element, "SyncTarget", defaultValue: false));
         }
 
         private static LibraryIngestRole ParseIngestRole(string? value)

@@ -991,7 +991,7 @@ public partial class OperationsViewModel : ViewModelBase
         {
             foreach (var location in configuration.IndexLocations)
                 Add(location.Target);
-            foreach (string key in new[] { "SyncTarget", "PlaylistTarget" })
+            foreach (string key in new[] { "PlaylistTarget" })
                 foreach (string value in configuration[key])
                     Add(value);
         }

@@ -51,6 +51,9 @@
                     <Button Content="Import legacy ingest config…"
                             Command="{Binding ImportIngestConfigurationCommand}"
                             ToolTip.Tip="Copy destinations and ingest behavior from an existing IngestMusicConfiguration XML"/>
+                    <Button Content="Clear sync target"
+                            Command="{Binding ClearSyncTargetCommand}"
+                            ToolTip.Tip="Leave CrossSyncMusic without a configured destination"/>
                 </WrapPanel>
                 <ScrollViewer HorizontalScrollBarVisibility="Disabled">
                     <ItemsControl ItemsSource="{Binding IndexTargets}">
@@ -84,6 +87,10 @@
                                             <CheckBox Content="Include in organization"
                                                       IsChecked="{Binding Organize}"
                                                       ToolTip.Tip="Clear to keep this root indexed while excluding it from organization operations"/>
+                                            <RadioButton Content="Cross-library sync target"
+                                                         GroupName="CrossLibrarySyncTarget"
+                                                         IsChecked="{Binding IsSyncTarget}"
+                                                         ToolTip.Tip="Use this indexed root as the CrossSyncMusic destination"/>
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <TextBlock Text="Ingest use" Classes="formlabel"/>
                                                 <ComboBox ItemsSource="{Binding $parent[Window].((vm:ConfigDialogViewModel)DataContext).IngestRoles}"
@@ -146,11 +153,30 @@
         </Border>
 
         <Grid Grid.Row="4" RowDefinitions="Auto,Auto" Margin="0,10,0,0">
-            <Grid Grid.Row="0" ColumnDefinitions="150,*" ColumnSpacing="6">
-                <TextBlock Grid.Column="0" Text="Sync target:" Classes="formlabel"/>
-                <TextBox Grid.Column="1" Text="{Binding SyncTarget}" PlaceholderText="(optional)"
-                         ToolTip.Tip="{Binding SyncTarget}"/>
-            </Grid>
+            <Border Grid.Row="0" Classes="card" Padding="10">
+                <DockPanel>
+                    <WrapPanel DockPanel.Dock="Top" Classes="toolbarwrap" Margin="0,0,-8,0">
+                        <TextBlock Text="Cross-library sync playlists"
+                                   FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <Button Content="Add playlist" Command="{Binding AddSyncPlaylistCommand}"/>
+                        <TextBlock Text="The destination is the IndexTarget marked as the cross-library sync target."
+                                   Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                    </WrapPanel>
+                    <ItemsControl ItemsSource="{Binding SyncPlaylists}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SyncPlaylistRow">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" Margin="0,3">
+                                    <TextBox Grid.Column="0" Text="{Binding Name}"
+                                             PlaceholderText="iTunes playlist name"/>
+                                    <Button Grid.Column="1" Content="Remove"
+                                            Command="{Binding $parent[Window].((vm:ConfigDialogViewModel)DataContext).RemoveSyncPlaylistCommand}"
+                                            CommandParameter="{Binding}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </DockPanel>
+            </Border>
 
             <Border Grid.Row="1" Classes="card" Padding="10" Margin="0,8,0,0">
                 <DockPanel>
