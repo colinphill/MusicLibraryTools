@@ -1,18 +1,22 @@
+using System.Text;
+
 namespace iTunes.Binary;
 
 /// <summary>iTunes' Windows media-folder naming rules for ordinary music tracks.</summary>
 public static class ItlMediaOrganization
 {
     public const int ComponentLengthLimit = 40;
-    private static readonly HashSet<char> ReplacedCharacters = ['\\', '/', ':', '*', '?', '"', '<', '>', '|'];
+    private static readonly HashSet<char> ReplacedCharacters =
+        ['\\', '/', ':', ';', '*', '?', '"', '<', '>', '|', '‘', '’', '“', '”', '´'];
 
     public static string CanonicalMusicPath(string mediaFolder, string? albumArtist, string? artist,
-        string album, int trackNumber, string title, bool compilation, string extension = ".m4a")
+        string album, int trackNumber, string title, bool compilation, string extension = ".m4a",
+        int? discNumber = null)
     {
         if (trackNumber <= 0)
             throw new ArgumentOutOfRangeException(nameof(trackNumber));
         return CanonicalMusicPath(mediaFolder, albumArtist, artist, album,
-            (int?)trackNumber, title, compilation, extension);
+            (int?)trackNumber, title, compilation, extension, discNumber);
     }
 
     /// <summary>
@@ -20,11 +24,12 @@ public static class ItlMediaOrganization
     /// the numeric prefix in that case rather than making the file impossible to organize.
     /// </summary>
     public static string CanonicalMusicPath(string mediaFolder, string? albumArtist, string? artist,
-        string album, int? trackNumber, string title, bool compilation, string extension = ".m4a")
+        string album, int? trackNumber, string title, bool compilation, string extension = ".m4a",
+        int? discNumber = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(mediaFolder);
         return CanonicalMusicFolderPath(Path.Combine(Path.GetFullPath(mediaFolder), "Music"),
-            albumArtist, artist, album, trackNumber, title, compilation, extension);
+            albumArtist, artist, album, trackNumber, title, compilation, extension, discNumber);
     }
 
     /// <summary>
@@ -33,7 +38,7 @@ public static class ItlMediaOrganization
     /// </summary>
     public static string CanonicalMusicFolderPath(string musicFolder, string? albumArtist,
         string? artist, string album, int? trackNumber, string title, bool compilation,
-        string extension = ".m4a")
+        string extension = ".m4a", int? discNumber = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(musicFolder);
         ArgumentException.ThrowIfNullOrWhiteSpace(album);
@@ -47,27 +52,53 @@ public static class ItlMediaOrganization
         if (extension.Length >= ComponentLengthLimit)
             throw new ArgumentException("The extension leaves no room for an iTunes filename.", nameof(extension));
 
-        string effectiveAlbumArtist = string.IsNullOrWhiteSpace(albumArtist) ? artist?.Trim() ?? string.Empty : albumArtist;
+        string effectiveAlbumArtist = string.IsNullOrWhiteSpace(albumArtist)
+            ? artist?.Trim(' ') ?? string.Empty
+            : albumArtist;
         if (!compilation)
             ArgumentException.ThrowIfNullOrWhiteSpace(effectiveAlbumArtist, nameof(albumArtist));
 
-        string artistFolder = compilation ? "Compilations" : Component(effectiveAlbumArtist);
-        string albumFolder = Component(album);
+        string artistFolder = compilation ? "Compilations" : FolderComponent(effectiveAlbumArtist);
+        string albumFolder = FolderComponent(album);
         // Native iTunes' 40-character filename limit includes the extension. Collision suffixes
         // are appended later and may make an otherwise truncated filename longer than 40.
-        string stem = trackNumber is null ? title : $"{trackNumber:D2} {title}";
-        string fileName = Component(stem, ComponentLengthLimit - extension.Length) + extension;
+        string prefix = trackNumber is null
+            ? ""
+            : discNumber is > 0
+                ? $"{discNumber}-{trackNumber:D2} "
+                : $"{trackNumber:D2} ";
+        string fileName = FileNameComponent(prefix + title, extension);
         return Path.Combine(Path.GetFullPath(musicFolder), artistFolder, albumFolder, fileName);
     }
 
-    private static string Component(string value, int limit = ComponentLengthLimit)
+    private static string FolderComponent(string value)
     {
-        char[] characters = value.Trim().Select(character =>
-            character < ' ' || ReplacedCharacters.Contains(character) ? '_' : character).ToArray();
-        string result = new string(characters).TrimEnd(' ', '.');
-        if (result.Length > limit)
-            result = result[..limit].TrimEnd(' ', '.');
+        string result = Sanitize(value);
+        if (result.Length > ComponentLengthLimit)
+            result = result[..ComponentLengthLimit].TrimEnd(' ');
+        if (result.Length > 0 && result[0] == '.')
+            result = '_' + result[1..];
+        if (result.Length > 0 && result[^1] == '.')
+            result = result[..^1] + '_';
         return string.IsNullOrEmpty(result) ? "Unknown" : result;
+    }
+
+    private static string FileNameComponent(string stem, string extension)
+    {
+        int stemLimit = ComponentLengthLimit - extension.Length;
+        string result = Sanitize(stem);
+        if (result.Length > stemLimit)
+            result = result[..stemLimit].TrimEnd(' ');
+        if (result.Length > 0 && result[0] == '.')
+            result = '_' + result[1..];
+        return (string.IsNullOrEmpty(result) ? "Unknown" : result) + extension;
+    }
+
+    private static string Sanitize(string value)
+    {
+        char[] characters = value.Normalize(NormalizationForm.FormC).Select(character =>
+            character < ' ' || ReplacedCharacters.Contains(character) ? '_' : character).ToArray();
+        return new string(characters).Trim();
     }
 }
 

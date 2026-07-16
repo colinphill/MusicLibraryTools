@@ -856,7 +856,8 @@ public sealed class IngestMusicService : IIngestMusicService
         HashSet<string> claimed)
     {
         string destination = ItlMediaOrganization.CanonicalMusicPath(mediaFolder,
-            track.AlbumArtist, track.Artist, track.Album, track.TrackNumber, track.Title, track.Compilation);
+            track.AlbumArtist, track.Artist, track.Album, track.TrackNumber, track.Title,
+            track.Compilation, discNumber: null);
         string directory = Path.GetDirectoryName(destination)!;
         string extension = Path.GetExtension(destination);
         string stem = Path.GetFileNameWithoutExtension(destination);

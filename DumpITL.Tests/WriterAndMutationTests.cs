@@ -41,6 +41,74 @@ public sealed class WriterAndMutationTests
             Path.GetFileName(path).Length);
     }
 
+    [Fact]
+    public void CanonicalMediaPathMatchesCorpusPunctuationAndPeriodRules()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "iTunes Media");
+        string path = ItlMediaOrganization.CanonicalMusicPath(root, "R.E.M.", "Track Artist",
+            "...Album; ‘Quoted’.", 3, "P.I.M.P.", compilation: false);
+
+        Assert.Equal(Path.Combine(Path.GetFullPath(root), "Music", "R.E.M_",
+            "_..Album_ _Quoted__", "03 P.I.M.P..m4a"), path);
+    }
+
+    [Fact]
+    public void CanonicalMediaPathReplacesTypographicQuotesAndAcuteAccent()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "iTunes Media");
+        string path = ItlMediaOrganization.CanonicalMusicPath(root, "Artist´", "Track Artist",
+            "Album", 3, "I’ll “Go”", compilation: false);
+
+        Assert.Equal(Path.Combine(Path.GetFullPath(root), "Music", "Artist_",
+            "Album", "03 I_ll _Go_.m4a"), path);
+    }
+
+    [Fact]
+    public void CanonicalMediaPathIncludesDiscPrefixWhenDiscNumberIsPresent()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "iTunes Media");
+        string path = ItlMediaOrganization.CanonicalMusicPath(root, "Artist", "Artist",
+            "Album", 3, "Title", compilation: false, discNumber: 1);
+
+        Assert.Equal(Path.Combine(Path.GetFullPath(root), "Music", "Artist",
+            "Album", "1-03 Title.m4a"), path);
+    }
+
+    [Fact]
+    public void CanonicalMediaPathReplacesTrailingTabsRatherThanTrimmingThem()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "iTunes Media");
+        string path = ItlMediaOrganization.CanonicalMusicPath(root, "Artist", "Artist",
+            "Album", 3, "Lime\t\t", compilation: false);
+
+        Assert.Equal(Path.Combine(Path.GetFullPath(root), "Music", "Artist",
+            "Album", "03 Lime__.m4a"), path);
+    }
+
+    [Fact]
+    public void CanonicalMediaPathTrimsTrailingNonBreakingSpaces()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "iTunes Media");
+        string path = ItlMediaOrganization.CanonicalMusicPath(root, "Artist", "Artist",
+            "Album", 3, "Title\u00a0", compilation: false);
+
+        Assert.Equal(Path.Combine(Path.GetFullPath(root), "Music", "Artist",
+            "Album", "03 Title.m4a"), path);
+    }
+
+    [Fact]
+    public void CanonicalMediaPathNormalizesUnicodeBeforeTruncating()
+    {
+        string root = Path.Combine(Path.GetTempPath(), "iTunes Media");
+        string path = ItlMediaOrganization.CanonicalMusicPath(root, "Sarah McLachlan",
+            "Sarah McLachlan", "Rarities, B-sides & Other Stuff 2", 14,
+            "Silence (DJ Tie\u0308sto In Search Of Sunrise Remix)", compilation: false);
+
+        Assert.Equal(Path.Combine(Path.GetFullPath(root), "Music", "Sarah McLachlan",
+            "Rarities, B-sides & Other Stuff 2",
+            "14 Silence (DJ Tiësto In Search Of S.m4a"), path);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

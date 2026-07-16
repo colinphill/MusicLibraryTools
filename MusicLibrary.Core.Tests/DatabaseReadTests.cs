@@ -227,6 +227,91 @@ public class DatabaseReadTests
     }
 
     [Fact]
+    public async Task ItunesCanonicalNaming_UsesCorpusPunctuationAndPeriodRules()
+    {
+        var (work, music, config, song) = Setup(
+            "sample.flac", useItunesCanonicalNaming: true,
+            libraryFolder: Path.Combine("iTunes Media", "Music"));
+        try
+        {
+            var settings = new AppSettings(Path.Combine(work, "settings.json"));
+            settings.LoadConfig(config);
+            using var library = new LibraryService(settings);
+            await library.IndexAsync();
+            BatchWriteResult write = await new TagWriteService(library).ApplyAsync(
+                [song],
+                [
+                    new TagEdit(TagFields.AlbumArtist, "R.E.M."),
+                    new TagEdit(TagFields.Album, "Happier."),
+                    new TagEdit(TagFields.Title, "P.I.M.P."),
+                ]);
+            Assert.Equal(1, write.SavedCount);
+
+            PlannedMove move = Assert.Single(await library.PreviewMovesAsync());
+
+            Assert.Equal(Path.Combine(music, "R.E.M_", "Happier_",
+                "03 P.I.M.P..flac"), move.Destination);
+        }
+        finally
+        {
+            try { Directory.Delete(work, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task ItunesCanonicalNaming_UsesTaggedDiscNumberInTrackPrefix()
+    {
+        var (work, music, config, song) = Setup(
+            "sample.flac", useItunesCanonicalNaming: true,
+            libraryFolder: Path.Combine("iTunes Media", "Music"));
+        try
+        {
+            var settings = new AppSettings(Path.Combine(work, "settings.json"));
+            settings.LoadConfig(config);
+            using var library = new LibraryService(settings);
+            await library.IndexAsync();
+            BatchWriteResult write = await new TagWriteService(library).ApplyAsync(
+                [song], [new TagEdit(TagFields.DiscNumber, "1")]);
+            Assert.Equal(1, write.SavedCount);
+
+            PlannedMove move = Assert.Single(await library.PreviewMovesAsync());
+
+            Assert.Equal(Path.Combine(music, "TestArtist", "TestAlbum",
+                "1-03 TestTitle.flac"), move.Destination);
+        }
+        finally
+        {
+            try { Directory.Delete(work, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task ItunesCanonicalNaming_PreservesMatchingExistingDiscPrefixWhenTagIsMissing()
+    {
+        var (work, music, config, song) = Setup(
+            "sample.flac", useItunesCanonicalNaming: true,
+            libraryFolder: Path.Combine("iTunes Media", "Music"));
+        try
+        {
+            string canonical = Path.Combine(music, "TestArtist", "TestAlbum",
+                "1-03 TestTitle.flac");
+            Directory.CreateDirectory(Path.GetDirectoryName(canonical)!);
+            File.Move(song, canonical);
+
+            var settings = new AppSettings(Path.Combine(work, "settings.json"));
+            settings.LoadConfig(config);
+            using var library = new LibraryService(settings);
+            await library.IndexAsync();
+
+            Assert.Empty(await library.PreviewMovesAsync());
+        }
+        finally
+        {
+            try { Directory.Delete(work, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public async Task ItunesCanonicalNaming_MediaRootAddsMusicDirectory()
     {
         var (work, mediaRoot, config, _) = Setup(
