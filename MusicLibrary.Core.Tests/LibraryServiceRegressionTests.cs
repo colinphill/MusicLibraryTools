@@ -9,6 +9,28 @@ namespace MusicLibrary.Core.Tests;
 public sealed class LibraryServiceRegressionTests
 {
     [Fact]
+    public async Task CommandLineConfiguration_IndexesAndPlansOrganizationWithoutAppState()
+    {
+        using var temp = new TempDirectory();
+        var root = temp.CreateDirectory("music");
+        string source = temp.CopyFixture(root, "loose.flac");
+        string config = temp.WriteConfig(
+            "library.xml", "cache.db", new IndexTargetEntry { Target = root });
+        using var library = new LibraryService(config);
+        var progress = new CollectingOperationProgress();
+
+        await library.IndexForOperationAsync(progress);
+        IReadOnlyList<TrackRecord> records = await library.GetAllRecordsAsync();
+        IReadOnlyList<PlannedMove> moves = await library.PreviewMovesAsync();
+
+        Assert.Single(records);
+        Assert.Equal(source, records[0].Path);
+        Assert.Single(moves);
+        Assert.Equal(source, moves[0].Source);
+        Assert.NotEmpty(progress.Values);
+    }
+
+    [Fact]
     public async Task LoadingNewConfig_DoesNotBlockActiveIndex_AndQueuedIndexUsesNewRoots()
     {
         using var temp = new TempDirectory();
@@ -168,6 +190,56 @@ public sealed class LibraryServiceRegressionTests
         Assert.Equal(1, result.CacheFailedCount);
         Assert.Equal(1, result.FailedCount);
         Assert.True(File.Exists(destination));
+        Assert.NotNull(result.JournalPath);
+    }
+
+    [Fact]
+    public async Task ApplyMoves_RejectsStaleReviewedPlanBeforeFirstMove()
+    {
+        using var temp = new TempDirectory();
+        var root = temp.CreateDirectory("music");
+        var source = temp.CopyFixture(root, "song.flac");
+        var destination = System.IO.Path.Combine(root, "moved.flac");
+        var config = temp.WriteConfig(
+            "library.xml", "cache.db", new IndexTargetEntry { Target = root });
+        using var library = new LibraryService(config);
+        await library.IndexForOperationAsync();
+        var info = new FileInfo(source);
+        var sourceSnapshot = new OperationPathSnapshot(
+            true, false, info.Length, info.LastWriteTimeUtc) { Path = source };
+        var move = new PlannedMove(
+            source, destination, sourceSnapshot, OperationPathSnapshot.Missing(destination));
+        File.SetLastWriteTimeUtc(source, info.LastWriteTimeUtc.AddSeconds(2));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            library.ApplyMovesAsync([move]));
+
+        Assert.True(File.Exists(source));
+        Assert.False(File.Exists(destination));
+    }
+
+    [Fact]
+    public async Task ApplyMoves_RollsBackEarlierMovesWhenLaterMoveFails()
+    {
+        using var temp = new TempDirectory();
+        var root = temp.CreateDirectory("music");
+        var firstSource = temp.CopyFixture(root, "first.flac");
+        var firstDestination = System.IO.Path.Combine(root, "moved", "first.flac");
+        var missingSource = System.IO.Path.Combine(root, "missing.flac");
+        var secondDestination = System.IO.Path.Combine(root, "moved", "second.flac");
+        var config = temp.WriteConfig(
+            "library.xml", "cache.db", new IndexTargetEntry { Target = root });
+        using var library = new LibraryService(config);
+        await library.IndexForOperationAsync();
+
+        await Assert.ThrowsAnyAsync<IOException>(() => library.ApplyMovesAsync(
+        [
+            new PlannedMove(firstSource, firstDestination),
+            new PlannedMove(missingSource, secondDestination),
+        ]));
+
+        Assert.True(File.Exists(firstSource));
+        Assert.False(File.Exists(firstDestination));
     }
 
     [Fact]
@@ -279,6 +351,12 @@ public sealed class LibraryServiceRegressionTests
         {
             lock (sync) values.Add(value);
         }
+    }
+
+    private sealed class CollectingOperationProgress : IProgress<OperationProgress>
+    {
+        public List<OperationProgress> Values { get; } = [];
+        public void Report(OperationProgress value) => Values.Add(value);
     }
 
     private sealed class TempDirectory : IDisposable

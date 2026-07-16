@@ -38,11 +38,21 @@ public sealed class ArtistReconciler : IArtistReconciler
 
     public IReadOnlyList<SimilarArtistGroup> FindSimilarArtists(IReadOnlyList<TrackRecord> records, double threshold = 0.2, CancellationToken ct = default)
     {
-        // Group files by their effective album-artist spelling.
+        // AnalyzeMetadata historically compared the union of Artist and AlbumArtist spellings.
+        // Keep each file once per spelling so a differing track artist is not hidden merely because
+        // the file also has an album artist.
         var byName = records
-            .Where(r => !string.IsNullOrWhiteSpace(r.EffectiveAlbumArtist))
-            .GroupBy(r => r.EffectiveAlbumArtist)
-            .ToDictionary(g => g.Key, g => g.Select(r => r.Path).ToList());
+            .SelectMany(record => new[] { record.Artist, record.AlbumArtist }
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct(StringComparer.Ordinal)
+                .Select(value => (Name: value!, record.Path)))
+            .GroupBy(item => item.Name, StringComparer.Ordinal)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(item => item.Path)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
+                StringComparer.Ordinal);
 
         var names = byName.Keys.OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase).ToList();
 

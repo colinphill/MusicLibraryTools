@@ -94,6 +94,21 @@ public class ArtistReconcilerTests
     }
 
     [Fact]
+    public void FindSimilarArtists_IncludesTrackArtistWhenAlbumArtistDiffers()
+    {
+        var records = new[]
+        {
+            Rec("1.flac", "Various Artists") with { Artist = "The Beatles" },
+            Rec("2.flac", "Various Artists") with { Artist = "Beatles" },
+        };
+
+        var group = Assert.Single(_reconciler.FindSimilarArtists(records, threshold: 0),
+            candidate => candidate.Variants.Any(variant => variant.Name == "The Beatles"));
+
+        Assert.Contains(group.Variants, variant => variant.Name == "Beatles");
+    }
+
+    [Fact]
     public async Task RenameArtist_RewritesMatchingFiles()
     {
         using var media = MediaFixtures.Copy("sample.flac");   // Artist=TestArtist

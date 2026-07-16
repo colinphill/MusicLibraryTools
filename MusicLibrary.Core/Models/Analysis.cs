@@ -83,6 +83,34 @@ public sealed record AnalysisReport(string Name, IReadOnlyList<AnalysisFinding> 
     public int Count => Findings.Count;
 }
 
+public sealed record ResolutionAlbum(string Artist, string Album, string Directory);
+
+public enum ResolutionComparisonKind
+{
+    TrackCountMismatch,
+    MetadataDifference,
+    Missing,
+    Ambiguous,
+}
+
+public sealed record ResolutionComparisonFinding(
+    ResolutionComparisonKind Kind,
+    ResolutionAlbum HighResolution,
+    ResolutionAlbum? Standard,
+    double MatchThreshold,
+    IReadOnlyList<ResolutionAlbum>? Candidates = null,
+    int HighTrackCount = 0,
+    int StandardTrackCount = 0,
+    int ArtistDistance = 0,
+    int AlbumDistance = 0);
+
+public sealed record ResolutionComparisonReport(
+    int AlbumCount,
+    int MatchedCount,
+    int MissingCount,
+    int AmbiguousCount,
+    IReadOnlyList<ResolutionComparisonFinding> Findings);
+
 public sealed record DecodedAudioPair(string FirstPath, string SecondPath, string Description);
 
 public sealed record DecodedAudioProgress(int CompletedFiles, int TotalFiles, string Path);

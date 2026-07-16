@@ -49,6 +49,23 @@ public sealed class AppSettingsTests
         Assert.Null(settings.Configuration);
     }
 
+    [Fact]
+    public void InvalidIndexTargetOrganizeFlag_IsRejectedDuringLoad()
+    {
+        using var temp = new TempDirectory();
+        var config = Path.Combine(temp.Path, "bad-organize.xml");
+        File.WriteAllText(config,
+            "<LibraryConfiguration><DatabaseFile>cache.db</DatabaseFile>" +
+            $"<IndexTarget Organize=\"sometimes\">{System.Security.SecurityElement.Escape(temp.Path)}</IndexTarget>" +
+            "</LibraryConfiguration>");
+        var settings = new AppSettings(Path.Combine(temp.Path, "settings.json"));
+
+        var error = Assert.Throws<InvalidDataException>(() => settings.LoadConfig(config));
+
+        Assert.Contains("Organize", error.Message);
+        Assert.Null(settings.Configuration);
+    }
+
     [Theory]
     [InlineData("<PlaylistTarget Type=\"m3u\">Z:\\Playlists</PlaylistTarget>")]
     [InlineData("<PlaylistTarget Set=\"1\">Z:\\Playlists</PlaylistTarget><PlaylistType>m3u</PlaylistType>")]

@@ -17,7 +17,8 @@ namespace MusicLibrary.Core.Tests;
 /// </summary>
 public class DatabaseReadTests
 {
-    private static (string Work, string Music, string Config, string Song) Setup(string fixture)
+    private static (string Work, string Music, string Config, string Song) Setup(
+        string fixture, bool organize = true)
     {
         var work = Path.Combine(Path.GetTempPath(), "mldb_" + Guid.NewGuid().ToString("N"));
         var music = Path.Combine(work, "music");
@@ -31,7 +32,7 @@ public class DatabaseReadTests
             DatabaseFile = "cache.db",
             LengthLimit = 255,
             DiscNumLengthLimit = 255,
-            IndexTargets = [new IndexTargetEntry { Target = music }],
+            IndexTargets = [new IndexTargetEntry { Target = music, Organize = organize }],
         }.Save(config);
 
         return (work, music, config, song);
@@ -122,6 +123,33 @@ public class DatabaseReadTests
             // The cache is synced automatically: the old path is gone and the new path is indexed.
             Assert.Null(await library.GetFileDetailsAsync(song, includeArtwork: false));
             Assert.NotNull(await library.GetFileDetailsAsync(dest, includeArtwork: false));
+        }
+        finally
+        {
+            try { Directory.Delete(work, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task Organize_ExcludedIndexTargetRemainsIndexedButCannotMove()
+    {
+        var (work, music, config, song) = Setup("sample.flac", organize: false);
+        try
+        {
+            var settings = new AppSettings(Path.Combine(work, "settings.json"));
+            settings.LoadConfig(config);
+            using var library = new LibraryService(settings);
+            await library.IndexAsync();
+
+            Assert.NotNull(await library.GetFileDetailsAsync(song, includeArtwork: false));
+            Assert.Empty(await library.PreviewMovesAsync());
+
+            var move = new PlannedMove(song, Path.Combine(music, "elsewhere.flac"));
+            var error = await Assert.ThrowsAsync<InvalidOperationException>(
+                () => library.ApplyMovesAsync([move]));
+            Assert.Contains("disabled", error.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.True(File.Exists(song));
+            Assert.False(File.Exists(move.Destination));
         }
         finally
         {

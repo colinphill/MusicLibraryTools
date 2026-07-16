@@ -30,7 +30,8 @@ public sealed record LibraryWorkspaceState(
 
 /// <summary>
 /// A tabular details view of every track with user-selectable columns, realtime filtering
-/// (substring / glob / regex), and click-to-sort columns. Rows are held in a
+/// (substring / glob / regex plus column-qualified boolean expressions), and click-to-sort
+/// columns. Rows are held in a
 /// <see cref="DataGridCollectionView"/> so filtering (via a predicate) and sorting coexist and
 /// survive each keystroke. Column values come from the cache via <see cref="DetailsRow"/>.
 /// </summary>
@@ -45,7 +46,7 @@ public partial class DetailsGridViewModel : ViewModelBase
     private readonly IReindexService _reindex;
     private readonly IAppSettings _settings;
     private List<DetailsRow> _allRows = [];
-    private PatternMatcher _matcher = PatternMatcher.Create(null, FilterMode.Substring);
+    private LibraryFilterQuery _filter = LibraryFilterQuery.Create(null, FilterMode.Substring);
     private CancellationTokenSource? _cts;
 
     // The persisted column layout: visible columns, in display order, with their (absolute) widths.
@@ -66,6 +67,12 @@ public partial class DetailsGridViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _filterValid = true;
+
+    [ObservableProperty]
+    private string? _filterError;
+
+    [ObservableProperty]
+    private bool _isAdvancedFilter;
 
     [ObservableProperty]
     private FilterMode _selectedFilterMode = FilterMode.Substring;
@@ -512,9 +519,9 @@ public partial class DetailsGridViewModel : ViewModelBase
     {
         var row = (DetailsRow)o;
         var key = SelectedScope?.Key;
-        // Scoped to one column → match that column's text; otherwise the visible-columns search text.
+        // Unqualified terms use the chosen scope; qualified terms address their own columns.
         var text = key is null ? row.SearchText : row[key];
-        return _matcher.IsMatch(text);
+        return _filter.IsMatch(row, text);
     }
 
     partial void OnFilterTextChanged(string? value)
@@ -570,16 +577,20 @@ public partial class DetailsGridViewModel : ViewModelBase
 
     private void ApplyFilter()
     {
-        _matcher = PatternMatcher.Create(FilterText, SelectedFilterMode);
-        FilterValid = _matcher.IsValid;
+        _filter = LibraryFilterQuery.Create(FilterText, SelectedFilterMode);
+        FilterValid = _filter.IsValid;
+        FilterError = _filter.Error;
+        IsAdvancedFilter = _filter.IsAdvanced;
         View?.Refresh();     // re-applies FilterPredicate; keeps any active column sort
 
         var shown = View?.Count ?? 0;
         StatusText = _allRows.Count == 0
             ? "No rows — Load to populate the table."
-            : _matcher.IsEmpty
+            : _filter.IsEmpty
                 ? $"{_allRows.Count:N0} rows"
                 : $"{shown:N0} of {_allRows.Count:N0} rows"
-                    + (_matcher.IsValid ? "" : "  ·  invalid pattern");
+                    + (_filter.IsValid
+                        ? (_filter.IsAdvanced ? "  ·  advanced query" : "")
+                        : $"  ·  invalid filter: {_filter.Error}");
     }
 }

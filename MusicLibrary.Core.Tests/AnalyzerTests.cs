@@ -130,6 +130,61 @@ public class AnalyzerTests
     }
 
     [Fact]
+    public void BasicMetadata_ReportsLegacyPerFileChecks()
+    {
+        var record = Rec("album\u00a0name/track.flac", "AA", "Album", "One",
+            track: null, total: 0, disc: 1, discTotal: 2);
+
+        var report = LibraryAnalyzer.BasicMetadata([record]);
+
+        Assert.Contains(report.Findings, finding => finding.Problem == "Zero track total");
+        Assert.Contains(report.Findings,
+            finding => finding.Problem == "Missing or zero track number");
+        Assert.Contains(report.Findings, finding => finding.Problem == "Disc metadata present");
+        Assert.Contains(report.Findings,
+            finding => finding.Problem == "Non-breaking space in path");
+    }
+
+    [Fact]
+    public void LowResolutionCheck_RecognizesEitherDirectorySeparator()
+    {
+        var records = new[]
+        {
+            Rec(@"Z:\iTunes\HiRes\Stereo\one.flac", "AA", "A", "One"),
+            Rec("/music/hires/multi/two.flac", "AA", "A", "Two"),
+            Rec("/music/flac/three.flac", "AA", "A", "Three"),
+        };
+
+        var report = LibraryAnalyzer.LowResolutionInHighResolutionTree(records);
+
+        Assert.Equal(2, report.Count);
+        Assert.DoesNotContain(report.Findings, finding => finding.Path.EndsWith("three.flac"));
+    }
+
+    [Fact]
+    public void ResolutionComparison_ReportsTrackCountMismatchAgainstStandardAlbum()
+    {
+        var records = new[]
+        {
+            Rec(@"Z:\iTunes\HiRes\Stereo\Artist\Album\01.flac",
+                "Artist", "Album", "One", track: 1, sr: 96_000, bps: 24),
+            Rec(@"Z:\iTunes\FLAC\Artist\Album\01.flac",
+                "Artist", "Album", "One", track: 1),
+            Rec(@"Z:\iTunes\FLAC\Artist\Album\02.flac",
+                "Artist", "Album", "Two", track: 2),
+        };
+
+        var report = LibraryAnalyzer.CompareResolutionAlbums(records, "hires", "stereo");
+
+        Assert.Equal(1, report.AlbumCount);
+        Assert.Equal(1, report.MatchedCount);
+        var finding = Assert.Single(report.Findings);
+        Assert.Equal(ResolutionComparisonKind.TrackCountMismatch, finding.Kind);
+        Assert.Equal(1, finding.HighTrackCount);
+        Assert.Equal(2, finding.StandardTrackCount);
+    }
+
+    [Fact]
     public void DuplicateFinder_GroupsSameTrackAcrossVersions()
     {
         var records = new[]

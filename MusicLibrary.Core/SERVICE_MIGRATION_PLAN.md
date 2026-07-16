@@ -33,6 +33,13 @@ Checkpoint completed 2026-07-15:
   safeguards, and journaled copy/quarantine execution. Rebalancing is planned as recoverable
   copy-plus-quarantine path changes, missing target files are naturally repaired by desired-state
   comparison, and the CLI and Operations tab consume the same reviewed plan.
+- Migrated `AnalyzeMetadata` to the existing Core indexing, cross-set comparison, artist
+  reconciliation, and typed analyzer services. The executable now owns only check selection,
+  interactive canonical-artist selection, rendering, and exit codes.
+- Migrated `OrganizeFiles` to `ILibraryOrganizer`. The CLI now indexes, previews, and applies
+  through `LibraryService`; canonical path planning, exclusion policy, recovery journaling,
+  full-plan stale validation, rollback, filesystem mutation, cleanup, and cache synchronization
+  remain in Core.
 - Reduced `UnifiedJobService` to a read-only catalog containing only operations backed by typed
   services. Core no longer redirects or writes process-wide console streams.
 - Replaced the Operations tab's raw command-line argument editor with operation-specific paths,
@@ -76,6 +83,8 @@ In particular, the final implementation must not:
 | FixArtwork | `IArtworkNormalizationService` |
 | CheckRedundancies | `IRedundancyAnalysisService` |
 | ITL validation | `IItunesValidationService` |
+| AnalyzeMetadata | `ILibraryService`, `IArtistReconciler`, typed `LibraryAnalyzer` reports |
+| OrganizeFiles | `ILibraryOrganizer` |
 
 Mutable services will expose typed preview/apply methods. For example:
 

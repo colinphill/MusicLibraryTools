@@ -16,6 +16,7 @@ public sealed class IndexTargetEntry
     public string? DefaultOffset { get; set; }
     public List<IndexTargetSetEntry> Memberships { get; set; } = [];
     public string? Filter { get; set; }
+    public bool Organize { get; set; } = true;
 }
 
 /// <summary>One repeatable playlist export destination.</summary>
@@ -74,6 +75,7 @@ public sealed class EditableLibraryConfig
             {
                 Target = location.Target,
                 DefaultOffset = location.DefaultOffset,
+                Organize = location.Organize,
                 Memberships = location.Memberships.Select(membership => new IndexTargetSetEntry
                 {
                     Name = membership.Name,
@@ -121,6 +123,7 @@ public sealed class EditableLibraryConfig
             if (!string.IsNullOrWhiteSpace(t.DefaultOffset))
                 e.SetAttributeValue("Offset", t.DefaultOffset.Trim());
             if (!string.IsNullOrEmpty(t.Filter)) e.SetAttributeValue("Filter", t.Filter);
+            if (!t.Organize) e.SetAttributeValue("Organize", false);
             var seen = new HashSet<string>(LibraryConfiguration.ScanSetComparer);
             foreach (IndexTargetSetEntry membership in t.Memberships)
             {

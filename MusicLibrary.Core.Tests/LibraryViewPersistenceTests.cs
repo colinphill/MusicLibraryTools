@@ -116,6 +116,41 @@ public sealed class LibraryViewPersistenceTests
         Assert.Equal("Reindexed 2 selected file(s).", viewModel.StatusText);
     }
 
+    [Fact]
+    public async Task AdvancedFilterCombinesVisibleAndHiddenColumns()
+    {
+        using var temp = new TempDirectory();
+        var records = new[]
+        {
+            Track("one.flac", "So What", "Miles Davis", "Miles Davis", "FLAC"),
+            Track("two.mp3", "Freddie Freeloader", "Miles Davis", "Miles Davis", "MP3"),
+            Track("three.flac", "Blue Train", "John Coltrane", "John Coltrane", "FLAC"),
+        };
+        var viewModel = new DetailsGridViewModel(
+            new ReadyLibraryService(records), new StubReindexService(),
+            new AppSettings(Path.Combine(temp.Path, "settings.json")));
+
+        await viewModel.LoadCommand.ExecuteAsync(null);
+        viewModel.FilterText = "AlbumArtist:\"Miles Davis\" AND NOT Codec:MP3";
+
+        Assert.True(viewModel.FilterValid);
+        Assert.True(viewModel.IsAdvancedFilter);
+        DetailsRow shown = Assert.IsType<DetailsRow>(
+            Assert.Single(viewModel.View!.Cast<object>()));
+        Assert.Equal("one.flac", shown.Path);
+    }
+
+    private static TrackRecord Track(string path, string title, string artist,
+        string albumArtist, string codec) => new()
+    {
+        Path = path,
+        Title = title,
+        Artist = artist,
+        AlbumArtist = albumArtist,
+        Album = "Album",
+        CodecName = codec,
+    };
+
     private static DetailsGridViewModel Create(IAppSettings settings) =>
         new(new StubLibraryService(), new StubReindexService(), settings);
 
@@ -136,12 +171,17 @@ public sealed class LibraryViewPersistenceTests
 
     private sealed class ReadyLibraryService : ILibraryService
     {
+        private readonly IReadOnlyList<TrackRecord> _records;
+
+        public ReadyLibraryService(IReadOnlyList<TrackRecord>? records = null) =>
+            _records = records ?? [];
+
         public bool IsReady => true;
         public int LoadCalls { get; private set; }
         public Task<IReadOnlyList<TrackRecord>> GetAllRecordsAsync(CancellationToken ct = default)
         {
             LoadCalls++;
-            return Task.FromResult<IReadOnlyList<TrackRecord>>([]);
+            return Task.FromResult(_records);
         }
         public Task<(int Added, int Modified, int Removed, int Unchanged)> IndexAsync(
             IProgress<IndexProgress>? progress = null, CancellationToken ct = default) =>

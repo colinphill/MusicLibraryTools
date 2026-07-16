@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
+using MusicLibraryTools;
 
 namespace MusicLibrary.App.ViewModels;
 
@@ -59,7 +60,10 @@ public partial class OrganizeViewModel : ViewModelBase
                 Moves.Add(m);
             HasPreview = moves.Count > 0;
             StatusText = moves.Count == 0
-                ? "Everything is already in its canonical location."
+                ? LibraryOrganizationPolicy.EligibleRoots(
+                    _settings.Configuration!.IndexLocations).Count == 0
+                    ? "No organization-eligible IndexTargets are configured."
+                    : "Everything eligible is already in its canonical location."
                 : $"{moves.Count:N0} files would be moved. Review below, then Apply.";
         }
         catch (OperationCanceledException)
@@ -101,7 +105,7 @@ public partial class OrganizeViewModel : ViewModelBase
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Cancelled — files already moved were synced to the cache.";
+            StatusText = "Cancelled — completed moves were rolled back.";
             Moves.Clear();
             HasPreview = false;
             MovesApplied?.Invoke();

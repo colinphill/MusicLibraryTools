@@ -10,6 +10,172 @@ namespace MusicLibrary.Core.Services;
 /// </summary>
 public static class LibraryAnalyzer
 {
+    /// <summary>
+    /// Basic per-file metadata hygiene corresponding to AnalyzeMetadata's historical basecheck.
+    /// </summary>
+    public static AnalysisReport BasicMetadata(IReadOnlyList<TrackRecord> records)
+    {
+        ArgumentNullException.ThrowIfNull(records);
+        var findings = new List<AnalysisFinding>();
+        foreach (TrackRecord record in records.OrderBy(
+                     record => record.Path, StringComparer.CurrentCultureIgnoreCase))
+        {
+            if (record.TrackTotal == 0)
+                findings.Add(new(record.Path, "0 TrackTotal", "Zero track total"));
+            else if (record.TrackTotal is null)
+                findings.Add(new(record.Path, "Missing TrackTotal", "Missing track total"));
+            if ((record.TrackNumber ?? 0) == 0)
+                findings.Add(new(record.Path, "0/Missing TrackNumber",
+                    "Missing or zero track number"));
+            if (record.DiscNumber is not null || record.DiscTotal is not null)
+                findings.Add(new(record.Path,
+                    $"({record.DiscNumber}/{record.DiscTotal}) Disc", "Disc metadata present"));
+            if (record.Path.Contains('\u00A0'))
+                findings.Add(new(record.Path, "Contains nbsp", "Non-breaking space in path"));
+        }
+        return new("Basic metadata check", findings);
+    }
+
+    /// <summary>
+    /// Basic metadata hygiene plus album-folder track-total disagreements.
+    /// </summary>
+    public static AnalysisReport MetadataInconsistencies(IReadOnlyList<TrackRecord> records)
+    {
+        ArgumentNullException.ThrowIfNull(records);
+        var findings = new List<AnalysisFinding>();
+        foreach (var folder in records.GroupBy(
+                     record => Path.GetDirectoryName(record.Path) ?? "",
+                     PathComparer))
+        {
+            if (folder.Select(record => record.Album).Distinct().Take(2).Count() != 1)
+                continue;
+            if (folder.Select(record => record.TrackTotal).Distinct().Take(2).Count() > 1)
+            {
+                string path = folder.Key;
+                findings.Add(new(path, "Multiple Track Totals",
+                    "Album folder contains multiple track totals"));
+            }
+        }
+        findings.AddRange(BasicMetadata(records).Findings);
+        return new("Metadata inconsistencies", findings);
+    }
+
+    /// <summary>Low-resolution files stored anywhere beneath a HiRes directory.</summary>
+    public static AnalysisReport LowResolutionInHighResolutionTree(
+        IReadOnlyList<TrackRecord> records)
+    {
+        ArgumentNullException.ThrowIfNull(records);
+        var findings = records
+            .Where(record => ContainsPathSegment(record.Path, "hires") &&
+                record.SampleRate <= 48_000 && record.BitsPerSample <= 16)
+            .OrderBy(record => record.Path, PathComparer)
+            .Select(record => new AnalysisFinding(record.Path,
+                $"({record.SampleRate}/{record.BitsPerSample})",
+                "Low-resolution file in HiRes tree"))
+            .ToList();
+        return new("Low-resolution files in HiRes tree", findings);
+    }
+
+    /// <summary>Files whose sample rate or sample width exceeds compact-disc resolution.</summary>
+    public static AnalysisReport HighResolutionAudio(IReadOnlyList<TrackRecord> records)
+    {
+        ArgumentNullException.ThrowIfNull(records);
+        var findings = records
+            .Where(record => record.SampleRate > 44_100 || record.BitsPerSample > 16)
+            .OrderBy(record => record.Path, PathComparer)
+            .Select(record => new AnalysisFinding(record.Path,
+                $"({record.SampleRate}/{record.BitsPerSample})",
+                "High-resolution audio"))
+            .ToList();
+        return new("High-resolution audio", findings);
+    }
+
+    /// <summary>
+    /// Compare albums in a selected HiRes branch with the standard-resolution library using the
+    /// historical progressively tightened fuzzy artist/album match.
+    /// </summary>
+    public static ResolutionComparisonReport CompareResolutionAlbums(
+        IReadOnlyList<TrackRecord> records,
+        params string[] highResolutionPathSegments)
+    {
+        ArgumentNullException.ThrowIfNull(records);
+        if (highResolutionPathSegments.Length == 0)
+            throw new ArgumentException("At least one path segment is required.",
+                nameof(highResolutionPathSegments));
+
+        TrackRecord[] highFiles = records.Where(record =>
+            ContainsPathSequence(record.Path, highResolutionPathSegments)).ToArray();
+        TrackRecord[] standardFiles = records.Where(record =>
+            !ContainsPathSegment(record.Path, "hires")).ToArray();
+        var highAlbums = highFiles.Select(record => new ResolutionAlbum(
+                record.EffectiveAlbumArtist,
+                record.StrippedAlbum ?? record.Album ?? "",
+                Path.GetDirectoryName(record.Path) ?? ""))
+            .Distinct()
+            .ToArray();
+        var standardAlbums = standardFiles.Select(record => new ResolutionAlbum(
+                record.EffectiveAlbumArtist,
+                record.Album ?? "",
+                Path.GetDirectoryName(record.Path) ?? ""))
+            .Distinct()
+            .ToArray();
+
+        var findings = new List<ResolutionComparisonFinding>();
+        int matched = 0, missing = 0, ambiguous = 0;
+        foreach (ResolutionAlbum album in highAlbums)
+        {
+            double threshold = 0.5;
+            ResolutionAlbum[] possibilities = MatchingAlbums(standardAlbums, album, threshold);
+            while (possibilities.Length > 1 && threshold >= 0.1)
+            {
+                threshold -= 0.1;
+                possibilities = MatchingAlbums(standardAlbums, album, threshold);
+            }
+
+            if (possibilities.Length == 0)
+            {
+                missing++;
+                findings.Add(new(ResolutionComparisonKind.Missing, album, null, threshold));
+                continue;
+            }
+            if (possibilities.Length > 1)
+            {
+                ambiguous++;
+                findings.Add(new(ResolutionComparisonKind.Ambiguous, album, null, threshold,
+                    possibilities));
+                continue;
+            }
+
+            matched++;
+            ResolutionAlbum standard = possibilities[0];
+            int highTrackCount = highFiles.Count(record =>
+                StringComparer.Ordinal.Equals(record.StrippedAlbum ?? record.Album ?? "", album.Album) &&
+                (StringComparer.Ordinal.Equals(record.Artist, album.Artist) ||
+                 StringComparer.Ordinal.Equals(record.AlbumArtist, album.Artist)));
+            int standardTrackCount = standardFiles.Count(record =>
+                StringComparer.Ordinal.Equals(record.Album ?? "", standard.Album) &&
+                (StringComparer.Ordinal.Equals(record.Artist, standard.Artist) ||
+                 StringComparer.Ordinal.Equals(record.AlbumArtist, standard.Artist)));
+            if (highTrackCount < standardTrackCount)
+            {
+                findings.Add(new(ResolutionComparisonKind.TrackCountMismatch, album, standard,
+                    threshold, HighTrackCount: highTrackCount,
+                    StandardTrackCount: standardTrackCount));
+                continue;
+            }
+
+            int artistDistance = album.Artist.EditDistance(standard.Artist);
+            int albumDistance = album.Album.EditDistance(standard.Album);
+            if (artistDistance != 0 || albumDistance != 0)
+            {
+                findings.Add(new(ResolutionComparisonKind.MetadataDifference, album, standard,
+                    threshold, ArtistDistance: artistDistance, AlbumDistance: albumDistance));
+            }
+        }
+
+        return new(highAlbums.Length, matched, missing, ambiguous, findings);
+    }
+
     /// <summary>Files that are lossy (candidates that should perhaps be lossless).</summary>
     public static AnalysisReport Lossless(IReadOnlyList<TrackRecord> records)
     {
@@ -159,4 +325,54 @@ public static class LibraryAnalyzer
         InconsistentTotals(records),
         SimilarArtists(records, ct: ct),
     ];
+
+    private static ResolutionAlbum[] MatchingAlbums(
+        IEnumerable<ResolutionAlbum> candidates,
+        ResolutionAlbum album,
+        double threshold) =>
+        candidates.Where(candidate =>
+            IsFuzzy(candidate.Artist, album.Artist, threshold) &&
+            IsFuzzy(candidate.Album, album.Album, threshold)).ToArray();
+
+    private static bool IsFuzzy(string left, string right, double threshold)
+    {
+        if (string.Equals(left, right, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (string.IsNullOrEmpty(left) || string.IsNullOrEmpty(right))
+            return false;
+        double length = Math.Max(left.Length, right.Length);
+        int distance = left.ToLowerInvariant().EditDistance(right.ToLowerInvariant());
+        return distance / length < threshold;
+    }
+
+    private static bool ContainsPathSegment(string path, string segment) =>
+        PathSegments(path).Contains(segment, StringComparer.OrdinalIgnoreCase);
+
+    private static bool ContainsPathSequence(string path, IReadOnlyList<string> sequence)
+    {
+        string[] segments = PathSegments(path);
+        for (int start = 0; start <= segments.Length - sequence.Count; start++)
+        {
+            bool match = true;
+            for (int offset = 0; offset < sequence.Count; offset++)
+            {
+                if (!segments[start + offset].Equals(
+                        sequence[offset], StringComparison.OrdinalIgnoreCase))
+                {
+                    match = false;
+                    break;
+                }
+            }
+            if (match)
+                return true;
+        }
+        return false;
+    }
+
+    private static string[] PathSegments(string path) =>
+        path.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries);
+
+    private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
+        ? StringComparer.OrdinalIgnoreCase
+        : StringComparer.Ordinal;
 }

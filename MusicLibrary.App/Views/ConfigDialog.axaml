@@ -68,6 +68,10 @@
                                             <TextBlock Text="Set memberships" FontWeight="SemiBold" VerticalAlignment="Center"/>
                                             <TextBlock Text="The default offset above applies to every set without an override."
                                                        Classes="muted" VerticalAlignment="Center"/>
+                                            <CheckBox Content="Include in organization"
+                                                      IsChecked="{Binding Organize}"
+                                                      VerticalAlignment="Center"
+                                                      ToolTip.Tip="Clear to keep this root indexed while excluding it from organization operations"/>
                                             <Button Content="Add set"
                                                     Command="{Binding $parent[Window].((vm:ConfigDialogViewModel)DataContext).AddSetCommand}"
                                                     CommandParameter="{Binding}"/>

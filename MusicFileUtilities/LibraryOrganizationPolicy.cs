@@ -1,0 +1,64 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+
+namespace MusicLibraryTools;
+
+/// <summary>
+/// Resolves IndexTarget organization eligibility, including duplicate and nested roots. Excluded
+/// targets remain indexed and available to every non-organization workflow.
+/// </summary>
+public static class LibraryOrganizationPolicy
+{
+    public static IReadOnlyList<string> EligibleRoots(
+        IEnumerable<LibraryIndexLocation> locations) =>
+        locations
+            .GroupBy(location => Path.TrimEndingDirectorySeparator(location.Target), PathComparer)
+            .Where(group => group.All(location => location.Organize))
+            .Select(group => group.First().Target)
+            .ToArray();
+
+    public static bool IsPathEligible(
+        string path, IEnumerable<LibraryIndexLocation> locations)
+    {
+        LibraryIndexLocation[] matches = locations
+            .Where(location => IsWithinOrEqual(path, location.Target))
+            .ToArray();
+        return matches.Length > 0 && matches.All(location => location.Organize);
+    }
+
+    /// <summary>
+    /// Empty-folder cleanup is recursive, so an eligible parent containing an excluded nested root
+    /// is omitted from cleanup. Files in the eligible portion can still be organized.
+    /// </summary>
+    public static IReadOnlyList<string> CleanupRoots(
+        IEnumerable<LibraryIndexLocation> locations)
+    {
+        LibraryIndexLocation[] materialized = locations.ToArray();
+        string[] excludedRoots = materialized
+            .Where(location => !location.Organize)
+            .Select(location => Path.TrimEndingDirectorySeparator(location.Target))
+            .Distinct(PathComparer)
+            .ToArray();
+        return EligibleRoots(materialized)
+            .Where(root => !excludedRoots.Any(excluded => IsWithinOrEqual(excluded, root)))
+            .ToArray();
+    }
+
+    private static bool IsWithinOrEqual(string path, string root)
+    {
+        string normalizedPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(path));
+        string normalizedRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+        return PathComparer.Equals(normalizedPath, normalizedRoot) ||
+               normalizedPath.StartsWith(normalizedRoot + Path.DirectorySeparatorChar,
+                   PathComparison);
+    }
+
+    private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
+        ? StringComparer.OrdinalIgnoreCase
+        : StringComparer.Ordinal;
+    private static readonly StringComparison PathComparison = OperatingSystem.IsWindows()
+        ? StringComparison.OrdinalIgnoreCase
+        : StringComparison.Ordinal;
+}

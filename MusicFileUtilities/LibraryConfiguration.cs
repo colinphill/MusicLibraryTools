@@ -34,7 +34,8 @@ namespace MusicLibraryTools
         string Target,
         string? DefaultOffset,
         IReadOnlyList<LibraryIndexSetMembership> Memberships,
-        string? Filter)
+        string? Filter,
+        bool Organize = true)
     {
         public IReadOnlyList<string> Sets { get; } =
             Memberships.Select(membership => membership.Name).ToArray();
@@ -151,7 +152,8 @@ namespace MusicLibraryTools
                     .Select(name => new LibraryIndexSetMembership(name, null)).ToArray();
             }
             return new(target, defaultOffset, memberships,
-                CleanOptional((string?)element.Attribute("Filter")));
+                CleanOptional((string?)element.Attribute("Filter")),
+                ParseOptionalBoolean(element, "Organize", defaultValue: true));
         }
 
         /// <summary>Parse a comma, semicolon, or whitespace separated logical-set list.</summary>
@@ -257,6 +259,18 @@ namespace MusicLibraryTools
 
         private static string? CleanOptional(string? value) =>
             string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+        private static bool ParseOptionalBoolean(
+            XElement element, string attributeName, bool defaultValue)
+        {
+            string? value = CleanOptional((string?)element.Attribute(attributeName));
+            if (value is null)
+                return defaultValue;
+            if (bool.TryParse(value, out bool parsed))
+                return parsed;
+            throw new InvalidDataException(
+                $"Attribute '{attributeName}' on <{element.Name.LocalName}> must be true or false.");
+        }
  
     }
 }

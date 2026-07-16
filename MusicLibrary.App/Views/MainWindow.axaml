@@ -200,8 +200,28 @@
                                 <ComboBox ItemsSource="{Binding FilterScopes}"
                                           SelectedItem="{Binding SelectedScope}" Width="170"
                                           ToolTip.Tip="Filter in which column"/>
-                                <TextBox Name="LibraryFilterTextBox" Text="{Binding FilterText}" Width="240"
-                                         PlaceholderText="Filter (realtime)…" ToolTip.Tip="Focus filter (Ctrl+F)"/>
+                                <TextBox Name="LibraryFilterTextBox" Text="{Binding FilterText}" Width="360"
+                                         PlaceholderText="Filter or Artist:Name AND NOT Codec:MP3"
+                                         ToolTip.Tip="{Binding FilterError}"/>
+                                <Button Content="Syntax">
+                                    <Button.Flyout>
+                                        <Flyout>
+                                            <StackPanel Width="440" Spacing="7" Margin="6">
+                                                <TextBlock Text="Advanced library filtering" FontWeight="SemiBold"/>
+                                                <TextBlock TextWrapping="Wrap"
+                                                           Text="Qualify terms with any column name and combine them with uppercase AND, OR, NOT, and parentheses."/>
+                                                <TextBlock FontFamily="Consolas" TextWrapping="Wrap"
+                                                           Text="Artist:&quot;Miles Davis&quot; AND (Codec:FLAC OR Codec:ALAC) AND NOT Album:Live"/>
+                                                <TextBlock TextWrapping="Wrap"
+                                                           Text="Adjacent terms imply AND. Column names ignore spaces and punctuation, so AlbumArtist and album-artist are equivalent. Quote values containing spaces or parentheses."/>
+                                                <TextBlock TextWrapping="Wrap"
+                                                           Text="The selected Substring, Glob, or Regex mode applies to every term. Unqualified text uses the selected scope; qualified terms can use hidden columns."/>
+                                                <TextBlock Classes="muted" TextWrapping="Wrap"
+                                                           Text="Plain text without column qualifiers or uppercase boolean operators keeps the original filtering behavior."/>
+                                            </StackPanel>
+                                        </Flyout>
+                                    </Button.Flyout>
+                                </Button>
                                 <TextBlock Text="{Binding StatusText}" Classes="muted" MaxWidth="320"
                                            TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding StatusText}"/>
                             </WrapPanel>

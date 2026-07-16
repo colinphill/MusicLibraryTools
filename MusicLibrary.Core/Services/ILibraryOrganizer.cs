@@ -11,7 +11,10 @@ public interface ILibraryOrganizer
     /// <summary>Compute the moves needed to canonicalize the library. No filesystem changes.</summary>
     Task<IReadOnlyList<PlannedMove>> PreviewMovesAsync(CancellationToken ct = default);
 
-    /// <summary>Apply the given moves, then clean up emptied folders. Reports per-file progress.</summary>
+    /// <summary>
+    /// Stale-check and apply the reviewed moves as one recoverable batch, then clean up emptied
+    /// folders and synchronize the cache. Reports per-file progress.
+    /// </summary>
     Task<OrganizeResult> ApplyMovesAsync(
         IReadOnlyList<PlannedMove> moves, IProgress<int>? progress = null, CancellationToken ct = default);
 }

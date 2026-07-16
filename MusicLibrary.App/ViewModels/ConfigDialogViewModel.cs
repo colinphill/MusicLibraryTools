@@ -13,6 +13,7 @@ public partial class IndexTargetRow : ObservableObject
     [ObservableProperty] private string _target = "";
     [ObservableProperty] private string? _defaultOffset;
     [ObservableProperty] private string? _filter;
+    [ObservableProperty] private bool _organize = true;
     public ObservableCollection<IndexTargetSetRow> Memberships { get; } = [];
 }
 
@@ -82,6 +83,7 @@ public partial class ConfigDialogViewModel : ViewModelBase
                     Target = t.Target,
                     DefaultOffset = t.DefaultOffset,
                     Filter = t.Filter,
+                    Organize = t.Organize,
                 };
                 foreach (IndexTargetSetEntry membership in t.Memberships)
                     row.Memberships.Add(new IndexTargetSetRow
@@ -191,6 +193,7 @@ public partial class ConfigDialogViewModel : ViewModelBase
                     {
                         Target = t.Target,
                         DefaultOffset = t.DefaultOffset,
+                        Organize = t.Organize,
                         Memberships = t.Memberships
                             .Where(membership => !string.IsNullOrWhiteSpace(membership.Name))
                             .Select(membership => new IndexTargetSetEntry

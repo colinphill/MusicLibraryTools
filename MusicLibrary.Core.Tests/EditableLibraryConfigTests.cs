@@ -25,6 +25,7 @@ public class EditableLibraryConfigTests
                     new IndexTargetEntry
                     {
                         Target = @"Z:\FLAC", DefaultOffset = "/Music", Filter = "*.flac",
+                        Organize = false,
                         Memberships =
                         [
                             new() { Name = "Lossless" },
@@ -56,6 +57,8 @@ public class EditableLibraryConfigTests
             Assert.Equal("/Car/FLAC", reloaded.IndexTargets[0].Memberships[1].Offset);
             Assert.Empty(reloaded.IndexTargets[1].Memberships);
             Assert.Equal("*.flac", reloaded.IndexTargets[0].Filter);
+            Assert.False(reloaded.IndexTargets[0].Organize);
+            Assert.True(reloaded.IndexTargets[1].Organize);
             Assert.Equal(2, reloaded.PlaylistTargets.Count);
             Assert.Equal(@"Z:\WPL", reloaded.PlaylistTargets[0].Target);
             Assert.Equal("wpl", reloaded.PlaylistTargets[0].Type);
@@ -65,6 +68,8 @@ public class EditableLibraryConfigTests
             var xml = System.Xml.Linq.XDocument.Load(path);
             Assert.Null(xml.Root!.Element("PlaylistType"));
             Assert.Equal(@"Z:\FLAC", (string?)xml.Root.Elements("IndexTarget").First().Attribute("Path"));
+            Assert.Equal("false",
+                (string?)xml.Root.Elements("IndexTarget").First().Attribute("Organize"));
             Assert.Equal(2, xml.Root.Elements("IndexTarget").First().Elements("Set").Count());
             Assert.All(xml.Root.Elements("PlaylistTarget"), target =>
             {
@@ -107,6 +112,7 @@ public class EditableLibraryConfigTests
             var roots = config.IndexLocations.ToList();
             Assert.Single(roots);
             Assert.Equal(@"Z:\Music", roots[0].Target);
+            Assert.True(roots[0].Organize);
             Assert.Equal(["Desktop2", "Car4"], roots[0].Sets);
             var playlistTarget = Assert.Single(config.PlaylistTargets);
             Assert.Equal(@"Z:\Playlists", playlistTarget.Target);

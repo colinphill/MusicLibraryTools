@@ -111,7 +111,7 @@ at least one `Set`; multiple sets form a union:
   <Set Name="Car"/>
   <Set Name="Archive" Offset="../Archive/FLAC"/>
 </IndexTarget>
-<IndexTarget Path="Z:\iTunes\Purchased Sync">
+<IndexTarget Path="Z:\iTunes\Purchased Sync" Organize="false">
   <Set Name="Car" Offset="../Music/Purchased"/>
 </IndexTarget>
 <PlaylistTarget Type="wpl" Set="Lossless">Z:\iTunes\Playlists\Lossless</PlaylistTarget>
@@ -125,6 +125,9 @@ An `IndexTarget` can belong to several sets or none. Its `Offset` is the common 
 for all child sets; a child `Set` can override it. Selecting two different resolved offsets for the
 same root is rejected as ambiguous. Legacy numeric `Set` attributes remain readable and are migrated
 to textual names in the cache database without a rescan.
+Set `Organize="false"` on an `IndexTarget` to keep it indexed and available to browsing, analysis,
+sync, and playlist export while excluding its files from organization previews, moves, and recursive
+empty-folder cleanup. The attribute defaults to `true`.
 
 Library indexing uses up to 16 concurrent metadata readers so high-latency SMB shares can
 overlap file opens. Set `MLT_INDEX_PARALLELISM` to a value from 1 through 64 to tune the global

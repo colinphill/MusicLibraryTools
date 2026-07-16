@@ -25,6 +25,15 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         _mutations = mutations ?? FileMutationCoordinator.Shared;
     }
 
+    /// <summary>
+    /// Creates a non-persisting service instance for command-line workflows. The configuration is
+    /// loaded directly and no application recent-file or preference state is read or written.
+    /// </summary>
+    public LibraryService(string configurationPath, IFileMutationCoordinator? mutations = null)
+        : this(new CommandLineAppSettings(configurationPath), mutations)
+    {
+    }
+
     public bool IsReady => _settings.GetSnapshot().Configuration is not null;
 
     private sealed record LibraryContext(
@@ -287,7 +296,8 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         {
             var context = GetContext();
             var config = context.Configuration;
-            var baseDirs = GetRoots(config);
+            var locations = config.IndexLocations.ToList();
+            var baseDirs = LibraryOrganizationPolicy.EligibleRoots(locations);
             var (lengthLimit, discLimit) = GetLimits(config);
             var db = GetDatabase(context);
             return await Task.Run(() =>
@@ -302,11 +312,17 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                     foreach (var (source, entry) in cache.FileCache)
                     {
                         ct.ThrowIfCancellationRequested();
+                        if (!LibraryOrganizationPolicy.IsPathEligible(source, locations))
+                            continue;
                         var dest = CanonicalPath(baseDir, entry, source, lengthLimit, discLimit, claimed);
                         if (dest is not null)
                         {
                             claimed.Add(dest);
-                            moves.Add(new PlannedMove(source, dest));
+                            moves.Add(new PlannedMove(
+                                source,
+                                dest,
+                                CaptureOrganizationSnapshot(source),
+                                CaptureOrganizationSnapshot(dest)));
                         }
                     }
                 }
@@ -343,71 +359,104 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
     public async Task<OrganizeResult> ApplyMovesAsync(
         IReadOnlyList<PlannedMove> moves, IProgress<int>? progress = null, CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(moves);
         var context = GetContext();
         var config = context.Configuration;
-        var baseDirs = GetRoots(config);
+        var locations = config.IndexLocations.ToList();
+        var baseDirs = LibraryOrganizationPolicy.EligibleRoots(locations);
+        PlannedMove? excluded = moves.FirstOrDefault(move =>
+            !LibraryOrganizationPolicy.IsPathEligible(move.Source, locations));
+        if (excluded is not null)
+            throw new InvalidOperationException(
+                $"Organization is disabled for '{excluded.Source}' by its IndexTarget configuration.");
         bool deleteNonMusic = config["DeleteNonMusic"].Length != 0;
         bool keepFolderImages = config["KeepFolderImages"].Length != 0;
+        string[] mutationPaths = moves
+            .SelectMany(move => new[] { move.Source, move.Destination })
+            .Distinct(FilePathComparer)
+            .ToArray();
+        using IDisposable lease = await _mutations.AcquireAsync(mutationPaths, ct);
+        ValidateOrganizationPlan(moves, ct);
         string? journalPath = BeginOrganizeJournal(baseDirs, moves);
 
         // Successful (source → destination) pairs, so we can sync the cache to exactly the moves that
         // happened — even if the operation is cancelled partway.
         var relocated = new List<(string Source, string Destination)>();
-        OrganizeResult result;
-        IReadOnlyList<(string Source, string Error)> cacheErrors = [];
         try
         {
-            result = await Task.Run(async () =>
+            await Task.Run(() =>
             {
-                int moved = 0, done = 0;
-                var errors = new List<(string Source, string Error)>();
-
+                int done = 0;
                 foreach (var move in moves)
                 {
                     ct.ThrowIfCancellationRequested();
-                    try
-                    {
-                        using var mutation = await _mutations.AcquireAsync(
-                            [move.Source, move.Destination], ct);
-                        Directory.CreateDirectory(Path.GetDirectoryName(move.Destination)!);
-                        File.Move(move.Source, move.Destination);
-                        relocated.Add((move.Source, move.Destination));
-                        moved++;
-                        TryAppendOrganizeJournal(journalPath,
-                            $"MOVE\tORGANIZE\t{move.Source}\t{move.Destination}");
-                    }
-                    catch (OperationCanceledException) when (ct.IsCancellationRequested)
-                    {
-                        throw;
-                    }
-                    catch (Exception ex)
-                    {
-                        errors.Add((move.Source, ex.Message));
-                        TryAppendOrganizeJournal(journalPath,
-                            $"MOVE_FAILED\tORGANIZE\t{move.Source}\t{move.Destination}\t{ex.Message}");
-                    }
+                    Directory.CreateDirectory(Path.GetDirectoryName(move.Destination)!);
+                    File.Move(move.Source, move.Destination);
+                    relocated.Add((move.Source, move.Destination));
+                    TryAppendOrganizeJournal(journalPath,
+                        $"MOVE\tORGANIZE\t{move.Source}\t{move.Destination}");
                     progress?.Report(++done);
                 }
-
-                // Remove folders emptied by the moves (mirrors OrganizeFiles' cleanup step).
-                foreach (var baseDir in baseDirs)
-                {
-                    try { MetadataExtensions.CleanEmptyMusicFolders(new DirectoryInfo(baseDir), deleteNonMusic, keepFolderImages); }
-                    catch { /* cleanup is best-effort */ }
-                }
-
-                TryAppendOrganizeJournal(journalPath, "COMMIT\tORGANIZE");
-
-                return new OrganizeResult(moved, errors);
             }, ct);
         }
-        finally
+        catch (Exception operationError)
         {
-            // Attempt to keep the cache in sync with every completed move, even on cancellation. Any
-            // refresh failures are returned separately from filesystem move failures.
-            cacheErrors = await SyncMovesToCacheAsync(relocated, context);
+            TryAppendOrganizeJournal(journalPath,
+                $"ROLLBACK_BEGIN\tORGANIZE\t{operationError.Message}");
+            var rollbackErrors = new List<Exception>();
+            foreach ((string source, string destination) in relocated.AsEnumerable().Reverse())
+            {
+                try
+                {
+                    if (File.Exists(destination) && !File.Exists(source))
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(source)!);
+                        File.Move(destination, source);
+                        TryAppendOrganizeJournal(journalPath,
+                            $"ROLLBACK_MOVE\tORGANIZE\t{destination}\t{source}");
+                    }
+                }
+                catch (Exception rollbackError)
+                {
+                    rollbackErrors.Add(rollbackError);
+                    TryAppendOrganizeJournal(journalPath,
+                        $"ROLLBACK_FAILED\tORGANIZE\t{destination}\t{source}\t" +
+                        rollbackError.Message);
+                }
+            }
+            TryAppendOrganizeJournal(journalPath, rollbackErrors.Count == 0
+                ? "ROLLBACK\tORGANIZE"
+                : "ROLLBACK_INCOMPLETE\tORGANIZE");
+            if (rollbackErrors.Count > 0)
+            {
+                rollbackErrors.Insert(0, operationError);
+                throw new AggregateException(
+                    "Organization failed and rollback was incomplete.", rollbackErrors);
+            }
+            throw;
         }
-        return result with { CacheErrors = cacheErrors };
+
+        foreach (var baseDir in LibraryOrganizationPolicy.CleanupRoots(locations))
+        {
+            try
+            {
+                MetadataExtensions.CleanEmptyMusicFolders(
+                    new DirectoryInfo(baseDir), deleteNonMusic, keepFolderImages);
+            }
+            catch
+            {
+                // Cleanup is best-effort and does not invalidate completed, journaled moves.
+            }
+        }
+        TryAppendOrganizeJournal(journalPath, "COMMIT\tORGANIZE");
+
+        IReadOnlyList<(string Source, string Error)> cacheErrors =
+            await SyncMovesToCacheAsync(relocated, context);
+        return new OrganizeResult(relocated.Count, [])
+        {
+            CacheErrors = cacheErrors,
+            JournalPath = journalPath,
+        };
     }
 
     public async Task<IReadOnlyList<ScanRootHealth>> GetScanRootHealthAsync(CancellationToken ct = default)
@@ -424,6 +473,25 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         {
             _gate.Release();
         }
+    }
+
+    /// <summary>
+    /// Core-model progress adapter for command-line and operation workflows that should not need a
+    /// compile-time dependency on the metadata database implementation.
+    /// </summary>
+    public Task<(int Added, int Modified, int Removed, int Unchanged)> IndexForOperationAsync(
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        IProgress<IndexProgress>? indexProgress = progress is null
+            ? null
+            : new Progress<IndexProgress>(value => progress.Report(new(
+                OperationPhase.IndexingSources,
+                value.Scanned,
+                CurrentPath: null,
+                Message: $"Indexed {value.Scanned:N0}; {value.Added:N0} added, " +
+                         $"{value.Modified:N0} modified")));
+        return IndexAsync(indexProgress, ct);
     }
 
     public async Task<IReadOnlyList<ArtworkAuditFile>> GetArtworkAuditFilesAsync(CancellationToken ct = default)
@@ -444,6 +512,58 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                 .ToList(), ct);
         }
         finally { _gate.Release(); }
+    }
+
+    private static OperationPathSnapshot CaptureOrganizationSnapshot(string path)
+    {
+        string fullPath = Path.GetFullPath(path);
+        var file = new FileInfo(fullPath);
+        return file.Exists
+            ? new OperationPathSnapshot(true, false, file.Length, file.LastWriteTimeUtc)
+                { Path = fullPath }
+            : OperationPathSnapshot.Missing(fullPath);
+    }
+
+    private static void ValidateOrganizationPlan(
+        IReadOnlyList<PlannedMove> moves,
+        CancellationToken ct)
+    {
+        var destinations = new HashSet<string>(FilePathComparer);
+        var sources = moves.Select(move => Path.GetFullPath(move.Source))
+            .ToHashSet(FilePathComparer);
+        foreach (PlannedMove move in moves)
+        {
+            ct.ThrowIfCancellationRequested();
+            string source = Path.GetFullPath(move.Source);
+            string destination = Path.GetFullPath(move.Destination);
+            if (!destinations.Add(destination))
+                throw new InvalidOperationException(
+                    $"Organization plan contains a duplicate destination: '{destination}'.");
+            if (!FilePathComparer.Equals(source, destination) && sources.Contains(destination))
+                throw new InvalidOperationException(
+                    $"Organization plan would overwrite another planned source: '{destination}'.");
+            if (move.ExpectedSource is not null)
+                ValidateOrganizationSnapshot(move.ExpectedSource);
+            if (move.ExpectedDestination is not null &&
+                !ReferenceEquals(move.ExpectedSource, move.ExpectedDestination))
+                ValidateOrganizationSnapshot(move.ExpectedDestination);
+        }
+    }
+
+    private static void ValidateOrganizationSnapshot(OperationPathSnapshot expected)
+    {
+        string path = expected.Path ?? throw new InvalidOperationException(
+            "Organization snapshots must include their normalized path.");
+        var file = new FileInfo(path);
+        if (file.Exists != expected.Exists)
+            throw new InvalidOperationException(
+                $"Stale organization plan: existence changed for '{path}'.");
+        if (!file.Exists)
+            return;
+        if (file.Length != expected.Length ||
+            Math.Abs((file.LastWriteTimeUtc - expected.LastWriteTimeUtc).TotalMilliseconds) > 500)
+            throw new InvalidOperationException(
+                $"Stale organization plan: file changed since preview: '{path}'.");
     }
 
     private static string? BeginOrganizeJournal(
@@ -736,6 +856,30 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
             path = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(configPath))!, path);
 
         return prefix + path;
+    }
+
+    private sealed class CommandLineAppSettings : IAppSettings
+    {
+        private readonly AppConfigurationSnapshot _snapshot;
+
+        public CommandLineAppSettings(string configurationPath)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(configurationPath);
+            string fullPath = Path.GetFullPath(configurationPath);
+            _snapshot = new(fullPath, new LibraryConfiguration(fullPath), 1);
+        }
+
+        public string? ConfigPath => _snapshot.ConfigPath;
+        public LibraryConfiguration? Configuration => _snapshot.Configuration;
+        public AppConfigurationSnapshot GetSnapshot() => _snapshot;
+        public event EventHandler? ConfigurationChanged { add { } remove { } }
+        public void LoadConfig(string path) =>
+            throw new NotSupportedException("Command-line library settings are immutable.");
+        public string? GetRememberedConfigPath() => null;
+        public IReadOnlyList<string> RecentConfigPaths => [];
+        public void ClearRecentConfigs() { }
+        public string? GetPreference(string key) => null;
+        public void SetPreference(string key, string? value) { }
     }
 
     public void Dispose()
