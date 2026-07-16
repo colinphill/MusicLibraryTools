@@ -14,9 +14,16 @@ internal static class LibraryCanonicalPath
         string extension = Path.GetExtension(source);
         if (target.UseItunesCanonicalNaming)
         {
-            return ItlMediaOrganization.CanonicalMusicPath(target.Target,
-                entry.AlbumArtist, entry.Artist, entry.Album, entry.TrackNumber, entry.Title,
-                entry.Compilation, extension).Normalize();
+            string targetRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(target.Target));
+            string destination = Path.GetFileName(targetRoot).Equals(
+                    "Music", StringComparison.OrdinalIgnoreCase)
+                ? ItlMediaOrganization.CanonicalMusicFolderPath(targetRoot,
+                    entry.AlbumArtist, entry.Artist, entry.Album, entry.TrackNumber, entry.Title,
+                    entry.Compilation, extension)
+                : ItlMediaOrganization.CanonicalMusicPath(targetRoot,
+                    entry.AlbumArtist, entry.Artist, entry.Album, entry.TrackNumber, entry.Title,
+                    entry.Compilation, extension);
+            return destination.Normalize();
         }
 
         return Path.Combine(target.Target,

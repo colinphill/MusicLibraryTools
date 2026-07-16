@@ -18,10 +18,11 @@ namespace MusicLibrary.Core.Tests;
 public class DatabaseReadTests
 {
     private static (string Work, string Music, string Config, string Song) Setup(
-        string fixture, bool organize = true, bool useItunesCanonicalNaming = false)
+        string fixture, bool organize = true, bool useItunesCanonicalNaming = false,
+        string libraryFolder = "music")
     {
         var work = Path.Combine(Path.GetTempPath(), "mldb_" + Guid.NewGuid().ToString("N"));
-        var music = Path.Combine(work, "music");
+        var music = Path.Combine(work, libraryFolder);
         Directory.CreateDirectory(music);
         var song = Path.Combine(music, "song" + Path.GetExtension(fixture));
         File.Copy(MediaFixtures.Path_(fixture), song, overwrite: true);
@@ -169,7 +170,8 @@ public class DatabaseReadTests
     public async Task ItunesCanonicalNaming_IsUsedByOrganizationAndAnalysis()
     {
         var (work, music, config, song) = Setup(
-            "sample.flac", useItunesCanonicalNaming: true);
+            "sample.flac", useItunesCanonicalNaming: true,
+            libraryFolder: Path.Combine("iTunes Media", "Music"));
         try
         {
             var settings = new AppSettings(Path.Combine(work, "settings.json"));
@@ -177,7 +179,7 @@ public class DatabaseReadTests
             using var library = new LibraryService(settings);
             await library.IndexAsync();
 
-            string expected = Path.Combine(music, "Music", "TestArtist",
+            string expected = Path.Combine(music, "TestArtist",
                 "TestAlbum", "03 TestTitle.flac");
             PlannedMove move = Assert.Single(await library.PreviewMovesAsync());
             Assert.Equal(expected, move.Destination);
@@ -201,7 +203,8 @@ public class DatabaseReadTests
     public async Task ItunesCanonicalNaming_LoadsCompilationFlagWithoutPerTrackMetadataQueries()
     {
         var (work, music, config, song) = Setup(
-            "sample.flac", useItunesCanonicalNaming: true);
+            "sample.flac", useItunesCanonicalNaming: true,
+            libraryFolder: Path.Combine("iTunes Media", "Music"));
         try
         {
             var settings = new AppSettings(Path.Combine(work, "settings.json"));
@@ -214,7 +217,31 @@ public class DatabaseReadTests
 
             PlannedMove move = Assert.Single(await library.PreviewMovesAsync());
 
-            Assert.Equal(Path.Combine(music, "Music", "Compilations",
+            Assert.Equal(Path.Combine(music, "Compilations",
+                "TestAlbum", "03 TestTitle.flac"), move.Destination);
+        }
+        finally
+        {
+            try { Directory.Delete(work, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task ItunesCanonicalNaming_MediaRootAddsMusicDirectory()
+    {
+        var (work, mediaRoot, config, _) = Setup(
+            "sample.flac", useItunesCanonicalNaming: true,
+            libraryFolder: "iTunes Media");
+        try
+        {
+            var settings = new AppSettings(Path.Combine(work, "settings.json"));
+            settings.LoadConfig(config);
+            using var library = new LibraryService(settings);
+            await library.IndexAsync();
+
+            PlannedMove move = Assert.Single(await library.PreviewMovesAsync());
+
+            Assert.Equal(Path.Combine(mediaRoot, "Music", "TestArtist",
                 "TestAlbum", "03 TestTitle.flac"), move.Destination);
         }
         finally

@@ -23,6 +23,19 @@ public static class ItlMediaOrganization
         string album, int? trackNumber, string title, bool compilation, string extension = ".m4a")
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(mediaFolder);
+        return CanonicalMusicFolderPath(Path.Combine(Path.GetFullPath(mediaFolder), "Music"),
+            albumArtist, artist, album, trackNumber, title, compilation, extension);
+    }
+
+    /// <summary>
+    /// Returns the native iTunes path when the caller already has the Music subdirectory rather
+    /// than the parent iTunes Media folder.
+    /// </summary>
+    public static string CanonicalMusicFolderPath(string musicFolder, string? albumArtist,
+        string? artist, string album, int? trackNumber, string title, bool compilation,
+        string extension = ".m4a")
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(musicFolder);
         ArgumentException.ThrowIfNullOrWhiteSpace(album);
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
         if (trackNumber <= 0)
@@ -44,7 +57,7 @@ public static class ItlMediaOrganization
         // are appended later and may make an otherwise truncated filename longer than 40.
         string stem = trackNumber is null ? title : $"{trackNumber:D2} {title}";
         string fileName = Component(stem, ComponentLengthLimit - extension.Length) + extension;
-        return Path.Combine(Path.GetFullPath(mediaFolder), "Music", artistFolder, albumFolder, fileName);
+        return Path.Combine(Path.GetFullPath(musicFolder), artistFolder, albumFolder, fileName);
     }
 
     private static string Component(string value, int limit = ComponentLengthLimit)

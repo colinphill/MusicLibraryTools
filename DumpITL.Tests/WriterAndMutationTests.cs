@@ -67,6 +67,18 @@ public sealed class WriterAndMutationTests
     }
 
     [Fact]
+    public void CanonicalMusicFolderPathDoesNotAddAnotherMusicDirectory()
+    {
+        string music = Path.Combine(Path.GetTempPath(), "iTunes Media", "Music");
+        string path = ItlMediaOrganization.CanonicalMusicFolderPath(music,
+            "Artist", "Artist", "Album", 2, "Title", compilation: false,
+            extension: ".flac");
+
+        Assert.Equal(Path.Combine(Path.GetFullPath(music), "Artist",
+            "Album", "02 Title.flac"), path);
+    }
+
+    [Fact]
     public void AacImportReplacesTemplateMetadataAndLinksEntities()
     {
         string media = Path.Combine(Path.GetTempPath(), $"itl-import-{Guid.NewGuid():N}.m4a");
