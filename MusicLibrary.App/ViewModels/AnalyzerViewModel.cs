@@ -696,7 +696,9 @@ public partial class AnalysisRepairItemViewModel : ViewModelBase
     public string DisplayPath => ShowWhitespace(Repair.Path);
     public string Field => Repair.Kind == AnalysisRepairKind.Path
         ? "Path"
-        : Repair.Field.ToString();
+        : Repair.TargetId3Version is not null
+            ? "ID3 tag version"
+            : Repair.Field.ToString();
     public string Before => string.IsNullOrEmpty(Repair.Before)
         ? "(missing)"
         : ShowWhitespace(Repair.Before);

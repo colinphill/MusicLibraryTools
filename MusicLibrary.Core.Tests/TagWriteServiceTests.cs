@@ -37,6 +37,30 @@ public class TagWriteServiceTests
     }
 
     [Fact]
+    public async Task AppliesId3VersionUpgradeTogetherWithMetadataEdits()
+    {
+        using var media = MediaFixtures.Copy("sample.mp3");
+        var source = Assert.IsType<MP3File>(MediaFile.GetFile(media.Path));
+        source.ChangeVersion(ID3v2Version.V22);
+        source.Save();
+
+        BatchWriteResult result = await _writer.ApplyAsync(
+            [media.Path],
+            [
+                new TagEdit(
+                    TagFields.NullField,
+                    "ID3v2.3",
+                    ID3v2Version.V23),
+                new TagEdit(TagFields.Title, "Upgraded title"),
+            ]);
+
+        Assert.Equal(1, result.SavedCount);
+        var reopened = Assert.IsType<MP3File>(MediaFile.GetFile(media.Path));
+        Assert.Equal(3, reopened.Version);
+        Assert.Equal("Upgraded title", reopened.Title);
+    }
+
+    [Fact]
     public async Task RoundTrips_Ogg_ViaVorbisCommentsFallback()
     {
         // OggVorbisFile does not implement IMetadataWriter; the service must fall back to the

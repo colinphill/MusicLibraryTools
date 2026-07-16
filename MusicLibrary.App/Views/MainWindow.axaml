@@ -475,7 +475,8 @@
                                 <Button Content="Artwork health" Margin="0,0,8,8" Command="{Binding RunArtworkHealthCommand}"
                                         ToolTip.Tip="Audit cached artwork metadata without loading image blobs or scanning deferred files"/>
                                 <Button Content="Metadata repairs" Margin="0,0,8,8"
-                                        Command="{Binding PreviewMetadataRepairsCommand}"/>
+                                        Command="{Binding PreviewMetadataRepairsCommand}"
+                                        ToolTip.Tip="Preview metadata corrections and ID3v2.2 to ID3v2.3 upgrades"/>
                                 <Button Content="Album artist conflicts" Margin="0,0,8,8"
                                         Command="{Binding FindAlbumArtistConflictsCommand}"
                                         ToolTip.Tip="Choose canonical values for ambiguous album artists"/>
@@ -826,7 +827,7 @@
                                     <WrapPanel Grid.Row="0" Classes="toolbarwrap" Margin="0,0,-8,4">
                                         <Button Content="Apply active" Classes="accent"
                                                 Command="{Binding ApplyRepairsCommand}"/>
-                                        <TextBlock Text="Automatic repairs are unambiguous; explicit conflict choices use the same stale-checked preview."
+                                        <TextBlock Text="Automatic repairs include safe ID3v2.2 to ID3v2.3 upgrades; explicit conflict choices use the same stale-checked preview."
                                                    Classes="muted" VerticalAlignment="Center" TextWrapping="Wrap"/>
                                     </WrapPanel>
                                     <TreeView Grid.Row="1" ItemsSource="{Binding RepairGroups}"

@@ -31,6 +31,7 @@ namespace MetadataCaching
         private bool _touched = false;
         private CodecType _codectype = CodecType.Lossy;
         private string _codecname = "";
+        private string _tagtype = "";
         private uint _channels = 0;
         private uint _samplerate = 0;
         private uint _bitspersample = 0;
@@ -61,6 +62,7 @@ namespace MetadataCaching
             _discnumber = mp.DiscNumber;
             _disctotal = mp.DiscTotal;
             _releasedate = mp.ReleaseDate;
+            _tagtype = mp.TagType;
             
             if (codec != null)
             {
@@ -76,6 +78,7 @@ namespace MetadataCaching
         }
 
         public string CodecName => _codecname;
+        public string TagType => _tagtype;
         public CodecType CodecType => _codectype;
         public uint Channels => _channels;
         public uint BitsPerSample => _bitspersample;

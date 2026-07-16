@@ -17,11 +17,61 @@ using System.Runtime.CompilerServices;
 using System.ComponentModel;
 using System.ComponentModel.Design;
 using System.Net.Mail;
+using System.Text.RegularExpressions;
 
 namespace MusicFileUtilities
 {
 
     public enum TagAction { Get, Set, Add, Delete };
+
+    public enum ID3v2Version
+    {
+        V22 = 2,
+        V23 = 3,
+        V24 = 4,
+    }
+
+    public sealed record ID3VersionConversionOptions
+    {
+        /// <summary>
+        /// Drop frames with no safe target representation. The default is false, which makes the
+        /// conversion fail atomically instead.
+        /// </summary>
+        public bool DropUnsupportedFrames { get; init; }
+
+        /// <summary>
+        /// Join ID3v2.4 multi-value text when targeting v2.2/v2.3. The default is false because
+        /// joining is not generally reversible.
+        /// </summary>
+        public bool CoalesceTextValues { get; init; }
+
+        public string MultiValueSeparator { get; init; } = "/";
+    }
+
+    public sealed record ID3VersionConversionIssue(
+        string FrameID,
+        string Message,
+        bool Dropped,
+        bool IsWarning = false);
+
+    public sealed record ID3VersionConversionResult(
+        ID3v2Version SourceVersion,
+        ID3v2Version TargetVersion,
+        int ConvertedFrameCount,
+        IReadOnlyList<ID3VersionConversionIssue> Issues);
+
+    public sealed class ID3VersionConversionException : InvalidOperationException
+    {
+        public IReadOnlyList<ID3VersionConversionIssue> Issues { get; }
+
+        public ID3VersionConversionException(
+            string message,
+            IReadOnlyList<ID3VersionConversionIssue> issues)
+            : base(message)
+        {
+            Issues = issues;
+        }
+    }
 
     public class ID3v2Util
     {
@@ -221,6 +271,18 @@ namespace MusicFileUtilities
             }
         }
 
+        public static object[] CommentTextMapping(
+            ID3v2Tag tag,
+            string frameid,
+            TagAction action,
+            params object[] values)
+        {
+            var frame = tag.FindFrame(frameid) as CommentFrame;
+            if (action == TagAction.Get)
+                return frame is null ? Array.Empty<object>() : new object[] { frame.Value };
+            throw new InvalidOperationException();
+        }
+
         public static object[] DateMapping(ID3v2Tag tag, TagAction action, params object[] values)
         {
             if (tag.Version == 2)
@@ -330,7 +392,7 @@ namespace MusicFileUtilities
             { TagFields.Key, (tag, action, values) => SimpleMapping(tag, "TKE", action, values) },
             { TagFields.ISRC, (tag, action, values) => SimpleMapping(tag, "TRC", action, values) },
             { TagFields.Language, (tag, action, values) => SimpleMapping(tag, "TLA", action, values) },
-            { TagFields.Lyrics, (tag, action, values) => SimpleMapping(tag, "ULT", action, values) },
+            { TagFields.Lyrics, (tag, action, values) => CommentTextMapping(tag, "ULT", action, values) },
             { TagFields.Media, (tag, action, values) => SimpleMapping(tag, "TMT", action, values) },
             { TagFields.Mood, (tag, action, values) => UserStringMapping(tag, "TXX", "MOOD", action, values) },
             { TagFields.Movement, (tag, action, values) => SimpleMapping(tag, "MVN", action, values) },
@@ -406,7 +468,7 @@ namespace MusicFileUtilities
             { TagFields.Key, (tag, action, values) => SimpleMapping(tag, "TKEY", action, values) },
             { TagFields.ISRC, (tag, action, values) => SimpleMapping(tag, "TSRC", action, values) },
             { TagFields.Language, (tag, action, values) => SimpleMapping(tag, "TLAN", action, values) },
-            { TagFields.Lyrics, (tag, action, values) => SimpleMapping(tag, "USLT", action, values) },
+            { TagFields.Lyrics, (tag, action, values) => CommentTextMapping(tag, "USLT", action, values) },
             { TagFields.Media, (tag, action, values) => SimpleMapping(tag, "TMED", action, values) },
             { TagFields.Mood, (tag, action, values) => SimpleMapping(tag, "TMOO", action, values) },
             { TagFields.Movement, (tag, action, values) => SimpleMapping(tag, "MVNM", action, values) },
@@ -751,6 +813,7 @@ namespace MusicFileUtilities
             set
             {
                 values_ = value.ToArray();
+                Encode();
             }
         }
 
@@ -981,7 +1044,34 @@ namespace MusicFileUtilities
 
         public override void Encode()
         {
-            throw new NotImplementedException();
+            string language = string.IsNullOrWhiteSpace(_lang) ? "eng" : _lang;
+            language = language.PadRight(3).Substring(0, 3);
+
+            ID3v2Util.ID3Encoding encoding;
+            byte[] key;
+            byte[] value;
+            try
+            {
+                encoding = ID3v2Util.ID3Encoding.ISO8859;
+                key = CodeString(encoding, _key ?? "");
+                value = CodeString(encoding, _value ?? "");
+            }
+            catch
+            {
+                encoding = ID3v2Util.UseUTF8 && tag_.Version >= 4
+                    ? ID3v2Util.ID3Encoding.UTF8
+                    : ID3v2Util.ID3Encoding.MarkedUnicode;
+                key = CodeString(encoding, _key ?? "");
+                value = CodeString(encoding, _value ?? "");
+            }
+
+            int separatorLength = encoding is ID3v2Util.ID3Encoding.MarkedUnicode
+                or ID3v2Util.ID3Encoding.BEUnicode ? 2 : 1;
+            Data = new byte[4 + key.Length + separatorLength + value.Length];
+            Data[0] = (byte)encoding;
+            ID3v2Util.ISO8859Encoding.GetBytes(language, 0, 3, Data, 1);
+            Array.Copy(key, 0, Data, 4, key.Length);
+            Array.Copy(value, 0, Data, 4 + key.Length + separatorLength, value.Length);
         }
 
         public override void Decode()
@@ -1144,17 +1234,54 @@ namespace MusicFileUtilities
             // Materialize the payload before Data is rebuilt underneath it.
             byte[] picdata = PicData;
             if (picdata == null) return;
+            ID3v2Util.ID3Encoding encoding;
+            byte[] desc;
+            try
+            {
+                encoding = ID3v2Util.ID3Encoding.ISO8859;
+                desc = CodeString(encoding, _description ?? "");
+            }
+            catch
+            {
+                encoding = ID3v2Util.UseUTF8 && tag_.Version >= 4
+                    ? ID3v2Util.ID3Encoding.UTF8
+                    : ID3v2Util.ID3Encoding.MarkedUnicode;
+                desc = CodeString(encoding, _description ?? "");
+            }
+            int descriptionTerminator = encoding is ID3v2Util.ID3Encoding.MarkedUnicode
+                or ID3v2Util.ID3Encoding.BEUnicode ? 2 : 1;
+            if (tag_.Version == 2)
+            {
+                string format = (_mimetype ?? "image/jpeg").ToLowerInvariant() switch
+                {
+                    "image/jpeg" or "image/jpg" => "JPG",
+                    "image/png" => "PNG",
+                    "image/bmp" => "BMP",
+                    "image/gif" => "GIF",
+                    _ => throw new InvalidOperationException(
+                        $"ID3v2.2 PIC cannot represent image type '{_mimetype}'."),
+                };
+                Data = new byte[1 + 3 + 1 + desc.Length + descriptionTerminator + picdata.Length];
+                Data[0] = (byte)encoding;
+                Encoding.ASCII.GetBytes(format, 0, 3, Data, 1);
+                Data[4] = (byte)_type;
+                Array.Copy(desc, 0, Data, 5, desc.Length);
+                Array.Copy(picdata, 0, Data, 5 + desc.Length + descriptionTerminator,
+                    picdata.Length);
+                return;
+            }
+
             byte[] mime = ID3v2Util.ISO8859Encoding.GetBytes(_mimetype ?? "image/jpeg");
-            byte[] desc = ID3v2Util.ISO8859Encoding.GetBytes(_description ?? "");
-            int totalLen = 1 + mime.Length + 1 + 1 + desc.Length + 1 + picdata.Length;
+            int totalLen = 1 + mime.Length + 1 + 1 + desc.Length +
+                descriptionTerminator + picdata.Length;
             Data = new byte[totalLen];
             int pos = 0;
-            Data[pos++] = (byte)ID3v2Util.ID3Encoding.ISO8859;
+            Data[pos++] = (byte)encoding;
             Array.Copy(mime, 0, Data, pos, mime.Length); pos += mime.Length;
             Data[pos++] = 0;
             Data[pos++] = (byte)_type;
             Array.Copy(desc, 0, Data, pos, desc.Length); pos += desc.Length;
-            Data[pos++] = 0;
+            pos += descriptionTerminator;
             Array.Copy(picdata, 0, Data, pos, picdata.Length);
         }
 
@@ -1202,7 +1329,7 @@ namespace MusicFileUtilities
     public class ID3v2Tag : TagBase, IArtworkWriter
     {
 
-        protected int _headerversion = 0;
+        protected int _headerversion = 3;
         private int _flags = 0;
         protected int _tagsize = 0;
         private List<ID3v2Frame> _frames = new List<ID3v2Frame>();
@@ -1226,6 +1353,784 @@ namespace MusicFileUtilities
 
         public int Version => _headerversion;
         public int Flags => _flags;
+
+        private enum ConvertibleFrameKind
+        {
+            Raw,
+            Text,
+            UserString,
+            Identifier,
+            Comment,
+            Picture,
+        }
+
+        private sealed record FrameSnapshot(
+            string FrameID,
+            int Flags,
+            ConvertibleFrameKind Kind,
+            string[] TextValues,
+            string Key,
+            string Value,
+            string Language,
+            byte[] BinaryValue,
+            ID3v2Util.APICType PictureType,
+            string MimeType,
+            string Description,
+            byte[] Data);
+
+        private static readonly IReadOnlyDictionary<string, string> FrameIdsV22ToV23 =
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["BUF"] = "RBUF", ["CNT"] = "PCNT", ["COM"] = "COMM",
+                ["CRA"] = "AENC", ["ETC"] = "ETCO", ["EQU"] = "EQUA",
+                ["GEO"] = "GEOB", ["IPL"] = "IPLS", ["LNK"] = "LINK",
+                ["MCI"] = "MCDI", ["MLL"] = "MLLT", ["PIC"] = "APIC",
+                ["POP"] = "POPM", ["REV"] = "RVRB", ["RVA"] = "RVAD",
+                ["SLT"] = "SYLT", ["STC"] = "SYTC", ["TAL"] = "TALB",
+                ["TBP"] = "TBPM", ["TCM"] = "TCOM", ["TCO"] = "TCON",
+                ["TCR"] = "TCOP", ["TDA"] = "TDAT", ["TDY"] = "TDLY",
+                ["TEN"] = "TENC", ["TFT"] = "TFLT", ["TIM"] = "TIME",
+                ["TKE"] = "TKEY", ["TLA"] = "TLAN", ["TLE"] = "TLEN",
+                ["TMT"] = "TMED", ["TOA"] = "TOPE", ["TOF"] = "TOFN",
+                ["TOL"] = "TOLY", ["TOR"] = "TORY", ["TOT"] = "TOAL",
+                ["TP1"] = "TPE1", ["TP2"] = "TPE2", ["TP3"] = "TPE3",
+                ["TP4"] = "TPE4", ["TPA"] = "TPOS", ["TPB"] = "TPUB",
+                ["TRC"] = "TSRC", ["TRD"] = "TRDA", ["TRK"] = "TRCK",
+                ["TSI"] = "TSIZ", ["TSS"] = "TSSE", ["TT1"] = "TIT1",
+                ["TT2"] = "TIT2", ["TT3"] = "TIT3", ["TXT"] = "TEXT",
+                ["TXX"] = "TXXX", ["TYE"] = "TYER", ["UFI"] = "UFID",
+                ["ULT"] = "USLT", ["WAF"] = "WOAF", ["WAR"] = "WOAR",
+                ["WAS"] = "WOAS", ["WCM"] = "WCOM", ["WCP"] = "WCOP",
+                ["WPB"] = "WPUB", ["WXX"] = "WXXX",
+
+                // Common extensions already recognized by MusicFileUtilities.
+                ["GP1"] = "TIT1", ["MVN"] = "MVNM", ["MVI"] = "MVIN",
+                ["TCP"] = "TCMP", ["TS2"] = "TSO2", ["TSA"] = "TSOA",
+                ["TSC"] = "TSOC", ["TSP"] = "TSOP", ["TPS"] = "TSST",
+                ["TST"] = "TSOT",
+            };
+
+        private static readonly IReadOnlyDictionary<string, string> FrameIdsV23ToV22 =
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["RBUF"] = "BUF", ["PCNT"] = "CNT", ["COMM"] = "COM",
+                ["AENC"] = "CRA", ["ETCO"] = "ETC", ["EQUA"] = "EQU",
+                ["GEOB"] = "GEO", ["IPLS"] = "IPL", ["LINK"] = "LNK",
+                ["MCDI"] = "MCI", ["MLLT"] = "MLL", ["APIC"] = "PIC",
+                ["POPM"] = "POP", ["RVRB"] = "REV", ["RVAD"] = "RVA",
+                ["SYLT"] = "SLT", ["SYTC"] = "STC", ["TALB"] = "TAL",
+                ["TBPM"] = "TBP", ["TCOM"] = "TCM", ["TCON"] = "TCO",
+                ["TCOP"] = "TCR", ["TDAT"] = "TDA", ["TDLY"] = "TDY",
+                ["TENC"] = "TEN", ["TFLT"] = "TFT", ["TIME"] = "TIM",
+                ["TKEY"] = "TKE", ["TLAN"] = "TLA", ["TLEN"] = "TLE",
+                ["TMED"] = "TMT", ["TOPE"] = "TOA", ["TOFN"] = "TOF",
+                ["TOLY"] = "TOL", ["TORY"] = "TOR", ["TOAL"] = "TOT",
+                ["TPE1"] = "TP1", ["TPE2"] = "TP2", ["TPE3"] = "TP3",
+                ["TPE4"] = "TP4", ["TPOS"] = "TPA", ["TPUB"] = "TPB",
+                ["TSRC"] = "TRC", ["TRDA"] = "TRD", ["TRCK"] = "TRK",
+                ["TSIZ"] = "TSI", ["TSSE"] = "TSS", ["TEXT"] = "TXT",
+                ["TXXX"] = "TXX", ["TYER"] = "TYE", ["UFID"] = "UFI",
+                ["USLT"] = "ULT", ["WOAF"] = "WAF", ["WOAR"] = "WAR",
+                ["WOAS"] = "WAS", ["WCOM"] = "WCM", ["WCOP"] = "WCP",
+                ["WPUB"] = "WPB", ["WXXX"] = "WXX",
+
+                // Prefer the extension IDs used by the existing v2.2 metadata mappings.
+                ["TIT1"] = "GP1", ["TIT2"] = "TT2", ["TIT3"] = "TT3",
+                ["MVNM"] = "MVN", ["MVIN"] = "MVI", ["TCMP"] = "TCP",
+                ["TSO2"] = "TS2", ["TSOA"] = "TSA", ["TSOC"] = "TSC",
+                ["TSOP"] = "TSP", ["TSST"] = "TPS", ["TSOT"] = "TST",
+            };
+
+        private static readonly HashSet<string> RawFramesSafeAcrossV23V24 =
+            new(StringComparer.Ordinal)
+            {
+                "AENC", "COMR", "ENCR", "ETCO", "GEOB", "GRID", "LINK",
+                "IPLS", "MCDI", "MLLT", "OWNE", "PCNT", "POPM", "POSS", "PRIV",
+                "RBUF", "RVRB", "SYLT", "SYTC", "UFID", "USER",
+            };
+
+        private static readonly HashSet<string> RawFramesWithTextEncoding =
+            new(StringComparer.Ordinal)
+            {
+                "COMR", "GEOB", "IPLS", "OWNE", "SYLT", "USER",
+            };
+
+        private static readonly HashSet<string> RecordingDateFrameIds =
+            new(StringComparer.Ordinal)
+            {
+                "TYE", "TDA", "TIM", "TRD",
+                "TYER", "TDAT", "TIME", "TRDA",
+                "TDRC",
+            };
+
+        private static readonly HashSet<string> OriginalDateFrameIds =
+            new(StringComparer.Ordinal) { "TOR", "TORY", "TDOR" };
+
+        private static readonly IReadOnlyDictionary<TagFields, string> SimpleFieldIdsV22 =
+            new Dictionary<TagFields, string>
+            {
+                [TagFields.Album] = "TAL",
+                [TagFields.AlbumArtist] = "TP2",
+                [TagFields.AlbumArtistSort] = "TS2",
+                [TagFields.AlbumSort] = "TSA",
+                [TagFields.Artist] = "TP1",
+                [TagFields.ArtistSort] = "TSP",
+                [TagFields.BPM] = "TBP",
+                [TagFields.Compilation] = "TCP",
+                [TagFields.Composer] = "TCM",
+                [TagFields.ComposerSort] = "TSC",
+                [TagFields.Conductor] = "TP3",
+                [TagFields.Copyright] = "TCR",
+                [TagFields.DiscSubtitle] = "TPS",
+                [TagFields.EncodedBy] = "TEN",
+                [TagFields.Genre] = "TCO",
+                [TagFields.Grouping] = "GP1",
+                [TagFields.Key] = "TKE",
+                [TagFields.ISRC] = "TRC",
+                [TagFields.Language] = "TLA",
+                [TagFields.Media] = "TMT",
+                [TagFields.Movement] = "MVN",
+                [TagFields.OriginalAlbum] = "TOT",
+                [TagFields.OriginalArtist] = "TOA",
+                [TagFields.OriginalFileName] = "TOF",
+                [TagFields.Rating] = "POP",
+                [TagFields.Label] = "TPB",
+                [TagFields.Remixer] = "TP4",
+                [TagFields.Subtitle] = "TT3",
+                [TagFields.Title] = "TT2",
+                [TagFields.TitleSort] = "TST",
+                [TagFields.Website] = "WAR",
+            };
+
+        private static readonly IReadOnlyDictionary<TagFields, string> UserStringFieldKeys =
+            new Dictionary<TagFields, string>
+            {
+                [TagFields.AcoustID_ID] = "Acoustid Id",
+                [TagFields.AcoustID_Fingerprint] = "Acoustid Fingerprint",
+                [TagFields.Artists] = "Artists",
+                [TagFields.ASIN] = "ASIN",
+                [TagFields.Barcode] = "BARCODE",
+                [TagFields.CatalogNumber] = "CATALOGNUMBER",
+                [TagFields.Mood] = "MOOD",
+                [TagFields.MusicBrainz_ArtistID] = "MusicBrainz Artist Id",
+                [TagFields.MusicBrainz_DiscID] = "MusicBrainz Disc Id",
+                [TagFields.MusicBrainz_OriginalArtistID] = "MusicBrainz Original Artist Id",
+                [TagFields.MusicBrainz_OriginalAlbumID] = "MusicBrainz Original Album Id",
+                [TagFields.MusicBrainz_AlbumArtistID] = "MusicBrainz Album Artist Id",
+                [TagFields.MusicBrainz_ReleaseGroupID] = "MusicBrainz Release Group Id",
+                [TagFields.MusicBrainz_AlbumID] = "MusicBrainz Album Id",
+                [TagFields.MusicBrainz_TrackID] = "MusicBrainz Release Track Id",
+                [TagFields.MusicBrainz_WorkID] = "MusicBrainz Work Id",
+                [TagFields.ReleaseCountry] = "MusicBrainz Album Release Country",
+                [TagFields.ReleaseStatus] = "MusicBrainz Album Status",
+                [TagFields.ReleaseType] = "MusicBrainz Album Type",
+                [TagFields.ReplayGain_Album_Gain] = "REPLAYGAIN_ALBUM_GAIN",
+                [TagFields.ReplayGain_Album_Peak] = "REPLAYGAIN_ALBUM_PEAK",
+                [TagFields.ReplayGain_Album_Range] = "REPLAYGAIN_ALBUM_RANGE",
+                [TagFields.ReplayGain_Reference_Loudness] = "REPLAYGAIN_REFERENCE_LOUDNESS",
+                [TagFields.ReplayGain_Track_Gain] = "REPLAYGAIN_TRACK_GAIN",
+                [TagFields.ReplayGain_Track_Peak] = "REPLAYGAIN_TRACK_PEAK",
+                [TagFields.ReplayGain_Track_Range] = "REPLAYGAIN_TRACK_RANGE",
+                [TagFields.Script] = "SCRIPT",
+                [TagFields.ShowMovement] = "SHOWMOVEMENT",
+                [TagFields.Work] = "WORK",
+                [TagFields.Writer] = "Writer",
+            };
+
+        public ID3VersionConversionResult ChangeVersion(
+            ID3v2Version targetVersion,
+            ID3VersionConversionOptions options = null)
+        {
+            int target = (int)targetVersion;
+            if (target is < 2 or > 4)
+                throw new ArgumentOutOfRangeException(nameof(targetVersion));
+            if (_headerversion is < 2 or > 4)
+                throw new InvalidOperationException(
+                    $"Cannot convert unsupported source ID3v2 version {_headerversion}.");
+
+            var sourceVersion = (ID3v2Version)_headerversion;
+            if (sourceVersion == targetVersion)
+                return new(sourceVersion, targetVersion, 0, Array.Empty<ID3VersionConversionIssue>());
+
+            options ??= new ID3VersionConversionOptions();
+            FrameSnapshot[] snapshots = _frames.Select(CaptureFrame).ToArray();
+            var issues = new List<ID3VersionConversionIssue>();
+            var converted = new List<ID3v2Frame>();
+            int source = _headerversion;
+            FrameSnapshot[] convertibleSnapshots = snapshots
+                .Where(snapshot => !HasUnsupportedFormatFlags(snapshot, source))
+                .ToArray();
+            foreach (FrameSnapshot snapshot in snapshots.Except(convertibleSnapshots))
+                AddUnsupported(snapshot.FrameID,
+                    "Compressed, encrypted, or grouped frame payloads cannot be converted safely.",
+                    issues, options);
+            _headerversion = target;
+            try
+            {
+                ConvertDateFrames(
+                    convertibleSnapshots, source, target, converted, issues, options);
+
+                foreach (FrameSnapshot snapshot in convertibleSnapshots)
+                {
+                    if (RecordingDateFrameIds.Contains(snapshot.FrameID) ||
+                        OriginalDateFrameIds.Contains(snapshot.FrameID))
+                        continue;
+
+                    if (source == 2 && target > 2 &&
+                        snapshot.Kind == ConvertibleFrameKind.UserString &&
+                        string.Equals(snapshot.Key, "MOOD", StringComparison.OrdinalIgnoreCase))
+                    {
+                        converted.Add(CreateTextFrame("TMOO", [snapshot.Value]));
+                        continue;
+                    }
+                    if (source > 2 && target == 2 && snapshot.FrameID == "TMOO" &&
+                        snapshot.Kind == ConvertibleFrameKind.Text)
+                    {
+                        string mood = SingleTargetText(snapshot, options, issues);
+                        if (mood is not null)
+                            converted.Add(CreateUserStringFrame("TXX", "MOOD", mood));
+                        continue;
+                    }
+
+                    if (!TryMapFrameId(source, target, snapshot.FrameID, out string frameId,
+                            out string mappingError))
+                    {
+                        AddUnsupported(snapshot.FrameID, mappingError, issues, options);
+                        continue;
+                    }
+
+                    ID3v2Frame frame = ConvertFrame(
+                        snapshot, frameId, source, target, options, issues);
+                    if (frame is not null)
+                        converted.Add(frame);
+                }
+
+                if (!options.DropUnsupportedFrames &&
+                    issues.Any(issue => !issue.Dropped && !issue.IsWarning))
+                    throw new ID3VersionConversionException(
+                        $"ID3v2.{source} cannot be converted to ID3v2.{target} without loss.",
+                        issues.ToArray());
+
+                _frames = converted;
+                _flags = 0;
+                return new(sourceVersion, targetVersion, converted.Count, issues.ToArray());
+            }
+            catch
+            {
+                _headerversion = source;
+                throw;
+            }
+        }
+
+        private FrameSnapshot CaptureFrame(ID3v2Frame frame)
+        {
+            if (frame is PictureFrame picture)
+                return new(frame.FrameID, frame.Flags, ConvertibleFrameKind.Picture, null,
+                    null, null, null, null, picture.Type, picture.MimeType, picture.Description,
+                    picture.PictureData?.ToArray() ?? []);
+            if (frame is CommentFrame comment)
+                return new(frame.FrameID, frame.Flags, ConvertibleFrameKind.Comment, null,
+                    comment.Key, comment.Value, comment.Language, null, default, null, null, null);
+            if (frame is UserStringFrame user)
+                return new(frame.FrameID, frame.Flags, ConvertibleFrameKind.UserString, null,
+                    user.Key, user.Value, null, null, default, null, null, null);
+            if (frame is IdentifierFrame identifier)
+                return new(frame.FrameID, frame.Flags, ConvertibleFrameKind.Identifier, null,
+                    identifier.Key, null, null, identifier.Value?.ToArray() ?? [], default,
+                    null, null, null);
+            if (frame is TextFrame text)
+                return new(frame.FrameID, frame.Flags, ConvertibleFrameKind.Text,
+                    text.Values.ToArray(), null, null, null, null, default, null, null, null);
+            return new(frame.FrameID, frame.Flags, ConvertibleFrameKind.Raw, null, null, null,
+                null, null, default, null, null, frame.Data.ToArray());
+        }
+
+        private static bool HasUnsupportedFormatFlags(FrameSnapshot snapshot, int source) =>
+            source switch
+            {
+                3 => (snapshot.Flags & 0x00E0) != 0,
+                4 => (snapshot.Flags & 0x004C) != 0,
+                _ => false,
+            };
+
+        private ID3v2Frame ConvertFrame(
+            FrameSnapshot snapshot,
+            string frameId,
+            int source,
+            int target,
+            ID3VersionConversionOptions options,
+            List<ID3VersionConversionIssue> issues)
+        {
+            try
+            {
+                if (snapshot.Kind == ConvertibleFrameKind.Raw &&
+                    snapshot.FrameID is "LNK" or "LINK")
+                    return ConvertLinkedFrame(snapshot, frameId, source, target, issues, options);
+
+                return snapshot.Kind switch
+                {
+                    ConvertibleFrameKind.Text => CreateTextFrame(
+                        frameId, TargetTextValues(snapshot, target, options, issues)),
+                    ConvertibleFrameKind.UserString => CreateUserStringFrame(
+                        frameId, snapshot.Key, snapshot.Value),
+                    ConvertibleFrameKind.Identifier => CreateIdentifierFrame(
+                        frameId, snapshot.Key, snapshot.BinaryValue),
+                    ConvertibleFrameKind.Comment => CreateCommentFrame(
+                        frameId, snapshot.Language, snapshot.Key, snapshot.Value),
+                    ConvertibleFrameKind.Picture => CreatePictureFrame(
+                        frameId, snapshot.PictureType, snapshot.MimeType,
+                        snapshot.Description, snapshot.Data),
+                    ConvertibleFrameKind.Raw when !IsRawPayloadCompatible(
+                        snapshot.FrameID, snapshot.Data, source, target) =>
+                        UnsupportedFrame(snapshot.FrameID,
+                            "The raw payload is not known to be binary-compatible with the target version.",
+                            issues, options),
+                    _ => new ID3v2Frame(this)
+                    {
+                        FrameID = frameId,
+                        Flags = 0,
+                        Data = snapshot.Data?.ToArray() ?? [],
+                    },
+                };
+            }
+            catch (ID3VersionConversionException)
+            {
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return UnsupportedFrame(snapshot.FrameID, ex.Message, issues, options);
+            }
+        }
+
+        private ID3v2Frame ConvertLinkedFrame(
+            FrameSnapshot snapshot,
+            string frameId,
+            int source,
+            int target,
+            List<ID3VersionConversionIssue> issues,
+            ID3VersionConversionOptions options)
+        {
+            int sourceIdLength = source == 2 ? 3 : 4;
+            if (snapshot.Data is null || snapshot.Data.Length < sourceIdLength)
+                return UnsupportedFrame(snapshot.FrameID,
+                    "The linked-information payload is truncated.", issues, options);
+
+            string linkedSourceId = ID3v2Util.ISO8859Encoding.GetString(
+                snapshot.Data, 0, sourceIdLength);
+            if (!TryMapFrameId(source, target, linkedSourceId, out string linkedTargetId,
+                    out string mappingError))
+                return UnsupportedFrame(snapshot.FrameID,
+                    $"Linked frame {linkedSourceId}: {mappingError}", issues, options);
+
+            byte[] linkedId = ID3v2Util.ISO8859Encoding.GetBytes(linkedTargetId);
+            byte[] data = new byte[linkedId.Length + snapshot.Data.Length - sourceIdLength];
+            Array.Copy(linkedId, data, linkedId.Length);
+            Array.Copy(snapshot.Data, sourceIdLength, data, linkedId.Length,
+                snapshot.Data.Length - sourceIdLength);
+            return new ID3v2Frame(this)
+            {
+                FrameID = frameId,
+                Flags = 0,
+                Data = data,
+            };
+        }
+
+        private string[] TargetTextValues(
+            FrameSnapshot snapshot,
+            int target,
+            ID3VersionConversionOptions options,
+            List<ID3VersionConversionIssue> issues)
+        {
+            string[] values = snapshot.TextValues ?? [""];
+            if (target >= 4 || values.Length <= 1)
+                return values;
+            string single = SingleTargetText(snapshot, options, issues);
+            if (single is null)
+                throw new ID3VersionConversionException("Text values cannot be represented.", issues);
+            return [single];
+        }
+
+        private static bool IsRawPayloadCompatible(
+            string sourceId,
+            byte[] data,
+            int source,
+            int target)
+        {
+            bool crossesV24Boundary =
+                source == 4 && target < 4 ||
+                source < 4 && target == 4;
+            if (!crossesV24Boundary)
+                return true;
+
+            string v23Id;
+            if (source == 2)
+                FrameIdsV22ToV23.TryGetValue(sourceId, out v23Id);
+            else if (source == 4)
+                v23Id = sourceId == "TIPL" ? "IPLS" : sourceId;
+            else
+                v23Id = sourceId;
+
+            if (v23Id is null || !RawFramesSafeAcrossV23V24.Contains(v23Id))
+                return false;
+            return source != 4 || target >= 4 ||
+                !RawFramesWithTextEncoding.Contains(v23Id) ||
+                data is { Length: > 0 } && data[0] <= 1;
+        }
+
+        private string SingleTargetText(
+            FrameSnapshot snapshot,
+            ID3VersionConversionOptions options,
+            List<ID3VersionConversionIssue> issues)
+        {
+            string[] values = snapshot.TextValues ?? [""];
+            if (values.Length <= 1)
+                return values.FirstOrDefault() ?? "";
+            if (options.CoalesceTextValues)
+            {
+                issues.Add(new(snapshot.FrameID,
+                    $"Coalesced {values.Length} text values with '{options.MultiValueSeparator}'.",
+                    false,
+                    true));
+                return string.Join(options.MultiValueSeparator, values);
+            }
+            AddUnsupported(snapshot.FrameID,
+                $"The target version cannot represent {values.Length} independent text values.",
+                issues, options);
+            return null;
+        }
+
+        private ID3v2Frame UnsupportedFrame(
+            string frameId,
+            string message,
+            List<ID3VersionConversionIssue> issues,
+            ID3VersionConversionOptions options)
+        {
+            AddUnsupported(frameId, message, issues, options);
+            return null;
+        }
+
+        private static void AddUnsupported(
+            string frameId,
+            string message,
+            List<ID3VersionConversionIssue> issues,
+            ID3VersionConversionOptions options)
+        {
+            issues.Add(new(frameId, message, options.DropUnsupportedFrames));
+        }
+
+        private bool TryMapFrameId(
+            int source,
+            int target,
+            string sourceId,
+            out string targetId,
+            out string error)
+        {
+            targetId = null;
+            error = null;
+            string v23Id;
+            if (source == 2)
+            {
+                if (!FrameIdsV22ToV23.TryGetValue(sourceId, out v23Id))
+                {
+                    error = "No ID3v2.3/2.4 equivalent is known for this v2.2 frame.";
+                    return false;
+                }
+            }
+            else if (source == 3)
+            {
+                v23Id = sourceId;
+            }
+            else
+            {
+                v23Id = sourceId switch
+                {
+                    "TIPL" => "IPLS",
+                    "EQU2" or "RVA2" or "ASPI" or "SEEK" or "SIGN" or "TMCL" or
+                    "TDEN" or "TDRL" or "TDTG" or "TPRO" => null,
+                    _ => sourceId,
+                };
+                if (v23Id is null)
+                {
+                    error = "This ID3v2.4 frame has no payload-compatible earlier-version equivalent.";
+                    return false;
+                }
+            }
+
+            if (target == 3)
+            {
+                targetId = v23Id;
+                return targetId.Length == 4;
+            }
+            if (target == 2)
+            {
+                if (!FrameIdsV23ToV22.TryGetValue(v23Id, out targetId))
+                {
+                    error = "No ID3v2.2 equivalent is known for this frame.";
+                    return false;
+                }
+                return true;
+            }
+
+            targetId = v23Id switch
+            {
+                "IPLS" => "TIPL",
+                "EQUA" or "RVAD" or "TSIZ" => null,
+                _ => v23Id,
+            };
+            if (targetId is null)
+            {
+                error = "This ID3v2.3 frame was replaced by an incompatible ID3v2.4 payload.";
+                return false;
+            }
+            return targetId.Length == 4;
+        }
+
+        private void ConvertDateFrames(
+            IReadOnlyList<FrameSnapshot> snapshots,
+            int source,
+            int target,
+            List<ID3v2Frame> converted,
+            List<ID3VersionConversionIssue> issues,
+            ID3VersionConversionOptions options)
+        {
+            string recording = ReadRecordingTimestamp(snapshots, source, issues, options);
+            string original = ReadOriginalTimestamp(snapshots, source, issues, options);
+            if (recording is not null)
+                AddRecordingTimestamp(recording, target, converted, issues, options);
+            if (original is not null)
+                AddOriginalTimestamp(original, target, converted, issues, options);
+        }
+
+        private static string SnapshotText(
+            IEnumerable<FrameSnapshot> snapshots,
+            string frameId) =>
+            snapshots.FirstOrDefault(frame => frame.FrameID == frameId)?.TextValues?
+                .FirstOrDefault();
+
+        private string ReadRecordingTimestamp(
+            IReadOnlyList<FrameSnapshot> snapshots,
+            int source,
+            List<ID3VersionConversionIssue> issues,
+            ID3VersionConversionOptions options)
+        {
+            if (source == 4)
+            {
+                FrameSnapshot frame = snapshots.FirstOrDefault(candidate =>
+                    candidate.FrameID == "TDRC");
+                if (frame?.TextValues is { Length: > 1 })
+                {
+                    AddUnsupported("TDRC",
+                        "Multiple recording timestamps cannot be represented by earlier ID3 versions.",
+                        issues, options);
+                    return null;
+                }
+                return frame?.TextValues?.FirstOrDefault();
+            }
+
+            string year = SnapshotText(snapshots, source == 2 ? "TYE" : "TYER");
+            string date = SnapshotText(snapshots, source == 2 ? "TDA" : "TDAT");
+            string time = SnapshotText(snapshots, source == 2 ? "TIM" : "TIME");
+            string freeDate = SnapshotText(snapshots, source == 2 ? "TRD" : "TRDA");
+            if (!string.IsNullOrEmpty(freeDate))
+                AddUnsupported(source == 2 ? "TRD" : "TRDA",
+                    "Free-form recording dates cannot be converted safely to TDRC.",
+                    issues, options);
+            if (string.IsNullOrEmpty(year))
+            {
+                if (!string.IsNullOrEmpty(date) || !string.IsNullOrEmpty(time))
+                    AddUnsupported(source == 2 ? "TYE" : "TYER",
+                        "Date/time components without a year cannot be represented safely.",
+                        issues, options);
+                return null;
+            }
+
+            string result = year;
+            if (!string.IsNullOrEmpty(date))
+            {
+                if (date.Length != 4 || !date.All(char.IsDigit))
+                {
+                    AddUnsupported(source == 2 ? "TDA" : "TDAT",
+                        "The date is not in the required DDMM form.", issues, options);
+                    return year;
+                }
+                result += $"-{date.Substring(2, 2)}-{date.Substring(0, 2)}";
+            }
+            if (!string.IsNullOrEmpty(time))
+            {
+                if (time.Length != 4 || !time.All(char.IsDigit) || string.IsNullOrEmpty(date))
+                {
+                    AddUnsupported(source == 2 ? "TIM" : "TIME",
+                        "The time is not HHMM or has no complete date.", issues, options);
+                    return result;
+                }
+                result += $"T{time.Substring(0, 2)}:{time.Substring(2, 2)}";
+            }
+            return result;
+        }
+
+        private static string ReadOriginalTimestamp(
+            IReadOnlyList<FrameSnapshot> snapshots,
+            int source,
+            List<ID3VersionConversionIssue> issues,
+            ID3VersionConversionOptions options)
+        {
+            string frameId = source switch
+            {
+                2 => "TOR",
+                3 => "TORY",
+                _ => "TDOR",
+            };
+            FrameSnapshot frame = snapshots.FirstOrDefault(candidate =>
+                candidate.FrameID == frameId);
+            if (frame?.TextValues is { Length: > 1 })
+            {
+                AddUnsupported(frameId,
+                    "Multiple original release timestamps cannot be represented safely.",
+                    issues, options);
+                return null;
+            }
+            return frame?.TextValues?.FirstOrDefault();
+        }
+
+        private void AddRecordingTimestamp(
+            string timestamp,
+            int target,
+            List<ID3v2Frame> converted,
+            List<ID3VersionConversionIssue> issues,
+            ID3VersionConversionOptions options)
+        {
+            if (target == 4)
+            {
+                converted.Add(CreateTextFrame("TDRC", [timestamp]));
+                return;
+            }
+            if (!TrySplitLegacyTimestamp(timestamp, out string year, out string date, out string time))
+            {
+                AddUnsupported("TDRC",
+                    "The timestamp contains precision that ID3v2.2/2.3 cannot represent.",
+                    issues, options);
+                return;
+            }
+            converted.Add(CreateTextFrame(target == 2 ? "TYE" : "TYER", [year]));
+            if (date is not null)
+                converted.Add(CreateTextFrame(target == 2 ? "TDA" : "TDAT", [date]));
+            if (time is not null)
+                converted.Add(CreateTextFrame(target == 2 ? "TIM" : "TIME", [time]));
+        }
+
+        private void AddOriginalTimestamp(
+            string timestamp,
+            int target,
+            List<ID3v2Frame> converted,
+            List<ID3VersionConversionIssue> issues,
+            ID3VersionConversionOptions options)
+        {
+            if (target == 4)
+            {
+                converted.Add(CreateTextFrame("TDOR", [timestamp]));
+                return;
+            }
+            if (!Regex.IsMatch(timestamp ?? "", @"^\d{4}$"))
+            {
+                AddUnsupported("TDOR",
+                    "Earlier ID3 versions can represent only the original release year.",
+                    issues, options);
+                return;
+            }
+            converted.Add(CreateTextFrame(target == 2 ? "TOR" : "TORY", [timestamp]));
+        }
+
+        private static bool TrySplitLegacyTimestamp(
+            string timestamp,
+            out string year,
+            out string date,
+            out string time)
+        {
+            year = date = time = null;
+            Match match = Regex.Match(timestamp ?? "",
+                @"^(?<year>\d{4})(?:-(?<month>\d{2})-(?<day>\d{2})(?:T(?<hour>\d{2}):(?<minute>\d{2}))?)?$");
+            if (!match.Success)
+                return false;
+            year = match.Groups["year"].Value;
+            if (match.Groups["month"].Success)
+            {
+                int numericYear = int.Parse(year);
+                int month = int.Parse(match.Groups["month"].Value);
+                int day = int.Parse(match.Groups["day"].Value);
+                if (month is < 1 or > 12)
+                    return false;
+                int daysInMonth = month switch
+                {
+                    2 => numericYear > 0 && DateTime.IsLeapYear(numericYear) ? 29 : 28,
+                    4 or 6 or 9 or 11 => 30,
+                    _ => 31,
+                };
+                if (day is < 1 || day > daysInMonth)
+                    return false;
+                date = match.Groups["day"].Value + match.Groups["month"].Value;
+            }
+            if (match.Groups["hour"].Success)
+            {
+                int hour = int.Parse(match.Groups["hour"].Value);
+                int minute = int.Parse(match.Groups["minute"].Value);
+                if (hour is < 0 or > 23 || minute is < 0 or > 59)
+                    return false;
+                time = match.Groups["hour"].Value + match.Groups["minute"].Value;
+            }
+            return true;
+        }
+
+        private TextFrame CreateTextFrame(string frameId, IEnumerable<string> values)
+        {
+            var frame = new TextFrame(this) { FrameID = frameId };
+            frame.Values = values;
+            return frame;
+        }
+
+        private UserStringFrame CreateUserStringFrame(string frameId, string key, string value)
+        {
+            var frame = new UserStringFrame(this) { FrameID = frameId };
+            frame.Key = key ?? "";
+            frame.Value = value ?? "";
+            return frame;
+        }
+
+        private IdentifierFrame CreateIdentifierFrame(string frameId, string key, byte[] value)
+        {
+            var frame = new IdentifierFrame(this) { FrameID = frameId };
+            frame.Key = key ?? "";
+            frame.Value = value?.ToArray() ?? [];
+            return frame;
+        }
+
+        private CommentFrame CreateCommentFrame(
+            string frameId,
+            string language,
+            string key,
+            string value)
+        {
+            var frame = new CommentFrame(this) { FrameID = frameId };
+            frame.Language = language ?? "eng";
+            frame.Key = key ?? "";
+            frame.Value = value ?? "";
+            return frame;
+        }
+
+        private PictureFrame CreatePictureFrame(
+            string frameId,
+            ID3v2Util.APICType type,
+            string mimeType,
+            string description,
+            byte[] data)
+        {
+            var frame = new PictureFrame(this) { FrameID = frameId };
+            frame.Type = type;
+            frame.MimeType = mimeType ?? "image/jpeg";
+            frame.Description = description ?? "";
+            frame.PictureData = data?.ToArray() ?? [];
+            return frame;
+        }
 
         protected void WriteHeader(FileStream s)
         {
@@ -1365,8 +2270,18 @@ namespace MusicFileUtilities
 
         public void SetField(TagFields field, string value)
         {
+            if (_headerversion == 2)
+            {
+                SetFieldV22(field, value);
+                return;
+            }
             if (!ID3v2Util.ActionMappingsv23v24.ContainsKey(field))
                 throw new ArgumentException($"Unsupported tag field for ID3: {field}");
+            if (field == TagFields.Lyrics)
+            {
+                SetLyrics(value);
+                return;
+            }
 
             // Special compound fields stored as "N/total" in a single frame
             if (field == TagFields.TrackNumber || field == TagFields.TotalTracks)
@@ -1416,9 +2331,12 @@ namespace MusicFileUtilities
             }
             if (field == TagFields.Date)
             {
-                if (value == null) { _frames.RemoveAll(f => f.FrameID == "TDRC" || f.FrameID == "TYER"); return; }
-                if (_headerversion >= 4) SetString("TDRC", value);
-                else SetString("TYER", value.Length >= 4 ? value.Substring(0, 4) : value);
+                SetDate(value);
+                return;
+            }
+            if (field == TagFields.OriginalDate)
+            {
+                SetOriginalDate(value);
                 return;
             }
 
@@ -1444,7 +2362,6 @@ namespace MusicFileUtilities
                 case TagFields.Key:              if (value == null) _frames.RemoveAll(f => f.FrameID == "TKEY"); else SetString("TKEY", value); break;
                 case TagFields.ISRC:             if (value == null) _frames.RemoveAll(f => f.FrameID == "TSRC"); else SetString("TSRC", value); break;
                 case TagFields.Language:         if (value == null) _frames.RemoveAll(f => f.FrameID == "TLAN"); else SetString("TLAN", value); break;
-                case TagFields.Lyrics:           if (value == null) _frames.RemoveAll(f => f.FrameID == "USLT"); else SetString("USLT", value); break;
                 case TagFields.Media:            if (value == null) _frames.RemoveAll(f => f.FrameID == "TMED"); else SetString("TMED", value); break;
                 case TagFields.Mood:             if (value == null) _frames.RemoveAll(f => f.FrameID == "TMOO"); else SetString("TMOO", value); break;
                 case TagFields.Movement:         if (value == null) _frames.RemoveAll(f => f.FrameID == "MVNM"); else SetString("MVNM", value); break;
@@ -1490,6 +2407,133 @@ namespace MusicFileUtilities
             }
         }
 
+        private void SetFieldV22(TagFields field, string value)
+        {
+            if (field == TagFields.Lyrics)
+            {
+                SetLyrics(value);
+                return;
+            }
+            if (SimpleFieldIdsV22.TryGetValue(field, out string frameId))
+            {
+                if (value is null)
+                    _frames.RemoveAll(frame => frame.FrameID == frameId);
+                else
+                    SetString(frameId, value);
+                return;
+            }
+            if (UserStringFieldKeys.TryGetValue(field, out string key))
+            {
+                if (value is null)
+                    _frames.RemoveAll(frame => frame is UserStringFrame user &&
+                        string.Equals(user.Key, key, StringComparison.Ordinal));
+                else
+                    SetUserString(key, value);
+                return;
+            }
+            if (field is TagFields.TrackNumber or TagFields.TotalTracks)
+            {
+                SetCompoundField("TRK", field == TagFields.TrackNumber, value);
+                return;
+            }
+            if (field is TagFields.DiscNumber or TagFields.TotalDiscs)
+            {
+                SetCompoundField("TPA", field == TagFields.DiscNumber, value);
+                return;
+            }
+            if (field is TagFields.MovementNumber or TagFields.MovementTotal)
+            {
+                SetCompoundField("MVI", field == TagFields.MovementNumber, value);
+                return;
+            }
+            if (field == TagFields.Date)
+            {
+                SetDate(value);
+                return;
+            }
+            if (field == TagFields.OriginalDate)
+            {
+                SetOriginalDate(value);
+                return;
+            }
+            throw new ArgumentException($"Unsupported tag field for ID3v2.2: {field}");
+        }
+
+        private void SetCompoundField(string frameId, bool setIndex, string value)
+        {
+            var frame = _frames.OfType<TextFrame>()
+                .FirstOrDefault(candidate => candidate.FrameID == frameId);
+            string[] parts = (frame?.Text ?? "").Split('/');
+            string index = parts.Length >= 1 ? parts[0] : "";
+            string total = parts.Length >= 2 ? parts[1] : "";
+            if (setIndex)
+                index = value ?? "";
+            else
+                total = value ?? "";
+            string combined = string.IsNullOrEmpty(total) ? index : index + "/" + total;
+            if (string.IsNullOrEmpty(combined))
+                _frames.RemoveAll(candidate => candidate.FrameID == frameId);
+            else
+                SetString(frameId, combined);
+        }
+
+        private void SetDate(string value)
+        {
+            string year = null;
+            string date = null;
+            string time = null;
+            if (_headerversion >= 4)
+            {
+                _frames.RemoveAll(frame => RecordingDateFrameIds.Contains(frame.FrameID));
+                if (value is null)
+                    return;
+                SetString("TDRC", value);
+                return;
+            }
+            if (value is not null &&
+                !TrySplitLegacyTimestamp(value, out year, out date, out time))
+                throw new ArgumentException(
+                    $"ID3v2.{_headerversion} cannot represent date '{value}'.",
+                    nameof(value));
+            _frames.RemoveAll(frame => RecordingDateFrameIds.Contains(frame.FrameID));
+            if (value is null)
+                return;
+            SetString(_headerversion == 2 ? "TYE" : "TYER", year);
+            if (date is not null)
+                SetString(_headerversion == 2 ? "TDA" : "TDAT", date);
+            if (time is not null)
+                SetString(_headerversion == 2 ? "TIM" : "TIME", time);
+        }
+
+        private void SetOriginalDate(string value)
+        {
+            if (_headerversion >= 4)
+            {
+                _frames.RemoveAll(frame => OriginalDateFrameIds.Contains(frame.FrameID));
+                if (value is null)
+                    return;
+                SetString("TDOR", value);
+                return;
+            }
+            if (value is not null && !Regex.IsMatch(value, @"^\d{4}$"))
+                throw new ArgumentException(
+                    $"ID3v2.{_headerversion} can represent only the original release year.",
+                    nameof(value));
+            _frames.RemoveAll(frame => OriginalDateFrameIds.Contains(frame.FrameID));
+            if (value is null)
+                return;
+            SetString(_headerversion == 2 ? "TOR" : "TORY", value);
+        }
+
+        private void SetLyrics(string value)
+        {
+            string frameId = _headerversion == 2 ? "ULT" : "USLT";
+            _frames.RemoveAll(frame => frame.FrameID == frameId);
+            if (value is null)
+                return;
+            _frames.Add(CreateCommentFrame(frameId, "eng", "", value));
+        }
+
         public void RemoveField(TagFields field) => SetField(field, null);
 
         public void Save(string outputPath = null)
@@ -1530,7 +2574,6 @@ namespace MusicFileUtilities
                         source.Seek(oldTagEnd, SeekOrigin.Begin);
 
                         _tagsize = size + padSize;
-                        if (_headerversion < 3) _headerversion = 3;
                         WriteHeader(dest);
                         foreach (ID3v2Frame f in _frames)
                             f.Write(dest);
@@ -1706,14 +2749,15 @@ namespace MusicFileUtilities
                             _frames.Add(new IdentifierFrame(f));
                         else if (f.FrameID == "APIC")
                             _frames.Add(new PictureFrame(f));
-                        else if (f.FrameID == "COMM")
+                        else if (f.FrameID is "COMM" or "USLT")
                             _frames.Add(new CommentFrame(f));
                         else if (f.FrameID == "MCDI")
                         {
                             f.Decode();
                             _frames.Add(f);
                         }
-                        else if ((f.FrameID[0] == 'T') || (f.FrameID[0] == 'W') || (f.FrameID[0] == 'M'))
+                        else if ((f.FrameID[0] == 'T') || (f.FrameID[0] == 'W') ||
+                            f.FrameID is "MVIN" or "MVNM")
                             _frames.Add(new TextFrame(f));
                         else
                         {
@@ -1760,9 +2804,10 @@ namespace MusicFileUtilities
                             _frames.Add(new PictureFrame(f));
                         else if ((f.FrameID == "UFI") || (f.FrameID == "PRI"))
                             _frames.Add(new IdentifierFrame(f));
-                        else if (f.FrameID == "COM")
+                        else if (f.FrameID is "COM" or "ULT")
                             _frames.Add(new CommentFrame(f));
-                        else if ((f.FrameID[0] == 'T') || (f.FrameID[0] == 'W'))
+                        else if ((f.FrameID[0] == 'T') || (f.FrameID[0] == 'W') ||
+                            f.FrameID is "MVI" or "MVN")
                             _frames.Add(new TextFrame(f));
                         else
                             _frames.Add(f);
@@ -2139,7 +3184,6 @@ namespace MusicFileUtilities
             foreach (var f in Frames)
                 newTagBodySize += frameHeaderSize + f.Data.Length;
             _tagsize = newTagBodySize;
-            if (_headerversion < 3) _headerversion = 3;
 
             if (outputPath == null)
             {

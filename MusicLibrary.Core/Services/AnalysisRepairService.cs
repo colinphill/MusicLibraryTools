@@ -17,6 +17,8 @@ public interface IAnalysisRepairService
 
     AnalysisRepairPlan PreviewMultiDiscAlbumNames(IReadOnlyList<TrackRecord> records);
 
+    AnalysisRepairPlan PreviewId3VersionUpgrades(IReadOnlyList<TrackRecord> records);
+
     IReadOnlyList<AnalysisTagConflict> FindAlbumArtistConflicts(IReadOnlyList<TrackRecord> records);
 
     AnalysisRepairPlan PreviewConflictRepairs(IReadOnlyList<AnalysisConflictResolution> resolutions);
@@ -97,13 +99,38 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
             .Concat(PreviewNumberingAndTotals(records).Items)
             .Concat(PreviewMultiDiscAlbumNames(records).Items)
             .Concat(PreviewTextNormalization(records).Items)
-            .GroupBy(repair => (repair.Path, repair.Field), PathFieldComparer.Instance)
+            .Concat(PreviewId3VersionUpgrades(records).Items)
+            .GroupBy(
+                repair => (repair.Path, repair.Field, repair.TargetId3Version),
+                PathFieldVersionComparer.Instance)
             .Select(group => group.First())
             .OrderBy(repair => repair.Path, StringComparer.CurrentCultureIgnoreCase)
             .ThenBy(repair => repair.Field)
             .Concat(PreviewPathNormalization(records))
             .ToList();
         return new AnalysisRepairPlan("Safe metadata repairs", repairs);
+    }
+
+    public AnalysisRepairPlan PreviewId3VersionUpgrades(IReadOnlyList<TrackRecord> records)
+    {
+        ArgumentNullException.ThrowIfNull(records);
+        var repairs = records
+            .Where(record => string.Equals(
+                record.TagType, "ID3v22", StringComparison.OrdinalIgnoreCase))
+            .Select(record => new AnalysisTagRepair(
+                record.Path,
+                TagFields.NullField,
+                "ID3v2.2",
+                "ID3v2.3",
+                "Upgrade the legacy ID3v2.2 tag to ID3v2.3. " +
+                "The conversion is atomic and leaves the file unchanged if any frame cannot " +
+                "be represented safely.",
+                record.Length,
+                record.LastWriteTime,
+                TargetId3Version: ID3v2Version.V23))
+            .OrderBy(repair => repair.Path, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+        return new AnalysisRepairPlan("Upgrade ID3 tags", repairs);
     }
 
     public AnalysisRepairPlan PreviewMissingAlbumArtists(IReadOnlyList<TrackRecord> records)
@@ -812,14 +839,17 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
                 if (snapshots.Count != 1)
                     throw new InvalidOperationException($"Repair preview has inconsistent source snapshots: {group.Key}");
                 var edits = group
-                    .GroupBy(repair => repair.Field)
+                    .GroupBy(repair => (repair.Field, repair.TargetId3Version))
                     .Select(fieldGroup =>
                     {
                         var values = fieldGroup.Select(repair => repair.After).Distinct(StringComparer.Ordinal).ToList();
                         if (values.Count != 1)
                             throw new InvalidOperationException(
-                                $"Repair preview has conflicting {fieldGroup.Key} values: {group.Key}");
-                        return new TagEdit(fieldGroup.Key, values[0]);
+                                $"Repair preview has conflicting {fieldGroup.Key.Field} values: {group.Key}");
+                        return new TagEdit(
+                            fieldGroup.Key.Field,
+                            values[0],
+                            fieldGroup.Key.TargetId3Version);
                     })
                     .OrderBy(edit => edit.Field)
                     .ToList();
@@ -1017,6 +1047,26 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
             HashCode.Combine(StringComparer.OrdinalIgnoreCase.GetHashCode(value.Path), value.Field);
     }
 
+    private sealed class PathFieldVersionComparer :
+        IEqualityComparer<(string Path, TagFields Field, ID3v2Version? TargetId3Version)>
+    {
+        public static PathFieldVersionComparer Instance { get; } = new();
+
+        public bool Equals(
+            (string Path, TagFields Field, ID3v2Version? TargetId3Version) x,
+            (string Path, TagFields Field, ID3v2Version? TargetId3Version) y) =>
+            x.Field == y.Field &&
+            x.TargetId3Version == y.TargetId3Version &&
+            StringComparer.OrdinalIgnoreCase.Equals(x.Path, y.Path);
+
+        public int GetHashCode(
+            (string Path, TagFields Field, ID3v2Version? TargetId3Version) value) =>
+            HashCode.Combine(
+                StringComparer.OrdinalIgnoreCase.GetHashCode(value.Path),
+                value.Field,
+                value.TargetId3Version);
+    }
+
     private sealed class TagEditListComparer : IEqualityComparer<IReadOnlyList<TagEdit>>
     {
         public static TagEditListComparer Instance { get; } = new();
@@ -1027,7 +1077,8 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
             if (x is null || y is null || x.Count != y.Count) return false;
             for (int index = 0; index < x.Count; index++)
                 if (x[index].Field != y[index].Field ||
-                    !StringComparer.Ordinal.Equals(x[index].Value, y[index].Value))
+                    !StringComparer.Ordinal.Equals(x[index].Value, y[index].Value) ||
+                    x[index].TargetId3Version != y[index].TargetId3Version)
                     return false;
             return true;
         }
@@ -1039,6 +1090,7 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
             {
                 hash.Add(edit.Field);
                 hash.Add(edit.Value, StringComparer.Ordinal);
+                hash.Add(edit.TargetId3Version);
             }
             return hash.ToHashCode();
         }

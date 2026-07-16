@@ -141,8 +141,27 @@ public sealed class TagWriteService : ITagWriteService
             var unsupported = new List<TagFields>();
             int applied = 0;
             var provider = file.Tags.First();
+            foreach (var edit in edits.Where(edit => edit.TargetId3Version is not null))
+            {
+                ID3v2Tag? id3 =
+                    file as ID3v2Tag ??
+                    file.Tags.OfType<ID3v2Tag>().FirstOrDefault();
+                if (id3 is null)
+                    return new(new FileWriteResult
+                    {
+                        Path = path,
+                        Outcome = WriteOutcome.Failed,
+                        Error = "The file does not contain a writable ID3v2 tag.",
+                    });
+                if (id3.Version == (int)edit.TargetId3Version!.Value)
+                    continue;
+                id3.ChangeVersion(edit.TargetId3Version.Value);
+                applied++;
+            }
             foreach (var edit in edits)
             {
+                if (edit.TargetId3Version is not null)
+                    continue;
                 try
                 {
                     // Avoid a network write when the requested normalized value is already the

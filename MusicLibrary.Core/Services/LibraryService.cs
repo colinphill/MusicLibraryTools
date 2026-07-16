@@ -157,6 +157,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                         DiscNumber = e.DiscNumber,
                         DiscTotal = e.DiscTotal,
                         CodecName = e.CodecName,
+                        TagType = e.TagType,
                         CodecType = e.CodecType,
                         SampleRate = e.SampleRate,
                         BitsPerSample = e.BitsPerSample,

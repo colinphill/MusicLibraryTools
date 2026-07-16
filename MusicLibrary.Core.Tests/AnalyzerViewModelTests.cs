@@ -283,6 +283,37 @@ public sealed class AnalyzerViewModelTests
     }
 
     [Fact]
+    public void MetadataRepairRun_LabelsId3VersionUpgrades()
+    {
+        var record = Track(@"Z:\Music\Artist\Album\Track.mp3", "Artist", "Album") with
+        {
+            TagType = "ID3v22",
+        };
+        var repair = new AnalysisTagRepair(
+            record.Path,
+            TagFields.NullField,
+            "ID3v2.2",
+            "ID3v2.3",
+            "Upgrade the legacy tag.",
+            100,
+            DateTime.UtcNow,
+            TargetId3Version: ID3v2Version.V23);
+        var item = new AnalysisRepairItemViewModel(repair);
+
+        AnalysisRunViewModel run = AnalysisRunViewModel.ForRepairs(
+            new AnalysisRepairPlan("Safe metadata repairs", [repair]),
+            [item],
+            [record],
+            "1 repair");
+
+        Assert.Equal("ID3 tag version", item.Field);
+        Assert.Equal("ID3 tag version", Assert.Single(run.RepairGroups).Category);
+        Assert.Equal("ID3v2.2", item.Before);
+        Assert.Equal("ID3v2.3", item.After);
+        Assert.True(item.IsActive);
+    }
+
+    [Fact]
     public async Task Analyzer_ConflictChoiceCreatesASeparateRepairPreview()
     {
         var records = new[]
@@ -619,6 +650,8 @@ public sealed class AnalyzerViewModelTests
             new("Normalize metadata text", []);
         public AnalysisRepairPlan PreviewMultiDiscAlbumNames(IReadOnlyList<TrackRecord> records) =>
             new("Normalize multi-disc album names", []);
+        public AnalysisRepairPlan PreviewId3VersionUpgrades(IReadOnlyList<TrackRecord> records) =>
+            new("Upgrade ID3 tags", []);
         public IReadOnlyList<AnalysisTagConflict> FindAlbumArtistConflicts(IReadOnlyList<TrackRecord> records) => [];
         public AnalysisRepairPlan PreviewConflictRepairs(IReadOnlyList<AnalysisConflictResolution> resolutions) =>
             new("Resolve album artist conflicts", []);
@@ -642,6 +675,8 @@ public sealed class AnalyzerViewModelTests
         public AnalysisRepairPlan PreviewTextNormalization(IReadOnlyList<TrackRecord> records) =>
             throw new NotSupportedException();
         public AnalysisRepairPlan PreviewMultiDiscAlbumNames(IReadOnlyList<TrackRecord> records) =>
+            throw new NotSupportedException();
+        public AnalysisRepairPlan PreviewId3VersionUpgrades(IReadOnlyList<TrackRecord> records) =>
             throw new NotSupportedException();
         public IReadOnlyList<AnalysisTagConflict> FindAlbumArtistConflicts(IReadOnlyList<TrackRecord> records) =>
             throw new NotSupportedException();
@@ -679,6 +714,8 @@ public sealed class AnalyzerViewModelTests
         public AnalysisRepairPlan PreviewTextNormalization(IReadOnlyList<TrackRecord> records) =>
             throw new NotSupportedException();
         public AnalysisRepairPlan PreviewMultiDiscAlbumNames(IReadOnlyList<TrackRecord> records) =>
+            throw new NotSupportedException();
+        public AnalysisRepairPlan PreviewId3VersionUpgrades(IReadOnlyList<TrackRecord> records) =>
             throw new NotSupportedException();
         public Task<BatchWriteResult> ApplyAsync(
             AnalysisRepairPlan plan, IProgress<int>? progress = null, CancellationToken ct = default) =>

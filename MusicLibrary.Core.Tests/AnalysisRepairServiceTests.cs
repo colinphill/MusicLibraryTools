@@ -571,6 +571,38 @@ public sealed class AnalysisRepairServiceTests
     }
 
     [Fact]
+    public void PreviewId3VersionUpgrades_OffersOnlyV22Tags()
+    {
+        string folder = Path.Combine("library", "Artist", "Album");
+        TrackRecord v22 = Track(
+            Path.Combine(folder, "01.mp3"), "Album", "Artist", "Artist") with
+        {
+            TagType = "ID3v22",
+        };
+        TrackRecord v23 = Track(
+            Path.Combine(folder, "02.mp3"), "Album", "Artist", "Artist") with
+        {
+            TagType = "ID3v23",
+        };
+        TrackRecord flac = Track(
+            Path.Combine(folder, "03.flac"), "Album", "Artist", "Artist") with
+        {
+            TagType = "Vorbis",
+        };
+
+        var service = new AnalysisRepairService(new RecordingWriter());
+        AnalysisRepairPlan plan = service.PreviewId3VersionUpgrades([v22, v23, flac]);
+
+        AnalysisTagRepair repair = Assert.Single(plan.Items);
+        Assert.Equal(v22.Path, repair.Path);
+        Assert.Equal("ID3v2.2", repair.Before);
+        Assert.Equal("ID3v2.3", repair.After);
+        Assert.Equal(ID3v2Version.V23, repair.TargetId3Version);
+        Assert.Contains(service.PreviewSafeRepairs([v22, v23, flac]).Items,
+            item => item.TargetId3Version == ID3v2Version.V23);
+    }
+
+    [Fact]
     public async Task Apply_RejectsAnyChangedSourceBeforeWriting()
     {
         using var temp = new TempDirectory();
@@ -674,6 +706,41 @@ public sealed class AnalysisRepairServiceTests
         Assert.True(MediaFile.GetFile(path).Tags.First().HasAlbumArtist);
         Assert.Equal("TestArtist", MediaFile.GetFile(path).Tags.First().AlbumArtist);
         Assert.Equal("TestArtist", (await library.GetFileDetailsAsync(path, includeArtwork: false))!.Entry.AlbumArtist);
+    }
+
+    [Fact]
+    public async Task PreviewAndApply_UpgradesIndexedId3V22AndRefreshesCachedTagType()
+    {
+        using var temp = new TempDirectory();
+        string music = System.IO.Path.Combine(temp.Path, "music");
+        Directory.CreateDirectory(music);
+        string path = System.IO.Path.Combine(music, "track.mp3");
+        File.Copy(MediaFixtures.Path_("sample.mp3"), path);
+        var source = Assert.IsType<MP3File>(MediaFile.GetFile(path));
+        source.ChangeVersion(ID3v2Version.V22);
+        source.Save();
+        Assert.Equal(2, Assert.IsType<MP3File>(MediaFile.GetFile(path)).Version);
+
+        string configPath = System.IO.Path.Combine(temp.Path, "library.xml");
+        new EditableLibraryConfig
+        {
+            DatabaseFile = "cache.db",
+            IndexTargets = [new IndexTargetEntry { Target = music }],
+        }.Save(configPath);
+        var settings = new AppSettings(System.IO.Path.Combine(temp.Path, "settings.json"));
+        settings.LoadConfig(configPath);
+        using var library = new LibraryService(settings);
+        await library.IndexAsync();
+        var service = new AnalysisRepairService(new TagWriteService(library));
+
+        TrackRecord cachedBefore = Assert.Single(await library.GetAllRecordsAsync());
+        Assert.Equal("ID3v22", cachedBefore.TagType);
+        AnalysisRepairPlan plan = service.PreviewId3VersionUpgrades([cachedBefore]);
+        BatchWriteResult result = await service.ApplyAsync(plan);
+
+        Assert.Equal(1, result.SavedCount);
+        Assert.Equal(3, Assert.IsType<MP3File>(MediaFile.GetFile(path)).Version);
+        Assert.Equal("ID3v23", Assert.Single(await library.GetAllRecordsAsync()).TagType);
     }
 
     [Fact]

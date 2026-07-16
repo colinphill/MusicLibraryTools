@@ -97,6 +97,7 @@ namespace MetadataCaching
             _hasalbumartist = reader.GetInt64("HasAlbumArtist") != 0;
             _compilation = compilation ?? reader.GetInt64("Compilation") != 0;
             _codecname = reader.GetString("CodecName");
+            _tagtype = reader.GetString("TagType");
             _codectype = (CodecType)Enum.Parse(typeof(CodecType), reader.GetString("CodecType"));
             _averagebitrate = (uint)reader.GetInt64("AverageBitrate");
             _maxbitrate = (uint)reader.GetInt64("MaxBitrate"); ;
@@ -694,7 +695,7 @@ namespace MetadataCaching
                         .ToHashSet(StringComparer.OrdinalIgnoreCase);
                 using var querycomm = conn_.CreateCommand();
                 querycomm.CommandText = "SELECT ID, Path, LastWriteTime, FileSize, HasAlbumArtist, " +
-                    "CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, " +
+                    "CodecName, TagType, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, " +
                     "Channels, DurationInFrames, Artist, AlbumArtist, Album, TrackNumber, TrackTotal, " +
                     "DiscNumber, DiscTotal, ReleaseDate, Track, AlbumPath " +
                     "FROM MetadataSummaryView WHERE ScanSetID = " + set.ID;

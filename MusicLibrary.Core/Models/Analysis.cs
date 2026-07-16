@@ -18,6 +18,7 @@ public sealed record TrackRecord
     public int? DiscNumber { get; init; }
     public int? DiscTotal { get; init; }
     public string? CodecName { get; init; }
+    public string? TagType { get; init; }
     public CodecType CodecType { get; init; }
     public uint SampleRate { get; init; }
     public uint BitsPerSample { get; init; }
@@ -50,7 +51,8 @@ public sealed record AnalysisTagRepair(
     DateTime SourceLastWriteTimeUtc,
     AnalysisRepairKind Kind = AnalysisRepairKind.Tag,
     OperationPathSnapshot? ExpectedDestination = null,
-    string? BlockingReason = null)
+    string? BlockingReason = null,
+    ID3v2Version? TargetId3Version = null)
 {
     public bool CanApply => string.IsNullOrWhiteSpace(BlockingReason);
 }

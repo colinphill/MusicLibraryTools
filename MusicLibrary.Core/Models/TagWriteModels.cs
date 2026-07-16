@@ -2,8 +2,14 @@ using MusicFileUtilities;
 
 namespace MusicLibrary.Core.Models;
 
-/// <summary>A single field change to apply. A null <see cref="Value"/> removes the field.</summary>
-public sealed record TagEdit(TagFields Field, string? Value);
+/// <summary>
+/// A field change or ID3 version change to apply. A null <see cref="Value"/> removes an ordinary
+/// metadata field.
+/// </summary>
+public sealed record TagEdit(
+    TagFields Field,
+    string? Value,
+    ID3v2Version? TargetId3Version = null);
 
 public enum WriteOutcome { Saved, Skipped, Failed }
 
