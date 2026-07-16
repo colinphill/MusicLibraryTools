@@ -110,20 +110,22 @@ public sealed class AnalysisRunViewModel : ViewModelBase
     }
 }
 
-/// <summary>All findings for one problem, divided into albums.</summary>
+/// <summary>All findings for one problem, divided into artists and albums.</summary>
 public sealed class AnalysisProblemGroupViewModel : ViewModelBase
 {
     public string Problem { get; }
-    public IReadOnlyList<AnalysisAlbumGroupViewModel> Albums { get; }
-    public int Count => Albums.Sum(album => album.Count);
-    public int ActiveCount => Albums.Sum(album => album.ActiveCount);
+    public IReadOnlyList<AnalysisArtistGroupViewModel> Artists { get; }
+    public int Count => Artists.Sum(artist => artist.Count);
+    public int ActiveCount => Artists.Sum(artist => artist.ActiveCount);
 
-    private AnalysisProblemGroupViewModel(string problem, IReadOnlyList<AnalysisAlbumGroupViewModel> albums)
+    private AnalysisProblemGroupViewModel(
+        string problem,
+        IReadOnlyList<AnalysisArtistGroupViewModel> artists)
     {
         Problem = problem;
-        Albums = albums;
-        foreach (var album in Albums)
-            album.PropertyChanged += AlbumChanged;
+        Artists = artists;
+        foreach (var artist in Artists)
+            artist.PropertyChanged += ArtistChanged;
     }
 
     public static IReadOnlyList<AnalysisProblemGroupViewModel> Build(
@@ -137,28 +139,68 @@ public sealed class AnalysisProblemGroupViewModel : ViewModelBase
         return findings
             .Select(finding => new AnalysisFindingViewModel(
                 finding,
+                ArtistLabel(recordsByPath.GetValueOrDefault(finding.Path)),
                 AlbumLabel(finding.Path, recordsByPath.GetValueOrDefault(finding.Path))))
             .GroupBy(item => item.Problem, StringComparer.CurrentCultureIgnoreCase)
             .OrderBy(group => group.Key, StringComparer.CurrentCultureIgnoreCase)
             .Select(group => new AnalysisProblemGroupViewModel(
                 group.Key,
-                group.GroupBy(item => item.Album, StringComparer.CurrentCultureIgnoreCase)
-                    .OrderBy(album => album.Key, StringComparer.CurrentCultureIgnoreCase)
-                    .Select(album => new AnalysisAlbumGroupViewModel(
-                        album.Key,
-                        album.OrderBy(item => item.Path, StringComparer.CurrentCultureIgnoreCase).ToList()))
+                group.GroupBy(item => item.Artist, StringComparer.CurrentCultureIgnoreCase)
+                    .OrderBy(artist => artist.Key, StringComparer.CurrentCultureIgnoreCase)
+                    .Select(artist => new AnalysisArtistGroupViewModel(
+                        artist.Key,
+                        artist.GroupBy(item => item.Album, StringComparer.CurrentCultureIgnoreCase)
+                            .OrderBy(album => album.Key, StringComparer.CurrentCultureIgnoreCase)
+                            .Select(album => new AnalysisAlbumGroupViewModel(
+                                album.Key,
+                                album.OrderBy(item => item.Path, StringComparer.CurrentCultureIgnoreCase).ToList()))
+                            .ToList()))
                     .ToList()))
             .ToList();
     }
 
+    private static string ArtistLabel(TrackRecord? record) =>
+        record?.EffectiveAlbumArtist ?? "Unknown Artist";
+
     private static string AlbumLabel(string path, TrackRecord? record)
     {
-        if (record is not null && !string.IsNullOrWhiteSpace(record.Album))
-            return $"{record.EffectiveAlbumArtist} — {record.StrippedAlbum ?? record.Album}";
+        if (record is not null)
+        {
+            string? album = !string.IsNullOrWhiteSpace(record.StrippedAlbum)
+                ? record.StrippedAlbum
+                : record.Album;
+            return string.IsNullOrWhiteSpace(album) ? "Unknown Album" : album;
+        }
 
         var directory = Path.GetDirectoryName(path);
         var folder = string.IsNullOrWhiteSpace(directory) ? null : Path.GetFileName(directory);
-        return string.IsNullOrWhiteSpace(folder) ? "(album unavailable)" : folder;
+        return string.IsNullOrWhiteSpace(folder) ? "Unknown Album" : folder;
+    }
+
+    private void ArtistChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(AnalysisArtistGroupViewModel.ActiveCount))
+            return;
+        OnPropertyChanged(nameof(ActiveCount));
+    }
+}
+
+/// <summary>Findings for one artist within a problem group, divided into albums.</summary>
+public sealed class AnalysisArtistGroupViewModel : ViewModelBase
+{
+    public string Artist { get; }
+    public IReadOnlyList<AnalysisAlbumGroupViewModel> Albums { get; }
+    public int Count => Albums.Sum(album => album.Count);
+    public int ActiveCount => Albums.Sum(album => album.ActiveCount);
+
+    public AnalysisArtistGroupViewModel(
+        string artist,
+        IReadOnlyList<AnalysisAlbumGroupViewModel> albums)
+    {
+        Artist = artist;
+        Albums = albums;
+        foreach (var album in Albums)
+            album.PropertyChanged += AlbumChanged;
     }
 
     private void AlbumChanged(object? sender, PropertyChangedEventArgs e)
@@ -199,6 +241,7 @@ public partial class AnalysisFindingViewModel : ViewModelBase
     public string Path => Finding.Path;
     public string Description => Finding.Description;
     public string Problem => Finding.Problem ?? Finding.Description;
+    public string Artist { get; }
     public string Album { get; }
     public IReadOnlyList<AnalysisFindingDisposition> Dispositions { get; } =
         Enum.GetValues<AnalysisFindingDisposition>();
@@ -206,9 +249,10 @@ public partial class AnalysisFindingViewModel : ViewModelBase
     [ObservableProperty]
     private AnalysisFindingDisposition _disposition;
 
-    public AnalysisFindingViewModel(AnalysisFinding finding, string album)
+    public AnalysisFindingViewModel(AnalysisFinding finding, string artist, string album)
     {
         Finding = finding;
+        Artist = artist;
         Album = album;
     }
 }

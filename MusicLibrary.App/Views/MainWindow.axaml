@@ -511,60 +511,56 @@
 
                             <Grid Grid.Row="3">
                                 <!-- Findings (inconsistencies / lossy / cross-set) -->
-                                <ListBox IsVisible="{Binding ShowFindings}" ItemsSource="{Binding FindingGroups}"
-                                         Classes="analysisresults">
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate x:DataType="vm:AnalysisProblemGroupViewModel">
-                                                <Expander Margin="0,0,0,8" HorizontalAlignment="Stretch">
-                                                    <Expander.Header>
-                                                        <TextBlock>
-                                                            <Run Text="{Binding Problem}" FontWeight="SemiBold"/>
-                                                            <Run Text="{Binding Count, StringFormat=' ({0})'}"/>
-                                                            <Run Text="{Binding ActiveCount, StringFormat=' · {0} active'}"
-                                                                 Foreground="{DynamicResource AppTextMuted}"/>
-                                                        </TextBlock>
-                                                    </Expander.Header>
-                                                    <ItemsControl ItemsSource="{Binding Albums}" Margin="10,0,0,0">
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate x:DataType="vm:AnalysisAlbumGroupViewModel">
-                                                                <Expander Margin="0,2" HorizontalAlignment="Stretch">
-                                                                    <Expander.Header>
-                                                                        <TextBlock>
-                                                                            <Run Text="{Binding Album}" FontWeight="SemiBold"/>
-                                                                            <Run Text="{Binding Count, StringFormat=' ({0})'}"/>
-                                                                            <Run Text="{Binding ActiveCount, StringFormat=' · {0} active'}"
-                                                                                 Foreground="{DynamicResource AppTextMuted}"/>
-                                                                        </TextBlock>
-                                                                    </Expander.Header>
-                                                                    <ItemsControl ItemsSource="{Binding Findings}" Margin="10,0,0,0">
-                                                                        <ItemsControl.ItemTemplate>
-                                                                            <DataTemplate x:DataType="vm:AnalysisFindingViewModel">
-                                                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                                                                    <Button Grid.Column="0" HorizontalAlignment="Stretch"
-                                                                                            HorizontalContentAlignment="Left"
-                                                                                            Background="Transparent" Padding="8,4" CornerRadius="6"
-                                                                                            Command="{Binding $parent[TabItem].((vm:AnalyzerViewModel)DataContext).OpenCommand}"
-                                                                                            CommandParameter="{Binding Path}">
-                                                                                        <StackPanel>
-                                                                                            <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
-                                                                                            <TextBlock Text="{Binding Path}" Classes="caption" TextWrapping="Wrap"/>
-                                                                                        </StackPanel>
-                                                                                    </Button>
-                                                                                    <ComboBox Grid.Column="1" Width="120" VerticalAlignment="Center"
-                                                                                              ItemsSource="{Binding Dispositions}"
-                                                                                              SelectedItem="{Binding Disposition}"/>
-                                                                                </Grid>
-                                                                            </DataTemplate>
-                                                                        </ItemsControl.ItemTemplate>
-                                                                    </ItemsControl>
-                                                                </Expander>
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
-                                                </Expander>
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                </ListBox>
+                                <TreeView IsVisible="{Binding ShowFindings}" ItemsSource="{Binding FindingGroups}"
+                                          Background="Transparent">
+                                    <TreeView.DataTemplates>
+                                        <TreeDataTemplate x:DataType="vm:AnalysisProblemGroupViewModel"
+                                                          ItemsSource="{Binding Artists}">
+                                            <TextBlock>
+                                                <Run Text="{Binding Problem}" FontWeight="SemiBold"/>
+                                                <Run Text="{Binding Count, StringFormat=' ({0})'}"/>
+                                                <Run Text="{Binding ActiveCount, StringFormat=' · {0} active'}"
+                                                     Foreground="{DynamicResource AppTextMuted}"/>
+                                            </TextBlock>
+                                        </TreeDataTemplate>
+                                        <TreeDataTemplate x:DataType="vm:AnalysisArtistGroupViewModel"
+                                                          ItemsSource="{Binding Albums}">
+                                            <TextBlock>
+                                                <Run Text="{Binding Artist}" FontWeight="SemiBold"/>
+                                                <Run Text="{Binding Count, StringFormat=' ({0})'}"/>
+                                                <Run Text="{Binding ActiveCount, StringFormat=' · {0} active'}"
+                                                     Foreground="{DynamicResource AppTextMuted}"/>
+                                            </TextBlock>
+                                        </TreeDataTemplate>
+                                        <TreeDataTemplate x:DataType="vm:AnalysisAlbumGroupViewModel"
+                                                          ItemsSource="{Binding Findings}">
+                                            <TextBlock>
+                                                <Run Text="{Binding Album}" FontWeight="SemiBold"/>
+                                                <Run Text="{Binding Count, StringFormat=' ({0})'}"/>
+                                                <Run Text="{Binding ActiveCount, StringFormat=' · {0} active'}"
+                                                     Foreground="{DynamicResource AppTextMuted}"/>
+                                            </TextBlock>
+                                        </TreeDataTemplate>
+                                        <DataTemplate x:DataType="vm:AnalysisFindingViewModel">
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"
+                                                  HorizontalAlignment="Stretch">
+                                                <Button Grid.Column="0" HorizontalAlignment="Stretch"
+                                                        HorizontalContentAlignment="Left"
+                                                        Background="Transparent" Padding="8,4" CornerRadius="6"
+                                                        Command="{Binding $parent[TabItem].((vm:AnalyzerViewModel)DataContext).OpenCommand}"
+                                                        CommandParameter="{Binding Path}">
+                                                    <StackPanel>
+                                                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap"/>
+                                                        <TextBlock Text="{Binding Path}" Classes="caption" TextWrapping="Wrap"/>
+                                                    </StackPanel>
+                                                </Button>
+                                                <ComboBox Grid.Column="1" Width="120" VerticalAlignment="Center"
+                                                          ItemsSource="{Binding Dispositions}"
+                                                          SelectedItem="{Binding Disposition}"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </TreeView.DataTemplates>
+                                </TreeView>
 
                                 <!-- Duplicates -->
                                 <ListBox IsVisible="{Binding ShowDuplicates}" ItemsSource="{Binding Duplicates}"
@@ -788,86 +784,144 @@
                                                             <TextBlock Text="{Binding Root}" Classes="caption"/>
                                                         </StackPanel>
                                                     </Expander.Header>
-                                                    <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                                                                  VerticalScrollBarVisibility="Disabled">
-                                                        <StackPanel Width="1520">
-                                                            <Grid ColumnDefinitions="60,60,75,75,170,190,200,110,220,360">
-                                                                <Border Grid.Column="0" Classes="matrixcell"><TextBlock Text="Disc" Classes="h2"/></Border>
-                                                                <Border Grid.Column="1" Classes="matrixcell"><TextBlock Text="Track" Classes="h2"/></Border>
-                                                                <Border Grid.Column="2" Classes="matrixcell"><TextBlock Text="Tracks" Classes="h2"/></Border>
-                                                                <Border Grid.Column="3" Classes="matrixcell"><TextBlock Text="Discs" Classes="h2"/></Border>
-                                                                <Border Grid.Column="4" Classes="matrixcell"><TextBlock Text="Artist" Classes="h2"/></Border>
-                                                                <Border Grid.Column="5" Classes="matrixcell"><TextBlock Text="Album artist" Classes="h2"/></Border>
-                                                                <Border Grid.Column="6" Classes="matrixcell"><TextBlock Text="Album" Classes="h2"/></Border>
-                                                                <Border Grid.Column="7" Classes="matrixcell"><TextBlock Text="Release date" Classes="h2"/></Border>
-                                                                <Border Grid.Column="8" Classes="matrixcell"><TextBlock Text="Title" Classes="h2"/></Border>
-                                                                <Border Grid.Column="9" Classes="matrixcell"><TextBlock Text="File" Classes="h2"/></Border>
-                                                            </Grid>
-                                                            <ItemsControl ItemsSource="{Binding Rows}">
-                                                                <ItemsControl.ItemTemplate>
+                                                    <DataGrid ItemsSource="{Binding Rows}" Classes="matrixgrid"
+                                                              AutoGenerateColumns="False"
+                                                              CanUserResizeColumns="True"
+                                                              CanUserReorderColumns="False"
+                                                              CanUserSortColumns="False"
+                                                              IsReadOnly="True"
+                                                              MaxHeight="480"
+                                                              GridLinesVisibility="All"
+                                                              ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                                        <DataGrid.Columns>
+                                                            <DataGridTemplateColumn Header="Disc" Width="60" MinWidth="50">
+                                                                <DataGridTemplateColumn.CellTemplate>
                                                                     <DataTemplate x:DataType="models:AlbumMetadataRow">
-                                                                        <Grid ColumnDefinitions="60,60,75,75,170,190,200,110,220,360">
-                                                                            <Border Grid.Column="0" Classes="matrixcell"
-                                                                                    Classes.inconsistent="{Binding DiscNumber.IsInconsistent}"
-                                                                                    ToolTip.Tip="{Binding DiscNumber.Reason}">
-                                                                                <TextBlock Text="{Binding DiscNumber.Display}" TextTrimming="CharacterEllipsis"/>
-                                                                            </Border>
-                                                                            <Border Grid.Column="1" Classes="matrixcell"
-                                                                                    Classes.inconsistent="{Binding TrackNumber.IsInconsistent}"
-                                                                                    ToolTip.Tip="{Binding TrackNumber.Reason}">
-                                                                                <TextBlock Text="{Binding TrackNumber.Display}" TextTrimming="CharacterEllipsis"/>
-                                                                            </Border>
-                                                                            <Border Grid.Column="2" Classes="matrixcell"
-                                                                                    Classes.inconsistent="{Binding TrackTotal.IsInconsistent}"
-                                                                                    ToolTip.Tip="{Binding TrackTotal.Reason}">
-                                                                                <TextBlock Text="{Binding TrackTotal.Display}" TextTrimming="CharacterEllipsis"/>
-                                                                            </Border>
-                                                                            <Border Grid.Column="3" Classes="matrixcell"
-                                                                                    Classes.inconsistent="{Binding DiscTotal.IsInconsistent}"
-                                                                                    ToolTip.Tip="{Binding DiscTotal.Reason}">
-                                                                                <TextBlock Text="{Binding DiscTotal.Display}" TextTrimming="CharacterEllipsis"/>
-                                                                            </Border>
-                                                                            <Border Grid.Column="4" Classes="matrixcell"
-                                                                                    Classes.inconsistent="{Binding Artist.IsInconsistent}"
-                                                                                    ToolTip.Tip="{Binding Artist.Reason}">
-                                                                                <TextBlock Text="{Binding Artist.Display}" TextTrimming="CharacterEllipsis"/>
-                                                                            </Border>
-                                                                            <Border Grid.Column="5" Classes="matrixcell"
-                                                                                    Classes.inconsistent="{Binding AlbumArtist.IsInconsistent}"
-                                                                                    ToolTip.Tip="{Binding AlbumArtist.Reason}">
-                                                                                <TextBlock Text="{Binding AlbumArtist.Display}" TextTrimming="CharacterEllipsis"/>
-                                                                            </Border>
-                                                                            <Border Grid.Column="6" Classes="matrixcell"
-                                                                                    Classes.inconsistent="{Binding Album.IsInconsistent}"
-                                                                                    ToolTip.Tip="{Binding Album.Reason}">
-                                                                                <TextBlock Text="{Binding Album.Display}" TextTrimming="CharacterEllipsis"/>
-                                                                            </Border>
-                                                                            <Border Grid.Column="7" Classes="matrixcell"
-                                                                                    Classes.inconsistent="{Binding ReleaseDate.IsInconsistent}"
-                                                                                    ToolTip.Tip="{Binding ReleaseDate.Reason}">
-                                                                                <TextBlock Text="{Binding ReleaseDate.Display}" TextTrimming="CharacterEllipsis"/>
-                                                                            </Border>
-                                                                            <Border Grid.Column="8" Classes="matrixcell"
-                                                                                    Classes.inconsistent="{Binding Title.IsInconsistent}"
-                                                                                    ToolTip.Tip="{Binding Title.Reason}">
-                                                                                <TextBlock Text="{Binding Title.Display}" TextTrimming="CharacterEllipsis"/>
-                                                                            </Border>
-                                                                            <Border Grid.Column="9" Classes="matrixcell">
-                                                                                <Button Background="Transparent" Padding="0"
-                                                                                        HorizontalAlignment="Stretch"
-                                                                                        HorizontalContentAlignment="Left"
-                                                                                        Command="{Binding $parent[TabItem].((vm:AnalyzerViewModel)DataContext).OpenCommand}"
-                                                                                        CommandParameter="{Binding Path}">
-                                                                                    <TextBlock Text="{Binding Path}" Classes="caption"
-                                                                                               TextTrimming="CharacterEllipsis"/>
-                                                                                </Button>
-                                                                            </Border>
-                                                                        </Grid>
+                                                                        <Border Classes="matrixcell"
+                                                                                Classes.inconsistent="{Binding DiscNumber.IsInconsistent}"
+                                                                                ToolTip.Tip="{Binding DiscNumber.Reason}">
+                                                                            <TextBlock Text="{Binding DiscNumber.Display}"
+                                                                                       TextTrimming="CharacterEllipsis"/>
+                                                                        </Border>
                                                                     </DataTemplate>
-                                                                </ItemsControl.ItemTemplate>
-                                                            </ItemsControl>
-                                                        </StackPanel>
-                                                    </ScrollViewer>
+                                                                </DataGridTemplateColumn.CellTemplate>
+                                                            </DataGridTemplateColumn>
+                                                            <DataGridTemplateColumn Header="Track" Width="60" MinWidth="50">
+                                                                <DataGridTemplateColumn.CellTemplate>
+                                                                    <DataTemplate x:DataType="models:AlbumMetadataRow">
+                                                                        <Border Classes="matrixcell"
+                                                                                Classes.inconsistent="{Binding TrackNumber.IsInconsistent}"
+                                                                                ToolTip.Tip="{Binding TrackNumber.Reason}">
+                                                                            <TextBlock Text="{Binding TrackNumber.Display}"
+                                                                                       TextTrimming="CharacterEllipsis"/>
+                                                                        </Border>
+                                                                    </DataTemplate>
+                                                                </DataGridTemplateColumn.CellTemplate>
+                                                            </DataGridTemplateColumn>
+                                                            <DataGridTemplateColumn Header="Tracks" Width="75" MinWidth="55">
+                                                                <DataGridTemplateColumn.CellTemplate>
+                                                                    <DataTemplate x:DataType="models:AlbumMetadataRow">
+                                                                        <Border Classes="matrixcell"
+                                                                                Classes.inconsistent="{Binding TrackTotal.IsInconsistent}"
+                                                                                ToolTip.Tip="{Binding TrackTotal.Reason}">
+                                                                            <TextBlock Text="{Binding TrackTotal.Display}"
+                                                                                       TextTrimming="CharacterEllipsis"/>
+                                                                        </Border>
+                                                                    </DataTemplate>
+                                                                </DataGridTemplateColumn.CellTemplate>
+                                                            </DataGridTemplateColumn>
+                                                            <DataGridTemplateColumn Header="Discs" Width="75" MinWidth="55">
+                                                                <DataGridTemplateColumn.CellTemplate>
+                                                                    <DataTemplate x:DataType="models:AlbumMetadataRow">
+                                                                        <Border Classes="matrixcell"
+                                                                                Classes.inconsistent="{Binding DiscTotal.IsInconsistent}"
+                                                                                ToolTip.Tip="{Binding DiscTotal.Reason}">
+                                                                            <TextBlock Text="{Binding DiscTotal.Display}"
+                                                                                       TextTrimming="CharacterEllipsis"/>
+                                                                        </Border>
+                                                                    </DataTemplate>
+                                                                </DataGridTemplateColumn.CellTemplate>
+                                                            </DataGridTemplateColumn>
+                                                            <DataGridTemplateColumn Header="Artist" Width="170" MinWidth="90">
+                                                                <DataGridTemplateColumn.CellTemplate>
+                                                                    <DataTemplate x:DataType="models:AlbumMetadataRow">
+                                                                        <Border Classes="matrixcell"
+                                                                                Classes.inconsistent="{Binding Artist.IsInconsistent}"
+                                                                                ToolTip.Tip="{Binding Artist.Reason}">
+                                                                            <TextBlock Text="{Binding Artist.Display}"
+                                                                                       TextTrimming="CharacterEllipsis"/>
+                                                                        </Border>
+                                                                    </DataTemplate>
+                                                                </DataGridTemplateColumn.CellTemplate>
+                                                            </DataGridTemplateColumn>
+                                                            <DataGridTemplateColumn Header="Album artist" Width="190" MinWidth="100">
+                                                                <DataGridTemplateColumn.CellTemplate>
+                                                                    <DataTemplate x:DataType="models:AlbumMetadataRow">
+                                                                        <Border Classes="matrixcell"
+                                                                                Classes.inconsistent="{Binding AlbumArtist.IsInconsistent}"
+                                                                                ToolTip.Tip="{Binding AlbumArtist.Reason}">
+                                                                            <TextBlock Text="{Binding AlbumArtist.Display}"
+                                                                                       TextTrimming="CharacterEllipsis"/>
+                                                                        </Border>
+                                                                    </DataTemplate>
+                                                                </DataGridTemplateColumn.CellTemplate>
+                                                            </DataGridTemplateColumn>
+                                                            <DataGridTemplateColumn Header="Album" Width="200" MinWidth="110">
+                                                                <DataGridTemplateColumn.CellTemplate>
+                                                                    <DataTemplate x:DataType="models:AlbumMetadataRow">
+                                                                        <Border Classes="matrixcell"
+                                                                                Classes.inconsistent="{Binding Album.IsInconsistent}"
+                                                                                ToolTip.Tip="{Binding Album.Reason}">
+                                                                            <TextBlock Text="{Binding Album.Display}"
+                                                                                       TextTrimming="CharacterEllipsis"/>
+                                                                        </Border>
+                                                                    </DataTemplate>
+                                                                </DataGridTemplateColumn.CellTemplate>
+                                                            </DataGridTemplateColumn>
+                                                            <DataGridTemplateColumn Header="Release date" Width="110" MinWidth="85">
+                                                                <DataGridTemplateColumn.CellTemplate>
+                                                                    <DataTemplate x:DataType="models:AlbumMetadataRow">
+                                                                        <Border Classes="matrixcell"
+                                                                                Classes.inconsistent="{Binding ReleaseDate.IsInconsistent}"
+                                                                                ToolTip.Tip="{Binding ReleaseDate.Reason}">
+                                                                            <TextBlock Text="{Binding ReleaseDate.Display}"
+                                                                                       TextTrimming="CharacterEllipsis"/>
+                                                                        </Border>
+                                                                    </DataTemplate>
+                                                                </DataGridTemplateColumn.CellTemplate>
+                                                            </DataGridTemplateColumn>
+                                                            <DataGridTemplateColumn Header="Title" Width="220" MinWidth="110">
+                                                                <DataGridTemplateColumn.CellTemplate>
+                                                                    <DataTemplate x:DataType="models:AlbumMetadataRow">
+                                                                        <Border Classes="matrixcell"
+                                                                                Classes.inconsistent="{Binding Title.IsInconsistent}"
+                                                                                ToolTip.Tip="{Binding Title.Reason}">
+                                                                            <TextBlock Text="{Binding Title.Display}"
+                                                                                       TextTrimming="CharacterEllipsis"/>
+                                                                        </Border>
+                                                                    </DataTemplate>
+                                                                </DataGridTemplateColumn.CellTemplate>
+                                                            </DataGridTemplateColumn>
+                                                            <DataGridTemplateColumn Header="File" Width="360" MinWidth="180">
+                                                                <DataGridTemplateColumn.CellTemplate>
+                                                                    <DataTemplate x:DataType="models:AlbumMetadataRow">
+                                                                        <Border Classes="matrixcell">
+                                                                            <Button Background="Transparent" Padding="0"
+                                                                                    MinHeight="0"
+                                                                                    HorizontalAlignment="Stretch"
+                                                                                    HorizontalContentAlignment="Left"
+                                                                                    Command="{Binding $parent[TabItem].((vm:AnalyzerViewModel)DataContext).OpenCommand}"
+                                                                                    CommandParameter="{Binding Path}">
+                                                                                <TextBlock Text="{Binding Path}" Classes="caption"
+                                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                            </Button>
+                                                                        </Border>
+                                                                    </DataTemplate>
+                                                                </DataGridTemplateColumn.CellTemplate>
+                                                            </DataGridTemplateColumn>
+                                                        </DataGrid.Columns>
+                                                    </DataGrid>
                                                 </Expander>
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>

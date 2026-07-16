@@ -41,7 +41,7 @@ public sealed class AnalyzerViewModelTests
     }
 
     [Fact]
-    public void FindingRun_GroupsByProblemAndAlbumAndTracksDisposition()
+    public void FindingRun_GroupsByProblemArtistAndAlbumAndTracksDisposition()
     {
         var records = new[]
         {
@@ -59,16 +59,55 @@ public sealed class AnalyzerViewModelTests
 
         Assert.Equal(2, run.FindingGroups.Count);
         var missing = run.FindingGroups.Single(group => group.Problem == "Missing track total");
-        var album = Assert.Single(missing.Albums);
-        Assert.Equal("AA — First", album.Album);
+        var artist = Assert.Single(missing.Artists);
+        Assert.Equal("AA", artist.Artist);
+        var album = Assert.Single(artist.Albums);
+        Assert.Equal("First", album.Album);
         Assert.Equal(2, album.ActiveCount);
+        Assert.Equal(2, artist.ActiveCount);
         Assert.Equal(3, run.ActiveFindingCount);
 
         album.Findings[0].Disposition = AnalysisFindingDisposition.Deferred;
 
         Assert.Equal(1, album.ActiveCount);
+        Assert.Equal(1, artist.ActiveCount);
         Assert.Equal(1, missing.ActiveCount);
         Assert.Equal(2, run.ActiveFindingCount);
+    }
+
+    [Fact]
+    public void FindingRun_SortsHierarchyAndUsesUnknownMetadataFallbacks()
+    {
+        var records = new[]
+        {
+            Track("z.flac", "Zulu", "Second"),
+            Track("a.flac", "Alpha", "First"),
+            Track("alpha.flac", "alpha", "first"),
+            Track("unknown.flac", "", "") with
+            {
+                AlbumArtist = null,
+                HasAlbumArtist = false,
+                Artist = null,
+                Album = null,
+                StrippedAlbum = null,
+            },
+        };
+        var report = new AnalysisReport("Health", [
+            new(records[0].Path, "issue", "Category"),
+            new(records[1].Path, "issue", "Category"),
+            new(records[2].Path, "issue", "Category"),
+            new(records[3].Path, "issue", "Category"),
+        ]);
+
+        var category = Assert.Single(
+            AnalysisRunViewModel.ForFindings(report, records, "4 findings").FindingGroups);
+
+        Assert.Equal(["Alpha", "Unknown Artist", "Zulu"],
+            category.Artists.Select(artist => artist.Artist));
+        var alpha = category.Artists.Single(artist => artist.Artist == "Alpha");
+        Assert.Equal(2, Assert.Single(alpha.Albums).Count);
+        var unknown = category.Artists.Single(artist => artist.Artist == "Unknown Artist");
+        Assert.Equal("Unknown Album", Assert.Single(unknown.Albums).Album);
     }
 
     [Fact]
@@ -108,14 +147,17 @@ public sealed class AnalyzerViewModelTests
         ]);
         await viewModel.RunLossyCommand.ExecuteAsync(null);
         var lossyRun = viewModel.SelectedRun!;
-        var finding = Assert.Single(Assert.Single(lossyRun.FindingGroups).Albums).Findings[0];
+        var finding = Assert.Single(
+            Assert.Single(Assert.Single(lossyRun.FindingGroups).Artists).Albums).Findings[0];
         finding.Disposition = AnalysisFindingDisposition.Completed;
 
         await viewModel.RunInconsistenciesCommand.ExecuteAsync(null);
         viewModel.SelectedRun = lossyRun;
 
         Assert.Equal(AnalysisFindingDisposition.Completed,
-            Assert.Single(Assert.Single(viewModel.FindingGroups).Albums).Findings[0].Disposition);
+            Assert.Single(
+                Assert.Single(Assert.Single(viewModel.FindingGroups).Artists).Albums)
+                .Findings[0].Disposition);
         Assert.Equal(0, lossyRun.ActiveFindingCount);
     }
 

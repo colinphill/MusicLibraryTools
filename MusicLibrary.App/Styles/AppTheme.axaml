@@ -278,6 +278,9 @@
     <Style Selector="DataGridCell">
         <Setter Property="Foreground" Value="{DynamicResource AppText}"/>
     </Style>
+    <Style Selector="DataGrid.matrixgrid DataGridCell">
+        <Setter Property="Padding" Value="0"/>
+    </Style>
 
     <!-- Toolbar row helper: consistent inner spacing -->
     <Style Selector="StackPanel.toolbarrow">
