@@ -53,7 +53,11 @@ public sealed record ArtworkNormalizationResult(
     int UpdatedFileCount,
     int UpdatedTrackCount,
     string? JournalPath,
-    IReadOnlyList<OperationIssue> Issues);
+    IReadOnlyList<OperationIssue> Issues)
+{
+    public IReadOnlyList<string> UpdatedPaths { get; init; } = [];
+    public string? CacheError { get; init; }
+}
 
 public interface IArtworkNormalizationService
 {
@@ -80,9 +84,21 @@ public sealed class ArtworkNormalizationService : IArtworkNormalizationService
         : StringComparer.Ordinal;
 
     private readonly IFileMutationCoordinator _mutations;
+    private readonly IReindexService? _reindex;
 
-    public ArtworkNormalizationService(IFileMutationCoordinator? mutations = null) =>
+    public ArtworkNormalizationService(IFileMutationCoordinator? mutations = null)
+    {
         _mutations = mutations ?? FileMutationCoordinator.Shared;
+    }
+
+    public ArtworkNormalizationService(
+        IReindexService reindex,
+        IFileMutationCoordinator? mutations = null)
+    {
+        ArgumentNullException.ThrowIfNull(reindex);
+        _reindex = reindex;
+        _mutations = mutations ?? FileMutationCoordinator.Shared;
+    }
 
     public Task<ArtworkNormalizationPlan> PreviewAsync(
         ArtworkNormalizationRequest request,
@@ -107,9 +123,36 @@ public sealed class ArtworkNormalizationService : IArtworkNormalizationService
         progress?.Report(new(OperationPhase.Validating,
             Message: "Waiting to validate the reviewed artwork plan"));
         using IDisposable lease = await _mutations.AcquireAsync(paths, ct).ConfigureAwait(false);
-        return await Task.Run(() => Apply(plan, progress, ct), CancellationToken.None)
+        ApplyOutcome applied = await Task.Run(() => Apply(plan, progress, ct), CancellationToken.None)
             .ConfigureAwait(false);
+
+        ArtworkNormalizationResult result = applied.Result;
+        if (_reindex is not null && applied.SavedFiles.Count > 0)
+        {
+            try
+            {
+                progress?.Report(new(OperationPhase.Applying, plan.Items.Count, plan.Items.Count,
+                    Message: "Refreshing normalized artwork in the metadata cache"));
+                await _reindex.ReindexFilesAsync(applied.SavedFiles, CancellationToken.None)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                result = result with { CacheError = ex.Message };
+            }
+        }
+        progress?.Report(new(OperationPhase.Completed, plan.Items.Count, plan.Items.Count,
+            Message: plan.Items.Count == 0
+                ? "No artwork changes are required"
+                : result.CacheError is null
+                ? $"Normalized {plan.Items.Count:N0} media file(s)"
+                : $"Normalized {plan.Items.Count:N0} media file(s); cache refresh failed"));
+        return result;
     }
+
+    private sealed record ApplyOutcome(
+        ArtworkNormalizationResult Result,
+        IReadOnlyList<(string Path, IMediaFile File)> SavedFiles);
 
     private static ArtworkNormalizationPlan Preview(
         ArtworkNormalizationRequest request,
@@ -243,7 +286,7 @@ public sealed class ArtworkNormalizationService : IArtworkNormalizationService
             artworkTracks, unchanged, issues, recoveryRoot, DateTimeOffset.UtcNow);
     }
 
-    private static ArtworkNormalizationResult Apply(
+    private static ApplyOutcome Apply(
         ArtworkNormalizationPlan plan,
         IProgress<OperationProgress>? progress,
         CancellationToken ct)
@@ -252,11 +295,7 @@ public sealed class ArtworkNormalizationService : IArtworkNormalizationService
         // first write so no partially stale plan can begin.
         ValidatePlan(plan, ct);
         if (plan.Items.Count == 0)
-        {
-            progress?.Report(new(OperationPhase.Completed, 0, 0,
-                Message: "No artwork changes are required"));
-            return new(0, 0, null, plan.Issues);
-        }
+            return new(new(0, 0, null, plan.Issues), []);
 
         ItlFileEditor.EnsureItunesIsClosed();
         ItlDocument document = ItlDocument.Load(plan.LibraryPath);
@@ -274,6 +313,7 @@ public sealed class ArtworkNormalizationService : IArtworkNormalizationService
             $"PLAN_QUARANTINE\tITL\t{plan.LibraryPath}\t{BackupPath(plan.RecoveryRoot, plan.LibraryPath)}");
 
         var modified = new List<(ArtworkNormalizationItem Item, string Backup)>();
+        var savedFiles = new List<(string Path, IMediaFile File)>();
         string? libraryBackup = null;
         try
         {
@@ -298,6 +338,7 @@ public sealed class ArtworkNormalizationService : IArtworkNormalizationService
                 ]);
                 mediaFile.SaveTags();
                 VerifyWrittenArtwork(item);
+                savedFiles.Add((item.Path, mediaFile));
 
                 FileInfo file = new(item.Path);
                 foreach (int trackId in item.TrackIds)
@@ -322,10 +363,16 @@ public sealed class ArtworkNormalizationService : IArtworkNormalizationService
             _ = ItlDocument.Load(plan.LibraryPath);
             WriteJournal(journal, journalStream, $"INSTALL\tITL\t{plan.LibraryPath}");
             WriteJournal(journal, journalStream, $"COMMIT\t{operationId}");
-            progress?.Report(new(OperationPhase.Completed, plan.Items.Count, plan.Items.Count,
-                Message: $"Normalized {plan.Items.Count:N0} media file(s)"));
-            return new(plan.Items.Count, plan.Items.Sum(item => item.TrackIds.Count),
-                journalPath, plan.Issues);
+            return new(
+                new ArtworkNormalizationResult(
+                    plan.Items.Count,
+                    plan.Items.Sum(item => item.TrackIds.Count),
+                    journalPath,
+                    plan.Issues)
+                {
+                    UpdatedPaths = plan.Items.Select(item => item.Path).ToArray(),
+                },
+                savedFiles);
         }
         catch (Exception applyError)
         {

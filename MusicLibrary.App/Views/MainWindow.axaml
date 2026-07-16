@@ -156,9 +156,9 @@
                             IsVisible="{Binding Library.IsBusy}"/>
                     <ProgressBar IsIndeterminate="True" Width="60"
                                  IsVisible="{Binding Library.IsBusy}"/>
-                    <TextBlock Text="{Binding Library.StatusText}" Classes="muted"
+                    <TextBlock Text="{Binding Library.StatusDisplayText}" Classes="muted"
                                MaxWidth="900" TextWrapping="Wrap"
-                               ToolTip.Tip="{Binding Library.StatusText}"/>
+                               ToolTip.Tip="{Binding Library.StatusDisplayText}"/>
                 </WrapPanel>
             </Grid>
         </Border>

@@ -1592,7 +1592,12 @@ namespace MusicFileUtilities
                 Atom parsedAtom = sa;
                 if (!ReadArtworkData && Type == "covr" && sa.Type == "data")
                 {
-                    parsedAtom = new DiscardedAtom(sa);
+                    // Keep cover bytes out of memory while retaining a copy-through reference for
+                    // editable metadata-only parses. RootAtom normally parses a FileStream; the
+                    // stream fallback is only for synthetic/in-memory read-only callers.
+                    parsedAtom = s is FileStream
+                        ? new DemandAtom(sa, s)
+                        : new DiscardedAtom(sa);
                     _children.Add(parsedAtom);
                 }
                 else if (MP4Util.AtomTypes.TryGetValue(sa.Type, out Type Atom_type) ||
@@ -1914,7 +1919,7 @@ namespace MusicFileUtilities
                     widthChanges[i].Atom.SetUses64BitOffsets(widthChanges[i].PreviousWidth);
                 if (offsetsAdjusted)
                     FixFileOffsets(-offsetDelta);
-                foreach (DemandAtom demand in _children.OfType<DemandAtom>())
+                foreach (DemandAtom demand in EnumerateDemandAtoms(this))
                     demand.AbortRewrite();
                 if (tpath != null)
                     Tools.DeleteIfExists(tpath);
@@ -1922,7 +1927,7 @@ namespace MusicFileUtilities
             }
 
             string committedPath = System.IO.Path.GetFullPath(path);
-            foreach (DemandAtom demand in _children.OfType<DemandAtom>())
+            foreach (DemandAtom demand in EnumerateDemandAtoms(this))
                 demand.CommitRewrite(committedPath);
             foreach (var (atom, offset) in committedOffsets)
                 atom.CommitFileOffset(offset);
@@ -2038,6 +2043,18 @@ namespace MusicFileUtilities
             }
         }
 
+        private static IEnumerable<DemandAtom> EnumerateDemandAtoms(ContainerAtom container)
+        {
+            foreach (Atom atom in container.Children)
+            {
+                if (atom is DemandAtom demand)
+                    yield return demand;
+                if (atom is ContainerAtom childContainer)
+                    foreach (DemandAtom nested in EnumerateDemandAtoms(childContainer))
+                        yield return nested;
+            }
+        }
+
         // Reserves a `free` padding atom inside moov so a later tag edit can be absorbed in place
         // (Path A) rather than copying the whole audio payload again. Only meaningful — and only
         // applied — for faststart files (moov before mdat) that don't already carry padding:
@@ -2123,6 +2140,16 @@ namespace MusicFileUtilities
 
             if (!pathA && !pathB)
                 return false;
+
+            // A changed container with deferred cover art would have to copy bytes from the same
+            // file region that this path is overwriting. Use the temp-file rewrite instead; it can
+            // stream the deferred payload safely without ever loading it into memory.
+            foreach (Atom atom in _children)
+            {
+                bool changed = atom.Touched || (atom is ContainerAtom changedContainer && changedContainer.Modified);
+                if (changed && atom is ContainerAtom container && EnumerateDemandAtoms(container).Any())
+                    return false;
+            }
 
             // Commit the reclaim only now that Path B is certain, so a fallback to WriteFile never
             // sees a half-adjusted tree.
@@ -2522,7 +2549,28 @@ namespace MusicFileUtilities
         {
             var existing = ilst.Children.FirstOrDefault(a => a.Type == atomType) as ContainerAtom;
             if (existing != null)
-                return existing.FindPath("data") as Atom_data;
+            {
+                if (existing.FindPath("data") is Atom_data loaded)
+                    return loaded;
+
+                // An editable metadata-only parse represents covr.data as DemandAtom. Replacing
+                // the cover must drop that copy-through node and install a normal in-memory atom.
+                if (atomType == "covr")
+                {
+                    foreach (Atom deferred in existing.Children.Where(a => a.Type == "data").ToList())
+                    {
+                        existing.Children.Remove(deferred);
+                        existing.Touch(-deferred.Size);
+                    }
+
+                    Atom_data replacement = new Atom_data(existing) { Type = "data" };
+                    existing.Children.Add(replacement);
+                    existing.Touch(replacement.Size);
+                    return replacement;
+                }
+
+                return null;
+            }
 
             ContainerAtom ca = ilst.CreateChild(atomType) as ContainerAtom;
             Atom_data da = new Atom_data(ca) { Type = "data" };

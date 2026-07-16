@@ -161,9 +161,10 @@ public sealed class ThumbnailProvider : IThumbnailProvider
                 if (batch.Length == 0)
                 {
                     _rawBatchScheduled = false;
-                    return;
                 }
             }
+            if (batch.Length == 0)
+                return;
 
             try
             {

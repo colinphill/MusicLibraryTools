@@ -84,6 +84,44 @@ namespace MusicFileUtilities.Tests
             Assert.Equal("TestTitle", metadataOnly.Tags.First().Title);
         }
 
+        [Theory]
+        [MemberData(nameof(Mp4Files))]
+        public void EditableMetadataOnlySavePreservesDeferredArtwork(string file)
+        {
+            using var tmp = MediaFixtures.Copy(file);
+            byte[] jpeg = Ffmpeg.EncodeJpeg(128, 128);
+
+            var withArtwork = (MP4File)MediaFile.GetFile(tmp.Path);
+            ((IArtworkWriter)withArtwork).SetFrontCover(jpeg, "image/jpeg");
+            withArtwork.Save();
+
+            var metadataOnly = new MP4File(tmp.Path, readOnly: false, readArtwork: false);
+            Assert.IsType<DemandAtom>(
+                metadataOnly.Root.FindPath("moov.udta.meta.ilst.covr.data"));
+            Assert.Empty(metadataOnly.GetImageMetadata());
+
+            metadataOnly.SetField(TagFields.Title, "Deferred Artwork Edit");
+            metadataOnly.Save();
+            Assert.False(metadataOnly.LastSaveWasInPlace);
+
+            // Exercise the same deferred node again after AtomicReplace: its source offset must
+            // have been rebound to the newly written file.
+            metadataOnly.SetField(TagFields.Album, "Deferred Artwork Second Edit");
+            metadataOnly.Save();
+
+            var reopened = (MP4File)MediaFile.GetFile(tmp.Path);
+            Assert.Equal("Deferred Artwork Edit", reopened.Title);
+            Assert.Equal("Deferred Artwork Second Edit", reopened.Album);
+            Assert.Equal(jpeg, Assert.Single(reopened.GetImageMetadata()).Data);
+
+            byte[] replacement = Ffmpeg.EncodeJpeg(96, 96);
+            metadataOnly.SetFrontCover(replacement, "image/jpeg");
+            metadataOnly.Save();
+            Assert.Equal(
+                replacement,
+                Assert.Single(((MP4File)MediaFile.GetFile(tmp.Path)).GetImageMetadata()).Data);
+        }
+
         // ---- shrink (remove field): tail truncates, audio still intact -----------------------
 
         [Theory]

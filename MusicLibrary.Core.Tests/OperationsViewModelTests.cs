@@ -58,6 +58,40 @@ public sealed class OperationsViewModelTests
     }
 
     [Fact]
+    public async Task ArtworkNormalizationPublishesUpdatedPathsAndCacheWarning()
+    {
+        using var temp = new TempDirectory();
+        var settings = new AppSettings(Path.Combine(temp.Path, "settings.json"));
+        string library = Path.Combine(temp.Path, "iTunes Library.itl");
+        string config = Path.Combine(temp.Path, "library.xml");
+        new EditableLibraryConfig { ItunesLibraryPath = library }.Save(config);
+        settings.LoadConfig(config);
+        var jobs = new UnifiedJobService();
+        var normalization = new StubArtworkNormalizationService(
+            [Path.Combine(temp.Path, "one.mp3"), Path.Combine(temp.Path, "two.m4a")],
+            "cache unavailable");
+        var viewModel = new OperationsViewModel(
+            new RecordingJournals(new([], [])),
+            new StubFiles(),
+            new StubDialogs(),
+            settings,
+            jobs: jobs,
+            artworkNormalization: normalization)
+        {
+            SelectedJob = jobs.Catalog.Single(job => job.Id == "artwork-normalization"),
+            JobPlaylistName = "Artwork",
+        };
+        IReadOnlyList<string>? affected = null;
+        viewModel.ArtworkNormalized += paths => affected = paths;
+
+        await viewModel.PreviewJobCommand.ExecuteAsync(null);
+        await viewModel.ApplyJobCommand.ExecuteAsync(null);
+
+        Assert.Equal(normalization.Paths, affected);
+        Assert.Contains("Cache warning: cache unavailable", viewModel.JobOutput);
+    }
+
+    [Fact]
     public async Task RefreshIncludesRememberedIngestAndAdditionalRootsAndProjectsRuns()
     {
         using var temp = new TempDirectory();
@@ -332,6 +366,43 @@ public sealed class OperationsViewModelTests
             return Task.FromResult(new CrossLibrarySyncResult(0, 0,
                 new FileMutationSummary(0, 0, 0, null, []), []));
         }
+    }
+
+    private sealed class StubArtworkNormalizationService(
+        IReadOnlyList<string> paths,
+        string? cacheError) : IArtworkNormalizationService
+    {
+        public IReadOnlyList<string> Paths { get; } = paths;
+
+        public Task<ArtworkNormalizationPlan> PreviewAsync(
+            ArtworkNormalizationRequest request,
+            IProgress<OperationProgress>? progress = null,
+            CancellationToken ct = default)
+        {
+            var snapshot = new OperationPathSnapshot(false, false, 0, default);
+            return Task.FromResult(new ArtworkNormalizationPlan(
+                request,
+                request.ItunesLibraryPath ?? "library.itl",
+                snapshot,
+                "",
+                [],
+                0,
+                0,
+                0,
+                [],
+                "recovery",
+                DateTimeOffset.UtcNow));
+        }
+
+        public Task<ArtworkNormalizationResult> ApplyAsync(
+            ArtworkNormalizationPlan plan,
+            IProgress<OperationProgress>? progress = null,
+            CancellationToken ct = default) =>
+            Task.FromResult(new ArtworkNormalizationResult(Paths.Count, Paths.Count, null, [])
+            {
+                UpdatedPaths = Paths,
+                CacheError = cacheError,
+            });
     }
 
     private sealed class StubDialogs : IDialogService

@@ -46,6 +46,15 @@ public sealed class LibraryIndexProgressTests
         Assert.DoesNotContain("files/s", status);
     }
 
+    [Theory]
+    [InlineData(0, "0 files have materialized artwork.")]
+    [InlineData(1, "1 file has materialized artwork.")]
+    [InlineData(1234, "1,234 files have materialized artwork.")]
+    public void MaterializedArtworkStatusReportsFileCount(int count, string expected)
+    {
+        Assert.Equal(expected, LibraryViewModel.DescribeMaterializedArtwork(count));
+    }
+
     [Fact]
     public void RootHealthStatusDistinguishesUnavailableFromLastSuccessfulScan()
     {

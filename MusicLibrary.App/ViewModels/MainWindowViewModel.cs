@@ -91,6 +91,13 @@ public partial class MainWindowViewModel : ViewModelBase
             await Table.ReloadAsync();
             await Inspector.ReloadAsync();
         };
+        Operations.ArtworkNormalized += async affected =>
+        {
+            foreach (var p in affected)
+                _thumbnails.Invalidate(p);
+            await Table.ReloadAsync();
+            await Inspector.ReloadAsync();
+        };
         _settings.ConfigurationChanged += OnConfigurationChanged;
     }
 

@@ -5,6 +5,15 @@ using MusicLibraryTools;
 namespace MusicLibrary.Core.Services;
 
 /// <summary>
+/// Publishes changes that can affect the number of files with materialized cached artwork.
+/// Notifications are raised after the cache operation has committed and released its database lock.
+/// </summary>
+public interface IArtworkMaterializationNotifier
+{
+    event Action? ArtworkMaterializationChanged;
+}
+
+/// <summary>
 /// Owns the single <see cref="MetadataDatabase"/> connection (opened from the loaded
 /// LibraryConfiguration's cache file) and serializes all access to it. Provides background
 /// indexing (with progress + cancellation) and building a browsable snapshot from the cache.
@@ -79,6 +88,13 @@ public interface ILibraryService
     /// <summary>Cached artwork metadata only; never hydrates deferred artwork or selects image blobs.</summary>
     Task<IReadOnlyList<ArtworkAuditFile>> GetArtworkAuditFilesAsync(CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<ArtworkAuditFile>>([]);
+
+    /// <summary>
+    /// Count cached files that have completed deferred artwork hydration and contain at least one
+    /// materialized image. Does not hydrate artwork or read image blobs.
+    /// </summary>
+    Task<int> GetMaterializedArtworkFileCountAsync(CancellationToken ct = default) =>
+        Task.FromResult(0);
 }
 
 public sealed record LibraryOperationCacheSnapshot(

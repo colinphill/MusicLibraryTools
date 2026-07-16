@@ -20,6 +20,7 @@ public partial class LibraryViewModel : ViewModelBase
     private readonly IAppSettings _settings;
     private readonly IScheduledScanService? _scheduledScans;
     private CancellationTokenSource? _indexCts;
+    private CancellationTokenSource? _artworkCountRefreshCts;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsBusy))]
@@ -49,7 +50,13 @@ public partial class LibraryViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(HasBenchmarkRecommendation))]
     private int? _benchmarkRecommendation;
 
-    [ObservableProperty] private string? _statusText;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StatusDisplayText))]
+    private string? _statusText;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StatusDisplayText))]
+    private int? _materializedArtworkFileCount;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasBenchmarkDetails))]
@@ -68,6 +75,10 @@ public partial class LibraryViewModel : ViewModelBase
     public bool HasBenchmarkDetails => !string.IsNullOrWhiteSpace(BenchmarkDetails);
     public bool HasRootHealthDetails => !string.IsNullOrWhiteSpace(RootHealthDetails);
     public bool HasItunesMediaDetails => !string.IsNullOrWhiteSpace(ItunesMediaDetails);
+    public string? StatusDisplayText => MaterializedArtworkFileCount is int count
+        ? string.Join(" ", new[] { StatusText, DescribeMaterializedArtwork(count) }
+            .Where(part => !string.IsNullOrWhiteSpace(part)))
+        : StatusText;
 
     /// <summary>Raised after a successful (or cancelled) index so views can refresh from the cache.</summary>
     public event Action? IndexCompleted;
@@ -82,6 +93,8 @@ public partial class LibraryViewModel : ViewModelBase
         _benchmarks = benchmarks;
         _settings = settings;
         _scheduledScans = scheduledScans;
+        if (library is IArtworkMaterializationNotifier artworkNotifier)
+            artworkNotifier.ArtworkMaterializationChanged += QueueMaterializedArtworkCountRefresh;
         if (int.TryParse(settings.GetPreference(IndexBenchmarkService.ReaderParallelismPreference),
                 out int parallelism))
             ReaderParallelism = Math.Clamp(parallelism, 1, 64);
@@ -93,6 +106,7 @@ public partial class LibraryViewModel : ViewModelBase
         {
             IndexCommand.NotifyCanExecuteChanged();
             BenchmarkReadersCommand.NotifyCanExecuteChanged();
+            MaterializedArtworkFileCount = null;
             StatusText = "Loading the cached library; automatic indexing will follow.";
         };
     }
@@ -153,7 +167,8 @@ public partial class LibraryViewModel : ViewModelBase
         {
             var (added, modified, removed, unchanged) = await _library.IndexAsync(progress, _indexCts.Token);
             StatusText = $"Indexed in {FormatDuration(clock.Elapsed)}: +{added} added, " +
-                $"~{modified} modified, -{removed} removed, {unchanged} unchanged. Artwork remains lazy.";
+                $"~{modified} modified, -{removed} removed, {unchanged} unchanged.";
+            await RefreshMaterializedArtworkCountAsync(_indexCts.Token);
             ItunesMediaReconciliationResult itunes =
                 await _library.GetLastItunesReconciliationAsync(_indexCts.Token);
             ItunesMediaDetails = DescribeItunesMediaReconciliation(itunes);
@@ -205,6 +220,56 @@ public partial class LibraryViewModel : ViewModelBase
         catch
         {
             // Index outcome remains primary; health is supplemental and can refresh next scan.
+        }
+    }
+
+    public async Task RefreshMaterializedArtworkCountAsync(CancellationToken ct = default)
+    {
+        if (!_library.IsReady)
+        {
+            MaterializedArtworkFileCount = null;
+            return;
+        }
+        try
+        {
+            MaterializedArtworkFileCount =
+                await _library.GetMaterializedArtworkFileCountAsync(ct);
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            // The scan result remains useful if this supplemental aggregate cannot be refreshed.
+        }
+    }
+
+    private void QueueMaterializedArtworkCountRefresh()
+    {
+        var request = new CancellationTokenSource();
+        CancellationTokenSource? previous = _artworkCountRefreshCts;
+        _artworkCountRefreshCts = request;
+        previous?.Cancel();
+        _ = RefreshMaterializedArtworkCountAfterDelayAsync(request);
+    }
+
+    private async Task RefreshMaterializedArtworkCountAfterDelayAsync(
+        CancellationTokenSource request)
+    {
+        try
+        {
+            await Task.Delay(100, request.Token);
+            await RefreshMaterializedArtworkCountAsync(request.Token);
+        }
+        catch (OperationCanceledException) when (request.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            if (ReferenceEquals(_artworkCountRefreshCts, request))
+                _artworkCountRefreshCts = null;
+            request.Dispose();
         }
     }
 
@@ -320,6 +385,11 @@ public partial class LibraryViewModel : ViewModelBase
         }
         return string.Join(Environment.NewLine, lines);
     }
+
+    public static string DescribeMaterializedArtwork(int fileCount) =>
+        fileCount == 1
+            ? "1 file has materialized artwork."
+            : $"{fileCount:N0} files have materialized artwork.";
 
     public static string DescribeProgress(IndexProgress progress)
     {

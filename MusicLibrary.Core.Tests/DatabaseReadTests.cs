@@ -346,13 +346,51 @@ public class DatabaseReadTests
             using var library = new LibraryService(settings);
             await library.IndexAsync();
 
+            Assert.Equal(0, await library.GetMaterializedArtworkFileCountAsync());
             var before = Assert.Single(await library.GetArtworkAuditFilesAsync());
             Assert.Equal(song, before.Path);
             Assert.False(before.ArtworkScanned);
 
             _ = await library.GetFirstImageAsync(song);
+            Assert.Equal(0, await library.GetMaterializedArtworkFileCountAsync());
             var after = Assert.Single(await library.GetArtworkAuditFilesAsync());
             Assert.True(after.ArtworkScanned);
+        }
+        finally
+        {
+            try { Directory.Delete(work, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task EveryArtworkMaterializingLibraryPathPublishesCountChange()
+    {
+        var (work, _, config, song) = Setup("sample.flac");
+        try
+        {
+            var settings = new AppSettings(Path.Combine(work, "settings.json"));
+            settings.LoadConfig(config);
+            using var library = new LibraryService(settings);
+            int changes = 0;
+            library.ArtworkMaterializationChanged += () => changes++;
+
+            await library.IndexAsync();
+            Assert.Equal(1, changes);
+            changes = 0;
+
+            _ = await library.GetFileDetailsAsync(song, includeArtwork: false);
+            Assert.Equal(0, changes);
+
+            _ = await library.GetFileDetailsAsync(song, includeArtwork: true);
+            _ = await library.GetFirstImageAsync(song);
+            _ = await library.GetFirstImagesAsync([song]);
+            _ = await library.GetImageSignaturesAsync([song]);
+            await library.ReindexFileAsync(song);
+            IMediaFile savedFile = MediaFile.GetFile(song);
+            await library.ReindexFileAsync(song, savedFile);
+            await library.ReindexFilesAsync([(song, savedFile)]);
+
+            Assert.Equal(7, changes);
         }
         finally
         {
@@ -483,11 +521,14 @@ public class DatabaseReadTests
             await library.IndexAsync();
 
             Assert.Equal(0L, ReadArtworkScanned(Path.Combine(work, "cache.db")));
+            Assert.Equal(0, await library.GetMaterializedArtworkFileCountAsync());
             Assert.NotNull(await library.GetFileDetailsAsync(song, includeArtwork: false));
             Assert.Equal(0L, ReadArtworkScanned(Path.Combine(work, "cache.db")));
+            Assert.Equal(0, await library.GetMaterializedArtworkFileCountAsync());
 
             Assert.Equal(cover, await library.GetFirstImageAsync(song));
             Assert.Equal(1L, ReadArtworkScanned(Path.Combine(work, "cache.db")));
+            Assert.Equal(1, await library.GetMaterializedArtworkFileCountAsync());
             Assert.Single((await library.GetFileDetailsAsync(song, includeArtwork: true))!.Images);
         }
         finally

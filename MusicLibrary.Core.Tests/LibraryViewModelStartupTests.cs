@@ -34,12 +34,25 @@ public sealed class LibraryViewModelStartupTests
         await viewModel.StartAutomaticIndexAsync();
 
         Assert.Equal(1, library.IndexCalls);
+        Assert.Contains("12 files have materialized artwork", viewModel.StatusDisplayText);
+
+        library.MaterializedArtworkFileCount = 13;
+        library.RaiseArtworkMaterializationChanged();
+        for (int attempt = 0;
+             attempt < 20 && !viewModel.StatusDisplayText!.Contains("13 files");
+             attempt++)
+            await Task.Delay(25);
+
+        Assert.Contains("13 files have materialized artwork", viewModel.StatusDisplayText);
     }
 
-    private sealed class RecordingLibraryService : ILibraryService
+    private sealed class RecordingLibraryService : ILibraryService, IArtworkMaterializationNotifier
     {
+        public event Action? ArtworkMaterializationChanged;
+
         public bool IsReady => true;
         public int IndexCalls { get; private set; }
+        public int MaterializedArtworkFileCount { get; set; } = 12;
 
         public Task<(int Added, int Modified, int Removed, int Unchanged)> IndexAsync(
             IProgress<IndexProgress>? progress = null, CancellationToken ct = default)
@@ -47,6 +60,9 @@ public sealed class LibraryViewModelStartupTests
             IndexCalls++;
             return Task.FromResult((0, 0, 0, 0));
         }
+
+        public Task<int> GetMaterializedArtworkFileCountAsync(CancellationToken ct = default) =>
+            Task.FromResult(MaterializedArtworkFileCount);
 
         public Task<LibrarySnapshot> BuildSnapshotAsync(
             LibraryGrouping grouping = LibraryGrouping.AlbumArtist, CancellationToken ct = default) =>
@@ -72,6 +88,9 @@ public sealed class LibraryViewModelStartupTests
         public Task<IReadOnlyList<string>> GetImageSignaturesAsync(
             IReadOnlyList<string> paths, CancellationToken ct = default) =>
             throw new NotSupportedException();
+
+        public void RaiseArtworkMaterializationChanged() =>
+            ArtworkMaterializationChanged?.Invoke();
     }
 
     private sealed class TempDirectory : IDisposable

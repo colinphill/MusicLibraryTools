@@ -7,7 +7,8 @@ using System.Text;
 namespace MusicLibrary.Core.Services;
 
 /// <inheritdoc cref="ILibraryService"/>
-public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReindexService, IDisposable
+public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReindexService,
+    IArtworkMaterializationNotifier, IDisposable
 {
     private readonly IAppSettings _settings;
     private readonly IFileMutationCoordinator _mutations;
@@ -21,6 +22,8 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
     private string? _openedDatabaseSpec;
     private ItunesMediaReconciliationResult _lastItunesReconciliation =
         ItunesMediaReconciliationResult.NotConfigured;
+
+    public event Action? ArtworkMaterializationChanged;
 
     public LibraryService(
         IAppSettings settings,
@@ -100,6 +103,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         finally
         {
             _gate.Release();
+            ArtworkMaterializationChanged?.Invoke();
         }
     }
 
@@ -286,48 +290,59 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
     {
         if (!IsReady)
             return null;
+        FileDetails? result;
         await _gate.WaitAsync(ct);
         try
         {
             var db = GetDatabase(GetContext());
-            return await Task.Run(() => db.GetFileDetails(path, includeArtwork), ct);
+            result = await Task.Run(() => db.GetFileDetails(path, includeArtwork), ct);
         }
         finally
         {
             _gate.Release();
         }
+        if (includeArtwork)
+            ArtworkMaterializationChanged?.Invoke();
+        return result;
     }
 
     public async Task<byte[]?> GetFirstImageAsync(string path, CancellationToken ct = default)
     {
         if (!IsReady)
             return null;
+        byte[]? result;
         await _gate.WaitAsync(ct);
         try
         {
             var db = GetDatabase(GetContext());
-            return await Task.Run(() => db.GetFirstImageData(path), ct);
+            result = await Task.Run(() => db.GetFirstImageData(path), ct);
         }
         finally
         {
             _gate.Release();
         }
+        ArtworkMaterializationChanged?.Invoke();
+        return result;
     }
 
     public async Task<IReadOnlyList<string>> GetImageSignaturesAsync(IReadOnlyList<string> paths, CancellationToken ct = default)
     {
         if (!IsReady || paths.Count == 0)
             return [];
+        IReadOnlyList<string> result;
         await _gate.WaitAsync(ct);
         try
         {
             var db = GetDatabase(GetContext());
-            return await Task.Run(() => (IReadOnlyList<string>)db.GetImageSignatures(paths), ct);
+            result = await Task.Run(
+                () => (IReadOnlyList<string>)db.GetImageSignatures(paths), ct);
         }
         finally
         {
             _gate.Release();
         }
+        ArtworkMaterializationChanged?.Invoke();
+        return result;
     }
 
     public async Task ReindexFileAsync(string path, CancellationToken ct = default)
@@ -344,6 +359,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         {
             _gate.Release();
         }
+        ArtworkMaterializationChanged?.Invoke();
     }
 
     public async Task<IReadOnlyList<PlannedMove>> PreviewMovesAsync(CancellationToken ct = default)
@@ -615,6 +631,19 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         finally { _gate.Release(); }
     }
 
+    public async Task<int> GetMaterializedArtworkFileCountAsync(CancellationToken ct = default)
+    {
+        if (!IsReady)
+            return 0;
+        await _gate.WaitAsync(ct);
+        try
+        {
+            var db = GetDatabase(GetContext());
+            return await Task.Run(db.GetMaterializedArtworkFileCount, ct);
+        }
+        finally { _gate.Release(); }
+    }
+
     private static OperationPathSnapshot CaptureOrganizationSnapshot(string path)
     {
         string fullPath = Path.GetFullPath(path);
@@ -882,16 +911,20 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
     {
         if (!IsReady || paths.Count == 0)
             return [];
+        IReadOnlyList<byte[]?> result;
         await _gate.WaitAsync(ct);
         try
         {
             var db = GetDatabase(GetContext());
-            return await Task.Run(() => (IReadOnlyList<byte[]?>)db.GetFirstImageData(paths), ct);
+            result = await Task.Run(
+                () => (IReadOnlyList<byte[]?>)db.GetFirstImageData(paths), ct);
         }
         finally
         {
             _gate.Release();
         }
+        ArtworkMaterializationChanged?.Invoke();
+        return result;
     }
 
     public async Task ReindexFileAsync(string path, IMediaFile savedFile, CancellationToken ct = default)
@@ -908,6 +941,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         {
             _gate.Release();
         }
+        ArtworkMaterializationChanged?.Invoke();
     }
 
     public async Task ReindexFilesAsync(
@@ -926,6 +960,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         {
             _gate.Release();
         }
+        ArtworkMaterializationChanged?.Invoke();
     }
 
     private static HashSet<string>? ParseExtensionFilter(string? filter)
@@ -953,6 +988,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         if (moves.Count == 0 || !IsReady)
             return [];
 
+        IReadOnlyList<(string Source, string Error)> result;
         var errors = new List<(string Source, string Error)>();
         await _gate.WaitAsync();
         try
@@ -978,16 +1014,18 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                     }
                 }
             });
-            return errors;
+            result = errors;
         }
         catch (Exception ex)
         {
-            return moves.Select(move => (move.Source, ex.Message)).ToList();
+            result = moves.Select(move => (move.Source, ex.Message)).ToList();
         }
         finally
         {
             _gate.Release();
         }
+        ArtworkMaterializationChanged?.Invoke();
+        return result;
     }
 
     private static (int Length, int Disc) GetLimits(LibraryConfiguration config)

@@ -44,6 +44,8 @@ public partial class OperationsViewModel : ViewModelBase
     private readonly ICarCardService? _carCard;
     private CancellationTokenSource? _cts;
 
+    public event Action<IReadOnlyList<string>>? ArtworkNormalized;
+
     [ObservableProperty]
     private string? _searchRoot;
 
@@ -431,6 +433,8 @@ public partial class OperationsViewModel : ViewModelBase
                 ArtworkNormalizationResult typedResult = await _artworkNormalization.ApplyAsync(
                     artworkPlan, typedProgress, _cts.Token);
                 clock.Stop();
+                if (typedResult.UpdatedPaths.Count > 0)
+                    ArtworkNormalized?.Invoke(typedResult.UpdatedPaths);
                 result = new(0, RenderArtworkNormalizationResult(typedResult), clock.Elapsed);
             }
             else if (plan.Job.Id == "device-sync" && _deviceSync is not null &&
@@ -562,7 +566,9 @@ public partial class OperationsViewModel : ViewModelBase
         $"Applied: {result.UpdatedFileCount:N0} media files and " +
         $"{result.UpdatedTrackCount:N0} ITL track caches updated." +
         (result.JournalPath is null ? "" :
-            Environment.NewLine + "Recovery journal: " + result.JournalPath);
+            Environment.NewLine + "Recovery journal: " + result.JournalPath) +
+        (result.CacheError is null ? "" :
+            Environment.NewLine + "Cache warning: " + result.CacheError);
 
     private static string RenderDeviceSyncPlan(DeviceSyncPlan plan)
     {

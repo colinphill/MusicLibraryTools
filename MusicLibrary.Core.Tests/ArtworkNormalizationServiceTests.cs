@@ -1,6 +1,12 @@
 using System.Security.Cryptography;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
+using MusicFileUtilities;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using Xunit;
 
 namespace MusicLibrary.Core.Tests;
@@ -15,12 +21,14 @@ public sealed class ArtworkNormalizationServiceTests
         await File.WriteAllBytesAsync(library, [1, 2, 3, 4],
             TestContext.Current.CancellationToken);
         ArtworkNormalizationPlan plan = CreatePlan(library);
+        var reindex = new RecordingReindexService();
 
-        ArtworkNormalizationResult result = await new ArtworkNormalizationService().ApplyAsync(
+        ArtworkNormalizationResult result = await new ArtworkNormalizationService(reindex).ApplyAsync(
             plan, ct: TestContext.Current.CancellationToken);
 
         Assert.Equal(0, result.UpdatedFileCount);
         Assert.Null(result.JournalPath);
+        Assert.Empty(reindex.Batches);
         Assert.False(Directory.Exists(plan.RecoveryRoot));
     }
 
@@ -57,6 +65,67 @@ public sealed class ArtworkNormalizationServiceTests
                 plan, ct: TestContext.Current.CancellationToken));
     }
 
+    [Fact]
+    public async Task ApplyRefreshesCacheFromSavedMaterializedArtwork()
+    {
+        using var fixture = CreateMediaPlan();
+        var reindex = new RecordingReindexService();
+
+        ArtworkNormalizationResult result = await new ArtworkNormalizationService(reindex).ApplyAsync(
+            fixture.Plan, ct: TestContext.Current.CancellationToken);
+
+        Assert.Null(result.CacheError);
+        Assert.Equal([fixture.MediaPath], result.UpdatedPaths);
+        var refreshed = Assert.Single(Assert.Single(reindex.Batches));
+        Assert.Equal(fixture.MediaPath, refreshed.Path);
+        Assert.Equal(
+            fixture.ProposedArtwork,
+            Assert.Single(refreshed.File.Tags.SelectMany(tag => tag.GetImageMetadata())).Data);
+        Assert.False(reindex.ReceivedToken.CanBeCanceled);
+    }
+
+    [Fact]
+    public async Task CacheFailureDoesNotRollbackCommittedArtwork()
+    {
+        using var fixture = CreateMediaPlan();
+        var reindex = new RecordingReindexService { Error = "cache unavailable" };
+
+        ArtworkNormalizationResult result = await new ArtworkNormalizationService(reindex).ApplyAsync(
+            fixture.Plan, ct: TestContext.Current.CancellationToken);
+
+        Assert.Equal("cache unavailable", result.CacheError);
+        Assert.Equal(1, result.UpdatedFileCount);
+        Assert.Equal(
+            fixture.ProposedArtwork,
+            Assert.Single(MediaFile.GetFile(fixture.MediaPath).Tags
+                .SelectMany(tag => tag.GetImageMetadata())).Data);
+    }
+
+    [Fact]
+    public async Task ApplyMakesNormalizedArtworkImmediatelyAvailableFromLibraryCache()
+    {
+        using var fixture = CreateMediaPlan();
+        string config = Path.Combine(fixture.Workspace.Path, "library.xml");
+        new EditableLibraryConfig
+        {
+            DatabaseFile = Path.Combine(fixture.Workspace.Path, "cache.db"),
+            IndexTargets = [new IndexTargetEntry { Target = Path.GetDirectoryName(fixture.MediaPath)! }],
+        }.Save(config);
+        var settings = new AppSettings(Path.Combine(fixture.Workspace.Path, "settings.json"));
+        settings.LoadConfig(config);
+        using var library = new LibraryService(settings);
+        await library.IndexAsync(ct: TestContext.Current.CancellationToken);
+
+        ArtworkNormalizationResult result = await new ArtworkNormalizationService(library).ApplyAsync(
+            fixture.Plan, ct: TestContext.Current.CancellationToken);
+
+        Assert.Null(result.CacheError);
+        Assert.Equal(fixture.ProposedArtwork, await library.GetFirstImageAsync(
+            fixture.MediaPath, TestContext.Current.CancellationToken));
+        Assert.True(Assert.Single(await library.GetArtworkAuditFilesAsync(
+            TestContext.Current.CancellationToken)).ArtworkScanned);
+    }
+
     private static ArtworkNormalizationPlan CreatePlan(string library)
     {
         var info = new FileInfo(library);
@@ -67,6 +136,91 @@ public sealed class ArtworkNormalizationServiceTests
         return new(new("Artwork"), library, snapshot,
             Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(library))), [], 0, 0, 0, [],
             Path.Combine(Path.GetDirectoryName(library)!, "recovery"), DateTimeOffset.UtcNow);
+    }
+
+    private static MediaPlanFixture CreateMediaPlan()
+    {
+        var workspace = new TempDirectory();
+        string mediaFolder = Path.Combine(workspace.Path, "media");
+        Directory.CreateDirectory(mediaFolder);
+        string mediaPath = Path.Combine(mediaFolder, "track.mp3");
+        File.Copy(MediaFixtures.Path_("sample.mp3"), mediaPath);
+
+        byte[] currentArtwork = CreateImage("png", 64, 64, Color.Blue);
+        var media = MediaFile.GetFile(mediaPath);
+        (media as IArtworkWriter ?? media.Tags.First() as IArtworkWriter)!
+            .SetFrontCover(currentArtwork, "image/png");
+        media.SaveTags();
+
+        string library = Path.Combine(workspace.Path, "iTunes Library.itl");
+        File.WriteAllBytes(library, SyntheticItunesLibrary.CreateFile(mediaFolder));
+        byte[] proposedArtwork = CreateImage("jpeg", 48, 48, Color.Red);
+        var mediaInfo = new FileInfo(mediaPath);
+        var libraryInfo = new FileInfo(library);
+        var item = new ArtworkNormalizationItem(
+            [1],
+            mediaPath,
+            new(true, false, mediaInfo.Length, mediaInfo.LastWriteTimeUtc) { Path = mediaPath },
+            new("image/png", 64, 64, currentArtwork.LongLength, Hash(currentArtwork)),
+            new("image/jpeg", 48, 48, proposedArtwork.LongLength, Hash(proposedArtwork)),
+            [.. proposedArtwork]);
+        var plan = new ArtworkNormalizationPlan(
+            new("####!####", library),
+            library,
+            new(true, false, libraryInfo.Length, libraryInfo.LastWriteTimeUtc) { Path = library },
+            Hash(File.ReadAllBytes(library)),
+            [item],
+            1,
+            1,
+            0,
+            [],
+            Path.Combine(workspace.Path, "recovery"),
+            DateTimeOffset.UtcNow);
+        return new(workspace, mediaPath, proposedArtwork, plan);
+    }
+
+    private static byte[] CreateImage(string format, int width, int height, Color color)
+    {
+        using var image = new Image<Rgba32>(width, height);
+        image.Mutate(context => context.BackgroundColor(color));
+        using var stream = new MemoryStream();
+        if (format == "png")
+            image.Save(stream, new PngEncoder());
+        else
+            image.Save(stream, new JpegEncoder { Quality = 80 });
+        return stream.ToArray();
+    }
+
+    private static string Hash(byte[] data) => Convert.ToHexString(SHA256.HashData(data));
+
+    private sealed record MediaPlanFixture(
+        TempDirectory Workspace,
+        string MediaPath,
+        byte[] ProposedArtwork,
+        ArtworkNormalizationPlan Plan) : IDisposable
+    {
+        public void Dispose() => Workspace.Dispose();
+    }
+
+    private sealed class RecordingReindexService : IReindexService
+    {
+        public string? Error { get; init; }
+        public CancellationToken ReceivedToken { get; private set; }
+        public List<IReadOnlyList<(string Path, IMediaFile File)>> Batches { get; } = [];
+
+        public Task ReindexFileAsync(string path, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public Task ReindexFilesAsync(
+            IReadOnlyList<(string Path, IMediaFile File)> files,
+            CancellationToken ct = default)
+        {
+            ReceivedToken = ct;
+            Batches.Add(files);
+            if (Error is not null)
+                throw new InvalidOperationException(Error);
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class TempDirectory : IDisposable

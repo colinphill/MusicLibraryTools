@@ -1863,6 +1863,22 @@ namespace MetadataCaching
             return summaries;
         }
 
+        /// <summary>
+        /// Count files whose deferred artwork has been hydrated and which have at least one cached
+        /// image. This uses only aggregate metadata and never selects image blobs.
+        /// </summary>
+        public int GetMaterializedArtworkFileCount()
+        {
+            using var cmd = conn_.CreateCommand();
+            cmd.CommandText =
+                "SELECT COUNT(*) FROM Files f" +
+                " WHERE f.ArtworkScanned <> 0" +
+                " AND EXISTS (" +
+                "SELECT 1 FROM ImageMetadata im" +
+                " WHERE im.FileID = f.ID AND im.ImageID IS NOT NULL)";
+            return Convert.ToInt32(cmd.ExecuteScalar());
+        }
+
         /// <summary>The bytes of a file's first embedded image (for thumbnails), or null if none.</summary>
         public byte[] GetFirstImageData(string fullPath)
         {
