@@ -1,14 +1,4 @@
-﻿/* 
- * SVN Information:
- * 
- * $HeadURL: file:///Z:/SVN_Repositories/MusicLibraryTools/trunk/MusicFileUtilities/LibraryConfiguration.cs $
- * $Date: 2013-01-06 06:51:18 -0700 (Sun, 06 Jan 2013) $
- * $Revision: 14 $
- * $Author: Colin $
- * 
- */
-
-#nullable enable
+﻿#nullable enable
 
 using MusicFileUtilities;
 using System;

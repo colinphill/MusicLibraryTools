@@ -1,14 +1,4 @@
-﻿/* 
- * SVN Information:
- * 
- * $HeadURL: file:///Z:/SVN_Repositories/MusicLibraryTools/trunk/FindNonLossless/Program.cs $
- * $Date: 2014-09-25 06:50:52 -0600 (Thu, 25 Sep 2014) $
- * $Revision: 17 $
- * $Author: colin $
- * 
- */
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;

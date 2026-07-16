@@ -1,14 +1,4 @@
-﻿/* 
- * SVN Information:
- * 
- * $HeadURL: file:///Z:/SVN_Repositories/MusicLibraryTools/trunk/MusicFileUtilities/LogConsole.cs $
- * $Date: 2014-09-27 18:13:09 -0600 (Sat, 27 Sep 2014) $
- * $Revision: 22 $
- * $Author: colin $
- * 
- */
-
-using System;
+﻿using System;
 using System.IO;
 using System.Text;
 

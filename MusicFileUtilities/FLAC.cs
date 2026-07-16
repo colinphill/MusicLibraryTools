@@ -1,14 +1,4 @@
-﻿/* 
- * SVN Information:
- * 
- * $HeadURL: file:///Z:/SVN_Repositories/MusicLibraryTools/trunk/MusicFileUtilities/FLAC.cs $
- * $Date: 2014-10-18 06:43:07 -0600 (Sat, 18 Oct 2014) $
- * $Revision: 23 $
- * $Author: colin $
- * 
- */
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;

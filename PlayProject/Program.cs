@@ -1,14 +1,4 @@
-﻿/* 
- * SVN Information:
- * 
- * $HeadURL: file:///Z:/SVN_Repositories/MusicLibraryTools/trunk/PlayProject/Program.cs $
- * $Date: 2012-05-28 12:19:15 -0600 (Mon, 28 May 2012) $
- * $Revision: 4 $
- * $Author: Colin $
- * 
- */
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;

@@ -1,14 +1,4 @@
-﻿/* 
- * SVN Information:
- * 
- * $HeadURL: file:///Z:/SVN_Repositories/MusicLibraryTools/trunk/MusicFileUtilities/MP4File.cs $
- * $Date: 2014-09-27 10:37:30 -0600 (Sat, 27 Sep 2014) $
- * $Revision: 20 $
- * $Author: colin $
- * 
- */
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;

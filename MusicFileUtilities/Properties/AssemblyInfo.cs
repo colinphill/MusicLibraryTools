@@ -1,14 +1,4 @@
-﻿/* 
- * SVN Information:
- * 
- * $HeadURL: file:///Z:/SVN_Repositories/MusicLibraryTools/trunk/MusicFileUtilities/Properties/AssemblyInfo.cs $
- * $Date: 2012-05-28 12:19:15 -0600 (Mon, 28 May 2012) $
- * $Revision: 4 $
- * $Author: Colin $
- * 
- */
-
-using System.Reflection;
+﻿using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 

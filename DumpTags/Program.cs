@@ -1,14 +1,4 @@
-﻿/* 
- * SVN Information:
- * 
- * $HeadURL: file:///Z:/SVN_Repositories/MusicLibraryTools/trunk/DumpTags/Program.cs $
- * $Date: 2014-09-26 05:47:24 -0600 (Fri, 26 Sep 2014) $
- * $Revision: 18 $
- * $Author: colin $
- * 
- */
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
