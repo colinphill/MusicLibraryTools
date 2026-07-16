@@ -40,14 +40,6 @@ public sealed class DialogService : IDialogService
         return await dialog.ShowDialog<string?>(Owner);
     }
 
-    public async Task<string?> ShowIngestConfigEditorAsync(string? existingPath)
-    {
-        if (Owner is null) return null;
-        var vm = new IngestConfigDialogViewModel(_services.GetRequiredService<IFileDialogService>(), existingPath);
-        var dialog = new IngestConfigDialog { DataContext = vm };
-        return await dialog.ShowDialog<string?>(Owner);
-    }
-
     public async Task<bool> ConfirmCdDerivationAsync(IngestApprovalItem item)
     {
         if (Owner is null) return false;

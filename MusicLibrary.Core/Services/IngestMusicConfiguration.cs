@@ -1,5 +1,6 @@
 using System.Xml.Linq;
 using MusicLibrary.Core.Services;
+using MusicLibraryTools;
 
 namespace MusicLibrary.Core.Models;
 
@@ -17,6 +18,89 @@ public sealed record IngestMusicConfiguration
     public int AacBitrateKbps { get; init; } = 256;
     public bool DeleteSourcesAfterIngest { get; init; }
     public bool RemoveNonMusicAfterIngest { get; init; }
+
+    public static IReadOnlyList<string> MissingLibrarySettings(LibraryConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+        IReadOnlyDictionary<LibraryIngestRole, LibraryIndexLocation> targets;
+        try
+        {
+            targets = configuration.IngestTargets;
+        }
+        catch (InvalidDataException ex)
+        {
+            return [ex.Message];
+        }
+
+        var missing = new List<string>();
+        if (!targets.ContainsKey(LibraryIngestRole.Cd))
+            missing.Add("Assign an IndexTarget to the CD ingest role.");
+        if (!targets.ContainsKey(LibraryIngestRole.CdFallback))
+            missing.Add("Assign an IndexTarget to the CD fallback ingest role.");
+        if (!targets.ContainsKey(LibraryIngestRole.HiRes))
+            missing.Add("Assign an IndexTarget to the Hi-res ingest role.");
+        if (string.IsNullOrWhiteSpace(configuration.ItunesLibraryPath) &&
+            !targets.ContainsKey(LibraryIngestRole.AacFallback))
+            missing.Add("Assign an IndexTarget to the AAC fallback role, or configure an iTunes library.");
+        return missing;
+    }
+
+    public static IngestMusicConfiguration FromLibraryConfiguration(
+        LibraryConfiguration configuration)
+    {
+        IReadOnlyList<string> missing = MissingLibrarySettings(configuration);
+        if (missing.Count > 0)
+            throw new InvalidDataException(string.Join(" ", missing));
+        IReadOnlyDictionary<LibraryIngestRole, LibraryIndexLocation> targets =
+            configuration.IngestTargets;
+        LibraryIngestSettings settings = configuration.IngestSettings;
+        return new IngestMusicConfiguration
+        {
+            FfmpegPath = configuration.FfmpegPath,
+            ItunesLibraryPath = configuration.ItunesLibraryPath,
+            CdDestination = targets[LibraryIngestRole.Cd].Target,
+            PairedCdDestination = targets[LibraryIngestRole.CdFallback].Target,
+            HighResolutionDestination = targets[LibraryIngestRole.HiRes].Target,
+            AacDestination = targets.TryGetValue(LibraryIngestRole.AacFallback, out var aac)
+                ? aac.Target
+                : "",
+            LengthLimit = configuration.LengthLimit,
+            DiscNumLengthLimit = configuration.DiscNumLengthLimit,
+            AacEncoder = settings.AacEncoder,
+            AacBitrateKbps = settings.AacBitrateKbps,
+            DeleteSourcesAfterIngest = settings.DeleteSourcesAfterIngest,
+            RemoveNonMusicAfterIngest = settings.RemoveNonMusicAfterIngest,
+        };
+    }
+
+    public static (IngestMusicConfiguration Configuration, string? ConfigurationPath) Resolve(
+        IngestRequest request, IAppSettings? settings)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        AppConfigurationSnapshot? snapshot = settings?.GetSnapshot();
+        if (string.IsNullOrWhiteSpace(request.ConfigurationPath))
+        {
+            if (snapshot?.Configuration is null)
+                throw new InvalidOperationException("Load a library configuration before using Ingest.");
+            return (FromLibraryConfiguration(snapshot.Configuration), snapshot.ConfigPath);
+        }
+
+        string fullPath = Path.GetFullPath(request.ConfigurationPath);
+        if (snapshot?.Configuration is not null && snapshot.ConfigPath is not null &&
+            PathComparer.Equals(Path.GetFullPath(snapshot.ConfigPath), fullPath))
+            return (FromLibraryConfiguration(snapshot.Configuration), fullPath);
+
+        XElement root = XDocument.Load(fullPath).Root
+            ?? throw new InvalidDataException("The configuration file is empty.");
+        return root.Name.LocalName switch
+        {
+            "LibraryConfiguration" =>
+                (FromLibraryConfiguration(new LibraryConfiguration(fullPath)), fullPath),
+            "IngestMusicConfiguration" => (Load(fullPath), fullPath),
+            _ => throw new InvalidDataException(
+                "Expected a LibraryConfiguration or legacy IngestMusicConfiguration root element."),
+        };
+    }
 
     public static IngestMusicConfiguration Load(string path)
     {
@@ -89,4 +173,8 @@ public sealed record IngestMusicConfiguration
                 new XElement("RemoveNonMusicAfterIngest", RemoveNonMusicAfterIngest)));
         AtomicFile.Write(path, document.Save);
     }
+
+    private static StringComparer PathComparer => OperatingSystem.IsWindows()
+        ? StringComparer.OrdinalIgnoreCase
+        : StringComparer.Ordinal;
 }

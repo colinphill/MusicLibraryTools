@@ -17,6 +17,7 @@ public sealed class IndexTargetEntry
     public List<IndexTargetSetEntry> Memberships { get; set; } = [];
     public string? Filter { get; set; }
     public bool Organize { get; set; } = true;
+    public LibraryIngestRole IngestRole { get; set; }
 }
 
 /// <summary>One repeatable playlist export destination.</summary>
@@ -39,6 +40,10 @@ public sealed class EditableLibraryConfig
     public string FfmpegPath { get; set; } = "ffmpeg";
     public int LengthLimit { get; set; } = 255;
     public int DiscNumLengthLimit { get; set; } = 255;
+    public string AacEncoder { get; set; } = "libfdk_aac";
+    public int AacBitrateKbps { get; set; } = 256;
+    public bool DeleteSourcesAfterIngest { get; set; }
+    public bool RemoveNonMusicAfterIngest { get; set; }
     public string? SyncTarget { get; set; }
     public List<PlaylistTargetEntry> PlaylistTargets { get; set; } = [];
     public List<IndexTargetEntry> IndexTargets { get; set; } = [];
@@ -49,7 +54,7 @@ public sealed class EditableLibraryConfig
     private static readonly HashSet<string> Known = new(StringComparer.Ordinal)
     {
         "DatabaseFile", "ItunesLibrary", "FfmpegPath", "LengthLimit", "DiscNumLengthLimit",
-        "SyncTarget", "PlaylistTarget", "PlaylistType", "IndexTarget",
+        "SyncTarget", "PlaylistTarget", "PlaylistType", "IndexTarget", "IngestSettings",
     };
 
     public static EditableLibraryConfig Load(string path)
@@ -69,6 +74,11 @@ public sealed class EditableLibraryConfig
         if (int.TryParse((string?)root.Element("DiscNumLengthLimit"), out var dl)) config.DiscNumLengthLimit = dl;
 
         var parsed = new LibraryConfiguration(path);
+        LibraryIngestSettings ingest = parsed.IngestSettings;
+        config.AacEncoder = ingest.AacEncoder;
+        config.AacBitrateKbps = ingest.AacBitrateKbps;
+        config.DeleteSourcesAfterIngest = ingest.DeleteSourcesAfterIngest;
+        config.RemoveNonMusicAfterIngest = ingest.RemoveNonMusicAfterIngest;
         foreach (LibraryIndexLocation location in parsed.IndexLocations)
         {
             config.IndexTargets.Add(new IndexTargetEntry
@@ -76,6 +86,7 @@ public sealed class EditableLibraryConfig
                 Target = location.Target,
                 DefaultOffset = location.DefaultOffset,
                 Organize = location.Organize,
+                IngestRole = location.IngestRole,
                 Memberships = location.Memberships.Select(membership => new IndexTargetSetEntry
                 {
                     Name = membership.Name,
@@ -124,6 +135,8 @@ public sealed class EditableLibraryConfig
                 e.SetAttributeValue("Offset", t.DefaultOffset.Trim());
             if (!string.IsNullOrEmpty(t.Filter)) e.SetAttributeValue("Filter", t.Filter);
             if (!t.Organize) e.SetAttributeValue("Organize", false);
+            if (t.IngestRole != LibraryIngestRole.None)
+                e.SetAttributeValue("IngestRole", t.IngestRole);
             var seen = new HashSet<string>(LibraryConfiguration.ScanSetComparer);
             foreach (IndexTargetSetEntry membership in t.Memberships)
             {
@@ -170,6 +183,26 @@ public sealed class EditableLibraryConfig
         }
 
         ValidatePlaylistOffsets();
+
+        if (AacBitrateKbps <= 0)
+            throw new InvalidDataException("AAC bitrate must be a positive integer.");
+        root.Add(new XElement("IngestSettings",
+            new XAttribute("AacEncoder",
+                string.IsNullOrWhiteSpace(AacEncoder) ? "libfdk_aac" : AacEncoder.Trim()),
+            new XAttribute("AacBitrateKbps", AacBitrateKbps),
+            new XAttribute("DeleteSourcesAfterIngest", DeleteSourcesAfterIngest),
+            new XAttribute("RemoveNonMusicAfterIngest", RemoveNonMusicAfterIngest)));
+
+        string[] duplicateRoles = IndexTargets
+            .Where(target => target.IngestRole != LibraryIngestRole.None)
+            .GroupBy(target => target.IngestRole)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key.ToString())
+            .ToArray();
+        if (duplicateRoles.Length > 0)
+            throw new InvalidDataException(
+                "Each ingest role may be assigned to only one IndexTarget: " +
+                string.Join(", ", duplicateRoles));
 
         root.Add(new XElement("LengthLimit", LengthLimit));
         root.Add(new XElement("DiscNumLengthLimit", DiscNumLengthLimit));

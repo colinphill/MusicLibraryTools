@@ -52,7 +52,7 @@
                     </StackPanel>
 
                 <!-- Configuration actions wrap instead of disappearing past the right edge. -->
-                <WrapPanel Grid.Column="1" Classes="toolbarwrap" HorizontalAlignment="Right"
+                <WrapPanel Grid.Column="1" Classes="toolbarwrap" HorizontalAlignment="Stretch"
                            Margin="24,0,-8,-8">
                     <TextBlock Text="Config" Classes="h2" VerticalAlignment="Center"/>
                     <ComboBox Width="170" PlaceholderText="No configuration loaded"
@@ -110,12 +110,12 @@
                             ToolTip.Tip="Index library (Ctrl+I)"/>
                     <TextBlock Text="Readers" VerticalAlignment="Center" Classes="muted"/>
                     <NumericUpDown Value="{Binding Library.ReaderParallelism}" Minimum="1" Maximum="64"
-                                   Increment="1" Width="112" FormatString="0"
+                                   Increment="1" FormatString="0"
                                    IsEnabled="{Binding !Library.IsBusy}"
                                    ToolTip.Tip="Global cap on concurrent metadata readers"/>
                     <TextBlock Text="Auto min" VerticalAlignment="Center" Classes="muted"/>
                     <NumericUpDown Value="{Binding Library.ScheduledScanMinutes}" Minimum="0" Maximum="1440"
-                                   Increment="5" Width="112" FormatString="0"
+                                   Increment="5" FormatString="0"
                                    IsEnabled="{Binding !Library.IsBusy}"
                                    ToolTip.Tip="{Binding Library.ScheduledScanText}"/>
                     <Button Content="Benchmark readers" Command="{Binding Library.BenchmarkReadersCommand}"
@@ -380,7 +380,7 @@
                                         Command="{Binding ApplyNormalizationCommand}"/>
                                 <TextBlock Text="Max px" VerticalAlignment="Center" Classes="muted"/>
                                 <NumericUpDown Value="{Binding MaxDimension}" Minimum="0" Maximum="4000"
-                                               Increment="100" Width="120" FormatString="0"/>
+                                               Increment="100" FormatString="0"/>
                                 <ProgressBar IsIndeterminate="True" Width="70" VerticalAlignment="Center"
                                              IsVisible="{Binding IsBusy}"/>
                             </WrapPanel>
@@ -452,12 +452,9 @@
                                 <Button Content="Representation repairs" Margin="0,0,8,8"
                                         Command="{Binding PreviewRepresentationRepairsCommand}"
                                         ToolTip.Tip="Preview counterpart metadata copies, missing derived files, and canonical organization"/>
-                                <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,8,8">
-                                    <Button Content="Verify decoded audio" Command="{Binding VerifyDecodedAudioCommand}"
-                                            ToolTip.Tip="Hash decoded PCM for compatible lossless representation pairs"/>
-                                    <TextBox Text="{Binding FfmpegPath}" Width="210" PlaceholderText="ffmpeg path"
-                                             ToolTip.Tip="ffmpeg executable used only for explicit decoded-audio verification"/>
-                                </StackPanel>
+                                <Button Content="Verify decoded audio" Margin="0,0,8,8"
+                                        Command="{Binding VerifyDecodedAudioCommand}"
+                                        ToolTip.Tip="Hash decoded PCM with ffmpeg from the active library configuration"/>
                                 <Button Content="Album matrix" Margin="0,0,8,8" Command="{Binding RunAlbumMatrixCommand}"/>
                                 <Button Content="Artwork health" Margin="0,0,8,8" Command="{Binding RunArtworkHealthCommand}"
                                         ToolTip.Tip="Audit cached artwork metadata without loading image blobs or scanning deferred files"/>
@@ -470,7 +467,7 @@
                                     <Button Content="Similar artists" Command="{Binding RunSimilarArtistsCommand}"/>
                                     <TextBlock Text="threshold" Classes="muted" VerticalAlignment="Center"/>
                                     <NumericUpDown Value="{Binding ArtistThreshold}" Minimum="0" Maximum="100"
-                                                   Increment="0.05" FormatString="0.00" Width="120"
+                                                   Increment="0.05" FormatString="0.00"
                                                    ToolTip.Tip="Fuzzy-distance threshold for the artist check (0 = identical only)"/>
                                 </StackPanel>
                                 <Button Content="Cancel" Margin="0,0,8,8" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}"/>
@@ -865,8 +862,12 @@
 
                     <!-- Ingest incoming FLAC / ALAC albums -->
                     <TabItem Header="Ingest" DataContext="{Binding Ingest}" x:DataType="vm:IngestViewModel">
-                        <Grid RowDefinitions="Auto,*" Margin="2,12,2,2">
-                            <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,10">
+                        <Grid RowDefinitions="*,Auto" Margin="2,12,2,2">
+                            <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          ClipToBounds="True"
+                                          Margin="0,0,0,10">
+                            <StackPanel Spacing="8" Margin="0,0,4,0">
                                 <Grid ColumnDefinitions="Auto,*,Auto,220" ColumnSpacing="8"
                                       DragDrop.AllowDrop="True"
                                       DragDrop.DragOver="OnIngestSourceDragOver"
@@ -885,14 +886,12 @@
                                         </ComboBox.ItemTemplate>
                                     </ComboBox>
                                 </Grid>
-                                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="8">
-                                    <TextBlock Grid.Column="0" Text="Config" VerticalAlignment="Center" Classes="muted"/>
-                                    <TextBox Grid.Column="1" Text="{Binding ConfigurationPath}"
-                                             ToolTip.Tip="{Binding ConfigurationPath}"/>
-                                    <Button Grid.Column="2" Content="Browse…" Command="{Binding BrowseConfigurationCommand}"/>
-                                    <Button Grid.Column="3" Content="New…" Command="{Binding NewConfigurationCommand}"/>
-                                    <Button Grid.Column="4" Content="Edit…" Command="{Binding EditConfigurationCommand}"/>
-                                </Grid>
+                                <Border Classes="card" Padding="10">
+                                    <TextBlock Text="{Binding ConfigurationReadinessText}"
+                                               TextWrapping="Wrap"
+                                               Classes="muted"
+                                               ToolTip.Tip="Assign ingest roles to IndexTargets in the active library configuration"/>
+                                </Border>
                                 <Grid ColumnDefinitions="Auto,220,*,Auto,Auto" ColumnSpacing="8">
                                     <TextBlock Grid.Column="0" Text="Preset" VerticalAlignment="Center" Classes="muted"/>
                                     <ComboBox Grid.Column="1" ItemsSource="{Binding Presets}"
@@ -997,7 +996,10 @@
                                     </StackPanel>
                                 </Expander>
                             </StackPanel>
-                            <ScrollViewer Grid.Row="1">
+                            </ScrollViewer>
+                            <ScrollViewer Grid.Row="1" MaxHeight="360"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled">
                                 <ItemsControl ItemsSource="{Binding Files}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:IngestFileItemViewModel">
@@ -1049,11 +1051,15 @@
 
                     <!-- Inventory, restore, and retention management for quarantine/recovery operations -->
                     <TabItem Header="Operations" DataContext="{Binding Operations}" x:DataType="vm:OperationsViewModel">
-                        <Grid RowDefinitions="Auto,*" Margin="2,12,2,2">
-                            <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,10">
+                        <Grid RowDefinitions="*,Auto" Margin="2,12,2,2">
+                            <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          ClipToBounds="True"
+                                          Margin="0,0,0,10">
+                            <StackPanel Spacing="8" Margin="0,0,4,0">
                                 <Expander Header="Run library jobs" HorizontalAlignment="Stretch">
                                     <StackPanel Spacing="7" Margin="8,6,0,6">
-                                        <Grid ColumnDefinitions="145,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="5">
+                                        <Grid ColumnDefinitions="128,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="5">
                                             <TextBlock Grid.Row="0" Grid.Column="0" Text="Job" Classes="muted"
                                                        VerticalAlignment="Center"/>
                                             <ComboBox Grid.Row="0" Grid.Column="1" ItemsSource="{Binding JobCatalog}"
@@ -1067,25 +1073,10 @@
                                             <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedJob.Description}"
                                                        Classes="muted" TextWrapping="Wrap"/>
                                         </Grid>
-                                        <Grid ColumnDefinitions="145,*,Auto" ColumnSpacing="8"
-                                              IsVisible="{Binding ShowConfigurationPath}">
-                                            <TextBlock Grid.Column="0" Text="Configuration" Classes="muted"
-                                                       VerticalAlignment="Center"/>
-                                            <TextBox Grid.Column="1" Text="{Binding JobConfigurationPath}"
-                                                     PlaceholderText="LibraryConfiguration.xml"/>
-                                            <Button Grid.Column="2" Content="Browse..."
-                                                    Command="{Binding BrowseJobConfigurationCommand}"/>
-                                        </Grid>
-                                        <Grid ColumnDefinitions="145,*,Auto" ColumnSpacing="8"
-                                              IsVisible="{Binding ShowLibraryPath}">
-                                            <TextBlock Grid.Column="0" Text="iTunes library" Classes="muted"
-                                                       VerticalAlignment="Center"/>
-                                            <TextBox Grid.Column="1" Text="{Binding JobLibraryPath}"
-                                                     PlaceholderText="Optional; uses the default library when empty"/>
-                                            <Button Grid.Column="2" Content="Browse..."
-                                                    Command="{Binding BrowseJobLibraryCommand}"/>
-                                        </Grid>
-                                        <Grid ColumnDefinitions="145,*" ColumnSpacing="8"
+                                        <TextBlock Text="Uses the active library configuration and current cache snapshot."
+                                                   Classes="caption" TextWrapping="Wrap"
+                                                   IsVisible="{Binding UsesActiveLibraryContext}"/>
+                                        <Grid ColumnDefinitions="128,*" ColumnSpacing="8"
                                               IsVisible="{Binding ShowPlaylistName}">
                                             <TextBlock Grid.Column="0" Text="Playlist" Classes="muted"
                                                        VerticalAlignment="Center"/>
@@ -1093,42 +1084,42 @@
                                                      PlaceholderText="iTunes playlist name"/>
                                         </Grid>
                                         <StackPanel Spacing="7" IsVisible="{Binding ShowDevicePaths}">
-                                            <Grid ColumnDefinitions="145,*,Auto" ColumnSpacing="8">
+                                            <Grid ColumnDefinitions="128,*,Auto" ColumnSpacing="8">
                                                 <TextBlock Grid.Column="0" Text="Source" Classes="muted"
                                                            VerticalAlignment="Center"/>
                                                 <TextBox Grid.Column="1" Text="{Binding JobSourcePath}"
                                                          PlaceholderText="Local folder or adb: path"/>
-                                                <Button Grid.Column="2" Content="Browse..."
+                                                <Button Grid.Column="2" Content="Browse…"
                                                         Command="{Binding BrowseJobSourceCommand}"/>
                                             </Grid>
-                                            <Grid ColumnDefinitions="145,*,Auto" ColumnSpacing="8">
+                                            <Grid ColumnDefinitions="128,*,Auto" ColumnSpacing="8">
                                                 <TextBlock Grid.Column="0" Text="Destination" Classes="muted"
                                                            VerticalAlignment="Center"/>
                                                 <TextBox Grid.Column="1" Text="{Binding JobDestinationPath}"
                                                          PlaceholderText="Local folder or adb: path"/>
-                                                <Button Grid.Column="2" Content="Browse..."
+                                                <Button Grid.Column="2" Content="Browse…"
                                                         Command="{Binding BrowseJobDestinationCommand}"/>
                                             </Grid>
                                         </StackPanel>
-                                        <Grid ColumnDefinitions="145,*,Auto" ColumnSpacing="8"
+                                        <Grid ColumnDefinitions="128,*,Auto" ColumnSpacing="8"
                                               IsVisible="{Binding ShowDestinationPath}">
                                             <TextBlock Grid.Column="0" Text="Destination" Classes="muted"
                                                        VerticalAlignment="Center"/>
                                             <TextBox Grid.Column="1" Text="{Binding JobDestinationPath}"
                                                      PlaceholderText="Smart-storage folder"/>
-                                            <Button Grid.Column="2" Content="Browse..."
+                                            <Button Grid.Column="2" Content="Browse…"
                                                     Command="{Binding BrowseJobDestinationCommand}"/>
                                         </Grid>
-                                        <Grid ColumnDefinitions="145,*,Auto" ColumnSpacing="8"
+                                        <Grid ColumnDefinitions="128,*,Auto" ColumnSpacing="8"
                                               IsVisible="{Binding ShowValidationPath}">
                                             <TextBlock Grid.Column="0" Text="Library to validate" Classes="muted"
                                                        VerticalAlignment="Center"/>
                                             <TextBox Grid.Column="1" Text="{Binding JobValidationPath}"
                                                      PlaceholderText="iTunes Library.itl"/>
-                                            <Button Grid.Column="2" Content="Browse..."
+                                            <Button Grid.Column="2" Content="Browse…"
                                                     Command="{Binding BrowseJobValidationCommand}"/>
                                         </Grid>
-                                        <WrapPanel Classes="toolbarwrap" Margin="145,0,-8,0">
+                                        <WrapPanel Classes="toolbarwrap" Margin="128,0,-8,0">
                                             <CheckBox Content="Initialize target" IsChecked="{Binding JobInitialize}"
                                                       IsVisible="{Binding ShowInitialize}"/>
                                             <CheckBox Content="Clean obsolete playlists" IsChecked="{Binding JobClean}"
@@ -1144,7 +1135,7 @@
                                                 <TextBlock Text="Maximum removals" Classes="muted"
                                                            VerticalAlignment="Center"/>
                                                 <NumericUpDown Value="{Binding JobMaxRemovals}" Minimum="0"
-                                                               Maximum="10000000" Increment="1" Width="150"
+                                                               Maximum="10000000" Increment="1" Classes="wide"
                                                                FormatString="0"
                                                                ToolTip.Tip="0 blocks any removal"/>
                                             </StackPanel>
@@ -1190,7 +1181,7 @@
                                     <Button Content="Scan operations" Classes="accent" Command="{Binding RefreshCommand}"/>
                                     <TextBlock Text="Keep runs (days)" VerticalAlignment="Center" Classes="muted"/>
                                     <NumericUpDown Value="{Binding RetentionDays}" Minimum="1" Maximum="3650"
-                                                   Increment="1" Width="120" FormatString="0"
+                                                   Increment="1" FormatString="0"
                                                    ToolTip.Tip="Interrupted operations are always protected"/>
                                     <Button Content="Preview purge" Command="{Binding PreviewPurgeCommand}"
                                             ToolTip.Tip="Inventory old completed/quarantine runs without deleting anything"/>
@@ -1205,8 +1196,12 @@
                                            IsVisible="{Binding ShowPurgePreview}"/>
                                 <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" Classes="muted"/>
                             </StackPanel>
+                            </ScrollViewer>
 
-                            <ScrollViewer Grid.Row="1" IsVisible="{Binding !ShowBrowser}">
+                            <ScrollViewer Grid.Row="1" MaxHeight="360"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          IsVisible="{Binding !ShowBrowser}">
                                 <ItemsControl ItemsSource="{Binding Runs}">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:OperationRunViewModel">
@@ -1238,7 +1233,8 @@
                                 </ItemsControl>
                             </ScrollViewer>
 
-                            <Grid Grid.Row="1" IsVisible="{Binding ShowBrowser}" RowDefinitions="Auto,*">
+                            <Grid Grid.Row="1" MaxHeight="420"
+                                  IsVisible="{Binding ShowBrowser}" RowDefinitions="Auto,*">
                                 <WrapPanel Grid.Row="0" Classes="toolbarwrap" Margin="0,0,-8,8">
                                     <Button Content="Back to operations" Command="{Binding CloseBrowserCommand}"/>
                                     <Button Content="Select restorable" Command="{Binding SelectAllRestorableCommand}"/>

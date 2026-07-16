@@ -9,14 +9,30 @@ static async Task<int> RunAsync(string[] args)
     string[] operands = args.Where(a => !a.Equals("--apply", StringComparison.OrdinalIgnoreCase)).ToArray();
     if (operands.Length != 2)
     {
-        Console.Error.WriteLine("Usage: IngestMusic <source-directory> <ingest-config.xml> [--apply]");
+        Console.Error.WriteLine(
+            "Usage: IngestMusic <source-directory> <libraryconfiguration.xml> [--apply]");
         return 1;
     }
 
     try
     {
+        string configurationPath = Path.GetFullPath(operands[1]);
+        if (System.Xml.Linq.XDocument.Load(configurationPath).Root?.Name.LocalName ==
+            "LibraryConfiguration")
+        {
+            using var library = new LibraryService(configurationPath);
+            Console.Error.WriteLine("Indexing the configured library cache...");
+            await library.IndexForOperationAsync();
+        }
+        else
+        {
+            Console.Error.WriteLine(
+                "Warning: legacy ingest configuration detected; import it into a " +
+                "LibraryConfiguration to use the shared library cache.");
+        }
+
         IIngestMusicService service = new IngestMusicService(new FfmpegRunner());
-        var plan = await service.PreviewAsync(new IngestRequest(operands[0], operands[1]));
+        var plan = await service.PreviewAsync(new IngestRequest(operands[0], configurationPath));
         PrintPlan(plan);
         if (!plan.CanApply)
             return 2;

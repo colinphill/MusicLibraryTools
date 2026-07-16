@@ -8,13 +8,12 @@ using MusicLibrary.Core.Services;
 
 namespace MusicLibrary.App.ViewModels;
 
-public sealed record IngestPreset(string Name, string SourceDirectory, string ConfigurationPath);
+public sealed record IngestPreset(string Name, string SourceDirectory);
 public enum IngestPreviewFilter { All, Albums, Outputs, Conflicts, Cleanup }
 
 public partial class IngestViewModel : ViewModelBase
 {
     private const string SourcePreference = "Ingest.SourceDirectory";
-    private const string ConfigPreference = "Ingest.ConfigurationPath";
     private const string PresetsPreference = "Ingest.Presets";
     private const string RecentSourcesPreference = "Ingest.RecentSources";
     private const int RecentSourceLimit = 12;
@@ -33,16 +32,13 @@ public partial class IngestViewModel : ViewModelBase
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(PreviewCommand)),
      NotifyCanExecuteChangedFor(nameof(PreflightCommand)), NotifyCanExecuteChangedFor(nameof(SavePresetCommand))]
     private string? _sourceDirectory;
-    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(PreviewCommand)), NotifyCanExecuteChangedFor(nameof(EditConfigurationCommand)),
-     NotifyCanExecuteChangedFor(nameof(PreflightCommand)), NotifyCanExecuteChangedFor(nameof(SavePresetCommand))]
-    private string? _configurationPath;
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(PreviewCommand)),
      NotifyCanExecuteChangedFor(nameof(PreflightCommand)), NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
     private bool _isBusy;
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
     private bool _hasApplicablePreview;
     [ObservableProperty]
-    private string _statusText = "Choose an incoming folder and IngestMusic configuration, then Preview.";
+    private string _statusText = "Choose an incoming folder, then Preview.";
     [ObservableProperty]
     private bool _isPreviewing;
     [ObservableProperty]
@@ -85,6 +81,17 @@ public partial class IngestViewModel : ViewModelBase
     public bool HasPreflightChecks => PreflightChecks.Count > 0;
     public bool HasHistory => History.Count > 0;
     public int InterruptedHistoryCount => History.Count(item => item.IsInterrupted);
+    public bool IsConfigurationReady => GetConfigurationIssues().Count == 0;
+    public string ConfigurationReadinessText
+    {
+        get
+        {
+            IReadOnlyList<string> issues = GetConfigurationIssues();
+            return issues.Count == 0
+                ? "Ingest destinations and tools are configured in the active library configuration."
+                : "Ingest setup required: " + string.Join(" ", issues);
+        }
+    }
     public event Action? IngestCompleted;
     public event Action<OperationJournalSummary>? RecoveryRequested;
 
@@ -98,19 +105,18 @@ public partial class IngestViewModel : ViewModelBase
         LoadPresets();
         LoadRecentSources();
         SourceDirectory = settings.GetPreference(SourcePreference);
-        ConfigurationPath = settings.GetPreference(ConfigPreference);
+        settings.ConfigurationChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(IsConfigurationReady));
+            OnPropertyChanged(nameof(ConfigurationReadinessText));
+            InvalidatePreview();
+            NotifyCommands();
+        };
     }
 
     partial void OnSourceDirectoryChanged(string? value)
     {
         _settings.SetPreference(SourcePreference, string.IsNullOrWhiteSpace(value) ? null : value);
-        MarkPresetCustomized();
-        InvalidatePreview();
-    }
-
-    partial void OnConfigurationPathChanged(string? value)
-    {
-        _settings.SetPreference(ConfigPreference, string.IsNullOrWhiteSpace(value) ? null : value);
         MarkPresetCustomized();
         InvalidatePreview();
     }
@@ -124,7 +130,6 @@ public partial class IngestViewModel : ViewModelBase
         {
             PresetName = value.Name;
             SourceDirectory = value.SourceDirectory;
-            ConfigurationPath = value.ConfigurationPath;
         }
         finally { _applyingPreset = false; }
         StatusText = $"Loaded ingest preset '{value.Name}'. Run Preflight or Preview.";
@@ -162,42 +167,8 @@ public partial class IngestViewModel : ViewModelBase
         }
     }
 
-    [RelayCommand]
-    private async Task BrowseConfigurationAsync()
-    {
-        string? path = await _files.PickOpenFileAsync("Select IngestMusic configuration",
-            [new FilePickerFilter("XML configuration", ["*.xml"])]);
-        if (path is not null) ConfigurationPath = path;
-    }
-
-    [RelayCommand]
-    private async Task NewConfigurationAsync()
-    {
-        string? path = await _dialogs.ShowIngestConfigEditorAsync(null);
-        if (path is not null)
-        {
-            ConfigurationPath = path;
-            _settings.SetPreference(ConfigPreference, path);
-        }
-    }
-
-    private bool CanEditConfiguration() => !string.IsNullOrWhiteSpace(ConfigurationPath) && File.Exists(ConfigurationPath);
-
-    [RelayCommand(CanExecute = nameof(CanEditConfiguration))]
-    private async Task EditConfigurationAsync()
-    {
-        string? path = await _dialogs.ShowIngestConfigEditorAsync(ConfigurationPath);
-        if (path is not null)
-        {
-            ConfigurationPath = path;
-            _settings.SetPreference(ConfigPreference, path);
-            HasApplicablePreview = false;
-            _plan = null;
-            StatusText = "Configuration saved. Preview again before applying.";
-        }
-    }
-
-    private bool CanPreview() => !IsBusy && !string.IsNullOrWhiteSpace(SourceDirectory) && !string.IsNullOrWhiteSpace(ConfigurationPath);
+    private bool CanPreview() => !IsBusy && !string.IsNullOrWhiteSpace(SourceDirectory) &&
+        IsConfigurationReady;
 
     public void SetDroppedSource(string path)
     {
@@ -223,7 +194,7 @@ public partial class IngestViewModel : ViewModelBase
         {
             StatusText = "Checking ingest configuration and external tools…";
             var result = await _preflight.CheckAsync(
-                new IngestRequest(SourceDirectory!, ConfigurationPath!), _cts.Token);
+                new IngestRequest(SourceDirectory!), _cts.Token);
             foreach (var check in result.Checks)
                 PreflightChecks.Add(check);
             OnPropertyChanged(nameof(HasPreflightChecks));
@@ -283,13 +254,12 @@ public partial class IngestViewModel : ViewModelBase
     }
 
     private bool CanSavePreset() => !string.IsNullOrWhiteSpace(PresetName) &&
-        !string.IsNullOrWhiteSpace(SourceDirectory) && !string.IsNullOrWhiteSpace(ConfigurationPath);
+        !string.IsNullOrWhiteSpace(SourceDirectory);
 
     [RelayCommand(CanExecute = nameof(CanSavePreset))]
     private void SavePreset()
     {
-        var preset = new IngestPreset(PresetName!.Trim(), Path.GetFullPath(SourceDirectory!),
-            Path.GetFullPath(ConfigurationPath!));
+        var preset = new IngestPreset(PresetName!.Trim(), Path.GetFullPath(SourceDirectory!));
         int existing = Presets.Select((item, index) => (item, index))
             .FirstOrDefault(pair => pair.item.Name.Equals(preset.Name, StringComparison.OrdinalIgnoreCase)).index;
         bool found = Presets.Any(item => item.Name.Equals(preset.Name, StringComparison.OrdinalIgnoreCase));
@@ -324,7 +294,7 @@ public partial class IngestViewModel : ViewModelBase
         try
         {
             StatusText = "Scanning and planning…";
-            var plan = await _service.PreviewAsync(new IngestRequest(SourceDirectory!, ConfigurationPath!), _cts.Token);
+            var plan = await _service.PreviewAsync(new IngestRequest(SourceDirectory!), _cts.Token);
             _plan = plan;
             foreach (var file in plan.Files)
             {
@@ -347,7 +317,6 @@ public partial class IngestViewModel : ViewModelBase
             RefilterFiles();
             HasApplicablePreview = plan.CanApply;
             _settings.SetPreference(SourcePreference, plan.Request.SourceDirectory);
-            _settings.SetPreference(ConfigPreference, plan.Request.ConfigurationPath);
             AddRecentSource(plan.Request.SourceDirectory);
             StatusText = plan.CanApply
                 ? plan.Albums.Count == 0
@@ -438,8 +407,7 @@ public partial class IngestViewModel : ViewModelBase
     {
         if (_applyingPreset || SelectedPreset is null)
             return;
-        if (!StringComparer.OrdinalIgnoreCase.Equals(SourceDirectory, SelectedPreset.SourceDirectory) ||
-            !StringComparer.OrdinalIgnoreCase.Equals(ConfigurationPath, SelectedPreset.ConfigurationPath))
+        if (!StringComparer.OrdinalIgnoreCase.Equals(SourceDirectory, SelectedPreset.SourceDirectory))
             SelectedPreset = null;
     }
 
@@ -464,8 +432,7 @@ public partial class IngestViewModel : ViewModelBase
             var presets = JsonSerializer.Deserialize<List<IngestPreset>>(
                 _settings.GetPreference(PresetsPreference) ?? "[]") ?? [];
             foreach (var preset in presets.Where(preset => !string.IsNullOrWhiteSpace(preset.Name) &&
-                         !string.IsNullOrWhiteSpace(preset.SourceDirectory) &&
-                         !string.IsNullOrWhiteSpace(preset.ConfigurationPath)))
+                         !string.IsNullOrWhiteSpace(preset.SourceDirectory)))
                 Presets.Add(preset);
         }
         catch { }
@@ -499,6 +466,20 @@ public partial class IngestViewModel : ViewModelBase
             RecentSources.RemoveAt(RecentSources.Count - 1);
         _settings.SetPreference(RecentSourcesPreference, JsonSerializer.Serialize(RecentSources));
         SelectedRecentSource = fullPath;
+    }
+
+    private IReadOnlyList<string> GetConfigurationIssues()
+    {
+        if (_settings.Configuration is not { } configuration)
+            return ["Load a library configuration."];
+        return IngestMusicConfiguration.MissingLibrarySettings(configuration);
+    }
+
+    private void NotifyCommands()
+    {
+        PreviewCommand.NotifyCanExecuteChanged();
+        PreflightCommand.NotifyCanExecuteChanged();
+        SavePresetCommand.NotifyCanExecuteChanged();
     }
 }
 

@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <IngestMusicConfiguration>
+  <!-- Legacy format retained for import compatibility. New configurations should flag
+       IndexTargets in a LibraryConfiguration; see LibraryConfiguration.example.xml. -->
   <!-- Must be a build that includes libfdk_aac. A command on PATH is also accepted. -->
   <FfmpegPath>ffmpeg</FfmpegPath>
   <AacDestination>Z:\iTunes\AddAAC</AacDestination>

@@ -459,6 +459,31 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         };
     }
 
+    public async Task<LibraryOperationCacheSnapshot> GetOperationCacheSnapshotAsync(
+        CancellationToken ct = default)
+    {
+        await _gate.WaitAsync(ct);
+        try
+        {
+            LibraryContext context = GetContext();
+            LibraryIndexLocation[] locations = context.Configuration.IndexLocations.ToArray();
+            MetadataCache cache = GetDatabase(context).BuildCache(
+                locations.Select(location => location.Target)
+                    .Distinct(FilePathComparer),
+                buildSecondaryIndexes: false);
+            return new(
+                context.Configuration,
+                context.ConfigPath,
+                context.Version,
+                locations,
+                cache);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     public async Task<IReadOnlyList<ScanRootHealth>> GetScanRootHealthAsync(CancellationToken ct = default)
     {
         if (!IsReady)

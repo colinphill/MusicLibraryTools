@@ -8,7 +8,9 @@ public interface IIngestPreflightService
 }
 
 /// <summary>Checks ingest inputs and external tools without enumerating or reading source media.</summary>
-public sealed class IngestPreflightService(IFfmpegRunner ffmpeg) : IIngestPreflightService
+public sealed class IngestPreflightService(
+    IFfmpegRunner ffmpeg,
+    IAppSettings? settings = null) : IIngestPreflightService
 {
     public async Task<IngestPreflightResult> CheckAsync(IngestRequest request, CancellationToken ct = default)
     {
@@ -30,14 +32,11 @@ public sealed class IngestPreflightService(IFfmpegRunner ffmpeg) : IIngestPrefli
         IngestMusicConfiguration configuration;
         try
         {
-            string configPath = Path.GetFullPath(request.ConfigurationPath);
-            if (!File.Exists(configPath))
-            {
-                checks.Add(Error("Configuration", $"Configuration file is unavailable: {configPath}"));
-                return new(checks);
-            }
-            configuration = IngestMusicConfiguration.Load(configPath);
-            checks.Add(Pass("Configuration", $"Loaded {configPath}"));
+            var resolved = IngestMusicConfiguration.Resolve(request, settings);
+            configuration = resolved.Configuration;
+            checks.Add(Pass("Configuration", resolved.ConfigurationPath is null
+                ? "Using the active library configuration."
+                : $"Loaded {resolved.ConfigurationPath}"));
         }
         catch (Exception ex)
         {
@@ -52,6 +51,8 @@ public sealed class IngestPreflightService(IFfmpegRunner ffmpeg) : IIngestPrefli
             configuration.PairedCdDestination,
             configuration.HighResolutionDestination,
         ];
+        destinations = destinations.Where(destination =>
+            !string.IsNullOrWhiteSpace(destination)).ToArray();
         if (destinations.Any(destination => PathsOverlap(source, destination)))
             checks.Add(Error("Path isolation", "The source directory overlaps an ingestion destination."));
         else if (destinations.SelectMany((left, index) => destinations.Skip(index + 1)

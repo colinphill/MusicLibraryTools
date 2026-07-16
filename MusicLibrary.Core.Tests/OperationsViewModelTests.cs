@@ -9,7 +9,7 @@ namespace MusicLibrary.Core.Tests;
 public sealed class OperationsViewModelTests
 {
     [Fact]
-    public void ConfiguredItunesLibraryPrefillsApplicableJobs()
+    public void ConfigurationDependentJobsDoNotExposePerRunConfigurationOverrides()
     {
         using var temp = new TempDirectory();
         string library = Path.Combine(temp.Path, "iTunes Library.itl");
@@ -25,8 +25,7 @@ public sealed class OperationsViewModelTests
             SelectedJob = jobs.Catalog.Single(job => job.Id == "playlist-sync"),
         };
 
-        Assert.Equal(library, viewModel.JobLibraryPath);
-        Assert.Equal(configPath, viewModel.JobConfigurationPath);
+        Assert.Equal("playlist-sync", viewModel.SelectedJob!.Id);
     }
 
     [Fact]
@@ -41,8 +40,6 @@ public sealed class OperationsViewModelTests
             jobs, crossSync)
         {
             SelectedJob = jobs.Catalog.Single(job => job.Id == "cross-library-sync"),
-            JobConfigurationPath = "config.xml",
-            JobLibraryPath = "library.itl",
             JobMaxRemovals = 7,
         };
 
@@ -52,7 +49,7 @@ public sealed class OperationsViewModelTests
         await viewModel.ApplyJobCommand.ExecuteAsync(null);
 
         Assert.Equal(1, crossSync.PreviewCalls);
-        Assert.Equal(new CrossLibrarySyncRequest("config.xml", "library.itl", 7),
+        Assert.Equal(new CrossLibrarySyncRequest(null, null, 7),
             crossSync.LastRequest);
         Assert.Equal(1, crossSync.ApplyCalls);
         Assert.Same(crossSync.PreviewedPlan, crossSync.AppliedPlan);
@@ -341,7 +338,6 @@ public sealed class OperationsViewModelTests
     {
         public Task<bool> ShowFieldsEditorAsync(IReadOnlyList<string> paths) => Task.FromResult(false);
         public Task<string?> ShowConfigEditorAsync(string? existingPath) => Task.FromResult<string?>(null);
-        public Task<string?> ShowIngestConfigEditorAsync(string? existingPath) => Task.FromResult<string?>(null);
         public Task<bool> ConfirmCdDerivationAsync(IngestApprovalItem item) => Task.FromResult(false);
         public Task<bool> ConfirmRestoreAsync(OperationRestorePlan plan) => Task.FromResult(true);
         public Task<bool> ConfirmPurgeAsync(OperationPurgePlan plan) => Task.FromResult(true);

@@ -18,16 +18,12 @@ public enum AnalysisResultView { Findings, Duplicates, Artists, Conflicts, Repai
 /// </summary>
 public partial class AnalyzerViewModel : ViewModelBase
 {
-    private const string FfmpegPreference = "Analyzer.FfmpegPath";
-    private const string IngestConfigurationPreference = "Ingest.ConfigurationPath";
     private readonly ILibraryService _library;
     private readonly IArtistReconciler _reconciler;
     private readonly IAnalysisRepairService _repairs;
     private readonly IDecodedAudioVerificationService? _decodedAudio;
     private readonly IRepresentationRepairService? _representationRepairs;
     private readonly IAppSettings _settings;
-    private bool _settingFfmpegDefault;
-    private bool _hasFfmpegOverride;
     private CancellationTokenSource? _cts;
     private IReadOnlyList<TrackRecord> _representationRecords = [];
     private IReadOnlyList<DecodedAudioPair> _decodedAudioPairs = [];
@@ -48,9 +44,7 @@ public partial class AnalyzerViewModel : ViewModelBase
     [ObservableProperty]
     private double _artistThreshold = 0.2;
 
-    [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(VerifyDecodedAudioCommand))]
-    private string _ffmpegPath = "ffmpeg";
+    public string FfmpegPath => _settings.Configuration?.FfmpegPath ?? "ffmpeg";
 
     public ObservableCollection<AnalysisRunViewModel> Runs { get; } = [];
     public IReadOnlyList<AnalysisProblemGroupViewModel> FindingGroups => SelectedRun?.FindingGroups ?? [];
@@ -84,40 +78,13 @@ public partial class AnalyzerViewModel : ViewModelBase
         _decodedAudio = decodedAudio;
         _representationRepairs = representationRepairs;
         _settings = settings;
-        ApplyFfmpegDefault();
         settings.ConfigurationChanged += (_, _) =>
         {
-            if (!_hasFfmpegOverride)
-                ApplyFfmpegDefault();
+            OnPropertyChanged(nameof(FfmpegPath));
             ClearRuns();
             _representationRecords = [];
             _decodedAudioPairs = [];
         };
-    }
-
-    partial void OnFfmpegPathChanged(string value)
-    {
-        if (_settingFfmpegDefault)
-            return;
-        _hasFfmpegOverride = true;
-        _settings.SetPreference(FfmpegPreference, string.IsNullOrWhiteSpace(value) ? null : value);
-    }
-
-    private void ApplyFfmpegDefault()
-    {
-        _settingFfmpegDefault = true;
-        try
-        {
-            FfmpegPath = _settings.Configuration?.FfmpegPath ??
-                _settings.GetPreference(FfmpegPreference) ??
-                (File.Exists(@"C:\ffmpeg\nonfree\ffmpeg.exe")
-                    ? @"C:\ffmpeg\nonfree\ffmpeg.exe"
-                    : "ffmpeg");
-        }
-        finally
-        {
-            _settingFfmpegDefault = false;
-        }
     }
 
     partial void OnActiveViewChanged(AnalysisResultView value)
@@ -315,7 +282,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         {
             var records = await _library.GetAllRecordsAsync(scope.Token);
             var preview = await _representationRepairs.PreviewAsync(
-                records, _settings.GetPreference(IngestConfigurationPreference), scope.Token);
+                records, _settings.Configuration, scope.Token);
             var runs = await Task.Run(() =>
             {
                 var projected = new List<AnalysisRunViewModel>(2);

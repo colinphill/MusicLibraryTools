@@ -10,72 +10,93 @@
         WindowStartupLocation="CenterOwner"
         Title="{Binding Title}">
 
-    <Grid Margin="18" RowDefinitions="Auto,Auto,*,Auto,Auto,Auto">
+    <Grid Margin="18" RowDefinitions="*,Auto">
+        <ScrollViewer Grid.Row="0" HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto">
+        <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" Margin="0,0,4,0">
 
         <TextBlock Grid.Row="0" Text="{Binding Title}" Classes="h1" Margin="0,0,0,14"
                    TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Title}"/>
 
         <Grid Grid.Row="1" ColumnDefinitions="150,*,Auto" RowDefinitions="Auto,Auto,Auto,Auto"
               RowSpacing="6" ColumnSpacing="6" Margin="0,0,0,10">
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="Cache DB file:" VerticalAlignment="Center"/>
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="Cache DB file:" Classes="formlabel"/>
             <TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding DatabaseFile}"
                      PlaceholderText="cache.db (relative to this config)" ToolTip.Tip="{Binding DatabaseFile}"/>
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="iTunes library:" VerticalAlignment="Center"/>
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="iTunes library:" Classes="formlabel"/>
             <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ItunesLibraryPath}"
                      PlaceholderText="Optional .itl path" ToolTip.Tip="{Binding ItunesLibraryPath}"/>
-            <Button Grid.Row="1" Grid.Column="2" Content="Browse..." Command="{Binding BrowseItunesLibraryCommand}"/>
-            <TextBlock Grid.Row="2" Grid.Column="0" Text="ffmpeg:" VerticalAlignment="Center"/>
+            <Button Grid.Row="1" Grid.Column="2" Content="Browse…" Command="{Binding BrowseItunesLibraryCommand}"/>
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="ffmpeg:" Classes="formlabel"/>
             <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding FfmpegPath}"
                      PlaceholderText="ffmpeg or executable path" ToolTip.Tip="{Binding FfmpegPath}"/>
-            <Button Grid.Row="2" Grid.Column="2" Content="Browse..." Command="{Binding BrowseFfmpegCommand}"/>
-            <TextBlock Grid.Row="3" Grid.Column="0" Text="Length limits:" VerticalAlignment="Center"/>
-            <StackPanel Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8">
-                <TextBlock Text="Path" VerticalAlignment="Center"/>
-                <NumericUpDown Value="{Binding LengthLimit}" Minimum="1" Maximum="4096" Width="120" FormatString="0"/>
-                <TextBlock Text="Disc" VerticalAlignment="Center"/>
-                <NumericUpDown Value="{Binding DiscNumLengthLimit}" Minimum="1" Maximum="4096" Width="120" FormatString="0"/>
-            </StackPanel>
+            <Button Grid.Row="2" Grid.Column="2" Content="Browse…" Command="{Binding BrowseFfmpegCommand}"/>
+            <TextBlock Grid.Row="3" Grid.Column="0" Text="Length limits:" Classes="formlabel"/>
+            <WrapPanel Grid.Row="3" Grid.Column="1" Grid.ColumnSpan="2" Classes="toolbarwrap"
+                       Margin="0,0,-8,-8">
+                <TextBlock Text="Path" Classes="formlabel"/>
+                <NumericUpDown Value="{Binding LengthLimit}" Minimum="1" Maximum="4096"
+                               FormatString="0"/>
+                <TextBlock Text="Disc title" Classes="formlabel"/>
+                <NumericUpDown Value="{Binding DiscNumLengthLimit}" Minimum="1" Maximum="4096"
+                               FormatString="0"/>
+            </WrapPanel>
         </Grid>
 
-        <Border Grid.Row="2" Classes="card" Padding="10">
+        <Border Grid.Row="2" Classes="card" Padding="10" MinHeight="220">
             <DockPanel>
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,6">
+                <WrapPanel DockPanel.Dock="Top" Classes="toolbarwrap" Margin="0,0,-8,0">
                     <TextBlock Text="Scan roots (IndexTargets)" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     <Button Content="Add root" Command="{Binding AddTargetCommand}"/>
-                </StackPanel>
-                <ScrollViewer>
+                    <Button Content="Import legacy ingest config…"
+                            Command="{Binding ImportIngestConfigurationCommand}"
+                            ToolTip.Tip="Copy destinations and ingest behavior from an existing IngestMusicConfiguration XML"/>
+                </WrapPanel>
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled">
                     <ItemsControl ItemsSource="{Binding IndexTargets}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:IndexTargetRow">
                                 <Border BorderBrush="{DynamicResource AppDivider}" BorderThickness="0,0,0,1"
                                         Padding="0,4,0,8" Margin="0,0,0,4">
                                     <StackPanel Spacing="6">
-                                        <Grid ColumnDefinitions="*,Auto,130,170,Auto" ColumnSpacing="6">
+                                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
                                             <TextBox Grid.Column="0" Text="{Binding Target}" PlaceholderText="Folder path"
                                                      ToolTip.Tip="{Binding Target}"/>
                                             <Button Grid.Column="1" Content="Browse"
                                                     Command="{Binding $parent[Window].((vm:ConfigDialogViewModel)DataContext).BrowseTargetCommand}"
                                                     CommandParameter="{Binding}"/>
-                                            <TextBox Grid.Column="2" Text="{Binding Filter}" PlaceholderText="Filter"/>
-                                            <TextBox Grid.Column="3" Text="{Binding DefaultOffset}"
-                                                     PlaceholderText="Default offset"
-                                                     ToolTip.Tip="Used by every set below unless that set supplies an override"/>
-                                            <Button Grid.Column="4" Content="Remove root"
+                                            <Button Grid.Column="2" Content="Remove root"
                                                     Command="{Binding $parent[Window].((vm:ConfigDialogViewModel)DataContext).RemoveTargetCommand}"
                                                     CommandParameter="{Binding}"/>
                                         </Grid>
-                                        <StackPanel Orientation="Horizontal" Spacing="8">
-                                            <TextBlock Text="Set memberships" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                            <TextBlock Text="The default offset above applies to every set without an override."
-                                                       Classes="muted" VerticalAlignment="Center"/>
+                                        <WrapPanel Classes="toolbarwrap" Margin="0,0,-8,-8">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <TextBlock Text="Filter" Classes="formlabel"/>
+                                                <TextBox Text="{Binding Filter}" MinWidth="150"
+                                                         PlaceholderText="Optional extensions"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <TextBlock Text="Default offset" Classes="formlabel"/>
+                                                <TextBox Text="{Binding DefaultOffset}" MinWidth="170"
+                                                         PlaceholderText="Applied to all sets"
+                                                         ToolTip.Tip="Used by every set below unless that set supplies an override"/>
+                                            </StackPanel>
                                             <CheckBox Content="Include in organization"
                                                       IsChecked="{Binding Organize}"
-                                                      VerticalAlignment="Center"
                                                       ToolTip.Tip="Clear to keep this root indexed while excluding it from organization operations"/>
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <TextBlock Text="Ingest use" Classes="formlabel"/>
+                                                <ComboBox ItemsSource="{Binding $parent[Window].((vm:ConfigDialogViewModel)DataContext).IngestRoles}"
+                                                          SelectedItem="{Binding IngestRole}"
+                                                          MinWidth="150"
+                                                          ToolTip.Tip="Optional destination role used by the Ingest tab"/>
+                                            </StackPanel>
                                             <Button Content="Add set"
                                                     Command="{Binding $parent[Window].((vm:ConfigDialogViewModel)DataContext).AddSetCommand}"
                                                     CommandParameter="{Binding}"/>
-                                        </StackPanel>
+                                        </WrapPanel>
+                                        <TextBlock Text="Set memberships · the default offset applies unless a set overrides it."
+                                                   Classes="caption" TextWrapping="Wrap"/>
                                         <ItemsControl ItemsSource="{Binding Memberships}" Margin="18,0,0,0">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate x:DataType="vm:IndexTargetSetRow">
@@ -100,43 +121,78 @@
             </DockPanel>
         </Border>
 
-        <Grid Grid.Row="3" RowDefinitions="Auto,Auto" Margin="0,10,0,0">
-            <Grid Grid.Row="0" ColumnDefinitions="150,*">
-                <TextBlock Grid.Column="0" Text="Sync target:" VerticalAlignment="Center"/>
+        <Border Grid.Row="3" Classes="card" Padding="10" Margin="0,10,0,0">
+            <StackPanel Spacing="8">
+                <TextBlock Text="Ingest behavior" FontWeight="SemiBold"/>
+                <TextBlock Classes="caption" TextWrapping="Wrap"
+                           Text="Destination folders are assigned with each IndexTarget's Ingest use. Partial setup is allowed; the Ingest tab reports anything still required."/>
+                <WrapPanel Classes="toolbarwrap" Margin="0,0,-8,-8">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="AAC encoder" Classes="formlabel"/>
+                        <TextBox Text="{Binding AacEncoder}" MinWidth="180"
+                                 PlaceholderText="libfdk_aac"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="AAC bitrate (kbit/s)" Classes="formlabel"/>
+                        <NumericUpDown Value="{Binding AacBitrateKbps}" Minimum="1" Maximum="1000"
+                                       FormatString="0"/>
+                    </StackPanel>
+                    <CheckBox Content="Delete successfully ingested sources"
+                              IsChecked="{Binding DeleteSourcesAfterIngest}"/>
+                    <CheckBox Content="Also remove non-music files and empty folders"
+                              IsChecked="{Binding RemoveNonMusicAfterIngest}"/>
+                </WrapPanel>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="4" RowDefinitions="Auto,Auto" Margin="0,10,0,0">
+            <Grid Grid.Row="0" ColumnDefinitions="150,*" ColumnSpacing="6">
+                <TextBlock Grid.Column="0" Text="Sync target:" Classes="formlabel"/>
                 <TextBox Grid.Column="1" Text="{Binding SyncTarget}" PlaceholderText="(optional)"
                          ToolTip.Tip="{Binding SyncTarget}"/>
             </Grid>
 
             <Border Grid.Row="1" Classes="card" Padding="10" Margin="0,8,0,0">
                 <DockPanel>
-                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,6">
+                    <WrapPanel DockPanel.Dock="Top" Classes="toolbarwrap" Margin="0,0,-8,0">
                         <TextBlock Text="Playlist exports" FontWeight="SemiBold" VerticalAlignment="Center"/>
                         <Button Content="Add target" Command="{Binding AddPlaylistTargetCommand}"/>
                         <TextBlock Text="Every target requires one or more scan sets."
                                    Classes="muted" VerticalAlignment="Center"/>
-                    </StackPanel>
-                    <ScrollViewer MaxHeight="150">
+                    </WrapPanel>
+                    <ScrollViewer MaxHeight="180" HorizontalScrollBarVisibility="Disabled">
                         <ItemsControl ItemsSource="{Binding PlaylistTargets}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:PlaylistTargetRow">
-                                    <Grid ColumnDefinitions="*,Auto,90,175,Auto" Margin="0,3" ColumnSpacing="6">
-                                        <TextBox Grid.Column="0" Text="{Binding Target}" PlaceholderText="Export folder"
-                                                 ToolTip.Tip="{Binding Target}"/>
-                                        <Button Grid.Column="1" Content="Browse"
-                                                Command="{Binding $parent[Window].((vm:ConfigDialogViewModel)DataContext).BrowsePlaylistTargetCommand}"
-                                                CommandParameter="{Binding}"/>
-                                        <TextBox Grid.Column="2" Text="{Binding Type}" PlaceholderText="m3u"
-                                                 ToolTip.Tip="Playlist type: m3u or wpl"/>
-                                        <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="4"
-                                                    VerticalAlignment="Center">
-                                            <TextBlock Text="Sets" Classes="muted" VerticalAlignment="Center"/>
-                                            <TextBox Text="{Binding Sets}" Width="130" PlaceholderText="required"
-                                                     ToolTip.Tip="Required comma-separated alphanumeric scan-set names"/>
+                                    <Border BorderBrush="{DynamicResource AppDivider}"
+                                            BorderThickness="0,0,0,1" Padding="0,3,0,8" Margin="0,0,0,4">
+                                        <StackPanel Spacing="6">
+                                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                                <TextBox Grid.Column="0" Text="{Binding Target}" PlaceholderText="Export folder"
+                                                         ToolTip.Tip="{Binding Target}"/>
+                                                <Button Grid.Column="1" Content="Browse"
+                                                        Command="{Binding $parent[Window].((vm:ConfigDialogViewModel)DataContext).BrowsePlaylistTargetCommand}"
+                                                        CommandParameter="{Binding}"/>
+                                                <Button Grid.Column="2" Content="Remove"
+                                                        Command="{Binding $parent[Window].((vm:ConfigDialogViewModel)DataContext).RemovePlaylistTargetCommand}"
+                                                        CommandParameter="{Binding}"/>
+                                            </Grid>
+                                            <WrapPanel Classes="toolbarwrap" Margin="0,0,-8,-8">
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <TextBlock Text="Type" Classes="formlabel"/>
+                                                    <TextBox Text="{Binding Type}" MinWidth="100"
+                                                             PlaceholderText="m3u"
+                                                             ToolTip.Tip="Playlist type: m3u or wpl"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <TextBlock Text="Sets" Classes="formlabel"/>
+                                                    <TextBox Text="{Binding Sets}" MinWidth="220"
+                                                             PlaceholderText="required: set1,set2"
+                                                             ToolTip.Tip="Required comma-separated alphanumeric scan-set names"/>
+                                                </StackPanel>
+                                            </WrapPanel>
                                         </StackPanel>
-                                        <Button Grid.Column="4" Content="Remove"
-                                                Command="{Binding $parent[Window].((vm:ConfigDialogViewModel)DataContext).RemovePlaylistTargetCommand}"
-                                                CommandParameter="{Binding}"/>
-                                    </Grid>
+                                    </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -145,14 +201,17 @@
             </Border>
         </Grid>
 
-        <TextBlock Grid.Row="4" Text="{Binding StatusMessage}" Foreground="IndianRed"
+        <TextBlock Grid.Row="5" Text="{Binding StatusMessage}" Foreground="IndianRed"
                    TextWrapping="Wrap" Margin="0,8,0,0"/>
 
-        <StackPanel Grid.Row="5" Orientation="Horizontal" Spacing="8" Margin="0,14,0,0"
-                    HorizontalAlignment="Right">
+        </Grid>
+        </ScrollViewer>
+
+        <WrapPanel Grid.Row="1" Classes="toolbarwrap" Margin="0,14,-8,-8"
+                   HorizontalAlignment="Right">
             <Button Content="Save" Classes="accent" Command="{Binding SaveCommand}"/>
             <Button Content="Save As…" Command="{Binding SaveAsCommand}"/>
             <Button Content="Cancel" Command="{Binding CancelCommand}"/>
-        </StackPanel>
+        </WrapPanel>
     </Grid>
 </Window>

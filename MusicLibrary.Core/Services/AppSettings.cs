@@ -123,6 +123,8 @@ public sealed class AppSettings : IAppSettings
             !Path.GetExtension(library).Equals(".itl", StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("<ItunesLibrary> must identify an .itl file.");
         _ = configuration.FfmpegPath;
+        _ = configuration.IngestSettings;
+        _ = configuration.IngestTargets;
         _ = configuration.DatabaseFile;
         return configuration;
     }

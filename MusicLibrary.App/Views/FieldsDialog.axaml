@@ -20,7 +20,7 @@
                 <ItemsControl ItemsSource="{Binding Rows}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:FieldRow">
-                            <Grid ColumnDefinitions="200,*,Auto" Margin="0,3">
+                            <Grid ColumnDefinitions="160,*,Auto" ColumnSpacing="8" Margin="0,3">
                                 <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center"
                                            FontWeight="SemiBold"
                                            TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}"
@@ -28,7 +28,7 @@
                                 <TextBox Grid.Column="1" Text="{Binding Value, Mode=TwoWay}"
                                          IsEnabled="{Binding !MarkedForRemoval}"
                                          PlaceholderText="{Binding IsMixed, Converter={x:Static vm:MixedConverter.Instance}}"/>
-                                <Button Grid.Column="2" Content="{Binding RemoveButtonText}" Margin="6,0,0,0"
+                                <Button Grid.Column="2" Content="{Binding RemoveButtonText}"
                                         Command="{Binding $parent[Window].((vm:FieldsDialogViewModel)DataContext).RemoveFieldCommand}"
                                         CommandParameter="{Binding}"/>
                             </Grid>
@@ -38,11 +38,12 @@
             </ScrollViewer>
         </Border>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="0,10,0,0">
-            <TextBlock Text="Add field:" VerticalAlignment="Center"/>
-            <ComboBox ItemsSource="{Binding AddableFields}" SelectedItem="{Binding FieldToAdd}" Width="240"/>
-            <Button Content="Add" Command="{Binding AddFieldCommand}"/>
-        </StackPanel>
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="0,10,0,0">
+            <TextBlock Grid.Column="0" Text="Add field:" Classes="formlabel"/>
+            <ComboBox Grid.Column="1" ItemsSource="{Binding AddableFields}"
+                      SelectedItem="{Binding FieldToAdd}"/>
+            <Button Grid.Column="2" Content="Add" Command="{Binding AddFieldCommand}"/>
+        </Grid>
 
         <Grid Grid.Row="3" ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="0,14,0,0">
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">

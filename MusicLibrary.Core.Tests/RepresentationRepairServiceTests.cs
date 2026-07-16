@@ -1,6 +1,7 @@
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
+using MusicLibraryTools;
 using Xunit;
 
 namespace MusicLibrary.Core.Tests;
@@ -11,18 +12,10 @@ public sealed class RepresentationRepairServiceTests
     public async Task Preview_CombinesMetadataDerivationAndOrganizationWithoutChangingFiles()
     {
         string root = Path.Combine(Path.GetTempPath(), $"representation-repair-{Guid.NewGuid():N}");
-        string configPath = Path.Combine(root, "ingest.xml");
         Directory.CreateDirectory(root);
         try
         {
-            new IngestMusicConfiguration
-            {
-                FfmpegPath = "ffmpeg",
-                AacDestination = Path.Combine(root, "aac"),
-                CdDestination = Path.Combine(root, "cd"),
-                PairedCdDestination = Path.Combine(root, "paired"),
-                HighResolutionDestination = Path.Combine(root, "hires"),
-            }.Save(configPath);
+            LibraryConfiguration configuration = CreateConfiguration(root);
 
             var high = Track(Path.Combine(root, "hires", "01.flac"), "Canonical title", 96_000, 24);
             var cd = Track(Path.Combine(root, "cd", "01.flac"), "Old title", 44_100, 16);
@@ -30,7 +23,7 @@ public sealed class RepresentationRepairServiceTests
             var service = new RepresentationRepairService(
                 new StubOrganizer([new PlannedMove(cd.Path, organized)]));
 
-            var preview = await service.PreviewAsync([high, cd], configPath);
+            var preview = await service.PreviewAsync([high, cd], configuration);
 
             var titleCopy = Assert.Single(preview.MetadataCopies.Items,
                 repair => repair.Path == cd.Path && repair.Field == TagFields.Title);
@@ -56,22 +49,14 @@ public sealed class RepresentationRepairServiceTests
     public async Task Preview_HighResolutionOnlyPlansPairedCdAndAac()
     {
         string root = Path.Combine(Path.GetTempPath(), $"representation-repair-{Guid.NewGuid():N}");
-        string configPath = Path.Combine(root, "ingest.xml");
         Directory.CreateDirectory(root);
         try
         {
-            new IngestMusicConfiguration
-            {
-                FfmpegPath = "ffmpeg",
-                AacDestination = Path.Combine(root, "aac"),
-                CdDestination = Path.Combine(root, "cd"),
-                PairedCdDestination = Path.Combine(root, "paired"),
-                HighResolutionDestination = Path.Combine(root, "hires"),
-            }.Save(configPath);
+            LibraryConfiguration configuration = CreateConfiguration(root);
             var high = Track(Path.Combine(root, "hires", "01.flac"), "Title", 192_000, 24);
 
             var preview = await new RepresentationRepairService(new StubOrganizer([]))
-                .PreviewAsync([high], configPath);
+                .PreviewAsync([high], configuration);
 
             Assert.Contains(preview.FileActions,
                 action => action.Kind == RepresentationRepairKind.DeriveCdFlac &&
@@ -119,6 +104,22 @@ public sealed class RepresentationRepairServiceTests
         Length = 123,
         LastWriteTime = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc),
     };
+
+    private static LibraryConfiguration CreateConfiguration(string root)
+    {
+        string path = Path.Combine(root, "library.xml");
+        new EditableLibraryConfig
+        {
+            IndexTargets =
+            [
+                new() { Target = Path.Combine(root, "cd"), IngestRole = LibraryIngestRole.Cd },
+                new() { Target = Path.Combine(root, "paired"), IngestRole = LibraryIngestRole.CdFallback },
+                new() { Target = Path.Combine(root, "hires"), IngestRole = LibraryIngestRole.HiRes },
+                new() { Target = Path.Combine(root, "aac"), IngestRole = LibraryIngestRole.AacFallback },
+            ],
+        }.Save(path);
+        return new LibraryConfiguration(path);
+    }
 
     private sealed class StubOrganizer(IReadOnlyList<PlannedMove> moves) : ILibraryOrganizer
     {

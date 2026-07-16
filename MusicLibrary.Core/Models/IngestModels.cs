@@ -1,6 +1,6 @@
 namespace MusicLibrary.Core.Models;
 
-public sealed record IngestRequest(string SourceDirectory, string ConfigurationPath);
+public sealed record IngestRequest(string SourceDirectory, string? ConfigurationPath = null);
 
 public enum IngestPreflightSeverity { Pass, Warning, Error }
 

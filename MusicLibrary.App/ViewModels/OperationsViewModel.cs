@@ -95,8 +95,6 @@ public partial class OperationsViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowJobApply))]
-    [NotifyPropertyChangedFor(nameof(ShowConfigurationPath))]
-    [NotifyPropertyChangedFor(nameof(ShowLibraryPath))]
     [NotifyPropertyChangedFor(nameof(ShowPlaylistName))]
     [NotifyPropertyChangedFor(nameof(ShowDevicePaths))]
     [NotifyPropertyChangedFor(nameof(ShowDestinationPath))]
@@ -107,6 +105,7 @@ public partial class OperationsViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(ShowRebalance))]
     [NotifyPropertyChangedFor(nameof(ShowFixErrors))]
     [NotifyPropertyChangedFor(nameof(ShowRemap))]
+    [NotifyPropertyChangedFor(nameof(UsesActiveLibraryContext))]
     private UnifiedJobDescriptor? _selectedJob;
     [ObservableProperty]
     private string _jobStatus = "Choose a job, supply any required arguments, then Preview.";
@@ -116,8 +115,6 @@ public partial class OperationsViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(ShowJobApply))]
     private bool _hasJobPreview;
 
-    [ObservableProperty] private string _jobConfigurationPath = "";
-    [ObservableProperty] private string _jobLibraryPath = "";
     [ObservableProperty] private string _jobPlaylistName = "";
     [ObservableProperty] private string _jobSourcePath = "";
     [ObservableProperty] private string _jobDestinationPath = "";
@@ -128,7 +125,6 @@ public partial class OperationsViewModel : ViewModelBase
     [ObservableProperty] private bool _jobRebalance;
     [ObservableProperty] private bool _jobFixErrors;
     [ObservableProperty] private bool _jobRemap;
-    private string? _defaultLibraryPath;
 
     public ObservableCollection<OperationRunViewModel> Runs { get; } = [];
     public ObservableCollection<OperationEntryNodeViewModel> RootNodes { get; } = [];
@@ -137,9 +133,6 @@ public partial class OperationsViewModel : ViewModelBase
     public bool ShowJobApply => HasJobPreview &&
         SelectedJob?.ApplyMode == UnifiedJobApplyMode.ApplyFlag;
     private bool JobIs(params string[] ids) => SelectedJob is not null && ids.Contains(SelectedJob.Id);
-    public bool ShowConfigurationPath => JobIs("playlist-sync", "cross-library-sync", "car-card");
-    public bool ShowLibraryPath => JobIs("playlist-sync", "cross-library-sync", "car-card",
-        "smart-storage", "artwork-normalization", "redundancies");
     public bool ShowPlaylistName => JobIs("artwork-normalization");
     public bool ShowDevicePaths => JobIs("device-sync");
     public bool ShowDestinationPath => JobIs("smart-storage");
@@ -150,6 +143,8 @@ public partial class OperationsViewModel : ViewModelBase
     public bool ShowRebalance => JobIs("car-card");
     public bool ShowFixErrors => JobIs("car-card");
     public bool ShowRemap => JobIs("device-sync");
+    public bool UsesActiveLibraryContext =>
+        JobIs("playlist-sync", "cross-library-sync", "car-card");
 
     public OperationsViewModel(
         IOperationJournalService journals,
@@ -195,20 +190,9 @@ public partial class OperationsViewModel : ViewModelBase
 
     private void PopulateDefaultJobInputs()
     {
-        if (ShowConfigurationPath && string.IsNullOrWhiteSpace(JobConfigurationPath) &&
-            !string.IsNullOrWhiteSpace(_settings.ConfigPath))
-            JobConfigurationPath = _settings.ConfigPath!;
-
-        string? configuredLibrary = _settings.Configuration?.ItunesLibraryPath;
-        if (!string.IsNullOrWhiteSpace(configuredLibrary) &&
-            (string.IsNullOrWhiteSpace(JobLibraryPath) ||
-             string.Equals(JobLibraryPath, _defaultLibraryPath, StringComparison.OrdinalIgnoreCase)))
-            JobLibraryPath = configuredLibrary;
-        _defaultLibraryPath = configuredLibrary;
+        InvalidateJobPreview();
     }
 
-    partial void OnJobConfigurationPathChanged(string value) => InvalidateJobPreview();
-    partial void OnJobLibraryPathChanged(string value) => InvalidateJobPreview();
     partial void OnJobPlaylistNameChanged(string value) => InvalidateJobPreview();
     partial void OnJobSourcePathChanged(string value) => InvalidateJobPreview();
     partial void OnJobDestinationPathChanged(string value) => InvalidateJobPreview();
@@ -219,22 +203,6 @@ public partial class OperationsViewModel : ViewModelBase
     partial void OnJobRebalanceChanged(bool value) => InvalidateJobPreview();
     partial void OnJobFixErrorsChanged(bool value) => InvalidateJobPreview();
     partial void OnJobRemapChanged(bool value) => InvalidateJobPreview();
-
-    [RelayCommand]
-    private async Task BrowseJobConfigurationAsync()
-    {
-        string? path = await _files.PickOpenFileAsync("Select library configuration",
-            [new("XML configuration", ["*.xml"])]);
-        if (path is not null) JobConfigurationPath = path;
-    }
-
-    [RelayCommand]
-    private async Task BrowseJobLibraryAsync()
-    {
-        string? path = await _files.PickOpenFileAsync("Select iTunes library",
-            [new("iTunes library", ["*.itl"])]);
-        if (path is not null) JobLibraryPath = path;
-    }
 
     [RelayCommand]
     private async Task BrowseJobSourceAsync()
@@ -294,9 +262,10 @@ public partial class OperationsViewModel : ViewModelBase
             if (SelectedJob.Id == "cross-library-sync" && _crossLibrarySync is not null)
             {
                 IReadOnlyList<string> parsed = [];
-                CrossLibrarySyncRequest request = new(Required(JobConfigurationPath,
-                    "A library configuration path is required."), Optional(JobLibraryPath),
-                    JobMaxRemovals);
+                CrossLibrarySyncRequest request = new(
+                    ConfigurationPath: null,
+                    ItunesLibraryPath: null,
+                    MaxRemovals: JobMaxRemovals);
                 var typedProgress = new Progress<OperationProgress>(value =>
                     JobStatus = value.Message ?? value.Phase.ToString());
                 _crossLibrarySyncPlan = await _crossLibrarySync.PreviewAsync(
@@ -308,8 +277,10 @@ public partial class OperationsViewModel : ViewModelBase
             else if (SelectedJob.Id == "playlist-sync" && _playlistExport is not null)
             {
                 IReadOnlyList<string> parsed = [];
-                PlaylistExportRequest request = new(Required(JobConfigurationPath,
-                    "A library configuration path is required."), Optional(JobLibraryPath), JobClean);
+                PlaylistExportRequest request = new(
+                    ConfigurationPath: null,
+                    ItunesLibraryPath: null,
+                    Clean: JobClean);
                 var typedProgress = new Progress<OperationProgress>(value =>
                     JobStatus = value.Message ?? value.Phase.ToString());
                 _playlistExportPlan = await _playlistExport.PreviewAsync(
@@ -322,7 +293,7 @@ public partial class OperationsViewModel : ViewModelBase
             {
                 IReadOnlyList<string> parsed = [];
                 ArtworkNormalizationRequest request = new(Required(JobPlaylistName,
-                    "An iTunes playlist name is required."), Optional(JobLibraryPath));
+                    "An iTunes playlist name is required."), ConfiguredLibraryPath());
                 var typedProgress = new Progress<OperationProgress>(value =>
                     JobStatus = value.Message ?? value.Phase.ToString());
                 _artworkNormalizationPlan = await _artworkNormalization.PreviewAsync(
@@ -349,7 +320,7 @@ public partial class OperationsViewModel : ViewModelBase
                 IReadOnlyList<string> parsed = [];
                 SmartStorageRequest request = new(Required(JobDestinationPath,
                     "A smart-storage destination is required."), JobInitialize, JobMaxRemovals,
-                    Optional(JobLibraryPath));
+                    ConfiguredLibraryPath());
                 var typedProgress = new Progress<OperationProgress>(value =>
                     JobStatus = value.Message ?? value.Phase.ToString());
                 _smartStoragePlan = await _smartStorage.PreviewAsync(
@@ -361,9 +332,8 @@ public partial class OperationsViewModel : ViewModelBase
             else if (SelectedJob.Id == "car-card" && _carCard is not null)
             {
                 IReadOnlyList<string> parsed = [];
-                CarCardRequest request = new(Required(JobConfigurationPath,
-                    "A library configuration path is required."), JobRebalance, JobFixErrors,
-                    JobInitialize, JobMaxRemovals, Optional(JobLibraryPath));
+                CarCardRequest request = new(null, JobRebalance, JobFixErrors,
+                    JobInitialize, JobMaxRemovals, null);
                 var typedProgress = new Progress<OperationProgress>(value =>
                     JobStatus = value.Message ?? value.Phase.ToString());
                 _carCardPlan = await _carCard.PreviewAsync(request, typedProgress, _cts.Token);
@@ -374,7 +344,7 @@ public partial class OperationsViewModel : ViewModelBase
             else if (SelectedJob.Id == "redundancies" && _redundancyAnalysis is not null)
             {
                 IReadOnlyList<string> parsed = [];
-                string? library = Optional(JobLibraryPath);
+                string? library = ConfiguredLibraryPath();
                 var typedProgress = new Progress<OperationProgress>(value =>
                     JobStatus = value.Message ?? value.Phase.ToString());
                 RedundancyAnalysisResult result = await _redundancyAnalysis.AnalyzeAsync(
@@ -548,8 +518,10 @@ public partial class OperationsViewModel : ViewModelBase
     private static string TrimOutput(string output) => output.Length <= 20_000 ? output : output[^20_000..];
     private static string Required(string value, string message) =>
         string.IsNullOrWhiteSpace(value) ? throw new ArgumentException(message) : value.Trim();
-    private static string? Optional(string value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    private string ConfiguredLibraryPath() =>
+        _settings.Configuration?.ItunesLibraryPath
+        ?? throw new ArgumentException(
+            "Set the iTunes library path in the active library configuration.");
 
     private static string RenderCrossLibrarySyncPlan(CrossLibrarySyncPlan plan)
     {

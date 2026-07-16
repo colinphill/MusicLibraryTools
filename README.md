@@ -170,24 +170,32 @@ declined album cancels the whole run. Transcodes are staged and validated, sourc
 a sibling `.IngestMusic-quarantine` tree only after an album commits by default, and ffmpeg jobs run
 in parallel up to the machine's CPU-core count. Preview uses one buffered directory walk and up to 16
 concurrent metadata readers so network opens overlap; set `MLT_INGEST_PARALLELISM` to tune that cap
-(1-64) for a particular share. Set `DeleteSourcesAfterIngest` to `true` to delete
-successfully committed sources instead. Set `RemoveNonMusicAfterIngest` to `true` to apply that same
-delete/quarantine disposition to unsupported and non-audio files after every album succeeds, and to
-remove emptied folders from the incoming tree. Start from
-[`IngestMusicConfiguration.example.xml`](IngestMusic/IngestMusicConfiguration.example.xml), then run:
+(1-64) for a particular share. Set `DeleteSourcesAfterIngest` to `true` in the library
+configuration's `IngestSettings` element to delete successfully committed sources instead. Set
+`RemoveNonMusicAfterIngest` to `true` to apply that same delete/quarantine disposition to
+unsupported and non-audio files after every album succeeds, and to remove emptied folders from the
+incoming tree. Assign `Cd`, `CdFallback`, `HiRes`, and (when no iTunes library is configured)
+`AacFallback` roles to the appropriate `IndexTarget` elements. Start from
+[`LibraryConfiguration.example.xml`](IngestMusic/LibraryConfiguration.example.xml), then run:
 
 ```
-IngestMusic <incoming-directory> <ingest-config.xml> [--apply]
+IngestMusic <incoming-directory> <libraryconfiguration.xml> [--apply]
 ```
 
 The configured ffmpeg build must provide the `libfdk_aac` encoder.
 
-Set the optional `ItunesLibrary` configuration element to an `.itl` path to import generated AAC
-files directly. In this mode, the library's own media-folder setting determines the destination;
+Set the optional `ItunesLibrary` element to an `.itl` path to import generated AAC files directly.
+In this mode, the library's own media-folder setting determines the destination;
 tracks are organized below `Music` using iTunes' artist/album/track naming rules and then added to
 the binary library. iTunes must be closed during apply. Each album's library update is validated and
-atomically saved with a backup. If `ItunesLibrary` is omitted, AAC files continue to go to the
-configured `AacDestination` (normally `Z:\iTunes\AddAAC`).
+atomically saved with a backup. If `ItunesLibrary` is omitted, AAC files go to the `IndexTarget`
+flagged with `IngestRole="AacFallback"`.
+
+The App's Ingest tab always uses the active library configuration. Its configuration editor permits
+partial ingest setup and unavailable target folders; the Ingest tab lists any missing role
+assignments before enabling Preflight or Preview. The legacy
+[`IngestMusicConfiguration.example.xml`](IngestMusic/IngestMusicConfiguration.example.xml) format
+remains readable for migration and can be imported from the library configuration editor.
 
 The machine-specific `MusicLibrary.NonFree.Tests` project is deliberately absent from both solution
 files and therefore from CI. On the workstation that has `C:\ffmpeg\nonfree\ffmpeg.exe`, run its

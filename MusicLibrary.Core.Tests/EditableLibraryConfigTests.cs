@@ -1,3 +1,4 @@
+using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
 using MusicLibraryTools;
 using Xunit;
@@ -19,6 +20,10 @@ public class EditableLibraryConfigTests
                 FfmpegPath = @"C:\ffmpeg\ffmpeg.exe",
                 LengthLimit = 200,
                 DiscNumLengthLimit = 180,
+                AacEncoder = "aac-test",
+                AacBitrateKbps = 320,
+                DeleteSourcesAfterIngest = true,
+                RemoveNonMusicAfterIngest = true,
                 SyncTarget = @"\\nas\music",
                 IndexTargets =
                 [
@@ -26,13 +31,18 @@ public class EditableLibraryConfigTests
                     {
                         Target = @"Z:\FLAC", DefaultOffset = "/Music", Filter = "*.flac",
                         Organize = false,
+                        IngestRole = LibraryIngestRole.Cd,
                         Memberships =
                         [
                             new() { Name = "Lossless" },
                             new() { Name = "Car3", Offset = "/Car/FLAC" },
                         ],
                     },
-                    new IndexTargetEntry { Target = @"Z:\HiRes" },
+                    new IndexTargetEntry
+                    {
+                        Target = @"Z:\HiRes",
+                        IngestRole = LibraryIngestRole.HiRes,
+                    },
                 ],
                 PlaylistTargets =
                 [
@@ -48,6 +58,10 @@ public class EditableLibraryConfigTests
             Assert.Equal(@"C:\ffmpeg\ffmpeg.exe", reloaded.FfmpegPath);
             Assert.Equal(200, reloaded.LengthLimit);
             Assert.Equal(180, reloaded.DiscNumLengthLimit);
+            Assert.Equal("aac-test", reloaded.AacEncoder);
+            Assert.Equal(320, reloaded.AacBitrateKbps);
+            Assert.True(reloaded.DeleteSourcesAfterIngest);
+            Assert.True(reloaded.RemoveNonMusicAfterIngest);
             Assert.Equal(@"\\nas\music", reloaded.SyncTarget);
             Assert.Equal(2, reloaded.IndexTargets.Count);
             Assert.Equal(@"Z:\FLAC", reloaded.IndexTargets[0].Target);
@@ -59,6 +73,8 @@ public class EditableLibraryConfigTests
             Assert.Equal("*.flac", reloaded.IndexTargets[0].Filter);
             Assert.False(reloaded.IndexTargets[0].Organize);
             Assert.True(reloaded.IndexTargets[1].Organize);
+            Assert.Equal(LibraryIngestRole.Cd, reloaded.IndexTargets[0].IngestRole);
+            Assert.Equal(LibraryIngestRole.HiRes, reloaded.IndexTargets[1].IngestRole);
             Assert.Equal(2, reloaded.PlaylistTargets.Count);
             Assert.Equal(@"Z:\WPL", reloaded.PlaylistTargets[0].Target);
             Assert.Equal("wpl", reloaded.PlaylistTargets[0].Type);
@@ -118,6 +134,112 @@ public class EditableLibraryConfigTests
             Assert.Equal(@"Z:\Playlists", playlistTarget.Target);
             Assert.Equal("wpl", playlistTarget.Type);
             Assert.Equal(["Car4", "Desktop2"], playlistTarget.Sets);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void PartialAndUnavailableIngestTargetsAreValidButReportedAsNotReady()
+    {
+        string path = Path.Combine(Path.GetTempPath(), "cfg_" + Guid.NewGuid().ToString("N") + ".xml");
+        try
+        {
+            string unavailable = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"), "cd");
+            new EditableLibraryConfig
+            {
+                IndexTargets =
+                [
+                    new IndexTargetEntry
+                    {
+                        Target = unavailable,
+                        IngestRole = LibraryIngestRole.Cd,
+                    },
+                ],
+            }.Save(path);
+
+            var configuration = new LibraryConfiguration(path);
+            Assert.False(Directory.Exists(unavailable));
+            Assert.Equal(unavailable,
+                configuration.IngestTargets[LibraryIngestRole.Cd].Target);
+            IReadOnlyList<string> missing =
+                IngestMusicConfiguration.MissingLibrarySettings(configuration);
+            Assert.DoesNotContain(missing,
+                item => item.Contains("CD ingest", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(missing,
+                item => item.Contains("CD fallback", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(missing,
+                item => item.Contains("Hi-res", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(missing,
+                item => item.Contains("AAC fallback", StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void SaveRejectsDuplicateIngestRolesWithoutRequiringAllRoles()
+    {
+        string path = Path.Combine(Path.GetTempPath(), "cfg_" + Guid.NewGuid().ToString("N") + ".xml");
+        try
+        {
+            var configuration = new EditableLibraryConfig
+            {
+                IndexTargets =
+                [
+                    new() { Target = "first", IngestRole = LibraryIngestRole.HiRes },
+                    new() { Target = "second", IngestRole = LibraryIngestRole.HiRes },
+                ],
+            };
+
+            InvalidDataException error =
+                Assert.Throws<InvalidDataException>(() => configuration.Save(path));
+            Assert.Contains("only one", error.Message, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void CompleteLibraryIngestSettingsResolveToTheRuntimeConfiguration()
+    {
+        string path = Path.Combine(Path.GetTempPath(), "cfg_" + Guid.NewGuid().ToString("N") + ".xml");
+        try
+        {
+            new EditableLibraryConfig
+            {
+                FfmpegPath = "configured-ffmpeg",
+                AacEncoder = "configured-aac",
+                AacBitrateKbps = 288,
+                DeleteSourcesAfterIngest = true,
+                RemoveNonMusicAfterIngest = true,
+                IndexTargets =
+                [
+                    new() { Target = "cd", IngestRole = LibraryIngestRole.Cd },
+                    new() { Target = "paired", IngestRole = LibraryIngestRole.CdFallback },
+                    new() { Target = "hires", IngestRole = LibraryIngestRole.HiRes },
+                    new() { Target = "aac", IngestRole = LibraryIngestRole.AacFallback },
+                ],
+            }.Save(path);
+
+            var resolved = IngestMusicConfiguration.Resolve(
+                new IngestRequest("incoming", path), settings: null).Configuration;
+
+            Assert.Equal("configured-ffmpeg", resolved.FfmpegPath);
+            Assert.Equal("configured-aac", resolved.AacEncoder);
+            Assert.Equal(288, resolved.AacBitrateKbps);
+            Assert.Equal("cd", resolved.CdDestination);
+            Assert.Equal("paired", resolved.PairedCdDestination);
+            Assert.Equal("hires", resolved.HighResolutionDestination);
+            Assert.Equal("aac", resolved.AacDestination);
+            Assert.True(resolved.DeleteSourcesAfterIngest);
+            Assert.True(resolved.RemoveNonMusicAfterIngest);
         }
         finally
         {

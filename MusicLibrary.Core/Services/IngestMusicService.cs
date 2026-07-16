@@ -14,11 +14,16 @@ public sealed class IngestMusicService : IIngestMusicService
         @"^(?<album>.+?)\s+\(Disc\s+(?<disc>\d+)\)$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private readonly IFfmpegRunner _ffmpeg;
+    private readonly IAppSettings? _settings;
     private readonly int _previewParallelism;
 
-    public IngestMusicService(IFfmpegRunner ffmpeg, int? previewParallelism = null)
+    public IngestMusicService(
+        IFfmpegRunner ffmpeg,
+        IAppSettings? settings = null,
+        int? previewParallelism = null)
     {
         _ffmpeg = ffmpeg;
+        _settings = settings;
         _previewParallelism = Math.Clamp(previewParallelism ?? GetDefaultPreviewParallelism(), 1, 64);
     }
 
@@ -36,7 +41,8 @@ public sealed class IngestMusicService : IIngestMusicService
         string sourceRoot = Path.GetFullPath(request.SourceDirectory);
         if (!Directory.Exists(sourceRoot))
             throw new DirectoryNotFoundException($"Source directory does not exist: {sourceRoot}");
-        var config = IngestMusicConfiguration.Load(request.ConfigurationPath);
+        var resolved = IngestMusicConfiguration.Resolve(request, _settings);
+        var config = resolved.Configuration;
         string? itunesMediaFolder = null;
         IngestFileSnapshot? itunesLibrarySnapshot = null;
         if (!string.IsNullOrWhiteSpace(config.ItunesLibraryPath))
@@ -260,7 +266,11 @@ public sealed class IngestMusicService : IIngestMusicService
 
         return new IngestPlan
         {
-            Request = request with { SourceDirectory = sourceRoot, ConfigurationPath = Path.GetFullPath(request.ConfigurationPath) },
+            Request = request with
+            {
+                SourceDirectory = sourceRoot,
+                ConfigurationPath = resolved.ConfigurationPath,
+            },
             Configuration = config,
             Albums = albums,
             Files = files,

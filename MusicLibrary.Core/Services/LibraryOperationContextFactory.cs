@@ -16,7 +16,7 @@ public sealed record LibraryOperationContext(
 public interface ILibraryOperationContextFactory
 {
     Task<LibraryOperationContext> CreateAsync(
-        string configurationPath,
+        string? configurationPath,
         string? itunesLibraryPath = null,
         IProgress<OperationProgress>? progress = null,
         CancellationToken ct = default);
@@ -25,13 +25,24 @@ public interface ILibraryOperationContextFactory
 /// <summary>Loads configuration, source metadata, and ITL state exactly once for a planning run.</summary>
 public sealed class LibraryOperationContextFactory : ILibraryOperationContextFactory
 {
+    private readonly ILibraryService? _library;
+
+    public LibraryOperationContextFactory(ILibraryService? library = null) =>
+        _library = library;
+
     public Task<LibraryOperationContext> CreateAsync(
-        string configurationPath,
+        string? configurationPath,
         string? itunesLibraryPath = null,
         IProgress<OperationProgress>? progress = null,
         CancellationToken ct = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(configurationPath);
+        if (string.IsNullOrWhiteSpace(configurationPath))
+        {
+            if (_library is null)
+                throw new InvalidOperationException(
+                    "No active library cache is available and no configuration path was supplied.");
+            return CreateFromActiveCacheAsync(itunesLibraryPath, progress, ct);
+        }
         return Task.Run((Func<Task<LibraryOperationContext>>)(async () =>
         {
             ct.ThrowIfCancellationRequested();
@@ -65,6 +76,33 @@ public sealed class LibraryOperationContextFactory : ILibraryOperationContextFac
                 return new(configuration, locations, cache, library, tracks, resolvedLibraryPath);
             }
         }), ct);
+    }
+
+    private async Task<LibraryOperationContext> CreateFromActiveCacheAsync(
+        string? itunesLibraryPath,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct)
+    {
+        progress?.Report(new(OperationPhase.LoadingConfiguration,
+            Message: "Using the active library configuration and cache"));
+        LibraryOperationCacheSnapshot snapshot =
+            await _library!.GetOperationCacheSnapshotAsync(ct).ConfigureAwait(false);
+        string configuredLibraryPath =
+            itunesLibraryPath ?? snapshot.Configuration.ItunesLibraryPath
+            ?? throw new InvalidOperationException(
+                "Set the iTunes library path in the active library configuration.");
+        string resolvedLibraryPath = ItlFileEditor.ResolveLibraryPath(configuredLibraryPath);
+        progress?.Report(new(OperationPhase.LoadingLibrary,
+            CurrentPath: resolvedLibraryPath, Message: "Loading iTunes library"));
+        ItlLibrary library = await Task.Run(() => ItlLibrary.Load(resolvedLibraryPath), ct)
+            .ConfigureAwait(false);
+        return new(
+            snapshot.Configuration,
+            snapshot.IndexLocations,
+            snapshot.Cache,
+            library,
+            library.Tracks.ToDictionary(track => track.Id),
+            resolvedLibraryPath);
     }
 
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()

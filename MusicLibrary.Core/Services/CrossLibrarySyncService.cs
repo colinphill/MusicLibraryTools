@@ -5,7 +5,7 @@ using MusicLibrary.Core.Models;
 namespace MusicLibrary.Core.Services;
 
 public sealed record CrossLibrarySyncRequest(
-    string ConfigurationPath,
+    string? ConfigurationPath = null,
     string? ItunesLibraryPath = null,
     int MaxRemovals = 0);
 

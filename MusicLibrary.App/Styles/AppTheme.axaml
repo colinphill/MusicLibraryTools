@@ -93,17 +93,19 @@
         <Setter Property="Height" Value="34"/>
     </Style>
 
-    <!-- ===== Controls: rounder, roomier ===== -->
+    <!-- ===== Controls: content-driven sizing with comfortable pointer targets ===== -->
     <Style Selector="Button">
         <Setter Property="CornerRadius" Value="8"/>
-        <Setter Property="Padding" Value="14,7"/>
-        <Setter Property="MinHeight" Value="34"/>
+        <Setter Property="Padding" Value="14,8"/>
+        <Setter Property="MinHeight" Value="38"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
     <Style Selector="TextBox">
         <Setter Property="CornerRadius" Value="8"/>
         <Setter Property="TextWrapping" Value="NoWrap"/>
-        <Setter Property="Height" Value="34"/>
-        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="MinHeight" Value="38"/>
+        <Setter Property="Padding" Value="10,6"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
 
     <Style Selector="Border.matrixcell">
@@ -118,12 +120,29 @@
     </Style>
     <Style Selector="ComboBox">
         <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="MinHeight" Value="38"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
     <Style Selector="NumericUpDown">
         <Setter Property="CornerRadius" Value="8"/>
-        <Setter Property="MinWidth" Value="110"/>
-        <Setter Property="MinHeight" Value="34"/>
+        <!-- The Fluent spinner template reserves substantial width for two step buttons. Narrow
+             controls leave only a few pixels for the value and visually crop the editor. -->
+        <Setter Property="MinWidth" Value="144"/>
+        <Setter Property="MinHeight" Value="42"/>
+        <Setter Property="FontSize" Value="14"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="NumericUpDown.wide">
+        <Setter Property="MinWidth" Value="176"/>
+    </Style>
+    <Style Selector="CheckBox">
+        <Setter Property="MinHeight" Value="32"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="Expander">
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
     </Style>
 
     <!-- Primary (accent) button -->
@@ -169,12 +188,16 @@
     <!-- ===== Tabs: clean, spaced ===== -->
     <Style Selector="TabControl">
         <Setter Property="Padding" Value="0,10,0,0"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
     </Style>
     <Style Selector="TabItem">
         <Setter Property="FontSize" Value="13"/>
         <Setter Property="FontWeight" Value="Medium"/>
-        <Setter Property="MinHeight" Value="40"/>
-        <Setter Property="Padding" Value="12,0"/>
+        <Setter Property="MinHeight" Value="42"/>
+        <Setter Property="Padding" Value="13,0"/>
+        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
     </Style>
 
     <!-- ===== Tree ===== -->
@@ -255,5 +278,23 @@
     <Style Selector="WrapPanel.toolbarwrap > TextBlock">
         <Setter Property="Margin" Value="0,0,8,8"/>
         <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="WrapPanel.toolbarwrap > CheckBox">
+        <Setter Property="Margin" Value="0,0,12,8"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+    <Style Selector="WrapPanel.toolbarwrap > StackPanel">
+        <Setter Property="Margin" Value="0,0,8,8"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+    </Style>
+
+    <!-- Form helpers used by the configuration and operation editors. -->
+    <Style Selector="TextBlock.formlabel">
+        <Setter Property="Foreground" Value="{DynamicResource AppTextMuted}"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
+    </Style>
+    <Style Selector="Border.formsection">
+        <Setter Property="Padding" Value="12"/>
     </Style>
 </Styles>

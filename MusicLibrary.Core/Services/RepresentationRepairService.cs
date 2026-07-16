@@ -1,5 +1,6 @@
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
+using MusicLibraryTools;
 
 namespace MusicLibrary.Core.Services;
 
@@ -7,7 +8,7 @@ public interface IRepresentationRepairService
 {
     Task<RepresentationRepairPreview> PreviewAsync(
         IReadOnlyList<TrackRecord> records,
-        string? ingestConfigurationPath,
+        LibraryConfiguration? configuration,
         CancellationToken ct = default);
 }
 
@@ -38,7 +39,7 @@ public sealed class RepresentationRepairService(ILibraryOrganizer organizer) : I
 
     public async Task<RepresentationRepairPreview> PreviewAsync(
         IReadOnlyList<TrackRecord> records,
-        string? ingestConfigurationPath,
+        LibraryConfiguration? libraryConfiguration,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(records);
@@ -47,16 +48,20 @@ public sealed class RepresentationRepairService(ILibraryOrganizer organizer) : I
         var warnings = new List<string>();
 
         IngestMusicConfiguration? configuration = null;
-        if (string.IsNullOrWhiteSpace(ingestConfigurationPath) || !File.Exists(ingestConfigurationPath))
+        if (libraryConfiguration is null)
         {
-            warnings.Add("Derivation preview unavailable: choose an existing IngestMusic configuration first.");
+            warnings.Add("Derivation preview unavailable: load a library configuration first.");
         }
         else
         {
             try
             {
-                configuration = IngestMusicConfiguration.Load(ingestConfigurationPath);
+                configuration = IngestMusicConfiguration.FromLibraryConfiguration(libraryConfiguration);
                 actions.AddRange(PreviewDerivations(records, configuration, ct));
+                if (string.IsNullOrWhiteSpace(configuration.AacDestination))
+                    warnings.Add(
+                        "AAC derivation preview unavailable: assign an AAC fallback IndexTarget. " +
+                        "Direct iTunes import is handled by the Ingest workflow.");
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -178,7 +183,8 @@ public sealed class RepresentationRepairService(ILibraryOrganizer organizer) : I
 
             bool hasPortableCounterpart = byRole.ContainsKey(LibraryRepresentation.GeneratedAac) ||
                 byRole.ContainsKey(LibraryRepresentation.Purchased);
-            if (!hasPortableCounterpart)
+            if (!hasPortableCounterpart &&
+                !string.IsNullOrWhiteSpace(configuration.AacDestination))
             {
                 TrackRecord? source = byRole.GetValueOrDefault(LibraryRepresentation.CdFlac) ??
                     byRole.GetValueOrDefault(LibraryRepresentation.HighResolutionFlac);

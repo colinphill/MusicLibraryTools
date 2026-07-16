@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MusicLibrary.App.Services;
+using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
 using MusicLibraryTools;
 
@@ -14,6 +15,7 @@ public partial class IndexTargetRow : ObservableObject
     [ObservableProperty] private string? _defaultOffset;
     [ObservableProperty] private string? _filter;
     [ObservableProperty] private bool _organize = true;
+    [ObservableProperty] private LibraryIngestRole _ingestRole;
     public ObservableCollection<IndexTargetSetRow> Memberships { get; } = [];
 }
 
@@ -44,12 +46,18 @@ public partial class ConfigDialogViewModel : ViewModelBase
     [ObservableProperty] private string _ffmpegPath = "ffmpeg";
     [ObservableProperty] private int _lengthLimit = 255;
     [ObservableProperty] private int _discNumLengthLimit = 255;
+    [ObservableProperty] private string _aacEncoder = "libfdk_aac";
+    [ObservableProperty] private int _aacBitrateKbps = 256;
+    [ObservableProperty] private bool _deleteSourcesAfterIngest;
+    [ObservableProperty] private bool _removeNonMusicAfterIngest;
     [ObservableProperty] private string? _syncTarget;
     [ObservableProperty] private string? _currentPath;
     [ObservableProperty] private string? _statusMessage;
 
     public ObservableCollection<IndexTargetRow> IndexTargets { get; } = [];
     public ObservableCollection<PlaylistTargetRow> PlaylistTargets { get; } = [];
+    public IReadOnlyList<LibraryIngestRole> IngestRoles { get; } =
+        Enum.GetValues<LibraryIngestRole>();
 
     public string Title => CurrentPath is null ? "New library configuration" : $"Edit configuration — {System.IO.Path.GetFileName(CurrentPath)}";
 
@@ -75,6 +83,10 @@ public partial class ConfigDialogViewModel : ViewModelBase
             FfmpegPath = config.FfmpegPath;
             LengthLimit = config.LengthLimit;
             DiscNumLengthLimit = config.DiscNumLengthLimit;
+            AacEncoder = config.AacEncoder;
+            AacBitrateKbps = config.AacBitrateKbps;
+            DeleteSourcesAfterIngest = config.DeleteSourcesAfterIngest;
+            RemoveNonMusicAfterIngest = config.RemoveNonMusicAfterIngest;
             SyncTarget = config.SyncTarget;
             foreach (var t in config.IndexTargets)
             {
@@ -84,6 +96,7 @@ public partial class ConfigDialogViewModel : ViewModelBase
                     DefaultOffset = t.DefaultOffset,
                     Filter = t.Filter,
                     Organize = t.Organize,
+                    IngestRole = t.IngestRole,
                 };
                 foreach (IndexTargetSetEntry membership in t.Memberships)
                     row.Memberships.Add(new IndexTargetSetRow
@@ -164,6 +177,54 @@ public partial class ConfigDialogViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private async Task ImportIngestConfigurationAsync()
+    {
+        string? path = await _dialogs.PickOpenFileAsync(
+            "Import legacy IngestMusic configuration",
+            [new FilePickerFilter("XML configuration", ["*.xml"])]);
+        if (path is null)
+            return;
+        try
+        {
+            IngestMusicConfiguration ingest = IngestMusicConfiguration.Load(path);
+            FfmpegPath = ingest.FfmpegPath;
+            ItunesLibraryPath = ingest.ItunesLibraryPath;
+            LengthLimit = ingest.LengthLimit;
+            DiscNumLengthLimit = ingest.DiscNumLengthLimit;
+            AacEncoder = ingest.AacEncoder;
+            AacBitrateKbps = ingest.AacBitrateKbps;
+            DeleteSourcesAfterIngest = ingest.DeleteSourcesAfterIngest;
+            RemoveNonMusicAfterIngest = ingest.RemoveNonMusicAfterIngest;
+            AssignIngestRole(ingest.CdDestination, LibraryIngestRole.Cd);
+            AssignIngestRole(ingest.PairedCdDestination, LibraryIngestRole.CdFallback);
+            AssignIngestRole(ingest.HighResolutionDestination, LibraryIngestRole.HiRes);
+            AssignIngestRole(ingest.AacDestination, LibraryIngestRole.AacFallback);
+            StatusMessage =
+                "Legacy ingest settings imported. Review the flagged IndexTargets, then save.";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Import failed: {ex.Message}";
+        }
+    }
+
+    private void AssignIngestRole(string path, LibraryIngestRole role)
+    {
+        foreach (IndexTargetRow existing in IndexTargets.Where(target => target.IngestRole == role))
+            existing.IngestRole = LibraryIngestRole.None;
+        IndexTargetRow? row = IndexTargets.FirstOrDefault(target =>
+            PathComparer.Equals(
+                Path.TrimEndingDirectorySeparator(target.Target),
+                Path.TrimEndingDirectorySeparator(path)));
+        if (row is null)
+        {
+            row = new IndexTargetRow { Target = path };
+            IndexTargets.Add(row);
+        }
+        row.IngestRole = role;
+    }
+
+    [RelayCommand]
     private async Task SaveAsync() => await SaveToAsync(CurrentPath);
 
     [RelayCommand]
@@ -186,6 +247,11 @@ public partial class ConfigDialogViewModel : ViewModelBase
                 FfmpegPath = string.IsNullOrWhiteSpace(FfmpegPath) ? "ffmpeg" : FfmpegPath.Trim(),
                 LengthLimit = LengthLimit,
                 DiscNumLengthLimit = DiscNumLengthLimit,
+                AacEncoder = string.IsNullOrWhiteSpace(AacEncoder)
+                    ? "libfdk_aac" : AacEncoder.Trim(),
+                AacBitrateKbps = AacBitrateKbps,
+                DeleteSourcesAfterIngest = DeleteSourcesAfterIngest,
+                RemoveNonMusicAfterIngest = RemoveNonMusicAfterIngest,
                 SyncTarget = SyncTarget,
                 IndexTargets = IndexTargets
                     .Where(t => !string.IsNullOrWhiteSpace(t.Target))
@@ -194,6 +260,7 @@ public partial class ConfigDialogViewModel : ViewModelBase
                         Target = t.Target,
                         DefaultOffset = t.DefaultOffset,
                         Organize = t.Organize,
+                        IngestRole = t.IngestRole,
                         Memberships = t.Memberships
                             .Where(membership => !string.IsNullOrWhiteSpace(membership.Name))
                             .Select(membership => new IndexTargetSetEntry
@@ -226,4 +293,8 @@ public partial class ConfigDialogViewModel : ViewModelBase
 
     [RelayCommand]
     private void Cancel() => CloseRequested?.Invoke(null);
+
+    private static StringComparer PathComparer => OperatingSystem.IsWindows()
+        ? StringComparer.OrdinalIgnoreCase
+        : StringComparer.Ordinal;
 }

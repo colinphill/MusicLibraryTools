@@ -30,12 +30,28 @@ namespace MusicLibraryTools
     /// </summary>
     public sealed record LibraryIndexSetMembership(string Name, string? Offset);
 
+    public enum LibraryIngestRole
+    {
+        None,
+        Cd,
+        CdFallback,
+        HiRes,
+        AacFallback,
+    }
+
+    public sealed record LibraryIngestSettings(
+        string AacEncoder,
+        int AacBitrateKbps,
+        bool DeleteSourcesAfterIngest,
+        bool RemoveNonMusicAfterIngest);
+
     public sealed record LibraryIndexLocation(
         string Target,
         string? DefaultOffset,
         IReadOnlyList<LibraryIndexSetMembership> Memberships,
         string? Filter,
-        bool Organize = true)
+        bool Organize = true,
+        LibraryIngestRole IngestRole = LibraryIngestRole.None)
     {
         public IReadOnlyList<string> Sets { get; } =
             Memberships.Select(membership => membership.Name).ToArray();
@@ -153,7 +169,24 @@ namespace MusicLibraryTools
             }
             return new(target, defaultOffset, memberships,
                 CleanOptional((string?)element.Attribute("Filter")),
-                ParseOptionalBoolean(element, "Organize", defaultValue: true));
+                ParseOptionalBoolean(element, "Organize", defaultValue: true),
+                ParseIngestRole((string?)element.Attribute("IngestRole")));
+        }
+
+        private static LibraryIngestRole ParseIngestRole(string? value)
+        {
+            value = CleanOptional(value);
+            if (value is null)
+                return LibraryIngestRole.None;
+            return value.ToLowerInvariant() switch
+            {
+                "cd" => LibraryIngestRole.Cd,
+                "cdfallback" => LibraryIngestRole.CdFallback,
+                "hires" => LibraryIngestRole.HiRes,
+                "aacfallback" => LibraryIngestRole.AacFallback,
+                _ => throw new InvalidDataException(
+                    $"Invalid IngestRole '{value}'. Expected Cd, CdFallback, HiRes, or AacFallback."),
+            };
         }
 
         /// <summary>Parse a comma, semicolon, or whitespace separated logical-set list.</summary>
@@ -245,6 +278,35 @@ namespace MusicLibraryTools
             }
         }
 
+        public LibraryIngestSettings IngestSettings
+        {
+            get
+            {
+                XElement? element = root_.Element("IngestSettings");
+                return new(
+                    CleanOptional((string?)element?.Attribute("AacEncoder")) ?? "libfdk_aac",
+                    ParsePositiveInteger(element, "AacBitrateKbps", 256),
+                    ParseOptionalBoolean(element, "DeleteSourcesAfterIngest", defaultValue: false),
+                    ParseOptionalBoolean(element, "RemoveNonMusicAfterIngest", defaultValue: false));
+            }
+        }
+
+        public IReadOnlyDictionary<LibraryIngestRole, LibraryIndexLocation> IngestTargets
+        {
+            get
+            {
+                var result = new Dictionary<LibraryIngestRole, LibraryIndexLocation>();
+                foreach (LibraryIndexLocation location in IndexLocations.Where(location =>
+                             location.IngestRole != LibraryIngestRole.None))
+                {
+                    if (!result.TryAdd(location.IngestRole, location))
+                        throw new InvalidDataException(
+                            $"More than one IndexTarget is assigned IngestRole '{location.IngestRole}'.");
+                }
+                return result;
+            }
+        }
+
         public string [] this[string key] => root_.Elements(key).Select(e => e.Value).ToArray();
 
         public int LengthLimit => int.Parse(root_.Element("LengthLimit")!.Value);
@@ -261,8 +323,10 @@ namespace MusicLibraryTools
             string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
         private static bool ParseOptionalBoolean(
-            XElement element, string attributeName, bool defaultValue)
+            XElement? element, string attributeName, bool defaultValue)
         {
+            if (element is null)
+                return defaultValue;
             string? value = CleanOptional((string?)element.Attribute(attributeName));
             if (value is null)
                 return defaultValue;
@@ -270,6 +334,19 @@ namespace MusicLibraryTools
                 return parsed;
             throw new InvalidDataException(
                 $"Attribute '{attributeName}' on <{element.Name.LocalName}> must be true or false.");
+        }
+
+        private static int ParsePositiveInteger(XElement? element, string attributeName, int fallback)
+        {
+            if (element is null)
+                return fallback;
+            string? value = CleanOptional((string?)element.Attribute(attributeName));
+            if (value is null)
+                return fallback;
+            if (int.TryParse(value, out int parsed) && parsed > 0)
+                return parsed;
+            throw new InvalidDataException(
+                $"Attribute '{attributeName}' on <{element.Name.LocalName}> must be a positive integer.");
         }
  
     }

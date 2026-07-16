@@ -8,7 +8,7 @@ using MusicLibrary.Core.Models;
 
 namespace MusicLibrary.Core.Services;
 
-public sealed record CarCardRequest(string ConfigurationPath, bool Rebalance = false,
+public sealed record CarCardRequest(string? ConfigurationPath = null, bool Rebalance = false,
     bool FixErrors = false, bool Initialize = false, int MaxRemovals = 0,
     string? ItunesLibraryPath = null);
 

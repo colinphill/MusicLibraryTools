@@ -3,6 +3,7 @@ using MusicFileUtilities;
 using MusicLibrary.App.ViewModels;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
+using MusicLibraryTools;
 using Xunit;
 
 namespace MusicLibrary.Core.Tests;
@@ -10,7 +11,7 @@ namespace MusicLibrary.Core.Tests;
 public sealed class AnalyzerViewModelTests
 {
     [Fact]
-    public void ConfiguredFfmpegIsTheDefaultButAnExplicitSessionOverrideWins()
+    public void ConfiguredFfmpegAlwaysTracksTheActiveLibraryConfiguration()
     {
         string directory = Path.Combine(Path.GetTempPath(), $"analyzer-config-{Guid.NewGuid():N}");
         Directory.CreateDirectory(directory);
@@ -30,9 +31,8 @@ public sealed class AnalyzerViewModelTests
                 new StubLibrary([]), new StubReconciler(), new StubRepairs(), settings);
 
             Assert.Equal("configured-ffmpeg", viewModel.FfmpegPath);
-            viewModel.FfmpegPath = "session-override";
             settings.LoadConfig(second);
-            Assert.Equal("session-override", viewModel.FfmpegPath);
+            Assert.Equal("replacement-ffmpeg", viewModel.FfmpegPath);
         }
         finally
         {
@@ -312,14 +312,16 @@ public sealed class AnalyzerViewModelTests
             [new(RepresentationRepairKind.DeriveAac, record.Path, @"Z:\AAC\Album\01.m4a", "Encode AAC.")],
             []));
         var settings = new AppSettings(Path.Combine(Path.GetTempPath(), $"analyzer-{Guid.NewGuid():N}.json"));
-        settings.SetPreference("Ingest.ConfigurationPath", @"C:\config\ingest.xml");
+        string configPath = Path.Combine(Path.GetTempPath(), $"analyzer-config-{Guid.NewGuid():N}.xml");
+        new EditableLibraryConfig().Save(configPath);
+        settings.LoadConfig(configPath);
         var viewModel = new AnalyzerViewModel(
             new StubLibrary([record]), new StubReconciler(), new StubRepairs(), settings,
             representationRepairs: previewer);
 
         await viewModel.PreviewRepresentationRepairsCommand.ExecuteAsync(null);
 
-        Assert.Equal(@"C:\config\ingest.xml", previewer.ConfigurationPath);
+        Assert.Same(settings.Configuration, previewer.Configuration);
         Assert.Equal(2, viewModel.Runs.Count);
         Assert.Equal("Copy representation metadata", viewModel.SelectedRun!.Name);
         Assert.Single(viewModel.RepairItems);
@@ -408,11 +410,11 @@ public sealed class AnalyzerViewModelTests
     private sealed class StubRepresentationRepairs(RepresentationRepairPreview preview)
         : IRepresentationRepairService
     {
-        public string? ConfigurationPath { get; private set; }
+        public LibraryConfiguration? Configuration { get; private set; }
         public Task<RepresentationRepairPreview> PreviewAsync(IReadOnlyList<TrackRecord> records,
-            string? ingestConfigurationPath, CancellationToken ct = default)
+            LibraryConfiguration? configuration, CancellationToken ct = default)
         {
-            ConfigurationPath = ingestConfigurationPath;
+            Configuration = configuration;
             return Task.FromResult(preview);
         }
     }

@@ -1,5 +1,6 @@
 using MetadataCaching;
 using MusicLibrary.Core.Models;
+using MusicLibraryTools;
 
 namespace MusicLibrary.Core.Services;
 
@@ -29,6 +30,16 @@ public interface ILibraryService
 
     /// <summary>Flatten the current cache into per-file records for the analyzers/duplicate finder.</summary>
     Task<IReadOnlyList<TrackRecord>> GetAllRecordsAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Capture the active configuration and a metadata snapshot from the already-open cache.
+    /// Configuration-dependent App operations use this instead of reopening or re-indexing the
+    /// configured database independently.
+    /// </summary>
+    Task<LibraryOperationCacheSnapshot> GetOperationCacheSnapshotAsync(
+        CancellationToken ct = default) =>
+        Task.FromException<LibraryOperationCacheSnapshot>(
+            new NotSupportedException("This library service does not expose operation snapshots."));
 
     /// <summary>
     /// Cross-reference the configured scan sets (config IndexTargets carry a Set number): flag files
@@ -61,3 +72,10 @@ public interface ILibraryService
     Task<IReadOnlyList<ArtworkAuditFile>> GetArtworkAuditFilesAsync(CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<ArtworkAuditFile>>([]);
 }
+
+public sealed record LibraryOperationCacheSnapshot(
+    LibraryConfiguration Configuration,
+    string? ConfigurationPath,
+    long ConfigurationVersion,
+    IReadOnlyList<LibraryIndexLocation> IndexLocations,
+    MetadataCache Cache);

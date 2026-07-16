@@ -10,7 +10,7 @@ using MusicLibraryTools;
 namespace MusicLibrary.Core.Services;
 
 public sealed record PlaylistExportRequest(
-    string ConfigurationPath,
+    string? ConfigurationPath = null,
     string? ItunesLibraryPath = null,
     bool Clean = false);
 
@@ -371,8 +371,10 @@ public sealed class PlaylistExportService : IPlaylistExportService
         IReadOnlyList<LibraryPlaylistTarget> targets, IReadOnlyList<OperationIssue> issues)
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
-        string root = targets.FirstOrDefault()?.Target ?? Path.GetDirectoryName(
-            Path.GetFullPath(request.ConfigurationPath))!;
+        string root = targets.FirstOrDefault()?.Target ??
+            (string.IsNullOrWhiteSpace(request.ConfigurationPath)
+                ? Environment.CurrentDirectory
+                : Path.GetDirectoryName(Path.GetFullPath(request.ConfigurationPath))!);
         var mutations = new FileMutationPlan("CrossSyncPlaylists", root, "", [], issues, now);
         return new(request, [], mutations, issues);
     }

@@ -160,7 +160,7 @@ public sealed class CrossLibrarySyncServiceTests
     private sealed class StubContextFactory(LibraryOperationContext context)
         : ILibraryOperationContextFactory
     {
-        public Task<LibraryOperationContext> CreateAsync(string configurationPath,
+        public Task<LibraryOperationContext> CreateAsync(string? configurationPath,
             string? itunesLibraryPath = null, IProgress<OperationProgress>? progress = null,
             CancellationToken ct = default) => Task.FromResult(context);
     }

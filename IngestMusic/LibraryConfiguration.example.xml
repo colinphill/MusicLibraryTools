@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LibraryConfiguration>
+  <DatabaseFile>cache.db</DatabaseFile>
+  <ItunesLibrary>Z:\iTunes\iTunes Library.itl</ItunesLibrary>
+  <FfmpegPath>ffmpeg</FfmpegPath>
+
+  <IndexTarget Path="Z:\iTunes\FLAC" IngestRole="Cd" />
+  <IndexTarget Path="Z:\iTunes\FLAC2" IngestRole="CdFallback" />
+  <IndexTarget Path="Z:\iTunes\HiRes\Stereo\PCM" IngestRole="HiRes" />
+  <IndexTarget Path="Z:\iTunes\AddAAC" IngestRole="AacFallback" />
+
+  <IngestSettings
+      AacEncoder="libfdk_aac"
+      AacBitrateKbps="256"
+      DeleteSourcesAfterIngest="false"
+      RemoveNonMusicAfterIngest="false" />
+
+  <LengthLimit>255</LengthLimit>
+  <DiscNumLengthLimit>255</DiscNumLengthLimit>
+</LibraryConfiguration>
