@@ -27,7 +27,14 @@ static async Task<int> RunAsync(string[] args)
             itunes = new ItunesMediaMutationService(settings);
             using var library = new LibraryService(settings, itunes: itunes);
             Console.Error.WriteLine("Indexing the configured library cache...");
-            await library.IndexForOperationAsync();
+            var indexProgress = new SynchronousProgress<OperationProgress>(p =>
+            {
+                if (!string.IsNullOrWhiteSpace(p.Message))
+                    Console.Error.WriteLine(p.CurrentPath is null
+                        ? p.Message
+                        : $"{p.Message}: {p.CurrentPath}");
+            });
+            await library.IndexForOperationAsync(indexProgress);
         }
         else
         {
@@ -71,8 +78,9 @@ static async Task<int> RunAsync(string[] args)
             }
         }
 
-        var progress = new Progress<IngestProgress>(p =>
-            Console.WriteLine($"[{p.CompletedItems}/{p.TotalItems}] {p.Album}: {p.Operation}"));
+        var progress = new SynchronousProgress<IngestProgress>(p =>
+            Console.Error.WriteLine(
+                $"[{p.CompletedItems}/{p.TotalItems}] {p.Album}: {p.Operation}"));
         var result = await service.ApplyAsync(plan, approvals, progress);
         if (result.Cancelled)
         {

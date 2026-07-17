@@ -55,15 +55,16 @@ public sealed class LibraryOperationContextFactory : ILibraryOperationContextFac
                 Message: $"Indexing {locations.Length:N0} source root(s)"));
             using (MetadataDatabase database = MetadataDatabase.OpenDatabase(configuration.DatabaseFile))
             {
-                var indexProgress = progress is null ? null : new Progress<IndexProgress>(value =>
-                    progress.Report(new(OperationPhase.IndexingSources, value.Scanned,
-                        CurrentPath: null,
-                        Message: $"Indexed {value.Scanned:N0}; {value.Added:N0} added, " +
-                                 $"{value.Modified:N0} modified")));
-                await database.IndexFilesAsync(
+                var indexProgress = progress is null
+                    ? null
+                    : new IndexOperationProgressAdapter(progress);
+                var indexResult = await database.IndexFilesAsync(
                     locations.Select(location => new ScanRootDefinition(location.Target, location.Sets)),
                     progress: indexProgress, ct: ct).ConfigureAwait(false);
                 ct.ThrowIfCancellationRequested();
+                indexProgress?.ReportCompleted(
+                    indexResult.Added, indexResult.Modified,
+                    indexResult.Removed, indexResult.Unchanged);
                 MetadataCache cache = database.BuildCache(
                     locations.Select(location => location.Target).Distinct(PathComparer));
 

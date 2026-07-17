@@ -27,7 +27,7 @@ internal static class CrossSyncMusicCommand
             new LibraryOperationContextFactory(),
             new FileInventoryService(),
             new FileMutationPlanExecutor(coordinator, itunes));
-        var progress = new Progress<OperationProgress>(ReportProgress);
+        var progress = new SynchronousProgress<OperationProgress>(ReportProgress);
 
         try
         {

@@ -23,10 +23,10 @@ public static class Program
             var inventories = new FileInventoryService();
             var service = new SmartStorageService(new SmartStorageLibraryLoader(), inventories,
                 new FileMutationPlanExecutor());
-            var progress = new Progress<OperationProgress>(value =>
+            var progress = new SynchronousProgress<OperationProgress>(value =>
             {
                 if (!string.IsNullOrWhiteSpace(value.Message))
-                    Console.WriteLine(value.CurrentPath is null
+                    Console.Error.WriteLine(value.CurrentPath is null
                         ? value.Message
                         : $"{value.Message}: {value.CurrentPath}");
             });

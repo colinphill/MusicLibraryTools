@@ -597,19 +597,14 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
     /// Core-model progress adapter for command-line and operation workflows that should not need a
     /// compile-time dependency on the metadata database implementation.
     /// </summary>
-    public Task<(int Added, int Modified, int Removed, int Unchanged)> IndexForOperationAsync(
+    public async Task<(int Added, int Modified, int Removed, int Unchanged)> IndexForOperationAsync(
         IProgress<OperationProgress>? progress = null,
         CancellationToken ct = default)
     {
-        IProgress<IndexProgress>? indexProgress = progress is null
-            ? null
-            : new Progress<IndexProgress>(value => progress.Report(new(
-                OperationPhase.IndexingSources,
-                value.Scanned,
-                CurrentPath: null,
-                Message: $"Indexed {value.Scanned:N0}; {value.Added:N0} added, " +
-                         $"{value.Modified:N0} modified")));
-        return IndexAsync(indexProgress, ct);
+        var adapter = progress is null ? null : new IndexOperationProgressAdapter(progress);
+        var result = await IndexAsync(adapter, ct).ConfigureAwait(false);
+        adapter?.ReportCompleted(result.Added, result.Modified, result.Removed, result.Unchanged);
+        return result;
     }
 
     public async Task<IReadOnlyList<ArtworkAuditFile>> GetArtworkAuditFilesAsync(CancellationToken ct = default)

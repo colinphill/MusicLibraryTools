@@ -35,7 +35,7 @@ public static class Program
     private static async Task<int> RunAsync(Options options)
     {
         var service = new ArtworkNormalizationService();
-        var progress = new Progress<MusicLibrary.Core.Models.OperationProgress>(value =>
+        var progress = new SynchronousProgress<MusicLibrary.Core.Models.OperationProgress>(value =>
         {
             if (!string.IsNullOrWhiteSpace(value.CurrentPath))
                 LogConsole.WriteLine($"{value.Message}: {value.CurrentPath}");

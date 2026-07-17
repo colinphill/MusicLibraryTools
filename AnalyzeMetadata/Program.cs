@@ -24,11 +24,13 @@ public static class Program
             var settings = new CommandLineAppSettings(args[0]);
             var itunes = new ItunesMediaMutationService(settings);
             using var library = new LibraryService(settings, itunes: itunes);
-            Console.WriteLine("Indexing Files...");
-            var indexProgress = new Progress<OperationProgress>(value =>
+            Console.Error.WriteLine("Indexing files...");
+            var indexProgress = new SynchronousProgress<OperationProgress>(value =>
             {
-                if ((value.Completed & 1023) == 0 && value.Completed > 0)
-                    Console.WriteLine($"Indexed {value.Completed:N0} files...");
+                if (!string.IsNullOrWhiteSpace(value.Message))
+                    Console.Error.WriteLine(value.CurrentPath is null
+                        ? value.Message
+                        : $"{value.Message}: {value.CurrentPath}");
             });
             await library.IndexForOperationAsync(indexProgress);
             IReadOnlyList<TrackRecord> records = await library.GetAllRecordsAsync();

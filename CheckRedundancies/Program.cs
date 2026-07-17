@@ -25,7 +25,7 @@ internal static class CheckRedundanciesCommand
         {
             IRedundancyAnalysisService service = new RedundancyAnalysisService();
             RedundancyAnalysisResult result = await service.AnalyzeAsync(library,
-                new Progress<OperationProgress>(value =>
+                new SynchronousProgress<OperationProgress>(value =>
                 {
                     if (!string.IsNullOrWhiteSpace(value.Message)) Console.Error.WriteLine(value.Message);
                 }));

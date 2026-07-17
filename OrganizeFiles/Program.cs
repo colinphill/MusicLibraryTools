@@ -21,11 +21,13 @@ public static class Program
         try
         {
             using var service = new LibraryService(args[0]);
-            Console.WriteLine("Indexing...");
-            var indexProgress = new Progress<OperationProgress>(value =>
+            Console.Error.WriteLine("Indexing...");
+            var indexProgress = new SynchronousProgress<OperationProgress>(value =>
             {
-                if ((value.Completed & 1023) == 0 && value.Completed > 0)
-                    Console.WriteLine($"Indexed {value.Completed:N0} files...");
+                if (!string.IsNullOrWhiteSpace(value.Message))
+                    Console.Error.WriteLine(value.CurrentPath is null
+                        ? value.Message
+                        : $"{value.Message}: {value.CurrentPath}");
             });
             await service.IndexForOperationAsync(indexProgress);
 
@@ -42,8 +44,8 @@ public static class Program
             }
 
             int total = plan.Count;
-            var progress = new Progress<int>(completed =>
-                Console.WriteLine($"Moved {completed:N0}/{total:N0}"));
+            var progress = new SynchronousProgress<int>(completed =>
+                Console.Error.WriteLine($"Moved {completed:N0}/{total:N0}"));
             OrganizeResult result = await service.ApplyMovesAsync(plan, progress);
             foreach ((string source, string error) in result.Errors)
                 Console.Error.WriteLine($"Move failed: {source}: {error}");

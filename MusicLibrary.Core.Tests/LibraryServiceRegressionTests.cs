@@ -23,11 +23,41 @@ public sealed class LibraryServiceRegressionTests
         IReadOnlyList<TrackRecord> records = await library.GetAllRecordsAsync();
         IReadOnlyList<PlannedMove> moves = await library.PreviewMovesAsync();
 
+        IReadOnlyList<OperationProgress> reports = progress.Values;
         Assert.Single(records);
         Assert.Equal(source, records[0].Path);
         Assert.Single(moves);
         Assert.Equal(source, moves[0].Source);
-        Assert.NotEmpty(progress.Values);
+        Assert.NotEmpty(reports);
+        Assert.Equal(1, reports[^1].Completed);
+        Assert.Equal(1, reports[^1].Total);
+        Assert.StartsWith("Index complete:", reports[^1].Message);
+    }
+
+    [Fact]
+    public async Task CommandLineIndex_ReportsUnchangedEnumerationAndCompletesBeforeReturning()
+    {
+        using var temp = new TempDirectory();
+        var root = temp.CreateDirectory("music");
+        temp.CopyFixture(root, "song.flac");
+        string config = temp.WriteConfig(
+            "library.xml", "cache.db", new IndexTargetEntry { Target = root });
+        using var library = new LibraryService(config);
+        await library.IndexForOperationAsync();
+        var progress = new CollectingOperationProgress();
+
+        await library.IndexForOperationAsync(progress);
+
+        IReadOnlyList<OperationProgress> reports = progress.Values;
+        Assert.Contains(reports, report => report.Completed == 1 &&
+            report.Message?.Contains("found", StringComparison.Ordinal) == true);
+        Assert.Contains(reports, report => report.Completed == 0 &&
+            report.Message?.Contains("0 metadata read", StringComparison.Ordinal) == true);
+        OperationProgress completed = reports[^1];
+        Assert.Equal(1, completed.Completed);
+        Assert.Equal(1, completed.Total);
+        Assert.Contains("0 metadata read", completed.Message);
+        Assert.Contains("1 unchanged", completed.Message);
     }
 
     [Fact]
@@ -492,8 +522,16 @@ public sealed class LibraryServiceRegressionTests
 
     private sealed class CollectingOperationProgress : IProgress<OperationProgress>
     {
-        public List<OperationProgress> Values { get; } = [];
-        public void Report(OperationProgress value) => Values.Add(value);
+        private readonly object sync = new();
+        private readonly List<OperationProgress> values = [];
+        public IReadOnlyList<OperationProgress> Values
+        {
+            get { lock (sync) return values.ToList(); }
+        }
+        public void Report(OperationProgress value)
+        {
+            lock (sync) values.Add(value);
+        }
     }
 
     private sealed class TempDirectory : IDisposable

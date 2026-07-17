@@ -26,7 +26,7 @@ internal static class CrossSyncPlaylistsCommand
         IPlaylistExportService service = new PlaylistExportService(
             new LibraryOperationContextFactory(), new FileInventoryService(),
             new FileMutationPlanExecutor(coordinator, itunes));
-        var progress = new Progress<OperationProgress>(value =>
+        var progress = new SynchronousProgress<OperationProgress>(value =>
         {
             if (!string.IsNullOrWhiteSpace(value.Message)) Console.Error.WriteLine(value.Message);
         });
