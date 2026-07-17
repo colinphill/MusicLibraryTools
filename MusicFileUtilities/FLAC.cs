@@ -49,6 +49,7 @@ namespace MusicFileUtilities
         private int _paddingAfterVcDataLen;
         private bool _paddingAfterVcIsLast;
         private long _audioOffset = -1;
+        private readonly bool _readOnly;
 
         internal bool LastSaveWasInPlace { get; private set; }
 
@@ -110,25 +111,41 @@ namespace MusicFileUtilities
         }
 
         public FLACFile(string filename, bool readArtwork = true)
+            : this(filename, readOnly: false, readArtwork: readArtwork, knownLength: null)
+        {
+        }
+
+        internal FLACFile(
+            string filename,
+            bool readOnly,
+            bool readArtwork,
+            long? knownLength)
         {
             Filename = filename;
+            _readOnly = readOnly;
 
             using FileStream s = Tools.OpenReadSequential(filename);
-            Parse(s, readArtwork);
+            Parse(s, readArtwork, knownLength);
         }
 
-        internal FLACFile(Stream stream, string filename, bool readArtwork = true)
+        internal FLACFile(
+            Stream stream,
+            string filename,
+            bool readArtwork = true,
+            bool readOnly = false,
+            long? knownLength = null)
         {
             Filename = filename;
-            Parse(stream, readArtwork);
+            _readOnly = readOnly;
+            Parse(stream, readArtwork, knownLength);
         }
 
-        private void Parse(Stream s, bool readArtwork)
+        private void Parse(Stream s, bool readArtwork, long? knownLength)
         {
             byte[] si = null;
             byte [] b = new byte[4];
             s.ReadExactly(b);
-            if (Encoding.ASCII.GetString(b) != "fLaC")
+            if (!b.AsSpan().SequenceEqual("fLaC"u8))
                 throw new InvalidDataException();
 
             bool last = false;
@@ -149,16 +166,20 @@ namespace MusicFileUtilities
                 {
                     si = new byte[len];
                     s.ReadExactly(si);
-                    _streamInfoData = si;
+                    if (!_readOnly)
+                        _streamInfoData = si;
                 }
                 else if (blockType == 4) // VORBIS_COMMENT
                 {
-                    _vcBlockOffset = s.Position - 4; // position of the 4-byte block header
-                    _vcBlockDataLen = (int)len;
-                    _vcIsLast = (b[0] & 128) == 128;
+                    if (!_readOnly)
+                    {
+                        _vcBlockOffset = s.Position - 4; // position of the 4-byte block header
+                        _vcBlockDataLen = (int)len;
+                        _vcIsLast = (b[0] & 128) == 128;
+                    }
                     byte [] vc = new byte[len];
                     s.ReadExactly(vc);
-                    FromByteArray(vc);
+                    FromByteArray(vc, readArtwork);
                 }
                 else if (blockType == 6) // PICTURE
                 {
@@ -166,7 +187,8 @@ namespace MusicFileUtilities
                     {
                         byte[] p = new byte[len];
                         s.ReadExactly(p);
-                        _originalPictureBlocks.Add(p);
+                        if (!_readOnly)
+                            _originalPictureBlocks.Add(p);
                         Artworks.Add(new VorbisArtwork(p));
                     }
                     else if (!isLast)
@@ -174,36 +196,54 @@ namespace MusicFileUtilities
                 }
                 else
                 {
-                    // PADDING has no semantic payload. On a network share, skip it instead of
-                    // transferring and retaining bytes that a rewrite may safely regenerate. A
-                    // final padding block needs no seek at all: no later byte is parsed.
-                    byte[] raw = null;
-                    if (blockType == 1 && !isLast)
-                        s.Seek(len, SeekOrigin.Current);
-                    else if (blockType != 1)
+                    if (_readOnly)
                     {
-                        raw = new byte[len];
-                        s.ReadExactly(raw);
+                        // Codec/tag projections do not use PADDING, APPLICATION, SEEKTABLE,
+                        // CUESHEET, or reserved metadata blocks. Avoid transferring and retaining
+                        // their payloads when this instance can never be saved. A final block does
+                        // not need to be consumed because parsing ends at its declared boundary.
+                        if (!isLast)
+                            Tools.SkipExactly(s, len);
                     }
-                    _otherMetaBlocks.Add((blockType, raw, (int)len));
-
-                    if (blockType == 1 && previousWasVorbisComment)
+                    else
                     {
-                        _paddingAfterVcOffset = blockOffset;
-                        _paddingAfterVcDataLen = (int)len;
-                        _paddingAfterVcIsLast = (b[0] & 128) == 128;
+                        // PADDING has no semantic payload. On a network share, skip it instead of
+                        // transferring and retaining bytes that a rewrite may safely regenerate. A
+                        // final padding block needs no seek at all: no later byte is parsed.
+                        byte[] raw = null;
+                        if (blockType == 1 && !isLast)
+                            Tools.SkipExactly(s, len);
+                        else if (blockType != 1)
+                        {
+                            raw = new byte[len];
+                            s.ReadExactly(raw);
+                        }
+                        _otherMetaBlocks.Add((blockType, raw, (int)len));
+
+                        if (blockType == 1 && previousWasVorbisComment)
+                        {
+                            _paddingAfterVcOffset = blockOffset;
+                            _paddingAfterVcDataLen = (int)len;
+                            _paddingAfterVcIsLast = (b[0] & 128) == 128;
+                        }
                     }
                 }
 
                 last = isLast;
-                if (isLast)
+                if (isLast && !_readOnly)
                     _audioOffset = checked(blockOffset + 4 + len);
                 previousWasVorbisComment = blockType == 4;
+
+                // FLAC permits one VORBIS_COMMENT block. Once it and the mandatory leading
+                // STREAMINFO have been parsed, a read-only metadata pass has every projection it
+                // exposes; later blocks are artwork or save-only container data.
+                if (_readOnly && !readArtwork && blockType == 4 && si != null)
+                    break;
 
             }
 
             if (si != null)
-                ParseStreamInfo(si, s.Length);
+                ParseStreamInfo(si, knownLength ?? s.Length);
 
         }
 
@@ -234,6 +274,10 @@ namespace MusicFileUtilities
 
         public void Save(string outputPath = null)
         {
+            if (_readOnly)
+                throw new InvalidOperationException(
+                    "This FLAC was opened read-only; reopen it without readOnly before writing tags.");
+
             LastSaveWasInPlace = false;
             string target = outputPath ?? Filename
                 ?? throw new InvalidOperationException("No filename associated with this file.");

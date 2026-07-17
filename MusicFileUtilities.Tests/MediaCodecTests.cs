@@ -51,6 +51,37 @@ namespace MusicFileUtilities.Tests
             Assert.Null(ex);
         }
 
+        [Theory]
+        [InlineData("sample.flac")]
+        [InlineData("sample.mp3")]
+        [InlineData("sample.dsf")]
+        [InlineData("sample_alac.m4a")]
+        [InlineData("sample.wv")]
+        public void KnownFileLengthPreservesCodecAndMetadataProjections(string file)
+        {
+            string path = MediaFixtures.Path_(file);
+            var baseline = MediaFile.GetFile(path, readOnly: true, readArtwork: false);
+            var hinted = MediaFile.GetFile(
+                path,
+                readOnly: true,
+                readArtwork: false,
+                knownLength: new System.IO.FileInfo(path).Length);
+            var baselineCodec = baseline.Codecs.First();
+            var hintedCodec = hinted.Codecs.First();
+
+            Assert.Equal(baselineCodec.CodecName, hintedCodec.CodecName);
+            Assert.Equal(baselineCodec.AverageBitrate, hintedCodec.AverageBitrate);
+            Assert.Equal(baselineCodec.Samplerate, hintedCodec.Samplerate);
+            Assert.Equal(baselineCodec.Channels, hintedCodec.Channels);
+            Assert.Equal(baselineCodec.BitsPerSample, hintedCodec.BitsPerSample);
+            Assert.Equal(baselineCodec.DurationInFrames, hintedCodec.DurationInFrames);
+            Assert.Equal(
+                baseline.Tags.First().GetKnownMetadata()
+                    .OrderBy(value => value.Key).ThenBy(value => value.Value),
+                hinted.Tags.First().GetKnownMetadata()
+                    .OrderBy(value => value.Key).ThenBy(value => value.Value));
+        }
+
         [Fact]
         public void UnsupportedExtensionThrows()
         {

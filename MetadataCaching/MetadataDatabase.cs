@@ -1143,7 +1143,11 @@ namespace MetadataCaching
                    {
                        try
                        {
-                           var parsed = MediaFile.GetFile(file.Name, readOnly: true, readArtwork: false);
+                           var parsed = MediaFile.GetFile(
+                               file.Name,
+                               readOnly: true,
+                               readArtwork: false,
+                               knownLength: file.Size);
                            filequeue.Add((id, setID, relativename, file.Size, file.Modified,
                                parsed), pipelineCts.Token);
                            if (isAdded)
@@ -1975,7 +1979,12 @@ namespace MetadataCaching
                     {
                         var target = targets[index];
                         using var sha = SHA256.Create();
-                        var file = MediaFile.GetFile(target.Path, sha, readOnly: true, readArtwork: true);
+                        var file = MediaFile.GetFile(
+                            target.Path,
+                            sha,
+                            readOnly: true,
+                            readArtwork: true,
+                            knownLength: target.Length);
                         ValidateArtworkSource(target);
                         hydrated[index] = (target, file);
                     });

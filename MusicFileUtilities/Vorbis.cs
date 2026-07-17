@@ -571,7 +571,7 @@ namespace MusicFileUtilities
         {
             byte[] b = new byte[27];
             s.ReadExactly(b);
-            if (Encoding.ASCII.GetString(b, 0, 4) != "OggS")
+            if (!b.AsSpan(0, 4).SequenceEqual("OggS"u8))
                 throw new InvalidDataException();
             byte[] segs = new byte[b[26]];
             s.ReadExactly(segs);
@@ -593,7 +593,7 @@ namespace MusicFileUtilities
         {
             if (page.Length < 7)
                 return;
-            if (Encoding.ASCII.GetString(page, 1, 6) != "vorbis")
+            if (!page.AsSpan(1, 6).SequenceEqual("vorbis"u8))
                 return;
             if (page[0] == 3) // Comment Block
             {

@@ -347,7 +347,7 @@ namespace MusicFileUtilities
             _deltasize = 8;
         }
 
-        public Atom(Stream s)
+        private void ReadHeader(Stream s)
         {
             long offs = s.Position;
             _fileoffset = offs;
@@ -359,14 +359,27 @@ namespace MusicFileUtilities
                 _headersize += 8;
             }
             else if (size == 0)
-                size = (ulong)(s.Length - offs);
+                size = (ulong)(SourceLength(s) - offs);
             _size = size;
         }
 
+        public Atom(Stream s)
+        {
+            ReadHeader(s);
+        }
+
         public Atom(Stream s, ContainerAtom parent)
-            : this(s)
         {
             _parent = parent;
+            ReadHeader(s);
+        }
+
+        protected long SourceLength(Stream s)
+        {
+            for (Atom atom = this; atom != null; atom = atom.ParentAtom)
+                if (atom is RootAtom root && root.KnownSourceLength is long knownLength)
+                    return knownLength;
+            return s.Length;
         }
 
         protected uint ReadUint16(Stream s)
@@ -1445,7 +1458,9 @@ namespace MusicFileUtilities
             // Clamp to the bytes actually present in the atom and the stream (malformed
             // counts/sizes would otherwise over-allocate), then parse from one bulk read.
             long atomPayloadBytes = Math.Max((long)_size - (long)_headersize - 8, 0);
-            long available = Math.Min(atomPayloadBytes / entryWidth, (s.Length - s.Position) / entryWidth);
+            long available = Math.Min(
+                atomPayloadBytes / entryWidth,
+                (SourceLength(s) - s.Position) / entryWidth);
             if (count > available)
                 count = (uint)Math.Max(available, 0);
 
@@ -1793,21 +1808,33 @@ namespace MusicFileUtilities
 
     public class RootAtom : ContainerAtom
     {
-        public RootAtom(string path, bool preserveUnknownData = true, bool readArtworkData = true)
+        public RootAtom(
+            string path,
+            bool preserveUnknownData = true,
+            bool readArtworkData = true,
+            long? knownLength = null)
         {
             PreserveUnknownData = preserveUnknownData;
             ReadArtworkData = readArtworkData;
+            KnownSourceLength = knownLength;
             ReadFile(path);
         }
 
-        internal RootAtom(Stream stream, string path, bool preserveUnknownData = true, bool readArtworkData = true)
+        internal RootAtom(
+            Stream stream,
+            string path,
+            bool preserveUnknownData = true,
+            bool readArtworkData = true,
+            long? knownLength = null)
         {
             PreserveUnknownData = preserveUnknownData;
             ReadArtworkData = readArtworkData;
+            KnownSourceLength = knownLength;
             ReadStream(stream, path);
         }
 
         private string _associatedpath;
+        internal long? KnownSourceLength { get; }
 
         public string Path
         {
@@ -1825,7 +1852,7 @@ namespace MusicFileUtilities
 
         private void ReadStream(Stream s, string path)
         {
-            long length = s.Length;
+            long length = SourceLength(s);
             while (s.Position < length)
             {
                 long pos = s.Position;
@@ -2349,10 +2376,18 @@ namespace MusicFileUtilities
         {
         }
 
-        public MP4File(string filename, bool readOnly, bool readArtwork = true)
+        public MP4File(
+            string filename,
+            bool readOnly,
+            bool readArtwork = true,
+            long? knownLength = null)
         {
             _readOnly = readOnly;
-            root_ = new RootAtom(filename, preserveUnknownData: !readOnly, readArtworkData: readArtwork);
+            root_ = new RootAtom(
+                filename,
+                preserveUnknownData: !readOnly,
+                readArtworkData: readArtwork,
+                knownLength: knownLength);
             ParseCodecInfo();
             Atom_mvhd mvhd = root_.FindPath("moov.mvhd") as Atom_mvhd;
             DurationInFrames = mvhd.DurationInFrames;

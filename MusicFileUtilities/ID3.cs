@@ -2639,7 +2639,10 @@ namespace MusicFileUtilities
             return _frames.OfType<IdentifierFrame>().FirstOrDefault(f => f.FrameID == frameId && f.Key == key);
         }
 
-        protected void ReadTag(Stream s, bool readArtwork = true)
+        protected void ReadTag(
+            Stream s,
+            bool readArtwork = true,
+            long? knownLength = null)
         {
             if (s is FileStream fs)
                 _filename = fs.Name;
@@ -2647,7 +2650,7 @@ namespace MusicFileUtilities
             BinaryReader r = new BinaryReader(s, Encoding.ASCII, true);
             long tagStart = s.CanSeek ? s.Position : 0;
             byte[] header = r.ReadBytes(10);
-            if (header.Length < 10 || Encoding.ASCII.GetString(header, 0, 3) != "ID3")
+            if (header.Length < 10 || !header.AsSpan(0, 3).SequenceEqual("ID3"u8))
             {
                 // No existing tag: leave the audio untouched for the codec scanner and use a
                 // deterministic version if the caller later creates metadata.
@@ -2662,7 +2665,7 @@ namespace MusicFileUtilities
 
             _headerversion = header[3];
 
-            if (Encoding.ASCII.GetString(header, 0, 3) == "ID3")
+            if (header.AsSpan(0, 3).SequenceEqual("ID3"u8))
             {
                 _flags = header[5];
                 _tagsize = header[6];
@@ -2823,7 +2826,7 @@ namespace MusicFileUtilities
             {
                 long tagEnd = tagStart + 10L + _tagsize +
                     ((_headerversion == 4 && (_flags & 0x10) != 0) ? 10L : 0L);
-                if (tagEnd <= s.Length && s.Position != tagEnd)
+                if (tagEnd <= (knownLength ?? s.Length) && s.Position != tagEnd)
                     s.Seek(tagEnd, SeekOrigin.Begin);
             }
             ParseStandardFields();
@@ -2871,13 +2874,18 @@ namespace MusicFileUtilities
 
 
         public MP3File(string filename, bool readArtwork = true)
+            : this(filename, readArtwork, knownLength: null)
+        {
+        }
+
+        internal MP3File(string filename, bool readArtwork, long? knownLength)
         {
             using (FileStream s = Tools.OpenReadSequential(filename))
             {
-                ReadTag(s, readArtwork);
+                long length = knownLength ?? s.Length;
+                ReadTag(s, readArtwork, length);
                 // FileStream.Length is a syscall; don't pay it once per scanned byte while
                 // hunting for the first frame sync.
-                long length = s.Length;
                 for (; ; )
                 {
                     int b0 = -1, b1 = -1, b5 = -1;
@@ -3075,25 +3083,30 @@ namespace MusicFileUtilities
             }
         }
         public DSFFile(string filename, bool readArtwork = true)
+            : this(filename, readArtwork, knownLength: null)
+        {
+        }
+
+        internal DSFFile(string filename, bool readArtwork, long? knownLength)
         {
             // ReadTag only runs when a metadata pointer is present, so set the filename here
             // too — otherwise a DSF with no existing tag can't be saved in place.
             _filename = filename;
             using FileStream s = Tools.OpenReadSequential(filename);
-            Parse(s, readArtwork);
+            Parse(s, readArtwork, knownLength);
         }
 
-        internal DSFFile(Stream stream, string filename)
+        internal DSFFile(Stream stream, string filename, long? knownLength = null)
         {
             _filename = filename;
-            Parse(stream, readArtwork: true);
+            Parse(stream, readArtwork: true, knownLength);
         }
 
-        private void Parse(Stream s, bool readArtwork)
+        private void Parse(Stream s, bool readArtwork, long? knownLength)
         {
             byte[] header = new byte[4];
             s.ReadExactly(header);
-            if (Encoding.ASCII.GetString(header, 0, 4) != "DSD ")
+            if (!header.AsSpan().SequenceEqual("DSD "u8))
                 return;
             Array.Resize(ref header, 28);
             s.ReadExactly(header, 4, 24);
@@ -3103,7 +3116,7 @@ namespace MusicFileUtilities
             // ID3 tag and then back to byte 28, costing an extra round trip on every tagged DSF.
             byte[] fmtId = new byte[4];
             s.ReadExactly(fmtId);
-            if (Encoding.ASCII.GetString(fmtId, 0, 4) != "fmt ")
+            if (!fmtId.AsSpan().SequenceEqual("fmt "u8))
                 return;
             using (BinaryReader r = new BinaryReader(s, Encoding.ASCII, true))
             {
@@ -3120,7 +3133,7 @@ namespace MusicFileUtilities
             if (_tagoffset != 0)
             {
                 s.Seek(_tagoffset, SeekOrigin.Begin);
-                ReadTag(s, readArtwork);
+                ReadTag(s, readArtwork, knownLength);
             }
         }
 

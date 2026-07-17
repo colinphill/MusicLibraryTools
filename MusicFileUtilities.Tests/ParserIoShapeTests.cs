@@ -21,6 +21,113 @@ public class ParserIoShapeTests
 
         Assert.Equal(0, stream.SeekCount);
         Assert.True(stream.Position < stream.Length);
+        Assert.Equal(stream.Position, stream.BytesRead);
+    }
+
+    [Fact]
+    public void FlacKeepsSmallNonFinalPaddingInsideSequentialReadBuffer()
+    {
+        byte[] comments = new VorbisComments().ToByteArray(includeart: false);
+        using var bytes = new MemoryStream();
+        bytes.Write("fLaC"u8);
+        FLACFile.WriteMetaBlockHeader(bytes, 0, 34, isLast: false);
+        bytes.Write(new byte[34]);
+        FLACFile.WriteMetaBlockHeader(bytes, 1, 8192, isLast: false);
+        bytes.Write(new byte[8192]);
+        FLACFile.WriteMetaBlockHeader(bytes, 4, comments.Length, isLast: true);
+        bytes.Write(comments);
+
+        byte[] file = bytes.ToArray();
+        using var stream = new CountingMemoryStream(file);
+        _ = new FLACFile(stream, "test.flac", readArtwork: false);
+
+        Assert.Equal(0, stream.SeekCount);
+        Assert.Equal(file.Length, stream.BytesRead);
+    }
+
+    [Fact]
+    public void MetadataOnlyFlacDoesNotDecodePictureFromVorbisComment()
+    {
+        var comments = new VorbisComments();
+        comments.Artworks.Add(new VorbisArtwork
+        {
+            PictureType = ID3v2Util.APICType.FrontCover,
+            MimeType = "image/jpeg",
+            Description = "",
+            Width = 1000,
+            Height = 1000,
+            Depth = 24,
+            Data = new byte[256 * 1024],
+        });
+        byte[] commentData = comments.ToByteArray(includeart: true);
+        using var bytes = new MemoryStream();
+        bytes.Write("fLaC"u8);
+        FLACFile.WriteMetaBlockHeader(bytes, 0, 34, isLast: false);
+        bytes.Write(new byte[34]);
+        FLACFile.WriteMetaBlockHeader(bytes, 4, commentData.Length, isLast: true);
+        bytes.Write(commentData);
+
+        using var stream = new CountingMemoryStream(bytes.ToArray());
+        var flac = new FLACFile(stream, "test.flac", readArtwork: false);
+
+        Assert.Empty(flac.GetImageMetadata());
+    }
+
+    [Fact]
+    public void ReadOnlyMetadataFlacStopsAfterVorbisComment()
+    {
+        var comments = new VorbisComments();
+        comments.Comments.Add(KeyValuePair.Create("TITLE", "Network Test"));
+        byte[] commentData = comments.ToByteArray(includeart: false);
+        byte[] picture = new VorbisArtwork
+        {
+            PictureType = ID3v2Util.APICType.FrontCover,
+            MimeType = "image/jpeg",
+            Description = "",
+            Width = 1000,
+            Height = 1000,
+            Depth = 24,
+            Data = new byte[512 * 1024],
+        }.ToByteArray();
+        using var bytes = new MemoryStream();
+        bytes.Write("fLaC"u8);
+        FLACFile.WriteMetaBlockHeader(bytes, 0, 34, isLast: false);
+        bytes.Write(new byte[34]);
+        FLACFile.WriteMetaBlockHeader(bytes, 4, commentData.Length, isLast: false);
+        bytes.Write(commentData);
+        long expectedEnd = bytes.Position;
+        FLACFile.WriteMetaBlockHeader(bytes, 6, picture.Length, isLast: false);
+        bytes.Write(picture);
+        FLACFile.WriteMetaBlockHeader(bytes, 1, 8192, isLast: true);
+        bytes.Write(new byte[8192]);
+        byte[] file = bytes.ToArray();
+
+        using var stream = new CountingMemoryStream(file);
+        var flac = new FLACFile(
+            stream,
+            "test.flac",
+            readArtwork: false,
+            readOnly: true,
+            knownLength: file.Length);
+
+        Assert.Equal("Network Test", flac.Title);
+        Assert.Equal(expectedEnd, stream.Position);
+        Assert.Equal(expectedEnd, stream.BytesRead);
+        Assert.Equal(0, stream.SeekCount);
+        Assert.Equal(0, stream.LengthQueryCount);
+    }
+
+    [Fact]
+    public void ReadOnlyFlacCannotBeSaved()
+    {
+        string path = MediaFixtures.Path_("sample.flac");
+        var flac = Assert.IsType<FLACFile>(MediaFile.GetFile(
+            path,
+            readOnly: true,
+            readArtwork: false,
+            knownLength: new FileInfo(path).Length));
+
+        Assert.Throws<InvalidOperationException>(() => flac.Save());
     }
 
     [Fact]
@@ -44,11 +151,13 @@ public class ParserIoShapeTests
         bytes.Write(picture);
         FLACFile.WriteMetaBlockHeader(bytes, 1, 0, isLast: true);
 
-        using var stream = new CountingMemoryStream(bytes.ToArray());
+        byte[] file = bytes.ToArray();
+        using var stream = new CountingMemoryStream(file);
         var flac = new FLACFile(stream, "test.flac", readArtwork: false);
 
         Assert.Empty(flac.GetImageMetadata());
         Assert.Equal(1, stream.SeekCount);
+        Assert.True(stream.BytesRead < file.Length);
     }
 
     [Fact]
@@ -63,9 +172,10 @@ public class ParserIoShapeTests
         ];
         using var stream = new CountingMemoryStream(file);
 
-        var root = new RootAtom(stream, "test.m4a");
+        var root = new RootAtom(stream, "test.m4a", knownLength: file.Length);
 
         Assert.Equal(0, stream.SeekCount);
+        Assert.Equal(0, stream.LengthQueryCount);
         Assert.Single(root.Children);
     }
 
@@ -123,10 +233,11 @@ public class ParserIoShapeTests
 
         using var stream = new CountingMemoryStream(file);
         var tag = new ReadableId3Tag();
-        tag.Read(stream);
+        tag.Read(stream, knownLength: file.Length);
 
         Assert.Equal(10 + tagSize, stream.Position);
         Assert.Equal(1, stream.SeekCount);
+        Assert.Equal(0, stream.LengthQueryCount);
         Assert.Equal("X", tag.Title);
     }
 
@@ -150,11 +261,12 @@ public class ParserIoShapeTests
 
         using var stream = new CountingMemoryStream(file);
         var tag = new ReadableId3Tag();
-        tag.Read(stream, readArtwork: false);
+        tag.Read(stream, readArtwork: false, knownLength: file.Length);
 
         Assert.Equal("X", tag.Title);
         Assert.Empty(tag.GetImageMetadata());
         Assert.Equal(1, stream.SeekCount);
+        Assert.Equal(0, stream.LengthQueryCount);
     }
 
     [Fact]
@@ -168,9 +280,10 @@ public class ParserIoShapeTests
         using var stream = new CountingMemoryStream(file);
         var parsed = new APETag();
 
-        Assert.True(parsed.ReadTag(stream, onlyAtEnd: true));
+        Assert.True(parsed.ReadTag(stream, onlyAtEnd: true, knownLength: file.Length));
 
         Assert.Equal(2, stream.SeekCount); // footer, then item data; no front/header probes
+        Assert.Equal(0, stream.LengthQueryCount);
         Assert.Equal(128, parsed.AudioEndOffset);
         Assert.Equal("Tail Tag", parsed.Title);
     }
@@ -187,11 +300,16 @@ public class ParserIoShapeTests
         using var stream = new CountingMemoryStream(file);
         var parsed = new APETag();
 
-        Assert.True(parsed.ReadTag(stream, onlyAtEnd: true, readArtwork: false));
+        Assert.True(parsed.ReadTag(
+            stream,
+            onlyAtEnd: true,
+            readArtwork: false,
+            knownLength: file.Length));
 
         Assert.Equal("Tail Tag", parsed.Title);
         Assert.Empty(parsed.GetImageMetadata());
         Assert.Equal(3, stream.SeekCount); // footer, item start, then the large image value
+        Assert.Equal(0, stream.LengthQueryCount);
     }
 
     [Fact]
@@ -213,9 +331,10 @@ public class ParserIoShapeTests
         file[103] = 3;
 
         using var stream = new CountingMemoryStream(file);
-        var dsf = new DSFFile(stream, "test.dsf");
+        var dsf = new DSFFile(stream, "test.dsf", knownLength: file.Length);
 
         Assert.Equal(1, stream.SeekCount);
+        Assert.Equal(0, stream.LengthQueryCount);
         Assert.Equal(2_822_400u, dsf.Samplerate);
         Assert.Equal(2u, dsf.Channels);
         Assert.Equal(75u, dsf.DurationInFrames);
@@ -239,17 +358,56 @@ public class ParserIoShapeTests
 
     private sealed class ReadableId3Tag : ID3v2Tag
     {
-        public void Read(Stream stream, bool readArtwork = true) => ReadTag(stream, readArtwork);
+        public void Read(
+            Stream stream,
+            bool readArtwork = true,
+            long? knownLength = null) => ReadTag(stream, readArtwork, knownLength);
     }
 
     private sealed class CountingMemoryStream(byte[] bytes) : MemoryStream(bytes)
     {
         public int SeekCount { get; private set; }
+        public int LengthQueryCount { get; private set; }
+        public int ReadCount { get; private set; }
+        public long BytesRead { get; private set; }
+
+        public override long Length
+        {
+            get
+            {
+                LengthQueryCount++;
+                return base.Length;
+            }
+        }
 
         public override long Seek(long offset, SeekOrigin loc)
         {
             SeekCount++;
             return base.Seek(offset, loc);
+        }
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            int read = base.Read(buffer, offset, count);
+            ReadCount++;
+            BytesRead += read;
+            return read;
+        }
+
+        public override int Read(Span<byte> buffer)
+        {
+            // MemoryStream's span implementation delegates to the array overload, where this
+            // stream records the operation. Counting here too would double every ReadExactly.
+            return base.Read(buffer);
+        }
+
+        public override int ReadByte()
+        {
+            int value = base.ReadByte();
+            ReadCount++;
+            if (value >= 0)
+                BytesRead++;
+            return value;
         }
     }
 }

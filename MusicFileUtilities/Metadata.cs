@@ -269,32 +269,35 @@ namespace MusicFileUtilities
             string path,
             HashAlgorithm hash = null,
             bool readOnly = false,
-            bool readArtwork = true)
+            bool readArtwork = true,
+            long? knownLength = null)
         {
             string extension = Path.GetExtension(path).ToLower();
             // No File.Exists pre-check: on a network share it costs a full round-trip per file,
             // and the parser's own open throws FileNotFoundException for a missing file anyway.
+            // Indexing callers may provide the length captured by the same directory enumeration
+            // so parsers do not issue another handle-length request over the share.
 
             IMediaFile file = null;
             switch (extension)
             {
                 case ".wv":
-                    file = new WavPackFile(path, readArtwork);
+                    file = new WavPackFile(path, readArtwork, knownLength);
                     break;
 
                 case ".mp3":
-                    file = new MP3File(path, readArtwork);
+                    file = new MP3File(path, readArtwork, knownLength);
                     break;
 
                 case ".dsf":
-                    file = new DSFFile(path, readArtwork);
+                    file = new DSFFile(path, readArtwork, knownLength);
                     break;
 
                 case ".m4a":
                 case ".mp4":
                 case ".m4p":
                 case ".m4r":
-                    file = new MP4File(path, readOnly, readArtwork);
+                    file = new MP4File(path, readOnly, readArtwork, knownLength);
                     break;
 
                 case ".ogg":
@@ -302,7 +305,7 @@ namespace MusicFileUtilities
                     break;
 
                 case ".flac":
-                    file = new FLACFile(path, readArtwork);
+                    file = new FLACFile(path, readOnly, readArtwork, knownLength);
                     break;
 
                 default:

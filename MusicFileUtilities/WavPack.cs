@@ -58,12 +58,18 @@ namespace MusicFileUtilities
             24000, 32000, 44100, 48000, 64000, 88200, 96000, 192000, 44100 };
 
         public WavPackFile(string filename, bool readArtwork = true)
+            : this(filename, readArtwork, knownLength: null)
+        {
+        }
+
+        internal WavPackFile(string filename, bool readArtwork, long? knownLength)
         {
             _filename = filename;
             using var s = Tools.OpenReadSequential(filename);
+            long fileLength = knownLength ?? s.Length;
             byte[] header = new byte[32];
             s.ReadExactly(header);
-            while (Encoding.ASCII.GetString(header,0,4) == "wvpk")
+            while (header.AsSpan(0, 4).SequenceEqual("wvpk"u8))
             {
                 int blocksize = Tools.Int32AtLE(header, 4) - 24;
                 int version = Tools.Int16AtLE(header, 8);
@@ -106,12 +112,18 @@ namespace MusicFileUtilities
                 durationinframes_ = (uint)(75ul * totalsamples / samplerate_);
                 // Derive bitrate from the raw sample count so sub-second files
                 // (durationinframes_ < 75) don't divide by zero.
-                averagebitrate_ = totalsamples == 0 ? 0 : (uint)((ulong)s.Length * 8 * samplerate_ / totalsamples);
+                averagebitrate_ = totalsamples == 0
+                    ? 0
+                    : (uint)((ulong)fileLength * 8 * samplerate_ / totalsamples);
 
                 break;
             }
             tag_ = new APETag();
-            if (!tag_.ReadTag(s, onlyAtEnd: true, readArtwork: readArtwork))
+            if (!tag_.ReadTag(
+                    s,
+                    onlyAtEnd: true,
+                    readArtwork: readArtwork,
+                    knownLength: fileLength))
                 tag_ = new APETag();
         }
 

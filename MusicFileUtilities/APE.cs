@@ -503,9 +503,13 @@ namespace MusicFileUtilities
             return result.ToArray();
         }
 
-        public bool ReadTag(Stream s, bool onlyAtEnd = false, bool readArtwork = true)
+        public bool ReadTag(
+            Stream s,
+            bool onlyAtEnd = false,
+            bool readArtwork = true,
+            long? knownLength = null)
         {
-            long streamLength = s.Length;
+            long streamLength = knownLength ?? s.Length;
             if (streamLength < 32)
                 return false;
             byte[] preamble = new byte[8];
