@@ -56,7 +56,7 @@ than extending the legacy migration:
 ## Objective
 
 Rewrite the library-operation algorithms as typed, independently testable services in
-`MusicLibrary.Core`. `MusicLibrary.App` and the existing command-line executables will call those
+`MusicLibrary.Core`. `MusicLibraryManager` and the existing command-line executables will call those
 same services. The command-line projects will contain only option parsing, progress rendering,
 result rendering, and exit-code mapping.
 

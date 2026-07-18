@@ -559,16 +559,16 @@ public sealed class PresentationTests
                 TextFields = [new TextField("CUSTOM_NOTE", "Second")],
             });
         var writer = new FakeTagWriter();
-        var viewModel = new MusicLibrary.App.ViewModels.FieldsDialogViewModel(
+        var viewModel = new FieldsDialogViewModel(
             media, writer, [@"C:\one.flac", @"C:\two.flac"]);
         await viewModel.Loading;
 
-        MusicLibrary.App.ViewModels.FieldRow grouping =
+        FieldRow grouping =
             viewModel.Rows.Single(row => row.Field == TagFields.Grouping);
         Assert.True(grouping.IsMixed);
         grouping.Value = "Canonical grouping";
 
-        MusicLibrary.App.ViewModels.FieldRow copyright =
+        FieldRow copyright =
             viewModel.Rows.Single(row => row.Field == TagFields.Copyright);
         viewModel.RemoveFieldCommand.Execute(copyright);
 
@@ -576,7 +576,7 @@ public sealed class PresentationTests
         viewModel.AddFieldCommand.Execute(null);
         viewModel.Rows.Single(row => row.Field == TagFields.Mood).Value = "Calm";
 
-        MusicLibrary.App.ViewModels.FieldRow custom =
+        FieldRow custom =
             viewModel.Rows.Single(row => row.UserStringKey == "CUSTOM_NOTE");
         Assert.True(custom.IsMixed);
         custom.Value = "Canonical note";

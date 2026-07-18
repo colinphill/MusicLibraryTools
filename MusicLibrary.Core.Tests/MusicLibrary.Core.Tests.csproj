@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
@@ -24,7 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MusicLibrary.Core\MusicLibrary.Core.csproj" />
-    <ProjectReference Include="..\MusicLibrary.App\MusicLibrary.App.csproj" />
+    <ProjectReference Include="..\MusicLibraryManager.Presentation\MusicLibraryManager.Presentation.csproj" />
   </ItemGroup>
 
   <!-- Reuse the shared fixture generator from MusicFileUtilities.Tests: tiny ffmpeg tone clips

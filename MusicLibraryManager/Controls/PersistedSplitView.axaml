@@ -1,0 +1,24 @@
+<UserControl x:Class="MusicLibraryManager.Controls.PersistedSplitView"
+             x:Name="Root"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Grid x:Name="SplitGrid">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="300" MinWidth="180" />
+      <ColumnDefinition Width="10" />
+      <ColumnDefinition Width="*" MinWidth="160" />
+    </Grid.ColumnDefinitions>
+    <ContentPresenter x:Name="LeftPresenter" Grid.Column="0"
+                      HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+    <Border Grid.Column="1" Width="2" Margin="0,8" CornerRadius="2"
+            Background="{DynamicResource AppBorderBrush}" />
+    <GridSplitter x:Name="Splitter" Grid.Column="1"
+                  ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"
+                  KeyboardIncrement="24" DragIncrement="1"
+                  Background="Transparent" Focusable="True"
+                  AutomationProperties.Name="{Binding Label, ElementName=Root}"
+                  KeyDown="OnSplitterKeyDown" />
+    <ContentPresenter x:Name="RightPresenter" Grid.Column="2"
+                      HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+  </Grid>
+</UserControl>

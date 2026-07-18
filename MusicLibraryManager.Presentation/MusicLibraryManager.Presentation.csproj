@@ -10,17 +10,4 @@
     <PackageReference Include="CommunityToolkit.Mvvm" />
     <ProjectReference Include="..\MusicLibrary.Core\MusicLibrary.Core.csproj" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Compile Include="..\MusicLibrary.App\Services\IDialogService.cs" Link="LegacyContracts\IDialogService.cs" />
-    <Compile Include="..\MusicLibrary.App\Services\IFileDialogService.cs" Link="LegacyContracts\IFileDialogService.cs" />
-    <Compile Include="..\MusicLibrary.App\ViewModels\ViewModelBase.cs" Link="Workflows\ViewModelBase.cs" />
-    <Compile Include="..\MusicLibrary.App\ViewModels\AnalysisRunViewModel.cs" Link="Workflows\AnalysisRunViewModel.cs" />
-    <Compile Include="..\MusicLibrary.App\ViewModels\AnalyzerViewModel.cs" Link="Workflows\AnalyzerViewModel.cs" />
-    <Compile Include="..\MusicLibrary.App\ViewModels\ArtistGroupViewModel.cs" Link="Workflows\ArtistGroupViewModel.cs" />
-    <Compile Include="..\MusicLibrary.App\ViewModels\FieldsDialogViewModel.cs" Link="Workflows\FieldsDialogViewModel.cs" />
-    <Compile Include="..\MusicLibrary.App\ViewModels\IngestViewModel.cs" Link="Workflows\IngestViewModel.cs" />
-    <Compile Include="..\MusicLibrary.App\ViewModels\OrganizeViewModel.cs" Link="Workflows\OrganizeViewModel.cs" />
-    <Compile Include="..\MusicLibrary.App\ViewModels\OperationsViewModel.cs" Link="Workflows\OperationsViewModel.cs" />
-  </ItemGroup>
 </Project>

@@ -43,25 +43,11 @@ Embedded artwork is parsed, hashed, measured, and preserved byte-for-byte across
 
 ### Desktop app
 
-- **MusicLibraryManager.Studio** — the complete Windows desktop experience built with WPF and a
-  Blazor WebView. It exposes library browsing and editing plus the health, ingest, organize, and
-  operations workflows in one shell. A packaging script produces a self-contained x64 folder,
-  versioned ZIP, and checksum; see
-  [`MusicLibraryManager.Studio/DEPLOYMENT.md`](MusicLibraryManager.Studio/DEPLOYMENT.md).
-- **MusicLibraryManager.Studio.Avalonia** — the native cross-platform Studio rewrite for Windows,
-  macOS, and Linux. It preserves the Studio shell and workflows without WPF, Razor, WebView2,
-  CSS, or JavaScript; see
-  [`MusicLibraryManager.Studio.Avalonia/DEPLOYMENT.md`](MusicLibraryManager.Studio.Avalonia/DEPLOYMENT.md).
-- **MusicLibraryManager** — the Windows 11 Fluent manager and staged successor to the Avalonia
-  app. Its first release provides configuration management, cached/offline browsing, a virtualized
-  sortable library table, saved views, indexing with cancellation, and safe single- or multi-file
-  tag/artwork editing. It targets x64 WinUI 3 with the Windows 11 Fluent theme and publishes as a
-  self-contained folder;
-  see [`MusicLibraryManager/README.md`](MusicLibraryManager/README.md).
-- **MusicLibrary.App** — an Avalonia library browser and editor for indexing, cached filtering,
-  tag and artwork editing, analysis, ingest, and organization. The prioritized application backlog
-  is tracked in [`MusicLibrary.App/ROADMAP.md`](MusicLibrary.App/ROADMAP.md). It remains available
-  while manager parity is completed.
+- **MusicLibraryManager** — the native Avalonia desktop application for Windows, macOS, and
+  Linux. It provides configuration management, cached library browsing, indexing, tag and artwork
+  editing, and the health, ingest, organize, and operations workflows in one shell. Cross-platform
+  packaging instructions are in
+  [`MusicLibraryManager/DEPLOYMENT.md`](MusicLibraryManager/DEPLOYMENT.md).
 
 ### Tools
 
@@ -166,7 +152,7 @@ be validated against the share rather than assumed to be faster. Multiple scan r
 discovered concurrently under that same cap, and root-file snapshots from discovery are reused so
 each root directory is listed only once per indexing pass. The file lengths in those snapshots are
 also reused by metadata parsers instead of querying each open handle again.
-MusicLibrary.App exposes this cap beside **Index library** and includes a bounded, read-only
+MusicLibraryManager exposes this cap beside **Index library** and includes a bounded, read-only
 per-root benchmark. The benchmark reads disjoint metadata samples without artwork or database writes and recommends
 the smallest reader count within 5% of each root's measured peak; its conservative all-root setting
 uses the lowest of those recommendations.
@@ -232,7 +218,7 @@ the binary library. iTunes must be closed during apply. Each album's library upd
 atomically saved with a backup. If `ItunesLibrary` is omitted, AAC files go to the `IndexTarget`
 flagged with `IngestRole="AacFallback"`.
 
-The App's Ingest tab always uses the active library configuration. Its configuration editor permits
+The manager's Ingest tab always uses the active library configuration. Its configuration editor permits
 partial ingest setup and unavailable target folders; the Ingest tab lists any missing role
 assignments before enabling Preflight or Preview. The legacy
 [`IngestMusicConfiguration.example.xml`](IngestMusic/IngestMusicConfiguration.example.xml) format

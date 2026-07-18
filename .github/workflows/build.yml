@@ -5,29 +5,6 @@ on:
   pull_request:
 
 jobs:
-  studio:
-    runs-on: windows-latest
-    env:
-      DOTNET_CLI_TELEMETRY_OPTOUT: 1
-      CI: true
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: 10.0.301
-      - name: Test Studio
-        run: dotnet test MusicLibraryManager.Studio.Tests/MusicLibraryManager.Studio.Tests.csproj --configuration Release
-      - name: Package Studio
-        run: MusicLibraryManager.Studio\Package.cmd -Version "1.0.0-ci.${{ github.run_number }}" -NoRestore
-      - name: Upload Studio package
-        uses: actions/upload-artifact@v7
-        with:
-          name: MusicLibraryManager.Studio-win-x64
-          path: |
-            .artifacts/studio/*.zip
-            .artifacts/studio/*.sha256
-          if-no-files-found: error
-
   portable:
     runs-on: windows-latest
     env:
@@ -48,7 +25,7 @@ jobs:
       - name: Test
         run: dotnet test MusicLibraryTools.Portable.slnf --configuration Release --no-build
 
-  avalonia-packages:
+  manager-packages:
     strategy:
       fail-fast: false
       matrix:
@@ -71,20 +48,20 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.301
-      - name: Test native Studio
+      - name: Test Music Library Manager
         shell: pwsh
-        run: dotnet test MusicLibraryManager.Studio.Avalonia.Tests/MusicLibraryManager.Studio.Avalonia.Tests.csproj --configuration Release
-      - name: Package native Studio
+        run: dotnet test MusicLibraryManager.UI.Tests/MusicLibraryManager.UI.Tests.csproj --configuration Release
+      - name: Package Music Library Manager
         shell: pwsh
-        run: ./MusicLibraryManager.Studio.Avalonia/Package.ps1 -Version "1.0.0-ci.${{ github.run_number }}" -Rids ${{ matrix.rid }}
-      - name: Upload native Studio package
+        run: ./MusicLibraryManager/Package.ps1 -Version "1.0.0-ci.${{ github.run_number }}" -Rids ${{ matrix.rid }}
+      - name: Upload Music Library Manager package
         uses: actions/upload-artifact@v7
         with:
-          name: MusicLibraryManager.Studio.Avalonia-${{ matrix.rid }}
+          name: MusicLibraryManager-${{ matrix.rid }}
           path: |
-            .artifacts/studio-avalonia/*.zip
-            .artifacts/studio-avalonia/*.tar.gz
-            .artifacts/studio-avalonia/*.sha256
+            .artifacts/music-library-manager/*.zip
+            .artifacts/music-library-manager/*.tar.gz
+            .artifacts/music-library-manager/*.sha256
           if-no-files-found: error
 
   linux:

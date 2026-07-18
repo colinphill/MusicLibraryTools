@@ -1,4 +1,3 @@
-using MusicLibrary.App.ViewModels;
 using MusicLibrary.Core.Services;
 using MusicLibraryTools;
 using Xunit;
@@ -54,31 +53,6 @@ public sealed class IndexBenchmarkServiceTests
         Assert.False(root.Succeeded);
         Assert.NotNull(root.Error);
         Assert.Empty(root.Trials);
-    }
-
-    [Fact]
-    public void ReaderControlPersistsAndBenchmarkSummaryRetainsPerRootMeasurements()
-    {
-        using var temp = new TempDirectory();
-        var settings = new AppSettings(Path.Combine(temp.Path, "settings.json"));
-        using var library = new LibraryService(settings);
-        var viewModel = new LibraryViewModel(library, new IndexBenchmarkService(settings), settings);
-        viewModel.ReaderParallelism = 7;
-        var result = new MusicLibrary.Core.Models.IndexBenchmarkResult(
-        [
-            new("Z:\\Music", 96, TimeSpan.FromSeconds(2),
-                [
-                    new(1, 96, 0, TimeSpan.FromSeconds(9.6), 10),
-                    new(4, 96, 0, TimeSpan.FromSeconds(3.2), 30),
-                ], 4, null),
-        ]);
-
-        string summary = LibraryViewModel.DescribeBenchmark(result, 4);
-
-        Assert.Equal("7", settings.GetPreference(IndexBenchmarkService.ReaderParallelismPreference));
-        Assert.Contains("Z:\\Music", summary);
-        Assert.Contains("1× 10.0/s", summary);
-        Assert.Contains("recommend 4", summary);
     }
 
     private static AppSettings LoadSettings(TempDirectory temp, string root)

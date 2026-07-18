@@ -1,5 +1,4 @@
-using MusicLibrary.App.Services;
-using MusicLibrary.App.ViewModels;
+using MusicLibraryManager.Presentation;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
 using MusicLibraryTools;

@@ -1,8 +1,0 @@
-<select value="@Item.SelectedOption?.Value" @onchange="Changed" aria-label="Canonical value">
-    @foreach (var option in Item.Options) { <option value="@option.Value">@option.Value</option> }
-</select>
-
-@code {
-    [Parameter, EditorRequired] public AnalysisConflictGroupViewModel Item { get; set; } = null!;
-    private void Changed(ChangeEventArgs e) => Item.SelectedOption = Item.Options.FirstOrDefault(option => option.Value == e.Value?.ToString());
-}

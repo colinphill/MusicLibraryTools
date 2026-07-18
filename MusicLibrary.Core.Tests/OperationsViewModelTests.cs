@@ -1,5 +1,4 @@
-using MusicLibrary.App.Services;
-using MusicLibrary.App.ViewModels;
+using MusicLibraryManager.Presentation;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
 using Xunit;
@@ -98,7 +97,7 @@ public sealed class OperationsViewModelTests
         var settings = new AppSettings(Path.Combine(temp.Path, "settings.json"));
         string ingest = Path.Combine(temp.Path, "incoming");
         string device = Path.Combine(temp.Path, "device");
-        settings.SetPreference("Ingest.SourceDirectory", ingest);
+        settings.SetPreference("manager.ingest.source.v1", ingest);
         var summary = new OperationJournalSummary(
             "UpdateCarCard", OperationJournalKind.Device, OperationJournalState.Interrupted,
             Path.Combine(device, "run"), Path.Combine(device, "run", "journal.tsv"),
@@ -243,7 +242,7 @@ public sealed class OperationsViewModelTests
         Assert.True(viewModel.ShowPurgePreview);
         Assert.True(viewModel.ApplyPurgeCommand.CanExecute(null));
         Assert.Equal(45, journals.PreviewRetentionDays);
-        Assert.Equal("45", settings.GetPreference("Operations.RetentionDays"));
+        Assert.Equal("45", settings.GetPreference("manager.operations.retentionDays.v1"));
 
         await viewModel.ApplyPurgeCommand.ExecuteAsync(null);
 
