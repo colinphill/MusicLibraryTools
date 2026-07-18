@@ -2203,7 +2203,8 @@ namespace MusicFileUtilities
 
     }
 
-    public class MP4File : TagBase, ICodecProvider, IMediaFile, IMetadataWriter, IArtworkWriter
+    public class MP4File : TagBase, ICodecProvider, IMediaFile, IMetadataWriter, IArtworkWriter,
+        IUserStringMetadata
     {
   
         #region IMetadataProvider Properties
@@ -2270,6 +2271,24 @@ namespace MusicFileUtilities
         {
             foreach (var field in GetKnownMetadata())
                 yield return KeyValuePair.Create(field.Key.ToString(), field.Value);
+        }
+
+        public IEnumerable<KeyValuePair<string, string>> GetUserStrings()
+        {
+            if (root_.FindPath("moov.udta.meta.ilst") is not Atom_ilst ilst)
+                yield break;
+
+            foreach (ContainerAtom atom in ilst.Children
+                .Where(child => child.Type == "----")
+                .OfType<ContainerAtom>())
+            {
+                string key = (atom.FindPath("name") as StringAtom)?.Text;
+                if (string.IsNullOrWhiteSpace(key) || MP4Util.TagMapping.ContainsKey(key))
+                    continue;
+                foreach (Atom_data data in atom.FindMultiplePath("data").OfType<Atom_data>())
+                    if (data.IsText)
+                        yield return KeyValuePair.Create(key, data.Text);
+            }
         }
 
         public override IEnumerable<IMetadataImage> GetImageMetadata()
@@ -2514,6 +2533,33 @@ namespace MusicFileUtilities
 
             SetField(field, null);
         }
+
+        public void SetUserString(string key, string value)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+                throw new ArgumentException("A user-string key is required.", nameof(key));
+            key = key.Trim();
+            Atom_ilst ilst = root_.FindPath("moov.udta.meta.ilst") as Atom_ilst
+                ?? throw new InvalidOperationException("No ilst atom found.");
+
+            if (value is null)
+            {
+                Atom existing = ilst.Children.FirstOrDefault(atom =>
+                    atom.Type == "----" &&
+                    (atom as ContainerAtom)?.FindPath("name") is StringAtom name &&
+                    string.Equals(name.Text, key, StringComparison.OrdinalIgnoreCase));
+                if (existing is not null)
+                {
+                    ilst.Children.Remove(existing);
+                    ilst.Touch(-(long)existing.Size);
+                }
+                return;
+            }
+
+            GetOrCreateFreeformDataAtom(ilst, key).Text = value;
+        }
+
+        public void RemoveUserString(string key) => SetUserString(key, null);
 
         // IArtworkWriter: write the cover into the 'covr' atom under ilst, creating it if absent
         // (same pattern as the text fields above). The atom tree resizes/reflows on Touch.

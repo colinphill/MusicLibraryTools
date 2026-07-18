@@ -10,8 +10,11 @@ namespace MusicLibrary.App.ViewModels;
 /// <summary>One arbitrary tag field being edited in the fields dialog.</summary>
 public partial class FieldRow : ObservableObject
 {
-    public TagFields Field { get; }
-    public string Name => Field.ToString();
+    public TagFields? Field { get; }
+    public string? UserStringKey { get; }
+    public bool IsUserString => UserStringKey is not null;
+    public string Name => UserStringKey ?? Field?.ToString() ?? "";
+    public string Kind => IsUserString ? "User string" : "Known field";
 
     /// <summary>True when the field already exists on disk (vs. freshly added in this dialog).</summary>
     public bool IsOriginal { get; }
@@ -30,8 +33,24 @@ public partial class FieldRow : ObservableObject
     public string RemoveButtonText => MarkedForRemoval ? "Undo" : "Remove";
 
     public FieldRow(TagFields field, string value, bool mixed, bool isNew)
+        : this(field, null, value, mixed, isNew)
+    {
+    }
+
+    public FieldRow(string userStringKey, string value, bool mixed, bool isNew)
+        : this(null, userStringKey, value, mixed, isNew)
+    {
+    }
+
+    private FieldRow(
+        TagFields? field,
+        string? userStringKey,
+        string value,
+        bool mixed,
+        bool isNew)
     {
         Field = field;
+        UserStringKey = userStringKey;
         IsOriginal = !isNew;
         _suppress = true;
         Value = value;
@@ -60,11 +79,10 @@ public partial class FieldsDialogViewModel : ViewModelBase
     private readonly ITagWriteService _writer;
     private readonly IReadOnlyList<string> _paths;
 
-    private HashSet<TagFields> _originalFields = [];
-
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string? _statusMessage;
     [ObservableProperty] private TagFields _fieldToAdd = TagFields.Comment;
+    [ObservableProperty] private string? _newUserStringName;
 
     public ObservableCollection<FieldRow> Rows { get; } = [];
 
@@ -98,25 +116,49 @@ public partial class FieldsDialogViewModel : ViewModelBase
         IsBusy = true;
         try
         {
-            var maps = new List<Dictionary<TagFields, string>>();
+            var knownMaps = new List<Dictionary<TagFields, string>>();
+            var userStringMaps = new List<Dictionary<string, string>>();
             foreach (var path in _paths)
             {
-                var result = await _media.LoadAsync(path, includeArtwork: false);
+                var result = await _media.LoadDirectAsync(path, includeArtwork: false);
                 if (result.Success)
                 {
-                    var map = new Dictionary<TagFields, string>();
+                    var knownMap = new Dictionary<TagFields, string>();
                     foreach (var kv in result.Value!.KnownFields)
-                        map.TryAdd(kv.Field, kv.Value);   // first value wins, mirroring the parsers
-                    maps.Add(map);
+                        knownMap.TryAdd(kv.Field, kv.Value); // first value wins, mirroring the parsers
+                    knownMaps.Add(knownMap);
+
+                    var userStringMap = new Dictionary<string, string>(
+                        StringComparer.OrdinalIgnoreCase);
+                    foreach (TextField field in result.Value.TextFields)
+                        userStringMap.TryAdd(field.Key, field.Value);
+                    userStringMaps.Add(userStringMap);
                 }
             }
 
-            _originalFields = maps.SelectMany(m => m.Keys).ToHashSet();
-            foreach (var field in _originalFields.OrderBy(f => f.ToString(), StringComparer.Ordinal))
+            HashSet<TagFields> originalFields = knownMaps.SelectMany(map => map.Keys).ToHashSet();
+            foreach (var field in originalFields.OrderBy(f => f.ToString(), StringComparer.Ordinal))
             {
-                var values = maps.Select(m => m.TryGetValue(field, out var v) ? v : "").Distinct().ToList();
+                var values = knownMaps.Select(map =>
+                    map.TryGetValue(field, out string? value) ? value : "").Distinct().ToList();
                 var mixed = values.Count > 1;
                 Rows.Add(new FieldRow(field, mixed ? "" : values.FirstOrDefault() ?? "", mixed, isNew: false));
+            }
+
+            IEnumerable<string> userStringKeys = userStringMaps
+                .SelectMany(map => map.Keys)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(key => key, StringComparer.OrdinalIgnoreCase);
+            foreach (string key in userStringKeys)
+            {
+                var values = userStringMaps.Select(map =>
+                    map.TryGetValue(key, out string? value) ? value : "").Distinct().ToList();
+                bool mixed = values.Count > 1;
+                Rows.Add(new FieldRow(
+                    key,
+                    mixed ? "" : values.FirstOrDefault() ?? "",
+                    mixed,
+                    isNew: false));
             }
         }
         finally
@@ -128,13 +170,38 @@ public partial class FieldsDialogViewModel : ViewModelBase
     [RelayCommand]
     private void AddField()
     {
-        var existing = Rows.FirstOrDefault(r => r.Field == FieldToAdd);
+        FieldRow? existing = Rows.FirstOrDefault(row => row.Field == FieldToAdd);
         if (existing is not null)
         {
             existing.MarkedForRemoval = false;   // re-adding an un-removes a struck field
             return;
         }
         Rows.Add(new FieldRow(FieldToAdd, "", mixed: false, isNew: true));
+    }
+
+    [RelayCommand]
+    private void AddUserString()
+    {
+        string key = NewUserStringName?.Trim() ?? "";
+        if (key.Length == 0)
+        {
+            StatusMessage = "Enter a user-string name.";
+            return;
+        }
+
+        FieldRow? existing = Rows.FirstOrDefault(row =>
+            row.IsUserString && string.Equals(
+                row.UserStringKey, key, StringComparison.OrdinalIgnoreCase));
+        if (existing is not null)
+        {
+            existing.MarkedForRemoval = false;
+            StatusMessage = $"User string '{existing.UserStringKey}' is already in the list.";
+            return;
+        }
+
+        Rows.Add(new FieldRow(key, "", mixed: false, isNew: true));
+        NewUserStringName = null;
+        StatusMessage = null;
     }
 
     [RelayCommand]
@@ -155,9 +222,16 @@ public partial class FieldsDialogViewModel : ViewModelBase
         foreach (var row in Rows)
         {
             if (row.MarkedForRemoval)
-                edits.Add(new TagEdit(row.Field, null));   // remove the field
+                edits.Add(row.IsUserString
+                    ? TagEdit.UserString(row.UserStringKey!, null)
+                    : new TagEdit(row.Field!.Value, null));
             else if (row.IsModified)
-                edits.Add(new TagEdit(row.Field, string.IsNullOrEmpty(row.Value) ? null : row.Value));
+            {
+                string? value = string.IsNullOrEmpty(row.Value) ? null : row.Value;
+                edits.Add(row.IsUserString
+                    ? TagEdit.UserString(row.UserStringKey!, value)
+                    : new TagEdit(row.Field!.Value, value));
+            }
         }
 
         if (edits.Count == 0)

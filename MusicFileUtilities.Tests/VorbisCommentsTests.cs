@@ -28,6 +28,23 @@ namespace MusicFileUtilities.Tests
         }
 
         [Fact]
+        public void ArbitraryUserStringRoundTripsAndRemoves()
+        {
+            var comments = new VorbisComments { Vendor = "test" };
+            comments.SetField(TagFields.Title, "Known");
+            comments.SetUserString("custom_note", "Value");
+
+            var roundTrip = new VorbisComments(comments.ToByteArray(false));
+            var userString = Assert.Single(roundTrip.GetUserStrings());
+            Assert.Equal("CUSTOM_NOTE", userString.Key);
+            Assert.Equal("Value", userString.Value);
+
+            roundTrip.RemoveUserString("custom_note");
+            Assert.Empty(roundTrip.GetUserStrings());
+            Assert.Equal("Known", Known(roundTrip)[TagFields.Title]);
+        }
+
+        [Fact]
         public void SetFieldOverwritesRatherThanDuplicates()
         {
             var vc = new VorbisComments { Vendor = "test" };

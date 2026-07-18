@@ -74,7 +74,7 @@ public partial class LibraryViewModel : ObservableObject
             Columns.Add(new LibraryColumnChoice(column.Key, column.Header, DetailsColumns.DefaultVisible.Contains(column.Key)));
         LoadViews();
         LoadWorkspace();
-        settings.ConfigurationChanged += (_, _) => _ = ReloadAsync();
+        settings.ConfigurationChanged += OnConfigurationChanged;
         indexing.IndexCompleted += () => _ = ReloadAsync();
         inspector.FilesChanged += () => _ = ReloadAsync();
     }
@@ -86,6 +86,15 @@ public partial class LibraryViewModel : ObservableObject
     public IndexingViewModel Indexing { get; }
     public int TotalCount => _allRows.Count;
     public bool HasFilterError => !string.IsNullOrWhiteSpace(FilterError);
+
+    private async void OnConfigurationChanged(object? sender, EventArgs args)
+    {
+        // Restore cached browsing first, then return to the UI loop before starting the root scan.
+        // This mirrors the portable app and ensures Home is painted before progress begins.
+        await ReloadAsync();
+        await Task.Yield();
+        await Indexing.StartAutomaticIndexAsync();
+    }
 
     partial void OnFilterTextChanged(string? value)
     {
@@ -158,8 +167,10 @@ public partial class LibraryViewModel : ObservableObject
     [RelayCommand]
     private void Cancel() => _loadCancellation?.Cancel();
 
-    public async Task SelectAsync(IReadOnlyList<string> paths)
-        => await _inspector.LoadAsync(new SelectionContext(paths));
+    public async Task SelectAsync(IReadOnlyList<LibraryRow> rows)
+        => await _inspector.LoadAsync(new SelectionContext(
+            rows.Select(row => row.Path).ToArray(),
+            rows.Select(row => row.Record).ToArray()));
 
     public Task ApplyFilterNowAsync(CancellationToken cancellationToken = default)
         => ApplyFilterAsync(immediate: true, cancellationToken);

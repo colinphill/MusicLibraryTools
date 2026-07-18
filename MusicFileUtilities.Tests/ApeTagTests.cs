@@ -40,6 +40,23 @@ namespace MusicFileUtilities.Tests
         }
 
         [Fact]
+        public void ArbitraryUserStringRoundTripsAndRemoves()
+        {
+            var tag = new APETag();
+            tag.SetField(TagFields.Title, "Known");
+            tag.SetUserString("CUSTOM_NOTE", "Value");
+
+            APETag roundTrip = RoundTrip(tag);
+            var userString = Assert.Single(roundTrip.GetUserStrings());
+            Assert.Equal("CUSTOM_NOTE", userString.Key);
+            Assert.Equal("Value", userString.Value);
+
+            roundTrip.RemoveUserString("custom_note");
+            Assert.Empty(roundTrip.GetUserStrings());
+            Assert.Equal("Known", Known(roundTrip)[TagFields.Title]);
+        }
+
+        [Fact]
         public void TrackAndTotalShareSingleKeyAsCombined()
         {
             var tag = new APETag();

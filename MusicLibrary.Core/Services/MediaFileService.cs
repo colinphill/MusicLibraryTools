@@ -47,6 +47,12 @@ public sealed class MediaFileService : IMediaFileService
         return await Task.Run(() => Load(path, includeArtwork), ct);
     }
 
+    public Task<OperationResult<MediaFileModel>> LoadDirectAsync(
+        string path,
+        bool includeArtwork,
+        CancellationToken ct = default) =>
+        Task.Run(() => Load(path, includeArtwork), ct);
+
     private static MediaFileModel MapFromCache(string path, FileDetails d, bool includeArtwork)
     {
         var e = d.Entry;
@@ -151,9 +157,11 @@ public sealed class MediaFileService : IMediaFileService
                 KnownFields = tag is null
                     ? []
                     : tag.GetKnownMetadata().Select(kv => new TagFieldValue(kv.Key, kv.Value)).ToList(),
-                TextFields = tag is null
-                    ? []
-                    : tag.GetTextMetadata().Select(kv => new TextField(kv.Key, kv.Value)).ToList(),
+                TextFields = tag is IUserStringMetadata userStrings
+                    ? userStrings.GetUserStrings()
+                        .Select(kv => new TextField(kv.Key, kv.Value))
+                        .ToList()
+                    : [],
                 Artwork = tag is null || !includeArtwork ? [] : ProjectArtwork(tag),
                 Codec = codec is null ? null : new CodecModel
                 {

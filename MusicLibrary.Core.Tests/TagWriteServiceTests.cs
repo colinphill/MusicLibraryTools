@@ -36,6 +36,37 @@ public class TagWriteServiceTests
         Assert.Equal("NewAlbumArtist", reload.Value!.AlbumArtist);
     }
 
+    [Theory]
+    [InlineData("sample.flac")]
+    [InlineData("sample.mp3")]
+    [InlineData("sample.ogg")]
+    [InlineData("sample_alac.m4a")]
+    [InlineData("sample.wv")]
+    public async Task RoundTrips_ArbitraryUserString(string fixture)
+    {
+        using var media = MediaFixtures.Copy(fixture);
+
+        BatchWriteResult write = await _writer.ApplyAsync(
+            [media.Path],
+            [TagEdit.UserString("CUSTOM_APP_NOTE", "Remember this")]);
+
+        Assert.Equal(1, write.SavedCount);
+        OperationResult<MediaFileModel> reload = await _reader.LoadDirectAsync(
+            media.Path, includeArtwork: false);
+        Assert.True(reload.Success, reload.Error);
+        Assert.Contains(reload.Value!.TextFields, field =>
+            field.Key.Equals("CUSTOM_APP_NOTE", StringComparison.OrdinalIgnoreCase) &&
+            field.Value == "Remember this");
+
+        BatchWriteResult remove = await _writer.ApplyAsync(
+            [media.Path],
+            [TagEdit.UserString("custom_app_note", null)]);
+        Assert.Equal(1, remove.SavedCount);
+        reload = await _reader.LoadDirectAsync(media.Path, includeArtwork: false);
+        Assert.DoesNotContain(reload.Value!.TextFields, field =>
+            field.Key.Equals("CUSTOM_APP_NOTE", StringComparison.OrdinalIgnoreCase));
+    }
+
     [Fact]
     public async Task AppliesId3VersionUpgradeTogetherWithMetadataEdits()
     {

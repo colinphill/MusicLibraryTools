@@ -130,6 +130,18 @@ public sealed class AnalysisTreeItem : INotifyPropertyChanged, IDisposable
     public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
         Enum.GetValues<AnalysisRepairDisposition>();
 
+    public bool HasAutomatedRepair => Model switch
+    {
+        AnalysisRepairCategoryGroupViewModel value => value.Artists.Any(ContainsAutomatedRepair),
+        AnalysisRepairArtistGroupViewModel value => value.Albums.Any(ContainsAutomatedRepair),
+        AnalysisRepairAlbumGroupViewModel value => value.Items.Any(item => item.CanChangeDisposition),
+        RepresentationRepairCategoryGroupViewModel value => value.Artists.Any(ContainsAutomatedRepair),
+        RepresentationRepairArtistGroupViewModel value => value.Albums.Any(ContainsAutomatedRepair),
+        RepresentationRepairAlbumGroupViewModel value =>
+            value.Items.Any(item => item.CanChangeDisposition),
+        _ => false,
+    };
+
     public AnalysisRepairDisposition Disposition
     {
         get => Model switch
@@ -168,7 +180,20 @@ public sealed class AnalysisTreeItem : INotifyPropertyChanged, IDisposable
     {
         if (e.PropertyName == nameof(Disposition))
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Disposition)));
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasAutomatedRepair)));
     }
+
+    private static bool ContainsAutomatedRepair(AnalysisRepairArtistGroupViewModel artist) =>
+        artist.Albums.Any(ContainsAutomatedRepair);
+
+    private static bool ContainsAutomatedRepair(AnalysisRepairAlbumGroupViewModel album) =>
+        album.Items.Any(item => item.CanChangeDisposition);
+
+    private static bool ContainsAutomatedRepair(RepresentationRepairArtistGroupViewModel artist) =>
+        artist.Albums.Any(ContainsAutomatedRepair);
+
+    private static bool ContainsAutomatedRepair(RepresentationRepairAlbumGroupViewModel album) =>
+        album.Items.Any(item => item.CanChangeDisposition);
 
     public void Dispose()
     {

@@ -33,7 +33,7 @@ public sealed partial class LibraryPage : UserControl
     private async void LibraryTable_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         IReadOnlyList<LibraryRow> rows = SelectedRows();
-        await ViewModel.SelectAsync(rows.Select(row => row.Path).ToArray());
+        await ViewModel.SelectAsync(rows);
         if (_overlayInspector && rows.Count > 0)
             InspectorPanel.Visibility = Visibility.Visible;
     }

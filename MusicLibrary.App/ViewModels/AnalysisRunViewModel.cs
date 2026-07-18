@@ -623,6 +623,7 @@ public partial class RepresentationRepairActionItemViewModel : ViewModelBase
             .Where(value => value != AnalysisRepairDisposition.Mixed)
             .ToArray();
     public bool IsActive => Disposition == AnalysisRepairDisposition.Active && !IsApplied;
+    public bool CanChangeDisposition => !IsApplied;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsActive))]
@@ -630,6 +631,7 @@ public partial class RepresentationRepairActionItemViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsActive))]
+    [NotifyPropertyChangedFor(nameof(CanChangeDisposition))]
     private bool _isApplied;
 
     [ObservableProperty]

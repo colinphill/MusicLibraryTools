@@ -270,7 +270,7 @@ namespace MusicFileUtilities
 
     }
 
-    public class APETag : TagBase, IArtworkWriter
+    public class APETag : TagBase, IArtworkWriter, IUserStringMetadata
     {
         public override string TagType => "APE";
 
@@ -278,6 +278,18 @@ namespace MusicFileUtilities
         {
             foreach (var field in GetKnownMetadata())
                 yield return KeyValuePair.Create(field.Key.ToString(), field.Value);
+        }
+
+        public IEnumerable<KeyValuePair<string, string>> GetUserStrings()
+        {
+            foreach (var item in TextItems)
+            {
+                string upperKey = item.Key.ToUpperInvariant();
+                bool isKnown = APEUtil.SensitiveMap.ContainsKey(item.Key) ||
+                    APEUtil.InsensitiveMap.ContainsKey(upperKey);
+                if (!isKnown)
+                    yield return item;
+            }
         }
 
         public override IEnumerable<KeyValuePair<TagFields, string>> GetKnownMetadata()
@@ -385,6 +397,19 @@ namespace MusicFileUtilities
         }
 
         public void RemoveField(TagFields field) => SetField(field, null);
+
+        public void SetUserString(string key, string value)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+                throw new ArgumentException("A user-string key is required.", nameof(key));
+            key = key.Trim();
+            TextItems.RemoveAll(item => string.Equals(
+                item.Key, key, StringComparison.OrdinalIgnoreCase));
+            if (value is not null)
+                TextItems.Add(KeyValuePair.Create(key, value));
+        }
+
+        public void RemoveUserString(string key) => SetUserString(key, null);
 
         // IArtworkWriter: APEv2 stores a picture as a binary item whose value is "filename\0picdata";
         // the reader derives the MIME type from the filename extension (see APEArtwork ctor), so the

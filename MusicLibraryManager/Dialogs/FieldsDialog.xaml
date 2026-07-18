@@ -16,6 +16,7 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <StackPanel Spacing="5">
             <TextBlock Text="{Binding Title}" Opacity="0.64" TextTrimming="CharacterEllipsis"/>
@@ -34,8 +35,11 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold"
-                                               TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Name}"/>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Name}"/>
+                                        <TextBlock Text="{Binding Kind}" FontSize="11" Opacity="0.52"/>
+                                    </StackPanel>
                                     <Grid Grid.Column="1">
                                         <TextBox Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                         <TextBlock Text="Mixed values — type to replace" Margin="10,0" VerticalAlignment="Center"
@@ -61,6 +65,12 @@
             <Button Grid.Column="2" Content="Add" Command="{Binding AddFieldCommand}"/>
         </Grid>
         <Grid Grid.Row="3" ColumnSpacing="8">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBlock Text="Add user string" Opacity="0.68" VerticalAlignment="Center"/>
+            <TextBox Grid.Column="1" PlaceholderText="Custom field name" Text="{Binding NewUserStringName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+            <Button Grid.Column="2" Content="Add" Command="{Binding AddUserStringCommand}"/>
+        </Grid>
+        <Grid Grid.Row="4" ColumnSpacing="8">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="{StaticResource BrandAmberBrush}" VerticalAlignment="Center"/>
             <Button Grid.Column="1" Content="Cancel" Command="{Binding CancelCommand}"/>

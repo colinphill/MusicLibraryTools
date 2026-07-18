@@ -1316,7 +1316,7 @@ namespace MusicFileUtilities
 
     }
 
-    public class ID3v2Tag : TagBase, IArtworkWriter
+    public class ID3v2Tag : TagBase, IArtworkWriter, IUserStringMetadata
     {
 
         protected int _headerversion = 3;
@@ -2174,6 +2174,15 @@ namespace MusicFileUtilities
                 yield return KeyValuePair.Create(field.Key.ToString(), field.Value);
         }
 
+        public IEnumerable<KeyValuePair<string, string>> GetUserStrings()
+        {
+            HashSet<string> knownKeys = UserStringFieldKeys.Values.ToHashSet(
+                StringComparer.OrdinalIgnoreCase);
+            foreach (UserStringFrame frame in _frames.OfType<UserStringFrame>())
+                if (!knownKeys.Contains(frame.Key))
+                    yield return KeyValuePair.Create(frame.Key, frame.Value);
+        }
+
         public override IEnumerable<IMetadataImage> GetImageMetadata()
         {
             foreach (var frame in _frames)
@@ -2199,19 +2208,22 @@ namespace MusicFileUtilities
 
         public void SetUserString(string key, string value)
         {
+            if (string.IsNullOrWhiteSpace(key))
+                throw new ArgumentException("A user-string key is required.", nameof(key));
+
             string txxx = (_headerversion == 2) ? "TXX" : "TXXX";
-            var existing = _frames.OfType<UserStringFrame>()
-                                  .FirstOrDefault(f => f.FrameID == txxx && f.Key == key);
-            if (existing != null)
-            {
-                existing.Value = value;
+            _frames.RemoveAll(frame => frame is UserStringFrame user &&
+                user.FrameID == txxx &&
+                string.Equals(user.Key, key, StringComparison.OrdinalIgnoreCase));
+            if (value is null)
                 return;
-            }
             var frame = new UserStringFrame(this) { FrameID = txxx };
-            frame.Key = key;
+            frame.Key = key.Trim();
             frame.Value = value;
             _frames.Add(frame);
         }
+
+        public void RemoveUserString(string key) => SetUserString(key, null);
 
         public void SetAttachedImage(ID3v2Util.APICType pictureType, string mimeType,
                                      string description, byte[] data)

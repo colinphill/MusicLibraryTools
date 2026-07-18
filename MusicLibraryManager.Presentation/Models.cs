@@ -27,7 +27,9 @@ public partial class LibraryColumnChoice(string key, string header, bool isVisib
     private bool _isVisible = isVisible;
 }
 
-public sealed record SelectionContext(IReadOnlyList<string> Paths)
+public sealed record SelectionContext(
+    IReadOnlyList<string> Paths,
+    IReadOnlyList<TrackRecord>? Records = null)
 {
     public static SelectionContext Empty { get; } = new([]);
     public bool HasSelection => Paths.Count > 0;
@@ -93,8 +95,15 @@ public partial class EditableTagField(TagFields field, string label) : Observabl
     private bool _isModified;
 
     public void SetLoaded(string? value, bool mixed)
+        => SetLoaded(string.IsNullOrEmpty(value) ? [] : [value], mixed);
+
+    public void SetLoaded(IReadOnlyList<string> values, bool mixed)
     {
-        Value = value;
+        string[] distinctValues = values
+            .Where(value => !string.IsNullOrEmpty(value))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        Value = !mixed && distinctValues.Length == 1 ? distinctValues[0] : null;
         IsMixed = mixed;
         IsModified = false;
     }

@@ -59,6 +59,30 @@ namespace MusicFileUtilities.Tests
         }
 
         [Fact]
+        public void ArbitraryUserStringCanBeAddedUpdatedAndRemoved()
+        {
+            var tag = new ID3v2Tag();
+            tag.SetUserString("CUSTOM_NOTE", "First");
+            tag.SetUserString("custom_note", "Second");
+
+            var userString = Assert.Single(tag.GetUserStrings());
+            Assert.Equal("custom_note", userString.Key);
+            Assert.Equal("Second", userString.Value);
+
+            tag.RemoveUserString("CUSTOM_NOTE");
+            Assert.Empty(tag.GetUserStrings());
+        }
+
+        [Fact]
+        public void KnownTxxxMappingsAreNotReportedAsArbitraryUserStrings()
+        {
+            var tag = new ID3v2Tag();
+            tag.SetField(TagFields.MusicBrainz_ArtistID, "abc-123");
+
+            Assert.Empty(tag.GetUserStrings());
+        }
+
+        [Fact]
         public void SettingSameFieldTwiceDoesNotDuplicateFrames()
         {
             var tag = new ID3v2Tag();

@@ -122,7 +122,12 @@
                                         <ItemsControl.ItemTemplate><DataTemplate>
                                             <Grid Margin="0,3" ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="110"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                                                 <TextBlock Text="{Binding Label}" VerticalAlignment="Center" Opacity="0.68"/>
-                                                <TextBox Grid.Column="1" Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                                <Grid Grid.Column="1">
+                                                    <TextBox Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                                    <TextBlock Text="Mixed values — type to replace" Margin="10,0" VerticalAlignment="Center"
+                                                               Foreground="Gray" IsHitTestVisible="False"
+                                                               Visibility="{Binding IsMixed, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                                </Grid>
                                             </Grid>
                                         </DataTemplate></ItemsControl.ItemTemplate>
                                     </ItemsControl>
@@ -139,7 +144,14 @@
                         </TabViewItem>
                         <TabViewItem Header="Artwork" IsClosable="False">
                             <ScrollViewer><StackPanel Margin="4,14,4,4" Spacing="10">
-                                <Border Background="#16000000" CornerRadius="10" Padding="8"><Image Source="{Binding ArtworkSource}" Height="260" Stretch="Uniform"/></Border>
+                                <Border Background="#16000000" CornerRadius="10" Padding="8">
+                                    <Grid Height="260">
+                                        <Image Source="{Binding ArtworkSource}" Stretch="Uniform"/>
+                                        <TextBlock Text="Mixed values" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                   FontSize="20" FontWeight="SemiBold" Foreground="Gray"
+                                                   Visibility="{Binding IsArtworkMixed, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                    </Grid>
+                                </Border>
                                 <TextBlock Text="{Binding ArtworkSummary}" TextWrapping="Wrap" Opacity="0.68"/>
                                 <TextBlock Text="Maximum dimension" Opacity="0.68"/>
                                 <TextBox Text="{Binding ArtworkMaxDimension, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>

@@ -10,7 +10,7 @@
         WindowStartupLocation="CenterOwner"
         Title="{Binding Title}">
 
-    <Grid Margin="18" RowDefinitions="Auto,*,Auto,Auto">
+    <Grid Margin="18" RowDefinitions="Auto,*,Auto,Auto,Auto">
 
         <TextBlock Grid.Row="0" Text="{Binding Title}" Classes="h1" Margin="0,0,0,14"
                    TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Title}"/>
@@ -21,10 +21,12 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:FieldRow">
                             <Grid ColumnDefinitions="160,*,Auto" ColumnSpacing="8" Margin="0,3">
-                                <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center"
-                                           FontWeight="SemiBold"
-                                           TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}"
-                                           TextDecorations="{Binding MarkedForRemoval, Converter={x:Static vm:StrikeConverter.Instance}}"/>
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Name}"
+                                               TextDecorations="{Binding MarkedForRemoval, Converter={x:Static vm:StrikeConverter.Instance}}"/>
+                                    <TextBlock Text="{Binding Kind}" FontSize="11" Opacity="0.52"/>
+                                </StackPanel>
                                 <TextBox Grid.Column="1" Text="{Binding Value, Mode=TwoWay}"
                                          IsEnabled="{Binding !MarkedForRemoval}"
                                          PlaceholderText="{Binding IsMixed, Converter={x:Static vm:MixedConverter.Instance}}"/>
@@ -45,7 +47,13 @@
             <Button Grid.Column="2" Content="Add" Command="{Binding AddFieldCommand}"/>
         </Grid>
 
-        <Grid Grid.Row="3" ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="0,14,0,0">
+        <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="0,8,0,0">
+            <TextBlock Grid.Column="0" Text="Add user string:" Classes="formlabel"/>
+            <TextBox Grid.Column="1" PlaceholderText="Custom field name" Text="{Binding NewUserStringName}"/>
+            <Button Grid.Column="2" Content="Add" Command="{Binding AddUserStringCommand}"/>
+        </Grid>
+
+        <Grid Grid.Row="4" ColumnDefinitions="Auto,*" ColumnSpacing="12" Margin="0,14,0,0">
             <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
                 <Button Content="Save" Classes="accent" Command="{Binding SaveCommand}"/>
                 <Button Content="Cancel" Command="{Binding CancelCommand}"/>

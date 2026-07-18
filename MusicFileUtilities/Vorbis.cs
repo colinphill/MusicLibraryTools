@@ -267,7 +267,7 @@ namespace MusicFileUtilities
     }
 
     [Serializable]
-    public class VorbisComments : TagBase, IArtworkWriter
+    public class VorbisComments : TagBase, IArtworkWriter, IUserStringMetadata
     {
         // IArtworkWriter: replace the front cover in the PICTURE list, probing dimensions the same
         // way the reader does. FLAC/Ogg serialize Artworks on save (see FLAC.SaveTags / ToByteArray).
@@ -321,6 +321,13 @@ namespace MusicFileUtilities
         {
             foreach (var field in GetKnownMetadata())
                 yield return KeyValuePair.Create(field.Key.ToString(), field.Value);
+        }
+
+        public IEnumerable<KeyValuePair<string, string>> GetUserStrings()
+        {
+            foreach (var comment in Comments)
+                if (!VorbisUtil.TagMappings.ContainsKey(comment.Key))
+                    yield return comment;
         }
 
         public override IEnumerable<KeyValuePair<TagFields, string>> GetKnownMetadata()
@@ -506,6 +513,21 @@ namespace MusicFileUtilities
         }
 
         public void RemoveField(TagFields field) => SetField(field, null);
+
+        public void SetUserString(string key, string value)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+                throw new ArgumentException("A user-string key is required.", nameof(key));
+            key = key.Trim().ToUpperInvariant();
+            if (key.Contains('='))
+                throw new ArgumentException("A Vorbis comment key cannot contain '='.", nameof(key));
+            Comments.RemoveAll(comment => string.Equals(
+                comment.Key, key, StringComparison.OrdinalIgnoreCase));
+            if (value is not null)
+                Comments.Add(KeyValuePair.Create(key, value));
+        }
+
+        public void RemoveUserString(string key) => SetUserString(key, null);
 
     }
 

@@ -138,6 +138,10 @@ public sealed class TagWriteService : ITagWriteService
             else
                 return new(new FileWriteResult { Path = path, Outcome = WriteOutcome.Failed, Error = "Tag format is read-only." });
 
+            IUserStringMetadata? userStrings =
+                file as IUserStringMetadata ??
+                file.Tags.OfType<IUserStringMetadata>().FirstOrDefault();
+
             var unsupported = new List<TagFields>();
             int applied = 0;
             var provider = file.Tags.First();
@@ -164,6 +168,36 @@ public sealed class TagWriteService : ITagWriteService
                     continue;
                 try
                 {
+                    if (edit.IsUserString)
+                    {
+                        if (userStrings is null)
+                            return new(new FileWriteResult
+                            {
+                                Path = path,
+                                Outcome = WriteOutcome.Failed,
+                                Error = "This tag format does not support user-defined text fields.",
+                            });
+
+                        string key = edit.UserStringKey!.Trim();
+                        string[] existingUserValues = userStrings.GetUserStrings()
+                            .Where(item => string.Equals(
+                                item.Key, key, StringComparison.OrdinalIgnoreCase))
+                            .Select(item => item.Value)
+                            .ToArray();
+                        if (edit.Value is null
+                                ? existingUserValues.Length == 0
+                                : existingUserValues.Length == 1 &&
+                                  existingUserValues[0] == edit.Value)
+                            continue;
+
+                        if (edit.Value is null)
+                            userStrings.RemoveUserString(key);
+                        else
+                            userStrings.SetUserString(key, edit.Value);
+                        applied++;
+                        continue;
+                    }
+
                     // Avoid a network write when the requested normalized value is already the
                     // file's sole value (or the requested removal is already absent).
                     var existing = provider.GetKnownMetadata()

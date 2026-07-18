@@ -21,7 +21,12 @@ public partial class IndexingViewModel : ObservableObject
     private string _statusText = "Load a configuration to begin.";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ProgressText))]
     private double _progress;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ProgressText))]
+    private bool _isProgressIndeterminate;
 
     public IndexingViewModel(ILibraryService library, IAppSettings settings, IActivityService activities)
     {
@@ -36,6 +41,12 @@ public partial class IndexingViewModel : ObservableObject
     }
 
     public event Action? IndexCompleted;
+    public string ProgressText => IsProgressIndeterminate ? "Scanning…" : $"{Progress:P0}";
+
+    /// <summary>Starts the deferred scan after startup has restored the responsive cached view.</summary>
+    public Task StartAutomaticIndexAsync() => IndexCommand.CanExecute(null)
+        ? IndexCommand.ExecuteAsync(null)
+        : Task.CompletedTask;
 
     private bool CanIndex() => _library.IsReady && !IsIndexing;
 
@@ -44,11 +55,13 @@ public partial class IndexingViewModel : ObservableObject
     {
         IsIndexing = true;
         Progress = 0;
+        IsProgressIndeterminate = true;
         _cancellation = new CancellationTokenSource();
         Guid activity = _activities.Start("Index library", "Preparing the library index");
         var progress = new Progress<IndexProgress>(item =>
         {
             StatusText = Describe(item);
+            IsProgressIndeterminate = item.Phase is IndexPhase.Preparing or IndexPhase.Enumeration;
             Progress = Estimate(item);
             _activities.Report(activity, StatusText, Progress);
         });
@@ -56,6 +69,7 @@ public partial class IndexingViewModel : ObservableObject
         {
             var result = await _library.IndexAsync(progress, _cancellation.Token);
             StatusText = $"Index complete: +{result.Added:N0}, ~{result.Modified:N0}, -{result.Removed:N0}, {result.Unchanged:N0} unchanged.";
+            IsProgressIndeterminate = false;
             Progress = 1;
             _activities.Finish(activity, StatusText);
         }
@@ -71,6 +85,7 @@ public partial class IndexingViewModel : ObservableObject
         }
         finally
         {
+            IsProgressIndeterminate = false;
             _cancellation.Dispose();
             _cancellation = null;
             IsIndexing = false;

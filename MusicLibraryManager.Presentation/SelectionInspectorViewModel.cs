@@ -11,6 +11,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
 {
     private const int MaxCommonValueSample = 200;
     private readonly IMediaFileService _media;
+    private readonly ILibraryService _library;
     private readonly ITagWriteService _tags;
     private readonly IArtworkService _artwork;
     private readonly IFilePickerService _files;
@@ -28,11 +29,13 @@ public partial class SelectionInspectorViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasStatusMessage))]
     private string? _statusMessage;
     [ObservableProperty] private object? _artworkSource;
+    [ObservableProperty] private bool _isArtworkMixed;
     [ObservableProperty] private string _artworkSummary = "No artwork loaded.";
     [ObservableProperty] private int _artworkMaxDimension = 1000;
 
     public SelectionInspectorViewModel(
         IMediaFileService media,
+        ILibraryService library,
         ITagWriteService tags,
         IArtworkService artwork,
         IFilePickerService files,
@@ -42,6 +45,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
         IActivityService activities)
     {
         _media = media;
+        _library = library;
         _tags = tags;
         _artwork = artwork;
         _files = files;
@@ -86,6 +90,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectionSummary));
         StatusMessage = null;
         ArtworkSource = null;
+        IsArtworkMixed = false;
         ArtworkSummary = "No embedded artwork.";
         NotifyCommands();
 
@@ -93,7 +98,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
         {
             Overview = "Select a track to inspect its metadata.";
             foreach (EditableTagField field in Fields)
-                field.SetLoaded(null, false);
+                field.SetLoaded([], false);
             return;
         }
 
@@ -117,7 +122,20 @@ public partial class SelectionInspectorViewModel : ObservableObject
                 return;
 
             LoadFields(models);
-            Overview = DescribeOverview(models.FirstOrDefault(), selection.Paths.Count);
+            Overview = DescribeOverview(selection, models);
+
+            IReadOnlyList<string> artworkSignatures = await _library.GetImageSignaturesAsync(
+                selection.Paths, cancellation.Token);
+            string[] distinctArtwork = artworkSignatures.Distinct(StringComparer.Ordinal).ToArray();
+            IsArtworkMixed = distinctArtwork.Length > 1;
+            if (IsArtworkMixed)
+            {
+                ArtworkSummary = "Mixed values — selected files have different embedded artwork.";
+                return;
+            }
+
+            if (distinctArtwork.Length == 0 || string.IsNullOrEmpty(distinctArtwork[0]))
+                return;
 
             OperationResult<MediaFileModel> artwork = await _media.LoadAsync(
                 selection.Paths[0], includeArtwork: true, cancellation.Token);
@@ -130,7 +148,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
                     first.Data, cancellationToken: cancellation.Token);
                 ArtworkSummary = $"{first.ImageType ?? "image"} · {first.Width:N0} × {first.Height:N0} · {FormatBytes(first.Size)}";
                 if (selection.Paths.Count > 1)
-                    ArtworkSummary += $" · previewing the first of {selection.Paths.Count:N0} tracks";
+                    ArtworkSummary += $" · shared by {selection.Paths.Count:N0} tracks";
             }
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
@@ -156,12 +174,27 @@ public partial class SelectionInspectorViewModel : ObservableObject
     {
         var maps = models.Select(model => model.KnownFields
             .GroupBy(value => value.Field)
-            .ToDictionary(group => group.Key, group => group.First().Value)).ToArray();
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(value => value.Value)
+                    .Where(value => !string.IsNullOrEmpty(value))
+                    .Distinct(StringComparer.Ordinal)
+                    .ToArray())).ToArray();
         foreach (EditableTagField field in Fields)
         {
-            string[] values = maps.Select(map => map.GetValueOrDefault(field.Field) ?? "")
-                .Distinct(StringComparer.Ordinal).ToArray();
-            field.SetLoaded(values.Length == 1 ? values[0] : null, values.Length > 1);
+            string[][] valuesByFile = maps
+                .Select(map => map.GetValueOrDefault(field.Field) ?? [])
+                .ToArray();
+            bool mixed = valuesByFile.Skip(1).Any(values =>
+                !values.SequenceEqual(valuesByFile[0], StringComparer.Ordinal));
+            mixed |= valuesByFile.Any(values => values.Length > 1);
+            string[] displayValues = valuesByFile
+                .SelectMany(values => values.Length == 0 ? ["(missing)"] : values)
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+            if (displayValues.Length == 1 && displayValues[0] == "(missing)")
+                displayValues = [];
+            field.SetLoaded(displayValues, mixed);
         }
     }
 
@@ -302,20 +335,47 @@ public partial class SelectionInspectorViewModel : ObservableObject
         RemoveArtworkCommand.NotifyCanExecuteChanged();
     }
 
-    private static string DescribeOverview(MediaFileModel? model, int count)
+    private static string DescribeOverview(
+        SelectionContext selection,
+        IReadOnlyList<MediaFileModel> loadedModels)
     {
-        if (model is null)
-            return "Metadata could not be loaded for this selection.";
-        string scope = count == 1 ? model.Path : $"{count:N0} tracks · showing representative metadata";
-        string codec = model.Codec is null ? "Unknown codec" :
-            $"{model.Codec.CodecName} · {model.Codec.Samplerate:N0} Hz · {model.Codec.BitsPerSample:N0}-bit · {model.Codec.Channels:N0} ch";
-        string tagFormat = model.TagType switch
+        int count = selection.Paths.Count;
+        IEnumerable<string> fileFormats = selection.Paths.Select(path =>
         {
-            null or "" => "Unknown tag format",
-            "Vorbis" => "Vorbis comments",
-            string value => value,
-        };
-        return $"{scope}{Environment.NewLine}{codec}{Environment.NewLine}Tag format: {tagFormat}";
+            string extension = Path.GetExtension(path).TrimStart('.');
+            return string.IsNullOrWhiteSpace(extension) ? "Unknown" : extension.ToUpperInvariant();
+        });
+        string[] knownTagFormats = (selection.Records is { Count: > 0 }
+            ? selection.Records.Select(record => NormalizeTagFormat(record.TagType))
+            : loadedModels.Select(model => NormalizeTagFormat(model.TagType)))
+            .Take(count)
+            .ToArray();
+        IEnumerable<string> tagFormats = knownTagFormats.Concat(
+            Enumerable.Repeat("Unknown", Math.Max(0, count - knownTagFormats.Length)));
+        string scope = count == 1 ? "1 track selected" : $"{count:N0} tracks selected";
+
+        return $"{scope}{Environment.NewLine}{Environment.NewLine}" +
+               $"File formats{Environment.NewLine}{FormatDistribution(fileFormats, count)}" +
+               $"{Environment.NewLine}{Environment.NewLine}Tag formats{Environment.NewLine}" +
+               FormatDistribution(tagFormats, count);
+    }
+
+    private static string NormalizeTagFormat(string? value) => value switch
+    {
+        null or "" => "Unknown",
+        "Vorbis" => "Vorbis comments",
+        _ => value,
+    };
+
+    private static string FormatDistribution(IEnumerable<string> values, int total)
+    {
+        string[] lines = values
+            .GroupBy(value => value, StringComparer.OrdinalIgnoreCase)
+            .OrderByDescending(group => group.Count())
+            .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
+            .Select(group => $"{group.Key}: {group.Count():N0} ({(double)group.Count() / total:P0})")
+            .ToArray();
+        return lines.Length == 0 ? "Unknown: 0" : string.Join(Environment.NewLine, lines);
     }
 
     private static string FormatBytes(long bytes) => bytes switch

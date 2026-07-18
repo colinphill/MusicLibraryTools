@@ -16,4 +16,14 @@ public interface IMediaFileService
     /// read, so callers that only need the text fields (e.g. the batch tag editor) pass false.
     /// </summary>
     Task<OperationResult<MediaFileModel>> LoadAsync(string path, bool includeArtwork, CancellationToken ct = default);
+
+    /// <summary>
+    /// Parse a file directly instead of using cached normalized metadata. This is intended for
+    /// editors that must expose format-native user strings that are not stored in the library cache.
+    /// Implementations without a cache may use the normal load path.
+    /// </summary>
+    Task<OperationResult<MediaFileModel>> LoadDirectAsync(
+        string path,
+        bool includeArtwork,
+        CancellationToken ct = default) => LoadAsync(path, includeArtwork, ct);
 }

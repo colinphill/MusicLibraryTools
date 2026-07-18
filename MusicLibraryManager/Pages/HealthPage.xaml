@@ -75,10 +75,9 @@
                                 <TreeView.ItemTemplate>
                                     <DataTemplate>
                                         <Grid Width="310" MinHeight="38" ColumnSpacing="6">
-                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="108"/></Grid.ColumnDefinitions>
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                                             <TextBlock Text="{Binding Content.Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
                                             <TextBlock Grid.Column="1" Text="{Binding Content.Count}" Opacity="0.58" VerticalAlignment="Center"/>
-                                            <ComboBox Grid.Column="2" ItemsSource="{Binding Content.Dispositions}" SelectedItem="{Binding Content.Disposition, Mode=TwoWay}"/>
                                         </Grid>
                                     </DataTemplate>
                                 </TreeView.ItemTemplate>
@@ -90,7 +89,6 @@
                                               CanResizeColumns="True" CanReorderColumns="True" CanSortColumns="True" FrozenColumnCount="1"
                                               controls:TableViewColumnReorderBehavior.IsEnabled="True">
                                     <tv:TableView.Columns>
-                                        <tv:TableViewTemplateColumn Header="Disposition" Width="150" MinWidth="135"><tv:TableViewTemplateColumn.CellTemplate><DataTemplate><ComboBox ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}"/></DataTemplate></tv:TableViewTemplateColumn.CellTemplate></tv:TableViewTemplateColumn>
                                         <tv:TableViewTextColumn Header="Track" Binding="{Binding Path}" Width="360" MinWidth="240" IsReadOnly="True"/>
                                         <tv:TableViewTextColumn Header="Reason" Binding="{Binding Description}" Width="360" MinWidth="240" IsReadOnly="True"/>
                                     </tv:TableView.Columns>
@@ -124,7 +122,7 @@
                             <TreeView x:Name="RepairTree" SelectionMode="Single" SelectionChanged="RepairTree_SelectionChanged">
                                 <TreeView.ItemTemplate><DataTemplate>
                                     <Grid Width="310" MinHeight="38" ColumnSpacing="6"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="108"/></Grid.ColumnDefinitions>
-                                        <TextBlock Text="{Binding Content.Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/><TextBlock Grid.Column="1" Text="{Binding Content.Count}" Opacity="0.58" VerticalAlignment="Center"/><ComboBox Grid.Column="2" ItemsSource="{Binding Content.Dispositions}" SelectedItem="{Binding Content.Disposition, Mode=TwoWay}"/>
+                                        <TextBlock Text="{Binding Content.Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/><TextBlock Grid.Column="1" Text="{Binding Content.Count}" Opacity="0.58" VerticalAlignment="Center"/><ComboBox Grid.Column="2" ItemsSource="{Binding Content.Dispositions}" SelectedItem="{Binding Content.Disposition, Mode=TwoWay}" Visibility="{Binding Content.HasAutomatedRepair, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                     </Grid>
                                 </DataTemplate></TreeView.ItemTemplate>
                             </TreeView>
@@ -132,7 +130,7 @@
                             <tv:TableView Grid.Column="2" ItemsSource="{Binding DisplayedRepairItems}" AutoGenerateColumns="False" CanResizeColumns="True" CanReorderColumns="True" FrozenColumnCount="1"
                                           controls:TableViewColumnReorderBehavior.IsEnabled="True">
                                 <tv:TableView.Columns>
-                                    <tv:TableViewTemplateColumn Header="Disposition" Width="150"><tv:TableViewTemplateColumn.CellTemplate><DataTemplate><ComboBox ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" IsEnabled="{Binding CanChangeDisposition}"/></DataTemplate></tv:TableViewTemplateColumn.CellTemplate></tv:TableViewTemplateColumn>
+                                    <tv:TableViewTemplateColumn Header="Disposition" Width="150"><tv:TableViewTemplateColumn.CellTemplate><DataTemplate><ComboBox ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" Visibility="{Binding CanChangeDisposition, Converter={StaticResource BooleanToVisibilityConverter}}"/></DataTemplate></tv:TableViewTemplateColumn.CellTemplate></tv:TableViewTemplateColumn>
                                     <tv:TableViewTextColumn Header="Track" Binding="{Binding DisplayPath}" Width="320" IsReadOnly="True"/><tv:TableViewTextColumn Header="Before" Binding="{Binding Before}" Width="180" IsReadOnly="True"/><tv:TableViewTextColumn Header="After" Binding="{Binding After}" Width="180" IsReadOnly="True"/><tv:TableViewTextColumn Header="Reason" Binding="{Binding Reason}" Width="300" IsReadOnly="True"/>
                                 </tv:TableView.Columns>
                             </tv:TableView>
@@ -144,7 +142,7 @@
                             <TreeView x:Name="RepresentationTree" SelectionMode="Single" SelectionChanged="RepresentationTree_SelectionChanged">
                                 <TreeView.ItemTemplate><DataTemplate>
                                     <Grid Width="310" MinHeight="38" ColumnSpacing="6"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="108"/></Grid.ColumnDefinitions>
-                                        <TextBlock Text="{Binding Content.Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/><TextBlock Grid.Column="1" Text="{Binding Content.Count}" Opacity="0.58" VerticalAlignment="Center"/><ComboBox Grid.Column="2" ItemsSource="{Binding Content.Dispositions}" SelectedItem="{Binding Content.Disposition, Mode=TwoWay}"/>
+                                        <TextBlock Text="{Binding Content.Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/><TextBlock Grid.Column="1" Text="{Binding Content.Count}" Opacity="0.58" VerticalAlignment="Center"/><ComboBox Grid.Column="2" ItemsSource="{Binding Content.Dispositions}" SelectedItem="{Binding Content.Disposition, Mode=TwoWay}" Visibility="{Binding Content.HasAutomatedRepair, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                     </Grid>
                                 </DataTemplate></TreeView.ItemTemplate>
                             </TreeView>
@@ -152,7 +150,7 @@
                             <tv:TableView Grid.Column="2" ItemsSource="{Binding DisplayedRepresentationItems}" AutoGenerateColumns="False" CanResizeColumns="True" CanReorderColumns="True" FrozenColumnCount="1"
                                           controls:TableViewColumnReorderBehavior.IsEnabled="True">
                                 <tv:TableView.Columns>
-                                    <tv:TableViewTemplateColumn Header="Disposition" Width="150"><tv:TableViewTemplateColumn.CellTemplate><DataTemplate><ComboBox ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}"/></DataTemplate></tv:TableViewTemplateColumn.CellTemplate></tv:TableViewTemplateColumn>
+                                    <tv:TableViewTemplateColumn Header="Disposition" Width="150"><tv:TableViewTemplateColumn.CellTemplate><DataTemplate><ComboBox ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" Visibility="{Binding CanChangeDisposition, Converter={StaticResource BooleanToVisibilityConverter}}"/></DataTemplate></tv:TableViewTemplateColumn.CellTemplate></tv:TableViewTemplateColumn>
                                     <tv:TableViewTextColumn Header="Track" Binding="{Binding SourcePath}" Width="320" IsReadOnly="True"/><tv:TableViewTextColumn Header="Action" Binding="{Binding Description}" Width="260" IsReadOnly="True"/><tv:TableViewTextColumn Header="Destination" Binding="{Binding DestinationPath}" Width="320" IsReadOnly="True"/><tv:TableViewTextColumn Header="Result" Binding="{Binding ResultText}" Width="180" IsReadOnly="True"/>
                                 </tv:TableView.Columns>
                             </tv:TableView>

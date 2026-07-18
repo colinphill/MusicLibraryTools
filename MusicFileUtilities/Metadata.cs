@@ -168,6 +168,19 @@ namespace MusicFileUtilities
     }
 
     /// <summary>
+    /// Reads and writes format-native user-defined text fields. Implementations map these to ID3
+    /// TXXX frames, Vorbis comments, APE text items, or MP4 freeform atoms as appropriate.
+    /// Known <see cref="TagFields"/> values are intentionally excluded from
+    /// <see cref="GetUserStrings"/> so callers can present the two kinds of metadata separately.
+    /// </summary>
+    public interface IUserStringMetadata
+    {
+        IEnumerable<KeyValuePair<string, string>> GetUserStrings();
+        void SetUserString(string key, string value);
+        void RemoveUserString(string key);
+    }
+
+    /// <summary>
     /// Uniform embedded-artwork writing across formats. Implemented where the underlying tag can
     /// carry pictures; the front cover is the common case. Call <see cref="IMediaFile.SaveTags"/>
     /// (or <see cref="IMetadataWriter.Save"/>) afterwards to persist. Formats without an

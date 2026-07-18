@@ -3,13 +3,20 @@ using MusicFileUtilities;
 namespace MusicLibrary.Core.Models;
 
 /// <summary>
-/// A field change or ID3 version change to apply. A null <see cref="Value"/> removes an ordinary
-/// metadata field.
+/// A known-field change, user-string change, or ID3 version change to apply. A null
+/// <see cref="Value"/> removes the selected metadata field.
 /// </summary>
 public sealed record TagEdit(
     TagFields Field,
     string? Value,
-    ID3v2Version? TargetId3Version = null);
+    ID3v2Version? TargetId3Version = null,
+    string? UserStringKey = null)
+{
+    public bool IsUserString => !string.IsNullOrWhiteSpace(UserStringKey);
+
+    public static TagEdit UserString(string key, string? value) =>
+        new(TagFields.NullField, value, UserStringKey: key);
+}
 
 public enum WriteOutcome { Saved, Skipped, Failed }
 

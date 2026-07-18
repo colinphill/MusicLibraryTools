@@ -116,13 +116,45 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public async Task Loading_a_configuration_restores_cached_rows_then_starts_the_startup_scan()
+    {
+        var settings = new FakeSettings();
+        TrackRecord[] records =
+        [
+            Track("Artist", "Album", "Track", "FLAC", @"C:\Music\Track.flac"),
+        ];
+        var library = new FakeLibrary(records)
+        {
+            IndexRelease = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously),
+        };
+        LibraryViewModel viewModel = BuildLibrary(settings, records, library);
+        var completed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        viewModel.Indexing.IndexCompleted += () => completed.TrySetResult(true);
+
+        settings.LoadConfig("startup-library.xml");
+        await library.IndexStarted.Task.WaitAsync(
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, viewModel.TotalCount);
+        Assert.True(viewModel.Indexing.IsIndexing);
+        Assert.Equal("Scanning…", viewModel.Indexing.ProgressText);
+
+        library.IndexRelease.SetResult(true);
+        await completed.Task.WaitAsync(
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, library.IndexCallCount);
+        Assert.False(viewModel.Indexing.IsIndexing);
+    }
+
+    [Fact]
     public async Task Selection_inspector_detects_mixed_values_and_writes_only_modified_fields()
     {
         var media = new FakeMediaService(
             Model(@"C:\one.flac", "One", "Artist A"),
             Model(@"C:\two.flac", "Two", "Artist B"));
         var writer = new FakeTagWriter();
-        var inspector = new SelectionInspectorViewModel(media, writer, new FakeArtworkService(),
+        var inspector = new SelectionInspectorViewModel(media, new FakeLibrary([]), writer, new FakeArtworkService(),
             new FakeFilePicker(), new FakeDialogs(), new FakeFieldsEditor(),
             new FakeThumbnails(), new AppActivityService());
 
@@ -136,6 +168,93 @@ public sealed class PresentationTests
         TagEdit edit = Assert.Single(writer.Edits!);
         Assert.Equal(TagFields.Artist, edit.Field);
         Assert.Equal("Canonical Artist", edit.Value);
+    }
+
+    [Fact]
+    public async Task Selection_inspector_preserves_multiple_values_from_one_tag()
+    {
+        var model = Model(@"C:\one.flac", "One", "Artist") with
+        {
+            KnownFields =
+            [
+                new TagFieldValue(TagFields.Title, "One"),
+                new TagFieldValue(TagFields.Artist, "Artist"),
+                new TagFieldValue(TagFields.Genre, "Rock"),
+                new TagFieldValue(TagFields.Genre, "Alternative"),
+            ],
+        };
+        var inspector = new SelectionInspectorViewModel(
+            new FakeMediaService(model),
+            new FakeLibrary([]),
+            new FakeTagWriter(),
+            new FakeArtworkService(),
+            new FakeFilePicker(),
+            new FakeDialogs(),
+            new FakeFieldsEditor(),
+            new FakeThumbnails(),
+            new AppActivityService());
+
+        await inspector.LoadAsync(new SelectionContext([model.Path]));
+
+        EditableTagField genre = inspector.Fields.Single(field => field.Field == TagFields.Genre);
+        Assert.True(genre.IsMixed);
+        Assert.Null(genre.Value);
+        Assert.False(genre.IsModified);
+    }
+
+    [Fact]
+    public async Task Selection_inspector_summarizes_all_selected_file_and_tag_formats()
+    {
+        TrackRecord[] records =
+        [
+            Track("Artist", "Album", "One", "FLAC", @"C:\one.flac") with { TagType = "Vorbis" },
+            Track("Artist", "Album", "Two", "FLAC", @"C:\two.flac") with { TagType = "Vorbis" },
+            Track("Artist", "Album", "Three", "MP3", @"C:\three.mp3") with { TagType = "ID3v24" },
+        ];
+        var inspector = new SelectionInspectorViewModel(
+            new FakeMediaService(records.Select(record => Model(record.Path, record.Title!, record.Artist!)).ToArray()),
+            new FakeLibrary(records),
+            new FakeTagWriter(),
+            new FakeArtworkService(),
+            new FakeFilePicker(),
+            new FakeDialogs(),
+            new FakeFieldsEditor(),
+            new FakeThumbnails(),
+            new AppActivityService());
+
+        await inspector.LoadAsync(new SelectionContext(
+            records.Select(record => record.Path).ToArray(), records));
+
+        Assert.Contains("3 tracks selected", inspector.Overview);
+        Assert.Contains("FLAC: 2 (67%)", inspector.Overview);
+        Assert.Contains("MP3: 1 (33%)", inspector.Overview);
+        Assert.Contains("Vorbis comments: 2 (67%)", inspector.Overview);
+        Assert.Contains("ID3v24: 1 (33%)", inspector.Overview);
+    }
+
+    [Fact]
+    public async Task Selection_inspector_reports_mixed_artwork_without_showing_a_representative_cover()
+    {
+        string[] paths = [@"C:\one.flac", @"C:\two.flac"];
+        var library = new FakeLibrary([]);
+        library.ImageSignatures[paths[0]] = "cover-a";
+        library.ImageSignatures[paths[1]] = "cover-b";
+        var inspector = new SelectionInspectorViewModel(
+            new FakeMediaService(paths.Select(path => Model(path, "Title", "Artist")).ToArray()),
+            library,
+            new FakeTagWriter(),
+            new FakeArtworkService(),
+            new FakeFilePicker(),
+            new FakeDialogs(),
+            new FakeFieldsEditor(),
+            new FakeThumbnails(),
+            new AppActivityService());
+
+        await inspector.LoadAsync(new SelectionContext(paths));
+
+        Assert.True(inspector.IsArtworkMixed);
+        Assert.StartsWith("Mixed values", inspector.ArtworkSummary);
+        Assert.Null(inspector.ArtworkSource);
     }
 
     [Fact]
@@ -243,11 +362,13 @@ public sealed class PresentationTests
                     new TagFieldValue(TagFields.Grouping, "First"),
                     new TagFieldValue(TagFields.Copyright, "Copyright owner"),
                 ],
+                TextFields = [new TextField("CUSTOM_NOTE", "First")],
             },
             new MediaFileModel
             {
                 Path = @"C:\two.flac", IsWritable = true,
                 KnownFields = [new TagFieldValue(TagFields.Grouping, "Second")],
+                TextFields = [new TextField("CUSTOM_NOTE", "Second")],
             });
         var writer = new FakeTagWriter();
         var viewModel = new MusicLibrary.App.ViewModels.FieldsDialogViewModel(
@@ -267,6 +388,15 @@ public sealed class PresentationTests
         viewModel.AddFieldCommand.Execute(null);
         viewModel.Rows.Single(row => row.Field == TagFields.Mood).Value = "Calm";
 
+        MusicLibrary.App.ViewModels.FieldRow custom =
+            viewModel.Rows.Single(row => row.UserStringKey == "CUSTOM_NOTE");
+        Assert.True(custom.IsMixed);
+        custom.Value = "Canonical note";
+
+        viewModel.NewUserStringName = "DJ_SET";
+        viewModel.AddUserStringCommand.Execute(null);
+        viewModel.Rows.Single(row => row.UserStringKey == "DJ_SET").Value = "Warmup";
+
         bool? closed = null;
         viewModel.CloseRequested += result => closed = result;
         await viewModel.SaveCommand.ExecuteAsync(null);
@@ -278,6 +408,10 @@ public sealed class PresentationTests
             edit.Field == TagFields.Copyright && edit.Value is null);
         Assert.Contains(writer.Edits!, edit =>
             edit.Field == TagFields.Mood && edit.Value == "Calm");
+        Assert.Contains(writer.Edits!, edit =>
+            edit.UserStringKey == "CUSTOM_NOTE" && edit.Value == "Canonical note");
+        Assert.Contains(writer.Edits!, edit =>
+            edit.UserStringKey == "DJ_SET" && edit.Value == "Warmup");
     }
 
     private static LibraryViewModel BuildLibrary(
@@ -287,7 +421,7 @@ public sealed class PresentationTests
     {
         library ??= new FakeLibrary(records);
         var activity = new AppActivityService();
-        var inspector = new SelectionInspectorViewModel(new FakeMediaService(), new FakeTagWriter(),
+        var inspector = new SelectionInspectorViewModel(new FakeMediaService(), library, new FakeTagWriter(),
             new FakeArtworkService(), new FakeFilePicker(), new FakeDialogs(), new FakeFieldsEditor(),
             new FakeThumbnails(), activity);
         var indexing = new IndexingViewModel(library, settings, activity);
@@ -343,9 +477,21 @@ internal sealed class FakeSettings : IAppSettings
 internal sealed class FakeLibrary(IReadOnlyList<TrackRecord> records) : ILibraryService
 {
     public int ArtworkReadCount { get; private set; }
+    public int IndexCallCount { get; private set; }
+    public TaskCompletionSource<bool> IndexStarted { get; } =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
+    public TaskCompletionSource<bool>? IndexRelease { get; init; }
+    public Dictionary<string, string> ImageSignatures { get; } = new(StringComparer.OrdinalIgnoreCase);
     public bool IsReady => true;
-    public Task<(int Added, int Modified, int Removed, int Unchanged)> IndexAsync(IProgress<IndexProgress>? progress = null, CancellationToken ct = default)
-        => Task.FromResult((0, 0, 0, records.Count));
+    public async Task<(int Added, int Modified, int Removed, int Unchanged)> IndexAsync(
+        IProgress<IndexProgress>? progress = null, CancellationToken ct = default)
+    {
+        IndexCallCount++;
+        IndexStarted.TrySetResult(true);
+        if (IndexRelease is not null)
+            await IndexRelease.Task.WaitAsync(ct);
+        return (0, 0, 0, records.Count);
+    }
     public Task<LibrarySnapshot> BuildSnapshotAsync(LibraryGrouping grouping = LibraryGrouping.AlbumArtist, CancellationToken ct = default)
         => Task.FromResult(new LibrarySnapshot { TotalTracks = records.Count });
     public Task<IReadOnlyList<TrackRecord>> GetAllRecordsAsync(CancellationToken ct = default)
@@ -365,7 +511,9 @@ internal sealed class FakeLibrary(IReadOnlyList<TrackRecord> records) : ILibrary
         return Task.FromResult<IReadOnlyList<byte[]?>>(paths.Select(_ => (byte[]?)null).ToArray());
     }
     public Task<IReadOnlyList<string>> GetImageSignaturesAsync(IReadOnlyList<string> paths, CancellationToken ct = default)
-        => Task.FromResult<IReadOnlyList<string>>(paths.Select(_ => "").ToArray());
+        => Task.FromResult<IReadOnlyList<string>>(paths
+            .Select(path => ImageSignatures.GetValueOrDefault(path) ?? "")
+            .ToArray());
 }
 
 internal sealed class FakeReindex : IReindexService
