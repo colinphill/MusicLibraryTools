@@ -267,7 +267,9 @@ public sealed class AnalysisRepairCategoryGroupViewModel : ViewModelBase
         IEnumerable<AnalysisRepairDisposition> dispositions)
     {
         AnalysisRepairDisposition[] values = dispositions.Distinct().ToArray();
-        return values.Length == 1 ? values[0] : AnalysisRepairDisposition.Mixed;
+        return values.Length == 0
+            ? AnalysisRepairDisposition.Ignored
+            : values.Length == 1 ? values[0] : AnalysisRepairDisposition.Mixed;
     }
 }
 
@@ -349,7 +351,7 @@ public sealed class AnalysisRepairAlbumGroupViewModel : ViewModelBase
             if (value == AnalysisRepairDisposition.Mixed || _propagating)
                 return;
             _propagating = true;
-            foreach (var item in Items.Where(item => !item.IsApplied))
+            foreach (var item in Items.Where(item => item.CanChangeDisposition))
                 item.Disposition = value;
             _propagating = false;
             RefreshState();
@@ -365,7 +367,7 @@ public sealed class AnalysisRepairAlbumGroupViewModel : ViewModelBase
         foreach (var item in Items)
             item.PropertyChanged += ItemChanged;
         _disposition = AnalysisRepairCategoryGroupViewModel.Aggregate(
-            Items.Select(item => item.Disposition));
+            Items.Where(item => item.Repair.CanApply).Select(item => item.Disposition));
     }
 
     private void ItemChanged(object? sender, PropertyChangedEventArgs e)
@@ -380,7 +382,7 @@ public sealed class AnalysisRepairAlbumGroupViewModel : ViewModelBase
     {
         SetProperty(ref _disposition,
             AnalysisRepairCategoryGroupViewModel.Aggregate(
-                Items.Select(item => item.Disposition)),
+                Items.Where(item => item.Repair.CanApply).Select(item => item.Disposition)),
             nameof(Disposition));
         OnPropertyChanged(nameof(ActiveCount));
     }
@@ -627,7 +629,7 @@ public partial class RepresentationRepairActionItemViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsActive))]
-    private AnalysisRepairDisposition _disposition;
+    private AnalysisRepairDisposition _disposition = AnalysisRepairDisposition.Ignored;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsActive))]

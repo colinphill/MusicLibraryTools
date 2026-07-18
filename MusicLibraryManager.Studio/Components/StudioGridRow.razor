@@ -1,0 +1,63 @@
+@typeparam TItem
+@implements IDisposable
+@using System.ComponentModel
+
+<div id="grid-row-@KeyValue.GetHashCode()" class="grid-row @(IsSelected ? "selected" : null)" role="row" aria-selected="@IsSelected"
+     style="@GridStyle" @onclick="OnClick" @ondblclick="OnDoubleClick">
+    @for (int index = 0; index < Columns.Count; index++)
+    {
+        StudioGridColumn<TItem> column = Columns[index];
+        <div class="grid-cell @(index < FrozenColumnCount ? "frozen" : null)" role="gridcell"
+             style="@(index < FrozenColumnCount ? "left:0" : null)" title="@column.Value(Item)?.ToString()">
+            @if (column.Template is not null) { @column.Template(Item) } else { <span class="grid-cell-text">@column.Value(Item)</span> }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public TItem Item { get; set; } = default!;
+    [Parameter, EditorRequired] public IReadOnlyList<StudioGridColumn<TItem>> Columns { get; set; } = [];
+    [Parameter] public string GridStyle { get; set; } = "";
+    [Parameter] public int FrozenColumnCount { get; set; }
+    [Parameter] public bool IsSelected { get; set; }
+    [Parameter] public string KeyValue { get; set; } = "";
+    [Parameter] public EventCallback<Microsoft.AspNetCore.Components.Web.MouseEventArgs> OnClick { get; set; }
+    [Parameter] public EventCallback OnDoubleClick { get; set; }
+    [Parameter] public Func<TItem, Task>? OnRealized { get; set; }
+    [Parameter] public Action<TItem>? OnReleased { get; set; }
+    private INotifyPropertyChanged? ObservedItem;
+    private TItem RealizedItem = default!;
+    private bool HasRealizedItem;
+
+    protected override void OnParametersSet()
+    {
+        INotifyPropertyChanged? next = Item as INotifyPropertyChanged;
+        if (!ReferenceEquals(ObservedItem, next))
+        {
+            if (ObservedItem is not null)
+                ObservedItem.PropertyChanged -= ItemChanged;
+            ObservedItem = next;
+            if (ObservedItem is not null)
+                ObservedItem.PropertyChanged += ItemChanged;
+        }
+        if (!HasRealizedItem || !EqualityComparer<TItem>.Default.Equals(RealizedItem, Item))
+        {
+            if (HasRealizedItem)
+                OnReleased?.Invoke(RealizedItem);
+            RealizedItem = Item;
+            HasRealizedItem = true;
+            if (OnRealized is not null)
+                _ = OnRealized(Item);
+        }
+    }
+
+    private void ItemChanged(object? sender, PropertyChangedEventArgs e) => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        if (ObservedItem is not null)
+            ObservedItem.PropertyChanged -= ItemChanged;
+        if (HasRealizedItem)
+            OnReleased?.Invoke(RealizedItem);
+    }
+}

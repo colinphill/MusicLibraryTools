@@ -316,7 +316,22 @@ public partial class LibraryViewModel : ObservableObject
             return;
         var columns = Columns.Select((column, index) =>
             new LibraryColumnState(column.Key, null, index, column.IsVisible)).ToArray();
-        var view = new LibraryViewDefinition(name, FilterText, FilterMode, columns, null);
+        SaveNamedView(name, columns, null);
+    }
+
+    /// <summary>
+    /// Saves a named view using layout details supplied by a platform-specific grid. The original
+    /// parameterless command remains available to XAML shells that only expose visibility choices.
+    /// </summary>
+    public void SaveNamedView(
+        string name,
+        IReadOnlyList<LibraryColumnState> columns,
+        LibrarySortState? sort)
+    {
+        name = name.Trim();
+        if (name.Length == 0)
+            return;
+        var view = new LibraryViewDefinition(name, FilterText, FilterMode, columns, sort);
         LibraryViewDefinition? existing = SavedViews.FirstOrDefault(item =>
             item.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         if (existing is not null)

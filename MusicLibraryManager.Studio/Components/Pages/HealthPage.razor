@@ -1,0 +1,149 @@
+@inherits ReactiveComponentBase
+@inject AnalyzerViewModel ViewModel
+
+<section class="page" style="grid-template-rows:auto auto minmax(0,1fr)">
+    <PageHeader Title="Health" Subtitle="Audit the collection, inspect every proposed change, and apply safe repairs.">
+        <Actions>
+            <StudioCommandButton Command="ViewModel.ApplyRepairsCommand" CssClass="button primary">Apply metadata repairs</StudioCommandButton>
+            <StudioCommandButton Command="ViewModel.ApplyRepresentationRepairsCommand" CssClass="button primary">Apply file repairs</StudioCommandButton>
+            <StudioCommandButton Command="ViewModel.CancelCommand">Cancel</StudioCommandButton>
+        </Actions>
+    </PageHeader>
+    <article class="card stack analysis-launcher scrollable-card">
+        <div class="row wrap">
+            <StudioCommandButton Command="ViewModel.RunInconsistenciesCommand">Inconsistencies</StudioCommandButton>
+            <StudioCommandButton Command="ViewModel.RunLossyCommand">Lossy files</StudioCommandButton>
+            <StudioCommandButton Command="ViewModel.RunDuplicatesCommand">Duplicates</StudioCommandButton>
+            <StudioCommandButton Command="ViewModel.RunSimilarArtistsCommand">Similar artists</StudioCommandButton>
+            <StudioCommandButton Command="ViewModel.RunCheckSetsCommand">Cross-set check</StudioCommandButton>
+            <StudioCommandButton Command="ViewModel.RunRepresentationsCommand">Representations</StudioCommandButton>
+            <StudioCommandButton Command="ViewModel.VerifyDecodedAudioCommand">Verify audio</StudioCommandButton>
+            <StudioCommandButton Command="ViewModel.RunAlbumMatrixCommand">Album matrix</StudioCommandButton>
+            <StudioCommandButton Command="ViewModel.RunArtworkHealthCommand">Artwork audit</StudioCommandButton>
+            <StudioCommandButton Command="ViewModel.PreviewMetadataRepairsCommand">Preview metadata repairs</StudioCommandButton>
+            <StudioCommandButton Command="ViewModel.PreviewRepresentationRepairsCommand">Preview file repairs</StudioCommandButton>
+            <StudioCommandButton Command="ViewModel.FindAlbumArtistConflictsCommand">Album artist conflicts</StudioCommandButton>
+            <StudioCommandButton Command="ViewModel.PreviewConflictRepairsCommand">Preview conflict repairs</StudioCommandButton>
+        </div>
+        @if (ViewModel.IsBusy) { <div class="progress-track indeterminate"><span></span></div> }
+        <div class="muted">@ViewModel.StatusText</div>
+    </article>
+
+    <ResizableSplitPane CssClass="health-workspace" InitialLeftWidth="260" MinLeftWidth="190" MaxLeftWidth="430" PersistenceKey="health-history" Label="Resize analysis history">
+        <Left>
+            <aside class="card stack history-pane">
+                <h2>Analysis history</h2>
+                <div class="list scroll-area">
+                    @foreach (AnalysisRunViewModel run in ViewModel.Runs)
+                    { <button class="list-item buttonless @(ViewModel.SelectedRun == run ? "selected" : null)" @onclick="() => ViewModel.SelectedRun = run"><div><strong>@run.Name</strong><p>@run.DisplayLabel</p></div></button> }
+                </div>
+                <div class="row"><StudioCommandButton Command="ViewModel.RemoveRunCommand">Remove</StudioCommandButton><StudioCommandButton Command="ViewModel.ClearRunsCommand">Clear</StudioCommandButton></div>
+            </aside>
+        </Left>
+        <Right>
+            <article class="card flush result-pane">
+                <div class="tabs scroll-x">
+                    @foreach ((string label, AnalysisResultView view) in ResultTabs)
+                    { <button class="tab @(ViewModel.ActiveView == view ? "active" : null)" @onclick="() => ViewModel.ActiveView = view">@label</button> }
+                </div>
+                <div class="health-results">
+                    @switch (ViewModel.ActiveView)
+                    {
+                        case AnalysisResultView.Findings:
+                            <ResizableSplitPane CssClass="health-detail-split" InitialLeftWidth="330" MinLeftWidth="230" MaxLeftWidth="620" PersistenceKey="health-findings" Label="Resize findings hierarchy">
+                                <Left><HealthFindingTree @key="ViewModel.SelectedRun" /></Left>
+                                <Right><StudioDataGrid TItem="AnalysisFindingViewModel" Items="ViewModel.DisplayedFindings" Columns="FindingColumns" KeySelector="FindingKey" AriaLabel="Files in selected findings branch" EmptyText="Select a findings branch" /></Right>
+                            </ResizableSplitPane>
+                            break;
+                        case AnalysisResultView.Duplicates:
+                            <div class="result-cards scroll-area">@foreach (var group in ViewModel.Duplicates) { <article class="result-card"><strong>@group.Key</strong>@foreach(var track in group.Tracks){<p>@track.Path</p>}</article> }</div>
+                            break;
+                        case AnalysisResultView.Artists:
+                            <div class="result-cards scroll-area">@foreach (ArtistGroupViewModel group in ViewModel.ArtistGroups) { <article class="result-card row wrap"><div class="grow">@foreach(var variant in group.Variants){<p>@variant.Name</p>}</div><input @bind="group.CanonicalName" /><StudioCommandButton Command="group.MergeCommand">Merge</StudioCommandButton></article> }</div>
+                            break;
+                        case AnalysisResultView.Repairs:
+                            <ResizableSplitPane CssClass="health-detail-split" InitialLeftWidth="350" MinLeftWidth="240" MaxLeftWidth="650" PersistenceKey="health-metadata-repairs" Label="Resize metadata repair hierarchy">
+                                <Left><HealthRepairTree @key="ViewModel.SelectedRun" /></Left>
+                                <Right><StudioDataGrid TItem="AnalysisRepairItemViewModel" Items="ViewModel.DisplayedRepairItems" Columns="RepairColumns" KeySelector="RepairKey" FrozenColumnCount="1" AriaLabel="Metadata repairs" EmptyText="Select a metadata repair branch" /></Right>
+                            </ResizableSplitPane>
+                            break;
+                        case AnalysisResultView.RepresentationRepairs:
+                            <ResizableSplitPane CssClass="health-detail-split" InitialLeftWidth="350" MinLeftWidth="240" MaxLeftWidth="650" PersistenceKey="health-file-repairs" Label="Resize file repair hierarchy">
+                                <Left><HealthRepresentationTree @key="ViewModel.SelectedRun" /></Left>
+                                <Right><StudioDataGrid TItem="RepresentationRepairActionItemViewModel" Items="ViewModel.DisplayedRepresentationItems" Columns="RepresentationColumns" KeySelector="RepresentationKey" FrozenColumnCount="1" AriaLabel="File repairs" EmptyText="Select a file repair branch" /></Right>
+                            </ResizableSplitPane>
+                            break;
+                        case AnalysisResultView.Conflicts:
+                            <StudioDataGrid TItem="AnalysisConflictGroupViewModel" Items="ViewModel.ConflictGroups" Columns="ConflictColumns" KeySelector="ConflictKey" AriaLabel="Album artist conflicts" EmptyText="No conflicts" />
+                            break;
+                        case AnalysisResultView.Matrix:
+                            <div class="result-cards scroll-area">@foreach(var matrix in ViewModel.Matrices){<details class="result-card" open><summary><strong>@matrix.DisplayName</strong></summary>@foreach(var row in matrix.Rows){<p>@row.DiscNumber.Display · @row.TrackNumber.Display · @row.Title.Display · @row.Artist.Display</p>}</details>}</div>
+                            break;
+                    }
+                </div>
+            </article>
+        </Right>
+    </ResizableSplitPane>
+</section>
+
+@code {
+    private static readonly (string, AnalysisResultView)[] ResultTabs =
+    [
+        ("Findings", AnalysisResultView.Findings), ("Duplicates", AnalysisResultView.Duplicates),
+        ("Similar artists", AnalysisResultView.Artists), ("Metadata repairs", AnalysisResultView.Repairs),
+        ("File repairs", AnalysisResultView.RepresentationRepairs), ("Conflicts", AnalysisResultView.Conflicts),
+        ("Album matrix", AnalysisResultView.Matrix),
+    ];
+    private readonly List<StudioGridColumn<AnalysisFindingViewModel>> FindingColumns = [];
+    private readonly List<StudioGridColumn<AnalysisRepairItemViewModel>> RepairColumns = [];
+    private readonly List<StudioGridColumn<RepresentationRepairActionItemViewModel>> RepresentationColumns = [];
+    private readonly List<StudioGridColumn<AnalysisConflictGroupViewModel>> ConflictColumns = [];
+
+    protected override void OnInitialized()
+    {
+        Observe(ViewModel); Observe(ViewModel.Runs); BuildColumns();
+    }
+
+    private void BuildColumns()
+    {
+        FindingColumns.Add(new() { Key="Path", Header="Track", Width=380, MinWidth=220, Value=item=>item.Path });
+        FindingColumns.Add(new() { Key="Description", Header="Reason", Width=420, MinWidth=220, Value=item=>item.Description });
+        RepairColumns.Add(new() { Key="Disposition", Header="Disposition", Width=145, MinWidth=125, Value=item=>item.Disposition, Template=RepairDispositionTemplate });
+        RepairColumns.Add(new() { Key="Path", Header="Track", Width=320, MinWidth=190, Value=item=>item.DisplayPath });
+        RepairColumns.Add(new() { Key="Before", Header="Before", Width=180, MinWidth=100, Value=item=>item.Before });
+        RepairColumns.Add(new() { Key="After", Header="After", Width=180, MinWidth=100, Value=item=>item.After });
+        RepairColumns.Add(new() { Key="Reason", Header="Reason", Width=320, MinWidth=180, Value=item=>item.Reason });
+        RepresentationColumns.Add(new() { Key="Disposition", Header="Disposition", Width=145, MinWidth=125, Value=item=>item.Disposition, Template=RepresentationDispositionTemplate });
+        RepresentationColumns.Add(new() { Key="Source", Header="Track", Width=320, MinWidth=190, Value=item=>item.SourcePath });
+        RepresentationColumns.Add(new() { Key="Action", Header="Action", Width=250, MinWidth=160, Value=item=>item.Description });
+        RepresentationColumns.Add(new() { Key="Destination", Header="Destination", Width=340, MinWidth=200, Value=item=>item.DestinationPath });
+        RepresentationColumns.Add(new() { Key="Result", Header="Result", Width=180, MinWidth=110, Value=item=>item.ResultText });
+        ConflictColumns.Add(new() { Key="Album", Header="Album", Width=190, MinWidth=120, Value=item=>item.Album });
+        ConflictColumns.Add(new() { Key="Field", Header="Field", Width=130, MinWidth=90, Value=item=>item.Field });
+        ConflictColumns.Add(new() { Key="Files", Header="Files", Width=75, MinWidth=60, Value=item=>item.FileCount });
+        ConflictColumns.Add(new() { Key="Canonical", Header="Canonical value", Width=230, MinWidth=150, Value=item=>item.SelectedOption?.Value, Template=ConflictTemplate });
+        ConflictColumns.Add(new() { Key="Directory", Header="Directory", Width=360, MinWidth=200, Value=item=>item.Directory });
+    }
+
+    private RenderFragment RepairDispositionTemplate(AnalysisRepairItemViewModel item) => builder =>
+    {
+        if (!item.CanChangeDisposition) { builder.OpenElement(0, "span"); builder.AddAttribute(1, "class", "faint"); builder.AddContent(2, item.BlockingReason ?? item.ResultText ?? "No automated fix"); builder.CloseElement(); return; }
+        builder.OpenComponent<DispositionSelect>(0); builder.AddAttribute(1, "Value", item.Disposition);
+        builder.AddAttribute(2, "ValueChanged", EventCallback.Factory.Create<AnalysisRepairDisposition>(this, value => item.Disposition = value));
+        builder.AddAttribute(3, "Options", item.Dispositions); builder.CloseComponent();
+    };
+    private RenderFragment RepresentationDispositionTemplate(RepresentationRepairActionItemViewModel item) => builder =>
+    {
+        if (!item.CanChangeDisposition) { builder.OpenElement(0, "span"); builder.AddAttribute(1, "class", "faint"); builder.AddContent(2, item.ResultText ?? "Applied"); builder.CloseElement(); return; }
+        builder.OpenComponent<DispositionSelect>(0); builder.AddAttribute(1, "Value", item.Disposition);
+        builder.AddAttribute(2, "ValueChanged", EventCallback.Factory.Create<AnalysisRepairDisposition>(this, value => item.Disposition = value));
+        builder.AddAttribute(3, "Options", item.Dispositions); builder.CloseComponent();
+    };
+    private RenderFragment ConflictTemplate(AnalysisConflictGroupViewModel item) => builder =>
+    { builder.OpenComponent<ConflictOptionSelect>(0); builder.AddAttribute(1, "Item", item); builder.CloseComponent(); };
+
+    private static string FindingKey(AnalysisFindingViewModel item) => $"{item.Path}|{item.Description}";
+    private static string RepairKey(AnalysisRepairItemViewModel item) => $"{item.DisplayPath}|{item.Field}";
+    private static string RepresentationKey(RepresentationRepairActionItemViewModel item) => $"{item.SourcePath}|{item.DestinationPath}";
+    private static string ConflictKey(AnalysisConflictGroupViewModel item) => $"{item.Directory}|{item.Album}|{item.Field}";
+}

@@ -171,6 +171,12 @@ public sealed class AnalyzerViewModelTests
 
         var aac = run.RepresentationActionGroups.Single(
             group => group.Category == "Derive missing AAC");
+        Assert.Equal(0, aac.ActiveCount);
+        Assert.All(run.RepresentationActionItems,
+            item => Assert.Equal(AnalysisRepairDisposition.Ignored, item.Disposition));
+
+        aac.Disposition = AnalysisRepairDisposition.Active;
+
         Assert.Equal(2, aac.ActiveCount);
         var firstAlbum = Assert.Single(
             aac.Artists.Single(artist => artist.Artist == "AA").Albums);
@@ -327,11 +333,15 @@ public sealed class AnalyzerViewModelTests
         var category = Assert.Single(run.RepairGroups);
         Assert.Equal("Path", category.Category);
         Assert.Equal(2, category.Count);
-        Assert.Equal(1, category.ActiveCount);
+        Assert.Equal(0, category.ActiveCount);
+        Assert.All(items, item => Assert.Equal(AnalysisRepairDisposition.Ignored, item.Disposition));
         Assert.Contains("⟦NBSP⟧", items[0].Before);
         Assert.True(items[0].CanChangeDisposition);
         Assert.False(items[1].CanChangeDisposition);
         Assert.False(items[1].IsActive);
+
+        items[0].Disposition = AnalysisRepairDisposition.Active;
+        Assert.Equal(1, category.ActiveCount);
     }
 
     [Fact]
@@ -362,6 +372,9 @@ public sealed class AnalyzerViewModelTests
         Assert.Equal("ID3 tag version", Assert.Single(run.RepairGroups).Category);
         Assert.Equal("ID3v2.2", item.Before);
         Assert.Equal("ID3v2.3", item.After);
+        Assert.Equal(AnalysisRepairDisposition.Ignored, item.Disposition);
+        Assert.False(item.IsActive);
+        item.Disposition = AnalysisRepairDisposition.Active;
         Assert.True(item.IsActive);
     }
 
@@ -552,6 +565,12 @@ public sealed class AnalyzerViewModelTests
         var first = Assert.Single(titles.Artists.Single(artist => artist.Artist == "AA").Albums);
         Assert.Equal("First", first.Album);
         Assert.Equal(2, first.Count);
+        Assert.Equal(0, first.ActiveCount);
+        Assert.All(viewModel.RepairItems,
+            item => Assert.Equal(AnalysisRepairDisposition.Ignored, item.Disposition));
+
+        titles.Disposition = AnalysisRepairDisposition.Active;
+
         Assert.Equal(2, first.ActiveCount);
 
         viewModel.SelectedRepairNode = titles;

@@ -67,7 +67,9 @@ public partial class LibraryRow : ObservableObject
     public string AlbumArtist => Record.AlbumArtist ?? "";
     public string Album => Record.Album ?? "";
     public int? Track => Record.TrackNumber;
+    public int? TrackTotal => Record.TrackTotal;
     public int? Disc => Record.DiscNumber;
+    public int? DiscTotal => Record.DiscTotal;
     public string Codec => Record.CodecName ?? "";
     public string Duration => Details["Duration"];
     public string Modified => Details["Modified"];
@@ -112,6 +114,89 @@ public partial class EditableTagField(TagFields field, string label) : Observabl
     {
         if (!IsMixed || value is not null)
             IsModified = true;
+    }
+}
+
+public partial class ArtworkPreviewItem : ObservableObject
+{
+    private string _technicalSummary;
+
+    public ArtworkPreviewItem(
+        object? source,
+        ID3v2Util.APICType type,
+        string mimeType,
+        byte[] data,
+        string technicalSummary,
+        string? description)
+    {
+        Source = source;
+        _type = type;
+        MimeType = mimeType;
+        Data = data;
+        _technicalSummary = technicalSummary;
+        _description = description;
+    }
+
+    public object? Source { get; private set; }
+    public string MimeType { get; private set; }
+    public byte[] Data { get; private set; }
+    public string Label => FormatType(Type);
+    public string Summary => string.IsNullOrWhiteSpace(Description)
+        ? _technicalSummary
+        : $"{Description} · {_technicalSummary}";
+    public bool IsModified { get; private set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Label))]
+    private ID3v2Util.APICType _type;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Summary))]
+    private string? _description;
+
+    partial void OnTypeChanged(ID3v2Util.APICType value) => MarkModified();
+    partial void OnDescriptionChanged(string? value) => MarkModified();
+
+    public void AcceptChanges()
+    {
+        if (!IsModified)
+            return;
+        IsModified = false;
+        OnPropertyChanged(nameof(IsModified));
+    }
+
+    public void ReplaceContent(
+        object? source,
+        string mimeType,
+        byte[] data,
+        string technicalSummary)
+    {
+        Source = source;
+        MimeType = mimeType;
+        Data = data;
+        _technicalSummary = technicalSummary;
+        OnPropertyChanged(nameof(Source));
+        OnPropertyChanged(nameof(MimeType));
+        OnPropertyChanged(nameof(Data));
+        OnPropertyChanged(nameof(Summary));
+        MarkModified();
+    }
+
+    private void MarkModified()
+    {
+        if (IsModified)
+            return;
+        IsModified = true;
+        OnPropertyChanged(nameof(IsModified));
+    }
+
+    private static string FormatType(ID3v2Util.APICType value)
+    {
+        string text = value.ToString();
+        return string.Concat(text.Select((character, index) =>
+            index > 0 && char.IsUpper(character) && char.IsLower(text[index - 1])
+                ? $" {char.ToLowerInvariant(character)}"
+                : character.ToString()));
     }
 }
 

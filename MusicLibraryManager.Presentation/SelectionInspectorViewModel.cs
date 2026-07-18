@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MusicFileUtilities;
@@ -21,6 +22,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
     private readonly IActivityService _activities;
     private int _generation;
     private CancellationTokenSource? _cancellation;
+    private bool _artworkSetModified;
 
     [ObservableProperty] private SelectionContext _selection = SelectionContext.Empty;
     [ObservableProperty] private bool _isBusy;
@@ -58,6 +60,9 @@ public partial class SelectionInspectorViewModel : ObservableObject
     }
 
     public ObservableCollection<EditableTagField> Fields { get; } = [];
+    public ObservableCollection<ArtworkPreviewItem> ArtworkItems { get; } = [];
+    public IReadOnlyList<ID3v2Util.APICType> ArtworkTypes { get; } =
+        Enum.GetValues<ID3v2Util.APICType>();
     public bool HasSelection => Selection.HasSelection;
     public bool HasStatusMessage => !string.IsNullOrWhiteSpace(StatusMessage);
     public string SelectionSummary => Selection.Summary;
@@ -90,6 +95,8 @@ public partial class SelectionInspectorViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectionSummary));
         StatusMessage = null;
         ArtworkSource = null;
+        ClearArtworkItems();
+        _artworkSetModified = false;
         IsArtworkMixed = false;
         ArtworkSummary = "No embedded artwork.";
         NotifyCommands();
@@ -141,15 +148,32 @@ public partial class SelectionInspectorViewModel : ObservableObject
                 selection.Paths[0], includeArtwork: true, cancellation.Token);
             if (generation != _generation)
                 return;
-            ArtworkModel? first = artwork.Value?.Artwork.FirstOrDefault();
-            if (first is not null)
+            ArtworkModel[] embeddedArtwork = artwork.Value?.Artwork.ToArray() ?? [];
+            if (embeddedArtwork.Length == 0)
+                return;
+            for (int index = 0; index < embeddedArtwork.Length; index++)
             {
-                ArtworkSource = await _thumbnails.CreateImageSourceAsync(
-                    first.Data, cancellationToken: cancellation.Token);
-                ArtworkSummary = $"{first.ImageType ?? "image"} · {first.Width:N0} × {first.Height:N0} · {FormatBytes(first.Size)}";
-                if (selection.Paths.Count > 1)
-                    ArtworkSummary += $" · shared by {selection.Paths.Count:N0} tracks";
+                ArtworkModel image = embeddedArtwork[index];
+                object? source = await _thumbnails.CreateImageSourceAsync(
+                    image.Data, cancellationToken: cancellation.Token);
+                if (generation != _generation)
+                    return;
+                var preview = new ArtworkPreviewItem(
+                    source,
+                    ArtworkType(image, index),
+                    ArtworkMimeType(image),
+                    image.Data,
+                    ArtworkDetails(image),
+                    image.Description);
+                preview.PropertyChanged += OnArtworkItemChanged;
+                ArtworkItems.Add(preview);
             }
+            ArtworkSource = ArtworkItems.FirstOrDefault()?.Source;
+            ArtworkSummary = embeddedArtwork.Length == 1
+                ? ArtworkItems[0].Summary
+                : $"{embeddedArtwork.Length:N0} embedded artworks";
+            if (selection.Paths.Count > 1)
+                ArtworkSummary += $" · shared by {selection.Paths.Count:N0} tracks";
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
@@ -199,6 +223,9 @@ public partial class SelectionInspectorViewModel : ObservableObject
     }
 
     private bool CanEdit() => HasSelection && !IsBusy;
+    private bool CanEditArtworkSet() => CanEdit() && !IsArtworkMixed;
+    private bool CanSaveArtworkSet() => CanEditArtworkSet() &&
+        (_artworkSetModified || ArtworkItems.Any(item => item.IsModified));
 
     [RelayCommand(CanExecute = nameof(CanEdit))]
     private async Task SaveTagsAsync()
@@ -259,6 +286,101 @@ public partial class SelectionInspectorViewModel : ObservableObject
             return;
         await ApplyArtworkAsync("Replace artwork", async musicPath =>
             await _artwork.SetCoverFromFileAsync(musicPath, path, ArtworkMaxDimension));
+    }
+
+    [RelayCommand(CanExecute = nameof(CanEditArtworkSet))]
+    private async Task AddArtworkAsync()
+    {
+        string? path = await _files.PickFileAsync("Choose artwork",
+            [new FilePickerType("Images", [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"])]);
+        if (path is null)
+            return;
+
+        PreparedImage? prepared = await _artwork.PrepareFromFileAsync(path, ArtworkMaxDimension);
+        if (prepared is null)
+        {
+            StatusMessage = "The selected image could not be prepared for embedding.";
+            return;
+        }
+
+        ID3v2Util.APICType type = ArtworkItems.Any(item => item.Type == ID3v2Util.APICType.FrontCover)
+            ? ID3v2Util.APICType.Other
+            : ID3v2Util.APICType.FrontCover;
+        object? source = await _thumbnails.CreateImageSourceAsync(prepared.Data);
+        var item = new ArtworkPreviewItem(
+            source,
+            type,
+            prepared.MimeType,
+            prepared.Data,
+            $"{prepared.MimeType} · {prepared.Width:N0} × {prepared.Height:N0} · {FormatBytes(prepared.Data.LongLength)}",
+            null);
+        item.PropertyChanged += OnArtworkItemChanged;
+        ArtworkItems.Add(item);
+        ArtworkSource ??= item.Source;
+        _artworkSetModified = true;
+        UpdateArtworkSummary();
+        SaveArtworkSetCommand.NotifyCanExecuteChanged();
+    }
+
+    public void RemoveArtworkItem(ArtworkPreviewItem item)
+    {
+        if (!CanEditArtworkSet() || !ArtworkItems.Contains(item))
+            return;
+        item.PropertyChanged -= OnArtworkItemChanged;
+        ArtworkItems.Remove(item);
+        ArtworkSource = ArtworkItems.FirstOrDefault()?.Source;
+        _artworkSetModified = true;
+        UpdateArtworkSummary();
+        SaveArtworkSetCommand.NotifyCanExecuteChanged();
+    }
+
+    public async Task ReplaceArtworkItemAsync(ArtworkPreviewItem item)
+    {
+        if (!CanEditArtworkSet() || !ArtworkItems.Contains(item))
+            return;
+        string? path = await _files.PickFileAsync("Choose replacement artwork",
+            [new FilePickerType("Images", [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"])]);
+        if (path is null)
+            return;
+
+        PreparedImage? prepared = await _artwork.PrepareFromFileAsync(path, ArtworkMaxDimension);
+        if (prepared is null)
+        {
+            StatusMessage = "The selected image could not be prepared for embedding.";
+            return;
+        }
+
+        object? source = await _thumbnails.CreateImageSourceAsync(prepared.Data);
+        item.ReplaceContent(
+            source,
+            prepared.MimeType,
+            prepared.Data,
+            $"{prepared.MimeType} · {prepared.Width:N0} × {prepared.Height:N0} · {FormatBytes(prepared.Data.LongLength)}");
+        if (ReferenceEquals(ArtworkItems.FirstOrDefault(), item))
+            ArtworkSource = item.Source;
+        _artworkSetModified = true;
+        UpdateArtworkSummary();
+        StatusMessage = "Artwork replacement ready to save.";
+        SaveArtworkSetCommand.NotifyCanExecuteChanged();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSaveArtworkSet))]
+    private async Task SaveArtworkSetAsync()
+    {
+        if (Selection.Paths.Count > 1 &&
+            !await _dialogs.ConfirmAsync(
+                "Save artwork changes",
+                $"Replace the embedded artwork set on {Selection.Paths.Count:N0} selected tracks with these {ArtworkItems.Count:N0} image(s)?",
+                "Save"))
+            return;
+
+        ArtworkInput[] images = ArtworkItems.Select(item => new ArtworkInput(
+            item.Type,
+            item.MimeType,
+            item.Data,
+            string.IsNullOrWhiteSpace(item.Description) ? null : item.Description.Trim())).ToArray();
+        await ApplyArtworkAsync("Save artwork changes", musicPath =>
+            _artwork.SaveImagesAsync(musicPath, images));
     }
 
     [RelayCommand(CanExecute = nameof(CanEdit))]
@@ -331,8 +453,32 @@ public partial class SelectionInspectorViewModel : ObservableObject
         SaveTagsCommand.NotifyCanExecuteChanged();
         EditAllFieldsCommand.NotifyCanExecuteChanged();
         ReplaceArtworkCommand.NotifyCanExecuteChanged();
+        AddArtworkCommand.NotifyCanExecuteChanged();
+        SaveArtworkSetCommand.NotifyCanExecuteChanged();
         ScrubArtworkCommand.NotifyCanExecuteChanged();
         RemoveArtworkCommand.NotifyCanExecuteChanged();
+    }
+
+    private void OnArtworkItemChanged(object? sender, PropertyChangedEventArgs e)
+        => SaveArtworkSetCommand.NotifyCanExecuteChanged();
+
+    private void ClearArtworkItems()
+    {
+        foreach (ArtworkPreviewItem item in ArtworkItems)
+            item.PropertyChanged -= OnArtworkItemChanged;
+        ArtworkItems.Clear();
+    }
+
+    private void UpdateArtworkSummary()
+    {
+        ArtworkSummary = ArtworkItems.Count switch
+        {
+            0 => "No embedded artwork.",
+            1 => ArtworkItems[0].Summary,
+            _ => $"{ArtworkItems.Count:N0} embedded artworks",
+        };
+        if (Selection.Paths.Count > 1 && ArtworkItems.Count > 0)
+            ArtworkSummary += $" · shared by {Selection.Paths.Count:N0} tracks";
     }
 
     private static string DescribeOverview(
@@ -340,11 +486,13 @@ public partial class SelectionInspectorViewModel : ObservableObject
         IReadOnlyList<MediaFileModel> loadedModels)
     {
         int count = selection.Paths.Count;
+        Dictionary<string, string?> codecsByPath = (selection.Records is { Count: > 0 }
+                ? selection.Records.Select(record => (record.Path, record.CodecName))
+                : loadedModels.Select(model => (model.Path, model.Codec?.CodecName)))
+            .GroupBy(value => value.Path, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First().Item2, StringComparer.OrdinalIgnoreCase);
         IEnumerable<string> fileFormats = selection.Paths.Select(path =>
-        {
-            string extension = Path.GetExtension(path).TrimStart('.');
-            return string.IsNullOrWhiteSpace(extension) ? "Unknown" : extension.ToUpperInvariant();
-        });
+            FormatFileFormat(path, codecsByPath.GetValueOrDefault(path)));
         string[] knownTagFormats = (selection.Records is { Count: > 0 }
             ? selection.Records.Select(record => NormalizeTagFormat(record.TagType))
             : loadedModels.Select(model => NormalizeTagFormat(model.TagType)))
@@ -358,6 +506,17 @@ public partial class SelectionInspectorViewModel : ObservableObject
                $"File formats{Environment.NewLine}{FormatDistribution(fileFormats, count)}" +
                $"{Environment.NewLine}{Environment.NewLine}Tag formats{Environment.NewLine}" +
                FormatDistribution(tagFormats, count);
+    }
+
+    private static string FormatFileFormat(string path, string? codec)
+    {
+        string extension = Path.GetExtension(path).TrimStart('.').ToUpperInvariant();
+        if (string.IsNullOrWhiteSpace(extension))
+            return "Unknown";
+        bool isMp4Family = extension is "MP4" or "M4A" or "M4P" or "M4R";
+        return isMp4Family && !string.IsNullOrWhiteSpace(codec)
+            ? $"{extension} ({codec})"
+            : extension;
     }
 
     private static string NormalizeTagFormat(string? value) => value switch
@@ -384,4 +543,26 @@ public partial class SelectionInspectorViewModel : ObservableObject
         >= 1024 => $"{bytes / 1024d:N0} KB",
         _ => $"{bytes:N0} bytes",
     };
+
+    private static ID3v2Util.APICType ArtworkType(ArtworkModel image, int index) =>
+        Enum.TryParse(image.Category, true, out ID3v2Util.APICType type)
+            ? type
+            : index == 0 ? ID3v2Util.APICType.FrontCover : ID3v2Util.APICType.Other;
+
+    private static string ArtworkMimeType(ArtworkModel image)
+    {
+        if (string.IsNullOrWhiteSpace(image.ImageType))
+            return "image/jpeg";
+        if (image.ImageType.Contains('/'))
+            return image.ImageType;
+        string subtype = string.Equals(image.ImageType, "jpg", StringComparison.OrdinalIgnoreCase)
+            ? "jpeg"
+            : image.ImageType;
+        return $"image/{subtype.ToLowerInvariant()}";
+    }
+
+    private static string ArtworkDetails(ArtworkModel image)
+    {
+        return $"{image.ImageType ?? "image"} · {image.Width:N0} × {image.Height:N0} · {FormatBytes(image.Size)}";
+    }
 }

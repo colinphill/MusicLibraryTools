@@ -1,0 +1,11 @@
+@inherits ReactiveComponentBase
+@inject OrganizeViewModel ViewModel
+
+<section class="page" style="grid-template-rows:auto auto minmax(0,1fr)">
+    <PageHeader Title="Organize" Subtitle="Move eligible files into the canonical library layout with rollback protection.">
+        <Actions><StudioCommandButton Command="ViewModel.PreviewCommand">Preview</StudioCommandButton><StudioCommandButton Command="ViewModel.ApplyCommand" CssClass="button primary">Apply moves</StudioCommandButton><StudioCommandButton Command="ViewModel.CancelCommand">Cancel</StudioCommandButton></Actions>
+    </PageHeader>
+    <article class="card row scrollable-card"><span class="@(ViewModel.IsBusy?"spinner":"status-dot")"></span><div class="grow"><strong>Preview before applying</strong><div class="muted">@ViewModel.StatusText</div></div><span class="pill">@ViewModel.Moves.Count planned</span></article>
+    <article class="card flush fill-card"><div class="simple-table fill"><div class="simple-head two"><span>Current location</span><span>New location</span></div>@foreach(var move in ViewModel.Moves){<div class="simple-row two"><span title="@move.Source">@move.Source</span><span title="@move.Destination">@move.Destination</span></div>}</div></article>
+</section>
+@code { protected override void OnInitialized(){Observe(ViewModel);Observe(ViewModel.Moves);} }

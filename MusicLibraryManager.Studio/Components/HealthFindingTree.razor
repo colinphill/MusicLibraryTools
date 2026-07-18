@@ -1,0 +1,70 @@
+@inherits ReactiveComponentBase
+@inject AnalyzerViewModel ViewModel
+
+<div class="tree" role="tree" aria-label="Findings hierarchy">
+    <details class="tree-root" open>
+        <summary class="tree-node @(ViewModel.SelectedFindingNode is null ? "selected" : null)" @onclick="SelectRoot">
+            <span>All findings</span><span class="tree-count">@RootCount</span>
+        </summary>
+        <div class="tree-children">
+            @foreach (AnalysisProblemGroupViewModel problem in ViewModel.FindingGroups)
+            {
+                <details open>
+                    <summary class="tree-node @(ReferenceEquals(ViewModel.SelectedFindingNode, problem) ? "selected" : null)" @onclick="() => Select(problem)">
+                        <span>@problem.Problem</span><span class="tree-count">@problem.Count</span>
+                    </summary>
+                    <div class="tree-children">
+                        @foreach (AnalysisArtistGroupViewModel artist in problem.Artists)
+                        {
+                            <details open>
+                                <summary class="tree-node @(ReferenceEquals(ViewModel.SelectedFindingNode, artist) ? "selected" : null)" @onclick="() => Select(artist)">
+                                    <span>@artist.Artist</span><span class="tree-count">@artist.Count</span>
+                                </summary>
+                                <div class="tree-children">
+                                    @foreach (AnalysisAlbumGroupViewModel album in artist.Albums)
+                                    {
+                                        <details>
+                                            <summary class="tree-node @(ReferenceEquals(ViewModel.SelectedFindingNode, album) ? "selected" : null)" @onclick="() => Select(album)">
+                                                <span>@album.Album</span><span class="tree-count">@album.Count</span>
+                                            </summary>
+                                            <div class="tree-children">
+                                                @foreach (AnalysisFindingViewModel finding in album.Findings)
+                                                {
+                                                    <button class="tree-button @(ReferenceEquals(ViewModel.SelectedFindingNode, finding) ? "selected" : null)" @onclick="() => Select(finding)" title="@finding.Path">@Path.GetFileName(finding.Path)</button>
+                                                }
+                                            </div>
+                                        </details>
+                                    }
+                                </div>
+                            </details>
+                        }
+                    </div>
+                </details>
+            }
+        </div>
+    </details>
+</div>
+
+@code {
+    private int RootCount => ViewModel.FindingGroups.Sum(group => group.Count);
+
+    protected override void OnInitialized()
+    {
+        foreach (AnalysisProblemGroupViewModel problem in ViewModel.FindingGroups)
+        {
+            Observe(problem);
+            foreach (AnalysisArtistGroupViewModel artist in problem.Artists)
+            {
+                Observe(artist);
+                foreach (AnalysisAlbumGroupViewModel album in artist.Albums)
+                {
+                    Observe(album);
+                    foreach (AnalysisFindingViewModel finding in album.Findings) Observe(finding);
+                }
+            }
+        }
+    }
+
+    private void SelectRoot() => ViewModel.SelectedFindingNode = null;
+    private void Select(object node) => ViewModel.SelectedFindingNode = node;
+}

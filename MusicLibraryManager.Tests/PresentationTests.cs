@@ -62,6 +62,28 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public void Named_view_accepts_explicit_column_layout_and_typed_sort_state()
+    {
+        var settings = new FakeSettings();
+        LibraryViewModel viewModel = BuildLibrary(settings, []);
+        LibraryColumnState[] columns =
+        [
+            new("codec", 92, 0, true),
+            new("title", 340, 1, false),
+        ];
+
+        viewModel.SaveNamedView("Mastering", columns, new LibrarySortState("codec", true));
+
+        LibraryViewDefinition saved = Assert.Single(viewModel.SavedViews);
+        Assert.Equal("Mastering", saved.Name);
+        Assert.Equal(92, saved.Columns[0].Width);
+        Assert.False(saved.Columns[1].Visible);
+        Assert.Equal("codec", saved.Sort!.Key);
+        Assert.True(saved.Sort.Descending);
+        Assert.Contains("manager.library.views.v1", settings.Preferences.Keys);
+    }
+
+    [Fact]
     public async Task Library_view_handles_one_hundred_thousand_cached_tracks_without_artwork_reads()
     {
         var settings = new FakeSettings();
@@ -233,6 +255,39 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public async Task Selection_inspector_includes_codec_in_mp4_family_file_formats()
+    {
+        TrackRecord[] records =
+        [
+            Track("Artist", "Album", "AAC", "AAC", @"C:\one.mp4"),
+            Track("Artist", "Album", "Lossless", "ALAC", @"C:\two.m4a"),
+        ];
+        var inspector = new SelectionInspectorViewModel(
+            new FakeMediaService(records.Select(record => Model(record.Path, record.Title!, record.Artist!)).ToArray()),
+            new FakeLibrary(records), new FakeTagWriter(), new FakeArtworkService(), new FakeFilePicker(),
+            new FakeDialogs(), new FakeFieldsEditor(), new FakeThumbnails(), new AppActivityService());
+
+        await inspector.LoadAsync(new SelectionContext(
+            records.Select(record => record.Path).ToArray(), records));
+
+        Assert.Contains("MP4 (AAC): 1 (50%)", inspector.Overview);
+        Assert.Contains("M4A (ALAC): 1 (50%)", inspector.Overview);
+    }
+
+    [Fact]
+    public void Library_row_exposes_track_and_disc_totals_for_typed_grid_columns()
+    {
+        var row = new LibraryRow(Track("Artist", "Album", "Title", "FLAC", @"C:\one.flac") with
+        {
+            TrackTotal = 12,
+            DiscTotal = 3,
+        });
+
+        Assert.Equal(12, row.TrackTotal);
+        Assert.Equal(3, row.DiscTotal);
+    }
+
+    [Fact]
     public async Task Selection_inspector_reports_mixed_artwork_without_showing_a_representative_cover()
     {
         string[] paths = [@"C:\one.flac", @"C:\two.flac"];
@@ -255,6 +310,139 @@ public sealed class PresentationTests
         Assert.True(inspector.IsArtworkMixed);
         Assert.StartsWith("Mixed values", inspector.ArtworkSummary);
         Assert.Null(inspector.ArtworkSource);
+    }
+
+    [Fact]
+    public async Task Selection_inspector_exposes_every_embedded_artwork_with_type_and_dimensions()
+    {
+        const string path = @"C:\one.flac";
+        var library = new FakeLibrary([]);
+        library.ImageSignatures[path] = "multi-artwork";
+        MediaFileModel model = Model(path, "Title", "Artist") with
+        {
+            Artwork =
+            [
+                new ArtworkModel
+                {
+                    Category = "FrontCover", ImageType = "image/jpeg", Width = 1200, Height = 1200,
+                    Size = 4096, Data = [1, 2, 3],
+                },
+                new ArtworkModel
+                {
+                    Category = "BackCover", Description = "Rear scan", ImageType = "image/png",
+                    Width = 900, Height = 880, Size = 8192, Data = [4, 5, 6],
+                },
+            ],
+        };
+        var inspector = new SelectionInspectorViewModel(
+            new FakeMediaService(model), library, new FakeTagWriter(), new FakeArtworkService(),
+            new FakeFilePicker(), new FakeDialogs(), new FakeFieldsEditor(),
+            new FakeThumbnails(), new AppActivityService());
+
+        await inspector.LoadAsync(new SelectionContext([path]));
+
+        Assert.Collection(inspector.ArtworkItems,
+            front =>
+            {
+                Assert.Equal("Front cover", front.Label);
+                Assert.Contains("1,200 × 1,200", front.Summary);
+            },
+            back =>
+            {
+                Assert.Equal("Back cover", back.Label);
+                Assert.Contains("Rear scan", back.Summary);
+            });
+        Assert.Equal("2 embedded artworks", inspector.ArtworkSummary);
+    }
+
+    [Fact]
+    public async Task Selection_inspector_saves_description_edits_and_individual_removals()
+    {
+        const string path = @"C:\one.flac";
+        var library = new FakeLibrary([]);
+        library.ImageSignatures[path] = "multi-artwork";
+        MediaFileModel model = Model(path, "Title", "Artist") with
+        {
+            Artwork =
+            [
+                new ArtworkModel { Category = "FrontCover", ImageType = "image/jpeg", Width = 800, Height = 800, Size = 3, Data = [1, 2, 3] },
+                new ArtworkModel { Category = "BackCover", ImageType = "image/png", Width = 700, Height = 700, Size = 3, Data = [4, 5, 6] },
+            ],
+        };
+        var artworkService = new FakeArtworkService();
+        var inspector = new SelectionInspectorViewModel(
+            new FakeMediaService(model), library, new FakeTagWriter(), artworkService,
+            new FakeFilePicker(), new FakeDialogs(), new FakeFieldsEditor(),
+            new FakeThumbnails(), new AppActivityService());
+        await inspector.LoadAsync(new SelectionContext([path]));
+
+        ArtworkPreviewItem front = inspector.ArtworkItems[0];
+        front.Description = "Restored front scan";
+        inspector.RemoveArtworkItem(inspector.ArtworkItems[1]);
+        Assert.True(inspector.SaveArtworkSetCommand.CanExecute(null));
+        await inspector.SaveArtworkSetCommand.ExecuteAsync(null);
+
+        ArtworkInput saved = Assert.Single(artworkService.SavedImages!);
+        Assert.Equal(ID3v2Util.APICType.FrontCover, saved.Type);
+        Assert.Equal("Restored front scan", saved.Description);
+        Assert.Equal([1, 2, 3], saved.Data);
+    }
+
+    [Fact]
+    public async Task Selection_inspector_adds_prepared_artwork_as_a_front_cover()
+    {
+        const string path = @"C:\one.flac";
+        var artworkService = new FakeArtworkService(
+            new PreparedImage([7, 8, 9], "image/jpeg", 640, 640));
+        var inspector = new SelectionInspectorViewModel(
+            new FakeMediaService(Model(path, "Title", "Artist")), new FakeLibrary([]),
+            new FakeTagWriter(), artworkService, new FakeFilePicker(@"C:\cover.png"),
+            new FakeDialogs(), new FakeFieldsEditor(), new FakeThumbnails(),
+            new AppActivityService());
+        await inspector.LoadAsync(new SelectionContext([path]));
+
+        await inspector.AddArtworkCommand.ExecuteAsync(null);
+
+        ArtworkPreviewItem added = Assert.Single(inspector.ArtworkItems);
+        Assert.Equal(ID3v2Util.APICType.FrontCover, added.Type);
+        Assert.Equal([7, 8, 9], added.Data);
+        Assert.True(inspector.SaveArtworkSetCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Selection_inspector_replaces_one_artwork_without_losing_its_metadata()
+    {
+        const string path = @"C:\one.flac";
+        var library = new FakeLibrary([]);
+        library.ImageSignatures[path] = "artwork";
+        MediaFileModel model = Model(path, "Title", "Artist") with
+        {
+            Artwork =
+            [
+                new ArtworkModel
+                {
+                    Category = "BackCover", Description = "Original booklet scan",
+                    ImageType = "image/png", Width = 800, Height = 800, Size = 3,
+                    Data = [1, 2, 3],
+                },
+            ],
+        };
+        var artworkService = new FakeArtworkService(
+            new PreparedImage([9, 8, 7], "image/jpeg", 600, 600));
+        var inspector = new SelectionInspectorViewModel(
+            new FakeMediaService(model), library, new FakeTagWriter(), artworkService,
+            new FakeFilePicker(@"C:\replacement.jpg"), new FakeDialogs(),
+            new FakeFieldsEditor(), new FakeThumbnails(), new AppActivityService());
+        await inspector.LoadAsync(new SelectionContext([path]));
+
+        ArtworkPreviewItem item = Assert.Single(inspector.ArtworkItems);
+        await inspector.ReplaceArtworkItemAsync(item);
+
+        Assert.Equal(ID3v2Util.APICType.BackCover, item.Type);
+        Assert.Equal("Original booklet scan", item.Description);
+        Assert.Equal("image/jpeg", item.MimeType);
+        Assert.Equal([9, 8, 7], item.Data);
+        Assert.True(inspector.SaveArtworkSetCommand.CanExecute(null));
     }
 
     [Fact]
@@ -542,21 +730,26 @@ internal sealed class FakeTagWriter : ITagWriteService
     }
 }
 
-internal sealed class FakeArtworkService : IArtworkService
+internal sealed class FakeArtworkService(PreparedImage? prepared = null) : IArtworkService
 {
+    public IReadOnlyList<ArtworkInput>? SavedImages { get; private set; }
     public bool SupportsWrite(string musicPath) => true;
     public Task<ArtworkOpResult> SetCoverFromFileAsync(string musicPath, string imagePath, int maxDimension = 0, CancellationToken ct = default) => Success();
     public Task<ArtworkOpResult> ScrubAsync(string musicPath, int maxDimension, int quality = 90, CancellationToken ct = default) => Success();
     public Task<ArtworkOpResult> RemoveAsync(string musicPath, CancellationToken ct = default) => Success();
-    public Task<PreparedImage?> PrepareFromFileAsync(string imagePath, int maxDimension = 0, CancellationToken ct = default) => Task.FromResult<PreparedImage?>(null);
+    public Task<PreparedImage?> PrepareFromFileAsync(string imagePath, int maxDimension = 0, CancellationToken ct = default) => Task.FromResult(prepared);
     public Task<PreparedImage?> PrepareFromBytesAsync(byte[] data, int maxDimension = 0, int quality = 90, CancellationToken ct = default) => Task.FromResult<PreparedImage?>(null);
-    public Task<ArtworkOpResult> SaveImagesAsync(string musicPath, IReadOnlyList<ArtworkInput> images, CancellationToken ct = default) => Success();
+    public Task<ArtworkOpResult> SaveImagesAsync(string musicPath, IReadOnlyList<ArtworkInput> images, CancellationToken ct = default)
+    {
+        SavedImages = images.ToArray();
+        return Success();
+    }
     private static Task<ArtworkOpResult> Success() => Task.FromResult(new ArtworkOpResult { Success = true });
 }
 
-internal sealed class FakeFilePicker : IFilePickerService
+internal sealed class FakeFilePicker(string? selectedFile = null) : IFilePickerService
 {
-    public Task<string?> PickFileAsync(string title, IReadOnlyList<FilePickerType>? types = null) => Task.FromResult<string?>(null);
+    public Task<string?> PickFileAsync(string title, IReadOnlyList<FilePickerType>? types = null) => Task.FromResult(selectedFile);
     public Task<string?> PickFolderAsync(string title) => Task.FromResult<string?>(null);
     public Task<string?> SaveFileAsync(string title, string suggestedName, string extension) => Task.FromResult<string?>(null);
 }

@@ -1,0 +1,69 @@
+@inherits ReactiveComponentBase
+@inject HomeViewModel ViewModel
+
+<section class="page" style="grid-template-rows:auto auto minmax(0,1fr)">
+    <PageHeader Title="Your music, clearly managed" Subtitle="A calm view of the collection, its health, and what needs attention next.">
+        <Actions>
+            <StudioCommandButton Command="ViewModel.RefreshCommand">Refresh</StudioCommandButton>
+            <StudioCommandButton Command="ViewModel.OpenLibraryCommand" CssClass="button primary">Open library</StudioCommandButton>
+        </Actions>
+    </PageHeader>
+
+    @if (ViewModel.HasError)
+    {
+        <div class="status-banner warning"><strong>Dashboard unavailable</strong> — @ViewModel.ErrorMessage</div>
+    }
+
+    <div class="stack scroll-area">
+        @if (ViewModel.Indexing.IsIndexing)
+        {
+            <div class="card row">
+                <span class="spinner"></span>
+                <div class="grow"><strong>Scanning library</strong><div class="muted">@ViewModel.Indexing.StatusText</div></div>
+                <span class="pill">@ViewModel.Indexing.ProgressText</span>
+            </div>
+        }
+        <div class="metric-grid">
+            <article class="card metric"><span>Tracks</span><strong>@ViewModel.TrackCount</strong></article>
+            <article class="card metric"><span>Albums</span><strong>@ViewModel.AlbumCount</strong></article>
+            <article class="card metric"><span>Album artists</span><strong>@ViewModel.ArtistCount</strong></article>
+            <article class="card metric"><span>Artwork cached</span><strong>@ViewModel.ArtworkCount</strong></article>
+        </div>
+        <div class="two-column">
+            <article class="card stack">
+                <div class="row"><span class="status-dot"></span><h2>Library roots</h2></div>
+                <p class="muted">@ViewModel.RootHealth</p>
+                <p class="faint">Offline roots never remove cached tracks. Reconnect and index when they are available again.</p>
+                <div class="spacer"></div>
+                <StudioCommandButton Command="ViewModel.OpenSettingsCommand">Review configuration</StudioCommandButton>
+            </article>
+            <article class="card stack">
+                <div class="row">
+                    @if (ViewModel.Indexing.IsIndexing) { <span class="spinner"></span> }
+                    else { <span class="status-dot" aria-hidden="true"></span> }
+                    <h2>Indexing</h2>
+                </div>
+                <p class="muted">@ViewModel.Indexing.StatusText</p>
+                @if (ViewModel.Indexing.IsIndexing)
+                {
+                    <div class="progress-track"><span style="width:@(ViewModel.Indexing.Progress * 100)%"></span></div>
+                }
+                <div class="spacer"></div>
+                <div class="row">
+                    <StudioCommandButton Command="ViewModel.Indexing.IndexCommand" CssClass="button primary">Index library</StudioCommandButton>
+                    <StudioCommandButton Command="ViewModel.Indexing.CancelCommand">Cancel</StudioCommandButton>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+
+@code {
+    protected override void OnInitialized()
+    {
+        Observe(ViewModel);
+        Observe(ViewModel.Indexing);
+        if (!ViewModel.IsBusy)
+            _ = ViewModel.RefreshAsync();
+    }
+}

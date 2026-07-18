@@ -1,0 +1,84 @@
+@inherits ReactiveComponentBase
+@inject SelectionInspectorViewModel ViewModel
+
+<div class="inspector stack">
+    <div><span class="faint">SELECTION</span><h2 title="@ViewModel.SelectionSummary">@ViewModel.SelectionSummary</h2></div>
+    <div class="inspector-content stack">
+        <div class="inspector-summary preserve-lines">@ViewModel.Overview @if(ViewModel.IsBusy){<span class="spinner"></span>}</div>
+        <div class="divider"></div>
+        @foreach (EditableTagField field in ViewModel.Fields)
+        {
+            <label class="field">@field.Label
+                <input value="@field.Value" @oninput="e => field.Value = e.Value?.ToString()" placeholder="@(field.IsMixed ? "Mixed values — type to replace" : null)" />
+            </label>
+        }
+        @if (ViewModel.HasStatusMessage) { <div class="status-banner">@ViewModel.StatusMessage</div> }
+        <div class="row wrap">
+            <StudioCommandButton Command="ViewModel.SaveTagsCommand" CssClass="button primary">Save tags</StudioCommandButton>
+            <StudioCommandButton Command="ViewModel.EditAllFieldsCommand">All fields…</StudioCommandButton>
+            <StudioCommandButton Command="ViewModel.RevertCommand">Revert</StudioCommandButton>
+        </div>
+
+        <div class="divider"></div>
+        <h3 class="section-title">Artwork</h3>
+        <p class="muted artwork-summary">@ViewModel.ArtworkSummary</p>
+        @if (ViewModel.IsArtworkMixed)
+        {
+            <div class="inspector-art"><span class="muted">Mixed artwork</span></div>
+        }
+        else if (ViewModel.ArtworkItems.Count > 0)
+        {
+            <div class="artwork-list">
+                @foreach (ArtworkPreviewItem artwork in ViewModel.ArtworkItems)
+                {
+                    <article class="artwork-item">
+                        <div class="inspector-art">
+                            @if (artwork.Source is string source) { <img src="@source" alt="@artwork.Label" /> }
+                            else { <span class="faint">Preview unavailable</span> }
+                        </div>
+                        <label class="field">Artwork type
+                            <select @bind="artwork.Type">
+                                @foreach (var type in ViewModel.ArtworkTypes)
+                                {
+                                    <option value="@type">@FormatArtworkType(type)</option>
+                                }
+                            </select>
+                        </label>
+                        <label class="field">Description
+                            <input @bind="artwork.Description" @bind:event="oninput" placeholder="Optional description" />
+                        </label>
+                        <span class="muted">@artwork.Summary</span>
+                        <button class="button" disabled="@ViewModel.IsBusy"
+                                @onclick="async () => await ViewModel.ReplaceArtworkItemAsync(artwork)">Replace this artwork…</button>
+                        <button class="button danger" disabled="@ViewModel.IsBusy"
+                                @onclick="() => ViewModel.RemoveArtworkItem(artwork)">Remove this artwork</button>
+                    </article>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="inspector-art"><span class="faint">No artwork</span></div>
+        }
+        <label class="field">Maximum dimension<input type="number" @bind="ViewModel.ArtworkMaxDimension" /></label>
+        <div class="row wrap">
+            <StudioCommandButton Command="ViewModel.AddArtworkCommand">Add artwork…</StudioCommandButton>
+            <StudioCommandButton Command="ViewModel.SaveArtworkSetCommand" CssClass="button primary">Save artwork changes</StudioCommandButton>
+            <StudioCommandButton Command="ViewModel.ScrubArtworkCommand">Optimize</StudioCommandButton>
+            <StudioCommandButton Command="ViewModel.RemoveArtworkCommand" CssClass="button danger">Remove all</StudioCommandButton>
+        </div>
+    </div>
+</div>
+
+@code {
+    protected override void OnInitialized() { Observe(ViewModel); Observe(ViewModel.Fields); Observe(ViewModel.ArtworkItems); foreach (var field in ViewModel.Fields) Observe(field); }
+
+    private static string FormatArtworkType(MusicFileUtilities.ID3v2Util.APICType value)
+    {
+        string text = value.ToString();
+        return string.Concat(text.Select((character, index) =>
+            index > 0 && char.IsUpper(character) && char.IsLower(text[index - 1])
+                ? $" {char.ToLowerInvariant(character)}"
+                : character.ToString()));
+    }
+}

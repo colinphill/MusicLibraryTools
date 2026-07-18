@@ -1,0 +1,93 @@
+@implements IAsyncDisposable
+@inject IJSRuntime JS
+@inject StudioSplitStateService SplitState
+
+<div id="@SplitId" class="resizable-split @CssClass" style="grid-template-columns:minmax(0,@LeftWidthString) 10px minmax(0,1fr)">
+    <div class="split-pane-left">@Left</div>
+    <div class="splitter" role="separator" aria-label="@Label" aria-orientation="vertical" tabindex="0"
+         @onpointerdown="BeginResize" @onkeydown="HandleKeyDown"><span></span></div>
+    <div class="split-pane-right">@Right</div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public RenderFragment? Left { get; set; }
+    [Parameter, EditorRequired] public RenderFragment? Right { get; set; }
+    [Parameter] public string CssClass { get; set; } = "";
+    [Parameter] public string Label { get; set; } = "Resize panes";
+    [Parameter] public double InitialLeftWidth { get; set; } = 300;
+    [Parameter] public double MinLeftWidth { get; set; } = 180;
+    [Parameter] public double MaxLeftWidth { get; set; } = 700;
+    [Parameter] public double MinRightWidth { get; set; } = 160;
+    [Parameter] public string? PersistenceKey { get; set; }
+
+    private double LeftWidth;
+    private readonly string SplitId = $"studio-split-{Guid.NewGuid():N}";
+    private DotNetObjectReference<ResizableSplitPane>? Self;
+    private string LeftWidthString => $"{LeftWidth:0}px";
+
+    protected override void OnInitialized()
+    {
+        double initial = PersistenceKey is null ? InitialLeftWidth : SplitState.Load(PersistenceKey) ?? InitialLeftWidth;
+        LeftWidth = Math.Clamp(initial, MinLeftWidth, MaxLeftWidth);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+        Self ??= DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("studio.initializeSplit", SplitId, Self, MinRightWidth);
+    }
+
+    private async Task BeginResize(PointerEventArgs e)
+    {
+        Self ??= DotNetObjectReference.Create(this);
+        await JS.InvokeVoidAsync("studio.beginSplitResize", Self, SplitId, e.ClientX, MinRightWidth);
+    }
+
+    private void HandleKeyDown(Microsoft.AspNetCore.Components.Web.KeyboardEventArgs e)
+    {
+        if (e.Key is "ArrowLeft" or "ArrowRight")
+            ResizeAndPersist(LeftWidth + (e.Key == "ArrowLeft" ? -24 : 24));
+        else if (e.Key == "Home")
+            ResizeAndPersist(MinLeftWidth);
+        else if (e.Key == "End")
+            ResizeAndPersist(MaxLeftWidth);
+    }
+
+    [JSInvokable]
+    public void InitializeSplit(double width) => SetWidth(width);
+
+    [JSInvokable]
+    public void ResizeSplit(double width)
+    {
+        SetWidth(width);
+    }
+
+    [JSInvokable]
+    public void CommitSplitWidth() => PersistWidth();
+
+    private void ResizeAndPersist(double width)
+    {
+        SetWidth(width);
+        PersistWidth();
+    }
+
+    private void SetWidth(double width)
+    {
+        LeftWidth = Math.Clamp(width, MinLeftWidth, MaxLeftWidth);
+        StateHasChanged();
+    }
+
+    private void PersistWidth()
+    {
+        if (PersistenceKey is not null)
+            SplitState.Save(PersistenceKey, LeftWidth);
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        Self?.Dispose();
+        return ValueTask.CompletedTask;
+    }
+}

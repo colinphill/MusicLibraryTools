@@ -832,7 +832,7 @@ public partial class AnalysisRepairItemViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsActive))]
-    private AnalysisRepairDisposition _disposition;
+    private AnalysisRepairDisposition _disposition = AnalysisRepairDisposition.Ignored;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsActive))]

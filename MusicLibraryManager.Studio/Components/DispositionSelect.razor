@@ -1,0 +1,14 @@
+<select class="disposition-select" value="@Value" @onchange="Changed" @onclick:stopPropagation="true" aria-label="Disposition">
+    @foreach (AnalysisRepairDisposition option in Options) { <option value="@option" disabled="@(option == AnalysisRepairDisposition.Mixed)">@option</option> }
+</select>
+
+@code {
+    [Parameter] public AnalysisRepairDisposition Value { get; set; }
+    [Parameter] public EventCallback<AnalysisRepairDisposition> ValueChanged { get; set; }
+    [Parameter] public IReadOnlyList<AnalysisRepairDisposition> Options { get; set; } = [];
+    private async Task Changed(ChangeEventArgs e)
+    {
+        if (Enum.TryParse(e.Value?.ToString(), out AnalysisRepairDisposition value))
+            await ValueChanged.InvokeAsync(value);
+    }
+}
