@@ -52,6 +52,7 @@ public partial class LibraryViewModel : ObservableObject
     private LibraryViewDefinition? _selectedView;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasRows))]
     private IReadOnlyList<LibraryRow> _rows = [];
 
     public LibraryViewModel(
@@ -85,6 +86,7 @@ public partial class LibraryViewModel : ObservableObject
     public SelectionInspectorViewModel Inspector => _inspector;
     public IndexingViewModel Indexing { get; }
     public int TotalCount => _allRows.Count;
+    public bool HasRows => Rows.Count > 0;
     public bool HasFilterError => !string.IsNullOrWhiteSpace(FilterError);
 
     private async void OnConfigurationChanged(object? sender, EventArgs args)

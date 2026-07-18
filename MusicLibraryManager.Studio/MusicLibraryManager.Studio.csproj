@@ -22,6 +22,7 @@
     <Resource Include="..\MusicLibraryManager\Assets\AppIcon.ico" Link="Assets\AppIcon.ico" />
     <Content Include="..\MusicLibraryManager\Assets\BrandMark.svg" Link="wwwroot\assets\BrandMark.svg" CopyToOutputDirectory="PreserveNewest" />
     <Compile Include="..\MusicLibraryManager\Services\WorkflowIntegrationService.cs" Link="Services\WorkflowIntegrationService.cs" />
+    <None Update="DEPLOYMENT.md" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

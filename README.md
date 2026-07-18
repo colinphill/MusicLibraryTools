@@ -43,10 +43,19 @@ Embedded artwork is parsed, hashed, measured, and preserved byte-for-byte across
 
 ### Desktop app
 
+- **MusicLibraryManager.Studio** — the complete Windows desktop experience built with WPF and a
+  Blazor WebView. It exposes library browsing and editing plus the health, ingest, organize, and
+  operations workflows in one shell. A packaging script produces a self-contained x64 folder,
+  versioned ZIP, and checksum; see
+  [`MusicLibraryManager.Studio/DEPLOYMENT.md`](MusicLibraryManager.Studio/DEPLOYMENT.md).
+- **MusicLibraryManager.Studio.Avalonia** — the native cross-platform Studio rewrite for Windows,
+  macOS, and Linux. It preserves the Studio shell and workflows without WPF, Razor, WebView2,
+  CSS, or JavaScript; see
+  [`MusicLibraryManager.Studio.Avalonia/DEPLOYMENT.md`](MusicLibraryManager.Studio.Avalonia/DEPLOYMENT.md).
 - **MusicLibraryManager** — the Windows 11 Fluent manager and staged successor to the Avalonia
   app. Its first release provides configuration management, cached/offline browsing, a virtualized
   sortable library table, saved views, indexing with cancellation, and safe single- or multi-file
-  tag/artwork editing. It targets x64 WPF with the Windows 11 Fluent theme and publishes as a
+  tag/artwork editing. It targets x64 WinUI 3 with the Windows 11 Fluent theme and publishes as a
   self-contained folder;
   see [`MusicLibraryManager/README.md`](MusicLibraryManager/README.md).
 - **MusicLibrary.App** — an Avalonia library browser and editor for indexing, cached filtering,

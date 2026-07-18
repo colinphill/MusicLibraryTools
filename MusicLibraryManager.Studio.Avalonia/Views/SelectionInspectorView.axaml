@@ -1,0 +1,61 @@
+<UserControl x:Class="MusicLibraryManager.Studio.Avalonia.Views.SelectionInspectorView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Grid>
+    <Border x:Name="EmptyState" IsVisible="{Binding !HasSelection}" Padding="24">
+      <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8" MaxWidth="240">
+        <TextBlock Text="No selection" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
+        <TextBlock Classes="muted" Text="Select one or more tracks to inspect metadata and artwork."
+                   TextAlignment="Center" TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+  <ScrollViewer x:Name="InspectorContent" IsVisible="{Binding HasSelection}" VerticalScrollBarVisibility="Visible" HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="12" Spacing="10">
+      <TextBlock Classes="faint" Text="SELECTION" FontSize="11" FontWeight="SemiBold" />
+      <TextBlock Classes="section-title" Text="{Binding SelectionSummary}" TextTrimming="CharacterEllipsis" />
+      <TextBlock Classes="muted" Text="{Binding Overview}" TextWrapping="Wrap" />
+      <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" Height="3" />
+      <Border Height="1" Background="{DynamicResource StudioBorderBrush}" />
+
+      <ItemsControl ItemsSource="{Binding Fields}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <StackPanel Margin="0,0,0,8" Spacing="5">
+              <TextBlock Classes="muted" Text="{Binding Label}" FontSize="12" FontWeight="SemiBold" />
+              <TextBox Classes="studio" Text="{Binding Value, Mode=TwoWay}" PlaceholderText="Mixed values — type to replace" />
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <Border Classes="status-banner" IsVisible="{Binding HasStatusMessage}"><TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" /></Border>
+      <WrapPanel><Button Classes="studio primary" Margin="0,0,8,6" Content="Save tags" Command="{Binding SaveTagsCommand}" /><Button Classes="studio" Margin="0,0,8,6" Content="All fields…" Command="{Binding EditAllFieldsCommand}" /><Button Classes="studio" Margin="0,0,8,6" Content="Revert" Command="{Binding RevertCommand}" /></WrapPanel>
+
+      <Border Height="1" Background="{DynamicResource StudioBorderBrush}" />
+      <TextBlock Classes="section-title" Text="Artwork" />
+      <TextBlock Classes="muted" Text="{Binding ArtworkSummary}" TextWrapping="Wrap" />
+      <Border Height="220" CornerRadius="10" Background="{DynamicResource StudioInsetBrush}" IsVisible="{Binding IsArtworkMixed}"><TextBlock Classes="muted" Text="Mixed artwork" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+      <ItemsControl ItemsSource="{Binding ArtworkItems}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Border Classes="card" Padding="8" Margin="0,0,0,10">
+              <StackPanel Spacing="7">
+                <Border Height="220" CornerRadius="10" Background="{DynamicResource StudioInsetBrush}" ClipToBounds="True"><Image Source="{Binding Source}" Stretch="Uniform" /></Border>
+                <TextBlock Classes="muted" Text="Artwork type" FontSize="12" FontWeight="SemiBold" />
+                <ComboBox Classes="studio" ItemsSource="{Binding DataContext.ArtworkTypes, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding Type, Mode=TwoWay}" />
+                <TextBlock Classes="muted" Text="Description" FontSize="12" FontWeight="SemiBold" />
+                <TextBox Classes="studio" Text="{Binding Description, Mode=TwoWay}" PlaceholderText="Optional description" />
+                <TextBlock Classes="muted" Text="{Binding Summary}" TextWrapping="Wrap" />
+                <Button Classes="studio" Content="Replace this artwork…" Tag="{Binding}" Click="OnReplaceArtwork" />
+                <Button Classes="studio danger" Content="Remove this artwork" Tag="{Binding}" Click="OnRemoveArtwork" />
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <TextBlock Classes="muted" Text="Maximum dimension" FontSize="12" FontWeight="SemiBold" />
+      <NumericUpDown Classes="studio" Minimum="64" Value="{Binding ArtworkMaxDimension, Mode=TwoWay}" />
+      <WrapPanel><Button Classes="studio" Margin="0,0,8,6" Content="Add artwork…" Command="{Binding AddArtworkCommand}" /><Button Classes="studio primary" Margin="0,0,8,6" Content="Save artwork changes" Command="{Binding SaveArtworkSetCommand}" /><Button Classes="studio" Margin="0,0,8,6" Content="Optimize" Command="{Binding ScrubArtworkCommand}" /><Button Classes="studio danger" Margin="0,0,8,6" Content="Remove all" Command="{Binding RemoveArtworkCommand}" /></WrapPanel>
+    </StackPanel>
+  </ScrollViewer>
+  </Grid>
+</UserControl>

@@ -75,6 +75,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MusicLibraryManager.Studio"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MusicLibraryManager.Studio.Tests", "MusicLibraryManager.Studio.Tests\MusicLibraryManager.Studio.Tests.csproj", "{D12D72D4-DC30-437A-B018-7A45A472AB65}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MusicLibraryManager.Studio.Avalonia", "MusicLibraryManager.Studio.Avalonia\MusicLibraryManager.Studio.Avalonia.csproj", "{CB93DC2F-FA46-4CAB-A31F-03EA144C27F2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MusicLibraryManager.Studio.Avalonia.Tests", "MusicLibraryManager.Studio.Avalonia.Tests\MusicLibraryManager.Studio.Avalonia.Tests.csproj", "{1316D0B7-48CB-450B-9878-3F39D748E081}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -517,6 +521,30 @@ Global
 		{D12D72D4-DC30-437A-B018-7A45A472AB65}.Release|x64.Build.0 = Release|x64
 		{D12D72D4-DC30-437A-B018-7A45A472AB65}.Release|x86.ActiveCfg = Release|x64
 		{D12D72D4-DC30-437A-B018-7A45A472AB65}.Release|x86.Build.0 = Release|x64
+		{CB93DC2F-FA46-4CAB-A31F-03EA144C27F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CB93DC2F-FA46-4CAB-A31F-03EA144C27F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CB93DC2F-FA46-4CAB-A31F-03EA144C27F2}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{CB93DC2F-FA46-4CAB-A31F-03EA144C27F2}.Debug|x64.Build.0 = Debug|Any CPU
+		{CB93DC2F-FA46-4CAB-A31F-03EA144C27F2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{CB93DC2F-FA46-4CAB-A31F-03EA144C27F2}.Debug|x86.Build.0 = Debug|Any CPU
+		{CB93DC2F-FA46-4CAB-A31F-03EA144C27F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CB93DC2F-FA46-4CAB-A31F-03EA144C27F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CB93DC2F-FA46-4CAB-A31F-03EA144C27F2}.Release|x64.ActiveCfg = Release|Any CPU
+		{CB93DC2F-FA46-4CAB-A31F-03EA144C27F2}.Release|x64.Build.0 = Release|Any CPU
+		{CB93DC2F-FA46-4CAB-A31F-03EA144C27F2}.Release|x86.ActiveCfg = Release|Any CPU
+		{CB93DC2F-FA46-4CAB-A31F-03EA144C27F2}.Release|x86.Build.0 = Release|Any CPU
+		{1316D0B7-48CB-450B-9878-3F39D748E081}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1316D0B7-48CB-450B-9878-3F39D748E081}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1316D0B7-48CB-450B-9878-3F39D748E081}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{1316D0B7-48CB-450B-9878-3F39D748E081}.Debug|x64.Build.0 = Debug|Any CPU
+		{1316D0B7-48CB-450B-9878-3F39D748E081}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1316D0B7-48CB-450B-9878-3F39D748E081}.Debug|x86.Build.0 = Debug|Any CPU
+		{1316D0B7-48CB-450B-9878-3F39D748E081}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1316D0B7-48CB-450B-9878-3F39D748E081}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1316D0B7-48CB-450B-9878-3F39D748E081}.Release|x64.ActiveCfg = Release|Any CPU
+		{1316D0B7-48CB-450B-9878-3F39D748E081}.Release|x64.Build.0 = Release|Any CPU
+		{1316D0B7-48CB-450B-9878-3F39D748E081}.Release|x86.ActiveCfg = Release|Any CPU
+		{1316D0B7-48CB-450B-9878-3F39D748E081}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

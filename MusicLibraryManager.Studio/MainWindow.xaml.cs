@@ -204,6 +204,17 @@ public partial class MainWindow : Window
     private void OnBlazorWebViewInitialized(object sender, BlazorWebViewInitializedEventArgs e)
     {
         e.WebView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
+        string? captureDestination = Environment.GetEnvironmentVariable("STUDIO_CAPTURE_DESTINATION");
+        if (Enum.TryParse(captureDestination, ignoreCase: true, out ShellDestination destination))
+            _ = NavigateForCaptureAsync(destination);
+    }
+
+    private async Task NavigateForCaptureAsync(ShellDestination destination)
+    {
+        // The environment variable is used only by Capture-OpticalReferences.ps1. Give the
+        // Blazor root component time to subscribe to navigation before selecting the page.
+        await Task.Delay(1000);
+        await Dispatcher.InvokeAsync(() => App.GetService<INavigationService>().Navigate(destination));
     }
 
     private void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)

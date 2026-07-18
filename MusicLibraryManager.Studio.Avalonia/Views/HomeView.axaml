@@ -1,0 +1,72 @@
+<UserControl x:Class="MusicLibraryManager.Studio.Avalonia.Views.HomeView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Grid Margin="26,22,26,26" RowDefinitions="Auto,Auto,*" RowSpacing="14">
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+      <StackPanel Spacing="5">
+        <TextBlock Classes="page-title" Text="Your music, clearly managed" />
+        <TextBlock Classes="muted" Text="A calm view of the collection, its health, and what needs attention next." />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+        <Button Classes="studio" Content="Refresh" Command="{Binding RefreshCommand}" />
+        <Button Classes="studio primary" Content="Open library" Command="{Binding OpenLibraryCommand}" />
+      </StackPanel>
+    </Grid>
+
+    <Border Grid.Row="1" Classes="status-banner" IsVisible="{Binding HasError}">
+      <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
+    </Border>
+
+    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="14">
+        <Border Classes="card" IsVisible="{Binding Indexing.IsIndexing}">
+          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+            <ProgressBar Width="22" Height="22" IsIndeterminate="True" />
+            <StackPanel Grid.Column="1" Spacing="3">
+              <TextBlock Text="Scanning library" FontWeight="SemiBold" />
+              <TextBlock Classes="muted" Text="{Binding Indexing.StatusText}" />
+            </StackPanel>
+            <Border Grid.Column="2" Classes="pill"><TextBlock Classes="muted" Text="{Binding Indexing.ProgressText}" /></Border>
+          </Grid>
+        </Border>
+
+        <UniformGrid Columns="4" Rows="1">
+          <Border Classes="card" Margin="0,0,9,0">
+            <StackPanel Spacing="8"><TextBlock Classes="muted" Text="Tracks" FontWeight="SemiBold" /><TextBlock Text="{Binding TrackCount}" FontFamily="{DynamicResource StudioDisplayFont}" FontSize="28" FontWeight="SemiBold" /></StackPanel>
+          </Border>
+          <Border Classes="card" Margin="3,0,6,0">
+            <StackPanel Spacing="8"><TextBlock Classes="muted" Text="Albums" FontWeight="SemiBold" /><TextBlock Text="{Binding AlbumCount}" FontFamily="{DynamicResource StudioDisplayFont}" FontSize="28" FontWeight="SemiBold" /></StackPanel>
+          </Border>
+          <Border Classes="card" Margin="6,0,3,0">
+            <StackPanel Spacing="8"><TextBlock Classes="muted" Text="Album artists" FontWeight="SemiBold" /><TextBlock Text="{Binding ArtistCount}" FontFamily="{DynamicResource StudioDisplayFont}" FontSize="28" FontWeight="SemiBold" /></StackPanel>
+          </Border>
+          <Border Classes="card" Margin="9,0,0,0">
+            <StackPanel Spacing="8"><TextBlock Classes="muted" Text="Artwork cached" FontWeight="SemiBold" /><TextBlock Text="{Binding ArtworkCount}" FontFamily="{DynamicResource StudioDisplayFont}" FontSize="28" FontWeight="SemiBold" /></StackPanel>
+          </Border>
+        </UniformGrid>
+
+        <Grid ColumnDefinitions="1.45*,14,1*">
+          <Border Grid.Column="0" Classes="card">
+            <StackPanel Spacing="10">
+              <StackPanel Orientation="Horizontal" Spacing="8"><Ellipse Width="8" Height="8" Fill="{DynamicResource StudioAccentBrush}" /><TextBlock Classes="section-title" Text="Library roots" /></StackPanel>
+              <TextBlock Classes="muted" Text="{Binding RootHealth}" TextWrapping="Wrap" />
+              <TextBlock Classes="faint" Text="Offline roots never remove cached tracks. Reconnect and index when they are available again." TextWrapping="Wrap" />
+              <Button Classes="studio" HorizontalAlignment="Left" Content="Review configuration" Command="{Binding OpenSettingsCommand}" />
+            </StackPanel>
+          </Border>
+          <Border Grid.Column="2" Classes="card">
+            <StackPanel Spacing="10">
+              <TextBlock Classes="section-title" Text="Indexing" />
+              <TextBlock Classes="muted" Text="{Binding Indexing.StatusText}" TextWrapping="Wrap" />
+              <ProgressBar Classes="studio" Minimum="0" Maximum="1" Value="{Binding Indexing.Progress}" IsVisible="{Binding Indexing.IsIndexing}" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Classes="studio primary" Content="Index library" Command="{Binding Indexing.IndexCommand}" />
+                <Button Classes="studio" Content="Cancel" Command="{Binding Indexing.CancelCommand}" />
+              </StackPanel>
+            </StackPanel>
+          </Border>
+        </Grid>
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

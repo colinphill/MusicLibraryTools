@@ -1,0 +1,151 @@
+<UserControl x:Class="MusicLibraryManager.Studio.Avalonia.Views.HealthView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:MusicLibraryManager.Studio.Avalonia.Controls"
+             xmlns:vm="using:MusicLibrary.App.ViewModels">
+  <Grid Margin="26,22,26,26" RowDefinitions="Auto,Auto,*" RowSpacing="14">
+    <controls:StudioPageHeader Title="Health"
+        Subtitle="Audit the collection, inspect every proposed change, and apply safe repairs.">
+      <controls:StudioPageHeader.Actions>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button Classes="studio primary" Content="Apply metadata repairs" Command="{Binding ApplyRepairsCommand}" />
+          <Button Classes="studio primary" Content="Apply file repairs" Command="{Binding ApplyRepresentationRepairsCommand}" />
+          <Button Classes="studio" Content="Cancel" Command="{Binding CancelCommand}" />
+        </StackPanel>
+      </controls:StudioPageHeader.Actions>
+    </controls:StudioPageHeader>
+
+    <Border Grid.Row="1" Classes="card" Padding="14">
+      <StackPanel Spacing="10">
+        <WrapPanel>
+          <Button Classes="studio" Margin="0,0,8,7" Content="Inconsistencies" Command="{Binding RunInconsistenciesCommand}" />
+          <Button Classes="studio" Margin="0,0,8,7" Content="Lossy files" Command="{Binding RunLossyCommand}" />
+          <Button Classes="studio" Margin="0,0,8,7" Content="Duplicates" Command="{Binding RunDuplicatesCommand}" />
+          <Button Classes="studio" Margin="0,0,8,7" Content="Similar artists" Command="{Binding RunSimilarArtistsCommand}" />
+          <Button Classes="studio" Margin="0,0,8,7" Content="Cross-set check" Command="{Binding RunCheckSetsCommand}" />
+          <Button Classes="studio" Margin="0,0,8,7" Content="Representations" Command="{Binding RunRepresentationsCommand}" />
+          <Button Classes="studio" Margin="0,0,8,7" Content="Verify audio" Command="{Binding VerifyDecodedAudioCommand}" />
+          <Button Classes="studio" Margin="0,0,8,7" Content="Album matrix" Command="{Binding RunAlbumMatrixCommand}" />
+          <Button Classes="studio" Margin="0,0,8,7" Content="Artwork audit" Command="{Binding RunArtworkHealthCommand}" />
+          <Button Classes="studio" Margin="0,0,8,7" Content="Preview metadata repairs" Command="{Binding PreviewMetadataRepairsCommand}" />
+          <Button Classes="studio" Margin="0,0,8,7" Content="Preview file repairs" Command="{Binding PreviewRepresentationRepairsCommand}" />
+          <Button Classes="studio" Margin="0,0,8,7" Content="Album artist conflicts" Command="{Binding FindAlbumArtistConflictsCommand}" />
+          <Button Classes="studio" Margin="0,0,8,7" Content="Preview conflict repairs" Command="{Binding PreviewConflictRepairsCommand}" />
+        </WrapPanel>
+        <ProgressBar Classes="studio" IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
+        <TextBlock Classes="muted" Text="{Binding StatusText}" />
+      </StackPanel>
+    </Border>
+
+    <controls:StudioSplitView Grid.Row="2" InitialLeftWidth="260" MinLeftWidth="190" MaxLeftWidth="430"
+                              MinRightWidth="420" PersistenceKey="health-history" Label="Resize analysis history">
+      <controls:StudioSplitView.Left>
+        <Border Classes="card" Padding="12">
+          <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10">
+            <TextBlock Classes="section-title" Text="Analysis history" />
+            <ListBox Grid.Row="1" ItemsSource="{Binding Runs}" SelectedItem="{Binding SelectedRun, Mode=TwoWay}" Background="Transparent" BorderThickness="0">
+              <ListBox.ItemTemplate><DataTemplate><Border Classes="history-item" Padding="10,8" Margin="0,0,0,5"><StackPanel Spacing="3"><TextBlock Text="{Binding Name}" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="{Binding DisplayLabel}" TextWrapping="Wrap" /></StackPanel></Border></DataTemplate></ListBox.ItemTemplate>
+            </ListBox>
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8"><Button Classes="studio" Content="Remove" Command="{Binding RemoveRunCommand}" /><Button Classes="studio" Content="Clear" Command="{Binding ClearRunsCommand}" /></StackPanel>
+          </Grid>
+        </Border>
+      </controls:StudioSplitView.Left>
+
+      <controls:StudioSplitView.Right>
+        <Border Classes="card" Padding="0" ClipToBounds="True">
+          <TabControl SelectedIndex="{Binding ActiveResultIndex, Mode=TwoWay}">
+            <TabItem Header="Findings">
+              <controls:StudioSplitView InitialLeftWidth="330" MinLeftWidth="230" MaxLeftWidth="620" MinRightWidth="300" PersistenceKey="health-findings" Label="Resize findings hierarchy">
+                <controls:StudioSplitView.Left>
+                  <Grid RowDefinitions="Auto,*">
+                    <Button x:Name="FindingRootButton" Padding="10,8" Background="Transparent" BorderThickness="0"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Stretch" Click="OnSelectFindingRoot">
+                      <Grid HorizontalAlignment="Stretch">
+                        <Border IsVisible="{Binding IsFindingRootSelected}" Background="{DynamicResource StudioSelectionBrush}" CornerRadius="6" />
+                        <Grid Margin="7,2" ColumnDefinitions="*,Auto">
+                          <TextBlock FontWeight="SemiBold" Text="All findings" />
+                          <TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding FindingCount}" />
+                        </Grid>
+                      </Grid>
+                    </Button>
+                    <TreeView Grid.Row="1" Classes="health-tree" ItemsSource="{Binding FindingGroups}" SelectedItem="{Binding SelectedFindingNode, Mode=TwoWay}">
+                      <TreeView.DataTemplates>
+                        <TreeDataTemplate DataType="{x:Type vm:AnalysisProblemGroupViewModel}" ItemsSource="{Binding Artists}"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Problem}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /></Grid></TreeDataTemplate>
+                        <TreeDataTemplate DataType="{x:Type vm:AnalysisArtistGroupViewModel}" ItemsSource="{Binding Albums}"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Artist}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /></Grid></TreeDataTemplate>
+                        <TreeDataTemplate DataType="{x:Type vm:AnalysisAlbumGroupViewModel}" ItemsSource="{Binding Findings}"><Grid ColumnDefinitions="*,Auto"><TextBlock Text="{Binding Album}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /></Grid></TreeDataTemplate>
+                        <DataTemplate DataType="{x:Type vm:AnalysisFindingViewModel}"><TextBlock Text="{Binding Path}" TextTrimming="CharacterEllipsis" /></DataTemplate>
+                      </TreeView.DataTemplates>
+                    </TreeView>
+                  </Grid>
+                </controls:StudioSplitView.Left>
+                <controls:StudioSplitView.Right>
+                  <Grid>
+                    <controls:StudioDataGrid x:Name="FindingGrid" ItemsSource="{Binding DisplayedFindings}" />
+                    <TextBlock IsVisible="{Binding !DisplayedFindings.Count}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Classes="muted" Text="Select a findings branch" />
+                  </Grid>
+                </controls:StudioSplitView.Right>
+              </controls:StudioSplitView>
+            </TabItem>
+
+            <TabItem Header="Duplicates">
+              <ScrollViewer Margin="12" VerticalScrollBarVisibility="Auto"><ItemsControl ItemsSource="{Binding Duplicates}"><ItemsControl.ItemTemplate><DataTemplate>
+                <Border Classes="result-card" Margin="0,0,0,8"><StackPanel Spacing="5"><TextBlock Text="{Binding Key}" FontWeight="SemiBold" /><ItemsControl ItemsSource="{Binding Tracks}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Classes="muted" Text="{Binding Path}" TextTrimming="CharacterEllipsis" /></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
+              </DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="Similar artists">
+              <ScrollViewer Margin="12" VerticalScrollBarVisibility="Auto"><ItemsControl ItemsSource="{Binding ArtistGroups}"><ItemsControl.ItemTemplate><DataTemplate>
+                <Border Classes="result-card" Margin="0,0,0,8"><Grid ColumnDefinitions="*,240,Auto" ColumnSpacing="10"><ItemsControl ItemsSource="{Binding Variants}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Classes="muted" Text="{Binding Name}" /></DataTemplate></ItemsControl.ItemTemplate></ItemsControl><TextBox Grid.Column="1" Classes="studio" Text="{Binding CanonicalName, Mode=TwoWay}" /><Button Grid.Column="2" Classes="studio" Content="Merge" Command="{Binding MergeCommand}" /></Grid></Border>
+              </DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="Metadata repairs">
+              <controls:StudioSplitView InitialLeftWidth="350" MinLeftWidth="240" MaxLeftWidth="650" MinRightWidth="300" PersistenceKey="health-metadata-repairs" Label="Resize metadata repair hierarchy">
+                <controls:StudioSplitView.Left>
+                  <Grid RowDefinitions="Auto,*">
+                  <Grid Margin="10,8,10,3" ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="All metadata repairs" /><ComboBox x:Name="RepairRootDisposition" Grid.Column="1" MinWidth="112" /></Grid>
+                  <TreeView Grid.Row="1" Classes="health-tree" ItemsSource="{Binding RepairGroups}" SelectedItem="{Binding SelectedRepairNode, Mode=TwoWay}">
+                    <TreeView.DataTemplates>
+                      <TreeDataTemplate DataType="{x:Type vm:AnalysisRepairCategoryGroupViewModel}" ItemsSource="{Binding Artists}"><Grid ColumnDefinitions="*,Auto,Auto"><TextBlock Text="{Binding Category}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /><ComboBox Grid.Column="2" MinWidth="104" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" /></Grid></TreeDataTemplate>
+                      <TreeDataTemplate DataType="{x:Type vm:AnalysisRepairArtistGroupViewModel}" ItemsSource="{Binding Albums}"><Grid ColumnDefinitions="*,Auto,Auto"><TextBlock Text="{Binding Artist}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /><ComboBox Grid.Column="2" MinWidth="104" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" /></Grid></TreeDataTemplate>
+                      <TreeDataTemplate DataType="{x:Type vm:AnalysisRepairAlbumGroupViewModel}" ItemsSource="{Binding Items}"><Grid ColumnDefinitions="*,Auto,Auto"><TextBlock Text="{Binding Album}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /><ComboBox Grid.Column="2" MinWidth="104" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" /></Grid></TreeDataTemplate>
+                      <DataTemplate DataType="{x:Type vm:AnalysisRepairItemViewModel}"><TextBlock Text="{Binding DisplayPath}" TextTrimming="CharacterEllipsis" /></DataTemplate>
+                    </TreeView.DataTemplates>
+                  </TreeView>
+                  </Grid>
+                </controls:StudioSplitView.Left>
+                <controls:StudioSplitView.Right><controls:StudioDataGrid x:Name="RepairGrid" FrozenColumnCount="1" ItemsSource="{Binding DisplayedRepairItems}" /></controls:StudioSplitView.Right>
+              </controls:StudioSplitView>
+            </TabItem>
+
+            <TabItem Header="File repairs">
+              <controls:StudioSplitView InitialLeftWidth="350" MinLeftWidth="240" MaxLeftWidth="650" MinRightWidth="300" PersistenceKey="health-file-repairs" Label="Resize file repair hierarchy">
+                <controls:StudioSplitView.Left>
+                  <Grid RowDefinitions="Auto,*">
+                  <Grid Margin="10,8,10,3" ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="All file repairs" /><ComboBox x:Name="RepresentationRootDisposition" Grid.Column="1" MinWidth="112" /></Grid>
+                  <TreeView Grid.Row="1" Classes="health-tree" ItemsSource="{Binding RepresentationActionGroups}" SelectedItem="{Binding SelectedRepresentationNode, Mode=TwoWay}">
+                    <TreeView.DataTemplates>
+                      <TreeDataTemplate DataType="{x:Type vm:RepresentationRepairCategoryGroupViewModel}" ItemsSource="{Binding Artists}"><Grid ColumnDefinitions="*,Auto,Auto"><TextBlock Text="{Binding Category}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /><ComboBox Grid.Column="2" MinWidth="104" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" /></Grid></TreeDataTemplate>
+                      <TreeDataTemplate DataType="{x:Type vm:RepresentationRepairArtistGroupViewModel}" ItemsSource="{Binding Albums}"><Grid ColumnDefinitions="*,Auto,Auto"><TextBlock Text="{Binding Artist}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /><ComboBox Grid.Column="2" MinWidth="104" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" /></Grid></TreeDataTemplate>
+                      <TreeDataTemplate DataType="{x:Type vm:RepresentationRepairAlbumGroupViewModel}" ItemsSource="{Binding Items}"><Grid ColumnDefinitions="*,Auto,Auto"><TextBlock Text="{Binding Album}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /><ComboBox Grid.Column="2" MinWidth="104" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" /></Grid></TreeDataTemplate>
+                      <DataTemplate DataType="{x:Type vm:RepresentationRepairActionItemViewModel}"><TextBlock Text="{Binding SourcePath}" TextTrimming="CharacterEllipsis" /></DataTemplate>
+                    </TreeView.DataTemplates>
+                  </TreeView>
+                  </Grid>
+                </controls:StudioSplitView.Left>
+                <controls:StudioSplitView.Right><controls:StudioDataGrid x:Name="RepresentationGrid" FrozenColumnCount="1" ItemsSource="{Binding DisplayedRepresentationItems}" /></controls:StudioSplitView.Right>
+              </controls:StudioSplitView>
+            </TabItem>
+
+            <TabItem Header="Conflicts"><controls:StudioDataGrid x:Name="ConflictGrid" Margin="12" ItemsSource="{Binding ConflictGroups}" /></TabItem>
+            <TabItem Header="Album matrix"><ScrollViewer Margin="12" VerticalScrollBarVisibility="Auto"><ItemsControl ItemsSource="{Binding Matrices}"><ItemsControl.ItemTemplate><DataTemplate>
+              <Border Classes="result-card" Margin="0,0,0,8"><Expander IsExpanded="True"><Expander.Header><TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" /></Expander.Header><ItemsControl Margin="0,8,0,0" ItemsSource="{Binding Rows}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Classes="muted" Text="{Binding Title.Display}" /></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></Expander></Border>
+            </DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer></TabItem>
+          </TabControl>
+        </Border>
+      </controls:StudioSplitView.Right>
+    </controls:StudioSplitView>
+  </Grid>
+</UserControl>

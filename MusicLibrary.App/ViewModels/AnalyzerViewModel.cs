@@ -57,6 +57,7 @@ public partial class AnalyzerViewModel : ViewModelBase
 
     public ObservableCollection<AnalysisRunViewModel> Runs { get; } = [];
     public IReadOnlyList<AnalysisProblemGroupViewModel> FindingGroups => SelectedRun?.FindingGroups ?? [];
+    public int FindingCount => FindingGroups.Sum(group => group.Count);
     public IReadOnlyList<DuplicateGroup> Duplicates => SelectedRun?.Duplicates ?? [];
     public IReadOnlyList<ArtistGroupViewModel> ArtistGroups => SelectedRun?.ArtistGroups ?? [];
     public IReadOnlyList<AnalysisConflictGroupViewModel> ConflictGroups => SelectedRun?.ConflictGroups ?? [];
@@ -82,7 +83,10 @@ public partial class AnalyzerViewModel : ViewModelBase
         set
         {
             if (SetProperty(ref _selectedFindingNode, value))
+            {
                 OnPropertyChanged(nameof(DisplayedFindings));
+                OnPropertyChanged(nameof(IsFindingRootSelected));
+            }
         }
     }
 
@@ -120,6 +124,7 @@ public partial class AnalyzerViewModel : ViewModelBase
                 .SelectMany(group => group.Albums)
                 .SelectMany(group => group.Findings).ToList(),
         };
+    public bool IsFindingRootSelected => SelectedFindingNode is null;
 
     public IReadOnlyList<AnalysisRepairItemViewModel> DisplayedRepairItems =>
         SelectedRepairNode switch
@@ -234,6 +239,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         SelectedRepairNode = null;
         SelectedRepresentationNode = null;
         OnPropertyChanged(nameof(FindingGroups));
+        OnPropertyChanged(nameof(FindingCount));
         OnPropertyChanged(nameof(Duplicates));
         OnPropertyChanged(nameof(ArtistGroups));
         OnPropertyChanged(nameof(ConflictGroups));

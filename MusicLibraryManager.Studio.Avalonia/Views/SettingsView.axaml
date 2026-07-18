@@ -1,0 +1,120 @@
+<UserControl x:Class="MusicLibraryManager.Studio.Avalonia.Views.SettingsView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:MusicLibraryManager.Studio.Avalonia.Controls">
+  <UserControl.Styles>
+    <Style Selector="ScrollViewer.settings-scroll">
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+    </Style>
+    <Style Selector="StackPanel.settings-content">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+    </Style>
+  </UserControl.Styles>
+  <Grid Margin="26,22,26,26" RowDefinitions="Auto,*" RowSpacing="14">
+    <controls:StudioPageHeader Title="Settings"
+        Subtitle="Configure libraries, playlists, ingest tools, and the Studio appearance.">
+      <controls:StudioPageHeader.Actions>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button Classes="studio primary" Content="Save" Command="{Binding SaveConfigurationCommand}" />
+          <Button Classes="studio" Content="Save as" Command="{Binding SaveConfigurationAsCommand}" />
+        </StackPanel>
+      </controls:StudioPageHeader.Actions>
+    </controls:StudioPageHeader>
+
+    <Border Grid.Row="1" Classes="card" Padding="0" ClipToBounds="True">
+      <TabControl x:Name="SettingsTabs" SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}">
+        <TabItem Header="Configuration files">
+          <ScrollViewer x:Name="ConfigurationSettingsScroll" Classes="settings-scroll" VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="ConfigurationSettingsContent" Classes="settings-content" Margin="18" Spacing="10">
+              <TextBlock Classes="section-title" Text="Active configuration" />
+              <Border Classes="status-banner"><TextBlock Text="{Binding ActiveConfigurationPath, FallbackValue=No configuration loaded}" TextWrapping="Wrap" /></Border>
+              <WrapPanel><Button Classes="studio" Margin="0,0,8,6" Content="Open configuration" Command="{Binding BrowseConfigurationCommand}" /><Button Classes="studio primary" Margin="0,0,8,6" Content="Edit full configuration" Command="{Binding EditCurrentConfigurationCommand}" /><Button Classes="studio" Margin="0,0,8,6" Content="New configuration" Command="{Binding NewConfigurationCommand}" /></WrapPanel>
+              <TextBlock Classes="muted" Text="Recent configurations" FontSize="12" FontWeight="SemiBold" />
+              <ComboBox Classes="studio" ItemsSource="{Binding RecentConfigurations}" SelectedItem="{Binding SelectedRecentConfiguration, Mode=TwoWay}" PlaceholderText="Choose recent configuration" />
+              <StackPanel Orientation="Horizontal" Spacing="8"><Button Classes="studio" Content="Load selected" Command="{Binding LoadRecentConfigurationCommand}" /><Button Classes="studio" Content="Clear history" Command="{Binding ClearRecentConfigurationsCommand}" /></StackPanel>
+              <TextBlock Classes="muted" Text="Configuration path" FontSize="12" FontWeight="SemiBold" />
+              <TextBox Classes="studio" Text="{Binding EditorPath}" IsReadOnly="True" />
+              <Border Classes="status-banner"><TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" /></Border>
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+
+        <TabItem Header="Library editor">
+          <ScrollViewer Classes="settings-scroll" VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="LibrarySettingsContent" Classes="settings-content" Margin="18" Spacing="10">
+              <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="section-title" Text="Library roots and set membership" /><Button Grid.Column="1" Classes="studio" Content="Add root" Command="{Binding AddIndexTargetCommand}" /></Grid>
+              <ItemsControl ItemsSource="{Binding IndexTargets}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Classes="card" Margin="0,0,0,10" Padding="11">
+                      <StackPanel Spacing="10">
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                          <StackPanel Spacing="5"><TextBlock Classes="muted" Text="Root path" FontSize="12" FontWeight="SemiBold" /><TextBox Classes="studio" Text="{Binding Path, Mode=TwoWay}" /></StackPanel>
+                          <Button Grid.Column="1" Classes="studio" VerticalAlignment="Bottom" Content="Browse" Command="{Binding DataContext.BrowseIndexTargetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                          <Button Grid.Column="2" Classes="studio danger" VerticalAlignment="Bottom" Content="Remove" Command="{Binding DataContext.RemoveIndexTargetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+                          <StackPanel Spacing="5"><TextBlock Classes="muted" Text="Filter" FontSize="12" FontWeight="SemiBold" /><TextBox Classes="studio" Text="{Binding Filter, Mode=TwoWay}" /></StackPanel>
+                          <StackPanel Grid.Column="1" Spacing="5"><TextBlock Classes="muted" Text="Default offset" FontSize="12" FontWeight="SemiBold" /><TextBox Classes="studio" Text="{Binding DefaultOffset, Mode=TwoWay}" /></StackPanel>
+                          <StackPanel Grid.Column="2" Spacing="5"><TextBlock Classes="muted" Text="Ingest role" FontSize="12" FontWeight="SemiBold" /><ComboBox Classes="studio" ItemsSource="{Binding DataContext.IngestRoles, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding IngestRole, Mode=TwoWay}" /></StackPanel>
+                        </Grid>
+                        <WrapPanel><CheckBox Margin="0,0,14,6" Content="Organize" IsChecked="{Binding Organize, Mode=TwoWay}" /><CheckBox Margin="0,0,14,6" Content="iTunes canonical naming" IsChecked="{Binding UseItunesCanonicalNaming, Mode=TwoWay}" /><CheckBox Margin="0,0,14,6" Content="Sync target" IsChecked="{Binding IsSyncTarget, Mode=TwoWay}" /><Button Classes="studio" Content="Add set" Command="{Binding DataContext.AddIndexTargetSetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" /></WrapPanel>
+                        <ItemsControl ItemsSource="{Binding Memberships}">
+                          <ItemsControl.ItemTemplate><DataTemplate><Grid Margin="0,0,0,6" ColumnDefinitions="*,*,Auto" ColumnSpacing="8"><TextBox Classes="studio" Text="{Binding Name, Mode=TwoWay}" PlaceholderText="Set name" /><TextBox Grid.Column="1" Classes="studio" Text="{Binding Offset, Mode=TwoWay}" PlaceholderText="Offset" /><Button Grid.Column="2" Classes="studio danger" Content="Remove" Command="{Binding DataContext.RemoveIndexTargetSetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" /></Grid></DataTemplate></ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+
+        <TabItem Header="Playlist editor">
+          <ScrollViewer Classes="settings-scroll" VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="PlaylistSettingsContent" Classes="settings-content" Margin="18" Spacing="10">
+              <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="section-title" Text="Sync playlists" /><Button Grid.Column="1" Classes="studio" Content="Add playlist" Command="{Binding AddSyncPlaylistCommand}" /></Grid>
+              <ItemsControl ItemsSource="{Binding SyncPlaylists}"><ItemsControl.ItemTemplate><DataTemplate><Grid Margin="0,0,0,6" ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="studio" Text="{Binding Name, Mode=TwoWay}" PlaceholderText="Playlist name" /><Button Grid.Column="1" Classes="studio danger" Content="Remove" Command="{Binding DataContext.RemoveSyncPlaylistCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" /></Grid></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+              <Grid Margin="0,12,0,0" ColumnDefinitions="*,Auto"><TextBlock Classes="section-title" Text="Playlist export targets" /><Button Grid.Column="1" Classes="studio" Content="Add target" Command="{Binding AddPlaylistTargetCommand}" /></Grid>
+              <ItemsControl ItemsSource="{Binding PlaylistTargets}">
+                <ItemsControl.ItemTemplate><DataTemplate><Border Classes="card" Margin="0,0,0,8" Padding="11"><Grid ColumnDefinitions="*,160,*,Auto" ColumnSpacing="8"><TextBox Classes="studio" Text="{Binding Target, Mode=TwoWay}" PlaceholderText="Target" /><ComboBox Grid.Column="1" Classes="studio" ItemsSource="{Binding DataContext.PlaylistTypes, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding Type, Mode=TwoWay}" /><TextBox Grid.Column="2" Classes="studio" Text="{Binding Sets, Mode=TwoWay}" PlaceholderText="Sets" /><StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8"><Button Classes="studio" Content="Browse" Command="{Binding DataContext.BrowsePlaylistTargetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" /><Button Classes="studio danger" Content="Remove" Command="{Binding DataContext.RemovePlaylistTargetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" /></StackPanel></Grid></Border></DataTemplate></ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+
+        <TabItem Header="Ingest &amp; tools">
+          <ScrollViewer Classes="settings-scroll" VerticalScrollBarVisibility="Auto">
+            <StackPanel x:Name="ToolsSettingsContent" Classes="settings-content" Margin="18" Spacing="10">
+              <TextBlock Classes="section-title" Text="Cache and tool paths" />
+              <TextBlock Classes="muted" Text="Metadata database" FontSize="12" FontWeight="SemiBold" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="studio" Text="{Binding DatabaseFile, Mode=TwoWay}" /><Button Grid.Column="1" Classes="studio" Content="Browse" Command="{Binding BrowseDatabaseCommand}" /></Grid>
+              <TextBlock Classes="muted" Text="iTunes library" FontSize="12" FontWeight="SemiBold" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="studio" Text="{Binding ItunesLibraryPath, Mode=TwoWay}" /><Button Grid.Column="1" Classes="studio" Content="Browse" Command="{Binding BrowseItunesLibraryCommand}" /></Grid>
+              <TextBlock Classes="muted" Text="FFmpeg" FontSize="12" FontWeight="SemiBold" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="studio" Text="{Binding FfmpegPath, Mode=TwoWay}" /><Button Grid.Column="1" Classes="studio" Content="Browse" Command="{Binding BrowseFfmpegCommand}" /></Grid>
+              <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="12">
+                <StackPanel Spacing="5"><TextBlock Classes="muted" Text="Path length limit" FontSize="12" FontWeight="SemiBold" /><NumericUpDown Classes="studio" Value="{Binding LengthLimit, Mode=TwoWay}" /></StackPanel>
+                <StackPanel Grid.Column="1" Spacing="5"><TextBlock Classes="muted" Text="Disc number length limit" FontSize="12" FontWeight="SemiBold" /><NumericUpDown Classes="studio" Value="{Binding DiscNumLengthLimit, Mode=TwoWay}" /></StackPanel>
+                <StackPanel Grid.Column="2" Spacing="5"><TextBlock Classes="muted" Text="AAC encoder" FontSize="12" FontWeight="SemiBold" /><TextBox Classes="studio" Text="{Binding AacEncoder, Mode=TwoWay}" /></StackPanel>
+                <StackPanel Grid.Column="3" Spacing="5"><TextBlock Classes="muted" Text="AAC bitrate (kbps)" FontSize="12" FontWeight="SemiBold" /><NumericUpDown Classes="studio" Value="{Binding AacBitrateKbps, Mode=TwoWay}" /></StackPanel>
+              </Grid>
+              <CheckBox Content="Delete source music after successful ingest" IsChecked="{Binding DeleteSourcesAfterIngest, Mode=TwoWay}" />
+              <CheckBox Content="Remove non-music files after successful ingest" IsChecked="{Binding RemoveNonMusicAfterIngest, Mode=TwoWay}" />
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+
+        <TabItem Header="Appearance">
+          <StackPanel x:Name="AppearanceSettingsContent" Classes="settings-content" Margin="18" Spacing="10">
+            <TextBlock Classes="section-title" Text="Appearance" />
+            <TextBlock Classes="muted" Text="System follows the operating-system preference. Teal is reserved for selection, focus, progress, and safe actions." TextWrapping="Wrap" />
+            <ListBox ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme, Mode=TwoWay}" Background="Transparent" BorderThickness="0">
+              <ListBox.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="3" /></ItemsPanelTemplate></ListBox.ItemsPanel>
+              <ListBox.ItemTemplate><DataTemplate><Border Classes="card" Margin="0,0,12,12" HorizontalAlignment="Stretch"><StackPanel Spacing="8"><Border Height="72" CornerRadius="6" Background="{DynamicResource StudioInsetBrush}" BorderBrush="{DynamicResource StudioBorderBrush}" BorderThickness="1"><Grid ColumnDefinitions="*,*"><Border Background="{DynamicResource StudioCanvasBrush}" /><Border Grid.Column="1" Background="{DynamicResource StudioRaisedBrush}" /></Grid></Border><TextBlock Text="{Binding}" FontWeight="SemiBold" /></StackPanel></Border></DataTemplate></ListBox.ItemTemplate>
+            </ListBox>
+          </StackPanel>
+        </TabItem>
+      </TabControl>
+    </Border>
+  </Grid>
+</UserControl>
