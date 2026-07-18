@@ -190,6 +190,9 @@ public sealed class PresentationTests
             var viewModel = new SettingsViewModel(settings, new FakeFilePicker(),
                 new FakeDialogs(), new FakeTheme());
 
+            viewModel.EditCurrentConfigurationCommand.Execute(null);
+            Assert.Equal(1, viewModel.SelectedTabIndex);
+
             // The active configuration is restored directly into the editor; users should not
             // need to click Edit active before their roots and workflow targets appear.
             IndexTargetEditorRow root = Assert.Single(viewModel.IndexTargets);

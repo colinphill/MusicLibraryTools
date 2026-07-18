@@ -3,8 +3,8 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       Background="Transparent">
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                  HorizontalContentAlignment="Stretch">
-        <StackPanel Margin="36,30,36,48" MaxWidth="1280" HorizontalAlignment="Stretch">
+                  HorizontalContentAlignment="Center">
+        <StackPanel x:Name="HomeContent" Margin="36,30,36,48" MaxWidth="1280" HorizontalAlignment="Center">
             <Grid Margin="0,0,0,24">
                 <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                 <StackPanel>

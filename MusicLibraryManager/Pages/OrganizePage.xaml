@@ -1,6 +1,7 @@
 <UserControl x:Class="MusicLibraryManager.Pages.OrganizePage"
       xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:controls="using:MusicLibraryManager.Controls"
       xmlns:tv="using:WinUI.TableView" Background="Transparent">
     <Grid Margin="28,24,28,28">
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
@@ -28,7 +29,8 @@
 
         <Border Grid.Row="2" Style="{StaticResource CardStyle}" Padding="0">
             <tv:TableView ItemsSource="{Binding Moves}" AutoGenerateColumns="False" IsReadOnly="True"
-                          CanResizeColumns="True" CanReorderColumns="True" BorderThickness="0">
+                          CanResizeColumns="True" CanReorderColumns="True" BorderThickness="0"
+                          controls:TableViewColumnReorderBehavior.IsEnabled="True">
                 <tv:TableView.Columns>
                     <tv:TableViewTextColumn Header="Current location" Binding="{Binding Source}" Width="420"/>
                     <tv:TableViewTextColumn Header="New location" Binding="{Binding Destination}" Width="420"/>

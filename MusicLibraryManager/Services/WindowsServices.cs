@@ -196,6 +196,7 @@ public sealed class WinUiThumbnailService : IThumbnailService
         {
             writer.WriteBytes(data);
             await writer.StoreAsync();
+            writer.DetachStream();
         }
         stream.Seek(0);
         var bitmap = new BitmapImage();

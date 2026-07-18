@@ -29,9 +29,28 @@ public sealed partial class MainWindow : Window
         nint hwnd = WindowNative.GetWindowHandle(this);
         _appWindow = AppWindow.GetFromWindowId(Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd));
         _appWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico"));
+        ConfigureTitleBar();
         _appWindow.Closing += AppWindow_Closing;
         RestoreWindow();
         Navigate(ShellDestination.Home);
+    }
+
+    private void ConfigureTitleBar()
+    {
+        ExtendsContentIntoTitleBar = true;
+        SetTitleBar(TitleBarDragRegion);
+        if (!AppWindowTitleBar.IsCustomizationSupported())
+            return;
+
+        AppWindowTitleBar titleBar = _appWindow.TitleBar;
+        titleBar.ButtonBackgroundColor = Microsoft.UI.Colors.Transparent;
+        titleBar.ButtonInactiveBackgroundColor = Microsoft.UI.Colors.Transparent;
+        titleBar.ButtonForegroundColor = Microsoft.UI.Colors.White;
+        titleBar.ButtonInactiveForegroundColor = Windows.UI.Color.FromArgb(180, 255, 255, 255);
+        titleBar.ButtonHoverBackgroundColor = Windows.UI.Color.FromArgb(45, 255, 255, 255);
+        titleBar.ButtonHoverForegroundColor = Microsoft.UI.Colors.White;
+        titleBar.ButtonPressedBackgroundColor = Windows.UI.Color.FromArgb(75, 0, 0, 0);
+        titleBar.ButtonPressedForegroundColor = Microsoft.UI.Colors.White;
     }
 
     private void Navigate(ShellDestination destination)

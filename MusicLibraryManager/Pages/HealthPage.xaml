@@ -3,6 +3,7 @@
     x:Name="PageRoot"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:MusicLibraryManager.Controls"
     xmlns:tv="using:WinUI.TableView"
     Background="Transparent">
     <Grid Margin="28,24,28,28" RowSpacing="14">
@@ -44,8 +45,8 @@
             </StackPanel>
         </Border>
 
-        <Grid Grid.Row="2" ColumnSpacing="12">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="250"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="250" MinWidth="200" MaxWidth="420"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
             <Border Style="{StaticResource CardStyle}" Padding="10">
                 <Grid RowSpacing="8">
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
@@ -63,22 +64,31 @@
                 </Grid>
             </Border>
 
-            <Border Grid.Column="1" Style="{StaticResource CardStyle}" Padding="10">
+            <controls:ColumnSplitter Grid.Column="1" AutomationProperties.Name="Resize analysis history" Style="{StaticResource ColumnSplitterStyle}"/>
+
+            <Border Grid.Column="2" Style="{StaticResource CardStyle}" Padding="10">
                 <TabView x:Name="ResultsTabs" IsAddTabButtonVisible="False" SelectedIndex="{Binding ActiveResultIndex, Mode=TwoWay}">
                     <TabViewItem Header="Findings" IsClosable="False">
-                        <Grid ColumnSpacing="12">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="300"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                            <ListView ItemsSource="{Binding FindingGroups}" SelectionChanged="FindingList_SelectionChanged">
-                                <ListView.ItemTemplate><DataTemplate><Grid Margin="2,4" ColumnSpacing="8">
-                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/></Grid.ColumnDefinitions>
-                                    <StackPanel><TextBlock Text="{Binding Problem}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding Count}" Opacity="0.6"/></StackPanel>
-                                    <ComboBox Grid.Column="1" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}"/>
-                                </Grid></DataTemplate></ListView.ItemTemplate>
-                            </ListView>
-                            <Grid Grid.Column="1" RowSpacing="8"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="360" MinWidth="260" MaxWidth="560"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TreeView x:Name="FindingTree" SelectionMode="Single" SelectionChanged="FindingTree_SelectionChanged">
+                                <TreeView.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Width="310" MinHeight="38" ColumnSpacing="6">
+                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="108"/></Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Content.Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding Content.Count}" Opacity="0.58" VerticalAlignment="Center"/>
+                                            <ComboBox Grid.Column="2" ItemsSource="{Binding Content.Dispositions}" SelectedItem="{Binding Content.Disposition, Mode=TwoWay}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </TreeView.ItemTemplate>
+                            </TreeView>
+                            <controls:ColumnSplitter Grid.Column="1" AutomationProperties.Name="Resize findings hierarchy" Style="{StaticResource ColumnSplitterStyle}"/>
+                            <Grid Grid.Column="2" RowSpacing="8"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
                                 <TextBlock Text="Files in selected branch" FontSize="15" FontWeight="SemiBold"/>
                                 <tv:TableView Grid.Row="1" ItemsSource="{Binding DisplayedFindings}" AutoGenerateColumns="False"
-                                              CanResizeColumns="True" CanReorderColumns="True" CanSortColumns="True" FrozenColumnCount="1">
+                                              CanResizeColumns="True" CanReorderColumns="True" CanSortColumns="True" FrozenColumnCount="1"
+                                              controls:TableViewColumnReorderBehavior.IsEnabled="True">
                                     <tv:TableView.Columns>
                                         <tv:TableViewTemplateColumn Header="Disposition" Width="150" MinWidth="135"><tv:TableViewTemplateColumn.CellTemplate><DataTemplate><ComboBox ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}"/></DataTemplate></tv:TableViewTemplateColumn.CellTemplate></tv:TableViewTemplateColumn>
                                         <tv:TableViewTextColumn Header="Track" Binding="{Binding Path}" Width="360" MinWidth="240" IsReadOnly="True"/>
@@ -110,11 +120,17 @@
                     </TabViewItem>
 
                     <TabViewItem Header="Metadata repairs" IsClosable="False">
-                        <Grid ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="300"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                            <ListView ItemsSource="{Binding RepairGroups}" SelectionChanged="RepairList_SelectionChanged">
-                                <ListView.ItemTemplate><DataTemplate><Grid Margin="2,4" ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/></Grid.ColumnDefinitions><TextBlock Text="{Binding Category}" FontWeight="SemiBold"/><ComboBox Grid.Column="1" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}"/></Grid></DataTemplate></ListView.ItemTemplate>
-                            </ListView>
-                            <tv:TableView Grid.Column="1" ItemsSource="{Binding DisplayedRepairItems}" AutoGenerateColumns="False" CanResizeColumns="True" CanReorderColumns="True" FrozenColumnCount="1">
+                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="360" MinWidth="260" MaxWidth="560"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TreeView x:Name="RepairTree" SelectionMode="Single" SelectionChanged="RepairTree_SelectionChanged">
+                                <TreeView.ItemTemplate><DataTemplate>
+                                    <Grid Width="310" MinHeight="38" ColumnSpacing="6"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="108"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Content.Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/><TextBlock Grid.Column="1" Text="{Binding Content.Count}" Opacity="0.58" VerticalAlignment="Center"/><ComboBox Grid.Column="2" ItemsSource="{Binding Content.Dispositions}" SelectedItem="{Binding Content.Disposition, Mode=TwoWay}"/>
+                                    </Grid>
+                                </DataTemplate></TreeView.ItemTemplate>
+                            </TreeView>
+                            <controls:ColumnSplitter Grid.Column="1" AutomationProperties.Name="Resize metadata repair hierarchy" Style="{StaticResource ColumnSplitterStyle}"/>
+                            <tv:TableView Grid.Column="2" ItemsSource="{Binding DisplayedRepairItems}" AutoGenerateColumns="False" CanResizeColumns="True" CanReorderColumns="True" FrozenColumnCount="1"
+                                          controls:TableViewColumnReorderBehavior.IsEnabled="True">
                                 <tv:TableView.Columns>
                                     <tv:TableViewTemplateColumn Header="Disposition" Width="150"><tv:TableViewTemplateColumn.CellTemplate><DataTemplate><ComboBox ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" IsEnabled="{Binding CanChangeDisposition}"/></DataTemplate></tv:TableViewTemplateColumn.CellTemplate></tv:TableViewTemplateColumn>
                                     <tv:TableViewTextColumn Header="Track" Binding="{Binding DisplayPath}" Width="320" IsReadOnly="True"/><tv:TableViewTextColumn Header="Before" Binding="{Binding Before}" Width="180" IsReadOnly="True"/><tv:TableViewTextColumn Header="After" Binding="{Binding After}" Width="180" IsReadOnly="True"/><tv:TableViewTextColumn Header="Reason" Binding="{Binding Reason}" Width="300" IsReadOnly="True"/>
@@ -124,11 +140,17 @@
                     </TabViewItem>
 
                     <TabViewItem Header="File repairs" IsClosable="False">
-                        <Grid ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="300"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                            <ListView ItemsSource="{Binding RepresentationActionGroups}" SelectionChanged="RepresentationList_SelectionChanged">
-                                <ListView.ItemTemplate><DataTemplate><Grid Margin="2,4" ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/></Grid.ColumnDefinitions><TextBlock Text="{Binding Category}" FontWeight="SemiBold"/><ComboBox Grid.Column="1" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}"/></Grid></DataTemplate></ListView.ItemTemplate>
-                            </ListView>
-                            <tv:TableView Grid.Column="1" ItemsSource="{Binding DisplayedRepresentationItems}" AutoGenerateColumns="False" CanResizeColumns="True" CanReorderColumns="True" FrozenColumnCount="1">
+                        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="360" MinWidth="260" MaxWidth="560"/><ColumnDefinition Width="12"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <TreeView x:Name="RepresentationTree" SelectionMode="Single" SelectionChanged="RepresentationTree_SelectionChanged">
+                                <TreeView.ItemTemplate><DataTemplate>
+                                    <Grid Width="310" MinHeight="38" ColumnSpacing="6"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="108"/></Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Content.Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"/><TextBlock Grid.Column="1" Text="{Binding Content.Count}" Opacity="0.58" VerticalAlignment="Center"/><ComboBox Grid.Column="2" ItemsSource="{Binding Content.Dispositions}" SelectedItem="{Binding Content.Disposition, Mode=TwoWay}"/>
+                                    </Grid>
+                                </DataTemplate></TreeView.ItemTemplate>
+                            </TreeView>
+                            <controls:ColumnSplitter Grid.Column="1" AutomationProperties.Name="Resize file repair hierarchy" Style="{StaticResource ColumnSplitterStyle}"/>
+                            <tv:TableView Grid.Column="2" ItemsSource="{Binding DisplayedRepresentationItems}" AutoGenerateColumns="False" CanResizeColumns="True" CanReorderColumns="True" FrozenColumnCount="1"
+                                          controls:TableViewColumnReorderBehavior.IsEnabled="True">
                                 <tv:TableView.Columns>
                                     <tv:TableViewTemplateColumn Header="Disposition" Width="150"><tv:TableViewTemplateColumn.CellTemplate><DataTemplate><ComboBox ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}"/></DataTemplate></tv:TableViewTemplateColumn.CellTemplate></tv:TableViewTemplateColumn>
                                     <tv:TableViewTextColumn Header="Track" Binding="{Binding SourcePath}" Width="320" IsReadOnly="True"/><tv:TableViewTextColumn Header="Action" Binding="{Binding Description}" Width="260" IsReadOnly="True"/><tv:TableViewTextColumn Header="Destination" Binding="{Binding DestinationPath}" Width="320" IsReadOnly="True"/><tv:TableViewTextColumn Header="Result" Binding="{Binding ResultText}" Width="180" IsReadOnly="True"/>
@@ -138,7 +160,8 @@
                     </TabViewItem>
 
                     <TabViewItem Header="Conflicts" IsClosable="False">
-                        <tv:TableView ItemsSource="{Binding ConflictGroups}" AutoGenerateColumns="False" CanResizeColumns="True" CanReorderColumns="True">
+                        <tv:TableView ItemsSource="{Binding ConflictGroups}" AutoGenerateColumns="False" CanResizeColumns="True" CanReorderColumns="True"
+                                      controls:TableViewColumnReorderBehavior.IsEnabled="True">
                             <tv:TableView.Columns>
                                 <tv:TableViewTextColumn Header="Album" Binding="{Binding Album}" Width="180" IsReadOnly="True"/><tv:TableViewTextColumn Header="Field" Binding="{Binding Field}" Width="120" IsReadOnly="True"/><tv:TableViewTextColumn Header="Files" Binding="{Binding FileCount}" Width="65" IsReadOnly="True"/>
                                 <tv:TableViewTemplateColumn Header="Canonical value" Width="220"><tv:TableViewTemplateColumn.CellTemplate><DataTemplate><ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding SelectedOption, Mode=TwoWay}" DisplayMemberPath="Value"/></DataTemplate></tv:TableViewTemplateColumn.CellTemplate></tv:TableViewTemplateColumn>

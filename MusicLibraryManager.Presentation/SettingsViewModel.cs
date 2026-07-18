@@ -29,6 +29,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _removeNonMusicAfterIngest;
     [ObservableProperty] private string _statusMessage = "Choose an existing configuration or create a new one.";
     [ObservableProperty] private string _selectedTheme;
+    [ObservableProperty] private int _selectedTabIndex;
 
     public SettingsViewModel(
         IAppSettings settings,
@@ -81,7 +82,10 @@ public partial class SettingsViewModel : ObservableObject
     private void EditCurrentConfiguration()
     {
         if (ActiveConfigurationPath is not null)
+        {
             LoadEditor(ActiveConfigurationPath);
+            SelectedTabIndex = 1;
+        }
     }
 
     [RelayCommand]
@@ -103,6 +107,7 @@ public partial class SettingsViewModel : ObservableObject
         SyncPlaylists.Clear();
         PlaylistTargets.Clear();
         StatusMessage = "New configuration. Add at least one library root, then Save as.";
+        SelectedTabIndex = 1;
     }
 
     [RelayCommand]
@@ -224,6 +229,7 @@ public partial class SettingsViewModel : ObservableObject
         {
             _settings.LoadConfig(path);
             LoadEditor(path);
+            SelectedTabIndex = 1;
             StatusMessage = "Configuration loaded. Cached browsing is available while roots are offline.";
         }
         catch (Exception error)

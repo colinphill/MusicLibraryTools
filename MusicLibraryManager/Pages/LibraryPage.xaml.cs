@@ -96,6 +96,8 @@ public sealed partial class LibraryPage : UserControl
         InspectorButton.Visibility = overlay ? Visibility.Visible : Visibility.Collapsed;
         if (overlay)
         {
+            InspectorSplitter.Visibility = Visibility.Collapsed;
+            InspectorSplitterColumn.Width = new GridLength(0);
             InspectorColumn.MinWidth = 0;
             InspectorColumn.Width = new GridLength(0);
             Grid.SetColumn(InspectorPanel, 0);
@@ -105,7 +107,9 @@ public sealed partial class LibraryPage : UserControl
         }
         else
         {
-            Grid.SetColumn(InspectorPanel, 1);
+            InspectorSplitter.Visibility = Visibility.Visible;
+            InspectorSplitterColumn.Width = new GridLength(12);
+            Grid.SetColumn(InspectorPanel, 2);
             InspectorColumn.MinWidth = 280;
             InspectorColumn.Width = new GridLength(390);
             InspectorPanel.Width = double.NaN;

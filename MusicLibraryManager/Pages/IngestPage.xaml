@@ -2,6 +2,7 @@
     x:Class="MusicLibraryManager.Pages.IngestPage" x:Name="IngestRoot"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:MusicLibraryManager.Controls"
     xmlns:tv="using:WinUI.TableView"
     Background="Transparent" AllowDrop="True" DragOver="IngestPage_DragOver" Drop="IngestPage_Drop">
     <Grid Margin="28,24,28,28" RowSpacing="14">
@@ -42,7 +43,8 @@
                     <Grid Grid.Row="1" ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                         <TextBlock Text="{Binding AlbumCount}"/><TextBlock Grid.Column="1" Text="{Binding OutputCount}"/><TextBlock Grid.Column="2" Text="{Binding CleanupCount}"/><TextBlock Grid.Column="3" Text="{Binding ConflictCount}"/>
                     </Grid>
-                    <tv:TableView Grid.Row="2" ItemsSource="{Binding Files}" AutoGenerateColumns="False" IsReadOnly="True" CanResizeColumns="True" CanReorderColumns="True">
+                    <tv:TableView Grid.Row="2" ItemsSource="{Binding Files}" AutoGenerateColumns="False" IsReadOnly="True" CanResizeColumns="True" CanReorderColumns="True"
+                                  controls:TableViewColumnReorderBehavior.IsEnabled="True">
                         <tv:TableView.Columns>
                             <tv:TableViewTextColumn Header="Type" Binding="{Binding SourceType}" Width="145"/><tv:TableViewTextColumn Header="Source" Binding="{Binding Source}" Width="360"/><tv:TableViewTextColumn Header="Plan" Binding="{Binding Summary}" Width="480"/><tv:TableViewTextColumn Header="Progress" Binding="{Binding ProgressText}" Width="150"/>
                         </tv:TableView.Columns>
