@@ -43,9 +43,16 @@ Embedded artwork is parsed, hashed, measured, and preserved byte-for-byte across
 
 ### Desktop app
 
+- **MusicLibraryManager** — the Windows 11 Fluent manager and staged successor to the Avalonia
+  app. Its first release provides configuration management, cached/offline browsing, a virtualized
+  sortable library table, saved views, indexing with cancellation, and safe single- or multi-file
+  tag/artwork editing. It targets x64 WPF with the Windows 11 Fluent theme and publishes as a
+  self-contained folder;
+  see [`MusicLibraryManager/README.md`](MusicLibraryManager/README.md).
 - **MusicLibrary.App** — an Avalonia library browser and editor for indexing, cached filtering,
   tag and artwork editing, analysis, ingest, and organization. The prioritized application backlog
-  is tracked in [`MusicLibrary.App/ROADMAP.md`](MusicLibrary.App/ROADMAP.md).
+  is tracked in [`MusicLibrary.App/ROADMAP.md`](MusicLibrary.App/ROADMAP.md). It remains available
+  while manager parity is completed.
 
 ### Tools
 

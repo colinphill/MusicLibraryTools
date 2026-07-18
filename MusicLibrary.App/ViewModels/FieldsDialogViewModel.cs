@@ -79,6 +79,9 @@ public partial class FieldsDialogViewModel : ViewModelBase
         ? $"Edit fields — {System.IO.Path.GetFileName(_paths[0])}"
         : $"Edit fields — {_paths.Count} files";
 
+    /// <summary>Completes when the initial multi-file field aggregation has loaded.</summary>
+    public Task Loading { get; }
+
     /// <summary>Raised to close the dialog; the bool is the save/cancel result.</summary>
     public event Action<bool>? CloseRequested;
 
@@ -87,7 +90,7 @@ public partial class FieldsDialogViewModel : ViewModelBase
         _media = media;
         _writer = writer;
         _paths = paths;
-        _ = LoadAsync();
+        Loading = LoadAsync();
     }
 
     private async Task LoadAsync()

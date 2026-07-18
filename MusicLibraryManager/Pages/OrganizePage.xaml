@@ -1,0 +1,38 @@
+<UserControl x:Class="MusicLibraryManager.Pages.OrganizePage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Background="Transparent">
+    <Grid Margin="28,24,28,28">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="Organize" Style="{StaticResource PageTitleStyle}"/>
+                <TextBlock Text="Move eligible files into the canonical library layout with rollback protection." Opacity="0.66" Margin="0,4,0,0"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Content="Preview moves" Command="{Binding PreviewCommand}" Margin="0,0,8,0"/>
+                <Button Content="Apply moves" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding ApplyCommand}" Margin="0,0,8,0"/>
+                <Button Content="Cancel" Command="{Binding CancelCommand}"/>
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="0,18,0,14" Padding="16">
+            <StackPanel>
+                <TextBlock Text="Preview before applying" Style="{StaticResource SectionTitleStyle}"/>
+                <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" Opacity="0.7" Margin="0,5,0,0"/>
+                <ProgressBar IsIndeterminate="True" Height="3" Margin="0,12,0,0"
+                             Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+            </StackPanel>
+        </Border>
+
+        <Border Grid.Row="2" Style="{StaticResource CardStyle}" Padding="0">
+            <DataGrid ItemsSource="{Binding Moves}" AutoGenerateColumns="False" IsReadOnly="True"
+                      EnableRowVirtualization="True" EnableColumnVirtualization="True" BorderThickness="0">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Current location" Binding="{Binding Source}" Width="*"/>
+                    <DataGridTextColumn Header="New location" Binding="{Binding Destination}" Width="*"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Border>
+    </Grid>
+</UserControl>

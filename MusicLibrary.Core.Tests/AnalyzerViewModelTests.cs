@@ -73,6 +73,18 @@ public sealed class AnalyzerViewModelTests
         Assert.Equal(1, artist.ActiveCount);
         Assert.Equal(1, missing.ActiveCount);
         Assert.Equal(2, run.ActiveFindingCount);
+        Assert.Equal(AnalysisRepairDisposition.Mixed, album.Disposition);
+        Assert.Equal(AnalysisRepairDisposition.Mixed, artist.Disposition);
+        Assert.Equal(AnalysisRepairDisposition.Mixed, missing.Disposition);
+
+        missing.Disposition = AnalysisRepairDisposition.Ignored;
+
+        Assert.Equal(AnalysisRepairDisposition.Ignored, missing.Disposition);
+        Assert.Equal(0, missing.ActiveCount);
+        Assert.All(missing.Artists.SelectMany(group => group.Albums)
+            .SelectMany(group => group.Findings),
+            finding => Assert.Equal(AnalysisFindingDisposition.Ignored,
+                finding.Disposition));
     }
 
     [Fact]
@@ -108,6 +120,32 @@ public sealed class AnalyzerViewModelTests
         Assert.Equal(2, Assert.Single(alpha.Albums).Count);
         var unknown = category.Artists.Single(artist => artist.Artist == "Unknown Artist");
         Assert.Equal("Unknown Album", Assert.Single(unknown.Albums).Album);
+    }
+
+    [Fact]
+    public async Task Analyzer_FindingTreeSelectionIncludesEveryDescendantFile()
+    {
+        var viewModel = Create([
+            Track("aa-first-1.mp3", "AA", "First", CodecType.Lossy, "One", 1),
+            Track("aa-first-2.mp3", "AA", "First", CodecType.Lossy, "Two", 2),
+            Track("aa-second.mp3", "AA", "Second", CodecType.Lossy, "Three", 1),
+            Track("bb-third.mp3", "BB", "Third", CodecType.Lossy, "Four", 1),
+        ]);
+
+        await viewModel.RunLossyCommand.ExecuteAsync(null);
+
+        var reason = Assert.Single(viewModel.FindingGroups);
+        Assert.Equal(4, viewModel.DisplayedFindings.Count);
+
+        viewModel.SelectedFindingNode = reason.Artists.Single(artist => artist.Artist == "AA");
+        Assert.Equal(3, viewModel.DisplayedFindings.Count);
+
+        viewModel.SelectedFindingNode = reason.Artists.Single(artist => artist.Artist == "AA")
+            .Albums.Single(album => album.Album == "First");
+        Assert.Equal(2, viewModel.DisplayedFindings.Count);
+
+        viewModel.SelectedFindingNode = reason;
+        Assert.Equal(4, viewModel.DisplayedFindings.Count);
     }
 
     [Fact]
@@ -164,19 +202,33 @@ public sealed class AnalyzerViewModelTests
         await viewModel.RunDuplicatesCommand.ExecuteAsync(null);
         var duplicateRun = Assert.Single(viewModel.Runs);
         Assert.Single(viewModel.Duplicates);
+        Assert.Equal(1, viewModel.ActiveResultIndex);
 
         await viewModel.RunLossyCommand.ExecuteAsync(null);
 
         Assert.Equal(2, viewModel.Runs.Count);
         Assert.Equal("Lossy files", viewModel.SelectedRun!.Name);
+        Assert.Equal(0, viewModel.ActiveResultIndex);
         Assert.Single(viewModel.FindingGroups);
         Assert.Empty(viewModel.Duplicates);
 
         viewModel.SelectedRun = duplicateRun;
 
         Assert.Equal(AnalysisResultView.Duplicates, viewModel.ActiveView);
+        Assert.Equal(1, viewModel.ActiveResultIndex);
         Assert.Single(viewModel.Duplicates);
         Assert.Empty(viewModel.FindingGroups);
+    }
+
+    [Fact]
+    public void Analyzer_ResultIndexSupportsTwoWaySelection()
+    {
+        var viewModel = Create([]);
+
+        viewModel.ActiveResultIndex = 5;
+
+        Assert.Equal(AnalysisResultView.Conflicts, viewModel.ActiveView);
+        Assert.Equal(5, viewModel.ActiveResultIndex);
     }
 
     [Fact]
@@ -502,6 +554,13 @@ public sealed class AnalyzerViewModelTests
         Assert.Equal(2, first.Count);
         Assert.Equal(2, first.ActiveCount);
 
+        viewModel.SelectedRepairNode = titles;
+        Assert.Equal(3, viewModel.DisplayedRepairItems.Count);
+        viewModel.SelectedRepairNode = titles.Artists.Single(artist => artist.Artist == "AA");
+        Assert.Equal(2, viewModel.DisplayedRepairItems.Count);
+        viewModel.SelectedRepairNode = first;
+        Assert.Equal(2, viewModel.DisplayedRepairItems.Count);
+
         first.Items[0].Disposition = AnalysisRepairDisposition.Deferred;
 
         Assert.Equal(1, first.ActiveCount);
@@ -518,6 +577,8 @@ public sealed class AnalyzerViewModelTests
         var fileRun = viewModel.Runs.Single(run => run.Name == "Representation file repairs");
         viewModel.SelectedRun = fileRun;
         var category = Assert.Single(viewModel.RepresentationActionGroups);
+        viewModel.SelectedRepresentationNode = category;
+        Assert.Single(viewModel.DisplayedRepresentationItems);
         category.Disposition = AnalysisRepairDisposition.Deferred;
         Assert.All(viewModel.RepresentationActionItems,
             item => Assert.Equal(AnalysisRepairDisposition.Deferred, item.Disposition));

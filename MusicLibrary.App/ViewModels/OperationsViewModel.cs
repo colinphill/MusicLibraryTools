@@ -26,9 +26,15 @@ public sealed record UnifiedJobHistoryItem(
 /// <summary>Discovers, browses, restores, and retention-purges mutation journals and quarantine runs.</summary>
 public partial class OperationsViewModel : ViewModelBase
 {
+#if MUSIC_LIBRARY_MANAGER
+    private const string SearchRootPreference = "manager.operations.searchRoot.v1";
+    private const string RetentionDaysPreference = "manager.operations.retentionDays.v1";
+    private const string JobHistoryPreference = "manager.operations.jobHistory.v1";
+#else
     private const string SearchRootPreference = "Operations.SearchRoot";
     private const string RetentionDaysPreference = "Operations.RetentionDays";
     private const string JobHistoryPreference = "Operations.JobHistory";
+#endif
     private readonly IOperationJournalService _journals;
     private readonly IFileDialogService _files;
     private readonly IDialogService _dialogs;
@@ -131,7 +137,13 @@ public partial class OperationsViewModel : ViewModelBase
     public ObservableCollection<OperationRunViewModel> Runs { get; } = [];
     public ObservableCollection<OperationEntryNodeViewModel> RootNodes { get; } = [];
     public ObservableCollection<UnifiedJobHistoryItem> JobHistory { get; } = [];
+#if MUSIC_LIBRARY_MANAGER
+    public IReadOnlyList<UnifiedJobDescriptor> JobCatalog => _jobs?.Catalog
+        .Where(job => job.Id != "device-sync")
+        .ToArray() ?? [];
+#else
     public IReadOnlyList<UnifiedJobDescriptor> JobCatalog => _jobs?.Catalog ?? [];
+#endif
     public bool ShowJobApply => HasJobPreview &&
         SelectedJob?.ApplyMode == UnifiedJobApplyMode.ApplyFlag;
     private bool JobIs(params string[] ids) => SelectedJob is not null && ids.Contains(SelectedJob.Id);
@@ -989,7 +1001,11 @@ public partial class OperationsViewModel : ViewModelBase
         }
 
         Add(SearchRoot);
+#if MUSIC_LIBRARY_MANAGER
+        Add(_settings.GetPreference("manager.ingest.source.v1"));
+#else
         Add(_settings.GetPreference("Ingest.SourceDirectory"));
+#endif
         var snapshot = _settings.GetSnapshot();
         if (snapshot.ConfigPath is not null)
             Add(Path.GetDirectoryName(snapshot.ConfigPath));

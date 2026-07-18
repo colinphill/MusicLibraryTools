@@ -72,6 +72,85 @@ public partial class AnalyzerViewModel : ViewModelBase
     public IReadOnlyList<AlbumMetadataMatrix> Matrices => SelectedRun?.Matrices ?? [];
     public bool HasRuns => Runs.Count > 0;
 
+    private object? _selectedFindingNode;
+    private object? _selectedRepairNode;
+    private object? _selectedRepresentationNode;
+
+    public object? SelectedFindingNode
+    {
+        get => _selectedFindingNode;
+        set
+        {
+            if (SetProperty(ref _selectedFindingNode, value))
+                OnPropertyChanged(nameof(DisplayedFindings));
+        }
+    }
+
+    public object? SelectedRepairNode
+    {
+        get => _selectedRepairNode;
+        set
+        {
+            if (SetProperty(ref _selectedRepairNode, value))
+                OnPropertyChanged(nameof(DisplayedRepairItems));
+        }
+    }
+
+    public object? SelectedRepresentationNode
+    {
+        get => _selectedRepresentationNode;
+        set
+        {
+            if (SetProperty(ref _selectedRepresentationNode, value))
+                OnPropertyChanged(nameof(DisplayedRepresentationItems));
+        }
+    }
+
+    public IReadOnlyList<AnalysisFindingViewModel> DisplayedFindings =>
+        SelectedFindingNode switch
+        {
+            AnalysisFindingViewModel finding => [finding],
+            AnalysisAlbumGroupViewModel album => album.Findings,
+            AnalysisArtistGroupViewModel artist => artist.Albums
+                .SelectMany(group => group.Findings).ToList(),
+            AnalysisProblemGroupViewModel problem => problem.Artists
+                .SelectMany(group => group.Albums)
+                .SelectMany(group => group.Findings).ToList(),
+            _ => FindingGroups.SelectMany(group => group.Artists)
+                .SelectMany(group => group.Albums)
+                .SelectMany(group => group.Findings).ToList(),
+        };
+
+    public IReadOnlyList<AnalysisRepairItemViewModel> DisplayedRepairItems =>
+        SelectedRepairNode switch
+        {
+            AnalysisRepairItemViewModel item => [item],
+            AnalysisRepairAlbumGroupViewModel album => album.Items,
+            AnalysisRepairArtistGroupViewModel artist => artist.Albums
+                .SelectMany(group => group.Items).ToList(),
+            AnalysisRepairCategoryGroupViewModel category => category.Artists
+                .SelectMany(group => group.Albums)
+                .SelectMany(group => group.Items).ToList(),
+            _ => RepairGroups.SelectMany(group => group.Artists)
+                .SelectMany(group => group.Albums)
+                .SelectMany(group => group.Items).ToList(),
+        };
+
+    public IReadOnlyList<RepresentationRepairActionItemViewModel> DisplayedRepresentationItems =>
+        SelectedRepresentationNode switch
+        {
+            RepresentationRepairActionItemViewModel item => [item],
+            RepresentationRepairAlbumGroupViewModel album => album.Items,
+            RepresentationRepairArtistGroupViewModel artist => artist.Albums
+                .SelectMany(group => group.Items).ToList(),
+            RepresentationRepairCategoryGroupViewModel category => category.Artists
+                .SelectMany(group => group.Albums)
+                .SelectMany(group => group.Items).ToList(),
+            _ => RepresentationActionGroups.SelectMany(group => group.Artists)
+                .SelectMany(group => group.Albums)
+                .SelectMany(group => group.Items).ToList(),
+        };
+
     // Section visibility (bound in XAML; ActiveView drives which one shows).
     public bool ShowFindings => ActiveView == AnalysisResultView.Findings;
     public bool ShowDuplicates => ActiveView == AnalysisResultView.Duplicates;
@@ -81,6 +160,37 @@ public partial class AnalyzerViewModel : ViewModelBase
     public bool ShowRepresentationRepairs =>
         ActiveView == AnalysisResultView.RepresentationRepairs;
     public bool ShowMatrix => ActiveView == AnalysisResultView.Matrix;
+    public int ActiveResultIndex
+    {
+        get => ActiveView switch
+        {
+            AnalysisResultView.Findings => 0,
+            AnalysisResultView.Duplicates => 1,
+            AnalysisResultView.Artists => 2,
+            AnalysisResultView.Repairs => 3,
+            AnalysisResultView.RepresentationRepairs => 4,
+            AnalysisResultView.Conflicts => 5,
+            AnalysisResultView.Matrix => 6,
+            _ => 0,
+        };
+        set
+        {
+            AnalysisResultView view = value switch
+            {
+                0 => AnalysisResultView.Findings,
+                1 => AnalysisResultView.Duplicates,
+                2 => AnalysisResultView.Artists,
+                3 => AnalysisResultView.Repairs,
+                4 => AnalysisResultView.RepresentationRepairs,
+                5 => AnalysisResultView.Conflicts,
+                6 => AnalysisResultView.Matrix,
+                _ => AnalysisResultView.Findings,
+            };
+
+            if (ActiveView != view)
+                ActiveView = view;
+        }
+    }
 
     /// <summary>Raised with a file path when the user opens a finding/track.</summary>
     public event Action<string>? OpenRequested;
@@ -108,6 +218,7 @@ public partial class AnalyzerViewModel : ViewModelBase
 
     partial void OnActiveViewChanged(AnalysisResultView value)
     {
+        OnPropertyChanged(nameof(ActiveResultIndex));
         OnPropertyChanged(nameof(ShowFindings));
         OnPropertyChanged(nameof(ShowDuplicates));
         OnPropertyChanged(nameof(ShowArtists));
@@ -119,6 +230,9 @@ public partial class AnalyzerViewModel : ViewModelBase
 
     partial void OnSelectedRunChanged(AnalysisRunViewModel? value)
     {
+        SelectedFindingNode = null;
+        SelectedRepairNode = null;
+        SelectedRepresentationNode = null;
         OnPropertyChanged(nameof(FindingGroups));
         OnPropertyChanged(nameof(Duplicates));
         OnPropertyChanged(nameof(ArtistGroups));
@@ -129,6 +243,9 @@ public partial class AnalyzerViewModel : ViewModelBase
         OnPropertyChanged(nameof(RepresentationActionGroups));
         OnPropertyChanged(nameof(RepresentationWarnings));
         OnPropertyChanged(nameof(Matrices));
+        OnPropertyChanged(nameof(DisplayedFindings));
+        OnPropertyChanged(nameof(DisplayedRepairItems));
+        OnPropertyChanged(nameof(DisplayedRepresentationItems));
 
         if (value is not null)
         {

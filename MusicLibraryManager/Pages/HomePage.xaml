@@ -1,0 +1,61 @@
+<UserControl x:Class="MusicLibraryManager.Pages.HomePage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      Background="Transparent">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                  HorizontalContentAlignment="Stretch">
+        <StackPanel Margin="36,30,36,48" MaxWidth="1280" HorizontalAlignment="Stretch">
+            <Grid Margin="0,0,0,24">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="Your music, clearly managed" Style="{StaticResource PageTitleStyle}" />
+                    <TextBlock Text="A calm view of the collection, its health, and what needs attention next."
+                               FontSize="15" Opacity="0.68" TextWrapping="Wrap" Margin="0,6,0,0" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="Browse library" Style="{StaticResource PrimaryButtonStyle}"
+                            Command="{Binding OpenLibraryCommand}" Margin="0,0,10,0" />
+                    <Button Content="Refresh" Command="{Binding RefreshCommand}" />
+                </StackPanel>
+            </Grid>
+
+            <Border Style="{StaticResource CardStyle}" BorderBrush="{StaticResource BrandAmberBrush}"
+                    Visibility="{Binding HasError, Converter={StaticResource BooleanToVisibilityConverter}}" Margin="0,0,0,18">
+                <StackPanel><TextBlock Text="Dashboard unavailable" FontWeight="SemiBold"/><TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap"/></StackPanel>
+            </Border>
+
+            <UniformGrid Columns="4" Margin="0,0,0,18">
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,7,0"><StackPanel><TextBlock Text="Tracks" Opacity="0.66"/><TextBlock Text="{Binding TrackCount}" Style="{StaticResource MetricStyle}" Margin="0,6,0,0"/></StackPanel></Border>
+                <Border Style="{StaticResource CardStyle}" Margin="7,0"><StackPanel><TextBlock Text="Albums" Opacity="0.66"/><TextBlock Text="{Binding AlbumCount}" Style="{StaticResource MetricStyle}" Margin="0,6,0,0"/></StackPanel></Border>
+                <Border Style="{StaticResource CardStyle}" Margin="7,0"><StackPanel><TextBlock Text="Album artists" Opacity="0.66"/><TextBlock Text="{Binding ArtistCount}" Style="{StaticResource MetricStyle}" Margin="0,6,0,0"/></StackPanel></Border>
+                <Border Style="{StaticResource CardStyle}" Margin="7,0,0,0"><StackPanel><TextBlock Text="Artwork cached" Opacity="0.66"/><TextBlock Text="{Binding ArtworkCount}" Style="{StaticResource MetricStyle}" Margin="0,6,0,0"/></StackPanel></Border>
+            </UniformGrid>
+
+            <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Border Style="{StaticResource CardStyle}" Margin="0,0,7,0">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                            <TextBlock Text="&#xE9D9;" FontFamily="Segoe Fluent Icons" Foreground="{StaticResource BrandTealBrightBrush}" Margin="0,0,10,0" />
+                            <TextBlock Text="Library roots" Style="{StaticResource SectionTitleStyle}" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding RootHealth}" FontSize="16" TextWrapping="Wrap" Margin="0,0,0,10" />
+                        <TextBlock Text="Offline roots never remove cached tracks. Reconnect and index when they are available again."
+                                   Opacity="0.62" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Style="{StaticResource CardStyle}" Margin="7,0,0,0" DataContext="{Binding Indexing}">
+                    <StackPanel>
+                        <TextBlock Text="Indexing" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,10" />
+                        <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" Opacity="0.74" Margin="0,0,0,10" />
+                        <ProgressBar Value="{Binding Progress}" Maximum="1" Height="4" Margin="0,0,0,12" />
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Index library" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding IndexCommand}" Margin="0,0,8,0" />
+                            <Button Content="Cancel" Command="{Binding CancelCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -13,9 +13,15 @@ public enum IngestPreviewFilter { All, Albums, Outputs, Conflicts, Cleanup }
 
 public partial class IngestViewModel : ViewModelBase
 {
+#if MUSIC_LIBRARY_MANAGER
+    private const string SourcePreference = "manager.ingest.source.v1";
+    private const string PresetsPreference = "manager.ingest.presets.v1";
+    private const string RecentSourcesPreference = "manager.ingest.recentSources.v1";
+#else
     private const string SourcePreference = "Ingest.SourceDirectory";
     private const string PresetsPreference = "Ingest.Presets";
     private const string RecentSourcesPreference = "Ingest.RecentSources";
+#endif
     private const int RecentSourceLimit = 12;
     private readonly IIngestMusicService _service;
     private readonly IFileDialogService _files;
