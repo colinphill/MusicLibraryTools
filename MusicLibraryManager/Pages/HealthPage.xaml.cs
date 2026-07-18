@@ -1,9 +1,9 @@
-using System.Windows.Controls;
+using Microsoft.UI.Xaml.Controls;
 using MusicLibrary.App.ViewModels;
 
 namespace MusicLibraryManager.Pages;
 
-public partial class HealthPage : UserControl
+public sealed partial class HealthPage : UserControl
 {
     public HealthPage()
     {
@@ -11,27 +11,21 @@ public partial class HealthPage : UserControl
         DataContext = App.GetService<AnalyzerViewModel>();
     }
 
-    private void FindingTree_SelectedItemChanged(
-        object sender,
-        System.Windows.RoutedPropertyChangedEventArgs<object> e)
+    private void FindingList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (DataContext is AnalyzerViewModel viewModel)
-            viewModel.SelectedFindingNode = e.NewValue;
+            viewModel.SelectedFindingNode = (sender as ListView)?.SelectedItem;
     }
 
-    private void RepairTree_SelectedItemChanged(
-        object sender,
-        System.Windows.RoutedPropertyChangedEventArgs<object> e)
+    private void RepairList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (DataContext is AnalyzerViewModel viewModel)
-            viewModel.SelectedRepairNode = e.NewValue;
+            viewModel.SelectedRepairNode = (sender as ListView)?.SelectedItem;
     }
 
-    private void RepresentationTree_SelectedItemChanged(
-        object sender,
-        System.Windows.RoutedPropertyChangedEventArgs<object> e)
+    private void RepresentationList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (DataContext is AnalyzerViewModel viewModel)
-            viewModel.SelectedRepresentationNode = e.NewValue;
+            viewModel.SelectedRepresentationNode = (sender as ListView)?.SelectedItem;
     }
 }

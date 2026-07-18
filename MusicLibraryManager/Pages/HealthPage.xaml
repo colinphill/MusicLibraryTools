@@ -1,392 +1,164 @@
-<UserControl x:Class="MusicLibraryManager.Pages.HealthPage"
-      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-      xmlns:vm="clr-namespace:MusicLibrary.App.ViewModels;assembly=MusicLibraryManager.Presentation"
-      Background="Transparent">
-    <UserControl.Resources>
-        <Style x:Key="AnalysisTreeItemStyle" TargetType="TreeViewItem">
-            <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=TreeView}, Mode=OneWay}"/>
-            <Setter Property="FontFamily" Value="Segoe UI Variable Text"/>
-            <Setter Property="FontSize" Value="15"/>
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-        </Style>
-        <SolidColorBrush x:Key="AnalysisGridHeaderBrush" Color="#1E808080"/>
-        <SolidColorBrush x:Key="AnalysisGridAlternateRowBrush" Color="#0C808080"/>
-        <SolidColorBrush x:Key="AnalysisGridHoverBrush" Color="#182787C8"/>
-        <SolidColorBrush x:Key="AnalysisGridSelectionBrush" Color="#382787C8"/>
-        <Style x:Key="AnalysisGridColumnHeaderStyle" TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="{StaticResource AnalysisGridHeaderBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource CardStrokeBrush}"/>
-            <Setter Property="BorderThickness" Value="0,0,1,1"/>
-            <Setter Property="Padding" Value="10,0"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="HorizontalContentAlignment" Value="Left"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-        </Style>
-        <Style x:Key="AnalysisGridCellStyle" TargetType="DataGridCell">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="10,4"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Style.Triggers>
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="{StaticResource AnalysisGridSelectionBrush}"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-        <Style x:Key="AnalysisGridRowStyle" TargetType="DataGridRow">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="{StaticResource AnalysisGridHoverBrush}"/>
-                </Trigger>
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="{StaticResource AnalysisGridSelectionBrush}"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-        <Style x:Key="AnalysisGridStyle" TargetType="DataGrid">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderBrush" Value="{StaticResource CardStrokeBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="FontFamily" Value="Segoe UI Variable Text"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="RowBackground" Value="Transparent"/>
-            <Setter Property="AlternatingRowBackground" Value="{StaticResource AnalysisGridAlternateRowBrush}"/>
-            <Setter Property="HorizontalGridLinesBrush" Value="{StaticResource CardStrokeBrush}"/>
-            <Setter Property="ColumnHeaderStyle" Value="{StaticResource AnalysisGridColumnHeaderStyle}"/>
-            <Setter Property="CellStyle" Value="{StaticResource AnalysisGridCellStyle}"/>
-            <Setter Property="RowStyle" Value="{StaticResource AnalysisGridRowStyle}"/>
-            <Setter Property="RowHeaderWidth" Value="0"/>
-            <Setter Property="RowHeight" Value="38"/>
-            <Setter Property="ColumnHeaderHeight" Value="38"/>
-            <Setter Property="CanUserResizeColumns" Value="True"/>
-            <Setter Property="CanUserReorderColumns" Value="True"/>
-            <Setter Property="CanUserSortColumns" Value="True"/>
-            <Setter Property="MinColumnWidth" Value="70"/>
-            <Setter Property="HorizontalScrollBarVisibility" Value="Auto"/>
-            <Setter Property="VerticalScrollBarVisibility" Value="Auto"/>
-            <Setter Property="HeadersVisibility" Value="Column"/>
-            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
-        </Style>
-    </UserControl.Resources>
-    <Grid Margin="28,24,28,28">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-
+<UserControl
+    x:Class="MusicLibraryManager.Pages.HealthPage"
+    x:Name="PageRoot"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:tv="using:WinUI.TableView"
+    Background="Transparent">
+    <Grid Margin="28,24,28,28" RowSpacing="14">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
         <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <StackPanel>
                 <TextBlock Text="Health" Style="{StaticResource PageTitleStyle}"/>
                 <TextBlock Text="Audit the collection, review every proposed change, then apply safe repairs." Opacity="0.66" Margin="0,4,0,0"/>
             </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Content="Apply metadata repairs" Style="{StaticResource PrimaryButtonStyle}"
-                        Command="{Binding ApplyRepairsCommand}" Margin="0,0,8,0"
-                        ToolTipService.ShowOnDisabled="True" ToolTip="Preview metadata repairs and leave at least one item Active first."/>
-                <Button Content="Apply file repairs" Style="{StaticResource PrimaryButtonStyle}"
-                        Command="{Binding ApplyRepresentationRepairsCommand}" Margin="0,0,8,0"
-                        ToolTipService.ShowOnDisabled="True" ToolTip="Preview file repairs and leave at least one item Active first."/>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Button Content="Apply metadata repairs" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding ApplyRepairsCommand}"/>
+                <Button Content="Apply file repairs" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding ApplyRepresentationRepairsCommand}"/>
                 <Button Content="Cancel" Command="{Binding CancelCommand}"/>
             </StackPanel>
         </Grid>
 
-        <Border Grid.Row="1" Style="{StaticResource CardStyle}" Margin="0,18,0,14" Padding="16">
-            <StackPanel>
-                <WrapPanel>
-                    <Button Content="Inconsistencies" Command="{Binding RunInconsistenciesCommand}" Margin="0,0,8,8"/>
-                    <Button Content="Lossy files" Command="{Binding RunLossyCommand}" Margin="0,0,8,8"/>
-                    <Button Content="Duplicates" Command="{Binding RunDuplicatesCommand}" Margin="0,0,8,8"/>
-                    <Button Content="Similar artists" Command="{Binding RunSimilarArtistsCommand}" Margin="0,0,8,8"/>
-                    <Button Content="Cross-set check" Command="{Binding RunCheckSetsCommand}" Margin="0,0,8,8"/>
-                    <Button Content="Representations" Command="{Binding RunRepresentationsCommand}" Margin="0,0,8,8"/>
-                    <Button Content="Verify decoded audio" Command="{Binding VerifyDecodedAudioCommand}" Margin="0,0,8,8"
-                            ToolTipService.ShowOnDisabled="True" ToolTip="Run Representations first; verification is enabled when compatible lossless pairs are found."/>
-                    <Button Content="Album matrix" Command="{Binding RunAlbumMatrixCommand}" Margin="0,0,8,8"/>
-                    <Button Content="Artwork audit" Command="{Binding RunArtworkHealthCommand}" Margin="0,0,8,8"/>
-                    <Button Content="Preview metadata repairs" Command="{Binding PreviewMetadataRepairsCommand}" Margin="0,0,8,8"/>
-                    <Button Content="Preview file repairs" Command="{Binding PreviewRepresentationRepairsCommand}" Margin="0,0,8,8"
-                            ToolTipService.ShowOnDisabled="True" ToolTip="Requires an active library configuration with representation roots."/>
-                    <Button Content="Album artist conflicts" Command="{Binding FindAlbumArtistConflictsCommand}" Margin="0,0,0,8"/>
-                    <Button Content="Preview chosen conflict repairs" Command="{Binding PreviewConflictRepairsCommand}" Margin="8,0,0,8"
-                            ToolTipService.ShowOnDisabled="True" ToolTip="Find album artist conflicts, then choose a canonical value for one or more rows."/>
-                </WrapPanel>
-                <ProgressBar IsIndeterminate="True" Height="3" Margin="0,2,0,8"
-                             Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+        <Border Grid.Row="1" Style="{StaticResource CardStyle}" Padding="12">
+            <StackPanel Spacing="8">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Inconsistencies" Command="{Binding RunInconsistenciesCommand}"/>
+                        <Button Content="Lossy files" Command="{Binding RunLossyCommand}"/>
+                        <Button Content="Duplicates" Command="{Binding RunDuplicatesCommand}"/>
+                        <Button Content="Similar artists" Command="{Binding RunSimilarArtistsCommand}"/>
+                        <Button Content="Cross-set check" Command="{Binding RunCheckSetsCommand}"/>
+                        <Button Content="Representations" Command="{Binding RunRepresentationsCommand}"/>
+                        <Button Content="Verify audio" Command="{Binding VerifyDecodedAudioCommand}"/>
+                        <Button Content="Album matrix" Command="{Binding RunAlbumMatrixCommand}"/>
+                        <Button Content="Artwork audit" Command="{Binding RunArtworkHealthCommand}"/>
+                        <Button Content="Preview metadata repairs" Command="{Binding PreviewMetadataRepairsCommand}"/>
+                        <Button Content="Preview file repairs" Command="{Binding PreviewRepresentationRepairsCommand}"/>
+                        <Button Content="Album artist conflicts" Command="{Binding FindAlbumArtistConflictsCommand}"/>
+                        <Button Content="Preview conflict repairs" Command="{Binding PreviewConflictRepairsCommand}"/>
+                    </StackPanel>
+                </ScrollViewer>
+                <ProgressBar IsIndeterminate="True" Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                 <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" Opacity="0.72"/>
             </StackPanel>
         </Border>
 
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="2" ColumnSpacing="12">
             <Grid.ColumnDefinitions><ColumnDefinition Width="250"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-            <Border Style="{StaticResource CardStyle}" Padding="10" Margin="0,0,12,0">
-                <DockPanel>
-                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="4,10,4,2">
-                        <Button Content="Remove" Command="{Binding RemoveRunCommand}" Margin="0,0,8,0"/>
+            <Border Style="{StaticResource CardStyle}" Padding="10">
+                <Grid RowSpacing="8">
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <TextBlock Text="Analysis history" Style="{StaticResource SectionTitleStyle}" Margin="4,2"/>
+                    <ListView Grid.Row="1" ItemsSource="{Binding Runs}" SelectedItem="{Binding SelectedRun, Mode=TwoWay}">
+                        <ListView.ItemTemplate><DataTemplate><StackPanel Margin="5,6">
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding DisplayLabel}" FontSize="11" Opacity="0.6" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel></DataTemplate></ListView.ItemTemplate>
+                    </ListView>
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
+                        <Button Content="Remove" Command="{Binding RemoveRunCommand}"/>
                         <Button Content="Clear" Command="{Binding ClearRunsCommand}"/>
                     </StackPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="Analysis history" Style="{StaticResource SectionTitleStyle}" Margin="4,2,4,10"/>
-                    <ListBox ItemsSource="{Binding Runs, Mode=OneWay}" SelectedItem="{Binding SelectedRun, Mode=TwoWay}" BorderThickness="0" Background="Transparent">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate DataType="{x:Type vm:AnalysisRunViewModel}">
-                                <StackPanel Margin="5,6">
-                                    <TextBlock Text="{Binding Name, Mode=OneWay}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding DisplayLabel, Mode=OneWay}" FontSize="11" Opacity="0.6" TextTrimming="CharacterEllipsis"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </DockPanel>
+                </Grid>
             </Border>
 
-            <Border Grid.Column="1" Style="{StaticResource CardStyle}" Padding="14">
-                <TabControl x:Name="ResultsTabs" Background="Transparent" BorderThickness="0"
-                            SelectedIndex="{Binding ActiveResultIndex, Mode=TwoWay}">
-                    <TabItem Header="Findings">
-                        <Grid Margin="4,12,4,4">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="370" MinWidth="280"/>
-                                <ColumnDefinition Width="5"/>
-                                <ColumnDefinition Width="*" MinWidth="360"/>
-                            </Grid.ColumnDefinitions>
-                            <TreeView ItemsSource="{Binding FindingGroups}" BorderThickness="0" Background="Transparent"
-                                      FontSize="15" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=TabControl}, Mode=OneWay}"
-                                      ItemContainerStyle="{StaticResource AnalysisTreeItemStyle}"
-                                      SelectedItemChanged="FindingTree_SelectedItemChanged"
-                                      ScrollViewer.HorizontalScrollBarVisibility="Auto">
-                                <TreeView.Resources>
-                                    <HierarchicalDataTemplate DataType="{x:Type vm:AnalysisProblemGroupViewModel}" ItemsSource="{Binding Artists}">
-                                        <Grid MinWidth="270" Margin="2,3"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="125"/></Grid.ColumnDefinitions>
-                                            <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis"><Run Text="{Binding Problem, Mode=OneWay}" FontWeight="SemiBold"/><Run Text="{Binding Count, Mode=OneWay, StringFormat={}  ({0})}"/></TextBlock>
-                                            <ComboBox Grid.Column="1" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" Margin="8,0,0,0"/>
-                                        </Grid>
-                                    </HierarchicalDataTemplate>
-                                    <HierarchicalDataTemplate DataType="{x:Type vm:AnalysisArtistGroupViewModel}" ItemsSource="{Binding Albums}">
-                                        <Grid MinWidth="270" Margin="2,3"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="125"/></Grid.ColumnDefinitions>
-                                            <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis"><Run Text="{Binding Artist, Mode=OneWay}"/><Run Text="{Binding Count, Mode=OneWay, StringFormat={}  ({0})}"/></TextBlock>
-                                            <ComboBox Grid.Column="1" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" Margin="8,0,0,0"/>
-                                        </Grid>
-                                    </HierarchicalDataTemplate>
-                                    <DataTemplate DataType="{x:Type vm:AnalysisAlbumGroupViewModel}">
-                                        <Grid MinWidth="270" Margin="2,3"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="125"/></Grid.ColumnDefinitions>
-                                            <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis"><Run Text="{Binding Album, Mode=OneWay}"/><Run Text="{Binding Count, Mode=OneWay, StringFormat={}  ({0})}"/></TextBlock>
-                                            <ComboBox Grid.Column="1" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" Margin="8,0,0,0"/>
-                                        </Grid>
-                                    </DataTemplate>
-                                </TreeView.Resources>
-                            </TreeView>
-                            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="{StaticResource CardStrokeBrush}"/>
-                            <Grid Grid.Column="2" Margin="12,0,0,0">
-                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-                                <TextBlock Text="Files in selected branch" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                                <DataGrid Grid.Row="1" Style="{StaticResource AnalysisGridStyle}" ItemsSource="{Binding DisplayedFindings}" AutoGenerateColumns="False"
-                                          FrozenColumnCount="1" CanUserAddRows="False" CanUserDeleteRows="False" EnableRowVirtualization="True" EnableColumnVirtualization="True">
-                                    <DataGrid.Columns>
-                                        <DataGridTemplateColumn Header="File disposition" Width="150" MinWidth="135">
-                                            <DataGridTemplateColumn.CellTemplate><DataTemplate><ComboBox ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" Margin="4,2"/></DataTemplate></DataGridTemplateColumn.CellTemplate>
-                                        </DataGridTemplateColumn>
-                                        <DataGridTextColumn Header="Track" Binding="{Binding Path, Mode=OneWay}" Width="2*" MinWidth="240" IsReadOnly="True"/>
-                                        <DataGridTextColumn Header="Reason" Binding="{Binding Description, Mode=OneWay}" Width="2*" MinWidth="240" IsReadOnly="True"/>
-                                    </DataGrid.Columns>
-                                </DataGrid>
+            <Border Grid.Column="1" Style="{StaticResource CardStyle}" Padding="10">
+                <TabView x:Name="ResultsTabs" IsAddTabButtonVisible="False" SelectedIndex="{Binding ActiveResultIndex, Mode=TwoWay}">
+                    <TabViewItem Header="Findings" IsClosable="False">
+                        <Grid ColumnSpacing="12">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="300"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <ListView ItemsSource="{Binding FindingGroups}" SelectionChanged="FindingList_SelectionChanged">
+                                <ListView.ItemTemplate><DataTemplate><Grid Margin="2,4" ColumnSpacing="8">
+                                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/></Grid.ColumnDefinitions>
+                                    <StackPanel><TextBlock Text="{Binding Problem}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding Count}" Opacity="0.6"/></StackPanel>
+                                    <ComboBox Grid.Column="1" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}"/>
+                                </Grid></DataTemplate></ListView.ItemTemplate>
+                            </ListView>
+                            <Grid Grid.Column="1" RowSpacing="8"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+                                <TextBlock Text="Files in selected branch" FontSize="15" FontWeight="SemiBold"/>
+                                <tv:TableView Grid.Row="1" ItemsSource="{Binding DisplayedFindings}" AutoGenerateColumns="False"
+                                              CanResizeColumns="True" CanReorderColumns="True" CanSortColumns="True" FrozenColumnCount="1">
+                                    <tv:TableView.Columns>
+                                        <tv:TableViewTemplateColumn Header="Disposition" Width="150" MinWidth="135"><tv:TableViewTemplateColumn.CellTemplate><DataTemplate><ComboBox ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}"/></DataTemplate></tv:TableViewTemplateColumn.CellTemplate></tv:TableViewTemplateColumn>
+                                        <tv:TableViewTextColumn Header="Track" Binding="{Binding Path}" Width="360" MinWidth="240" IsReadOnly="True"/>
+                                        <tv:TableViewTextColumn Header="Reason" Binding="{Binding Description}" Width="360" MinWidth="240" IsReadOnly="True"/>
+                                    </tv:TableView.Columns>
+                                </tv:TableView>
                             </Grid>
                         </Grid>
-                    </TabItem>
-                    <TabItem Header="Duplicates">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="4,12,4,4">
-                            <ItemsControl ItemsSource="{Binding Duplicates}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Border BorderBrush="{StaticResource CardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8">
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding Key, Mode=OneWay}" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,6"/>
-                                                <ItemsControl ItemsSource="{Binding Tracks}">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate>
-                                                            <Grid Margin="0,3">
-                                                                <Grid.ColumnDefinitions><ColumnDefinition Width="90"/><ColumnDefinition Width="90"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                                                <TextBlock Text="{Binding CodecName, Mode=OneWay}" FontWeight="SemiBold"/>
-                                                                <TextBlock Grid.Column="1" Text="{Binding SampleRate, Mode=OneWay, StringFormat={}{0:N0} Hz}" Opacity="0.66"/>
-                                                                <TextBlock Grid.Column="2" Text="{Binding Path, Mode=OneWay}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Path, Mode=OneWay}"/>
-                                                            </Grid>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                            </StackPanel>
-                                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-                    </TabItem>
-                    <TabItem Header="Similar artists">
-                        <ItemsControl ItemsSource="{Binding ArtistGroups}" Margin="4,12,4,4">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate DataType="{x:Type vm:ArtistGroupViewModel}">
-                                    <Border BorderBrush="{StaticResource CardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8">
-                                        <Grid>
-                                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                                            <StackPanel>
-                                                <TextBlock Text="{Binding TrackCount, Mode=OneWay, StringFormat={}Similar spellings across {0:N0} tracks}" FontWeight="SemiBold"/>
-                                                <ItemsControl ItemsSource="{Binding Variants}">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate><TextBlock><Run Text="{Binding Name, Mode=OneWay}"/><Run Text="{Binding TrackCount, Mode=OneWay, StringFormat={}  ({0:N0} files)}"/></TextBlock></DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                                <TextBlock Text="{Binding Status, Mode=OneWay}" Opacity="0.66" Margin="0,4,0,0"/>
-                                            </StackPanel>
-                                            <TextBox Grid.Column="1" Text="{Binding CanonicalName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Margin="12,0,8,0" VerticalAlignment="Center"/>
-                                            <Button Grid.Column="2" Content="Merge" Command="{Binding MergeCommand}" VerticalAlignment="Center"/>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </TabItem>
-                    <TabItem Header="Metadata repairs">
-                        <Grid Margin="4,12,4,4">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="370" MinWidth="280"/><ColumnDefinition Width="5"/><ColumnDefinition Width="*" MinWidth="360"/></Grid.ColumnDefinitions>
-                            <TreeView ItemsSource="{Binding RepairGroups}" BorderThickness="0" Background="Transparent"
-                                      FontSize="15" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=TabControl}, Mode=OneWay}"
-                                      ItemContainerStyle="{StaticResource AnalysisTreeItemStyle}" SelectedItemChanged="RepairTree_SelectedItemChanged"
-                                      ScrollViewer.HorizontalScrollBarVisibility="Auto">
-                                <TreeView.Resources>
-                                    <HierarchicalDataTemplate DataType="{x:Type vm:AnalysisRepairCategoryGroupViewModel}" ItemsSource="{Binding Artists}">
-                                        <Grid MinWidth="270" Margin="2,3"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="125"/></Grid.ColumnDefinitions>
-                                            <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis"><Run Text="{Binding Category, Mode=OneWay}" FontWeight="SemiBold"/><Run Text="{Binding Count, Mode=OneWay, StringFormat={}  ({0})}"/></TextBlock>
-                                            <ComboBox Grid.Column="1" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" Margin="8,0,0,0"/>
-                                        </Grid>
-                                    </HierarchicalDataTemplate>
-                                    <HierarchicalDataTemplate DataType="{x:Type vm:AnalysisRepairArtistGroupViewModel}" ItemsSource="{Binding Albums}">
-                                        <Grid MinWidth="270" Margin="2,3"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="125"/></Grid.ColumnDefinitions>
-                                            <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis"><Run Text="{Binding Artist, Mode=OneWay}"/><Run Text="{Binding Count, Mode=OneWay, StringFormat={}  ({0})}"/></TextBlock>
-                                            <ComboBox Grid.Column="1" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" Margin="8,0,0,0"/>
-                                        </Grid>
-                                    </HierarchicalDataTemplate>
-                                    <DataTemplate DataType="{x:Type vm:AnalysisRepairAlbumGroupViewModel}">
-                                        <Grid MinWidth="270" Margin="2,3"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="125"/></Grid.ColumnDefinitions>
-                                            <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis"><Run Text="{Binding Album, Mode=OneWay}"/><Run Text="{Binding Count, Mode=OneWay, StringFormat={}  ({0})}"/></TextBlock>
-                                            <ComboBox Grid.Column="1" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" Margin="8,0,0,0"/>
-                                        </Grid>
-                                    </DataTemplate>
-                                </TreeView.Resources>
-                            </TreeView>
-                            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="{StaticResource CardStrokeBrush}"/>
-                            <Grid Grid.Column="2" Margin="12,0,0,0">
-                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-                                <TextBlock Text="Files in selected branch" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                                <DataGrid Grid.Row="1" Style="{StaticResource AnalysisGridStyle}" ItemsSource="{Binding DisplayedRepairItems}" AutoGenerateColumns="False"
-                                          FrozenColumnCount="1" CanUserAddRows="False" CanUserDeleteRows="False" EnableRowVirtualization="True" EnableColumnVirtualization="True">
-                                    <DataGrid.Columns>
-                                        <DataGridTemplateColumn Header="File disposition" Width="150" MinWidth="135"><DataGridTemplateColumn.CellTemplate><DataTemplate><ComboBox ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" IsEnabled="{Binding CanChangeDisposition}" Margin="4,2"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
-                                        <DataGridTextColumn Header="Track" Binding="{Binding DisplayPath, Mode=OneWay}" Width="2*" MinWidth="240" IsReadOnly="True"/>
-                                        <DataGridTextColumn Header="Before" Binding="{Binding Before, Mode=OneWay}" Width="*" MinWidth="140" IsReadOnly="True"/>
-                                        <DataGridTextColumn Header="After" Binding="{Binding After, Mode=OneWay}" Width="*" MinWidth="140" IsReadOnly="True"/>
-                                        <DataGridTextColumn Header="Reason" Binding="{Binding Reason, Mode=OneWay}" Width="2*" MinWidth="220" IsReadOnly="True"/>
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                            </Grid>
+                    </TabViewItem>
+
+                    <TabViewItem Header="Duplicates" IsClosable="False">
+                        <ScrollViewer><ItemsControl ItemsSource="{Binding Duplicates}" Margin="4,8">
+                            <ItemsControl.ItemTemplate><DataTemplate><Border BorderBrush="{StaticResource CardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                                <StackPanel Spacing="6"><TextBlock Text="{Binding Key}" FontWeight="SemiBold" TextWrapping="Wrap"/><ItemsControl ItemsSource="{Binding Tracks}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding Path}" TextTrimming="CharacterEllipsis"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel>
+                            </Border></DataTemplate></ItemsControl.ItemTemplate>
+                        </ItemsControl></ScrollViewer>
+                    </TabViewItem>
+
+                    <TabViewItem Header="Similar artists" IsClosable="False">
+                        <ScrollViewer><ItemsControl ItemsSource="{Binding ArtistGroups}" Margin="4,8">
+                            <ItemsControl.ItemTemplate><DataTemplate><Border BorderBrush="{StaticResource CardStrokeBrush}" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+                                <Grid ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                                    <ItemsControl ItemsSource="{Binding Variants}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}"/></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+                                    <TextBox Grid.Column="1" Text="{Binding CanonicalName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                    <Button Grid.Column="2" Content="Merge" Command="{Binding MergeCommand}"/>
+                                </Grid>
+                            </Border></DataTemplate></ItemsControl.ItemTemplate>
+                        </ItemsControl></ScrollViewer>
+                    </TabViewItem>
+
+                    <TabViewItem Header="Metadata repairs" IsClosable="False">
+                        <Grid ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="300"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <ListView ItemsSource="{Binding RepairGroups}" SelectionChanged="RepairList_SelectionChanged">
+                                <ListView.ItemTemplate><DataTemplate><Grid Margin="2,4" ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/></Grid.ColumnDefinitions><TextBlock Text="{Binding Category}" FontWeight="SemiBold"/><ComboBox Grid.Column="1" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}"/></Grid></DataTemplate></ListView.ItemTemplate>
+                            </ListView>
+                            <tv:TableView Grid.Column="1" ItemsSource="{Binding DisplayedRepairItems}" AutoGenerateColumns="False" CanResizeColumns="True" CanReorderColumns="True" FrozenColumnCount="1">
+                                <tv:TableView.Columns>
+                                    <tv:TableViewTemplateColumn Header="Disposition" Width="150"><tv:TableViewTemplateColumn.CellTemplate><DataTemplate><ComboBox ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" IsEnabled="{Binding CanChangeDisposition}"/></DataTemplate></tv:TableViewTemplateColumn.CellTemplate></tv:TableViewTemplateColumn>
+                                    <tv:TableViewTextColumn Header="Track" Binding="{Binding DisplayPath}" Width="320" IsReadOnly="True"/><tv:TableViewTextColumn Header="Before" Binding="{Binding Before}" Width="180" IsReadOnly="True"/><tv:TableViewTextColumn Header="After" Binding="{Binding After}" Width="180" IsReadOnly="True"/><tv:TableViewTextColumn Header="Reason" Binding="{Binding Reason}" Width="300" IsReadOnly="True"/>
+                                </tv:TableView.Columns>
+                            </tv:TableView>
                         </Grid>
-                    </TabItem>
-                    <TabItem Header="File repairs">
-                        <Grid Margin="4,12,4,4">
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="370" MinWidth="280"/><ColumnDefinition Width="5"/><ColumnDefinition Width="*" MinWidth="360"/></Grid.ColumnDefinitions>
-                            <TreeView ItemsSource="{Binding RepresentationActionGroups}" BorderThickness="0" Background="Transparent"
-                                      FontSize="15" Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=TabControl}, Mode=OneWay}"
-                                      ItemContainerStyle="{StaticResource AnalysisTreeItemStyle}" SelectedItemChanged="RepresentationTree_SelectedItemChanged"
-                                      ScrollViewer.HorizontalScrollBarVisibility="Auto">
-                                <TreeView.Resources>
-                                    <HierarchicalDataTemplate DataType="{x:Type vm:RepresentationRepairCategoryGroupViewModel}" ItemsSource="{Binding Artists}">
-                                        <Grid MinWidth="270" Margin="2,3"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="125"/></Grid.ColumnDefinitions>
-                                            <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis"><Run Text="{Binding Category, Mode=OneWay}" FontWeight="SemiBold"/><Run Text="{Binding Count, Mode=OneWay, StringFormat={}  ({0})}"/></TextBlock>
-                                            <ComboBox Grid.Column="1" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" Margin="8,0,0,0"/>
-                                        </Grid>
-                                    </HierarchicalDataTemplate>
-                                    <HierarchicalDataTemplate DataType="{x:Type vm:RepresentationRepairArtistGroupViewModel}" ItemsSource="{Binding Albums}">
-                                        <Grid MinWidth="270" Margin="2,3"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="125"/></Grid.ColumnDefinitions>
-                                            <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis"><Run Text="{Binding Artist, Mode=OneWay}"/><Run Text="{Binding Count, Mode=OneWay, StringFormat={}  ({0})}"/></TextBlock>
-                                            <ComboBox Grid.Column="1" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" Margin="8,0,0,0"/>
-                                        </Grid>
-                                    </HierarchicalDataTemplate>
-                                    <DataTemplate DataType="{x:Type vm:RepresentationRepairAlbumGroupViewModel}">
-                                        <Grid MinWidth="270" Margin="2,3"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="125"/></Grid.ColumnDefinitions>
-                                            <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis"><Run Text="{Binding Album, Mode=OneWay}"/><Run Text="{Binding Count, Mode=OneWay, StringFormat={}  ({0})}"/></TextBlock>
-                                            <ComboBox Grid.Column="1" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" Margin="8,0,0,0"/>
-                                        </Grid>
-                                    </DataTemplate>
-                                </TreeView.Resources>
-                            </TreeView>
-                            <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="{StaticResource CardStrokeBrush}"/>
-                            <Grid Grid.Column="2" Margin="12,0,0,0">
-                                <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-                                <TextBlock Text="Files in selected branch" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                                <DataGrid Grid.Row="1" Style="{StaticResource AnalysisGridStyle}" ItemsSource="{Binding DisplayedRepresentationItems}" AutoGenerateColumns="False"
-                                          FrozenColumnCount="1" CanUserAddRows="False" CanUserDeleteRows="False" EnableRowVirtualization="True" EnableColumnVirtualization="True">
-                                    <DataGrid.Columns>
-                                        <DataGridTemplateColumn Header="File disposition" Width="150" MinWidth="135"><DataGridTemplateColumn.CellTemplate><DataTemplate><ComboBox ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" Margin="4,2"/></DataTemplate></DataGridTemplateColumn.CellTemplate></DataGridTemplateColumn>
-                                        <DataGridTextColumn Header="Track" Binding="{Binding SourcePath, Mode=OneWay}" Width="2*" MinWidth="240" IsReadOnly="True"/>
-                                        <DataGridTextColumn Header="Action" Binding="{Binding Description, Mode=OneWay}" Width="2*" MinWidth="220" IsReadOnly="True"/>
-                                        <DataGridTextColumn Header="Destination" Binding="{Binding DestinationPath, Mode=OneWay}" Width="2*" MinWidth="240" IsReadOnly="True"/>
-                                        <DataGridTextColumn Header="Result" Binding="{Binding ResultText, Mode=OneWay}" Width="*" MinWidth="160" IsReadOnly="True"/>
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                            </Grid>
+                    </TabViewItem>
+
+                    <TabViewItem Header="File repairs" IsClosable="False">
+                        <Grid ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="300"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                            <ListView ItemsSource="{Binding RepresentationActionGroups}" SelectionChanged="RepresentationList_SelectionChanged">
+                                <ListView.ItemTemplate><DataTemplate><Grid Margin="2,4" ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="120"/></Grid.ColumnDefinitions><TextBlock Text="{Binding Category}" FontWeight="SemiBold"/><ComboBox Grid.Column="1" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}"/></Grid></DataTemplate></ListView.ItemTemplate>
+                            </ListView>
+                            <tv:TableView Grid.Column="1" ItemsSource="{Binding DisplayedRepresentationItems}" AutoGenerateColumns="False" CanResizeColumns="True" CanReorderColumns="True" FrozenColumnCount="1">
+                                <tv:TableView.Columns>
+                                    <tv:TableViewTemplateColumn Header="Disposition" Width="150"><tv:TableViewTemplateColumn.CellTemplate><DataTemplate><ComboBox ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}"/></DataTemplate></tv:TableViewTemplateColumn.CellTemplate></tv:TableViewTemplateColumn>
+                                    <tv:TableViewTextColumn Header="Track" Binding="{Binding SourcePath}" Width="320" IsReadOnly="True"/><tv:TableViewTextColumn Header="Action" Binding="{Binding Description}" Width="260" IsReadOnly="True"/><tv:TableViewTextColumn Header="Destination" Binding="{Binding DestinationPath}" Width="320" IsReadOnly="True"/><tv:TableViewTextColumn Header="Result" Binding="{Binding ResultText}" Width="180" IsReadOnly="True"/>
+                                </tv:TableView.Columns>
+                            </tv:TableView>
                         </Grid>
-                    </TabItem>
-                    <TabItem Header="Conflicts">
-                        <DataGrid ItemsSource="{Binding ConflictGroups}" AutoGenerateColumns="False" Margin="4,12,4,4">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Album" Binding="{Binding Album, Mode=OneWay}" Width="180" IsReadOnly="True"/>
-                                <DataGridTextColumn Header="Field" Binding="{Binding Field, Mode=OneWay}" Width="120" IsReadOnly="True"/>
-                                <DataGridTextColumn Header="Files" Binding="{Binding FileCount, Mode=OneWay}" Width="65" IsReadOnly="True"/>
-                                <DataGridTemplateColumn Header="Canonical value" Width="220">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate><ComboBox ItemsSource="{Binding Options, Mode=OneWay}" SelectedItem="{Binding SelectedOption, Mode=TwoWay}" DisplayMemberPath="Value"/></DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                <DataGridTextColumn Header="Directory" Binding="{Binding Directory, Mode=OneWay}" Width="*" IsReadOnly="True"/>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </TabItem>
-                    <TabItem Header="Album matrix">
-                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Margin="4,12,4,4">
-                            <ItemsControl ItemsSource="{Binding Matrices}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <Expander IsExpanded="True" Margin="0,0,0,8">
-                                            <Expander.Header>
-                                                <TextBlock>
-                                                    <Run Text="{Binding DisplayName, Mode=OneWay}" FontWeight="SemiBold"/>
-                                                    <Run Text="{Binding TrackCount, Mode=OneWay, StringFormat={}  ·  {0:N0} tracks}"/>
-                                                    <Run Text="{Binding InconsistentCellCount, Mode=OneWay, StringFormat={}  ·  {0:N0} differences}"/>
-                                                </TextBlock>
-                                            </Expander.Header>
-                                            <DataGrid ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True" Margin="0,8,0,0"
-                                                      MaxHeight="360" EnableRowVirtualization="True" EnableColumnVirtualization="True">
-                                                <DataGrid.Columns>
-                                                    <DataGridTextColumn Header="Disc" Binding="{Binding DiscNumber.Display, Mode=OneWay}" Width="60"/>
-                                                    <DataGridTextColumn Header="Track" Binding="{Binding TrackNumber.Display, Mode=OneWay}" Width="65"/>
-                                                    <DataGridTextColumn Header="Title" Binding="{Binding Title.Display, Mode=OneWay}" Width="180"/>
-                                                    <DataGridTextColumn Header="Artist" Binding="{Binding Artist.Display, Mode=OneWay}" Width="150"/>
-                                                    <DataGridTextColumn Header="Album artist" Binding="{Binding AlbumArtist.Display, Mode=OneWay}" Width="150"/>
-                                                    <DataGridTextColumn Header="Album" Binding="{Binding Album.Display, Mode=OneWay}" Width="170"/>
-                                                    <DataGridTextColumn Header="Date" Binding="{Binding ReleaseDate.Display, Mode=OneWay}" Width="90"/>
-                                                    <DataGridTextColumn Header="Track total" Binding="{Binding TrackTotal.Display, Mode=OneWay}" Width="85"/>
-                                                    <DataGridTextColumn Header="Disc total" Binding="{Binding DiscTotal.Display, Mode=OneWay}" Width="80"/>
-                                                    <DataGridTextColumn Header="Path" Binding="{Binding Path, Mode=OneWay}" Width="300"/>
-                                                </DataGrid.Columns>
-                                            </DataGrid>
-                                        </Expander>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-                    </TabItem>
-                </TabControl>
+                    </TabViewItem>
+
+                    <TabViewItem Header="Conflicts" IsClosable="False">
+                        <tv:TableView ItemsSource="{Binding ConflictGroups}" AutoGenerateColumns="False" CanResizeColumns="True" CanReorderColumns="True">
+                            <tv:TableView.Columns>
+                                <tv:TableViewTextColumn Header="Album" Binding="{Binding Album}" Width="180" IsReadOnly="True"/><tv:TableViewTextColumn Header="Field" Binding="{Binding Field}" Width="120" IsReadOnly="True"/><tv:TableViewTextColumn Header="Files" Binding="{Binding FileCount}" Width="65" IsReadOnly="True"/>
+                                <tv:TableViewTemplateColumn Header="Canonical value" Width="220"><tv:TableViewTemplateColumn.CellTemplate><DataTemplate><ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding SelectedOption, Mode=TwoWay}" DisplayMemberPath="Value"/></DataTemplate></tv:TableViewTemplateColumn.CellTemplate></tv:TableViewTemplateColumn>
+                                <tv:TableViewTextColumn Header="Directory" Binding="{Binding Directory}" Width="320" IsReadOnly="True"/>
+                            </tv:TableView.Columns>
+                        </tv:TableView>
+                    </TabViewItem>
+
+                    <TabViewItem Header="Album matrix" IsClosable="False">
+                        <ScrollViewer><ItemsControl ItemsSource="{Binding Matrices}" Margin="4,8"><ItemsControl.ItemTemplate><DataTemplate>
+                            <Expander Header="{Binding DisplayName}" IsExpanded="True" Margin="0,0,0,8">
+                                <tv:TableView ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True" MaxHeight="360" CanResizeColumns="True">
+                                    <tv:TableView.Columns>
+                                        <tv:TableViewTextColumn Header="Disc" Binding="{Binding DiscNumber.Display}" Width="60"/><tv:TableViewTextColumn Header="Track" Binding="{Binding TrackNumber.Display}" Width="65"/><tv:TableViewTextColumn Header="Title" Binding="{Binding Title.Display}" Width="180"/><tv:TableViewTextColumn Header="Artist" Binding="{Binding Artist.Display}" Width="150"/><tv:TableViewTextColumn Header="Album artist" Binding="{Binding AlbumArtist.Display}" Width="150"/><tv:TableViewTextColumn Header="Album" Binding="{Binding Album.Display}" Width="170"/><tv:TableViewTextColumn Header="Date" Binding="{Binding ReleaseDate.Display}" Width="90"/><tv:TableViewTextColumn Header="Path" Binding="{Binding Path}" Width="300"/>
+                                    </tv:TableView.Columns>
+                                </tv:TableView>
+                            </Expander>
+                        </DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer>
+                    </TabViewItem>
+                </TabView>
             </Border>
         </Grid>
     </Grid>

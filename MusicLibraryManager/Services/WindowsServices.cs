@@ -1,14 +1,17 @@
 using System.Diagnostics;
-using System.IO;
 using System.Text.Json;
-using System.Windows;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using Microsoft.Win32;
-using MusicLibrary.Core.Services;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media.Imaging;
 using MusicLibrary.App.ViewModels;
+using MusicLibrary.Core.Services;
 using MusicLibraryManager.Dialogs;
 using MusicLibraryManager.Presentation;
+using Windows.ApplicationModel.DataTransfer;
+using Windows.Storage;
+using Windows.Storage.Pickers;
+using Windows.Storage.Streams;
+using WinRT.Interop;
 using LegacyDialogs = MusicLibrary.App.Services.IDialogService;
 using LegacyFiles = MusicLibrary.App.Services.IFileDialogService;
 using LegacyFilter = MusicLibrary.App.Services.FilePickerFilter;
@@ -18,161 +21,188 @@ namespace MusicLibraryManager.Services;
 public sealed class WindowContext
 {
     public Window? Window { get; set; }
+
+    public nint Hwnd => Window is null ? 0 : WindowNative.GetWindowHandle(Window);
+
+    public XamlRoot? XamlRoot => Window?.Content?.XamlRoot;
 }
 
-public sealed class WpfFilePickerService(WindowContext context) : IFilePickerService
+public sealed class WinUiFilePickerService(WindowContext context) : IFilePickerService
 {
-    public Task<string?> PickFileAsync(string title, IReadOnlyList<FilePickerType>? types = null)
+    public async Task<string?> PickFileAsync(string title, IReadOnlyList<FilePickerType>? types = null)
     {
-        var picker = new OpenFileDialog
+        var picker = new FileOpenPicker { SuggestedStartLocation = PickerLocationId.MusicLibrary };
+        InitializeWithWindow.Initialize(picker, context.Hwnd);
+        AddFileTypes(picker.FileTypeFilter, types?.SelectMany(type => type.Extensions));
+        StorageFile? file = await picker.PickSingleFileAsync();
+        return file?.Path;
+    }
+
+    public async Task<string?> PickFolderAsync(string title)
+    {
+        var picker = new FolderPicker { SuggestedStartLocation = PickerLocationId.MusicLibrary };
+        picker.FileTypeFilter.Add("*");
+        InitializeWithWindow.Initialize(picker, context.Hwnd);
+        StorageFolder? folder = await picker.PickSingleFolderAsync();
+        return folder?.Path;
+    }
+
+    public async Task<string?> SaveFileAsync(string title, string suggestedName, string extension)
+    {
+        string normalized = NormalizeExtension(extension);
+        var picker = new FileSavePicker
         {
-            Title = title,
-            CheckFileExists = true,
-            Filter = BuildFilter(types),
+            SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
+            SuggestedFileName = suggestedName,
+            DefaultFileExtension = normalized,
         };
-        return Task.FromResult(picker.ShowDialog(context.Window) == true ? picker.FileName : null);
+        picker.FileTypeChoices.Add($"{normalized.TrimStart('.').ToUpperInvariant()} file", [normalized]);
+        InitializeWithWindow.Initialize(picker, context.Hwnd);
+        StorageFile? file = await picker.PickSaveFileAsync();
+        return file?.Path;
     }
 
-    public Task<string?> PickFolderAsync(string title)
+    internal static void AddFileTypes(IList<string> target, IEnumerable<string>? extensions)
     {
-        var picker = new OpenFolderDialog { Title = title, Multiselect = false };
-        return Task.FromResult(picker.ShowDialog(context.Window) == true ? picker.FolderName : null);
+        string[] values = extensions?.Select(NormalizeExtension).Distinct(StringComparer.OrdinalIgnoreCase).ToArray() ?? [];
+        foreach (string extension in values.Length == 0 ? ["*"] : values)
+            target.Add(extension);
     }
 
-    public Task<string?> SaveFileAsync(string title, string suggestedName, string extension)
+    internal static string NormalizeExtension(string value)
     {
-        var picker = new SaveFileDialog
-        {
-            Title = title,
-            FileName = suggestedName,
-            DefaultExt = extension,
-            AddExtension = true,
-            Filter = $"{extension.TrimStart('.').ToUpperInvariant()} file|*{extension}|All files|*.*",
-        };
-        return Task.FromResult(picker.ShowDialog(context.Window) == true ? picker.FileName : null);
-    }
-
-    private static string BuildFilter(IReadOnlyList<FilePickerType>? types)
-    {
-        if (types is null || types.Count == 0)
-            return "All files|*.*";
-        return string.Join("|", types.Select(type =>
-            $"{type.Description}|{string.Join(';', type.Extensions.Select(extension => $"*{extension}"))}")) +
-            "|All files|*.*";
+        string trimmed = value.Trim().TrimStart('*');
+        return trimmed == "" || trimmed == ".*" ? "*" : trimmed.StartsWith('.') ? trimmed : $".{trimmed}";
     }
 }
 
-public sealed class WpfDialogCoordinator(WindowContext context) : IDialogCoordinator
+public sealed class WinUiDialogCoordinator(WindowContext context) : IDialogCoordinator
 {
-    public Task<bool> ConfirmAsync(string title, string message, string primaryText)
-        => Task.FromResult(MessageBox.Show(context.Window, message, title,
-            MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes);
-
-    public Task ShowMessageAsync(string title, string message)
+    public async Task<bool> ConfirmAsync(string title, string message, string primaryText)
     {
-        MessageBox.Show(context.Window, message, title, MessageBoxButton.OK, MessageBoxImage.Information);
-        return Task.CompletedTask;
+        if (context.XamlRoot is null)
+            return false;
+        var dialog = new ContentDialog
+        {
+            XamlRoot = context.XamlRoot,
+            Title = title,
+            Content = message,
+            PrimaryButtonText = primaryText,
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Close,
+        };
+        return await dialog.ShowAsync() == ContentDialogResult.Primary;
+    }
+
+    public async Task ShowMessageAsync(string title, string message)
+    {
+        if (context.XamlRoot is null)
+            return;
+        var dialog = new ContentDialog
+        {
+            XamlRoot = context.XamlRoot,
+            Title = title,
+            Content = message,
+            CloseButtonText = "OK",
+        };
+        await dialog.ShowAsync();
     }
 }
 
-public sealed class WpfFieldsEditorService(
+public sealed class WinUiFieldsEditorService(
     WindowContext context,
     IMediaFileService media,
     ITagWriteService writer) : IFieldsEditorService
 {
-    public Task<bool> ShowAsync(IReadOnlyList<string> paths)
+    public async Task<bool> ShowAsync(IReadOnlyList<string> paths)
     {
-        if (context.Window is null || paths.Count == 0)
-            return Task.FromResult(false);
+        if (context.XamlRoot is null || paths.Count == 0)
+            return false;
         var viewModel = new FieldsDialogViewModel(media, writer, paths);
-        var dialog = new FieldsDialog(viewModel) { Owner = context.Window };
-        return Task.FromResult(dialog.ShowDialog() == true);
+        var dialog = new FieldsDialog(viewModel) { XamlRoot = context.XamlRoot };
+        return await dialog.ShowEditorAsync();
     }
 }
 
 public sealed class WorkflowFileDialogService(WindowContext context) : LegacyFiles
 {
-    public Task<string?> PickOpenFileAsync(string title, IReadOnlyList<LegacyFilter>? filters = null)
+    public async Task<string?> PickOpenFileAsync(string title, IReadOnlyList<LegacyFilter>? filters = null)
     {
-        var picker = new OpenFileDialog
-        {
-            Title = title,
-            CheckFileExists = true,
-            Filter = BuildFilter(filters),
-        };
-        return Task.FromResult(picker.ShowDialog(context.Window) == true ? picker.FileName : null);
+        var picker = new FileOpenPicker { SuggestedStartLocation = PickerLocationId.DocumentsLibrary };
+        WinUiFilePickerService.AddFileTypes(picker.FileTypeFilter, filters?.SelectMany(filter => filter.Patterns));
+        InitializeWithWindow.Initialize(picker, context.Hwnd);
+        return (await picker.PickSingleFileAsync())?.Path;
     }
 
-    public Task<string?> PickFolderAsync(string title)
+    public async Task<string?> PickFolderAsync(string title)
     {
-        var picker = new OpenFolderDialog { Title = title, Multiselect = false };
-        return Task.FromResult(picker.ShowDialog(context.Window) == true ? picker.FolderName : null);
+        var picker = new FolderPicker { SuggestedStartLocation = PickerLocationId.MusicLibrary };
+        picker.FileTypeFilter.Add("*");
+        InitializeWithWindow.Initialize(picker, context.Hwnd);
+        return (await picker.PickSingleFolderAsync())?.Path;
     }
 
-    public Task<string?> PickSaveFileAsync(string title, string? suggestedName = null,
+    public async Task<string?> PickSaveFileAsync(string title, string? suggestedName = null,
         string? defaultExtension = null, IReadOnlyList<LegacyFilter>? filters = null)
     {
-        var picker = new SaveFileDialog
+        var picker = new FileSavePicker
         {
-            Title = title,
-            FileName = suggestedName ?? "",
-            DefaultExt = defaultExtension ?? "",
-            AddExtension = true,
-            Filter = BuildFilter(filters),
+            SuggestedStartLocation = PickerLocationId.DocumentsLibrary,
+            SuggestedFileName = suggestedName ?? "export",
         };
-        return Task.FromResult(picker.ShowDialog(context.Window) == true ? picker.FileName : null);
+        if (!string.IsNullOrWhiteSpace(defaultExtension))
+            picker.DefaultFileExtension = WinUiFilePickerService.NormalizeExtension(defaultExtension);
+        if (filters is { Count: > 0 })
+        {
+            foreach (LegacyFilter filter in filters)
+                picker.FileTypeChoices.Add(filter.Name,
+                    filter.Patterns.Select(WinUiFilePickerService.NormalizeExtension).ToList());
+        }
+        else
+        {
+            picker.FileTypeChoices.Add("All files", ["*"]);
+        }
+        InitializeWithWindow.Initialize(picker, context.Hwnd);
+        return (await picker.PickSaveFileAsync())?.Path;
     }
-
-    private static string BuildFilter(IReadOnlyList<LegacyFilter>? filters)
-        => filters is null || filters.Count == 0
-            ? "All files|*.*"
-            : string.Join("|", filters.Select(filter =>
-                $"{filter.Name}|{string.Join(";", filter.Patterns)}")) + "|All files|*.*";
 }
 
-public sealed class WorkflowDialogService(WindowContext context) : LegacyDialogs
+public sealed class WorkflowDialogService(IDialogCoordinator dialogs) : LegacyDialogs
 {
     public Task<bool> ShowFieldsEditorAsync(IReadOnlyList<string> paths) => Task.FromResult(false);
     public Task<string?> ShowConfigEditorAsync(string? existingPath) => Task.FromResult<string?>(null);
 
     public Task<bool> ConfirmCdDerivationAsync(MusicLibrary.Core.Models.IngestApprovalItem item)
-        => Confirm("Approve CD derivation",
-            $"{item.AlbumDisplay}\n\nGenerate the missing tracks below?\n\n" +
-            string.Join("\n", item.MissingTracks));
+        => dialogs.ConfirmAsync("Approve CD derivation",
+            $"{item.AlbumDisplay}\n\nGenerate the missing tracks below?\n\n{string.Join("\n", item.MissingTracks)}", "Generate");
 
     public Task<bool> ConfirmRestoreAsync(MusicLibrary.Core.Models.OperationRestorePlan plan)
-        => Confirm("Restore operation items",
-            $"Restore {plan.Actions.Count:N0} selected item(s)?\n\n" +
-            $"{plan.CollisionCount:N0} existing destination(s) will be preserved as collision backups.");
+        => dialogs.ConfirmAsync("Restore operation items",
+            $"Restore {plan.Actions.Count:N0} selected item(s)?\n\n{plan.CollisionCount:N0} existing destination(s) will be preserved as collision backups.", "Restore");
 
     public Task<bool> ConfirmPurgeAsync(MusicLibrary.Core.Models.OperationPurgePlan plan)
-        => Confirm("Permanently purge operation history",
-            $"Permanently delete {plan.Runs.Count:N0} operation run(s), {plan.FileCount:N0} file(s), " +
-            $"and {plan.TotalBytes:N0} bytes?\n\nThis cannot be undone.");
-
-    private Task<bool> Confirm(string title, string message)
-        => Task.FromResult(MessageBox.Show(context.Window, message, title, MessageBoxButton.YesNo,
-            MessageBoxImage.Warning, MessageBoxResult.No) == MessageBoxResult.Yes);
+        => dialogs.ConfirmAsync("Permanently purge operation history",
+            $"Permanently delete {plan.Runs.Count:N0} operation run(s), {plan.FileCount:N0} file(s), and {plan.TotalBytes:N0} bytes?\n\nThis cannot be undone.", "Purge");
 }
 
-public sealed class WpfThumbnailService : IThumbnailService
+public sealed class WinUiThumbnailService : IThumbnailService
 {
-    public Task<object?> CreateImageSourceAsync(
-        byte[] data,
-        int decodePixelWidth = 0,
+    public async Task<object?> CreateImageSourceAsync(byte[] data, int decodePixelWidth = 0,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        using var stream = new MemoryStream(data, writable: false);
+        using var stream = new InMemoryRandomAccessStream();
+        using (var writer = new DataWriter(stream))
+        {
+            writer.WriteBytes(data);
+            await writer.StoreAsync();
+        }
+        stream.Seek(0);
         var bitmap = new BitmapImage();
-        bitmap.BeginInit();
-        bitmap.CacheOption = BitmapCacheOption.OnLoad;
         if (decodePixelWidth > 0)
             bitmap.DecodePixelWidth = decodePixelWidth;
-        bitmap.StreamSource = stream;
-        bitmap.EndInit();
-        bitmap.Freeze();
-        return Task.FromResult<object?>(bitmap);
+        await bitmap.SetSourceAsync(stream);
+        return bitmap;
     }
 }
 
@@ -180,7 +210,10 @@ public sealed class WindowsPlatformService : IPlatformService
 {
     public Task CopyTextAsync(string text)
     {
-        Clipboard.SetText(text);
+        var package = new DataPackage();
+        package.SetText(text);
+        Clipboard.SetContent(package);
+        Clipboard.Flush();
         return Task.CompletedTask;
     }
 
@@ -195,7 +228,7 @@ public sealed class WindowsPlatformService : IPlatformService
 
 public sealed class SettingsWindowStateService(IAppSettings settings) : IWindowStateService
 {
-    private const string Preference = "manager.window.wpf.v1";
+    private const string Preference = "manager.window.winui.v1";
 
     public WindowStateSnapshot? Load()
     {
@@ -214,55 +247,21 @@ public sealed class SettingsWindowStateService(IAppSettings settings) : IWindowS
         => settings.SetPreference(Preference, JsonSerializer.Serialize(state));
 }
 
-public sealed class WpfThemeService : IThemeService
+public sealed class WinUiThemeService(WindowContext context) : IThemeService
 {
     public string Current { get; private set; } = "System";
-
-    public WpfThemeService()
-    {
-        SystemEvents.UserPreferenceChanged += (_, _) =>
-        {
-            if (Current == "System" && Application.Current is { } application)
-                application.Dispatcher.BeginInvoke(UpdateNavigationForeground);
-        };
-    }
 
     public void Apply(string theme)
     {
         Current = theme is "Light" or "Dark" ? theme : "System";
-        Application.Current.ThemeMode = Current switch
+        if (context.Window?.Content is FrameworkElement root)
         {
-            "Light" => ThemeMode.Light,
-            "Dark" => ThemeMode.Dark,
-            _ => ThemeMode.System,
-        };
-        UpdateNavigationForeground();
-    }
-
-    private void UpdateNavigationForeground()
-    {
-        if (Application.Current is not { } application)
-            return;
-
-        SolidColorBrush brush;
-        if (SystemParameters.HighContrast)
-        {
-            brush = SystemColors.ControlTextBrush.CloneCurrentValue();
+            root.RequestedTheme = Current switch
+            {
+                "Light" => ElementTheme.Light,
+                "Dark" => ElementTheme.Dark,
+                _ => ElementTheme.Default,
+            };
         }
-        else
-        {
-            bool dark = Current == "Dark" || Current == "System" && IsSystemDark();
-            brush = new SolidColorBrush(dark
-                ? Color.FromRgb(243, 243, 243)
-                : Color.FromRgb(31, 31, 31));
-        }
-        brush.Freeze();
-        application.Resources["NavigationForegroundBrush"] = brush;
     }
-
-    private static bool IsSystemDark()
-        => Registry.GetValue(
-            @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
-            "AppsUseLightTheme",
-            1) is int value && value == 0;
 }

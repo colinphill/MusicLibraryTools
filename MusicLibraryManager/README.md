@@ -1,24 +1,23 @@
 # MusicLibraryManager
 
 MusicLibraryManager is the Windows 11 Fluent desktop experience for MusicLibraryTools. It is a
-self-contained WPF x64 application targeting `net10.0-windows10.0.26100.0` and Windows 11 build
+self-contained WinUI 3 x64 application targeting `net10.0-windows10.0.26100.0` and Windows 11 build
 22000 or newer. It directly consumes `MusicLibrary.Core`; no Avalonia controls or presentation
-types are referenced. WPF's native desktop rendering path keeps the real layout active throughout
-a live window resize.
+types are referenced. WinUI provides the native Windows 11 control theme, composition, and window chrome.
 
 ## Current release
 
 - Windows 11 Fluent shell with native window chrome, global search (`Ctrl+K`), active
   configuration, indexing state, and activity center.
 - Home dashboard with cached collection, artwork, scan-root, and indexing health.
-- Library workspace using WPF's recycling, virtualized `DataGrid`, advanced Core filtering, typed
+- Library workspace using the virtualized WinUI `TableView`, advanced Core filtering, typed
   sorting, configurable columns, saved views, and a responsive selection inspector.
 - Cache-first offline browsing and lazy artwork loading for the current selection.
 - Single- and multi-file tag editing, artwork replacement/removal/scrubbing, confirmation prompts,
   activity reporting, and targeted cache refresh.
 - Configuration creation/editing, scan roots, recent configurations, appearance selection, and
   versioned `manager.*` workspace settings.
-- Platform-neutral presentation ViewModels with WPF adapters for pickers, dialogs, clipboard,
+- Platform-neutral presentation ViewModels with WinUI adapters for pickers, dialogs, clipboard,
   Explorer, thumbnails, navigation, theme, and window state.
 
 Health, Ingest, Organize, and Operations are present in the information architecture and explicitly

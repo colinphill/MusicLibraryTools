@@ -1,9 +1,9 @@
-using System.Windows.Controls;
+using Microsoft.UI.Xaml.Controls;
 using MusicLibrary.App.ViewModels;
 
 namespace MusicLibraryManager.Pages;
 
-public partial class OrganizePage : UserControl
+public sealed partial class OrganizePage : UserControl
 {
     public OrganizePage()
     {

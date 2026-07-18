@@ -1,10 +1,12 @@
-using System.Windows;
-using System.Windows.Controls;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using MusicLibrary.App.ViewModels;
+using Windows.ApplicationModel.DataTransfer;
+using Windows.Storage;
 
 namespace MusicLibraryManager.Pages;
 
-public partial class IngestPage : UserControl
+public sealed partial class IngestPage : UserControl
 {
     private readonly IngestViewModel _viewModel;
 
@@ -17,14 +19,20 @@ public partial class IngestPage : UserControl
 
     private void IngestPage_DragOver(object sender, DragEventArgs e)
     {
-        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None;
+        e.AcceptedOperation = e.DataView.Contains(StandardDataFormats.StorageItems)
+            ? DataPackageOperation.Copy
+            : DataPackageOperation.None;
         e.Handled = true;
     }
 
-    private void IngestPage_Drop(object sender, DragEventArgs e)
+    private async void IngestPage_Drop(object sender, DragEventArgs e)
     {
-        if (e.Data.GetData(DataFormats.FileDrop) is string[] { Length: > 0 } paths)
-            _viewModel.SetDroppedSource(paths[0]);
+        if (e.DataView.Contains(StandardDataFormats.StorageItems))
+        {
+            IReadOnlyList<IStorageItem> items = await e.DataView.GetStorageItemsAsync();
+            if (items.FirstOrDefault() is { } item)
+                _viewModel.SetDroppedSource(item.Path);
+        }
         e.Handled = true;
     }
 }

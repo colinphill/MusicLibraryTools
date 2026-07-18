@@ -1,178 +1,157 @@
-<UserControl x:Class="MusicLibraryManager.Pages.LibraryPage"
-      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Background="Transparent">
-    <Grid Margin="24,20,24,24">
+<UserControl
+    x:Class="MusicLibraryManager.Pages.LibraryPage"
+    x:Name="PageRoot"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:tv="using:WinUI.TableView"
+    Background="Transparent">
+    <Grid Margin="24,20,24,24" RowSpacing="12">
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-
         <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
             <StackPanel>
-                <TextBlock Text="Library" Style="{StaticResource PageTitleStyle}" />
-                <TextBlock Text="Browse the cache instantly, even when music roots are offline." Opacity="0.66" Margin="0,4,0,0" />
+                <TextBlock Text="Library" Style="{StaticResource PageTitleStyle}"/>
+                <TextBlock Text="Browse the cache instantly, even when music roots are offline." Opacity="0.66" Margin="0,4,0,0"/>
             </StackPanel>
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Content="Reload" Command="{Binding ReloadCommand}" Margin="0,0,8,0" />
-                <Button Content="Index library" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding Indexing.IndexCommand}" Margin="0,0,8,0" />
-                <Button Content="Cancel" Command="{Binding Indexing.CancelCommand}" Margin="0,0,8,0" />
-                <Button x:Name="InspectorButton" Content="Inspector" Visibility="Collapsed" Click="InspectorButton_Click" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Button Content="Reload" Command="{Binding ReloadCommand}"/>
+                <Button Content="Index library" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding Indexing.IndexCommand}"/>
+                <Button Content="Cancel" Command="{Binding Indexing.CancelCommand}"/>
+                <Button x:Name="InspectorButton" Content="Inspector" Visibility="Collapsed" Click="InspectorButton_Click"/>
             </StackPanel>
         </Grid>
 
-        <WrapPanel Grid.Row="1" Margin="0,18,0,12" VerticalAlignment="Center">
-            <TextBox x:Name="FilterBox" Width="360" MinWidth="220" Margin="0,0,8,8" Padding="10,7"
-                     ToolTip="Filter, or use Artist:Name AND NOT Codec:MP3"
-                     Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}" />
-            <ComboBox Width="110" Margin="0,0,8,8" ItemsSource="{Binding FilterModes}" SelectedItem="{Binding FilterMode}" />
-            <Button Content="Columns" Margin="0,0,8,8">
-                <Button.ContextMenu>
-                    <ContextMenu ItemsSource="{Binding PlacementTarget.DataContext.Columns, RelativeSource={RelativeSource Self}}">
-                        <ContextMenu.ItemTemplate>
-                            <DataTemplate>
-                                <CheckBox Content="{Binding Header}" IsChecked="{Binding IsVisible}" Click="ColumnVisibility_Changed" Padding="6" />
-                            </DataTemplate>
-                        </ContextMenu.ItemTemplate>
-                    </ContextMenu>
-                </Button.ContextMenu>
+        <Grid Grid.Row="1" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="FilterBox" MinWidth="220" PlaceholderText="Filter, or use Artist:Name AND NOT Codec:MP3"
+                     Text="{Binding FilterText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+            <ComboBox Grid.Column="1" Width="110" ItemsSource="{Binding FilterModes}" SelectedItem="{Binding FilterMode, Mode=TwoWay}"/>
+            <Button Grid.Column="2" Content="Columns">
+                <Button.Flyout>
+                    <Flyout>
+                        <ItemsControl ItemsSource="{Binding Columns}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox Content="{Binding Header}" IsChecked="{Binding IsVisible, Mode=TwoWay}" Click="ColumnVisibility_Changed" Padding="6"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Flyout>
+                </Button.Flyout>
             </Button>
-            <ComboBox Width="150" Margin="0,0,8,8" ItemsSource="{Binding SavedViews}" SelectedItem="{Binding SelectedView}" DisplayMemberPath="Name" />
-            <TextBox Width="120" Margin="0,0,8,8" ToolTip="Saved view name" Text="{Binding NewViewName, UpdateSourceTrigger=PropertyChanged}" />
-            <Button Content="Save view" Command="{Binding SaveViewCommand}" Margin="0,0,8,8" />
-            <Button Content="Delete view" Command="{Binding DeleteViewCommand}" Margin="0,0,0,8" />
-        </WrapPanel>
+            <ComboBox Grid.Column="3" Width="150" ItemsSource="{Binding SavedViews}" SelectedItem="{Binding SelectedView, Mode=TwoWay}" DisplayMemberPath="Name"/>
+            <TextBox Grid.Column="4" Width="120" PlaceholderText="View name" Text="{Binding NewViewName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+            <StackPanel Grid.Column="5" Orientation="Horizontal" Spacing="8">
+                <Button Content="Save view" Command="{Binding SaveViewCommand}"/>
+                <Button Content="Delete" Command="{Binding DeleteViewCommand}"/>
+            </StackPanel>
+        </Grid>
 
-        <Grid x:Name="WorkspaceGrid" Grid.Row="2">
+        <Grid x:Name="WorkspaceGrid" Grid.Row="2" ColumnSpacing="10">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition x:Name="TableColumn" Width="*" MinWidth="360"/>
-                <ColumnDefinition x:Name="InspectorSplitterColumn" Width="10"/>
                 <ColumnDefinition x:Name="InspectorColumn" Width="390" MinWidth="280" MaxWidth="620"/>
             </Grid.ColumnDefinitions>
-            <Border Grid.Column="0" CornerRadius="10" BorderThickness="1" BorderBrush="{StaticResource CardStrokeBrush}">
-                <DataGrid x:Name="LibraryTable" ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True"
-                          SelectionMode="Extended" SelectionUnit="FullRow" HeadersVisibility="Column"
-                          EnableRowVirtualization="True" EnableColumnVirtualization="True"
-                          VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling"
-                          ScrollViewer.CanContentScroll="True" RowHeight="42" GridLinesVisibility="Horizontal"
-                          LoadingRow="LibraryTable_LoadingRow" UnloadingRow="LibraryTable_UnloadingRow"
-                          SelectionChanged="LibraryTable_SelectionChanged">
-                    <DataGrid.ContextMenu>
-                        <ContextMenu>
-                            <MenuItem Header="Copy path(s)" Click="CopyPaths_Click" />
-                            <MenuItem Header="Reveal first file" Click="RevealFile_Click" />
-                            <Separator />
-                            <MenuItem Header="Reindex selection" Click="ReindexSelection_Click" />
-                        </ContextMenu>
-                    </DataGrid.ContextMenu>
-                    <DataGrid.Columns>
-                        <DataGridTemplateColumn Header="Artwork" Width="58" MinWidth="58" MaxWidth="58" CanUserSort="False" CanUserResize="False">
-                            <DataGridTemplateColumn.CellTemplate>
+            <Border CornerRadius="10" BorderThickness="1" BorderBrush="{StaticResource CardStrokeBrush}" Clip="{x:Null}">
+                <tv:TableView x:Name="LibraryTable" ItemsSource="{Binding Rows}" AutoGenerateColumns="False" IsReadOnly="True"
+                              SelectionMode="Extended" SelectionUnit="Row" RowHeight="42" HeaderRowHeight="42"
+                              CanResizeColumns="True" CanReorderColumns="True" CanSortColumns="True"
+                              SelectionChanged="LibraryTable_SelectionChanged"
+                              ContainerContentChanging="LibraryTable_ContainerContentChanging">
+                    <tv:TableView.RowContextFlyout>
+                        <MenuFlyout>
+                            <MenuFlyoutItem Text="Copy path(s)" Click="CopyPaths_Click"/>
+                            <MenuFlyoutItem Text="Reveal first file" Click="RevealFile_Click"/>
+                            <MenuFlyoutSeparator/>
+                            <MenuFlyoutItem Text="Reindex selection" Click="ReindexSelection_Click"/>
+                        </MenuFlyout>
+                    </tv:TableView.RowContextFlyout>
+                    <tv:TableView.Columns>
+                        <tv:TableViewTemplateColumn Header="Artwork" Width="58" MinWidth="58" MaxWidth="58" CanSort="False" CanResize="False">
+                            <tv:TableViewTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Border Width="34" Height="34" CornerRadius="4" ClipToBounds="True"
-                                            Background="{StaticResource CardStrokeBrush}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    <Border Width="34" Height="34" CornerRadius="4" Background="{StaticResource CardStrokeBrush}" HorizontalAlignment="Center" VerticalAlignment="Center">
                                         <Image Source="{Binding ThumbnailSource}" Width="34" Height="34" Stretch="UniformToFill"/>
                                     </Border>
                                 </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                        <DataGridTextColumn Header="Title" Binding="{Binding Title}" SortMemberPath="Title" Width="280" MinWidth="140" />
-                        <DataGridTextColumn Header="Artist" Binding="{Binding Artist}" SortMemberPath="Artist" Width="190" MinWidth="100" />
-                        <DataGridTextColumn Header="Album artist" Binding="{Binding AlbumArtist}" SortMemberPath="AlbumArtist" Width="190" MinWidth="100" Visibility="Collapsed" />
-                        <DataGridTextColumn Header="Album" Binding="{Binding Album}" SortMemberPath="Album" Width="230" MinWidth="120" />
-                        <DataGridTextColumn Header="Track" Binding="{Binding Track}" SortMemberPath="Track" Width="70" />
-                        <DataGridTextColumn Header="Disc" Binding="{Binding Disc}" SortMemberPath="Disc" Width="65" Visibility="Collapsed" />
-                        <DataGridTextColumn Header="Codec" Binding="{Binding Codec}" SortMemberPath="Codec" Width="105" />
-                        <DataGridTextColumn Header="Duration" Binding="{Binding Duration}" SortMemberPath="Duration" Width="90" />
-                        <DataGridTextColumn Header="Modified" Binding="{Binding Modified}" SortMemberPath="Modified" Width="150" Visibility="Collapsed" />
-                        <DataGridTextColumn Header="Path" Binding="{Binding Path}" SortMemberPath="Path" Width="420" />
-                    </DataGrid.Columns>
-                </DataGrid>
+                            </tv:TableViewTemplateColumn.CellTemplate>
+                        </tv:TableViewTemplateColumn>
+                        <tv:TableViewTextColumn Header="Title" Binding="{Binding Title}" SortMemberPath="Title" Width="280" MinWidth="140"/>
+                        <tv:TableViewTextColumn Header="Artist" Binding="{Binding Artist}" SortMemberPath="Artist" Width="190" MinWidth="100"/>
+                        <tv:TableViewTextColumn Header="Album artist" Binding="{Binding AlbumArtist}" SortMemberPath="AlbumArtist" Width="190" MinWidth="100" Visibility="Collapsed"/>
+                        <tv:TableViewTextColumn Header="Album" Binding="{Binding Album}" SortMemberPath="Album" Width="230" MinWidth="120"/>
+                        <tv:TableViewTextColumn Header="Track" Binding="{Binding Track}" SortMemberPath="Track" Width="70"/>
+                        <tv:TableViewTextColumn Header="Disc" Binding="{Binding Disc}" SortMemberPath="Disc" Width="65" Visibility="Collapsed"/>
+                        <tv:TableViewTextColumn Header="Codec" Binding="{Binding Codec}" SortMemberPath="Codec" Width="105"/>
+                        <tv:TableViewTextColumn Header="Duration" Binding="{Binding Duration}" SortMemberPath="Duration" Width="90"/>
+                        <tv:TableViewTextColumn Header="Modified" Binding="{Binding Modified}" SortMemberPath="Modified" Width="150" Visibility="Collapsed"/>
+                        <tv:TableViewTextColumn Header="Path" Binding="{Binding Path}" SortMemberPath="Path" Width="420"/>
+                    </tv:TableView.Columns>
+                </tv:TableView>
             </Border>
 
-            <GridSplitter x:Name="InspectorSplitter" Grid.Column="1" Width="4"
-                          HorizontalAlignment="Center" VerticalAlignment="Stretch"
-                          ResizeDirection="Columns" ResizeBehavior="PreviousAndNext"
-                          ShowsPreview="True" Background="{StaticResource CardStrokeBrush}"
-                          Cursor="SizeWE" DragCompleted="InspectorSplitter_DragCompleted"
-                          ToolTip="Drag to resize the selection inspector"/>
-
-            <Border x:Name="InspectorPanel" Grid.Column="2" Style="{StaticResource CardStyle}" Padding="0"
-                    Panel.ZIndex="10" DataContext="{Binding Inspector}">
-                <Grid Margin="18">
+            <Border x:Name="InspectorPanel" Grid.Column="1" Style="{StaticResource CardStyle}" Padding="18" DataContext="{Binding Inspector}">
+                <Grid RowSpacing="12">
                     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-                    <StackPanel Margin="0,0,0,14">
-                        <TextBlock Text="Selection" Opacity="0.62" />
-                        <TextBlock Text="{Binding SelectionSummary}" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,4,0,0" />
+                    <StackPanel>
+                        <TextBlock Text="Selection" Opacity="0.62"/>
+                        <TextBlock Text="{Binding SelectionSummary}" FontSize="18" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Margin="0,4,0,0"/>
                     </StackPanel>
-                    <TabControl Grid.Row="1">
-                        <TabItem Header="Overview">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <StackPanel Margin="4,14,4,4">
-                                    <TextBlock Text="{Binding Overview}" TextWrapping="Wrap" LineHeight="22" />
-                                    <ProgressBar IsIndeterminate="True" Height="4" Margin="0,18,0,0"
-                                                 Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                </StackPanel>
-                            </ScrollViewer>
-                        </TabItem>
-                        <TabItem Header="Tags">
-                            <Grid Margin="4,14,4,4">
+                    <TabView Grid.Row="1" IsAddTabButtonVisible="False">
+                        <TabViewItem Header="Overview" IsClosable="False">
+                            <ScrollViewer><StackPanel Margin="4,14,4,4" Spacing="12">
+                                <TextBlock Text="{Binding Overview}" TextWrapping="Wrap"/>
+                                <ProgressRing IsActive="{Binding IsBusy}"/>
+                            </StackPanel></ScrollViewer>
+                        </TabViewItem>
+                        <TabViewItem Header="Tags" IsClosable="False">
+                            <Grid Margin="4,14,4,4" RowSpacing="12">
                                 <Grid.RowDefinitions><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <ScrollViewer>
                                     <ItemsControl ItemsSource="{Binding Fields}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Grid Margin="0,3">
-                                                    <Grid.ColumnDefinitions><ColumnDefinition Width="110"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                                                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" Opacity="0.68" />
-                                                    <TextBox Grid.Column="1" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" ToolTip="Mixed or empty" />
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
+                                        <ItemsControl.ItemTemplate><DataTemplate>
+                                            <Grid Margin="0,3" ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="110"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                                                <TextBlock Text="{Binding Label}" VerticalAlignment="Center" Opacity="0.68"/>
+                                                <TextBox Grid.Column="1" Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                            </Grid>
+                                        </DataTemplate></ItemsControl.ItemTemplate>
                                     </ItemsControl>
                                 </ScrollViewer>
-                                <StackPanel Grid.Row="1" Margin="0,12,0,0">
-                                    <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Opacity="0.72" Margin="0,0,0,8" />
-                                    <StackPanel Orientation="Horizontal">
-                                        <Button Content="Save tags" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding SaveTagsCommand}" Margin="0,0,8,0" />
-                                        <Button Content="All fields…" Command="{Binding EditAllFieldsCommand}" Margin="0,0,8,0"
-                                                ToolTip="Edit every writable metadata field"/>
-                                        <Button Content="Revert" Command="{Binding RevertCommand}" />
+                                <StackPanel Grid.Row="1" Spacing="8">
+                                    <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Opacity="0.72"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button Content="Save tags" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding SaveTagsCommand}"/>
+                                        <Button Content="All fields…" Command="{Binding EditAllFieldsCommand}"/>
+                                        <Button Content="Revert" Command="{Binding RevertCommand}"/>
                                     </StackPanel>
                                 </StackPanel>
                             </Grid>
-                        </TabItem>
-                        <TabItem Header="Artwork">
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <StackPanel Margin="4,14,4,4">
-                                    <Border Background="#16000000" CornerRadius="10" Padding="8" Margin="0,0,0,10">
-                                        <Image Source="{Binding ArtworkSource}" Height="260" Stretch="Uniform" />
-                                    </Border>
-                                    <TextBlock Text="{Binding ArtworkSummary}" TextWrapping="Wrap" Opacity="0.68" Margin="0,0,0,12" />
-                                    <TextBlock Text="Maximum dimension" Opacity="0.68" />
-                                    <TextBox Text="{Binding ArtworkMaxDimension, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,12" />
-                                    <WrapPanel>
-                                        <Button Content="Replace" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding ReplaceArtworkCommand}" Margin="0,0,8,8" />
-                                        <Button Content="Optimize" Command="{Binding ScrubArtworkCommand}" Margin="0,0,8,8" />
-                                        <Button Content="Remove" Command="{Binding RemoveArtworkCommand}" Margin="0,0,0,8" />
-                                    </WrapPanel>
-                                    <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Opacity="0.72" />
+                        </TabViewItem>
+                        <TabViewItem Header="Artwork" IsClosable="False">
+                            <ScrollViewer><StackPanel Margin="4,14,4,4" Spacing="10">
+                                <Border Background="#16000000" CornerRadius="10" Padding="8"><Image Source="{Binding ArtworkSource}" Height="260" Stretch="Uniform"/></Border>
+                                <TextBlock Text="{Binding ArtworkSummary}" TextWrapping="Wrap" Opacity="0.68"/>
+                                <TextBlock Text="Maximum dimension" Opacity="0.68"/>
+                                <TextBox Text="{Binding ArtworkMaxDimension, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="Replace" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding ReplaceArtworkCommand}"/>
+                                    <Button Content="Optimize" Command="{Binding ScrubArtworkCommand}"/>
+                                    <Button Content="Remove" Command="{Binding RemoveArtworkCommand}"/>
                                 </StackPanel>
-                            </ScrollViewer>
-                        </TabItem>
-                    </TabControl>
+                            </StackPanel></ScrollViewer>
+                        </TabViewItem>
+                    </TabView>
                 </Grid>
-            </Border>
-
-            <Border VerticalAlignment="Top" Margin="12" Padding="12" CornerRadius="8"
-                    Background="{StaticResource BrandAmberBrush}"
-                    Visibility="{Binding HasFilterError, Converter={StaticResource BooleanToVisibilityConverter}}"
-                    Panel.ZIndex="20">
-                <TextBlock Text="{Binding FilterError}" Foreground="White" TextWrapping="Wrap" />
             </Border>
         </Grid>
 
-        <Grid Grid.Row="3" Margin="0,10,0,0">
+        <Grid Grid.Row="3">
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-            <TextBlock Text="{Binding StatusText}" Opacity="0.68" TextTrimming="CharacterEllipsis" />
-            <TextBlock Grid.Column="1" Text="{Binding Indexing.StatusText}" Opacity="0.58" MaxWidth="520" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding StatusText}" Opacity="0.68" TextTrimming="CharacterEllipsis"/>
+            <TextBlock Grid.Column="1" Text="{Binding Indexing.StatusText}" Opacity="0.58" MaxWidth="520" TextTrimming="CharacterEllipsis"/>
         </Grid>
     </Grid>
 </UserControl>

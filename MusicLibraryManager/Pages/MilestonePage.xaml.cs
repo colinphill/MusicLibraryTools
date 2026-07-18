@@ -1,9 +1,9 @@
-using System.Windows.Controls;
+using Microsoft.UI.Xaml.Controls;
 using MusicLibraryManager.Presentation;
 
 namespace MusicLibraryManager.Pages;
 
-public partial class MilestonePage : UserControl
+public sealed partial class MilestonePage : UserControl
 {
     public MilestonePage(ShellDestination destination)
     {

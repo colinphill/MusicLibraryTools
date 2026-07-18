@@ -1,35 +1,38 @@
-using System.ComponentModel;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
+using Microsoft.UI.Input;
+using Microsoft.UI.Windowing;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using MusicLibraryManager.Pages;
 using MusicLibraryManager.Presentation;
+using Windows.Graphics;
+using Windows.System;
+using WinRT.Interop;
 
 namespace MusicLibraryManager;
 
-public partial class MainWindow : Window
+public sealed partial class MainWindow : Window
 {
     private readonly INavigationService _navigation;
     private readonly IWindowStateService _windowState;
     private readonly Dictionary<ShellDestination, FrameworkElement> _pages = [];
-    private bool? _compact;
+    private readonly AppWindow _appWindow;
 
     public MainWindow()
     {
         InitializeComponent();
-        DataContext = App.GetService<ShellViewModel>();
+        Root.DataContext = App.GetService<ShellViewModel>();
         _navigation = App.GetService<INavigationService>();
         _windowState = App.GetService<IWindowStateService>();
         _navigation.NavigationRequested += Navigate;
-        Loaded += MainWindow_Loaded;
-        SizeChanged += MainWindow_SizeChanged;
-        Closing += MainWindow_Closing;
-        PreviewKeyDown += MainWindow_PreviewKeyDown;
+
+        nint hwnd = WindowNative.GetWindowHandle(this);
+        _appWindow = AppWindow.GetFromWindowId(Microsoft.UI.Win32Interop.GetWindowIdFromWindow(hwnd));
+        _appWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "AppIcon.ico"));
+        _appWindow.Closing += AppWindow_Closing;
         RestoreWindow();
         Navigate(ShellDestination.Home);
     }
-
-    private void MainWindow_Loaded(object sender, RoutedEventArgs e) => ApplyResponsiveLayout(ActualWidth);
 
     private void Navigate(ShellDestination destination)
     {
@@ -48,35 +51,42 @@ public partial class MainWindow : Window
             };
             _pages[destination] = page;
         }
+
         PageHost.Content = page;
-        SelectNavigation(destination);
+        ShellNavigation.SelectedItem = destination == ShellDestination.Settings
+            ? ShellNavigation.SettingsItem
+            : ShellNavigation.MenuItems.OfType<NavigationViewItem>()
+                .FirstOrDefault(item => string.Equals(item.Tag?.ToString(), destination.ToString(), StringComparison.Ordinal));
     }
 
-    private void Navigation_Click(object sender, RoutedEventArgs e)
+    private void ShellNavigation_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
     {
-        if (sender is FrameworkElement { Tag: string tag } && Enum.TryParse(tag, out ShellDestination destination))
+        if (args.IsSettingsInvoked)
+        {
+            _navigation.Navigate(ShellDestination.Settings);
+            return;
+        }
+
+        if (args.InvokedItemContainer?.Tag is string tag && Enum.TryParse(tag, out ShellDestination destination))
             _navigation.Navigate(destination);
     }
 
-    private void Configuration_Click(object sender, RoutedEventArgs e) => _navigation.Navigate(ShellDestination.Settings);
+    private void Configuration_Click(object sender, RoutedEventArgs e)
+        => _navigation.Navigate(ShellDestination.Settings);
 
-    private void GlobalSearchBox_KeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key != Key.Enter)
-            return;
-        App.GetService<LibraryViewModel>().SetGlobalFilter(GlobalSearchBox.Text);
-        e.Handled = true;
-    }
+    private void GlobalSearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)
+        => App.GetService<LibraryViewModel>().SetGlobalFilter(sender.Text);
 
-    private void MainWindow_PreviewKeyDown(object sender, KeyEventArgs e)
+    private void Root_KeyDown(object sender, KeyRoutedEventArgs e)
     {
-        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && e.Key == Key.K)
+        bool control = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control)
+            .HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
+        if (control && e.Key == VirtualKey.K)
         {
-            GlobalSearchBox.Focus();
-            GlobalSearchBox.SelectAll();
+            GlobalSearchBox.Focus(FocusState.Programmatic);
             e.Handled = true;
         }
-        else if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control) && e.Key == Key.I)
+        else if (control && e.Key == VirtualKey.I)
         {
             IndexingViewModel indexing = App.GetService<IndexingViewModel>();
             if (indexing.IndexCommand.CanExecute(null))
@@ -85,62 +95,23 @@ public partial class MainWindow : Window
         }
     }
 
-    private void MainWindow_SizeChanged(object sender, SizeChangedEventArgs e) => ApplyResponsiveLayout(e.NewSize.Width);
-
-    private void ApplyResponsiveLayout(double width)
-    {
-        bool compact = width < 1050;
-        if (_compact == compact)
-            return;
-        _compact = compact;
-        NavigationColumn.Width = new GridLength(compact ? 64 : 220);
-        foreach (TextBlock label in new[] { HomeLabel, LibraryLabel, HealthLabel, IngestLabel, OrganizeLabel, OperationsLabel, SettingsLabel })
-            label.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        AppIdentity.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        ConfigurationButtonText.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-        ActivityButtonText.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-    }
-
-    private void SelectNavigation(ShellDestination destination)
-    {
-        foreach (RadioButton button in FindVisualChildren<RadioButton>(this))
-            if (button.Tag is string tag)
-                button.IsChecked = tag.Equals(destination.ToString(), StringComparison.Ordinal);
-    }
-
-    private static IEnumerable<T> FindVisualChildren<T>(DependencyObject root) where T : DependencyObject
-    {
-        for (int index = 0; index < System.Windows.Media.VisualTreeHelper.GetChildrenCount(root); index++)
-        {
-            DependencyObject child = System.Windows.Media.VisualTreeHelper.GetChild(root, index);
-            if (child is T match)
-                yield return match;
-            foreach (T descendant in FindVisualChildren<T>(child))
-                yield return descendant;
-        }
-    }
-
     private void RestoreWindow()
     {
         WindowStateSnapshot? state = _windowState.Load();
-        if (state is null)
-            return;
-        Width = Math.Max(MinWidth, state.Width);
-        Height = Math.Max(MinHeight, state.Height);
-        Left = Math.Clamp(state.X, SystemParameters.VirtualScreenLeft,
-            SystemParameters.VirtualScreenLeft + Math.Max(0, SystemParameters.VirtualScreenWidth - Width));
-        Top = Math.Clamp(state.Y, SystemParameters.VirtualScreenTop,
-            SystemParameters.VirtualScreenTop + Math.Max(0, SystemParameters.VirtualScreenHeight - Height));
-        WindowStartupLocation = WindowStartupLocation.Manual;
-        if (state.Maximized)
-            WindowState = WindowState.Maximized;
+        RectInt32 bounds = state is null
+            ? new RectInt32(80, 60, 1440, 900)
+            : new RectInt32(state.X, state.Y, Math.Max(900, state.Width), Math.Max(600, state.Height));
+        _appWindow.MoveAndResize(bounds);
+        if (state?.Maximized == true && _appWindow.Presenter is OverlappedPresenter presenter)
+            presenter.Maximize();
     }
 
-    private void MainWindow_Closing(object? sender, CancelEventArgs e)
+    private void AppWindow_Closing(AppWindow sender, AppWindowClosingEventArgs args)
     {
-        Rect bounds = WindowState == WindowState.Normal ? new Rect(Left, Top, Width, Height) : RestoreBounds;
-        _windowState.Save(new WindowStateSnapshot(1, (int)bounds.Left, (int)bounds.Top,
-            (int)bounds.Width, (int)bounds.Height, WindowState == WindowState.Maximized));
+        RectInt32 bounds = sender.Position.X >= 0
+            ? new RectInt32(sender.Position.X, sender.Position.Y, sender.Size.Width, sender.Size.Height)
+            : new RectInt32(80, 60, 1440, 900);
+        bool maximized = sender.Presenter is OverlappedPresenter { State: OverlappedPresenterState.Maximized };
+        _windowState.Save(new WindowStateSnapshot(1, bounds.X, bounds.Y, bounds.Width, bounds.Height, maximized));
     }
-
 }

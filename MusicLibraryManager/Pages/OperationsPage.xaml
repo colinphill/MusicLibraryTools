@@ -1,178 +1,54 @@
-<UserControl x:Class="MusicLibraryManager.Pages.OperationsPage"
-      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-      xmlns:vm="clr-namespace:MusicLibrary.App.ViewModels;assembly=MusicLibraryManager.Presentation"
-      Background="Transparent">
-    <Grid Margin="28,24,28,28">
+<UserControl
+    x:Class="MusicLibraryManager.Pages.OperationsPage" x:Name="OperationsRoot"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:tv="using:WinUI.TableView"
+    Background="Transparent">
+    <Grid Margin="28,24,28,28" RowSpacing="14">
         <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
         <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock Text="Operations" Style="{StaticResource PageTitleStyle}"/>
-                <TextBlock Text="Run library jobs and recover interrupted or quarantined file operations." Opacity="0.66" Margin="0,4,0,0"/>
-            </StackPanel>
-            <Button Grid.Column="1" Content="Cancel active operation" Command="{Binding CancelCommand}" VerticalAlignment="Center"/>
+            <StackPanel><TextBlock Text="Operations" Style="{StaticResource PageTitleStyle}"/><TextBlock Text="Run unified jobs, inspect history, and recover journaled changes." Opacity="0.66" Margin="0,4,0,0"/></StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"><Button Content="Refresh" Command="{Binding RefreshCommand}"/><Button Content="Cancel" Command="{Binding CancelCommand}"/></StackPanel>
         </Grid>
-
-        <TabControl Grid.Row="1" Margin="0,18,0,0" Background="Transparent" BorderThickness="0">
-            <TabItem Header="Library jobs">
-                <Grid Margin="0,14,0,0">
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="380"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Margin="0,0,12,0">
-                        <StackPanel>
-                            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
-                                <StackPanel>
-                                    <TextBlock Text="Choose a job" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,10"/>
-                                    <ComboBox ItemsSource="{Binding JobCatalog}" SelectedItem="{Binding SelectedJob}" DisplayMemberPath="Name"/>
-                                    <TextBlock Text="{Binding SelectedJob.Description}" Opacity="0.66" TextWrapping="Wrap" Margin="0,8,0,0"/>
-                                </StackPanel>
-                            </Border>
-                            <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12">
-                                <StackPanel>
-                                    <TextBlock Text="Inputs" Style="{StaticResource SectionTitleStyle}" Margin="0,0,0,10"/>
-                                    <StackPanel Visibility="{Binding ShowPlaylistName, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <TextBlock Text="Playlist" Opacity="0.66"/>
-                                        <TextBox Text="{Binding JobPlaylistName, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,10"/>
-                                    </StackPanel>
-                                    <StackPanel Visibility="{Binding ShowDestinationPath, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <TextBlock Text="Destination folder" Opacity="0.66"/>
-                                        <DockPanel Margin="0,4,0,10">
-                                            <Button DockPanel.Dock="Right" Content="Browse" Command="{Binding BrowseJobDestinationCommand}" Margin="8,0,0,0"/>
-                                            <TextBox Text="{Binding JobDestinationPath, UpdateSourceTrigger=PropertyChanged}"/>
-                                        </DockPanel>
-                                    </StackPanel>
-                                    <StackPanel Visibility="{Binding ShowValidationPath, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <TextBlock Text="iTunes library to validate" Opacity="0.66"/>
-                                        <DockPanel Margin="0,4,0,10">
-                                            <Button DockPanel.Dock="Right" Content="Browse" Command="{Binding BrowseJobValidationCommand}" Margin="8,0,0,0"/>
-                                            <TextBox Text="{Binding JobValidationPath, UpdateSourceTrigger=PropertyChanged}"/>
-                                        </DockPanel>
-                                    </StackPanel>
-                                    <StackPanel Visibility="{Binding ShowRemovalLimit, Converter={StaticResource BooleanToVisibilityConverter}}">
-                                        <TextBlock Text="Maximum removals (0 blocks removals)" Opacity="0.66"/>
-                                        <TextBox Text="{Binding JobMaxRemovals, UpdateSourceTrigger=PropertyChanged}" Margin="0,4,0,10"/>
-                                    </StackPanel>
-                                    <CheckBox Content="Initialize target" IsChecked="{Binding JobInitialize}" Margin="0,3"
-                                              Visibility="{Binding ShowInitialize, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                    <CheckBox Content="Clean obsolete playlists" IsChecked="{Binding JobClean}" Margin="0,3"
-                                              Visibility="{Binding ShowClean, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                    <CheckBox Content="Rebalance paths" IsChecked="{Binding JobRebalance}" Margin="0,3"
-                                              Visibility="{Binding ShowRebalance, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                    <CheckBox Content="Repair missing target files" IsChecked="{Binding JobFixErrors}" Margin="0,3"
-                                              Visibility="{Binding ShowFixErrors, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                                </StackPanel>
-                            </Border>
-                            <StackPanel Orientation="Horizontal">
-                                <Button Content="Preview job" Command="{Binding PreviewJobCommand}" Margin="0,0,8,0"/>
-                                <Button Content="Apply job" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding ApplyJobCommand}"
-                                        Visibility="{Binding ShowJobApply, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </ScrollViewer>
-
-                    <Grid Grid.Column="1">
-                        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="220"/></Grid.RowDefinitions>
-                        <Border Style="{StaticResource CardStyle}" Margin="0,0,0,12" Padding="16">
-                            <StackPanel>
-                                <TextBlock Text="Preview and results" Style="{StaticResource SectionTitleStyle}"/>
-                                <TextBlock Text="{Binding JobStatus}" TextWrapping="Wrap" Opacity="0.7" Margin="0,5,0,0"/>
-                                <ProgressBar IsIndeterminate="True" Height="3" Margin="0,10,0,0"
-                                             Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"/>
-                            </StackPanel>
-                        </Border>
-                        <TextBox Grid.Row="1" Text="{Binding JobOutput}" IsReadOnly="True" AcceptsReturn="True"
-                                 FontFamily="Cascadia Mono, Consolas" TextWrapping="NoWrap"
-                                 VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" Padding="12"/>
-                        <Border Grid.Row="2" Style="{StaticResource CardStyle}" Margin="0,12,0,0" Padding="10">
-                            <DockPanel>
-                                <TextBlock DockPanel.Dock="Top" Text="Job history" Style="{StaticResource SectionTitleStyle}" Margin="4,2,4,8"/>
-                                <DataGrid ItemsSource="{Binding JobHistory}" AutoGenerateColumns="False" IsReadOnly="True" BorderThickness="0">
-                                    <DataGrid.Columns>
-                                        <DataGridTextColumn Header="When" Binding="{Binding Created}" Width="145"/>
-                                        <DataGridTextColumn Header="Job" Binding="{Binding JobName}" Width="180"/>
-                                        <DataGridTextColumn Header="State" Binding="{Binding State}" Width="130"/>
-                                        <DataGridTextColumn Header="Elapsed" Binding="{Binding Elapsed}" Width="80"/>
-                                        <DataGridTextColumn Header="Output" Binding="{Binding Output}" Width="*"/>
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                            </DockPanel>
-                        </Border>
-                    </Grid>
-                </Grid>
-            </TabItem>
-
-            <TabItem Header="Recovery and retention">
-                <Grid Margin="0,14,0,0">
-                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
-                    <Border Style="{StaticResource CardStyle}" Padding="16" Margin="0,0,0,12">
-                        <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="80"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                            <TextBlock Text="Additional root" Opacity="0.66" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBox Grid.Column="1" Text="{Binding SearchRoot, UpdateSourceTrigger=PropertyChanged}"/>
-                            <Button Grid.Column="2" Content="Browse" Command="{Binding BrowseRootCommand}" Margin="8,0,18,0"/>
-                            <TextBox Grid.Column="3" Text="{Binding RetentionDays, UpdateSourceTrigger=PropertyChanged}" ToolTip="Retention days"/>
-                            <Button Grid.Column="4" Content="Scan operations" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding RefreshCommand}" Margin="8,0,0,0"/>
-                        </Grid>
+        <TabView Grid.Row="1" IsAddTabButtonVisible="False">
+            <TabViewItem Header="Jobs" IsClosable="False">
+                <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="280"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Border Style="{StaticResource CardStyle}" Padding="10"><ListView ItemsSource="{Binding JobCatalog}" SelectedItem="{Binding SelectedJob, Mode=TwoWay}"><ListView.ItemTemplate><DataTemplate><StackPanel Margin="5"><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Text="{Binding Description}" Opacity="0.65" TextWrapping="Wrap"/></StackPanel></DataTemplate></ListView.ItemTemplate></ListView></Border>
+                    <Border Grid.Column="1" Style="{StaticResource CardStyle}">
+                        <ScrollViewer><StackPanel Spacing="10">
+                            <TextBlock Text="{Binding SelectedJob.Description}" Style="{StaticResource SectionTitleStyle}" TextWrapping="Wrap"/>
+                            <TextBox Header="Playlist name" Text="{Binding JobPlaylistName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Visibility="{Binding ShowPlaylistName, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                            <Grid ColumnSpacing="8" Visibility="{Binding ShowDestinationPath, Converter={StaticResource BooleanToVisibilityConverter}}"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBox Header="Destination" Text="{Binding JobDestinationPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/><Button Grid.Column="1" Content="Browse" Command="{Binding BrowseJobDestinationCommand}" VerticalAlignment="Bottom"/></Grid>
+                            <Grid ColumnSpacing="8" Visibility="{Binding ShowValidationPath, Converter={StaticResource BooleanToVisibilityConverter}}"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBox Header="Validation path" Text="{Binding JobValidationPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/><Button Grid.Column="1" Content="Browse" Command="{Binding BrowseJobValidationCommand}" VerticalAlignment="Bottom"/></Grid>
+                            <NumberBox Header="Maximum removals" Value="{Binding JobMaxRemovals, Mode=TwoWay}" SpinButtonPlacementMode="Compact" Visibility="{Binding ShowRemovalLimit, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                            <StackPanel Orientation="Horizontal" Spacing="12"><CheckBox Content="Initialize" IsChecked="{Binding JobInitialize, Mode=TwoWay}" Visibility="{Binding ShowInitialize, Converter={StaticResource BooleanToVisibilityConverter}}"/><CheckBox Content="Clean" IsChecked="{Binding JobClean, Mode=TwoWay}" Visibility="{Binding ShowClean, Converter={StaticResource BooleanToVisibilityConverter}}"/><CheckBox Content="Rebalance" IsChecked="{Binding JobRebalance, Mode=TwoWay}" Visibility="{Binding ShowRebalance, Converter={StaticResource BooleanToVisibilityConverter}}"/><CheckBox Content="Fix errors" IsChecked="{Binding JobFixErrors, Mode=TwoWay}" Visibility="{Binding ShowFixErrors, Converter={StaticResource BooleanToVisibilityConverter}}"/></StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="8"><Button Content="Preview" Command="{Binding PreviewJobCommand}"/><Button Content="Apply" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding ApplyJobCommand}" Visibility="{Binding ShowJobApply, Converter={StaticResource BooleanToVisibilityConverter}}"/></StackPanel>
+                            <TextBlock Text="{Binding JobStatus}" TextWrapping="Wrap" Opacity="0.72"/>
+                            <TextBox Text="{Binding JobOutput}" AcceptsReturn="True" IsReadOnly="True" Height="220" TextWrapping="NoWrap"/>
+                        </StackPanel></ScrollViewer>
                     </Border>
-                    <Border Grid.Row="1" Style="{StaticResource CardStyle}" Padding="16" Margin="0,0,0,12">
-                        <Grid>
-                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                            <StackPanel>
-                                <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" Opacity="0.72"/>
-                                <TextBlock Text="{Binding RestorePreviewText}" TextWrapping="Wrap" Margin="0,5,0,0"/>
-                                <TextBlock Text="{Binding PurgePreviewText}" TextWrapping="Wrap" Margin="0,5,0,0"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="14,0,0,0">
-                                <Button Content="Preview purge" Command="{Binding PreviewPurgeCommand}" Margin="0,0,8,0"/>
-                                <Button Content="Apply purge" Command="{Binding ApplyPurgeCommand}"/>
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-                    <Grid Grid.Row="2">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="390"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-                        <Border Style="{StaticResource CardStyle}" Padding="10" Margin="0,0,12,0">
-                            <DockPanel>
-                                <TextBlock DockPanel.Dock="Top" Text="Discovered runs" Style="{StaticResource SectionTitleStyle}" Margin="4,2,4,8"/>
-                                <Button DockPanel.Dock="Bottom" Content="Open selected run" Command="{Binding OpenRunCommand}"
-                                        CommandParameter="{Binding SelectedItem, ElementName=RunsList}" HorizontalAlignment="Left" Margin="4,8,4,2"/>
-                                <ListBox x:Name="RunsList" ItemsSource="{Binding Runs}" SelectedItem="{Binding SelectedRun}" BorderThickness="0" Background="Transparent">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate>
-                                            <StackPanel Margin="5,6">
-                                                <TextBlock><Run Text="{Binding ToolName}" FontWeight="SemiBold"/><Run Text="{Binding Kind, StringFormat={}  ·  {0}}"/></TextBlock>
-                                                <TextBlock Text="{Binding State}" Opacity="0.68" TextWrapping="Wrap"/>
-                                                <TextBlock Text="{Binding Created}" FontSize="11" Opacity="0.55"/>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                            </DockPanel>
-                        </Border>
-                        <Border Grid.Column="1" Style="{StaticResource CardStyle}" Padding="12">
-                            <DockPanel>
-                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="2,0,2,10">
-                                    <Button Content="Select restorable" Command="{Binding SelectAllRestorableCommand}" Margin="0,0,8,0"/>
-                                    <Button Content="Clear selection" Command="{Binding ClearRestoreSelectionCommand}" Margin="0,0,8,0"/>
-                                    <Button Content="Preview restore" Command="{Binding PreviewRestoreCommand}" Margin="0,0,8,0"/>
-                                    <Button Content="Apply restore" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding ApplyRestoreCommand}" Margin="0,0,8,0"/>
-                                    <Button Content="Close run" Command="{Binding CloseBrowserCommand}"/>
-                                </StackPanel>
-                                <TreeView ItemsSource="{Binding RootNodes}" BorderThickness="0" Background="Transparent">
-                                    <TreeView.Resources>
-                                        <HierarchicalDataTemplate DataType="{x:Type vm:OperationEntryNodeViewModel}" ItemsSource="{Binding Children}">
-                                            <StackPanel Orientation="Horizontal" Margin="2,3">
-                                                <CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding CanRestore}" Margin="0,0,8,0"/>
-                                                <TextBlock Text="{Binding Name}"/>
-                                                <TextBlock Text="{Binding StateText, StringFormat={}  ·  {0}}" Opacity="0.58"/>
-                                            </StackPanel>
-                                        </HierarchicalDataTemplate>
-                                    </TreeView.Resources>
-                                </TreeView>
-                            </DockPanel>
-                        </Border>
-                    </Grid>
                 </Grid>
-            </TabItem>
-        </TabControl>
+            </TabViewItem>
+
+            <TabViewItem Header="Job history" IsClosable="False">
+                <Border Style="{StaticResource CardStyle}" Padding="0">
+                    <tv:TableView ItemsSource="{Binding JobHistory}" AutoGenerateColumns="False" IsReadOnly="True" CanResizeColumns="True" CanReorderColumns="True">
+                        <tv:TableView.Columns><tv:TableViewTextColumn Header="When" Binding="{Binding Created}" Width="145"/><tv:TableViewTextColumn Header="Job" Binding="{Binding JobName}" Width="180"/><tv:TableViewTextColumn Header="State" Binding="{Binding State}" Width="130"/><tv:TableViewTextColumn Header="Elapsed" Binding="{Binding Elapsed}" Width="80"/><tv:TableViewTextColumn Header="Output" Binding="{Binding Output}" Width="520"/></tv:TableView.Columns>
+                    </tv:TableView>
+                </Border>
+            </TabViewItem>
+
+            <TabViewItem Header="Recovery" IsClosable="False">
+                <Grid ColumnSpacing="14"><Grid.ColumnDefinitions><ColumnDefinition Width="320"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Border Style="{StaticResource CardStyle}" Padding="10"><Grid RowSpacing="8"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions><StackPanel Orientation="Horizontal" Spacing="8"><TextBox Width="190" PlaceholderText="Search root" Text="{Binding SearchRoot, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/><Button Content="Browse" Command="{Binding BrowseRootCommand}"/></StackPanel><ListView Grid.Row="1" ItemsSource="{Binding Runs}" SelectedItem="{Binding SelectedRun, Mode=TwoWay}"><ListView.ItemTemplate><DataTemplate><StackPanel Margin="5"><TextBlock Text="{Binding Name}" FontWeight="SemiBold"/><TextBlock Text="{Binding StateText}" Opacity="0.65"/></StackPanel></DataTemplate></ListView.ItemTemplate></ListView></Grid></Border>
+                    <Border Grid.Column="1" Style="{StaticResource CardStyle}"><Grid RowSpacing="8"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                        <StackPanel Orientation="Horizontal" Spacing="8"><Button Content="Open run" Command="{Binding OpenRunCommand}"/><Button Content="Select restorable" Command="{Binding SelectAllRestorableCommand}"/><Button Content="Clear selection" Command="{Binding ClearRestoreSelectionCommand}"/></StackPanel>
+                        <ListView Grid.Row="1" ItemsSource="{Binding RootNodes}"><ListView.ItemTemplate><DataTemplate><Grid Margin="4" ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" IsEnabled="{Binding CanRestore}"/><StackPanel Grid.Column="1"><TextBlock Text="{Binding Name}"/><TextBlock Text="{Binding OriginalPath}" Opacity="0.6" TextTrimming="CharacterEllipsis"/></StackPanel><TextBlock Grid.Column="2" Text="{Binding Kind}"/></Grid></DataTemplate></ListView.ItemTemplate></ListView>
+                        <StackPanel Grid.Row="2" Spacing="8"><TextBlock Text="{Binding RestorePreviewText}" TextWrapping="Wrap"/><StackPanel Orientation="Horizontal" Spacing="8"><Button Content="Preview restore" Command="{Binding PreviewRestoreCommand}"/><Button Content="Apply restore" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding ApplyRestoreCommand}"/><Button Content="Preview purge" Command="{Binding PreviewPurgeCommand}"/><Button Content="Apply purge" Command="{Binding ApplyPurgeCommand}"/></StackPanel><TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" Opacity="0.72"/></StackPanel>
+                    </Grid></Border>
+                </Grid>
+            </TabViewItem>
+        </TabView>
     </Grid>
 </UserControl>

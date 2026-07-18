@@ -1,93 +1,64 @@
-<Window x:Class="MusicLibraryManager.Dialogs.FieldsDialog"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="clr-namespace:MusicLibrary.App.ViewModels;assembly=MusicLibraryManager.Presentation"
-        Title="{Binding Title}" Width="680" Height="600" MinWidth="540" MinHeight="420"
-        WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
-    <Grid Margin="22">
+<ContentDialog
+    x:Class="MusicLibraryManager.Dialogs.FieldsDialog"
+    x:Name="DialogRoot"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="All metadata fields">
+    <Grid Width="640" MaxHeight="680" MinHeight="440" RowSpacing="12">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-
-        <StackPanel Margin="0,0,0,16">
-            <TextBlock Text="All metadata fields" Style="{StaticResource PageTitleStyle}"/>
-            <TextBlock Text="{Binding Title}" Opacity="0.64" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
-            <TextBlock Text="Mixed values are left unchanged until you enter a replacement. Removed fields can be restored before saving."
-                       Opacity="0.58" Margin="0,7,0,0" TextWrapping="Wrap"/>
+        <StackPanel Spacing="5">
+            <TextBlock Text="{Binding Title}" Opacity="0.64" TextTrimming="CharacterEllipsis"/>
+            <TextBlock Text="Mixed values remain unchanged until you enter a replacement."
+                       Opacity="0.58" TextWrapping="Wrap"/>
         </StackPanel>
-
         <Border Grid.Row="1" Style="{StaticResource CardStyle}" Padding="10">
             <Grid>
                 <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                     <ItemsControl ItemsSource="{Binding Rows}">
                         <ItemsControl.ItemTemplate>
-                            <DataTemplate DataType="{x:Type vm:FieldRow}">
-                                <Grid Margin="2,4">
+                            <DataTemplate>
+                                <Grid Margin="2,4" ColumnSpacing="8">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="180"/>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold"
-                                               TextTrimming="CharacterEllipsis" ToolTip="{Binding Name}">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding MarkedForRemoval}" Value="True">
-                                                        <Setter Property="TextDecorations" Value="Strikethrough"/>
-                                                        <Setter Property="Opacity" Value="0.5"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                    <Grid Grid.Column="1" Margin="8,0">
-                                        <TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}">
-                                            <TextBox.Style>
-                                                <Style TargetType="TextBox">
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding MarkedForRemoval}" Value="True">
-                                                            <Setter Property="IsEnabled" Value="False"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBox.Style>
-                                        </TextBox>
+                                               TextTrimming="CharacterEllipsis" ToolTipService.ToolTip="{Binding Name}"/>
+                                    <Grid Grid.Column="1">
+                                        <TextBox Text="{Binding Value, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                                         <TextBlock Text="Mixed values — type to replace" Margin="10,0" VerticalAlignment="Center"
                                                    Foreground="Gray" IsHitTestVisible="False"
                                                    Visibility="{Binding IsMixed, Converter={StaticResource BooleanToVisibilityConverter}}"/>
                                     </Grid>
                                     <Button Grid.Column="2" Content="{Binding RemoveButtonText}"
-                                            Command="{Binding DataContext.RemoveFieldCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            Command="{Binding DataContext.RemoveFieldCommand, ElementName=DialogRoot}"
                                             CommandParameter="{Binding}" MinWidth="74"/>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
-                <ProgressBar IsIndeterminate="True" Height="4" VerticalAlignment="Top"
+                <ProgressBar IsIndeterminate="True" VerticalAlignment="Top"
                              Visibility="{Binding IsBusy, Converter={StaticResource BooleanToVisibilityConverter}}"/>
             </Grid>
         </Border>
-
-        <Grid Grid.Row="2" Margin="0,12,0,0">
+        <Grid Grid.Row="2" ColumnSpacing="8">
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-            <TextBlock Text="Add field" Opacity="0.68" VerticalAlignment="Center" Margin="0,0,10,0"/>
-            <ComboBox Grid.Column="1" ItemsSource="{Binding AddableFields}" SelectedItem="{Binding FieldToAdd}"/>
-            <Button Grid.Column="2" Content="Add" Command="{Binding AddFieldCommand}" Margin="8,0,0,0"/>
+            <TextBlock Text="Add field" Opacity="0.68" VerticalAlignment="Center"/>
+            <ComboBox Grid.Column="1" ItemsSource="{Binding AddableFields}" SelectedItem="{Binding FieldToAdd, Mode=TwoWay}"/>
+            <Button Grid.Column="2" Content="Add" Command="{Binding AddFieldCommand}"/>
         </Grid>
-
-        <Grid Grid.Row="3" Margin="0,16,0,0">
-            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="{StaticResource BrandAmberBrush}"
-                       VerticalAlignment="Center" Margin="0,0,12,0"/>
-            <StackPanel Grid.Column="1" Orientation="Horizontal">
-                <Button Content="Cancel" Command="{Binding CancelCommand}" Margin="0,0,8,0"/>
-                <Button Content="Save fields" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding SaveCommand}"/>
-            </StackPanel>
+        <Grid Grid.Row="3" ColumnSpacing="8">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" Foreground="{StaticResource BrandAmberBrush}" VerticalAlignment="Center"/>
+            <Button Grid.Column="1" Content="Cancel" Command="{Binding CancelCommand}"/>
+            <Button Grid.Column="2" Content="Save fields" Style="{StaticResource PrimaryButtonStyle}" Command="{Binding SaveCommand}"/>
         </Grid>
     </Grid>
-</Window>
+</ContentDialog>

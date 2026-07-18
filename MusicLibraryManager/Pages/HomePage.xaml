@@ -24,12 +24,13 @@
                 <StackPanel><TextBlock Text="Dashboard unavailable" FontWeight="SemiBold"/><TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap"/></StackPanel>
             </Border>
 
-            <UniformGrid Columns="4" Margin="0,0,0,18">
-                <Border Style="{StaticResource CardStyle}" Margin="0,0,7,0"><StackPanel><TextBlock Text="Tracks" Opacity="0.66"/><TextBlock Text="{Binding TrackCount}" Style="{StaticResource MetricStyle}" Margin="0,6,0,0"/></StackPanel></Border>
-                <Border Style="{StaticResource CardStyle}" Margin="7,0"><StackPanel><TextBlock Text="Albums" Opacity="0.66"/><TextBlock Text="{Binding AlbumCount}" Style="{StaticResource MetricStyle}" Margin="0,6,0,0"/></StackPanel></Border>
-                <Border Style="{StaticResource CardStyle}" Margin="7,0"><StackPanel><TextBlock Text="Album artists" Opacity="0.66"/><TextBlock Text="{Binding ArtistCount}" Style="{StaticResource MetricStyle}" Margin="0,6,0,0"/></StackPanel></Border>
-                <Border Style="{StaticResource CardStyle}" Margin="7,0,0,0"><StackPanel><TextBlock Text="Artwork cached" Opacity="0.66"/><TextBlock Text="{Binding ArtworkCount}" Style="{StaticResource MetricStyle}" Margin="0,6,0,0"/></StackPanel></Border>
-            </UniformGrid>
+            <Grid Margin="0,0,0,18" ColumnSpacing="14">
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                <Border Style="{StaticResource CardStyle}"><StackPanel><TextBlock Text="Tracks" Opacity="0.66"/><TextBlock Text="{Binding TrackCount}" Style="{StaticResource MetricStyle}" Margin="0,6,0,0"/></StackPanel></Border>
+                <Border Grid.Column="1" Style="{StaticResource CardStyle}"><StackPanel><TextBlock Text="Albums" Opacity="0.66"/><TextBlock Text="{Binding AlbumCount}" Style="{StaticResource MetricStyle}" Margin="0,6,0,0"/></StackPanel></Border>
+                <Border Grid.Column="2" Style="{StaticResource CardStyle}"><StackPanel><TextBlock Text="Album artists" Opacity="0.66"/><TextBlock Text="{Binding ArtistCount}" Style="{StaticResource MetricStyle}" Margin="0,6,0,0"/></StackPanel></Border>
+                <Border Grid.Column="3" Style="{StaticResource CardStyle}"><StackPanel><TextBlock Text="Artwork cached" Opacity="0.66"/><TextBlock Text="{Binding ArtworkCount}" Style="{StaticResource MetricStyle}" Margin="0,6,0,0"/></StackPanel></Border>
+            </Grid>
 
             <Grid>
                 <Grid.ColumnDefinitions><ColumnDefinition Width="2*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>

@@ -1,10 +1,10 @@
-using System.Windows;
-using System.Windows.Controls;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using MusicLibraryManager.Presentation;
 
 namespace MusicLibraryManager.Pages;
 
-public partial class HomePage : UserControl
+public sealed partial class HomePage : UserControl
 {
     public HomePage()
     {

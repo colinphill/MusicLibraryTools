@@ -1,10 +1,10 @@
-using System.Windows;
-using System.Windows.Controls;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using MusicLibraryManager.Presentation;
 
 namespace MusicLibraryManager.Pages;
 
-public partial class SettingsPage : UserControl
+public sealed partial class SettingsPage : UserControl
 {
     public SettingsViewModel ViewModel { get; } = App.GetService<SettingsViewModel>();
 

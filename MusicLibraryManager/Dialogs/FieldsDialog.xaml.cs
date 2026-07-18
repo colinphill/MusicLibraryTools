@@ -1,12 +1,12 @@
-using System.ComponentModel;
-using System.Windows;
+using Microsoft.UI.Xaml.Controls;
 using MusicLibrary.App.ViewModels;
 
 namespace MusicLibraryManager.Dialogs;
 
-public partial class FieldsDialog : Window
+public sealed partial class FieldsDialog : ContentDialog
 {
     private readonly FieldsDialogViewModel _viewModel;
+    private bool _saved;
 
     public FieldsDialog(FieldsDialogViewModel viewModel)
     {
@@ -14,12 +14,21 @@ public partial class FieldsDialog : Window
         _viewModel = viewModel;
         DataContext = viewModel;
         viewModel.CloseRequested += CloseRequested;
-        Closing += FieldsDialog_Closing;
+        Closed += FieldsDialog_Closed;
+    }
+
+    public async Task<bool> ShowEditorAsync()
+    {
+        await ShowAsync();
+        return _saved;
     }
 
     private void CloseRequested(bool saved)
-        => DialogResult = saved;
+    {
+        _saved = saved;
+        Hide();
+    }
 
-    private void FieldsDialog_Closing(object? sender, CancelEventArgs e)
+    private void FieldsDialog_Closed(ContentDialog sender, ContentDialogClosedEventArgs args)
         => _viewModel.CloseRequested -= CloseRequested;
 }
