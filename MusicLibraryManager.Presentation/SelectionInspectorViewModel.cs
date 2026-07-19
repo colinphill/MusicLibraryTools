@@ -33,7 +33,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
     [ObservableProperty] private object? _artworkSource;
     [ObservableProperty] private bool _isArtworkMixed;
     [ObservableProperty] private string _artworkSummary = "No artwork loaded.";
-    [ObservableProperty] private int _artworkMaxDimension = 1000;
+    [ObservableProperty] private int _artworkMaxDimension = 600;
 
     public SelectionInspectorViewModel(
         IMediaFileService media,
