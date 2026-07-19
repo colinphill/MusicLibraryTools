@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -502,14 +503,69 @@ namespace MusicFileUtilities
 
         public void SetField(TagFields field, string value)
         {
-            // TotalTracks and TotalDiscs are stored as separate fields in Vorbis,
-            // unlike ID3/APE which use "N/total" notation.
             if (!VorbisUtil.ReverseTagMappings.TryGetValue(field, out string key))
                 throw new ArgumentException($"Unsupported tag field for Vorbis: {field}");
 
-            Comments.RemoveAll(c => c.Key == key);
+            // Most Vorbis writers use separate number/total comments, but combined values such as
+            // TRACKNUMBER=3/12 and DISCNUMBER=1/2 are also common. Normalize either representation
+            // while preserving the counterpart when just one field is edited or removed.
+            if (field == TagFields.TrackNumber || field == TagFields.TotalTracks)
+            {
+                SetNumberingField(field, value, TagFields.TrackNumber, TagFields.TotalTracks);
+                return;
+            }
+            if (field == TagFields.DiscNumber || field == TagFields.TotalDiscs)
+            {
+                SetNumberingField(field, value, TagFields.DiscNumber, TagFields.TotalDiscs);
+                return;
+            }
+
+            // Remove every recognized alias for the field, not just the preferred write key.
+            Comments.RemoveAll(comment =>
+                VorbisUtil.TagMappings.TryGetValue(comment.Key, out TagFields mapped) &&
+                mapped == field);
             if (value != null)
                 Comments.Add(new KeyValuePair<string, string>(key, value));
+        }
+
+        private void SetNumberingField(
+            TagFields field,
+            string value,
+            TagFields numberField,
+            TagFields totalField)
+        {
+            string number = null;
+            string total = Comments
+                .Where(comment =>
+                    VorbisUtil.TagMappings.TryGetValue(comment.Key, out TagFields mapped) &&
+                    mapped == totalField)
+                .Select(comment => comment.Value)
+                .FirstOrDefault();
+
+            foreach (var comment in Comments.Where(comment =>
+                         VorbisUtil.TagMappings.TryGetValue(comment.Key, out TagFields mapped) &&
+                         mapped == numberField))
+            {
+                string[] parts = comment.Value.Split('/', 2);
+                number ??= parts[0];
+                if (total == null && parts.Length > 1)
+                    total = parts[1];
+            }
+
+            if (field == numberField)
+                number = value;
+            else
+                total = value;
+
+            Comments.RemoveAll(comment =>
+                VorbisUtil.TagMappings.TryGetValue(comment.Key, out TagFields mapped) &&
+                (mapped == numberField || mapped == totalField));
+            if (!string.IsNullOrEmpty(number))
+                Comments.Add(KeyValuePair.Create(
+                    VorbisUtil.ReverseTagMappings[numberField], number));
+            if (!string.IsNullOrEmpty(total))
+                Comments.Add(KeyValuePair.Create(
+                    VorbisUtil.ReverseTagMappings[totalField], total));
         }
 
         public void RemoveField(TagFields field) => SetField(field, null);

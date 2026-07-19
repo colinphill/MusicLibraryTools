@@ -75,6 +75,46 @@ namespace MusicFileUtilities.Tests
         }
 
         [Fact]
+        public void RemovingCombinedTrackTotalPreservesTrackNumber()
+        {
+            var vc = new VorbisComments { Vendor = "test" };
+            vc["TRACKNUMBER"] = "3/12";
+
+            vc.RemoveField(TagFields.TotalTracks);
+
+            var known = Known(vc);
+            Assert.Equal("3", known[TagFields.TrackNumber]);
+            Assert.False(known.ContainsKey(TagFields.TotalTracks));
+            Assert.Equal("3", Assert.Single(vc.Comments).Value);
+        }
+
+        [Fact]
+        public void RemovingCombinedTrackNumberPreservesTrackTotal()
+        {
+            var vc = new VorbisComments { Vendor = "test" };
+            vc["TRACKNUMBER"] = "3/12";
+
+            vc.RemoveField(TagFields.TrackNumber);
+
+            var known = Known(vc);
+            Assert.False(known.ContainsKey(TagFields.TrackNumber));
+            Assert.Equal("12", known[TagFields.TotalTracks]);
+        }
+
+        [Fact]
+        public void RemovingTotalClearsEveryVorbisAlias()
+        {
+            var vc = new VorbisComments { Vendor = "test" };
+            vc["TRACKTOTAL"] = "12";
+            vc["TOTALTRACKS"] = "12";
+
+            vc.RemoveField(TagFields.TotalTracks);
+
+            Assert.False(Known(vc).ContainsKey(TagFields.TotalTracks));
+            Assert.Empty(vc.Comments);
+        }
+
+        [Fact]
         public void IndexerThrowsForMissingKey()
         {
             var vc = new VorbisComments { Vendor = "test" };

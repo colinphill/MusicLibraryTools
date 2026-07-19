@@ -37,15 +37,24 @@ namespace MusicFileUtilities
             Atom_data da = atom.FindPath("data") as Atom_data;
             if (da.IsTrackNumber)
             {
-                yield return KeyValuePair.Create(TagFields.TrackNumber, da.TrackNumber.ToString());
-                if (da.TotalTracks != 0)
-                    yield return KeyValuePair.Create(TagFields.TotalTracks, da.TotalTracks.ToString());
+                uint number = da.TrackNumber;
+                uint total = da.TotalTracks;
+                // A 0/0 atom is physically present and must remain visible in the All Fields
+                // editor so it can be corrected or removed. When just one component is zero,
+                // treat that component as absent and preserve the nonzero counterpart.
+                if (number != 0 || total == 0)
+                    yield return KeyValuePair.Create(TagFields.TrackNumber, number.ToString());
+                if (total != 0 || number == 0)
+                    yield return KeyValuePair.Create(TagFields.TotalTracks, total.ToString());
             }
             if (da.IsDiscNumber)
             {
-                yield return KeyValuePair.Create(TagFields.DiscNumber, da.DiscNumber.ToString());
-                if (da.TotalDiscs != 0)
-                    yield return KeyValuePair.Create(TagFields.TotalDiscs, da.TotalDiscs.ToString());
+                uint number = da.DiscNumber;
+                uint total = da.TotalDiscs;
+                if (number != 0 || total == 0)
+                    yield return KeyValuePair.Create(TagFields.DiscNumber, number.ToString());
+                if (total != 0 || number == 0)
+                    yield return KeyValuePair.Create(TagFields.TotalDiscs, total.ToString());
             }
         }
 

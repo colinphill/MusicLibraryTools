@@ -127,14 +127,27 @@ public sealed class TagWriteService : ITagWriteService
             // (OggVorbisFile doesn't advertise IMetadataWriter even though it can write). Prefer the
             // file so formats whose tag object isn't a writer still work.
             Action<TagFields, string?> setField;
+            Action<TagFields> removeField;
             if (file is IMetadataWriter fileWriter)
+            {
                 setField = (f, v) => fileWriter.SetField(f, v);
+                removeField = fileWriter.RemoveField;
+            }
             else if (file is VorbisComments fileVorbis)
+            {
                 setField = (f, v) => fileVorbis.SetField(f, v);
+                removeField = fileVorbis.RemoveField;
+            }
             else if (file.Tags.FirstOrDefault() is IMetadataWriter tagWriter)
+            {
                 setField = (f, v) => tagWriter.SetField(f, v);
+                removeField = tagWriter.RemoveField;
+            }
             else if (file.Tags.FirstOrDefault() is VorbisComments tagVorbis)
+            {
                 setField = (f, v) => tagVorbis.SetField(f, v);
+                removeField = tagVorbis.RemoveField;
+            }
             else
                 return new(new FileWriteResult { Path = path, Outcome = WriteOutcome.Failed, Error = "Tag format is read-only." });
 
@@ -207,8 +220,10 @@ public sealed class TagWriteService : ITagWriteService
                     if (edit.Value is null ? existing.Length == 0 : existing.Length == 1 && existing[0] == edit.Value)
                         continue;
 
-                    // SetField(field, null) removes the field.
-                    setField(edit.Field, edit.Value);
+                    if (edit.Value is null)
+                        removeField(edit.Field);
+                    else
+                        setField(edit.Field, edit.Value);
                     applied++;
                 }
                 catch (ArgumentException)

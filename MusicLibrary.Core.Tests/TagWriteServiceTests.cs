@@ -143,10 +143,16 @@ public class TagWriteServiceTests
         }
     }
 
-    [Fact]
-    public async Task RemovingField_ClearsIt()
+    [Theory]
+    [InlineData("sample.flac")]
+    [InlineData("sample.mp3")]
+    [InlineData("sample.ogg")]
+    [InlineData("sample_alac.m4a")]
+    [InlineData("sample_aac.m4a")]
+    [InlineData("sample.wv")]
+    public async Task RemovingField_ClearsIt(string fixture)
     {
-        using var media = MediaFixtures.Copy("sample.flac");
+        using var media = MediaFixtures.Copy(fixture);
 
         // Baseline fixture has Genre=Rock; a null value removes it.
         var result = await _writer.ApplyAsync([media.Path], [new TagEdit(TagFields.Genre, null)]);
@@ -155,6 +161,67 @@ public class TagWriteServiceTests
         var reload = await _reader.LoadAsync(media.Path);
         var genre = reload.Value!.KnownFields.FirstOrDefault(f => f.Field == TagFields.Genre);
         Assert.Null(genre); // no Genre entry remains
+    }
+
+    [Theory]
+    [InlineData("sample.flac")]
+    [InlineData("sample.mp3")]
+    [InlineData("sample.ogg")]
+    [InlineData("sample_alac.m4a")]
+    [InlineData("sample_aac.m4a")]
+    [InlineData("sample.wv")]
+    public async Task RemovingAllKnownFields_ClearsThem(string fixture)
+    {
+        using var media = MediaFixtures.Copy(fixture);
+        OperationResult<MediaFileModel> initial = await _reader.LoadDirectAsync(
+            media.Path, includeArtwork: false);
+        TagEdit[] removals = initial.Value!.KnownFields
+            .Select(field => field.Field)
+            .Distinct()
+            .Select(field => new TagEdit(field, null))
+            .ToArray();
+
+        BatchWriteResult result = await _writer.ApplyAsync([media.Path], removals);
+
+        Assert.Equal(1, result.SavedCount);
+        OperationResult<MediaFileModel> reload = await _reader.LoadDirectAsync(
+            media.Path, includeArtwork: false);
+        Assert.Empty(reload.Value!.KnownFields);
+    }
+
+    [Theory]
+    [InlineData("sample_alac.m4a")]
+    [InlineData("sample_aac.m4a")]
+    public async Task RemovingMp4TrackAndDiscNumbers_PreservesTotalsWithoutZeroFields(
+        string fixture)
+    {
+        using var media = MediaFixtures.Copy(fixture);
+        BatchWriteResult setup = await _writer.ApplyAsync(
+            [media.Path],
+            [
+                new TagEdit(TagFields.TrackNumber, "3"),
+                new TagEdit(TagFields.TotalTracks, "12"),
+                new TagEdit(TagFields.DiscNumber, "1"),
+                new TagEdit(TagFields.TotalDiscs, "2"),
+            ]);
+        Assert.Equal(1, setup.SavedCount);
+
+        BatchWriteResult remove = await _writer.ApplyAsync(
+            [media.Path],
+            [
+                new TagEdit(TagFields.TrackNumber, null),
+                new TagEdit(TagFields.DiscNumber, null),
+            ]);
+
+        Assert.Equal(1, remove.SavedCount);
+        OperationResult<MediaFileModel> reload = await _reader.LoadDirectAsync(
+            media.Path, includeArtwork: false);
+        Assert.DoesNotContain(reload.Value!.KnownFields,
+            field => field.Field is TagFields.TrackNumber or TagFields.DiscNumber);
+        Assert.Contains(reload.Value.KnownFields,
+            field => field.Field == TagFields.TotalTracks && field.Value == "12");
+        Assert.Contains(reload.Value.KnownFields,
+            field => field.Field == TagFields.TotalDiscs && field.Value == "2");
     }
 
     [Fact]
