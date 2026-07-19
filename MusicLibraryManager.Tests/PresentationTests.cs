@@ -52,13 +52,31 @@ public sealed class PresentationTests
         LibraryViewModel viewModel = BuildLibrary(settings, records);
 
         await viewModel.ReloadAsync();
-        viewModel.FilterText = "Artist:Miles AND Codec:FLAC";
+        viewModel.FilterText = "Artist:Miles aNd Codec:FLAC";
         await viewModel.ApplyFilterNowAsync(TestContext.Current.CancellationToken);
 
         Assert.Single(viewModel.Rows);
         Assert.Equal("So What", viewModel.Rows[0].Title);
         Assert.Contains("manager.library.workspace.v1", settings.Preferences.Keys);
         Assert.DoesNotContain("table.workspace.v1", settings.Preferences.Keys);
+    }
+
+    [Fact]
+    public async Task Library_view_treats_quoted_boolean_word_as_literal_text()
+    {
+        var settings = new FakeSettings();
+        var records = new[]
+        {
+            Track("Artist", "Album", "Rock and Roll", "FLAC", @"C:\Music\Rock and Roll.flac"),
+            Track("Artist", "Album", "Instrumental", "FLAC", @"C:\Music\Instrumental.flac"),
+        };
+        LibraryViewModel viewModel = BuildLibrary(settings, records);
+        await viewModel.ReloadAsync();
+
+        viewModel.FilterText = "\"and\"";
+        await viewModel.ApplyFilterNowAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal("Rock and Roll", Assert.Single(viewModel.Rows).Title);
     }
 
     [Fact]

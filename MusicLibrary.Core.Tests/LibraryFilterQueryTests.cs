@@ -36,6 +36,35 @@ public sealed class LibraryFilterQueryTests
     }
 
     [Fact]
+    public void BooleanOperatorsAreCaseInsensitive()
+    {
+        LibraryFilterQuery query = LibraryFilterQuery.Create(
+            "Artist:Miles aNd (Codec:FLAC oR Codec:ALAC) AND nOt Album:Live",
+            FilterMode.Substring);
+
+        Assert.True(query.IsValid);
+        Assert.True(query.IsAdvanced);
+        Assert.True(query.IsMatch(
+            Row("So What", "Miles Davis", "Kind of Blue", "FLAC"), ""));
+        Assert.False(query.IsMatch(
+            Row("So What", "Miles Davis", "Live in Europe", "ALAC"), ""));
+    }
+
+    [Theory]
+    [InlineData("\"and\"")]
+    [InlineData("\"AND\"")]
+    public void QuotedBooleanWordIsTreatedAsLiteralText(string text)
+    {
+        LibraryFilterQuery query = LibraryFilterQuery.Create(text, FilterMode.Substring);
+        DetailsRow row = Row("Rock and Roll", "Artist", "Album", "FLAC");
+
+        Assert.True(query.IsValid);
+        Assert.True(query.IsAdvanced);
+        Assert.True(query.IsMatch(row, row.SearchText));
+        Assert.False(query.IsMatch(row, "Rock Roll"));
+    }
+
+    [Fact]
     public void AdjacentTermsImplyAndAndColumnAliasesIgnorePunctuation()
     {
         LibraryFilterQuery query = LibraryFilterQuery.Create(

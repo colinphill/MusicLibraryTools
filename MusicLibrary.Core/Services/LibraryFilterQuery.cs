@@ -4,8 +4,8 @@ namespace MusicLibrary.Core.Services;
 
 /// <summary>
 /// Compiled details-grid filter. Plain text retains the original single-pattern behavior. A query
-/// becomes an expression when it contains a recognized column qualifier or an uppercase boolean
-/// operator (AND, OR, NOT).
+/// becomes an expression when it contains a recognized column qualifier, a case-insensitive
+/// boolean operator (AND, OR, NOT), or a quoted literal.
 /// </summary>
 public sealed class LibraryFilterQuery
 {
@@ -44,6 +44,7 @@ public sealed class LibraryFilterQuery
         }
 
         bool advanced = tokens.Any(token =>
+            token.WasQuoted ||
             token.Kind is QueryTokenKind.And or QueryTokenKind.Or or QueryTokenKind.Not ||
             token.Kind == QueryTokenKind.Atom &&
             (TrySplitField(token.Text, out _, out _) || HasFieldSyntax(token.Text)));
@@ -146,13 +147,13 @@ public sealed class LibraryFilterQuery
 
             if (text[index] == '(')
             {
-                tokens.Add(new(QueryTokenKind.LeftParenthesis, "("));
+                tokens.Add(new(QueryTokenKind.LeftParenthesis, "(", false));
                 index++;
                 continue;
             }
             if (text[index] == ')')
             {
-                tokens.Add(new(QueryTokenKind.RightParenthesis, ")"));
+                tokens.Add(new(QueryTokenKind.RightParenthesis, ")", false));
                 index++;
                 continue;
             }
@@ -192,18 +193,23 @@ public sealed class LibraryFilterQuery
                 throw new QueryParseException("Expected a filter term.");
             string value = atom.ToString();
             QueryTokenKind kind = !containedQuote
-                ? value switch
-                {
-                    "AND" => QueryTokenKind.And,
-                    "OR" => QueryTokenKind.Or,
-                    "NOT" => QueryTokenKind.Not,
-                    _ => QueryTokenKind.Atom,
-                }
+                ? BooleanKind(value)
                 : QueryTokenKind.Atom;
-            tokens.Add(new(kind, value));
+            tokens.Add(new(kind, value, containedQuote));
         }
-        tokens.Add(new(QueryTokenKind.End, ""));
+        tokens.Add(new(QueryTokenKind.End, "", false));
         return tokens;
+    }
+
+    private static QueryTokenKind BooleanKind(string value)
+    {
+        if (value.Equals("AND", StringComparison.OrdinalIgnoreCase))
+            return QueryTokenKind.And;
+        if (value.Equals("OR", StringComparison.OrdinalIgnoreCase))
+            return QueryTokenKind.Or;
+        if (value.Equals("NOT", StringComparison.OrdinalIgnoreCase))
+            return QueryTokenKind.Not;
+        return QueryTokenKind.Atom;
     }
 
     private sealed class Parser(IReadOnlyList<QueryToken> tokens, FilterMode mode)
@@ -332,7 +338,7 @@ public sealed class LibraryFilterQuery
             !Inner.IsMatch(row, defaultText);
     }
 
-    private sealed record QueryToken(QueryTokenKind Kind, string Text);
+    private sealed record QueryToken(QueryTokenKind Kind, string Text, bool WasQuoted);
 
     private enum QueryTokenKind
     {
