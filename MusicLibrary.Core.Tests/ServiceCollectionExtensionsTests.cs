@@ -19,5 +19,7 @@ public sealed class ServiceCollectionExtensionsTests
             provider.GetRequiredService<IIngestPreflightService>());
         Assert.IsType<LibraryOperationContextFactory>(
             provider.GetRequiredService<ILibraryOperationContextFactory>());
+        Assert.IsType<ItlMetadataRepairService>(
+            provider.GetRequiredService<IItlMetadataRepairService>());
     }
 }

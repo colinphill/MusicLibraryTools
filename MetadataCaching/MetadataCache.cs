@@ -53,8 +53,9 @@ namespace MetadataCaching
             _title = mp.Title;
             _album = mp.Album;
             _artist = mp.Artist;
-            _albumartist = mp.AlbumArtist;
-            _hasalbumartist = mp.HasAlbumArtist;
+            _hasalbumartist = mp.HasAlbumArtist &&
+                !string.IsNullOrWhiteSpace(mp.AlbumArtist);
+            _albumartist = _hasalbumartist ? mp.AlbumArtist : string.Empty;
             _compilation = mp.GetKnownMetadata().Any(item =>
                 item.Key == TagFields.Compilation && IsTrue(item.Value));
             _tracknumber = mp.TrackNumber;

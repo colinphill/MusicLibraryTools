@@ -14,15 +14,15 @@
       </controls:PageHeader.Actions>
     </controls:PageHeader>
     <Border Grid.Row="1" Classes="card">
-      <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+      <Grid x:Name="SummaryLayout" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
         <Ellipse Width="8" Height="8" Fill="{DynamicResource AppAccentBrush}" />
         <StackPanel Grid.Column="1" Spacing="3">
           <TextBlock Text="Preview before applying" FontWeight="SemiBold" />
           <TextBlock Classes="muted" Text="{Binding StatusText}" TextWrapping="Wrap" />
         </StackPanel>
-        <Border Grid.Column="2" Classes="pill">
-          <TextBlock Classes="muted" Text="{Binding Moves.Count, StringFormat={}{0} planned}" />
-        </Border>
+        <TextBlock x:Name="PlannedCount" Grid.Column="2"
+                   Classes="summary-label"
+                   Text="{Binding Moves.Count, StringFormat={}{0} planned}" />
       </Grid>
     </Border>
     <Border Grid.Row="2" Classes="card" Padding="0" ClipToBounds="True">

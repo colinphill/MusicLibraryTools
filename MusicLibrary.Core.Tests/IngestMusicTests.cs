@@ -77,6 +77,37 @@ public class IngestMusicTests
     }
 
     [Fact]
+    public async Task Apply_PreservesMissingAlbumArtistInsteadOfWritingArtistFallback()
+    {
+        using var tree = new TempTree();
+        string source = tree.FileFromFixture("incoming", "one.flac", "sample.flac");
+        IngestPlan original = ManualPlan(tree, [source], requireApproval: false);
+        List<IngestTrackPlan> tracks = original.Albums.Single().Tracks
+            .Select(track => track with { AlbumArtist = null })
+            .ToList();
+        Dictionary<string, IngestTrackPlan> tracksByIdentity = tracks
+            .ToDictionary(track => track.Identity);
+        IngestAlbumPlan album = original.Albums.Single() with
+        {
+            Tracks = tracks,
+            Outputs = original.Albums.Single().Outputs
+                .Select(output => output with { Metadata = tracksByIdentity[output.Identity] })
+                .ToList(),
+        };
+        IngestPlan plan = original with { Albums = [album] };
+
+        IngestResult result = await new IngestMusicService(new FakeFfmpeg()).ApplyAsync(plan, []);
+
+        Assert.Equal(0, result.Failed);
+        foreach (IngestOutputPlan output in album.Outputs)
+        {
+            IMetadataProvider metadata = MediaFile.GetFile(output.DestinationPath).Tags.First();
+            Assert.False(metadata.HasAlbumArtist);
+            Assert.Equal(string.Empty, metadata.AlbumArtist);
+        }
+    }
+
+    [Fact]
     public async Task Apply_UsesMutationServiceWithThePlansExplicitItunesLibrary()
     {
         using var tree = new TempTree();

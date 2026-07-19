@@ -68,7 +68,7 @@
 
     <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
       <TextBlock Classes="muted" VerticalAlignment="Center" Text="{Binding StatusText}" TextTrimming="CharacterEllipsis" />
-      <Border x:Name="SelectedPill" Grid.Column="1" Classes="pill" IsVisible="False"><TextBlock x:Name="SelectedCountText" Classes="muted" /></Border>
+      <TextBlock x:Name="SelectedCountLabel" Grid.Column="1" Classes="summary-label" IsVisible="False" />
       <Button x:Name="CopyButton" Grid.Column="2" Classes="app" IsVisible="False" Content="Copy paths" Click="OnCopyPaths" />
       <Button x:Name="RevealButton" Grid.Column="3" Classes="app" IsVisible="False" Content="Reveal" Click="OnReveal" />
       <Button x:Name="ReindexButton" Grid.Column="4" Classes="app" IsVisible="False" Content="Reindex" Click="OnReindex" />

@@ -187,8 +187,52 @@ public sealed partial class ItlDocument
             return;
         }
 
-        SetInternedField(Tracks, track, (int)type, value);
+        uint? sharedKey = type switch
+        {
+            ItlDataType.Album => SharedAlbumNameKey(value),
+            ItlDataType.Artist or ItlDataType.AlbumArtist => SharedArtistNameKey(value),
+            _ => null,
+        };
+        if (sharedKey.HasValue)
+            SetFieldWithKey(track, (int)type, value, sharedKey.Value);
+        else
+            SetInternedField(Tracks, track, (int)type, value);
         track.SetDateModified(DateTime.UtcNow);
+    }
+
+    private uint SharedAlbumNameKey(string value) => SharedStringKey(value,
+        Albums.SelectMany(record => record.Fields.Where(field =>
+            field.Type == (int)ItlDataType.AlbumRecordName))
+        .Concat(Tracks.SelectMany(record => record.Fields.Where(field =>
+            field.Type == (int)ItlDataType.Album))));
+
+    private uint SharedArtistNameKey(string value) => SharedStringKey(value,
+        Artists.SelectMany(record => record.Fields.Where(field =>
+            field.Type == (int)ItlDataType.ArtistRecordName))
+        .Concat(Albums.SelectMany(record => record.Fields.Where(field =>
+            field.Type is (int)ItlDataType.AlbumRecordArtist or
+                (int)ItlDataType.AlbumRecordSortArtist)))
+        .Concat(Tracks.SelectMany(record => record.Fields.Where(field =>
+            field.Type == (int)ItlDataType.Artist)))
+        .Concat(Tracks.SelectMany(record => record.Fields.Where(field =>
+            field.Type == (int)ItlDataType.AlbumArtist))));
+
+    private static uint SharedStringKey(string value, IEnumerable<ItlField> domain)
+    {
+        ItlField[] fields = [.. domain];
+        ItlField? existing = fields.FirstOrDefault(field => field.Text == value);
+        if (existing is not null)
+            return FieldKey(existing);
+        return checked(fields.Select(FieldKey).DefaultIfEmpty(0u).Max() + 1);
+    }
+
+    private static uint FieldKey(ItlField field) =>
+        BinaryPrimitives.ReadUInt32LittleEndian(field.Header.AsSpan(16));
+
+    private static void SetFieldWithKey(ItlRecord record, int type, string value, uint key)
+    {
+        record.SetField(type, value);
+        BinaryPrimitives.WriteUInt32LittleEndian(record.Field(type)!.Header.AsSpan(16), key);
     }
 
     private static void SetInternedField(IEnumerable<ItlRecord> records, ItlRecord record, int type, string value)
@@ -474,12 +518,14 @@ public sealed partial class ItlDocument
 
     public ItlRecord AddAlbum(string name, string artist, ItlRecord template)
     {
+        uint nameKey = SharedAlbumNameKey(name);
+        uint artistKey = SharedArtistNameKey(artist);
         ItlRecord album = template.Clone();
         AssignNewIdentity(album, NextId());
-        SetInternedField(Albums, album, (int)ItlDataType.AlbumRecordName, name);
-        SetInternedField(Albums, album, (int)ItlDataType.AlbumRecordArtist, artist);
+        SetFieldWithKey(album, (int)ItlDataType.AlbumRecordName, name, nameKey);
+        SetFieldWithKey(album, (int)ItlDataType.AlbumRecordArtist, artist, artistKey);
         if (album.Field((int)ItlDataType.AlbumRecordSortArtist) is not null)
-            SetInternedField(Albums, album, (int)ItlDataType.AlbumRecordSortArtist, artist);
+            SetFieldWithKey(album, (int)ItlDataType.AlbumRecordSortArtist, artist, artistKey);
         Albums.Add(album);
         return album;
     }
@@ -497,9 +543,10 @@ public sealed partial class ItlDocument
 
     public ItlRecord AddArtist(string name, ItlRecord template)
     {
+        uint nameKey = SharedArtistNameKey(name);
         ItlRecord artist = template.Clone();
         AssignNewIdentity(artist, NextId());
-        SetInternedField(Artists, artist, (int)ItlDataType.ArtistRecordName, name);
+        SetFieldWithKey(artist, (int)ItlDataType.ArtistRecordName, name, nameKey);
         Artists.Add(artist);
         return artist;
     }

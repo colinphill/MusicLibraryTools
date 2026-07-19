@@ -479,6 +479,7 @@ public sealed class PresentationTests
                         Memberships =
                         [
                             new IndexTargetSetEntry { Name = "Lossless", Offset = "/FLAC" },
+                            new IndexTargetSetEntry { Name = "Mobile", Offset = "/FLAC" },
                             new IndexTargetSetEntry { Name = "Desktop" },
                         ],
                     },
@@ -503,12 +504,14 @@ public sealed class PresentationTests
             // The active configuration is restored directly into the editor; users should not
             // need to click Edit active before their roots and workflow targets appear.
             IndexTargetEditorRow root = Assert.Single(viewModel.IndexTargets);
-            Assert.Equal("/Music", root.DefaultOffset);
             Assert.True(root.UseItunesCanonicalNaming);
             Assert.Equal(LibraryIngestRole.Cd, root.IngestRole);
             Assert.True(root.IsSyncTarget);
             Assert.Equal(2, root.Memberships.Count);
+            Assert.Equal("Lossless, Mobile", root.Memberships[0].Name);
             Assert.Equal("/FLAC", root.Memberships[0].Offset);
+            Assert.Equal("Desktop", root.Memberships[1].Name);
+            Assert.Equal("/Music", root.Memberships[1].Offset);
             Assert.Equal(220, viewModel.LengthLimit);
             Assert.Equal(180, viewModel.DiscNumLengthLimit);
             Assert.Equal("aac_encoder", viewModel.AacEncoder);
@@ -518,13 +521,19 @@ public sealed class PresentationTests
             Assert.Equal(["Favorites", "RoadTrip"], viewModel.SyncPlaylists.Select(row => row.Name));
             Assert.Equal("Lossless", Assert.Single(viewModel.PlaylistTargets).Sets);
 
+            root.Memberships[0].Name = "Lossless, Mobile, Portable";
             root.Memberships[0].Offset = "/Portable/FLAC";
             viewModel.PlaylistTargets[0].Type = "m3u";
             await viewModel.SaveConfigurationCommand.ExecuteAsync(null);
 
             EditableLibraryConfig saved = EditableLibraryConfig.Load(configurationPath);
             IndexTargetEntry savedRoot = Assert.Single(saved.IndexTargets);
-            Assert.Equal("/Portable/FLAC", savedRoot.Memberships[0].Offset);
+            Assert.Null(savedRoot.DefaultOffset);
+            Assert.Equal(["Lossless", "Mobile", "Portable", "Desktop"],
+                savedRoot.Memberships.Select(membership => membership.Name));
+            Assert.All(savedRoot.Memberships.Take(3), membership =>
+                Assert.Equal("/Portable/FLAC", membership.Offset));
+            Assert.Equal("/Music", savedRoot.Memberships[3].Offset);
             Assert.True(savedRoot.UseItunesCanonicalNaming);
             Assert.True(savedRoot.IsSyncTarget);
             Assert.Equal(LibraryIngestRole.Cd, savedRoot.IngestRole);

@@ -78,6 +78,16 @@
   </Style>
   <Style Selector="TextBlock.muted"><Setter Property="Foreground" Value="{DynamicResource AppMutedBrush}" /></Style>
   <Style Selector="TextBlock.faint"><Setter Property="Foreground" Value="{DynamicResource AppFaintBrush}" /></Style>
+  <Style Selector="TextBlock.summary-label">
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Run.text-difference">
+    <Setter Property="Background" Value="{DynamicResource AppAccentSoftBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
   <Style Selector="TextBlock.page-title">
     <Setter Property="FontFamily" Value="{DynamicResource AppDisplayFont}" />
     <Setter Property="FontSize" Value="27" />
@@ -247,13 +257,6 @@
   </Style>
   <Style Selector="TextBox.primary:focus, ComboBox.primary:focus, NumericUpDown.primary:focus">
     <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
-  </Style>
-
-  <Style Selector="Border.pill">
-    <Setter Property="MinHeight" Value="25" />
-    <Setter Property="Padding" Value="8,0" />
-    <Setter Property="CornerRadius" Value="999" />
-    <Setter Property="Background" Value="{DynamicResource AppInsetBrush}" />
   </Style>
 
   <Style Selector="Border.result-card">

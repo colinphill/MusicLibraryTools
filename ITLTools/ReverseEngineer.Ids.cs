@@ -86,6 +86,98 @@ public static partial class ReverseEngineer
             Console.WriteLine($"  {range.Owner,-9} mhoh {range.Type,-3} count={range.Count,7:N0} " +
                               $"distinct={range.Distinct,7:N0} min={range.Minimum,7:N0} max={range.Maximum,7:N0} " +
                               $"delta={(long)range.Maximum - word88,7:+#;-#;0}");
+
+        var albumsById = document.Albums.ToDictionary(ItlDocument.RecordIdOf);
+        var artistsById = document.Artists.ToDictionary(ItlDocument.RecordIdOf);
+        Console.WriteLine("\ntrack/entity child-key correlations:");
+        Correlate(ItlDataType.Album, ItlDataType.AlbumRecordName,
+            track => albumsById.GetValueOrDefault(track.GetAlbumId()), "album -> linked album name");
+        Correlate(ItlDataType.Artist, ItlDataType.ArtistRecordName,
+            track => artistsById.GetValueOrDefault(track.GetArtistId()), "artist -> linked artist name");
+        Correlate(ItlDataType.AlbumArtist, ItlDataType.ArtistRecordName,
+            track => artistsById.GetValueOrDefault(track.GetArtistId()), "album artist -> linked artist name");
+        Correlate(ItlDataType.AlbumArtist, ItlDataType.AlbumRecordArtist,
+            track => albumsById.GetValueOrDefault(track.GetAlbumId()), "album artist -> linked album artist");
+
+        ItlRecord[] badEntityLinks = [.. document.Tracks.Where(track =>
+        {
+            ItlRecord? album = albumsById.GetValueOrDefault(track.GetAlbumId());
+            ItlRecord? artist = artistsById.GetValueOrDefault(track.GetArtistId());
+            string? trackAlbum = track.GetString(ItlDataType.Album);
+            string? trackAlbumArtist = track.GetString(ItlDataType.AlbumArtist);
+            string? albumName = album?.Field((int)ItlDataType.AlbumRecordName)?.Text;
+            string? albumArtist = album?.Field((int)ItlDataType.AlbumRecordArtist)?.Text;
+            string? artistName = artist?.Field((int)ItlDataType.ArtistRecordName)?.Text;
+            return trackAlbum is not null && albumName is not null && trackAlbum != albumName ||
+                   trackAlbumArtist is not null && albumArtist is not null && trackAlbumArtist != albumArtist ||
+                   trackAlbumArtist is not null && artistName is not null && trackAlbumArtist != artistName;
+        })];
+        Console.WriteLine($"\ntracks whose visible album metadata disagrees with linked entities: {badEntityLinks.Length:N0}");
+        foreach (ItlRecord track in badEntityLinks.Take(80))
+        {
+            ItlRecord? album = albumsById.GetValueOrDefault(track.GetAlbumId());
+            ItlRecord? artist = artistsById.GetValueOrDefault(track.GetArtistId());
+            Console.WriteLine($"  mith:{track.GetTrackId()} title=\"{track.GetString(ItlDataType.Title)}\"");
+            Console.WriteLine($"    track  artist=\"{track.GetString(ItlDataType.Artist)}\" " +
+                              $"albumArtist=\"{track.GetString(ItlDataType.AlbumArtist)}\" " +
+                              $"album=\"{track.GetString(ItlDataType.Album)}\"");
+            Console.WriteLine($"    linked artist=\"{artist?.Field((int)ItlDataType.ArtistRecordName)?.Text}\" " +
+                              $"albumArtist=\"{album?.Field((int)ItlDataType.AlbumRecordArtist)?.Text}\" " +
+                              $"album=\"{album?.Field((int)ItlDataType.AlbumRecordName)?.Text}\"");
+            Console.WriteLine($"    location=\"{track.GetString(ItlDataType.Location)}\"");
+        }
+
+        ReportCollisions("album names", document.Albums.SelectMany(record => record.Fields.Where(field =>
+                field.Type == (int)ItlDataType.AlbumRecordName))
+            .Concat(document.Tracks.SelectMany(record => record.Fields.Where(field =>
+                field.Type == (int)ItlDataType.Album))));
+        ReportCollisions("artist names", document.Artists.SelectMany(record => record.Fields.Where(field =>
+                field.Type == (int)ItlDataType.ArtistRecordName))
+            .Concat(document.Albums.SelectMany(record => record.Fields.Where(field =>
+                field.Type == (int)ItlDataType.AlbumRecordArtist ||
+                field.Type == (int)ItlDataType.AlbumRecordSortArtist)))
+            .Concat(document.Tracks.SelectMany(record => record.Fields.Where(field =>
+                field.Type == (int)ItlDataType.Artist ||
+                field.Type == (int)ItlDataType.AlbumArtist))));
+
+        static void ReportCollisions(string label, IEnumerable<ItlField> fields)
+        {
+            var collisions = fields.GroupBy(field =>
+                    BinaryPrimitives.ReadUInt32LittleEndian(field.Header.AsSpan(16)))
+                .Select(group => new
+                {
+                    Key = group.Key,
+                    Values = group.Select(field => field.Text).OfType<string>()
+                        .Distinct(StringComparer.Ordinal).ToArray(),
+                })
+                .Where(item => item.Values.Length > 1)
+                .ToArray();
+            Console.WriteLine($"\nshared {label} key collisions: {collisions.Length:N0}");
+            foreach (var collision in collisions.Take(20))
+                Console.WriteLine($"  key {collision.Key:N0}: {string.Join(" | ", collision.Values.Select(value => $"\"{value}\""))}");
+        }
+
+        void Correlate(ItlDataType trackType, ItlDataType entityType,
+            Func<ItlRecord, ItlRecord?> resolve, string label)
+        {
+            int pairs = 0, keyMatches = 0, textMatches = 0;
+            foreach (ItlRecord track in document.Tracks)
+            {
+                ItlField? left = track.Field((int)trackType);
+                ItlField? right = resolve(track)?.Field((int)entityType);
+                if (left is null || right is null)
+                    continue;
+                pairs++;
+                if (BinaryPrimitives.ReadUInt32LittleEndian(left.Header.AsSpan(16)) ==
+                    BinaryPrimitives.ReadUInt32LittleEndian(right.Header.AsSpan(16)))
+                    keyMatches++;
+                if (string.Equals(left.Text, right.Text, StringComparison.Ordinal))
+                    textMatches++;
+            }
+            Console.WriteLine($"  {label,-38} pairs={pairs,7:N0} keys={keyMatches,7:N0} " +
+                              $"({(pairs == 0 ? 0 : (double)keyMatches / pairs):P1}) " +
+                              $"text={textMatches,7:N0} ({(pairs == 0 ? 0 : (double)textMatches / pairs):P1})");
+        }
     }
 
     public static void Memberships(ItlDocument document, int trackId)

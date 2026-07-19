@@ -256,6 +256,143 @@ public sealed class WriterAndMutationTests
     }
 
     [Fact]
+    public void CacheRepairChangesOnlyCachedTagFieldsAndRelinksEntities()
+    {
+        ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+        ItlRecord track = document.Tracks.Single();
+        document.SetTrackString(track, ItlDataType.Location, @"C:\Music\Track.m4a");
+        document.SetTrackString(track, ItlDataType.Genre, "Preserved genre");
+        document.SetTrackString(track, ItlDataType.Composer, "Preserved composer");
+        track.SetBpm(123);
+        track.SetDuration(TimeSpan.FromMilliseconds(201234));
+        track.SetArtworkCount(2);
+        track.SetPartOfGaplessAlbum(true);
+        track.SetSize(987654);
+
+        document.RepairLocalTrackFromCache(track, new ItlCachedTrackMetadata
+        {
+            Title = "Cached title",
+            Artist = "Cached track artist",
+            AlbumArtist = "Cached album artist",
+            HasExplicitAlbumArtist = true,
+            Album = "Cached album",
+            TrackNumber = 4,
+            TrackCount = 11,
+            DiscNumber = 2,
+            DiscCount = 3,
+            Year = 2026,
+            Compilation = true,
+        }, new DateTime(2026, 7, 19, 12, 0, 0, DateTimeKind.Utc));
+
+        Assert.Equal("Cached title", track.GetString(ItlDataType.Title));
+        Assert.Equal("Cached track artist", track.GetString(ItlDataType.Artist));
+        Assert.Equal("Cached album artist", track.GetString(ItlDataType.AlbumArtist));
+        Assert.Equal("Cached album", track.GetString(ItlDataType.Album));
+        Assert.Equal(4, track.GetTrackNumber());
+        Assert.Equal(11, track.GetTrackCount());
+        Assert.Equal(2, track.GetDiscNumber());
+        Assert.Equal(3, track.GetDiscCount());
+        Assert.Equal(2026, track.GetYear());
+        Assert.True(track.GetCompilation());
+
+        Assert.Equal(@"C:\Music\Track.m4a", track.GetString(ItlDataType.Location));
+        Assert.Equal("Preserved genre", track.GetString(ItlDataType.Genre));
+        Assert.Equal("Preserved composer", track.GetString(ItlDataType.Composer));
+        Assert.Equal(123, track.GetBpm());
+        Assert.Equal(TimeSpan.FromMilliseconds(201234), track.GetDuration());
+        Assert.Equal(2, track.GetArtworkCount());
+        Assert.True(track.GetPartOfGaplessAlbum());
+        Assert.Equal(987654ul, track.GetSize());
+
+        ItlRecord album = document.Albums.Single(value =>
+            ItlDocument.RecordIdOf(value) == track.GetAlbumId());
+        ItlRecord artist = document.Artists.Single(value =>
+            ItlDocument.RecordIdOf(value) == track.GetArtistId());
+        Assert.Equal("Cached album", album.Field((int)ItlDataType.AlbumRecordName)?.Text);
+        Assert.Equal("Cached album artist", album.Field((int)ItlDataType.AlbumRecordArtist)?.Text);
+        Assert.Equal("Cached album artist", artist.Field((int)ItlDataType.ArtistRecordName)?.Text);
+        Assert.DoesNotContain(document.Validate(), issue =>
+            issue.Severity == ItlValidationSeverity.Error);
+    }
+
+    [Fact]
+    public void MetadataEditsShareAlbumAndArtistKeysAcrossTrackAndEntityRecords()
+    {
+        ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+        ItlRecord template = document.Tracks.Single();
+        ItlRecord albumTemplate = document.Albums.Single();
+        ItlRecord artistTemplate = document.Artists.Single();
+
+        document.AddAlbum("Entity-only album", "Entity-only artist", albumTemplate);
+        document.AddArtist("Entity-only artist", artistTemplate);
+        document.SetTrackString(template, ItlDataType.Album, "Track-only album");
+        document.SetTrackString(template, ItlDataType.Artist, "Track-only artist");
+        document.SetTrackString(template, ItlDataType.AlbumArtist, "Track-only album artist");
+
+        ItlRecord imported = document.AddTrack(template);
+        document.RefreshLocalTrack(imported, Path.Combine(Path.GetTempPath(), "new-track.m4a"),
+            new ItlLocalTrackMetadata
+            {
+                Title = "New track",
+                Artist = "New artist",
+                AlbumArtist = "New artist",
+                Album = "New album",
+            }, 1234, DateTime.UtcNow);
+
+        ItlRecord linkedAlbum = document.Albums.Single(album =>
+            ItlDocument.RecordIdOf(album) == imported.GetAlbumId());
+        ItlRecord linkedArtist = document.Artists.Single(artist =>
+            ItlDocument.RecordIdOf(artist) == imported.GetArtistId());
+        uint albumKey = Key(imported.Field((int)ItlDataType.Album)!);
+        uint artistKey = Key(linkedArtist.Field((int)ItlDataType.ArtistRecordName)!);
+        Assert.Equal(albumKey, Key(linkedAlbum.Field((int)ItlDataType.AlbumRecordName)!));
+        Assert.Equal(artistKey, Key(imported.Field((int)ItlDataType.Artist)!));
+        Assert.Equal(artistKey, Key(imported.Field((int)ItlDataType.AlbumArtist)!));
+        Assert.Equal(artistKey, Key(linkedAlbum.Field((int)ItlDataType.AlbumRecordArtist)!));
+
+        AssertNoKeyCollisions(document.Tracks.SelectMany(record => record.Fields)
+            .Where(field => field.Type == (int)ItlDataType.Album)
+            .Concat(document.Albums.SelectMany(record => record.Fields)
+                .Where(field => field.Type == (int)ItlDataType.AlbumRecordName)));
+        IEnumerable<ItlField> artistDomain = document.Tracks.SelectMany(record => record.Fields)
+            .Where(field => field.Type == (int)ItlDataType.Artist ||
+                            field.Type == (int)ItlDataType.AlbumArtist)
+            .Concat(document.Albums.SelectMany(record => record.Fields)
+                .Where(field => field.Type == (int)ItlDataType.AlbumRecordArtist ||
+                                field.Type == (int)ItlDataType.AlbumRecordSortArtist))
+            .Concat(document.Artists.SelectMany(record => record.Fields)
+                .Where(field => field.Type == (int)ItlDataType.ArtistRecordName));
+        AssertNoKeyCollisions(artistDomain);
+
+        static uint Key(ItlField field) =>
+            BinaryPrimitives.ReadUInt32LittleEndian(field.Header.AsSpan(16));
+        static void AssertNoKeyCollisions(IEnumerable<ItlField> fields)
+        {
+            Assert.DoesNotContain(fields.GroupBy(Key), group =>
+                group.Select(field => field.Text).Distinct(StringComparer.Ordinal).Count() > 1);
+        }
+    }
+
+    [Fact]
+    public void ValidationRejectsSharedMetadataKeysThatNameDifferentValues()
+    {
+        ItlDocument document = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+        ItlRecord track = document.Tracks.Single();
+        ItlRecord album = document.AddAlbum("Album entity", "Artist entity", document.Albums.Single());
+        document.SetTrackString(track, ItlDataType.Album, "Different track album");
+        uint albumEntityKey = BinaryPrimitives.ReadUInt32LittleEndian(
+            album.Field((int)ItlDataType.AlbumRecordName)!.Header.AsSpan(16));
+        BinaryPrimitives.WriteUInt32LittleEndian(
+            track.Field((int)ItlDataType.Album)!.Header.AsSpan(16), albumEntityKey);
+
+        ItlValidationIssue issue = Assert.Single(document.Validate(), item =>
+            item.Code == "metadata.album-key-collision");
+        Assert.Equal(ItlValidationSeverity.Error, issue.Severity);
+        Assert.Contains("Album entity", issue.Message);
+        Assert.Contains("Different track album", issue.Message);
+    }
+
+    [Fact]
     public void GenericLocalImportUsesSameExtensionTemplateAndBuiltInMemberships()
     {
         string templatePath = Path.Combine(Path.GetTempPath(), "template.mp3");
@@ -379,6 +516,36 @@ public sealed class WriterAndMutationTests
         Assert.Equal((ulong)cloud.Offset + 0xF0,
             BinaryPrimitives.ReadUInt64LittleEndian(result.Body.AsSpan(mlqh.Offset + 28)));
         Assert.DoesNotContain(ItlDocument.Parse(result).Validate(), issue => issue.Code.StartsWith("mlqh."));
+    }
+
+    [Fact]
+    public void SaveValidatedRefreshesMlqhAnchorsBeforeValidatingSizeChangingEdits()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), $"itl-mlqh-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        string path = Path.Combine(directory, "library.itl");
+        try
+        {
+            ItlEnvelope initial = ItlEnvelope.Parse(ItlWriter.Build(
+                SyntheticLibrary.CreateEnvelope(),
+                SyntheticLibrary.CreateBody(includeMlqh: true)));
+            ItlDocument seeded = ItlDocument.Parse(initial);
+            seeded.SetTrackString(seeded.Tracks.Single(), ItlDataType.Title, "1234567890");
+            File.WriteAllBytes(path, ItlWriter.Build(initial, seeded.Serialize()));
+
+            ItlDocument edited = ItlDocument.Load(path);
+            edited.SetTrackString(edited.Tracks.Single(), ItlDataType.Title, "12345");
+
+            ItlFileEditor.SaveValidated(edited, path);
+
+            ItlDocument written = ItlDocument.Load(path);
+            Assert.Equal("12345", written.Tracks.Single().GetString(ItlDataType.Title));
+            Assert.DoesNotContain(written.Validate(), issue => issue.Code.StartsWith("mlqh."));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
     }
 
     [Fact]

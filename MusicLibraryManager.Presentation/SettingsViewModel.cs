@@ -261,17 +261,18 @@ public partial class SettingsViewModel : ObservableObject
                     Path = target.Target,
                     Filter = target.Filter,
                     Organize = target.Organize,
-                    DefaultOffset = target.DefaultOffset,
                     UseItunesCanonicalNaming = target.UseItunesCanonicalNaming,
                     IngestRole = target.IngestRole,
                     IsSyncTarget = target.IsSyncTarget,
                     Source = target,
                 };
-                foreach (IndexTargetSetEntry membership in target.Memberships)
+                foreach (IGrouping<string?, IndexTargetSetEntry> memberships in target.Memberships
+                             .GroupBy(membership => EffectiveOffset(membership, target),
+                                 StringComparer.Ordinal))
                     row.Memberships.Add(new IndexTargetSetEditorRow
                     {
-                        Name = membership.Name,
-                        Offset = membership.Offset,
+                        Name = string.Join(", ", memberships.Select(membership => membership.Name)),
+                        Offset = memberships.Key,
                     });
                 IndexTargets.Add(row);
             }
@@ -326,19 +327,17 @@ public partial class SettingsViewModel : ObservableObject
                         Target = row.Path.Trim(),
                         Filter = string.IsNullOrWhiteSpace(row.Filter) ? null : row.Filter.Trim(),
                         Organize = row.Organize,
-                        DefaultOffset = string.IsNullOrWhiteSpace(row.DefaultOffset)
-                            ? null : row.DefaultOffset.Trim(),
                         UseItunesCanonicalNaming = row.UseItunesCanonicalNaming,
                         IngestRole = row.IngestRole,
                         IsSyncTarget = row.IsSyncTarget,
                         Memberships = row.Memberships
-                            .Where(membership => !string.IsNullOrWhiteSpace(membership.Name))
-                            .Select(membership => new IndexTargetSetEntry
-                            {
-                                Name = membership.Name.Trim(),
-                                Offset = string.IsNullOrWhiteSpace(membership.Offset)
-                                    ? null : membership.Offset.Trim(),
-                            }).ToList(),
+                            .SelectMany(membership => LibraryConfiguration
+                                .ParseScanSets(membership.Name)
+                                .Select(name => new IndexTargetSetEntry
+                                {
+                                    Name = name,
+                                    Offset = CleanOptional(membership.Offset),
+                                })).ToList(),
                     };
                 }).ToList();
             _editing.SyncPlaylists = SyncPlaylists
@@ -379,4 +378,12 @@ public partial class SettingsViewModel : ObservableObject
         foreach (string path in _settings.RecentConfigPaths)
             RecentConfigurations.Add(path);
     }
+
+    private static string? EffectiveOffset(
+        IndexTargetSetEntry membership,
+        IndexTargetEntry target) =>
+        CleanOptional(membership.Offset) ?? CleanOptional(target.DefaultOffset);
+
+    private static string? CleanOptional(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

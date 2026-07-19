@@ -63,8 +63,10 @@ namespace MusicFileUtilities.Tests
             Assert.Equal("TestArtist", tag.Artist);
             Assert.Equal("TestAlbum", tag.Album);
             Assert.Equal(3, tag.TrackNumber);
-            // No AlbumArtist tag present -> falls back to Artist.
-            Assert.Equal("TestArtist", tag.AlbumArtist);
+            // AlbumArtist represents only an explicit nonblank tag. Grouping callers use their
+            // own effective Artist fallback when this value is empty.
+            Assert.Equal(string.Empty, tag.AlbumArtist);
+            Assert.False(tag.HasAlbumArtist);
         }
     }
 }

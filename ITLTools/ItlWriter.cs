@@ -21,7 +21,13 @@ public static class ItlWriter
 
     public static void Save(ItlEnvelope envelope, byte[] body, string path)
     {
-        byte[] data = Build(envelope, body);
+        SaveBuilt(Build(envelope, body), path);
+    }
+
+    /// <summary>Atomically commits an already-built and optionally validated .itl image.</summary>
+    internal static void SaveBuilt(byte[] data, string path)
+    {
+        ArgumentNullException.ThrowIfNull(data);
         path = Path.GetFullPath(path);
         string directory = Path.GetDirectoryName(path)!;
         Directory.CreateDirectory(directory);

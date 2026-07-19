@@ -127,11 +127,11 @@ public sealed class IngestMusicService : IIngestMusicService
         var approvals = new List<IngestApprovalItem>();
         var claimed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var group in scanned.GroupBy(t => AlbumKey(t.AlbumArtist, t.BaseAlbum)))
+        foreach (var group in scanned.GroupBy(t => AlbumKey(t.EffectiveAlbumArtist, t.BaseAlbum)))
         {
             ct.ThrowIfCancellationRequested();
             var sourceTracks = group.ToList();
-            string display = $"{sourceTracks[0].AlbumArtist} — {sourceTracks[0].BaseAlbum}";
+            string display = $"{sourceTracks[0].EffectiveAlbumArtist} — {sourceTracks[0].BaseAlbum}";
             int before = conflicts.Count;
             var discs = sourceTracks.Where(t => t.DiscNumber.HasValue).Select(t => t.DiscNumber!.Value).Distinct().Order().ToArray();
             bool multiDisc = discs.Length > 1;
@@ -154,7 +154,8 @@ public sealed class IngestMusicService : IIngestMusicService
                 {
                     int normalizedTrack = track.TrackNumber - offset;
                     string normalizedAlbum = multiDisc ? $"{track.BaseAlbum} (Disc {discGroup.Key})" : track.BaseAlbum;
-                    string identity = TrackKey(track.AlbumArtist, track.BaseAlbum, discGroup.Key, track.TrackNumber, track.Title);
+                    string identity = TrackKey(track.EffectiveAlbumArtist, track.BaseAlbum,
+                        discGroup.Key, track.TrackNumber, track.Title);
                     trackPlans.Add(new IngestTrackPlan
                     {
                         Identity = identity,
@@ -303,19 +304,21 @@ public sealed class IngestMusicService : IIngestMusicService
             if (codec.CodecType != CodecType.Lossless)
                 return PreviewFileResult.Ignored(snapshot);
             string artist = (tag.Artist ?? "").Trim();
-            string albumArtist = (tag.AlbumArtist ?? "").Trim();
+            string? albumArtist = tag.HasAlbumArtist &&
+                !string.IsNullOrWhiteSpace(tag.AlbumArtist)
+                    ? tag.AlbumArtist.Trim()
+                    : null;
             string album = (tag.Album ?? "").Trim();
             string title = (tag.Title ?? "").Trim();
-            if (string.IsNullOrWhiteSpace(albumArtist)) albumArtist = artist;
             string? compilationValue = tag.GetKnownMetadata()
                 .FirstOrDefault(field => field.Key == TagFields.Compilation).Value;
             bool compilation = compilationValue is not null &&
                 (compilationValue.Equals("1", StringComparison.OrdinalIgnoreCase) ||
                  compilationValue.Equals("true", StringComparison.OrdinalIgnoreCase) ||
                  compilationValue.Equals("yes", StringComparison.OrdinalIgnoreCase));
-            if (string.IsNullOrWhiteSpace(artist) || string.IsNullOrWhiteSpace(albumArtist) ||
+            if (string.IsNullOrWhiteSpace(artist) ||
                 string.IsNullOrWhiteSpace(album) || string.IsNullOrWhiteSpace(title) || tag.TrackNumber is null)
-                throw new InvalidDataException("Artist, album artist, album, title, and track number are required.");
+                throw new InvalidDataException("Artist, album, title, and track number are required.");
             if (codec.Channels != 2)
                 throw new InvalidDataException($"Only stereo input is supported (found {codec.Channels} channels).");
             if (codec.Samplerate < 44100 || codec.BitsPerSample < 16)
@@ -767,7 +770,10 @@ public sealed class IngestMusicService : IIngestMusicService
             ?? throw new InvalidDataException($"Output tag format is not writable: {path}");
         writer.SetField(TagFields.Title, track.Title);
         writer.SetField(TagFields.Artist, track.Artist);
-        writer.SetField(TagFields.AlbumArtist, track.AlbumArtist);
+        if (!string.IsNullOrWhiteSpace(track.AlbumArtist))
+            writer.SetField(TagFields.AlbumArtist, track.AlbumArtist);
+        else
+            writer.RemoveField(TagFields.AlbumArtist);
         writer.SetField(TagFields.Album, track.Album);
         writer.SetField(TagFields.TrackNumber, track.TrackNumber.ToString());
         writer.SetField(TagFields.TotalTracks, track.TrackTotal.ToString());
@@ -817,7 +823,10 @@ public sealed class IngestMusicService : IIngestMusicService
     }
 
     private static int ArtworkCount(string path) => MediaFile.GetFile(path).Tags.Sum(t => t.GetImageMetadata().Count());
-    private static bool Same(string? a, string? b) => string.Equals(a?.Trim(), b?.Trim(), StringComparison.Ordinal);
+    private static bool Same(string? a, string? b) => string.Equals(
+        string.IsNullOrWhiteSpace(a) ? null : a.Trim(),
+        string.IsNullOrWhiteSpace(b) ? null : b.Trim(),
+        StringComparison.Ordinal);
 
     private static void EnsureFresh(IngestPlan plan)
     {
@@ -841,7 +850,7 @@ public sealed class IngestMusicService : IIngestMusicService
     private static string ClaimCanonical(string root, IngestTrackPlan track, string extension,
         IngestMusicConfiguration config, HashSet<string> claimed)
     {
-        string artist = track.AlbumArtist.LimitLength(config.LengthLimit).FixPath();
+        string artist = track.EffectiveAlbumArtist.LimitLength(config.LengthLimit).FixPath();
         string album = track.Album.FormatDisc(config.LengthLimit, config.DiscNumLengthLimit).FixPath();
         string title = track.Title.LimitLength(config.LengthLimit).FixPath();
         string relative = Path.Combine(artist, album, $"{track.TrackNumber:D2} {title}");
@@ -903,7 +912,11 @@ public sealed class IngestMusicService : IIngestMusicService
         public static PreviewFileResult Ignored(IngestFileSnapshot snapshot) => new(null, null, snapshot);
     }
 
-    private sealed record ScannedTrack(string Path, string Artist, string AlbumArtist, string BaseAlbum,
+    private sealed record ScannedTrack(string Path, string Artist, string? AlbumArtist, string BaseAlbum,
         string Title, int TrackNumber, int? DiscNumber, uint SampleRate, uint BitsPerSample,
-        uint Channels, uint Duration, bool IsAlac, bool Compilation, IngestFileSnapshot Snapshot);
+        uint Channels, uint Duration, bool IsAlac, bool Compilation, IngestFileSnapshot Snapshot)
+    {
+        public string EffectiveAlbumArtist =>
+            !string.IsNullOrWhiteSpace(AlbumArtist) ? AlbumArtist : Artist;
+    }
 }

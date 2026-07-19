@@ -238,7 +238,7 @@ namespace MusicFileUtilities
                         break;
                     case TagFields.AlbumArtist:
                         AlbumArtist = kv.Value;
-                        HasAlbumArtist = true;
+                        HasAlbumArtist = !string.IsNullOrWhiteSpace(kv.Value);
                         break;
                     case TagFields.Album:
                         Album = kv.Value;
@@ -266,8 +266,6 @@ namespace MusicFileUtilities
                         break;
                 }    
             }
-            if (string.IsNullOrEmpty(AlbumArtist))
-                AlbumArtist = Artist;
         }
 
         public abstract string TagType { get; }

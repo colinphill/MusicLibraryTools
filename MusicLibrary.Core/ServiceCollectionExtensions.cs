@@ -14,6 +14,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IFileInventoryService, FileInventoryService>();
         services.AddSingleton<IFileMutationPlanExecutor, FileMutationPlanExecutor>();
         services.AddSingleton<ILibraryOperationContextFactory, LibraryOperationContextFactory>();
+        services.AddSingleton<IItlMetadataRepairService, ItlMetadataRepairService>();
         services.AddSingleton<ICrossLibrarySyncService, CrossLibrarySyncService>();
         services.AddSingleton<IPlaylistExportService, PlaylistExportService>();
         services.AddSingleton<IItunesValidationService, ItunesValidationService>();

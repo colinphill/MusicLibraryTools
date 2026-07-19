@@ -208,6 +208,14 @@ public partial class MainWindow : Window
             BeginMoveDrag(e);
     }
 
+    private void OnResizeGripPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (WindowState != WindowState.Normal || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            return;
+        BeginResizeDrag(WindowEdge.SouthEast, e);
+        e.Handled = true;
+    }
+
     private void OnMinimizeClick(object? sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
     private void OnMaximizeRestoreClick(object? sender, RoutedEventArgs e) => ToggleMaximize();
     private void OnCloseClick(object? sender, RoutedEventArgs e) => Close();
@@ -219,6 +227,7 @@ public partial class MainWindow : Window
     private void UpdateMaximizeButton()
     {
         bool maximized = WindowState == WindowState.Maximized;
+        ResizeGrip.IsVisible = !maximized;
         MaximizeGlyph.IsVisible = !maximized;
         RestoreGlyph.IsVisible = maximized;
         ToolTip.SetTip(MaximizeButton, maximized ? "Restore" : "Maximize");

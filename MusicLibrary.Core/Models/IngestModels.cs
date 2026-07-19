@@ -38,7 +38,10 @@ public sealed record IngestTrackPlan
     public required string SourcePath { get; init; }
     public required string Title { get; init; }
     public required string Artist { get; init; }
-    public required string AlbumArtist { get; init; }
+    /// <summary>The explicit nonblank Album Artist tag, or null when the source omitted it.</summary>
+    public string? AlbumArtist { get; init; }
+    public string EffectiveAlbumArtist =>
+        !string.IsNullOrWhiteSpace(AlbumArtist) ? AlbumArtist : Artist;
     public required string Album { get; init; }
     public required int TrackNumber { get; init; }
     public required int TrackTotal { get; init; }

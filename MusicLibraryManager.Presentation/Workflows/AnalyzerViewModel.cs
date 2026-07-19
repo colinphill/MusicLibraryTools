@@ -16,6 +16,7 @@ public enum AnalysisResultView
     Repairs,
     RepresentationRepairs,
     Matrix,
+    ItlRepairs,
 }
 
 /// <summary>
@@ -32,6 +33,7 @@ public partial class AnalyzerViewModel : ViewModelBase
     private readonly IAnalysisRepairService _repairs;
     private readonly IDecodedAudioVerificationService? _decodedAudio;
     private readonly IRepresentationRepairService? _representationRepairs;
+    private readonly IItlMetadataRepairService? _itlMetadataRepairs;
     private readonly IAppSettings _settings;
     private CancellationTokenSource? _cts;
     private IReadOnlyList<TrackRecord> _representationRecords = [];
@@ -71,11 +73,16 @@ public partial class AnalyzerViewModel : ViewModelBase
     public IReadOnlyList<string> RepresentationWarnings =>
         SelectedRun?.RepresentationWarnings ?? [];
     public IReadOnlyList<AlbumMetadataMatrix> Matrices => SelectedRun?.Matrices ?? [];
+    public IReadOnlyList<ItlMetadataRepairItemViewModel> ItlRepairItems =>
+        SelectedRun?.ItlRepairItems ?? [];
+    public IReadOnlyList<ItlMetadataRepairCategoryGroupViewModel> ItlRepairGroups =>
+        SelectedRun?.ItlRepairGroups ?? [];
     public bool HasRuns => Runs.Count > 0;
 
     private object? _selectedFindingNode;
     private object? _selectedRepairNode;
     private object? _selectedRepresentationNode;
+    private object? _selectedItlRepairNode;
 
     public object? SelectedFindingNode
     {
@@ -107,6 +114,16 @@ public partial class AnalyzerViewModel : ViewModelBase
         {
             if (SetProperty(ref _selectedRepresentationNode, value))
                 OnPropertyChanged(nameof(DisplayedRepresentationItems));
+        }
+    }
+
+    public object? SelectedItlRepairNode
+    {
+        get => _selectedItlRepairNode;
+        set
+        {
+            if (SetProperty(ref _selectedItlRepairNode, value))
+                OnPropertyChanged(nameof(DisplayedItlRepairItems));
         }
     }
 
@@ -156,6 +173,19 @@ public partial class AnalyzerViewModel : ViewModelBase
                 .SelectMany(group => group.Items).ToList(),
         };
 
+    public IReadOnlyList<ItlMetadataRepairItemViewModel> DisplayedItlRepairItems =>
+        SelectedItlRepairNode switch
+        {
+            ItlMetadataRepairItemViewModel item => [item],
+            ItlMetadataRepairAlbumGroupViewModel album => album.Items,
+            ItlMetadataRepairArtistGroupViewModel artist => artist.Albums
+                .SelectMany(group => group.Items).Distinct().ToList(),
+            ItlMetadataRepairCategoryGroupViewModel category => category.Artists
+                .SelectMany(group => group.Albums)
+                .SelectMany(group => group.Items).Distinct().ToList(),
+            _ => ItlRepairItems,
+        };
+
     // Section visibility (bound in XAML; ActiveView drives which one shows).
     public bool ShowFindings => ActiveView == AnalysisResultView.Findings;
     public bool ShowDuplicates => ActiveView == AnalysisResultView.Duplicates;
@@ -176,6 +206,7 @@ public partial class AnalyzerViewModel : ViewModelBase
             AnalysisResultView.RepresentationRepairs => 4,
             AnalysisResultView.Conflicts => 5,
             AnalysisResultView.Matrix => 6,
+            AnalysisResultView.ItlRepairs => 7,
             _ => 0,
         };
         set
@@ -189,6 +220,7 @@ public partial class AnalyzerViewModel : ViewModelBase
                 4 => AnalysisResultView.RepresentationRepairs,
                 5 => AnalysisResultView.Conflicts,
                 6 => AnalysisResultView.Matrix,
+                7 => AnalysisResultView.ItlRepairs,
                 _ => AnalysisResultView.Findings,
             };
 
@@ -204,13 +236,15 @@ public partial class AnalyzerViewModel : ViewModelBase
     public AnalyzerViewModel(ILibraryService library, IArtistReconciler reconciler,
         IAnalysisRepairService repairs, IAppSettings settings,
         IDecodedAudioVerificationService? decodedAudio = null,
-        IRepresentationRepairService? representationRepairs = null)
+        IRepresentationRepairService? representationRepairs = null,
+        IItlMetadataRepairService? itlMetadataRepairs = null)
     {
         _library = library;
         _reconciler = reconciler;
         _repairs = repairs;
         _decodedAudio = decodedAudio;
         _representationRepairs = representationRepairs;
+        _itlMetadataRepairs = itlMetadataRepairs;
         _settings = settings;
         settings.ConfigurationChanged += (_, _) =>
         {
@@ -238,6 +272,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         SelectedFindingNode = null;
         SelectedRepairNode = null;
         SelectedRepresentationNode = null;
+        SelectedItlRepairNode = null;
         OnPropertyChanged(nameof(FindingGroups));
         OnPropertyChanged(nameof(FindingCount));
         OnPropertyChanged(nameof(Duplicates));
@@ -249,9 +284,12 @@ public partial class AnalyzerViewModel : ViewModelBase
         OnPropertyChanged(nameof(RepresentationActionGroups));
         OnPropertyChanged(nameof(RepresentationWarnings));
         OnPropertyChanged(nameof(Matrices));
+        OnPropertyChanged(nameof(ItlRepairItems));
+        OnPropertyChanged(nameof(ItlRepairGroups));
         OnPropertyChanged(nameof(DisplayedFindings));
         OnPropertyChanged(nameof(DisplayedRepairItems));
         OnPropertyChanged(nameof(DisplayedRepresentationItems));
+        OnPropertyChanged(nameof(DisplayedItlRepairItems));
 
         if (value is not null)
         {
@@ -556,6 +594,80 @@ public partial class AnalyzerViewModel : ViewModelBase
     private bool CanApplyRepairs() => !IsBusy && SelectedRun?.RepairPlan is not null &&
         RepairItems.Any(item => item.IsActive);
 
+    private bool CanPreviewItlMetadataRepairs() => CanRun() && _itlMetadataRepairs is not null;
+
+    [RelayCommand(CanExecute = nameof(CanPreviewItlMetadataRepairs))]
+    private async Task PreviewItlMetadataRepairs()
+    {
+        if (_itlMetadataRepairs is null)
+            return;
+        using var scope = BeginRun("iTunes metadata repair preview", AnalysisResultView.ItlRepairs);
+        try
+        {
+            var progress = new Progress<OperationProgress>(value =>
+                StatusText = value.Message ?? "Preparing iTunes metadata repairs…");
+            ItlMetadataRepairPlan plan = await _itlMetadataRepairs.PreviewAsync(
+                progress: progress, ct: scope.Token);
+            var items = plan.Items.Select(item =>
+            {
+                var viewModel = new ItlMetadataRepairItemViewModel(item);
+                viewModel.StateChanged += () => ApplyItlMetadataRepairsCommand.NotifyCanExecuteChanged();
+                return viewModel;
+            }).ToList();
+            string status = items.Count == 0
+                ? "The iTunes library already matches the metadata cache."
+                : $"Previewed {items.Count:N0} iTunes track repair(s). Review, mark repairs active, then apply.";
+            AddRun(AnalysisRunViewModel.ForItlRepairs(plan, items, status));
+        }
+        catch (OperationCanceledException) { StatusText = "iTunes metadata repair preview cancelled."; }
+        catch (Exception ex) { StatusText = $"iTunes metadata repair preview failed: {ex.Message}"; }
+        finally { ApplyItlMetadataRepairsCommand.NotifyCanExecuteChanged(); }
+    }
+
+    private bool CanApplyItlMetadataRepairs() => !IsBusy &&
+        _itlMetadataRepairs is not null && SelectedRun?.ItlRepairPlan is not null &&
+        ItlRepairItems.Any(item => item.IsActive);
+
+    [RelayCommand(CanExecute = nameof(CanApplyItlMetadataRepairs))]
+    private async Task ApplyItlMetadataRepairs()
+    {
+        if (_itlMetadataRepairs is null || SelectedRun?.ItlRepairPlan is not { } plan)
+            return;
+        ItlMetadataRepairItemViewModel[] selected = [.. ItlRepairItems.Where(item => item.IsActive)];
+        if (selected.Length == 0)
+            return;
+        using var scope = BeginRun("Apply iTunes metadata repairs", AnalysisResultView.ItlRepairs);
+        try
+        {
+            var progress = new Progress<int>(done =>
+                StatusText = $"Applying iTunes metadata repairs… {done:N0}/{selected.Length:N0}");
+            ItlMetadataRepairApplyResult result = await _itlMetadataRepairs.ApplyAsync(
+                plan, selected.Select(item => item.Item.Id).ToArray(), progress, scope.Token);
+            var byId = result.Items.ToDictionary(item => item.Item.Id);
+            foreach (ItlMetadataRepairItemViewModel item in selected)
+            {
+                if (!byId.TryGetValue(item.Item.Id, out ItlMetadataRepairItemResult? applied))
+                    continue;
+                item.ResultText = applied.Outcome switch
+                {
+                    ItlMetadataRepairOutcome.Applied => "Applied",
+                    ItlMetadataRepairOutcome.Skipped => "Already correct",
+                    _ => applied.Error ?? "Failed",
+                };
+                if (applied.Outcome is ItlMetadataRepairOutcome.Applied or ItlMetadataRepairOutcome.Skipped)
+                {
+                    item.IsApplied = true;
+                    item.Disposition = AnalysisRepairDisposition.Completed;
+                }
+            }
+            StatusText = $"iTunes metadata repairs: {result.Applied:N0} applied, " +
+                $"{result.Skipped:N0} skipped, {result.Failed:N0} failed. A .bak backup was retained.";
+        }
+        catch (OperationCanceledException) { StatusText = "iTunes metadata repair apply cancelled."; }
+        catch (Exception ex) { StatusText = $"iTunes metadata repair apply failed: {ex.Message}"; }
+        finally { ApplyItlMetadataRepairsCommand.NotifyCanExecuteChanged(); }
+    }
+
     [RelayCommand(CanExecute = nameof(CanApplyRepairs))]
     private async Task ApplyRepairs()
     {
@@ -797,6 +909,8 @@ public partial class AnalyzerViewModel : ViewModelBase
         PreviewMetadataRepairsCommand.NotifyCanExecuteChanged();
         ApplyRepairsCommand.NotifyCanExecuteChanged();
         ApplyRepresentationRepairsCommand.NotifyCanExecuteChanged();
+        PreviewItlMetadataRepairsCommand.NotifyCanExecuteChanged();
+        ApplyItlMetadataRepairsCommand.NotifyCanExecuteChanged();
         RemoveRunCommand.NotifyCanExecuteChanged();
         ClearRunsCommand.NotifyCanExecuteChanged();
     }
@@ -812,8 +926,255 @@ public partial class AnalyzerViewModel : ViewModelBase
     }
 }
 
+public partial class ItlMetadataRepairItemViewModel : ViewModelBase
+{
+    private readonly TextDifferenceResult _difference;
+
+    public ItlMetadataRepairItem Item { get; }
+    public string Path => Item.Path;
+    public string DisplayPath => Item.Path.Replace("\u00A0", "⟦NBSP⟧", StringComparison.Ordinal);
+    public string Fields => string.Join(", ", Item.Differences.Select(value => value.Field));
+    public string Before { get; }
+    public string After { get; }
+    public IReadOnlyList<TextDifferenceSegment> BeforeDifference => _difference.Before;
+    public IReadOnlyList<TextDifferenceSegment> AfterDifference => _difference.After;
+    public string? UnicodeDifferenceDetails => _difference.UnicodeDetails;
+    public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
+        Enum.GetValues<AnalysisRepairDisposition>()
+            .Where(value => value != AnalysisRepairDisposition.Mixed)
+            .ToArray();
+    public bool CanChangeDisposition => !IsApplied;
+    public bool IsActive => Disposition == AnalysisRepairDisposition.Active && !IsApplied;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsActive))]
+    private AnalysisRepairDisposition _disposition = AnalysisRepairDisposition.Ignored;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsActive))]
+    [NotifyPropertyChangedFor(nameof(CanChangeDisposition))]
+    private bool _isApplied;
+
+    [ObservableProperty]
+    private string? _resultText;
+
+    public event Action? StateChanged;
+
+    public ItlMetadataRepairItemViewModel(ItlMetadataRepairItem item)
+    {
+        Item = item;
+        Before = Format(item.Differences, difference => difference.Before);
+        After = Format(item.Differences, difference => difference.After);
+        _difference = TextDifference.Compare(Before, After);
+    }
+
+    partial void OnDispositionChanged(AnalysisRepairDisposition value) => StateChanged?.Invoke();
+    partial void OnIsAppliedChanged(bool value) => StateChanged?.Invoke();
+
+    private static string Format(
+        IEnumerable<ItlMetadataDifference> differences,
+        Func<ItlMetadataDifference, string?> select) =>
+        string.Join(Environment.NewLine, differences.Select(difference =>
+            $"{difference.Field}: {select(difference) ?? "(missing)"}"));
+}
+
+public sealed class ItlMetadataRepairCategoryGroupViewModel : ViewModelBase
+{
+    private AnalysisRepairDisposition _disposition;
+    private bool _propagating;
+
+    public string Category { get; }
+    public IReadOnlyList<ItlMetadataRepairArtistGroupViewModel> Artists { get; }
+    public int Count => Artists.Sum(artist => artist.Count);
+    public int ActiveCount => Artists.Sum(artist => artist.ActiveCount);
+    public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
+        Enum.GetValues<AnalysisRepairDisposition>();
+
+    public AnalysisRepairDisposition Disposition
+    {
+        get => _disposition;
+        set
+        {
+            if (value == AnalysisRepairDisposition.Mixed || _propagating)
+                return;
+            _propagating = true;
+            foreach (ItlMetadataRepairArtistGroupViewModel artist in Artists)
+                artist.Disposition = value;
+            _propagating = false;
+            RefreshState();
+        }
+    }
+
+    private ItlMetadataRepairCategoryGroupViewModel(
+        string category,
+        IReadOnlyList<ItlMetadataRepairArtistGroupViewModel> artists)
+    {
+        Category = category;
+        Artists = artists;
+        foreach (ItlMetadataRepairArtistGroupViewModel artist in Artists)
+            artist.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName is nameof(ItlMetadataRepairArtistGroupViewModel.ActiveCount) or
+                    nameof(ItlMetadataRepairArtistGroupViewModel.Disposition))
+                    RefreshState();
+            };
+        _disposition = Aggregate();
+    }
+
+    public static IReadOnlyList<ItlMetadataRepairCategoryGroupViewModel> Build(
+        IReadOnlyList<ItlMetadataRepairItemViewModel> items) =>
+        items.Select(item => new
+            {
+                Item = item,
+                Category = "Cached metadata",
+                Artist = item.Item.Metadata.AlbumArtist ?? item.Item.Metadata.Artist ?? "Unknown Artist",
+                Album = item.Item.Metadata.Album ?? AlbumFromPath(item.Path),
+            })
+            .GroupBy(entry => entry.Category, StringComparer.CurrentCultureIgnoreCase)
+            .OrderBy(group => group.Key, StringComparer.CurrentCultureIgnoreCase)
+            .Select(category => new ItlMetadataRepairCategoryGroupViewModel(
+                category.Key,
+                category.GroupBy(entry => entry.Artist, StringComparer.CurrentCultureIgnoreCase)
+                    .OrderBy(group => group.Key, StringComparer.CurrentCultureIgnoreCase)
+                    .Select(artist => new ItlMetadataRepairArtistGroupViewModel(
+                        artist.Key,
+                        artist.GroupBy(entry => entry.Album, StringComparer.CurrentCultureIgnoreCase)
+                            .OrderBy(group => group.Key, StringComparer.CurrentCultureIgnoreCase)
+                            .Select(album => new ItlMetadataRepairAlbumGroupViewModel(
+                                album.Key,
+                                album.Select(entry => entry.Item)
+                                    .Distinct()
+                                    .OrderBy(item => item.Path, StringComparer.CurrentCultureIgnoreCase)
+                                    .ToList()))
+                            .ToList()))
+                    .ToList()))
+            .ToList();
+
+    private static string AlbumFromPath(string path) =>
+        Path.GetFileName(Path.GetDirectoryName(path)) is { Length: > 0 } value
+            ? value
+            : "Unknown Album";
+
+    private AnalysisRepairDisposition Aggregate() =>
+        AnalysisRepairCategoryGroupViewModel.Aggregate(
+            Artists.Select(artist => artist.Disposition));
+
+    private void RefreshState()
+    {
+        SetProperty(ref _disposition, Aggregate(), nameof(Disposition));
+        OnPropertyChanged(nameof(ActiveCount));
+    }
+}
+
+public sealed class ItlMetadataRepairArtistGroupViewModel : ViewModelBase
+{
+    private AnalysisRepairDisposition _disposition;
+    private bool _propagating;
+    public string Artist { get; }
+    public IReadOnlyList<ItlMetadataRepairAlbumGroupViewModel> Albums { get; }
+    public int Count => Albums.Sum(album => album.Count);
+    public int ActiveCount => Albums.Sum(album => album.ActiveCount);
+    public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
+        Enum.GetValues<AnalysisRepairDisposition>();
+    public AnalysisRepairDisposition Disposition
+    {
+        get => _disposition;
+        set
+        {
+            if (value == AnalysisRepairDisposition.Mixed || _propagating)
+                return;
+            _propagating = true;
+            foreach (ItlMetadataRepairAlbumGroupViewModel album in Albums)
+                album.Disposition = value;
+            _propagating = false;
+            RefreshState();
+        }
+    }
+
+    public ItlMetadataRepairArtistGroupViewModel(
+        string artist,
+        IReadOnlyList<ItlMetadataRepairAlbumGroupViewModel> albums)
+    {
+        Artist = artist;
+        Albums = albums;
+        foreach (ItlMetadataRepairAlbumGroupViewModel album in Albums)
+            album.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName is nameof(ItlMetadataRepairAlbumGroupViewModel.ActiveCount) or
+                    nameof(ItlMetadataRepairAlbumGroupViewModel.Disposition))
+                    RefreshState();
+            };
+        _disposition = Aggregate();
+    }
+
+    private AnalysisRepairDisposition Aggregate() =>
+        AnalysisRepairCategoryGroupViewModel.Aggregate(
+            Albums.Select(album => album.Disposition));
+
+    private void RefreshState()
+    {
+        SetProperty(ref _disposition, Aggregate(), nameof(Disposition));
+        OnPropertyChanged(nameof(ActiveCount));
+    }
+}
+
+public sealed class ItlMetadataRepairAlbumGroupViewModel : ViewModelBase
+{
+    private AnalysisRepairDisposition _disposition;
+    private bool _propagating;
+    public string Album { get; }
+    public IReadOnlyList<ItlMetadataRepairItemViewModel> Items { get; }
+    public int Count => Items.Count;
+    public int ActiveCount => Items.Count(item => item.IsActive);
+    public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
+        Enum.GetValues<AnalysisRepairDisposition>();
+    public AnalysisRepairDisposition Disposition
+    {
+        get => _disposition;
+        set
+        {
+            if (value == AnalysisRepairDisposition.Mixed || _propagating)
+                return;
+            _propagating = true;
+            foreach (ItlMetadataRepairItemViewModel item in Items.Where(item => item.CanChangeDisposition))
+                item.Disposition = value;
+            _propagating = false;
+            RefreshState();
+        }
+    }
+
+    public ItlMetadataRepairAlbumGroupViewModel(
+        string album,
+        IReadOnlyList<ItlMetadataRepairItemViewModel> items)
+    {
+        Album = album;
+        Items = items;
+        foreach (ItlMetadataRepairItemViewModel item in Items)
+            item.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName is nameof(ItlMetadataRepairItemViewModel.Disposition) or
+                    nameof(ItlMetadataRepairItemViewModel.IsApplied) or
+                    nameof(ItlMetadataRepairItemViewModel.IsActive))
+                    RefreshState();
+            };
+        _disposition = Aggregate();
+    }
+
+    private AnalysisRepairDisposition Aggregate() =>
+        AnalysisRepairCategoryGroupViewModel.Aggregate(
+            Items.Select(item => item.Disposition));
+
+    private void RefreshState()
+    {
+        SetProperty(ref _disposition, Aggregate(), nameof(Disposition));
+        OnPropertyChanged(nameof(ActiveCount));
+    }
+}
+
 public partial class AnalysisRepairItemViewModel : ViewModelBase
 {
+    private readonly TextDifferenceResult _difference;
+
     public AnalysisTagRepair Repair { get; }
     public string Path => Repair.Path;
     public string DisplayPath => ShowWhitespace(Repair.Path);
@@ -826,6 +1187,9 @@ public partial class AnalysisRepairItemViewModel : ViewModelBase
         ? "(missing)"
         : ShowWhitespace(Repair.Before);
     public string After => ShowWhitespace(Repair.After);
+    public IReadOnlyList<TextDifferenceSegment> BeforeDifference => _difference.Before;
+    public IReadOnlyList<TextDifferenceSegment> AfterDifference => _difference.After;
+    public string? UnicodeDifferenceDetails => _difference.UnicodeDetails;
     public string Reason => Repair.Reason;
     public string? BlockingReason => Repair.BlockingReason;
     public bool CanChangeDisposition => Repair.CanApply && !IsApplied;
@@ -849,7 +1213,11 @@ public partial class AnalysisRepairItemViewModel : ViewModelBase
 
     public event Action? StateChanged;
 
-    public AnalysisRepairItemViewModel(AnalysisTagRepair repair) => Repair = repair;
+    public AnalysisRepairItemViewModel(AnalysisTagRepair repair)
+    {
+        Repair = repair;
+        _difference = TextDifference.Compare(repair.Before, repair.After);
+    }
 
     partial void OnDispositionChanged(AnalysisRepairDisposition value) => StateChanged?.Invoke();
     partial void OnIsAppliedChanged(bool value) => StateChanged?.Invoke();

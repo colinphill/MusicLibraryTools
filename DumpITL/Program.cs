@@ -3,6 +3,7 @@ using System.Xml.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using iTunes.Binary;
+using MusicLibrary.Core.Services;
 
 if (args.Length < 2)
 {
@@ -42,6 +43,8 @@ if (args.Length < 2)
           re smartmembers <playlistName>     correlate a smart membership snapshot with track headers
 
         Write (prototype -- always work on a copy, with iTunes closed)
+          repair-cache <LibraryConfiguration.xml> [--apply] [--itunes <library.itl>]
+                                             preview/apply .itl metadata from the indexed cache
           roundtrip <out.itl>               re-encode unchanged, prove the body survives
           set <trackId> <field> <value> <out.itl>
           set-loved <trackId> <true|false> <out.itl>
@@ -142,6 +145,10 @@ switch (command)
         Console.WriteLine($"validation: {validation.ErrorCount} error(s), " +
             $"{validation.WarningCount} warning(s)");
         exitCode = validation.IsValid ? 0 : 4;
+        break;
+
+    case "repair-cache":
+        exitCode = await RepairFromCacheAsync(itl, args.Skip(2).ToArray());
         break;
 
     case "snapshot":
@@ -1282,6 +1289,65 @@ static string Truncate(string s, int max)
 {
     s = s.ReplaceLineEndings(" ");
     return s.Length <= max ? s : s[..max] + "â€¦";
+}
+
+static async Task<int> RepairFromCacheAsync(string configurationPath, string[] options)
+{
+    bool apply = false;
+    string? libraryPath = null;
+    for (int index = 0; index < options.Length; index++)
+    {
+        switch (options[index])
+        {
+            case "--apply":
+                apply = true;
+                break;
+            case "--itunes" when index + 1 < options.Length:
+                libraryPath = options[++index];
+                break;
+            default:
+                Console.Error.WriteLine($"Unknown repair-cache option: {options[index]}");
+                return 2;
+        }
+    }
+
+    var factory = new LibraryOperationContextFactory();
+    var service = new ItlMetadataRepairService(factory);
+    var progress = new Progress<MusicLibrary.Core.Models.OperationProgress>(value =>
+    {
+        if (!string.IsNullOrWhiteSpace(value.Message))
+            Console.Error.WriteLine(value.Message);
+    });
+    ItlMetadataRepairPlan plan = await service.PreviewAsync(
+        configurationPath, libraryPath, progress);
+    Console.WriteLine($"Library : {plan.LibraryPath}");
+    Console.WriteLine($"Repairs : {plan.Items.Count:N0} track(s)");
+    foreach (ItlMetadataRepairItem item in plan.Items)
+    {
+        Console.WriteLine($"\n[{item.TrackId}] {item.Path}");
+        foreach (ItlMetadataDifference difference in item.Differences)
+            Console.WriteLine($"  {difference.Field}: {Display(difference.Before)} -> {Display(difference.After)}");
+    }
+
+    if (!apply)
+    {
+        Console.WriteLine("\nDry run only. Re-run with --apply to write the reviewed repairs.");
+        return 0;
+    }
+    if (plan.Items.Count == 0)
+        return 0;
+
+    ItlMetadataRepairApplyResult result = await service.ApplyAsync(
+        plan, plan.Items.Select(item => item.Id).ToArray());
+    Console.WriteLine($"\nApplied {result.Applied:N0}; skipped {result.Skipped:N0}; failed {result.Failed:N0}.");
+    foreach (ItlMetadataRepairItemResult failed in result.Items.Where(item =>
+                 item.Outcome == ItlMetadataRepairOutcome.Failed))
+        Console.Error.WriteLine($"  [{failed.Item.TrackId}] {failed.Error}");
+    return result.Failed == 0 ? 0 : 4;
+
+    static string Display(string? value) => value is null
+        ? "(missing)"
+        : value.ReplaceLineEndings(" ");
 }
 
 

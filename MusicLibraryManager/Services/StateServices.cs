@@ -10,13 +10,19 @@ public sealed record GridSnapshot(
 
 public sealed class GridStateService(IAppSettings settings)
 {
-    private const string Preference = "manager.library.grid.v2";
+    private const string LibraryPreference = "manager.library.grid.v2";
+    private const string PreferencePrefix = "manager.grid.";
 
-    public GridSnapshot? Load()
+    public GridSnapshot? Load() => LoadPreference(LibraryPreference);
+
+    public GridSnapshot? Load(string key) =>
+        LoadPreference($"{PreferencePrefix}{key}.v1");
+
+    private GridSnapshot? LoadPreference(string preference)
     {
         try
         {
-            string? json = settings.GetPreference(Preference);
+            string? json = settings.GetPreference(preference);
             return string.IsNullOrWhiteSpace(json) ? null : JsonSerializer.Deserialize<GridSnapshot>(json);
         }
         catch
@@ -26,7 +32,13 @@ public sealed class GridStateService(IAppSettings settings)
     }
 
     public void Save(GridSnapshot state) =>
-        settings.SetPreference(Preference, JsonSerializer.Serialize(state));
+        SavePreference(LibraryPreference, state);
+
+    public void Save(string key, GridSnapshot state) =>
+        SavePreference($"{PreferencePrefix}{key}.v1", state);
+
+    private void SavePreference(string preference, GridSnapshot state) =>
+        settings.SetPreference(preference, JsonSerializer.Serialize(state));
 }
 
 public sealed class SplitStateService(IAppSettings settings)

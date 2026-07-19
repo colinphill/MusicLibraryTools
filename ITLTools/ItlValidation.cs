@@ -34,6 +34,7 @@ public sealed partial class ItlDocument
 
         ValidateEnvelopeMirror();
         ValidatePlaybackDsidMirror();
+        ValidateSharedStringKeys();
         ValidateSmartPlaylists();
         ValidateMprhReferences();
         ValidateMlqhAnchors();
@@ -106,6 +107,36 @@ public sealed partial class ItlDocument
         if (badPlaylistLinks > 0) Add("links.playlist", ItlValidationSeverity.Error, $"{badPlaylistLinks} playlist entries reference missing tracks.");
         if (badCloudLinks > 0) Add("links.cloud", ItlValidationSeverity.Error, $"{badCloudLinks} cloud records reference missing main tracks.");
 
+        var albumsById = Albums.ToDictionary(RecordIdOf);
+        var artistsById = Artists.ToDictionary(RecordIdOf);
+        int[] albumTextMismatches = [.. Tracks.Where(track =>
+        {
+            string? trackText = track.GetString(ItlDataType.Album);
+            string? entityText = albumsById.GetValueOrDefault(track.GetAlbumId())?
+                .Field((int)ItlDataType.AlbumRecordName)?.Text;
+            return trackText is not null && entityText is not null && trackText != entityText;
+        }).Select(TrackIdOf)];
+        int[] artistTextMismatches = [.. Tracks.Where(track =>
+        {
+            string? trackText = track.GetString(ItlDataType.AlbumArtist);
+            if (trackText is null)
+                return false;
+            ItlRecord? album = albumsById.GetValueOrDefault(track.GetAlbumId());
+            ItlRecord? artist = artistsById.GetValueOrDefault(track.GetArtistId());
+            string? albumText = album?.Field((int)ItlDataType.AlbumRecordArtist)?.Text;
+            string? artistText = artist?.Field((int)ItlDataType.ArtistRecordName)?.Text;
+            return albumText is not null && trackText != albumText ||
+                   artistText is not null && trackText != artistText;
+        }).Select(TrackIdOf)];
+        if (albumTextMismatches.Length > 0)
+            Add("metadata.album-link-text", ItlValidationSeverity.Warning,
+                $"{albumTextMismatches.Length} tracks have album text that disagrees with their linked album record " +
+                $"(track IDs {string.Join(", ", albumTextMismatches.Take(8))}).");
+        if (artistTextMismatches.Length > 0)
+            Add("metadata.artist-link-text", ItlValidationSeverity.Warning,
+                $"{artistTextMismatches.Length} tracks have album-artist text that disagrees with linked album or artist records " +
+                $"(track IDs {string.Join(", ", artistTextMismatches.Take(8))}).");
+
         ItlRecord? master = Playlists.FirstOrDefault(IsMasterPlaylist);
         if (master is null)
         {
@@ -121,6 +152,42 @@ public sealed partial class ItlDocument
         }
 
         return issues;
+
+        void ValidateSharedStringKeys()
+        {
+            CheckDomain("album", Albums.SelectMany(record => record.Fields.Where(field =>
+                    field.Type == (int)ItlDataType.AlbumRecordName))
+                .Concat(Tracks.SelectMany(record => record.Fields.Where(field =>
+                    field.Type == (int)ItlDataType.Album))));
+            CheckDomain("artist", Artists.SelectMany(record => record.Fields.Where(field =>
+                    field.Type == (int)ItlDataType.ArtistRecordName))
+                .Concat(Albums.SelectMany(record => record.Fields.Where(field =>
+                    field.Type == (int)ItlDataType.AlbumRecordArtist ||
+                    field.Type == (int)ItlDataType.AlbumRecordSortArtist)))
+                .Concat(Tracks.SelectMany(record => record.Fields.Where(field =>
+                    field.Type == (int)ItlDataType.Artist ||
+                    field.Type == (int)ItlDataType.AlbumArtist))));
+
+            void CheckDomain(string name, IEnumerable<ItlField> fields)
+            {
+                var collisions = fields.GroupBy(field =>
+                        BinaryPrimitives.ReadUInt32LittleEndian(field.Header.AsSpan(16)))
+                    .Select(group => new
+                    {
+                        group.Key,
+                        Values = group.Select(field => field.Text).OfType<string>()
+                            .Distinct(StringComparer.Ordinal).ToArray(),
+                    })
+                    .Where(item => item.Values.Length > 1)
+                    .ToArray();
+                if (collisions.Length == 0)
+                    return;
+                string examples = string.Join("; ", collisions.Take(3).Select(collision =>
+                    $"key {collision.Key} names {string.Join(" / ", collision.Values.Take(3).Select(value => $"'{value}'"))}"));
+                Add($"metadata.{name}-key-collision", ItlValidationSeverity.Error,
+                    $"{collisions.Length} shared {name} string keys identify different text values ({examples}).");
+            }
+        }
 
         void ValidateEnvelopeMirror()
         {

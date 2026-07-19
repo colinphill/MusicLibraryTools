@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using MusicLibrary.Core.Models;
+using MusicLibrary.Core.Services;
 
 namespace MusicLibraryManager.Presentation;
 
@@ -47,6 +48,9 @@ public sealed class AnalysisRunViewModel : ViewModelBase
     public IReadOnlyList<string> RepresentationWarnings { get; }
     public IReadOnlyList<AlbumMetadataMatrix> Matrices { get; }
     public AnalysisRepairPlan? RepairPlan { get; }
+    public IReadOnlyList<ItlMetadataRepairItemViewModel> ItlRepairItems { get; }
+    public IReadOnlyList<ItlMetadataRepairCategoryGroupViewModel> ItlRepairGroups { get; }
+    public ItlMetadataRepairPlan? ItlRepairPlan { get; }
     public int Count { get; }
 
     public int ActiveFindingCount => FindingGroups.Sum(group => group.ActiveCount);
@@ -67,7 +71,9 @@ public sealed class AnalysisRunViewModel : ViewModelBase
         IReadOnlyList<RepresentationRepairCategoryGroupViewModel>? representationActionGroups = null,
         IReadOnlyList<string>? representationWarnings = null,
         AnalysisRepairPlan? repairPlan = null,
-        IReadOnlyList<AlbumMetadataMatrix>? matrices = null)
+        IReadOnlyList<AlbumMetadataMatrix>? matrices = null,
+        IReadOnlyList<ItlMetadataRepairItemViewModel>? itlRepairItems = null,
+        ItlMetadataRepairPlan? itlRepairPlan = null)
     {
         Name = name;
         Summary = summary;
@@ -85,6 +91,9 @@ public sealed class AnalysisRunViewModel : ViewModelBase
         RepresentationWarnings = representationWarnings ?? [];
         RepairPlan = repairPlan;
         Matrices = matrices ?? [];
+        ItlRepairItems = itlRepairItems ?? [];
+        ItlRepairGroups = ItlMetadataRepairCategoryGroupViewModel.Build(ItlRepairItems);
+        ItlRepairPlan = itlRepairPlan;
 
         foreach (var group in FindingGroups)
             group.PropertyChanged += FindingGroupChanged;
@@ -146,6 +155,13 @@ public sealed class AnalysisRunViewModel : ViewModelBase
         string summary) =>
         new("Album metadata matrix", summary, AnalysisResultView.Matrix, matrices.Count,
             matrices: matrices);
+
+    public static AnalysisRunViewModel ForItlRepairs(
+        ItlMetadataRepairPlan plan,
+        IReadOnlyList<ItlMetadataRepairItemViewModel> items,
+        string summary) =>
+        new("iTunes library metadata repairs", summary, AnalysisResultView.ItlRepairs,
+            items.Count, itlRepairItems: items, itlRepairPlan: plan);
 
     private void FindingGroupChanged(object? sender, PropertyChangedEventArgs e)
     {

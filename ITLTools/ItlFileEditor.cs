@@ -41,11 +41,17 @@ public static class ItlFileEditor
     {
         ArgumentNullException.ThrowIfNull(document);
         EnsureItunesIsClosed();
-        ItlValidationIssue[] errors = [.. document.Validate()
+
+        // Some native fields (notably the absolute decoded-body anchors in mlqh) are derived from
+        // the final section layout. A size-changing edit makes their in-memory values stale until
+        // the writer refreshes them, so validate the exact rebuilt image that will be committed.
+        byte[] rebuilt = ItlWriter.Build(document.Envelope, document.Serialize());
+        ItlDocument written = ItlDocument.Parse(ItlEnvelope.Parse(rebuilt));
+        ItlValidationIssue[] errors = [.. written.Validate()
             .Where(issue => issue.Severity == ItlValidationSeverity.Error)];
         if (errors.Length > 0)
             throw new InvalidDataException("The edited library failed validation: " +
                 string.Join("; ", errors.Select(issue => $"{issue.Code}: {issue.Message}")));
-        document.Save(path);
+        ItlWriter.SaveBuilt(rebuilt, path);
     }
 }

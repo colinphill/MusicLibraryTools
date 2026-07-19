@@ -1,3 +1,5 @@
+using System.Buffers.Binary;
+
 namespace iTunes.Binary;
 
 /// <summary>
@@ -32,6 +34,29 @@ public sealed record ItlLocalTrackMetadata
     public int ArtworkCount { get; init; }
     public bool Compilation { get; init; }
     public bool Gapless { get; init; }
+}
+
+/// <summary>
+/// Tag values retained by the library metadata cache. This intentionally excludes fields such as
+/// artwork, sort values, comments, and playback state that the cache cannot reconstruct.
+/// </summary>
+public sealed record ItlCachedTrackMetadata
+{
+    public string? Title { get; init; }
+    public string? Artist { get; init; }
+    public string? AlbumArtist { get; init; }
+    /// <summary>
+    /// True only when the cache observed a nonblank album-artist tag. When false, repair removes
+    /// the ITL album-artist field and uses Artist only for the internal album/artist linkage.
+    /// </summary>
+    public bool HasExplicitAlbumArtist { get; init; }
+    public string? Album { get; init; }
+    public int? TrackNumber { get; init; }
+    public int? TrackCount { get; init; }
+    public int? DiscNumber { get; init; }
+    public int? DiscCount { get; init; }
+    public int? Year { get; init; }
+    public bool Compilation { get; init; }
 }
 
 public sealed partial class ItlDocument
@@ -122,6 +147,52 @@ public sealed partial class ItlDocument
     }
 
     /// <summary>
+    /// Repairs only the tag fields represented by the library cache. Unlike
+    /// <see cref="RefreshLocalTrack"/>, unrelated file-derived fields are preserved.
+    /// </summary>
+    public void RepairLocalTrackFromCache(
+        ItlRecord track,
+        ItlCachedTrackMetadata metadata,
+        DateTime lastWriteTimeUtc)
+    {
+        ArgumentNullException.ThrowIfNull(track);
+        ArgumentNullException.ThrowIfNull(metadata);
+        if (!Tracks.Contains(track))
+            throw new ArgumentException("The record is not a track in this document.", nameof(track));
+
+        SetOptionalTrackString(track, ItlDataType.Title, metadata.Title);
+        SetOptionalTrackString(track, ItlDataType.Artist, metadata.Artist);
+        SetOptionalTrackString(track, ItlDataType.AlbumArtist,
+            metadata.HasExplicitAlbumArtist ? metadata.AlbumArtist : null);
+        SetOptionalTrackString(track, ItlDataType.Album, metadata.Album);
+        track.SetTrackNumber(metadata.TrackNumber.GetValueOrDefault());
+        track.SetTrackCount(metadata.TrackCount.GetValueOrDefault());
+        track.SetDiscNumber(metadata.DiscNumber.GetValueOrDefault());
+        track.SetDiscCount(metadata.DiscCount.GetValueOrDefault());
+        track.SetYear(metadata.Year.GetValueOrDefault());
+        track.SetCompilation(metadata.Compilation);
+
+        string? album = Clean(metadata.Album);
+        string? albumArtist = metadata.HasExplicitAlbumArtist
+            ? Clean(metadata.AlbumArtist)
+            : null;
+        string? artist = albumArtist ?? Clean(metadata.Artist);
+        if (album is null || artist is null)
+            track.SetAlbumId(0);
+        if (artist is null)
+            track.SetArtistId(0);
+        LinkAlbumAndArtist(track, new ItlLocalTrackMetadata
+        {
+            Album = album,
+            Artist = Clean(metadata.Artist),
+            AlbumArtist = albumArtist,
+        });
+
+        // String setters stamp now; the cache records when the source metadata was read.
+        track.SetDateModified(lastWriteTimeUtc);
+    }
+
+    /// <summary>
     /// Imports an ordinary local audio file by cloning a non-store, non-video track with the same
     /// extension. This preserves version-specific native header layout while replacing all
     /// file-derived metadata. Existing records at the same path are refreshed and returned.
@@ -170,9 +241,10 @@ public sealed partial class ItlDocument
     {
         string? album = Clean(metadata.Album);
         string? artist = Clean(metadata.AlbumArtist) ?? Clean(metadata.Artist);
+        ItlRecord? albumRecord = null;
         if (album is not null && artist is not null)
         {
-            ItlRecord albumRecord = Albums.FirstOrDefault(candidate =>
+            albumRecord = Albums.FirstOrDefault(candidate =>
                 string.Equals(candidate.Field((int)ItlDataType.AlbumRecordName)?.Text, album,
                     StringComparison.OrdinalIgnoreCase) &&
                 string.Equals(candidate.Field((int)ItlDataType.AlbumRecordArtist)?.Text, artist,
@@ -192,6 +264,27 @@ public sealed partial class ItlDocument
                     ?? throw new InvalidOperationException(
                         "The library has no artist record template."));
             track.SetArtistId(RecordIdOf(artistRecord));
+
+            // These fields share one native string-key domain. Keeping their payload text equal is
+            // insufficient: a reused key causes iTunes to substitute that key's unrelated value
+            // across every track when it next rewrites the library.
+            ItlField artistName = artistRecord.Field((int)ItlDataType.ArtistRecordName)!;
+            SynchronizeKey(artistName, track.Field((int)ItlDataType.AlbumArtist));
+            SynchronizeKey(artistName, track.Field((int)ItlDataType.Artist));
+            SynchronizeKey(artistName, albumRecord?.Field((int)ItlDataType.AlbumRecordArtist));
+            SynchronizeKey(artistName, albumRecord?.Field((int)ItlDataType.AlbumRecordSortArtist));
+        }
+
+        if (albumRecord is not null)
+            SynchronizeKey(albumRecord.Field((int)ItlDataType.AlbumRecordName),
+                track.Field((int)ItlDataType.Album));
+
+        static void SynchronizeKey(ItlField? source, ItlField? target)
+        {
+            if (source is null || target is null || source.Text != target.Text)
+                return;
+            BinaryPrimitives.WriteUInt32LittleEndian(target.Header.AsSpan(16),
+                BinaryPrimitives.ReadUInt32LittleEndian(source.Header.AsSpan(16)));
         }
     }
 

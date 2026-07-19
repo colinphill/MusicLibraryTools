@@ -55,6 +55,7 @@ namespace MusicFileUtilities.Tests
                     Assert.Equal(3, health.MetadataRead);
                     var cachedEntries = cache.FileCache.Values.ToArray();
                     Assert.False(cache.FileCache[Path.Combine(scanDir, "sample.flac")].HasAlbumArtist);
+                    Assert.All(cachedEntries, entry => Assert.Equal(string.Empty, entry.AlbumArtist));
                     Assert.All(cachedEntries.Skip(1), entry =>
                     {
                         Assert.Same(cachedEntries[0].Artist, entry.Artist);
@@ -73,6 +74,14 @@ namespace MusicFileUtilities.Tests
                     var res2 = db.IndexFiles(new[] { scanDir }, ct: TestContext.Current.CancellationToken);
                     Assert.Equal(0, res2.Added);
                     Assert.Equal(3, res2.Unchanged);
+
+                    // The targeted reindex path uses Artist internally to locate/group the album,
+                    // but must not leak that fallback through the public cache projection.
+                    string flac = Path.Combine(scanDir, "sample.flac");
+                    Assert.True(db.ReindexFile(flac));
+                    MetadataCache reindexed = db.BuildCache([scanDir]);
+                    Assert.False(reindexed.FileCache[flac].HasAlbumArtist);
+                    Assert.Equal(string.Empty, reindexed.FileCache[flac].AlbumArtist);
                 }
 
                 // Raw check that the buffered multi-row metadata INSERTs actually persisted rows.
@@ -343,6 +352,39 @@ namespace MusicFileUtilities.Tests
             {
                 SqliteConnection.ClearAllPools();
                 try { Directory.Delete(directory, true); } catch { }
+            }
+        }
+
+        [Fact]
+        public void ExplicitAlbumArtistEqualToArtistRemainsExplicit()
+        {
+            string directory = Path.Combine(Path.GetTempPath(), "mlt_idx_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            string song = Path.Combine(directory, "sample.flac");
+            string dbPath = Path.Combine(directory, "cache.db");
+            File.Copy(MediaFixtures.Path_("sample.flac"), song);
+            var media = MediaFile.GetFile(song);
+            var writer = Assert.IsAssignableFrom<IMetadataWriter>(media);
+            writer.SetField(TagFields.AlbumArtist, media.Tags.First().Artist);
+            writer.Save();
+
+            try
+            {
+                using var database = MetadataDatabase.OpenDatabase("sqlite:" + dbPath);
+                database.IndexFiles([directory], ct: TestContext.Current.CancellationToken);
+                MetadataCacheEntry indexed = database.BuildCache([directory]).FileCache[song];
+                Assert.True(indexed.HasAlbumArtist);
+                Assert.Equal(indexed.Artist, indexed.AlbumArtist);
+
+                Assert.True(database.ReindexFile(song));
+                MetadataCacheEntry reindexed = database.BuildCache([directory]).FileCache[song];
+                Assert.True(reindexed.HasAlbumArtist);
+                Assert.Equal(reindexed.Artist, reindexed.AlbumArtist);
+            }
+            finally
+            {
+                SqliteConnection.ClearAllPools();
+                try { Directory.Delete(directory, true); } catch { /* best effort */ }
             }
         }
 

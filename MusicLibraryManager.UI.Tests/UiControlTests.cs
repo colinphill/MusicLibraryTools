@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Documents;
 using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Primitives;
 using Avalonia.Headless.XUnit;
@@ -12,6 +13,7 @@ using Avalonia.VisualTree;
 using Microsoft.Extensions.DependencyInjection;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
+using MusicFileUtilities;
 using MusicLibraryManager.Presentation;
 using MusicLibraryManager.Views;
 using MusicLibraryManager.Controls;
@@ -39,6 +41,29 @@ public sealed class UiControlTests
         Assert.Equal(2, grid.Columns.Count);
         Assert.Equal("Title", grid.KeyFor(grid.Columns[0]));
         Assert.Equal(280, grid.CaptureColumnLayout()[0].Width);
+    }
+
+    [AvaloniaFact]
+    public void Persisted_grid_layout_restores_widths_and_keeps_keys_isolated()
+    {
+        var settings = new FakeSettings();
+        var state = new GridStateService(settings);
+        AppGridColumnDefinition[] definitions =
+        [
+            new("Path", "Track", "Path", 380, 220),
+            new("Reason", "Reason", "Reason", 420, 220),
+        ];
+        var findings = new AppDataGrid();
+        PersistedGridLayout.Configure(findings, state, "health.findings", definitions);
+        findings.Columns[0].Width = new DataGridLength(515);
+
+        var restored = new AppDataGrid();
+        PersistedGridLayout.Configure(restored, state, "health.findings", definitions);
+        var separate = new AppDataGrid();
+        PersistedGridLayout.Configure(separate, state, "health.metadata-repairs", definitions);
+
+        Assert.Equal(515, restored.Columns[0].Width.Value);
+        Assert.Equal(380, separate.Columns[0].Width.Value);
     }
 
     [AvaloniaFact]
@@ -156,6 +181,7 @@ public sealed class UiControlTests
         App.UseServicesForTests(services);
         MainWindow window = services.GetRequiredService<MainWindow>();
         ContentControl host = window.FindControl<ContentControl>("ContentHost")!;
+        Border resizeGrip = window.FindControl<Border>("ResizeGrip")!;
         INavigationService navigation = services.GetRequiredService<INavigationService>();
         var destinations = new (ShellDestination Destination, Type View)[]
         {
@@ -168,11 +194,22 @@ public sealed class UiControlTests
             (ShellDestination.Settings, typeof(SettingsView)),
         };
 
+        Assert.Equal(22, resizeGrip.Width);
+        Assert.Equal(22, resizeGrip.Height);
+        Assert.Equal(global::Avalonia.Layout.HorizontalAlignment.Right, resizeGrip.HorizontalAlignment);
+        Assert.Equal(global::Avalonia.Layout.VerticalAlignment.Bottom, resizeGrip.VerticalAlignment);
+
         foreach ((ShellDestination destination, Type view) in destinations)
         {
             navigation.Navigate(destination);
             Assert.IsType(view, host.Content);
-            if (host.Content is LibraryView library)
+            if (host.Content is HomeView home)
+            {
+                Grid indexingBanner = home.FindControl<Grid>("IndexingBannerLayout")!;
+                Assert.Equal(2, indexingBanner.ColumnDefinitions.Count);
+                Assert.Empty(indexingBanner.Children.OfType<Border>());
+            }
+            else if (host.Content is LibraryView library)
             {
                 AppDataGrid grid = library.FindControl<AppDataGrid>("LibraryGrid")!;
                 Assert.Equal(8, grid.Columns.Count);
@@ -185,6 +222,40 @@ public sealed class UiControlTests
                 Assert.True(columnPopover.IsOpen);
                 closeColumnsButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 Assert.False(columnPopover.IsOpen);
+            }
+            else if (host.Content is HealthView health)
+            {
+                AppDataGrid repairGrid = health.FindControl<AppDataGrid>("RepairGrid")!;
+                DataGridColumn before = repairGrid.Columns.Single(column =>
+                    repairGrid.KeyFor(column) == "Before");
+                DataGridColumn after = repairGrid.Columns.Single(column =>
+                    repairGrid.KeyFor(column) == "After");
+                DataGridColumn result = repairGrid.Columns.Single(column =>
+                    repairGrid.KeyFor(column) == "Result");
+                Assert.IsType<DataGridTemplateColumn>(before);
+                Assert.IsType<DataGridTemplateColumn>(after);
+                Assert.IsType<DataGridTextColumn>(result);
+
+                var item = new AnalysisRepairItemViewModel(new AnalysisTagRepair(
+                    @"Z:\Music\Track.flac", TagFields.Title, "Mix\u00A0One", "Mix One",
+                    "Normalize whitespace.", 100, DateTime.UtcNow));
+                var beforeColumn = Assert.IsType<DataGridTemplateColumn>(before);
+                TextBlock beforeCell = Assert.IsType<TextBlock>(
+                    beforeColumn.CellTemplate!.Build(item));
+                Assert.Contains(beforeCell.Inlines!.OfType<Run>(),
+                    run => run.Classes.Contains("text-difference"));
+                Assert.Contains("U+00A0 NO-BREAK SPACE",
+                    Assert.IsType<string>(ToolTip.GetTip(beforeCell)));
+            }
+            else if (host.Content is OrganizeView organize)
+            {
+                Grid summary = organize.FindControl<Grid>("SummaryLayout")!;
+                TextBlock plannedCount = organize.FindControl<TextBlock>("PlannedCount")!;
+                Assert.Same(summary, plannedCount.Parent);
+                Assert.Equal(global::Avalonia.Layout.VerticalAlignment.Center,
+                    plannedCount.VerticalAlignment);
+                Assert.Equal(FontWeight.SemiBold, plannedCount.FontWeight);
+                Assert.Contains("summary-label", plannedCount.Classes);
             }
         }
     }

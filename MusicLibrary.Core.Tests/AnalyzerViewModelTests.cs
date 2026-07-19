@@ -4,6 +4,7 @@ using MusicLibraryManager.Presentation;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
 using MusicLibraryTools;
+using iTunes.Binary;
 using Xunit;
 
 namespace MusicLibrary.Core.Tests;
@@ -345,6 +346,45 @@ public sealed class AnalyzerViewModelTests
     }
 
     [Fact]
+    public void ItlRepairRun_GroupsRepairsByCategoryArtistAndAlbum()
+    {
+        string path = @"Z:\iTunes\AAC\Music\Artist\Album\Track.m4a";
+        var repair = new ItlMetadataRepairItem(
+            Guid.NewGuid(), 1, 1, path,
+            new ItlCachedTrackMetadata
+            {
+                Artist = "Artist",
+                AlbumArtist = "Album Artist",
+                HasExplicitAlbumArtist = true,
+                Album = "Album",
+                Title = "Correct title",
+            },
+            DateTime.UtcNow,
+            [new("Title", "Wrong title", "Correct title")]);
+        var item = new ItlMetadataRepairItemViewModel(repair);
+        var plan = new ItlMetadataRepairPlan(
+            "Library.itl", "HASH", DateTimeOffset.UtcNow, [repair]);
+
+        AnalysisRunViewModel run = AnalysisRunViewModel.ForItlRepairs(plan, [item], "1 repair");
+
+        ItlMetadataRepairCategoryGroupViewModel category = Assert.Single(run.ItlRepairGroups);
+        Assert.Equal("Cached metadata", category.Category);
+        ItlMetadataRepairArtistGroupViewModel artist = Assert.Single(category.Artists);
+        Assert.Equal("Album Artist", artist.Artist);
+        ItlMetadataRepairAlbumGroupViewModel album = Assert.Single(artist.Albums);
+        Assert.Equal("Album", album.Album);
+        Assert.Same(item, Assert.Single(album.Items));
+        Assert.Equal(AnalysisRepairDisposition.Ignored, category.Disposition);
+
+        category.Disposition = AnalysisRepairDisposition.Active;
+
+        Assert.True(item.IsActive);
+        Assert.Equal(1, album.ActiveCount);
+        Assert.Equal(1, artist.ActiveCount);
+        Assert.Equal(1, category.ActiveCount);
+    }
+
+    [Fact]
     public void MetadataRepairRun_LabelsId3VersionUpgrades()
     {
         var record = Track(@"Z:\Music\Artist\Album\Track.mp3", "Artist", "Album") with
@@ -376,6 +416,32 @@ public sealed class AnalyzerViewModelTests
         Assert.False(item.IsActive);
         item.Disposition = AnalysisRepairDisposition.Active;
         Assert.True(item.IsActive);
+    }
+
+    [Fact]
+    public void MetadataRepairRun_HighlightsAndDescribesUnicodeScalarDifferences()
+    {
+        var repair = new AnalysisTagRepair(
+            @"Z:\Music\Track.flac",
+            TagFields.Title,
+            "Caf\u00E9\u00A0Mix",
+            "Cafe\u0301 Mix",
+            "Normalize Unicode text.",
+            100,
+            DateTime.UtcNow);
+
+        var item = new AnalysisRepairItemViewModel(repair);
+
+        Assert.Equal("Caf", item.BeforeDifference[0].Text);
+        Assert.False(item.BeforeDifference[0].IsDifferent);
+        Assert.Contains(item.BeforeDifference,
+            segment => segment.IsDifferent && segment.Text.Contains("é⟦NBSP⟧"));
+        Assert.Contains(item.AfterDifference,
+            segment => segment.IsDifferent && segment.Text.Contains("é "));
+        Assert.Contains("U+00E9", item.UnicodeDifferenceDetails);
+        Assert.Contains("U+0301", item.UnicodeDifferenceDetails);
+        Assert.Contains("U+00A0 NO-BREAK SPACE", item.UnicodeDifferenceDetails);
+        Assert.Contains("U+0020 SPACE", item.UnicodeDifferenceDetails);
     }
 
     [Fact]

@@ -819,6 +819,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
 
     private static string[] PerformerKeys(MetadataCacheEntry entry) =>
         new[] { NormalizeSetText(entry.AlbumArtist), NormalizeSetText(entry.Artist) }
+            .Where(value => value.Length > 0)
             .Distinct(StringComparer.Ordinal)
             .ToArray();
 
@@ -832,7 +833,9 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         SameText(source.Title, candidate.Title);
 
     private static bool SamePerformer(MetadataCacheEntry left, MetadataCacheEntry right) =>
-        SameText(left.AlbumArtist, right.AlbumArtist) ||
+        (!string.IsNullOrWhiteSpace(left.AlbumArtist) &&
+         !string.IsNullOrWhiteSpace(right.AlbumArtist) &&
+         SameText(left.AlbumArtist, right.AlbumArtist)) ||
         SameText(left.Artist, right.Artist);
 
     private static IReadOnlyList<SetComparisonDifference> SetDifferences(

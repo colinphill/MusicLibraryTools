@@ -51,22 +51,13 @@ public sealed partial class ItlDocument
             fileUrl = "file://localhost/" + fileUrl[8..];
         SetTrackString(track, ItlDataType.FileUrl, fileUrl);
 
-        ItlRecord album = Albums.FirstOrDefault(candidate =>
-            string.Equals(candidate.Field((int)ItlDataType.AlbumRecordName)?.Text, import.Album,
-                StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(candidate.Field((int)ItlDataType.AlbumRecordArtist)?.Text, import.AlbumArtist,
-                StringComparison.OrdinalIgnoreCase))
-            ?? AddAlbum(import.Album, import.AlbumArtist, Albums.FirstOrDefault()
-                ?? throw new InvalidOperationException("The library has no album record template."));
-        ItlRecord artist = Artists.FirstOrDefault(candidate =>
-            string.Equals(candidate.Field((int)ItlDataType.ArtistRecordName)?.Text, import.AlbumArtist,
-                StringComparison.OrdinalIgnoreCase))
-            ?? AddArtist(import.AlbumArtist, Artists.FirstOrDefault()
-                ?? throw new InvalidOperationException("The library has no artist record template."));
-
         var file = new FileInfo(path);
-        track.SetAlbumId(RecordIdOf(album));
-        track.SetArtistId(RecordIdOf(artist));
+        LinkAlbumAndArtist(track, new ItlLocalTrackMetadata
+        {
+            Artist = import.Artist,
+            AlbumArtist = import.AlbumArtist,
+            Album = import.Album,
+        });
         track.SetTrackNumber(import.TrackNumber);
         track.SetTrackCount(import.TrackCount);
         track.SetDiscNumber(0);

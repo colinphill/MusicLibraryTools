@@ -1,11 +1,60 @@
+using System.Buffers.Binary;
 using System.Diagnostics;
 using iTunes.Binary;
+using MusicLibrary.Core.Services;
 using Xunit;
 
 namespace DumpITL.Tests;
 
 public sealed class CorpusRegressionTests
 {
+    [Fact]
+    public async Task PrivateCorpusImportSharesNativeAlbumAndArtistKeysWhenConfigured()
+    {
+        string? itl = Environment.GetEnvironmentVariable("DUMPITL_CORPUS_ITL");
+        string? media = Environment.GetEnvironmentVariable("DUMPITL_CORPUS_IMPORT");
+        if (string.IsNullOrWhiteSpace(itl) || string.IsNullOrWhiteSpace(media) ||
+            !File.Exists(itl) || !File.Exists(media))
+            return;
+
+        string directory = Path.Combine(Path.GetTempPath(), $"itl-corpus-import-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        string copy = Path.Combine(directory, "iTunes Library.itl");
+        File.Copy(itl, copy);
+        try
+        {
+            CancellationToken ct = TestContext.Current.CancellationToken;
+            var service = new ItunesMediaMutationService();
+            await using IItunesMediaMutationSession session =
+                await service.BeginAsync([media], backupFiles: false, copy, ct);
+            Assert.True(session.Active);
+            ItunesMediaMutationResult result = await session.CommitAsync(
+                [ItunesMediaMutation.Add(media)], ct);
+            Assert.Equal(1, result.ImportedTracks);
+            await session.CompleteAsync(ct);
+
+            ItlDocument document = ItlDocument.Load(copy);
+            ItlRecord track = Assert.Single(document.FindTracksByPath(media));
+            ItlRecord album = Assert.Single(document.Albums,
+                candidate => ItlDocument.RecordIdOf(candidate) == track.GetAlbumId());
+            ItlRecord artist = Assert.Single(document.Artists,
+                candidate => ItlDocument.RecordIdOf(candidate) == track.GetArtistId());
+            uint albumKey = Key(track.Field((int)ItlDataType.Album)!);
+            uint artistKey = Key(artist.Field((int)ItlDataType.ArtistRecordName)!);
+            Assert.Equal(albumKey, Key(album.Field((int)ItlDataType.AlbumRecordName)!));
+            Assert.Equal(artistKey, Key(track.Field((int)ItlDataType.Artist)!));
+            Assert.Equal(artistKey, Key(track.Field((int)ItlDataType.AlbumArtist)!));
+            Assert.Equal(artistKey, Key(album.Field((int)ItlDataType.AlbumRecordArtist)!));
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+
+        static uint Key(ItlField field) =>
+            BinaryPrimitives.ReadUInt32LittleEndian(field.Header.AsSpan(16));
+    }
+
     [Fact]
     public void PrivateCorpusRemainsIdenticalAndXmlVerifiedWhenConfigured()
     {

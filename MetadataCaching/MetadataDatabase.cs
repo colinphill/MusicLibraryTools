@@ -106,7 +106,14 @@ namespace MetadataCaching
             _channels = (uint)reader.GetInt64("Channels");
             _durationinseconds = (int)reader.GetInt64("DurationInFrames") / 75;
             _artist = reader.GetString("Artist");
-            _albumartist = reader.GetString("AlbumArtist");
+            string albumGroupingArtist = reader.GetString("AlbumArtist");
+            // The Albums relation has always used Artist as its grouping identity when the source
+            // tag omitted Album Artist. Keep that internal normalization out of the public cache
+            // projection: AlbumArtist now means a real, nonblank tag value. A distinct legacy
+            // grouping value also repairs an older lost presence flag without rescanning.
+            _hasalbumartist |= !string.IsNullOrWhiteSpace(albumGroupingArtist) &&
+                !string.Equals(albumGroupingArtist, _artist, StringComparison.Ordinal);
+            _albumartist = _hasalbumartist ? albumGroupingArtist : string.Empty;
             _album = reader.GetString("Album");
             _tracknumber = reader.IsDBNull("TrackNumber") ? null : (int)reader.GetInt64("TrackNumber");
             _tracktotal = reader.IsDBNull("TrackTotal") ? null : (int)reader.GetInt64("TrackTotal");
@@ -1427,7 +1434,12 @@ namespace MetadataCaching
                         var cp = file.File.Codecs.First();
 
                         var artist = mp.Artist;
-                        var albumartist = mp.AlbumArtist;
+                        // Album records need a stable grouping artist even when the explicit tag is
+                        // absent. This internal fallback must not leak through MetadataCacheEntry.
+                        var albumartist = mp.HasAlbumArtist &&
+                            !string.IsNullOrWhiteSpace(mp.AlbumArtist)
+                                ? mp.AlbumArtist
+                                : artist;
                         var album = mp.Album;
                         var title = mp.Title;
                         var track = mp.TrackNumber;
@@ -2208,9 +2220,10 @@ namespace MetadataCaching
                 int.TryParse(KnownValue(field), out int value) ? value : null;
 
             string artist = KnownValue(TagFields.Artist) ?? "";
-            string albumArtist = KnownValue(TagFields.AlbumArtist);
-            if (string.IsNullOrEmpty(albumArtist))
-                albumArtist = artist;
+            string explicitAlbumArtist = KnownValue(TagFields.AlbumArtist);
+            string albumArtist = !string.IsNullOrWhiteSpace(explicitAlbumArtist)
+                ? explicitAlbumArtist
+                : artist;
             string album = KnownValue(TagFields.Album) ?? "";
             string title = KnownValue(TagFields.Title) ?? "";
 
@@ -2256,7 +2269,8 @@ namespace MetadataCaching
                     fc.Parameters.Add("@Channels", DbType.Int64).Value = (long)cp.Channels;
                     fc.Parameters.Add("@DurationInFrames", DbType.Int64).Value = (long)cp.DurationInFrames;
                     fc.Parameters.Add("@TagType", DbType.String).Value = mp.TagType;
-                    fc.Parameters.Add("@HasAlbumArtist", DbType.Int64).Value = mp.HasAlbumArtist ? 1 : 0;
+                    fc.Parameters.Add("@HasAlbumArtist", DbType.Int64).Value =
+                        !string.IsNullOrWhiteSpace(explicitAlbumArtist) ? 1 : 0;
                     fileId = Convert.ToInt64(fc.ExecuteScalar());
                 }
 

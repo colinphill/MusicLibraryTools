@@ -212,9 +212,6 @@ public partial class IndexTargetEditorRow : ObservableObject
     private bool _organize = true;
 
     [ObservableProperty]
-    private string? _defaultOffset;
-
-    [ObservableProperty]
     private bool _useItunesCanonicalNaming;
 
     [ObservableProperty]

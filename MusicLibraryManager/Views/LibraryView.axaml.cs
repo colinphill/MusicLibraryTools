@@ -144,8 +144,8 @@ public partial class LibraryView : UserControl
         _selected = LibraryGrid.SelectedItems.OfType<LibraryRow>().ToArray();
         await _viewModel.SelectAsync(_selected);
         bool hasSelection = _selected.Count > 0;
-        SelectedPill.IsVisible = CopyButton.IsVisible = RevealButton.IsVisible = ReindexButton.IsVisible = hasSelection;
-        SelectedCountText.Text = $"{_selected.Count:N0} selected";
+        SelectedCountLabel.IsVisible = CopyButton.IsVisible = RevealButton.IsVisible = ReindexButton.IsVisible = hasSelection;
+        SelectedCountLabel.Text = $"{_selected.Count:N0} selected";
     }
 
     private void OnLoadingRow(object? sender, DataGridRowEventArgs e)

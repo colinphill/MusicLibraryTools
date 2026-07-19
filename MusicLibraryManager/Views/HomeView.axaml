@@ -20,13 +20,12 @@
     <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
       <StackPanel Spacing="14">
         <Border Classes="card" IsVisible="{Binding Indexing.IsIndexing}">
-          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+          <Grid x:Name="IndexingBannerLayout" ColumnDefinitions="Auto,*" ColumnSpacing="12">
             <ProgressBar Width="22" Height="22" IsIndeterminate="True" />
             <StackPanel Grid.Column="1" Spacing="3">
               <TextBlock Text="Scanning library" FontWeight="SemiBold" />
               <TextBlock Classes="muted" Text="{Binding Indexing.StatusText}" />
             </StackPanel>
-            <Border Grid.Column="2" Classes="pill"><TextBlock Classes="muted" Text="{Binding Indexing.ProgressText}" /></Border>
           </Grid>
         </Border>
 
