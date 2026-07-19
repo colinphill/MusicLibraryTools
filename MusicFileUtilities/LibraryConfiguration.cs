@@ -147,6 +147,9 @@ namespace MusicLibraryTools
             .Where(value => value.Length > 0)
             .ToArray();
 
+        public bool DeleteStaleCrossSyncFiles => ParseOptionalBoolean(
+            root_.Element("CrossSyncMusicSettings"), "DeleteStaleFiles", defaultValue: false);
+
         public IEnumerable<LibraryIndexLocation> IndexLocations =>
             root_.Elements("IndexTarget").Select(ParseIndexLocation);
 

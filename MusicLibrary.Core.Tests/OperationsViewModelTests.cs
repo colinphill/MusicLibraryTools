@@ -363,7 +363,7 @@ public sealed class OperationsViewModelTests
             ApplyCalls++;
             AppliedPlan = plan;
             return Task.FromResult(new CrossLibrarySyncResult(0, 0,
-                new FileMutationSummary(0, 0, 0, null, []), []));
+                new FileMutationSummary(0, 0, 0, 0, null, []), []));
         }
     }
 

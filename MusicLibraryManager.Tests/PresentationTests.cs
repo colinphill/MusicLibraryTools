@@ -465,6 +465,7 @@ public sealed class PresentationTests
                 AacBitrateKbps = 288,
                 DeleteSourcesAfterIngest = true,
                 RemoveNonMusicAfterIngest = true,
+                DeleteStaleCrossSyncFiles = true,
                 IndexTargets =
                 [
                     new IndexTargetEntry
@@ -518,6 +519,7 @@ public sealed class PresentationTests
             Assert.Equal(288, viewModel.AacBitrateKbps);
             Assert.True(viewModel.DeleteSourcesAfterIngest);
             Assert.True(viewModel.RemoveNonMusicAfterIngest);
+            Assert.True(viewModel.DeleteStaleCrossSyncFiles);
             Assert.Equal(["Favorites", "RoadTrip"], viewModel.SyncPlaylists.Select(row => row.Name));
             Assert.Equal("Lossless", Assert.Single(viewModel.PlaylistTargets).Sets);
 
@@ -537,6 +539,7 @@ public sealed class PresentationTests
             Assert.True(savedRoot.UseItunesCanonicalNaming);
             Assert.True(savedRoot.IsSyncTarget);
             Assert.Equal(LibraryIngestRole.Cd, savedRoot.IngestRole);
+            Assert.True(saved.DeleteStaleCrossSyncFiles);
             Assert.Equal(["Favorites", "RoadTrip"], saved.SyncPlaylists);
             Assert.Equal("m3u", Assert.Single(saved.PlaylistTargets).Type);
             Assert.Equal(["Lossless"], saved.PlaylistTargets[0].Sets);

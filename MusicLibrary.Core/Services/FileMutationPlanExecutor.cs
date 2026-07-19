@@ -57,8 +57,12 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
         {
             progress?.Report(new(OperationPhase.Completed, 0, 0,
                 Message: "No filesystem mutations are required"));
-            return new(0, 0, 0, null, plan.Issues);
+            return new(0, 0, 0, 0, null, plan.Issues);
         }
+
+        if (!plan.RetainRecovery)
+            return await ApplyWithoutRecoveryAsync(plan, itunesSession, progress, ct)
+                .ConfigureAwait(false);
 
         Directory.CreateDirectory(plan.RecoveryRoot);
         string journalPath = Path.Combine(plan.RecoveryRoot, "journal.tsv");
@@ -72,7 +76,7 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
 
         var completed = new List<CompletedMutation>();
         var createdDirectories = new List<string>();
-        int copied = 0, replaced = 0, quarantined = 0;
+        int copied = 0, replaced = 0, quarantined = 0, deleted = 0;
         try
         {
             for (int index = 0; index < plan.Actions.Count; index++)
@@ -111,9 +115,42 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
             await WriteJournalAsync(journal, journalStream, $"COMMIT\t{operationId}", ct);
             if (itunesSession is not null)
                 await itunesSession.CompleteAsync(CancellationToken.None).ConfigureAwait(false);
+
+            // Delete actions are recoverable moves until the complete plan and any iTunes update
+            // have committed. Purge only afterward; an individual purge failure safely leaves that
+            // item in the recovery tree and reports it as quarantined.
+            foreach (CompletedMutation mutation in completed.Where(item =>
+                         item.Action.Kind == FileMutationKind.Delete))
+            {
+                string staged = mutation.BackupPath!;
+                try
+                {
+                    File.SetAttributes(staged, FileAttributes.Normal);
+                    File.Delete(staged);
+                    deleted++;
+                }
+                catch (Exception error)
+                {
+                    quarantined++;
+                    try
+                    {
+                        await WriteJournalAsync(journal, journalStream,
+                            $"DELETE_FAILED\tSTALE\t{mutation.Action.SourcePath}\t{staged}\t{error.Message}",
+                            CancellationToken.None);
+                    }
+                    catch { }
+                    continue;
+                }
+                try
+                {
+                    await WriteJournalAsync(journal, journalStream,
+                        $"DELETE\tSTALE\t{mutation.Action.SourcePath}", CancellationToken.None);
+                }
+                catch { }
+            }
             progress?.Report(new(OperationPhase.Completed, plan.Actions.Count, plan.Actions.Count,
                 Message: "Mutation plan completed"));
-            return new(copied, replaced, quarantined, journalPath, plan.Issues);
+            return new(copied, replaced, quarantined, deleted, journalPath, plan.Issues);
         }
         catch
         {
@@ -144,6 +181,68 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
                 throw new AggregateException("The operation failed and rollback was incomplete.", rollbackErrors);
             throw;
         }
+    }
+
+    private static async Task<FileMutationSummary> ApplyWithoutRecoveryAsync(
+        FileMutationPlan plan,
+        IItunesMediaMutationSession? itunesSession,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct)
+    {
+        int copied = 0, replaced = 0, deleted = 0;
+        for (int index = 0; index < plan.Actions.Count; index++)
+        {
+            ct.ThrowIfCancellationRequested();
+            FileMutationAction action = plan.Actions[index];
+            string currentPath = action.Kind == FileMutationKind.Delete
+                ? action.SourcePath
+                : action.DestinationPath;
+            progress?.Report(new(OperationPhase.Applying, index, plan.Actions.Count,
+                currentPath, $"{action.Kind}: {currentPath}"));
+
+            switch (action.Kind)
+            {
+                case FileMutationKind.Copy:
+                    Directory.CreateDirectory(Path.GetDirectoryName(action.DestinationPath)!);
+                    CopyAtomically(action.SourcePath, action.DestinationPath, replace: false);
+                    copied++;
+                    break;
+                case FileMutationKind.Replace:
+                    Directory.CreateDirectory(Path.GetDirectoryName(action.DestinationPath)!);
+                    CopyAtomically(action.SourcePath, action.DestinationPath, replace: true);
+                    replaced++;
+                    break;
+                case FileMutationKind.Write:
+                    Directory.CreateDirectory(Path.GetDirectoryName(action.DestinationPath)!);
+                    WriteAtomically(action.Content, action.DestinationPath);
+                    copied++;
+                    break;
+                case FileMutationKind.ReplaceGenerated:
+                    Directory.CreateDirectory(Path.GetDirectoryName(action.DestinationPath)!);
+                    WriteAtomically(action.Content, action.DestinationPath, replace: true);
+                    replaced++;
+                    break;
+                case FileMutationKind.Delete:
+                    DeleteWithinRoot(action.SourcePath, action.DestinationPath);
+                    deleted++;
+                    break;
+                case FileMutationKind.Quarantine:
+                    throw new InvalidOperationException(
+                        "A no-recovery mutation plan cannot contain quarantine actions.");
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(action.Kind));
+            }
+        }
+
+        if (itunesSession is not null)
+        {
+            await itunesSession.CommitAsync(plan.Actions.Select(ToItunesMutation).ToArray(),
+                CancellationToken.None).ConfigureAwait(false);
+            await itunesSession.CompleteAsync(CancellationToken.None).ConfigureAwait(false);
+        }
+        progress?.Report(new(OperationPhase.Completed, plan.Actions.Count, plan.Actions.Count,
+            Message: "Mutation plan completed"));
+        return new(copied, replaced, 0, deleted, null, plan.Issues);
     }
 
     private static async Task<CompletedMutation> ApplyOneAsync(
@@ -238,6 +337,20 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
                 }
                 return new(action, action.DestinationPath);
 
+            case FileMutationKind.Delete:
+                File.Move(action.SourcePath, action.DestinationPath, false);
+                try
+                {
+                    await WriteJournalAsync(journal, journalStream,
+                        $"STAGE_DELETE\tSTALE\t{action.SourcePath}\t{action.DestinationPath}", ct);
+                }
+                catch
+                {
+                    File.Move(action.DestinationPath, action.SourcePath, false);
+                    throw;
+                }
+                return new(action, action.DestinationPath);
+
             default:
                 throw new ArgumentOutOfRangeException(nameof(action.Kind));
         }
@@ -272,7 +385,7 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
                     File.Move(mutation.BackupPath, action.DestinationPath, false);
                 }
                 break;
-            case FileMutationKind.Quarantine:
+            case FileMutationKind.Quarantine or FileMutationKind.Delete:
                 if (File.Exists(action.DestinationPath) && !File.Exists(action.SourcePath))
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(action.SourcePath)!);
@@ -289,7 +402,8 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
             ct.ThrowIfCancellationRequested();
             if (action.ExpectedSource is not null)
                 ValidateSnapshot(action.ExpectedSource);
-            ValidateSnapshot(action.ExpectedDestination);
+            if (action.ExpectedDestination is not null)
+                ValidateSnapshot(action.ExpectedDestination);
         }
     }
 
@@ -326,7 +440,7 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
     }
 
     private static void WriteAtomically(System.Collections.Immutable.ImmutableArray<byte> content,
-        string destination)
+        string destination, bool replace = false)
     {
         if (content.IsDefault)
             throw new InvalidOperationException("A generated-file mutation has no reviewed content.");
@@ -340,11 +454,33 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
                 stream.Write(content.AsSpan());
                 stream.Flush(true);
             }
-            File.Move(temporary, destination, false);
+            File.Move(temporary, destination, replace);
         }
         finally
         {
             try { if (File.Exists(temporary)) File.Delete(temporary); } catch { }
+        }
+    }
+
+    private static void DeleteWithinRoot(string path, string root)
+    {
+        string fullPath = Path.GetFullPath(path);
+        string fullRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
+        string rootPrefix = fullRoot + Path.DirectorySeparatorChar;
+        if (!fullPath.StartsWith(rootPrefix, PathComparison))
+            throw new InvalidOperationException(
+                $"Delete target '{fullPath}' is outside reviewed root '{fullRoot}'.");
+
+        File.SetAttributes(fullPath, FileAttributes.Normal);
+        File.Delete(fullPath);
+        string? directory = Path.GetDirectoryName(fullPath);
+        while (directory is not null && !PathComparer.Equals(directory, fullRoot) &&
+               directory.StartsWith(rootPrefix, PathComparison))
+        {
+            if (!Directory.Exists(directory) || Directory.EnumerateFileSystemEntries(directory).Any())
+                break;
+            Directory.Delete(directory);
+            directory = Path.GetDirectoryName(directory);
         }
     }
 
@@ -363,6 +499,8 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
             $"PLAN_INSTALL\t{action.Kind.ToString().ToUpperInvariant()}\t{action.DestinationPath}",
         FileMutationKind.Quarantine =>
             $"PLAN_QUARANTINE\tSTALE\t{action.SourcePath}\t{action.DestinationPath}",
+        FileMutationKind.Delete =>
+            $"PLAN_DELETE\tSTALE\t{action.SourcePath}",
         _ => throw new ArgumentOutOfRangeException(nameof(action.Kind)),
     };
 
@@ -373,7 +511,7 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
                 ItunesMediaMutation.Add(action.DestinationPath),
             FileMutationKind.Replace or FileMutationKind.ReplaceGenerated =>
                 ItunesMediaMutation.Refresh(action.DestinationPath),
-            FileMutationKind.Quarantine =>
+            FileMutationKind.Quarantine or FileMutationKind.Delete =>
                 ItunesMediaMutation.Remove(action.SourcePath),
             _ => throw new ArgumentOutOfRangeException(nameof(action.Kind)),
         };
@@ -391,4 +529,7 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase
         : StringComparer.Ordinal;
+    private static readonly StringComparison PathComparison = OperatingSystem.IsWindows()
+        ? StringComparison.OrdinalIgnoreCase
+        : StringComparison.Ordinal;
 }

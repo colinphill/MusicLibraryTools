@@ -24,6 +24,7 @@ public class EditableLibraryConfigTests
                 AacBitrateKbps = 320,
                 DeleteSourcesAfterIngest = true,
                 RemoveNonMusicAfterIngest = true,
+                DeleteStaleCrossSyncFiles = true,
                 SyncPlaylists = ["Favorites", "Road Trip"],
                 IndexTargets =
                 [
@@ -64,6 +65,7 @@ public class EditableLibraryConfigTests
             Assert.Equal(320, reloaded.AacBitrateKbps);
             Assert.True(reloaded.DeleteSourcesAfterIngest);
             Assert.True(reloaded.RemoveNonMusicAfterIngest);
+            Assert.True(reloaded.DeleteStaleCrossSyncFiles);
             Assert.Equal(["Favorites", "Road Trip"], reloaded.SyncPlaylists);
             Assert.Equal(2, reloaded.IndexTargets.Count);
             Assert.Equal(@"Z:\FLAC", reloaded.IndexTargets[0].Target);
@@ -100,6 +102,8 @@ public class EditableLibraryConfigTests
             Assert.Null(xml.Root.Element("SyncTarget"));
             Assert.Equal(["Favorites", "Road Trip"],
                 xml.Root.Elements("SyncPlaylist").Select(element => element.Value));
+            Assert.Equal("true", (string?)xml.Root.Element("CrossSyncMusicSettings")
+                ?.Attribute("DeleteStaleFiles"));
             Assert.Equal(2, xml.Root.Elements("IndexTarget").First().Elements("Set").Count());
             Assert.All(xml.Root.Elements("PlaylistTarget"), target =>
             {
@@ -184,6 +188,7 @@ public class EditableLibraryConfigTests
             var configuration = new LibraryConfiguration(path);
             Assert.Equal("portable", configuration.CrossSyncTargetLibraryPath);
             Assert.Equal(["Favorites"], configuration.SyncPlaylists);
+            Assert.False(configuration.DeleteStaleCrossSyncFiles);
         }
         finally
         {

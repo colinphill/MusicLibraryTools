@@ -43,6 +43,48 @@ public sealed class PlaylistExportServiceTests
     }
 
     [Fact]
+    public async Task CleanDeletesAllTargetContentsAndWritesFreshFilesWithoutRecoveryArtifacts()
+    {
+        using var workspace = new TempDirectory();
+        LibraryOperationContext context = CreateContext(workspace.Path);
+        string targetRoot = context.Configuration.PlaylistTargets.Single().Target;
+        string existingPlaylist = Path.Combine(targetRoot, "Favorites.m3u");
+        string unrelated = Path.Combine(targetRoot, "nested", "unrelated.txt");
+        Directory.CreateDirectory(Path.GetDirectoryName(unrelated)!);
+        await File.WriteAllTextAsync(existingPlaylist, "old playlist",
+            TestContext.Current.CancellationToken);
+        await File.WriteAllTextAsync(unrelated, "unrelated",
+            TestContext.Current.CancellationToken);
+        var service = CreateService(context);
+
+        PlaylistExportPlan plan = await service.PreviewAsync(
+            new(Path.Combine(workspace.Path, "library.xml"), Clean: true),
+            ct: TestContext.Current.CancellationToken);
+
+        Assert.False(plan.MutationPlan.RetainRecovery);
+        Assert.Equal(string.Empty, plan.MutationPlan.RecoveryRoot);
+        Assert.Equal(2, plan.MutationPlan.Actions.Count(action =>
+            action.Kind == FileMutationKind.Delete));
+        Assert.DoesNotContain(plan.MutationPlan.Actions, action =>
+            action.Kind is FileMutationKind.Quarantine or FileMutationKind.ReplaceGenerated);
+        Assert.Contains(plan.MutationPlan.Actions, action =>
+            action.Kind == FileMutationKind.Write && action.DestinationPath == existingPlaylist);
+
+        PlaylistExportResult result = await service.ApplyAsync(
+            plan, ct: TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, result.Mutations.Deleted);
+        Assert.Equal(0, result.Mutations.Quarantined);
+        Assert.Null(result.Mutations.JournalPath);
+        Assert.True(File.Exists(existingPlaylist));
+        Assert.Contains("#EXTM3U", await File.ReadAllTextAsync(existingPlaylist,
+            TestContext.Current.CancellationToken));
+        Assert.False(File.Exists(unrelated));
+        Assert.False(Directory.Exists(Path.GetDirectoryName(unrelated)));
+        Assert.Empty(Directory.GetDirectories(workspace.Path, "playlists.CrossSyncPlaylists-*"));
+    }
+
+    [Fact]
     public async Task ApplyRejectsDestinationCreatedAfterPreviewBeforeWritingAnything()
     {
         using var workspace = new TempDirectory();

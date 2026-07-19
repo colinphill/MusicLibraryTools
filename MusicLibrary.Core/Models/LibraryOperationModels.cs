@@ -30,7 +30,7 @@ public sealed record OperationIssue(
     string Message,
     string? Path = null);
 
-public enum FileMutationKind { Copy, Replace, Write, ReplaceGenerated, Quarantine }
+public enum FileMutationKind { Copy, Replace, Write, ReplaceGenerated, Quarantine, Delete }
 
 /// <summary>
 /// One immutable filesystem decision. Source and destination snapshots describe the exact state
@@ -42,7 +42,7 @@ public sealed record FileMutationAction(
     string SourcePath,
     string DestinationPath,
     OperationPathSnapshot? ExpectedSource,
-    OperationPathSnapshot ExpectedDestination,
+    OperationPathSnapshot? ExpectedDestination,
     ImmutableArray<byte> Content = default);
 
 public sealed record FileMutationPlan(
@@ -51,7 +51,8 @@ public sealed record FileMutationPlan(
     string RecoveryRoot,
     IReadOnlyList<FileMutationAction> Actions,
     IReadOnlyList<OperationIssue> Issues,
-    DateTimeOffset CreatedAtUtc)
+    DateTimeOffset CreatedAtUtc,
+    bool RetainRecovery = true)
 {
     public bool CanApply => Issues.All(issue => issue.Severity != OperationIssueSeverity.Blocker);
 }
@@ -60,6 +61,7 @@ public sealed record FileMutationSummary(
     int Copied,
     int Replaced,
     int Quarantined,
+    int Deleted,
     string? JournalPath,
     IReadOnlyList<OperationIssue> Issues);
 

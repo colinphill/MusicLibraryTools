@@ -28,7 +28,7 @@ public sealed class AnalysisRepairServiceTests
     }
 
     [Fact]
-    public void PreviewMissingAlbumArtists_UsesSharedArtistButSkipsAmbiguousCompilations()
+    public void PreviewMissingAlbumArtists_DoesNotInferFromTrackArtists()
     {
         string single = Path.Combine("library", "Solo", "Album");
         string compilation = Path.Combine("library", "Various", "Album");
@@ -42,9 +42,7 @@ public sealed class AnalysisRepairServiceTests
 
         var plan = new AnalysisRepairService(new RecordingWriter()).PreviewMissingAlbumArtists(records);
 
-        Assert.Equal(2, plan.Items.Count);
-        Assert.All(plan.Items, repair => Assert.Equal("Solo Artist", repair.After));
-        Assert.DoesNotContain(plan.Items, repair => repair.Path.StartsWith(compilation, StringComparison.Ordinal));
+        Assert.Empty(plan.Items);
     }
 
     [Fact]
@@ -564,7 +562,7 @@ public sealed class AnalysisRepairServiceTests
 
         var plan = new AnalysisRepairService(new RecordingWriter()).PreviewSafeRepairs(records);
 
-        Assert.Contains(plan.Items, repair => repair.Field == TagFields.AlbumArtist);
+        Assert.DoesNotContain(plan.Items, repair => repair.Field == TagFields.AlbumArtist);
         Assert.Contains(plan.Items, repair => repair.Field == TagFields.TrackNumber);
         Assert.Contains(plan.Items, repair => repair.Field == TagFields.TotalTracks);
         Assert.Contains(plan.Items, repair => repair.Field == TagFields.Artist && repair.After == "Artist");
@@ -679,7 +677,7 @@ public sealed class AnalysisRepairServiceTests
     }
 
     [Fact]
-    public async Task PreviewAndApply_RepairsARealIndexedFileAndRefreshesTheCache()
+    public async Task PreviewAndApply_LeaveMissingAlbumArtistAbsentWhenArtistIsShared()
     {
         using var temp = new TempDirectory();
         string music = System.IO.Path.Combine(temp.Path, "music");
@@ -702,10 +700,11 @@ public sealed class AnalysisRepairServiceTests
         var plan = service.PreviewMissingAlbumArtists(await library.GetAllRecordsAsync());
         var result = await service.ApplyAsync(plan);
 
-        Assert.Equal(1, result.SavedCount);
-        Assert.True(MediaFile.GetFile(path).Tags.First().HasAlbumArtist);
-        Assert.Equal("TestArtist", MediaFile.GetFile(path).Tags.First().AlbumArtist);
-        Assert.Equal("TestArtist", (await library.GetFileDetailsAsync(path, includeArtwork: false))!.Entry.AlbumArtist);
+        Assert.Empty(plan.Items);
+        Assert.Equal(0, result.SavedCount);
+        Assert.False(MediaFile.GetFile(path).Tags.First().HasAlbumArtist);
+        Assert.Equal(string.Empty, MediaFile.GetFile(path).Tags.First().AlbumArtist);
+        Assert.False((await library.GetFileDetailsAsync(path, includeArtwork: false))!.Entry.HasAlbumArtist);
     }
 
     [Fact]

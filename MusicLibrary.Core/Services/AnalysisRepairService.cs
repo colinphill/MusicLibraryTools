@@ -155,25 +155,10 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
                 .Select(value => value!)
                 .ToList();
             string? candidate = OneDistinctValue(knownAlbumArtists);
-            string reason;
-            if (candidate is not null)
-            {
-                reason = "Matches the album artist already used by other tracks in this folder.";
-            }
-            else
-            {
-                if (knownAlbumArtists.Count > 0)
-                    continue; // Conflicting existing values are not safe to infer away.
-                // With no existing album artist, a single track-artist value is safe. Varying artists
-                // are likely a compilation and intentionally require human input.
-                candidate = OneDistinctValue(album
-                    .Select(record => record.Artist)
-                    .Where(value => !string.IsNullOrWhiteSpace(value))
-                    .Select(value => value!));
-                if (candidate is null)
-                    continue;
-                reason = "All tracks in this album folder use the same artist.";
-            }
+            if (candidate is null)
+                continue; // Absence, even with one shared Artist, is valid and must remain absent.
+            const string reason =
+                "Matches the explicit album artist already used by other tracks in this folder.";
 
             foreach (var record in missing)
             {

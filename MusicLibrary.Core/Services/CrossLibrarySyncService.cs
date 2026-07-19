@@ -117,6 +117,7 @@ public sealed class CrossLibrarySyncService : ICrossLibrarySyncService
 
         bool includeNonMusic = context.Configuration["DeleteNonMusic"].Length != 0;
         bool keepFolderImages = context.Configuration["KeepFolderImages"].Length != 0;
+        bool deleteStaleFiles = context.Configuration.DeleteStaleCrossSyncFiles;
         bool IncludeDestinationFile(string path)
         {
             if (MetadataCache.ValidExtensions.Contains(Path.GetExtension(path),
@@ -217,8 +218,10 @@ public sealed class CrossLibrarySyncService : ICrossLibrarySyncService
                 $"{request.MaxRemovals:N0}."));
 
         DateTimeOffset createdAt = DateTimeOffset.UtcNow;
-        string recoveryRoot = targetRoot + ".CrossSyncMusic-quarantine" +
-            Path.DirectorySeparatorChar + createdAt.UtcDateTime.ToString("yyyyMMdd-HHmmssfff");
+        string recoveryRoot = deleteStaleFiles
+            ? ""
+            : targetRoot + ".CrossSyncMusic-quarantine" + Path.DirectorySeparatorChar +
+              createdAt.UtcDateTime.ToString("yyyyMMdd-HHmmssfff");
         var actions = new List<FileMutationAction>();
         var plannedFiles = new List<CrossLibrarySyncPlannedFile>();
         int unchanged = 0;
@@ -251,14 +254,22 @@ public sealed class CrossLibrarySyncService : ICrossLibrarySyncService
         }
         foreach (OperationPathSnapshot staleFile in stale)
         {
-            string quarantine = Path.Combine(recoveryRoot, "stale",
-                Path.GetRelativePath(targetRoot, staleFile.Path!));
-            actions.Add(new(FileMutationKind.Quarantine, staleFile.Path!, quarantine,
-                staleFile, OperationPathSnapshot.Missing(quarantine)));
+            if (deleteStaleFiles)
+            {
+                actions.Add(new(FileMutationKind.Delete, staleFile.Path!, targetRoot,
+                    staleFile, null));
+            }
+            else
+            {
+                string quarantine = Path.Combine(recoveryRoot, "stale",
+                    Path.GetRelativePath(targetRoot, staleFile.Path!));
+                actions.Add(new(FileMutationKind.Quarantine, staleFile.Path!, quarantine,
+                    staleFile, OperationPathSnapshot.Missing(quarantine)));
+            }
         }
 
         var mutationPlan = new FileMutationPlan("CrossSyncMusic", targetRoot, recoveryRoot,
-            actions, issues, createdAt);
+            actions, issues, createdAt, RetainRecovery: !deleteStaleFiles);
         return new(request, targetRoot, plannedFiles, unchanged, stale.Length,
             mutationPlan, issues);
     }

@@ -545,7 +545,9 @@ public partial class OperationsViewModel : ViewModelBase
             output.AppendLine($"{issue.Severity,-11} {issue.Code}: {issue.Message}" +
                 (issue.Path is null ? "" : " [" + issue.Path + "]"));
         foreach (FileMutationAction action in plan.MutationPlan.Actions)
-            output.AppendLine($"{action.Kind,-10} {action.SourcePath} -> {action.DestinationPath}");
+            output.AppendLine(action.Kind == FileMutationKind.Delete
+                ? $"{action.Kind,-10} {action.SourcePath}"
+                : $"{action.Kind,-10} {action.SourcePath} -> {action.DestinationPath}");
         output.AppendLine($"Plan: {plan.Files.Count:N0} desired, {plan.UnchangedCount:N0} unchanged, " +
             $"{plan.StaleCount:N0} stale, {plan.MutationPlan.Actions.Count:N0} mutations.");
         return output.ToString();
@@ -553,7 +555,8 @@ public partial class OperationsViewModel : ViewModelBase
 
     private static string RenderCrossLibrarySyncResult(CrossLibrarySyncResult result) =>
         $"Applied: {result.Mutations.Copied:N0} copied, {result.Mutations.Replaced:N0} replaced, " +
-        $"{result.Mutations.Quarantined:N0} quarantined, {result.UnchangedCount:N0} unchanged." +
+        $"{result.Mutations.Quarantined:N0} quarantined, {result.Mutations.Deleted:N0} deleted, " +
+        $"{result.UnchangedCount:N0} unchanged." +
         (result.Mutations.JournalPath is null ? "" :
             Environment.NewLine + "Recovery journal: " + result.Mutations.JournalPath);
 
@@ -654,14 +657,17 @@ public partial class OperationsViewModel : ViewModelBase
             output.AppendLine($"Target {target.Target}: {target.Files.Count:N0} playlist(s), " +
                 $"{target.MissingTrackCount:N0} missing mapping(s).");
         foreach (FileMutationAction action in plan.MutationPlan.Actions)
-            output.AppendLine($"{action.Kind,-16} {action.DestinationPath}");
+            output.AppendLine(action.Kind == FileMutationKind.Delete
+                ? $"{action.Kind,-16} {action.SourcePath}"
+                : $"{action.Kind,-16} {action.DestinationPath}");
         return output.ToString();
     }
 
     private static string RenderPlaylistExportResult(PlaylistExportResult result) =>
         $"Applied {result.PlaylistCount:N0} playlist(s): {result.Mutations.Copied:N0} created, " +
         $"{result.Mutations.Replaced:N0} replaced, " +
-        $"{result.Mutations.Quarantined:N0} quarantined." +
+        $"{result.Mutations.Quarantined:N0} quarantined, " +
+        $"{result.Mutations.Deleted:N0} deleted." +
         (result.Mutations.JournalPath is null ? "" :
             Environment.NewLine + "Recovery journal: " + result.Mutations.JournalPath);
 

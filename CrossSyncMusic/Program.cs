@@ -15,7 +15,8 @@ internal static class CrossSyncMusicCommand
             Console.Error.WriteLine(
                 "Usage: CrossSyncMusic <libraryconfiguration.xml> [--library <file.itl>] " +
                 "[--max-removals <count>] [--apply]");
-            Console.Error.WriteLine("Preview is the default. Stale files are quarantined, never deleted.");
+            Console.Error.WriteLine("Preview is the default. Stale files are quarantined unless " +
+                "CrossSyncMusicSettings DeleteStaleFiles is enabled in the configuration.");
             return 2;
         }
 
@@ -48,6 +49,7 @@ internal static class CrossSyncMusicCommand
             Console.WriteLine($"Applied: {result.Mutations.Copied:N0} copied, " +
                 $"{result.Mutations.Replaced:N0} replaced, " +
                 $"{result.Mutations.Quarantined:N0} quarantined, " +
+                $"{result.Mutations.Deleted:N0} deleted, " +
                 $"{result.UnchangedCount:N0} unchanged.");
             if (result.Mutations.JournalPath is not null)
                 Console.WriteLine("Recovery journal: " + result.Mutations.JournalPath);
@@ -71,7 +73,9 @@ internal static class CrossSyncMusicCommand
             Console.WriteLine($"{issue.Severity,-11} {issue.Code}: {issue.Message}" +
                 (issue.Path is null ? "" : " [" + issue.Path + "]"));
         foreach (FileMutationAction action in plan.MutationPlan.Actions)
-            Console.WriteLine($"{action.Kind,-10} {action.SourcePath} -> {action.DestinationPath}");
+            Console.WriteLine(action.Kind == FileMutationKind.Delete
+                ? $"{action.Kind,-10} {action.SourcePath}"
+                : $"{action.Kind,-10} {action.SourcePath} -> {action.DestinationPath}");
         Console.WriteLine($"Plan: {plan.Files.Count:N0} desired, {plan.UnchangedCount:N0} unchanged, " +
             $"{plan.StaleCount:N0} stale, {plan.MutationPlan.Actions.Count:N0} mutations.");
     }

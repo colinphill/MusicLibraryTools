@@ -51,6 +51,80 @@ public sealed class CrossLibrarySyncServiceTests
     }
 
     [Fact]
+    public async Task ConfiguredDeletionPermanentlyDeletesWithoutRecoveryArtifacts()
+    {
+        using var workspace = new TempDirectory();
+        string sourceRoot = Directory.CreateDirectory(Path.Combine(workspace.Path, "source")).FullName;
+        string targetRoot = Directory.CreateDirectory(Path.Combine(workspace.Path, "target")).FullName;
+        string source = Path.Combine(sourceRoot, "track.flac");
+        File.Copy(MediaFixtures.Path_("sample.flac"), source);
+        string stale = Path.Combine(targetRoot, "stale.flac");
+        File.Copy(MediaFixtures.Path_("sample.flac"), stale);
+
+        LibraryOperationContext context = CreateContext(
+            workspace.Path, sourceRoot, targetRoot, source, deleteStaleFiles: true);
+        var service = CreateService(context);
+        var request = new CrossLibrarySyncRequest(Path.Combine(workspace.Path, "library.xml"),
+            MaxRemovals: 1);
+
+        CrossLibrarySyncPlan plan = await service.PreviewAsync(
+            request, ct: TestContext.Current.CancellationToken);
+
+        Assert.True(plan.CanApply);
+        FileMutationAction delete = Assert.Single(plan.MutationPlan.Actions,
+            action => action.Kind == FileMutationKind.Delete);
+        Assert.Equal(stale, delete.SourcePath);
+        Assert.False(plan.MutationPlan.RetainRecovery);
+        Assert.Equal(string.Empty, plan.MutationPlan.RecoveryRoot);
+        Assert.True(File.Exists(stale));
+
+        CrossLibrarySyncResult result = await service.ApplyAsync(
+            plan, ct: TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, result.Mutations.Deleted);
+        Assert.Equal(0, result.Mutations.Quarantined);
+        Assert.False(File.Exists(stale));
+        Assert.Null(result.Mutations.JournalPath);
+        Assert.Empty(Directory.GetDirectories(workspace.Path, "target.CrossSyncMusic-*"));
+    }
+
+    [Fact]
+    public async Task ConfiguredDeletionReplacesWithoutQuarantiningPreviousFile()
+    {
+        using var workspace = new TempDirectory();
+        string sourceRoot = Directory.CreateDirectory(Path.Combine(workspace.Path, "source")).FullName;
+        string targetRoot = Directory.CreateDirectory(Path.Combine(workspace.Path, "target")).FullName;
+        string source = Path.Combine(sourceRoot, "track.flac");
+        File.Copy(MediaFixtures.Path_("sample.flac"), source);
+        LibraryOperationContext context = CreateContext(
+            workspace.Path, sourceRoot, targetRoot, source, deleteStaleFiles: true);
+        var service = CreateService(context);
+        var request = new CrossLibrarySyncRequest(Path.Combine(workspace.Path, "library.xml"));
+        CrossLibrarySyncPlan initial = await service.PreviewAsync(
+            request, ct: TestContext.Current.CancellationToken);
+        string destination = initial.Files.Single().DestinationPath;
+        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+        await File.WriteAllTextAsync(destination, "old destination",
+            TestContext.Current.CancellationToken);
+        File.SetLastWriteTimeUtc(destination, File.GetLastWriteTimeUtc(source).AddMinutes(-1));
+
+        CrossLibrarySyncPlan plan = await service.PreviewAsync(
+            request, ct: TestContext.Current.CancellationToken);
+
+        Assert.Contains(plan.MutationPlan.Actions,
+            action => action.Kind == FileMutationKind.Replace && action.DestinationPath == destination);
+        CrossLibrarySyncResult result = await service.ApplyAsync(
+            plan, ct: TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, result.Mutations.Replaced);
+        Assert.Equal(0, result.Mutations.Quarantined);
+        Assert.Null(result.Mutations.JournalPath);
+        Assert.Equal(await File.ReadAllBytesAsync(source, TestContext.Current.CancellationToken),
+            await File.ReadAllBytesAsync(destination, TestContext.Current.CancellationToken));
+        Assert.Empty(Directory.GetDirectories(workspace.Path, "target.CrossSyncMusic-*"));
+    }
+
+    [Fact]
     public async Task ApplyRejectsStaleSourceBeforeCreatingRecoveryTreeOrDestination()
     {
         using var workspace = new TempDirectory();
@@ -102,7 +176,7 @@ public sealed class CrossLibrarySyncServiceTests
             new FileMutationPlanExecutor(new FileMutationCoordinator()));
 
     private static LibraryOperationContext CreateContext(string workspace, string sourceRoot,
-        string targetRoot, string source)
+        string targetRoot, string source, bool deleteStaleFiles = false)
     {
         string configPath = Path.Combine(workspace, "library.xml");
         new XDocument(new XElement("LibraryConfiguration",
@@ -112,6 +186,8 @@ public sealed class CrossLibrarySyncServiceTests
                 new XAttribute("Path", targetRoot),
                 new XAttribute("SyncTarget", true)),
             new XElement("SyncPlaylist", "Test Sync"),
+            new XElement("CrossSyncMusicSettings",
+                new XAttribute("DeleteStaleFiles", deleteStaleFiles)),
             new XElement("LengthLimit", "255"),
             new XElement("DiscNumLengthLimit", "255"))).Save(configPath);
         var configuration = new LibraryConfiguration(configPath);

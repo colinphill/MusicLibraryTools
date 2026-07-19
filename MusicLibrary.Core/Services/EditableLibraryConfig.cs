@@ -46,6 +46,7 @@ public sealed class EditableLibraryConfig
     public int AacBitrateKbps { get; set; } = 256;
     public bool DeleteSourcesAfterIngest { get; set; }
     public bool RemoveNonMusicAfterIngest { get; set; }
+    public bool DeleteStaleCrossSyncFiles { get; set; }
     public List<string> SyncPlaylists { get; set; } = [];
     public List<PlaylistTargetEntry> PlaylistTargets { get; set; } = [];
     public List<IndexTargetEntry> IndexTargets { get; set; } = [];
@@ -57,7 +58,7 @@ public sealed class EditableLibraryConfig
     {
         "DatabaseFile", "ItunesLibrary", "FfmpegPath", "LengthLimit", "DiscNumLengthLimit",
         "SyncTarget", "SyncPlaylist", "PlaylistTarget", "PlaylistType", "IndexTarget",
-        "IngestSettings",
+        "IngestSettings", "CrossSyncMusicSettings",
     };
 
     public static EditableLibraryConfig Load(string path)
@@ -81,6 +82,7 @@ public sealed class EditableLibraryConfig
         config.AacBitrateKbps = ingest.AacBitrateKbps;
         config.DeleteSourcesAfterIngest = ingest.DeleteSourcesAfterIngest;
         config.RemoveNonMusicAfterIngest = ingest.RemoveNonMusicAfterIngest;
+        config.DeleteStaleCrossSyncFiles = parsed.DeleteStaleCrossSyncFiles;
         foreach (LibraryIndexLocation location in parsed.IndexLocations)
         {
             config.IndexTargets.Add(new IndexTargetEntry
@@ -191,6 +193,9 @@ public sealed class EditableLibraryConfig
                      .Where(value => value.Length > 0)
                      .Distinct(StringComparer.OrdinalIgnoreCase))
             root.Add(new XElement("SyncPlaylist", playlist));
+
+        root.Add(new XElement("CrossSyncMusicSettings",
+            new XAttribute("DeleteStaleFiles", DeleteStaleCrossSyncFiles)));
 
         var configuredSets = IndexTargets.SelectMany(indexTarget => indexTarget.Memberships)
             .Select(membership => LibraryConfiguration.ParseScanSetName(membership.Name))

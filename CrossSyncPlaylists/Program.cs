@@ -42,7 +42,9 @@ internal static class CrossSyncPlaylistsCommand
                     $"{target.MissingTrackCount:N0} missing track mapping(s).");
             if (!check)
                 foreach (FileMutationAction action in plan.MutationPlan.Actions)
-                    Console.WriteLine($"{action.Kind,-16} {action.DestinationPath}");
+                    Console.WriteLine(action.Kind == FileMutationKind.Delete
+                        ? $"{action.Kind,-16} {action.SourcePath}"
+                        : $"{action.Kind,-16} {action.DestinationPath}");
 
             if (check || !apply)
             {
@@ -58,7 +60,8 @@ internal static class CrossSyncPlaylistsCommand
             PlaylistExportResult result = await service.ApplyAsync(plan, progress);
             Console.WriteLine($"Applied {result.PlaylistCount:N0} playlist(s): " +
                 $"{result.Mutations.Copied:N0} created, {result.Mutations.Replaced:N0} replaced, " +
-                $"{result.Mutations.Quarantined:N0} quarantined.");
+                $"{result.Mutations.Quarantined:N0} quarantined, " +
+                $"{result.Mutations.Deleted:N0} deleted.");
             if (result.Mutations.JournalPath is not null)
                 Console.WriteLine("Recovery journal: " + result.Mutations.JournalPath);
             return 0;
