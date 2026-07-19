@@ -64,27 +64,35 @@ public sealed class AnalyzerViewModelTests
         Assert.Equal("AA", artist.Artist);
         var album = Assert.Single(artist.Albums);
         Assert.Equal("First", album.Album);
+        Assert.Equal([AnalysisFindingDisposition.None, AnalysisFindingDisposition.Filter],
+            album.Findings[0].Dispositions);
+        Assert.DoesNotContain("Deferred", Enum.GetNames<AnalysisRepairDisposition>());
         Assert.Equal(2, album.ActiveCount);
         Assert.Equal(2, artist.ActiveCount);
         Assert.Equal(3, run.ActiveFindingCount);
 
-        album.Findings[0].Disposition = AnalysisFindingDisposition.Deferred;
+        album.Findings[0].Disposition = AnalysisFindingDisposition.Filter;
 
         Assert.Equal(1, album.ActiveCount);
         Assert.Equal(1, artist.ActiveCount);
         Assert.Equal(1, missing.ActiveCount);
         Assert.Equal(2, run.ActiveFindingCount);
-        Assert.Equal(AnalysisRepairDisposition.Mixed, album.Disposition);
-        Assert.Equal(AnalysisRepairDisposition.Mixed, artist.Disposition);
-        Assert.Equal(AnalysisRepairDisposition.Mixed, missing.Disposition);
+        Assert.Equal(AnalysisFindingDisposition.Mixed, album.Disposition);
+        Assert.Equal(AnalysisFindingDisposition.Mixed, artist.Disposition);
+        Assert.Equal(AnalysisFindingDisposition.Mixed, missing.Disposition);
+        Assert.Equal([records[0].Path], run.FilteredPaths);
 
-        missing.Disposition = AnalysisRepairDisposition.Ignored;
+        missing.Disposition = AnalysisFindingDisposition.Filter;
 
-        Assert.Equal(AnalysisRepairDisposition.Ignored, missing.Disposition);
-        Assert.Equal(0, missing.ActiveCount);
+        Assert.Equal([records[0].Path, records[1].Path], run.FilteredPaths);
+
+        missing.Disposition = AnalysisFindingDisposition.None;
+
+        Assert.Equal(AnalysisFindingDisposition.None, missing.Disposition);
+        Assert.Equal(2, missing.ActiveCount);
         Assert.All(missing.Artists.SelectMany(group => group.Albums)
             .SelectMany(group => group.Findings),
-            finding => Assert.Equal(AnalysisFindingDisposition.Ignored,
+            finding => Assert.Equal(AnalysisFindingDisposition.None,
                 finding.Disposition));
     }
 
@@ -182,7 +190,7 @@ public sealed class AnalyzerViewModelTests
         var firstAlbum = Assert.Single(
             aac.Artists.Single(artist => artist.Artist == "AA").Albums);
 
-        firstAlbum.Disposition = AnalysisRepairDisposition.Deferred;
+        firstAlbum.Disposition = AnalysisRepairDisposition.Filter;
 
         Assert.Equal(AnalysisRepairDisposition.Mixed, aac.Disposition);
         Assert.Equal(1, aac.ActiveCount);
@@ -249,16 +257,39 @@ public sealed class AnalyzerViewModelTests
         var lossyRun = viewModel.SelectedRun!;
         var finding = Assert.Single(
             Assert.Single(Assert.Single(lossyRun.FindingGroups).Artists).Albums).Findings[0];
-        finding.Disposition = AnalysisFindingDisposition.Completed;
+        finding.Disposition = AnalysisFindingDisposition.Filter;
 
         await viewModel.RunInconsistenciesCommand.ExecuteAsync(null);
         viewModel.SelectedRun = lossyRun;
 
-        Assert.Equal(AnalysisFindingDisposition.Completed,
+        Assert.Equal(AnalysisFindingDisposition.Filter,
             Assert.Single(
                 Assert.Single(Assert.Single(viewModel.FindingGroups).Artists).Albums)
                 .Findings[0].Disposition);
         Assert.Equal(0, lossyRun.ActiveFindingCount);
+    }
+
+    [Fact]
+    public async Task Analyzer_PublishesFilteredPathsAndClearsThemWithTheRun()
+    {
+        TrackRecord record = Track(
+            "one.mp3", "AA", "Album", CodecType.Lossy, "One", 1);
+        var viewModel = Create([record]);
+        IReadOnlyList<string>? published = null;
+        viewModel.FilterChanged += paths => published = paths;
+        await viewModel.RunLossyCommand.ExecuteAsync(null);
+        AnalysisFindingViewModel finding = Assert.Single(
+            Assert.Single(Assert.Single(viewModel.FindingGroups).Artists).Albums).Findings[0];
+
+        finding.Disposition = AnalysisFindingDisposition.Filter;
+
+        Assert.Equal([record.Path], viewModel.FilteredPaths);
+        Assert.Equal([record.Path], published);
+
+        viewModel.RemoveRunCommand.Execute(null);
+
+        Assert.Empty(viewModel.FilteredPaths);
+        Assert.Empty(published!);
     }
 
     [Fact]
@@ -338,8 +369,13 @@ public sealed class AnalyzerViewModelTests
         Assert.All(items, item => Assert.Equal(AnalysisRepairDisposition.Ignored, item.Disposition));
         Assert.Contains("⟦NBSP⟧", items[0].Before);
         Assert.True(items[0].CanChangeDisposition);
-        Assert.False(items[1].CanChangeDisposition);
+        Assert.True(items[1].CanChangeDisposition);
+        Assert.Contains(AnalysisRepairDisposition.Filter, items[1].Dispositions);
+        Assert.DoesNotContain(AnalysisRepairDisposition.Active, items[1].Dispositions);
         Assert.False(items[1].IsActive);
+
+        items[1].Disposition = AnalysisRepairDisposition.Filter;
+        Assert.Equal([items[1].Path], run.FilteredPaths);
 
         items[0].Disposition = AnalysisRepairDisposition.Active;
         Assert.Equal(1, category.ActiveCount);
@@ -646,7 +682,7 @@ public sealed class AnalyzerViewModelTests
         viewModel.SelectedRepairNode = first;
         Assert.Equal(2, viewModel.DisplayedRepairItems.Count);
 
-        first.Items[0].Disposition = AnalysisRepairDisposition.Deferred;
+        first.Items[0].Disposition = AnalysisRepairDisposition.Filter;
 
         Assert.Equal(1, first.ActiveCount);
         Assert.Equal(AnalysisRepairDisposition.Mixed, first.Disposition);
@@ -664,9 +700,9 @@ public sealed class AnalyzerViewModelTests
         var category = Assert.Single(viewModel.RepresentationActionGroups);
         viewModel.SelectedRepresentationNode = category;
         Assert.Single(viewModel.DisplayedRepresentationItems);
-        category.Disposition = AnalysisRepairDisposition.Deferred;
+        category.Disposition = AnalysisRepairDisposition.Filter;
         Assert.All(viewModel.RepresentationActionItems,
-            item => Assert.Equal(AnalysisRepairDisposition.Deferred, item.Disposition));
+            item => Assert.Equal(AnalysisRepairDisposition.Filter, item.Disposition));
         Assert.False(viewModel.ApplyRepresentationRepairsCommand.CanExecute(null));
 
         category.Disposition = AnalysisRepairDisposition.Active;

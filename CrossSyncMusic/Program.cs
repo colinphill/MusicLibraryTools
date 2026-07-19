@@ -14,7 +14,7 @@ internal static class CrossSyncMusicCommand
         {
             Console.Error.WriteLine(
                 "Usage: CrossSyncMusic <libraryconfiguration.xml> [--library <file.itl>] " +
-                "[--max-removals <count>] [--apply]");
+                "[--apply]");
             Console.Error.WriteLine("Preview is the default. Stale files are quarantined unless " +
                 "CrossSyncMusicSettings DeleteStaleFiles is enabled in the configuration.");
             return 2;
@@ -95,22 +95,11 @@ internal static class CrossSyncMusicCommand
 
         string configuration = args[0];
         string? library = null;
-        int maxRemovals = 0;
         for (int index = 1; index < args.Length; index++)
         {
             string argument = args[index];
             if (argument.Equals("--apply", StringComparison.OrdinalIgnoreCase))
                 apply = true;
-            else if (argument.Equals("--max-removals", StringComparison.OrdinalIgnoreCase) &&
-                     index + 1 < args.Length && int.TryParse(args[++index], out maxRemovals) &&
-                     maxRemovals >= 0)
-            {
-            }
-            else if (argument.StartsWith("--max-removals=", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(argument["--max-removals=".Length..], out maxRemovals) &&
-                     maxRemovals >= 0)
-            {
-            }
             else if (argument.Equals("--library", StringComparison.OrdinalIgnoreCase) &&
                      index + 1 < args.Length)
                 library = args[++index];
@@ -118,7 +107,7 @@ internal static class CrossSyncMusicCommand
                 return false;
         }
 
-        request = new(configuration, library, maxRemovals);
+        request = new(configuration, library);
         return true;
     }
 }

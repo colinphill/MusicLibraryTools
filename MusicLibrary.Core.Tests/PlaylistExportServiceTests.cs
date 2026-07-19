@@ -46,7 +46,7 @@ public sealed class PlaylistExportServiceTests
     public async Task CleanDeletesAllTargetContentsAndWritesFreshFilesWithoutRecoveryArtifacts()
     {
         using var workspace = new TempDirectory();
-        LibraryOperationContext context = CreateContext(workspace.Path);
+        LibraryOperationContext context = CreateContext(workspace.Path, clean: true);
         string targetRoot = context.Configuration.PlaylistTargets.Single().Target;
         string existingPlaylist = Path.Combine(targetRoot, "Favorites.m3u");
         string unrelated = Path.Combine(targetRoot, "nested", "unrelated.txt");
@@ -58,7 +58,7 @@ public sealed class PlaylistExportServiceTests
         var service = CreateService(context);
 
         PlaylistExportPlan plan = await service.PreviewAsync(
-            new(Path.Combine(workspace.Path, "library.xml"), Clean: true),
+            new(Path.Combine(workspace.Path, "library.xml")),
             ct: TestContext.Current.CancellationToken);
 
         Assert.False(plan.MutationPlan.RetainRecovery);
@@ -144,7 +144,7 @@ public sealed class PlaylistExportServiceTests
             new FileMutationPlanExecutor(new FileMutationCoordinator()));
 
     private static LibraryOperationContext CreateContext(string workspace,
-        bool overrideOffset = false, bool conflictingOffsets = false)
+        bool overrideOffset = false, bool conflictingOffsets = false, bool clean = false)
     {
         string sourceRoot = Directory.CreateDirectory(Path.Combine(workspace, "source")).FullName;
         string targetRoot = Path.Combine(workspace, "playlists");
@@ -166,6 +166,7 @@ public sealed class PlaylistExportServiceTests
             indexTarget,
             new XElement("PlaylistTarget", new XAttribute("Type", "m3u"),
                 new XAttribute("Set", conflictingOffsets ? "Primary,Car2" : "Primary"), targetRoot),
+            new XElement("CrossSyncPlaylistsSettings", new XAttribute("Clean", clean)),
             new XElement("LengthLimit", "255"),
             new XElement("DiscNumLengthLimit", "255"))).Save(configPath);
         var configuration = new LibraryConfiguration(configPath);

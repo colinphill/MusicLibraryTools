@@ -29,7 +29,6 @@
                 <StackPanel Spacing="5" IsVisible="{Binding ShowRemovalLimit}"><TextBlock Classes="muted" Text="Maximum removals" FontSize="12" FontWeight="SemiBold" /><NumericUpDown Classes="app" Minimum="0" Value="{Binding JobMaxRemovals, Mode=TwoWay}" /></StackPanel>
                 <WrapPanel>
                   <CheckBox Margin="0,0,14,6" Content="Initialize" IsChecked="{Binding JobInitialize, Mode=TwoWay}" IsVisible="{Binding ShowInitialize}" />
-                  <CheckBox Margin="0,0,14,6" Content="Clean" IsChecked="{Binding JobClean, Mode=TwoWay}" IsVisible="{Binding ShowClean}" />
                   <CheckBox Margin="0,0,14,6" Content="Rebalance" IsChecked="{Binding JobRebalance, Mode=TwoWay}" IsVisible="{Binding ShowRebalance}" />
                   <CheckBox Margin="0,0,14,6" Content="Fix errors" IsChecked="{Binding JobFixErrors, Mode=TwoWay}" IsVisible="{Binding ShowFixErrors}" />
                 </WrapPanel>

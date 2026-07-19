@@ -6,8 +6,7 @@ namespace MusicLibrary.Core.Services;
 
 public sealed record CrossLibrarySyncRequest(
     string? ConfigurationPath = null,
-    string? ItunesLibraryPath = null,
-    int MaxRemovals = 0);
+    string? ItunesLibraryPath = null);
 
 public sealed record CrossLibrarySyncPlannedFile(
     int TrackId,
@@ -73,8 +72,6 @@ public sealed class CrossLibrarySyncService : ICrossLibrarySyncService
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(request);
-        if (request.MaxRemovals < 0)
-            throw new ArgumentOutOfRangeException(nameof(request), "MaxRemovals cannot be negative.");
 
         LibraryOperationContext context = await _contexts.CreateAsync(
             request.ConfigurationPath, request.ItunesLibraryPath, progress, ct).ConfigureAwait(false);
@@ -212,11 +209,6 @@ public sealed class CrossLibrarySyncService : ICrossLibrarySyncService
             .Where(snapshot => !desiredPaths.Contains(snapshot.Path!))
             .OrderBy(snapshot => snapshot.Path, PathComparer)
             .ToArray();
-        if (stale.Length > request.MaxRemovals)
-            issues.Add(new("removal-limit", OperationIssueSeverity.Blocker,
-                $"{stale.Length:N0} stale files exceed the removal limit of " +
-                $"{request.MaxRemovals:N0}."));
-
         DateTimeOffset createdAt = DateTimeOffset.UtcNow;
         string recoveryRoot = deleteStaleFiles
             ? ""

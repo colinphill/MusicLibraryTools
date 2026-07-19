@@ -45,6 +45,8 @@ public sealed class WorkflowIntegrationService : IDisposable
 
         _health.RepairsApplied += FilesChanged;
         _health.OpenRequested += OpenRequested;
+        _health.FilterChanged += HealthFilterChanged;
+        _library.SetHealthFilter(_health.FilteredPaths);
         _ingest.IngestCompleted += LibraryChanged;
         _ingest.RecoveryRequested += RecoveryRequested;
         _organize.MovesApplied += LibraryChanged;
@@ -95,6 +97,8 @@ public sealed class WorkflowIntegrationService : IDisposable
     }
 
     private void OpenRequested(string path) => _platform.RevealFile(path);
+    private void HealthFilterChanged(IReadOnlyList<string> paths) =>
+        _library.SetHealthFilter(paths);
     private void LibraryChanged() => _ = _library.ReloadAsync();
     private void FilesChanged(IReadOnlyList<string> paths) => _ = _library.ReloadAsync();
 
@@ -110,6 +114,7 @@ public sealed class WorkflowIntegrationService : IDisposable
             return;
         _health.RepairsApplied -= FilesChanged;
         _health.OpenRequested -= OpenRequested;
+        _health.FilterChanged -= HealthFilterChanged;
         _ingest.IngestCompleted -= LibraryChanged;
         _ingest.RecoveryRequested -= RecoveryRequested;
         _organize.MovesApplied -= LibraryChanged;

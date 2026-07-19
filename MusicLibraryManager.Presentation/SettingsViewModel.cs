@@ -28,6 +28,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private bool _deleteSourcesAfterIngest;
     [ObservableProperty] private bool _removeNonMusicAfterIngest;
     [ObservableProperty] private bool _deleteStaleCrossSyncFiles;
+    [ObservableProperty] private bool _cleanCrossSyncPlaylists;
     [ObservableProperty] private string _statusMessage = "Choose an existing configuration or create a new one.";
     [ObservableProperty] private string _selectedTheme;
     [ObservableProperty] private int _selectedTabIndex;
@@ -104,6 +105,7 @@ public partial class SettingsViewModel : ObservableObject
         DeleteSourcesAfterIngest = false;
         RemoveNonMusicAfterIngest = false;
         DeleteStaleCrossSyncFiles = false;
+        CleanCrossSyncPlaylists = false;
         IndexTargets.Clear();
         IndexTargets.Add(new IndexTargetEditorRow());
         SyncPlaylists.Clear();
@@ -256,6 +258,7 @@ public partial class SettingsViewModel : ObservableObject
             DeleteSourcesAfterIngest = _editing.DeleteSourcesAfterIngest;
             RemoveNonMusicAfterIngest = _editing.RemoveNonMusicAfterIngest;
             DeleteStaleCrossSyncFiles = _editing.DeleteStaleCrossSyncFiles;
+            CleanCrossSyncPlaylists = _editing.CleanCrossSyncPlaylists;
             IndexTargets.Clear();
             foreach (IndexTargetEntry target in _editing.IndexTargets)
             {
@@ -322,6 +325,7 @@ public partial class SettingsViewModel : ObservableObject
             _editing.DeleteSourcesAfterIngest = DeleteSourcesAfterIngest;
             _editing.RemoveNonMusicAfterIngest = RemoveNonMusicAfterIngest;
             _editing.DeleteStaleCrossSyncFiles = DeleteStaleCrossSyncFiles;
+            _editing.CleanCrossSyncPlaylists = CleanCrossSyncPlaylists;
             _editing.IndexTargets = IndexTargets
                 .Where(row => !string.IsNullOrWhiteSpace(row.Path))
                 .Select(row =>

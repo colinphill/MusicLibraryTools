@@ -126,6 +126,8 @@ public sealed class AppSettings : IAppSettings
         _ = configuration.IngestSettings;
         _ = configuration.IngestTargets;
         _ = configuration.CrossSyncTarget;
+        _ = configuration.DeleteStaleCrossSyncFiles;
+        _ = configuration.CleanCrossSyncPlaylists;
         _ = configuration.DatabaseFile;
         return configuration;
     }

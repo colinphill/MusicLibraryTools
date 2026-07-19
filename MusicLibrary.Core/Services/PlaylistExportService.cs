@@ -11,8 +11,7 @@ namespace MusicLibrary.Core.Services;
 
 public sealed record PlaylistExportRequest(
     string? ConfigurationPath = null,
-    string? ItunesLibraryPath = null,
-    bool Clean = false);
+    string? ItunesLibraryPath = null);
 
 public sealed record PlaylistExportFile(
     string PlaylistName,
@@ -82,6 +81,7 @@ public sealed class PlaylistExportService : IPlaylistExportService
         ArgumentNullException.ThrowIfNull(request);
         LibraryOperationContext context = await _contexts.CreateAsync(
             request.ConfigurationPath, request.ItunesLibraryPath, progress, ct).ConfigureAwait(false);
+        bool clean = context.Configuration.CleanCrossSyncPlaylists;
         IReadOnlyList<LibraryPlaylistTarget> targets = context.Configuration.PlaylistTargets;
         var issues = new List<OperationIssue>();
         if (targets.Count == 0)
@@ -105,14 +105,14 @@ public sealed class PlaylistExportService : IPlaylistExportService
         foreach (string folder in targets.Select(target => Path.GetFullPath(target.Target))
                      .Distinct(PathComparer))
         {
-            Func<string, bool>? includeFile = request.Clean ? null : IsManagedPlaylist;
+            Func<string, bool>? includeFile = clean ? null : IsManagedPlaylist;
             inventories[folder] = await _inventories.CaptureAsync(folder,
                 includeFile, progress, ct).ConfigureAwait(false);
         }
 
         DateTimeOffset createdAt = DateTimeOffset.UtcNow;
         string firstFolder = Path.TrimEndingDirectorySeparator(Path.GetFullPath(targets[0].Target));
-        string recoveryRoot = request.Clean
+        string recoveryRoot = clean
             ? ""
             : firstFolder + ".CrossSyncPlaylists-quarantine" +
               Path.DirectorySeparatorChar + createdAt.UtcDateTime.ToString("yyyyMMdd-HHmmssfff");
@@ -158,7 +158,7 @@ public sealed class PlaylistExportService : IPlaylistExportService
         }
 
         var actions = new List<FileMutationAction>();
-        if (request.Clean)
+        if (clean)
         {
             foreach (var pair in inventories.OrderBy(pair => pair.Key, PathComparer))
                 foreach (OperationPathSnapshot existing in pair.Value.Files.Values
@@ -171,7 +171,7 @@ public sealed class PlaylistExportService : IPlaylistExportService
         {
             FileInventory inventory = inventories[Path.GetFullPath(targets[output.TargetIndex].Target)];
             if (inventory.Files.TryGetValue(output.Path, out OperationPathSnapshot? existing))
-                actions.Add(new(request.Clean ? FileMutationKind.Write : FileMutationKind.ReplaceGenerated,
+                actions.Add(new(clean ? FileMutationKind.Write : FileMutationKind.ReplaceGenerated,
                     "", output.Path, null, existing, output.Content));
             else
                 actions.Add(new(FileMutationKind.Write, "", output.Path, null,
@@ -179,7 +179,7 @@ public sealed class PlaylistExportService : IPlaylistExportService
         }
 
         var mutationPlan = new FileMutationPlan("CrossSyncPlaylists", firstFolder, recoveryRoot,
-            actions, issues, createdAt, RetainRecovery: !request.Clean);
+            actions, issues, createdAt, RetainRecovery: !clean);
         return new(request, targetPlans, mutationPlan, issues);
     }
 

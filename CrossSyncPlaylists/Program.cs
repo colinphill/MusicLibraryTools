@@ -14,8 +14,10 @@ internal static class CrossSyncPlaylistsCommand
         if (!TryParse(args, out PlaylistExportRequest? request, out bool apply, out bool check))
         {
             Console.Error.WriteLine(
-                "Usage: CrossSyncPlaylists <libraryconfiguration.xml> [clean|check] " +
+                "Usage: CrossSyncPlaylists <libraryconfiguration.xml> [check] " +
                 "[--library <file.itl>] [--apply]");
+            Console.Error.WriteLine("Clean mode is controlled by CrossSyncPlaylistsSettings " +
+                "in the library configuration.");
             return 2;
         }
 
@@ -86,19 +88,17 @@ internal static class CrossSyncPlaylistsCommand
         check = false;
         if (args.Length == 0 || args[0].StartsWith("--", StringComparison.Ordinal))
             return false;
-        bool clean = false;
         string? library = null;
         for (int index = 1; index < args.Length; index++)
         {
             string argument = args[index];
-            if (argument.Equals("clean", StringComparison.OrdinalIgnoreCase)) clean = true;
-            else if (argument.Equals("check", StringComparison.OrdinalIgnoreCase)) check = true;
+            if (argument.Equals("check", StringComparison.OrdinalIgnoreCase)) check = true;
             else if (argument.Equals("--apply", StringComparison.OrdinalIgnoreCase)) apply = true;
             else if (argument.Equals("--library", StringComparison.OrdinalIgnoreCase) &&
                      index + 1 < args.Length) library = args[++index];
             else return false;
         }
-        request = new(args[0], library, clean);
+        request = new(args[0], library);
         return true;
     }
 }

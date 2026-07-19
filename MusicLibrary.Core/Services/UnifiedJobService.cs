@@ -17,7 +17,7 @@ public sealed class UnifiedJobService : IUnifiedJobService
     [
         new("playlist-sync", "Playlist sync",
             "Synchronize every playlist export target from the active library configuration.",
-            UnifiedJobApplyMode.ApplyFlag, [], "[clean]", 0),
+            UnifiedJobApplyMode.ApplyFlag, [], "", 0),
         new("artwork-normalization", "Artwork normalization",
             "Normalize embedded artwork for the tracks in an iTunes playlist.",
             UnifiedJobApplyMode.ApplyFlag, [], "<playlist>", 1),
@@ -35,8 +35,7 @@ public sealed class UnifiedJobService : IUnifiedJobService
             "[rebalance] [fixerrors] [--initialize] [--max-removals <count>]", 0),
         new("cross-library-sync", "Cross-library sync",
             "Synchronize configured playlists into the library target.",
-            UnifiedJobApplyMode.ApplyFlag, [],
-            "[--max-removals <count>]", 0),
+            UnifiedJobApplyMode.ApplyFlag, [], "", 0),
         new("redundancies", "Redundancy report",
             "Report likely duplicate iTunes tracks.", UnifiedJobApplyMode.ReadOnly,
             [], "", 0),

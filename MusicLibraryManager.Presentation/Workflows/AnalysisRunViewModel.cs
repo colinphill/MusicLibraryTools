@@ -8,10 +8,9 @@ namespace MusicLibraryManager.Presentation;
 /// <summary>What the user has decided to do with an analysis finding.</summary>
 public enum AnalysisFindingDisposition
 {
-    Active,
-    Completed,
-    Deferred,
-    Ignored,
+    None,
+    Filter,
+    Mixed,
 }
 
 /// <summary>
@@ -22,8 +21,8 @@ public enum AnalysisRepairDisposition
 {
     Active,
     Completed,
-    Deferred,
     Ignored,
+    Filter,
     Mixed,
 }
 
@@ -54,6 +53,23 @@ public sealed class AnalysisRunViewModel : ViewModelBase
     public int Count { get; }
 
     public int ActiveFindingCount => FindingGroups.Sum(group => group.ActiveCount);
+    public IReadOnlyList<string> FilteredPaths => FindingGroups
+        .SelectMany(group => group.Artists)
+        .SelectMany(group => group.Albums)
+        .SelectMany(group => group.Findings)
+        .Where(finding => finding.Disposition == AnalysisFindingDisposition.Filter)
+        .Select(finding => finding.Path)
+        .Concat(RepairItems
+            .Where(item => item.Disposition == AnalysisRepairDisposition.Filter)
+            .Select(item => item.Path))
+        .Concat(RepresentationActionItems
+            .Where(item => item.Disposition == AnalysisRepairDisposition.Filter)
+            .Select(item => item.SourcePath))
+        .Concat(ItlRepairItems
+            .Where(item => item.Disposition == AnalysisRepairDisposition.Filter)
+            .Select(item => item.Path))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
     public string DisplayLabel => $"{Name} · {Count:N0} · {CreatedAt:HH:mm:ss}";
 
     private AnalysisRunViewModel(
@@ -97,6 +113,17 @@ public sealed class AnalysisRunViewModel : ViewModelBase
 
         foreach (var group in FindingGroups)
             group.PropertyChanged += FindingGroupChanged;
+        foreach (AnalysisFindingViewModel finding in FindingGroups
+                     .SelectMany(group => group.Artists)
+                     .SelectMany(group => group.Albums)
+                     .SelectMany(group => group.Findings))
+            finding.PropertyChanged += FilterDispositionChanged;
+        foreach (AnalysisRepairItemViewModel item in RepairItems)
+            item.PropertyChanged += FilterDispositionChanged;
+        foreach (RepresentationRepairActionItemViewModel item in RepresentationActionItems)
+            item.PropertyChanged += FilterDispositionChanged;
+        foreach (ItlMetadataRepairItemViewModel item in ItlRepairItems)
+            item.PropertyChanged += FilterDispositionChanged;
     }
 
     public static AnalysisRunViewModel ForFindings(
@@ -167,6 +194,12 @@ public sealed class AnalysisRunViewModel : ViewModelBase
     {
         if (e.PropertyName == nameof(AnalysisProblemGroupViewModel.ActiveCount))
             OnPropertyChanged(nameof(ActiveFindingCount));
+    }
+
+    private void FilterDispositionChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == "Disposition")
+            OnPropertyChanged(nameof(FilteredPaths));
     }
 }
 
@@ -367,7 +400,8 @@ public sealed class AnalysisRepairAlbumGroupViewModel : ViewModelBase
             if (value == AnalysisRepairDisposition.Mixed || _propagating)
                 return;
             _propagating = true;
-            foreach (var item in Items.Where(item => item.CanChangeDisposition))
+            foreach (var item in Items.Where(item =>
+                         item.CanChangeDisposition && item.Dispositions.Contains(value)))
                 item.Disposition = value;
             _propagating = false;
             RefreshState();
@@ -383,7 +417,7 @@ public sealed class AnalysisRepairAlbumGroupViewModel : ViewModelBase
         foreach (var item in Items)
             item.PropertyChanged += ItemChanged;
         _disposition = AnalysisRepairCategoryGroupViewModel.Aggregate(
-            Items.Where(item => item.Repair.CanApply).Select(item => item.Disposition));
+            Items.Select(item => item.Disposition));
     }
 
     private void ItemChanged(object? sender, PropertyChangedEventArgs e)
@@ -398,7 +432,7 @@ public sealed class AnalysisRepairAlbumGroupViewModel : ViewModelBase
     {
         SetProperty(ref _disposition,
             AnalysisRepairCategoryGroupViewModel.Aggregate(
-                Items.Where(item => item.Repair.CanApply).Select(item => item.Disposition)),
+                Items.Select(item => item.Disposition)),
             nameof(Disposition));
         OnPropertyChanged(nameof(ActiveCount));
     }
@@ -667,22 +701,22 @@ public partial class RepresentationRepairActionItemViewModel : ViewModelBase
 /// <summary>All findings for one problem, divided into artists and albums.</summary>
 public sealed class AnalysisProblemGroupViewModel : ViewModelBase
 {
-    private AnalysisRepairDisposition _disposition;
+    private AnalysisFindingDisposition _disposition;
     private bool _propagating;
 
     public string Problem { get; }
     public IReadOnlyList<AnalysisArtistGroupViewModel> Artists { get; }
     public int Count => Artists.Sum(artist => artist.Count);
     public int ActiveCount => Artists.Sum(artist => artist.ActiveCount);
-    public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
-        Enum.GetValues<AnalysisRepairDisposition>();
+    public IReadOnlyList<AnalysisFindingDisposition> Dispositions { get; } =
+        Enum.GetValues<AnalysisFindingDisposition>();
 
-    public AnalysisRepairDisposition Disposition
+    public AnalysisFindingDisposition Disposition
     {
         get => _disposition;
         set
         {
-            if (value == AnalysisRepairDisposition.Mixed || _propagating)
+            if (value == AnalysisFindingDisposition.Mixed || _propagating)
                 return;
             _propagating = true;
             foreach (var artist in Artists)
@@ -700,7 +734,7 @@ public sealed class AnalysisProblemGroupViewModel : ViewModelBase
         Artists = artists;
         foreach (var artist in Artists)
             artist.PropertyChanged += ArtistChanged;
-        _disposition = AnalysisRepairCategoryGroupViewModel.Aggregate(
+        _disposition = Aggregate(
             Artists.Select(artist => artist.Disposition));
     }
 
@@ -764,32 +798,41 @@ public sealed class AnalysisProblemGroupViewModel : ViewModelBase
     private void RefreshState()
     {
         SetProperty(ref _disposition,
-            AnalysisRepairCategoryGroupViewModel.Aggregate(
+            Aggregate(
                 Artists.Select(artist => artist.Disposition)),
             nameof(Disposition));
         OnPropertyChanged(nameof(ActiveCount));
+    }
+
+    public static AnalysisFindingDisposition Aggregate(
+        IEnumerable<AnalysisFindingDisposition> dispositions)
+    {
+        AnalysisFindingDisposition[] values = dispositions.Distinct().ToArray();
+        return values.Length == 0
+            ? AnalysisFindingDisposition.None
+            : values.Length == 1 ? values[0] : AnalysisFindingDisposition.Mixed;
     }
 }
 
 /// <summary>Findings for one artist within a problem group, divided into albums.</summary>
 public sealed class AnalysisArtistGroupViewModel : ViewModelBase
 {
-    private AnalysisRepairDisposition _disposition;
+    private AnalysisFindingDisposition _disposition;
     private bool _propagating;
 
     public string Artist { get; }
     public IReadOnlyList<AnalysisAlbumGroupViewModel> Albums { get; }
     public int Count => Albums.Sum(album => album.Count);
     public int ActiveCount => Albums.Sum(album => album.ActiveCount);
-    public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
-        Enum.GetValues<AnalysisRepairDisposition>();
+    public IReadOnlyList<AnalysisFindingDisposition> Dispositions { get; } =
+        Enum.GetValues<AnalysisFindingDisposition>();
 
-    public AnalysisRepairDisposition Disposition
+    public AnalysisFindingDisposition Disposition
     {
         get => _disposition;
         set
         {
-            if (value == AnalysisRepairDisposition.Mixed || _propagating)
+            if (value == AnalysisFindingDisposition.Mixed || _propagating)
                 return;
             _propagating = true;
             foreach (var album in Albums)
@@ -807,7 +850,7 @@ public sealed class AnalysisArtistGroupViewModel : ViewModelBase
         Albums = albums;
         foreach (var album in Albums)
             album.PropertyChanged += AlbumChanged;
-        _disposition = AnalysisRepairCategoryGroupViewModel.Aggregate(
+        _disposition = AnalysisProblemGroupViewModel.Aggregate(
             Albums.Select(album => album.Disposition));
     }
 
@@ -822,7 +865,7 @@ public sealed class AnalysisArtistGroupViewModel : ViewModelBase
     private void RefreshState()
     {
         SetProperty(ref _disposition,
-            AnalysisRepairCategoryGroupViewModel.Aggregate(
+            AnalysisProblemGroupViewModel.Aggregate(
                 Albums.Select(album => album.Disposition)),
             nameof(Disposition));
         OnPropertyChanged(nameof(ActiveCount));
@@ -832,33 +875,27 @@ public sealed class AnalysisArtistGroupViewModel : ViewModelBase
 /// <summary>Findings for one album within a problem group.</summary>
 public sealed class AnalysisAlbumGroupViewModel : ViewModelBase
 {
-    private AnalysisRepairDisposition _disposition;
+    private AnalysisFindingDisposition _disposition;
     private bool _propagating;
 
     public string Album { get; }
     public IReadOnlyList<AnalysisFindingViewModel> Findings { get; }
     public int Count => Findings.Count;
-    public int ActiveCount => Findings.Count(finding => finding.Disposition == AnalysisFindingDisposition.Active);
-    public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
-        Enum.GetValues<AnalysisRepairDisposition>();
+    public int ActiveCount => Findings.Count(finding =>
+        finding.Disposition == AnalysisFindingDisposition.None);
+    public IReadOnlyList<AnalysisFindingDisposition> Dispositions { get; } =
+        Enum.GetValues<AnalysisFindingDisposition>();
 
-    public AnalysisRepairDisposition Disposition
+    public AnalysisFindingDisposition Disposition
     {
         get => _disposition;
         set
         {
-            if (value == AnalysisRepairDisposition.Mixed || _propagating)
+            if (value == AnalysisFindingDisposition.Mixed || _propagating)
                 return;
             _propagating = true;
-            AnalysisFindingDisposition findingDisposition = value switch
-            {
-                AnalysisRepairDisposition.Completed => AnalysisFindingDisposition.Completed,
-                AnalysisRepairDisposition.Deferred => AnalysisFindingDisposition.Deferred,
-                AnalysisRepairDisposition.Ignored => AnalysisFindingDisposition.Ignored,
-                _ => AnalysisFindingDisposition.Active,
-            };
             foreach (var finding in Findings)
-                finding.Disposition = findingDisposition;
+                finding.Disposition = value;
             _propagating = false;
             RefreshState();
         }
@@ -885,15 +922,9 @@ public sealed class AnalysisAlbumGroupViewModel : ViewModelBase
         OnPropertyChanged(nameof(ActiveCount));
     }
 
-    private AnalysisRepairDisposition AggregateFindings() =>
-        AnalysisRepairCategoryGroupViewModel.Aggregate(Findings.Select(finding =>
-            finding.Disposition switch
-            {
-                AnalysisFindingDisposition.Completed => AnalysisRepairDisposition.Completed,
-                AnalysisFindingDisposition.Deferred => AnalysisRepairDisposition.Deferred,
-                AnalysisFindingDisposition.Ignored => AnalysisRepairDisposition.Ignored,
-                _ => AnalysisRepairDisposition.Active,
-            }));
+    private AnalysisFindingDisposition AggregateFindings() =>
+        AnalysisProblemGroupViewModel.Aggregate(
+            Findings.Select(finding => finding.Disposition));
 }
 
 /// <summary>A finding plus its review disposition within a retained analysis run.</summary>
@@ -906,7 +937,9 @@ public partial class AnalysisFindingViewModel : ViewModelBase
     public string Artist { get; }
     public string Album { get; }
     public IReadOnlyList<AnalysisFindingDisposition> Dispositions { get; } =
-        Enum.GetValues<AnalysisFindingDisposition>();
+        Enum.GetValues<AnalysisFindingDisposition>()
+            .Where(value => value != AnalysisFindingDisposition.Mixed)
+            .ToArray();
 
     [ObservableProperty]
     private AnalysisFindingDisposition _disposition;

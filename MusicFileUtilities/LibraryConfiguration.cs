@@ -150,6 +150,9 @@ namespace MusicLibraryTools
         public bool DeleteStaleCrossSyncFiles => ParseOptionalBoolean(
             root_.Element("CrossSyncMusicSettings"), "DeleteStaleFiles", defaultValue: false);
 
+        public bool CleanCrossSyncPlaylists => ParseOptionalBoolean(
+            root_.Element("CrossSyncPlaylistsSettings"), "Clean", defaultValue: false);
+
         public IEnumerable<LibraryIndexLocation> IndexLocations =>
             root_.Elements("IndexTarget").Select(ParseIndexLocation);
 

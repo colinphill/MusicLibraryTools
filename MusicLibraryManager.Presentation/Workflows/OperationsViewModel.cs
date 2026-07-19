@@ -108,7 +108,6 @@ public partial class OperationsViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(ShowValidationPath))]
     [NotifyPropertyChangedFor(nameof(ShowRemovalLimit))]
     [NotifyPropertyChangedFor(nameof(ShowInitialize))]
-    [NotifyPropertyChangedFor(nameof(ShowClean))]
     [NotifyPropertyChangedFor(nameof(ShowRebalance))]
     [NotifyPropertyChangedFor(nameof(ShowFixErrors))]
     [NotifyPropertyChangedFor(nameof(ShowRemap))]
@@ -128,7 +127,6 @@ public partial class OperationsViewModel : ViewModelBase
     [ObservableProperty] private string _jobValidationPath = "";
     [ObservableProperty] private int _jobMaxRemovals;
     [ObservableProperty] private bool _jobInitialize;
-    [ObservableProperty] private bool _jobClean;
     [ObservableProperty] private bool _jobRebalance;
     [ObservableProperty] private bool _jobFixErrors;
     [ObservableProperty] private bool _jobRemap;
@@ -150,9 +148,8 @@ public partial class OperationsViewModel : ViewModelBase
     public bool ShowDevicePaths => JobIs("device-sync");
     public bool ShowDestinationPath => JobIs("smart-storage");
     public bool ShowValidationPath => JobIs("itunes-validation");
-    public bool ShowRemovalLimit => JobIs("cross-library-sync", "device-sync", "smart-storage", "car-card");
+    public bool ShowRemovalLimit => JobIs("device-sync", "smart-storage", "car-card");
     public bool ShowInitialize => JobIs("smart-storage", "car-card");
-    public bool ShowClean => JobIs("playlist-sync");
     public bool ShowRebalance => JobIs("car-card");
     public bool ShowFixErrors => JobIs("car-card");
     public bool ShowRemap => JobIs("device-sync");
@@ -212,7 +209,6 @@ public partial class OperationsViewModel : ViewModelBase
     partial void OnJobValidationPathChanged(string value) => InvalidateJobPreview();
     partial void OnJobMaxRemovalsChanged(int value) => InvalidateJobPreview();
     partial void OnJobInitializeChanged(bool value) => InvalidateJobPreview();
-    partial void OnJobCleanChanged(bool value) => InvalidateJobPreview();
     partial void OnJobRebalanceChanged(bool value) => InvalidateJobPreview();
     partial void OnJobFixErrorsChanged(bool value) => InvalidateJobPreview();
     partial void OnJobRemapChanged(bool value) => InvalidateJobPreview();
@@ -277,8 +273,7 @@ public partial class OperationsViewModel : ViewModelBase
                 IReadOnlyList<string> parsed = [];
                 CrossLibrarySyncRequest request = new(
                     ConfigurationPath: null,
-                    ItunesLibraryPath: null,
-                    MaxRemovals: JobMaxRemovals);
+                    ItunesLibraryPath: null);
                 var typedProgress = new Progress<OperationProgress>(value =>
                     JobStatus = value.Message ?? value.Phase.ToString());
                 _crossLibrarySyncPlan = await _crossLibrarySync.PreviewAsync(
@@ -292,8 +287,7 @@ public partial class OperationsViewModel : ViewModelBase
                 IReadOnlyList<string> parsed = [];
                 PlaylistExportRequest request = new(
                     ConfigurationPath: null,
-                    ItunesLibraryPath: null,
-                    Clean: JobClean);
+                    ItunesLibraryPath: null);
                 var typedProgress = new Progress<OperationProgress>(value =>
                     JobStatus = value.Message ?? value.Phase.ToString());
                 _playlistExportPlan = await _playlistExport.PreviewAsync(

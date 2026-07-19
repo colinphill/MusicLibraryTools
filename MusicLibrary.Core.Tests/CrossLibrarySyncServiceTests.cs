@@ -25,8 +25,7 @@ public sealed class CrossLibrarySyncServiceTests
 
         LibraryOperationContext context = CreateContext(workspace.Path, sourceRoot, targetRoot, source);
         var service = CreateService(context);
-        var request = new CrossLibrarySyncRequest(Path.Combine(workspace.Path, "library.xml"),
-            MaxRemovals: 1);
+        var request = new CrossLibrarySyncRequest(Path.Combine(workspace.Path, "library.xml"));
 
         CrossLibrarySyncPlan plan = await service.PreviewAsync(
             request, ct: TestContext.Current.CancellationToken);
@@ -64,8 +63,7 @@ public sealed class CrossLibrarySyncServiceTests
         LibraryOperationContext context = CreateContext(
             workspace.Path, sourceRoot, targetRoot, source, deleteStaleFiles: true);
         var service = CreateService(context);
-        var request = new CrossLibrarySyncRequest(Path.Combine(workspace.Path, "library.xml"),
-            MaxRemovals: 1);
+        var request = new CrossLibrarySyncRequest(Path.Combine(workspace.Path, "library.xml"));
 
         CrossLibrarySyncPlan plan = await service.PreviewAsync(
             request, ct: TestContext.Current.CancellationToken);
@@ -149,7 +147,7 @@ public sealed class CrossLibrarySyncServiceTests
     }
 
     [Fact]
-    public async Task RemovalLimitProducesInspectableBlockerWithoutMutatingDestination()
+    public async Task StaleFilesDoNotRequireASeparateRemovalApproval()
     {
         using var workspace = new TempDirectory();
         string sourceRoot = Directory.CreateDirectory(Path.Combine(workspace.Path, "source")).FullName;
@@ -161,12 +159,13 @@ public sealed class CrossLibrarySyncServiceTests
 
         var service = CreateService(CreateContext(workspace.Path, sourceRoot, targetRoot, source));
         CrossLibrarySyncPlan plan = await service.PreviewAsync(
-            new(Path.Combine(workspace.Path, "library.xml"), MaxRemovals: 0),
+            new(Path.Combine(workspace.Path, "library.xml")),
             ct: TestContext.Current.CancellationToken);
 
-        Assert.False(plan.CanApply);
-        Assert.Contains(plan.Issues, issue => issue.Code == "removal-limit" &&
-            issue.Severity == OperationIssueSeverity.Blocker);
+        Assert.True(plan.CanApply);
+        Assert.DoesNotContain(plan.Issues, issue => issue.Code == "removal-limit");
+        Assert.Contains(plan.MutationPlan.Actions, action =>
+            action.Kind == FileMutationKind.Quarantine && action.SourcePath == stale);
         Assert.True(File.Exists(stale));
         Assert.False(Directory.Exists(plan.MutationPlan.RecoveryRoot));
     }

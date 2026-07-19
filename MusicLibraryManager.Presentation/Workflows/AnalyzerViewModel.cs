@@ -77,6 +77,10 @@ public partial class AnalyzerViewModel : ViewModelBase
         SelectedRun?.ItlRepairItems ?? [];
     public IReadOnlyList<ItlMetadataRepairCategoryGroupViewModel> ItlRepairGroups =>
         SelectedRun?.ItlRepairGroups ?? [];
+    public IReadOnlyList<string> FilteredPaths => Runs
+        .SelectMany(run => run.FilteredPaths)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
     public bool HasRuns => Runs.Count > 0;
 
     private object? _selectedFindingNode;
@@ -232,6 +236,7 @@ public partial class AnalyzerViewModel : ViewModelBase
     /// <summary>Raised with a file path when the user opens a finding/track.</summary>
     public event Action<string>? OpenRequested;
     public event Action<IReadOnlyList<string>>? RepairsApplied;
+    public event Action<IReadOnlyList<string>>? FilterChanged;
 
     public AnalyzerViewModel(ILibraryService library, IArtistReconciler reconciler,
         IAnalysisRepairService repairs, IAppSettings settings,
@@ -850,6 +855,7 @@ public partial class AnalyzerViewModel : ViewModelBase
 
     private void AddRun(AnalysisRunViewModel run)
     {
+        run.PropertyChanged += RunChanged;
         foreach (var action in run.RepresentationActionItems)
             action.StateChanged += () =>
                 ApplyRepresentationRepairsCommand.NotifyCanExecuteChanged();
@@ -858,6 +864,20 @@ public partial class AnalyzerViewModel : ViewModelBase
         SelectedRun = run;
         RemoveRunCommand.NotifyCanExecuteChanged();
         ClearRunsCommand.NotifyCanExecuteChanged();
+        PublishFilter();
+    }
+
+    private void RunChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(AnalysisRunViewModel.FilteredPaths))
+            PublishFilter();
+    }
+
+    private void PublishFilter()
+    {
+        IReadOnlyList<string> paths = FilteredPaths;
+        OnPropertyChanged(nameof(FilteredPaths));
+        FilterChanged?.Invoke(paths);
     }
 
     private AnalysisRepairItemViewModel CreateRepairItem(AnalysisTagRepair item)
@@ -875,9 +895,11 @@ public partial class AnalyzerViewModel : ViewModelBase
         if (SelectedRun is null)
             return;
         int index = Runs.IndexOf(SelectedRun);
+        SelectedRun.PropertyChanged -= RunChanged;
         Runs.Remove(SelectedRun);
         SelectedRun = Runs.Count == 0 ? null : Runs[Math.Min(index, Runs.Count - 1)];
         OnPropertyChanged(nameof(HasRuns));
+        PublishFilter();
         NotifyCommands();
     }
 
@@ -886,9 +908,12 @@ public partial class AnalyzerViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanClearRuns))]
     private void ClearRuns()
     {
+        foreach (AnalysisRunViewModel run in Runs)
+            run.PropertyChanged -= RunChanged;
         Runs.Clear();
         SelectedRun = null;
         OnPropertyChanged(nameof(HasRuns));
+        PublishFilter();
         NotifyCommands();
     }
 
@@ -1192,11 +1217,8 @@ public partial class AnalysisRepairItemViewModel : ViewModelBase
     public string? UnicodeDifferenceDetails => _difference.UnicodeDetails;
     public string Reason => Repair.Reason;
     public string? BlockingReason => Repair.BlockingReason;
-    public bool CanChangeDisposition => Repair.CanApply && !IsApplied;
-    public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
-        Enum.GetValues<AnalysisRepairDisposition>()
-            .Where(value => value != AnalysisRepairDisposition.Mixed)
-            .ToArray();
+    public bool CanChangeDisposition => !IsApplied;
+    public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; }
     public bool IsActive =>
         Repair.CanApply && Disposition == AnalysisRepairDisposition.Active && !IsApplied;
 
@@ -1216,6 +1238,11 @@ public partial class AnalysisRepairItemViewModel : ViewModelBase
     public AnalysisRepairItemViewModel(AnalysisTagRepair repair)
     {
         Repair = repair;
+        Dispositions = Enum.GetValues<AnalysisRepairDisposition>()
+            .Where(value => value != AnalysisRepairDisposition.Mixed &&
+                (repair.CanApply || value is not (AnalysisRepairDisposition.Active or
+                    AnalysisRepairDisposition.Completed)))
+            .ToArray();
         _difference = TextDifference.Compare(repair.Before, repair.After);
     }
 

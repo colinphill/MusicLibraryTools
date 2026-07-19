@@ -22,20 +22,35 @@ public partial class HealthView : UserControl
         _viewModel = App.GetService<AnalyzerViewModel>();
         GridStateService gridState = App.GetService<GridStateService>();
         DataContext = _viewModel;
+        FindingRootDisposition.ItemsSource = Enum.GetValues<AnalysisFindingDisposition>();
         IReadOnlyList<AnalysisRepairDisposition> rootDispositions = Enum.GetValues<AnalysisRepairDisposition>();
         RepairRootDisposition.ItemsSource = rootDispositions;
         RepresentationRootDisposition.ItemsSource = rootDispositions;
         ItlRepairRootDisposition.ItemsSource = rootDispositions;
+        FindingRootDisposition.SelectionChanged += OnFindingRootDispositionChanged;
         RepairRootDisposition.SelectionChanged += OnRepairRootDispositionChanged;
         RepresentationRootDisposition.SelectionChanged += OnRepresentationRootDispositionChanged;
         ItlRepairRootDisposition.SelectionChanged += OnItlRepairRootDispositionChanged;
         _viewModel.PropertyChanged += (_, args) =>
         {
-            if (args.PropertyName == nameof(AnalyzerViewModel.SelectedRun))
+            if (args.PropertyName is nameof(AnalyzerViewModel.SelectedRun) or
+                nameof(AnalyzerViewModel.FilteredPaths))
                 UpdateRootDispositions();
         };
         UpdateRootDispositions();
 
+        var findingDispositionTemplate = new FuncDataTemplate<AnalysisFindingViewModel>((_, _) =>
+        {
+            var select = new ComboBox { MinWidth = 115 };
+            select.Bind(ItemsControl.ItemsSourceProperty,
+                new Binding(nameof(AnalysisFindingViewModel.Dispositions)));
+            select.Bind(ComboBox.SelectedItemProperty,
+                new Binding(nameof(AnalysisFindingViewModel.Disposition))
+                {
+                    Mode = BindingMode.TwoWay,
+                });
+            return select;
+        });
         var dispositionTemplate = new FuncDataTemplate<AnalysisRepairItemViewModel>((_, _) =>
         {
             var select = new ComboBox { MinWidth = 115 };
@@ -83,7 +98,9 @@ public partial class HealthView : UserControl
             item => item.AfterDifference);
 
         PersistedGridLayout.Configure(FindingGrid, gridState, "health.findings",
-            [new("Path", "Track", "Path", 380, 220),
+            [new("Disposition", "Disposition", null, 145, 125,
+                    CellTemplate: findingDispositionTemplate, Sortable: false),
+                new("Path", "Track", "Path", 380, 220),
                 new("Description", "Reason", "Description", 420, 220)]);
         PersistedGridLayout.Configure(RepairGrid, gridState, "health.metadata-repairs", [
             new("Disposition", "Disposition", null, 145, 125, CellTemplate: dispositionTemplate, Sortable: false), new("Path", "Track", "DisplayPath", 320, 190),
@@ -109,10 +126,23 @@ public partial class HealthView : UserControl
     private void UpdateRootDispositions()
     {
         _updatingRootDisposition = true;
+        FindingRootDisposition.SelectedItem = AnalysisProblemGroupViewModel.Aggregate(
+            _viewModel.FindingGroups.Select(group => group.Disposition));
         RepairRootDisposition.SelectedItem = Aggregate(_viewModel.RepairGroups.Select(group => group.Disposition));
         RepresentationRootDisposition.SelectedItem = Aggregate(_viewModel.RepresentationActionGroups.Select(group => group.Disposition));
         ItlRepairRootDisposition.SelectedItem = Aggregate(_viewModel.ItlRepairGroups.Select(group => group.Disposition));
         _updatingRootDisposition = false;
+    }
+
+    private void OnFindingRootDispositionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_updatingRootDisposition ||
+            FindingRootDisposition.SelectedItem is not AnalysisFindingDisposition value ||
+            value == AnalysisFindingDisposition.Mixed)
+            return;
+        foreach (AnalysisProblemGroupViewModel group in _viewModel.FindingGroups)
+            group.Disposition = value;
+        UpdateRootDispositions();
     }
 
     private void OnRepairRootDispositionChanged(object? sender, SelectionChangedEventArgs e)

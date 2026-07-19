@@ -132,6 +132,9 @@ element remains readable; opening and saving it in the editor migrates the path 
 `CrossSyncPlaylists` processes every configured playlist target in one invocation. The former
 standalone `<PlaylistType>` element is no longer used. Every referenced playlist set must occur on
 at least one `IndexTarget`; unknown sets are rejected before indexing or creating destination folders.
+Set `<CrossSyncPlaylistsSettings Clean="true" />` to delete all existing target contents before
+writing the freshly generated playlists. The configuration editor exposes this option; it defaults
+to `false`, which replaces only managed playlist files and retains recovery data.
 An `IndexTarget` can belong to several sets or none. Its `Offset` is the common playlist-path mapping
 for all child sets; a child `Set` can override it. Selecting two different resolved offsets for the
 same root is rejected as ambiguous. Legacy numeric `Set` attributes remain readable and are migrated
@@ -166,8 +169,8 @@ a configured share is offline.
 ## Safe execution
 
 High-impact sync, organization, iTunes, and device commands now default to a dry run or refuse to
-write until `--apply` is supplied. Commands that can remove stale entries also default to a removal
-ceiling of zero; set an intentional limit with `--max-removals <count>`. Device-image tools require
+write until `--apply` is supplied. Device-image commands that can remove stale entries default to a
+removal ceiling of zero; set an intentional limit with `--max-removals <count>`. Device-image tools require
 an initialized target marker (`--initialize` creates it after you verify the path), and removals are
 moved into timestamped quarantine/recovery directories rather than being deleted immediately.
 `UpdateCarCard --recover <journal.tsv>` can roll back an interrupted journaled update.

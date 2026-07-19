@@ -25,6 +25,7 @@ public partial class LibraryViewModel : ObservableObject
     private CancellationTokenSource _thumbnailLifetime = new();
     private const int ThumbnailCacheLimit = 256;
     private List<LibraryRow> _allRows = [];
+    private HashSet<string> _healthFilterPaths = new(StringComparer.OrdinalIgnoreCase);
     private CancellationTokenSource? _loadCancellation;
     private CancellationTokenSource? _filterCancellation;
 
@@ -86,6 +87,8 @@ public partial class LibraryViewModel : ObservableObject
     public SelectionInspectorViewModel Inspector => _inspector;
     public IndexingViewModel Indexing { get; }
     public int TotalCount => _allRows.Count;
+    public int HealthFilterCount => _healthFilterPaths.Count;
+    public bool HasHealthFilter => _healthFilterPaths.Count > 0;
     public bool HasRows => Rows.Count > 0;
     public bool HasFilterError => !string.IsNullOrWhiteSpace(FilterError);
 
@@ -122,6 +125,19 @@ public partial class LibraryViewModel : ObservableObject
     {
         FilterText = text;
         _navigation.Navigate(ShellDestination.Library);
+    }
+
+    public void SetHealthFilter(IReadOnlyList<string> paths)
+    {
+        ArgumentNullException.ThrowIfNull(paths);
+        var next = paths.Where(path => !string.IsNullOrWhiteSpace(path))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (_healthFilterPaths.SetEquals(next))
+            return;
+        _healthFilterPaths = next;
+        OnPropertyChanged(nameof(HealthFilterCount));
+        OnPropertyChanged(nameof(HasHealthFilter));
+        QueueFilter();
     }
 
     private bool CanReload() => _library.IsReady && !IsBusy;
@@ -390,17 +406,23 @@ public partial class LibraryViewModel : ObservableObject
             return;
         }
         List<LibraryRow> source = _allRows;
+        HashSet<string>? healthPaths = _healthFilterPaths.Count == 0
+            ? null
+            : new HashSet<string>(_healthFilterPaths, StringComparer.OrdinalIgnoreCase);
         List<LibraryRow> filtered = await Task.Run(() => source
-            .Where(row => query.IsMatch(row.Details, row.SearchText))
+            .Where(row => (healthPaths is null || healthPaths.Contains(row.Path)) &&
+                query.IsMatch(row.Details, row.SearchText))
             .ToList(), cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         // Replace the view once. Raising one collection notification per cached track makes a
         // virtualized table spend seconds processing changes on the UI thread and also starves
         // live window layout while a large library is loading or being filtered.
         Rows = filtered;
-        StatusText = filtered.Count == source.Count
-            ? $"{source.Count:N0} tracks"
-            : $"{filtered.Count:N0} of {source.Count:N0} tracks";
+        StatusText = healthPaths is not null
+            ? $"{filtered.Count:N0} Health-filtered track(s) of {source.Count:N0} total"
+            : filtered.Count == source.Count
+                ? $"{source.Count:N0} tracks"
+                : $"{filtered.Count:N0} of {source.Count:N0} tracks";
         OnPropertyChanged(nameof(TotalCount));
     }
 

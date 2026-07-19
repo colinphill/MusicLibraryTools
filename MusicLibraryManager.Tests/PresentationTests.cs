@@ -62,6 +62,33 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public async Task Library_view_intersects_text_filter_with_health_dispositions()
+    {
+        var settings = new FakeSettings();
+        var records = new[]
+        {
+            Track("Miles", "Kind of Blue", "So What", "FLAC", @"C:\Music\So What.flac"),
+            Track("Massive Attack", "Mezzanine", "Teardrop", "MP3", @"C:\Music\Teardrop.mp3"),
+        };
+        LibraryViewModel viewModel = BuildLibrary(settings, records);
+        await viewModel.ReloadAsync();
+
+        viewModel.SetHealthFilter([records[1].Path]);
+        await viewModel.ApplyFilterNowAsync(TestContext.Current.CancellationToken);
+
+        Assert.True(viewModel.HasHealthFilter);
+        Assert.Equal("Teardrop", Assert.Single(viewModel.Rows).Title);
+
+        viewModel.FilterText = "Artist:Miles";
+        await viewModel.ApplyFilterNowAsync(TestContext.Current.CancellationToken);
+        Assert.Empty(viewModel.Rows);
+
+        viewModel.SetHealthFilter([]);
+        await viewModel.ApplyFilterNowAsync(TestContext.Current.CancellationToken);
+        Assert.Equal("So What", Assert.Single(viewModel.Rows).Title);
+    }
+
+    [Fact]
     public void Named_view_accepts_explicit_column_layout_and_typed_sort_state()
     {
         var settings = new FakeSettings();
@@ -466,6 +493,7 @@ public sealed class PresentationTests
                 DeleteSourcesAfterIngest = true,
                 RemoveNonMusicAfterIngest = true,
                 DeleteStaleCrossSyncFiles = true,
+                CleanCrossSyncPlaylists = true,
                 IndexTargets =
                 [
                     new IndexTargetEntry
@@ -520,6 +548,7 @@ public sealed class PresentationTests
             Assert.True(viewModel.DeleteSourcesAfterIngest);
             Assert.True(viewModel.RemoveNonMusicAfterIngest);
             Assert.True(viewModel.DeleteStaleCrossSyncFiles);
+            Assert.True(viewModel.CleanCrossSyncPlaylists);
             Assert.Equal(["Favorites", "RoadTrip"], viewModel.SyncPlaylists.Select(row => row.Name));
             Assert.Equal("Lossless", Assert.Single(viewModel.PlaylistTargets).Sets);
 
@@ -540,6 +569,7 @@ public sealed class PresentationTests
             Assert.True(savedRoot.IsSyncTarget);
             Assert.Equal(LibraryIngestRole.Cd, savedRoot.IngestRole);
             Assert.True(saved.DeleteStaleCrossSyncFiles);
+            Assert.True(saved.CleanCrossSyncPlaylists);
             Assert.Equal(["Favorites", "RoadTrip"], saved.SyncPlaylists);
             Assert.Equal("m3u", Assert.Single(saved.PlaylistTargets).Type);
             Assert.Equal(["Lossless"], saved.PlaylistTargets[0].Sets);

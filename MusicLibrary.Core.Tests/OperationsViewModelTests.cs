@@ -39,8 +39,9 @@ public sealed class OperationsViewModelTests
             jobs, crossSync)
         {
             SelectedJob = jobs.Catalog.Single(job => job.Id == "cross-library-sync"),
-            JobMaxRemovals = 7,
         };
+
+        Assert.False(viewModel.ShowRemovalLimit);
 
         Assert.False(viewModel.ApplyJobCommand.CanExecute(null));
         await viewModel.PreviewJobCommand.ExecuteAsync(null);
@@ -48,7 +49,7 @@ public sealed class OperationsViewModelTests
         await viewModel.ApplyJobCommand.ExecuteAsync(null);
 
         Assert.Equal(1, crossSync.PreviewCalls);
-        Assert.Equal(new CrossLibrarySyncRequest(null, null, 7),
+        Assert.Equal(new CrossLibrarySyncRequest(null, null),
             crossSync.LastRequest);
         Assert.Equal(1, crossSync.ApplyCalls);
         Assert.Same(crossSync.PreviewedPlan, crossSync.AppliedPlan);
