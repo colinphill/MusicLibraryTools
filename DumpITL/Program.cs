@@ -19,6 +19,9 @@ if (args.Length < 2)
           mtph                              raw playlist track entries
           counts                            which header words cache child counts
           cloud <trackId>                   the parallel cloud track list
+          artwork-file [out-dir]            inspect one .itc2; optionally extract its images
+          artwork-cache <Album Artwork> [max-files]
+                                            inventory and correlate an artwork-cache tree
 
         Check
           verify <Library.xml>              cross-check tracks and playlists
@@ -64,7 +67,7 @@ string itl = args[1];
 
 int required = command switch
 {
-    "probe" or "discover" or "plprobe" or "roundtrip" or "cloud" or "demo" or "verify" or "compare" => 3,
+    "probe" or "discover" or "plprobe" or "roundtrip" or "cloud" or "demo" or "verify" or "compare" or "artwork-cache" => 3,
     "smart-convert-probe" => 4,
     "playlist-add" or "smart-add" or "track-add" or "track-add-new" or "set-loved" => 5,
     "smart-ref-add" or "smart-mask-probe" or "smart-field-probe" => 6,
@@ -185,6 +188,14 @@ switch (command)
         Cloud(ItlLibrary.Load(itl), int.Parse(args[2]));
         break;
 
+    case "artwork-file":
+        ArtworkFile(itl, args.Length > 2 ? args[2] : null);
+        break;
+
+    case "artwork-cache":
+        ArtworkCache(ItlDocument.Load(itl), args[2], args.Length > 3 ? int.Parse(args[3]) : 0);
+        break;
+
     case "re":
         int reRequired = args[2] is "sections" or "mprh" or "plists" or "fk" or "childkeys" or "playlistheaders" or "mhgh" or "playback" or "links" or "aggregates" or "envelope" ? 3 : 4;
         if (args.Length < reRequired)
@@ -250,6 +261,112 @@ catch (Exception ex) when (ex is InvalidDataException or IOException or Unauthor
 }
 
 return exitCode;
+
+static void ArtworkFile(string path, string? outputDirectory)
+{
+    Itc2File file = Itc2File.Load(path);
+    Console.WriteLine($"file            : {file.Path}");
+    Console.WriteLine($"container header: {file.HeaderLength} bytes");
+    Console.WriteLine($"container words : +8={file.Version8} +12={file.Word12} +16={file.Word16}");
+    Console.WriteLine($"items           : {file.Items.Count}");
+
+    string? fullOutput = outputDirectory is null ? null : Path.GetFullPath(outputDirectory);
+    for (int index = 0; index < file.Items.Count; index++)
+    {
+        Itc2Item item = file.Items[index];
+        string pixelTag = PrintableFourCc(item.PixelFormatTag);
+        Console.WriteLine($"  [{index}] offset=0x{item.RecordOffset:X} length={item.RecordLength:N0} " +
+                          $"header={item.HeaderLength} payload={item.PayloadLength:N0}");
+        Console.WriteLine($"      library={item.LibraryPersistentId:X16} artwork={item.ArtworkPersistentId:X16} " +
+                          $"source={item.SourceKind} origin='{PrintableFourCc(item.OriginTag)}'");
+        Console.WriteLine($"      format='{pixelTag}'/{item.Encoding} size={item.Width}x{item.Height} " +
+                          $"stored={item.StoredWidth}x{item.StoredHeight} " +
+                          $"words +12={item.Word12} +16={item.Word16} +20={item.Word20}");
+
+        if (fullOutput is not null)
+        {
+            string stem = Path.GetFileNameWithoutExtension(path);
+            string output = Path.Combine(fullOutput,
+                $"{stem}-{index}-{item.Width}x{item.Height}{item.SuggestedExtension}");
+            item.Extract(output);
+            Console.WriteLine($"      extracted={output}");
+        }
+    }
+
+    static string PrintableFourCc(string value) => string.Concat(value.Select(character =>
+        character is >= ' ' and <= '~' ? character.ToString() : $"\\x{(int)character:X2}"));
+}
+
+static void ArtworkCache(ItlDocument library, string root, int maxFiles)
+{
+    Itc2CacheReport report = Itc2CacheAnalyzer.Analyze(library, root, maxFiles);
+    Console.WriteLine($"root                    : {report.RootPath}");
+    Console.WriteLine($"library persistent      : {report.LibraryPersistentId:X16}");
+    Console.WriteLine($"files scanned           : {report.FilesScanned:N0}" +
+                      (report.WasLimited ? " (limited)" : ""));
+    Console.WriteLine($"file bytes              : {report.FileBytes:N0}");
+    Console.WriteLine($"items / distinct artwork: {report.Items:N0} / {report.DistinctArtworkIds:N0}");
+    Console.WriteLine($"parse failures          : {report.ParseFailures:N0}");
+    Console.WriteLine($"library id match/mismatch: {report.LibraryIdMatches:N0} / {report.LibraryIdMismatches:N0}");
+    Console.WriteLine($"shard match/mismatch    : {report.ShardMatches:N0} / {report.ShardMismatches:N0}");
+    Console.WriteLine($"local/cloud filename    : {report.LocalFileNameMatches:N0} / {report.CloudFileNameMatches:N0}");
+    Console.WriteLine($"filename mismatches     : {report.FileNameMismatches:N0}");
+    Console.WriteLine($"filename refs -> tracks : {report.ReferencedTrackFiles:N0} present, {report.MissingTrackFiles:N0} unresolved");
+    Console.WriteLine($"distinct filename refs  : {report.DistinctReferencedTracks:N0}");
+    Console.WriteLine($"artwork-id correlations : track={report.ArtworkTrackMatches:N0} " +
+                      $"album={report.ArtworkAlbumMatches:N0} artist={report.ArtworkArtistMatches:N0}");
+    Console.WriteLine($"ITL artwork-count > 0   : {report.TracksClaimingArtwork:N0} / {report.LibraryTracks:N0} tracks; " +
+                      $"{report.LibraryAlbums:N0} album records");
+    Console.WriteLine($"local cache refs w/art  : {report.LocalCacheTracksClaimingArtwork:N0}; " +
+                      $"distinct albums={report.DistinctLocalCacheAlbums:N0}");
+    Console.WriteLine($"ITL cloud-artwork plist : {report.TracksWithCloudArtworkMetadata:N0} tracks");
+
+    if (report.TrackHeaderArtworkIdOffsets.Count > 0)
+    {
+        Console.WriteLine("track-header u64s resolving to a local-cache artwork ID:");
+        foreach ((int offset, int count) in report.TrackHeaderArtworkIdOffsets)
+            Console.WriteLine($"  mith +{offset,-4} {count,8:N0} match(es)");
+    }
+
+    Console.WriteLine($"mith +316 u64          : {report.TrackHeader316Nonzero:N0} nonzero; " +
+                      $"{report.TrackHeader316SelfMatches:N0} self; {report.TrackHeader316TrackMatches:N0} resolve to tracks");
+
+    if (report.TrackHeaderLinkExamples.Count > 0)
+    {
+        Console.WriteLine("non-primary numeric matches at mith +316 (all cache matches are self):");
+        foreach (Itc2TrackHeaderLinkExample link in report.TrackHeaderLinkExamples)
+        {
+            Console.WriteLine($"  track [{link.TrackId}] {link.TrackPersistentId:X16} '{link.TrackTitle}' " +
+                              $"mith+{link.HeaderOffset} -> {link.ArtworkPersistentId:X16} '{link.ArtworkTrackTitle}'");
+            Console.WriteLine($"    albums: '{link.TrackAlbum}' -> '{link.ArtworkTrackAlbum}'");
+        }
+    }
+
+    Console.WriteLine("\ncategories (files):");
+    foreach ((string category, int count) in report.Categories.OrderBy(pair => pair.Key))
+        Console.WriteLine($"  {category,-18} {count,8:N0}");
+
+    Console.WriteLine("\nitem shapes:");
+    foreach ((string shape, int count) in report.Shapes.OrderByDescending(pair => pair.Value).ThenBy(pair => pair.Key))
+        Console.WriteLine($"  {count,8:N0}  {shape}");
+
+    Console.WriteLine("\nexamples:");
+    foreach (Itc2CacheExample example in report.Examples)
+    {
+        Console.WriteLine($"  {example.RelativePath}");
+        Console.WriteLine($"    artwork={example.ArtworkPersistentId:X16} " +
+                          $"reference={(example.FileReferencePersistentId?.ToString("X16") ?? "(unresolved)")} " +
+                          $"title={example.TrackTitle ?? "(not in library)"}");
+        Console.WriteLine($"    {example.Shape}");
+    }
+
+    if (report.Failures.Count > 0)
+    {
+        Console.WriteLine("\nfirst failures:");
+        foreach (string failure in report.Failures)
+            Console.WriteLine($"  {failure}");
+    }
+}
 
 static void WriteSnapshot(string path, string? outputPath)
 {

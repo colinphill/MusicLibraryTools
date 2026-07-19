@@ -32,5 +32,17 @@ ItlDocument document = ItlDocument.Load(path);
 ItlFileEditor.SaveValidated(document, path);
 ```
 
+Artwork-cache support is read-only. `Itc2File.Load()` parses one `.itc2` without loading its image
+payloads; each `Itc2Item` exposes the library/artwork IDs, source, encoding, dimensions, and a
+lossless `Extract()` method. `Itc2CacheAnalyzer` inventories a sharded Album Artwork tree and
+correlates it with an `ItlDocument`:
+
+```csharp
+Itc2File artwork = Itc2File.Load("cover.itc2");
+artwork.Items[0].Extract("cover.bmp");
+
+Itc2CacheReport report = Itc2CacheAnalyzer.Analyze(document, "Album Artwork");
+```
+
 See the [format and research notes](../DumpITL/README.md) for confirmed field mappings, writer
 policies, reverse-engineering commands, and the disposable native-iTunes acceptance workflow.

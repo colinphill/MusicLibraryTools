@@ -137,6 +137,66 @@ For semantic track, album, and artist strings, `mhoh +16` is a per-type value ke
 reuse a key and new values receive the next key. Location and FileUrl instead retain structural
 subtypes 1 and 2. Fresh native user playlists used child key 3 and matured to 4 on the next save.
 
+## ITC2 artwork cache
+
+`ITLTools` now parses and extracts the Windows iTunes `.itc2` artwork-cache format. ITC2 framing is
+big-endian. A file starts with a 284-byte `itch`/`artw` container header; the big-endian word at
+offset zero is that header length. Starting there, every image is a length-delimited `item` record.
+The observed item header length is 196 bytes and includes the leading record-length word and the
+trailing `data` tag, so the image payload starts at `record offset + 196`.
+
+| Record offset | Meaning |
+| ---: | --- |
+| `+0` | total item length, including header and image payload |
+| `+4` | `item` signature |
+| `+8` | item header length (`196`) |
+| `+12/+16/+20` | invariant observed words `1/2/1`; application meanings unresolved |
+| `+24` | source kind: observed `0` local and `2` Cloud Purchases |
+| `+28` | library persistent ID, big-endian `u64` |
+| `+36` | artwork persistent ID, big-endian `u64` |
+| `+44` | origin FourCC: observed `locl` and `CLPU` |
+| `+48` | pixel/storage FourCC or code: `bGRA`, `ARGb`, or numeric `13` for observed JPEGs |
+| `+56/+60` | image width and height |
+| `+76/+80` | secondary width and height for raw local images; zero for compressed cloud images |
+| `+192` | `data` signature; payload follows at `+196` |
+
+The reference corpus contains 3,917 valid files (2,746,729,792 bytes) and 9,355 image records with
+no parse failures. All 9,355 records carry the current ITL library ID. All filenames and paths obey
+the following layout:
+
+- the directory immediately below a cache category is the 16-hex library persistent ID;
+- the next three directories are the low twelve bits of the artwork ID, one nibble at a time from
+  least significant to most significant, written as **decimal** `00` through `15`;
+- local `Cache` files are `<library-id>-<track-persistent-id>.itc2`. The filename's second ID and
+  every item header's artwork ID are identical and resolve to a current `mith +128` track persistent
+  ID. The corpus has 2,719 such files, each for a distinct album record;
+- every local file contains three lossless raw BGRA images whose bounding boxes are 128, 256, and
+  400 pixels. Non-square artwork preserves aspect ratio, so one dimension can be below the bound;
+- `Cloud Purchases` files contain one JPEG, most commonly 600x600. Their first filename component
+  is the high-shard decimal pair followed by the 16-hex artwork ID; the second 16-hex identity does
+  not resolve to a current track in this corpus and remains unnamed. There are 1,198 such files;
+- `Custom`, `Download`, `Generated`, and `Store` are empty in the reference tree, so their record
+  variants remain unobserved.
+
+Of 47,586 current tracks, 47,577 have a nonzero ITL Artwork Count, while the local cache holds one
+file for only 2,719 distinct albums. The cache is therefore a rendered album-level working set, not
+a complete store of every track's embedded artwork. Searching aligned 64-bit `mith` header values
+finds every local filename identity at the known primary persistent ID `+128` and ten additional
+matches at `mith +316`. In all ten, `+316` duplicates that same track's own `+128` ID rather than
+pointing to another track. Across the whole library, however, `+316` is nonzero on 4,542 tracks and
+only 69 values equal or resolve to a current track ID. The ten cache intersections may therefore be
+a sparse identity mirror or a numeric coincidence in a composite field; they do not demonstrate an
+artwork-source reference.
+
+`Itc2File` parses metadata without loading image payloads. `Itc2Item.Extract` copies JPEG/PNG bytes
+unchanged and wraps raw BGRA in a top-down 32-bit BMP without color conversion or recompression;
+observed `ARGb` is reordered losslessly into BMP BGRA. The implementation validates every boundary,
+signature, raw-pixel byte count, library ID, filename convention, and shard path. The independently
+developed [itc2 extractor](https://gist.github.com/hidez8891/aa296f4f9538782b305ccfd7f27ff513)
+corroborates the container tags, big-endian framing, 196-byte image prefix, BGRA/ARGB layouts, and
+compressed-payload branch, but does not identify the persistent IDs or sharding rules established
+from this corpus.
+
 ## Smart playlists
 
 Playlist `mhoh` type 102 is the 112-byte big-endian Smart Info preference block. It carries live
@@ -321,6 +381,10 @@ family inventories fields, sections, IDs, blobs, aggregates, `mprh` links, playb
 correlations, and `smartmembers` membership/header candidates. Research snapshot schema 2 includes
 a nullable type-15 record matrix. Run
 the executable without arguments for the complete command list.
+`artwork-file <file.itc2> [out-dir]` prints every item and optionally extracts its image.
+`artwork-cache <library.itl> <Album Artwork> [max-files]` inventories a whole cache or a bounded
+sample and correlates its library, artwork, filename, shard, album, track-header, and image-format
+identities without reading image payloads.
 For changed ranges of up to 16 bytes, `compare` includes the before/after hex values so one-bit
 experiments can be interpreted directly from the research bundle.
 `smart-mask-probe` and `smart-field-probe` create disposable criteria for guarded native evaluation;
