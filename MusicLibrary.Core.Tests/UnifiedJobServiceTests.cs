@@ -12,7 +12,7 @@ public sealed class UnifiedJobServiceTests
         var catalog = new UnifiedJobService().Catalog;
 
         Assert.Equal(
-            ["playlist-sync", "artwork-normalization", "device-sync", "smart-storage", "car-card", "cross-library-sync", "redundancies", "itunes-validation"],
+            ["playlist-sync", "artwork-normalization", "smart-storage", "car-card", "cross-library-sync", "redundancies", "itunes-validation"],
             catalog.Select(job => job.Id).ToArray());
         Assert.Equal(UnifiedJobApplyMode.ApplyFlag,
             catalog.Single(job => job.Id == "playlist-sync").ApplyMode);

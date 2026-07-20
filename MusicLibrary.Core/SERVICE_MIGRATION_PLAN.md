@@ -20,10 +20,11 @@ Checkpoint completed 2026-07-15:
   bytes and media/artwork identities; apply revalidates the complete plan, journals durable media
   and ITL backups, verifies each written tag, and rolls back the whole operation on failure. The
   CLI and Operations tab both consume the typed service.
-- Migrated `AndroidSync` to `IDeviceSyncService` with local and native ADB
-  `IFileTreeEndpoint` implementations. Source and destination inventories are captured in parallel
-  with one recursive traversal each; apply re-inventories once, rejects stale plans, journals
-  create/copy/replace/quarantine actions, and rolls completed actions back in reverse order.
+- Replaced the managed ADB sync implementation with a typed `IDeviceSyncService` adapter over the
+  packaged native `syncer` runtime. The service persists the structured dry-run artifact and applies
+  that reviewed action list without repeating either full inventory, enforces removal limits,
+  reports and persists the device-side recovery run, exposes one-click native restore, and requests
+  cooperative cancellation over redirected standard input before using a timed kill fallback.
 - Migrated `UpdateSmartStorage` to `ISmartStorageService`. Preview preserves stable bucket/name
   assignments, lazily reuses the existing artwork catalog, records exact M3U/XML/binary output
   bytes, and plans initialization, media changes, stale-track/playlist quarantine, and the database
@@ -116,7 +117,8 @@ The services should reuse focused infrastructure instead of a generic legacy-job
   with behavior suitable for high-latency network shares.
 - `IFileMutationPlanExecutor`: validate snapshots and execute atomic copy, replace, move,
   quarantine, directory, and generated-file actions under a recovery journal.
-- `IFileTreeEndpoint`: provide a common planning surface for local and Android/ADB destinations.
+- `ISyncerProcessRunner`: invoke the packaged native Android sync runtime without exposing process
+  details to application ViewModels.
 - `OperationProgress`: report phase, completed count, total count, current path, and message without
   using global console state.
 - Shared typed models such as `OperationIssue`, `OperationPathSnapshot`, `FileMutationAction`, and
@@ -154,9 +156,9 @@ files, quarantines, missing inputs, overlap errors, snapshots, and removal-limit
 
 ### Device synchronization
 
-Implement a pure device-tree delta planner over `IFileTreeEndpoint`. Local and ADB endpoints execute
-the same planned directory creation, copy, replace, and quarantine actions. Cancellation must work
-during enumeration and transfer.
+Keep Android transport, hashing, delta planning, and device mutation in the native `syncer`
+runtime. The Core adapter requests a deterministic structured plan, preserves its digest for apply,
+and maps actions, issues, progress, and recovery metadata into typed application models.
 
 ### Car-card update
 

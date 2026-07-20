@@ -1,0 +1,93 @@
+<UserControl x:Class="MusicLibraryManager.Views.DevicesView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:MusicLibraryManager.Controls">
+  <Grid Margin="26,22,26,26" RowDefinitions="Auto,Auto,*" RowSpacing="14">
+    <controls:PageHeader Title="Devices"
+        Subtitle="Mirror a local music folder into a verified, managed Android destination over ADB.">
+      <controls:PageHeader.Actions>
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button Classes="app" Content="Initialize" Command="{Binding InitializeCommand}" />
+          <Button Classes="app" Content="Preview" Command="{Binding PreviewCommand}" />
+          <Button Classes="app primary" Content="Apply" Command="{Binding ApplyCommand}" />
+          <Button x:Name="RestoreButton" Classes="app" Content="Restore" Command="{Binding RestoreCommand}" />
+          <Button Classes="app" Content="Cancel" Command="{Binding CancelCommand}" />
+        </StackPanel>
+      </controls:PageHeader.Actions>
+    </controls:PageHeader>
+
+    <Border Grid.Row="1" Classes="status-banner">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+        <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
+        <TextBlock Grid.Column="1" Classes="summary-label"
+                   Text="{Binding Actions.Count, StringFormat={}{0} planned}" />
+      </Grid>
+    </Border>
+
+    <Grid Grid.Row="2" ColumnDefinitions="360,14,*">
+      <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="10">
+          <Border Classes="card">
+            <StackPanel Spacing="8">
+              <TextBlock Classes="section-title" Text="Mirror profile" />
+              <TextBlock Classes="muted" Text="Local source" FontSize="12" FontWeight="SemiBold" />
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <TextBox Classes="app" Text="{Binding SourcePath, Mode=TwoWay}" PlaceholderText="Local music folder" />
+                <Button Grid.Column="1" Classes="app" Content="Browse" Command="{Binding BrowseSourceCommand}" />
+              </Grid>
+              <TextBlock Classes="muted" Text="Android destination" FontSize="12" FontWeight="SemiBold" />
+              <TextBox Classes="app" Text="{Binding DestinationPath, Mode=TwoWay}"
+                       PlaceholderText="music or /storage/…/Music" />
+              <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                         Text="The ‘music’ alias selects removable SD storage only. Use /sdcard/Music for internal shared storage." />
+              <TextBlock Classes="muted" Text="Device serial (optional)" FontSize="12" FontWeight="SemiBold" />
+              <TextBox Classes="app" Text="{Binding DeviceSerial, Mode=TwoWay}" PlaceholderText="Auto-select the only ready device" />
+              <TextBlock Classes="muted" Text="ADB executable override (optional)" FontSize="12" FontWeight="SemiBold" />
+              <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <TextBox Classes="app" Text="{Binding AdbPath, Mode=TwoWay}" PlaceholderText="Auto-detect adb" />
+                <Button Grid.Column="1" Classes="app" Content="Browse" Command="{Binding BrowseAdbCommand}" />
+              </Grid>
+              <CheckBox Content="Adopt an existing non-empty destination" IsChecked="{Binding Adopt, Mode=TwoWay}" />
+            </StackPanel>
+          </Border>
+
+          <Border Classes="card">
+            <StackPanel Spacing="8">
+              <TextBlock Classes="section-title" Text="Policy" />
+              <CheckBox Content="Quarantine destination-only entries" IsChecked="{Binding DeleteExtras, Mode=TwoWay}" />
+              <CheckBox Content="Direct transfer (advanced; skips full staging)" IsChecked="{Binding Direct, Mode=TwoWay}" />
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <StackPanel Spacing="4">
+                  <TextBlock Classes="muted" Text="Maximum removals" FontSize="12" FontWeight="SemiBold" />
+                  <NumericUpDown Classes="app" Minimum="0" Value="{Binding MaxRemovals, Mode=TwoWay}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="4">
+                  <TextBlock Classes="muted" Text="Mtime tolerance (sec)" FontSize="12" FontWeight="SemiBold" />
+                  <NumericUpDown Classes="app" Minimum="0" Value="{Binding MtimeToleranceSeconds, Mode=TwoWay}" />
+                </StackPanel>
+              </Grid>
+              <TextBlock Classes="muted" Text="Exclusion globs (one per line)" FontSize="12" FontWeight="SemiBold" />
+              <TextBox Classes="app" Text="{Binding Exclusions, Mode=TwoWay}" AcceptsReturn="True"
+                       MinHeight="88" PlaceholderText="**/*.tmp" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </ScrollViewer>
+
+      <Grid Grid.Column="2" RowDefinitions="Auto,*" RowSpacing="10">
+        <ItemsControl ItemsSource="{Binding Issues}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Classes="status-banner" Margin="0,0,0,6">
+                <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Border Grid.Row="1" Classes="card" Padding="0" ClipToBounds="True">
+          <controls:AppDataGrid x:Name="ActionsGrid" ItemsSource="{Binding Actions}" />
+        </Border>
+      </Grid>
+    </Grid>
+  </Grid>
+</UserControl>

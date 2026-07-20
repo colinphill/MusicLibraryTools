@@ -39,6 +39,7 @@ public static class Composition
         services.AddSingleton<AnalyzerViewModel>();
         services.AddSingleton<IngestViewModel>();
         services.AddSingleton<OrganizeViewModel>();
+        services.AddSingleton<DevicesViewModel>();
         services.AddSingleton<OperationsViewModel>();
         services.AddSingleton<WorkflowIntegrationService>();
         services.AddSingleton<MainWindow>();

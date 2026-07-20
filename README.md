@@ -57,7 +57,12 @@ Sync and devices:
   their playlists in sync across locations.
 - **BackSyncPlaylists** — sync playlists back from a device/copy, with path remapping. It reads
   and updates the binary `.itl` directly through ITLTools; iTunes must be closed for `--apply`.
-- **AndroidSync** — push music to an Android phone over ADB.
+- **AndroidSync** — thin CLI adapter over the same verified native `syncer` engine used by the
+  manager's **Devices** page. It mirrors a local folder into an initialized Android shared-storage
+  destination with reviewed-plan enforcement, removal limits, BLAKE3 transfer verification, and
+  recoverable quarantine. The Devices page retains the last recovery run and provides one-click
+  restore while preserving any displaced current content. Cancellation is sent cooperatively over syncer's standard input so the
+  device lock and ADB forwarding are cleaned up before the process exits.
 - **UpdateCarCard** — maintain the car's SD card copy (with rebalancing and error fixing).
 - **UpdateSmartStorage** — build a device image with its own file/artwork databases.
 

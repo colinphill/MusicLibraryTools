@@ -9,6 +9,7 @@ public enum ShellDestination
     Health,
     Ingest,
     Organize,
+    Devices,
     Operations,
     Settings,
 }

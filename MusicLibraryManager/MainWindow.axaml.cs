@@ -37,6 +37,7 @@ public partial class MainWindow : Window
             [ShellDestination.Health] = this.FindControl<Button>("HealthNav")!,
             [ShellDestination.Ingest] = this.FindControl<Button>("IngestNav")!,
             [ShellDestination.Organize] = this.FindControl<Button>("OrganizeNav")!,
+            [ShellDestination.Devices] = this.FindControl<Button>("DevicesNav")!,
             [ShellDestination.Operations] = this.FindControl<Button>("OperationsNav")!,
             [ShellDestination.Settings] = this.FindControl<Button>("SettingsNav")!,
         };
@@ -140,6 +141,7 @@ public partial class MainWindow : Window
             ShellDestination.Health => new HealthView(),
             ShellDestination.Ingest => new IngestView(),
             ShellDestination.Organize => new OrganizeView(),
+            ShellDestination.Devices => new DevicesView(),
             ShellDestination.Operations => new OperationsView(),
             ShellDestination.Settings => new SettingsView(),
             _ => new PlaceholderView(destination.ToString()),

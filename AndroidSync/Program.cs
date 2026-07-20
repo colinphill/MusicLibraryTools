@@ -7,21 +7,23 @@ namespace AndroidSync;
 public static class Program
 {
     private sealed record Options(
-        string Source, string Destination, bool Remap, int MaxRemovals, bool Apply);
+        string Source, string Destination, string? Serial, string? AdbPath,
+        int MtimeTolerance, bool DeleteExtras, bool Direct, int MaxRemovals, bool Apply);
 
     public static async Task<int> Main(string[] args)
     {
         Console.OutputEncoding = System.Text.Encoding.UTF8;
         if (!TryParse(args, out Options? options))
         {
-            Console.WriteLine("Usage: AndroidSync <source> <destination> [remap] " +
+            Console.WriteLine("Usage: AndroidSync <source> <destination> [--serial <device>] " +
+                "[--adb <path>] [--mtime-tolerance <seconds>] [--no-delete] [--direct] " +
                 "[--max-removals <count>] [--apply]");
             return 2;
         }
 
         try
         {
-            var service = new DeviceSyncService(new FileTreeEndpointFactory());
+            var service = new DeviceSyncService(new SyncerProcessRunner());
             var progress = new SynchronousProgress<OperationProgress>(value =>
             {
                 if (!string.IsNullOrWhiteSpace(value.Message))
@@ -30,22 +32,30 @@ public static class Program
                         : $"{value.Message}: {value.CurrentPath}");
             });
             DeviceSyncPlan plan = await service.PreviewAsync(
-                new(options!.Source, options.Destination, options.Remap, options.MaxRemovals),
+                new(options!.Source, options.Destination, options.Serial, options.AdbPath,
+                    MtimeToleranceSeconds: options.MtimeTolerance,
+                    DeleteExtras: options.DeleteExtras, Direct: options.Direct,
+                    MaxRemovals: options.MaxRemovals),
                 progress);
             RenderPlan(plan);
-            if (!plan.CanApply) return 4;
+            if (!plan.CanApply)
+            {
+                TryDeletePlan(plan.PlanFilePath);
+                return 4;
+            }
             if (!options.Apply)
             {
+                TryDeletePlan(plan.PlanFilePath);
                 Console.WriteLine("Dry run: pass --apply to execute this exact reviewed plan.");
                 return 0;
             }
 
             DeviceSyncResult result = await service.ApplyAsync(plan, progress);
             Console.WriteLine($"Applied: {result.CreatedDirectoryCount:N0} directories created, " +
-                $"{result.CopiedFileCount:N0} files copied, {result.ReplacedFileCount:N0} replaced, " +
-                $"{result.QuarantinedCount:N0} quarantined.");
-            if (result.JournalPath is not null)
-                Console.WriteLine("Recovery journal: " + result.JournalPath);
+                $"{result.CopiedFileCount:N0} files copied, {result.QuarantinedCount:N0} quarantined, " +
+                $"{result.TransferredBytes:N0} bytes transferred.");
+            if (result.RecoveryId is not null)
+                Console.WriteLine("Recovery run: " + result.RecoveryId);
             return 0;
         }
         catch (OperationCanceledException)
@@ -68,7 +78,14 @@ public static class Program
         foreach (DeviceSyncAction action in plan.Actions)
             Console.WriteLine($"{action.Kind,-20} {action.RelativePath}");
         Console.WriteLine($"Plan: {plan.Actions.Count:N0} action(s), " +
-            $"{plan.UnchangedFileCount:N0} unchanged file(s), {plan.RemovalCount:N0} removal(s).");
+            $"{plan.FileCount:N0} file transfer(s), {plan.DirectoryCount:N0} directorie(s), " +
+            $"{plan.RemovalCount:N0} removal(s), {plan.TransferBytes:N0} byte(s).");
+    }
+
+    private static void TryDeletePlan(string path)
+    {
+        try { File.Delete(path); }
+        catch { }
     }
 
     private static bool TryParse(string[] args, out Options? options)
@@ -77,16 +94,26 @@ public static class Program
         if (args.Length < 2 || args[0].StartsWith("--", StringComparison.Ordinal) ||
             args[1].StartsWith("--", StringComparison.Ordinal))
             return false;
-        bool remap = false, apply = false;
+        bool apply = false, deleteExtras = true, direct = false;
+        string? serial = null, adbPath = null;
+        int mtimeTolerance = 60;
         int maxRemovals = 0;
         for (int index = 2; index < args.Length; index++)
         {
             string argument = args[index];
-            if (argument.Equals("remap", StringComparison.OrdinalIgnoreCase) ||
-                argument.Equals("--remap", StringComparison.OrdinalIgnoreCase))
-                remap = true;
-            else if (argument.Equals("--apply", StringComparison.OrdinalIgnoreCase))
+            if (argument.Equals("--apply", StringComparison.OrdinalIgnoreCase))
                 apply = true;
+            else if (argument.Equals("--no-delete", StringComparison.OrdinalIgnoreCase))
+                deleteExtras = false;
+            else if (argument.Equals("--direct", StringComparison.OrdinalIgnoreCase))
+                direct = true;
+            else if (argument.Equals("--serial", StringComparison.OrdinalIgnoreCase) && ++index < args.Length)
+                serial = args[index];
+            else if (argument.Equals("--adb", StringComparison.OrdinalIgnoreCase) && ++index < args.Length)
+                adbPath = args[index];
+            else if (argument.Equals("--mtime-tolerance", StringComparison.OrdinalIgnoreCase) &&
+                     ++index < args.Length && int.TryParse(args[index], out mtimeTolerance) && mtimeTolerance >= 0)
+            { }
             else if (argument.Equals("--max-removals", StringComparison.OrdinalIgnoreCase) &&
                      ++index < args.Length && int.TryParse(args[index], out maxRemovals) && maxRemovals >= 0)
             { }
@@ -95,7 +122,8 @@ public static class Program
             { }
             else return false;
         }
-        options = new(args[0], args[1], remap, maxRemovals, apply);
+        options = new(args[0], args[1], serial, adbPath, mtimeTolerance,
+            deleteExtras, direct, maxRemovals, apply);
         return true;
     }
 }

@@ -44,7 +44,6 @@ public partial class OperationsViewModel : ViewModelBase
     private readonly IRedundancyAnalysisService? _redundancyAnalysis;
     private readonly IItunesValidationService? _itunesValidation;
     private readonly IArtworkNormalizationService? _artworkNormalization;
-    private readonly IDeviceSyncService? _deviceSync;
     private readonly ISmartStorageService? _smartStorage;
     private readonly ICarCardService? _carCard;
     private CancellationTokenSource? _cts;
@@ -96,21 +95,18 @@ public partial class OperationsViewModel : ViewModelBase
     private CrossLibrarySyncPlan? _crossLibrarySyncPlan;
     private PlaylistExportPlan? _playlistExportPlan;
     private ArtworkNormalizationPlan? _artworkNormalizationPlan;
-    private DeviceSyncPlan? _deviceSyncPlan;
     private SmartStoragePlan? _smartStoragePlan;
     private CarCardPlan? _carCardPlan;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowJobApply))]
     [NotifyPropertyChangedFor(nameof(ShowPlaylistName))]
-    [NotifyPropertyChangedFor(nameof(ShowDevicePaths))]
     [NotifyPropertyChangedFor(nameof(ShowDestinationPath))]
     [NotifyPropertyChangedFor(nameof(ShowValidationPath))]
     [NotifyPropertyChangedFor(nameof(ShowRemovalLimit))]
     [NotifyPropertyChangedFor(nameof(ShowInitialize))]
     [NotifyPropertyChangedFor(nameof(ShowRebalance))]
     [NotifyPropertyChangedFor(nameof(ShowFixErrors))]
-    [NotifyPropertyChangedFor(nameof(ShowRemap))]
     [NotifyPropertyChangedFor(nameof(UsesActiveLibraryContext))]
     private UnifiedJobDescriptor? _selectedJob;
     [ObservableProperty]
@@ -122,37 +118,27 @@ public partial class OperationsViewModel : ViewModelBase
     private bool _hasJobPreview;
 
     [ObservableProperty] private string _jobPlaylistName = "";
-    [ObservableProperty] private string _jobSourcePath = "";
     [ObservableProperty] private string _jobDestinationPath = "";
     [ObservableProperty] private string _jobValidationPath = "";
     [ObservableProperty] private int _jobMaxRemovals;
     [ObservableProperty] private bool _jobInitialize;
     [ObservableProperty] private bool _jobRebalance;
     [ObservableProperty] private bool _jobFixErrors;
-    [ObservableProperty] private bool _jobRemap;
 
     public ObservableCollection<OperationRunViewModel> Runs { get; } = [];
     public ObservableCollection<OperationEntryNodeViewModel> RootNodes { get; } = [];
     public ObservableCollection<UnifiedJobHistoryItem> JobHistory { get; } = [];
-#if MUSIC_LIBRARY_MANAGER
-    public IReadOnlyList<UnifiedJobDescriptor> JobCatalog => _jobs?.Catalog
-        .Where(job => job.Id != "device-sync")
-        .ToArray() ?? [];
-#else
     public IReadOnlyList<UnifiedJobDescriptor> JobCatalog => _jobs?.Catalog ?? [];
-#endif
     public bool ShowJobApply => HasJobPreview &&
         SelectedJob?.ApplyMode == UnifiedJobApplyMode.ApplyFlag;
     private bool JobIs(params string[] ids) => SelectedJob is not null && ids.Contains(SelectedJob.Id);
     public bool ShowPlaylistName => JobIs("artwork-normalization");
-    public bool ShowDevicePaths => JobIs("device-sync");
     public bool ShowDestinationPath => JobIs("smart-storage");
     public bool ShowValidationPath => JobIs("itunes-validation");
-    public bool ShowRemovalLimit => JobIs("device-sync", "smart-storage", "car-card");
+    public bool ShowRemovalLimit => JobIs("smart-storage", "car-card");
     public bool ShowInitialize => JobIs("smart-storage", "car-card");
     public bool ShowRebalance => JobIs("car-card");
     public bool ShowFixErrors => JobIs("car-card");
-    public bool ShowRemap => JobIs("device-sync");
     public bool UsesActiveLibraryContext =>
         JobIs("playlist-sync", "cross-library-sync", "car-card");
 
@@ -167,7 +153,6 @@ public partial class OperationsViewModel : ViewModelBase
         IRedundancyAnalysisService? redundancyAnalysis = null,
         IItunesValidationService? itunesValidation = null,
         IArtworkNormalizationService? artworkNormalization = null,
-        IDeviceSyncService? deviceSync = null,
         ISmartStorageService? smartStorage = null,
         ICarCardService? carCard = null)
     {
@@ -181,7 +166,6 @@ public partial class OperationsViewModel : ViewModelBase
         _redundancyAnalysis = redundancyAnalysis;
         _itunesValidation = itunesValidation;
         _artworkNormalization = artworkNormalization;
-        _deviceSync = deviceSync;
         _smartStorage = smartStorage;
         _carCard = carCard;
         SearchRoot = settings.GetPreference(SearchRootPreference);
@@ -204,27 +188,17 @@ public partial class OperationsViewModel : ViewModelBase
     }
 
     partial void OnJobPlaylistNameChanged(string value) => InvalidateJobPreview();
-    partial void OnJobSourcePathChanged(string value) => InvalidateJobPreview();
     partial void OnJobDestinationPathChanged(string value) => InvalidateJobPreview();
     partial void OnJobValidationPathChanged(string value) => InvalidateJobPreview();
     partial void OnJobMaxRemovalsChanged(int value) => InvalidateJobPreview();
     partial void OnJobInitializeChanged(bool value) => InvalidateJobPreview();
     partial void OnJobRebalanceChanged(bool value) => InvalidateJobPreview();
     partial void OnJobFixErrorsChanged(bool value) => InvalidateJobPreview();
-    partial void OnJobRemapChanged(bool value) => InvalidateJobPreview();
-
-    [RelayCommand]
-    private async Task BrowseJobSourceAsync()
-    {
-        string? path = await _files.PickFolderAsync("Select device-sync source");
-        if (path is not null) JobSourcePath = path;
-    }
 
     [RelayCommand]
     private async Task BrowseJobDestinationAsync()
     {
-        string? path = await _files.PickFolderAsync(SelectedJob?.Id == "device-sync"
-            ? "Select device-sync destination" : "Select smart-storage destination");
+        string? path = await _files.PickFolderAsync("Select smart-storage destination");
         if (path is not null) JobDestinationPath = path;
     }
 
@@ -308,19 +282,6 @@ public partial class OperationsViewModel : ViewModelBase
                 int exitCode = _artworkNormalizationPlan.CanApply ? 0 : 4;
                 _jobPlan = new(SelectedJob, parsed, exitCode,
                     RenderArtworkNormalizationPlan(_artworkNormalizationPlan), DateTimeOffset.UtcNow);
-            }
-            else if (SelectedJob.Id == "device-sync" && _deviceSync is not null)
-            {
-                IReadOnlyList<string> parsed = [];
-                DeviceSyncRequest request = new(Required(JobSourcePath, "A source path is required."),
-                    Required(JobDestinationPath, "A destination path is required."), JobRemap,
-                    JobMaxRemovals);
-                var typedProgress = new Progress<OperationProgress>(value =>
-                    JobStatus = value.Message ?? value.Phase.ToString());
-                _deviceSyncPlan = await _deviceSync.PreviewAsync(request, typedProgress, _cts.Token);
-                int exitCode = _deviceSyncPlan.CanApply ? 0 : 4;
-                _jobPlan = new(SelectedJob, parsed, exitCode,
-                    RenderDeviceSyncPlan(_deviceSyncPlan), DateTimeOffset.UtcNow);
             }
             else if (SelectedJob.Id == "smart-storage" && _smartStorage is not null)
             {
@@ -442,17 +403,6 @@ public partial class OperationsViewModel : ViewModelBase
                     ArtworkNormalized?.Invoke(typedResult.UpdatedPaths);
                 result = new(0, RenderArtworkNormalizationResult(typedResult), clock.Elapsed);
             }
-            else if (plan.Job.Id == "device-sync" && _deviceSync is not null &&
-                     _deviceSyncPlan is { CanApply: true } devicePlan)
-            {
-                var clock = Stopwatch.StartNew();
-                var typedProgress = new Progress<OperationProgress>(value =>
-                    JobStatus = value.Message ?? value.Phase.ToString());
-                DeviceSyncResult typedResult = await _deviceSync.ApplyAsync(
-                    devicePlan, typedProgress, _cts.Token);
-                clock.Stop();
-                result = new(0, RenderDeviceSyncResult(typedResult), clock.Elapsed);
-            }
             else if (plan.Job.Id == "smart-storage" && _smartStorage is not null &&
                      _smartStoragePlan is { CanApply: true } smartPlan)
             {
@@ -498,7 +448,6 @@ public partial class OperationsViewModel : ViewModelBase
         _crossLibrarySyncPlan = null;
         _playlistExportPlan = null;
         _artworkNormalizationPlan = null;
-        _deviceSyncPlan = null;
         _smartStoragePlan = null;
         _carCardPlan = null;
         HasJobPreview = false;
@@ -577,26 +526,6 @@ public partial class OperationsViewModel : ViewModelBase
             Environment.NewLine + "Recovery journal: " + result.JournalPath) +
         (result.CacheError is null ? "" :
             Environment.NewLine + "Cache warning: " + result.CacheError);
-
-    private static string RenderDeviceSyncPlan(DeviceSyncPlan plan)
-    {
-        var output = new StringBuilder();
-        foreach (OperationIssue issue in plan.Issues)
-            output.AppendLine($"{issue.Severity,-11} {issue.Code}: {issue.Message}" +
-                (issue.Path is null ? "" : " [" + issue.Path + "]"));
-        foreach (DeviceSyncAction action in plan.Actions)
-            output.AppendLine($"{action.Kind,-20} {action.RelativePath}");
-        output.AppendLine($"Plan: {plan.Actions.Count:N0} action(s), " +
-            $"{plan.UnchangedFileCount:N0} unchanged file(s), {plan.RemovalCount:N0} removal(s).");
-        return output.ToString();
-    }
-
-    private static string RenderDeviceSyncResult(DeviceSyncResult result) =>
-        $"Applied: {result.CreatedDirectoryCount:N0} directories created, " +
-        $"{result.CopiedFileCount:N0} files copied, {result.ReplacedFileCount:N0} replaced, " +
-        $"{result.QuarantinedCount:N0} quarantined." +
-        (result.JournalPath is null ? "" :
-            Environment.NewLine + "Recovery journal: " + result.JournalPath);
 
     private static string RenderSmartStoragePlan(SmartStoragePlan plan)
     {

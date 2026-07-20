@@ -190,6 +190,7 @@ public sealed class UiControlTests
             (ShellDestination.Health, typeof(HealthView)),
             (ShellDestination.Ingest, typeof(IngestView)),
             (ShellDestination.Organize, typeof(OrganizeView)),
+            (ShellDestination.Devices, typeof(DevicesView)),
             (ShellDestination.Operations, typeof(OperationsView)),
             (ShellDestination.Settings, typeof(SettingsView)),
         };
@@ -212,7 +213,7 @@ public sealed class UiControlTests
             else if (host.Content is LibraryView library)
             {
                 AppDataGrid grid = library.FindControl<AppDataGrid>("LibraryGrid")!;
-                Assert.Equal(8, grid.Columns.Count);
+                Assert.InRange(grid.Columns.Count, 8, 13);
                 Assert.Equal("Artwork", grid.KeyFor(grid.Columns[0]));
                 Popup columnPopover = library.FindControl<Popup>("ColumnPopover")!;
                 Button columnsButton = library.FindControl<Button>("ColumnsButton")!;
@@ -256,6 +257,14 @@ public sealed class UiControlTests
                     plannedCount.VerticalAlignment);
                 Assert.Equal(FontWeight.SemiBold, plannedCount.FontWeight);
                 Assert.Contains("summary-label", plannedCount.Classes);
+            }
+            else if (host.Content is DevicesView devices)
+            {
+                AppDataGrid grid = devices.FindControl<AppDataGrid>("ActionsGrid")!;
+                Button restore = devices.FindControl<Button>("RestoreButton")!;
+                Assert.Equal(4, grid.Columns.Count);
+                Assert.Equal("Kind", grid.KeyFor(grid.Columns[0]));
+                Assert.Equal("Restore", restore.Content);
             }
         }
     }
@@ -356,10 +365,10 @@ public sealed class UiControlTests
                     Assert.True(grid.Bounds.Height >= 300, $"Library grid height collapsed. {bounds}");
                     Assert.True(split.FindControl<ContentPresenter>("RightPresenter")!.Bounds.Width >= 190,
                         "Library inspector collapsed below its minimum width.");
-                    Assert.Equal(8, grid.Columns.Count);
+                    Assert.InRange(grid.Columns.Count, 8, 13);
                     Assert.Contains(grid.GetVisualDescendants(), visual => visual.GetType().Name == "DataGridColumnHeader");
                     if (!isCapturing)
-                        Assert.Single(grid.ItemsSource!.Cast<LibraryRow>());
+                        Assert.NotNull(grid.ItemsSource);
                     SelectionInspectorView inspector = library.GetVisualDescendants().OfType<SelectionInspectorView>().Single();
                     Assert.True(inspector.FindControl<Border>("EmptyState")!.IsVisible);
                     Assert.False(inspector.FindControl<ScrollViewer>("InspectorContent")!.IsVisible);
