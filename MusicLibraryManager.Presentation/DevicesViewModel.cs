@@ -7,6 +7,33 @@ using MusicLibrary.Core.Services;
 
 namespace MusicLibraryManager.Presentation;
 
+public sealed partial class DeviceSyncActionRow(DeviceSyncAction action) : ObservableObject
+{
+    public DeviceSyncMutationKind Kind => action.Kind;
+    public string RelativePath => action.RelativePath;
+    public string Reason => action.Reason;
+    public bool IsDirectory => action.IsDirectory;
+    public long Length => action.Length;
+    public long ModifiedSeconds => action.ModifiedSeconds;
+
+    [ObservableProperty] private string _status = "";
+
+    public bool IsInProgress => Status == "In progress";
+
+    public void SetStatus(OperationItemStatus status)
+    {
+        string next = status switch
+        {
+            OperationItemStatus.InProgress => "In progress",
+            OperationItemStatus.Complete => "Complete",
+            OperationItemStatus.Failed => "Failed",
+            _ => "",
+        };
+        if ((Status == "Complete" || Status == "Failed") && next == "In progress") return;
+        Status = next;
+    }
+}
+
 public partial class DevicesViewModel : ViewModelBase
 {
     private const string ProfilePreference = "manager.devices.profile.v1";
@@ -28,7 +55,7 @@ public partial class DevicesViewModel : ViewModelBase
     [ObservableProperty] private string _adbPath = "";
     [ObservableProperty] private string _exclusions = "";
     [ObservableProperty] private int _mtimeToleranceSeconds = 60;
-    [ObservableProperty] private int _maxRemovals;
+    [ObservableProperty] private int? _maxRemovals;
     [ObservableProperty] private bool _deleteExtras = true;
     [ObservableProperty] private bool _direct;
     [ObservableProperty] private bool _adopt;
@@ -41,14 +68,16 @@ public partial class DevicesViewModel : ViewModelBase
     [NotifyCanExecuteChangedFor(nameof(InitializeCommand))]
     [NotifyCanExecuteChangedFor(nameof(RestoreCommand))]
     [NotifyCanExecuteChangedFor(nameof(CancelCommand))]
+    [NotifyPropertyChangedFor(nameof(IsConfigurationEnabled))]
     private bool _isBusy;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
     private bool _hasApplicablePreview;
 
-    public ObservableCollection<DeviceSyncAction> Actions { get; } = [];
+    public ObservableCollection<DeviceSyncActionRow> Actions { get; } = [];
     public ObservableCollection<OperationIssue> Issues { get; } = [];
+    public bool IsConfigurationEnabled => !IsBusy;
 
     public DevicesViewModel(
         IDeviceSyncService sync,
@@ -117,7 +146,7 @@ public partial class DevicesViewModel : ViewModelBase
         {
             DeviceSyncPlan plan = await _sync.PreviewAsync(CreateRequest(), progress, ct);
             _plan = plan;
-            foreach (DeviceSyncAction action in plan.Actions) Actions.Add(action);
+            foreach (DeviceSyncAction action in plan.Actions) Actions.Add(new(action));
             foreach (OperationIssue issue in plan.Issues) Issues.Add(issue);
             HasApplicablePreview = plan.CanApply;
             StatusText = plan.CanApply
@@ -132,7 +161,19 @@ public partial class DevicesViewModel : ViewModelBase
         DeviceSyncPlan plan = _plan ?? throw new InvalidOperationException("Preview is required.");
         await RunAsync("Synchronize Android device", async (progress, ct) =>
         {
-            DeviceSyncResult result = await _sync.ApplyAsync(plan, progress, ct);
+            DeviceSyncResult result;
+            try
+            {
+                result = await _sync.ApplyAsync(plan, progress, ct);
+            }
+            catch
+            {
+                foreach (DeviceSyncActionRow row in Actions.Where(row => row.IsInProgress))
+                    row.SetStatus(OperationItemStatus.Failed);
+                throw;
+            }
+            foreach (DeviceSyncActionRow row in Actions)
+                row.SetStatus(OperationItemStatus.Complete);
             StatusText = $"Synchronized {result.CopiedFileCount:N0} file(s), " +
                 $"quarantined {result.QuarantinedCount:N0} path(s), and transferred " +
                 $"{result.TransferredBytes:N0} byte(s)." +
@@ -140,6 +181,8 @@ public partial class DevicesViewModel : ViewModelBase
             if (!string.IsNullOrWhiteSpace(result.RecoveryId))
                 SetRecovery(result.RecoveryId, plan.Request.Destination.Trim(),
                     Clean(result.DeviceSerial));
+            else if (plan.Request.Direct)
+                ClearRecovery();
             HasApplicablePreview = false;
             _plan = null;
         });
@@ -177,6 +220,7 @@ public partial class DevicesViewModel : ViewModelBase
         Guid activity = _activities.Start(activityTitle, "Starting…");
         var progress = new Progress<OperationProgress>(value =>
         {
+            UpdateActionStatus(value);
             string message = value.Message ?? value.Phase.ToString();
             StatusText = message;
             double? fraction = value.Total is > 0 ? (double)value.Completed / value.Total : null;
@@ -227,7 +271,7 @@ public partial class DevicesViewModel : ViewModelBase
     partial void OnAdbPathChanged(string value) => InputChanged();
     partial void OnExclusionsChanged(string value) => InputChanged();
     partial void OnMtimeToleranceSecondsChanged(int value) => InputChanged();
-    partial void OnMaxRemovalsChanged(int value) => InputChanged();
+    partial void OnMaxRemovalsChanged(int? value) => InputChanged();
     partial void OnDeleteExtrasChanged(bool value) => InputChanged();
     partial void OnDirectChanged(bool value) => InputChanged();
     partial void OnAdoptChanged(bool value)
@@ -248,6 +292,15 @@ public partial class DevicesViewModel : ViewModelBase
         Issues.Clear();
     }
 
+    private void UpdateActionStatus(OperationProgress progress)
+    {
+        if (progress.ItemStatus is not { } status || string.IsNullOrEmpty(progress.CurrentPath))
+            return;
+        DeviceSyncActionRow? row = Actions.FirstOrDefault(candidate =>
+            StringComparer.Ordinal.Equals(candidate.RelativePath, progress.CurrentPath));
+        row?.SetStatus(status);
+    }
+
     private void LoadProfile()
     {
         _loadingProfile = true;
@@ -262,7 +315,9 @@ public partial class DevicesViewModel : ViewModelBase
             AdbPath = profile.AdbPath ?? "";
             Exclusions = profile.Exclusions ?? "";
             MtimeToleranceSeconds = Math.Max(0, profile.MtimeToleranceSeconds);
-            MaxRemovals = Math.Max(0, profile.MaxRemovals);
+            MaxRemovals = profile.MaxRemovals is { } maximum
+                ? Math.Max(0, maximum)
+                : null;
             DeleteExtras = profile.DeleteExtras;
             Direct = profile.Direct;
             Adopt = profile.Adopt;
@@ -306,7 +361,7 @@ public partial class DevicesViewModel : ViewModelBase
         string? AdbPath,
         string? Exclusions,
         int MtimeToleranceSeconds,
-        int MaxRemovals,
+        int? MaxRemovals,
         bool DeleteExtras,
         bool Direct,
         bool Adopt,

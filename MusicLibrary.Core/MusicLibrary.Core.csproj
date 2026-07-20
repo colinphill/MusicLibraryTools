@@ -4,6 +4,7 @@
     <ProjectReference Include="..\ITLTools\ITLTools.csproj" />
     <ProjectReference Include="..\MusicFileUtilities\MusicFileUtilities.csproj" />
     <ProjectReference Include="..\MetadataCaching\MetadataCaching.csproj" />
+    <ProjectReference Include="..\syncer\managed\src\Syncer.Client\Syncer.Client.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -262,9 +262,19 @@ public sealed class UiControlTests
             {
                 AppDataGrid grid = devices.FindControl<AppDataGrid>("ActionsGrid")!;
                 Button restore = devices.FindControl<Button>("RestoreButton")!;
-                Assert.Equal(4, grid.Columns.Count);
-                Assert.Equal("Kind", grid.KeyFor(grid.Columns[0]));
+                StackPanel configuration = devices.FindControl<StackPanel>("ConfigurationPanel")!;
+                DevicesViewModel viewModel = Assert.IsType<DevicesViewModel>(devices.DataContext);
+                Assert.Equal(5, grid.Columns.Count);
+                Assert.Equal("Status", grid.KeyFor(grid.Columns[0]));
+                Assert.Equal("Kind", grid.KeyFor(grid.Columns[1]));
                 Assert.Equal("Restore", restore.Content);
+                Assert.True(configuration.IsEnabled);
+                viewModel.IsBusy = true;
+                Dispatcher.UIThread.RunJobs();
+                Assert.False(configuration.IsEnabled);
+                viewModel.IsBusy = false;
+                Dispatcher.UIThread.RunJobs();
+                Assert.True(configuration.IsEnabled);
             }
         }
     }

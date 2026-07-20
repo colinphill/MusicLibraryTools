@@ -1,5 +1,5 @@
+using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
-using System.Text.Json;
 using Xunit;
 
 namespace MusicLibrary.Core.Tests;
@@ -10,11 +10,12 @@ public sealed class DeviceSyncServiceTests
     public async Task PreviewReturnsStructuredReviewedPlan()
     {
         using var source = new TempDirectory();
-        var runner = new StubRunner(SuccessJson(removals: 1));
-        var service = new DeviceSyncService(runner);
+        var adapter = new StubSyncerClientAdapter { PlanResult = SuccessPlan(removals: 1) };
+        var service = new DeviceSyncService(adapter);
 
-        DeviceSyncPlan plan = await service.PreviewAsync(new(source.Path, "music",
-            DeviceSerial: "phone", Exclusions: ["**/*.tmp"], MaxRemovals: 1),
+        var request = new DeviceSyncRequest(source.Path, "music",
+            DeviceSerial: "phone", Exclusions: ["**/*.tmp"], MaxRemovals: 1);
+        DeviceSyncPlan plan = await service.PreviewAsync(request,
             ct: TestContext.Current.CancellationToken);
 
         Assert.True(plan.CanApply);
@@ -23,18 +24,19 @@ public sealed class DeviceSyncServiceTests
         Assert.Equal(2, plan.Actions.Count);
         Assert.Contains(plan.Actions, action => action.Kind == DeviceSyncMutationKind.AddFile);
         Assert.Contains(plan.Actions, action => action.Kind == DeviceSyncMutationKind.DeleteFile);
-        Assert.Contains("--dry-run", runner.Invocations.Single());
-        int savedPlan = runner.Invocations.Single().ToList().IndexOf("--save-plan");
-        Assert.Equal(plan.PlanFilePath, runner.Invocations.Single()[savedPlan + 1]);
-        Assert.DoesNotContain("--max-removals", runner.Invocations.Single());
-        Assert.Contains("**/*.tmp", runner.Invocations.Single());
+        Assert.Equal(request, adapter.PlanInvocations.Single().Request);
+        Assert.Equal(plan.PlanFilePath, adapter.PlanInvocations.Single().PlanFilePath);
+        Assert.EndsWith(".json", plan.PlanFilePath, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     public async Task PreviewKeepsActionsButBlocksExcessRemovals()
     {
         using var source = new TempDirectory();
-        var service = new DeviceSyncService(new StubRunner(SuccessJson(removals: 3)));
+        var service = new DeviceSyncService(new StubSyncerClientAdapter
+        {
+            PlanResult = SuccessPlan(removals: 3),
+        });
 
         DeviceSyncPlan plan = await service.PreviewAsync(new(source.Path, "music", MaxRemovals: 2),
             ct: TestContext.Current.CancellationToken);
@@ -45,26 +47,46 @@ public sealed class DeviceSyncServiceTests
     }
 
     [Fact]
-    public async Task ApplyExecutesSavedPlanWithoutRescanningSourceOrDestination()
+    public async Task PreviewDistinguishesNoMaximumFromZeroAllowedRemovals()
     {
         using var source = new TempDirectory();
-        var runner = new StubRunner(SuccessJson(removals: 1),
-            SuccessJson(removals: 1, status: "success", recoveryId: "run-1", applied: true));
-        var service = new DeviceSyncService(runner);
+        var service = new DeviceSyncService(new StubSyncerClientAdapter
+        {
+            PlanResult = SuccessPlan(removals: 1),
+        });
+
+        DeviceSyncPlan unlimited = await service.PreviewAsync(
+            new(source.Path, "music", MaxRemovals: null),
+            ct: TestContext.Current.CancellationToken);
+        DeviceSyncPlan noneAllowed = await service.PreviewAsync(
+            new(source.Path, "music", MaxRemovals: 0),
+            ct: TestContext.Current.CancellationToken);
+
+        Assert.True(unlimited.CanApply);
+        Assert.False(noneAllowed.CanApply);
+        Assert.Contains(noneAllowed.Issues, issue => issue.Code == "removal-limit");
+        File.Delete(unlimited.PlanFilePath);
+        File.Delete(noneAllowed.PlanFilePath);
+    }
+
+    [Fact]
+    public async Task ApplyExecutesSavedManagedPlanWithoutRescanning()
+    {
+        using var source = new TempDirectory();
+        var adapter = new StubSyncerClientAdapter
+        {
+            PlanResult = SuccessPlan(removals: 1),
+            ApplyResult = new(0, 1, 2, 123, "run-1", "phone", "abc123"),
+        };
+        var service = new DeviceSyncService(adapter);
         DeviceSyncPlan plan = await service.PreviewAsync(new(source.Path, "music", MaxRemovals: 1),
             ct: TestContext.Current.CancellationToken);
 
         DeviceSyncResult result = await service.ApplyAsync(plan,
             ct: TestContext.Current.CancellationToken);
 
-        IReadOnlyList<string> apply = runner.Invocations[1];
-        Assert.Equal("apply", apply[0]);
-        int planIndex = apply.ToList().IndexOf("--plan");
-        Assert.Equal(plan.PlanFilePath, apply[planIndex + 1]);
-        Assert.DoesNotContain("--expect-plan", apply);
-        Assert.DoesNotContain("--max-removals", apply);
-        Assert.DoesNotContain(source.Path, apply);
-        Assert.DoesNotContain("music", apply);
+        Assert.Same(plan, adapter.ApplyInvocations.Single());
+        Assert.Single(adapter.PlanInvocations);
         Assert.Equal("run-1", result.RecoveryId);
         Assert.Equal(2, result.QuarantinedCount);
         Assert.Equal(123, result.TransferredBytes);
@@ -74,8 +96,12 @@ public sealed class DeviceSyncServiceTests
     public async Task ApplySurfacesChangedPlanBeforeMutation()
     {
         using var source = new TempDirectory();
-        var runner = new StubRunner(SuccessJson(), ErrorJson(6, "destination changed after the plan was saved"));
-        var service = new DeviceSyncService(runner);
+        var adapter = new StubSyncerClientAdapter
+        {
+            PlanResult = SuccessPlan(),
+            ApplyError = new InvalidOperationException("destination changed after the plan was saved"),
+        };
+        var service = new DeviceSyncService(adapter);
         DeviceSyncPlan plan = await service.PreviewAsync(new(source.Path, "music"),
             ct: TestContext.Current.CancellationToken);
 
@@ -86,26 +112,52 @@ public sealed class DeviceSyncServiceTests
     }
 
     [Fact]
+    public async Task ApplyRejectsAnUnexpectedManagedPlanDigest()
+    {
+        using var source = new TempDirectory();
+        var adapter = new StubSyncerClientAdapter
+        {
+            PlanResult = SuccessPlan(),
+            ApplyResult = new(0, 1, 0, 123, "run-1", "phone", "different"),
+        };
+        var service = new DeviceSyncService(adapter);
+        DeviceSyncPlan plan = await service.PreviewAsync(new(source.Path, "music"),
+            ct: TestContext.Current.CancellationToken);
+
+        InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.ApplyAsync(plan, ct: TestContext.Current.CancellationToken));
+
+        Assert.Contains("unexpected plan digest", error.Message);
+    }
+
+    [Fact]
     public async Task RestoreExecutesNamedRecoveryRunWithoutScanning()
     {
-        var runner = new StubRunner(RestoreJson("run-1"));
-        var service = new DeviceSyncService(runner);
+        var adapter = new StubSyncerClientAdapter
+        {
+            RestoreResult = new("/sdcard/Music", "run-1", "phone"),
+        };
+        var service = new DeviceSyncService(adapter);
+        var request = new DeviceSyncRestoreRequest(
+            "/sdcard/Music", "run-1", "phone", "C:\\adb.exe");
 
-        DeviceSyncRestoreResult result = await service.RestoreAsync(
-            new("/sdcard/Music", "run-1", "phone", "C:\\adb.exe"),
+        DeviceSyncRestoreResult result = await service.RestoreAsync(request,
             ct: TestContext.Current.CancellationToken);
 
         Assert.Equal("run-1", result.RecoveryId);
         Assert.Equal("phone", result.DeviceSerial);
-        Assert.Equal(["restore", "--json", "--adb", "C:\\adb.exe", "--serial", "phone",
-            "--recovery", "run-1", "/sdcard/Music"], runner.Invocations.Single());
+        Assert.Equal(request, adapter.RestoreInvocations.Single());
+        Assert.Empty(adapter.PlanInvocations);
     }
 
     [Fact]
-    public async Task RestoreSurfacesNativeSafetyFailure()
+    public async Task RestoreSurfacesManagedSafetyFailure()
     {
-        var runner = new StubRunner(ErrorJson(4, "recovery run has already been restored"));
-        var service = new DeviceSyncService(runner);
+        var adapter = new StubSyncerClientAdapter
+        {
+            RestoreError = new InvalidOperationException("recovery run has already been restored"),
+        };
+        var service = new DeviceSyncService(adapter);
 
         InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             service.RestoreAsync(new("music", "run-1"),
@@ -117,83 +169,115 @@ public sealed class DeviceSyncServiceTests
     [Fact]
     public async Task InitializeUsesExplicitAdoptAndConnectionSelection()
     {
-        var runner = new StubRunner(new SyncerProcessResult(0, "Initialized music on phone", ""));
-        var service = new DeviceSyncService(runner);
+        var adapter = new StubSyncerClientAdapter
+        {
+            InitializationResult = new("music", "phone", true, "Initialized music on phone"),
+        };
+        var service = new DeviceSyncService(adapter);
+        var request = new DeviceSyncInitializationRequest(
+            "music", "phone", "C:\\adb.exe", Adopt: true);
 
-        DeviceSyncInitializationResult result = await service.InitializeAsync(
-            new("music", "phone", "C:\\adb.exe", Adopt: true),
+        DeviceSyncInitializationResult result = await service.InitializeAsync(request,
             ct: TestContext.Current.CancellationToken);
 
         Assert.Equal("Initialized music on phone", result.Message);
-        Assert.Equal(["init", "--adb", "C:\\adb.exe", "--serial", "phone", "--adopt", "music"],
-            runner.Invocations.Single());
+        Assert.True(result.Adopted);
+        Assert.Equal(request, adapter.InitializationInvocations.Single());
     }
 
     [Fact]
-    public async Task InitializeFailureSurfacesNativeErrorWithoutParsingJson()
+    public async Task InitializeFailureSurfacesManagedError()
     {
-        var runner = new StubRunner(new SyncerProcessResult(5, "",
-            "syncer: destination must be below internal shared storage"));
-        var service = new DeviceSyncService(runner);
+        var adapter = new StubSyncerClientAdapter
+        {
+            InitializationError = new InvalidOperationException(
+                "destination must be below internal shared storage"),
+        };
+        var service = new DeviceSyncService(adapter);
 
         InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             service.InitializeAsync(new("/invalid", Adopt: true),
                 ct: TestContext.Current.CancellationToken));
 
-        Assert.Equal("syncer: destination must be below internal shared storage", error.Message);
+        Assert.Equal("destination must be below internal shared storage", error.Message);
     }
 
-    private static SyncerProcessResult SuccessJson(
-        int removals = 0, string status = "dry_run", string? recoveryId = null, bool applied = false)
+    private static ManagedSyncerPlan SuccessPlan(int removals = 0) => new(
+        "phone", "abc123",
+        [
+            new(DeviceSyncMutationKind.AddFile, "Artist/song.flac",
+                "destination path is missing", false, 123, 10),
+            new(DeviceSyncMutationKind.DeleteFile, "old.flac",
+                "destination only", false, 10, 9),
+        ],
+        DirectoryCount: 0,
+        FileCount: 1,
+        RemovalCount: removals,
+        TransferBytes: 123);
+
+    private sealed class StubSyncerClientAdapter : ISyncerClientAdapter
     {
-        string json = JsonSerializer.Serialize(new
-        {
-            schema = 1, status, device = "phone", source = "source", destination = "music",
-            plan_digest = "abc123", recovery_id = recoveryId, removal_count = removals,
-            actions = new object[]
-            {
-                new { action = "add_file", path = "Artist/song.flac", reason = "destination path is missing", type = "file", size = 123, modified_seconds = 10 },
-                new { action = "delete_file", path = "old.flac", reason = "destination only", type = "file", size = 10, modified_seconds = 9 },
-            },
-            planned = new { files = 1, directories = 0, deletions = removals, bytes = 123 },
-            applied = new { files = applied ? 1 : 0, directories = 0, deletions = applied ? removals : 0, bytes = applied ? 123 : 0 },
-            quarantined_count = applied ? removals + 1 : 0,
-            transferred_bytes = applied ? 123 : 0, duration_ms = 1, error = (object?)null,
-        });
-        return new(0, json, "");
-    }
+        public ManagedSyncerPlan PlanResult { get; init; } = SuccessPlan();
+        public ManagedSyncerApplyResult ApplyResult { get; init; } =
+            new(0, 1, 0, 123, "run-1", "phone", "abc123");
+        public DeviceSyncInitializationResult InitializationResult { get; init; } =
+            new("music", "phone", false, "Initialized music on phone");
+        public DeviceSyncRestoreResult RestoreResult { get; init; } =
+            new("music", "run-1", "phone");
+        public Exception? ApplyError { get; init; }
+        public Exception? InitializationError { get; init; }
+        public Exception? RestoreError { get; init; }
 
-    private static SyncerProcessResult ErrorJson(int code, string message) => new(code,
-        JsonSerializer.Serialize(new
-        {
-            schema = 1, status = "error", device = (string?)null, source = (string?)null,
-            destination = (string?)null, plan_digest = (string?)null, actions = Array.Empty<object>(),
-            recovery_id = (string?)null, removal_count = 0,
-            planned = new { files = 0, directories = 0, deletions = 0, bytes = 0 },
-            applied = new { files = 0, directories = 0, deletions = 0, bytes = 0 },
-            quarantined_count = 0,
-            transferred_bytes = 0, duration_ms = 0, error = new { code, message },
-        }), "");
+        public List<(DeviceSyncRequest Request, string PlanFilePath)> PlanInvocations { get; } = [];
+        public List<DeviceSyncPlan> ApplyInvocations { get; } = [];
+        public List<DeviceSyncInitializationRequest> InitializationInvocations { get; } = [];
+        public List<DeviceSyncRestoreRequest> RestoreInvocations { get; } = [];
 
-    private static SyncerProcessResult RestoreJson(string recoveryId) => new(0,
-        JsonSerializer.Serialize(new
-        {
-            schema = 1, status = "restored", device = "phone", destination = "/sdcard/Music",
-            recovery_id = recoveryId, duration_ms = 1, error = (object?)null,
-        }), "");
-
-    private sealed class StubRunner(params SyncerProcessResult[] results) : ISyncerProcessRunner
-    {
-        private readonly Queue<SyncerProcessResult> _results = new(results);
-        public List<IReadOnlyList<string>> Invocations { get; } = [];
-
-        public Task<SyncerProcessResult> RunAsync(IReadOnlyList<string> arguments,
-            IProgress<MusicLibrary.Core.Models.OperationProgress>? progress = null,
+        public Task<DeviceSyncInitializationResult> InitializeAsync(
+            DeviceSyncInitializationRequest request,
+            IProgress<OperationProgress>? progress = null,
             CancellationToken ct = default)
         {
             ct.ThrowIfCancellationRequested();
-            Invocations.Add(arguments.ToArray());
-            return Task.FromResult(_results.Dequeue());
+            InitializationInvocations.Add(request);
+            return InitializationError is null
+                ? Task.FromResult(InitializationResult)
+                : Task.FromException<DeviceSyncInitializationResult>(InitializationError);
+        }
+
+        public Task<ManagedSyncerPlan> PlanPushAsync(
+            DeviceSyncRequest request,
+            string planFilePath,
+            IProgress<OperationProgress>? progress = null,
+            CancellationToken ct = default)
+        {
+            ct.ThrowIfCancellationRequested();
+            PlanInvocations.Add((request, planFilePath));
+            return Task.FromResult(PlanResult);
+        }
+
+        public Task<ManagedSyncerApplyResult> ApplyPlanAsync(
+            DeviceSyncPlan plan,
+            IProgress<OperationProgress>? progress = null,
+            CancellationToken ct = default)
+        {
+            ct.ThrowIfCancellationRequested();
+            ApplyInvocations.Add(plan);
+            return ApplyError is null
+                ? Task.FromResult(ApplyResult)
+                : Task.FromException<ManagedSyncerApplyResult>(ApplyError);
+        }
+
+        public Task<DeviceSyncRestoreResult> RestoreAsync(
+            DeviceSyncRestoreRequest request,
+            IProgress<OperationProgress>? progress = null,
+            CancellationToken ct = default)
+        {
+            ct.ThrowIfCancellationRequested();
+            RestoreInvocations.Add(request);
+            return RestoreError is null
+                ? Task.FromResult(RestoreResult)
+                : Task.FromException<DeviceSyncRestoreResult>(RestoreError);
         }
     }
 

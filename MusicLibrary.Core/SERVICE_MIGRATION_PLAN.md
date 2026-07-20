@@ -117,8 +117,8 @@ The services should reuse focused infrastructure instead of a generic legacy-job
   with behavior suitable for high-latency network shares.
 - `IFileMutationPlanExecutor`: validate snapshots and execute atomic copy, replace, move,
   quarantine, directory, and generated-file actions under a recovery journal.
-- `ISyncerProcessRunner`: invoke the packaged native Android sync runtime without exposing process
-  details to application ViewModels.
+- `ISyncerClientAdapter`: invoke the managed Syncer.Client API in-process while keeping its
+  protocol models out of application ViewModels.
 - `OperationProgress`: report phase, completed count, total count, current path, and message without
   using global console state.
 - Shared typed models such as `OperationIssue`, `OperationPathSnapshot`, `FileMutationAction`, and

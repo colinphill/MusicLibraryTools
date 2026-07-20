@@ -8,7 +8,7 @@ public static class Program
 {
     private sealed record Options(
         string Source, string Destination, string? Serial, string? AdbPath,
-        int MtimeTolerance, bool DeleteExtras, bool Direct, int MaxRemovals, bool Apply);
+        int MtimeTolerance, bool DeleteExtras, bool Direct, int? MaxRemovals, bool Apply);
 
     public static async Task<int> Main(string[] args)
     {
@@ -23,7 +23,7 @@ public static class Program
 
         try
         {
-            var service = new DeviceSyncService(new SyncerProcessRunner());
+            var service = new DeviceSyncService(new SyncerClientAdapter());
             var progress = new SynchronousProgress<OperationProgress>(value =>
             {
                 if (!string.IsNullOrWhiteSpace(value.Message))
@@ -97,7 +97,7 @@ public static class Program
         bool apply = false, deleteExtras = true, direct = false;
         string? serial = null, adbPath = null;
         int mtimeTolerance = 60;
-        int maxRemovals = 0;
+        int? maxRemovals = null;
         for (int index = 2; index < args.Length; index++)
         {
             string argument = args[index];
@@ -115,11 +115,11 @@ public static class Program
                      ++index < args.Length && int.TryParse(args[index], out mtimeTolerance) && mtimeTolerance >= 0)
             { }
             else if (argument.Equals("--max-removals", StringComparison.OrdinalIgnoreCase) &&
-                     ++index < args.Length && int.TryParse(args[index], out maxRemovals) && maxRemovals >= 0)
-            { }
+                     ++index < args.Length && int.TryParse(args[index], out int parsedMaximum) && parsedMaximum >= 0)
+                maxRemovals = parsedMaximum;
             else if (argument.StartsWith("--max-removals=", StringComparison.OrdinalIgnoreCase) &&
-                     int.TryParse(argument["--max-removals=".Length..], out maxRemovals) && maxRemovals >= 0)
-            { }
+                     int.TryParse(argument["--max-removals=".Length..], out parsedMaximum) && parsedMaximum >= 0)
+                maxRemovals = parsedMaximum;
             else return false;
         }
         options = new(args[0], args[1], serial, adbPath, mtimeTolerance,

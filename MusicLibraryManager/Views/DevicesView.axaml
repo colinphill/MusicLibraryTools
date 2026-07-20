@@ -26,7 +26,8 @@
 
     <Grid Grid.Row="2" ColumnDefinitions="360,14,*">
       <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Spacing="10">
+        <StackPanel x:Name="ConfigurationPanel" Spacing="10"
+                    IsEnabled="{Binding IsConfigurationEnabled}">
           <Border Classes="card">
             <StackPanel Spacing="8">
               <TextBlock Classes="section-title" Text="Mirror profile" />
@@ -54,12 +55,14 @@
           <Border Classes="card">
             <StackPanel Spacing="8">
               <TextBlock Classes="section-title" Text="Policy" />
-              <CheckBox Content="Quarantine destination-only entries" IsChecked="{Binding DeleteExtras, Mode=TwoWay}" />
-              <CheckBox Content="Direct transfer (advanced; skips full staging)" IsChecked="{Binding Direct, Mode=TwoWay}" />
+              <CheckBox Content="Delete destination-only entries" IsChecked="{Binding DeleteExtras, Mode=TwoWay}" />
+              <CheckBox Content="Direct transfer (advanced; no staging or recovery)" IsChecked="{Binding Direct, Mode=TwoWay}" />
               <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                 <StackPanel Spacing="4">
                   <TextBlock Classes="muted" Text="Maximum removals" FontSize="12" FontWeight="SemiBold" />
                   <NumericUpDown Classes="app" Minimum="0" Value="{Binding MaxRemovals, Mode=TwoWay}" />
+                  <TextBlock Classes="muted" FontSize="11" TextWrapping="Wrap"
+                             Text="Blank allows any number; 0 allows none." />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Spacing="4">
                   <TextBlock Classes="muted" Text="Mtime tolerance (sec)" FontSize="12" FontWeight="SemiBold" />

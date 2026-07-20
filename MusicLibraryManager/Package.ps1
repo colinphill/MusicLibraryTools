@@ -13,7 +13,7 @@ $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $PSScriptRoot "MusicLibraryManager.csproj"
 if ([string]::IsNullOrWhiteSpace($SyncerRuntimeRoot)) {
-    $SyncerRuntimeRoot = Join-Path (Split-Path -Parent $projectRoot) "syncer/out/package/syncer-Release"
+    $SyncerRuntimeRoot = Join-Path $projectRoot "syncer/out/package/syncer-Release"
 }
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $OutputRoot = Join-Path $projectRoot ".artifacts/music-library-manager"
@@ -52,20 +52,30 @@ foreach ($rid in $Rids) {
     & dotnet @arguments
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for $rid" }
 
+    $syncerAssembly = Join-Path $publishRoot "Syncer.Client.dll"
+    $dependencyManifest = Join-Path $publishRoot "MusicLibraryManager.deps.json"
+    if (-not (Test-Path -LiteralPath $syncerAssembly -PathType Leaf) -or
+        -not (Test-Path -LiteralPath $dependencyManifest -PathType Leaf) -or
+        -not (Select-String -LiteralPath $dependencyManifest -SimpleMatch 'Syncer.Client/' -Quiet)) {
+        throw "The published app does not contain a resolvable Syncer.Client dependency. Restore the current project graph and publish again."
+    }
+
     $ridSyncerRoot = Join-Path $SyncerRuntimeRoot $rid
     if (-not (Test-Path -LiteralPath $ridSyncerRoot -PathType Container)) {
         $ridSyncerRoot = $SyncerRuntimeRoot
     }
-    $syncerName = if ($rid.StartsWith("win-", [StringComparison]::OrdinalIgnoreCase)) { "syncer.exe" } else { "syncer" }
-    $syncerExecutable = Join-Path $ridSyncerRoot $syncerName
     $syncerServers = Join-Path $ridSyncerRoot "servers"
-    if (-not (Test-Path -LiteralPath $syncerExecutable -PathType Leaf) -or
-        -not (Test-Path -LiteralPath $syncerServers -PathType Container)) {
-        throw "A syncer runtime for $rid was not found under $ridSyncerRoot. Build syncer first or pass -SyncerRuntimeRoot."
+    if (-not (Test-Path -LiteralPath $syncerServers -PathType Container)) {
+        throw "Syncer Android servers for $rid were not found under $ridSyncerRoot. Build syncer first or pass -SyncerRuntimeRoot."
+    }
+    foreach ($abi in @('arm64-v8a', 'armeabi-v7a', 'x86_64', 'x86')) {
+        $server = Join-Path $syncerServers "$abi/syncerd"
+        if (-not (Test-Path -LiteralPath $server -PathType Leaf)) {
+            throw "The Syncer Android server set is incomplete. Missing: $server"
+        }
     }
     $syncerPublishRoot = Join-Path $publishRoot "tools/syncer"
     New-Item -ItemType Directory -Force -Path $syncerPublishRoot | Out-Null
-    Copy-Item -LiteralPath $syncerExecutable -Destination $syncerPublishRoot -Force
     Copy-Item -LiteralPath $syncerServers -Destination $syncerPublishRoot -Recurse -Force
 
     $productName = "MusicLibraryManager-$Version-$rid"

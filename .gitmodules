@@ -1,0 +1,3 @@
+[submodule "syncer"]
+	path = syncer
+	url = ssh://git@github.com/colinphill/syncer

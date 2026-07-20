@@ -1,16 +1,21 @@
-name: build
+name: release
 
 on:
   push:
-  pull_request:
+    tags: ['v*']
   workflow_dispatch:
+    inputs:
+      version:
+        description: Package version for a manual artifact build
+        required: true
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: build-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
@@ -19,50 +24,6 @@ env:
   NDK_VERSION: 27.3.13750724
 
 jobs:
-  portable:
-    name: Portable build (${{ matrix.name }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: Windows
-            os: windows-2022
-          - name: Linux
-            os: ubuntu-24.04
-    steps:
-      - name: Check out source
-        uses: actions/checkout@v7
-
-      - name: Check out syncer submodule
-        run: |
-          git config url.https://github.com/.insteadOf ssh://git@github.com/
-          git submodule update --init --recursive
-
-      - name: Set up .NET
-        uses: actions/setup-dotnet@v6
-        with:
-          dotnet-version: 10.0.x
-
-      - name: Install ffmpeg (Windows)
-        if: runner.os == 'Windows'
-        run: choco install ffmpeg --yes --no-progress
-
-      - name: Install ffmpeg (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes ffmpeg
-
-      - name: Verify ffmpeg
-        run: ffmpeg -version
-
-      - name: Build portable projects
-        run: dotnet build MusicLibraryTools.Portable.slnf --configuration Release
-
-      - name: Test portable projects
-        run: dotnet test MusicLibraryTools.Portable.slnf --configuration Release --no-build --no-restore
-
   syncer-runtime:
     name: Build Android syncer runtime
     runs-on: windows-2022
@@ -109,11 +70,14 @@ jobs:
         shell: pwsh
         run: ctest --test-dir syncer/out/build/windows -C Release --output-on-failure
 
-      - name: Build and test managed syncer
-        run: |
-          dotnet restore syncer/managed/Syncer.Managed.slnx
-          dotnet build syncer/managed/Syncer.Managed.slnx --configuration Release --no-restore
-          dotnet test syncer/managed/Syncer.Managed.slnx --configuration Release --no-build --no-restore
+      - name: Test managed syncer
+        run: dotnet test syncer/managed/Syncer.Managed.slnx --configuration Release
+
+      - name: Install ffmpeg
+        run: choco install ffmpeg --yes --no-progress
+
+      - name: Test portable application projects
+        run: dotnet test MusicLibraryTools.Portable.slnf --configuration Release
 
       - name: Upload Android server set
         uses: actions/upload-artifact@v7
@@ -123,9 +87,9 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  manager-packages:
-    name: Manager package (${{ matrix.rid }})
-    needs: [portable, syncer-runtime]
+  package:
+    name: Package ${{ matrix.rid }}
+    needs: syncer-runtime
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -153,20 +117,34 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Resolve release version
+        id: version
+        shell: pwsh
+        env:
+          MANUAL_VERSION: ${{ inputs.version }}
+        run: |
+          $version = if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            if (-not $env:GITHUB_REF_NAME.StartsWith('v')) { throw 'Release tags must start with v.' }
+            $env:GITHUB_REF_NAME.Substring(1)
+          } else {
+            $env:MANUAL_VERSION
+          }
+          if ($version -notmatch '^\d+\.\d+\.\d+([-.][0-9A-Za-z.-]+)?$') {
+            throw "Invalid package version: $version"
+          }
+          "value=$version" >> $env:GITHUB_OUTPUT
+
       - name: Download Android server set
         uses: actions/download-artifact@v8
         with:
           name: syncer-android-servers
           path: .ci/syncer-runtime/servers
 
-      - name: Test Music Library Manager UI
-        run: dotnet test MusicLibraryManager.UI.Tests/MusicLibraryManager.UI.Tests.csproj --configuration Release
-
       - name: Package Music Library Manager
         shell: pwsh
-        run: ./MusicLibraryManager/Package.ps1 -Version "0.0.0-ci.${{ github.run_number }}" -Rids ${{ matrix.rid }} -SyncerRuntimeRoot .ci/syncer-runtime
+        run: ./MusicLibraryManager/Package.ps1 -Version "${{ steps.version.outputs.value }}" -Rids ${{ matrix.rid }} -SyncerRuntimeRoot .ci/syncer-runtime
 
-      - name: Upload Music Library Manager package
+      - name: Upload release package
         uses: actions/upload-artifact@v7
         with:
           name: MusicLibraryManager-${{ matrix.rid }}
@@ -176,3 +154,23 @@ jobs:
             .artifacts/music-library-manager/*.sha256
           if-no-files-found: error
           retention-days: 14
+
+  publish:
+    name: Publish GitHub release
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: package
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download release packages
+        uses: actions/download-artifact@v8
+        with:
+          pattern: MusicLibraryManager-*
+          path: dist
+          merge-multiple: true
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --generate-notes

@@ -23,7 +23,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ITagWriteService, TagWriteService>();
         services.AddSingleton<IArtworkService, ArtworkService>();
         services.AddSingleton<IArtworkNormalizationService, ArtworkNormalizationService>();
-        services.AddSingleton<ISyncerProcessRunner, SyncerProcessRunner>();
+        services.AddSingleton<ISyncerClientAdapter, SyncerClientAdapter>();
         services.AddSingleton<IDeviceSyncService, DeviceSyncService>();
         services.AddSingleton<ISmartStorageLibraryLoader, SmartStorageLibraryLoader>();
         services.AddSingleton<ISmartStorageService, SmartStorageService>();

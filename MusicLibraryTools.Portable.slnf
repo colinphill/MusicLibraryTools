@@ -33,6 +33,7 @@
       "PlayProject/PlayProject.csproj",
       "ScrubArtwork/ScrubArtwork.csproj",
       "SortDownloads/SortDownloads.csproj",
+      "syncer/managed/src/Syncer.Client/Syncer.Client.csproj",
       "UpdateCarCard/UpdateCarCard.csproj",
       "UpdateSmartStorage/UpdateSmartStorage.csproj"
     ]

@@ -15,12 +15,20 @@ public enum OperationPhase
     Completed,
 }
 
+public enum OperationItemStatus
+{
+    InProgress,
+    Complete,
+    Failed,
+}
+
 public sealed record OperationProgress(
     OperationPhase Phase,
     int Completed = 0,
     int? Total = null,
     string? CurrentPath = null,
-    string? Message = null);
+    string? Message = null,
+    OperationItemStatus? ItemStatus = null);
 
 public enum OperationIssueSeverity { Information, Warning, Blocker }
 

@@ -1,7 +1,5 @@
-using System.Diagnostics;
-using System.Globalization;
-using System.Text.Json;
 using MusicLibrary.Core.Models;
+using Syncer;
 
 namespace MusicLibrary.Core.Services;
 
@@ -14,7 +12,7 @@ public sealed record DeviceSyncRequest(
     int MtimeToleranceSeconds = 60,
     bool DeleteExtras = true,
     bool Direct = false,
-    int MaxRemovals = 0);
+    int? MaxRemovals = null);
 
 public sealed record DeviceSyncInitializationRequest(
     string Destination,
@@ -109,126 +107,225 @@ public interface IDeviceSyncService
         CancellationToken ct = default);
 }
 
-public sealed record SyncerProcessResult(int ExitCode, string StandardOutput, string StandardError);
+public sealed record ManagedSyncerPlan(
+    string DeviceSerial,
+    string PlanDigest,
+    IReadOnlyList<DeviceSyncAction> Actions,
+    int DirectoryCount,
+    int FileCount,
+    int RemovalCount,
+    long TransferBytes);
 
-public interface ISyncerProcessRunner
+public sealed record ManagedSyncerApplyResult(
+    int CreatedDirectoryCount,
+    int CopiedFileCount,
+    int QuarantinedCount,
+    long TransferredBytes,
+    string? RecoveryId,
+    string DeviceSerial,
+    string PlanDigest);
+
+/// <summary>Application boundary around the managed Syncer.Client library.</summary>
+public interface ISyncerClientAdapter
 {
-    Task<SyncerProcessResult> RunAsync(
-        IReadOnlyList<string> arguments,
+    Task<DeviceSyncInitializationResult> InitializeAsync(
+        DeviceSyncInitializationRequest request,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default);
+
+    Task<ManagedSyncerPlan> PlanPushAsync(
+        DeviceSyncRequest request,
+        string planFilePath,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default);
+
+    Task<ManagedSyncerApplyResult> ApplyPlanAsync(
+        DeviceSyncPlan plan,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default);
+
+    Task<DeviceSyncRestoreResult> RestoreAsync(
+        DeviceSyncRestoreRequest request,
         IProgress<OperationProgress>? progress = null,
         CancellationToken ct = default);
 }
 
-public sealed class SyncerProcessRunner : ISyncerProcessRunner
+/// <summary>
+/// Uses Syncer.Client in-process. Only ADB and the matching Android server are external; no host
+/// syncer command is launched and no command output needs to be parsed.
+/// </summary>
+public sealed class SyncerClientAdapter : ISyncerClientAdapter
 {
-    public async Task<SyncerProcessResult> RunAsync(
-        IReadOnlyList<string> arguments,
+    public async Task<DeviceSyncInitializationResult> InitializeAsync(
+        DeviceSyncInitializationRequest request,
         IProgress<OperationProgress>? progress = null,
         CancellationToken ct = default)
     {
-        string executable = LocateExecutable();
-        var start = new ProcessStartInfo(executable)
+        SyncerClient client = CreateClient(request.AdbPath, request.DeviceSerial);
+        InitializeResult result = await InvokeAsync(() => client.InitializeAsync(
+            request.Destination.Trim(), new InitializeOptions { Adopt = request.Adopt },
+            AdaptProgress(progress), ct)).ConfigureAwait(false);
+        return new(result.Destination, result.DeviceSerial, request.Adopt,
+            $"Initialized {result.Destination} on {result.DeviceSerial}");
+    }
+
+    public async Task<ManagedSyncerPlan> PlanPushAsync(
+        DeviceSyncRequest request,
+        string planFilePath,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        SyncerClient client = CreateClient(request.AdbPath, request.DeviceSerial);
+        var options = new PushOptions
         {
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            RedirectStandardInput = true,
-            CreateNoWindow = true,
+            Exclusions = (request.Exclusions ?? [])
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value.Trim())
+                .ToArray(),
+            ModificationTimeTolerance = TimeSpan.FromSeconds(request.MtimeToleranceSeconds),
+            DeleteExtraneous = request.DeleteExtras,
+            Direct = request.Direct,
+            // Core retains the reviewed actions when the threshold is exceeded, then blocks Apply.
+            MaximumRemovals = null,
         };
-        for (int index = 0; index < arguments.Count; index++)
+        SyncPlan plan = await InvokeAsync(() => client.PlanPushAsync(
+            request.Source, request.Destination.Trim(), options, AdaptProgress(progress), ct))
+            .ConfigureAwait(false);
+        await InvokeAsync(async () =>
         {
-            start.ArgumentList.Add(arguments[index]);
-            if (index == 0) start.ArgumentList.Add("--cancel-stdin");
-        }
+            await client.SavePlanAsync(plan, planFilePath, ct).ConfigureAwait(false);
+            return true;
+        }).ConfigureAwait(false);
 
-        using var process = new Process { StartInfo = start };
+        DeviceSyncAction[] actions = plan.Directories
+            .Concat(plan.Files)
+            .Concat(plan.Deletions)
+            .Select(ToDeviceAction)
+            .ToArray();
+        return new(plan.DeviceSerial, plan.Digest, actions,
+            plan.Directories.Count, plan.Files.Count, checked((int)plan.RemovalCount),
+            checked((long)plan.TransferBytes));
+    }
+
+    public async Task<ManagedSyncerApplyResult> ApplyPlanAsync(
+        DeviceSyncPlan plan,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        SyncerClient client = CreateClient(plan.Request.AdbPath, plan.Request.DeviceSerial);
+        SyncPlan savedPlan = await InvokeAsync(() => client.LoadPlanAsync(plan.PlanFilePath, ct))
+            .ConfigureAwait(false);
+        if (!StringComparer.Ordinal.Equals(savedPlan.Digest, plan.PlanDigest))
+            throw new InvalidOperationException("The saved sync plan no longer matches the reviewed plan.");
+
+        SyncResult result = await InvokeAsync(() => client.ApplyPlanAsync(
+            savedPlan, AdaptProgress(progress), ct)).ConfigureAwait(false);
+        return new(result.Applied.Directories, result.Applied.Files, result.QuarantinedCount,
+            checked((long)result.TransferredBytes), result.RecoveryId, result.DeviceSerial,
+            result.PlanDigest);
+    }
+
+    public async Task<DeviceSyncRestoreResult> RestoreAsync(
+        DeviceSyncRestoreRequest request,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        SyncerClient client = CreateClient(request.AdbPath, request.DeviceSerial);
+        RestoreResult result = await InvokeAsync(() => client.RestoreAsync(
+            request.Destination.Trim(), request.RecoveryId.Trim(), AdaptProgress(progress), ct))
+            .ConfigureAwait(false);
+        return new(result.Destination, result.RecoveryId, result.DeviceSerial);
+    }
+
+    private static SyncerClient CreateClient(string? adbPath, string? deviceSerial) => new(new()
+    {
+        AdbPath = Normalize(adbPath),
+        DeviceSerial = Normalize(deviceSerial),
+        ServerDirectory = LocateServerDirectory(),
+    });
+
+    private static string? LocateServerDirectory()
+    {
+        string? configured = Normalize(Environment.GetEnvironmentVariable("MLT_SYNCER_SERVER_PATH"));
+        if (configured is not null) return Path.GetFullPath(configured);
+        string packaged = Path.Combine(AppContext.BaseDirectory, "tools", "syncer");
+        return Directory.Exists(packaged) ? packaged : null;
+    }
+
+    private static string? Normalize(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private static DeviceSyncAction ToDeviceAction(PlannedChange change) => new(
+        change.Action switch
+        {
+            PlanAction.CreateDirectory => DeviceSyncMutationKind.CreateDirectory,
+            PlanAction.ReplaceWithDirectory => DeviceSyncMutationKind.ReplaceWithDirectory,
+            PlanAction.AddFile => DeviceSyncMutationKind.AddFile,
+            PlanAction.UpdateFile => DeviceSyncMutationKind.UpdateFile,
+            PlanAction.ReplaceWithFile => DeviceSyncMutationKind.ReplaceWithFile,
+            PlanAction.DeleteFile => DeviceSyncMutationKind.DeleteFile,
+            PlanAction.DeleteDirectory => DeviceSyncMutationKind.DeleteDirectory,
+            PlanAction.DeleteOther => DeviceSyncMutationKind.DeleteOther,
+            _ => throw new InvalidDataException($"Unknown syncer plan action '{change.Action}'."),
+        },
+        change.Path,
+        change.Reason,
+        change.Entry.Type == EntryType.Directory,
+        checked((long)change.Entry.Size),
+        change.Entry.ModifiedSeconds);
+
+    private static IProgress<SyncerProgress>? AdaptProgress(IProgress<OperationProgress>? progress) =>
+        progress is null ? null : new SynchronousProgress<SyncerProgress>(value =>
+            progress.Report(value.Stage switch
+            {
+                SyncerProgressStage.ScanningSource => new(OperationPhase.IndexingSources,
+                    CurrentPath: value.Path, Message: "Scanning the synchronization source"),
+                SyncerProgressStage.ScanningDestination => new(OperationPhase.InventoryingDestination,
+                    CurrentPath: value.Path, Message: "Scanning the managed Android destination"),
+                SyncerProgressStage.SelectedChange => new(OperationPhase.Planning,
+                    CurrentPath: value.Path, Message: "Selecting synchronization changes"),
+                SyncerProgressStage.StagingFile => new(OperationPhase.Applying,
+                    CurrentPath: value.Path, Message: "Staging file on the Android device",
+                    ItemStatus: OperationItemStatus.InProgress),
+                SyncerProgressStage.TransferringFile => new(OperationPhase.Applying,
+                    CurrentPath: value.Path, Message: "Transferring file to the Android device",
+                    ItemStatus: OperationItemStatus.InProgress),
+                SyncerProgressStage.Applying => new(OperationPhase.Applying,
+                    CurrentPath: value.Path, Message: "Applying synchronization changes",
+                    ItemStatus: OperationItemStatus.InProgress),
+                SyncerProgressStage.CompletedChange => new(OperationPhase.Applying,
+                    CurrentPath: value.Path, Message: "Synchronization change complete",
+                    ItemStatus: OperationItemStatus.Complete),
+                SyncerProgressStage.FailedChange => new(OperationPhase.Applying,
+                    CurrentPath: value.Path, Message: "Synchronization change failed",
+                    ItemStatus: OperationItemStatus.Failed),
+                _ => new(OperationPhase.Applying, CurrentPath: value.Path),
+            }));
+
+    private static async Task<T> InvokeAsync<T>(Func<Task<T>> action)
+    {
         try
         {
-            if (!process.Start())
-                throw new InvalidOperationException("Unable to start syncer.");
-        }
-        catch (Exception error)
-        {
-            throw new InvalidOperationException(
-                $"Unable to start syncer at '{executable}': {error.Message}", error);
-        }
-
-        Task<string> stdout = process.StandardOutput.ReadToEndAsync(CancellationToken.None);
-        Task<string> stderr = ConsumeProgressAsync(
-            process.StandardError, progress, CancellationToken.None);
-        try
-        {
-            await process.WaitForExitAsync(ct).ConfigureAwait(false);
+            return await action().ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
-            try
-            {
-                if (!process.HasExited)
-                {
-                    await process.StandardInput.WriteLineAsync("cancel").ConfigureAwait(false);
-                    await process.StandardInput.FlushAsync(CancellationToken.None).ConfigureAwait(false);
-                    process.StandardInput.Close();
-                    Task gracefulExit = process.WaitForExitAsync(CancellationToken.None);
-                    if (await Task.WhenAny(gracefulExit, Task.Delay(TimeSpan.FromSeconds(5))) != gracefulExit)
-                    {
-                        process.Kill(entireProcessTree: true);
-                        await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
-                    }
-                    else
-                        await gracefulExit.ConfigureAwait(false);
-                }
-                await Task.WhenAll(stdout, stderr).ConfigureAwait(false);
-            }
-            catch { }
             throw;
         }
-
-        string output = await stdout.ConfigureAwait(false);
-        string errorOutput = await stderr.ConfigureAwait(false);
-        return new(process.ExitCode, output, errorOutput);
-    }
-
-    private static async Task<string> ConsumeProgressAsync(
-        StreamReader reader,
-        IProgress<OperationProgress>? progress,
-        CancellationToken ct)
-    {
-        var lines = new List<string>();
-        while (await reader.ReadLineAsync(ct).ConfigureAwait(false) is { } line)
+        catch (SyncerException error)
         {
-            lines.Add(line);
-            if (!string.IsNullOrWhiteSpace(line))
-                progress?.Report(new(OperationPhase.Applying, Message: line.Trim()));
+            throw new InvalidOperationException(error.Message, error);
         }
-        return string.Join(Environment.NewLine, lines);
-    }
-
-    internal static string LocateExecutable()
-    {
-        string? configured = Environment.GetEnvironmentVariable("MLT_SYNCER_PATH");
-        if (!string.IsNullOrWhiteSpace(configured) && File.Exists(configured))
-            return Path.GetFullPath(configured);
-
-        string name = OperatingSystem.IsWindows() ? "syncer.exe" : "syncer";
-        string[] candidates =
-        [
-            Path.Combine(AppContext.BaseDirectory, "tools", "syncer", name),
-            Path.Combine(AppContext.BaseDirectory, name),
-        ];
-        return candidates.FirstOrDefault(File.Exists)
-            ?? throw new FileNotFoundException(
-                $"The packaged syncer executable was not found. Set MLT_SYNCER_PATH or place '{name}' under tools/syncer.");
     }
 }
 
 /// <summary>
-/// Typed application adapter for syncer's managed Android mirror. Preview persists syncer's
-/// deterministic action artifact; Apply executes that artifact after validating its digest,
-/// device identity, source files, and affected destination paths without repeating full inventories.
-/// Restore reverses a completed sync from its native recovery journal.
+/// Typed application service for Syncer.Client's managed Android mirror. Preview persists a
+/// deterministic action artifact; Apply reloads and validates that artifact without repeating
+/// full source or destination inventories. Restore reverses a completed sync from its recovery
+/// journal.
 /// </summary>
-public sealed class DeviceSyncService(ISyncerProcessRunner runner) : IDeviceSyncService
+public sealed class DeviceSyncService(ISyncerClientAdapter syncer) : IDeviceSyncService
 {
     public async Task<DeviceSyncInitializationResult> InitializeAsync(
         DeviceSyncInitializationRequest request,
@@ -238,17 +335,9 @@ public sealed class DeviceSyncService(ISyncerProcessRunner runner) : IDeviceSync
         ArgumentNullException.ThrowIfNull(request);
         if (string.IsNullOrWhiteSpace(request.Destination))
             throw new ArgumentException("An Android destination is required.", nameof(request));
-
-        var arguments = new List<string> { "init" };
-        AddConnectionArguments(arguments, request.AdbPath, request.DeviceSerial);
-        if (request.Adopt) arguments.Add("--adopt");
-        arguments.Add(request.Destination.Trim());
-        progress?.Report(new(OperationPhase.Validating, Message: "Initializing managed Android destination"));
-        SyncerProcessResult result = await runner.RunAsync(arguments, progress, ct).ConfigureAwait(false);
-        if (result.ExitCode != 0)
-            throw SyncerFailure(result);
-        return new(request.Destination.Trim(), request.DeviceSerial, request.Adopt,
-            result.StandardOutput.Trim());
+        progress?.Report(new(OperationPhase.Validating,
+            Message: "Initializing managed Android destination"));
+        return await syncer.InitializeAsync(request, progress, ct).ConfigureAwait(false);
     }
 
     public async Task<DeviceSyncPlan> PreviewAsync(
@@ -260,18 +349,11 @@ public sealed class DeviceSyncService(ISyncerProcessRunner runner) : IDeviceSync
         progress?.Report(new(OperationPhase.IndexingSources,
             Message: "Scanning the source and managed Android destination"));
         string planFile = CreatePlanFilePath();
-        SyncerProcessResult result;
-        SyncerResponse response;
+        ManagedSyncerPlan managedPlan;
         try
         {
-            var arguments = BuildPushArguments(request, dryRun: true, savePlan: planFile);
-            result = await runner.RunAsync(arguments, progress, ct).ConfigureAwait(false);
-            response = ParseResponse(result);
-            if (result.ExitCode != 0 || response.Error is not null)
-            {
-                TryDeletePlan(planFile);
-                return BlockedPlan(request, response, result);
-            }
+            managedPlan = await syncer.PlanPushAsync(request, planFile, progress, ct)
+                .ConfigureAwait(false);
         }
         catch
         {
@@ -280,17 +362,17 @@ public sealed class DeviceSyncService(ISyncerProcessRunner runner) : IDeviceSync
         }
 
         var issues = new List<OperationIssue>();
-        if (response.RemovalCount > request.MaxRemovals)
+        if (request.MaxRemovals is { } maximumRemovals &&
+            managedPlan.RemovalCount > maximumRemovals)
             issues.Add(new("removal-limit", OperationIssueSeverity.Blocker,
-                $"The plan removes {response.RemovalCount:N0} entries, exceeding MaxRemovals {request.MaxRemovals:N0}."));
+                $"The plan removes {managedPlan.RemovalCount:N0} entries, exceeding MaxRemovals {maximumRemovals:N0}."));
         if (request.Direct)
             issues.Add(new("direct-mode", OperationIssueSeverity.Warning,
-                "Direct mode does not stage the complete transfer before changing the destination."));
+                "Direct mode does not stage the complete transfer and saves no recovery information; replacements and deletions are permanent."));
 
-        return new(request, response.Device ?? request.DeviceSerial ?? "",
-            response.PlanDigest ?? "", planFile, response.Actions,
-            response.PlannedDirectories, response.PlannedFiles, response.RemovalCount,
-            response.PlannedBytes, issues, DateTimeOffset.UtcNow);
+        return new(request, managedPlan.DeviceSerial, managedPlan.PlanDigest, planFile,
+            managedPlan.Actions, managedPlan.DirectoryCount, managedPlan.FileCount,
+            managedPlan.RemovalCount, managedPlan.TransferBytes, issues, DateTimeOffset.UtcNow);
     }
 
     public async Task<DeviceSyncResult> ApplyAsync(
@@ -303,19 +385,16 @@ public sealed class DeviceSyncService(ISyncerProcessRunner runner) : IDeviceSync
             throw new InvalidOperationException("The device-sync plan contains blocking issues.");
         progress?.Report(new(OperationPhase.Validating,
             Message: "Validating affected paths from the saved sync plan"));
-        var arguments = BuildApplyArguments(plan);
-        SyncerProcessResult result = await runner.RunAsync(arguments, progress, ct).ConfigureAwait(false);
-        SyncerResponse response = ParseResponse(result);
-        if (result.ExitCode != 0 || response.Error is not null)
-            throw SyncerFailure(result, response);
-        if (!StringComparer.Ordinal.Equals(response.PlanDigest, plan.PlanDigest))
+        ManagedSyncerApplyResult result = await syncer.ApplyPlanAsync(plan, progress, ct)
+            .ConfigureAwait(false);
+        if (!StringComparer.Ordinal.Equals(result.PlanDigest, plan.PlanDigest))
             throw new InvalidOperationException("syncer applied an unexpected plan digest.");
         progress?.Report(new(OperationPhase.Completed,
             Message: "Android synchronization completed"));
         TryDeletePlan(plan.PlanFilePath);
-        return new(response.AppliedDirectories, response.AppliedFiles,
-            response.QuarantinedCount, response.TransferredBytes,
-            response.RecoveryId, response.Device ?? plan.DeviceSerial, plan.Issues);
+        return new(result.CreatedDirectoryCount, result.CopiedFileCount,
+            result.QuarantinedCount, result.TransferredBytes, result.RecoveryId,
+            result.DeviceSerial, plan.Issues);
     }
 
     public async Task<DeviceSyncRestoreResult> RestoreAsync(
@@ -330,56 +409,13 @@ public sealed class DeviceSyncService(ISyncerProcessRunner runner) : IDeviceSync
             throw new ArgumentException("A recovery run identifier is required.", nameof(request));
         progress?.Report(new(OperationPhase.Validating,
             Message: "Restoring the previous Android synchronization"));
-        var arguments = new List<string> { "restore", "--json" };
-        AddConnectionArguments(arguments, request.AdbPath, request.DeviceSerial);
-        arguments.Add("--recovery");
-        arguments.Add(request.RecoveryId.Trim());
-        arguments.Add(request.Destination.Trim());
-        SyncerProcessResult process = await runner.RunAsync(arguments, progress, ct).ConfigureAwait(false);
-        RestoreResponse response = ParseRestoreResponse(process);
-        if (process.ExitCode != 0 || response.Error is not null)
-            throw SyncerFailure(process, response.Error?.Message);
-        if (!StringComparer.Ordinal.Equals(response.RecoveryId, request.RecoveryId.Trim()))
+        DeviceSyncRestoreResult result = await syncer.RestoreAsync(request, progress, ct)
+            .ConfigureAwait(false);
+        if (!StringComparer.Ordinal.Equals(result.RecoveryId, request.RecoveryId.Trim()))
             throw new InvalidOperationException("syncer restored an unexpected recovery run.");
         progress?.Report(new(OperationPhase.Completed,
             Message: "Android synchronization restored"));
-        return new(request.Destination.Trim(), response.RecoveryId,
-            response.Device ?? request.DeviceSerial ?? "");
-    }
-
-    private static List<string> BuildPushArguments(
-        DeviceSyncRequest request, bool dryRun, string? savePlan)
-    {
-        var arguments = new List<string> { "push", "--json" };
-        AddConnectionArguments(arguments, request.AdbPath, request.DeviceSerial);
-        foreach (string exclusion in request.Exclusions ?? [])
-        {
-            if (string.IsNullOrWhiteSpace(exclusion)) continue;
-            arguments.Add("--exclude");
-            arguments.Add(exclusion.Trim());
-        }
-        arguments.Add("--mtime-tolerance");
-        arguments.Add(request.MtimeToleranceSeconds.ToString(CultureInfo.InvariantCulture));
-        if (!request.DeleteExtras) arguments.Add("--no-delete");
-        if (request.Direct) arguments.Add("--direct");
-        if (dryRun) arguments.Add("--dry-run");
-        if (savePlan is not null)
-        {
-            arguments.Add("--save-plan");
-            arguments.Add(savePlan);
-        }
-        arguments.Add(request.Source);
-        arguments.Add(request.Destination);
-        return arguments;
-    }
-
-    private static List<string> BuildApplyArguments(DeviceSyncPlan plan)
-    {
-        var arguments = new List<string> { "apply", "--json" };
-        AddConnectionArguments(arguments, plan.Request.AdbPath, plan.Request.DeviceSerial);
-        arguments.Add("--plan");
-        arguments.Add(plan.PlanFilePath);
-        return arguments;
+        return result;
     }
 
     private static string CreatePlanFilePath()
@@ -396,20 +432,6 @@ public sealed class DeviceSyncService(ISyncerProcessRunner runner) : IDeviceSync
         catch { }
     }
 
-    private static void AddConnectionArguments(List<string> arguments, string? adbPath, string? serial)
-    {
-        if (!string.IsNullOrWhiteSpace(adbPath))
-        {
-            arguments.Add("--adb");
-            arguments.Add(adbPath.Trim());
-        }
-        if (!string.IsNullOrWhiteSpace(serial))
-        {
-            arguments.Add("--serial");
-            arguments.Add(serial.Trim());
-        }
-    }
-
     private static void Validate(DeviceSyncRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -421,154 +443,7 @@ public sealed class DeviceSyncService(ISyncerProcessRunner runner) : IDeviceSync
             throw new ArgumentException("An Android destination is required.", nameof(request));
         if (request.MtimeToleranceSeconds < 0)
             throw new ArgumentOutOfRangeException(nameof(request), "MtimeToleranceSeconds cannot be negative.");
-        if (request.MaxRemovals < 0)
+        if (request.MaxRemovals is < 0)
             throw new ArgumentOutOfRangeException(nameof(request), "MaxRemovals cannot be negative.");
     }
-
-    private static DeviceSyncPlan BlockedPlan(
-        DeviceSyncRequest request, SyncerResponse response, SyncerProcessResult process)
-    {
-        string message = response.Error?.Message ?? process.StandardError.Trim();
-        if (string.IsNullOrWhiteSpace(message))
-            message = $"syncer exited with code {process.ExitCode}.";
-        return new(request, response.Device ?? request.DeviceSerial ?? "", "", "", response.Actions,
-            response.PlannedDirectories, response.PlannedFiles, response.RemovalCount,
-            response.PlannedBytes,
-            [new("syncer-" + (response.Error?.Code ?? process.ExitCode),
-                OperationIssueSeverity.Blocker, message)], DateTimeOffset.UtcNow);
-    }
-
-    private static Exception SyncerFailure(SyncerProcessResult process, SyncerResponse? response = null)
-    {
-        string message = response?.Error?.Message ?? process.StandardError.Trim();
-        if (string.IsNullOrWhiteSpace(message) && response is null)
-            message = process.StandardOutput.Trim();
-        if (string.IsNullOrWhiteSpace(message))
-            message = $"syncer exited with code {process.ExitCode}.";
-        return new InvalidOperationException(message);
-    }
-
-    private static Exception SyncerFailure(SyncerProcessResult process, string? nativeMessage)
-    {
-        string message = nativeMessage ?? process.StandardError.Trim();
-        if (string.IsNullOrWhiteSpace(message)) message = process.StandardOutput.Trim();
-        if (string.IsNullOrWhiteSpace(message)) message = $"syncer exited with code {process.ExitCode}.";
-        return new InvalidOperationException(message);
-    }
-
-    private static RestoreResponse ParseRestoreResponse(SyncerProcessResult result)
-    {
-        try
-        {
-            using JsonDocument document = JsonDocument.Parse(result.StandardOutput);
-            JsonElement root = document.RootElement;
-            if (root.GetProperty("schema").GetInt32() != 1)
-                throw new InvalidDataException("Unsupported syncer JSON schema.");
-            SyncerError? error = null;
-            if (root.TryGetProperty("error", out JsonElement errorElement) &&
-                errorElement.ValueKind == JsonValueKind.Object)
-                error = new(errorElement.GetProperty("code").GetInt32(),
-                    errorElement.GetProperty("message").GetString() ?? "syncer failed");
-            return new(
-                root.TryGetProperty("device", out JsonElement device) && device.ValueKind == JsonValueKind.String
-                    ? device.GetString() : null,
-                root.TryGetProperty("recovery_id", out JsonElement recovery) && recovery.ValueKind == JsonValueKind.String
-                    ? recovery.GetString() ?? "" : "",
-                error);
-        }
-        catch (Exception error) when (error is JsonException or KeyNotFoundException or InvalidOperationException)
-        {
-            throw new InvalidDataException("syncer returned invalid JSON output.", error);
-        }
-    }
-
-    private static SyncerResponse ParseResponse(SyncerProcessResult result)
-    {
-        try
-        {
-            using JsonDocument document = JsonDocument.Parse(result.StandardOutput);
-            JsonElement root = document.RootElement;
-            if (root.GetProperty("schema").GetInt32() != 1)
-                throw new InvalidDataException("Unsupported syncer JSON schema.");
-            var actions = new List<DeviceSyncAction>();
-            if (root.TryGetProperty("actions", out JsonElement actionArray))
-            {
-                foreach (JsonElement action in actionArray.EnumerateArray())
-                {
-                    string type = action.GetProperty("type").GetString() ?? "other";
-                    actions.Add(new(ParseKind(action.GetProperty("action").GetString()),
-                        action.GetProperty("path").GetString() ?? "",
-                        action.GetProperty("reason").GetString() ?? "",
-                        type == "directory",
-                        checked((long)action.GetProperty("size").GetUInt64()),
-                        action.GetProperty("modified_seconds").GetInt64()));
-                }
-            }
-            JsonElement planned = root.GetProperty("planned");
-            JsonElement applied = root.GetProperty("applied");
-            SyncerError? error = null;
-            if (root.TryGetProperty("error", out JsonElement errorElement) &&
-                errorElement.ValueKind == JsonValueKind.Object)
-                error = new(errorElement.GetProperty("code").GetInt32(),
-                    errorElement.GetProperty("message").GetString() ?? "syncer failed");
-            return new(
-                root.TryGetProperty("device", out JsonElement device) && device.ValueKind == JsonValueKind.String
-                    ? device.GetString() : null,
-                root.TryGetProperty("plan_digest", out JsonElement digest) && digest.ValueKind == JsonValueKind.String
-                    ? digest.GetString() : null,
-                root.TryGetProperty("plan_file", out JsonElement planFile) && planFile.ValueKind == JsonValueKind.String
-                    ? planFile.GetString() : null,
-                root.TryGetProperty("recovery_id", out JsonElement recovery) && recovery.ValueKind == JsonValueKind.String
-                    ? recovery.GetString() : null,
-                actions,
-                planned.GetProperty("directories").GetInt32(),
-                planned.GetProperty("files").GetInt32(),
-                root.TryGetProperty("removal_count", out JsonElement removals) ? removals.GetInt32() :
-                    planned.GetProperty("deletions").GetInt32(),
-                checked((long)planned.GetProperty("bytes").GetUInt64()),
-                applied.GetProperty("directories").GetInt32(),
-                applied.GetProperty("files").GetInt32(),
-                applied.GetProperty("deletions").GetInt32(),
-                root.TryGetProperty("quarantined_count", out JsonElement quarantined)
-                    ? quarantined.GetInt32()
-                    : applied.GetProperty("deletions").GetInt32(),
-                checked((long)root.GetProperty("transferred_bytes").GetUInt64()), error);
-        }
-        catch (Exception error) when (error is JsonException or KeyNotFoundException or InvalidOperationException)
-        {
-            throw new InvalidDataException("syncer returned invalid JSON output.", error);
-        }
-    }
-
-    private static DeviceSyncMutationKind ParseKind(string? value) => value switch
-    {
-        "create_directory" => DeviceSyncMutationKind.CreateDirectory,
-        "replace_with_directory" => DeviceSyncMutationKind.ReplaceWithDirectory,
-        "add_file" => DeviceSyncMutationKind.AddFile,
-        "update_file" => DeviceSyncMutationKind.UpdateFile,
-        "replace_with_file" => DeviceSyncMutationKind.ReplaceWithFile,
-        "delete_file" => DeviceSyncMutationKind.DeleteFile,
-        "delete_directory" => DeviceSyncMutationKind.DeleteDirectory,
-        "delete_other" => DeviceSyncMutationKind.DeleteOther,
-        _ => throw new InvalidDataException($"Unknown syncer plan action '{value}'."),
-    };
-
-    private sealed record SyncerError(int Code, string Message);
-    private sealed record RestoreResponse(string? Device, string RecoveryId, SyncerError? Error);
-    private sealed record SyncerResponse(
-        string? Device,
-        string? PlanDigest,
-        string? PlanFile,
-        string? RecoveryId,
-        IReadOnlyList<DeviceSyncAction> Actions,
-        int PlannedDirectories,
-        int PlannedFiles,
-        int RemovalCount,
-        long PlannedBytes,
-        int AppliedDirectories,
-        int AppliedFiles,
-        int AppliedDeletions,
-        int QuarantinedCount,
-        long TransferredBytes,
-        SyncerError? Error);
 }
