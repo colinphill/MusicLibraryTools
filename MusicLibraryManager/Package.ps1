@@ -6,10 +6,158 @@ param(
     [string[]]$Rids,
     [string]$OutputRoot,
     [string]$SyncerRuntimeRoot,
+    [switch]$Installers,
     [switch]$NoRestore
 )
 
 $ErrorActionPreference = "Stop"
+
+function Write-ArtifactChecksum([string]$Artifact) {
+    $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $Artifact).Hash.ToLowerInvariant()
+    $checksum = "$Artifact.sha256"
+    Set-Content -LiteralPath $checksum -Value "$hash  $([IO.Path]::GetFileName($Artifact))" -Encoding ascii
+}
+
+function Resolve-InnoCompiler {
+    $command = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+    if ($command) { return $command.Source }
+    $programFilesX86 = [Environment]::GetFolderPath([Environment+SpecialFolder]::ProgramFilesX86)
+    $localPrograms = Join-Path ([Environment]::GetFolderPath([Environment+SpecialFolder]::LocalApplicationData)) "Programs"
+    $candidates = @(
+        (Join-Path $localPrograms "Inno Setup 7/ISCC.exe"),
+        (Join-Path $localPrograms "Inno Setup 6/ISCC.exe"),
+        (Join-Path $programFilesX86 "Inno Setup 7/ISCC.exe"),
+        (Join-Path $programFilesX86 "Inno Setup 6/ISCC.exe")
+    )
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) { return $candidate }
+    }
+    throw "Inno Setup Compiler (ISCC.exe) is required to build the Windows installer."
+}
+
+function New-WindowsInstaller(
+    [string]$Version,
+    [string]$PublishRoot,
+    [string]$OutputRoot,
+    [string]$ProductName
+) {
+    $compiler = Resolve-InnoCompiler
+    $script = Join-Path $PSScriptRoot "Installer.iss"
+    & $compiler "/DAppVersion=$Version" "/DPublishRoot=$PublishRoot" "/DOutputDir=$OutputRoot" $script |
+        ForEach-Object { Write-Host $_ }
+    if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE." }
+    $installer = Join-Path $OutputRoot "$ProductName-setup.exe"
+    if (-not (Test-Path -LiteralPath $installer -PathType Leaf)) {
+        throw "Inno Setup did not produce the expected installer: $installer"
+    }
+    return $installer
+}
+
+function New-DebianPackage(
+    [string]$Version,
+    [string]$PublishRoot,
+    [string]$PackageRoot,
+    [string]$OutputRoot,
+    [string]$ProductName
+) {
+    if ($Version -notmatch '^[0-9][0-9A-Za-z.+:~-]*$') {
+        throw "Version '$Version' is not valid for a Debian package."
+    }
+    if (-not (Get-Command dpkg-deb -ErrorAction SilentlyContinue)) {
+        throw "dpkg-deb is required to build the Linux installer."
+    }
+
+    $debRoot = Join-Path $PackageRoot "deb"
+    $controlRoot = Join-Path $debRoot "DEBIAN"
+    $applicationRoot = Join-Path $debRoot "opt/musiclibrarymanager"
+    $launcherRoot = Join-Path $debRoot "usr/bin"
+    $desktopRoot = Join-Path $debRoot "usr/share/applications"
+    $iconRoot = Join-Path $debRoot "usr/share/pixmaps"
+    New-Item -ItemType Directory -Force -Path $controlRoot, $applicationRoot, $launcherRoot, $desktopRoot, $iconRoot | Out-Null
+    Copy-Item -Path (Join-Path $PublishRoot "*") -Destination $applicationRoot -Recurse -Force
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot "Assets/AppIcon.ico") `
+        -Destination (Join-Path $iconRoot "musiclibrarymanager.ico") -Force
+
+    $executable = Join-Path $applicationRoot "MusicLibraryManager"
+    if (-not (Test-Path -LiteralPath $executable -PathType Leaf)) {
+        throw "The linux-x64 publish output does not contain MusicLibraryManager."
+    }
+    & chmod -R "u=rwX,go=rX" $debRoot
+    if ($LASTEXITCODE -ne 0) { throw "chmod failed while preparing the Debian package." }
+    & chmod "755" $executable
+    if ($LASTEXITCODE -ne 0) { throw "chmod failed for the MusicLibraryManager executable." }
+    & ln -s "/opt/musiclibrarymanager/MusicLibraryManager" (Join-Path $launcherRoot "musiclibrarymanager")
+    if ($LASTEXITCODE -ne 0) { throw "Could not create the Debian command launcher." }
+
+    $desktop = @"
+[Desktop Entry]
+Type=Application
+Name=Music Library Manager
+Comment=Manage and analyze music libraries
+Exec=/usr/bin/musiclibrarymanager
+Icon=/usr/share/pixmaps/musiclibrarymanager.ico
+Terminal=false
+Categories=AudioVideo;Audio;Utility;
+StartupWMClass=MusicLibraryManager
+"@ -replace "`r`n", "`n"
+    [IO.File]::WriteAllText((Join-Path $desktopRoot "musiclibrarymanager.desktop"),
+        $desktop + "`n", [Text.UTF8Encoding]::new($false))
+
+    $installedBytes = (Get-ChildItem -LiteralPath $debRoot -File -Recurse |
+        Where-Object { $_.FullName -notlike "$controlRoot*" } |
+        Measure-Object -Property Length -Sum).Sum
+    $installedSize = [Math]::Max(1, [Math]::Ceiling($installedBytes / 1KB))
+    $control = @"
+Package: musiclibrarymanager
+Version: $Version
+Section: sound
+Priority: optional
+Architecture: amd64
+Installed-Size: $installedSize
+Maintainer: MusicLibraryTools <colinphill@users.noreply.github.com>
+Depends: libfontconfig1, libice6, libsm6, libx11-6
+Homepage: https://github.com/colinphill/MusicLibraryTools
+Description: Manage, inspect, and maintain music libraries
+ Music Library Manager is a native desktop application for indexing,
+ analyzing, repairing, and synchronizing music collections.
+"@ -replace "`r`n", "`n"
+    [IO.File]::WriteAllText((Join-Path $controlRoot "control"),
+        $control + "`n", [Text.UTF8Encoding]::new($false))
+
+    $package = Join-Path $OutputRoot "$ProductName.deb"
+    if (Test-Path -LiteralPath $package) { Remove-Item -LiteralPath $package -Force }
+    & dpkg-deb --root-owner-group --build $debRoot $package | ForEach-Object { Write-Host $_ }
+    if ($LASTEXITCODE -ne 0) { throw "dpkg-deb failed with exit code $LASTEXITCODE." }
+    & dpkg-deb --info $package | ForEach-Object { Write-Host $_ }
+    if ($LASTEXITCODE -ne 0) { throw "The generated Debian package failed validation." }
+    return $package
+}
+
+function New-MacDiskImage(
+    [string]$Bundle,
+    [string]$PackageRoot,
+    [string]$OutputRoot,
+    [string]$ProductName
+) {
+    if (-not (Get-Command hdiutil -ErrorAction SilentlyContinue)) {
+        throw "hdiutil is required to build the macOS installer."
+    }
+    $staging = Join-Path $PackageRoot "dmg"
+    New-Item -ItemType Directory -Force -Path $staging | Out-Null
+    Copy-Item -LiteralPath $Bundle -Destination (Join-Path $staging "MusicLibraryManager.app") -Recurse -Force
+    & ln -s "/Applications" (Join-Path $staging "Applications")
+    if ($LASTEXITCODE -ne 0) { throw "Could not create the Applications link for the macOS disk image." }
+
+    $image = Join-Path $OutputRoot "$ProductName.dmg"
+    if (Test-Path -LiteralPath $image) { Remove-Item -LiteralPath $image -Force }
+    & hdiutil create -volname "Music Library Manager" -srcfolder $staging -anyowners -ov -format UDZO $image |
+        ForEach-Object { Write-Host $_ }
+    if ($LASTEXITCODE -ne 0) { throw "hdiutil failed with exit code $LASTEXITCODE." }
+    & hdiutil verify $image | ForEach-Object { Write-Host $_ }
+    if ($LASTEXITCODE -ne 0) { throw "The generated macOS disk image failed validation." }
+    return $image
+}
+
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $PSScriptRoot "MusicLibraryManager.csproj"
 if ([string]::IsNullOrWhiteSpace($SyncerRuntimeRoot)) {
@@ -79,10 +227,18 @@ foreach ($rid in $Rids) {
     Copy-Item -LiteralPath $syncerServers -Destination $syncerPublishRoot -Recurse -Force
 
     $productName = "MusicLibraryManager-$Version-$rid"
+    $artifacts = [Collections.Generic.List[string]]::new()
     if ($rid.StartsWith("win-", [StringComparison]::OrdinalIgnoreCase)) {
         $archive = Join-Path $resolvedOutputRoot "$productName.zip"
         if (Test-Path -LiteralPath $archive) { Remove-Item -LiteralPath $archive -Force }
         Compress-Archive -Path (Join-Path $publishRoot "*") -DestinationPath $archive -CompressionLevel Optimal
+        [void]$artifacts.Add($archive)
+        if ($Installers) {
+            if (-not $isWindowsPlatform -or $rid -ne "win-x64") {
+                throw "Windows installer generation supports win-x64 on Windows only."
+            }
+            [void]$artifacts.Add((New-WindowsInstaller $Version $publishRoot $resolvedOutputRoot $productName))
+        }
     }
     elseif ($rid.StartsWith("osx-", [StringComparison]::OrdinalIgnoreCase)) {
         $bundle = Join-Path $packageRoot "MusicLibraryManager.app"
@@ -105,19 +261,34 @@ foreach ($rid in $Rids) {
 </dict></plist>
 "@
         [IO.File]::WriteAllText((Join-Path $bundle "Contents/Info.plist"), $plist, [Text.UTF8Encoding]::new($false))
+        & chmod "755" (Join-Path $macOs "MusicLibraryManager")
+        if ($LASTEXITCODE -ne 0) { throw "chmod failed for the macOS application executable." }
         $archive = Join-Path $resolvedOutputRoot "$productName.tar.gz"
         if (Test-Path -LiteralPath $archive) { Remove-Item -LiteralPath $archive -Force }
         & tar -czf $archive -C $packageRoot "MusicLibraryManager.app"
         if ($LASTEXITCODE -ne 0) { throw "tar failed for $rid" }
+        [void]$artifacts.Add($archive)
+        if ($Installers) {
+            if (-not $isMacPlatform) { throw "macOS disk images can only be built on macOS." }
+            [void]$artifacts.Add((New-MacDiskImage $bundle $packageRoot $resolvedOutputRoot $productName))
+        }
     }
     else {
         $archive = Join-Path $resolvedOutputRoot "$productName.tar.gz"
         if (Test-Path -LiteralPath $archive) { Remove-Item -LiteralPath $archive -Force }
         & tar -czf $archive -C $publishRoot .
         if ($LASTEXITCODE -ne 0) { throw "tar failed for $rid" }
+        [void]$artifacts.Add($archive)
+        if ($Installers) {
+            if ($isWindowsPlatform -or $isMacPlatform -or $rid -ne "linux-x64") {
+                throw "Debian package generation supports linux-x64 on Linux only."
+            }
+            [void]$artifacts.Add((New-DebianPackage $Version $publishRoot $packageRoot $resolvedOutputRoot $productName))
+        }
     }
 
-    $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $archive).Hash.ToLowerInvariant()
-    Set-Content -LiteralPath "$archive.sha256" -Value "$hash  $([IO.Path]::GetFileName($archive))" -Encoding ascii
-    Write-Host "Created $archive"
+    foreach ($artifact in $artifacts) {
+        Write-ArtifactChecksum $artifact
+        Write-Host "Created $artifact"
+    }
 }

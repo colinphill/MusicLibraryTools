@@ -158,9 +158,13 @@ jobs:
           name: syncer-android-servers
           path: .ci/syncer-runtime/servers
 
+      - name: Install Inno Setup
+        if: runner.os == 'Windows'
+        run: choco install innosetup --yes --no-progress
+
       - name: Package Music Library Manager
         shell: pwsh
-        run: ./MusicLibraryManager/Package.ps1 -Version "${{ steps.version.outputs.value }}" -Rids ${{ matrix.rid }} -SyncerRuntimeRoot .ci/syncer-runtime
+        run: ./MusicLibraryManager/Package.ps1 -Version "${{ steps.version.outputs.value }}" -Rids ${{ matrix.rid }} -SyncerRuntimeRoot .ci/syncer-runtime -Installers
 
       - name: Upload release package
         uses: actions/upload-artifact@v7
@@ -169,6 +173,9 @@ jobs:
           path: |
             .artifacts/music-library-manager/*.zip
             .artifacts/music-library-manager/*.tar.gz
+            .artifacts/music-library-manager/*.exe
+            .artifacts/music-library-manager/*.deb
+            .artifacts/music-library-manager/*.dmg
             .artifacts/music-library-manager/*.sha256
           if-no-files-found: error
           retention-days: 14
