@@ -34,10 +34,19 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v7
 
+      - name: Resolve syncer revision
+        id: syncer_ref
+        shell: pwsh
+        run: '"revision=$(git rev-parse HEAD:syncer)" >> $env:GITHUB_OUTPUT'
+
       - name: Check out syncer submodule
-        run: |
-          git config url.https://github.com/.insteadOf ssh://git@github.com/
-          git submodule update --init --recursive
+        uses: actions/checkout@v7
+        with:
+          repository: colinphill/syncer
+          ref: ${{ steps.syncer_ref.outputs.revision }}
+          path: syncer
+          ssh-key: ${{ secrets.SYNCER_SSH_KEY }}
+          persist-credentials: false
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
@@ -71,10 +80,19 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v7
 
+      - name: Resolve syncer revision
+        id: syncer_ref
+        shell: pwsh
+        run: '"revision=$(git rev-parse HEAD:syncer)" >> $env:GITHUB_OUTPUT'
+
       - name: Check out syncer submodule
-        run: |
-          git config url.https://github.com/.insteadOf ssh://git@github.com/
-          git submodule update --init --recursive
+        uses: actions/checkout@v7
+        with:
+          repository: colinphill/syncer
+          ref: ${{ steps.syncer_ref.outputs.revision }}
+          path: syncer
+          ssh-key: ${{ secrets.SYNCER_SSH_KEY }}
+          persist-credentials: false
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
@@ -143,10 +161,19 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v7
 
+      - name: Resolve syncer revision
+        id: syncer_ref
+        shell: pwsh
+        run: '"revision=$(git rev-parse HEAD:syncer)" >> $env:GITHUB_OUTPUT'
+
       - name: Check out syncer submodule
-        run: |
-          git config url.https://github.com/.insteadOf ssh://git@github.com/
-          git submodule update --init --recursive
+        uses: actions/checkout@v7
+        with:
+          repository: colinphill/syncer
+          ref: ${{ steps.syncer_ref.outputs.revision }}
+          path: syncer
+          ssh-key: ${{ secrets.SYNCER_SSH_KEY }}
+          persist-credentials: false
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
