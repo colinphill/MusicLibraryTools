@@ -33,11 +33,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v7
-
-      - name: Check out syncer submodule
-        run: |
-          git config url.https://github.com/.insteadOf ssh://git@github.com/
-          git submodule update --init --recursive
+        with:
+          submodules: recursive
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
@@ -70,11 +67,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v7
-
-      - name: Check out syncer submodule
-        run: |
-          git config url.https://github.com/.insteadOf ssh://git@github.com/
-          git submodule update --init --recursive
+        with:
+          submodules: recursive
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
@@ -142,11 +136,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v7
-
-      - name: Check out syncer submodule
-        run: |
-          git config url.https://github.com/.insteadOf ssh://git@github.com/
-          git submodule update --init --recursive
+        with:
+          submodules: recursive
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
