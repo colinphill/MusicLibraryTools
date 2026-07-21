@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MusicFileUtilities;
@@ -571,8 +572,8 @@ public partial class SelectionInspectorViewModel : ObservableObject
         }
 
         string extension = ArtworkFileExtension(item.MimeType);
-        string sourceName = Path.GetFileNameWithoutExtension(
-            Selection.Paths.FirstOrDefault()) ?? "";
+        string sourceName = FileNameWithoutExtension(
+            Selection.Paths.FirstOrDefault());
         if (string.IsNullOrWhiteSpace(sourceName))
             sourceName = "artwork";
         string typeName = string.Join('-', item.Label.ToLowerInvariant()
@@ -805,6 +806,14 @@ public partial class SelectionInspectorViewModel : ObservableObject
             _ => ".bin",
         };
 
+    private static string FileNameWithoutExtension(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+            return "";
+        int separator = path.LastIndexOfAny(['\\', '/']);
+        return Path.GetFileNameWithoutExtension(path[(separator + 1)..]);
+    }
+
     private static string FormatFileFormat(string path, string? codec)
     {
         string extension = Path.GetExtension(path).TrimStart('.').ToUpperInvariant();
@@ -829,7 +838,8 @@ public partial class SelectionInspectorViewModel : ObservableObject
             .GroupBy(value => value, StringComparer.OrdinalIgnoreCase)
             .OrderByDescending(group => group.Count())
             .ThenBy(group => group.Key, StringComparer.OrdinalIgnoreCase)
-            .Select(group => $"{group.Key}: {group.Count():N0} ({(double)group.Count() / total:P0})")
+            .Select(group => $"{group.Key}: {group.Count():N0} " +
+                $"({(100d * group.Count() / total).ToString("0", CultureInfo.InvariantCulture)}%)")
             .ToArray();
         return lines.Length == 0 ? "Unknown: 0" : string.Join(Environment.NewLine, lines);
     }
