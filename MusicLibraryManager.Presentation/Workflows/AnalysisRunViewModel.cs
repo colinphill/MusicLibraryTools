@@ -32,6 +32,8 @@ public enum AnalysisRepairDisposition
 /// </summary>
 public sealed class AnalysisRunViewModel : ViewModelBase
 {
+    private bool _clearingFilterDispositions;
+
     public string Name { get; }
     public string Summary { get; }
     public DateTimeOffset CreatedAt { get; }
@@ -198,8 +200,50 @@ public sealed class AnalysisRunViewModel : ViewModelBase
 
     private void FilterDispositionChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == "Disposition")
+        if (e.PropertyName == "Disposition" && !_clearingFilterDispositions)
             OnPropertyChanged(nameof(FilteredPaths));
+    }
+
+    /// <summary>
+    /// Clears the Library-filter choice without disturbing repair choices that are active,
+    /// ignored, completed, or otherwise unrelated to the filter chip.
+    /// </summary>
+    public bool ClearFilterDispositions()
+    {
+        if (FilteredPaths.Count == 0)
+            return false;
+
+        _clearingFilterDispositions = true;
+        try
+        {
+            foreach (AnalysisFindingViewModel finding in FindingGroups
+                         .SelectMany(group => group.Artists)
+                         .SelectMany(group => group.Albums)
+                         .SelectMany(group => group.Findings)
+                         .Where(finding =>
+                             finding.Disposition == AnalysisFindingDisposition.Filter))
+                finding.Disposition = AnalysisFindingDisposition.None;
+
+            foreach (AnalysisRepairItemViewModel item in RepairItems.Where(item =>
+                         item.Disposition == AnalysisRepairDisposition.Filter))
+                item.Disposition = AnalysisRepairDisposition.Ignored;
+
+            foreach (RepresentationRepairActionItemViewModel item in
+                     RepresentationActionItems.Where(item =>
+                         item.Disposition == AnalysisRepairDisposition.Filter))
+                item.Disposition = AnalysisRepairDisposition.Ignored;
+
+            foreach (ItlMetadataRepairItemViewModel item in ItlRepairItems.Where(item =>
+                         item.Disposition == AnalysisRepairDisposition.Filter))
+                item.Disposition = AnalysisRepairDisposition.Ignored;
+        }
+        finally
+        {
+            _clearingFilterDispositions = false;
+        }
+
+        OnPropertyChanged(nameof(FilteredPaths));
+        return true;
     }
 }
 

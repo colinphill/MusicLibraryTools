@@ -1,0 +1,30 @@
+<Window x:Class="MusicLibraryManager.Views.ArtworkPreviewWindow"
+        xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Icon="/Assets/AppIcon.ico"
+        Width="900" Height="700" MinWidth="320" MinHeight="240"
+        WindowDecorations="Full" CanResize="True"
+        WindowStartupLocation="CenterOwner"
+        KeyDown="OnKeyDown">
+  <Grid RowDefinitions="*,Auto">
+    <Border Background="{DynamicResource AppInsetBrush}" Padding="12">
+      <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
+                    HorizontalContentAlignment="Center" VerticalContentAlignment="Center">
+        <Image x:Name="PreviewImage" Stretch="None"
+               HorizontalAlignment="Center" VerticalAlignment="Center" />
+      </ScrollViewer>
+    </Border>
+    <Border Grid.Row="1" Background="{DynamicResource AppPanelBrush}"
+            BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,1,0,0"
+            Padding="14,10">
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+        <StackPanel VerticalAlignment="Center" Spacing="2">
+          <TextBlock x:Name="PreviewDetails" Classes="muted" TextWrapping="Wrap" />
+          <TextBlock Classes="faint" FontSize="12" Text="Scroll to inspect the image at full resolution. Press Esc to close." />
+        </StackPanel>
+        <Button Grid.Column="1" Classes="app" Content="Close" Click="OnClose"
+                AutomationProperties.Name="Close artwork preview" />
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

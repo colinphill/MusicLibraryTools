@@ -46,22 +46,36 @@ public sealed class WorkflowIntegrationService : IDisposable
         _health.RepairsApplied += FilesChanged;
         _health.OpenRequested += OpenRequested;
         _health.FilterChanged += HealthFilterChanged;
+        _library.HealthFilterClearRequested += HealthFilterClearRequested;
         _library.SetHealthFilter(_health.FilteredPaths);
         _ingest.IngestCompleted += LibraryChanged;
         _ingest.RecoveryRequested += RecoveryRequested;
         _organize.MovesApplied += LibraryChanged;
         _operations.ArtworkNormalized += FilesChanged;
 
-        Observe(_health, "Health analysis", () => _health.IsBusy, () => _health.StatusText);
-        Observe(_ingest, "Ingest", () => _ingest.IsBusy, () => _ingest.StatusText);
-        Observe(_organize, "Organize", () => _organize.IsBusy, () => _organize.StatusText);
-        Observe(_operations, "Library operation", () => _operations.IsBusy, () => _operations.StatusText);
+        Observe(_health, "Health analysis", ShellDestination.Health,
+            () => _health.IsBusy, () => _health.StatusText,
+            () => _health.LastActivityState,
+            () => ExecuteIfAvailable(_health.CancelCommand));
     }
 
-    private void Observe(INotifyPropertyChanged source, string title, Func<bool> busy, Func<string?> status)
+    private void Observe(
+        INotifyPropertyChanged source,
+        string title,
+        ShellDestination destination,
+        Func<bool> busy,
+        Func<string?> status,
+        Func<AppActivityState> outcome,
+        Action cancel)
     {
-        _workflows[source] = new WorkflowState(title, busy, status);
+        _workflows[source] = new WorkflowState(title, destination, busy, status, outcome, cancel);
         source.PropertyChanged += WorkflowChanged;
+    }
+
+    private static void ExecuteIfAvailable(System.Windows.Input.ICommand command)
+    {
+        if (command.CanExecute(null))
+            command.Execute(null);
     }
 
     private void WorkflowChanged(object? sender, PropertyChangedEventArgs e)
@@ -71,11 +85,15 @@ public sealed class WorkflowIntegrationService : IDisposable
         if (e.PropertyName is nameof(AnalyzerViewModel.IsBusy))
         {
             if (state.IsBusy() && state.ActivityId is null)
-                state.ActivityId = _activities.Start(state.Title, state.Status() ?? "Starting…");
+                state.ActivityId = _activities.Start(
+                    state.Title,
+                    state.Status() ?? "Starting…",
+                    state.Destination,
+                    state.Cancel);
             else if (!state.IsBusy() && state.ActivityId is Guid id)
             {
                 string message = state.Status() ?? "Finished.";
-                _activities.Finish(id, message, InferState(message));
+                _activities.Finish(id, message, state.Outcome());
                 state.ActivityId = null;
             }
         }
@@ -85,20 +103,10 @@ public sealed class WorkflowIntegrationService : IDisposable
         }
     }
 
-    private static AppActivityState InferState(string message)
-    {
-        if (message.Contains("cancel", StringComparison.OrdinalIgnoreCase))
-            return AppActivityState.Cancelled;
-        if (message.Contains("failed", StringComparison.OrdinalIgnoreCase) ||
-            message.Contains("could not", StringComparison.OrdinalIgnoreCase) ||
-            message.Contains("error", StringComparison.OrdinalIgnoreCase))
-            return AppActivityState.Failed;
-        return AppActivityState.Completed;
-    }
-
     private void OpenRequested(string path) => _platform.RevealFile(path);
     private void HealthFilterChanged(IReadOnlyList<string> paths) =>
         _library.SetHealthFilter(paths);
+    private void HealthFilterClearRequested() => _health.ClearFilterDispositions();
     private void LibraryChanged() => _ = _library.ReloadAsync();
     private void FilesChanged(IReadOnlyList<string> paths) => _ = _library.ReloadAsync();
 
@@ -115,6 +123,7 @@ public sealed class WorkflowIntegrationService : IDisposable
         _health.RepairsApplied -= FilesChanged;
         _health.OpenRequested -= OpenRequested;
         _health.FilterChanged -= HealthFilterChanged;
+        _library.HealthFilterClearRequested -= HealthFilterClearRequested;
         _ingest.IngestCompleted -= LibraryChanged;
         _ingest.RecoveryRequested -= RecoveryRequested;
         _organize.MovesApplied -= LibraryChanged;
@@ -125,11 +134,20 @@ public sealed class WorkflowIntegrationService : IDisposable
         _started = false;
     }
 
-    private sealed class WorkflowState(string title, Func<bool> isBusy, Func<string?> status)
+    private sealed class WorkflowState(
+        string title,
+        ShellDestination destination,
+        Func<bool> isBusy,
+        Func<string?> status,
+        Func<AppActivityState> outcome,
+        Action cancel)
     {
         public string Title { get; } = title;
+        public ShellDestination Destination { get; } = destination;
         public Func<bool> IsBusy { get; } = isBusy;
         public Func<string?> Status { get; } = status;
+        public Func<AppActivityState> Outcome { get; } = outcome;
+        public Action Cancel { get; } = cancel;
         public Guid? ActivityId { get; set; }
     }
 }

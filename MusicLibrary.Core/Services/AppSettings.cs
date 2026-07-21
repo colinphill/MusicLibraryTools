@@ -124,6 +124,7 @@ public sealed class AppSettings : IAppSettings
             throw new InvalidDataException("<ItunesLibrary> must identify an .itl file.");
         _ = configuration.FfmpegPath;
         _ = configuration.IngestSettings;
+        _ = configuration.ArtworkHealthSettings;
         _ = configuration.IngestTargets;
         _ = configuration.CrossSyncTarget;
         _ = configuration.DeleteStaleCrossSyncFiles;

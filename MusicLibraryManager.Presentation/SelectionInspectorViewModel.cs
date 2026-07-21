@@ -30,10 +30,22 @@ public partial class SelectionInspectorViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasStatusMessage))]
     private string? _statusMessage;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStatusInfo))]
+    [NotifyPropertyChangedFor(nameof(IsStatusSuccess))]
+    [NotifyPropertyChangedFor(nameof(IsStatusWarning))]
+    [NotifyPropertyChangedFor(nameof(IsStatusError))]
+    [NotifyPropertyChangedFor(nameof(StatusIcon))]
+    private MessageTone _statusTone = MessageTone.Info;
     [ObservableProperty] private object? _artworkSource;
     [ObservableProperty] private bool _isArtworkMixed;
     [ObservableProperty] private string _artworkSummary = "No artwork loaded.";
     [ObservableProperty] private int _artworkMaxDimension = 600;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUnsavedChanges))]
+    [NotifyPropertyChangedFor(nameof(UnsavedChangesSummary))]
+    private bool _hasPendingArtworkChanges;
 
     public SelectionInspectorViewModel(
         IMediaFileService media,
@@ -56,7 +68,11 @@ public partial class SelectionInspectorViewModel : ObservableObject
         _thumbnails = thumbnails;
         _activities = activities;
         foreach (var (field, label) in FieldDefinitions)
-            Fields.Add(new EditableTagField(field, label));
+        {
+            var item = new EditableTagField(field, label);
+            item.PropertyChanged += OnFieldChanged;
+            Fields.Add(item);
+        }
     }
 
     public ObservableCollection<EditableTagField> Fields { get; } = [];
@@ -65,8 +81,43 @@ public partial class SelectionInspectorViewModel : ObservableObject
         Enum.GetValues<ID3v2Util.APICType>();
     public bool HasSelection => Selection.HasSelection;
     public bool HasStatusMessage => !string.IsNullOrWhiteSpace(StatusMessage);
+    public bool IsStatusInfo => StatusTone == MessageTone.Info;
+    public bool IsStatusSuccess => StatusTone == MessageTone.Success;
+    public bool IsStatusWarning => StatusTone == MessageTone.Warning;
+    public bool IsStatusError => StatusTone == MessageTone.Error;
+    public string StatusIcon => StatusTone switch
+    {
+        MessageTone.Success => "✓",
+        MessageTone.Warning => "⚠",
+        MessageTone.Error => "!",
+        _ => "i",
+    };
     public string SelectionSummary => Selection.Summary;
+    public bool HasUnsavedChanges => Fields.Any(item => item.IsModified) ||
+        HasPendingArtworkChanges || ArtworkItems.Any(item => item.IsModified);
+    public string UnsavedChangesSummary
+    {
+        get
+        {
+            int tagCount = Fields.Count(item => item.IsModified);
+            bool artwork = HasPendingArtworkChanges || ArtworkItems.Any(item => item.IsModified);
+            return (tagCount, artwork) switch
+            {
+                (0, false) => "No unsaved changes",
+                (1, false) => "1 unsaved tag change",
+                (> 1, false) => $"{tagCount:N0} unsaved tag changes",
+                (0, true) => "Unsaved artwork changes",
+                _ => $"{tagCount:N0} unsaved tag changes and artwork changes",
+            };
+        }
+    }
     public event Action? FilesChanged;
+
+    public void ReportArtworkPreviewUnavailable()
+    {
+        StatusTone = MessageTone.Warning;
+        StatusMessage = "The full-size artwork preview is unavailable because the image data is missing or invalid.";
+    }
 
     private static readonly (TagFields Field, string Label)[] FieldDefinitions =
     [
@@ -84,6 +135,29 @@ public partial class SelectionInspectorViewModel : ObservableObject
         (TagFields.Comment, "Comment"),
     ];
 
+    public async Task<bool> TryLoadAsync(SelectionContext selection)
+    {
+        if (SameSelection(Selection, selection))
+            return true;
+        if (!await ConfirmDiscardChangesAsync())
+            return false;
+        await LoadAsync(selection);
+        return true;
+    }
+
+    public async Task<bool> ConfirmDiscardChangesAsync()
+    {
+        if (!HasUnsavedChanges)
+            return true;
+        if (!await _dialogs.ConfirmAsync(
+                "Discard unsaved metadata changes?",
+                $"{UnsavedChangesSummary} for {SelectionSummary}. Discard them and continue?",
+                "Discard changes"))
+            return false;
+        await LoadAsync(Selection);
+        return true;
+    }
+
     public async Task LoadAsync(SelectionContext selection)
     {
         int generation = ++_generation;
@@ -94,18 +168,21 @@ public partial class SelectionInspectorViewModel : ObservableObject
         OnPropertyChanged(nameof(HasSelection));
         OnPropertyChanged(nameof(SelectionSummary));
         StatusMessage = null;
+        StatusTone = MessageTone.Info;
         ArtworkSource = null;
         ClearArtworkItems();
         _artworkSetModified = false;
+        HasPendingArtworkChanges = false;
         IsArtworkMixed = false;
         ArtworkSummary = "No embedded artwork.";
+        foreach (EditableTagField field in Fields)
+            field.SetLoaded([], false);
+        NotifyUnsavedChangesChanged();
         NotifyCommands();
 
         if (!selection.HasSelection)
         {
             Overview = "Select a track to inspect its metadata.";
-            foreach (EditableTagField field in Fields)
-                field.SetLoaded([], false);
             return;
         }
 
@@ -113,8 +190,11 @@ public partial class SelectionInspectorViewModel : ObservableObject
         NotifyCommands();
         try
         {
+            // Large selections use the complete cache-backed records below. Reading an arbitrary
+            // first 200 files is both slow and incapable of proving a value is common, so fields
+            // absent from the cache remain explicitly unverified until the user replaces them.
             IReadOnlyList<string> sample = selection.Paths.Count > MaxCommonValueSample
-                ? selection.Paths.Take(MaxCommonValueSample).ToArray()
+                ? []
                 : selection.Paths;
             var models = new List<MediaFileModel>();
             foreach (string path in sample)
@@ -128,8 +208,12 @@ public partial class SelectionInspectorViewModel : ObservableObject
             if (generation != _generation)
                 return;
 
-            LoadFields(models);
+            LoadFields(models, selection);
             Overview = DescribeOverview(selection, models);
+            if (selection.Paths.Count > MaxCommonValueSample)
+                Overview += Environment.NewLine + Environment.NewLine +
+                    "Common values in cache-backed fields were checked across the full selection. " +
+                    "Fields not stored in the cache are marked unverified and remain blank until you intentionally replace them.";
 
             IReadOnlyList<string> artworkSignatures = await _library.GetImageSignaturesAsync(
                 selection.Paths, cancellation.Token);
@@ -180,6 +264,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
         }
         catch (Exception error)
         {
+            StatusTone = MessageTone.Error;
             StatusMessage = error.Message;
         }
         finally
@@ -194,8 +279,12 @@ public partial class SelectionInspectorViewModel : ObservableObject
         }
     }
 
-    private void LoadFields(IReadOnlyList<MediaFileModel> models)
+    private void LoadFields(IReadOnlyList<MediaFileModel> models, SelectionContext selection)
     {
+        bool completeMediaRead = models.Count == selection.Paths.Count &&
+            models.Select(model => model.Path).ToHashSet(StringComparer.OrdinalIgnoreCase)
+                .SetEquals(selection.Paths);
+        Dictionary<string, TrackRecord>? cachedRecords = BuildCompleteRecordMap(selection);
         var maps = models.Select(model => model.KnownFields
             .GroupBy(value => value.Field)
             .ToDictionary(
@@ -206,28 +295,110 @@ public partial class SelectionInspectorViewModel : ObservableObject
                     .ToArray())).ToArray();
         foreach (EditableTagField field in Fields)
         {
+            if (!completeMediaRead)
+            {
+                if (TryGetCompleteCachedValues(selection, cachedRecords, field.Field, out string[][] cachedValues))
+                {
+                    SetFieldValues(field, cachedValues, FieldValueVerification.Exact);
+                    continue;
+                }
+
+                // A sample can indicate that a field varies, but it cannot prove that a common
+                // value applies to every selected file. Do not show a representative value that
+                // could be mistaken for an exact bulk-edit baseline.
+                field.SetLoaded([], true, FieldValueVerification.Unverified);
+                continue;
+            }
+
             string[][] valuesByFile = maps
                 .Select(map => map.GetValueOrDefault(field.Field) ?? [])
                 .ToArray();
-            bool mixed = valuesByFile.Skip(1).Any(values =>
-                !values.SequenceEqual(valuesByFile[0], StringComparer.Ordinal));
-            mixed |= valuesByFile.Any(values => values.Length > 1);
-            string[] displayValues = valuesByFile
-                .SelectMany(values => values.Length == 0 ? ["(missing)"] : values)
-                .Distinct(StringComparer.Ordinal)
-                .ToArray();
-            if (displayValues.Length == 1 && displayValues[0] == "(missing)")
-                displayValues = [];
-            field.SetLoaded(displayValues, mixed);
+            SetFieldValues(field, valuesByFile, FieldValueVerification.Exact);
         }
+        NotifyUnsavedChangesChanged();
+    }
+
+    private static void SetFieldValues(
+        EditableTagField field,
+        IReadOnlyList<string[]> valuesByFile,
+        FieldValueVerification verification)
+    {
+        if (valuesByFile.Count == 0)
+        {
+            field.SetLoaded([], false, verification);
+            return;
+        }
+        bool mixed = valuesByFile.Skip(1).Any(values =>
+            !values.SequenceEqual(valuesByFile[0], StringComparer.Ordinal));
+        mixed |= valuesByFile.Any(values => values.Length > 1);
+        string[] displayValues = valuesByFile
+            .SelectMany(values => values.Length == 0 ? ["(missing)"] : values)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (displayValues.Length == 1 && displayValues[0] == "(missing)")
+            displayValues = [];
+        field.SetLoaded(displayValues, mixed, verification);
+    }
+
+    private static bool TryGetCompleteCachedValues(
+        SelectionContext selection,
+        IReadOnlyDictionary<string, TrackRecord>? recordsByPath,
+        TagFields field,
+        out string[][] values)
+    {
+        values = [];
+        if (recordsByPath is null || !IsCacheBackedField(field))
+            return false;
+        values = selection.Paths
+            .Select(path => CachedValues(recordsByPath[path], field))
+            .ToArray();
+        return true;
+    }
+
+    private static Dictionary<string, TrackRecord>? BuildCompleteRecordMap(SelectionContext selection)
+    {
+        if (selection.Records is not { } records || records.Count != selection.Paths.Count)
+            return null;
+        var recordsByPath = records
+            .GroupBy(record => record.Path, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+        return recordsByPath.Count == selection.Paths.Distinct(StringComparer.OrdinalIgnoreCase).Count() &&
+               selection.Paths.All(recordsByPath.ContainsKey)
+            ? recordsByPath
+            : null;
+    }
+
+    private static bool IsCacheBackedField(TagFields field) => field is
+        TagFields.Title or TagFields.Artist or TagFields.AlbumArtist or TagFields.Album or
+        TagFields.TrackNumber or TagFields.TotalTracks or TagFields.DiscNumber or
+        TagFields.TotalDiscs or TagFields.Date;
+
+    private static string[] CachedValues(TrackRecord record, TagFields field)
+    {
+        string? value = field switch
+        {
+            TagFields.Title => record.Title,
+            TagFields.Artist => record.Artist,
+            TagFields.AlbumArtist => record.AlbumArtist,
+            TagFields.Album => record.Album,
+            TagFields.TrackNumber => record.TrackNumber?.ToString(),
+            TagFields.TotalTracks => record.TrackTotal?.ToString(),
+            TagFields.DiscNumber => record.DiscNumber?.ToString(),
+            TagFields.TotalDiscs => record.DiscTotal?.ToString(),
+            TagFields.Date => record.ReleaseDate,
+            _ => null,
+        };
+        return string.IsNullOrEmpty(value) ? [] : [value];
     }
 
     private bool CanEdit() => HasSelection && !IsBusy;
+    private bool CanRevert() => HasUnsavedChanges && !IsBusy;
+    private bool CanSaveTags() => CanEdit() && Fields.Any(field => field.IsModified);
     private bool CanEditArtworkSet() => CanEdit() && !IsArtworkMixed;
     private bool CanSaveArtworkSet() => CanEditArtworkSet() &&
         (_artworkSetModified || ArtworkItems.Any(item => item.IsModified));
 
-    [RelayCommand(CanExecute = nameof(CanEdit))]
+    [RelayCommand(CanExecute = nameof(CanSaveTags))]
     private async Task SaveTagsAsync()
     {
         TagEdit[] edits = Fields.Where(field => field.IsModified)
@@ -235,26 +406,41 @@ public partial class SelectionInspectorViewModel : ObservableObject
             .ToArray();
         if (edits.Length == 0)
         {
+            StatusTone = MessageTone.Info;
             StatusMessage = "No tag changes to save.";
             return;
         }
+        if (Selection.Paths.Count > 1 &&
+            !await _dialogs.ConfirmAsync(
+                "Save tag changes",
+                $"Apply {edits.Length:N0} tag change(s) to {Selection.Paths.Count:N0} selected tracks? " +
+                "Only the listed fields will be replaced. This writes the files directly; no recovery journal is created.",
+                "Save tags"))
+            return;
         IsBusy = true;
         NotifyCommands();
-        Guid activity = _activities.Start("Save tags", $"Updating {Selection.Paths.Count:N0} track(s)");
+        Guid activity = _activities.Start(
+            "Save tags", $"Updating {Selection.Paths.Count:N0} track(s)", ShellDestination.Library);
         try
         {
             BatchWriteResult result = await _tags.ApplyAsync(Selection.Paths, edits);
-            StatusMessage = result.Summary;
-            _activities.Finish(activity, result.Summary,
+            bool hasFailures = result.FailedCount > 0;
+            StatusTone = hasFailures ? MessageTone.Error : MessageTone.Success;
+            StatusMessage = hasFailures
+                ? $"{result.Summary}. Proposed tag changes remain ready to retry."
+                : result.Summary;
+            _activities.Finish(activity, StatusMessage,
                 result.FailedCount > 0 ? AppActivityState.Failed : AppActivityState.Completed);
             if (result.SavedCount > 0)
                 FilesChanged?.Invoke();
-            await LoadAsync(Selection);
+            if (!hasFailures)
+                await LoadAsync(Selection);
         }
         catch (Exception error)
         {
-            StatusMessage = error.Message;
-            _activities.Finish(activity, error.Message, AppActivityState.Failed);
+            StatusTone = MessageTone.Error;
+            StatusMessage = error.Message + " Proposed tag changes remain ready to retry.";
+            _activities.Finish(activity, StatusMessage, AppActivityState.Failed);
         }
         finally
         {
@@ -268,6 +454,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
     {
         if (!await _fieldsEditor.ShowAsync(Selection.Paths))
             return;
+        StatusTone = MessageTone.Success;
         StatusMessage = "Metadata fields updated.";
         FilesChanged?.Invoke();
         await LoadAsync(Selection);
@@ -281,7 +468,8 @@ public partial class SelectionInspectorViewModel : ObservableObject
         if (path is null)
             return;
         if (!await _dialogs.ConfirmAsync("Replace artwork",
-                $"Replace the front cover on {Selection.Paths.Count:N0} selected track(s)?",
+                $"Replace the front cover on {Selection.Paths.Count:N0} selected track(s)? " +
+                "This writes the files directly; no recovery journal is created.",
                 "Replace"))
             return;
         await ApplyArtworkAsync("Replace artwork", async musicPath =>
@@ -299,6 +487,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
         PreparedImage? prepared = await _artwork.PrepareFromFileAsync(path, ArtworkMaxDimension);
         if (prepared is null)
         {
+            StatusTone = MessageTone.Error;
             StatusMessage = "The selected image could not be prepared for embedding.";
             return;
         }
@@ -318,7 +507,9 @@ public partial class SelectionInspectorViewModel : ObservableObject
         ArtworkItems.Add(item);
         ArtworkSource ??= item.Source;
         _artworkSetModified = true;
+        HasPendingArtworkChanges = true;
         UpdateArtworkSummary();
+        NotifyUnsavedChangesChanged();
         SaveArtworkSetCommand.NotifyCanExecuteChanged();
     }
 
@@ -330,7 +521,9 @@ public partial class SelectionInspectorViewModel : ObservableObject
         ArtworkItems.Remove(item);
         ArtworkSource = ArtworkItems.FirstOrDefault()?.Source;
         _artworkSetModified = true;
+        HasPendingArtworkChanges = true;
         UpdateArtworkSummary();
+        NotifyUnsavedChangesChanged();
         SaveArtworkSetCommand.NotifyCanExecuteChanged();
     }
 
@@ -346,6 +539,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
         PreparedImage? prepared = await _artwork.PrepareFromFileAsync(path, ArtworkMaxDimension);
         if (prepared is null)
         {
+            StatusTone = MessageTone.Error;
             StatusMessage = "The selected image could not be prepared for embedding.";
             return;
         }
@@ -359,18 +553,21 @@ public partial class SelectionInspectorViewModel : ObservableObject
         if (ReferenceEquals(ArtworkItems.FirstOrDefault(), item))
             ArtworkSource = item.Source;
         _artworkSetModified = true;
+        HasPendingArtworkChanges = true;
         UpdateArtworkSummary();
+        StatusTone = MessageTone.Info;
         StatusMessage = "Artwork replacement ready to save.";
+        NotifyUnsavedChangesChanged();
         SaveArtworkSetCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand(CanExecute = nameof(CanSaveArtworkSet))]
     private async Task SaveArtworkSetAsync()
     {
-        if (Selection.Paths.Count > 1 &&
-            !await _dialogs.ConfirmAsync(
+        if (!await _dialogs.ConfirmAsync(
                 "Save artwork changes",
-                $"Replace the embedded artwork set on {Selection.Paths.Count:N0} selected tracks with these {ArtworkItems.Count:N0} image(s)?",
+                $"Replace the embedded artwork set on {Selection.Paths.Count:N0} selected tracks with these {ArtworkItems.Count:N0} image(s)? " +
+                "This writes the files directly; no recovery journal is created.",
                 "Save"))
             return;
 
@@ -387,7 +584,8 @@ public partial class SelectionInspectorViewModel : ObservableObject
     private async Task ScrubArtworkAsync()
     {
         if (!await _dialogs.ConfirmAsync("Optimize artwork",
-                $"Re-encode and limit artwork to {ArtworkMaxDimension:N0}px on {Selection.Paths.Count:N0} track(s)?",
+                $"Re-encode and limit artwork to {ArtworkMaxDimension:N0}px on {Selection.Paths.Count:N0} track(s)? " +
+                "This writes the files directly; no recovery journal is created.",
                 "Optimize"))
             return;
         await ApplyArtworkAsync("Optimize artwork", async musicPath =>
@@ -398,21 +596,33 @@ public partial class SelectionInspectorViewModel : ObservableObject
     private async Task RemoveArtworkAsync()
     {
         if (!await _dialogs.ConfirmAsync("Remove artwork",
-                $"Remove all embedded artwork from {Selection.Paths.Count:N0} selected track(s)?",
+                $"Remove all embedded artwork from {Selection.Paths.Count:N0} selected track(s)? " +
+                "This writes the files directly; no recovery journal is created.",
                 "Remove"))
             return;
         await ApplyArtworkAsync("Remove artwork", async musicPath =>
             await _artwork.RemoveAsync(musicPath));
     }
 
-    [RelayCommand]
-    private async Task RevertAsync() => await LoadAsync(Selection);
+    [RelayCommand(CanExecute = nameof(CanRevert))]
+    private async Task RevertAsync()
+    {
+        if (!await _dialogs.ConfirmAsync(
+                "Revert unsaved metadata changes?",
+                $"{UnsavedChangesSummary} for {SelectionSummary}. Revert to the values currently stored in the files?",
+                "Revert changes"))
+            return;
+        await LoadAsync(Selection);
+    }
 
     private async Task ApplyArtworkAsync(string title, Func<string, Task<ArtworkOpResult>> apply)
     {
+        bool hasRetryableChanges = HasPendingArtworkChanges ||
+            ArtworkItems.Any(item => item.IsModified);
         IsBusy = true;
         NotifyCommands();
-        Guid activity = _activities.Start(title, $"Updating {Selection.Paths.Count:N0} track(s)");
+        Guid activity = _activities.Start(
+            title, $"Updating {Selection.Paths.Count:N0} track(s)", ShellDestination.Library);
         int saved = 0;
         string? firstError = null;
         try
@@ -429,17 +639,25 @@ public partial class SelectionInspectorViewModel : ObservableObject
             }
             StatusMessage = saved == Selection.Paths.Count
                 ? $"Updated artwork on {saved:N0} track(s)."
-                : $"Updated {saved:N0} of {Selection.Paths.Count:N0}. {firstError}";
+                : $"Updated {saved:N0} of {Selection.Paths.Count:N0}. {firstError}" +
+                  (hasRetryableChanges ? " Proposed artwork changes remain ready to retry." : "");
+            StatusTone = saved == Selection.Paths.Count ? MessageTone.Success : MessageTone.Error;
             _activities.Finish(activity, StatusMessage,
                 saved == Selection.Paths.Count ? AppActivityState.Completed : AppActivityState.Failed);
             if (saved > 0)
                 FilesChanged?.Invoke();
-            await LoadAsync(Selection);
+            if (saved == Selection.Paths.Count)
+                await LoadAsync(Selection);
         }
         catch (Exception error)
         {
-            StatusMessage = error.Message;
-            _activities.Finish(activity, error.Message, AppActivityState.Failed);
+            StatusTone = MessageTone.Error;
+            StatusMessage = error.Message + (hasRetryableChanges
+                ? " Proposed artwork changes remain ready to retry."
+                : "");
+            _activities.Finish(activity, StatusMessage, AppActivityState.Failed);
+            if (saved > 0)
+                FilesChanged?.Invoke();
         }
         finally
         {
@@ -457,10 +675,29 @@ public partial class SelectionInspectorViewModel : ObservableObject
         SaveArtworkSetCommand.NotifyCanExecuteChanged();
         ScrubArtworkCommand.NotifyCanExecuteChanged();
         RemoveArtworkCommand.NotifyCanExecuteChanged();
+        RevertCommand.NotifyCanExecuteChanged();
+    }
+
+    private void OnFieldChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(EditableTagField.IsModified))
+            return;
+        NotifyUnsavedChangesChanged();
+        SaveTagsCommand.NotifyCanExecuteChanged();
     }
 
     private void OnArtworkItemChanged(object? sender, PropertyChangedEventArgs e)
-        => SaveArtworkSetCommand.NotifyCanExecuteChanged();
+    {
+        NotifyUnsavedChangesChanged();
+        SaveArtworkSetCommand.NotifyCanExecuteChanged();
+    }
+
+    private void NotifyUnsavedChangesChanged()
+    {
+        OnPropertyChanged(nameof(HasUnsavedChanges));
+        OnPropertyChanged(nameof(UnsavedChangesSummary));
+        RevertCommand.NotifyCanExecuteChanged();
+    }
 
     private void ClearArtworkItems()
     {
@@ -468,6 +705,13 @@ public partial class SelectionInspectorViewModel : ObservableObject
             item.PropertyChanged -= OnArtworkItemChanged;
         ArtworkItems.Clear();
     }
+
+    private static bool SameSelection(SelectionContext left, SelectionContext right) =>
+        left.Paths.Count == right.Paths.Count &&
+        left.Paths.OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+            .SequenceEqual(
+                right.Paths.OrderBy(path => path, StringComparer.OrdinalIgnoreCase),
+                StringComparer.OrdinalIgnoreCase);
 
     private void UpdateArtworkSummary()
     {

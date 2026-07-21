@@ -76,6 +76,7 @@ public class FieldsDialogIntegrationTests
 
         viewModel.RemoveFieldCommand.Execute(discNumber);
         await viewModel.SaveCommand.ExecuteAsync(null);
+        await viewModel.SaveCommand.ExecuteAsync(null);
 
         var reload = await reader.LoadDirectAsync(media.Path, includeArtwork: false);
         Assert.DoesNotContain(reload.Value!.KnownFields,
@@ -101,6 +102,8 @@ public class FieldsDialogIntegrationTests
 
         bool? closed = null;
         viewModel.CloseRequested += result => closed = result;
+        await viewModel.SaveCommand.ExecuteAsync(null);
+        Assert.Null(closed);
         await viewModel.SaveCommand.ExecuteAsync(null);
 
         Assert.True(closed);

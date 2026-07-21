@@ -2,6 +2,7 @@ using global::Avalonia;
 using global::Avalonia.Controls;
 using global::Avalonia.Controls.Templates;
 using global::Avalonia.Data;
+using System.ComponentModel;
 using MusicLibraryManager.Presentation;
 
 namespace MusicLibraryManager.Controls;
@@ -50,6 +51,9 @@ public sealed class AppDataGrid : DataGrid
 
     public void ConfigureColumns(IEnumerable<AppGridColumnDefinition> definitions)
     {
+        LibrarySortState? sort = CurrentSortKey is null
+            ? null
+            : new LibrarySortState(CurrentSortKey, CurrentSortDescending);
         _configuring = true;
         try
         {
@@ -69,6 +73,8 @@ public sealed class AppDataGrid : DataGrid
                 column.Width = new DataGridLength(definition.Width);
                 column.MinWidth = definition.MinWidth;
                 column.CanUserSort = definition.Sortable;
+                if (definition.Sortable)
+                    column.SortMemberPath = definition.BindingPath ?? definition.Key;
                 Columns.Add(column);
                 _definitions[column] = definition;
                 column.PropertyChanged += OnColumnPropertyChanged;
@@ -78,6 +84,29 @@ public sealed class AppDataGrid : DataGrid
         {
             _configuring = false;
         }
+        if (sort is not null)
+            ApplySort(sort);
+    }
+
+    /// <summary>Applies a persisted sort to both the collection view and column indicator.</summary>
+    public bool ApplySort(LibrarySortState? sort)
+    {
+        if (sort is null)
+        {
+            CurrentSortKey = null;
+            CurrentSortDescending = false;
+            return true;
+        }
+
+        DataGridColumn? target = Columns.FirstOrDefault(column =>
+            string.Equals(KeyFor(column), sort.Key, StringComparison.OrdinalIgnoreCase));
+        if (target is null || !target.CanUserSort)
+            return false;
+
+        CurrentSortKey = KeyFor(target);
+        CurrentSortDescending = sort.Descending;
+        target.Sort(sort.Descending ? ListSortDirection.Descending : ListSortDirection.Ascending);
+        return true;
     }
 
     public IReadOnlyList<LibraryColumnState> CaptureColumnLayout() => Columns

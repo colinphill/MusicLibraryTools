@@ -22,6 +22,16 @@ public partial class IngestView : UserControl
             new AppGridColumnDefinition("Plan", "Plan", "Summary", 420, 240),
             new AppGridColumnDefinition("Progress", "Progress", "ProgressText", 160, 110),
         ]);
+        SizeChanged += (_, _) => ApplyResponsiveLayout();
+    }
+
+    private void ApplyResponsiveLayout()
+    {
+        bool compactHeight = Bounds.Height <= 560;
+        SetupCard.Padding = new global::Avalonia.Thickness(compactHeight ? 12 : 16);
+        SetupPanel.Spacing = compactHeight ? 6 : 10;
+        PreviewEmptyDescription.IsVisible = !compactHeight;
+        HistoryEmptyDescription.IsVisible = !compactHeight;
     }
 
     private void OnDragOver(object? sender, DragEventArgs e)

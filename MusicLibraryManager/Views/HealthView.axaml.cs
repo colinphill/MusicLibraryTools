@@ -2,6 +2,7 @@ using global::Avalonia.Controls;
 using global::Avalonia.Controls.Documents;
 using global::Avalonia.Controls.Templates;
 using global::Avalonia.Data;
+using global::Avalonia.Input;
 using global::Avalonia.Interactivity;
 using global::Avalonia.Markup.Xaml;
 using MusicLibraryManager.Presentation;
@@ -14,12 +15,14 @@ namespace MusicLibraryManager.Views;
 public partial class HealthView : UserControl
 {
     private readonly AnalyzerViewModel _viewModel;
+    private readonly IPlatformService _platform;
     private bool _updatingRootDisposition;
 
     public HealthView()
     {
         InitializeComponent();
         _viewModel = App.GetService<AnalyzerViewModel>();
+        _platform = App.GetService<IPlatformService>();
         GridStateService gridState = App.GetService<GridStateService>();
         DataContext = _viewModel;
         FindingRootDisposition.ItemsSource = Enum.GetValues<AnalysisFindingDisposition>();
@@ -175,6 +178,17 @@ public partial class HealthView : UserControl
     private void OnSelectFindingRoot(object? sender, RoutedEventArgs e) =>
         _viewModel.SelectedFindingNode = null;
 
+    private void OnHealthResultContextRequested(object? sender, ContextRequestedEventArgs e)
+    {
+        ContextMenu? menu = HealthResultContextMenuFactory.CreateForSource(e.Source, _platform);
+        if (menu is null)
+            return;
+
+        Control target = e.Source as Control ?? (Control)sender!;
+        menu.Open(target);
+        e.Handled = true;
+    }
+
     private static AnalysisRepairDisposition Aggregate(IEnumerable<AnalysisRepairDisposition> values)
     {
         AnalysisRepairDisposition[] distinct = values.Distinct().ToArray();
@@ -229,4 +243,29 @@ public partial class HealthView : UserControl
                 ToolTip.SetTip(text, item.UnicodeDifferenceDetails);
             return text;
         });
+}
+
+public static class HealthResultContextMenuFactory
+{
+    public static ContextMenu? CreateForSource(object? source, IPlatformService platform)
+    {
+        object? result = (source as global::Avalonia.StyledElement)?.DataContext;
+        return HealthResultPathResolver.TryGetPath(result, out string path)
+            ? Create(path, platform)
+            : null;
+    }
+
+    public static ContextMenu Create(string path, IPlatformService platform)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        ArgumentNullException.ThrowIfNull(platform);
+
+        var copy = new MenuItem { Header = "Copy path" };
+        copy.Click += async (_, _) => await platform.CopyTextAsync(path);
+
+        var reveal = new MenuItem { Header = "Reveal in File Explorer" };
+        reveal.Click += (_, _) => platform.RevealFile(path);
+
+        return new ContextMenu { ItemsSource = new[] { copy, reveal } };
+    }
 }

@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MusicLibrary.Core.Services;
@@ -6,7 +8,7 @@ using MusicLibraryTools;
 
 namespace MusicLibraryManager.Presentation;
 
-public partial class SettingsViewModel : ObservableObject
+public partial class SettingsViewModel : ObservableObject, INavigationGuard
 {
     private const string ThemePreference = "manager.appearance.theme.v1";
     private readonly IAppSettings _settings;
@@ -14,8 +16,12 @@ public partial class SettingsViewModel : ObservableObject
     private readonly IDialogCoordinator _dialogs;
     private readonly IThemeService _theme;
     private EditableLibraryConfig _editing = new();
+    private bool _suppressDirty = true;
+    private readonly HashSet<INotifyPropertyChanged> _trackedRows = [];
 
-    [ObservableProperty] private string? _activeConfigurationPath;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(EditCurrentConfigurationCommand))]
+    private string? _activeConfigurationPath;
     [ObservableProperty] private string? _selectedRecentConfiguration;
     [ObservableProperty] private string? _editorPath;
     [ObservableProperty] private string _databaseFile = "cache.db";
@@ -25,13 +31,27 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private int _discNumLengthLimit = 255;
     [ObservableProperty] private string _aacEncoder = "libfdk_aac";
     [ObservableProperty] private int _aacBitrateKbps = 256;
+    [ObservableProperty] private int _oversizedArtworkByteThreshold =
+        LibraryArtworkHealthSettings.DefaultOversizedByteThreshold;
+    [ObservableProperty] private int _oversizedArtworkDimensionThreshold =
+        LibraryArtworkHealthSettings.DefaultOversizedDimensionThreshold;
     [ObservableProperty] private bool _deleteSourcesAfterIngest;
     [ObservableProperty] private bool _removeNonMusicAfterIngest;
     [ObservableProperty] private bool _deleteStaleCrossSyncFiles;
     [ObservableProperty] private bool _cleanCrossSyncPlaylists;
     [ObservableProperty] private string _statusMessage = "Choose an existing configuration or create a new one.";
     [ObservableProperty] private string _selectedTheme;
+    [ObservableProperty] private ThemeChoice? _selectedThemeChoice;
     [ObservableProperty] private int _selectedTabIndex;
+    [ObservableProperty] private int _validationTabIndex = 1;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveConfigurationCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SaveConfigurationAsCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DiscardChangesCommand))]
+    private bool _hasUnsavedChanges;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasValidationError))]
+    private string? _validationSummary;
 
     public SettingsViewModel(
         IAppSettings settings,
@@ -43,10 +63,24 @@ public partial class SettingsViewModel : ObservableObject
         _files = files;
         _dialogs = dialogs;
         _theme = theme;
-        _selectedTheme = settings.GetPreference(ThemePreference) ?? "System";
+        string? storedTheme = settings.GetPreference(ThemePreference);
+        ThemeChoice? storedChoice = ThemeChoices.FirstOrDefault(choice => choice.Name == storedTheme);
+        _selectedThemeChoice = storedChoice ?? ThemeChoices[0];
+        _selectedTheme = _selectedThemeChoice.Name;
+        if (storedTheme is not null && storedChoice is null)
+            settings.SetPreference(ThemePreference, _selectedTheme);
         RecentConfigurations = new ObservableCollection<string>(settings.RecentConfigPaths);
+        PropertyChanged += OnOwnPropertyChanged;
+        IndexTargets.CollectionChanged += OnTrackedCollectionChanged;
+        SyncPlaylists.CollectionChanged += OnTrackedCollectionChanged;
+        PlaylistTargets.CollectionChanged += OnTrackedCollectionChanged;
         settings.ConfigurationChanged += (_, _) => RefreshActiveConfiguration();
         RefreshActiveConfiguration();
+        TrackRows(IndexTargets);
+        TrackRows(SyncPlaylists);
+        TrackRows(PlaylistTargets);
+        _suppressDirty = false;
+        HasUnsavedChanges = false;
     }
 
     public ObservableCollection<string> RecentConfigurations { get; }
@@ -54,19 +88,231 @@ public partial class SettingsViewModel : ObservableObject
     public ObservableCollection<SyncPlaylistEditorRow> SyncPlaylists { get; } = [];
     public ObservableCollection<PlaylistTargetEditorRow> PlaylistTargets { get; } = [];
     public IReadOnlyList<string> Themes { get; } = ["System", "Light", "Dark"];
+    public IReadOnlyList<ThemeChoice> ThemeChoices { get; } =
+    [
+        new("System", "#0D1417", "#F8FBFA", "#2CC7BC"),
+        new("Light", "#EEF4F3", "#FFFFFF", "#087F8C"),
+        new("Dark", "#0D1417", "#18262B", "#2CC7BC"),
+    ];
     public IReadOnlyList<LibraryIngestRole> IngestRoles { get; } =
         Enum.GetValues<LibraryIngestRole>();
     public IReadOnlyList<string> PlaylistTypes { get; } = ["m3u", "wpl"];
+    public bool HasValidationError => !string.IsNullOrWhiteSpace(ValidationSummary);
+    public bool IsEditorValid => ValidationIssues().Count == 0;
+    public decimal OversizedArtworkSizeThresholdMib
+    {
+        get => (decimal)OversizedArtworkByteThreshold / (1024 * 1024);
+        set => OversizedArtworkByteThreshold = checked((int)decimal.Round(
+            value * (1024 * 1024), MidpointRounding.AwayFromZero));
+    }
+
+    partial void OnOversizedArtworkByteThresholdChanged(int value) =>
+        OnPropertyChanged(nameof(OversizedArtworkSizeThresholdMib));
 
     partial void OnSelectedThemeChanged(string value)
     {
         _settings.SetPreference(ThemePreference, value);
         _theme.Apply(value);
+        ThemeChoice? choice = ThemeChoices.FirstOrDefault(item => item.Name == value);
+        if (choice is not null && SelectedThemeChoice != choice)
+            SelectedThemeChoice = choice;
+    }
+
+    partial void OnSelectedThemeChoiceChanged(ThemeChoice? value)
+    {
+        if (value is not null && SelectedTheme != value.Name)
+            SelectedTheme = value.Name;
+    }
+
+    private static readonly HashSet<string> EditorProperties =
+    [
+        nameof(DatabaseFile),
+        nameof(ItunesLibraryPath),
+        nameof(FfmpegPath),
+        nameof(LengthLimit),
+        nameof(DiscNumLengthLimit),
+        nameof(AacEncoder),
+        nameof(AacBitrateKbps),
+        nameof(OversizedArtworkByteThreshold),
+        nameof(OversizedArtworkDimensionThreshold),
+        nameof(DeleteSourcesAfterIngest),
+        nameof(RemoveNonMusicAfterIngest),
+        nameof(DeleteStaleCrossSyncFiles),
+        nameof(CleanCrossSyncPlaylists),
+    ];
+
+    private void OnOwnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is { } name && EditorProperties.Contains(name))
+            MarkDirty();
+    }
+
+    private void OnTrackedCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.OldItems is not null)
+            foreach (object item in e.OldItems)
+                UntrackRow(item);
+        if (e.NewItems is not null)
+            foreach (object item in e.NewItems)
+                TrackRow(item);
+        MarkDirty();
+    }
+
+    private void TrackRows(System.Collections.IEnumerable rows)
+    {
+        foreach (object row in rows)
+            TrackRow(row);
+    }
+
+    private void TrackRow(object row)
+    {
+        if (row is not INotifyPropertyChanged changed || !_trackedRows.Add(changed))
+            return;
+        changed.PropertyChanged += OnTrackedRowChanged;
+        if (row is IndexTargetEditorRow target)
+        {
+            target.Memberships.CollectionChanged += OnTrackedCollectionChanged;
+            TrackRows(target.Memberships);
+        }
+    }
+
+    private void UntrackRow(object row)
+    {
+        if (row is INotifyPropertyChanged changed && _trackedRows.Remove(changed))
+            changed.PropertyChanged -= OnTrackedRowChanged;
+        if (row is IndexTargetEditorRow target)
+        {
+            target.Memberships.CollectionChanged -= OnTrackedCollectionChanged;
+            foreach (IndexTargetSetEditorRow membership in target.Memberships)
+                UntrackRow(membership);
+        }
+    }
+
+    private void ClearEditorCollections()
+    {
+        foreach (IndexTargetEditorRow row in IndexTargets.ToArray())
+            UntrackRow(row);
+        foreach (SyncPlaylistEditorRow row in SyncPlaylists.ToArray())
+            UntrackRow(row);
+        foreach (PlaylistTargetEditorRow row in PlaylistTargets.ToArray())
+            UntrackRow(row);
+        IndexTargets.Clear();
+        SyncPlaylists.Clear();
+        PlaylistTargets.Clear();
+    }
+
+    private void OnTrackedRowChanged(object? sender, PropertyChangedEventArgs e) => MarkDirty();
+
+    private void MarkDirty()
+    {
+        if (_suppressDirty)
+            return;
+        HasUnsavedChanges = true;
+        UpdateValidation();
+        SaveConfigurationCommand.NotifyCanExecuteChanged();
+        SaveConfigurationAsCommand.NotifyCanExecuteChanged();
+    }
+
+    private void UpdateValidation()
+    {
+        IReadOnlyList<(int Tab, string Message)> issues = ValidationIssues();
+        ValidationTabIndex = issues.FirstOrDefault().Tab;
+        ValidationSummary = issues.Count == 0
+            ? null
+            : "Fix the following before saving:" + Environment.NewLine +
+              string.Join(Environment.NewLine, issues.Select(issue => $"• {issue.Message}"));
+        SaveConfigurationCommand.NotifyCanExecuteChanged();
+        SaveConfigurationAsCommand.NotifyCanExecuteChanged();
+    }
+
+    private IReadOnlyList<(int Tab, string Message)> ValidationIssues()
+    {
+        var issues = new List<(int, string)>();
+        if (!IndexTargets.Any(target => !string.IsNullOrWhiteSpace(target.Path)))
+            issues.Add((1, "Add at least one library root."));
+        if (LengthLimit <= 0)
+            issues.Add((3, "Path length limit must be greater than zero."));
+        if (DiscNumLengthLimit <= 0)
+            issues.Add((3, "Disc number length limit must be greater than zero."));
+        if (AacBitrateKbps <= 0)
+            issues.Add((3, "AAC bitrate must be greater than zero."));
+        if (OversizedArtworkByteThreshold is < 262_144 or > 1_073_741_824)
+            issues.Add((4, "Oversized artwork size threshold must be between 0.25 and 1,024 MiB."));
+        if (OversizedArtworkDimensionThreshold is < 64 or > 100_000)
+            issues.Add((4, "Oversized artwork dimension threshold must be between 64 and 100,000 pixels."));
+        return issues;
+    }
+
+    [RelayCommand]
+    private void OpenValidation() => SelectedTabIndex = ValidationTabIndex;
+
+    private async Task<bool> ConfirmDiscardChangesAsync()
+    {
+        if (!HasUnsavedChanges)
+            return true;
+        return await _dialogs.ConfirmAsync(
+            "Discard unsaved configuration changes?",
+            "The library configuration has changes that have not been saved.",
+            "Discard changes");
+    }
+
+    public async Task<bool> ConfirmNavigationAsync()
+    {
+        if (!await ConfirmDiscardChangesAsync())
+            return false;
+        DiscardEditorChanges();
+        return true;
+    }
+
+    private void DiscardEditorChanges()
+    {
+        if (!HasUnsavedChanges)
+            return;
+        if (!string.IsNullOrWhiteSpace(ActiveConfigurationPath))
+        {
+            LoadEditor(ActiveConfigurationPath);
+            StatusMessage = "Unsaved configuration changes were discarded.";
+            return;
+        }
+
+        _suppressDirty = true;
+        ClearEditorCollections();
+        EditorPath = null;
+        DatabaseFile = "cache.db";
+        ItunesLibraryPath = null;
+        FfmpegPath = "ffmpeg";
+        LengthLimit = 255;
+        DiscNumLengthLimit = 255;
+        AacEncoder = "libfdk_aac";
+        AacBitrateKbps = 256;
+        OversizedArtworkByteThreshold =
+            LibraryArtworkHealthSettings.DefaultOversizedByteThreshold;
+        OversizedArtworkDimensionThreshold =
+            LibraryArtworkHealthSettings.DefaultOversizedDimensionThreshold;
+        DeleteSourcesAfterIngest = false;
+        RemoveNonMusicAfterIngest = false;
+        DeleteStaleCrossSyncFiles = false;
+        CleanCrossSyncPlaylists = false;
+        _suppressDirty = false;
+        HasUnsavedChanges = false;
+        ValidationSummary = null;
+        StatusMessage = "Unsaved configuration changes were discarded.";
+    }
+
+    private bool CanDiscardChanges() => HasUnsavedChanges;
+
+    [RelayCommand(CanExecute = nameof(CanDiscardChanges))]
+    private async Task DiscardChangesAsync()
+    {
+        if (await ConfirmDiscardChangesAsync())
+            DiscardEditorChanges();
     }
 
     [RelayCommand]
     private async Task BrowseConfigurationAsync()
     {
+        if (!await ConfirmDiscardChangesAsync())
+            return;
         string? path = await _files.PickFileAsync("Open library configuration",
             [new FilePickerType("Library configuration", [".xml"])]);
         if (path is not null)
@@ -74,16 +320,20 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void LoadRecentConfiguration()
+    private async Task LoadRecentConfigurationAsync()
     {
-        if (!string.IsNullOrWhiteSpace(SelectedRecentConfiguration))
+        if (!string.IsNullOrWhiteSpace(SelectedRecentConfiguration) &&
+            await ConfirmDiscardChangesAsync())
             LoadConfiguration(SelectedRecentConfiguration);
     }
 
-    [RelayCommand]
-    private void EditCurrentConfiguration()
+    private bool CanEditCurrentConfiguration() => ActiveConfigurationPath is not null;
+
+    [RelayCommand(CanExecute = nameof(CanEditCurrentConfiguration))]
+    private async Task EditCurrentConfigurationAsync()
     {
-        if (ActiveConfigurationPath is not null)
+        if (ActiveConfigurationPath is not null &&
+            (!HasUnsavedChanges || await ConfirmDiscardChangesAsync()))
         {
             LoadEditor(ActiveConfigurationPath);
             SelectedTabIndex = 1;
@@ -91,8 +341,11 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void NewConfiguration()
+    private async Task NewConfigurationAsync()
     {
+        if (!await ConfirmDiscardChangesAsync())
+            return;
+        _suppressDirty = true;
         _editing = new EditableLibraryConfig();
         EditorPath = null;
         DatabaseFile = "cache.db";
@@ -102,16 +355,23 @@ public partial class SettingsViewModel : ObservableObject
         DiscNumLengthLimit = 255;
         AacEncoder = "libfdk_aac";
         AacBitrateKbps = 256;
+        OversizedArtworkByteThreshold =
+            LibraryArtworkHealthSettings.DefaultOversizedByteThreshold;
+        OversizedArtworkDimensionThreshold =
+            LibraryArtworkHealthSettings.DefaultOversizedDimensionThreshold;
         DeleteSourcesAfterIngest = false;
         RemoveNonMusicAfterIngest = false;
         DeleteStaleCrossSyncFiles = false;
         CleanCrossSyncPlaylists = false;
-        IndexTargets.Clear();
+        ClearEditorCollections();
         IndexTargets.Add(new IndexTargetEditorRow());
-        SyncPlaylists.Clear();
-        PlaylistTargets.Clear();
         StatusMessage = "New configuration. Add at least one library root, then Save as.";
         SelectedTabIndex = 1;
+        _suppressDirty = false;
+        HasUnsavedChanges = true;
+        UpdateValidation();
+        SaveConfigurationCommand.NotifyCanExecuteChanged();
+        SaveConfigurationAsCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand]
@@ -211,11 +471,13 @@ public partial class SettingsViewModel : ObservableObject
             FfmpegPath = path;
     }
 
-    [RelayCommand]
+    private bool CanSaveConfiguration() => HasUnsavedChanges && IsEditorValid;
+
+    [RelayCommand(CanExecute = nameof(CanSaveConfiguration))]
     private async Task SaveConfigurationAsync()
         => await SaveEditorAsync(EditorPath);
 
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(CanSaveConfiguration))]
     private async Task SaveConfigurationAsAsync()
         => await SaveEditorAsync(null);
 
@@ -244,6 +506,8 @@ public partial class SettingsViewModel : ObservableObject
 
     private void LoadEditor(string path)
     {
+        bool previousSuppression = _suppressDirty;
+        _suppressDirty = true;
         try
         {
             _editing = EditableLibraryConfig.Load(path);
@@ -255,11 +519,13 @@ public partial class SettingsViewModel : ObservableObject
             DiscNumLengthLimit = _editing.DiscNumLengthLimit;
             AacEncoder = _editing.AacEncoder;
             AacBitrateKbps = _editing.AacBitrateKbps;
+            OversizedArtworkByteThreshold = _editing.OversizedArtworkByteThreshold;
+            OversizedArtworkDimensionThreshold = _editing.OversizedArtworkDimensionThreshold;
             DeleteSourcesAfterIngest = _editing.DeleteSourcesAfterIngest;
             RemoveNonMusicAfterIngest = _editing.RemoveNonMusicAfterIngest;
             DeleteStaleCrossSyncFiles = _editing.DeleteStaleCrossSyncFiles;
             CleanCrossSyncPlaylists = _editing.CleanCrossSyncPlaylists;
-            IndexTargets.Clear();
+            ClearEditorCollections();
             foreach (IndexTargetEntry target in _editing.IndexTargets)
             {
                 var row = new IndexTargetEditorRow
@@ -284,10 +550,8 @@ public partial class SettingsViewModel : ObservableObject
             }
             if (IndexTargets.Count == 0)
                 IndexTargets.Add(new IndexTargetEditorRow());
-            SyncPlaylists.Clear();
             foreach (string playlist in _editing.SyncPlaylists)
                 SyncPlaylists.Add(new SyncPlaylistEditorRow { Name = playlist });
-            PlaylistTargets.Clear();
             foreach (PlaylistTargetEntry target in _editing.PlaylistTargets)
                 PlaylistTargets.Add(new PlaylistTargetEditorRow
                 {
@@ -295,23 +559,33 @@ public partial class SettingsViewModel : ObservableObject
                     Type = target.Type,
                     Sets = target.Sets.Count == 0 ? null : string.Join(",", target.Sets),
                 });
+            HasUnsavedChanges = false;
+            ValidationSummary = null;
         }
         catch (Exception error)
         {
             StatusMessage = $"Could not edit configuration: {error.Message}";
         }
+        finally
+        {
+            _suppressDirty = previousSuppression;
+            SaveConfigurationCommand.NotifyCanExecuteChanged();
+            SaveConfigurationAsCommand.NotifyCanExecuteChanged();
+        }
     }
 
     private async Task SaveEditorAsync(string? path)
     {
+        if (!IsEditorValid)
+        {
+            UpdateValidation();
+            StatusMessage = "Resolve the validation issues before saving.";
+            SelectedTabIndex = ValidationTabIndex;
+            return;
+        }
         path ??= await _files.SaveFileAsync("Save library configuration", "library.xml", ".xml");
         if (path is null)
             return;
-        if (IndexTargets.All(target => string.IsNullOrWhiteSpace(target.Path)))
-        {
-            StatusMessage = "Add at least one library root before saving.";
-            return;
-        }
         try
         {
             _editing.DatabaseFile = string.IsNullOrWhiteSpace(DatabaseFile) ? "cache.db" : DatabaseFile.Trim();
@@ -322,6 +596,8 @@ public partial class SettingsViewModel : ObservableObject
             _editing.AacEncoder = string.IsNullOrWhiteSpace(AacEncoder)
                 ? "libfdk_aac" : AacEncoder.Trim();
             _editing.AacBitrateKbps = AacBitrateKbps;
+            _editing.OversizedArtworkByteThreshold = OversizedArtworkByteThreshold;
+            _editing.OversizedArtworkDimensionThreshold = OversizedArtworkDimensionThreshold;
             _editing.DeleteSourcesAfterIngest = DeleteSourcesAfterIngest;
             _editing.RemoveNonMusicAfterIngest = RemoveNonMusicAfterIngest;
             _editing.DeleteStaleCrossSyncFiles = DeleteStaleCrossSyncFiles;
@@ -363,6 +639,8 @@ public partial class SettingsViewModel : ObservableObject
             _settings.LoadConfig(path);
             LoadEditor(path);
             StatusMessage = "Configuration saved and loaded.";
+            HasUnsavedChanges = false;
+            ValidationSummary = null;
         }
         catch (Exception error)
         {
@@ -377,7 +655,14 @@ public partial class SettingsViewModel : ObservableObject
         RefreshRecentConfigurations();
         if (!string.IsNullOrWhiteSpace(ActiveConfigurationPath) &&
             !string.Equals(EditorPath, ActiveConfigurationPath, StringComparison.OrdinalIgnoreCase))
+        {
+            if (HasUnsavedChanges)
+            {
+                StatusMessage = "The active configuration changed, but your unsaved editor changes were retained. Save them as a separate file or discard them before editing the active configuration.";
+                return;
+            }
             LoadEditor(ActiveConfigurationPath);
+        }
     }
 
     private void RefreshRecentConfigurations()
@@ -395,3 +680,5 @@ public partial class SettingsViewModel : ObservableObject
     private static string? CleanOptional(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
+
+public sealed record ThemeChoice(string Name, string Canvas, string Raised, string Accent);

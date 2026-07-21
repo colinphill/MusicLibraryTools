@@ -23,6 +23,29 @@ public class ArtworkServiceTests
         return path;
     }
 
+    private static string MakeQuadrantPng(int width, int height)
+    {
+        var path = Path.Combine(Path.GetTempPath(), "img_" + Guid.NewGuid().ToString("N") + ".png");
+        using var image = new Image<Rgba32>(width, height);
+        image.ProcessPixelRows(accessor =>
+        {
+            for (var y = 0; y < height; y++)
+            {
+                Span<Rgba32> row = accessor.GetRowSpan(y);
+                for (var x = 0; x < width; x++)
+                    row[x] = (x < width / 2, y < height / 2) switch
+                    {
+                        (true, true) => new Rgba32(255, 0, 0),
+                        (false, true) => new Rgba32(0, 255, 0),
+                        (true, false) => new Rgba32(0, 0, 255),
+                        _ => new Rgba32(255, 255, 0),
+                    };
+            }
+        });
+        image.Save(path, new PngEncoder());
+        return path;
+    }
+
     [Theory]
     [InlineData("sample.flac")]
     [InlineData("sample.mp3")]
@@ -101,6 +124,66 @@ public class ArtworkServiceTests
         {
             File.Delete(frontPng);
             File.Delete(backPng);
+        }
+    }
+
+    [Theory]
+    [InlineData(640, 320, 200, 100)]
+    [InlineData(320, 640, 100, 200)]
+    public async Task Scrub_FitsArtworkInsideBoundingBoxWithoutStretchingOrCropping(
+        int sourceWidth,
+        int sourceHeight,
+        int expectedWidth,
+        int expectedHeight)
+    {
+        using var media = MediaFixtures.Copy("sample.flac");
+        string png = MakeQuadrantPng(sourceWidth, sourceHeight);
+        try
+        {
+            ArtworkOpResult embedded = await _art.SetCoverFromFileAsync(media.Path, png);
+            Assert.True(embedded.Success, embedded.Error);
+
+            ArtworkOpResult scrubbed = await _art.ScrubAsync(media.Path, maxDimension: 200, quality: 95);
+            Assert.True(scrubbed.Success, scrubbed.Error);
+            Assert.Equal(expectedWidth, scrubbed.Width);
+            Assert.Equal(expectedHeight, scrubbed.Height);
+            Assert.True(scrubbed.Width <= 200 && scrubbed.Height <= 200);
+
+            MediaFileModel reloaded = (await _reader.LoadAsync(media.Path)).Value!;
+            ArtworkModel cover = Assert.Single(reloaded.Artwork);
+            using Image<Rgba32> decoded = Image.Load<Rgba32>(cover.Data);
+            Assert.Equal(expectedWidth, decoded.Width);
+            Assert.Equal(expectedHeight, decoded.Height);
+
+            // Sample well inside each quadrant. Retaining all four markers proves the transform
+            // fitted the whole source rather than cropping it; the expected non-square dimensions
+            // prove it was not stretched to the square bound.
+            AssertMostlyRed(decoded[decoded.Width / 4, decoded.Height / 4]);
+            AssertMostlyGreen(decoded[decoded.Width * 3 / 4, decoded.Height / 4]);
+            AssertMostlyBlue(decoded[decoded.Width / 4, decoded.Height * 3 / 4]);
+            AssertMostlyYellow(decoded[decoded.Width * 3 / 4, decoded.Height * 3 / 4]);
+        }
+        finally
+        {
+            File.Delete(png);
+        }
+    }
+
+    [Fact]
+    public async Task PrepareArtwork_DoesNotEnlargeImagesAlreadyInsideBoundingBox()
+    {
+        string png = MakeQuadrantPng(120, 60);
+        try
+        {
+            PreparedImage? prepared = await _art.PrepareFromFileAsync(png, maxDimension: 200);
+
+            Assert.NotNull(prepared);
+            Assert.Equal(120, prepared.Width);
+            Assert.Equal(60, prepared.Height);
+        }
+        finally
+        {
+            File.Delete(png);
         }
     }
 
@@ -224,5 +307,25 @@ public class ArtworkServiceTests
             ReceivedToken = ct;
             throw new InvalidOperationException("cache unavailable");
         }
+    }
+
+    private static void AssertMostlyRed(Rgba32 pixel)
+    {
+        Assert.True(pixel.R > 160 && pixel.G < 100 && pixel.B < 100, $"Expected red, got {pixel}.");
+    }
+
+    private static void AssertMostlyGreen(Rgba32 pixel)
+    {
+        Assert.True(pixel.G > 160 && pixel.R < 100 && pixel.B < 100, $"Expected green, got {pixel}.");
+    }
+
+    private static void AssertMostlyBlue(Rgba32 pixel)
+    {
+        Assert.True(pixel.B > 160 && pixel.R < 100 && pixel.G < 100, $"Expected blue, got {pixel}.");
+    }
+
+    private static void AssertMostlyYellow(Rgba32 pixel)
+    {
+        Assert.True(pixel.R > 160 && pixel.G > 160 && pixel.B < 100, $"Expected yellow, got {pixel}.");
     }
 }

@@ -46,6 +46,7 @@ public partial class OperationsViewModel : ViewModelBase
     private readonly IArtworkNormalizationService? _artworkNormalization;
     private readonly ISmartStorageService? _smartStorage;
     private readonly ICarCardService? _carCard;
+    private readonly IActivityService? _activities;
     private CancellationTokenSource? _cts;
 
     public event Action<IReadOnlyList<string>>? ArtworkNormalized;
@@ -62,6 +63,7 @@ public partial class OperationsViewModel : ViewModelBase
     [NotifyCanExecuteChangedFor(nameof(ApplyPurgeCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewJobCommand))]
     [NotifyCanExecuteChangedFor(nameof(ApplyJobCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CancelCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -129,6 +131,8 @@ public partial class OperationsViewModel : ViewModelBase
     public ObservableCollection<OperationEntryNodeViewModel> RootNodes { get; } = [];
     public ObservableCollection<UnifiedJobHistoryItem> JobHistory { get; } = [];
     public IReadOnlyList<UnifiedJobDescriptor> JobCatalog => _jobs?.Catalog ?? [];
+    public bool HasRuns => Runs.Count > 0;
+    public bool IsRunListEmpty => Runs.Count == 0;
     public bool ShowJobApply => HasJobPreview &&
         SelectedJob?.ApplyMode == UnifiedJobApplyMode.ApplyFlag;
     private bool JobIs(params string[] ids) => SelectedJob is not null && ids.Contains(SelectedJob.Id);
@@ -154,7 +158,8 @@ public partial class OperationsViewModel : ViewModelBase
         IItunesValidationService? itunesValidation = null,
         IArtworkNormalizationService? artworkNormalization = null,
         ISmartStorageService? smartStorage = null,
-        ICarCardService? carCard = null)
+        ICarCardService? carCard = null,
+        IActivityService? activities = null)
     {
         _journals = journals;
         _files = files;
@@ -168,6 +173,7 @@ public partial class OperationsViewModel : ViewModelBase
         _artworkNormalization = artworkNormalization;
         _smartStorage = smartStorage;
         _carCard = carCard;
+        _activities = activities;
         SearchRoot = settings.GetPreference(SearchRootPreference);
         if (int.TryParse(settings.GetPreference(RetentionDaysPreference), out int days))
             RetentionDays = Math.Clamp(days, 1, 3650);
@@ -238,6 +244,8 @@ public partial class OperationsViewModel : ViewModelBase
             return;
         IsBusy = true;
         _cts = new CancellationTokenSource();
+        Guid? activity = _activities?.Start(
+            $"Preview {SelectedJob.Name}", "Starting preview", ShellDestination.Operations, Cancel);
         JobOutput = "";
         JobStatus = $"Previewing {SelectedJob.Name}…";
         try
@@ -249,7 +257,7 @@ public partial class OperationsViewModel : ViewModelBase
                     ConfigurationPath: null,
                     ItunesLibraryPath: null);
                 var typedProgress = new Progress<OperationProgress>(value =>
-                    JobStatus = value.Message ?? value.Phase.ToString());
+                    ReportJobProgress(activity, value));
                 _crossLibrarySyncPlan = await _crossLibrarySync.PreviewAsync(
                     request, typedProgress, _cts.Token);
                 int exitCode = _crossLibrarySyncPlan.CanApply ? 0 : 4;
@@ -263,7 +271,7 @@ public partial class OperationsViewModel : ViewModelBase
                     ConfigurationPath: null,
                     ItunesLibraryPath: null);
                 var typedProgress = new Progress<OperationProgress>(value =>
-                    JobStatus = value.Message ?? value.Phase.ToString());
+                    ReportJobProgress(activity, value));
                 _playlistExportPlan = await _playlistExport.PreviewAsync(
                     request, typedProgress, _cts.Token);
                 int exitCode = _playlistExportPlan.CanApply ? 0 : 4;
@@ -276,7 +284,7 @@ public partial class OperationsViewModel : ViewModelBase
                 ArtworkNormalizationRequest request = new(Required(JobPlaylistName,
                     "An iTunes playlist name is required."), ConfiguredLibraryPath());
                 var typedProgress = new Progress<OperationProgress>(value =>
-                    JobStatus = value.Message ?? value.Phase.ToString());
+                    ReportJobProgress(activity, value));
                 _artworkNormalizationPlan = await _artworkNormalization.PreviewAsync(
                     request, typedProgress, _cts.Token);
                 int exitCode = _artworkNormalizationPlan.CanApply ? 0 : 4;
@@ -290,7 +298,7 @@ public partial class OperationsViewModel : ViewModelBase
                     "A smart-storage destination is required."), JobInitialize, JobMaxRemovals,
                     ConfiguredLibraryPath());
                 var typedProgress = new Progress<OperationProgress>(value =>
-                    JobStatus = value.Message ?? value.Phase.ToString());
+                    ReportJobProgress(activity, value));
                 _smartStoragePlan = await _smartStorage.PreviewAsync(
                     request, typedProgress, _cts.Token);
                 int exitCode = _smartStoragePlan.CanApply ? 0 : 4;
@@ -303,7 +311,7 @@ public partial class OperationsViewModel : ViewModelBase
                 CarCardRequest request = new(null, JobRebalance, JobFixErrors,
                     JobInitialize, JobMaxRemovals, null);
                 var typedProgress = new Progress<OperationProgress>(value =>
-                    JobStatus = value.Message ?? value.Phase.ToString());
+                    ReportJobProgress(activity, value));
                 _carCardPlan = await _carCard.PreviewAsync(request, typedProgress, _cts.Token);
                 int exitCode = _carCardPlan.CanApply ? 0 : 4;
                 _jobPlan = new(SelectedJob, parsed, exitCode,
@@ -314,7 +322,7 @@ public partial class OperationsViewModel : ViewModelBase
                 IReadOnlyList<string> parsed = [];
                 string? library = ConfiguredLibraryPath();
                 var typedProgress = new Progress<OperationProgress>(value =>
-                    JobStatus = value.Message ?? value.Phase.ToString());
+                    ReportJobProgress(activity, value));
                 RedundancyAnalysisResult result = await _redundancyAnalysis.AnalyzeAsync(
                     library, typedProgress, _cts.Token);
                 _jobPlan = new(SelectedJob, parsed, 0, RenderRedundancyResult(result),
@@ -326,7 +334,7 @@ public partial class OperationsViewModel : ViewModelBase
                 string validationPath = Required(JobValidationPath,
                     "An iTunes Library.itl path is required.");
                 var typedProgress = new Progress<OperationProgress>(value =>
-                    JobStatus = value.Message ?? value.Phase.ToString());
+                    ReportJobProgress(activity, value));
                 ItunesValidationResult result = await _itunesValidation.ValidateAsync(
                     validationPath, typedProgress, _cts.Token);
                 _jobPlan = new(SelectedJob, parsed, result.IsValid ? 0 : 4,
@@ -344,9 +352,19 @@ public partial class OperationsViewModel : ViewModelBase
                 : $"Preview exited with code {_jobPlan.PreviewExitCode}.";
             AddJobHistory(new(SelectedJob.Name, false, _jobPlan.PreviewExitCode == 0,
                 _jobPlan.CreatedAtUtc, 0, TrimOutput(JobOutput)));
+            FinishActivity(activity, JobStatus,
+                _jobPlan.PreviewExitCode == 0 ? AppActivityState.Completed : AppActivityState.Failed);
         }
-        catch (OperationCanceledException) { JobStatus = "Job preview cancelled."; }
-        catch (Exception ex) { JobStatus = $"Job preview failed: {ex.Message}"; }
+        catch (OperationCanceledException)
+        {
+            JobStatus = "Job preview cancelled.";
+            FinishActivity(activity, JobStatus, AppActivityState.Cancelled);
+        }
+        catch (Exception ex)
+        {
+            JobStatus = $"Job preview failed: {ex.Message}";
+            FinishActivity(activity, JobStatus, AppActivityState.Failed);
+        }
         finally
         {
             _cts?.Dispose(); _cts = null; IsBusy = false;
@@ -361,9 +379,16 @@ public partial class OperationsViewModel : ViewModelBase
     {
         if (_jobs is null || _jobPlan is not { CanApply: true } plan)
             return;
+        if (!await _dialogs.ConfirmApplyAsync(
+                $"Apply {plan.Job.Name}",
+                DescribeJobApplyConfirmation(plan),
+                "Apply"))
+            return;
         IsBusy = true;
         _cts = new CancellationTokenSource();
         JobOutput = "";
+        Guid? activity = _activities?.Start(
+            plan.Job.Name, "Starting apply", ShellDestination.Operations, Cancel);
         try
         {
             UnifiedJobResult result;
@@ -372,7 +397,7 @@ public partial class OperationsViewModel : ViewModelBase
             {
                 var clock = Stopwatch.StartNew();
                 var typedProgress = new Progress<OperationProgress>(value =>
-                    JobStatus = value.Message ?? value.Phase.ToString());
+                    ReportJobProgress(activity, value));
                 CrossLibrarySyncResult typedResult = await _crossLibrarySync.ApplyAsync(
                     typedPlan, typedProgress, _cts.Token);
                 clock.Stop();
@@ -384,7 +409,7 @@ public partial class OperationsViewModel : ViewModelBase
             {
                 var clock = Stopwatch.StartNew();
                 var typedProgress = new Progress<OperationProgress>(value =>
-                    JobStatus = value.Message ?? value.Phase.ToString());
+                    ReportJobProgress(activity, value));
                 PlaylistExportResult typedResult = await _playlistExport.ApplyAsync(
                     playlistPlan, typedProgress, _cts.Token);
                 clock.Stop();
@@ -395,7 +420,7 @@ public partial class OperationsViewModel : ViewModelBase
             {
                 var clock = Stopwatch.StartNew();
                 var typedProgress = new Progress<OperationProgress>(value =>
-                    JobStatus = value.Message ?? value.Phase.ToString());
+                    ReportJobProgress(activity, value));
                 ArtworkNormalizationResult typedResult = await _artworkNormalization.ApplyAsync(
                     artworkPlan, typedProgress, _cts.Token);
                 clock.Stop();
@@ -408,7 +433,7 @@ public partial class OperationsViewModel : ViewModelBase
             {
                 var clock = Stopwatch.StartNew();
                 var typedProgress = new Progress<OperationProgress>(value =>
-                    JobStatus = value.Message ?? value.Phase.ToString());
+                    ReportJobProgress(activity, value));
                 SmartStorageResult typedResult = await _smartStorage.ApplyAsync(
                     smartPlan, typedProgress, _cts.Token);
                 clock.Stop();
@@ -419,7 +444,7 @@ public partial class OperationsViewModel : ViewModelBase
             {
                 var clock = Stopwatch.StartNew();
                 var typedProgress = new Progress<OperationProgress>(value =>
-                    JobStatus = value.Message ?? value.Phase.ToString());
+                    ReportJobProgress(activity, value));
                 CarCardResult typedResult = await _carCard.ApplyAsync(
                     carCardPlan, typedProgress, _cts.Token);
                 clock.Stop();
@@ -436,10 +461,47 @@ public partial class OperationsViewModel : ViewModelBase
             AddJobHistory(new(plan.Job.Name, true, result.Success, DateTimeOffset.UtcNow,
                 result.Elapsed.TotalSeconds, TrimOutput(result.Output)));
             InvalidateJobPreview(clearOutput: false);
+            FinishActivity(activity, JobStatus,
+                result.Success ? AppActivityState.Completed : AppActivityState.Failed);
         }
-        catch (OperationCanceledException) { JobStatus = "Job apply cancelled; inspect Operations for a recovery journal."; }
-        catch (Exception ex) { JobStatus = $"Job apply failed: {ex.Message}"; }
+        catch (OperationCanceledException)
+        {
+            JobStatus = "Job apply cancelled; inspect Operations for a recovery journal.";
+            FinishActivity(activity, JobStatus, AppActivityState.Cancelled);
+        }
+        catch (Exception ex)
+        {
+            JobStatus = $"Job apply failed: {ex.Message}";
+            FinishActivity(activity, JobStatus, AppActivityState.Failed);
+        }
         finally { _cts?.Dispose(); _cts = null; IsBusy = false; }
+    }
+
+    private string DescribeJobApplyConfirmation(UnifiedJobPlan plan)
+    {
+        (int mutations, bool recovery, string? recoveryRoot) = plan.Job.Id switch
+        {
+            "cross-library-sync" when _crossLibrarySyncPlan is { } typed =>
+                (typed.MutationPlan.Actions.Count, typed.MutationPlan.RetainRecovery,
+                    typed.MutationPlan.RecoveryRoot),
+            "playlist-sync" when _playlistExportPlan is { } typed =>
+                (typed.MutationPlan.Actions.Count, typed.MutationPlan.RetainRecovery,
+                    typed.MutationPlan.RecoveryRoot),
+            "artwork-normalization" when _artworkNormalizationPlan is { } typed =>
+                (typed.Items.Count, !string.IsNullOrWhiteSpace(typed.RecoveryRoot), typed.RecoveryRoot),
+            "smart-storage" when _smartStoragePlan is { } typed =>
+                (typed.MutationPlan.Actions.Count, typed.MutationPlan.RetainRecovery,
+                    typed.MutationPlan.RecoveryRoot),
+            "car-card" when _carCardPlan is { } typed =>
+                (typed.MutationPlan.Actions.Count, typed.MutationPlan.RetainRecovery,
+                    typed.MutationPlan.RecoveryRoot),
+            _ => (0, false, null),
+        };
+        string recoveryText = recovery
+            ? "Recovery is available: changed files will be journaled" +
+              (string.IsNullOrWhiteSpace(recoveryRoot) ? "." : $" under '{recoveryRoot}'.")
+            : "Recovery is not available for this apply.";
+        return $"Apply {plan.Job.Name} with {mutations:N0} planned file mutation(s)?\n\n{recoveryText}";
     }
 
     private void InvalidateJobPreview(bool clearOutput = true)
@@ -632,6 +694,9 @@ public partial class OperationsViewModel : ViewModelBase
 
         IsBusy = true;
         _cts = new CancellationTokenSource();
+        Guid? activity = _activities?.Start(
+            "Scan recovery operations", $"Scanning {roots.Count:N0} root(s)",
+            ShellDestination.Operations, Cancel);
         StatusText = $"Scanning {roots.Count:N0} root(s) for operation journals…";
         try
         {
@@ -644,18 +709,24 @@ public partial class OperationsViewModel : ViewModelBase
             InvalidatePurgePreview();
             foreach (var run in result.Runs)
                 Runs.Add(new OperationRunViewModel(run));
+            OnPropertyChanged(nameof(HasRuns));
+            OnPropertyChanged(nameof(IsRunListEmpty));
             int interrupted = result.Runs.Count(run => run.State == OperationJournalState.Interrupted);
             StatusText = $"Found {result.Runs.Count:N0} operation run(s); {interrupted:N0} interrupted"
                 + (result.Warnings.Count == 0 ? "." : $"; {result.Warnings.Count:N0} root(s) could not be scanned.");
             PreviewPurgeCommand.NotifyCanExecuteChanged();
+            FinishActivity(activity, StatusText,
+                result.Warnings.Count == 0 ? AppActivityState.Completed : AppActivityState.Failed);
         }
         catch (OperationCanceledException)
         {
             StatusText = "Operation discovery cancelled.";
+            FinishActivity(activity, StatusText, AppActivityState.Cancelled);
         }
         catch (Exception ex)
         {
             StatusText = $"Operation discovery failed: {ex.Message}";
+            FinishActivity(activity, StatusText, AppActivityState.Failed);
         }
         finally
         {
@@ -665,8 +736,27 @@ public partial class OperationsViewModel : ViewModelBase
         }
     }
 
-    [RelayCommand]
+    private bool CanCancel() => IsBusy && _cts is not null;
+
+    [RelayCommand(CanExecute = nameof(CanCancel))]
     private void Cancel() => _cts?.Cancel();
+
+    private void ReportJobProgress(Guid? activity, OperationProgress progress)
+    {
+        JobStatus = progress.Message ?? progress.Phase.ToString();
+        if (activity is { } id)
+            _activities?.Report(id, JobStatus,
+                progress.Total is > 0 ? (double)progress.Completed / progress.Total.Value : null);
+    }
+
+    private void FinishActivity(
+        Guid? activity,
+        string message,
+        AppActivityState state = AppActivityState.Completed)
+    {
+        if (activity is { } id)
+            _activities?.Finish(id, message, state);
+    }
 
     private bool CanOpenRun(OperationRunViewModel? run) => !IsBusy && run is not null;
 
@@ -677,6 +767,9 @@ public partial class OperationsViewModel : ViewModelBase
             return;
         IsBusy = true;
         _cts = new CancellationTokenSource();
+        Guid? activity = _activities?.Start(
+            "Open recovery run", $"Opening {run.ToolName} operation",
+            ShellDestination.Operations, Cancel);
         StatusText = $"Opening {run.ToolName} operation…";
         try
         {
@@ -690,14 +783,18 @@ public partial class OperationsViewModel : ViewModelBase
             InvalidateRestorePreview();
             StatusText = $"{browse.Entries.Count:N0} operation item(s) in their original hierarchy"
                 + (browse.Warnings.Count == 0 ? "." : $"; {browse.Warnings.Count:N0} item(s) could not be read.");
+            FinishActivity(activity, StatusText,
+                browse.Warnings.Count == 0 ? AppActivityState.Completed : AppActivityState.Failed);
         }
         catch (OperationCanceledException)
         {
             StatusText = "Opening operation cancelled.";
+            FinishActivity(activity, StatusText, AppActivityState.Cancelled);
         }
         catch (Exception ex)
         {
             StatusText = $"Could not open operation: {ex.Message}";
+            FinishActivity(activity, StatusText, AppActivityState.Failed);
         }
         finally
         {
@@ -716,6 +813,8 @@ public partial class OperationsViewModel : ViewModelBase
         {
             run = new OperationRunViewModel(summary);
             Runs.Insert(0, run);
+            OnPropertyChanged(nameof(HasRuns));
+            OnPropertyChanged(nameof(IsRunListEmpty));
         }
         await OpenRunAsync(run);
     }
@@ -763,6 +862,9 @@ public partial class OperationsViewModel : ViewModelBase
         var entries = RootNodes.SelectMany(root => root.SelectedEntries()).ToList();
         IsBusy = true;
         _cts = new CancellationTokenSource();
+        Guid? activity = _activities?.Start(
+            "Preview recovery restore", $"Reviewing {entries.Count:N0} selected item(s)",
+            ShellDestination.Operations, Cancel);
         try
         {
             _restorePlan = await _journals.PreviewRestoreAsync(SelectedRun.Summary, entries, _cts.Token);
@@ -773,9 +875,19 @@ public partial class OperationsViewModel : ViewModelBase
                   $"{_restorePlan.SkippedCount:N0} skipped."
                 : "No selected entries are currently recoverable.";
             StatusText = RestorePreviewText;
+            FinishActivity(activity, StatusText,
+                _restorePlan.CanApply ? AppActivityState.Completed : AppActivityState.Failed);
         }
-        catch (OperationCanceledException) { StatusText = "Restore preview cancelled."; }
-        catch (Exception ex) { StatusText = $"Restore preview failed: {ex.Message}"; }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Restore preview cancelled.";
+            FinishActivity(activity, StatusText, AppActivityState.Cancelled);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Restore preview failed: {ex.Message}";
+            FinishActivity(activity, StatusText, AppActivityState.Failed);
+        }
         finally
         {
             _cts?.Dispose(); _cts = null; IsBusy = false;
@@ -793,10 +905,18 @@ public partial class OperationsViewModel : ViewModelBase
             return;
         IsBusy = true;
         _cts = new CancellationTokenSource();
+        Guid? activity = _activities?.Start(
+            "Restore operation items", $"Restoring {plan.Actions.Count:N0} item(s)",
+            ShellDestination.Operations, Cancel);
         try
         {
             var progress = new Progress<int>(count =>
-                StatusText = $"Restoring… {count:N0}/{plan.Actions.Count:N0}");
+            {
+                StatusText = $"Restoring… {count:N0}/{plan.Actions.Count:N0}";
+                if (activity is { } id)
+                    _activities?.Report(id, StatusText,
+                        plan.Actions.Count == 0 ? null : (double)count / plan.Actions.Count);
+            });
             var result = await _journals.ApplyRestoreAsync(plan, progress, _cts.Token);
             var browse = await _journals.BrowseAsync(SelectedRun.Summary, CancellationToken.None);
             RootNodes.Clear();
@@ -806,9 +926,18 @@ public partial class OperationsViewModel : ViewModelBase
             InvalidateRestorePreview();
             StatusText = $"Restored {result.RestoredCount:N0} item(s); " +
                 $"preserved {result.CollisionBackupCount:N0} collision(s).";
+            FinishActivity(activity, StatusText);
         }
-        catch (OperationCanceledException) { StatusText = "Restore cancelled and completed actions were rolled back."; }
-        catch (Exception ex) { StatusText = $"Restore failed and completed actions were rolled back: {ex.Message}"; }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Restore cancelled and completed actions were rolled back.";
+            FinishActivity(activity, StatusText, AppActivityState.Cancelled);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Restore failed and completed actions were rolled back: {ex.Message}";
+            FinishActivity(activity, StatusText, AppActivityState.Failed);
+        }
         finally
         {
             _cts?.Dispose(); _cts = null; IsBusy = false;
@@ -832,6 +961,9 @@ public partial class OperationsViewModel : ViewModelBase
     {
         IsBusy = true;
         _cts = new CancellationTokenSource();
+        Guid? activity = _activities?.Start(
+            "Preview recovery purge", $"Reviewing runs older than {RetentionDays:N0} day(s)",
+            ShellDestination.Operations, Cancel);
         StatusText = $"Inventorying operation runs older than {RetentionDays:N0} day(s)…";
         try
         {
@@ -840,9 +972,19 @@ public partial class OperationsViewModel : ViewModelBase
             ShowPurgePreview = true;
             PurgePreviewText = DescribePurgePlan(_purgePlan);
             StatusText = PurgePreviewText;
+            FinishActivity(activity, StatusText,
+                _purgePlan.CanApply ? AppActivityState.Completed : AppActivityState.Failed);
         }
-        catch (OperationCanceledException) { StatusText = "Purge preview cancelled."; }
-        catch (Exception ex) { StatusText = $"Purge preview failed: {ex.Message}"; }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Purge preview cancelled.";
+            FinishActivity(activity, StatusText, AppActivityState.Cancelled);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Purge preview failed: {ex.Message}";
+            FinishActivity(activity, StatusText, AppActivityState.Failed);
+        }
         finally
         {
             _cts?.Dispose(); _cts = null; IsBusy = false;
@@ -860,10 +1002,18 @@ public partial class OperationsViewModel : ViewModelBase
             return;
         IsBusy = true;
         _cts = new CancellationTokenSource();
+        Guid? activity = _activities?.Start(
+            "Purge operation history", $"Purging {plan.Runs.Count:N0} run(s)",
+            ShellDestination.Operations, Cancel);
         try
         {
             var progress = new Progress<int>(count =>
-                StatusText = $"Purging… {count:N0}/{plan.Runs.Count:N0} run(s)");
+            {
+                StatusText = $"Purging… {count:N0}/{plan.Runs.Count:N0} run(s)";
+                if (activity is { } id)
+                    _activities?.Report(id, StatusText,
+                        plan.Runs.Count == 0 ? null : (double)count / plan.Runs.Count);
+            });
             var result = await _journals.ApplyPurgeAsync(plan, progress, _cts.Token);
             var deleted = plan.Runs.Select(run => run.Run.RunPath)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -872,14 +1022,19 @@ public partial class OperationsViewModel : ViewModelBase
             InvalidatePurgePreview();
             StatusText = $"Purged {result.RunsDeleted:N0} run(s), {result.FilesDeleted:N0} file(s), " +
                 $"and {FormatBytes(result.BytesDeleted)}.";
+            OnPropertyChanged(nameof(HasRuns));
+            OnPropertyChanged(nameof(IsRunListEmpty));
+            FinishActivity(activity, StatusText);
         }
         catch (OperationCanceledException)
         {
             StatusText = "Purge cancelled. Runs not yet irreversibly deleted may remain in purge staging.";
+            FinishActivity(activity, StatusText, AppActivityState.Cancelled);
         }
         catch (Exception ex)
         {
             StatusText = $"Purge stopped: {ex.Message}";
+            FinishActivity(activity, StatusText, AppActivityState.Failed);
         }
         finally
         {

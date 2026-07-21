@@ -8,39 +8,58 @@
         Subtitle="Audit the collection, inspect every proposed change, and apply safe repairs.">
       <controls:PageHeader.Actions>
         <StackPanel Orientation="Horizontal" Spacing="8">
-          <Button Classes="app primary" Content="Apply metadata repairs" Command="{Binding ApplyRepairsCommand}" />
-          <Button Classes="app primary" Content="Apply file repairs" Command="{Binding ApplyRepresentationRepairsCommand}" />
-          <Button Classes="app primary" Content="Apply iTunes repairs" Command="{Binding ApplyItlMetadataRepairsCommand}" />
           <Button Classes="app" Content="Cancel" Command="{Binding CancelCommand}" />
         </StackPanel>
       </controls:PageHeader.Actions>
     </controls:PageHeader>
 
     <Border Grid.Row="1" Classes="card" Padding="14">
-      <StackPanel Spacing="10">
-        <WrapPanel>
-          <Button Classes="app" Margin="0,0,8,7" Content="Inconsistencies" Command="{Binding RunInconsistenciesCommand}" />
-          <Button Classes="app" Margin="0,0,8,7" Content="Lossy files" Command="{Binding RunLossyCommand}" />
-          <Button Classes="app" Margin="0,0,8,7" Content="Duplicates" Command="{Binding RunDuplicatesCommand}" />
-          <Button Classes="app" Margin="0,0,8,7" Content="Similar artists" Command="{Binding RunSimilarArtistsCommand}" />
-          <Button Classes="app" Margin="0,0,8,7" Content="Cross-set check" Command="{Binding RunCheckSetsCommand}" />
-          <Button Classes="app" Margin="0,0,8,7" Content="Representations" Command="{Binding RunRepresentationsCommand}" />
-          <Button Classes="app" Margin="0,0,8,7" Content="Verify audio" Command="{Binding VerifyDecodedAudioCommand}" />
-          <Button Classes="app" Margin="0,0,8,7" Content="Album matrix" Command="{Binding RunAlbumMatrixCommand}" />
-          <Button Classes="app" Margin="0,0,8,7" Content="Artwork audit" Command="{Binding RunArtworkHealthCommand}" />
-          <Button Classes="app" Margin="0,0,8,7" Content="Preview metadata repairs" Command="{Binding PreviewMetadataRepairsCommand}" />
-          <Button Classes="app" Margin="0,0,8,7" Content="Preview file repairs" Command="{Binding PreviewRepresentationRepairsCommand}" />
-          <Button Classes="app" Margin="0,0,8,7" Content="Album artist conflicts" Command="{Binding FindAlbumArtistConflictsCommand}" />
-          <Button Classes="app" Margin="0,0,8,7" Content="Preview conflict repairs" Command="{Binding PreviewConflictRepairsCommand}" />
-          <Button Classes="app" Margin="0,0,8,7" Content="Preview iTunes metadata repairs" Command="{Binding PreviewItlMetadataRepairsCommand}" />
-        </WrapPanel>
+      <StackPanel Spacing="12">
+        <Grid ColumnDefinitions="1.25*,1*" ColumnSpacing="24">
+          <StackPanel Spacing="7">
+            <TextBlock Text="Audit" FontWeight="SemiBold" />
+            <TextBlock Classes="muted" Text="Inspect quality, consistency, and file integrity." TextWrapping="Wrap" />
+            <WrapPanel>
+              <Button Classes="app" Margin="0,0,8,7" Content="Inconsistencies" Command="{Binding RunInconsistenciesCommand}" />
+              <Button Classes="app" Margin="0,0,8,7" Content="Lossy files" Command="{Binding RunLossyCommand}" />
+              <Button Classes="app" Margin="0,0,8,7" Content="Duplicates" Command="{Binding RunDuplicatesCommand}" />
+              <Button Classes="app" Margin="0,0,8,7" Content="Similar artists" Command="{Binding RunSimilarArtistsCommand}" />
+              <Button Classes="app" Margin="0,0,8,7" Content="Cross-set" Command="{Binding RunCheckSetsCommand}" />
+              <Button Classes="app" Margin="0,0,8,7" Content="Representations" Command="{Binding RunRepresentationsCommand}" />
+              <Button Classes="app" Margin="0,0,8,7" Content="Verify audio" Command="{Binding VerifyDecodedAudioCommand}" />
+              <Button Classes="app" Margin="0,0,8,7" Content="Album matrix" Command="{Binding RunAlbumMatrixCommand}" />
+              <Button Classes="app" Margin="0,0,8,7" Content="Artwork" Command="{Binding RunArtworkHealthCommand}" />
+            </WrapPanel>
+          </StackPanel>
+          <StackPanel Grid.Column="1" Spacing="7">
+            <TextBlock Text="Prepare repairs" FontWeight="SemiBold" />
+            <TextBlock Classes="muted" Text="Build a reviewable plan. Nothing changes until you apply it." TextWrapping="Wrap" />
+            <WrapPanel>
+              <Button Classes="app" Margin="0,0,8,7" Content="Metadata" Command="{Binding PreviewMetadataRepairsCommand}" />
+              <Button Classes="app" Margin="0,0,8,7" Content="Files" Command="{Binding PreviewRepresentationRepairsCommand}" />
+              <Button Classes="app" Margin="0,0,8,7" Content="Album artist conflicts" Command="{Binding FindAlbumArtistConflictsCommand}" />
+              <Button Classes="app" Margin="0,0,8,7" Content="Conflict repairs" Command="{Binding PreviewConflictRepairsCommand}" />
+              <Button Classes="app" Margin="0,0,8,7" Content="iTunes metadata" Command="{Binding PreviewItlMetadataRepairsCommand}" />
+            </WrapPanel>
+          </StackPanel>
+        </Grid>
         <ProgressBar Classes="app" IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
-        <TextBlock Classes="muted" Text="{Binding StatusText}" />
+        <Border Classes="status-banner"
+                Classes.info="{Binding IsStatusInfo}"
+                Classes.success="{Binding IsStatusSuccess}"
+                Classes.warning="{Binding IsStatusWarning}"
+                Classes.error="{Binding IsStatusError}"
+                AutomationProperties.LiveSetting="Polite">
+          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+            <TextBlock Classes="status-icon" Text="{Binding StatusIcon}" />
+            <TextBlock Grid.Column="1" Text="{Binding StatusText}" TextWrapping="Wrap" />
+          </Grid>
+        </Border>
       </StackPanel>
     </Border>
 
     <controls:PersistedSplitView Grid.Row="2" InitialLeftWidth="260" MinLeftWidth="190" MaxLeftWidth="430"
-                              MinRightWidth="420" PersistenceKey="health-history" Label="Resize analysis history">
+                              MinRightWidth="560" PersistenceKey="health-history" Label="Resize analysis history">
       <controls:PersistedSplitView.Left>
         <Border Classes="card" Padding="12">
           <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10">
@@ -48,6 +67,10 @@
             <ListBox Grid.Row="1" ItemsSource="{Binding Runs}" SelectedItem="{Binding SelectedRun, Mode=TwoWay}" Background="Transparent" BorderThickness="0">
               <ListBox.ItemTemplate><DataTemplate><Border Classes="history-item" Padding="10,8" Margin="0,0,0,5"><StackPanel Spacing="3"><TextBlock Text="{Binding Name}" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="{Binding DisplayLabel}" TextWrapping="Wrap" /></StackPanel></Border></DataTemplate></ListBox.ItemTemplate>
             </ListBox>
+            <TextBlock Grid.Row="1" IsVisible="{Binding !HasRuns}" Classes="muted"
+                       Text="Run an audit to build reviewable results."
+                       TextAlignment="Center" TextWrapping="Wrap"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" Margin="16" />
             <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8"><Button Classes="app" Content="Remove" Command="{Binding RemoveRunCommand}" /><Button Classes="app" Content="Clear" Command="{Binding ClearRunsCommand}" /></StackPanel>
           </Grid>
         </Border>
@@ -55,20 +78,23 @@
 
       <controls:PersistedSplitView.Right>
         <Border Classes="card" Padding="0" ClipToBounds="True">
-          <TabControl SelectedIndex="{Binding ActiveResultIndex, Mode=TwoWay}">
+          <Grid>
+          <TabControl SelectedIndex="{Binding ActiveResultIndex, Mode=TwoWay}" IsVisible="{Binding HasRuns}"
+                      ContextRequested="OnHealthResultContextRequested">
             <TabItem Header="Findings">
               <controls:PersistedSplitView InitialLeftWidth="330" MinLeftWidth="230" MaxLeftWidth="620" MinRightWidth="300" PersistenceKey="health-findings" Label="Resize findings hierarchy">
                 <controls:PersistedSplitView.Left>
                   <Grid RowDefinitions="Auto,*">
                     <Button x:Name="FindingRootButton" Padding="10,8" Background="Transparent" BorderThickness="0"
                             HorizontalAlignment="Stretch"
-                            HorizontalContentAlignment="Stretch" Click="OnSelectFindingRoot">
+                            HorizontalContentAlignment="Stretch" Click="OnSelectFindingRoot"
+                            AutomationProperties.Name="Select all findings">
                       <Grid HorizontalAlignment="Stretch">
                         <Border IsVisible="{Binding IsFindingRootSelected}" Background="{DynamicResource AppSelectionBrush}" CornerRadius="6" />
                         <Grid Margin="7,2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                           <TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="All findings" />
                           <TextBlock Grid.Column="1" VerticalAlignment="Center" Classes="tree-count" Text="{Binding FindingCount}" />
-                          <ComboBox x:Name="FindingRootDisposition" Grid.Column="2" VerticalAlignment="Center" MinWidth="104" />
+                          <ComboBox x:Name="FindingRootDisposition" Grid.Column="2" VerticalAlignment="Center" MinWidth="104" AutomationProperties.Name="Disposition for all findings" />
                         </Grid>
                       </Grid>
                     </Button>
@@ -86,29 +112,46 @@
                   <Grid>
                     <controls:AppDataGrid x:Name="FindingGrid" ItemsSource="{Binding DisplayedFindings}" />
                     <TextBlock IsVisible="{Binding !DisplayedFindings.Count}" HorizontalAlignment="Center" VerticalAlignment="Center"
-                               Classes="muted" Text="Select a findings branch" />
+                               Classes="muted" Text="{Binding FindingsEmptyText}" TextWrapping="Wrap" TextAlignment="Center" Margin="18" />
                   </Grid>
                 </controls:PersistedSplitView.Right>
               </controls:PersistedSplitView>
             </TabItem>
 
-            <TabItem Header="Duplicates">
-              <ScrollViewer Margin="12" VerticalScrollBarVisibility="Auto"><ItemsControl ItemsSource="{Binding Duplicates}"><ItemsControl.ItemTemplate><DataTemplate>
-                <Border Classes="result-card" Margin="0,0,0,8"><StackPanel Spacing="5"><TextBlock Text="{Binding Key}" FontWeight="SemiBold" /><ItemsControl ItemsSource="{Binding Tracks}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Classes="muted" Text="{Binding Path}" TextTrimming="CharacterEllipsis" /></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
-              </DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer>
+            <TabItem Header="Duplicates" IsVisible="{Binding HasDuplicateSection}">
+              <Grid>
+                <ScrollViewer Margin="12" VerticalScrollBarVisibility="Auto" IsVisible="{Binding HasDuplicateResults}"><ItemsControl ItemsSource="{Binding Duplicates}"><ItemsControl.ItemTemplate><DataTemplate>
+                  <Border Classes="result-card" Margin="0,0,0,8"><StackPanel Spacing="5"><TextBlock Text="{Binding Key}" FontWeight="SemiBold" /><ItemsControl ItemsSource="{Binding Tracks}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Classes="muted" Text="{Binding Path}" TextTrimming="CharacterEllipsis" /></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></StackPanel></Border>
+                </DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer>
+                <TextBlock Classes="muted" IsVisible="{Binding !HasDuplicateResults}" Text="No duplicate groups were found."
+                           HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" />
+              </Grid>
             </TabItem>
 
-            <TabItem Header="Similar artists">
-              <ScrollViewer Margin="12" VerticalScrollBarVisibility="Auto"><ItemsControl ItemsSource="{Binding ArtistGroups}"><ItemsControl.ItemTemplate><DataTemplate>
-                <Border Classes="result-card" Margin="0,0,0,8"><Grid ColumnDefinitions="*,240,Auto" ColumnSpacing="10"><ItemsControl ItemsSource="{Binding Variants}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Classes="muted" Text="{Binding Name}" /></DataTemplate></ItemsControl.ItemTemplate></ItemsControl><TextBox Grid.Column="1" Classes="app" Text="{Binding CanonicalName, Mode=TwoWay}" /><Button Grid.Column="2" Classes="app" Content="Merge" Command="{Binding MergeCommand}" /></Grid></Border>
-              </DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer>
+            <TabItem Header="Similar artists" IsVisible="{Binding HasArtistSection}">
+              <Grid>
+                <ScrollViewer Margin="12" VerticalScrollBarVisibility="Auto" IsVisible="{Binding HasArtistResults}"><ItemsControl ItemsSource="{Binding ArtistGroups}"><ItemsControl.ItemTemplate><DataTemplate>
+                  <Border Classes="result-card" Margin="0,0,0,8"><StackPanel Spacing="8"><Grid ColumnDefinitions="*,240,Auto" ColumnSpacing="10"><ItemsControl ItemsSource="{Binding Variants}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Classes="muted" Text="{Binding Name}" /></DataTemplate></ItemsControl.ItemTemplate></ItemsControl><TextBox Grid.Column="1" Classes="app" Text="{Binding CanonicalName, Mode=TwoWay}" AutomationProperties.Name="Canonical artist name" /><Button Grid.Column="2" Classes="app" Content="Merge" Command="{Binding MergeCommand}" /></Grid><Border Classes="status-banner" Classes.info="{Binding IsStatusInfo}" Classes.success="{Binding IsStatusSuccess}" Classes.warning="{Binding IsStatusWarning}" Classes.error="{Binding IsStatusError}" IsVisible="{Binding HasStatus}" AutomationProperties.LiveSetting="Polite"><Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"><TextBlock Classes="status-icon" Text="{Binding StatusIcon}" /><TextBlock Grid.Column="1" Text="{Binding Status}" TextWrapping="Wrap" /></Grid></Border></StackPanel></Border>
+                </DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer>
+                <TextBlock Classes="muted" IsVisible="{Binding !HasArtistResults}" Text="No similar artist names were found."
+                           HorizontalAlignment="Center" VerticalAlignment="Center" TextWrapping="Wrap" />
+              </Grid>
             </TabItem>
 
-            <TabItem Header="Metadata repairs">
-              <controls:PersistedSplitView InitialLeftWidth="350" MinLeftWidth="240" MaxLeftWidth="650" MinRightWidth="300" PersistenceKey="health-metadata-repairs" Label="Resize metadata repair hierarchy">
+            <TabItem Header="Metadata repairs" IsVisible="{Binding HasRepairSection}">
+              <Grid RowDefinitions="Auto,*">
+                <Border Classes="status-banner info" Margin="10,8,10,4">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <TextBlock Classes="summary-label" VerticalAlignment="Center"
+                               Text="{Binding RepairItems.Count, StringFormat={}{0} reviewed metadata repairs}" />
+                    <Button Grid.Column="1" Classes="app primary" Content="Apply selected repairs"
+                            Command="{Binding ApplyRepairsCommand}" />
+                  </Grid>
+                </Border>
+              <controls:PersistedSplitView Grid.Row="1" InitialLeftWidth="350" MinLeftWidth="240" MaxLeftWidth="650" MinRightWidth="300" PersistenceKey="health-metadata-repairs" Label="Resize metadata repair hierarchy">
                 <controls:PersistedSplitView.Left>
                   <Grid RowDefinitions="Auto,*">
-                  <Grid Margin="10,8,10,3" ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="All metadata repairs" /><ComboBox x:Name="RepairRootDisposition" Grid.Column="1" MinWidth="112" /></Grid>
+                  <Grid Margin="10,8,10,3" ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="All metadata repairs" /><ComboBox x:Name="RepairRootDisposition" Grid.Column="1" MinWidth="112" AutomationProperties.Name="Disposition for all metadata repairs" /></Grid>
                   <TreeView Grid.Row="1" Classes="health-tree" ItemsSource="{Binding RepairGroups}" SelectedItem="{Binding SelectedRepairNode, Mode=TwoWay}">
                     <TreeView.DataTemplates>
                       <TreeDataTemplate DataType="{x:Type vm:AnalysisRepairCategoryGroupViewModel}" ItemsSource="{Binding Artists}"><Grid ColumnDefinitions="*,Auto,Auto"><TextBlock Text="{Binding Category}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /><ComboBox Grid.Column="2" MinWidth="104" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" /></Grid></TreeDataTemplate>
@@ -121,13 +164,23 @@
                 </controls:PersistedSplitView.Left>
                 <controls:PersistedSplitView.Right><controls:AppDataGrid x:Name="RepairGrid" FrozenColumnCount="1" ItemsSource="{Binding DisplayedRepairItems}" /></controls:PersistedSplitView.Right>
               </controls:PersistedSplitView>
+              </Grid>
             </TabItem>
 
-            <TabItem Header="File repairs">
-              <controls:PersistedSplitView InitialLeftWidth="350" MinLeftWidth="240" MaxLeftWidth="650" MinRightWidth="300" PersistenceKey="health-file-repairs" Label="Resize file repair hierarchy">
+            <TabItem Header="File repairs" IsVisible="{Binding HasRepresentationSection}">
+              <Grid RowDefinitions="Auto,*">
+                <Border Classes="status-banner warning" Margin="10,8,10,4">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <TextBlock Classes="summary-label" VerticalAlignment="Center"
+                               Text="{Binding RepresentationActionItems.Count, StringFormat={}{0} reviewed file actions}" />
+                    <Button Grid.Column="1" Classes="app primary" Content="Apply selected file repairs"
+                            Command="{Binding ApplyRepresentationRepairsCommand}" />
+                  </Grid>
+                </Border>
+              <controls:PersistedSplitView Grid.Row="1" InitialLeftWidth="350" MinLeftWidth="240" MaxLeftWidth="650" MinRightWidth="300" PersistenceKey="health-file-repairs" Label="Resize file repair hierarchy">
                 <controls:PersistedSplitView.Left>
                   <Grid RowDefinitions="Auto,*">
-                  <Grid Margin="10,8,10,3" ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="All file repairs" /><ComboBox x:Name="RepresentationRootDisposition" Grid.Column="1" MinWidth="112" /></Grid>
+                  <Grid Margin="10,8,10,3" ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="All file repairs" /><ComboBox x:Name="RepresentationRootDisposition" Grid.Column="1" MinWidth="112" AutomationProperties.Name="Disposition for all file repairs" /></Grid>
                   <TreeView Grid.Row="1" Classes="health-tree" ItemsSource="{Binding RepresentationActionGroups}" SelectedItem="{Binding SelectedRepresentationNode, Mode=TwoWay}">
                     <TreeView.DataTemplates>
                       <TreeDataTemplate DataType="{x:Type vm:RepresentationRepairCategoryGroupViewModel}" ItemsSource="{Binding Artists}"><Grid ColumnDefinitions="*,Auto,Auto"><TextBlock Text="{Binding Category}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /><ComboBox Grid.Column="2" MinWidth="104" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" /></Grid></TreeDataTemplate>
@@ -140,17 +193,27 @@
                 </controls:PersistedSplitView.Left>
                 <controls:PersistedSplitView.Right><controls:AppDataGrid x:Name="RepresentationGrid" FrozenColumnCount="1" ItemsSource="{Binding DisplayedRepresentationItems}" /></controls:PersistedSplitView.Right>
               </controls:PersistedSplitView>
+              </Grid>
             </TabItem>
 
-            <TabItem Header="Conflicts"><controls:AppDataGrid x:Name="ConflictGrid" Margin="12" ItemsSource="{Binding ConflictGroups}" /></TabItem>
-            <TabItem Header="Album matrix"><ScrollViewer Margin="12" VerticalScrollBarVisibility="Auto"><ItemsControl ItemsSource="{Binding Matrices}"><ItemsControl.ItemTemplate><DataTemplate>
+            <TabItem Header="Conflicts" IsVisible="{Binding HasConflictSection}"><Grid><controls:AppDataGrid x:Name="ConflictGrid" Margin="12" ItemsSource="{Binding ConflictGroups}" IsVisible="{Binding HasConflictResults}" /><TextBlock Classes="muted" IsVisible="{Binding !HasConflictResults}" Text="No album-artist conflicts were found." HorizontalAlignment="Center" VerticalAlignment="Center" /></Grid></TabItem>
+            <TabItem Header="Album matrix" IsVisible="{Binding HasMatrixSection}"><Grid><ScrollViewer Margin="12" VerticalScrollBarVisibility="Auto" IsVisible="{Binding HasMatrixResults}"><ItemsControl ItemsSource="{Binding Matrices}"><ItemsControl.ItemTemplate><DataTemplate>
               <Border Classes="result-card" Margin="0,0,0,8"><Expander IsExpanded="True"><Expander.Header><TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" /></Expander.Header><ItemsControl Margin="0,8,0,0" ItemsSource="{Binding Rows}"><ItemsControl.ItemTemplate><DataTemplate><TextBlock Classes="muted" Text="{Binding Title.Display}" /></DataTemplate></ItemsControl.ItemTemplate></ItemsControl></Expander></Border>
-            </DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer></TabItem>
-            <TabItem Header="iTunes repairs">
-              <controls:PersistedSplitView InitialLeftWidth="350" MinLeftWidth="240" MaxLeftWidth="650" MinRightWidth="300" PersistenceKey="health-itl-metadata-repairs" Label="Resize iTunes metadata repair hierarchy">
+            </DataTemplate></ItemsControl.ItemTemplate></ItemsControl></ScrollViewer><TextBlock Classes="muted" IsVisible="{Binding !HasMatrixResults}" Text="No album metadata rows were found." HorizontalAlignment="Center" VerticalAlignment="Center" /></Grid></TabItem>
+            <TabItem Header="iTunes repairs" IsVisible="{Binding HasItlRepairSection}">
+              <Grid RowDefinitions="Auto,*">
+                <Border Classes="status-banner warning" Margin="10,8,10,4">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <TextBlock Classes="summary-label" VerticalAlignment="Center"
+                               Text="{Binding ItlRepairItems.Count, StringFormat={}{0} reviewed iTunes repairs}" />
+                    <Button Grid.Column="1" Classes="app primary" Content="Apply selected iTunes repairs"
+                            Command="{Binding ApplyItlMetadataRepairsCommand}" />
+                  </Grid>
+                </Border>
+              <controls:PersistedSplitView Grid.Row="1" InitialLeftWidth="350" MinLeftWidth="240" MaxLeftWidth="650" MinRightWidth="300" PersistenceKey="health-itl-metadata-repairs" Label="Resize iTunes metadata repair hierarchy">
                 <controls:PersistedSplitView.Left>
                   <Grid RowDefinitions="Auto,*">
-                    <Grid Margin="10,8,10,3" ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="All iTunes repairs" /><ComboBox x:Name="ItlRepairRootDisposition" Grid.Column="1" MinWidth="112" /></Grid>
+                    <Grid Margin="10,8,10,3" ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Text="All iTunes repairs" /><ComboBox x:Name="ItlRepairRootDisposition" Grid.Column="1" MinWidth="112" AutomationProperties.Name="Disposition for all iTunes repairs" /></Grid>
                     <TreeView Grid.Row="1" Classes="health-tree" ItemsSource="{Binding ItlRepairGroups}" SelectedItem="{Binding SelectedItlRepairNode, Mode=TwoWay}">
                       <TreeView.DataTemplates>
                         <TreeDataTemplate DataType="{x:Type vm:ItlMetadataRepairCategoryGroupViewModel}" ItemsSource="{Binding Artists}"><Grid ColumnDefinitions="*,Auto,Auto"><TextBlock Text="{Binding Category}" /><TextBlock Grid.Column="1" Classes="tree-count" Text="{Binding Count}" /><ComboBox Grid.Column="2" MinWidth="104" ItemsSource="{Binding Dispositions}" SelectedItem="{Binding Disposition, Mode=TwoWay}" /></Grid></TreeDataTemplate>
@@ -163,8 +226,16 @@
                 </controls:PersistedSplitView.Left>
                 <controls:PersistedSplitView.Right><controls:AppDataGrid x:Name="ItlRepairGrid" FrozenColumnCount="1" ItemsSource="{Binding DisplayedItlRepairItems}" /></controls:PersistedSplitView.Right>
               </controls:PersistedSplitView>
+              </Grid>
             </TabItem>
           </TabControl>
+          <StackPanel IsVisible="{Binding !HasRuns}" Spacing="10"
+                      HorizontalAlignment="Center" VerticalAlignment="Center" Margin="24">
+            <TextBlock Classes="section-title" Text="No analysis selected" TextAlignment="Center" />
+            <TextBlock Classes="muted" Text="Run an Audit or Prepare repairs command to review its results here."
+                       TextAlignment="Center" TextWrapping="Wrap" MaxWidth="380" />
+          </StackPanel>
+          </Grid>
         </Border>
       </controls:PersistedSplitView.Right>
     </controls:PersistedSplitView>

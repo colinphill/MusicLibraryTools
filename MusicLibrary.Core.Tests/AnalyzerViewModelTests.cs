@@ -218,6 +218,8 @@ public sealed class AnalyzerViewModelTests
         var duplicateRun = Assert.Single(viewModel.Runs);
         Assert.Single(viewModel.Duplicates);
         Assert.Equal(1, viewModel.ActiveResultIndex);
+        Assert.Equal(AppActivityState.Completed, viewModel.LastActivityState);
+        Assert.Equal(MessageTone.Success, viewModel.StatusTone);
 
         await viewModel.RunLossyCommand.ExecuteAsync(null);
 
@@ -290,6 +292,62 @@ public sealed class AnalyzerViewModelTests
 
         Assert.Empty(viewModel.FilteredPaths);
         Assert.Empty(published!);
+    }
+
+    [Fact]
+    public async Task Analyzer_ClearFilterDispositionsClearsFindingsAndPreservesOtherChoices()
+    {
+        TrackRecord record = Track(
+            "one.mp3", "AA", "Album", CodecType.Lossy, "One", 1);
+        var viewModel = Create([record]);
+        IReadOnlyList<string>? published = null;
+        viewModel.FilterChanged += paths => published = paths;
+        await viewModel.RunLossyCommand.ExecuteAsync(null);
+        AnalysisFindingViewModel finding = Assert.Single(
+            Assert.Single(Assert.Single(viewModel.FindingGroups).Artists).Albums).Findings[0];
+        finding.Disposition = AnalysisFindingDisposition.Filter;
+
+        var activeRepair = new AnalysisTagRepair(
+            record.Path, TagFields.AlbumArtist, null, "AA", "Fill album artist", 1,
+            DateTime.UtcNow);
+        var filteredRepair = activeRepair with
+        {
+            Path = "two.mp3",
+            Reason = "Fill second album artist",
+        };
+        var completedRepair = activeRepair with
+        {
+            Path = "three.mp3",
+            Reason = "Already completed album artist",
+        };
+        var activeItem = new AnalysisRepairItemViewModel(activeRepair)
+        {
+            Disposition = AnalysisRepairDisposition.Active,
+        };
+        var filteredItem = new AnalysisRepairItemViewModel(filteredRepair)
+        {
+            Disposition = AnalysisRepairDisposition.Filter,
+        };
+        var completedItem = new AnalysisRepairItemViewModel(completedRepair)
+        {
+            Disposition = AnalysisRepairDisposition.Completed,
+            IsApplied = true,
+        };
+        viewModel.Runs.Add(AnalysisRunViewModel.ForRepairs(
+            new AnalysisRepairPlan("Repairs", [activeRepair, filteredRepair, completedRepair]),
+            [activeItem, filteredItem, completedItem], [record], "3 repairs"));
+        int clearPublicationCount = 0;
+        viewModel.FilterChanged += _ => clearPublicationCount++;
+
+        viewModel.ClearFilterDispositions();
+
+        Assert.Equal(AnalysisFindingDisposition.None, finding.Disposition);
+        Assert.Equal(AnalysisRepairDisposition.Active, activeItem.Disposition);
+        Assert.Equal(AnalysisRepairDisposition.Ignored, filteredItem.Disposition);
+        Assert.Equal(AnalysisRepairDisposition.Completed, completedItem.Disposition);
+        Assert.Empty(viewModel.FilteredPaths);
+        Assert.Empty(published!);
+        Assert.Equal(1, clearPublicationCount);
     }
 
     [Fact]
@@ -573,6 +631,41 @@ public sealed class AnalyzerViewModelTests
     }
 
     [Fact]
+    public async Task Analyzer_ArtworkHealthUsesThresholdsFromActiveLibraryConfiguration()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), $"analyzer-artwork-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            string configurationPath = Path.Combine(directory, "library.xml");
+            new EditableLibraryConfig
+            {
+                OversizedArtworkByteThreshold = 2_000_000,
+                OversizedArtworkDimensionThreshold = 500,
+            }.Save(configurationPath);
+            var settings = new AppSettings(Path.Combine(directory, "settings.json"));
+            settings.LoadConfig(configurationPath);
+            TrackRecord record = Track("track.flac", "AA", "Album");
+            var library = new StubLibrary([record],
+            [
+                new ArtworkAuditFile(record.Path, true,
+                    [new("cover", "image/jpeg", "FrontCover", 501, 500, 100_000)]),
+            ]);
+            var viewModel = new AnalyzerViewModel(
+                library, new StubReconciler(), new StubRepairs(), settings);
+
+            await viewModel.RunArtworkHealthCommand.ExecuteAsync(null);
+
+            Assert.Contains(viewModel.FindingGroups,
+                group => group.Problem == "Oversized artwork");
+        }
+        finally
+        {
+            try { Directory.Delete(directory, true); } catch { }
+        }
+    }
+
+    [Fact]
     public async Task Analyzer_RepresentationsHydratesArtworkOnlyForMatchedCandidates()
     {
         var cd = Track(@"Z:\FLAC\Album\01.flac", "AA", "Album", title: "Song", track: 1);
@@ -739,7 +832,9 @@ public sealed class AnalyzerViewModelTests
             CodecName = codec == CodecType.Lossy ? "MP3" : "FLAC",
         };
 
-    private sealed class StubLibrary(IReadOnlyList<TrackRecord> records) : ILibraryService
+    private sealed class StubLibrary(
+        IReadOnlyList<TrackRecord> records,
+        IReadOnlyList<ArtworkAuditFile>? artwork = null) : ILibraryService
     {
         public IReadOnlyList<string>? ArtworkPaths { get; private set; }
         public bool IsReady => true;
@@ -768,6 +863,9 @@ public sealed class AnalyzerViewModelTests
             return Task.FromResult<IReadOnlyList<string>>(
                 Enumerable.Repeat("same-cover", paths.Count).ToList());
         }
+        public Task<IReadOnlyList<ArtworkAuditFile>> GetArtworkAuditFilesAsync(
+            CancellationToken ct = default) =>
+            Task.FromResult(artwork ?? (IReadOnlyList<ArtworkAuditFile>)[]);
     }
 
     private sealed class StubReconciler : IArtistReconciler

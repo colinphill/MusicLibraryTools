@@ -44,6 +44,10 @@ public sealed class EditableLibraryConfig
     public int DiscNumLengthLimit { get; set; } = 255;
     public string AacEncoder { get; set; } = "libfdk_aac";
     public int AacBitrateKbps { get; set; } = 256;
+    public int OversizedArtworkByteThreshold { get; set; } =
+        LibraryArtworkHealthSettings.DefaultOversizedByteThreshold;
+    public int OversizedArtworkDimensionThreshold { get; set; } =
+        LibraryArtworkHealthSettings.DefaultOversizedDimensionThreshold;
     public bool DeleteSourcesAfterIngest { get; set; }
     public bool RemoveNonMusicAfterIngest { get; set; }
     public bool DeleteStaleCrossSyncFiles { get; set; }
@@ -59,7 +63,8 @@ public sealed class EditableLibraryConfig
     {
         "DatabaseFile", "ItunesLibrary", "FfmpegPath", "LengthLimit", "DiscNumLengthLimit",
         "SyncTarget", "SyncPlaylist", "PlaylistTarget", "PlaylistType", "IndexTarget",
-        "IngestSettings", "CrossSyncMusicSettings", "CrossSyncPlaylistsSettings",
+        "IngestSettings", "ArtworkHealthSettings", "CrossSyncMusicSettings",
+        "CrossSyncPlaylistsSettings",
     };
 
     public static EditableLibraryConfig Load(string path)
@@ -83,6 +88,9 @@ public sealed class EditableLibraryConfig
         config.AacBitrateKbps = ingest.AacBitrateKbps;
         config.DeleteSourcesAfterIngest = ingest.DeleteSourcesAfterIngest;
         config.RemoveNonMusicAfterIngest = ingest.RemoveNonMusicAfterIngest;
+        LibraryArtworkHealthSettings artworkHealth = parsed.ArtworkHealthSettings;
+        config.OversizedArtworkByteThreshold = artworkHealth.OversizedByteThreshold;
+        config.OversizedArtworkDimensionThreshold = artworkHealth.OversizedDimensionThreshold;
         config.DeleteStaleCrossSyncFiles = parsed.DeleteStaleCrossSyncFiles;
         config.CleanCrossSyncPlaylists = parsed.CleanCrossSyncPlaylists;
         foreach (LibraryIndexLocation location in parsed.IndexLocations)
@@ -240,6 +248,14 @@ public sealed class EditableLibraryConfig
             new XAttribute("AacBitrateKbps", AacBitrateKbps),
             new XAttribute("DeleteSourcesAfterIngest", DeleteSourcesAfterIngest),
             new XAttribute("RemoveNonMusicAfterIngest", RemoveNonMusicAfterIngest)));
+
+        if (OversizedArtworkByteThreshold <= 0)
+            throw new InvalidDataException("Oversized artwork byte threshold must be a positive integer.");
+        if (OversizedArtworkDimensionThreshold <= 0)
+            throw new InvalidDataException("Oversized artwork dimension threshold must be a positive integer.");
+        root.Add(new XElement("ArtworkHealthSettings",
+            new XAttribute("OversizedByteThreshold", OversizedArtworkByteThreshold),
+            new XAttribute("OversizedDimensionThreshold", OversizedArtworkDimensionThreshold)));
 
         string[] duplicateRoles = IndexTargets
             .Where(target => target.IngestRole != LibraryIngestRole.None)

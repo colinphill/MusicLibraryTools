@@ -7,18 +7,15 @@ using MusicLibrary.Core.Services;
 
 namespace MusicLibraryManager.Presentation;
 
-public sealed record IngestPreset(string Name, string SourceDirectory);
 public enum IngestPreviewFilter { All, Albums, Outputs, Conflicts, Cleanup }
 
 public partial class IngestViewModel : ViewModelBase
 {
 #if MUSIC_LIBRARY_MANAGER
     private const string SourcePreference = "manager.ingest.source.v1";
-    private const string PresetsPreference = "manager.ingest.presets.v1";
     private const string RecentSourcesPreference = "manager.ingest.recentSources.v1";
 #else
     private const string SourcePreference = "Ingest.SourceDirectory";
-    private const string PresetsPreference = "Ingest.Presets";
     private const string RecentSourcesPreference = "Ingest.RecentSources";
 #endif
     private const int RecentSourceLimit = 12;
@@ -29,16 +26,17 @@ public partial class IngestViewModel : ViewModelBase
     private readonly ILibraryService _library;
     private readonly IIngestPreflightService? _preflight;
     private readonly IOperationJournalService? _journals;
+    private readonly IActivityService? _activities;
     private CancellationTokenSource? _cts;
     private IngestPlan? _plan;
-    private bool _applyingPreset;
     private readonly List<IngestFileItemViewModel> _allFiles = [];
 
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(PreviewCommand)),
-     NotifyCanExecuteChangedFor(nameof(PreflightCommand)), NotifyCanExecuteChangedFor(nameof(SavePresetCommand))]
+     NotifyCanExecuteChangedFor(nameof(PreflightCommand))]
     private string? _sourceDirectory;
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(PreviewCommand)),
-     NotifyCanExecuteChangedFor(nameof(PreflightCommand)), NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
+     NotifyCanExecuteChangedFor(nameof(PreflightCommand)), NotifyCanExecuteChangedFor(nameof(ApplyCommand)),
+     NotifyCanExecuteChangedFor(nameof(CancelCommand)), NotifyCanExecuteChangedFor(nameof(OpenHistoryCommand))]
     private bool _isBusy;
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
     private bool _hasApplicablePreview;
@@ -52,10 +50,6 @@ public partial class IngestViewModel : ViewModelBase
     private int _applyProgress;
     [ObservableProperty]
     private int _applyProgressMaximum = 1;
-    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(SavePresetCommand))]
-    private string? _presetName;
-    [ObservableProperty, NotifyCanExecuteChangedFor(nameof(DeletePresetCommand))]
-    private IngestPreset? _selectedPreset;
     [ObservableProperty]
     private string? _selectedRecentSource;
     [ObservableProperty]
@@ -72,21 +66,27 @@ public partial class IngestViewModel : ViewModelBase
     private int _cleanupCount;
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RefreshHistoryCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenHistoryCommand))]
     private bool _isHistoryBusy;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(OpenHistoryCommand))]
+    private IngestHistoryItemViewModel? _selectedHistory;
     [ObservableProperty]
     private string _historyStatus = "Refresh to discover persistent ingest journals and interrupted runs.";
 
     public ObservableCollection<IngestFileItemViewModel> Files { get; } = [];
     public ObservableCollection<IngestConflict> Conflicts { get; } = [];
-    public ObservableCollection<IngestPreset> Presets { get; } = [];
     public ObservableCollection<string> RecentSources { get; } = [];
     public ObservableCollection<IngestPreflightCheck> PreflightChecks { get; } = [];
     public ObservableCollection<IngestHistoryItemViewModel> History { get; } = [];
     public IReadOnlyList<IngestPreviewFilter> PreviewFilters { get; } = Enum.GetValues<IngestPreviewFilter>();
     public bool HasPreflightChecks => PreflightChecks.Count > 0;
+    public bool IsPreviewEmpty => Files.Count == 0;
     public bool HasHistory => History.Count > 0;
+    public bool IsHistoryEmpty => History.Count == 0;
     public int InterruptedHistoryCount => History.Count(item => item.IsInterrupted);
     public bool IsConfigurationReady => GetConfigurationIssues().Count == 0;
+    public string ConfigurationReadinessIcon => IsConfigurationReady ? "i" : "⚠";
     public string ConfigurationReadinessText
     {
         get
@@ -102,18 +102,19 @@ public partial class IngestViewModel : ViewModelBase
 
     public IngestViewModel(IIngestMusicService service, IFileDialogService files, IDialogService dialogs,
         IAppSettings settings, ILibraryService library, IIngestPreflightService? preflight = null,
-        IOperationJournalService? journals = null)
+        IOperationJournalService? journals = null, IActivityService? activities = null)
     {
         _service = service; _files = files; _dialogs = dialogs; _settings = settings; _library = library;
         _preflight = preflight;
         _journals = journals;
-        LoadPresets();
+        _activities = activities;
         LoadRecentSources();
         SourceDirectory = settings.GetPreference(SourcePreference);
         settings.ConfigurationChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(IsConfigurationReady));
             OnPropertyChanged(nameof(ConfigurationReadinessText));
+            OnPropertyChanged(nameof(ConfigurationReadinessIcon));
             InvalidatePreview();
             NotifyCommands();
         };
@@ -122,22 +123,7 @@ public partial class IngestViewModel : ViewModelBase
     partial void OnSourceDirectoryChanged(string? value)
     {
         _settings.SetPreference(SourcePreference, string.IsNullOrWhiteSpace(value) ? null : value);
-        MarkPresetCustomized();
         InvalidatePreview();
-    }
-
-    partial void OnSelectedPresetChanged(IngestPreset? value)
-    {
-        if (value is null || _applyingPreset)
-            return;
-        _applyingPreset = true;
-        try
-        {
-            PresetName = value.Name;
-            SourceDirectory = value.SourceDirectory;
-        }
-        finally { _applyingPreset = false; }
-        StatusText = $"Loaded ingest preset '{value.Name}'. Run Preflight or Preview.";
     }
 
     partial void OnSelectedRecentSourceChanged(string? value)
@@ -193,6 +179,8 @@ public partial class IngestViewModel : ViewModelBase
             return;
         IsBusy = true;
         _cts = new CancellationTokenSource();
+        Guid? activity = _activities?.Start(
+            "Preflight ingest", "Checking ingest prerequisites", ShellDestination.Ingest, Cancel);
         PreflightChecks.Clear();
         OnPropertyChanged(nameof(HasPreflightChecks));
         try
@@ -208,9 +196,19 @@ public partial class IngestViewModel : ViewModelBase
                     ? "Preflight passed. The source is ready to scan."
                     : $"Preflight passed with {result.WarningCount:N0} warning(s). Review before previewing."
                 : $"Preflight found {result.ErrorCount:N0} blocking error(s).";
+            FinishActivity(activity, StatusText,
+                result.CanProceed ? AppActivityState.Completed : AppActivityState.Failed);
         }
-        catch (OperationCanceledException) { StatusText = "Preflight cancelled."; }
-        catch (Exception ex) { StatusText = $"Preflight failed: {ex.Message}"; }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Preflight cancelled.";
+            FinishActivity(activity, StatusText, AppActivityState.Cancelled);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Preflight failed: {ex.Message}";
+            FinishActivity(activity, StatusText, AppActivityState.Failed);
+        }
         finally { FinishBusy(); }
     }
 
@@ -232,70 +230,50 @@ public partial class IngestViewModel : ViewModelBase
             return;
         }
         IsHistoryBusy = true;
+        Guid? activity = _activities?.Start(
+            "Refresh ingest history", "Searching for ingest journals", ShellDestination.Ingest);
         try
         {
             HistoryStatus = $"Searching {roots.Count:N0} source root(s) for ingest journals…";
             var result = await _journals.DiscoverAsync(roots);
+            SelectedHistory = null;
             History.Clear();
             foreach (var run in result.Runs.Where(run => run.Kind == OperationJournalKind.Ingest).Take(50))
                 History.Add(new IngestHistoryItemViewModel(run));
             OnPropertyChanged(nameof(HasHistory));
+            OnPropertyChanged(nameof(IsHistoryEmpty));
             OnPropertyChanged(nameof(InterruptedHistoryCount));
             HistoryStatus = $"{History.Count:N0} ingest run(s); {InterruptedHistoryCount:N0} interrupted"
                 + (result.Warnings.Count == 0 ? "." : $"; {result.Warnings.Count:N0} root warning(s).");
+            FinishActivity(activity, HistoryStatus,
+                result.Warnings.Count == 0 ? AppActivityState.Completed : AppActivityState.Failed);
         }
         catch (Exception ex)
         {
             HistoryStatus = $"Ingest history refresh failed: {ex.Message}";
+            FinishActivity(activity, HistoryStatus, AppActivityState.Failed);
         }
         finally { IsHistoryBusy = false; }
     }
 
-    [RelayCommand]
-    private void OpenHistory(IngestHistoryItemViewModel? item)
+    private bool CanOpenHistory() => !IsBusy && !IsHistoryBusy && SelectedHistory is not null;
+
+    [RelayCommand(CanExecute = nameof(CanOpenHistory))]
+    private void OpenHistory()
     {
-        if (item is not null)
-            RecoveryRequested?.Invoke(item.Summary);
+        if (SelectedHistory is not null)
+            RecoveryRequested?.Invoke(SelectedHistory.Summary);
     }
-
-    private bool CanSavePreset() => !string.IsNullOrWhiteSpace(PresetName) &&
-        !string.IsNullOrWhiteSpace(SourceDirectory);
-
-    [RelayCommand(CanExecute = nameof(CanSavePreset))]
-    private void SavePreset()
-    {
-        var preset = new IngestPreset(PresetName!.Trim(), Path.GetFullPath(SourceDirectory!));
-        int existing = Presets.Select((item, index) => (item, index))
-            .FirstOrDefault(pair => pair.item.Name.Equals(preset.Name, StringComparison.OrdinalIgnoreCase)).index;
-        bool found = Presets.Any(item => item.Name.Equals(preset.Name, StringComparison.OrdinalIgnoreCase));
-        if (found) Presets[existing] = preset;
-        else Presets.Add(preset);
-        PersistPresets();
-        _applyingPreset = true;
-        try { SelectedPreset = preset; }
-        finally { _applyingPreset = false; }
-        StatusText = $"Saved ingest preset '{preset.Name}'.";
-    }
-
-    [RelayCommand(CanExecute = nameof(CanDeletePreset))]
-    private void DeletePreset()
-    {
-        if (SelectedPreset is not { } selected)
-            return;
-        Presets.Remove(selected);
-        SelectedPreset = null;
-        PersistPresets();
-        StatusText = $"Deleted ingest preset '{selected.Name}'.";
-    }
-
-    private bool CanDeletePreset() => SelectedPreset is not null;
 
     [RelayCommand(CanExecute = nameof(CanPreview))]
     private async Task PreviewAsync()
     {
         IsBusy = true; IsPreviewing = true; HasApplicablePreview = false; _plan = null;
         _allFiles.Clear(); Files.Clear(); Conflicts.Clear(); HasPreviewSummary = false;
+        OnPropertyChanged(nameof(IsPreviewEmpty));
         _cts = new CancellationTokenSource();
+        Guid? activity = _activities?.Start(
+            "Preview ingest", "Scanning incoming music", ShellDestination.Ingest, Cancel);
         try
         {
             StatusText = "Scanning and planning…";
@@ -331,9 +309,19 @@ public partial class IngestViewModel : ViewModelBase
                 : plan.Conflicts.Count > 0
                     ? $"Preview has {plan.Conflicts.Count} conflicts and cannot be applied."
                     : "No importable music albums or enabled non-music cleanup items were found.";
+            FinishActivity(activity, StatusText,
+                plan.CanApply ? AppActivityState.Completed : AppActivityState.Failed);
         }
-        catch (OperationCanceledException) { StatusText = "Preview cancelled."; }
-        catch (Exception ex) { StatusText = $"Preview failed: {ex.Message}"; }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Preview cancelled.";
+            FinishActivity(activity, StatusText, AppActivityState.Cancelled);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Preview failed: {ex.Message}";
+            FinishActivity(activity, StatusText, AppActivityState.Failed);
+        }
         finally { FinishBusy(); }
     }
 
@@ -343,8 +331,10 @@ public partial class IngestViewModel : ViewModelBase
     private async Task ApplyAsync()
     {
         if (_plan is null) return;
+        IngestPlan plan = _plan;
         IsBusy = true; IsApplying = true; ApplyProgress = 0; ApplyProgressMaximum = 1; _cts = new CancellationTokenSource();
         foreach (var file in _allFiles) file.ResetProgress();
+        Guid? activity = null;
         try
         {
             var decisions = new List<IngestApprovalDecision>();
@@ -358,6 +348,20 @@ public partial class IngestViewModel : ViewModelBase
                     return;
                 }
             }
+            int outputs = plan.Albums.Sum(album => album.Outputs.Count);
+            int cleanup = plan.IgnoredFileSnapshots.Count + plan.SourceDirectories.Count;
+            if (!await _dialogs.ConfirmApplyAsync(
+                    "Apply ingest plan",
+                    $"Import {plan.Albums.Count:N0} album(s), create {outputs:N0} output file(s), " +
+                    $"and clean up {cleanup:N0} source item(s)?\n\n" +
+                    "Recovery is available: completed albums and cleanup actions are recorded in operation journals.",
+                    "Apply ingest"))
+            {
+                StatusText = "Ingest was not applied. The reviewed preview remains available.";
+                return;
+            }
+            activity = _activities?.Start(
+                "Ingest music", "Starting ingest", ShellDestination.Ingest, Cancel);
             var progress = new Progress<IngestProgress>(p =>
             {
                 ApplyProgressMaximum = Math.Max(1, p.TotalItems);
@@ -367,8 +371,11 @@ public partial class IngestViewModel : ViewModelBase
                     _allFiles.FirstOrDefault(file => !file.IsConflict &&
                         string.Equals(file.Source, p.SourcePath, StringComparison.OrdinalIgnoreCase))
                         ?.SetProgress(state, p.Operation);
+                if (activity is { } id)
+                    _activities?.Report(id, StatusText,
+                        p.TotalItems <= 0 ? null : (double)p.CompletedItems / p.TotalItems);
             });
-            var result = await _service.ApplyAsync(_plan, decisions, progress, _cts.Token);
+            var result = await _service.ApplyAsync(plan, decisions, progress, _cts.Token);
             if (!result.Cancelled && result.Albums.Any(a => a.Success) && _library.IsReady)
             {
                 // Once ingestion commits files, finish the cache refresh even if the user presses
@@ -392,28 +399,42 @@ public partial class IngestViewModel : ViewModelBase
             HasApplicablePreview = false; _plan = null;
             if (!result.Cancelled && _journals is not null)
                 await RefreshHistoryAsync();
+            FinishActivity(activity, StatusText,
+                result.Cancelled ? AppActivityState.Cancelled :
+                result.Failed == 0 ? AppActivityState.Completed : AppActivityState.Failed);
         }
-        catch (OperationCanceledException) { StatusText = "Cancelled; any album already committed remains safely journaled."; }
-        catch (Exception ex) { StatusText = $"Apply failed: {ex.Message}"; }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Cancelled; any album already committed remains safely journaled.";
+            FinishActivity(activity, StatusText, AppActivityState.Cancelled);
+        }
+        catch (Exception ex)
+        {
+            StatusText = $"Apply failed: {ex.Message}";
+            FinishActivity(activity, StatusText, AppActivityState.Failed);
+        }
         finally { FinishBusy(); }
     }
 
-    [RelayCommand]
+    private bool CanCancel() => IsBusy && _cts is not null;
+
+    [RelayCommand(CanExecute = nameof(CanCancel))]
     private void Cancel() => _cts?.Cancel();
+
+    private void FinishActivity(
+        Guid? activity,
+        string message,
+        AppActivityState state = AppActivityState.Completed)
+    {
+        if (activity is { } id)
+            _activities?.Finish(id, message, state);
+    }
 
     private void FinishBusy()
     {
         _cts?.Dispose(); _cts = null; IsBusy = false; IsPreviewing = false; IsApplying = false;
         PreviewCommand.NotifyCanExecuteChanged(); PreflightCommand.NotifyCanExecuteChanged();
         ApplyCommand.NotifyCanExecuteChanged();
-    }
-
-    private void MarkPresetCustomized()
-    {
-        if (_applyingPreset || SelectedPreset is null)
-            return;
-        if (!StringComparer.OrdinalIgnoreCase.Equals(SourceDirectory, SelectedPreset.SourceDirectory))
-            SelectedPreset = null;
     }
 
     private void RefilterFiles()
@@ -428,23 +449,8 @@ public partial class IngestViewModel : ViewModelBase
                      _ => true,
                  }))
             Files.Add(item);
+        OnPropertyChanged(nameof(IsPreviewEmpty));
     }
-
-    private void LoadPresets()
-    {
-        try
-        {
-            var presets = JsonSerializer.Deserialize<List<IngestPreset>>(
-                _settings.GetPreference(PresetsPreference) ?? "[]") ?? [];
-            foreach (var preset in presets.Where(preset => !string.IsNullOrWhiteSpace(preset.Name) &&
-                         !string.IsNullOrWhiteSpace(preset.SourceDirectory)))
-                Presets.Add(preset);
-        }
-        catch { }
-    }
-
-    private void PersistPresets() =>
-        _settings.SetPreference(PresetsPreference, JsonSerializer.Serialize(Presets));
 
     private void LoadRecentSources()
     {
@@ -484,7 +490,6 @@ public partial class IngestViewModel : ViewModelBase
     {
         PreviewCommand.NotifyCanExecuteChanged();
         PreflightCommand.NotifyCanExecuteChanged();
-        SavePresetCommand.NotifyCanExecuteChanged();
     }
 }
 

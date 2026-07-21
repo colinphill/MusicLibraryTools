@@ -7,18 +7,50 @@
         <TextBlock Classes="page-title" Text="Your music, clearly managed" />
         <TextBlock Classes="muted" Text="A calm view of the collection, its health, and what needs attention next." />
       </StackPanel>
-      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasConfiguration}">
         <Button Classes="app" Content="Refresh" Command="{Binding RefreshCommand}" />
         <Button Classes="app primary" Content="Open library" Command="{Binding OpenLibraryCommand}" />
       </StackPanel>
+      <Button Grid.Column="1" Classes="app" Content="Set up library"
+              IsVisible="{Binding NeedsSetup}" Command="{Binding OpenSettingsCommand}" />
     </Grid>
 
-    <Border Grid.Row="1" Classes="status-banner" IsVisible="{Binding HasError}">
+    <Border Grid.Row="1" Classes="status-banner error" IsVisible="{Binding HasError}"
+            AutomationProperties.LiveSetting="Assertive">
       <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
     </Border>
 
     <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
       <StackPanel Spacing="14">
+        <Border Classes="card" IsVisible="{Binding NeedsSetup}">
+          <Grid ColumnDefinitions="1.2*,0.8*" ColumnSpacing="28">
+            <StackPanel Spacing="10">
+              <TextBlock Classes="section-title" Text="Set up your music library" />
+              <TextBlock Classes="muted" Text="Connect a configuration before browsing, auditing, or organizing music. Your existing files are not changed during setup." TextWrapping="Wrap" />
+              <Button Classes="app primary" HorizontalAlignment="Left" Content="Choose or create configuration"
+                      Command="{Binding OpenSettingsCommand}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="10">
+              <Grid ColumnDefinitions="28,*" ColumnSpacing="10">
+                <Border Width="26" Height="26" CornerRadius="13" Background="{DynamicResource AppAccentBrush}"><TextBlock Text="1" Foreground="{DynamicResource AppAccentInkBrush}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+                <StackPanel Grid.Column="1"><TextBlock Text="Choose a configuration" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="Open an existing XML file or create one." TextWrapping="Wrap" /></StackPanel>
+              </Grid>
+              <Grid ColumnDefinitions="28,*" ColumnSpacing="10">
+                <Border Width="26" Height="26" CornerRadius="13" Background="{DynamicResource AppInsetBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"><TextBlock Text="2" Classes="muted" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+                <StackPanel Grid.Column="1"><TextBlock Text="Add library roots" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="Tell the manager where your music lives." TextWrapping="Wrap" /></StackPanel>
+              </Grid>
+              <Grid ColumnDefinitions="28,*" ColumnSpacing="10">
+                <Border Width="26" Height="26" CornerRadius="13" Background="{DynamicResource AppInsetBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"><TextBlock Text="3" Classes="muted" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+                <StackPanel Grid.Column="1"><TextBlock Text="Index the library" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="Build the local cache without changing your files." TextWrapping="Wrap" /></StackPanel>
+              </Grid>
+              <Grid ColumnDefinitions="28,*" ColumnSpacing="10">
+                <Border Width="26" Height="26" CornerRadius="13" Background="{DynamicResource AppInsetBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"><TextBlock Text="4" Classes="muted" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
+                <StackPanel Grid.Column="1"><TextBlock Text="Browse and review" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="Explore the indexed collection and run a Health audit." TextWrapping="Wrap" /></StackPanel>
+              </Grid>
+            </StackPanel>
+          </Grid>
+        </Border>
+
         <Border Classes="card" IsVisible="{Binding Indexing.IsIndexing}">
           <Grid x:Name="IndexingBannerLayout" ColumnDefinitions="Auto,*" ColumnSpacing="12">
             <ProgressBar Width="22" Height="22" IsIndeterminate="True" />
@@ -29,7 +61,7 @@
           </Grid>
         </Border>
 
-        <UniformGrid Columns="4" Rows="1">
+        <UniformGrid Columns="4" Rows="1" IsVisible="{Binding HasConfiguration}">
           <Border Classes="card" Margin="0,0,9,0">
             <StackPanel Spacing="8"><TextBlock Classes="muted" Text="Tracks" FontWeight="SemiBold" /><TextBlock Text="{Binding TrackCount}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="28" FontWeight="SemiBold" /></StackPanel>
           </Border>
@@ -44,7 +76,25 @@
           </Border>
         </UniformGrid>
 
-        <Grid ColumnDefinitions="1.45*,14,1*">
+        <Grid ColumnDefinitions="*,14,*" IsVisible="{Binding HasConfiguration}">
+          <Border Grid.Column="0" Classes="card">
+            <StackPanel Spacing="8">
+              <TextBlock Classes="muted" Text="Last successful index" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding LastIndexTime}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="20" FontWeight="SemiBold" />
+            </StackPanel>
+          </Border>
+          <Border Grid.Column="2" Classes="card">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+              <StackPanel Spacing="8">
+                <TextBlock Classes="muted" Text="Roots needing attention" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding AttentionCount}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="20" FontWeight="SemiBold" />
+              </StackPanel>
+              <Button Grid.Column="1" Classes="app" Content="Open Health" Command="{Binding OpenHealthCommand}" VerticalAlignment="Center" />
+            </Grid>
+          </Border>
+        </Grid>
+
+        <Grid ColumnDefinitions="1.45*,14,1*" IsVisible="{Binding HasConfiguration}">
           <Border Grid.Column="0" Classes="card">
             <StackPanel Spacing="10">
               <StackPanel Orientation="Horizontal" Spacing="8"><Ellipse Width="8" Height="8" Fill="{DynamicResource AppAccentBrush}" /><TextBlock Classes="section-title" Text="Library roots" /></StackPanel>
@@ -59,12 +109,30 @@
               <TextBlock Classes="muted" Text="{Binding Indexing.StatusText}" TextWrapping="Wrap" />
               <ProgressBar Classes="app" Minimum="0" Maximum="1" Value="{Binding Indexing.Progress}" IsVisible="{Binding Indexing.IsIndexing}" />
               <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Classes="app primary" Content="Index library" Command="{Binding Indexing.IndexCommand}" />
+                <Button Classes="app" Content="Index library" Command="{Binding Indexing.IndexCommand}" />
                 <Button Classes="app" Content="Cancel" Command="{Binding Indexing.CancelCommand}" />
               </StackPanel>
             </StackPanel>
           </Border>
         </Grid>
+
+        <Border Classes="card" IsVisible="{Binding HasRecentActivity}">
+          <StackPanel Spacing="10">
+            <TextBlock Classes="section-title" Text="Recent activity" />
+            <ItemsControl ItemsSource="{Binding RecentActivityItems}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Grid Margin="0,0,0,8" ColumnDefinitions="Auto,180,*,Auto" ColumnSpacing="10">
+                    <Ellipse Width="7" Height="7" Fill="{DynamicResource AppAccentBrush}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="2" Classes="muted" Text="{Binding Message}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="3" Classes="muted" Text="{Binding State}" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
       </StackPanel>
     </ScrollViewer>
   </Grid>

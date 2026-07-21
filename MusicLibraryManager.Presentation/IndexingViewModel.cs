@@ -57,7 +57,11 @@ public partial class IndexingViewModel : ObservableObject
         Progress = 0;
         IsProgressIndeterminate = true;
         _cancellation = new CancellationTokenSource();
-        Guid activity = _activities.Start("Index library", "Preparing the library index");
+        Guid activity = _activities.Start(
+            "Index library",
+            "Preparing the library index",
+            ShellDestination.Library,
+            () => _cancellation?.Cancel());
         var progress = new Progress<IndexProgress>(item =>
         {
             StatusText = Describe(item);

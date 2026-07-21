@@ -6,11 +6,11 @@
     <controls:PageHeader Title="Organize"
         Subtitle="Move eligible files into the canonical library layout with rollback protection.">
       <controls:PageHeader.Actions>
-        <StackPanel Orientation="Horizontal" Spacing="8">
+        <WrapPanel>
           <Button Classes="app" Content="Preview" Command="{Binding PreviewCommand}" />
-          <Button Classes="app primary" Content="Apply moves" Command="{Binding ApplyCommand}" />
-          <Button Classes="app" Content="Cancel" Command="{Binding CancelCommand}" />
-        </StackPanel>
+          <Button Classes="app primary" Margin="8,0,0,0" Content="Apply moves" Command="{Binding ApplyCommand}" />
+          <Button Classes="app" Margin="8,0,0,0" Content="Cancel" Command="{Binding CancelCommand}" />
+        </WrapPanel>
       </controls:PageHeader.Actions>
     </controls:PageHeader>
     <Border Grid.Row="1" Classes="card">
@@ -18,7 +18,7 @@
         <Ellipse Width="8" Height="8" Fill="{DynamicResource AppAccentBrush}" />
         <StackPanel Grid.Column="1" Spacing="3">
           <TextBlock Text="Preview before applying" FontWeight="SemiBold" />
-          <TextBlock Classes="muted" Text="{Binding StatusText}" TextWrapping="Wrap" />
+          <TextBlock Classes="muted" Text="{Binding StatusText}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
         </StackPanel>
         <TextBlock x:Name="PlannedCount" Grid.Column="2"
                    Classes="summary-label"
@@ -26,7 +26,15 @@
       </Grid>
     </Border>
     <Border Grid.Row="2" Classes="card" Padding="0" ClipToBounds="True">
-      <controls:AppDataGrid x:Name="MovesGrid" ItemsSource="{Binding Moves}" />
+      <Grid>
+        <controls:AppDataGrid x:Name="MovesGrid" ItemsSource="{Binding Moves}" />
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6"
+                    IsVisible="{Binding IsMoveListEmpty}" MaxWidth="420">
+          <TextBlock HorizontalAlignment="Center" FontWeight="SemiBold" Text="No planned moves" />
+          <TextBlock Classes="muted" TextAlignment="Center" TextWrapping="Wrap"
+                     Text="Preview the active library to see files that need canonical locations." />
+        </StackPanel>
+      </Grid>
     </Border>
   </Grid>
 </UserControl>

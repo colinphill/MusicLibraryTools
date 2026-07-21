@@ -1,4 +1,6 @@
+using global::Avalonia;
 using global::Avalonia.Controls;
+using global::Avalonia.Controls.Presenters;
 using global::Avalonia.Controls.Templates;
 using global::Avalonia.Data;
 using global::Avalonia.Interactivity;
@@ -6,6 +8,7 @@ using global::Avalonia.Input;
 using global::Avalonia.Markup.Xaml;
 using global::Avalonia.Media;
 using global::Avalonia.Threading;
+using System.ComponentModel;
 using MusicLibraryManager.Presentation;
 using MusicLibraryManager.Controls;
 using MusicLibraryManager.Services;
@@ -20,6 +23,10 @@ public partial class LibraryView : UserControl
     private readonly List<AppGridColumnDefinition> _columns = [];
     private IReadOnlyList<LibraryRow> _selected = [];
     private LibrarySortState? _sort;
+    private bool _restoringSelection;
+    private bool _selectionChangePending;
+    private bool _responsiveCompact;
+    private bool _drawerOpen;
 
     public LibraryView()
     {
@@ -31,9 +38,13 @@ public partial class LibraryView : UserControl
         BuildColumns();
         ApplySnapshot(_gridState.Load());
         ConfigureGrid();
+        LibraryGrid.ApplySort(_sort);
         BuildColumnOptions();
         LibraryGrid.LayoutChanged += (_, _) => PersistLayout();
         LibraryGrid.SortChanged += (_, _) => Dispatcher.UIThread.Post(CaptureSortAndPersist);
+        InspectorView.CloseRequested += OnInspectorCloseRequested;
+        AttachedToVisualTree += OnAttachedToVisualTree;
+        DetachedFromVisualTree += OnDetachedFromVisualTree;
         if (_viewModel.Rows.Count == 0)
             _ = _viewModel.ReloadAsync();
     }
@@ -87,6 +98,7 @@ public partial class LibraryView : UserControl
     {
         LibraryGrid.ConfigureColumns(_columns);
         LibraryGrid.FrozenColumnCount = _columns.TakeWhile(item => !item.Visible).Any() ? 0 : 1;
+        LibraryGrid.ApplySort(_sort);
     }
 
     private void BuildColumnOptions()
@@ -141,11 +153,37 @@ public partial class LibraryView : UserControl
 
     private async void OnGridSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        _selected = LibraryGrid.SelectedItems.OfType<LibraryRow>().ToArray();
-        await _viewModel.SelectAsync(_selected);
-        bool hasSelection = _selected.Count > 0;
-        SelectedCountLabel.IsVisible = CopyButton.IsVisible = RevealButton.IsVisible = ReindexButton.IsVisible = hasSelection;
-        SelectedCountLabel.Text = $"{_selected.Count:N0} selected";
+        if (_restoringSelection || _selectionChangePending)
+            return;
+
+        // Replacing ItemsSource clears DataGrid's object-based selection before the new rows are
+        // realized. Preserve the path-based selection and restore it against the replacement rows.
+        if (LibraryGrid.SelectedItems.Count == 0 &&
+            e.RemovedItems.OfType<LibraryRow>().Any(row => !_viewModel.Rows.Contains(row)) &&
+            _viewModel.SelectedPaths.Count > 0)
+        {
+            Dispatcher.UIThread.Post(RestoreVisibleSelection);
+            return;
+        }
+
+        LibraryRow[] requested = LibraryGrid.SelectedItems.OfType<LibraryRow>().ToArray();
+        _selectionChangePending = true;
+        LibraryGrid.IsEnabled = false;
+        try
+        {
+            if (!await _viewModel.SelectAsync(requested))
+            {
+                RestoreVisibleSelection();
+                return;
+            }
+            _selected = requested;
+            UpdateSelectionActions();
+        }
+        finally
+        {
+            _selectionChangePending = false;
+            LibraryGrid.IsEnabled = true;
+        }
     }
 
     private void OnLoadingRow(object? sender, DataGridRowEventArgs e)
@@ -166,18 +204,45 @@ public partial class LibraryView : UserControl
 
     private void OnLibraryKeyDown(object? sender, KeyEventArgs e)
     {
-        if (e.Key != Key.Escape || !ColumnPopover.IsOpen)
+        if (e.Key != Key.Escape)
             return;
-        ColumnPopover.IsOpen = false;
-        e.Handled = true;
+        if (ColumnPopover.IsOpen)
+        {
+            ColumnPopover.IsOpen = false;
+            e.Handled = true;
+        }
+        else if (ViewsPopover.IsOpen)
+        {
+            ViewsPopover.IsOpen = false;
+            e.Handled = true;
+        }
+        else if (FilterHelpPopover.IsOpen)
+        {
+            FilterHelpPopover.IsOpen = false;
+            e.Handled = true;
+        }
     }
-    private void OnInspectorToggle(object? sender, RoutedEventArgs e) => WorkspaceSplit.ToggleCompactRight();
+
+    private void OnInspectorToggle(object? sender, RoutedEventArgs e)
+    {
+        if (!_viewModel.IsInspectorOpen)
+        {
+            _viewModel.IsInspectorOpen = true;
+            _drawerOpen = true;
+        }
+        else if (_responsiveCompact)
+        {
+            _drawerOpen = !_drawerOpen;
+        }
+        ApplyInspectorVisibility();
+    }
 
     public void ApplyResponsiveLayout(bool compact)
     {
-        WorkspaceSplit.SetCompact(compact);
-        InspectorToggle.IsVisible = compact;
-        ViewNameBox.IsVisible = !compact;
+        _responsiveCompact = compact;
+        if (!compact)
+            _drawerOpen = false;
+        ApplyInspectorVisibility();
     }
 
     private void OnSavedViewChanged(object? sender, SelectionChangedEventArgs e)
@@ -186,7 +251,10 @@ public partial class LibraryView : UserControl
         {
             ApplySnapshot(new GridSnapshot(view.Columns, view.Sort));
             ConfigureGrid();
+            LibraryGrid.ApplySort(view.Sort);
+            _sort = view.Sort;
             BuildColumnOptions();
+            ViewsPopover.IsOpen = false;
         }
     }
 
@@ -208,4 +276,92 @@ public partial class LibraryView : UserControl
 
     private async void OnReindex(object? sender, RoutedEventArgs e) =>
         await _viewModel.ReindexAsync(_selected.Select(item => item.Path).ToArray());
+
+    private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        Dispatcher.UIThread.Post(() =>
+        {
+            RestoreVisibleSelection();
+            ApplyInspectorVisibility();
+        });
+    }
+
+    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e) =>
+        _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(LibraryViewModel.Rows) or nameof(LibraryViewModel.SelectedPaths))
+            Dispatcher.UIThread.Post(RestoreVisibleSelection);
+        else if (e.PropertyName is nameof(LibraryViewModel.IsInspectorOpen) or
+                 nameof(LibraryViewModel.HasUnsavedSelectionChanges))
+            Dispatcher.UIThread.Post(ApplyInspectorVisibility);
+    }
+
+    private void RestoreVisibleSelection()
+    {
+        LibraryRow[] rows = _viewModel.GetVisibleSelectedRows().ToArray();
+        _restoringSelection = true;
+        try
+        {
+            LibraryGrid.SelectedItems.Clear();
+            foreach (LibraryRow row in rows)
+                LibraryGrid.SelectedItems.Add(row);
+        }
+        finally
+        {
+            _restoringSelection = false;
+        }
+        _selected = rows;
+        UpdateSelectionActions();
+    }
+
+    private void UpdateSelectionActions()
+    {
+        bool hasSelection = _selected.Count > 0;
+        SelectedCountLabel.IsVisible = CopyButton.IsVisible = RevealButton.IsVisible =
+            ReindexButton.IsVisible = hasSelection;
+        SelectedCountLabel.Text = $"{_selected.Count:N0} selected";
+    }
+
+    private void OnInspectorCloseRequested(object? sender, EventArgs e)
+    {
+        _drawerOpen = false;
+        _viewModel.IsInspectorOpen = false;
+        ApplyInspectorVisibility();
+    }
+
+    private void ApplyInspectorVisibility()
+    {
+        bool inspectorOpen = _viewModel.IsInspectorOpen;
+        bool useCompactPresentation = _responsiveCompact || !inspectorOpen;
+        WorkspaceSplit.SetCompact(useCompactPresentation);
+        ContentPresenter? presenter = WorkspaceSplit.FindControl<ContentPresenter>("RightPresenter");
+        if (presenter is not null)
+        {
+            presenter.Width = _responsiveCompact ? 320 : double.NaN;
+            presenter.IsVisible = inspectorOpen && (!_responsiveCompact || _drawerOpen);
+        }
+        bool drawerVisible = inspectorOpen && _responsiveCompact && _drawerOpen;
+        InspectorScrim.IsVisible = drawerVisible;
+        InspectorToggle.IsVisible = _responsiveCompact || !inspectorOpen;
+        InspectorToggle.Content = drawerVisible ? "Hide inspector" :
+            _viewModel.HasUnsavedSelectionChanges ? "Inspector (unsaved)" : "Inspector";
+    }
+
+    private void OnInspectorScrimPressed(object? sender, PointerPressedEventArgs e)
+    {
+        _drawerOpen = false;
+        ApplyInspectorVisibility();
+        e.Handled = true;
+    }
+
+    private void OnViewsClick(object? sender, RoutedEventArgs e) =>
+        ViewsPopover.IsOpen = !ViewsPopover.IsOpen;
+
+    private void OnViewsClose(object? sender, RoutedEventArgs e) => ViewsPopover.IsOpen = false;
+
+    private void OnFilterHelpClick(object? sender, RoutedEventArgs e) =>
+        FilterHelpPopover.IsOpen = !FilterHelpPopover.IsOpen;
 }

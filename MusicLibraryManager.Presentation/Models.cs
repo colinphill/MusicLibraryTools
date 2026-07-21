@@ -11,6 +11,31 @@ public sealed record LibraryColumnState(string Key, double? Width, int DisplayIn
 
 public sealed record LibrarySortState(string Key, bool Descending);
 
+public enum LibraryPageState
+{
+    NoConfiguration,
+    Loading,
+    Ready,
+    NotIndexed,
+    NoResults,
+    FilteredToZero,
+    Error,
+}
+
+public enum FieldValueVerification
+{
+    Exact,
+    Unverified,
+}
+
+public enum MessageTone
+{
+    Info,
+    Success,
+    Warning,
+    Error,
+}
+
 public sealed record LibraryViewDefinition(
     string Name,
     string? Filter,
@@ -96,19 +121,44 @@ public partial class EditableTagField(TagFields field, string label) : Observabl
     [ObservableProperty]
     private bool _isModified;
 
-    public void SetLoaded(string? value, bool mixed)
-        => SetLoaded(string.IsNullOrEmpty(value) ? [] : [value], mixed);
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsUnverified))]
+    [NotifyPropertyChangedFor(nameof(PlaceholderText))]
+    [NotifyPropertyChangedFor(nameof(VerificationMessage))]
+    private FieldValueVerification _verification = FieldValueVerification.Exact;
 
-    public void SetLoaded(IReadOnlyList<string> values, bool mixed)
+    public bool IsUnverified => Verification == FieldValueVerification.Unverified;
+    public string PlaceholderText => IsUnverified
+        ? "Not verified across the full selection - type to replace"
+        : IsMixed
+            ? "Mixed values - type to replace"
+            : "No value";
+    public string? VerificationMessage => IsUnverified
+        ? "The cache does not contain this field for every selected track. Its current value is not shown; typing a value will intentionally replace it on the full selection."
+        : null;
+
+    public void SetLoaded(string? value, bool mixed)
+        => SetLoaded(string.IsNullOrEmpty(value) ? [] : [value], mixed, FieldValueVerification.Exact);
+
+    public void SetLoaded(
+        IReadOnlyList<string> values,
+        bool mixed,
+        FieldValueVerification verification = FieldValueVerification.Exact)
     {
         string[] distinctValues = values
             .Where(value => !string.IsNullOrEmpty(value))
             .Distinct(StringComparer.Ordinal)
             .ToArray();
-        Value = !mixed && distinctValues.Length == 1 ? distinctValues[0] : null;
-        IsMixed = mixed;
+        Verification = verification;
+        Value = verification == FieldValueVerification.Exact && !mixed && distinctValues.Length == 1
+            ? distinctValues[0]
+            : null;
+        IsMixed = mixed || verification == FieldValueVerification.Unverified;
         IsModified = false;
+        OnPropertyChanged(nameof(PlaceholderText));
     }
+
+    partial void OnIsMixedChanged(bool value) => OnPropertyChanged(nameof(PlaceholderText));
 
     partial void OnValueChanged(string? value)
     {

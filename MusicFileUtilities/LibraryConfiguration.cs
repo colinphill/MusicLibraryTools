@@ -35,6 +35,14 @@ namespace MusicLibraryTools
         bool DeleteSourcesAfterIngest,
         bool RemoveNonMusicAfterIngest);
 
+    public sealed record LibraryArtworkHealthSettings(
+        int OversizedByteThreshold,
+        int OversizedDimensionThreshold)
+    {
+        public const int DefaultOversizedByteThreshold = 2 * 1024 * 1024;
+        public const int DefaultOversizedDimensionThreshold = 2_000;
+    }
+
     public sealed record LibraryIndexLocation(
         string Target,
         string? DefaultOffset,
@@ -310,6 +318,19 @@ namespace MusicLibraryTools
                     ParsePositiveInteger(element, "AacBitrateKbps", 256),
                     ParseOptionalBoolean(element, "DeleteSourcesAfterIngest", defaultValue: false),
                     ParseOptionalBoolean(element, "RemoveNonMusicAfterIngest", defaultValue: false));
+            }
+        }
+
+        public LibraryArtworkHealthSettings ArtworkHealthSettings
+        {
+            get
+            {
+                XElement? element = root_.Element("ArtworkHealthSettings");
+                return new(
+                    ParsePositiveInteger(element, "OversizedByteThreshold",
+                        LibraryArtworkHealthSettings.DefaultOversizedByteThreshold),
+                    ParsePositiveInteger(element, "OversizedDimensionThreshold",
+                        LibraryArtworkHealthSettings.DefaultOversizedDimensionThreshold));
             }
         }
 

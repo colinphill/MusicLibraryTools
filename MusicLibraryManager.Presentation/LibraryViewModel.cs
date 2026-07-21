@@ -6,7 +6,7 @@ using MusicLibrary.Core.Services;
 
 namespace MusicLibraryManager.Presentation;
 
-public partial class LibraryViewModel : ObservableObject
+public partial class LibraryViewModel : ObservableObject, INavigationGuard
 {
     private const string ViewsPreference = "manager.library.views.v1";
     private const string WorkspacePreference = "manager.library.workspace.v1";
@@ -26,14 +26,17 @@ public partial class LibraryViewModel : ObservableObject
     private const int ThumbnailCacheLimit = 256;
     private List<LibraryRow> _allRows = [];
     private HashSet<string> _healthFilterPaths = new(StringComparer.OrdinalIgnoreCase);
+    private IReadOnlyList<string> _selectedPaths = [];
     private CancellationTokenSource? _loadCancellation;
     private CancellationTokenSource? _filterCancellation;
+    private bool _loadingWorkspace;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ReloadCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasTextFilter))]
     private string? _filterText;
 
     [ObservableProperty]
@@ -54,7 +57,19 @@ public partial class LibraryViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasRows))]
+    [NotifyPropertyChangedFor(nameof(HasEmptyState))]
+    [NotifyPropertyChangedFor(nameof(ResultCountText))]
     private IReadOnlyList<LibraryRow> _rows = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasEmptyState))]
+    [NotifyPropertyChangedFor(nameof(EmptyStateTitle))]
+    [NotifyPropertyChangedFor(nameof(EmptyStateMessage))]
+    [NotifyPropertyChangedFor(nameof(EmptyStateActionLabel))]
+    private LibraryPageState _pageState = LibraryPageState.NoConfiguration;
+
+    [ObservableProperty]
+    private bool _isInspectorOpen = true;
 
     public LibraryViewModel(
         ILibraryService library,
@@ -79,6 +94,11 @@ public partial class LibraryViewModel : ObservableObject
         settings.ConfigurationChanged += OnConfigurationChanged;
         indexing.IndexCompleted += () => _ = ReloadAsync();
         inspector.FilesChanged += () => _ = ReloadAsync();
+        inspector.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName == nameof(SelectionInspectorViewModel.HasUnsavedChanges))
+                OnPropertyChanged(nameof(HasUnsavedSelectionChanges));
+        };
     }
 
     public ObservableCollection<LibraryViewDefinition> SavedViews { get; } = [];
@@ -89,8 +109,45 @@ public partial class LibraryViewModel : ObservableObject
     public int TotalCount => _allRows.Count;
     public int HealthFilterCount => _healthFilterPaths.Count;
     public bool HasHealthFilter => _healthFilterPaths.Count > 0;
+    public string HealthFilterSummary => $"Health results: {HealthFilterCount:N0} track(s)";
+    public bool HasTextFilter => !string.IsNullOrWhiteSpace(FilterText);
     public bool HasRows => Rows.Count > 0;
+    public bool HasEmptyState => Rows.Count == 0 && PageState != LibraryPageState.Loading;
     public bool HasFilterError => !string.IsNullOrWhiteSpace(FilterError);
+    public string ResultCountText => Rows.Count == TotalCount
+        ? $"{Rows.Count:N0} tracks"
+        : $"{Rows.Count:N0} of {TotalCount:N0}";
+    public IReadOnlyList<string> SelectedPaths => _selectedPaths;
+    public bool HasUnsavedSelectionChanges => Inspector.HasUnsavedChanges;
+    public bool HasUnsavedChanges => HasUnsavedSelectionChanges;
+    public event Action? HealthFilterClearRequested;
+    public string EmptyStateTitle => PageState switch
+    {
+        LibraryPageState.NoConfiguration => "Choose a library configuration",
+        LibraryPageState.NotIndexed => "This library has not been indexed",
+        LibraryPageState.FilteredToZero => "No tracks match this filter",
+        LibraryPageState.NoResults => "No tracks match the Health results",
+        LibraryPageState.Error => "The library could not be loaded",
+        _ => "No tracks to show",
+    };
+    public string EmptyStateMessage => PageState switch
+    {
+        LibraryPageState.NoConfiguration => "Open Settings to choose or create a configuration before browsing.",
+        LibraryPageState.NotIndexed => "Index the configured music roots to populate the cached library.",
+        LibraryPageState.FilteredToZero => "Clear or revise the filter to show tracks again.",
+        LibraryPageState.NoResults => "Clear the Health filter to return to the full library.",
+        LibraryPageState.Error => StatusText,
+        _ => "Adjust this view or reload the library.",
+    };
+    public string EmptyStateActionLabel => PageState switch
+    {
+        LibraryPageState.NoConfiguration => "Open Settings",
+        LibraryPageState.NotIndexed => "Index library",
+        LibraryPageState.FilteredToZero => "Clear filter",
+        LibraryPageState.NoResults => "Clear Health filter",
+        LibraryPageState.Error => "Try again",
+        _ => "Reload",
+    };
 
     private async void OnConfigurationChanged(object? sender, EventArgs args)
     {
@@ -103,14 +160,22 @@ public partial class LibraryViewModel : ObservableObject
 
     partial void OnFilterTextChanged(string? value)
     {
-        SaveWorkspace();
+        if (!_loadingWorkspace)
+            SaveWorkspace();
         QueueFilter();
     }
 
     partial void OnFilterModeChanged(FilterMode value)
     {
-        SaveWorkspace();
+        if (!_loadingWorkspace)
+            SaveWorkspace();
         QueueFilter();
+    }
+
+    partial void OnIsInspectorOpenChanged(bool value)
+    {
+        if (!_loadingWorkspace)
+            SaveWorkspace();
     }
 
     partial void OnSelectedViewChanged(LibraryViewDefinition? value)
@@ -137,7 +202,44 @@ public partial class LibraryViewModel : ObservableObject
         _healthFilterPaths = next;
         OnPropertyChanged(nameof(HealthFilterCount));
         OnPropertyChanged(nameof(HasHealthFilter));
+        OnPropertyChanged(nameof(HealthFilterSummary));
         QueueFilter();
+    }
+
+    [RelayCommand]
+    private void ClearFilter() => FilterText = null;
+
+    [RelayCommand]
+    private void ClearHealthFilter()
+    {
+        if (!HasHealthFilter)
+            return;
+        SetHealthFilter([]);
+        HealthFilterClearRequested?.Invoke();
+    }
+
+    [RelayCommand]
+    private async Task EmptyStateActionAsync()
+    {
+        switch (PageState)
+        {
+            case LibraryPageState.NoConfiguration:
+                _navigation.Navigate(ShellDestination.Settings);
+                break;
+            case LibraryPageState.NotIndexed:
+                if (Indexing.IndexCommand.CanExecute(null))
+                    await Indexing.IndexCommand.ExecuteAsync(null);
+                break;
+            case LibraryPageState.FilteredToZero:
+                ClearFilter();
+                break;
+            case LibraryPageState.NoResults:
+                ClearHealthFilter();
+                break;
+            default:
+                await ReloadAsync();
+                break;
+        }
     }
 
     private bool CanReload() => _library.IsReady && !IsBusy;
@@ -151,16 +253,29 @@ public partial class LibraryViewModel : ObservableObject
         _loadCancellation = cancellation;
         if (!_library.IsReady)
         {
+            _allRows = [];
+            Rows = [];
+            PageState = LibraryPageState.NoConfiguration;
             StatusText = "Choose a library configuration in Settings.";
+            OnPropertyChanged(nameof(TotalCount));
+            OnPropertyChanged(nameof(ResultCountText));
             return;
         }
         IsBusy = true;
+        PageState = LibraryPageState.Loading;
         StatusText = "Loading the cached library…";
         try
         {
             var records = await _library.GetAllRecordsAsync(cancellation.Token);
             var rows = await Task.Run(() => records.Select(record => new LibraryRow(record)).ToList(), cancellation.Token);
             cancellation.Token.ThrowIfCancellationRequested();
+            if (_inspector.HasUnsavedChanges && _selectedPaths.Count > 0)
+            {
+                var loadedPaths = rows.Select(row => row.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                rows.AddRange(_allRows.Where(row =>
+                    _selectedPaths.Contains(row.Path, StringComparer.OrdinalIgnoreCase) &&
+                    loadedPaths.Add(row.Path)));
+            }
             _allRows = rows;
             await ApplyFilterAsync(immediate: true);
         }
@@ -170,6 +285,7 @@ public partial class LibraryViewModel : ObservableObject
         catch (Exception error)
         {
             StatusText = $"Could not load the cached library: {error.Message}";
+            PageState = LibraryPageState.Error;
         }
         finally
         {
@@ -185,10 +301,42 @@ public partial class LibraryViewModel : ObservableObject
     [RelayCommand]
     private void Cancel() => _loadCancellation?.Cancel();
 
-    public async Task SelectAsync(IReadOnlyList<LibraryRow> rows)
-        => await _inspector.LoadAsync(new SelectionContext(
+    public async Task<bool> SelectAsync(IReadOnlyList<LibraryRow> rows)
+    {
+        ArgumentNullException.ThrowIfNull(rows);
+        var selection = new SelectionContext(
             rows.Select(row => row.Path).ToArray(),
-            rows.Select(row => row.Record).ToArray()));
+            rows.Select(row => row.Record).ToArray());
+        if (!await _inspector.TryLoadAsync(selection))
+            return false;
+        SetSelectedPaths(selection.Paths);
+        return true;
+    }
+
+    /// <summary>Navigation hosts call this before replacing the Library view.</summary>
+    public Task<bool> ConfirmCanNavigateAwayAsync() => _inspector.ConfirmDiscardChangesAsync();
+
+    public Task<bool> ConfirmNavigationAsync() => ConfirmCanNavigateAwayAsync();
+
+    public IReadOnlyList<LibraryRow> GetVisibleSelectedRows()
+    {
+        if (_selectedPaths.Count == 0)
+            return [];
+        var selected = _selectedPaths.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return Rows.Where(row => selected.Contains(row.Path)).ToArray();
+    }
+
+    private void SetSelectedPaths(IReadOnlyList<string> paths)
+    {
+        string[] distinct = paths
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (_selectedPaths.SequenceEqual(distinct, StringComparer.OrdinalIgnoreCase))
+            return;
+        _selectedPaths = distinct;
+        OnPropertyChanged(nameof(SelectedPaths));
+    }
 
     public Task ApplyFilterNowAsync(CancellationToken cancellationToken = default)
         => ApplyFilterAsync(immediate: true, cancellationToken);
@@ -414,6 +562,33 @@ public partial class LibraryViewModel : ObservableObject
                 query.IsMatch(row.Details, row.SearchText))
             .ToList(), cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
+
+        int preservedSelectionCount = 0;
+        if (_inspector.HasUnsavedChanges && _selectedPaths.Count > 0)
+        {
+            var includedPaths = filtered.Select(row => row.Path)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            LibraryRow[] preserved = source.Where(row =>
+                _selectedPaths.Contains(row.Path, StringComparer.OrdinalIgnoreCase) &&
+                includedPaths.Add(row.Path)).ToArray();
+            preservedSelectionCount = preserved.Length;
+            filtered.AddRange(preserved);
+        }
+
+        SelectionContext? updatedSelection = null;
+        if (!_inspector.HasUnsavedChanges && _selectedPaths.Count > 0)
+        {
+            var selectedPaths = _selectedPaths.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            LibraryRow[] visibleSelection = filtered.Where(row => selectedPaths.Contains(row.Path)).ToArray();
+            if (visibleSelection.Length != _selectedPaths.Count)
+            {
+                SetSelectedPaths(visibleSelection.Select(row => row.Path).ToArray());
+                updatedSelection = new SelectionContext(
+                    visibleSelection.Select(row => row.Path).ToArray(),
+                    visibleSelection.Select(row => row.Record).ToArray());
+            }
+        }
+
         // Replace the view once. Raising one collection notification per cached track makes a
         // virtualized table spend seconds processing changes on the UI thread and also starves
         // live window layout while a large library is loading or being filtered.
@@ -423,7 +598,21 @@ public partial class LibraryViewModel : ObservableObject
             : filtered.Count == source.Count
                 ? $"{source.Count:N0} tracks"
                 : $"{filtered.Count:N0} of {source.Count:N0} tracks";
+        if (preservedSelectionCount > 0)
+            StatusText += $" · {preservedSelectionCount:N0} selected with unsaved changes kept visible";
+        PageState = source.Count == 0
+            ? LibraryPageState.NotIndexed
+            : filtered.Count > 0
+                ? LibraryPageState.Ready
+                : HasTextFilter
+                    ? LibraryPageState.FilteredToZero
+                    : healthPaths is not null
+                        ? LibraryPageState.NoResults
+                        : LibraryPageState.NotIndexed;
         OnPropertyChanged(nameof(TotalCount));
+        OnPropertyChanged(nameof(ResultCountText));
+        if (updatedSelection is not null)
+            await _inspector.LoadAsync(updatedSelection);
     }
 
     private void LoadViews()
@@ -446,6 +635,7 @@ public partial class LibraryViewModel : ObservableObject
 
     private void LoadWorkspace()
     {
+        _loadingWorkspace = true;
         try
         {
             string? json = _settings.GetPreference(WorkspacePreference);
@@ -456,17 +646,22 @@ public partial class LibraryViewModel : ObservableObject
             {
                 FilterText = state.Filter;
                 FilterMode = state.Mode;
+                IsInspectorOpen = state.InspectorOpen ?? true;
             }
         }
         catch
         {
         }
+        finally
+        {
+            _loadingWorkspace = false;
+        }
     }
 
     private void SaveWorkspace()
         => _settings.SetPreference(WorkspacePreference,
-            JsonSerializer.Serialize(new LibraryWorkspaceSnapshot(FilterText, FilterMode)));
+            JsonSerializer.Serialize(new LibraryWorkspaceSnapshot(FilterText, FilterMode, IsInspectorOpen)));
 
-    private sealed record LibraryWorkspaceSnapshot(string? Filter, FilterMode Mode);
+    private sealed record LibraryWorkspaceSnapshot(string? Filter, FilterMode Mode, bool? InspectorOpen = null);
     private sealed record ThumbnailCacheItem(object? Image, LinkedListNode<string> Node);
 }

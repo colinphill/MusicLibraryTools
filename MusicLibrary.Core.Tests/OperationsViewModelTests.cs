@@ -58,6 +58,30 @@ public sealed class OperationsViewModelTests
     }
 
     [Fact]
+    public async Task UnifiedJobApplyRequiresARecoverySummaryConfirmation()
+    {
+        using var temp = new TempDirectory();
+        var settings = new AppSettings(Path.Combine(temp.Path, "settings.json"));
+        var jobs = new UnifiedJobService();
+        var crossSync = new StubCrossLibrarySyncService();
+        var dialogs = new StubDialogs { ConfirmApplyResult = false };
+        var viewModel = new OperationsViewModel(
+            new RecordingJournals(new([], [])), new StubFiles(), dialogs, settings,
+            jobs, crossSync)
+        {
+            SelectedJob = jobs.Catalog.Single(job => job.Id == "cross-library-sync"),
+        };
+
+        await viewModel.PreviewJobCommand.ExecuteAsync(null);
+        await viewModel.ApplyJobCommand.ExecuteAsync(null);
+
+        Assert.Equal(0, crossSync.ApplyCalls);
+        Assert.True(viewModel.ApplyJobCommand.CanExecute(null));
+        Assert.Contains("0 planned file mutation", dialogs.ApplyMessage);
+        Assert.Contains("Recovery is available", dialogs.ApplyMessage);
+    }
+
+    [Fact]
     public async Task ArtworkNormalizationPublishesUpdatedPathsAndCacheWarning()
     {
         using var temp = new TempDirectory();
@@ -407,8 +431,15 @@ public sealed class OperationsViewModelTests
 
     private sealed class StubDialogs : IDialogService
     {
+        public bool ConfirmApplyResult { get; init; } = true;
+        public string? ApplyMessage { get; private set; }
         public Task<bool> ShowFieldsEditorAsync(IReadOnlyList<string> paths) => Task.FromResult(false);
         public Task<string?> ShowConfigEditorAsync(string? existingPath) => Task.FromResult<string?>(null);
+        public Task<bool> ConfirmApplyAsync(string title, string message, string primaryText)
+        {
+            ApplyMessage = message;
+            return Task.FromResult(ConfirmApplyResult);
+        }
         public Task<bool> ConfirmCdDerivationAsync(IngestApprovalItem item) => Task.FromResult(false);
         public Task<bool> ConfirmRestoreAsync(OperationRestorePlan plan) => Task.FromResult(true);
         public Task<bool> ConfirmPurgeAsync(OperationPurgePlan plan) => Task.FromResult(true);

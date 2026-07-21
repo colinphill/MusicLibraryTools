@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MetadataCaching;
@@ -10,31 +11,64 @@ public partial class HomeViewModel : ObservableObject
     private readonly ILibraryService _library;
     private readonly IAppSettings _settings;
     private readonly INavigationService _navigation;
+    private readonly IActivityService _activities;
 
-    [ObservableProperty] private bool _isBusy;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RefreshCommand))]
+    private bool _isBusy;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NeedsSetup))]
+    [NotifyCanExecuteChangedFor(nameof(RefreshCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenLibraryCommand))]
+    private bool _hasConfiguration;
+    [ObservableProperty] private bool _hasRecentActivity;
     [ObservableProperty] private string _trackCount = "—";
     [ObservableProperty] private string _albumCount = "—";
     [ObservableProperty] private string _artistCount = "—";
     [ObservableProperty] private string _artworkCount = "—";
+    [ObservableProperty] private string _lastIndexTime = "Not indexed yet";
+    [ObservableProperty] private string _attentionCount = "—";
     [ObservableProperty] private string _rootHealth = "Load a configuration to see library health.";
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasError))]
     private string? _errorMessage;
 
-    public HomeViewModel(ILibraryService library, IAppSettings settings, INavigationService navigation, IndexingViewModel indexing)
+    public HomeViewModel(
+        ILibraryService library,
+        IAppSettings settings,
+        INavigationService navigation,
+        IndexingViewModel indexing,
+        IActivityService activities)
     {
         _library = library;
         _settings = settings;
         _navigation = navigation;
+        _activities = activities;
         Indexing = indexing;
-        settings.ConfigurationChanged += (_, _) => _ = RefreshAsync();
+        HasConfiguration = settings.Configuration is not null;
+        HasRecentActivity = activities.Activities.Count > 0;
+        settings.ConfigurationChanged += (_, _) =>
+        {
+            HasConfiguration = settings.Configuration is not null;
+            _ = RefreshAsync();
+        };
+        activities.Changed += () =>
+        {
+            HasRecentActivity = activities.Activities.Count > 0;
+            OnPropertyChanged(nameof(RecentActivityItems));
+        };
         indexing.IndexCompleted += () => _ = RefreshAsync();
     }
 
     public IndexingViewModel Indexing { get; }
+    public ReadOnlyObservableCollection<AppActivity> RecentActivities => _activities.Activities;
+    public IReadOnlyList<AppActivity> RecentActivityItems => _activities.Activities.Take(3).ToArray();
+    public bool NeedsSetup => !HasConfiguration;
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
 
-    [RelayCommand]
+    private bool CanRefresh() => HasConfiguration && !IsBusy;
+
+    [RelayCommand(CanExecute = nameof(CanRefresh))]
     public async Task RefreshAsync()
     {
         if (!_library.IsReady || IsBusy)
@@ -57,6 +91,15 @@ public partial class HomeViewModel : ObservableObject
             ArtistCount = counts.Artists.ToString("N0");
             ArtworkCount = (await _library.GetMaterializedArtworkFileCountAsync()).ToString("N0");
             IReadOnlyList<ScanRootHealth> roots = await _library.GetScanRootHealthAsync();
+            DateTime? lastSuccessfulIndex = roots
+                .Where(root => root.LastSuccessUtc is not null)
+                .Select(root => root.LastSuccessUtc)
+                .Max();
+            LastIndexTime = lastSuccessfulIndex is { } completed
+                ? completed.ToLocalTime().ToString("g")
+                : "Not indexed yet";
+            AttentionCount = roots.Count(root => root.State is
+                ScanRootState.Degraded or ScanRootState.Unavailable).ToString("N0");
             RootHealth = roots.Count == 0
                 ? "No scan history yet. Your cached library remains available offline."
                 : DescribeRoots(roots);
@@ -71,11 +114,16 @@ public partial class HomeViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    private bool CanOpenLibrary() => HasConfiguration;
+
+    [RelayCommand(CanExecute = nameof(CanOpenLibrary))]
     private void OpenLibrary() => _navigation.Navigate(ShellDestination.Library);
 
     [RelayCommand]
     private void OpenSettings() => _navigation.Navigate(ShellDestination.Settings);
+
+    [RelayCommand]
+    private void OpenHealth() => _navigation.Navigate(ShellDestination.Health);
 
     private static string DescribeRoots(IReadOnlyList<ScanRootHealth> roots)
     {

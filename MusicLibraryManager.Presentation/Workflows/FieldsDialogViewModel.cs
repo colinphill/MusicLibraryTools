@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MusicFileUtilities;
@@ -78,13 +80,53 @@ public partial class FieldsDialogViewModel : ViewModelBase
     private readonly IMediaFileService _media;
     private readonly ITagWriteService _writer;
     private readonly IReadOnlyList<string> _paths;
+    private readonly IActivityService? _activities;
+    private CancellationTokenSource? _saveCancellation;
 
-    [ObservableProperty] private bool _isBusy;
-    [ObservableProperty] private string? _statusMessage;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CancelCommand))]
+    [NotifyPropertyChangedFor(nameof(CancelButtonText))]
+    private bool _isBusy;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasStatusMessage))]
+    private string? _statusMessage;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStatusInfo))]
+    [NotifyPropertyChangedFor(nameof(IsStatusSuccess))]
+    [NotifyPropertyChangedFor(nameof(IsStatusWarning))]
+    [NotifyPropertyChangedFor(nameof(IsStatusError))]
+    [NotifyPropertyChangedFor(nameof(StatusIcon))]
+    private MessageTone _statusTone = MessageTone.Info;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SaveButtonText))]
+    private bool _isConfirmingSave;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CancelButtonText))]
+    private bool _isConfirmingCancel;
     [ObservableProperty] private TagFields _fieldToAdd = TagFields.Comment;
     [ObservableProperty] private string? _newUserStringName;
 
     public ObservableCollection<FieldRow> Rows { get; } = [];
+    public bool HasStatusMessage => !string.IsNullOrWhiteSpace(StatusMessage);
+    public bool HasPendingChanges =>
+        !string.IsNullOrWhiteSpace(NewUserStringName) ||
+        Rows.Any(row => row.IsModified || row.MarkedForRemoval);
+    public string SaveButtonText => IsConfirmingSave ? "Apply changes" : "Save fields";
+    public string CancelButtonText => IsBusy
+        ? "Cancel save"
+        : IsConfirmingCancel ? "Discard changes" : "Cancel";
+    public bool IsStatusInfo => StatusTone == MessageTone.Info;
+    public bool IsStatusSuccess => StatusTone == MessageTone.Success;
+    public bool IsStatusWarning => StatusTone == MessageTone.Warning;
+    public bool IsStatusError => StatusTone == MessageTone.Error;
+    public string StatusIcon => StatusTone switch
+    {
+        MessageTone.Success => "✓",
+        MessageTone.Warning => "⚠",
+        MessageTone.Error => "!",
+        _ => "i",
+    };
 
     /// <summary>All addable fields (every TagFields except the null sentinel), alphabetized.</summary>
     public IReadOnlyList<TagFields> AddableFields { get; } =
@@ -103,12 +145,51 @@ public partial class FieldsDialogViewModel : ViewModelBase
     /// <summary>Raised to close the dialog; the bool is the save/cancel result.</summary>
     public event Action<bool>? CloseRequested;
 
-    public FieldsDialogViewModel(IMediaFileService media, ITagWriteService writer, IReadOnlyList<string> paths)
+    public FieldsDialogViewModel(
+        IMediaFileService media,
+        ITagWriteService writer,
+        IReadOnlyList<string> paths,
+        IActivityService? activities = null)
     {
         _media = media;
         _writer = writer;
         _paths = paths;
+        _activities = activities;
+        Rows.CollectionChanged += OnRowsChanged;
         Loading = LoadAsync();
+    }
+
+    partial void OnNewUserStringNameChanged(string? value)
+    {
+        OnPropertyChanged(nameof(HasPendingChanges));
+        ResetConfirmations();
+    }
+
+    private void OnRowsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.OldItems is not null)
+            foreach (FieldRow row in e.OldItems)
+                row.PropertyChanged -= OnRowChanged;
+        if (e.NewItems is not null)
+            foreach (FieldRow row in e.NewItems)
+                row.PropertyChanged += OnRowChanged;
+        OnPropertyChanged(nameof(HasPendingChanges));
+        ResetConfirmations();
+    }
+
+    private void OnRowChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is not (nameof(FieldRow.Value) or nameof(FieldRow.IsModified) or
+            nameof(FieldRow.MarkedForRemoval)))
+            return;
+        OnPropertyChanged(nameof(HasPendingChanges));
+        ResetConfirmations();
+    }
+
+    private void ResetConfirmations()
+    {
+        IsConfirmingSave = false;
+        IsConfirmingCancel = false;
     }
 
     private async Task LoadAsync()
@@ -215,8 +296,89 @@ public partial class FieldsDialogViewModel : ViewModelBase
             row.MarkedForRemoval = !row.MarkedForRemoval;
     }
 
-    [RelayCommand]
+    private bool CanSave() => !IsBusy;
+
+    [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task SaveAsync()
+    {
+        List<TagEdit> edits = BuildEdits();
+        if (edits.Count == 0)
+        {
+            CloseRequested?.Invoke(false);
+            return;
+        }
+
+        if (!IsConfirmingSave)
+        {
+            IsConfirmingCancel = false;
+            IsConfirmingSave = true;
+            StatusTone = MessageTone.Warning;
+            StatusMessage = $"Apply {edits.Count:N0} field change(s) to {_paths.Count:N0} file(s)? " +
+                "This writes the files directly; no recovery journal is created. " +
+                "Choose Apply changes to continue.";
+            return;
+        }
+
+        IsConfirmingCancel = false;
+        IsBusy = true;
+        _saveCancellation = new CancellationTokenSource();
+        CancelCommand.NotifyCanExecuteChanged();
+        Guid? activity = _activities?.Start(
+            "Save metadata fields",
+            $"Applying {edits.Count:N0} field change(s) to {_paths.Count:N0} file(s)",
+            ShellDestination.Library,
+            _saveCancellation.Cancel);
+        var progress = new Progress<int>(completed =>
+        {
+            if (activity.HasValue)
+                _activities!.Report(activity.Value,
+                    $"Updated {Math.Min(completed, _paths.Count):N0} of {_paths.Count:N0} file(s)",
+                    _paths.Count == 0 ? null : Math.Min(1, (double)completed / _paths.Count));
+        });
+        try
+        {
+            BatchWriteResult result = await _writer.ApplyAsync(
+                _paths, edits, progress, _saveCancellation.Token);
+            if (result.FailedCount == 0)
+            {
+                StatusTone = MessageTone.Success;
+                StatusMessage = result.Summary;
+                if (activity.HasValue)
+                    _activities!.Finish(activity.Value, result.Summary, AppActivityState.Completed);
+                CloseRequested?.Invoke(true);
+            }
+            else
+            {
+                StatusTone = MessageTone.Error;
+                StatusMessage = $"{result.Summary}. Proposed field changes remain ready to retry.";
+                if (activity.HasValue)
+                    _activities!.Finish(activity.Value, StatusMessage, AppActivityState.Failed);
+            }
+        }
+        catch (OperationCanceledException) when (_saveCancellation.IsCancellationRequested)
+        {
+            StatusTone = MessageTone.Warning;
+            StatusMessage = "Save cancelled. Proposed field changes remain ready to retry.";
+            if (activity.HasValue)
+                _activities!.Finish(activity.Value, StatusMessage, AppActivityState.Cancelled);
+        }
+        catch (Exception ex)
+        {
+            StatusTone = MessageTone.Error;
+            StatusMessage = $"Save failed: {ex.Message}. Proposed field changes remain ready to retry.";
+            if (activity.HasValue)
+                _activities!.Finish(activity.Value, StatusMessage, AppActivityState.Failed);
+        }
+        finally
+        {
+            _saveCancellation.Dispose();
+            _saveCancellation = null;
+            IsBusy = false;
+            CancelCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    private List<TagEdit> BuildEdits()
     {
         var edits = new List<TagEdit>();
         foreach (var row in Rows)
@@ -233,36 +395,32 @@ public partial class FieldsDialogViewModel : ViewModelBase
                     : new TagEdit(row.Field!.Value, value));
             }
         }
+        return edits;
+    }
 
-        if (edits.Count == 0)
+    private bool CanCancel() => !IsBusy || _saveCancellation is not null;
+
+    [RelayCommand(CanExecute = nameof(CanCancel))]
+    private void Cancel()
+    {
+        if (IsBusy)
+        {
+            _saveCancellation?.Cancel();
+            return;
+        }
+        if (!HasPendingChanges)
         {
             CloseRequested?.Invoke(false);
             return;
         }
-
-        IsBusy = true;
-        try
+        if (!IsConfirmingCancel)
         {
-            var result = await _writer.ApplyAsync(_paths, edits);
-            if (result.FailedCount == 0)
-            {
-                CloseRequested?.Invoke(true);
-            }
-            else
-            {
-                StatusMessage = result.Summary;
-            }
+            IsConfirmingSave = false;
+            IsConfirmingCancel = true;
+            StatusTone = MessageTone.Warning;
+            StatusMessage = "Discard the unsaved field changes? Choose Discard changes to confirm.";
+            return;
         }
-        catch (Exception ex)
-        {
-            StatusMessage = $"Save failed: {ex.Message}";
-        }
-        finally
-        {
-            IsBusy = false;
-        }
+        CloseRequested?.Invoke(false);
     }
-
-    [RelayCommand]
-    private void Cancel() => CloseRequested?.Invoke(false);
 }

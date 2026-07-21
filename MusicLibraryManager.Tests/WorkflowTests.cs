@@ -66,6 +66,8 @@ public sealed class WorkflowTests
     {
         public Task<bool> ShowFieldsEditorAsync(IReadOnlyList<string> paths) => Task.FromResult(false);
         public Task<string?> ShowConfigEditorAsync(string? existingPath) => Task.FromResult<string?>(null);
+        public Task<bool> ConfirmApplyAsync(string title, string message, string primaryText) =>
+            Task.FromResult(false);
         public Task<bool> ConfirmCdDerivationAsync(IngestApprovalItem item) => Task.FromResult(false);
         public Task<bool> ConfirmRestoreAsync(OperationRestorePlan plan) => Task.FromResult(false);
         public Task<bool> ConfirmPurgeAsync(OperationPurgePlan plan) => Task.FromResult(false);

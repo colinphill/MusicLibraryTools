@@ -25,6 +25,36 @@ public sealed class PresentationTests
         Assert.Null(service.Current);
         Assert.Equal(AppActivityState.Completed, service.Activities[0].State);
         Assert.Equal("Complete", service.Activities[0].Message);
+
+        bool cancelled = false;
+        Guid cancellable = service.Start(
+            "Preview", "Working", ShellDestination.Operations, () => cancelled = true);
+        Assert.Equal(ShellDestination.Operations, service.Current!.Destination);
+        Assert.True(service.Current.CanCancel);
+        Assert.True(service.Cancel(cancellable));
+        Assert.True(cancelled);
+        Assert.False(service.Current!.CanCancel);
+    }
+
+    [Fact]
+    public void Activity_capacity_trims_completed_history_before_a_running_activity()
+    {
+        var service = new AppActivityService();
+        bool runningCancelled = false;
+        Guid running = service.Start("Long operation", "Working", cancel: () => runningCancelled = true);
+
+        for (int index = 0; index < 30; index++)
+        {
+            Guid completed = service.Start($"Completed {index}", "Working");
+            service.Finish(completed, "Done");
+        }
+
+        AppActivity retained = Assert.Single(service.Activities, activity => activity.Id == running);
+        Assert.Equal(AppActivityState.Running, retained.State);
+        Assert.True(retained.CanCancel);
+        Assert.Equal(25, service.Activities.Count);
+        Assert.True(service.Cancel(running));
+        Assert.True(runningCancelled);
     }
 
     [Fact]
@@ -38,6 +68,50 @@ public sealed class PresentationTests
 
         Assert.Equal(ShellDestination.Library, service.Current);
         Assert.Equal(ShellDestination.Library, observed);
+    }
+
+    [Fact]
+    public async Task Navigation_service_ignores_an_older_guard_that_completes_last()
+    {
+        var service = new NavigationService();
+        var libraryGuard = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var settingsGuard = new TaskCompletionSource<bool>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var observed = new List<ShellDestination>();
+        service.NavigationRequested += observed.Add;
+        service.Guard = destination => destination switch
+        {
+            ShellDestination.Library => libraryGuard.Task,
+            ShellDestination.Settings => settingsGuard.Task,
+            _ => Task.FromResult(true),
+        };
+
+        Task older = service.NavigateAsync(ShellDestination.Library);
+        Task newer = service.NavigateAsync(ShellDestination.Settings);
+        settingsGuard.SetResult(true);
+        await newer;
+        libraryGuard.SetResult(true);
+        await older;
+
+        Assert.Equal(ShellDestination.Settings, service.Current);
+        Assert.Equal([ShellDestination.Settings], observed);
+    }
+
+    [Fact]
+    public async Task Navigation_service_contains_and_publishes_guard_failures()
+    {
+        var service = new NavigationService();
+        var expected = new InvalidOperationException("guard failed");
+        Exception? observed = null;
+        service.NavigationFailed += error => observed = error;
+        service.Guard = _ => Task.FromException<bool>(expected);
+
+        await service.NavigateAsync(ShellDestination.Library);
+
+        Assert.Same(expected, service.LastError);
+        Assert.Same(expected, observed);
+        Assert.Equal(ShellDestination.Home, service.Current);
     }
 
     [Fact]
@@ -320,6 +394,102 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public async Task Selection_inspector_uses_full_cache_for_large_selections_and_marks_other_fields_unverified()
+    {
+        TrackRecord[] records = Enumerable.Range(0, 201)
+            .Select(index => Track("Shared artist", "Album", $"Track {index}", "FLAC", $@"C:\Music\{index}.flac"))
+            .ToArray();
+        var writer = new FakeTagWriter();
+        var inspector = new SelectionInspectorViewModel(
+            new FakeMediaService(), new FakeLibrary(records), writer, new FakeArtworkService(),
+            new FakeFilePicker(), new FakeDialogs(), new FakeFieldsEditor(),
+            new FakeThumbnails(), new AppActivityService());
+
+        await inspector.LoadAsync(new SelectionContext(
+            records.Select(record => record.Path).ToArray(), records));
+
+        EditableTagField artist = inspector.Fields.Single(item => item.Field == TagFields.Artist);
+        EditableTagField genre = inspector.Fields.Single(item => item.Field == TagFields.Genre);
+        Assert.Equal(FieldValueVerification.Exact, artist.Verification);
+        Assert.Equal("Shared artist", artist.Value);
+        Assert.Equal(FieldValueVerification.Unverified, genre.Verification);
+        Assert.Null(genre.Value);
+        Assert.False(genre.IsModified);
+
+        genre.Value = "Ambient";
+        await inspector.SaveTagsCommand.ExecuteAsync(null);
+
+        TagEdit edit = Assert.Single(writer.Edits!);
+        Assert.Equal(TagFields.Genre, edit.Field);
+        Assert.Equal("Ambient", edit.Value);
+    }
+
+    [Fact]
+    public async Task Selection_inspector_refuses_to_replace_a_dirty_selection_when_discard_is_cancelled()
+    {
+        MediaFileModel first = Model(@"C:\one.flac", "One", "Artist");
+        MediaFileModel second = Model(@"C:\two.flac", "Two", "Artist");
+        var inspector = new SelectionInspectorViewModel(
+            new FakeMediaService(first, second), new FakeLibrary([]), new FakeTagWriter(),
+            new FakeArtworkService(), new FakeFilePicker(), new RejectingDialogs(),
+            new FakeFieldsEditor(), new FakeThumbnails(), new AppActivityService());
+        await inspector.LoadAsync(new SelectionContext([first.Path]));
+        inspector.Fields.Single(item => item.Field == TagFields.Title).Value = "Edited";
+
+        bool changed = await inspector.TryLoadAsync(new SelectionContext([second.Path]));
+
+        Assert.False(changed);
+        Assert.Equal(first.Path, Assert.Single(inspector.Selection.Paths));
+        Assert.True(inspector.HasUnsavedChanges);
+    }
+
+    [Fact]
+    public async Task Selection_inspector_keeps_dirty_values_when_revert_is_cancelled()
+    {
+        MediaFileModel model = Model(@"C:\one.flac", "One", "Artist");
+        var inspector = new SelectionInspectorViewModel(
+            new FakeMediaService(model), new FakeLibrary([]), new FakeTagWriter(),
+            new FakeArtworkService(), new FakeFilePicker(), new RejectingDialogs(),
+            new FakeFieldsEditor(), new FakeThumbnails(), new AppActivityService());
+        await inspector.LoadAsync(new SelectionContext([model.Path]));
+        EditableTagField title = inspector.Fields.Single(item => item.Field == TagFields.Title);
+        title.Value = "Edited";
+
+        Assert.True(inspector.RevertCommand.CanExecute(null));
+        await inspector.RevertCommand.ExecuteAsync(null);
+
+        Assert.Equal("Edited", title.Value);
+        Assert.True(inspector.HasUnsavedChanges);
+    }
+
+    [Fact]
+    public async Task Library_filter_keeps_a_dirty_selection_visible_until_it_is_resolved()
+    {
+        var settings = new FakeSettings();
+        TrackRecord[] records =
+        [
+            Track("Miles", "Kind of Blue", "So What", "FLAC", @"C:\Music\So What.flac"),
+            Track("Massive Attack", "Mezzanine", "Teardrop", "MP3", @"C:\Music\Teardrop.mp3"),
+        ];
+        LibraryViewModel viewModel = BuildLibrary(settings, records);
+        await viewModel.ReloadAsync();
+        Assert.True(await viewModel.SelectAsync([viewModel.Rows[0]]));
+        viewModel.Inspector.Fields.Single(item => item.Field == TagFields.Title).Value = "Edited title";
+
+        viewModel.FilterText = "Artist:Massive";
+        await viewModel.ApplyFilterNowAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(2, viewModel.Rows.Count);
+        Assert.Contains(viewModel.Rows, row => row.Path == records[0].Path);
+        Assert.Equal(records[0].Path, Assert.Single(viewModel.SelectedPaths));
+        Assert.Contains("unsaved changes kept visible", viewModel.StatusText);
+        INavigationGuard guard = Assert.IsAssignableFrom<INavigationGuard>(viewModel);
+        Assert.True(guard.HasUnsavedChanges);
+        Assert.True(await guard.ConfirmNavigationAsync());
+        Assert.False(guard.HasUnsavedChanges);
+    }
+
+    [Fact]
     public void Library_row_exposes_track_and_disc_totals_for_typed_grid_columns()
     {
         var row = new LibraryRow(Track("Artist", "Album", "Title", "FLAC", @"C:\one.flac") with
@@ -491,6 +661,21 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public void Settings_unknown_stored_theme_falls_back_and_normalizes_preference()
+    {
+        var settings = new FakeSettings();
+        settings.Preferences["manager.appearance.theme.v1"] = "LegacySepia";
+
+        var viewModel = new SettingsViewModel(
+            settings, new FakeFilePicker(), new FakeDialogs(), new FakeTheme());
+
+        Assert.Equal("System", viewModel.SelectedTheme);
+        Assert.Equal("System", viewModel.SelectedThemeChoice?.Name);
+        Assert.Equal("System", settings.Preferences["manager.appearance.theme.v1"]);
+        Assert.False(viewModel.HasUnsavedChanges);
+    }
+
+    [Fact]
     public async Task Settings_editor_round_trips_complete_library_configuration()
     {
         string directory = Path.Combine(Path.GetTempPath(), $"manager-settings-{Guid.NewGuid():N}");
@@ -508,6 +693,8 @@ public sealed class PresentationTests
                 DiscNumLengthLimit = 180,
                 AacEncoder = "aac_encoder",
                 AacBitrateKbps = 288,
+                OversizedArtworkByteThreshold = 5 * 1024 * 1024,
+                OversizedArtworkDimensionThreshold = 3_200,
                 DeleteSourcesAfterIngest = true,
                 RemoveNonMusicAfterIngest = true,
                 DeleteStaleCrossSyncFiles = true,
@@ -545,6 +732,9 @@ public sealed class PresentationTests
             var viewModel = new SettingsViewModel(settings, new FakeFilePicker(),
                 new FakeDialogs(), new FakeTheme());
 
+            Assert.False(viewModel.HasUnsavedChanges);
+            Assert.False(viewModel.SaveConfigurationCommand.CanExecute(null));
+
             viewModel.EditCurrentConfigurationCommand.Execute(null);
             Assert.Equal(1, viewModel.SelectedTabIndex);
 
@@ -563,6 +753,9 @@ public sealed class PresentationTests
             Assert.Equal(180, viewModel.DiscNumLengthLimit);
             Assert.Equal("aac_encoder", viewModel.AacEncoder);
             Assert.Equal(288, viewModel.AacBitrateKbps);
+            Assert.Equal(5m, viewModel.OversizedArtworkSizeThresholdMib);
+            Assert.Equal(5 * 1024 * 1024, viewModel.OversizedArtworkByteThreshold);
+            Assert.Equal(3_200, viewModel.OversizedArtworkDimensionThreshold);
             Assert.True(viewModel.DeleteSourcesAfterIngest);
             Assert.True(viewModel.RemoveNonMusicAfterIngest);
             Assert.True(viewModel.DeleteStaleCrossSyncFiles);
@@ -573,7 +766,13 @@ public sealed class PresentationTests
             root.Memberships[0].Name = "Lossless, Mobile, Portable";
             root.Memberships[0].Offset = "/Portable/FLAC";
             viewModel.PlaylistTargets[0].Type = "m3u";
+            viewModel.OversizedArtworkSizeThresholdMib = 3.5m;
+            viewModel.OversizedArtworkDimensionThreshold = 2_500;
+            Assert.True(viewModel.HasUnsavedChanges);
+            Assert.True(viewModel.SaveConfigurationCommand.CanExecute(null));
             await viewModel.SaveConfigurationCommand.ExecuteAsync(null);
+            Assert.False(viewModel.HasUnsavedChanges);
+            Assert.False(viewModel.SaveConfigurationCommand.CanExecute(null));
 
             EditableLibraryConfig saved = EditableLibraryConfig.Load(configurationPath);
             IndexTargetEntry savedRoot = Assert.Single(saved.IndexTargets);
@@ -588,9 +787,24 @@ public sealed class PresentationTests
             Assert.Equal(LibraryIngestRole.Cd, savedRoot.IngestRole);
             Assert.True(saved.DeleteStaleCrossSyncFiles);
             Assert.True(saved.CleanCrossSyncPlaylists);
+            Assert.Equal((int)(3.5m * 1024 * 1024), saved.OversizedArtworkByteThreshold);
+            Assert.Equal(2_500, saved.OversizedArtworkDimensionThreshold);
             Assert.Equal(["Favorites", "RoadTrip"], saved.SyncPlaylists);
             Assert.Equal("m3u", Assert.Single(saved.PlaylistTargets).Type);
             Assert.Equal(["Lossless"], saved.PlaylistTargets[0].Sets);
+
+            viewModel.LengthLimit = 0;
+            Assert.False(viewModel.SaveConfigurationCommand.CanExecute(null));
+            Assert.Contains("Path length limit", viewModel.ValidationSummary);
+            viewModel.OpenValidationCommand.Execute(null);
+            Assert.Equal(3, viewModel.SelectedTabIndex);
+
+            viewModel.LengthLimit = 255;
+            viewModel.OversizedArtworkDimensionThreshold = 0;
+            Assert.False(viewModel.SaveConfigurationCommand.CanExecute(null));
+            Assert.Contains("Oversized artwork dimension", viewModel.ValidationSummary);
+            viewModel.OpenValidationCommand.Execute(null);
+            Assert.Equal(4, viewModel.SelectedTabIndex);
         }
         finally
         {
@@ -647,6 +861,11 @@ public sealed class PresentationTests
 
         bool? closed = null;
         viewModel.CloseRequested += result => closed = result;
+        await viewModel.SaveCommand.ExecuteAsync(null);
+        Assert.Null(closed);
+        Assert.True(viewModel.IsConfirmingSave);
+        Assert.Contains("5 field change(s) to 2 file(s)", viewModel.StatusMessage);
+        Assert.Contains("no recovery journal", viewModel.StatusMessage);
         await viewModel.SaveCommand.ExecuteAsync(null);
 
         Assert.True(closed);
@@ -817,6 +1036,12 @@ internal sealed class FakeFilePicker(string? selectedFile = null) : IFilePickerS
 internal sealed class FakeDialogs : IDialogCoordinator
 {
     public Task<bool> ConfirmAsync(string title, string message, string primaryText) => Task.FromResult(true);
+    public Task ShowMessageAsync(string title, string message) => Task.CompletedTask;
+}
+
+internal sealed class RejectingDialogs : IDialogCoordinator
+{
+    public Task<bool> ConfirmAsync(string title, string message, string primaryText) => Task.FromResult(false);
     public Task ShowMessageAsync(string title, string message) => Task.CompletedTask;
 }
 

@@ -1,12 +1,15 @@
 <UserControl x:Class="MusicLibraryManager.Controls.PageHeader"
              x:Name="Root"
              xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="20">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Focusable="True"
+             AutomationProperties.Name="{Binding Title, ElementName=Root}">
+  <Grid x:Name="HeaderGrid" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="20" RowSpacing="10">
     <StackPanel Spacing="5">
       <TextBlock Classes="page-title" Text="{Binding Title, ElementName=Root}" />
       <TextBlock Classes="muted" Text="{Binding Subtitle, ElementName=Root}" TextWrapping="Wrap" />
     </StackPanel>
-    <ContentPresenter Grid.Column="1" Content="{Binding Actions, ElementName=Root}" VerticalAlignment="Top" />
+    <ContentPresenter x:Name="ActionsPresenter" Grid.Column="1" Content="{Binding Actions, ElementName=Root}"
+                      HorizontalAlignment="Right" VerticalAlignment="Top" />
   </Grid>
 </UserControl>

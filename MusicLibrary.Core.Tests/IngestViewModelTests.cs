@@ -76,7 +76,8 @@ public sealed class IngestViewModelTests
             Assert.Equal(1, viewModel.InterruptedHistoryCount);
             OperationJournalSummary? requested = null;
             viewModel.RecoveryRequested += run => requested = run;
-            viewModel.OpenHistoryCommand.Execute(item);
+            viewModel.SelectedHistory = item;
+            viewModel.OpenHistoryCommand.Execute(null);
             Assert.Same(interrupted, requested);
         }
         finally
@@ -110,7 +111,7 @@ public sealed class IngestViewModelTests
         var plan = new IngestPlan
         {
             Request = new("source", "config.xml"), Configuration = configuration,
-            Albums = [new IngestAlbumPlan { Key = "album", Display = "Artist â€” Album",
+                    Albums = [new IngestAlbumPlan { Key = "album", Display = "Artist — Album",
                 Tracks = [track], Outputs = outputs, Sources = [], HasHighResolution = false }],
             Files = [new("source.flac", "CD FLAC", "Create outputs"),
                 new("cover.jpg", "Unsupported/non-audio", "Quarantine")],
@@ -152,7 +153,62 @@ public sealed class IngestViewModelTests
     }
 
     [Fact]
-    public async Task PresetsRecentDropsAndPreflightPersistAsWorkflowState()
+    public async Task ApplyRequiresARecoverySummaryConfirmation()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"ingest-confirm-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        string configPath = Path.Combine(root, "library.xml");
+        string settingsPath = Path.Combine(root, "settings.json");
+        try
+        {
+            WriteReadyLibraryConfig(configPath);
+            var settings = new AppSettings(settingsPath);
+            settings.LoadConfig(configPath);
+            var plan = new IngestPlan
+            {
+                Request = new(root),
+                Configuration = new IngestMusicConfiguration
+                {
+                    FfmpegPath = "ffmpeg",
+                    AacDestination = "aac",
+                    CdDestination = "cd",
+                    PairedCdDestination = "paired",
+                    HighResolutionDestination = "hires",
+                    RemoveNonMusicAfterIngest = true,
+                },
+                Albums = [],
+                Files = [new("cover.jpg", "Unsupported/non-audio", "Quarantine")],
+                RequiredApprovals = [],
+                Conflicts = [],
+                IgnoredFiles = ["cover.jpg"],
+                IgnoredFileSnapshots = [new("cover.jpg", 10, DateTime.UtcNow)],
+                SourceDirectories = [root],
+            };
+            var ingest = new StubIngest(plan);
+            var dialogs = new StubDialogs { ConfirmApplyResult = false };
+            var viewModel = new IngestViewModel(ingest, new StubFiles(), dialogs,
+                settings, new StubLibrary())
+            {
+                SourceDirectory = root,
+            };
+
+            await viewModel.PreviewCommand.ExecuteAsync(null);
+            await viewModel.ApplyCommand.ExecuteAsync(null);
+
+            Assert.Equal(0, ingest.ApplyCalls);
+            Assert.True(viewModel.ApplyCommand.CanExecute(null));
+            Assert.Contains("clean up 2 source item", dialogs.ApplyMessage);
+            Assert.Contains("Recovery is available", dialogs.ApplyMessage);
+            Assert.False(viewModel.CancelCommand.CanExecute(null));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task RecentDropsAndPreflightPersistAsWorkflowState()
     {
         string root = Path.Combine(Path.GetTempPath(), $"ingest-vm-{Guid.NewGuid():N}");
         Directory.CreateDirectory(root);
@@ -168,13 +224,10 @@ public sealed class IngestViewModelTests
             var preflight = new StubPreflight();
             var viewModel = Create(settings, preflight);
             viewModel.SourceDirectory = source;
-            viewModel.PresetName = "Downloads";
 
-            viewModel.SavePresetCommand.Execute(null);
             viewModel.SetDroppedSource(dropped);
             await viewModel.PreflightCommand.ExecuteAsync(null);
 
-            Assert.Equal("Downloads", Assert.Single(viewModel.Presets).Name);
             Assert.Equal(dropped, viewModel.RecentSources[0]);
             Assert.True(viewModel.HasPreflightChecks);
             Assert.Equal(1, preflight.Calls);
@@ -182,10 +235,8 @@ public sealed class IngestViewModelTests
             var restoredSettings = new AppSettings(state);
             restoredSettings.LoadConfig(config);
             var restored = Create(restoredSettings, new StubPreflight());
-            var preset = Assert.Single(restored.Presets);
-            restored.SelectedPreset = preset;
 
-            Assert.Equal(source, restored.SourceDirectory);
+            Assert.Equal(dropped, restored.SourceDirectory);
             Assert.Contains(dropped, restored.RecentSources);
         }
         finally
@@ -245,11 +296,16 @@ public sealed class IngestViewModelTests
 
     private sealed class StubIngest(IngestPlan? plan = null) : IIngestMusicService
     {
+        public int ApplyCalls { get; private set; }
         public Task<IngestPlan> PreviewAsync(IngestRequest request, CancellationToken ct = default) =>
             plan is null ? throw new NotSupportedException() : Task.FromResult(plan);
         public Task<IngestResult> ApplyAsync(IngestPlan plan,
             IReadOnlyList<IngestApprovalDecision> approvals, IProgress<IngestProgress>? progress = null,
-            CancellationToken ct = default) => throw new NotSupportedException();
+            CancellationToken ct = default)
+        {
+            ApplyCalls++;
+            return Task.FromResult(new IngestResult([], false));
+        }
     }
 
     private sealed class StubFiles : IFileDialogService
@@ -264,8 +320,15 @@ public sealed class IngestViewModelTests
 
     private sealed class StubDialogs : IDialogService
     {
+        public bool ConfirmApplyResult { get; init; } = true;
+        public string? ApplyMessage { get; private set; }
         public Task<bool> ShowFieldsEditorAsync(IReadOnlyList<string> paths) => Task.FromResult(false);
         public Task<string?> ShowConfigEditorAsync(string? existingPath) => Task.FromResult<string?>(null);
+        public Task<bool> ConfirmApplyAsync(string title, string message, string primaryText)
+        {
+            ApplyMessage = message;
+            return Task.FromResult(ConfirmApplyResult);
+        }
         public Task<bool> ConfirmCdDerivationAsync(IngestApprovalItem item) => Task.FromResult(false);
         public Task<bool> ConfirmRestoreAsync(OperationRestorePlan plan) => Task.FromResult(false);
         public Task<bool> ConfirmPurgeAsync(OperationPurgePlan plan) => Task.FromResult(false);

@@ -2,7 +2,6 @@ using MusicFileUtilities;
 using MusicLibrary.Core.Models;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Processing;
 
 namespace MusicLibrary.Core.Services;
 
@@ -222,14 +221,7 @@ public sealed class ArtworkService : IArtworkService
     private static (byte[] Jpeg, int Width, int Height) Encode(byte[] source, int maxDimension, int quality = 90)
     {
         using var image = Image.Load(source);
-        if (maxDimension > 0 && (image.Width > maxDimension || image.Height > maxDimension))
-        {
-            image.Mutate(x => x.Resize(new ResizeOptions
-            {
-                Mode = ResizeMode.Max,
-                Size = new Size(maxDimension, maxDimension),
-            }));
-        }
+        ArtworkImageProcessor.ResizeToFit(image, maxDimension);
 
         using var ms = new MemoryStream();
         image.Save(ms, new JpegEncoder { Quality = quality });

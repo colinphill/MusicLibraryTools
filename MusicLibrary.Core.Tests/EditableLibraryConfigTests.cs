@@ -22,6 +22,8 @@ public class EditableLibraryConfigTests
                 DiscNumLengthLimit = 180,
                 AacEncoder = "aac-test",
                 AacBitrateKbps = 320,
+                OversizedArtworkByteThreshold = 3 * 1024 * 1024,
+                OversizedArtworkDimensionThreshold = 2_400,
                 DeleteSourcesAfterIngest = true,
                 RemoveNonMusicAfterIngest = true,
                 DeleteStaleCrossSyncFiles = true,
@@ -64,6 +66,8 @@ public class EditableLibraryConfigTests
             Assert.Equal(180, reloaded.DiscNumLengthLimit);
             Assert.Equal("aac-test", reloaded.AacEncoder);
             Assert.Equal(320, reloaded.AacBitrateKbps);
+            Assert.Equal(3 * 1024 * 1024, reloaded.OversizedArtworkByteThreshold);
+            Assert.Equal(2_400, reloaded.OversizedArtworkDimensionThreshold);
             Assert.True(reloaded.DeleteSourcesAfterIngest);
             Assert.True(reloaded.RemoveNonMusicAfterIngest);
             Assert.True(reloaded.DeleteStaleCrossSyncFiles);
@@ -108,6 +112,11 @@ public class EditableLibraryConfigTests
                 ?.Attribute("DeleteStaleFiles"));
             Assert.Equal("true", (string?)xml.Root.Element("CrossSyncPlaylistsSettings")
                 ?.Attribute("Clean"));
+            Assert.Equal((3 * 1024 * 1024).ToString(),
+                (string?)xml.Root.Element("ArtworkHealthSettings")
+                    ?.Attribute("OversizedByteThreshold"));
+            Assert.Equal("2400", (string?)xml.Root.Element("ArtworkHealthSettings")
+                ?.Attribute("OversizedDimensionThreshold"));
             Assert.Equal(2, xml.Root.Elements("IndexTarget").First().Elements("Set").Count());
             Assert.All(xml.Root.Elements("PlaylistTarget"), target =>
             {
@@ -156,6 +165,56 @@ public class EditableLibraryConfigTests
             Assert.Equal(@"Z:\Playlists", playlistTarget.Target);
             Assert.Equal("wpl", playlistTarget.Type);
             Assert.Equal(["Car4", "Desktop2"], playlistTarget.Sets);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void LegacyConfigurationWithoutArtworkHealthSettingsUsesCurrentDefaults()
+    {
+        string path = Path.Combine(Path.GetTempPath(), "cfg_" + Guid.NewGuid().ToString("N") + ".xml");
+        try
+        {
+            File.WriteAllText(path, "<LibraryConfiguration><DatabaseFile>cache.db</DatabaseFile>" +
+                "</LibraryConfiguration>");
+
+            EditableLibraryConfig editable = EditableLibraryConfig.Load(path);
+            var configuration = new LibraryConfiguration(path);
+
+            Assert.Equal(LibraryArtworkHealthSettings.DefaultOversizedByteThreshold,
+                editable.OversizedArtworkByteThreshold);
+            Assert.Equal(LibraryArtworkHealthSettings.DefaultOversizedDimensionThreshold,
+                editable.OversizedArtworkDimensionThreshold);
+            Assert.Equal(LibraryArtworkHealthSettings.DefaultOversizedByteThreshold,
+                configuration.ArtworkHealthSettings.OversizedByteThreshold);
+            Assert.Equal(LibraryArtworkHealthSettings.DefaultOversizedDimensionThreshold,
+                configuration.ArtworkHealthSettings.OversizedDimensionThreshold);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void PartialArtworkHealthSettingsDefaultsTheMissingThreshold()
+    {
+        string path = Path.Combine(Path.GetTempPath(), "cfg_" + Guid.NewGuid().ToString("N") + ".xml");
+        try
+        {
+            File.WriteAllText(path, "<LibraryConfiguration>" +
+                "<ArtworkHealthSettings OversizedDimensionThreshold=\"2500\" />" +
+                "</LibraryConfiguration>");
+
+            LibraryArtworkHealthSettings settings =
+                new LibraryConfiguration(path).ArtworkHealthSettings;
+
+            Assert.Equal(LibraryArtworkHealthSettings.DefaultOversizedByteThreshold,
+                settings.OversizedByteThreshold);
+            Assert.Equal(2_500, settings.OversizedDimensionThreshold);
         }
         finally
         {

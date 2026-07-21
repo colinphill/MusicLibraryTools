@@ -7,10 +7,13 @@ namespace MusicLibraryManager.Views;
 
 public partial class DevicesView : UserControl
 {
+    private bool _startedDeviceDiscovery;
+
     public DevicesView()
     {
         InitializeComponent();
         DataContext = App.GetService<DevicesViewModel>();
+        Loaded += OnLoaded;
         ActionsGrid.ConfigureColumns([
             new AppGridColumnDefinition("Status", "Status", "Status", 110, 90),
             new AppGridColumnDefinition("Kind", "Action", "Kind", 170, 120),
@@ -18,5 +21,14 @@ public partial class DevicesView : UserControl
             new AppGridColumnDefinition("Reason", "Reason", "Reason", 430, 220),
             new AppGridColumnDefinition("Length", "Bytes", "Length", 110, 80),
         ]);
+    }
+
+    private async void OnLoaded(object? sender, global::Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (_startedDeviceDiscovery || DataContext is not DevicesViewModel viewModel)
+            return;
+        _startedDeviceDiscovery = true;
+        if (viewModel.RefreshDevicesCommand.CanExecute(null))
+            await viewModel.RefreshDevicesCommand.ExecuteAsync(null);
     }
 }

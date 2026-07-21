@@ -40,6 +40,7 @@ public partial class PersistedSplitView : UserControl
     private bool _compact;
     private bool _initialized;
     private double? _lastPersistedWidth;
+    private double _expandedLeftWidth;
 
     public PersistedSplitView()
     {
@@ -77,8 +78,12 @@ public partial class PersistedSplitView : UserControl
         SplitGrid.ColumnDefinitions[0].MaxWidth = MaxLeftWidth;
         SplitGrid.ColumnDefinitions[2].MinWidth = MinRightWidth;
         double width = PersistenceKey is null ? InitialLeftWidth : _state.Load(PersistenceKey) ?? InitialLeftWidth;
-        SetLeftWidth(width);
-        _lastPersistedWidth = SplitGrid.ColumnDefinitions[0].Width.Value;
+        _expandedLeftWidth = Math.Clamp(width, MinLeftWidth, MaxLeftWidth);
+        if (_compact)
+            ApplyCompactColumns();
+        else
+            SetLeftWidth(_expandedLeftWidth);
+        _lastPersistedWidth = _expandedLeftWidth;
         _initialized = true;
     }
 
@@ -118,9 +123,18 @@ public partial class PersistedSplitView : UserControl
     {
         if (_compact == compact)
             return;
+        if (compact)
+        {
+            Persist();
+            if (SplitGrid.ColumnDefinitions[0].Width.IsAbsolute)
+                _expandedLeftWidth = SplitGrid.ColumnDefinitions[0].Width.Value;
+        }
         _compact = compact;
         Splitter.IsVisible = !compact;
-        SplitGrid.ColumnDefinitions[1].Width = compact ? new GridLength(0) : new GridLength(10);
+        if (compact)
+            ApplyCompactColumns();
+        else
+            ApplyExpandedColumns();
         Grid.SetColumn(LeftPresenter, 0);
         Grid.SetColumnSpan(LeftPresenter, compact ? 3 : 1);
         Grid.SetColumn(RightPresenter, compact ? 0 : 2);
@@ -131,6 +145,32 @@ public partial class PersistedSplitView : UserControl
             : global::Avalonia.Layout.HorizontalAlignment.Stretch;
         RightPresenter.SetValue(Panel.ZIndexProperty, compact ? 15 : 0);
         RightPresenter.IsVisible = !compact;
+    }
+
+    private void ApplyCompactColumns()
+    {
+        ColumnDefinition left = SplitGrid.ColumnDefinitions[0];
+        ColumnDefinition divider = SplitGrid.ColumnDefinitions[1];
+        ColumnDefinition right = SplitGrid.ColumnDefinitions[2];
+        left.MinWidth = 0;
+        left.MaxWidth = double.PositiveInfinity;
+        left.Width = new GridLength(1, GridUnitType.Star);
+        divider.Width = new GridLength(0);
+        right.MinWidth = 0;
+        right.Width = new GridLength(0);
+    }
+
+    private void ApplyExpandedColumns()
+    {
+        ColumnDefinition left = SplitGrid.ColumnDefinitions[0];
+        ColumnDefinition divider = SplitGrid.ColumnDefinitions[1];
+        ColumnDefinition right = SplitGrid.ColumnDefinitions[2];
+        left.MinWidth = MinLeftWidth;
+        left.MaxWidth = MaxLeftWidth;
+        divider.Width = new GridLength(10);
+        right.MinWidth = MinRightWidth;
+        right.Width = new GridLength(1, GridUnitType.Star);
+        SetLeftWidth(_expandedLeftWidth > 0 ? _expandedLeftWidth : InitialLeftWidth);
     }
 
     public void ToggleCompactRight()

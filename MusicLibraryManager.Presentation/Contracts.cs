@@ -23,6 +23,12 @@ public interface INavigationService
     void Navigate(ShellDestination destination);
 }
 
+public interface INavigationGuard
+{
+    bool HasUnsavedChanges { get; }
+    Task<bool> ConfirmNavigationAsync();
+}
+
 public interface IFilePickerService
 {
     Task<string?> PickFileAsync(string title, IReadOnlyList<FilePickerType>? types = null);
@@ -84,14 +90,22 @@ public sealed record AppActivity(
     AppActivityState State,
     double? Progress,
     DateTimeOffset StartedAt,
-    DateTimeOffset? FinishedAt = null);
+    DateTimeOffset? FinishedAt = null,
+    ShellDestination? Destination = null,
+    bool CanCancel = false);
 
 public interface IActivityService
 {
     ReadOnlyObservableCollection<AppActivity> Activities { get; }
     AppActivity? Current { get; }
     event Action? Changed;
-    Guid Start(string title, string message);
+    Guid Start(
+        string title,
+        string message,
+        ShellDestination? destination = null,
+        Action? cancel = null);
     void Report(Guid id, string message, double? progress = null);
     void Finish(Guid id, string message, AppActivityState state = AppActivityState.Completed);
+    bool Cancel(Guid id);
+    void Dismiss(Guid id);
 }

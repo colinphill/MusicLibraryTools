@@ -85,6 +85,27 @@ public sealed class AppSettingsTests
     }
 
     [Theory]
+    [InlineData("OversizedByteThreshold", "0")]
+    [InlineData("OversizedDimensionThreshold", "not-a-number")]
+    public void InvalidArtworkHealthThreshold_IsRejectedDuringLoad(
+        string attribute, string value)
+    {
+        using var temp = new TempDirectory();
+        string config = Path.Combine(temp.Path, "bad-artwork-health.xml");
+        File.WriteAllText(config,
+            "<LibraryConfiguration><DatabaseFile>cache.db</DatabaseFile>" +
+            $"<ArtworkHealthSettings {attribute}=\"{value}\" />" +
+            "</LibraryConfiguration>");
+        var settings = new AppSettings(Path.Combine(temp.Path, "settings.json"));
+
+        InvalidDataException error = Assert.Throws<InvalidDataException>(
+            () => settings.LoadConfig(config));
+
+        Assert.Contains(attribute, error.Message);
+        Assert.Null(settings.Configuration);
+    }
+
+    [Theory]
     [InlineData("<PlaylistTarget Type=\"m3u\">Z:\\Playlists</PlaylistTarget>")]
     [InlineData("<PlaylistTarget Set=\"1\">Z:\\Playlists</PlaylistTarget><PlaylistType>m3u</PlaylistType>")]
     [InlineData("<PlaylistTarget Type=\"unknown\" Set=\"1\">Z:\\Playlists</PlaylistTarget>")]

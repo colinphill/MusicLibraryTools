@@ -8,41 +8,93 @@
     <controls:PageHeader Title="Library"
         Subtitle="Browse the cache instantly, even when music roots are offline.">
       <controls:PageHeader.Actions>
-        <StackPanel Orientation="Horizontal" Spacing="8">
-          <Button Classes="app" Content="Reload" Command="{Binding ReloadCommand}" />
-          <Button Classes="app primary" Content="Index library" Command="{Binding Indexing.IndexCommand}" />
-          <Button Classes="app" Content="Cancel" Command="{Binding Indexing.CancelCommand}" />
-          <Button x:Name="InspectorToggle" Classes="app" Content="Inspector" Click="OnInspectorToggle" IsVisible="False" />
-        </StackPanel>
+        <WrapPanel>
+          <Button Classes="app" Margin="0,0,8,6" Content="Reload" Command="{Binding ReloadCommand}"
+                  AutomationProperties.Name="Reload cached library" />
+          <Button Classes="app primary" Margin="0,0,8,6" Content="Index library" Command="{Binding Indexing.IndexCommand}" />
+          <Button Classes="app" Margin="0,0,8,6" Content="Cancel" Command="{Binding Indexing.CancelCommand}"
+                  IsVisible="{Binding Indexing.IsIndexing}" />
+          <Button x:Name="InspectorToggle" Classes="app" Margin="0,0,0,6" Content="Inspector"
+                  Click="OnInspectorToggle" IsVisible="False" ToolTip.Tip="Show or hide the metadata inspector" />
+        </WrapPanel>
       </controls:PageHeader.Actions>
     </controls:PageHeader>
 
-    <Grid Grid.Row="1" ColumnDefinitions="*,150,Auto,180,120,Auto,Auto" ColumnSpacing="8">
-      <TextBox x:Name="FilterBox" Classes="app" Text="{Binding FilterText, Mode=TwoWay}" PlaceholderText="Filter, or use Artist:Name AND NOT Codec:MP3" />
-      <ComboBox Grid.Column="1" Classes="app" ItemsSource="{Binding FilterModes}" SelectedItem="{Binding FilterMode, Mode=TwoWay}" />
-      <Button x:Name="ColumnsButton" Grid.Column="2" Classes="app" Content="Columns" Click="OnColumnsClick" />
-      <ComboBox x:Name="SavedViews" Grid.Column="3" Classes="app" ItemsSource="{Binding SavedViews}" SelectedItem="{Binding SelectedView, Mode=TwoWay}" PlaceholderText="Saved views" SelectionChanged="OnSavedViewChanged">
-        <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate></ComboBox.ItemTemplate>
-      </ComboBox>
-      <TextBox x:Name="ViewNameBox" Grid.Column="4" Classes="app" Text="{Binding NewViewName, Mode=TwoWay}" PlaceholderText="View name" />
-      <Button Grid.Column="5" Classes="app" Content="Save view" Click="OnSaveView" />
-      <Button Grid.Column="6" Classes="app" Content="Delete" Command="{Binding DeleteViewCommand}" />
-    </Grid>
+    <StackPanel Grid.Row="1" Spacing="8">
+      <Grid ColumnDefinitions="*,150,Auto,Auto,Auto" ColumnSpacing="8">
+        <TextBox x:Name="FilterBox" Classes="app" Text="{Binding FilterText, Mode=TwoWay}"
+                 PlaceholderText="Filter, or use Artist:Name AND NOT Codec:MP3"
+                 AutomationProperties.Name="Filter library" />
+        <ComboBox Grid.Column="1" Classes="app" ItemsSource="{Binding FilterModes}"
+                  SelectedItem="{Binding FilterMode, Mode=TwoWay}"
+                  AutomationProperties.Name="Filter matching mode" />
+        <Button Grid.Column="2" Classes="app" Content="Clear" Command="{Binding ClearFilterCommand}"
+                IsVisible="{Binding HasTextFilter}" ToolTip.Tip="Clear the text filter" />
+        <Button x:Name="FilterHelpButton" Grid.Column="3" Classes="app" Width="36" Content="?"
+                Click="OnFilterHelpClick" ToolTip.Tip="Show filter syntax help"
+                AutomationProperties.Name="Filter syntax help" />
+        <TextBlock Grid.Column="4" Classes="summary-label" VerticalAlignment="Center"
+                   Text="{Binding ResultCountText}" AutomationProperties.LiveSetting="Polite" />
+      </Grid>
+
+      <TextBlock Classes="error" IsVisible="{Binding HasFilterError}" Text="{Binding FilterError}"
+                 TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive" />
+
+      <WrapPanel>
+        <Border Classes="card" Padding="10,5" Margin="0,0,8,6" IsVisible="{Binding HasHealthFilter}">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock VerticalAlignment="Center" Text="{Binding HealthFilterSummary}" />
+            <Button Classes="app" Padding="5,0" MinWidth="24" MinHeight="24" Content="&#x2715;"
+                    Command="{Binding ClearHealthFilterCommand}" ToolTip.Tip="Clear Health filter"
+                    AutomationProperties.Name="Clear Health filter" />
+          </StackPanel>
+        </Border>
+        <Button x:Name="ColumnsButton" Classes="app" Margin="0,0,8,6" Content="Columns" Click="OnColumnsClick" />
+        <Button x:Name="ViewsButton" Classes="app" Margin="0,0,8,6" Content="Saved views" Click="OnViewsClick" />
+      </WrapPanel>
+    </StackPanel>
 
     <Grid Grid.Row="2">
-      <controls:PersistedSplitView x:Name="WorkspaceSplit" InitialLeftWidth="900" MinLeftWidth="340" MaxLeftWidth="1800" MinRightWidth="190" PersistenceKey="library" Label="Resize library and inspector">
+      <controls:PersistedSplitView x:Name="WorkspaceSplit" InitialLeftWidth="900" MinLeftWidth="340"
+                                   MaxLeftWidth="1800" MinRightWidth="320" PersistenceKey="library"
+                                   Label="Resize library and inspector">
         <controls:PersistedSplitView.Left>
           <Border Classes="card" Padding="0" ClipToBounds="True">
             <Grid>
               <controls:AppDataGrid x:Name="LibraryGrid" ItemsSource="{Binding Rows}" FrozenColumnCount="1"
-                                       SelectionChanged="OnGridSelectionChanged" LoadingRow="OnLoadingRow" UnloadingRow="OnUnloadingRow" />
-              <TextBlock IsVisible="{Binding !HasRows}" HorizontalAlignment="Center" VerticalAlignment="Center"
-                         Classes="muted" Text="No tracks match this view" />
+                                    SelectionChanged="OnGridSelectionChanged" LoadingRow="OnLoadingRow"
+                                    UnloadingRow="OnUnloadingRow"
+                                    AutomationProperties.Name="Library tracks" />
+
+              <Border x:Name="LibraryEmptyState" IsVisible="{Binding HasEmptyState}"
+                      Background="{DynamicResource AppPanelBrush}" Padding="28">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="390" Spacing="10">
+                  <TextBlock Classes="section-title" FontSize="18" Text="{Binding EmptyStateTitle}"
+                             TextAlignment="Center" TextWrapping="Wrap" />
+                  <TextBlock Classes="muted" Text="{Binding EmptyStateMessage}"
+                             TextAlignment="Center" TextWrapping="Wrap" />
+                  <Button Classes="app primary" HorizontalAlignment="Center" Content="{Binding EmptyStateActionLabel}"
+                          Command="{Binding EmptyStateActionCommand}" />
+                </StackPanel>
+              </Border>
+
+              <Border IsVisible="{Binding IsBusy}" Background="#990D1417" Padding="28">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="10">
+                  <ProgressBar IsIndeterminate="True" Width="220" Height="4" />
+                  <TextBlock Foreground="White" Text="Loading the cached library..."
+                             AutomationProperties.LiveSetting="Polite" />
+                </StackPanel>
+              </Border>
+
+              <Border x:Name="InspectorScrim" IsVisible="False" Background="#66000000"
+                      PointerPressed="OnInspectorScrimPressed" />
             </Grid>
           </Border>
         </controls:PersistedSplitView.Left>
         <controls:PersistedSplitView.Right>
-          <Border Classes="card" Padding="0" ClipToBounds="True"><views:SelectionInspectorView /></Border>
+          <Border Classes="card" Padding="0" ClipToBounds="True">
+            <views:SelectionInspectorView x:Name="InspectorView" />
+          </Border>
         </controls:PersistedSplitView.Right>
       </controls:PersistedSplitView>
 
@@ -64,10 +116,58 @@
           </Grid>
         </Border>
       </Popup>
+
+      <Popup x:Name="ViewsPopover" PlacementTarget="{Binding #ViewsButton}"
+             Placement="BottomEdgeAlignedLeft" VerticalOffset="8"
+             IsLightDismissEnabled="True" IsOpen="False">
+        <Border Width="330" MaxHeight="480"
+                Background="{DynamicResource AppPanelBrush}" BorderBrush="{DynamicResource AppBorderStrongBrush}"
+                BorderThickness="1" CornerRadius="9" Padding="14" BoxShadow="0 14 40 0 #77000000">
+          <StackPanel Spacing="10">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Text="Saved views" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" />
+              <Button Grid.Column="1" Classes="app" Width="28" Height="28" Padding="0" Content="&#x2715;"
+                      Click="OnViewsClose" ToolTip.Tip="Close saved views" />
+            </Grid>
+            <ComboBox x:Name="SavedViews" Classes="app" ItemsSource="{Binding SavedViews}"
+                      SelectedItem="{Binding SelectedView, Mode=TwoWay}" PlaceholderText="Choose a saved view"
+                      SelectionChanged="OnSavedViewChanged" AutomationProperties.Name="Saved library views">
+              <ComboBox.ItemTemplate>
+                <DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <Border Height="1" Background="{DynamicResource AppBorderBrush}" />
+            <TextBlock Classes="muted" Text="Save the current filter, columns, and sort" TextWrapping="Wrap" />
+            <TextBox x:Name="ViewNameBox" Classes="app" Text="{Binding NewViewName, Mode=TwoWay}"
+                     PlaceholderText="View name" AutomationProperties.Name="New saved view name" />
+            <WrapPanel>
+              <Button Classes="app primary" Margin="0,0,8,0" Content="Save view" Click="OnSaveView" />
+              <Button Classes="app" Content="Delete selected" Command="{Binding DeleteViewCommand}" />
+            </WrapPanel>
+          </StackPanel>
+        </Border>
+      </Popup>
+
+      <Popup x:Name="FilterHelpPopover" PlacementTarget="{Binding #FilterHelpButton}"
+             Placement="BottomEdgeAlignedRight" VerticalOffset="8"
+             IsLightDismissEnabled="True" IsOpen="False">
+        <Border Width="360" Background="{DynamicResource AppPanelBrush}"
+                BorderBrush="{DynamicResource AppBorderStrongBrush}" BorderThickness="1"
+                CornerRadius="9" Padding="14" BoxShadow="0 14 40 0 #77000000">
+          <StackPanel Spacing="7">
+            <TextBlock Text="Filter syntax" FontSize="14" FontWeight="SemiBold" />
+            <TextBlock Classes="muted" TextWrapping="Wrap"
+                       Text="Search all visible metadata with ordinary text. Use Field:Value for a field, quotes for phrases, and AND, OR, or NOT to combine terms." />
+            <TextBlock FontFamily="Consolas" Text="Artist:Miles AND NOT Codec:MP3" />
+            <TextBlock FontFamily="Consolas" Text="Album:&quot;Kind of Blue&quot;" />
+          </StackPanel>
+        </Border>
+      </Popup>
     </Grid>
 
     <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8">
-      <TextBlock Classes="muted" VerticalAlignment="Center" Text="{Binding StatusText}" TextTrimming="CharacterEllipsis" />
+      <TextBlock Classes="muted" VerticalAlignment="Center" Text="{Binding StatusText}"
+                 TextTrimming="CharacterEllipsis" AutomationProperties.LiveSetting="Polite" />
       <TextBlock x:Name="SelectedCountLabel" Grid.Column="1" Classes="summary-label" IsVisible="False" />
       <Button x:Name="CopyButton" Grid.Column="2" Classes="app" IsVisible="False" Content="Copy paths" Click="OnCopyPaths" />
       <Button x:Name="RevealButton" Grid.Column="3" Classes="app" IsVisible="False" Content="Reveal" Click="OnReveal" />

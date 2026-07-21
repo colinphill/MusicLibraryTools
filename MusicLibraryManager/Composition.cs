@@ -9,7 +9,7 @@ namespace MusicLibraryManager;
 
 public static class Composition
 {
-    public static ServiceProvider BuildServices()
+    public static ServiceProvider BuildServices(Action<IServiceCollection>? configureServices = null)
     {
         var services = new ServiceCollection();
         services.AddMusicLibraryCore();
@@ -43,6 +43,7 @@ public static class Composition
         services.AddSingleton<OperationsViewModel>();
         services.AddSingleton<WorkflowIntegrationService>();
         services.AddSingleton<MainWindow>();
+        configureServices?.Invoke(services);
         return services.BuildServiceProvider();
     }
 }

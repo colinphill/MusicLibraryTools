@@ -84,8 +84,29 @@ public sealed record DeviceSyncRestoreResult(
     string RecoveryId,
     string DeviceSerial);
 
+/// <summary>
+/// A device reported by ADB. <see cref="Id"/> is the composite model-and-serial profile identity;
+/// <see cref="Serial"/> is the raw ADB selector used by synchronization requests.
+/// </summary>
+public sealed record DeviceSyncDevice(
+    string Id,
+    string Serial,
+    string DisplayName,
+    string State,
+    bool IsReady,
+    string? Model = null,
+    string? Product = null,
+    string? Device = null,
+    string? TransportId = null,
+    string? Connection = null);
+
 public interface IDeviceSyncService
 {
+    Task<IReadOnlyList<DeviceSyncDevice>> EnumerateDevicesAsync(
+        string? adbPath = null,
+        CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<DeviceSyncDevice>>([]);
+
     Task<DeviceSyncInitializationResult> InitializeAsync(
         DeviceSyncInitializationRequest request,
         IProgress<OperationProgress>? progress = null,
@@ -128,6 +149,11 @@ public sealed record ManagedSyncerApplyResult(
 /// <summary>Application boundary around the managed Syncer.Client library.</summary>
 public interface ISyncerClientAdapter
 {
+    Task<IReadOnlyList<DeviceSyncDevice>> EnumerateDevicesAsync(
+        string? adbPath = null,
+        CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<DeviceSyncDevice>>([]);
+
     Task<DeviceSyncInitializationResult> InitializeAsync(
         DeviceSyncInitializationRequest request,
         IProgress<OperationProgress>? progress = null,
@@ -156,6 +182,26 @@ public interface ISyncerClientAdapter
 /// </summary>
 public sealed class SyncerClientAdapter : ISyncerClientAdapter
 {
+    public async Task<IReadOnlyList<DeviceSyncDevice>> EnumerateDevicesAsync(
+        string? adbPath = null,
+        CancellationToken ct = default)
+    {
+        SyncerClient client = CreateClient(adbPath, null);
+        IReadOnlyList<SyncerDevice> devices = await InvokeAsync(
+            () => client.EnumerateDevicesAsync(ct)).ConfigureAwait(false);
+        return devices.Select(device => new DeviceSyncDevice(
+            device.Id,
+            device.Serial,
+            device.DisplayName,
+            device.State,
+            device.IsReady,
+            device.Model,
+            device.Product,
+            device.Device,
+            device.TransportId,
+            device.Connection)).ToArray();
+    }
+
     public async Task<DeviceSyncInitializationResult> InitializeAsync(
         DeviceSyncInitializationRequest request,
         IProgress<OperationProgress>? progress = null,
@@ -327,6 +373,11 @@ public sealed class SyncerClientAdapter : ISyncerClientAdapter
 /// </summary>
 public sealed class DeviceSyncService(ISyncerClientAdapter syncer) : IDeviceSyncService
 {
+    public Task<IReadOnlyList<DeviceSyncDevice>> EnumerateDevicesAsync(
+        string? adbPath = null,
+        CancellationToken ct = default) =>
+        syncer.EnumerateDevicesAsync(adbPath, ct);
+
     public async Task<DeviceSyncInitializationResult> InitializeAsync(
         DeviceSyncInitializationRequest request,
         IProgress<OperationProgress>? progress = null,

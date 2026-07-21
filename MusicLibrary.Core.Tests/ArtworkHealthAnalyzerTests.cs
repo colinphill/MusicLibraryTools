@@ -37,6 +37,37 @@ public sealed class ArtworkHealthAnalyzerTests
             Assert.Contains(report.Findings, finding => finding.Problem == problem);
     }
 
+    [Fact]
+    public void AnalyzeUsesConfiguredOversizedThresholdsWithStrictComparison()
+    {
+        TrackRecord record = Track("cover.flac");
+        var artwork = new[]
+        {
+            new ArtworkAuditFile(record.Path, true,
+                [new("cover", "image/jpeg", "FrontCover", 1_500, 1_000, 1_500_000)]),
+        };
+
+        AnalysisReport exactLimits = ArtworkHealthAnalyzer.Analyze([record], artwork,
+            1_500_000, 1_500);
+        Assert.DoesNotContain(exactLimits.Findings,
+            finding => finding.Problem == "Oversized artwork");
+
+        AnalysisReport encodedSizeExceeded = ArtworkHealthAnalyzer.Analyze([record], artwork,
+            1_499_999, 2_000);
+        Assert.Contains(encodedSizeExceeded.Findings,
+            finding => finding.Problem == "Oversized artwork");
+
+        var portraitArtwork = new[]
+        {
+            new ArtworkAuditFile(record.Path, true,
+                [new("portrait", "image/jpeg", "FrontCover", 1_000, 1_500, 100_000)]),
+        };
+        AnalysisReport dimensionExceeded = ArtworkHealthAnalyzer.Analyze([record], portraitArtwork,
+            2_000_000, 1_499);
+        Assert.Contains(dimensionExceeded.Findings,
+            finding => finding.Problem == "Oversized artwork");
+    }
+
     private static TrackRecord Track(string path) => new()
     {
         Path = path,

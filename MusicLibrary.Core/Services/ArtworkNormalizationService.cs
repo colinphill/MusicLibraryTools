@@ -6,7 +6,6 @@ using MusicFileUtilities;
 using MusicLibrary.Core.Models;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Processing;
 
 namespace MusicLibrary.Core.Services;
 
@@ -248,13 +247,7 @@ public sealed class ArtworkNormalizationService : IArtworkNormalizationService
                     continue;
                 }
                 if (image.Width > request.MaximumDimension || image.Height > request.MaximumDimension)
-                {
-                    image.Mutate(context => context.Resize(new ResizeOptions
-                    {
-                        Mode = ResizeMode.Max,
-                        Size = new Size(request.MaximumDimension, request.MaximumDimension),
-                    }));
-                }
+                    ArtworkImageProcessor.ResizeToFit(image, request.MaximumDimension);
                 using var encodedStream = new MemoryStream();
                 image.Save(encodedStream, new JpegEncoder { Quality = request.JpegQuality });
                 byte[] encoded = encodedStream.ToArray();

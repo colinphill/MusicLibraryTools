@@ -5,11 +5,13 @@ using Avalonia.Controls.Presenters;
 using Avalonia.Controls.Primitives;
 using Avalonia.Headless.XUnit;
 using Avalonia.Headless;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
+using MetadataCaching;
 using Microsoft.Extensions.DependencyInjection;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
@@ -41,6 +43,30 @@ public sealed class UiControlTests
         Assert.Equal(2, grid.Columns.Count);
         Assert.Equal("Title", grid.KeyFor(grid.Columns[0]));
         Assert.Equal(280, grid.CaptureColumnLayout()[0].Width);
+    }
+
+    [AvaloniaFact]
+    public void Data_grid_applies_a_typed_persisted_sort_state()
+    {
+        LibraryRow[] rows =
+        [
+            new LibraryRow(new TrackRecord { Path = @"C:\b.flac", Title = "B" }),
+            new LibraryRow(new TrackRecord { Path = @"C:\a.flac", Title = "A" }),
+        ];
+        var view = new global::Avalonia.Collections.DataGridCollectionView(rows);
+        var grid = new AppDataGrid
+        {
+            ItemsSource = view,
+        };
+        grid.ConfigureColumns([
+            new AppGridColumnDefinition("Title", "Title", "Title", 280, 140),
+        ]);
+
+        Assert.True(grid.ApplySort(new LibrarySortState("Title", true)));
+        Assert.Equal("Title", grid.CurrentSortKey);
+        Assert.True(grid.CurrentSortDescending);
+        Assert.Equal(["B", "A"], view.Cast<LibraryRow>().Select(row => row.Title));
+        Assert.False(grid.ApplySort(new LibrarySortState("Missing", false)));
     }
 
     [AvaloniaFact]
@@ -175,13 +201,86 @@ public sealed class UiControlTests
     }
 
     [AvaloniaFact]
+    public void Faint_text_meets_wcag_contrast_on_app_surfaces()
+    {
+        foreach (ThemeVariant theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
+        {
+            Assert.True(Application.Current!.TryGetResource("AppFaintBrush", theme, out object? faintValue));
+            Color faint = Assert.IsType<SolidColorBrush>(faintValue).Color;
+            foreach (string surfaceKey in new[]
+                     {
+                         "AppCanvasBrush", "AppPanelBrush", "AppRaisedBrush", "AppInsetBrush",
+                     })
+            {
+                Assert.True(Application.Current.TryGetResource(surfaceKey, theme, out object? surfaceValue));
+                Color surface = Assert.IsType<SolidColorBrush>(surfaceValue).Color;
+                Assert.True(ContrastRatio(faint, surface) >= 4.5,
+                    $"{theme} faint text contrast on {surfaceKey} was {ContrastRatio(faint, surface):0.00}:1");
+            }
+        }
+    }
+
+    [AvaloniaFact]
+    public void Larger_text_and_logical_dpi_keep_minimum_header_commands_in_bounds()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        MainWindow window = services.GetRequiredService<MainWindow>();
+        INavigationService navigation = services.GetRequiredService<INavigationService>();
+        try
+        {
+            window.FontSize = 18;
+            window.Show();
+            window.WindowState = WindowState.Normal;
+            window.Width = 900;
+            window.Height = 600;
+            window.Activate();
+
+            int headersChecked = 0;
+            foreach (ShellDestination destination in Enum.GetValues<ShellDestination>())
+            {
+                navigation.Navigate(destination);
+                Dispatcher.UIThread.RunJobs();
+                AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+                Control activeView = Assert.IsAssignableFrom<Control>(
+                    window.FindControl<ContentControl>("ContentHost")!.Content);
+                PageHeader? header = activeView.GetVisualDescendants().OfType<PageHeader>().SingleOrDefault();
+                if (header is null)
+                    continue;
+                headersChecked++;
+                foreach (Button button in header.GetVisualDescendants().OfType<Button>()
+                             .Where(button => button.IsEffectivelyVisible))
+                {
+                    Point? corner = button.TranslatePoint(
+                        new Point(button.Bounds.Width, button.Bounds.Height), header);
+                    Assert.NotNull(corner);
+                    Assert.InRange(corner.Value.X, 0, header.Bounds.Width + 1);
+                    Assert.InRange(corner.Value.Y, 0, header.Bounds.Height + 1);
+                }
+            }
+            Assert.True(headersChecked >= 7);
+
+            using var frame = window.GetLastRenderedFrame();
+            Assert.NotNull(frame);
+            Assert.True(window.RenderScaling > 0);
+            Assert.Equal(window.RenderScaling,
+                frame.PixelSize.Width / window.Bounds.Width, precision: 3);
+            Assert.Equal(window.RenderScaling,
+                frame.PixelSize.Height / window.Bounds.Height, precision: 3);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
     public void Native_shell_constructs_and_routes_every_destination()
     {
-        using ServiceProvider services = Composition.BuildServices();
+        using ServiceProvider services = BuildIsolatedServices();
         App.UseServicesForTests(services);
         MainWindow window = services.GetRequiredService<MainWindow>();
         ContentControl host = window.FindControl<ContentControl>("ContentHost")!;
-        Border resizeGrip = window.FindControl<Border>("ResizeGrip")!;
         INavigationService navigation = services.GetRequiredService<INavigationService>();
         var destinations = new (ShellDestination Destination, Type View)[]
         {
@@ -195,15 +294,21 @@ public sealed class UiControlTests
             (ShellDestination.Settings, typeof(SettingsView)),
         };
 
-        Assert.Equal(22, resizeGrip.Width);
-        Assert.Equal(22, resizeGrip.Height);
-        Assert.Equal(global::Avalonia.Layout.HorizontalAlignment.Right, resizeGrip.HorizontalAlignment);
-        Assert.Equal(global::Avalonia.Layout.VerticalAlignment.Bottom, resizeGrip.VerticalAlignment);
+        Assert.Equal(WindowDecorations.Full, window.WindowDecorations);
+        Assert.True(window.CanResize);
+        Assert.Equal(900, window.MinWidth);
+        Assert.Equal(600, window.MinHeight);
 
         foreach ((ShellDestination destination, Type view) in destinations)
         {
             navigation.Navigate(destination);
             Assert.IsType(view, host.Content);
+            Button navigationButton = window.FindControl<Button>($"{destination}Nav")!;
+            Assert.Equal("Selected", global::Avalonia.Automation.AutomationProperties.GetItemStatus(
+                navigationButton));
+            Assert.Equal(destination.ToString(),
+                global::Avalonia.Automation.AutomationProperties.GetName(navigationButton));
+            Assert.NotNull(ToolTip.GetTip(navigationButton));
             if (host.Content is HomeView home)
             {
                 Grid indexingBanner = home.FindControl<Grid>("IndexingBannerLayout")!;
@@ -218,6 +323,8 @@ public sealed class UiControlTests
                 Popup columnPopover = library.FindControl<Popup>("ColumnPopover")!;
                 Button columnsButton = library.FindControl<Button>("ColumnsButton")!;
                 Button closeColumnsButton = library.FindControl<Button>("CloseColumnsButton")!;
+                Assert.Equal("Filter library", global::Avalonia.Automation.AutomationProperties.GetName(
+                    library.FindControl<TextBox>("FilterBox")!));
                 Assert.True(columnPopover.IsLightDismissEnabled);
                 columnsButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 Assert.True(columnPopover.IsOpen);
@@ -248,6 +355,19 @@ public sealed class UiControlTests
                 Assert.Contains("U+00A0 NO-BREAK SPACE",
                     Assert.IsType<string>(ToolTip.GetTip(beforeCell)));
             }
+            else if (host.Content is IngestView ingest)
+            {
+                ComboBox recentFolders = ingest.FindControl<ComboBox>("RecentFoldersCombo")!;
+                Assert.Equal("Recent folders", recentFolders.PlaceholderText);
+                Assert.Equal("Recent ingest folders",
+                    global::Avalonia.Automation.AutomationProperties.GetName(recentFolders));
+                Assert.Single(ingest.FindControl<StackPanel>("SetupPanel")!.Children.OfType<Grid>());
+                Assert.DoesNotContain(ingest.GetVisualDescendants().OfType<TextBlock>(),
+                    text => text.Text?.Contains("Preset", StringComparison.OrdinalIgnoreCase) == true);
+                Assert.DoesNotContain(ingest.GetVisualDescendants().OfType<Button>(),
+                    button => button.Content is string content &&
+                        content.Contains("preset", StringComparison.OrdinalIgnoreCase));
+            }
             else if (host.Content is OrganizeView organize)
             {
                 Grid summary = organize.FindControl<Grid>("SummaryLayout")!;
@@ -262,12 +382,19 @@ public sealed class UiControlTests
             {
                 AppDataGrid grid = devices.FindControl<AppDataGrid>("ActionsGrid")!;
                 Button restore = devices.FindControl<Button>("RestoreButton")!;
+                ComboBox deviceSelector = devices.FindControl<ComboBox>("DeviceSelector")!;
+                Button refreshDevices = devices.FindControl<Button>("RefreshDevicesButton")!;
                 StackPanel configuration = devices.FindControl<StackPanel>("ConfigurationPanel")!;
                 DevicesViewModel viewModel = Assert.IsType<DevicesViewModel>(devices.DataContext);
                 Assert.Equal(5, grid.Columns.Count);
                 Assert.Equal("Status", grid.KeyFor(grid.Columns[0]));
                 Assert.Equal("Kind", grid.KeyFor(grid.Columns[1]));
                 Assert.Equal("Restore", restore.Content);
+                Assert.Equal("Android device",
+                    global::Avalonia.Automation.AutomationProperties.GetName(deviceSelector));
+                Assert.Equal("Refresh Android devices",
+                    global::Avalonia.Automation.AutomationProperties.GetName(refreshDevices));
+                Assert.NotNull(deviceSelector.ItemTemplate);
                 Assert.True(configuration.IsEnabled);
                 viewModel.IsBusy = true;
                 Dispatcher.UIThread.RunJobs();
@@ -280,9 +407,262 @@ public sealed class UiControlTests
     }
 
     [AvaloniaFact]
+    public async Task Confirmation_dialog_defaults_to_cancel_and_restores_focus_on_escape()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        MainWindow window = services.GetRequiredService<MainWindow>();
+        DialogService dialogs = services.GetRequiredService<DialogService>();
+        Task<bool>? pending = null;
+        try
+        {
+            window.Show();
+            window.Width = 900;
+            window.Height = 600;
+            window.Activate();
+            Dispatcher.UIThread.RunJobs();
+            TextBox search = window.FindControl<TextBox>("SearchBox")!;
+            search.Focus();
+
+            pending = dialogs.ConfirmAsync(
+                "Permanently remove files?",
+                "Remove 12 files. No recovery is available.",
+                "Remove",
+                DialogTone.Danger);
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+
+            DialogHost host = window.GetVisualDescendants().OfType<DialogHost>().Single();
+            Border card = host.FindControl<Border>("DialogCard")!;
+            Button cancel = host.GetVisualDescendants().OfType<Button>()
+                .Single(button => Equals(button.Content, "Cancel"));
+            StackPanel buttons = host.FindControl<StackPanel>("DialogButtons")!;
+            Assert.True(host.IsVisible);
+            Assert.True(card.Bounds.Width <= 560);
+            Assert.True(card.Bounds.Height <= window.Bounds.Height - 48);
+            Assert.Equal(KeyboardNavigationMode.Cycle, KeyboardNavigation.GetTabNavigation(card));
+            Assert.Equal(["Cancel", "Remove"],
+                buttons.Children.OfType<Button>().Select(button => button.Content?.ToString()));
+            Assert.Same(cancel, window.FocusManager?.GetFocusedElement());
+
+            host.RaiseEvent(new KeyEventArgs
+            {
+                RoutedEvent = InputElement.KeyDownEvent,
+                Key = Key.Escape,
+            });
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.False(await pending);
+            Assert.False(host.IsVisible);
+            Assert.Same(search, window.FocusManager?.GetFocusedElement());
+        }
+        finally
+        {
+            if (pending is { IsCompleted: false })
+                dialogs.Complete(false);
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Native_close_cancels_a_dismissible_dialog_without_closing_its_owner()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        MainWindow window = services.GetRequiredService<MainWindow>();
+        DialogService dialogs = services.GetRequiredService<DialogService>();
+        Task<bool>? pending = null;
+        try
+        {
+            window.Show();
+            window.Activate();
+            Dispatcher.UIThread.RunJobs();
+
+            pending = dialogs.ConfirmAsync(
+                "Apply reviewed changes?",
+                "Apply one reviewed change.",
+                "Apply");
+            Dispatcher.UIThread.RunJobs();
+            DialogHost host = window.GetVisualDescendants().OfType<DialogHost>().Single();
+            Assert.True(host.IsVisible);
+
+            window.Close();
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.True(window.IsVisible);
+            Assert.False(await pending);
+            Assert.Null(dialogs.Current);
+            Assert.False(host.IsVisible);
+        }
+        finally
+        {
+            if (pending is { IsCompleted: false })
+                dialogs.Complete(false);
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Native_close_preserves_a_dirty_fields_dialog()
+    {
+        using ServiceProvider services = BuildIsolatedServices(
+            configureServices: collection =>
+                collection.AddSingleton<IMediaFileService>(new FieldsDialogMediaService()));
+        App.UseServicesForTests(services);
+        MainWindow window = services.GetRequiredService<MainWindow>();
+        DialogService dialogs = services.GetRequiredService<DialogService>();
+        Task<bool>? pending = null;
+        try
+        {
+            window.Show();
+            window.Activate();
+            Dispatcher.UIThread.RunJobs();
+
+            pending = dialogs.ShowAsync([@"C:\Music\Track.flac"]);
+            Dispatcher.UIThread.RunJobs();
+            FieldsRequest request = Assert.IsType<FieldsRequest>(dialogs.Current);
+            FieldRow title = Assert.Single(request.ViewModel.Rows,
+                row => row.Field == TagFields.Title);
+            title.Value = "Unsaved title";
+            Assert.False(request.DismissalPolicy.CanDismissFromCloseButton);
+
+            DialogHost host = window.GetVisualDescendants().OfType<DialogHost>().Single();
+            Assert.True(host.IsVisible);
+            window.Close();
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.True(window.IsVisible);
+            Assert.True(host.IsVisible);
+            Assert.Same(request, dialogs.Current);
+            Assert.False(pending.IsCompleted);
+            Assert.Equal("Unsaved title", title.Value);
+        }
+        finally
+        {
+            if (pending is { IsCompleted: false })
+            {
+                dialogs.Complete(false);
+                Assert.False(await pending);
+            }
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Persistent_activity_strip_routes_and_cancels_at_minimum_size()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        IActivityService activities = services.GetRequiredService<IActivityService>();
+        bool cancelled = false;
+        Guid activity = activities.Start(
+            "Preview operation", "Computing a recoverable plan", ShellDestination.Operations,
+            () => cancelled = true);
+        MainWindow window = services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Show();
+            window.Width = 900;
+            window.Height = 600;
+            window.Activate();
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+
+            Border banner = window.FindControl<Border>("ActivityBanner")!;
+            Assert.True(banner.IsVisible);
+            Assert.InRange(banner.Bounds.Height, 36, 56);
+            Button open = banner.GetVisualDescendants().OfType<Button>()
+                .Single(button => Equals(button.Content, "Open"));
+            Button cancel = banner.GetVisualDescendants().OfType<Button>()
+                .Single(button => Equals(button.Content, "Cancel"));
+
+            Assert.True(open.Command!.CanExecute(open.CommandParameter));
+            open.Command.Execute(open.CommandParameter);
+            Dispatcher.UIThread.RunJobs();
+            Assert.IsType<OperationsView>(window.FindControl<ContentControl>("ContentHost")!.Content);
+
+            Assert.True(cancel.Command!.CanExecute(cancel.CommandParameter));
+            cancel.Command.Execute(cancel.CommandParameter);
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(cancelled);
+            Assert.False(cancel.IsEffectivelyEnabled);
+
+            activities.Finish(activity, "Preview cancelled", AppActivityState.Cancelled);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Contains("warning", banner.Classes);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Completed_activity_strip_removes_stale_progress_and_cancel_action()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        IActivityService activities = services.GetRequiredService<IActivityService>();
+        Guid activity = activities.Start(
+            "Index library", "Indexing fixture tracks", ShellDestination.Library,
+            () => { });
+        activities.Report(activity, "Indexed 2 fixture tracks", 0.75);
+
+        MainWindow window = services.GetRequiredService<MainWindow>();
+        ThemeVariant? previousTheme = Application.Current!.RequestedThemeVariant;
+        try
+        {
+            Application.Current.RequestedThemeVariant = ThemeVariant.Dark;
+            window.Show();
+            window.Width = 2048;
+            window.Height = 900;
+            window.Activate();
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+
+            Grid progress = window.FindControl<Grid>("ActivityProgressHost")!;
+            Button cancel = window.FindControl<Button>("ActivityCancelButton")!;
+            Button dismiss = window.FindControl<Button>("ActivityDismissButton")!;
+            TextBlock state = window.FindControl<TextBlock>("ActivityStateLabel")!;
+            Assert.True(progress.IsVisible);
+            Assert.True(progress.ClipToBounds);
+            Assert.True(cancel.IsVisible);
+            Assert.False(dismiss.IsVisible);
+            Assert.Equal("In progress", state.Text);
+            Assert.True(progress.Bounds.Right <= state.Bounds.Left,
+                $"Progress ended at {progress.Bounds.Right}, but the state label began at {state.Bounds.Left}.");
+
+            activities.Finish(activity, "Index complete: 2 unchanged.");
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+
+            Assert.False(progress.IsVisible);
+            Assert.False(cancel.IsVisible);
+            Assert.True(dismiss.IsVisible);
+            Assert.Equal("Completed", state.Text);
+            Assert.Contains("success", state.Classes);
+
+            string? captureDirectory = Environment.GetEnvironmentVariable(
+                "MUSIC_LIBRARY_MANAGER_CAPTURE_DIR");
+            if (!string.IsNullOrWhiteSpace(captureDirectory))
+            {
+                Directory.CreateDirectory(captureDirectory);
+                using var frame = window.GetLastRenderedFrame();
+                Assert.NotNull(frame);
+                frame.Save(Path.Combine(captureDirectory, "activity-completed-wide.png"));
+            }
+        }
+        finally
+        {
+            window.Hide();
+            Application.Current.RequestedThemeVariant = previousTheme;
+        }
+    }
+
+    [AvaloniaFact]
     public void Every_destination_completes_a_headless_1440_by_900_render_pass()
     {
-        using ServiceProvider services = Composition.BuildServices();
+        using ServiceProvider services = BuildIsolatedServices();
         App.UseServicesForTests(services);
         MainWindow window = services.GetRequiredService<MainWindow>();
         INavigationService navigation = services.GetRequiredService<INavigationService>();
@@ -324,20 +704,7 @@ public sealed class UiControlTests
         Assert.Equal(
             global::Avalonia.Layout.VerticalAlignment.Center,
             window.FindControl<TextBox>("SearchBox")!.VerticalContentAlignment);
-        foreach (string captionName in new[] { "MinimizeButton", "MaximizeButton", "CloseButton" })
-        {
-            Button caption = window.FindControl<Button>(captionName)!;
-            Viewbox icon = Assert.IsType<Viewbox>(caption.Content);
-            ContentPresenter presenter = caption.GetVisualDescendants().OfType<ContentPresenter>().Single();
-            Assert.Equal(global::Avalonia.Layout.HorizontalAlignment.Center, caption.HorizontalContentAlignment);
-            Assert.Equal(global::Avalonia.Layout.VerticalAlignment.Center, caption.VerticalContentAlignment);
-            Assert.Equal(global::Avalonia.Layout.HorizontalAlignment.Center, presenter.HorizontalContentAlignment);
-            Assert.Equal(global::Avalonia.Layout.VerticalAlignment.Center, presenter.VerticalContentAlignment);
-            Assert.Equal(global::Avalonia.Layout.HorizontalAlignment.Center, icon.HorizontalAlignment);
-            Assert.Equal(global::Avalonia.Layout.VerticalAlignment.Center, icon.VerticalAlignment);
-            Assert.Equal(20, icon.Width);
-            Assert.Equal(20, icon.Height);
-        }
+        Assert.Equal(WindowDecorations.Full, window.WindowDecorations);
 
         try
         {
@@ -394,8 +761,9 @@ public sealed class UiControlTests
                     Assert.Equal(global::Avalonia.Layout.HorizontalAlignment.Stretch, scroll.HorizontalContentAlignment);
                     Assert.Equal(ScrollBarVisibility.Disabled, scroll.HorizontalScrollBarVisibility);
                     Assert.Equal(global::Avalonia.Layout.HorizontalAlignment.Stretch, content.HorizontalAlignment);
-                    Assert.True(content.Bounds.Width >= scroll.Bounds.Width - 50,
-                        $"Settings content did not fill its viewport. Content={content.Bounds.Width:0}; Scroll={scroll.Bounds.Width:0}");
+                    Assert.InRange(content.Bounds.Width, 1000, 1040);
+                    Assert.True(content.Bounds.Width <= scroll.Bounds.Width,
+                        $"Settings content exceeded its viewport. Content={content.Bounds.Width:0}; Scroll={scroll.Bounds.Width:0}");
                 }
                 else if (destination == ShellDestination.Health)
                 {
@@ -419,6 +787,414 @@ public sealed class UiControlTests
         }
     }
 
+    [AvaloniaFact]
+    public void Every_destination_renders_at_the_900_by_600_minimum_in_light_and_dark()
+    {
+        string? captureDirectory = Environment.GetEnvironmentVariable("MUSIC_LIBRARY_MANAGER_CAPTURE_DIR");
+        ThemeVariant? previousTheme = Application.Current!.RequestedThemeVariant;
+        try
+        {
+            foreach ((string name, ThemeVariant theme) in new[]
+                     {
+                         ("light", ThemeVariant.Light),
+                         ("dark", ThemeVariant.Dark),
+                     })
+            {
+                Application.Current.RequestedThemeVariant = theme;
+                using ServiceProvider services = BuildIsolatedServices();
+                App.UseServicesForTests(services);
+                MainWindow window = services.GetRequiredService<MainWindow>();
+                INavigationService navigation = services.GetRequiredService<INavigationService>();
+                try
+                {
+                    window.Show();
+                    window.WindowState = WindowState.Normal;
+                    window.Width = 900;
+                    window.Height = 600;
+                    window.Activate();
+                    Dispatcher.UIThread.RunJobs();
+
+                    Assert.Equal(64, window.FindControl<Grid>("BodyGrid")!.ColumnDefinitions[0].ActualWidth);
+                    Assert.False(window.FindControl<TextBlock>("ConfigurationChipText")!.IsVisible);
+                    Assert.False(window.FindControl<Border>("SearchShortcut")!.IsVisible);
+
+                    foreach (ShellDestination destination in Enum.GetValues<ShellDestination>())
+                    {
+                        navigation.Navigate(destination);
+                        Dispatcher.UIThread.RunJobs();
+                        AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+
+                        Control activeView = Assert.IsAssignableFrom<Control>(
+                            window.FindControl<ContentControl>("ContentHost")!.Content);
+                        Assert.True(activeView.Bounds.Width >= 800,
+                            $"{destination} did not fill the compact content host. Width={activeView.Bounds.Width:0}");
+                        Assert.True(activeView.Bounds.Height >= 500,
+                            $"{destination} did not fill the compact content host. Height={activeView.Bounds.Height:0}");
+
+                        if (destination == ShellDestination.Library)
+                        {
+                            LibraryView library = Assert.IsType<LibraryView>(activeView);
+                            Button inspectorToggle = library.FindControl<Button>("InspectorToggle")!;
+                            Border inspectorScrim = library.FindControl<Border>("InspectorScrim")!;
+                            Assert.True(inspectorToggle.IsVisible);
+                            Assert.False(inspectorScrim.IsVisible);
+                            inspectorToggle.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                            Dispatcher.UIThread.RunJobs();
+                            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+                            Assert.True(inspectorScrim.IsVisible);
+                            PersistedSplitView split = library.FindControl<PersistedSplitView>("WorkspaceSplit")!;
+                            ContentPresenter left = split.FindControl<ContentPresenter>("LeftPresenter")!;
+                            ContentPresenter right = split.FindControl<ContentPresenter>("RightPresenter")!;
+                            Assert.True(left.Bounds.Width >= split.Bounds.Width - 1,
+                                $"Compact Library pane was clipped: {left.Bounds.Width:0}/{split.Bounds.Width:0}");
+                            Assert.InRange(right.Bounds.Width, 319, 321);
+                            Assert.True(right.Bounds.Right <= split.Bounds.Width + 1,
+                                $"Inspector drawer exceeded its host: right={right.Bounds.Right:0}, host={split.Bounds.Width:0}");
+                        }
+                        else if (destination == ShellDestination.Settings)
+                        {
+                            SettingsView settings = Assert.IsType<SettingsView>(activeView);
+                            SettingsViewModel viewModel = Assert.IsType<SettingsViewModel>(settings.DataContext);
+                            viewModel.LengthLimit = 254;
+                            settings.FindControl<TabControl>("SettingsTabs")!.SelectedIndex = 4;
+                            Dispatcher.UIThread.RunJobs();
+                            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+                            foreach (NumericUpDown input in new[]
+                                     {
+                                         settings.FindControl<NumericUpDown>("ArtworkSizeThresholdInput")!,
+                                         settings.FindControl<NumericUpDown>("ArtworkDimensionThresholdInput")!,
+                                     })
+                            {
+                                Assert.True(input.IsEffectivelyVisible);
+                                Point? corner = input.TranslatePoint(
+                                    new Point(input.Bounds.Width, input.Bounds.Height), settings);
+                                Assert.NotNull(corner);
+                                Assert.InRange(corner.Value.X, 0, settings.Bounds.Width + 1);
+                                Assert.InRange(corner.Value.Y, 0, settings.Bounds.Height + 1);
+                            }
+                            PageHeader header = settings.GetVisualDescendants().OfType<PageHeader>().Single();
+                            Button discard = header.GetVisualDescendants().OfType<Button>()
+                                .Single(button => Equals(button.Content, "Discard"));
+                            Assert.True(discard.IsEffectivelyVisible);
+                            foreach (Button button in header.GetVisualDescendants().OfType<Button>()
+                                         .Where(button => button.IsEffectivelyVisible))
+                            {
+                                Point? corner = button.TranslatePoint(
+                                    new Point(button.Bounds.Width, button.Bounds.Height), header);
+                                Assert.NotNull(corner);
+                                Assert.InRange(corner.Value.X, 0, header.Bounds.Width + 1);
+                                Assert.InRange(corner.Value.Y, 0, header.Bounds.Height + 1);
+                            }
+                        }
+
+                        using var frame = window.GetLastRenderedFrame();
+                        Assert.NotNull(frame);
+                        Assert.Equal(900, frame.PixelSize.Width);
+                        Assert.Equal(600, frame.PixelSize.Height);
+                        if (!string.IsNullOrWhiteSpace(captureDirectory))
+                        {
+                            Directory.CreateDirectory(captureDirectory);
+                            frame.Save(Path.Combine(captureDirectory,
+                                $"{name}-900x600-{destination}.png"));
+                        }
+                    }
+                }
+                finally
+                {
+                    window.Hide();
+                }
+            }
+        }
+        finally
+        {
+            Application.Current.RequestedThemeVariant = previousTheme;
+        }
+    }
+
+    [AvaloniaFact]
+    public void Populated_health_nested_panes_fit_at_the_900_by_600_minimum()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        MainWindow window = services.GetRequiredService<MainWindow>();
+        AnalyzerViewModel analyzer = services.GetRequiredService<AnalyzerViewModel>();
+        INavigationService navigation = services.GetRequiredService<INavigationService>();
+        var record = new TrackRecord
+        {
+            Path = @"X:\Fixture\Artist\Album\Track.flac",
+            Artist = "Fixture Artist",
+            Album = "Fixture Album",
+            Title = "Fixture Track",
+        };
+        AnalysisRunViewModel findings = AnalysisRunViewModel.ForFindings(
+            new AnalysisReport("Fixture findings",
+                [new AnalysisFinding(record.Path, "Fixture inconsistency", "Metadata")]),
+            [record],
+            "One fixture finding.");
+        var repair = new AnalysisTagRepair(
+            record.Path,
+            TagFields.AlbumArtist,
+            null,
+            record.Artist!,
+            "Fill the missing album artist",
+            1,
+            DateTime.UnixEpoch);
+        AnalysisRunViewModel repairs = AnalysisRunViewModel.ForRepairs(
+            new AnalysisRepairPlan("Fixture repairs", [repair]),
+            [new AnalysisRepairItemViewModel(repair)],
+            [record],
+            "One fixture metadata repair.");
+        analyzer.Runs.Add(findings);
+        analyzer.Runs.Add(repairs);
+        analyzer.SelectedRun = repairs;
+
+        try
+        {
+            window.Show();
+            window.WindowState = WindowState.Normal;
+            window.Width = 900;
+            window.Height = 600;
+            window.Activate();
+            navigation.Navigate(ShellDestination.Health);
+            Render();
+
+            HealthView health = Assert.IsType<HealthView>(
+                window.FindControl<ContentControl>("ContentHost")!.Content);
+            AssertNestedPaneFits(health, "health-metadata-repairs");
+
+            analyzer.SelectedRun = findings;
+            Render();
+            AssertNestedPaneFits(health, "health-findings");
+
+            using var frame = window.GetLastRenderedFrame();
+            Assert.NotNull(frame);
+            Assert.Equal(900, frame.PixelSize.Width);
+            Assert.Equal(600, frame.PixelSize.Height);
+        }
+        finally
+        {
+            window.Hide();
+        }
+
+        static void Render()
+        {
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+        }
+
+        static void AssertNestedPaneFits(HealthView health, string persistenceKey)
+        {
+            PersistedSplitView split = health.GetVisualDescendants()
+                .OfType<PersistedSplitView>()
+                .Single(candidate => candidate.PersistenceKey == persistenceKey);
+            ContentPresenter left = split.FindControl<ContentPresenter>("LeftPresenter")!;
+            ContentPresenter right = split.FindControl<ContentPresenter>("RightPresenter")!;
+
+            Assert.True(split.Bounds.Width >= split.MinLeftWidth + 10 + split.MinRightWidth,
+                $"{persistenceKey} cannot satisfy its pane minima: {split.Bounds.Width:0}px.");
+            Assert.True(left.Bounds.Right <= split.Bounds.Width + 1,
+                $"{persistenceKey} hierarchy exceeded its host: {left.Bounds.Right:0}/{split.Bounds.Width:0}.");
+            Assert.True(right.Bounds.Right <= split.Bounds.Width + 1,
+                $"{persistenceKey} results exceeded its host: {right.Bounds.Right:0}/{split.Bounds.Width:0}.");
+            Assert.True(right.Bounds.Width >= split.MinRightWidth - 1,
+                $"{persistenceKey} results collapsed below minimum: {right.Bounds.Width:0}px.");
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Clearing_library_health_chip_clears_the_originating_disposition()
+    {
+        var record = new TrackRecord
+        {
+            Path = @"X:\Fixture\Lossy.mp3",
+            Artist = "Fixture Artist",
+            AlbumArtist = "Fixture Artist",
+            Album = "Fixture Album",
+            Title = "Lossy Fixture",
+            CodecName = "MP3",
+            CodecType = CodecType.Lossy,
+        };
+        using ServiceProvider services = BuildIsolatedServices([record]);
+        WorkflowIntegrationService integration =
+            services.GetRequiredService<WorkflowIntegrationService>();
+        AnalyzerViewModel health = services.GetRequiredService<AnalyzerViewModel>();
+        LibraryViewModel library = services.GetRequiredService<LibraryViewModel>();
+        integration.Start();
+
+        await health.RunLossyCommand.ExecuteAsync(null);
+        AnalysisFindingViewModel finding = Assert.Single(
+            Assert.Single(Assert.Single(health.FindingGroups).Artists).Albums).Findings[0];
+        finding.Disposition = AnalysisFindingDisposition.Filter;
+
+        Assert.True(library.HasHealthFilter);
+        Assert.Equal([record.Path], health.FilteredPaths);
+
+        library.ClearHealthFilterCommand.Execute(null);
+
+        Assert.False(library.HasHealthFilter);
+        Assert.Empty(health.FilteredPaths);
+        Assert.Equal(AnalysisFindingDisposition.None, finding.Disposition);
+    }
+
+    [AvaloniaFact]
+    public async Task Representative_page_states_render_at_both_sizes_in_light_and_dark()
+    {
+        string? captureDirectory = Environment.GetEnvironmentVariable("MUSIC_LIBRARY_MANAGER_CAPTURE_DIR");
+        ThemeVariant? previousTheme = Application.Current!.RequestedThemeVariant;
+        LibraryRow[] fixture =
+        [
+            new(new TrackRecord
+            {
+                Path = @"X:\Fixture\Aurora.flac",
+                Title = "Aurora",
+                Artist = "The Fixtures",
+                Album = "Deterministic Data",
+                CodecName = "FLAC",
+            }),
+            new(new TrackRecord
+            {
+                Path = @"X:\Fixture\Harbor.mp3",
+                Title = "Harbor",
+                Artist = "The Fixtures",
+                Album = "Deterministic Data",
+                CodecName = "MP3",
+            }),
+        ];
+
+        try
+        {
+            foreach ((string themeName, ThemeVariant theme) in new[]
+                     {
+                         ("light", ThemeVariant.Light),
+                         ("dark", ThemeVariant.Dark),
+                     })
+            foreach ((int width, int height) in new[] { (1440, 900), (900, 600) })
+            {
+                Application.Current.RequestedThemeVariant = theme;
+                using ServiceProvider services = BuildIsolatedServices(
+                    fixture.Select(row => row.Record).ToArray());
+                App.UseServicesForTests(services);
+                MainWindow window = services.GetRequiredService<MainWindow>();
+                INavigationService navigation = services.GetRequiredService<INavigationService>();
+                IActivityService activities = services.GetRequiredService<IActivityService>();
+                DialogService dialogs = services.GetRequiredService<DialogService>();
+                try
+                {
+                    window.Show();
+                    window.WindowState = WindowState.Normal;
+                    window.Width = width;
+                    window.Height = height;
+                    window.Activate();
+                    navigation.Navigate(ShellDestination.Library);
+                    Dispatcher.UIThread.RunJobs();
+
+                    LibraryView view = Assert.IsType<LibraryView>(
+                        window.FindControl<ContentControl>("ContentHost")!.Content);
+                    LibraryViewModel viewModel = Assert.IsType<LibraryViewModel>(view.DataContext);
+                    viewModel.IsInspectorOpen = false;
+
+                    viewModel.Rows = [];
+                    viewModel.StatusText = "Choose a fixture configuration.";
+                    viewModel.PageState = LibraryPageState.NoConfiguration;
+                    RenderAndCapture("empty");
+                    Assert.True(view.FindControl<Border>("LibraryEmptyState")!.IsVisible);
+
+                    await viewModel.ReloadAsync();
+                    viewModel.Indexing.StatusText = "Fixture index is current.";
+                    RenderAndCapture("populated");
+                    Assert.Equal(2, view.FindControl<AppDataGrid>("LibraryGrid")!
+                        .ItemsSource!.Cast<object>().Count());
+
+                    Guid activity = activities.Start(
+                        "Index fixture library", "Reading 2 deterministic tracks",
+                        ShellDestination.Library, () => { });
+                    viewModel.IsBusy = true;
+                    viewModel.PageState = LibraryPageState.Loading;
+                    viewModel.Indexing.StatusText = "Indexing fixture library…";
+                    RenderAndCapture("busy");
+                    Assert.True(window.FindControl<Border>("ActivityBanner")!.IsVisible);
+                    viewModel.IsBusy = false;
+                    activities.Finish(activity, "Fixture index complete", AppActivityState.Completed);
+                    activities.Dismiss(activity);
+
+                    viewModel.Rows = [];
+                    viewModel.StatusText = "The fixture cache could not be opened.";
+                    viewModel.PageState = LibraryPageState.Error;
+                    viewModel.Indexing.StatusText = "Last fixture index failed.";
+                    RenderAndCapture("error");
+                    Assert.Contains("could not be opened", viewModel.EmptyStateMessage);
+
+                    Task<bool> pending = dialogs.ConfirmAsync(
+                        "Apply fixture changes?",
+                        "Move 2 files. A recovery journal will be retained for 30 days.",
+                        "Apply");
+                    Dispatcher.UIThread.RunJobs();
+                    DialogHost dialogHost = window.GetVisualDescendants().OfType<DialogHost>().Single();
+                    Assert.True(dialogHost.IsVisible);
+                    dialogHost.InvalidateMeasure();
+                    dialogHost.InvalidateArrange();
+                    dialogHost.InvalidateVisual();
+                    window.InvalidateVisual();
+                    RenderAndCapture("dialog");
+                    dialogs.Complete(false);
+                    Assert.False(await pending);
+
+                    void RenderAndCapture(string state)
+                    {
+                        Dispatcher.UIThread.RunJobs();
+                        AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+                        using var frame = window.GetLastRenderedFrame();
+                        Assert.NotNull(frame);
+                        Assert.Equal(width, frame.PixelSize.Width);
+                        Assert.Equal(height, frame.PixelSize.Height);
+                        if (string.IsNullOrWhiteSpace(captureDirectory))
+                            return;
+                        Directory.CreateDirectory(captureDirectory);
+                        frame.Save(Path.Combine(captureDirectory,
+                            $"{themeName}-{width}x{height}-state-{state}.png"));
+                    }
+                }
+                finally
+                {
+                    window.Hide();
+                }
+            }
+        }
+        finally
+        {
+            Application.Current.RequestedThemeVariant = previousTheme;
+        }
+    }
+
+    private static ServiceProvider BuildIsolatedServices(
+        IReadOnlyList<TrackRecord>? records = null,
+        Action<IServiceCollection>? configureServices = null) =>
+        Composition.BuildServices(services =>
+        {
+            services.AddSingleton<IAppSettings>(new FakeSettings());
+            if (records is not null)
+                services.AddSingleton<ILibraryService>(new FixtureLibraryService(records));
+            configureServices?.Invoke(services);
+        });
+
+    private static double ContrastRatio(Color first, Color second)
+    {
+        double firstLuminance = RelativeLuminance(first);
+        double secondLuminance = RelativeLuminance(second);
+        double lighter = Math.Max(firstLuminance, secondLuminance);
+        double darker = Math.Min(firstLuminance, secondLuminance);
+        return (lighter + 0.05) / (darker + 0.05);
+    }
+
+    private static double RelativeLuminance(Color color) =>
+        0.2126 * Linear(color.R) + 0.7152 * Linear(color.G) + 0.0722 * Linear(color.B);
+
+    private static double Linear(byte channel)
+    {
+        double value = channel / 255d;
+        return value <= 0.04045 ? value / 12.92 : Math.Pow((value + 0.055) / 1.055, 2.4);
+    }
+
     private sealed class FakeSettings : IAppSettings
     {
         private readonly Dictionary<string, string> _preferences = [];
@@ -438,5 +1214,57 @@ public sealed class UiControlTests
             else
                 _preferences[key] = value;
         }
+    }
+
+    private sealed class FieldsDialogMediaService : IMediaFileService
+    {
+        public Task<OperationResult<MediaFileModel>> LoadAsync(
+            string path,
+            CancellationToken ct = default) => LoadAsync(path, includeArtwork: true, ct);
+
+        public Task<OperationResult<MediaFileModel>> LoadAsync(
+            string path,
+            bool includeArtwork,
+            CancellationToken ct = default) =>
+            Task.FromResult(OperationResult<MediaFileModel>.Ok(new MediaFileModel
+            {
+                Path = path,
+                IsWritable = true,
+                KnownFields = [new TagFieldValue(TagFields.Title, "Original title")],
+            }));
+    }
+
+    private sealed class FixtureLibraryService(IReadOnlyList<TrackRecord> records) : ILibraryService
+    {
+        public bool IsReady => true;
+
+        public Task<(int Added, int Modified, int Removed, int Unchanged)> IndexAsync(
+            IProgress<IndexProgress>? progress = null, CancellationToken ct = default) =>
+            Task.FromResult((records.Count, 0, 0, 0));
+
+        public Task<LibrarySnapshot> BuildSnapshotAsync(
+            LibraryGrouping grouping = LibraryGrouping.AlbumArtist, CancellationToken ct = default) =>
+            Task.FromException<LibrarySnapshot>(new NotSupportedException());
+
+        public Task<IReadOnlyList<TrackRecord>> GetAllRecordsAsync(CancellationToken ct = default) =>
+            Task.FromResult(records);
+
+        public Task<AnalysisReport> CheckSetsAsync(CancellationToken ct = default) =>
+            Task.FromException<AnalysisReport>(new NotSupportedException());
+
+        public Task<FileDetails?> GetFileDetailsAsync(
+            string path, bool includeArtwork, CancellationToken ct = default) =>
+            Task.FromResult<FileDetails?>(null);
+
+        public Task<byte[]?> GetFirstImageAsync(string path, CancellationToken ct = default) =>
+            Task.FromResult<byte[]?>(null);
+
+        public Task<IReadOnlyList<byte[]?>> GetFirstImagesAsync(
+            IReadOnlyList<string> paths, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<byte[]?>>(paths.Select(_ => (byte[]?)null).ToArray());
+
+        public Task<IReadOnlyList<string>> GetImageSignaturesAsync(
+            IReadOnlyList<string> paths, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<string>>(paths.Select(_ => "").ToArray());
     }
 }

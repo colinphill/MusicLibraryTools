@@ -11,6 +11,9 @@ public interface IDialogService
     /// <summary>Create/edit a LibraryConfiguration. Returns the saved config path, or null if cancelled.</summary>
     Task<string?> ShowConfigEditorAsync(string? existingPath);
 
+    /// <summary>Confirm a reviewed workflow plan immediately before it mutates files.</summary>
+    Task<bool> ConfirmApplyAsync(string title, string message, string primaryText);
+
     Task<bool> ConfirmCdDerivationAsync(IngestApprovalItem item);
 
     Task<bool> ConfirmRestoreAsync(OperationRestorePlan plan);

@@ -1,18 +1,31 @@
 using MusicLibrary.Core.Models;
+using MusicLibraryTools;
 
 namespace MusicLibrary.Core.Services;
 
 /// <summary>Cache-only artwork health analysis. It never requests or decodes image blobs.</summary>
 public static class ArtworkHealthAnalyzer
 {
-    public const int OversizedByteThreshold = 2 * 1024 * 1024;
-    public const int OversizedDimensionThreshold = 2_000;
+    public const int OversizedByteThreshold =
+        LibraryArtworkHealthSettings.DefaultOversizedByteThreshold;
+    public const int OversizedDimensionThreshold =
+        LibraryArtworkHealthSettings.DefaultOversizedDimensionThreshold;
 
     public static AnalysisReport Analyze(
         IReadOnlyList<TrackRecord> records,
         IReadOnlyList<ArtworkAuditFile> artwork,
         CancellationToken ct = default)
+        => Analyze(records, artwork, OversizedByteThreshold, OversizedDimensionThreshold, ct);
+
+    public static AnalysisReport Analyze(
+        IReadOnlyList<TrackRecord> records,
+        IReadOnlyList<ArtworkAuditFile> artwork,
+        int oversizedByteThreshold,
+        int oversizedDimensionThreshold,
+        CancellationToken ct = default)
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(oversizedByteThreshold);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(oversizedDimensionThreshold);
         var findings = new List<AnalysisFinding>();
         var byPath = artwork.ToDictionary(file => file.Path, PathComparer);
 
@@ -38,8 +51,8 @@ public static class ArtworkHealthAnalyzer
                     findings.Add(new(record.Path,
                         $"Cached image metadata is invalid ({image.ImageType}, {image.Width}x{image.Height}, {image.Size:N0} bytes).",
                         "Unreadable artwork"));
-                if (image.Size > OversizedByteThreshold || image.Width > OversizedDimensionThreshold ||
-                    image.Height > OversizedDimensionThreshold)
+                if (image.Size > oversizedByteThreshold || image.Width > oversizedDimensionThreshold ||
+                    image.Height > oversizedDimensionThreshold)
                     findings.Add(new(record.Path,
                         $"Embedded {image.ImageType} is {image.Width:N0}x{image.Height:N0} and {image.Size:N0} bytes.",
                         "Oversized artwork"));

@@ -21,6 +21,12 @@ public partial class ShellViewModel : ObservableObject
     private bool _hasRunningActivity;
 
     [ObservableProperty]
+    private bool _hasVisibleActivity;
+
+    [ObservableProperty]
+    private AppActivity? _visibleActivity;
+
+    [ObservableProperty]
     private string? _globalSearchText;
 
     public ShellViewModel(IAppSettings settings, INavigationService navigation, IActivityService activities)
@@ -37,6 +43,28 @@ public partial class ShellViewModel : ObservableObject
 
     public ObservableCollection<string> RecentConfigurations { get; }
     public ReadOnlyObservableCollection<AppActivity> Activities => _activities.Activities;
+    public string ActivityTitle => VisibleActivity?.Title ?? "Activity";
+    public double ActivityProgress => VisibleActivity?.Progress ?? 0;
+    public bool HasDeterminateActivityProgress =>
+        VisibleActivity is { State: AppActivityState.Running, Progress: not null };
+    public bool HasIndeterminateActivityProgress =>
+        VisibleActivity is { State: AppActivityState.Running, Progress: null };
+    public bool HasVisibleActivityProgress =>
+        HasDeterminateActivityProgress || HasIndeterminateActivityProgress;
+    public bool IsActivityCancelVisible => VisibleActivity?.CanCancel == true;
+    public bool IsActivityDismissVisible =>
+        VisibleActivity is { State: not AppActivityState.Running };
+    public bool ActivityIsInfo => VisibleActivity?.State == AppActivityState.Running;
+    public bool ActivityIsSuccess => VisibleActivity?.State == AppActivityState.Completed;
+    public bool ActivityIsWarning => VisibleActivity?.State == AppActivityState.Cancelled;
+    public bool ActivityIsError => VisibleActivity?.State == AppActivityState.Failed;
+    public string ActivityStateText => VisibleActivity?.State switch
+    {
+        AppActivityState.Completed => "Completed",
+        AppActivityState.Failed => "Failed",
+        AppActivityState.Cancelled => "Cancelled",
+        _ => "In progress",
+    };
 
     public void RestoreConfiguration()
     {
@@ -62,6 +90,34 @@ public partial class ShellViewModel : ObservableObject
     [RelayCommand]
     private void OpenSettings() => _navigation.Navigate(ShellDestination.Settings);
 
+    private bool CanOpenActivity() => VisibleActivity?.Destination is not null;
+
+    [RelayCommand(CanExecute = nameof(CanOpenActivity))]
+    private void OpenActivity()
+    {
+        if (VisibleActivity?.Destination is { } destination)
+            _navigation.Navigate(destination);
+    }
+
+    private bool CanCancelActivity() => VisibleActivity?.CanCancel == true;
+
+    [RelayCommand(CanExecute = nameof(CanCancelActivity))]
+    private void CancelActivity()
+    {
+        if (VisibleActivity is { } activity)
+            _activities.Cancel(activity.Id);
+    }
+
+    private bool CanDismissActivity() =>
+        VisibleActivity is { State: not AppActivityState.Running };
+
+    [RelayCommand(CanExecute = nameof(CanDismissActivity))]
+    private void DismissActivity()
+    {
+        if (VisibleActivity is { } activity)
+            _activities.Dismiss(activity.Id);
+    }
+
     private void RefreshConfiguration()
     {
         ConfigurationName = _settings.ConfigPath is { } configPath
@@ -76,6 +132,23 @@ public partial class ShellViewModel : ObservableObject
     {
         AppActivity? current = _activities.Current;
         HasRunningActivity = current is not null;
-        ActivityText = current?.Message ?? _activities.Activities.FirstOrDefault()?.Message ?? "Ready";
+        VisibleActivity = current ?? _activities.Activities.FirstOrDefault();
+        HasVisibleActivity = VisibleActivity is not null;
+        ActivityText = VisibleActivity?.Message ?? "Ready";
+        OnPropertyChanged(nameof(ActivityTitle));
+        OnPropertyChanged(nameof(ActivityProgress));
+        OnPropertyChanged(nameof(HasDeterminateActivityProgress));
+        OnPropertyChanged(nameof(HasIndeterminateActivityProgress));
+        OnPropertyChanged(nameof(HasVisibleActivityProgress));
+        OnPropertyChanged(nameof(IsActivityCancelVisible));
+        OnPropertyChanged(nameof(IsActivityDismissVisible));
+        OnPropertyChanged(nameof(ActivityIsInfo));
+        OnPropertyChanged(nameof(ActivityIsSuccess));
+        OnPropertyChanged(nameof(ActivityIsWarning));
+        OnPropertyChanged(nameof(ActivityIsError));
+        OnPropertyChanged(nameof(ActivityStateText));
+        OpenActivityCommand.NotifyCanExecuteChanged();
+        CancelActivityCommand.NotifyCanExecuteChanged();
+        DismissActivityCommand.NotifyCanExecuteChanged();
     }
 }

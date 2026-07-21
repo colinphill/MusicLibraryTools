@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
+using MusicLibraryTools;
 
 namespace MusicLibraryManager.Presentation;
 
@@ -35,15 +36,29 @@ public partial class AnalyzerViewModel : ViewModelBase
     private readonly IRepresentationRepairService? _representationRepairs;
     private readonly IItlMetadataRepairService? _itlMetadataRepairs;
     private readonly IAppSettings _settings;
+    private readonly IDialogCoordinator? _dialogs;
+    private readonly IActivityService? _activities;
     private CancellationTokenSource? _cts;
     private IReadOnlyList<TrackRecord> _representationRecords = [];
     private IReadOnlyList<DecodedAudioPair> _decodedAudioPairs = [];
+    private bool _clearingFilterDispositions;
 
     [ObservableProperty]
     private bool _isBusy;
 
     [ObservableProperty]
     private string? _statusText = "Choose an analysis to run.";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStatusInfo))]
+    [NotifyPropertyChangedFor(nameof(IsStatusSuccess))]
+    [NotifyPropertyChangedFor(nameof(IsStatusWarning))]
+    [NotifyPropertyChangedFor(nameof(IsStatusError))]
+    [NotifyPropertyChangedFor(nameof(StatusIcon))]
+    private MessageTone _statusTone = MessageTone.Info;
+
+    [ObservableProperty]
+    private AppActivityState _lastActivityState = AppActivityState.Completed;
 
     [ObservableProperty]
     private AnalysisResultView _activeView = AnalysisResultView.Findings;
@@ -82,6 +97,24 @@ public partial class AnalyzerViewModel : ViewModelBase
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .ToArray();
     public bool HasRuns => Runs.Count > 0;
+    public bool IsStatusInfo => StatusTone == MessageTone.Info;
+    public bool IsStatusSuccess => StatusTone == MessageTone.Success;
+    public bool IsStatusWarning => StatusTone == MessageTone.Warning;
+    public bool IsStatusError => StatusTone == MessageTone.Error;
+    public string StatusIcon => StatusTone switch
+    {
+        MessageTone.Success => "✓",
+        MessageTone.Warning => "⚠",
+        MessageTone.Error => "!",
+        _ => "i",
+    };
+    public bool HasDuplicateResults => Duplicates.Count > 0;
+    public bool HasArtistResults => ArtistGroups.Count > 0;
+    public bool HasConflictResults => ConflictGroups.Count > 0;
+    public bool HasMatrixResults => Matrices.Count > 0;
+    public string FindingsEmptyText => FindingCount == 0
+        ? "This analysis found no matching tracks."
+        : "Select a findings branch.";
 
     private object? _selectedFindingNode;
     private object? _selectedRepairNode;
@@ -199,6 +232,15 @@ public partial class AnalyzerViewModel : ViewModelBase
     public bool ShowRepresentationRepairs =>
         ActiveView == AnalysisResultView.RepresentationRepairs;
     public bool ShowMatrix => ActiveView == AnalysisResultView.Matrix;
+    public bool HasDuplicateSection => ShowDuplicates || Duplicates.Count > 0;
+    public bool HasArtistSection => ShowArtists || ArtistGroups.Count > 0;
+    public bool HasRepairSection => ShowRepairs || RepairItems.Count > 0;
+    public bool HasRepresentationSection =>
+        ShowRepresentationRepairs || RepresentationActionItems.Count > 0;
+    public bool HasConflictSection => ShowConflicts || ConflictGroups.Count > 0;
+    public bool HasMatrixSection => ShowMatrix || Matrices.Count > 0;
+    public bool HasItlRepairSection =>
+        ActiveView == AnalysisResultView.ItlRepairs || ItlRepairItems.Count > 0;
     public int ActiveResultIndex
     {
         get => ActiveView switch
@@ -242,7 +284,9 @@ public partial class AnalyzerViewModel : ViewModelBase
         IAnalysisRepairService repairs, IAppSettings settings,
         IDecodedAudioVerificationService? decodedAudio = null,
         IRepresentationRepairService? representationRepairs = null,
-        IItlMetadataRepairService? itlMetadataRepairs = null)
+        IItlMetadataRepairService? itlMetadataRepairs = null,
+        IDialogCoordinator? dialogs = null,
+        IActivityService? activities = null)
     {
         _library = library;
         _reconciler = reconciler;
@@ -251,12 +295,19 @@ public partial class AnalyzerViewModel : ViewModelBase
         _representationRepairs = representationRepairs;
         _itlMetadataRepairs = itlMetadataRepairs;
         _settings = settings;
+        _dialogs = dialogs;
+        _activities = activities;
+        if (settings.Configuration is null)
+            StatusText = "Choose a library configuration in Settings before running an audit.";
         settings.ConfigurationChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(FfmpegPath));
             ClearRuns();
             _representationRecords = [];
             _decodedAudioPairs = [];
+            StatusText = settings.Configuration is null
+                ? "Choose a library configuration in Settings before running an audit."
+                : "Choose an analysis to run.";
         };
     }
 
@@ -270,6 +321,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowRepairs));
         OnPropertyChanged(nameof(ShowRepresentationRepairs));
         OnPropertyChanged(nameof(ShowMatrix));
+        NotifySectionVisibility();
     }
 
     partial void OnSelectedRunChanged(AnalysisRunViewModel? value)
@@ -280,21 +332,27 @@ public partial class AnalyzerViewModel : ViewModelBase
         SelectedItlRepairNode = null;
         OnPropertyChanged(nameof(FindingGroups));
         OnPropertyChanged(nameof(FindingCount));
+        OnPropertyChanged(nameof(FindingsEmptyText));
         OnPropertyChanged(nameof(Duplicates));
+        OnPropertyChanged(nameof(HasDuplicateResults));
         OnPropertyChanged(nameof(ArtistGroups));
+        OnPropertyChanged(nameof(HasArtistResults));
         OnPropertyChanged(nameof(ConflictGroups));
+        OnPropertyChanged(nameof(HasConflictResults));
         OnPropertyChanged(nameof(RepairItems));
         OnPropertyChanged(nameof(RepairGroups));
         OnPropertyChanged(nameof(RepresentationActionItems));
         OnPropertyChanged(nameof(RepresentationActionGroups));
         OnPropertyChanged(nameof(RepresentationWarnings));
         OnPropertyChanged(nameof(Matrices));
+        OnPropertyChanged(nameof(HasMatrixResults));
         OnPropertyChanged(nameof(ItlRepairItems));
         OnPropertyChanged(nameof(ItlRepairGroups));
         OnPropertyChanged(nameof(DisplayedFindings));
         OnPropertyChanged(nameof(DisplayedRepairItems));
         OnPropertyChanged(nameof(DisplayedRepresentationItems));
         OnPropertyChanged(nameof(DisplayedItlRepairItems));
+        NotifySectionVisibility();
 
         if (value is not null)
         {
@@ -307,6 +365,17 @@ public partial class AnalyzerViewModel : ViewModelBase
         }
 
         NotifyCommands();
+    }
+
+    private void NotifySectionVisibility()
+    {
+        OnPropertyChanged(nameof(HasDuplicateSection));
+        OnPropertyChanged(nameof(HasArtistSection));
+        OnPropertyChanged(nameof(HasRepairSection));
+        OnPropertyChanged(nameof(HasRepresentationSection));
+        OnPropertyChanged(nameof(HasConflictSection));
+        OnPropertyChanged(nameof(HasMatrixSection));
+        OnPropertyChanged(nameof(HasItlRepairSection));
     }
 
     private bool CanRun() => _library.IsReady && !IsBusy;
@@ -342,7 +411,8 @@ public partial class AnalyzerViewModel : ViewModelBase
         string status = groups.Count == 0 ? "No similar artist names found." : $"{groups.Count:N0} cluster(s) of similar artist names.";
         return (status, AnalysisRunViewModel.ForArtists(
             "Similar artists",
-            groups.Select(group => new ArtistGroupViewModel(_reconciler, group)).ToList(),
+            groups.Select(group => new ArtistGroupViewModel(
+                _reconciler, group, _dialogs, _activities)).ToList(),
             status));
     });
 
@@ -361,13 +431,22 @@ public partial class AnalyzerViewModel : ViewModelBase
     private async Task RunArtworkHealth()
     {
         using var scope = BeginRun("Artwork health", AnalysisResultView.Findings);
+        AppConfigurationSnapshot configurationSnapshot = _settings.GetSnapshot();
+        LibraryArtworkHealthSettings healthSettings =
+            configurationSnapshot.Configuration?.ArtworkHealthSettings ??
+            new LibraryArtworkHealthSettings(
+                LibraryArtworkHealthSettings.DefaultOversizedByteThreshold,
+                LibraryArtworkHealthSettings.DefaultOversizedDimensionThreshold);
         try
         {
             var records = await _library.GetAllRecordsAsync(scope.Token);
             var artwork = await _library.GetArtworkAuditFilesAsync(scope.Token);
             var result = await Task.Run(() =>
             {
-                var report = ArtworkHealthAnalyzer.Analyze(records, artwork, scope.Token);
+                var report = ArtworkHealthAnalyzer.Analyze(records, artwork,
+                    healthSettings.OversizedByteThreshold,
+                    healthSettings.OversizedDimensionThreshold,
+                    scope.Token);
                 int deferred = report.Findings.Count(finding => finding.Problem == "Artwork scan deferred");
                 int actionable = report.Count - deferred;
                 string status = report.Count == 0
@@ -378,8 +457,8 @@ public partial class AnalyzerViewModel : ViewModelBase
             }, scope.Token);
             AddRun(result.Run);
         }
-        catch (OperationCanceledException) { StatusText = "Artwork health audit cancelled."; }
-        catch (Exception ex) { StatusText = $"Artwork health audit failed: {ex.Message}"; }
+        catch (OperationCanceledException) { scope.Cancel(); StatusText = "Artwork health audit cancelled."; }
+        catch (Exception ex) { scope.Fail(); StatusText = $"Artwork health audit failed: {ex.Message}"; }
     }
 
     [RelayCommand(CanExecute = nameof(CanRun))]
@@ -429,8 +508,8 @@ public partial class AnalyzerViewModel : ViewModelBase
             }, scope.Token);
             AddRun(result.Run);
         }
-        catch (OperationCanceledException) { StatusText = "Album representation comparison cancelled."; }
-        catch (Exception ex) { StatusText = $"Album representation comparison failed: {ex.Message}"; }
+        catch (OperationCanceledException) { scope.Cancel(); StatusText = "Album representation comparison cancelled."; }
+        catch (Exception ex) { scope.Fail(); StatusText = $"Album representation comparison failed: {ex.Message}"; }
         finally { VerifyDecodedAudioCommand.NotifyCanExecuteChanged(); }
     }
 
@@ -456,8 +535,8 @@ public partial class AnalyzerViewModel : ViewModelBase
                 () => AnalysisRunViewModel.ForFindings(report, _representationRecords, status), scope.Token);
             AddRun(run);
         }
-        catch (OperationCanceledException) { StatusText = "Decoded-audio verification cancelled."; }
-        catch (Exception ex) { StatusText = $"Decoded-audio verification failed: {ex.Message}"; }
+        catch (OperationCanceledException) { scope.Cancel(); StatusText = "Decoded-audio verification cancelled."; }
+        catch (Exception ex) { scope.Fail(); StatusText = $"Decoded-audio verification failed: {ex.Message}"; }
     }
 
     private bool CanPreviewRepresentationRepairs() => CanRun() && _representationRepairs is not null;
@@ -502,8 +581,8 @@ public partial class AnalyzerViewModel : ViewModelBase
             if (runs.Count == 0)
                 StatusText = "No representation derivation, metadata-copy, or organization repairs were found.";
         }
-        catch (OperationCanceledException) { StatusText = "Representation repair preview cancelled."; }
-        catch (Exception ex) { StatusText = $"Representation repair preview failed: {ex.Message}"; }
+        catch (OperationCanceledException) { scope.Cancel(); StatusText = "Representation repair preview cancelled."; }
+        catch (Exception ex) { scope.Fail(); StatusText = $"Representation repair preview failed: {ex.Message}"; }
         finally
         {
             ApplyRepairsCommand.NotifyCanExecuteChanged();
@@ -532,8 +611,8 @@ public partial class AnalyzerViewModel : ViewModelBase
             }, scope.Token);
             AddRun(run);
         }
-        catch (OperationCanceledException) { StatusText = "Metadata repair preview cancelled."; }
-        catch (Exception ex) { StatusText = $"Metadata repair preview failed: {ex.Message}"; }
+        catch (OperationCanceledException) { scope.Cancel(); StatusText = "Metadata repair preview cancelled."; }
+        catch (Exception ex) { scope.Fail(); StatusText = $"Metadata repair preview failed: {ex.Message}"; }
         finally { ApplyRepairsCommand.NotifyCanExecuteChanged(); }
     }
 
@@ -559,8 +638,8 @@ public partial class AnalyzerViewModel : ViewModelBase
             }, scope.Token);
             AddRun(run);
         }
-        catch (OperationCanceledException) { StatusText = "Album artist conflict search cancelled."; }
-        catch (Exception ex) { StatusText = $"Album artist conflict search failed: {ex.Message}"; }
+        catch (OperationCanceledException) { scope.Cancel(); StatusText = "Album artist conflict search cancelled."; }
+        catch (Exception ex) { scope.Fail(); StatusText = $"Album artist conflict search failed: {ex.Message}"; }
         finally { PreviewConflictRepairsCommand.NotifyCanExecuteChanged(); }
     }
 
@@ -591,8 +670,8 @@ public partial class AnalyzerViewModel : ViewModelBase
             }, scope.Token);
             AddRun(run);
         }
-        catch (OperationCanceledException) { StatusText = "Conflict repair preview cancelled."; }
-        catch (Exception ex) { StatusText = $"Conflict repair preview failed: {ex.Message}"; }
+        catch (OperationCanceledException) { scope.Cancel(); StatusText = "Conflict repair preview cancelled."; }
+        catch (Exception ex) { scope.Fail(); StatusText = $"Conflict repair preview failed: {ex.Message}"; }
         finally { ApplyRepairsCommand.NotifyCanExecuteChanged(); }
     }
 
@@ -624,8 +703,8 @@ public partial class AnalyzerViewModel : ViewModelBase
                 : $"Previewed {items.Count:N0} iTunes track repair(s). Review, mark repairs active, then apply.";
             AddRun(AnalysisRunViewModel.ForItlRepairs(plan, items, status));
         }
-        catch (OperationCanceledException) { StatusText = "iTunes metadata repair preview cancelled."; }
-        catch (Exception ex) { StatusText = $"iTunes metadata repair preview failed: {ex.Message}"; }
+        catch (OperationCanceledException) { scope.Cancel(); StatusText = "iTunes metadata repair preview cancelled."; }
+        catch (Exception ex) { scope.Fail(); StatusText = $"iTunes metadata repair preview failed: {ex.Message}"; }
         finally { ApplyItlMetadataRepairsCommand.NotifyCanExecuteChanged(); }
     }
 
@@ -640,6 +719,11 @@ public partial class AnalyzerViewModel : ViewModelBase
             return;
         ItlMetadataRepairItemViewModel[] selected = [.. ItlRepairItems.Where(item => item.IsActive)];
         if (selected.Length == 0)
+            return;
+        if (_dialogs is not null && !await _dialogs.ConfirmAsync(
+                "Apply iTunes metadata repairs",
+                $"Apply {selected.Length:N0} selected repair(s) to the iTunes library? A backup copy will be retained.",
+                "Apply repairs"))
             return;
         using var scope = BeginRun("Apply iTunes metadata repairs", AnalysisResultView.ItlRepairs);
         try
@@ -667,9 +751,10 @@ public partial class AnalyzerViewModel : ViewModelBase
             }
             StatusText = $"iTunes metadata repairs: {result.Applied:N0} applied, " +
                 $"{result.Skipped:N0} skipped, {result.Failed:N0} failed. A .bak backup was retained.";
+            scope.Complete(result.Failed > 0 ? MessageTone.Warning : MessageTone.Success);
         }
-        catch (OperationCanceledException) { StatusText = "iTunes metadata repair apply cancelled."; }
-        catch (Exception ex) { StatusText = $"iTunes metadata repair apply failed: {ex.Message}"; }
+        catch (OperationCanceledException) { scope.Cancel(); StatusText = "iTunes metadata repair apply cancelled."; }
+        catch (Exception ex) { scope.Fail(); StatusText = $"iTunes metadata repair apply failed: {ex.Message}"; }
         finally { ApplyItlMetadataRepairsCommand.NotifyCanExecuteChanged(); }
     }
 
@@ -682,6 +767,12 @@ public partial class AnalyzerViewModel : ViewModelBase
         if (selected.Count == 0)
             return;
         int selectedRepairs = selected.Count;
+        if (_dialogs is not null && !await _dialogs.ConfirmAsync(
+                "Apply metadata repairs",
+                $"Write {selectedRepairs:N0} reviewed metadata repair(s) to the selected files? " +
+                "Each source is checked for changes made since preview. Files are written directly; no recovery journal is created.",
+                "Apply repairs"))
+            return;
 
         using var scope = BeginRun("Apply metadata repairs", AnalysisResultView.Repairs);
         try
@@ -709,6 +800,9 @@ public partial class AnalyzerViewModel : ViewModelBase
                     item.Disposition = AnalysisRepairDisposition.Completed;
             }
             StatusText = $"Metadata repairs: {result.Summary}.";
+            scope.Complete(result.FailedCount > 0 || result.CacheFailedCount > 0
+                ? MessageTone.Warning
+                : MessageTone.Success);
             var changed = result.Items
                 .Where(item => item.Outcome == WriteOutcome.Saved)
                 .Select(item => item.AppliedPath ?? item.Repair.Path)
@@ -717,8 +811,8 @@ public partial class AnalyzerViewModel : ViewModelBase
             if (changed.Count > 0)
                 RepairsApplied?.Invoke(changed);
         }
-        catch (OperationCanceledException) { StatusText = "Metadata repair apply cancelled."; }
-        catch (Exception ex) { StatusText = $"Metadata repair apply failed: {ex.Message}"; }
+        catch (OperationCanceledException) { scope.Cancel(); StatusText = "Metadata repair apply cancelled."; }
+        catch (Exception ex) { scope.Fail(); StatusText = $"Metadata repair apply failed: {ex.Message}"; }
         finally { ApplyRepairsCommand.NotifyCanExecuteChanged(); }
     }
 
@@ -735,6 +829,12 @@ public partial class AnalyzerViewModel : ViewModelBase
         var active = RepresentationActionItems.Where(item => item.IsActive).ToList();
         if (active.Count == 0)
             return;
+        if (_dialogs is not null && !await _dialogs.ConfirmAsync(
+                "Apply file repairs",
+                $"Apply {active.Count:N0} reviewed file repair action(s)? " +
+                "Recoverable file mutations are recorded in the operation journal; metadata-only writes do not have journal recovery.",
+                "Apply file repairs"))
+            return;
 
         using var scope = BeginRun(
             "Apply representation file repairs",
@@ -743,7 +843,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         {
             var progress = new Progress<RepresentationRepairProgress>(value =>
                 StatusText =
-                    $"Applying representation repairsâ€¦ {value.Completed:N0}/{value.Total:N0}: " +
+                    $"Applying representation repairs\u2026 {value.Completed:N0}/{value.Total:N0}: " +
                     Path.GetFileName(value.SourcePath));
             RepresentationRepairApplyResult result =
                 await _representationRepairs.ApplyAsync(
@@ -774,15 +874,21 @@ public partial class AnalyzerViewModel : ViewModelBase
                 ? $"Representation repairs cancelled after {result.Applied:N0} action(s)."
                 : $"Representation repairs: {result.Applied:N0} applied, " +
                   $"{result.Failed:N0} failed.";
+            if (result.Cancelled)
+                scope.Cancel();
+            else
+                scope.Complete(result.Failed > 0 ? MessageTone.Warning : MessageTone.Success);
             if (result.ChangedPaths.Count > 0)
                 RepairsApplied?.Invoke(result.ChangedPaths);
         }
         catch (OperationCanceledException)
         {
+            scope.Cancel();
             StatusText = "Representation repair apply cancelled.";
         }
         catch (Exception ex)
         {
+            scope.Fail();
             StatusText = $"Representation repair apply failed: {ex.Message}";
         }
         finally
@@ -806,8 +912,8 @@ public partial class AnalyzerViewModel : ViewModelBase
                 () => AnalysisRunViewModel.ForFindings(report, records, status), scope.Token);
             AddRun(run);
         }
-        catch (OperationCanceledException) { StatusText = "Cross-set check cancelled."; }
-        catch (Exception ex) { StatusText = $"Cross-set check failed: {ex.Message}"; }
+        catch (OperationCanceledException) { scope.Cancel(); StatusText = "Cross-set check cancelled."; }
+        catch (Exception ex) { scope.Fail(); StatusText = $"Cross-set check failed: {ex.Message}"; }
     }
 
     // Shared runner for the analyses that operate on the flat record list: fetch records, run `body`
@@ -823,8 +929,8 @@ public partial class AnalyzerViewModel : ViewModelBase
             AddRun(run);
             StatusText = status;
         }
-        catch (OperationCanceledException) { StatusText = $"{label} cancelled."; }
-        catch (Exception ex) { StatusText = $"{label} failed: {ex.Message}"; }
+        catch (OperationCanceledException) { scope.Cancel(); StatusText = $"{label} cancelled."; }
+        catch (Exception ex) { scope.Fail(); StatusText = $"{label} failed: {ex.Message}"; }
     }
 
     // Sets up busy state / cancellation / active view; disposing restores idle state.
@@ -836,6 +942,8 @@ public partial class AnalyzerViewModel : ViewModelBase
         if (SelectedRun is null)
             ActiveView = view;
         StatusText = $"Running {label}…";
+        StatusTone = MessageTone.Info;
+        LastActivityState = AppActivityState.Running;
         _cts = new CancellationTokenSource();
         NotifyCommands();
         return new RunScope(this);
@@ -844,8 +952,29 @@ public partial class AnalyzerViewModel : ViewModelBase
     private sealed class RunScope(AnalyzerViewModel vm) : IDisposable
     {
         public CancellationToken Token => vm._cts!.Token;
+
+        public void Complete(MessageTone tone = MessageTone.Success)
+        {
+            vm.LastActivityState = AppActivityState.Completed;
+            vm.StatusTone = tone;
+        }
+
+        public void Cancel()
+        {
+            vm.LastActivityState = AppActivityState.Cancelled;
+            vm.StatusTone = MessageTone.Warning;
+        }
+
+        public void Fail()
+        {
+            vm.LastActivityState = AppActivityState.Failed;
+            vm.StatusTone = MessageTone.Error;
+        }
+
         public void Dispose()
         {
+            if (vm.LastActivityState == AppActivityState.Running)
+                Complete();
             vm.IsBusy = false;
             vm._cts?.Dispose();
             vm._cts = null;
@@ -869,7 +998,27 @@ public partial class AnalyzerViewModel : ViewModelBase
 
     private void RunChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(AnalysisRunViewModel.FilteredPaths))
+        if (e.PropertyName == nameof(AnalysisRunViewModel.FilteredPaths) &&
+            !_clearingFilterDispositions)
+            PublishFilter();
+    }
+
+    /// <summary>Clears every disposition represented by the Library's Health-results chip.</summary>
+    public void ClearFilterDispositions()
+    {
+        bool changed = false;
+        _clearingFilterDispositions = true;
+        try
+        {
+            foreach (AnalysisRunViewModel run in Runs)
+                changed |= run.ClearFilterDispositions();
+        }
+        finally
+        {
+            _clearingFilterDispositions = false;
+        }
+
+        if (changed)
             PublishFilter();
     }
 
@@ -938,9 +1087,12 @@ public partial class AnalyzerViewModel : ViewModelBase
         ApplyItlMetadataRepairsCommand.NotifyCanExecuteChanged();
         RemoveRunCommand.NotifyCanExecuteChanged();
         ClearRunsCommand.NotifyCanExecuteChanged();
+        CancelCommand.NotifyCanExecuteChanged();
     }
 
-    [RelayCommand]
+    private bool CanCancel() => IsBusy;
+
+    [RelayCommand(CanExecute = nameof(CanCancel))]
     private void Cancel() => _cts?.Cancel();
 
     [RelayCommand]
