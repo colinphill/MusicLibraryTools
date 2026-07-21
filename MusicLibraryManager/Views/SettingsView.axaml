@@ -144,28 +144,48 @@
         <TabItem Header="Health">
           <ScrollViewer Classes="settings-scroll" VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="HealthSettingsContent" Classes="settings-content" Margin="18" Spacing="10">
-              <TextBlock Classes="section-title" Text="Artwork health" />
-              <TextBlock Classes="muted" Text="The Artwork audit flags an embedded image when its encoded size OR its width or height exceeds the corresponding per-library threshold." TextWrapping="Wrap" />
-              <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                <StackPanel Spacing="5">
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="20">
+                <StackPanel Spacing="7">
+                  <TextBlock Classes="section-title" Text="Artwork analysis thresholds" />
+                  <TextBlock Classes="muted" Text="The audit flags artwork exceeding either limit." TextWrapping="Wrap" />
+                  <StackPanel Spacing="5">
                   <TextBlock Classes="muted" Text="Oversized encoded size (MiB)" FontSize="12" FontWeight="SemiBold" />
                   <NumericUpDown x:Name="ArtworkSizeThresholdInput" Classes="app"
                                  Minimum="0.25" Maximum="1024" Increment="0.25" FormatString="0.##"
                                  Value="{Binding OversizedArtworkSizeThresholdMib, Mode=TwoWay}"
                                  AutomationProperties.Name="Oversized artwork encoded size threshold in mebibytes" />
-                </StackPanel>
-                <StackPanel Grid.Column="1" Spacing="5">
+                  </StackPanel>
+                  <StackPanel Spacing="5">
                   <TextBlock Classes="muted" Text="Oversized width or height (pixels)" FontSize="12" FontWeight="SemiBold" />
                   <NumericUpDown x:Name="ArtworkDimensionThresholdInput" Classes="app"
                                  Minimum="64" Maximum="100000" Increment="100"
                                  Value="{Binding OversizedArtworkDimensionThreshold, Mode=TwoWay}"
                                  AutomationProperties.Name="Oversized artwork width or height threshold in pixels" />
+                  </StackPanel>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Spacing="7">
+                  <TextBlock Classes="section-title" Text="Automatic repair targets" />
+                  <TextBlock Classes="muted" Text="Repair output uses these independent limits." TextWrapping="Wrap" />
+                  <StackPanel Spacing="5">
+                  <TextBlock Classes="muted" Text="Repair target encoded size (MiB)" FontSize="12" FontWeight="SemiBold" />
+                  <NumericUpDown x:Name="ArtworkRepairSizeTargetInput" Classes="app"
+                                 Minimum="0.0625" Maximum="1024" Increment="0.0625" FormatString="0.####"
+                                 Value="{Binding ArtworkRepairTargetSizeMib, Mode=TwoWay}"
+                                 AutomationProperties.Name="Artwork repair encoded size target in mebibytes" />
+                  </StackPanel>
+                  <StackPanel Spacing="5">
+                  <TextBlock Classes="muted" Text="Repair target width or height (pixels)" FontSize="12" FontWeight="SemiBold" />
+                  <NumericUpDown x:Name="ArtworkRepairDimensionTargetInput" Classes="app"
+                                 Minimum="64" Maximum="100000" Increment="50"
+                                 Value="{Binding ArtworkRepairTargetDimension, Mode=TwoWay}"
+                                 AutomationProperties.Name="Artwork repair width or height target in pixels" />
+                  </StackPanel>
                 </StackPanel>
               </Grid>
               <Border Classes="status-banner info">
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                   <TextBlock Classes="status-icon" Text="i" AutomationProperties.Name="Information" />
-                  <TextBlock Grid.Column="1" Text="Defaults: 2 MiB encoded size and 2,000 pixels for either dimension. Artwork exactly equal to a threshold is not flagged." TextWrapping="Wrap" />
+                  <TextBlock Grid.Column="1" Text="Analysis defaults: 2 MiB and 2,000 pixels. Repair defaults: 225 KiB and 600 pixels. Artwork exactly equal to an analysis threshold is not flagged." TextWrapping="Wrap" />
                 </Grid>
               </Border>
             </StackPanel>
@@ -175,9 +195,9 @@
         <TabItem Header="Appearance">
           <StackPanel x:Name="AppearanceSettingsContent" Classes="settings-content" Margin="18" Spacing="10">
             <TextBlock Classes="section-title" Text="Appearance" />
-            <TextBlock Classes="muted" Text="Theme changes apply immediately. System follows the operating-system preference; teal remains reserved for selection, focus, progress, and safe actions." TextWrapping="Wrap" />
+            <TextBlock Classes="muted" Text="Theme changes apply immediately. System follows the operating-system preference; each palette keeps its accent reserved for selection, focus, progress, and safe actions." TextWrapping="Wrap" />
             <ListBox ItemsSource="{Binding ThemeChoices}" SelectedItem="{Binding SelectedThemeChoice, Mode=TwoWay}" Background="Transparent" BorderThickness="0" AutomationProperties.Name="Application theme">
-              <ListBox.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="3" /></ItemsPanelTemplate></ListBox.ItemsPanel>
+              <ListBox.ItemsPanel><ItemsPanelTemplate><UniformGrid Columns="4" /></ItemsPanelTemplate></ListBox.ItemsPanel>
               <ListBox.ItemTemplate><DataTemplate><Border Classes="card theme-option" Margin="0,0,12,12" HorizontalAlignment="Stretch"><StackPanel Spacing="8"><Border Height="72" CornerRadius="6" Background="{Binding Canvas}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" ClipToBounds="True"><Grid ColumnDefinitions="*,*" RowDefinitions="*,6"><Border Background="{Binding Canvas}" /><Border Grid.Column="1" Background="{Binding Raised}" /><Border Grid.Row="1" Grid.ColumnSpan="2" Background="{Binding Accent}" /></Grid></Border><TextBlock Text="{Binding Name}" FontWeight="SemiBold" /></StackPanel></Border></DataTemplate></ListBox.ItemTemplate>
             </ListBox>
           </StackPanel>

@@ -147,6 +147,26 @@ public sealed class AlbumMetadataMatrixTests
 
         Assert.True(row.AlbumArtist.IsInconsistent);
         Assert.Equal("(missing)", row.AlbumArtist.Display);
+        Assert.Equal("01.flac", row.FileName);
+        Assert.True(row.HasIssues);
+        Assert.Equal("Explicit Album Artist is missing.", row.IssueSummary);
+        Assert.Equal(record.Path, row.TitleToolTip);
+    }
+
+    [Fact]
+    public void MatrixSummaryExplainsItsScopeAndFlagCount()
+    {
+        var records = new[]
+        {
+            Track(Path.Combine("Artist", "Album", "one.flac"), 1, 2, "One"),
+            Track(Path.Combine("Artist", "Album", "two.flac"), 1, 3, "Two"),
+        };
+
+        AlbumMetadataMatrix matrix = Assert.Single(AlbumMetadataMatrixBuilder.Build(records));
+
+        Assert.Equal("2 tracks · 4 flagged values", matrix.Summary);
+        Assert.Contains("Track number is duplicated within this disc.", matrix.Rows[0].IssueSummary);
+        Assert.Contains("Track totals disagree within this disc.", matrix.Rows[0].IssueSummary);
     }
 
     private static TrackRecord Track(string path, int track, int total, string title) => new()

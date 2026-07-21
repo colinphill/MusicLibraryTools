@@ -1,3 +1,4 @@
+using global::Avalonia;
 using global::Avalonia.Controls;
 using global::Avalonia.Controls.Documents;
 using global::Avalonia.Controls.Templates;
@@ -27,13 +28,17 @@ public partial class HealthView : UserControl
         DataContext = _viewModel;
         FindingRootDisposition.ItemsSource = Enum.GetValues<AnalysisFindingDisposition>();
         IReadOnlyList<AnalysisRepairDisposition> rootDispositions = Enum.GetValues<AnalysisRepairDisposition>();
+        ArtistRootDisposition.ItemsSource = rootDispositions;
         RepairRootDisposition.ItemsSource = rootDispositions;
         RepresentationRootDisposition.ItemsSource = rootDispositions;
         ItlRepairRootDisposition.ItemsSource = rootDispositions;
+        ArtworkRepairRootDisposition.ItemsSource = rootDispositions;
         FindingRootDisposition.SelectionChanged += OnFindingRootDispositionChanged;
+        ArtistRootDisposition.SelectionChanged += OnArtistRootDispositionChanged;
         RepairRootDisposition.SelectionChanged += OnRepairRootDispositionChanged;
         RepresentationRootDisposition.SelectionChanged += OnRepresentationRootDispositionChanged;
         ItlRepairRootDisposition.SelectionChanged += OnItlRepairRootDispositionChanged;
+        ArtworkRepairRootDisposition.SelectionChanged += OnArtworkRepairRootDispositionChanged;
         _viewModel.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName is nameof(AnalyzerViewModel.SelectedRun) or
@@ -132,8 +137,11 @@ public partial class HealthView : UserControl
         FindingRootDisposition.SelectedItem = AnalysisProblemGroupViewModel.Aggregate(
             _viewModel.FindingGroups.Select(group => group.Disposition));
         RepairRootDisposition.SelectedItem = Aggregate(_viewModel.RepairGroups.Select(group => group.Disposition));
+        ArtistRootDisposition.SelectedItem = Aggregate(_viewModel.ArtistGroups.Select(group => group.Disposition));
         RepresentationRootDisposition.SelectedItem = Aggregate(_viewModel.RepresentationActionGroups.Select(group => group.Disposition));
         ItlRepairRootDisposition.SelectedItem = Aggregate(_viewModel.ItlRepairGroups.Select(group => group.Disposition));
+        ArtworkRepairRootDisposition.SelectedItem = Aggregate(
+            _viewModel.ArtworkRepairItems.Select(item => item.Disposition));
         _updatingRootDisposition = false;
     }
 
@@ -157,6 +165,17 @@ public partial class HealthView : UserControl
         UpdateRootDispositions();
     }
 
+    private void OnArtistRootDispositionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_updatingRootDisposition ||
+            ArtistRootDisposition.SelectedItem is not AnalysisRepairDisposition value ||
+            value == AnalysisRepairDisposition.Mixed)
+            return;
+        foreach (ArtistGroupViewModel group in _viewModel.ArtistGroups)
+            group.Disposition = value;
+        UpdateRootDispositions();
+    }
+
     private void OnRepresentationRootDispositionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (_updatingRootDisposition || RepresentationRootDisposition.SelectedItem is not AnalysisRepairDisposition value || value == AnalysisRepairDisposition.Mixed)
@@ -175,8 +194,80 @@ public partial class HealthView : UserControl
         UpdateRootDispositions();
     }
 
+    private void OnArtworkRepairRootDispositionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (_updatingRootDisposition ||
+            ArtworkRepairRootDisposition.SelectedItem is not AnalysisRepairDisposition value ||
+            value == AnalysisRepairDisposition.Mixed)
+            return;
+        foreach (ArtworkRepairItemViewModel item in _viewModel.ArtworkRepairItems
+                     .Where(item => item.CanChangeDisposition &&
+                         (item.CanApply || value is not (AnalysisRepairDisposition.Active or
+                             AnalysisRepairDisposition.Completed))))
+            item.Disposition = value;
+        UpdateRootDispositions();
+    }
+
     private void OnSelectFindingRoot(object? sender, RoutedEventArgs e) =>
         _viewModel.SelectedFindingNode = null;
+
+    // A ComboBox hosted by a TreeViewItem must consume its own press. Otherwise the same press
+    // also selects (and scrolls) the tree row after opening the drop-down.
+    private void OnEmbeddedInteractivePointerPressed(object? sender, PointerPressedEventArgs e) =>
+        e.Handled = true;
+
+    private void OnArtworkRepairTreeContextRequested(
+        object? sender,
+        ContextRequestedEventArgs e)
+    {
+        Control? source = e.Source as Control;
+        object? node = source?.DataContext;
+        if (node is null || !_viewModel.CanAutomaticallySelectMixedArtwork(node))
+            return;
+
+        var first = CreateArtworkSelectionMenuItem(
+            "Select first image and mark Active", node, ArtworkCandidateSelectionRule.First);
+        var resolution = CreateArtworkSelectionMenuItem(
+            "Select highest resolution and mark Active", node,
+            ArtworkCandidateSelectionRule.HighestResolution);
+        var size = CreateArtworkSelectionMenuItem(
+            "Select largest file and mark Active", node,
+            ArtworkCandidateSelectionRule.LargestFile);
+        var menu = new ContextMenu { ItemsSource = new[] { first, resolution, size } };
+        menu.Open(source ?? (Control)sender!);
+        e.Handled = true;
+    }
+
+    private MenuItem CreateArtworkSelectionMenuItem(
+        string header,
+        object node,
+        ArtworkCandidateSelectionRule rule)
+    {
+        var item = new MenuItem { Header = header };
+        item.Click += (_, _) =>
+        {
+            int activated = _viewModel.AutomaticallySelectMixedArtwork(node, rule);
+            _viewModel.StatusText = activated == 0
+                ? "No eligible mixed-artwork repairs were changed."
+                : $"Selected artwork and marked {activated:N0} repair(s) Active.";
+        };
+        return item;
+    }
+
+    private async void OnArtworkCandidateAttached(
+        object? sender, VisualTreeAttachmentEventArgs e)
+    {
+        if (sender is not Image { Tag: ArtworkRepairCandidateViewModel candidate })
+            return;
+        try
+        {
+            await candidate.EnsureThumbnailAsync();
+        }
+        catch
+        {
+            // Invalid or unavailable artwork leaves an empty preview without blocking the list.
+        }
+    }
 
     private void OnHealthResultContextRequested(object? sender, ContextRequestedEventArgs e)
     {

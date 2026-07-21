@@ -20,6 +20,7 @@ public static class HealthResultPathResolver
             AnalysisConflictGroupViewModel conflict => conflict.Directory,
             TrackRecord track => track.Path,
             AlbumMetadataRow row => row.Path,
+            ArtistPathViewModel artistPath => artistPath.Path,
             _ => null,
         };
 

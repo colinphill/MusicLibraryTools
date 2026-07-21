@@ -602,6 +602,118 @@ public sealed class AnalyzerViewModelTests
     }
 
     [Fact]
+    public async Task Analyzer_SimilarArtistsUsesTheSelectedThresholdAndBuildsAReviewRun()
+    {
+        var reconciler = new RecordingArtistReconciler(SimilarGroup());
+        var viewModel = new AnalyzerViewModel(
+            new StubLibrary([]), reconciler, new StubRepairs(),
+            new AppSettings(Path.Combine(Path.GetTempPath(), $"analyzer-{Guid.NewGuid():N}.json")))
+        {
+            ArtistThreshold = 0.07,
+        };
+
+        await viewModel.RunSimilarArtistsCommand.ExecuteAsync(null);
+
+        Assert.Equal(0.07, reconciler.Threshold);
+        Assert.Equal(AnalysisResultView.Artists, viewModel.ActiveView);
+        Assert.Contains("threshold 0.07", viewModel.StatusText);
+        ArtistGroupViewModel group = Assert.Single(viewModel.ArtistGroups);
+        Assert.Equal("Canonical", group.CanonicalName);
+        Assert.All(group.Variants, variant =>
+            Assert.Equal(AnalysisRepairDisposition.Ignored, variant.Disposition));
+        Assert.False(viewModel.ApplySimilarArtistsCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void Analyzer_ArtistThresholdPersistsAcrossSessions()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), $"analyzer-threshold-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            string settingsPath = Path.Combine(directory, "settings.json");
+            var first = new AnalyzerViewModel(
+                new StubLibrary([]), new StubReconciler(), new StubRepairs(),
+                new AppSettings(settingsPath));
+
+            first.ArtistThresholdText = "0.13";
+
+            var restored = new AnalyzerViewModel(
+                new StubLibrary([]), new StubReconciler(), new StubRepairs(),
+                new AppSettings(settingsPath));
+            Assert.Equal(0.13, restored.ArtistThreshold, precision: 3);
+            Assert.Equal("0.13", restored.ArtistThresholdText);
+
+            restored.ArtistThresholdText = "";
+            var restoredEmptyValue = new AnalyzerViewModel(
+                new StubLibrary([]), new StubReconciler(), new StubRepairs(),
+                new AppSettings(settingsPath));
+            Assert.Equal(0, restoredEmptyValue.ArtistThreshold);
+            Assert.Equal("0", restoredEmptyValue.ArtistThresholdText);
+        }
+        finally
+        {
+            try { Directory.Delete(directory, true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task Analyzer_AppliesOnlyActiveArtistVariantsAndPublishesChangedPaths()
+    {
+        var reconciler = new RecordingArtistReconciler(SimilarGroup());
+        var dialogs = new RecordingDialogs(true);
+        var viewModel = new AnalyzerViewModel(
+            new StubLibrary([]), reconciler, new StubRepairs(),
+            new AppSettings(Path.Combine(Path.GetTempPath(), $"analyzer-{Guid.NewGuid():N}.json")),
+            dialogs: dialogs);
+        IReadOnlyList<string>? publishedPaths = null;
+        viewModel.RepairsApplied += paths => publishedPaths = paths;
+        await viewModel.RunSimilarArtistsCommand.ExecuteAsync(null);
+        ArtistVariantViewModel typo = viewModel.ArtistGroups.Single().Variants
+            .Single(variant => variant.Name == "Canoncial");
+
+        typo.Disposition = AnalysisRepairDisposition.Active;
+        Assert.True(viewModel.ApplySimilarArtistsCommand.CanExecute(null));
+        await viewModel.ApplySimilarArtistsCommand.ExecuteAsync(null);
+
+        var call = Assert.Single(reconciler.Calls);
+        Assert.Equal("Canoncial", call.From);
+        Assert.Equal("Canonical", call.To);
+        Assert.Equal(typo.Files.Select(file => file.Path), call.Paths);
+        Assert.Contains("2 track(s)", dialogs.Message);
+        Assert.Contains("no recovery journal", dialogs.Message);
+        Assert.True(typo.IsApplied);
+        Assert.Equal(AnalysisRepairDisposition.Completed, typo.Disposition);
+        Assert.Equal(typo.Files.Select(file => file.Path), publishedPaths);
+        Assert.False(viewModel.ApplySimilarArtistsCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Analyzer_SimilarArtistApplyCanBeCancelled()
+    {
+        var reconciler = new BlockingArtistReconciler(SimilarGroup());
+        var viewModel = new AnalyzerViewModel(
+            new StubLibrary([]), reconciler, new StubRepairs(),
+            new AppSettings(Path.Combine(Path.GetTempPath(), $"analyzer-{Guid.NewGuid():N}.json")),
+            dialogs: new RecordingDialogs(true));
+        await viewModel.RunSimilarArtistsCommand.ExecuteAsync(null);
+        ArtistVariantViewModel typo = viewModel.ArtistGroups.Single().Variants
+            .Single(variant => variant.Name == "Canoncial");
+        typo.Disposition = AnalysisRepairDisposition.Active;
+
+        Task apply = viewModel.ApplySimilarArtistsCommand.ExecuteAsync(null);
+        await reconciler.Started.Task.WaitAsync(
+            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
+        viewModel.CancelCommand.Execute(null);
+        await apply;
+
+        Assert.False(typo.IsApplied);
+        Assert.Equal(AnalysisRepairDisposition.Active, typo.Disposition);
+        Assert.Equal(MessageTone.Warning, viewModel.StatusTone);
+        Assert.Contains("cancelled", viewModel.StatusText, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task Analyzer_AlbumMatrixIsRetainedAsATypedRun()
     {
         var record = Track("track.flac", "AA", "Album") with { TrackTotal = null };
@@ -628,6 +740,126 @@ public sealed class AnalyzerViewModelTests
         Assert.Equal("Artwork health", viewModel.SelectedRun!.Name);
         Assert.Null(library.ArtworkPaths);
         Assert.Contains(viewModel.FindingGroups, group => group.Problem == "Artwork scan deferred");
+    }
+
+    [Fact]
+    public async Task Analyzer_ForceScansDeferredArtworkAndRefreshesTheAudit()
+    {
+        TrackRecord track = Track("track.flac", "AA", "Album");
+        var library = new StubLibrary([track])
+        {
+            ArtworkAfterSignatureRead =
+            [
+                new ArtworkAuditFile(track.Path, true,
+                    [new("cover", "image/jpeg", "FrontCover", 600, 600, 100_000)]),
+            ],
+        };
+        var viewModel = new AnalyzerViewModel(
+            library, new StubReconciler(), new StubRepairs(),
+            new AppSettings(Path.Combine(Path.GetTempPath(), $"analyzer-{Guid.NewGuid():N}.json")));
+
+        await viewModel.RunArtworkHealthCommand.ExecuteAsync(null);
+        Assert.Equal(1, viewModel.DeferredArtworkCount);
+
+        await viewModel.ForceScanDeferredArtworkCommand.ExecuteAsync(null);
+
+        Assert.Equal([track.Path], library.ArtworkPaths);
+        Assert.Equal(0, viewModel.DeferredArtworkCount);
+        Assert.DoesNotContain(viewModel.FindingGroups,
+            group => group.Problem == "Artwork scan deferred");
+    }
+
+    [Fact]
+    public async Task Analyzer_AppliesOnlyActiveArtworkActionsToEveryAffectedFile()
+    {
+        TrackRecord one = Track("one.flac", "AA", "Album", title: "One");
+        TrackRecord two = Track("two.flac", "AA", "Album", title: "Two");
+        ArtworkAuditFile[] audit =
+        [
+            new(one.Path, true,
+                [new("one", "image/jpeg", "FrontCover", 900, 900, 300_000)]),
+            new(two.Path, true,
+                [new("two", "image/jpeg", "FrontCover", 800, 800, 250_000)]),
+        ];
+        var library = new StubLibrary([one, two], audit,
+            new Dictionary<string, byte[]>
+            {
+                [one.Path] = [1, 2, 3],
+                [two.Path] = [4, 5, 6],
+            });
+        var artwork = new RecordingArtworkService();
+        var viewModel = new AnalyzerViewModel(
+            library, new StubReconciler(), new StubRepairs(),
+            new AppSettings(Path.Combine(Path.GetTempPath(), $"analyzer-{Guid.NewGuid():N}.json")),
+            artwork: artwork);
+
+        await viewModel.RunArtworkHealthCommand.ExecuteAsync(null);
+        ArtworkRepairItemViewModel item = Assert.Single(viewModel.ArtworkRepairItems);
+        item.SelectedCandidate = item.Candidates[1];
+        item.Disposition = AnalysisRepairDisposition.Active;
+
+        await viewModel.ApplyArtworkRepairsCommand.ExecuteAsync(null);
+
+        Assert.Equal([one.Path, two.Path], artwork.SavedPaths);
+        Assert.All(artwork.SavedImages, images =>
+            Assert.Equal([4, 5, 6], Assert.Single(images).Data));
+        Assert.Equal(LibraryArtworkHealthSettings.DefaultRepairTargetDimension,
+            artwork.PrepareDimensions.Single());
+        Assert.Equal(AnalysisRepairDisposition.Completed, item.Disposition);
+        Assert.True(item.IsApplied);
+    }
+
+    [Fact]
+    public async Task Analyzer_MixedArtworkHierarchyScopesAutomaticCandidateSelection()
+    {
+        TrackRecord[] records =
+        [
+            Track("one-a.flac", "Artist", "One", title: "One A"),
+            Track("one-b.flac", "Artist", "One", title: "One B"),
+            Track("two-a.flac", "Artist", "Two", title: "Two A"),
+            Track("two-b.flac", "Artist", "Two", title: "Two B"),
+        ];
+        ArtworkAuditFile[] audit =
+        [
+            new(records[0].Path, true,
+                [new("one-a", "image/jpeg", "FrontCover", 600, 600, 500_000)]),
+            new(records[1].Path, true,
+                [new("one-b", "image/jpeg", "FrontCover", 900, 900, 300_000)]),
+            new(records[2].Path, true,
+                [new("two-a", "image/jpeg", "FrontCover", 700, 700, 600_000)]),
+            new(records[3].Path, true,
+                [new("two-b", "image/jpeg", "FrontCover", 800, 800, 400_000)]),
+        ];
+        var viewModel = new AnalyzerViewModel(
+            new StubLibrary(records, audit), new StubReconciler(), new StubRepairs(),
+            new AppSettings(Path.Combine(Path.GetTempPath(), $"analyzer-{Guid.NewGuid():N}.json")),
+            artwork: new RecordingArtworkService());
+
+        await viewModel.RunArtworkHealthCommand.ExecuteAsync(null);
+
+        ArtworkRepairCategoryGroupViewModel category =
+            Assert.Single(viewModel.ArtworkRepairGroups);
+        ArtworkRepairArtistGroupViewModel artist = Assert.Single(category.Artists);
+        Assert.Equal("Artist", artist.Artist);
+        Assert.Equal(["One", "Two"], artist.Albums.Select(album => album.Album));
+        ArtworkRepairAlbumGroupViewModel album = artist.Albums[0];
+        ArtworkRepairItemViewModel leaf = Assert.Single(album.Items);
+        Assert.True(viewModel.CanAutomaticallySelectMixedArtwork(category));
+        Assert.True(viewModel.CanAutomaticallySelectMixedArtwork(artist));
+        Assert.True(viewModel.CanAutomaticallySelectMixedArtwork(album));
+        Assert.True(viewModel.CanAutomaticallySelectMixedArtwork(leaf));
+
+        Assert.Equal(1, viewModel.AutomaticallySelectMixedArtwork(
+            album, ArtworkCandidateSelectionRule.HighestResolution));
+        Assert.Equal("One B", leaf.SelectedCandidate!.Label);
+        Assert.True(leaf.IsActive);
+        Assert.False(Assert.Single(artist.Albums[1].Items).IsActive);
+
+        Assert.Equal(2, viewModel.AutomaticallySelectMixedArtwork(
+            category, ArtworkCandidateSelectionRule.LargestFile));
+        Assert.Equal("One A", leaf.SelectedCandidate!.Label);
+        Assert.Equal("Two A", Assert.Single(artist.Albums[1].Items).SelectedCandidate!.Label);
+        Assert.All(category.DescendantItems, item => Assert.True(item.IsActive));
     }
 
     [Fact]
@@ -832,11 +1064,20 @@ public sealed class AnalyzerViewModelTests
             CodecName = codec == CodecType.Lossy ? "MP3" : "FLAC",
         };
 
+    private static SimilarArtistGroup SimilarGroup() => new(
+    [
+        new ArtistVariant("Canonical", [@"C:\one.flac", @"C:\two.flac", @"C:\three.flac"]),
+        new ArtistVariant("Canoncial", [@"C:\four.flac", @"C:\five.flac"]),
+    ]);
+
     private sealed class StubLibrary(
         IReadOnlyList<TrackRecord> records,
-        IReadOnlyList<ArtworkAuditFile>? artwork = null) : ILibraryService
+        IReadOnlyList<ArtworkAuditFile>? artwork = null,
+        IReadOnlyDictionary<string, byte[]>? images = null) : ILibraryService
     {
+        private IReadOnlyList<ArtworkAuditFile> _artwork = artwork ?? [];
         public IReadOnlyList<string>? ArtworkPaths { get; private set; }
+        public IReadOnlyList<ArtworkAuditFile>? ArtworkAfterSignatureRead { get; init; }
         public bool IsReady => true;
         public Task<IReadOnlyList<TrackRecord>> GetAllRecordsAsync(CancellationToken ct = default) =>
             Task.FromResult(records);
@@ -852,20 +1093,56 @@ public sealed class AnalyzerViewModelTests
             string path, bool includeArtwork, CancellationToken ct = default) =>
             throw new NotSupportedException();
         public Task<byte[]?> GetFirstImageAsync(string path, CancellationToken ct = default) =>
-            throw new NotSupportedException();
+            Task.FromResult(images is not null && images.TryGetValue(path, out byte[]? data)
+                ? data
+                : null);
         public Task<IReadOnlyList<byte[]?>> GetFirstImagesAsync(
-            IReadOnlyList<string> paths, CancellationToken ct = default) =>
-            throw new NotSupportedException();
+            IReadOnlyList<string> paths, CancellationToken ct = default) => images is null
+            ? throw new NotSupportedException()
+            : Task.FromResult<IReadOnlyList<byte[]?>>(paths.Select(path =>
+                images.TryGetValue(path, out byte[]? data) ? data : null).ToArray());
         public Task<IReadOnlyList<string>> GetImageSignaturesAsync(
             IReadOnlyList<string> paths, CancellationToken ct = default)
         {
             ArtworkPaths = paths;
+            if (ArtworkAfterSignatureRead is not null)
+                _artwork = ArtworkAfterSignatureRead;
             return Task.FromResult<IReadOnlyList<string>>(
                 Enumerable.Repeat("same-cover", paths.Count).ToList());
         }
         public Task<IReadOnlyList<ArtworkAuditFile>> GetArtworkAuditFilesAsync(
             CancellationToken ct = default) =>
-            Task.FromResult(artwork ?? (IReadOnlyList<ArtworkAuditFile>)[]);
+            Task.FromResult(_artwork);
+    }
+
+    private sealed class RecordingArtworkService : IArtworkService
+    {
+        public List<string> SavedPaths { get; } = [];
+        public List<IReadOnlyList<ArtworkInput>> SavedImages { get; } = [];
+        public List<int> PrepareDimensions { get; } = [];
+        public bool SupportsWrite(string musicPath) => true;
+        public Task<PreparedImage?> PrepareFromBytesAsync(byte[] data, int maxDimension = 0,
+            int quality = 90, CancellationToken ct = default)
+        {
+            PrepareDimensions.Add(maxDimension);
+            return Task.FromResult<PreparedImage?>(
+                new PreparedImage(data, "image/jpeg", maxDimension, maxDimension));
+        }
+        public Task<ArtworkOpResult> SaveImagesAsync(string musicPath,
+            IReadOnlyList<ArtworkInput> images, CancellationToken ct = default)
+        {
+            SavedPaths.Add(musicPath);
+            SavedImages.Add(images);
+            return Task.FromResult(new ArtworkOpResult { Success = true });
+        }
+        public Task<ArtworkOpResult> SetCoverFromFileAsync(string musicPath, string imagePath,
+            int maxDimension = 0, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<ArtworkOpResult> ScrubAsync(string musicPath, int maxDimension,
+            int quality = 90, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<ArtworkOpResult> RemoveAsync(string musicPath,
+            CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<PreparedImage?> PrepareFromFileAsync(string imagePath,
+            int maxDimension = 0, CancellationToken ct = default) => throw new NotSupportedException();
     }
 
     private sealed class StubReconciler : IArtistReconciler
@@ -876,6 +1153,60 @@ public sealed class AnalyzerViewModelTests
             IReadOnlyList<string> paths, string from, string to,
             IProgress<int>? progress = null, CancellationToken ct = default) =>
             Task.FromResult(0);
+    }
+
+    private sealed class RecordingArtistReconciler(SimilarArtistGroup group) : IArtistReconciler
+    {
+        public double? Threshold { get; private set; }
+        public List<(IReadOnlyList<string> Paths, string From, string To)> Calls { get; } = [];
+
+        public IReadOnlyList<SimilarArtistGroup> FindSimilarArtists(
+            IReadOnlyList<TrackRecord> records, double threshold = 0.2,
+            CancellationToken ct = default)
+        {
+            Threshold = threshold;
+            return [group];
+        }
+
+        public Task<int> RenameArtistAsync(
+            IReadOnlyList<string> paths, string from, string to,
+            IProgress<int>? progress = null, CancellationToken ct = default)
+        {
+            Calls.Add((paths, from, to));
+            return Task.FromResult(paths.Count);
+        }
+    }
+
+    private sealed class BlockingArtistReconciler(SimilarArtistGroup group) : IArtistReconciler
+    {
+        public TaskCompletionSource<bool> Started { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public IReadOnlyList<SimilarArtistGroup> FindSimilarArtists(
+            IReadOnlyList<TrackRecord> records, double threshold = 0.2,
+            CancellationToken ct = default) => [group];
+
+        public async Task<int> RenameArtistAsync(
+            IReadOnlyList<string> paths, string from, string to,
+            IProgress<int>? progress = null, CancellationToken ct = default)
+        {
+            Started.TrySetResult(true);
+            await Task.Delay(Timeout.InfiniteTimeSpan, ct);
+            return 0;
+        }
+    }
+
+    private sealed class RecordingDialogs(bool result) : IDialogCoordinator
+    {
+        public string? Message { get; private set; }
+
+        public Task<bool> ConfirmAsync(string title, string message, string primaryText)
+        {
+            Message = message;
+            return Task.FromResult(result);
+        }
+
+        public Task ShowMessageAsync(string title, string message) => Task.CompletedTask;
     }
 
     private sealed class TrackingDecodedAudio : IDecodedAudioVerificationService

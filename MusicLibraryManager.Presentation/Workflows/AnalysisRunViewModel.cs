@@ -48,6 +48,8 @@ public sealed class AnalysisRunViewModel : ViewModelBase
     public IReadOnlyList<RepresentationRepairCategoryGroupViewModel> RepresentationActionGroups { get; }
     public IReadOnlyList<string> RepresentationWarnings { get; }
     public IReadOnlyList<AlbumMetadataMatrix> Matrices { get; }
+    public IReadOnlyList<ArtworkRepairItemViewModel> ArtworkRepairItems { get; }
+    public IReadOnlyList<ArtworkRepairCategoryGroupViewModel> ArtworkRepairGroups { get; }
     public AnalysisRepairPlan? RepairPlan { get; }
     public IReadOnlyList<ItlMetadataRepairItemViewModel> ItlRepairItems { get; }
     public IReadOnlyList<ItlMetadataRepairCategoryGroupViewModel> ItlRepairGroups { get; }
@@ -64,11 +66,20 @@ public sealed class AnalysisRunViewModel : ViewModelBase
         .Concat(RepairItems
             .Where(item => item.Disposition == AnalysisRepairDisposition.Filter)
             .Select(item => item.Path))
+        .Concat(ArtistGroups
+            .SelectMany(group => group.Variants)
+            .Where(variant => variant.Disposition == AnalysisRepairDisposition.Filter)
+            .SelectMany(variant => variant.Files)
+            .Select(file => file.Path))
         .Concat(RepresentationActionItems
             .Where(item => item.Disposition == AnalysisRepairDisposition.Filter)
             .Select(item => item.SourcePath))
         .Concat(ItlRepairItems
             .Where(item => item.Disposition == AnalysisRepairDisposition.Filter)
+            .Select(item => item.Path))
+        .Concat(ArtworkRepairItems
+            .Where(item => item.Disposition == AnalysisRepairDisposition.Filter)
+            .SelectMany(item => item.AffectedPaths)
             .Select(item => item.Path))
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .ToArray();
@@ -90,6 +101,7 @@ public sealed class AnalysisRunViewModel : ViewModelBase
         IReadOnlyList<string>? representationWarnings = null,
         AnalysisRepairPlan? repairPlan = null,
         IReadOnlyList<AlbumMetadataMatrix>? matrices = null,
+        IReadOnlyList<ArtworkRepairItemViewModel>? artworkRepairItems = null,
         IReadOnlyList<ItlMetadataRepairItemViewModel>? itlRepairItems = null,
         ItlMetadataRepairPlan? itlRepairPlan = null)
     {
@@ -109,6 +121,8 @@ public sealed class AnalysisRunViewModel : ViewModelBase
         RepresentationWarnings = representationWarnings ?? [];
         RepairPlan = repairPlan;
         Matrices = matrices ?? [];
+        ArtworkRepairItems = artworkRepairItems ?? [];
+        ArtworkRepairGroups = ArtworkRepairCategoryGroupViewModel.Build(ArtworkRepairItems);
         ItlRepairItems = itlRepairItems ?? [];
         ItlRepairGroups = ItlMetadataRepairCategoryGroupViewModel.Build(ItlRepairItems);
         ItlRepairPlan = itlRepairPlan;
@@ -122,9 +136,13 @@ public sealed class AnalysisRunViewModel : ViewModelBase
             finding.PropertyChanged += FilterDispositionChanged;
         foreach (AnalysisRepairItemViewModel item in RepairItems)
             item.PropertyChanged += FilterDispositionChanged;
+        foreach (ArtistVariantViewModel variant in ArtistGroups.SelectMany(group => group.Variants))
+            variant.PropertyChanged += FilterDispositionChanged;
         foreach (RepresentationRepairActionItemViewModel item in RepresentationActionItems)
             item.PropertyChanged += FilterDispositionChanged;
         foreach (ItlMetadataRepairItemViewModel item in ItlRepairItems)
+            item.PropertyChanged += FilterDispositionChanged;
+        foreach (ArtworkRepairItemViewModel item in ArtworkRepairItems)
             item.PropertyChanged += FilterDispositionChanged;
     }
 
@@ -185,6 +203,15 @@ public sealed class AnalysisRunViewModel : ViewModelBase
         new("Album metadata matrix", summary, AnalysisResultView.Matrix, matrices.Count,
             matrices: matrices);
 
+    public static AnalysisRunViewModel ForArtwork(
+        AnalysisReport report,
+        IReadOnlyList<TrackRecord> records,
+        IReadOnlyList<ArtworkRepairItemViewModel> repairs,
+        string summary) =>
+        new("Artwork health", summary, AnalysisResultView.ArtworkRepairs,
+            report.Count, findingGroups: AnalysisProblemGroupViewModel.Build(report.Findings, records),
+            artworkRepairItems: repairs);
+
     public static AnalysisRunViewModel ForItlRepairs(
         ItlMetadataRepairPlan plan,
         IReadOnlyList<ItlMetadataRepairItemViewModel> items,
@@ -228,12 +255,22 @@ public sealed class AnalysisRunViewModel : ViewModelBase
                          item.Disposition == AnalysisRepairDisposition.Filter))
                 item.Disposition = AnalysisRepairDisposition.Ignored;
 
+            foreach (ArtistVariantViewModel variant in ArtistGroups
+                         .SelectMany(group => group.Variants)
+                         .Where(variant =>
+                             variant.Disposition == AnalysisRepairDisposition.Filter))
+                variant.Disposition = AnalysisRepairDisposition.Ignored;
+
             foreach (RepresentationRepairActionItemViewModel item in
                      RepresentationActionItems.Where(item =>
                          item.Disposition == AnalysisRepairDisposition.Filter))
                 item.Disposition = AnalysisRepairDisposition.Ignored;
 
             foreach (ItlMetadataRepairItemViewModel item in ItlRepairItems.Where(item =>
+                         item.Disposition == AnalysisRepairDisposition.Filter))
+                item.Disposition = AnalysisRepairDisposition.Ignored;
+
+            foreach (ArtworkRepairItemViewModel item in ArtworkRepairItems.Where(item =>
                          item.Disposition == AnalysisRepairDisposition.Filter))
                 item.Disposition = AnalysisRepairDisposition.Ignored;
         }

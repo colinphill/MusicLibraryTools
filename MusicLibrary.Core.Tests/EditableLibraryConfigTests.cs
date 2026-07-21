@@ -24,6 +24,8 @@ public class EditableLibraryConfigTests
                 AacBitrateKbps = 320,
                 OversizedArtworkByteThreshold = 3 * 1024 * 1024,
                 OversizedArtworkDimensionThreshold = 2_400,
+                ArtworkRepairTargetByteSize = 180 * 1024,
+                ArtworkRepairTargetDimension = 720,
                 DeleteSourcesAfterIngest = true,
                 RemoveNonMusicAfterIngest = true,
                 DeleteStaleCrossSyncFiles = true,
@@ -68,6 +70,8 @@ public class EditableLibraryConfigTests
             Assert.Equal(320, reloaded.AacBitrateKbps);
             Assert.Equal(3 * 1024 * 1024, reloaded.OversizedArtworkByteThreshold);
             Assert.Equal(2_400, reloaded.OversizedArtworkDimensionThreshold);
+            Assert.Equal(180 * 1024, reloaded.ArtworkRepairTargetByteSize);
+            Assert.Equal(720, reloaded.ArtworkRepairTargetDimension);
             Assert.True(reloaded.DeleteSourcesAfterIngest);
             Assert.True(reloaded.RemoveNonMusicAfterIngest);
             Assert.True(reloaded.DeleteStaleCrossSyncFiles);
@@ -117,6 +121,11 @@ public class EditableLibraryConfigTests
                     ?.Attribute("OversizedByteThreshold"));
             Assert.Equal("2400", (string?)xml.Root.Element("ArtworkHealthSettings")
                 ?.Attribute("OversizedDimensionThreshold"));
+            Assert.Equal((180 * 1024).ToString(),
+                (string?)xml.Root.Element("ArtworkHealthSettings")
+                    ?.Attribute("RepairTargetByteSize"));
+            Assert.Equal("720", (string?)xml.Root.Element("ArtworkHealthSettings")
+                ?.Attribute("RepairTargetDimension"));
             Assert.Equal(2, xml.Root.Elements("IndexTarget").First().Elements("Set").Count());
             Assert.All(xml.Root.Elements("PlaylistTarget"), target =>
             {
@@ -192,6 +201,14 @@ public class EditableLibraryConfigTests
                 configuration.ArtworkHealthSettings.OversizedByteThreshold);
             Assert.Equal(LibraryArtworkHealthSettings.DefaultOversizedDimensionThreshold,
                 configuration.ArtworkHealthSettings.OversizedDimensionThreshold);
+            Assert.Equal(LibraryArtworkHealthSettings.DefaultRepairTargetByteSize,
+                editable.ArtworkRepairTargetByteSize);
+            Assert.Equal(LibraryArtworkHealthSettings.DefaultRepairTargetDimension,
+                editable.ArtworkRepairTargetDimension);
+            Assert.Equal(LibraryArtworkHealthSettings.DefaultRepairTargetByteSize,
+                configuration.ArtworkHealthSettings.RepairTargetByteSize);
+            Assert.Equal(LibraryArtworkHealthSettings.DefaultRepairTargetDimension,
+                configuration.ArtworkHealthSettings.RepairTargetDimension);
         }
         finally
         {
@@ -215,6 +232,10 @@ public class EditableLibraryConfigTests
             Assert.Equal(LibraryArtworkHealthSettings.DefaultOversizedByteThreshold,
                 settings.OversizedByteThreshold);
             Assert.Equal(2_500, settings.OversizedDimensionThreshold);
+            Assert.Equal(LibraryArtworkHealthSettings.DefaultRepairTargetByteSize,
+                settings.RepairTargetByteSize);
+            Assert.Equal(LibraryArtworkHealthSettings.DefaultRepairTargetDimension,
+                settings.RepairTargetDimension);
         }
         finally
         {

@@ -235,9 +235,20 @@ public sealed record AlbumMetadataRow(
     AnalysisMatrixCell ReleaseDate,
     AnalysisMatrixCell Title)
 {
+    private IReadOnlyList<AnalysisMatrixCell> Cells =>
+        [DiscNumber, TrackNumber, TrackTotal, DiscTotal, Artist, AlbumArtist, Album, ReleaseDate, Title];
+
+    public string FileName => System.IO.Path.GetFileName(Path);
+    public string TitleToolTip => Title.IsInconsistent
+        ? $"{Path}{Environment.NewLine}{Title.Reason}"
+        : Path;
     public int InconsistentCellCount =>
-        new[] { DiscNumber, TrackNumber, TrackTotal, DiscTotal, Artist, AlbumArtist, Album, ReleaseDate, Title }
-            .Count(cell => cell.IsInconsistent);
+        Cells.Count(cell => cell.IsInconsistent);
+    public bool HasIssues => InconsistentCellCount > 0;
+    public string IssueSummary => string.Join(" ", Cells
+        .Where(cell => cell.IsInconsistent && !string.IsNullOrWhiteSpace(cell.Reason))
+        .Select(cell => cell.Reason!)
+        .Distinct(StringComparer.Ordinal));
 }
 
 /// <summary>An album package matrix containing only cache-derived values.</summary>
@@ -248,6 +259,9 @@ public sealed record AlbumMetadataMatrix(
 {
     public int TrackCount => Rows.Count;
     public int InconsistentCellCount => Rows.Sum(row => row.InconsistentCellCount);
+    public string Summary =>
+        $"{TrackCount:N0} {(TrackCount == 1 ? "track" : "tracks")} · " +
+        $"{InconsistentCellCount:N0} {(InconsistentCellCount == 1 ? "flagged value" : "flagged values")}";
 }
 
 /// <summary>A group of files considered duplicates of each other.</summary>

@@ -571,6 +571,49 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public async Task Selection_inspector_saves_each_artwork_card_without_reencoding_it()
+    {
+        const string musicPath = @"C:\Music\one.flac";
+        string outputPath = Path.Combine(Path.GetTempPath(),
+            $"inspector-artwork-{Guid.NewGuid():N}.png");
+        try
+        {
+            var library = new FakeLibrary([]);
+            library.ImageSignatures[musicPath] = "artwork";
+            MediaFileModel model = Model(musicPath, "One", "Artist") with
+            {
+                Artwork =
+                [
+                    new ArtworkModel
+                    {
+                        Category = "BackCover", ImageType = "image/png",
+                        Width = 900, Height = 880, Size = 4, Data = [4, 5, 6, 7],
+                    },
+                ],
+            };
+            var files = new FakeFilePicker(saveFile: outputPath);
+            var inspector = new SelectionInspectorViewModel(
+                new FakeMediaService(model), library, new FakeTagWriter(),
+                new FakeArtworkService(), files, new FakeDialogs(),
+                new FakeFieldsEditor(), new FakeThumbnails(), new AppActivityService());
+            await inspector.LoadAsync(new SelectionContext([musicPath]));
+
+            await inspector.SaveArtworkItemToFileAsync(Assert.Single(inspector.ArtworkItems));
+
+            Assert.Equal([4, 5, 6, 7], await File.ReadAllBytesAsync(
+                outputPath, TestContext.Current.CancellationToken));
+            Assert.Equal(".png", files.LastSaveExtension);
+            Assert.Equal("one-back-cover.png", files.LastSuggestedName);
+            Assert.Equal(MessageTone.Success, inspector.StatusTone);
+            Assert.False(inspector.HasUnsavedChanges);
+        }
+        finally
+        {
+            File.Delete(outputPath);
+        }
+    }
+
+    [Fact]
     public async Task Selection_inspector_saves_description_edits_and_individual_removals()
     {
         const string path = @"C:\one.flac";
@@ -672,6 +715,23 @@ public sealed class PresentationTests
         Assert.Equal("System", viewModel.SelectedTheme);
         Assert.Equal("System", viewModel.SelectedThemeChoice?.Name);
         Assert.Equal("System", settings.Preferences["manager.appearance.theme.v1"]);
+        Assert.False(viewModel.HasUnsavedChanges);
+    }
+
+    [Fact]
+    public void Settings_steel_blue_theme_applies_immediately_and_persists()
+    {
+        var settings = new FakeSettings();
+        var theme = new FakeTheme();
+        var viewModel = new SettingsViewModel(
+            settings, new FakeFilePicker(), new FakeDialogs(), theme);
+
+        viewModel.SelectedThemeChoice = viewModel.ThemeChoices.Single(
+            choice => choice.Name == "Steel Blue");
+
+        Assert.Equal("Steel Blue", viewModel.SelectedTheme);
+        Assert.Equal("Steel Blue", theme.Current);
+        Assert.Equal("Steel Blue", settings.Preferences["manager.appearance.theme.v1"]);
         Assert.False(viewModel.HasUnsavedChanges);
     }
 
@@ -1026,11 +1086,20 @@ internal sealed class FakeArtworkService(PreparedImage? prepared = null) : IArtw
     private static Task<ArtworkOpResult> Success() => Task.FromResult(new ArtworkOpResult { Success = true });
 }
 
-internal sealed class FakeFilePicker(string? selectedFile = null) : IFilePickerService
+internal sealed class FakeFilePicker(
+    string? selectedFile = null,
+    string? saveFile = null) : IFilePickerService
 {
+    public string? LastSuggestedName { get; private set; }
+    public string? LastSaveExtension { get; private set; }
     public Task<string?> PickFileAsync(string title, IReadOnlyList<FilePickerType>? types = null) => Task.FromResult(selectedFile);
     public Task<string?> PickFolderAsync(string title) => Task.FromResult<string?>(null);
-    public Task<string?> SaveFileAsync(string title, string suggestedName, string extension) => Task.FromResult<string?>(null);
+    public Task<string?> SaveFileAsync(string title, string suggestedName, string extension)
+    {
+        LastSuggestedName = suggestedName;
+        LastSaveExtension = extension;
+        return Task.FromResult(saveFile);
+    }
 }
 
 internal sealed class FakeDialogs : IDialogCoordinator

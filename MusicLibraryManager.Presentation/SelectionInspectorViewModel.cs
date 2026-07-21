@@ -561,6 +561,45 @@ public partial class SelectionInspectorViewModel : ObservableObject
         SaveArtworkSetCommand.NotifyCanExecuteChanged();
     }
 
+    public async Task SaveArtworkItemToFileAsync(ArtworkPreviewItem item)
+    {
+        if (!ArtworkItems.Contains(item) || item.Data.Length == 0)
+        {
+            StatusTone = MessageTone.Warning;
+            StatusMessage = "This artwork has no image data to save.";
+            return;
+        }
+
+        string extension = ArtworkFileExtension(item.MimeType);
+        string sourceName = Path.GetFileNameWithoutExtension(
+            Selection.Paths.FirstOrDefault()) ?? "";
+        if (string.IsNullOrWhiteSpace(sourceName))
+            sourceName = "artwork";
+        string typeName = string.Join('-', item.Label.ToLowerInvariant()
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        int typeCount = ArtworkItems.Count(candidate => candidate.Type == item.Type);
+        int typeIndex = ArtworkItems.Take(ArtworkItems.IndexOf(item) + 1)
+            .Count(candidate => candidate.Type == item.Type);
+        string ordinal = typeCount > 1 ? $"-{typeIndex}" : "";
+        string suggestedName = $"{sourceName}-{typeName}{ordinal}{extension}";
+        string? path = await _files.SaveFileAsync(
+            $"Save {item.Label.ToLowerInvariant()} artwork", suggestedName, extension);
+        if (path is null)
+            return;
+
+        try
+        {
+            await File.WriteAllBytesAsync(path, item.Data);
+            StatusTone = MessageTone.Success;
+            StatusMessage = $"Artwork saved to {path}.";
+        }
+        catch (Exception error)
+        {
+            StatusTone = MessageTone.Error;
+            StatusMessage = $"Artwork could not be saved: {error.Message}";
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanSaveArtworkSet))]
     private async Task SaveArtworkSetAsync()
     {
@@ -751,6 +790,20 @@ public partial class SelectionInspectorViewModel : ObservableObject
                $"{Environment.NewLine}{Environment.NewLine}Tag formats{Environment.NewLine}" +
                FormatDistribution(tagFormats, count);
     }
+
+    private static string ArtworkFileExtension(string? mimeType) =>
+        mimeType?.Trim().ToLowerInvariant() switch
+        {
+            "image/jpeg" or "image/jpg" => ".jpg",
+            "image/png" => ".png",
+            "image/gif" => ".gif",
+            "image/webp" => ".webp",
+            "image/bmp" or "image/x-ms-bmp" => ".bmp",
+            "image/tiff" => ".tif",
+            "image/avif" => ".avif",
+            "image/x-icon" or "image/vnd.microsoft.icon" => ".ico",
+            _ => ".bin",
+        };
 
     private static string FormatFileFormat(string path, string? codec)
     {

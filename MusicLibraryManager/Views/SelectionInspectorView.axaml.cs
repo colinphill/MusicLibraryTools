@@ -30,6 +30,12 @@ public partial class SelectionInspectorView : UserControl
             await _viewModel.ReplaceArtworkItemAsync(item);
     }
 
+    private async void OnSaveArtwork(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { Tag: ArtworkPreviewItem item })
+            await _viewModel.SaveArtworkItemToFileAsync(item);
+    }
+
     private void OnRemoveArtwork(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: ArtworkPreviewItem item })

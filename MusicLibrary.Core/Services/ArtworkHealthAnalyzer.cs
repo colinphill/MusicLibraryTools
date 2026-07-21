@@ -72,9 +72,10 @@ public static class ArtworkHealthAnalyzer
                 continue;
             var signatures = scanned.Select(item => Signature(item.Artwork!)).Distinct(StringComparer.Ordinal).ToList();
             if (signatures.Count > 1)
-                findings.Add(new(scanned[0].Record.Path,
-                    $"Album tracks use {signatures.Count:N0} distinct embedded-artwork sets.",
-                    "Mixed album artwork"));
+                foreach (var item in scanned)
+                    findings.Add(new(item.Record.Path,
+                        $"Album tracks use {signatures.Count:N0} distinct embedded-artwork sets.",
+                        "Mixed album artwork"));
         }
 
         return new("Artwork health", findings

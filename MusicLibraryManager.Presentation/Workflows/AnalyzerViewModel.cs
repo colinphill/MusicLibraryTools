@@ -1,9 +1,11 @@
 using System.Collections.ObjectModel;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
 using MusicLibraryTools;
+using MusicFileUtilities;
 
 namespace MusicLibraryManager.Presentation;
 
@@ -18,17 +20,20 @@ public enum AnalysisResultView
     RepresentationRepairs,
     Matrix,
     ItlRepairs,
+    ArtworkRepairs,
 }
 
 /// <summary>
 /// Library-wide analysis. Each analysis type is run by its own button (inconsistencies, lossy files,
 /// duplicates, similar artists, cross-set check); typed results are retained for the session.
-/// Selecting a finding/track opens that file; similar-artist clusters can be merged in place.
+/// Selecting a finding/track opens that file; similar-artist variants use review/apply dispositions.
 /// Conservative and user-directed tag repairs share a preview/select/apply surface and reject
 /// sources changed since preview.
 /// </summary>
 public partial class AnalyzerViewModel : ViewModelBase
 {
+    private const string ArtistThresholdPreference = "manager.health.artistSimilarityThreshold.v1";
+
     private readonly ILibraryService _library;
     private readonly IArtistReconciler _reconciler;
     private readonly IAnalysisRepairService _repairs;
@@ -37,7 +42,8 @@ public partial class AnalyzerViewModel : ViewModelBase
     private readonly IItlMetadataRepairService? _itlMetadataRepairs;
     private readonly IAppSettings _settings;
     private readonly IDialogCoordinator? _dialogs;
-    private readonly IActivityService? _activities;
+    private readonly IArtworkService? _artwork;
+    private readonly IThumbnailService? _thumbnails;
     private CancellationTokenSource? _cts;
     private IReadOnlyList<TrackRecord> _representationRecords = [];
     private IReadOnlyList<DecodedAudioPair> _decodedAudioPairs = [];
@@ -70,6 +76,45 @@ public partial class AnalyzerViewModel : ViewModelBase
     [ObservableProperty]
     private double _artistThreshold = 0.2;
 
+    private string _artistThresholdText = "0.20";
+
+    /// <summary>
+    /// Editable threshold text. An empty value intentionally means zero; incomplete or invalid
+    /// numeric input leaves the last usable threshold in place until it becomes valid.
+    /// </summary>
+    public string ArtistThresholdText
+    {
+        get => _artistThresholdText;
+        set
+        {
+            if (!SetProperty(ref _artistThresholdText, value))
+                return;
+
+            if (string.IsNullOrWhiteSpace(value))
+                ArtistThreshold = 0;
+            else if (double.TryParse(value, NumberStyles.Float, CultureInfo.CurrentCulture,
+                         out double threshold))
+                ArtistThreshold = Math.Clamp(threshold, 0, 1);
+        }
+    }
+
+    partial void OnArtistThresholdChanged(double value)
+    {
+        _settings.SetPreference(ArtistThresholdPreference,
+            Math.Clamp(value, 0, 1).ToString("R", CultureInfo.InvariantCulture));
+
+        if (string.IsNullOrWhiteSpace(_artistThresholdText))
+            return;
+        if (double.TryParse(_artistThresholdText, NumberStyles.Float,
+                CultureInfo.CurrentCulture, out double current) &&
+            Math.Abs(current - value) < 0.0000001)
+            return;
+
+        SetProperty(ref _artistThresholdText,
+            Math.Clamp(value, 0, 1).ToString("0.##", CultureInfo.CurrentCulture),
+            nameof(ArtistThresholdText));
+    }
+
     public string FfmpegPath => _settings.Configuration?.FfmpegPath ?? "ffmpeg";
 
     public ObservableCollection<AnalysisRunViewModel> Runs { get; } = [];
@@ -77,6 +122,11 @@ public partial class AnalyzerViewModel : ViewModelBase
     public int FindingCount => FindingGroups.Sum(group => group.Count);
     public IReadOnlyList<DuplicateGroup> Duplicates => SelectedRun?.Duplicates ?? [];
     public IReadOnlyList<ArtistGroupViewModel> ArtistGroups => SelectedRun?.ArtistGroups ?? [];
+    public int ActiveArtistVariantCount => ArtistGroups.Sum(group => group.ActiveCount);
+    public int ActiveArtistTrackCount => ArtistGroups.SelectMany(group => group.Variants)
+        .Where(variant => variant.IsActive)
+        .SelectMany(variant => variant.Files)
+        .DistinctBy(file => file.Path, StringComparer.OrdinalIgnoreCase).Count();
     public IReadOnlyList<AnalysisConflictGroupViewModel> ConflictGroups => SelectedRun?.ConflictGroups ?? [];
     public IReadOnlyList<AnalysisRepairItemViewModel> RepairItems => SelectedRun?.RepairItems ?? [];
     public IReadOnlyList<AnalysisRepairCategoryGroupViewModel> RepairGroups =>
@@ -88,6 +138,10 @@ public partial class AnalyzerViewModel : ViewModelBase
     public IReadOnlyList<string> RepresentationWarnings =>
         SelectedRun?.RepresentationWarnings ?? [];
     public IReadOnlyList<AlbumMetadataMatrix> Matrices => SelectedRun?.Matrices ?? [];
+    public IReadOnlyList<ArtworkRepairItemViewModel> ArtworkRepairItems =>
+        SelectedRun?.ArtworkRepairItems ?? [];
+    public IReadOnlyList<ArtworkRepairCategoryGroupViewModel> ArtworkRepairGroups =>
+        SelectedRun?.ArtworkRepairGroups ?? [];
     public IReadOnlyList<ItlMetadataRepairItemViewModel> ItlRepairItems =>
         SelectedRun?.ItlRepairItems ?? [];
     public IReadOnlyList<ItlMetadataRepairCategoryGroupViewModel> ItlRepairGroups =>
@@ -112,6 +166,20 @@ public partial class AnalyzerViewModel : ViewModelBase
     public bool HasArtistResults => ArtistGroups.Count > 0;
     public bool HasConflictResults => ConflictGroups.Count > 0;
     public bool HasMatrixResults => Matrices.Count > 0;
+    public bool HasArtworkRepairResults => ArtworkRepairItems.Count > 0;
+    public int ActiveArtworkRepairCount => ArtworkRepairItems.Count(item => item.IsActive);
+    public bool IsArtworkHealthRun => SelectedRun?.Name == "Artwork health";
+    public IReadOnlyList<string> DeferredArtworkPaths => IsArtworkHealthRun
+        ? FindingGroups.Where(group => group.Problem == "Artwork scan deferred")
+            .SelectMany(group => group.Artists)
+            .SelectMany(group => group.Albums)
+            .SelectMany(group => group.Findings)
+            .Select(finding => finding.Path)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray()
+        : [];
+    public int DeferredArtworkCount => DeferredArtworkPaths.Count;
+    public bool HasDeferredArtwork => DeferredArtworkCount > 0;
     public string FindingsEmptyText => FindingCount == 0
         ? "This analysis found no matching tracks."
         : "Select a findings branch.";
@@ -120,6 +188,7 @@ public partial class AnalyzerViewModel : ViewModelBase
     private object? _selectedRepairNode;
     private object? _selectedRepresentationNode;
     private object? _selectedItlRepairNode;
+    private object? _selectedArtworkRepairNode;
 
     public object? SelectedFindingNode
     {
@@ -161,6 +230,16 @@ public partial class AnalyzerViewModel : ViewModelBase
         {
             if (SetProperty(ref _selectedItlRepairNode, value))
                 OnPropertyChanged(nameof(DisplayedItlRepairItems));
+        }
+    }
+
+    public object? SelectedArtworkRepairNode
+    {
+        get => _selectedArtworkRepairNode;
+        set
+        {
+            if (SetProperty(ref _selectedArtworkRepairNode, value))
+                OnPropertyChanged(nameof(DisplayedArtworkRepairItems));
         }
     }
 
@@ -223,6 +302,41 @@ public partial class AnalyzerViewModel : ViewModelBase
             _ => ItlRepairItems,
         };
 
+    public IReadOnlyList<ArtworkRepairItemViewModel> DisplayedArtworkRepairItems =>
+        SelectedArtworkRepairNode switch
+        {
+            ArtworkRepairItemViewModel item => [item],
+            ArtworkRepairGroupViewModel group => group.DescendantItems,
+            _ => ArtworkRepairItems,
+        };
+
+    public bool CanAutomaticallySelectMixedArtwork(object? node)
+    {
+        IReadOnlyList<ArtworkRepairItemViewModel> items = ArtworkItemsForNode(node);
+        return items.Count > 0 && items.All(item => item.Kind == ArtworkRepairKind.NormalizeAlbum);
+    }
+
+    public int AutomaticallySelectMixedArtwork(
+        object node,
+        ArtworkCandidateSelectionRule rule)
+    {
+        if (!CanAutomaticallySelectMixedArtwork(node))
+            return 0;
+        int activated = ArtworkItemsForNode(node)
+            .Count(item => item.SelectCandidateAndActivate(rule));
+        OnPropertyChanged(nameof(ActiveArtworkRepairCount));
+        ApplyArtworkRepairsCommand.NotifyCanExecuteChanged();
+        return activated;
+    }
+
+    private static IReadOnlyList<ArtworkRepairItemViewModel> ArtworkItemsForNode(object? node) =>
+        node switch
+        {
+            ArtworkRepairItemViewModel item => [item],
+            ArtworkRepairGroupViewModel group => group.DescendantItems,
+            _ => [],
+        };
+
     // Section visibility (bound in XAML; ActiveView drives which one shows).
     public bool ShowFindings => ActiveView == AnalysisResultView.Findings;
     public bool ShowDuplicates => ActiveView == AnalysisResultView.Duplicates;
@@ -232,6 +346,7 @@ public partial class AnalyzerViewModel : ViewModelBase
     public bool ShowRepresentationRepairs =>
         ActiveView == AnalysisResultView.RepresentationRepairs;
     public bool ShowMatrix => ActiveView == AnalysisResultView.Matrix;
+    public bool ShowArtworkRepairs => ActiveView == AnalysisResultView.ArtworkRepairs;
     public bool HasDuplicateSection => ShowDuplicates || Duplicates.Count > 0;
     public bool HasArtistSection => ShowArtists || ArtistGroups.Count > 0;
     public bool HasRepairSection => ShowRepairs || RepairItems.Count > 0;
@@ -239,6 +354,8 @@ public partial class AnalyzerViewModel : ViewModelBase
         ShowRepresentationRepairs || RepresentationActionItems.Count > 0;
     public bool HasConflictSection => ShowConflicts || ConflictGroups.Count > 0;
     public bool HasMatrixSection => ShowMatrix || Matrices.Count > 0;
+    public bool HasArtworkRepairSection =>
+        ShowArtworkRepairs || ArtworkRepairItems.Count > 0;
     public bool HasItlRepairSection =>
         ActiveView == AnalysisResultView.ItlRepairs || ItlRepairItems.Count > 0;
     public int ActiveResultIndex
@@ -253,6 +370,7 @@ public partial class AnalyzerViewModel : ViewModelBase
             AnalysisResultView.Conflicts => 5,
             AnalysisResultView.Matrix => 6,
             AnalysisResultView.ItlRepairs => 7,
+            AnalysisResultView.ArtworkRepairs => 8,
             _ => 0,
         };
         set
@@ -267,6 +385,7 @@ public partial class AnalyzerViewModel : ViewModelBase
                 5 => AnalysisResultView.Conflicts,
                 6 => AnalysisResultView.Matrix,
                 7 => AnalysisResultView.ItlRepairs,
+                8 => AnalysisResultView.ArtworkRepairs,
                 _ => AnalysisResultView.Findings,
             };
 
@@ -286,7 +405,8 @@ public partial class AnalyzerViewModel : ViewModelBase
         IRepresentationRepairService? representationRepairs = null,
         IItlMetadataRepairService? itlMetadataRepairs = null,
         IDialogCoordinator? dialogs = null,
-        IActivityService? activities = null)
+        IArtworkService? artwork = null,
+        IThumbnailService? thumbnails = null)
     {
         _library = library;
         _reconciler = reconciler;
@@ -296,7 +416,14 @@ public partial class AnalyzerViewModel : ViewModelBase
         _itlMetadataRepairs = itlMetadataRepairs;
         _settings = settings;
         _dialogs = dialogs;
-        _activities = activities;
+        _artwork = artwork;
+        _thumbnails = thumbnails;
+        if (double.TryParse(settings.GetPreference(ArtistThresholdPreference),
+                NumberStyles.Float, CultureInfo.InvariantCulture, out double storedThreshold))
+        {
+            _artistThreshold = Math.Clamp(storedThreshold, 0, 1);
+            _artistThresholdText = _artistThreshold.ToString("0.##", CultureInfo.CurrentCulture);
+        }
         if (settings.Configuration is null)
             StatusText = "Choose a library configuration in Settings before running an audit.";
         settings.ConfigurationChanged += (_, _) =>
@@ -321,6 +448,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowRepairs));
         OnPropertyChanged(nameof(ShowRepresentationRepairs));
         OnPropertyChanged(nameof(ShowMatrix));
+        OnPropertyChanged(nameof(ShowArtworkRepairs));
         NotifySectionVisibility();
     }
 
@@ -330,6 +458,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         SelectedRepairNode = null;
         SelectedRepresentationNode = null;
         SelectedItlRepairNode = null;
+        SelectedArtworkRepairNode = null;
         OnPropertyChanged(nameof(FindingGroups));
         OnPropertyChanged(nameof(FindingCount));
         OnPropertyChanged(nameof(FindingsEmptyText));
@@ -337,6 +466,8 @@ public partial class AnalyzerViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasDuplicateResults));
         OnPropertyChanged(nameof(ArtistGroups));
         OnPropertyChanged(nameof(HasArtistResults));
+        OnPropertyChanged(nameof(ActiveArtistVariantCount));
+        OnPropertyChanged(nameof(ActiveArtistTrackCount));
         OnPropertyChanged(nameof(ConflictGroups));
         OnPropertyChanged(nameof(HasConflictResults));
         OnPropertyChanged(nameof(RepairItems));
@@ -346,6 +477,15 @@ public partial class AnalyzerViewModel : ViewModelBase
         OnPropertyChanged(nameof(RepresentationWarnings));
         OnPropertyChanged(nameof(Matrices));
         OnPropertyChanged(nameof(HasMatrixResults));
+        OnPropertyChanged(nameof(ArtworkRepairItems));
+        OnPropertyChanged(nameof(ArtworkRepairGroups));
+        OnPropertyChanged(nameof(DisplayedArtworkRepairItems));
+        OnPropertyChanged(nameof(HasArtworkRepairResults));
+        OnPropertyChanged(nameof(ActiveArtworkRepairCount));
+        OnPropertyChanged(nameof(IsArtworkHealthRun));
+        OnPropertyChanged(nameof(DeferredArtworkPaths));
+        OnPropertyChanged(nameof(DeferredArtworkCount));
+        OnPropertyChanged(nameof(HasDeferredArtwork));
         OnPropertyChanged(nameof(ItlRepairItems));
         OnPropertyChanged(nameof(ItlRepairGroups));
         OnPropertyChanged(nameof(DisplayedFindings));
@@ -375,6 +515,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasRepresentationSection));
         OnPropertyChanged(nameof(HasConflictSection));
         OnPropertyChanged(nameof(HasMatrixSection));
+        OnPropertyChanged(nameof(HasArtworkRepairSection));
         OnPropertyChanged(nameof(HasItlRepairSection));
     }
 
@@ -408,13 +549,98 @@ public partial class AnalyzerViewModel : ViewModelBase
     private Task RunSimilarArtists() => RunOverRecords("Similar artists", AnalysisResultView.Artists, (records, ct) =>
     {
         var groups = _reconciler.FindSimilarArtists(records, ArtistThreshold, ct);
-        string status = groups.Count == 0 ? "No similar artist names found." : $"{groups.Count:N0} cluster(s) of similar artist names.";
+        string status = groups.Count == 0
+            ? $"No similar artist names found at threshold {ArtistThreshold:0.00}."
+            : $"{groups.Count:N0} cluster(s) of similar artist names at threshold " +
+              $"{ArtistThreshold:0.00}. Review variants, then apply active.";
         return (status, AnalysisRunViewModel.ForArtists(
             "Similar artists",
-            groups.Select(group => new ArtistGroupViewModel(
-                _reconciler, group, _dialogs, _activities)).ToList(),
+            groups.Select(group => new ArtistGroupViewModel(group)).ToList(),
             status));
     });
+
+    private bool CanApplySimilarArtists() => !IsBusy && ArtistGroups.Any(group =>
+        group.HasCanonicalName && group.Variants.Any(variant => variant.IsActive));
+
+    [RelayCommand(CanExecute = nameof(CanApplySimilarArtists))]
+    private async Task ApplySimilarArtists()
+    {
+        var selected = ArtistGroups
+            .Where(group => group.HasCanonicalName)
+            .SelectMany(group => group.Variants
+                .Where(variant => variant.IsActive)
+                .Select(variant => (Group: group, Variant: variant)))
+            .ToList();
+        if (selected.Count == 0)
+            return;
+
+        int selectedTracks = selected.SelectMany(action => action.Variant.Files)
+            .DistinctBy(file => file.Path, StringComparer.OrdinalIgnoreCase).Count();
+        int selectedGroups = selected.Select(action => action.Group).Distinct().Count();
+        if (_dialogs is not null && !await _dialogs.ConfirmAsync(
+                "Apply similar artist merges",
+                $"Rename {selected.Count:N0} reviewed spelling variant(s) across " +
+                $"{selectedTracks:N0} track(s) in {selectedGroups:N0} cluster(s)? " +
+                "Files are written directly; no recovery journal is created.",
+                "Apply artist merges"))
+            return;
+
+        using var scope = BeginRun("Apply similar artist merges", AnalysisResultView.Artists);
+        var changedPaths = new List<string>();
+        int changed = 0;
+        int failed = 0;
+        int processed = 0;
+        try
+        {
+            foreach (var action in selected)
+            {
+                scope.Token.ThrowIfCancellationRequested();
+                string canonical = action.Group.CanonicalName.Trim();
+                StatusText = $"Applying similar artist merges… {processed:N0}/{selected.Count:N0} variants";
+                try
+                {
+                    int variantChanged = await _reconciler.RenameArtistAsync(
+                        action.Variant.Files.Select(file => file.Path).ToArray(),
+                        action.Variant.Name,
+                        canonical,
+                        ct: scope.Token);
+                    changed += variantChanged;
+                    if (variantChanged > 0)
+                        changedPaths.AddRange(action.Variant.Files.Select(file => file.Path));
+                    action.Variant.ResultText = variantChanged == 0
+                        ? "Already correct"
+                        : $"Renamed {variantChanged:N0} file(s)";
+                    action.Variant.IsApplied = true;
+                    action.Variant.Disposition = AnalysisRepairDisposition.Completed;
+                }
+                catch (OperationCanceledException) when (scope.Token.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    action.Variant.ResultText = $"Failed: {ex.Message}";
+                }
+                processed++;
+            }
+
+            StatusText = $"Similar artist merges: {changed:N0} file(s) renamed, " +
+                $"{selected.Count - failed:N0} variant(s) completed, {failed:N0} failed.";
+            scope.Complete(failed > 0 ? MessageTone.Warning : MessageTone.Success);
+            if (changedPaths.Count > 0)
+                RepairsApplied?.Invoke(changedPaths.Distinct(StringComparer.OrdinalIgnoreCase).ToList());
+        }
+        catch (OperationCanceledException)
+        {
+            scope.Cancel();
+            StatusText = "Similar artist merge apply cancelled. Review the affected files before retrying.";
+        }
+        finally
+        {
+            ApplySimilarArtistsCommand.NotifyCanExecuteChanged();
+        }
+    }
 
     [RelayCommand(CanExecute = nameof(CanRun))]
     private Task RunAlbumMatrix() => RunOverRecords("Album metadata matrix", AnalysisResultView.Matrix, (records, ct) =>
@@ -430,35 +656,183 @@ public partial class AnalyzerViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanRun))]
     private async Task RunArtworkHealth()
     {
-        using var scope = BeginRun("Artwork health", AnalysisResultView.Findings);
-        AppConfigurationSnapshot configurationSnapshot = _settings.GetSnapshot();
-        LibraryArtworkHealthSettings healthSettings =
-            configurationSnapshot.Configuration?.ArtworkHealthSettings ??
-            new LibraryArtworkHealthSettings(
-                LibraryArtworkHealthSettings.DefaultOversizedByteThreshold,
-                LibraryArtworkHealthSettings.DefaultOversizedDimensionThreshold);
+        using var scope = BeginRun("Artwork health", AnalysisResultView.ArtworkRepairs);
         try
         {
             var records = await _library.GetAllRecordsAsync(scope.Token);
             var artwork = await _library.GetArtworkAuditFilesAsync(scope.Token);
-            var result = await Task.Run(() =>
-            {
-                var report = ArtworkHealthAnalyzer.Analyze(records, artwork,
-                    healthSettings.OversizedByteThreshold,
-                    healthSettings.OversizedDimensionThreshold,
-                    scope.Token);
-                int deferred = report.Findings.Count(finding => finding.Problem == "Artwork scan deferred");
-                int actionable = report.Count - deferred;
-                string status = report.Count == 0
-                    ? "Artwork health: no cached issues found."
-                    : $"Artwork health: {actionable:N0} cached issue(s), {deferred:N0} file(s) still deferred. " +
-                      "No image blobs were loaded.";
-                return (Status: status, Run: AnalysisRunViewModel.ForFindings(report, records, status));
-            }, scope.Token);
-            AddRun(result.Run);
+            AnalysisRunViewModel run = await BuildArtworkHealthRunAsync(
+                records, artwork, GetArtworkHealthSettings(), scope.Token);
+            AddRun(run);
         }
         catch (OperationCanceledException) { scope.Cancel(); StatusText = "Artwork health audit cancelled."; }
         catch (Exception ex) { scope.Fail(); StatusText = $"Artwork health audit failed: {ex.Message}"; }
+    }
+
+    private LibraryArtworkHealthSettings GetArtworkHealthSettings() =>
+        _settings.GetSnapshot().Configuration?.ArtworkHealthSettings ??
+        new LibraryArtworkHealthSettings(
+            LibraryArtworkHealthSettings.DefaultOversizedByteThreshold,
+            LibraryArtworkHealthSettings.DefaultOversizedDimensionThreshold);
+
+    private async Task<AnalysisRunViewModel> BuildArtworkHealthRunAsync(
+        IReadOnlyList<TrackRecord> records,
+        IReadOnlyList<ArtworkAuditFile> artwork,
+        LibraryArtworkHealthSettings settings,
+        CancellationToken ct)
+    {
+        AnalysisReport report = await Task.Run(() => ArtworkHealthAnalyzer.Analyze(
+            records, artwork, settings.OversizedByteThreshold,
+            settings.OversizedDimensionThreshold, ct), ct);
+        IReadOnlyList<ArtworkRepairItemViewModel> repairs = _artwork is null
+            ? []
+            : await Task.Run(() => ArtworkRepairPlanner.BuildAsync(
+                records, artwork, settings, _library, _artwork, _thumbnails, ct), ct);
+        int deferred = report.Findings.Count(finding =>
+            finding.Problem == "Artwork scan deferred");
+        int actionable = report.Count - deferred;
+        string status = report.Count == 0
+            ? "Artwork health: no issues found."
+            : $"Artwork health: {actionable:N0} issue(s), {repairs.Count:N0} repair action(s), " +
+              $"{deferred:N0} deferred file(s).";
+        return await Task.Run(
+            () => AnalysisRunViewModel.ForArtwork(report, records, repairs, status), ct);
+    }
+
+    private bool CanForceScanDeferredArtwork() =>
+        !IsBusy && _library.IsReady && DeferredArtworkCount > 0;
+
+    [RelayCommand(CanExecute = nameof(CanForceScanDeferredArtwork))]
+    private async Task ForceScanDeferredArtwork()
+    {
+        string[] paths = DeferredArtworkPaths.ToArray();
+        if (paths.Length == 0)
+            return;
+
+        using var scope = BeginRun("Force scan deferred artwork", AnalysisResultView.ArtworkRepairs);
+        try
+        {
+            StatusText = $"Reading embedded artwork from {paths.Length:N0} deferred file(s)...";
+            _ = await _library.GetImageSignaturesAsync(paths, scope.Token);
+            var records = await _library.GetAllRecordsAsync(scope.Token);
+            var artwork = await _library.GetArtworkAuditFilesAsync(scope.Token);
+            AnalysisRunViewModel run = await BuildArtworkHealthRunAsync(
+                records, artwork, GetArtworkHealthSettings(), scope.Token);
+            AddRun(run);
+            StatusText = run.Summary;
+        }
+        catch (OperationCanceledException) { scope.Cancel(); StatusText = "Deferred artwork scan cancelled."; }
+        catch (Exception ex) { scope.Fail(); StatusText = $"Deferred artwork scan failed: {ex.Message}"; }
+    }
+
+    private bool CanApplyArtworkRepairs() =>
+        !IsBusy && _artwork is not null && ArtworkRepairItems.Any(item => item.IsActive);
+
+    [RelayCommand(CanExecute = nameof(CanApplyArtworkRepairs))]
+    private async Task ApplyArtworkRepairs()
+    {
+        if (_artwork is null)
+            return;
+        ArtworkRepairItemViewModel[] selected = ArtworkRepairItems
+            .Where(item => item.IsActive).ToArray();
+        if (selected.Length == 0)
+            return;
+        int fileCount = selected.SelectMany(item => item.AffectedPaths)
+            .Select(item => item.Path).Distinct(StringComparer.OrdinalIgnoreCase).Count();
+        if (_dialogs is not null && !await _dialogs.ConfirmAsync(
+                "Apply artwork repairs",
+                $"Replace the entire embedded-artwork set in {fileCount:N0} file(s) using " +
+                $"{selected.Length:N0} reviewed action(s)? Files are written directly; no recovery journal is created.",
+                "Apply artwork repairs"))
+            return;
+
+        using var scope = BeginRun("Apply artwork repairs", AnalysisResultView.ArtworkRepairs);
+        var changedPaths = new List<string>();
+        int completed = 0;
+        int failed = 0;
+        try
+        {
+            foreach (ArtworkRepairItemViewModel item in selected)
+            {
+                scope.Token.ThrowIfCancellationRequested();
+                StatusText = $"Applying artwork repairs... {completed + failed:N0}/{selected.Length:N0}";
+                PreparedImage? prepared = await PrepareArtworkWithinLimitsAsync(item, scope.Token);
+                if (prepared is null)
+                {
+                    failed++;
+                    item.ResultText = "Failed: the selected image could not be encoded within the repair targets.";
+                    continue;
+                }
+
+                var itemFailures = new List<string>();
+                foreach (ArtistPathViewModel target in item.AffectedPaths)
+                {
+                    scope.Token.ThrowIfCancellationRequested();
+                    ArtworkOpResult result = await _artwork.SaveImagesAsync(target.Path,
+                        [new ArtworkInput(ID3v2Util.APICType.FrontCover,
+                            prepared.MimeType, prepared.Data)], scope.Token);
+                    if (result.Success)
+                        changedPaths.Add(target.Path);
+                    else
+                        itemFailures.Add($"{Path.GetFileName(target.Path)}: {result.Error ?? "unknown error"}");
+                }
+
+                if (itemFailures.Count == 0)
+                {
+                    completed++;
+                    item.IsApplied = true;
+                    item.Disposition = AnalysisRepairDisposition.Completed;
+                    item.ResultText = $"Completed for {item.FileCount:N0} file(s) - " +
+                        $"{prepared.Width:N0}x{prepared.Height:N0} - {prepared.Data.Length / 1024d:0.#} KiB";
+                }
+                else
+                {
+                    failed++;
+                    item.ResultText = $"Failed for {itemFailures.Count:N0} file(s): " +
+                        string.Join("; ", itemFailures.Take(3));
+                }
+            }
+
+            StatusText = $"Artwork repairs: {completed:N0} action(s) completed, {failed:N0} failed.";
+            scope.Complete(failed > 0 ? MessageTone.Warning : MessageTone.Success);
+            if (changedPaths.Count > 0)
+                RepairsApplied?.Invoke(changedPaths.Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
+        }
+        catch (OperationCanceledException)
+        {
+            scope.Cancel();
+            StatusText = "Artwork repair apply cancelled. Review the affected files before retrying.";
+        }
+        finally
+        {
+            OnPropertyChanged(nameof(ActiveArtworkRepairCount));
+            ApplyArtworkRepairsCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    private async Task<PreparedImage?> PrepareArtworkWithinLimitsAsync(
+        ArtworkRepairItemViewModel item, CancellationToken ct)
+    {
+        if (_artwork is null || item.SelectedCandidate is null)
+            return null;
+        byte[]? sourceData = await item.SelectedCandidate.EnsureDataAsync(ct);
+        if (sourceData is null || sourceData.Length == 0)
+            return null;
+        int dimension = item.MaximumDimension;
+        while (dimension >= 64)
+        {
+            foreach (int quality in new[] { 90, 80, 70, 60, 50, 40, 30 })
+            {
+                PreparedImage? prepared = await _artwork.PrepareFromBytesAsync(
+                    sourceData, dimension, quality, ct);
+                if (prepared is not null && prepared.Data.Length <= item.MaximumBytes &&
+                    prepared.Width <= item.MaximumDimension &&
+                    prepared.Height <= item.MaximumDimension)
+                    return prepared;
+            }
+            dimension = (int)Math.Floor(dimension * 0.8);
+        }
+        return null;
     }
 
     [RelayCommand(CanExecute = nameof(CanRun))]
@@ -988,6 +1362,10 @@ public partial class AnalyzerViewModel : ViewModelBase
         foreach (var action in run.RepresentationActionItems)
             action.StateChanged += () =>
                 ApplyRepresentationRepairsCommand.NotifyCanExecuteChanged();
+        foreach (ArtworkRepairItemViewModel item in run.ArtworkRepairItems)
+            item.StateChanged += ArtworkRepairStateChanged;
+        foreach (ArtistGroupViewModel group in run.ArtistGroups)
+            group.StateChanged += ArtistGroupStateChanged;
         Runs.Insert(0, run);
         OnPropertyChanged(nameof(HasRuns));
         SelectedRun = run;
@@ -1001,6 +1379,19 @@ public partial class AnalyzerViewModel : ViewModelBase
         if (e.PropertyName == nameof(AnalysisRunViewModel.FilteredPaths) &&
             !_clearingFilterDispositions)
             PublishFilter();
+    }
+
+    private void ArtistGroupStateChanged()
+    {
+        OnPropertyChanged(nameof(ActiveArtistVariantCount));
+        OnPropertyChanged(nameof(ActiveArtistTrackCount));
+        ApplySimilarArtistsCommand.NotifyCanExecuteChanged();
+    }
+
+    private void ArtworkRepairStateChanged()
+    {
+        OnPropertyChanged(nameof(ActiveArtworkRepairCount));
+        ApplyArtworkRepairsCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>Clears every disposition represented by the Library's Health-results chip.</summary>
@@ -1076,12 +1467,15 @@ public partial class AnalyzerViewModel : ViewModelBase
         PreviewConflictRepairsCommand.NotifyCanExecuteChanged();
         RunAlbumMatrixCommand.NotifyCanExecuteChanged();
         RunArtworkHealthCommand.NotifyCanExecuteChanged();
+        ForceScanDeferredArtworkCommand.NotifyCanExecuteChanged();
+        ApplyArtworkRepairsCommand.NotifyCanExecuteChanged();
         RunRepresentationsCommand.NotifyCanExecuteChanged();
         PreviewRepresentationRepairsCommand.NotifyCanExecuteChanged();
         VerifyDecodedAudioCommand.NotifyCanExecuteChanged();
         RunCheckSetsCommand.NotifyCanExecuteChanged();
         PreviewMetadataRepairsCommand.NotifyCanExecuteChanged();
         ApplyRepairsCommand.NotifyCanExecuteChanged();
+        ApplySimilarArtistsCommand.NotifyCanExecuteChanged();
         ApplyRepresentationRepairsCommand.NotifyCanExecuteChanged();
         PreviewItlMetadataRepairsCommand.NotifyCanExecuteChanged();
         ApplyItlMetadataRepairsCommand.NotifyCanExecuteChanged();

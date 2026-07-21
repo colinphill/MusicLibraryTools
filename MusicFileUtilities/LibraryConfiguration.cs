@@ -37,10 +37,14 @@ namespace MusicLibraryTools
 
     public sealed record LibraryArtworkHealthSettings(
         int OversizedByteThreshold,
-        int OversizedDimensionThreshold)
+        int OversizedDimensionThreshold,
+        int RepairTargetByteSize = LibraryArtworkHealthSettings.DefaultRepairTargetByteSize,
+        int RepairTargetDimension = LibraryArtworkHealthSettings.DefaultRepairTargetDimension)
     {
         public const int DefaultOversizedByteThreshold = 2 * 1024 * 1024;
         public const int DefaultOversizedDimensionThreshold = 2_000;
+        public const int DefaultRepairTargetByteSize = 225 * 1024;
+        public const int DefaultRepairTargetDimension = 600;
     }
 
     public sealed record LibraryIndexLocation(
@@ -330,7 +334,11 @@ namespace MusicLibraryTools
                     ParsePositiveInteger(element, "OversizedByteThreshold",
                         LibraryArtworkHealthSettings.DefaultOversizedByteThreshold),
                     ParsePositiveInteger(element, "OversizedDimensionThreshold",
-                        LibraryArtworkHealthSettings.DefaultOversizedDimensionThreshold));
+                        LibraryArtworkHealthSettings.DefaultOversizedDimensionThreshold),
+                    ParsePositiveInteger(element, "RepairTargetByteSize",
+                        LibraryArtworkHealthSettings.DefaultRepairTargetByteSize),
+                    ParsePositiveInteger(element, "RepairTargetDimension",
+                        LibraryArtworkHealthSettings.DefaultRepairTargetDimension));
             }
         }
 

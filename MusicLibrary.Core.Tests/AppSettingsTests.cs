@@ -87,6 +87,8 @@ public sealed class AppSettingsTests
     [Theory]
     [InlineData("OversizedByteThreshold", "0")]
     [InlineData("OversizedDimensionThreshold", "not-a-number")]
+    [InlineData("RepairTargetByteSize", "0")]
+    [InlineData("RepairTargetDimension", "not-a-number")]
     public void InvalidArtworkHealthThreshold_IsRejectedDuringLoad(
         string attribute, string value)
     {

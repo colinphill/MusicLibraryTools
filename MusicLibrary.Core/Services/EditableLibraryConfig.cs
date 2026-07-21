@@ -48,6 +48,10 @@ public sealed class EditableLibraryConfig
         LibraryArtworkHealthSettings.DefaultOversizedByteThreshold;
     public int OversizedArtworkDimensionThreshold { get; set; } =
         LibraryArtworkHealthSettings.DefaultOversizedDimensionThreshold;
+    public int ArtworkRepairTargetByteSize { get; set; } =
+        LibraryArtworkHealthSettings.DefaultRepairTargetByteSize;
+    public int ArtworkRepairTargetDimension { get; set; } =
+        LibraryArtworkHealthSettings.DefaultRepairTargetDimension;
     public bool DeleteSourcesAfterIngest { get; set; }
     public bool RemoveNonMusicAfterIngest { get; set; }
     public bool DeleteStaleCrossSyncFiles { get; set; }
@@ -91,6 +95,8 @@ public sealed class EditableLibraryConfig
         LibraryArtworkHealthSettings artworkHealth = parsed.ArtworkHealthSettings;
         config.OversizedArtworkByteThreshold = artworkHealth.OversizedByteThreshold;
         config.OversizedArtworkDimensionThreshold = artworkHealth.OversizedDimensionThreshold;
+        config.ArtworkRepairTargetByteSize = artworkHealth.RepairTargetByteSize;
+        config.ArtworkRepairTargetDimension = artworkHealth.RepairTargetDimension;
         config.DeleteStaleCrossSyncFiles = parsed.DeleteStaleCrossSyncFiles;
         config.CleanCrossSyncPlaylists = parsed.CleanCrossSyncPlaylists;
         foreach (LibraryIndexLocation location in parsed.IndexLocations)
@@ -253,9 +259,15 @@ public sealed class EditableLibraryConfig
             throw new InvalidDataException("Oversized artwork byte threshold must be a positive integer.");
         if (OversizedArtworkDimensionThreshold <= 0)
             throw new InvalidDataException("Oversized artwork dimension threshold must be a positive integer.");
+        if (ArtworkRepairTargetByteSize <= 0)
+            throw new InvalidDataException("Artwork repair byte target must be a positive integer.");
+        if (ArtworkRepairTargetDimension <= 0)
+            throw new InvalidDataException("Artwork repair dimension target must be a positive integer.");
         root.Add(new XElement("ArtworkHealthSettings",
             new XAttribute("OversizedByteThreshold", OversizedArtworkByteThreshold),
-            new XAttribute("OversizedDimensionThreshold", OversizedArtworkDimensionThreshold)));
+            new XAttribute("OversizedDimensionThreshold", OversizedArtworkDimensionThreshold),
+            new XAttribute("RepairTargetByteSize", ArtworkRepairTargetByteSize),
+            new XAttribute("RepairTargetDimension", ArtworkRepairTargetDimension)));
 
         string[] duplicateRoles = IndexTargets
             .Where(target => target.IngestRole != LibraryIngestRole.None)

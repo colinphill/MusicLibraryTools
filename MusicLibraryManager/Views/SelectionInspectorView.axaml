@@ -101,7 +101,11 @@
                   <TextBox Classes="app" Text="{Binding Description, Mode=TwoWay}"
                            PlaceholderText="Optional description" AutomationProperties.Name="Artwork description" />
                   <TextBlock Classes="muted" Text="{Binding Summary}" TextWrapping="Wrap" />
-                  <Button Classes="app" Content="Replace this artwork..." Tag="{Binding}" Click="OnReplaceArtwork" />
+                  <WrapPanel>
+                    <Button Classes="app" Margin="0,0,8,6" Content="Save to file..." Tag="{Binding}"
+                            Click="OnSaveArtwork" AutomationProperties.Name="Save artwork to file" />
+                    <Button Classes="app" Margin="0,0,8,6" Content="Replace this artwork..." Tag="{Binding}" Click="OnReplaceArtwork" />
+                  </WrapPanel>
                   <Button Classes="app danger" Content="Remove this artwork" Tag="{Binding}" Click="OnRemoveArtwork" />
                 </StackPanel>
               </Border>

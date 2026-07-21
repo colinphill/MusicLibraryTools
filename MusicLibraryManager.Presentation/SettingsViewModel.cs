@@ -35,6 +35,10 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         LibraryArtworkHealthSettings.DefaultOversizedByteThreshold;
     [ObservableProperty] private int _oversizedArtworkDimensionThreshold =
         LibraryArtworkHealthSettings.DefaultOversizedDimensionThreshold;
+    [ObservableProperty] private int _artworkRepairTargetByteSize =
+        LibraryArtworkHealthSettings.DefaultRepairTargetByteSize;
+    [ObservableProperty] private int _artworkRepairTargetDimension =
+        LibraryArtworkHealthSettings.DefaultRepairTargetDimension;
     [ObservableProperty] private bool _deleteSourcesAfterIngest;
     [ObservableProperty] private bool _removeNonMusicAfterIngest;
     [ObservableProperty] private bool _deleteStaleCrossSyncFiles;
@@ -87,12 +91,13 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     public ObservableCollection<IndexTargetEditorRow> IndexTargets { get; } = [];
     public ObservableCollection<SyncPlaylistEditorRow> SyncPlaylists { get; } = [];
     public ObservableCollection<PlaylistTargetEditorRow> PlaylistTargets { get; } = [];
-    public IReadOnlyList<string> Themes { get; } = ["System", "Light", "Dark"];
+    public IReadOnlyList<string> Themes { get; } = ["System", "Light", "Dark", "Steel Blue"];
     public IReadOnlyList<ThemeChoice> ThemeChoices { get; } =
     [
         new("System", "#0D1417", "#F8FBFA", "#2CC7BC"),
         new("Light", "#EEF4F3", "#FFFFFF", "#087F8C"),
         new("Dark", "#0D1417", "#18262B", "#2CC7BC"),
+        new("Steel Blue", "#101C2A", "#1D3043", "#3AAFB8"),
     ];
     public IReadOnlyList<LibraryIngestRole> IngestRoles { get; } =
         Enum.GetValues<LibraryIngestRole>();
@@ -108,6 +113,16 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
 
     partial void OnOversizedArtworkByteThresholdChanged(int value) =>
         OnPropertyChanged(nameof(OversizedArtworkSizeThresholdMib));
+
+    public decimal ArtworkRepairTargetSizeMib
+    {
+        get => (decimal)ArtworkRepairTargetByteSize / (1024 * 1024);
+        set => ArtworkRepairTargetByteSize = checked((int)decimal.Round(
+            value * (1024 * 1024), MidpointRounding.AwayFromZero));
+    }
+
+    partial void OnArtworkRepairTargetByteSizeChanged(int value) =>
+        OnPropertyChanged(nameof(ArtworkRepairTargetSizeMib));
 
     partial void OnSelectedThemeChanged(string value)
     {
@@ -135,6 +150,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         nameof(AacBitrateKbps),
         nameof(OversizedArtworkByteThreshold),
         nameof(OversizedArtworkDimensionThreshold),
+        nameof(ArtworkRepairTargetByteSize),
+        nameof(ArtworkRepairTargetDimension),
         nameof(DeleteSourcesAfterIngest),
         nameof(RemoveNonMusicAfterIngest),
         nameof(DeleteStaleCrossSyncFiles),
@@ -240,6 +257,10 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             issues.Add((4, "Oversized artwork size threshold must be between 0.25 and 1,024 MiB."));
         if (OversizedArtworkDimensionThreshold is < 64 or > 100_000)
             issues.Add((4, "Oversized artwork dimension threshold must be between 64 and 100,000 pixels."));
+        if (ArtworkRepairTargetByteSize is < 65_536 or > 1_073_741_824)
+            issues.Add((4, "Artwork repair size target must be between 0.0625 and 1,024 MiB."));
+        if (ArtworkRepairTargetDimension is < 64 or > 100_000)
+            issues.Add((4, "Artwork repair dimension target must be between 64 and 100,000 pixels."));
         return issues;
     }
 
@@ -289,6 +310,10 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             LibraryArtworkHealthSettings.DefaultOversizedByteThreshold;
         OversizedArtworkDimensionThreshold =
             LibraryArtworkHealthSettings.DefaultOversizedDimensionThreshold;
+        ArtworkRepairTargetByteSize =
+            LibraryArtworkHealthSettings.DefaultRepairTargetByteSize;
+        ArtworkRepairTargetDimension =
+            LibraryArtworkHealthSettings.DefaultRepairTargetDimension;
         DeleteSourcesAfterIngest = false;
         RemoveNonMusicAfterIngest = false;
         DeleteStaleCrossSyncFiles = false;
@@ -359,6 +384,10 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             LibraryArtworkHealthSettings.DefaultOversizedByteThreshold;
         OversizedArtworkDimensionThreshold =
             LibraryArtworkHealthSettings.DefaultOversizedDimensionThreshold;
+        ArtworkRepairTargetByteSize =
+            LibraryArtworkHealthSettings.DefaultRepairTargetByteSize;
+        ArtworkRepairTargetDimension =
+            LibraryArtworkHealthSettings.DefaultRepairTargetDimension;
         DeleteSourcesAfterIngest = false;
         RemoveNonMusicAfterIngest = false;
         DeleteStaleCrossSyncFiles = false;
@@ -521,6 +550,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             AacBitrateKbps = _editing.AacBitrateKbps;
             OversizedArtworkByteThreshold = _editing.OversizedArtworkByteThreshold;
             OversizedArtworkDimensionThreshold = _editing.OversizedArtworkDimensionThreshold;
+            ArtworkRepairTargetByteSize = _editing.ArtworkRepairTargetByteSize;
+            ArtworkRepairTargetDimension = _editing.ArtworkRepairTargetDimension;
             DeleteSourcesAfterIngest = _editing.DeleteSourcesAfterIngest;
             RemoveNonMusicAfterIngest = _editing.RemoveNonMusicAfterIngest;
             DeleteStaleCrossSyncFiles = _editing.DeleteStaleCrossSyncFiles;
@@ -598,6 +629,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             _editing.AacBitrateKbps = AacBitrateKbps;
             _editing.OversizedArtworkByteThreshold = OversizedArtworkByteThreshold;
             _editing.OversizedArtworkDimensionThreshold = OversizedArtworkDimensionThreshold;
+            _editing.ArtworkRepairTargetByteSize = ArtworkRepairTargetByteSize;
+            _editing.ArtworkRepairTargetDimension = ArtworkRepairTargetDimension;
             _editing.DeleteSourcesAfterIngest = DeleteSourcesAfterIngest;
             _editing.RemoveNonMusicAfterIngest = RemoveNonMusicAfterIngest;
             _editing.DeleteStaleCrossSyncFiles = DeleteStaleCrossSyncFiles;

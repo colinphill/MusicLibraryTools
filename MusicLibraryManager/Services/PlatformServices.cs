@@ -4,6 +4,7 @@ using global::Avalonia;
 using global::Avalonia.Controls;
 using global::Avalonia.Input;
 using global::Avalonia.Input.Platform;
+using global::Avalonia.Media;
 using global::Avalonia.Media.Imaging;
 using global::Avalonia.Platform.Storage;
 using global::Avalonia.Styling;
@@ -170,21 +171,73 @@ public sealed class WindowStateService(IAppSettings settings) : IWindowStateServ
 
 public sealed class ThemeService : IThemeService
 {
+    public const string SteelBlueTheme = "Steel Blue";
+
+    private static readonly IReadOnlyDictionary<string, string> SteelBlueBrushes =
+        new Dictionary<string, string>
+        {
+            ["AccentFillColorDefaultBrush"] = "#3AAFB8",
+            ["AppCanvasBrush"] = "#101C2A",
+            ["AppPanelBrush"] = "#162536",
+            ["AppRaisedBrush"] = "#1D3043",
+            ["AppInsetBrush"] = "#122031",
+            ["AppBorderBrush"] = "#30485D",
+            ["AppBorderStrongBrush"] = "#46657D",
+            ["AppTextBrush"] = "#EDF7FA",
+            ["AppMutedBrush"] = "#AEC2CF",
+            ["AppFaintBrush"] = "#A2B8C6",
+            ["AppAccentBrush"] = "#3AAFB8",
+            ["AppAccentHoverBrush"] = "#58C4CB",
+            ["AppAccentInkBrush"] = "#071F27",
+            ["AppAccentSoftBrush"] = "#243AAFB8",
+            ["AppSelectionBrush"] = "#1A4A58",
+            ["AppHoverBrush"] = "#233C50",
+            ["AppInfoBrush"] = "#58A6DB",
+            ["AppInfoSoftBrush"] = "#2458A6DB",
+            ["AppSuccessBrush"] = "#48B88A",
+            ["AppSuccessSoftBrush"] = "#2448B88A",
+            ["AppWarningBrush"] = "#E1A848",
+            ["AppWarningSoftBrush"] = "#24E1A848",
+            ["AppDangerBrush"] = "#E16B76",
+            ["AppDangerHoverBrush"] = "#EF8590",
+            ["AppDangerSoftBrush"] = "#24E16B76",
+            ["AppDangerInkBrush"] = "#FFFFFF",
+            ["AppScrimBrush"] = "#99000000",
+        };
+
     public string Current { get; private set; } = "System";
     public event Action? Changed;
 
     public void Apply(string theme)
     {
-        Current = theme is "Light" or "Dark" ? theme : "System";
+        Current = theme is "Light" or "Dark" or SteelBlueTheme ? theme : "System";
         if (Application.Current is { } app)
         {
+            ClearSteelBluePalette(app);
             app.RequestedThemeVariant = Current switch
             {
                 "Light" => ThemeVariant.Light,
                 "Dark" => ThemeVariant.Dark,
+                SteelBlueTheme => ThemeVariant.Dark,
                 _ => ThemeVariant.Default,
             };
+            if (Current == SteelBlueTheme)
+                ApplySteelBluePalette(app);
         }
         Changed?.Invoke();
+    }
+
+    private static void ApplySteelBluePalette(Application app)
+    {
+        app.Resources["SystemAccentColor"] = Color.Parse("#3AAFB8");
+        foreach ((string key, string color) in SteelBlueBrushes)
+            app.Resources[key] = new SolidColorBrush(Color.Parse(color));
+    }
+
+    private static void ClearSteelBluePalette(Application app)
+    {
+        app.Resources.Remove("SystemAccentColor");
+        foreach (string key in SteelBlueBrushes.Keys)
+            app.Resources.Remove(key);
     }
 }

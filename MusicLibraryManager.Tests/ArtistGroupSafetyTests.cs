@@ -1,5 +1,4 @@
 using MusicLibrary.Core.Models;
-using MusicLibrary.Core.Services;
 using MusicLibraryManager.Presentation;
 using Xunit;
 
@@ -8,65 +7,63 @@ namespace MusicLibraryManager.Tests;
 public sealed class ArtistGroupSafetyTests
 {
     [Fact]
-    public async Task Similar_artist_merge_requires_a_mutation_and_recovery_summary()
+    public void Similar_artist_variants_expose_their_files_and_folders_for_review()
     {
-        var reconciler = new RecordingReconciler();
-        var dialogs = new RecordingDialogs(false);
-        var activities = new AppActivityService();
-        var viewModel = new ArtistGroupViewModel(
-            reconciler, Group(), dialogs, activities);
+        string firstFolder = Path.Combine("Music", "First");
+        string secondFolder = Path.Combine("Music", "Second");
+        var viewModel = new ArtistGroupViewModel(new SimilarArtistGroup(
+        [
+            new ArtistVariant("Canonical",
+                [Path.Combine(firstFolder, "one.flac"), Path.Combine(firstFolder, "two.flac")]),
+            new ArtistVariant("Canoncial",
+                [Path.Combine(secondFolder, "three.flac")]),
+        ]));
 
-        await viewModel.MergeCommand.ExecuteAsync(null);
-
-        Assert.Empty(reconciler.Calls);
-        Assert.Contains("2 track(s)", dialogs.Message);
-        Assert.Contains("1 spelling variant(s)", dialogs.Message);
-        Assert.Contains("no recovery journal", dialogs.Message);
-        Assert.Contains("no files were changed", viewModel.Status);
-        Assert.Empty(activities.Activities);
+        ArtistVariantViewModel canonical = viewModel.Variants[0];
+        ArtistVariantViewModel typo = viewModel.Variants[1];
+        Assert.True(canonical.IsCanonical);
+        Assert.False(canonical.CanChangeDisposition);
+        Assert.False(typo.IsCanonical);
+        Assert.Equal([firstFolder], canonical.Folders.Select(folder => folder.Path));
+        Assert.Equal(["one.flac", "two.flac"], canonical.Files.Select(file => file.Name));
+        Assert.Equal([secondFolder], typo.Folders.Select(folder => folder.Path));
     }
 
     [Fact]
-    public async Task Confirmed_similar_artist_merge_reports_a_health_activity()
+    public void Similar_artist_cluster_propagates_dispositions_only_to_noncanonical_variants()
     {
-        var reconciler = new RecordingReconciler();
-        var dialogs = new RecordingDialogs(true);
-        var activities = new AppActivityService();
-        var viewModel = new ArtistGroupViewModel(
-            reconciler, Group(), dialogs, activities);
+        var viewModel = new ArtistGroupViewModel(Group());
+        ArtistVariantViewModel canonical = viewModel.Variants[0];
+        ArtistVariantViewModel typo = viewModel.Variants[1];
 
-        await viewModel.MergeCommand.ExecuteAsync(null);
+        viewModel.Disposition = AnalysisRepairDisposition.Active;
 
-        var call = Assert.Single(reconciler.Calls);
-        Assert.Equal("Canoncial", call.From);
-        Assert.Equal("Canonical", call.To);
-        Assert.Equal(2, call.Paths.Count);
-        Assert.True(viewModel.IsMerged);
-        Assert.Equal(MessageTone.Success, viewModel.StatusTone);
-        AppActivity activity = Assert.Single(activities.Activities);
-        Assert.Equal(ShellDestination.Health, activity.Destination);
-        Assert.Equal(AppActivityState.Completed, activity.State);
-        Assert.False(activity.CanCancel);
+        Assert.Equal(AnalysisRepairDisposition.Ignored, canonical.Disposition);
+        Assert.Equal(AnalysisRepairDisposition.Active, typo.Disposition);
+        Assert.Equal(AnalysisRepairDisposition.Active, viewModel.Disposition);
+        Assert.Equal(1, viewModel.ActiveCount);
+        Assert.Equal(2, viewModel.ActiveTrackCount);
+
+        typo.Disposition = AnalysisRepairDisposition.Filter;
+
+        AnalysisRunViewModel run = AnalysisRunViewModel.ForArtists(
+            "Similar artists", [viewModel], "Review variants");
+        Assert.Equal(typo.Files.Select(file => file.Path), run.FilteredPaths);
+        Assert.True(run.ClearFilterDispositions());
+        Assert.Equal(AnalysisRepairDisposition.Ignored, typo.Disposition);
     }
 
     [Fact]
-    public async Task Similar_artist_merge_can_be_cancelled_from_its_activity()
+    public void Changing_the_canonical_name_updates_which_variant_is_actionable()
     {
-        var reconciler = new BlockingReconciler();
-        var activities = new AppActivityService();
-        var viewModel = new ArtistGroupViewModel(
-            reconciler, Group(), new RecordingDialogs(true), activities);
+        var viewModel = new ArtistGroupViewModel(Group());
 
-        Task merge = viewModel.MergeCommand.ExecuteAsync(null);
-        await reconciler.Started.Task.WaitAsync(
-            TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
-        AppActivity running = Assert.Single(activities.Activities);
-        Assert.True(activities.Cancel(running.Id));
-        await merge;
+        viewModel.CanonicalName = "Canoncial";
 
-        Assert.False(viewModel.IsMerged);
-        Assert.Equal(MessageTone.Warning, viewModel.StatusTone);
-        Assert.Equal(AppActivityState.Cancelled, Assert.Single(activities.Activities).State);
+        Assert.False(viewModel.Variants[0].IsCanonical);
+        Assert.True(viewModel.Variants[0].CanChangeDisposition);
+        Assert.True(viewModel.Variants[1].IsCanonical);
+        Assert.False(viewModel.Variants[1].CanChangeDisposition);
     }
 
     private static SimilarArtistGroup Group() => new(
@@ -74,53 +71,4 @@ public sealed class ArtistGroupSafetyTests
         new ArtistVariant("Canonical", [@"C:\one.flac", @"C:\two.flac", @"C:\three.flac"]),
         new ArtistVariant("Canoncial", [@"C:\four.flac", @"C:\five.flac"]),
     ]);
-
-    private sealed class RecordingReconciler : IArtistReconciler
-    {
-        public List<(IReadOnlyList<string> Paths, string From, string To)> Calls { get; } = [];
-
-        public IReadOnlyList<SimilarArtistGroup> FindSimilarArtists(
-            IReadOnlyList<TrackRecord> records, double threshold = 0.2,
-            CancellationToken ct = default) => [];
-
-        public Task<int> RenameArtistAsync(
-            IReadOnlyList<string> paths, string from, string to,
-            IProgress<int>? progress = null, CancellationToken ct = default)
-        {
-            Calls.Add((paths, from, to));
-            return Task.FromResult(paths.Count);
-        }
-    }
-
-    private sealed class RecordingDialogs(bool result) : IDialogCoordinator
-    {
-        public string? Message { get; private set; }
-
-        public Task<bool> ConfirmAsync(string title, string message, string primaryText)
-        {
-            Message = message;
-            return Task.FromResult(result);
-        }
-
-        public Task ShowMessageAsync(string title, string message) => Task.CompletedTask;
-    }
-
-    private sealed class BlockingReconciler : IArtistReconciler
-    {
-        public TaskCompletionSource<bool> Started { get; } =
-            new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        public IReadOnlyList<SimilarArtistGroup> FindSimilarArtists(
-            IReadOnlyList<TrackRecord> records, double threshold = 0.2,
-            CancellationToken ct = default) => [];
-
-        public async Task<int> RenameArtistAsync(
-            IReadOnlyList<string> paths, string from, string to,
-            IProgress<int>? progress = null, CancellationToken ct = default)
-        {
-            Started.TrySetResult(true);
-            await Task.Delay(Timeout.InfiniteTimeSpan, ct);
-            return 0;
-        }
-    }
 }

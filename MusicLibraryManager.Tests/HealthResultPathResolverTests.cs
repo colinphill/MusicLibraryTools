@@ -31,6 +31,7 @@ public sealed class HealthResultPathResolverTests
         var cell = new AnalysisMatrixCell("value");
         var matrixRow = new AlbumMetadataRow(Path, cell, cell, cell, cell, cell, cell, cell,
             cell, cell);
+        var artistPath = new ArtistPathViewModel(Path);
 
         AssertPath(finding, Path);
         AssertPath(metadataRepair, Path);
@@ -39,6 +40,7 @@ public sealed class HealthResultPathResolverTests
         AssertPath(conflict, @"C:\Music\Artist\Album");
         AssertPath(track, Path);
         AssertPath(matrixRow, Path);
+        AssertPath(artistPath, Path);
     }
 
     [Fact]

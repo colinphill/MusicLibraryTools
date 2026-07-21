@@ -35,6 +35,11 @@ public sealed class ArtworkHealthAnalyzerTests
                      "Oversized artwork", "Unreadable artwork", "Duplicate embedded artwork",
                  })
             Assert.Contains(report.Findings, finding => finding.Problem == problem);
+
+        Assert.Equal(
+            ["invalid.flac", "large.flac", "missing.flac", "other.flac"],
+            report.Findings.Where(finding => finding.Problem == "Mixed album artwork")
+                .Select(finding => finding.Path).Order().ToArray());
     }
 
     [Fact]

@@ -9,6 +9,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Styling;
 using Avalonia.VisualTree;
 using MetadataCaching;
@@ -201,6 +202,42 @@ public sealed class UiControlTests
     }
 
     [AvaloniaFact]
+    public void Steel_blue_theme_overrides_dark_surfaces_and_restores_the_dark_palette()
+    {
+        Application app = Application.Current!;
+        ThemeVariant? previousTheme = app.RequestedThemeVariant;
+        var themes = new ThemeService();
+        try
+        {
+            themes.Apply(ThemeService.SteelBlueTheme);
+
+            Assert.Equal(ThemeService.SteelBlueTheme, themes.Current);
+            Assert.Equal(ThemeVariant.Dark, app.RequestedThemeVariant);
+            Assert.True(app.TryGetResource("AppCanvasBrush", ThemeVariant.Dark, out object? canvasValue));
+            Assert.True(app.TryGetResource("AppRaisedBrush", ThemeVariant.Dark, out object? raisedValue));
+            Assert.True(app.TryGetResource("AppAccentBrush", ThemeVariant.Dark, out object? accentValue));
+            Assert.True(app.TryGetResource("AppFaintBrush", ThemeVariant.Dark, out object? faintValue));
+            Assert.Equal(Color.Parse("#101C2A"), Assert.IsType<SolidColorBrush>(canvasValue).Color);
+            Assert.Equal(Color.Parse("#1D3043"), Assert.IsType<SolidColorBrush>(raisedValue).Color);
+            Assert.Equal(Color.Parse("#3AAFB8"), Assert.IsType<SolidColorBrush>(accentValue).Color);
+            Assert.True(ContrastRatio(
+                Assert.IsType<SolidColorBrush>(faintValue).Color,
+                Assert.IsType<SolidColorBrush>(raisedValue).Color) >= 4.5);
+
+            themes.Apply("Dark");
+            Assert.True(app.TryGetResource("AppCanvasBrush", ThemeVariant.Dark, out canvasValue));
+            Assert.True(app.TryGetResource("AppAccentBrush", ThemeVariant.Dark, out accentValue));
+            Assert.Equal(Color.Parse("#0D1417"), Assert.IsType<SolidColorBrush>(canvasValue).Color);
+            Assert.Equal(Color.Parse("#2CC7BC"), Assert.IsType<SolidColorBrush>(accentValue).Color);
+        }
+        finally
+        {
+            themes.Apply("System");
+            app.RequestedThemeVariant = previousTheme;
+        }
+    }
+
+    [AvaloniaFact]
     public void Faint_text_meets_wcag_contrast_on_app_surfaces()
     {
         foreach (ThemeVariant theme in new[] { ThemeVariant.Light, ThemeVariant.Dark })
@@ -333,6 +370,22 @@ public sealed class UiControlTests
             }
             else if (host.Content is HealthView health)
             {
+                TextBlock matrixExplanation = health.FindControl<TextBlock>("AlbumMatrixExplanation")!;
+                Assert.Equal("Read-only album consistency audit", matrixExplanation.Text);
+                TextBox artistThreshold = health.FindControl<TextBox>("ArtistThresholdInput")!;
+                Assert.NotNull(health.FindControl<ComboBox>("ArtworkRepairRootDisposition"));
+                Assert.Equal("Similar artist fuzzy threshold",
+                    global::Avalonia.Automation.AutomationProperties.GetName(artistThreshold));
+                artistThreshold.Text = "0.13";
+                Dispatcher.UIThread.RunJobs();
+                Assert.Equal(0.13, services.GetRequiredService<AnalyzerViewModel>().ArtistThreshold,
+                    precision: 3);
+                artistThreshold.Text = "";
+                Dispatcher.UIThread.RunJobs();
+                Assert.Equal(0, services.GetRequiredService<AnalyzerViewModel>().ArtistThreshold);
+                Assert.NotNull(health.FindControl<ComboBox>("ArtistRootDisposition"));
+                Assert.DoesNotContain(health.GetVisualDescendants().OfType<Button>(),
+                    button => string.Equals(button.Content as string, "Merge", StringComparison.Ordinal));
                 AppDataGrid repairGrid = health.FindControl<AppDataGrid>("RepairGrid")!;
                 DataGridColumn before = repairGrid.Columns.Single(column =>
                     repairGrid.KeyFor(column) == "Before");
@@ -403,6 +456,126 @@ public sealed class UiControlTests
                 Dispatcher.UIThread.RunJobs();
                 Assert.True(configuration.IsEnabled);
             }
+        }
+    }
+
+    [AvaloniaFact]
+    public void Health_long_result_lists_realize_only_the_visible_containers()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        var health = new HealthView();
+        var viewModel = Assert.IsType<AnalyzerViewModel>(health.DataContext);
+        DuplicateGroup[] groups = Enumerable.Range(0, 2_000)
+            .Select(index => new DuplicateGroup($"Duplicate {index:N0}",
+            [
+                new TrackRecord
+                {
+                    Path = $@"C:\Music\Track {index:N0}.flac",
+                    Title = $"Track {index:N0}",
+                },
+            ]))
+            .ToArray();
+        AnalysisRunViewModel run = AnalysisRunViewModel.ForDuplicates(
+            "Duplicates", groups, "2,000 duplicate groups");
+        viewModel.Runs.Add(run);
+        viewModel.SelectedRun = run;
+        var window = new Window { Width = 900, Height = 600, Content = health };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+
+            ItemsControl list = health.FindControl<ItemsControl>("DuplicateResultsList")!;
+            var panel = Assert.IsType<VirtualizingStackPanel>(list.ItemsPanelRoot);
+            Assert.InRange(panel.Children.Count, 1, 100);
+            Assert.True(panel.Children.Count < groups.Length);
+            Assert.False(list is SelectingItemsControl);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Health_interactive_artwork_results_are_nonselecting_and_virtualized()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        var health = new HealthView();
+        var viewModel = Assert.IsType<AnalyzerViewModel>(health.DataContext);
+        ArtworkRepairItemViewModel[] repairs = Enumerable.Range(0, 2_000)
+            .Select(index => new ArtworkRepairItemViewModel(
+                ArtworkRepairKind.NormalizeFile,
+                $"Track {index:N0}.flac",
+                "Normalize artwork",
+                [$@"C:\Music\Track {index:N0}.flac"],
+                [], false, 128_000, 800, "Test item"))
+            .ToArray();
+        AnalysisRunViewModel run = AnalysisRunViewModel.ForArtwork(
+            new AnalysisReport("Artwork health", []), [], repairs,
+            "2,000 artwork repairs");
+        viewModel.Runs.Add(run);
+        viewModel.SelectedRun = run;
+        var window = new Window { Width = 1100, Height = 700, Content = health };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+
+            ItemsControl list = health.FindControl<ItemsControl>("ArtworkRepairResultsList")!;
+            var panel = Assert.IsType<VirtualizingStackPanel>(list.ItemsPanelRoot);
+            Assert.InRange(panel.Children.Count, 1, 100);
+            Assert.True(panel.Children.Count < repairs.Length);
+            Assert.False(list is SelectingItemsControl);
+            Assert.NotNull(health.GetVisualDescendants().OfType<TreeView>().FirstOrDefault(tree =>
+                ReferenceEquals(tree.ItemsSource, viewModel.ArtworkRepairGroups)));
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Health_dropdowns_are_not_nested_inside_other_click_targets()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        var health = new HealthView();
+        var viewModel = Assert.IsType<AnalyzerViewModel>(health.DataContext);
+        var artistGroup = new ArtistGroupViewModel(new SimilarArtistGroup(
+        [
+            new ArtistVariant("Canonical", [@"C:\Music\one.flac"]),
+            new ArtistVariant("Canoncial", [@"C:\Music\two.flac"]),
+        ]));
+        AnalysisRunViewModel run = AnalysisRunViewModel.ForArtists(
+            "Similar artists", [artistGroup], "Similar artists");
+        viewModel.Runs.Add(run);
+        viewModel.SelectedRun = run;
+        var window = new Window { Width = 1100, Height = 700, Content = health };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+
+            ComboBox findingRoot = health.FindControl<ComboBox>("FindingRootDisposition")!;
+            Assert.Empty(findingRoot.GetVisualAncestors().OfType<Button>());
+
+            ComboBox variantDisposition = health.GetVisualDescendants().OfType<ComboBox>()
+                .First(combo => string.Equals(
+                    global::Avalonia.Automation.AutomationProperties.GetName(combo),
+                    "Disposition for artist spelling variant", StringComparison.Ordinal));
+            Assert.Empty(variantDisposition.GetVisualAncestors().OfType<Expander>());
+            Assert.Empty(variantDisposition.GetVisualAncestors().OfType<ListBoxItem>());
+        }
+        finally
+        {
+            window.Hide();
         }
     }
 
@@ -649,7 +822,8 @@ public sealed class UiControlTests
                 Directory.CreateDirectory(captureDirectory);
                 using var frame = window.GetLastRenderedFrame();
                 Assert.NotNull(frame);
-                frame.Save(Path.Combine(captureDirectory, "activity-completed-wide.png"));
+                frame.Save(Path.Combine(captureDirectory, "activity-completed-wide.png"),
+                    PngBitmapEncoderOptions.Default);
             }
         }
         finally
@@ -777,7 +951,8 @@ public sealed class UiControlTests
                 Assert.Equal(1440, frame.PixelSize.Width);
                 Assert.Equal(900, frame.PixelSize.Height);
                 if (isCapturing)
-                    frame.Save(Path.Combine(captureDirectory!, $"{destination}.png"));
+                    frame.Save(Path.Combine(captureDirectory!, $"{destination}.png"),
+                        PngBitmapEncoderOptions.Default);
             }
         }
         finally
@@ -863,6 +1038,8 @@ public sealed class UiControlTests
                                      {
                                          settings.FindControl<NumericUpDown>("ArtworkSizeThresholdInput")!,
                                          settings.FindControl<NumericUpDown>("ArtworkDimensionThresholdInput")!,
+                                         settings.FindControl<NumericUpDown>("ArtworkRepairSizeTargetInput")!,
+                                         settings.FindControl<NumericUpDown>("ArtworkRepairDimensionTargetInput")!,
                                      })
                             {
                                 Assert.True(input.IsEffectivelyVisible);
@@ -895,7 +1072,8 @@ public sealed class UiControlTests
                         {
                             Directory.CreateDirectory(captureDirectory);
                             frame.Save(Path.Combine(captureDirectory,
-                                $"{name}-900x600-{destination}.png"));
+                                $"{name}-900x600-{destination}.png"),
+                                PngBitmapEncoderOptions.Default);
                         }
                     }
                 }
@@ -1151,7 +1329,8 @@ public sealed class UiControlTests
                             return;
                         Directory.CreateDirectory(captureDirectory);
                         frame.Save(Path.Combine(captureDirectory,
-                            $"{themeName}-{width}x{height}-state-{state}.png"));
+                            $"{themeName}-{width}x{height}-state-{state}.png"),
+                            PngBitmapEncoderOptions.Default);
                     }
                 }
                 finally
