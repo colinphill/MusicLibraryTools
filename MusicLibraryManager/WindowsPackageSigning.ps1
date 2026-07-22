@@ -116,7 +116,12 @@ function Invoke-InnoCompiler([switch]$UseSignedUninstaller) {
     }
     $arguments += $script
     & $compiler @arguments | ForEach-Object { Write-Host $_ }
-    return $LASTEXITCODE
+    $exitCode = $LASTEXITCODE
+
+    # Callers handle the compiler result explicitly. Do not let an expected first-pass
+    # failure remain as the exit status of the PowerShell process running this script.
+    $global:LASTEXITCODE = 0
+    return $exitCode
 }
 
 switch ($Operation) {
@@ -144,6 +149,9 @@ switch ($Operation) {
         $exitCode = Invoke-InnoCompiler -UseSignedUninstaller
         if ($exitCode -eq 0) {
             throw "Inno Setup unexpectedly completed before the cached uninstaller was signed."
+        }
+        if ($exitCode -ne 2) {
+            throw "Inno Setup failed unexpectedly with exit code $exitCode while preparing the signed uninstaller."
         }
 
         $uninstaller = Get-SignedUninstaller
