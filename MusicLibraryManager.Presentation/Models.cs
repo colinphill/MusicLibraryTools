@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using MusicFileUtilities;
@@ -91,6 +92,10 @@ public partial class LibraryRow : ObservableObject
     public string Artist => Record.Artist ?? "";
     public string AlbumArtist => Record.AlbumArtist ?? "";
     public string Album => Record.Album ?? "";
+    public string Genre => Record.Genre ?? "";
+    public string Composer => Record.Composer ?? "";
+    public string Grouping => Record.Grouping ?? "";
+    public string Year => Record.Year?.ToString() ?? "";
     public int? Track => Record.TrackNumber;
     public int? TrackTotal => Record.TrackTotal;
     public int? Disc => Record.DiscNumber;
@@ -253,13 +258,88 @@ public partial class ArtworkPreviewItem : ObservableObject
 public partial class IndexTargetEditorRow : ObservableObject
 {
     [ObservableProperty]
+    private Guid _id = Guid.NewGuid();
+
+    [ObservableProperty]
     private string _path = "";
+
+    [ObservableProperty]
+    private string? _profileId;
 
     [ObservableProperty]
     private string? _filter;
 
     [ObservableProperty]
-    private bool _organize = true;
+    private string? _indexFormats;
+
+    [ObservableProperty]
+    private string? _indexIncludePatterns;
+
+    [ObservableProperty]
+    private string? _indexExcludePatterns;
+
+    private LibraryRootPermissions _permissions;
+
+    public LibraryRootPermissions Permissions
+    {
+        get => _permissions;
+        set
+        {
+            if (!SetProperty(ref _permissions, value))
+                return;
+            OnPropertyChanged(nameof(AllowMetadataWrites));
+            OnPropertyChanged(nameof(AllowArtworkWrites));
+            OnPropertyChanged(nameof(AllowOrganization));
+            OnPropertyChanged(nameof(AllowIngestOutput));
+            OnPropertyChanged(nameof(AllowSynchronizationOutput));
+            OnPropertyChanged(nameof(Organize));
+            OnPropertyChanged(nameof(IsReadOnly));
+            OnPropertyChanged(nameof(PermissionSummary));
+        }
+    }
+
+    public bool AllowMetadataWrites
+    {
+        get => HasPermission(LibraryRootPermissions.WriteMetadata);
+        set => SetPermission(LibraryRootPermissions.WriteMetadata, value);
+    }
+
+    public bool AllowArtworkWrites
+    {
+        get => HasPermission(LibraryRootPermissions.WriteArtwork);
+        set => SetPermission(LibraryRootPermissions.WriteArtwork, value);
+    }
+
+    public bool AllowOrganization
+    {
+        get => HasPermission(LibraryRootPermissions.OrganizeFiles);
+        set => SetPermission(LibraryRootPermissions.OrganizeFiles, value);
+    }
+
+    public bool AllowIngestOutput
+    {
+        get => HasPermission(LibraryRootPermissions.IngestOutput);
+        set => SetPermission(LibraryRootPermissions.IngestOutput, value);
+    }
+
+    public bool AllowSynchronizationOutput
+    {
+        get => HasPermission(LibraryRootPermissions.SynchronizeOutput);
+        set => SetPermission(LibraryRootPermissions.SynchronizeOutput, value);
+    }
+
+    // Retained for callers that still use the legacy organization switch.
+    public bool Organize
+    {
+        get => AllowOrganization;
+        set => AllowOrganization = value;
+    }
+
+    public bool IsReadOnly => Permissions == LibraryRootPermissions.None;
+
+    public string PermissionSummary => IsReadOnly
+        ? "Catalog-only: this root is read-only."
+        : "Allowed changes: " + string.Join(", ", PermissionLabels());
 
     [ObservableProperty]
     private bool _useItunesCanonicalNaming;
@@ -268,11 +348,42 @@ public partial class IndexTargetEditorRow : ObservableObject
     private LibraryIngestRole _ingestRole;
 
     [ObservableProperty]
+    private LibraryRepresentationRole _representationRole =
+        LibraryRepresentationRole.Ignore;
+
+    [ObservableProperty]
     private bool _isSyncTarget;
 
     public ObservableCollection<IndexTargetSetEditorRow> Memberships { get; } = [];
 
     public IndexTargetEntry? Source { get; set; }
+
+    partial void OnIngestRoleChanged(LibraryIngestRole value)
+    {
+        if (value != LibraryIngestRole.None)
+            AllowIngestOutput = true;
+    }
+
+    partial void OnIsSyncTargetChanged(bool value)
+    {
+        if (value)
+            AllowSynchronizationOutput = true;
+    }
+
+    private bool HasPermission(LibraryRootPermissions permission) =>
+        Permissions.HasFlag(permission);
+
+    private void SetPermission(LibraryRootPermissions permission, bool enabled) =>
+        Permissions = enabled ? Permissions | permission : Permissions & ~permission;
+
+    private IEnumerable<string> PermissionLabels()
+    {
+        if (AllowMetadataWrites) yield return "metadata";
+        if (AllowArtworkWrites) yield return "artwork";
+        if (AllowOrganization) yield return "organization";
+        if (AllowIngestOutput) yield return "ingest output";
+        if (AllowSynchronizationOutput) yield return "sync output";
+    }
 }
 
 public partial class IndexTargetSetEditorRow : ObservableObject
@@ -300,4 +411,537 @@ public partial class PlaylistTargetEditorRow : ObservableObject
 
     [ObservableProperty]
     private string? _sets;
+
+    [ObservableProperty] private string _pathStyle = "legacy";
+    [ObservableProperty] private string _encoding = "utf-8";
+    [ObservableProperty] private bool _emitByteOrderMark = true;
+    [ObservableProperty] private string _lineEnding = "platform";
+    [ObservableProperty] private bool _includeExtendedInfo = true;
+    [ObservableProperty] private string _fileNameTransform = "legacy";
+    [ObservableProperty] private int _maxTrackCount = 500;
+    [ObservableProperty] private LibraryPathCollisionPolicy _collisionPolicy =
+        LibraryPathCollisionPolicy.Stop;
+
+    public PlaylistTargetEntry? Source { get; set; }
+}
+
+public partial class PlaylistSourceEditorRow : ObservableObject
+{
+    [ObservableProperty] private string _location = "";
+    [ObservableProperty] private string _type = "m3u";
+    [ObservableProperty] private bool _recursive;
+
+    public PlaylistSourceEntry? Source { get; set; }
+}
+
+public partial class ExportProfileEditorRow : ObservableObject
+{
+    public required LibraryExportProfile Source { get; init; }
+    [ObservableProperty] private string _id = "";
+    [ObservableProperty] private string _name = "";
+    [ObservableProperty] private bool _enabled;
+    [ObservableProperty] private ExportSelectionKind _selectionKind;
+    [ObservableProperty] private string? _selectionValues;
+    [ObservableProperty] private string? _selectionQuery;
+    [ObservableProperty] private ExportTransformMode _transformMode;
+    [ObservableProperty] private string? _transformRecipeId;
+    [ObservableProperty] private string? _transformProviderId;
+    [ObservableProperty] private string? _codec;
+    [ObservableProperty] private string? _container;
+    [ObservableProperty] private string? _namingProfileId;
+    [ObservableProperty] private bool _preserveSourceLayout;
+    [ObservableProperty] private string? _folderTemplate;
+    [ObservableProperty] private string? _fileNameTemplate;
+    [ObservableProperty] private bool _useNamingProfileCollision = true;
+    [ObservableProperty] private LibraryPathCollisionPolicy _collisionPolicy;
+    [ObservableProperty] private ExportArtworkMode _artworkMode;
+    [ObservableProperty] private bool _frontCoverOnly;
+    [ObservableProperty] private bool _preserveArtworkEncoding;
+    [ObservableProperty] private int? _artworkMaximumDimension;
+    [ObservableProperty] private int? _artworkMaximumBytes;
+    [ObservableProperty] private bool _playlistEnabled;
+    [ObservableProperty] private string _playlistFormat = "m3u8";
+    [ObservableProperty] private bool _playlistRelativePaths = true;
+    [ObservableProperty] private bool _playlistIncludeExtendedInfo = true;
+    [ObservableProperty] private string _playlistEncoding = "utf-8";
+    [ObservableProperty] private bool _playlistWriteBom;
+    [ObservableProperty] private string _playlistLineEnding = "platform";
+    [ObservableProperty] private int? _playlistMaximumTracks;
+    [ObservableProperty] private string _transportProviderId = "local-filesystem";
+    [ObservableProperty] private string _transportDestination = "";
+    [ObservableProperty] private string? _transportOptions;
+    [ObservableProperty] private ExportExtraFileDisposition _extraFileDisposition;
+    [ObservableProperty] private bool _replaceChangedFiles;
+    [ObservableProperty] private bool _removeEmptyDirectories;
+    [ObservableProperty] private int? _maximumRemovals;
+
+    public static ExportProfileEditorRow From(LibraryExportProfile profile) => new()
+    {
+        Source = profile,
+        Id = profile.Id,
+        Name = profile.Name,
+        Enabled = profile.Enabled,
+        SelectionKind = profile.Selection.Kind,
+        SelectionValues = string.Join(", ", profile.Selection.Values),
+        SelectionQuery = profile.Selection.Query,
+        TransformMode = profile.Transform.Mode,
+        TransformRecipeId = profile.Transform.RecipeId,
+        TransformProviderId = profile.Transform.ProviderId,
+        Codec = profile.Transform.Codec,
+        Container = profile.Transform.Container,
+        NamingProfileId = profile.Naming.LibraryProfileId,
+        PreserveSourceLayout = profile.Naming.PreserveSourceLayout,
+        FolderTemplate = profile.Naming.FolderTemplate,
+        FileNameTemplate = profile.Naming.FileNameTemplate,
+        UseNamingProfileCollision = profile.Naming.CollisionPolicy is null,
+        CollisionPolicy = profile.Naming.CollisionPolicy ??
+            LibraryPathCollisionPolicy.Stop,
+        ArtworkMode = profile.Artwork.Mode,
+        FrontCoverOnly = profile.Artwork.FrontCoverOnly,
+        PreserveArtworkEncoding = profile.Artwork.PreserveEncoding,
+        ArtworkMaximumDimension = profile.Artwork.MaximumDimension,
+        ArtworkMaximumBytes = profile.Artwork.MaximumBytes,
+        PlaylistEnabled = profile.Playlists.Enabled,
+        PlaylistFormat = profile.Playlists.Format,
+        PlaylistRelativePaths = profile.Playlists.RelativePaths,
+        PlaylistIncludeExtendedInfo = profile.Playlists.IncludeExtendedInfo,
+        PlaylistEncoding = profile.Playlists.EncodingName,
+        PlaylistWriteBom = profile.Playlists.WriteByteOrderMark,
+        PlaylistLineEnding = profile.Playlists.LineEnding,
+        PlaylistMaximumTracks = profile.Playlists.MaximumTracks,
+        TransportProviderId = profile.Transport.ProviderId,
+        TransportDestination = profile.Transport.Destination,
+        TransportOptions = string.Join("; ", profile.Transport.Options.Select(pair =>
+            $"{pair.Key}={pair.Value}")),
+        ExtraFileDisposition = profile.Reconciliation.ExtraFiles,
+        ReplaceChangedFiles = profile.Reconciliation.ReplaceChangedFiles,
+        RemoveEmptyDirectories = profile.Reconciliation.RemoveEmptyDirectories,
+        MaximumRemovals = profile.Reconciliation.MaximumRemovals,
+    };
+
+    public static ExportProfileEditorRow Create() => From(new(
+        "export-" + Guid.NewGuid().ToString("N")[..12],
+        "New export",
+        false,
+        ExportSelectionPolicy.EntireLibrary,
+        new(),
+        new(PreserveSourceLayout: true),
+        new(),
+        new(),
+        new("local-filesystem", ""),
+        new()));
+
+    public LibraryExportProfile Build() => Source with
+    {
+        Id = Id.Trim(),
+        Name = Name.Trim(),
+        Enabled = Enabled,
+        Selection = new(SelectionKind, SplitValues(SelectionValues), Clean(SelectionQuery)),
+        Transform = new(TransformMode, Clean(TransformRecipeId),
+            Clean(TransformProviderId), Clean(Codec), Clean(Container)),
+        Naming = new(Clean(NamingProfileId), PreserveSourceLayout,
+            Clean(FolderTemplate), Clean(FileNameTemplate),
+            UseNamingProfileCollision ? null : CollisionPolicy),
+        Artwork = new(ArtworkMode, FrontCoverOnly, PreserveArtworkEncoding,
+            ArtworkMaximumDimension, ArtworkMaximumBytes),
+        Playlists = new(PlaylistEnabled, PlaylistFormat.Trim(), PlaylistRelativePaths,
+            PlaylistIncludeExtendedInfo, PlaylistEncoding.Trim(), PlaylistWriteBom,
+            PlaylistLineEnding.Trim(), PlaylistMaximumTracks),
+        Transport = new(TransportProviderId.Trim(), TransportDestination.Trim(),
+            ParseOptions(TransportOptions)),
+        Reconciliation = new(ExtraFileDisposition, ReplaceChangedFiles,
+            RemoveEmptyDirectories, MaximumRemovals),
+    };
+
+    private static ImmutableArray<string> SplitValues(string? values) =>
+        (values ?? "").Split([',', ';', '\r', '\n'],
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToImmutableArray();
+
+    private static ImmutableDictionary<string, string> ParseOptions(string? options)
+    {
+        var result = ImmutableDictionary.CreateBuilder<string, string>(
+            StringComparer.OrdinalIgnoreCase);
+        foreach (string item in (options ?? "").Split([';', '\r', '\n'],
+                     StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            int separator = item.IndexOf('=');
+            if (separator <= 0)
+                throw new InvalidDataException(
+                    $"Export transport option '{item}' must use name=value syntax.");
+            result.Add(item[..separator].Trim(), item[(separator + 1)..].Trim());
+        }
+        return result.ToImmutable();
+    }
+
+    private static string? Clean(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}
+
+public partial class HealthRuleEditorRow : ObservableObject
+{
+    public required string Id { get; init; }
+
+    [ObservableProperty] private bool _enabled;
+    [ObservableProperty] private LibraryHealthSeverity _severity;
+    [ObservableProperty] private bool _proposeRepair;
+    [ObservableProperty] private bool _applyRepair;
+
+    public LibraryHealthRulePolicy Build() => new(
+        Id, Enabled, Severity, ProposeRepair, ApplyRepair);
+}
+
+public partial class IngestRecipeEditorRow : ObservableObject
+{
+    public required LibraryIngestRecipe Source { get; init; }
+    [ObservableProperty] private string _id = "";
+    [ObservableProperty] private string _name = "";
+    [ObservableProperty] private bool _enabled;
+    [ObservableProperty] private string _inputExtensions = "";
+    [ObservableProperty] private bool? _requireLossless;
+    [ObservableProperty] private int? _minimumSampleRateHz;
+    [ObservableProperty] private int? _minimumBitsPerSample;
+    [ObservableProperty] private int? _inputChannels;
+    [ObservableProperty] private bool _matchAnyQualityMinimum;
+    [ObservableProperty] private LibraryIngestAction _action;
+    [ObservableProperty] private string? _destinationRootId;
+    [ObservableProperty] private LibraryIngestRole _destinationLegacyRole;
+    [ObservableProperty] private string? _outputExtension;
+    [ObservableProperty] private string? _codec;
+    [ObservableProperty] private string? _encoder;
+    [ObservableProperty] private int? _bitrateKbps;
+    [ObservableProperty] private int? _sampleRateHz;
+    [ObservableProperty] private int? _bitsPerSample;
+    [ObservableProperty] private int? _outputChannels;
+    [ObservableProperty] private string? _namingProfileId;
+    [ObservableProperty] private bool _preserveMetadata = true;
+    [ObservableProperty] private bool _preserveArtwork = true;
+    [ObservableProperty] private bool _useProfileCollision = true;
+    [ObservableProperty] private LibraryPathCollisionPolicy _collisionPolicy;
+    [ObservableProperty] private LibraryRepresentationRole _outputRepresentationRole;
+
+    public string Summary => $"{Action}; {InputExtensions} to " +
+        (!string.IsNullOrWhiteSpace(DestinationRootId)
+            ? DestinationRootId
+            : DestinationLegacyRole.ToString());
+
+    public static IngestRecipeEditorRow From(LibraryIngestRecipe recipe) => new()
+    {
+        Source = recipe,
+        Id = recipe.Id,
+        Name = recipe.Name,
+        Enabled = recipe.Enabled,
+        InputExtensions = string.Join(", ", recipe.InputExtensions),
+        RequireLossless = recipe.RequireLossless,
+        MinimumSampleRateHz = recipe.MinimumSampleRateHz,
+        MinimumBitsPerSample = recipe.MinimumBitsPerSample,
+        InputChannels = recipe.InputChannels,
+        MatchAnyQualityMinimum = recipe.MatchAnyQualityMinimum,
+        Action = recipe.Action,
+        DestinationRootId = recipe.DestinationRootId?.ToString("D"),
+        DestinationLegacyRole = recipe.DestinationLegacyRole,
+        OutputExtension = recipe.OutputExtension,
+        Codec = recipe.Codec,
+        Encoder = recipe.Encoder,
+        BitrateKbps = recipe.BitrateKbps,
+        SampleRateHz = recipe.SampleRateHz,
+        BitsPerSample = recipe.BitsPerSample,
+        OutputChannels = recipe.OutputChannels,
+        NamingProfileId = recipe.NamingProfileId,
+        PreserveMetadata = recipe.PreserveMetadata,
+        PreserveArtwork = recipe.PreserveArtwork,
+        UseProfileCollision = recipe.CollisionPolicy is null,
+        CollisionPolicy = recipe.CollisionPolicy ?? LibraryPathCollisionPolicy.Stop,
+        OutputRepresentationRole = recipe.OutputRepresentationRole,
+    };
+
+    public static IngestRecipeEditorRow Create() => From(new(
+        "recipe-" + Guid.NewGuid().ToString("N")[..12],
+        "New recipe",
+        false,
+        [".flac"],
+        null,
+        null,
+        null,
+        null,
+        false,
+        LibraryIngestAction.Copy,
+        null,
+        LibraryIngestRole.None,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        true,
+        true,
+        null));
+
+    public LibraryIngestRecipe Build()
+    {
+        Guid? destinationRoot = null;
+        if (!string.IsNullOrWhiteSpace(DestinationRootId))
+            destinationRoot = Guid.TryParse(DestinationRootId.Trim(), out Guid parsed)
+                ? parsed
+                : Guid.Empty;
+        return Source with
+        {
+            Id = Id.Trim(),
+            Name = Name.Trim(),
+            Enabled = Enabled,
+            InputExtensions = InputExtensions.Split(
+                [',', ';', ' ', '\t', '\r', '\n'],
+                StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+            RequireLossless = RequireLossless,
+            MinimumSampleRateHz = MinimumSampleRateHz,
+            MinimumBitsPerSample = MinimumBitsPerSample,
+            InputChannels = InputChannels,
+            MatchAnyQualityMinimum = MatchAnyQualityMinimum,
+            Action = Action,
+            DestinationRootId = destinationRoot,
+            DestinationLegacyRole = DestinationLegacyRole,
+            OutputExtension = Clean(OutputExtension),
+            Codec = Clean(Codec),
+            Encoder = Clean(Encoder),
+            BitrateKbps = BitrateKbps,
+            SampleRateHz = SampleRateHz,
+            BitsPerSample = BitsPerSample,
+            OutputChannels = OutputChannels,
+            NamingProfileId = Clean(NamingProfileId),
+            PreserveMetadata = PreserveMetadata,
+            PreserveArtwork = PreserveArtwork,
+            CollisionPolicy = UseProfileCollision ? null : CollisionPolicy,
+            OutputRepresentationRole = OutputRepresentationRole,
+        };
+    }
+
+    private static string? Clean(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}
+
+public partial class SidecarRuleEditorRow : ObservableObject
+{
+    public required LibrarySidecarRule Source { get; init; }
+    [ObservableProperty] private string _id = "";
+    [ObservableProperty] private string _name = "";
+    [ObservableProperty] private string _patterns = "";
+    [ObservableProperty] private bool _enabled;
+    [ObservableProperty] private LibrarySidecarDisposition _disposition;
+
+    public static SidecarRuleEditorRow From(LibrarySidecarRule rule) => new()
+    {
+        Source = rule,
+        Id = rule.Id,
+        Name = rule.Name,
+        Patterns = string.Join(", ", rule.Patterns),
+        Enabled = rule.Enabled,
+        Disposition = rule.Disposition,
+    };
+
+    public static SidecarRuleEditorRow Create() => From(new(
+        "sidecar-" + Guid.NewGuid().ToString("N")[..12],
+        "New sidecar rule",
+        true,
+        ["*.txt"],
+        LibrarySidecarDisposition.Preserve));
+
+    public LibrarySidecarRule Build() => Source with
+    {
+        Id = Id.Trim(),
+        Name = Name.Trim(),
+        Patterns = Patterns.Split([',', ';'],
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+        Enabled = Enabled,
+        Disposition = Disposition,
+    };
+}
+
+public partial class LibraryProfileEditorRow : ObservableObject
+{
+    public required LibraryProfile Source { get; init; }
+    public string Id => Source.Id;
+    public string Name => Source.Name;
+
+    [ObservableProperty] private string _directoryTemplate = "";
+    [ObservableProperty] private string _fileNameTemplate = "";
+    [ObservableProperty] private int _trackPadding;
+    [ObservableProperty] private int _discPadding;
+    [ObservableProperty] private LibraryPathCollisionPolicy _collisionPolicy;
+    [ObservableProperty] private bool _preserveUnicode;
+    [ObservableProperty] private string _invalidCharacterReplacement = "_";
+    [ObservableProperty] private string _missingArtistFallback = "Unknown Artist";
+    [ObservableProperty] private string _missingAlbumFallback = "Unknown Album";
+    [ObservableProperty] private string _missingTitleFallback = "Untitled";
+    [ObservableProperty] private string _compilationValue = "Compilations";
+    [ObservableProperty] private LibraryUnicodeNormalization _unicodeNormalization;
+    [ObservableProperty] private int? _componentLengthLimit;
+    [ObservableProperty] private int? _completePathLengthLimit;
+    [ObservableProperty] private LibraryDiscStrategy _discStrategy;
+    [ObservableProperty] private LibraryTrackTotalScope _trackTotalScope;
+    [ObservableProperty] private bool _inferAlbumSuffix;
+    [ObservableProperty] private bool _preserveDiscTags;
+    [ObservableProperty] private bool _identityUsesAlbumArtist;
+    [ObservableProperty] private bool _identityStripsFormatSuffixes;
+    [ObservableProperty] private bool _identityStripsDiscSuffixes;
+    [ObservableProperty] private bool _identityIncludesReleaseYear;
+    [ObservableProperty] private bool _preserveReplayGain;
+    [ObservableProperty] private bool _preserveMusicBrainzIdentifiers;
+    [ObservableProperty] private bool _preserveCustomFields;
+    [ObservableProperty] private bool _preserveCompilationSemantics;
+    [ObservableProperty] private int _highResolutionMinimumSampleRateHz;
+    [ObservableProperty] private int _highResolutionMinimumBitsPerSample;
+    [ObservableProperty] private bool _ingestEnabled;
+    [ObservableProperty] private LibrarySourceDisposition _sourceDisposition;
+    [ObservableProperty] private bool _preserveSidecars;
+    [ObservableProperty] private LibraryArtworkStorage _artworkStorage;
+    [ObservableProperty] private LibraryArtworkRoleSelection _artworkRoles;
+    [ObservableProperty] private LibraryArtworkEncoding _artworkEncoding;
+    [ObservableProperty] private int _artworkMaximumDimension;
+    [ObservableProperty] private int _artworkMaximumEncodedBytes;
+    [ObservableProperty] private int _artworkJpegQuality;
+    [ObservableProperty] private string _artworkSidecarTemplate = "";
+    [ObservableProperty] private LibrarySidecarDisposition _unknownSidecarDisposition;
+
+    public ObservableCollection<HealthRuleEditorRow> HealthRules { get; } = [];
+    public ObservableCollection<IngestRecipeEditorRow> IngestRecipes { get; } = [];
+    public ObservableCollection<SidecarRuleEditorRow> SidecarRules { get; } = [];
+
+    public static LibraryProfileEditorRow From(LibraryProfile profile)
+    {
+        var editor = new LibraryProfileEditorRow
+        {
+            Source = profile,
+            DirectoryTemplate = profile.Naming.DirectoryTemplate,
+            FileNameTemplate = profile.Naming.FileNameTemplate,
+            TrackPadding = profile.Naming.TrackPadding,
+            DiscPadding = profile.Naming.DiscPadding,
+            CollisionPolicy = profile.Naming.CollisionPolicy,
+            PreserveUnicode = profile.Naming.PreserveUnicode,
+            InvalidCharacterReplacement = profile.Naming.InvalidCharacterReplacement,
+            MissingArtistFallback = profile.Naming.MissingArtistFallback,
+            MissingAlbumFallback = profile.Naming.MissingAlbumFallback,
+            MissingTitleFallback = profile.Naming.MissingTitleFallback,
+            CompilationValue = profile.Naming.CompilationValue,
+            UnicodeNormalization = profile.Naming.UnicodeNormalization,
+            ComponentLengthLimit = profile.Naming.ComponentLengthLimit,
+            CompletePathLengthLimit = profile.Naming.CompletePathLengthLimit,
+            DiscStrategy = profile.Disc.Strategy,
+            TrackTotalScope = profile.Disc.TrackTotalScope,
+            InferAlbumSuffix = profile.Disc.InferAlbumSuffix,
+            PreserveDiscTags = profile.Disc.PreserveDiscTags,
+            IdentityUsesAlbumArtist = profile.AlbumIdentity.UseAlbumArtist,
+            IdentityStripsFormatSuffixes = profile.AlbumIdentity.StripFormatSuffixes,
+            IdentityStripsDiscSuffixes = profile.AlbumIdentity.StripDiscSuffixes,
+            IdentityIncludesReleaseYear = profile.AlbumIdentity.IncludeReleaseYear,
+            PreserveReplayGain = profile.Metadata.PreserveReplayGain,
+            PreserveMusicBrainzIdentifiers =
+                profile.Metadata.PreserveMusicBrainzIdentifiers,
+            PreserveCustomFields = profile.Metadata.PreserveCustomFields,
+            PreserveCompilationSemantics =
+                profile.Metadata.PreserveCompilationSemantics,
+            HighResolutionMinimumSampleRateHz =
+                profile.Quality.HighResolutionMinimumSampleRateHz,
+            HighResolutionMinimumBitsPerSample =
+                profile.Quality.HighResolutionMinimumBitsPerSample,
+            IngestEnabled = profile.Ingest.Enabled,
+            SourceDisposition = profile.Ingest.SourceDisposition,
+            PreserveSidecars = profile.Ingest.PreserveSidecars,
+            ArtworkStorage = profile.Artwork.Storage,
+            ArtworkRoles = profile.Artwork.Roles,
+            ArtworkEncoding = profile.Artwork.Encoding,
+            ArtworkMaximumDimension = profile.Artwork.MaximumDimension,
+            ArtworkMaximumEncodedBytes = profile.Artwork.MaximumEncodedBytes,
+            ArtworkJpegQuality = profile.Artwork.JpegQuality,
+            ArtworkSidecarTemplate = profile.Artwork.SidecarFileNameTemplate,
+            UnknownSidecarDisposition = profile.Sidecars.UnknownFileDisposition,
+        };
+        foreach (LibraryHealthRulePolicy rule in profile.Health.Rules)
+            editor.HealthRules.Add(new()
+            {
+                Id = rule.Id,
+                Enabled = rule.Enabled,
+                Severity = rule.Severity,
+                ProposeRepair = rule.ProposeRepair,
+                ApplyRepair = rule.ApplyRepair,
+            });
+        foreach (LibraryIngestRecipe recipe in profile.Ingest.Recipes)
+            editor.IngestRecipes.Add(IngestRecipeEditorRow.From(recipe));
+        foreach (LibrarySidecarRule rule in profile.Sidecars.Rules)
+            editor.SidecarRules.Add(SidecarRuleEditorRow.From(rule));
+        return editor;
+    }
+
+    public LibraryProfile Build() => Source with
+    {
+        Naming = Source.Naming with
+        {
+            DirectoryTemplate = DirectoryTemplate,
+            FileNameTemplate = FileNameTemplate,
+            TrackPadding = TrackPadding,
+            DiscPadding = DiscPadding,
+            CollisionPolicy = CollisionPolicy,
+            PreserveUnicode = PreserveUnicode,
+            InvalidCharacterReplacement = InvalidCharacterReplacement,
+            MissingArtistFallback = MissingArtistFallback,
+            MissingAlbumFallback = MissingAlbumFallback,
+            MissingTitleFallback = MissingTitleFallback,
+            CompilationValue = CompilationValue,
+            UnicodeNormalization = UnicodeNormalization,
+            ComponentLengthLimit = ComponentLengthLimit,
+            CompletePathLengthLimit = CompletePathLengthLimit,
+        },
+        Disc = Source.Disc with
+        {
+            Strategy = DiscStrategy,
+            TrackTotalScope = TrackTotalScope,
+            InferAlbumSuffix = InferAlbumSuffix,
+            PreserveDiscTags = PreserveDiscTags,
+        },
+        AlbumIdentity = Source.AlbumIdentity with
+        {
+            UseAlbumArtist = IdentityUsesAlbumArtist,
+            StripFormatSuffixes = IdentityStripsFormatSuffixes,
+            StripDiscSuffixes = IdentityStripsDiscSuffixes,
+            IncludeReleaseYear = IdentityIncludesReleaseYear,
+        },
+        Metadata = Source.Metadata with
+        {
+            PreserveReplayGain = PreserveReplayGain,
+            PreserveMusicBrainzIdentifiers = PreserveMusicBrainzIdentifiers,
+            PreserveCustomFields = PreserveCustomFields,
+            PreserveCompilationSemantics = PreserveCompilationSemantics,
+        },
+        Quality = Source.Quality with
+        {
+            HighResolutionMinimumSampleRateHz = HighResolutionMinimumSampleRateHz,
+            HighResolutionMinimumBitsPerSample = HighResolutionMinimumBitsPerSample,
+        },
+        Health = new(HealthRules.Select(rule => rule.Build()).ToArray()),
+        Ingest = Source.Ingest with
+        {
+            Enabled = IngestEnabled,
+            SourceDisposition = SourceDisposition,
+            PreserveSidecars = PreserveSidecars,
+            Recipes = IngestRecipes.Select(recipe => recipe.Build()).ToArray(),
+        },
+        Artwork = Source.Artwork with
+        {
+            Storage = ArtworkStorage,
+            Roles = ArtworkRoles,
+            Encoding = ArtworkEncoding,
+            MaximumDimension = ArtworkMaximumDimension,
+            MaximumEncodedBytes = ArtworkMaximumEncodedBytes,
+            JpegQuality = ArtworkJpegQuality,
+            SidecarFileNameTemplate = ArtworkSidecarTemplate,
+        },
+        Sidecars = Source.Sidecars with
+        {
+            UnknownFileDisposition = UnknownSidecarDisposition,
+            Rules = SidecarRules.Select(rule => rule.Build()).ToArray(),
+        },
+    };
 }

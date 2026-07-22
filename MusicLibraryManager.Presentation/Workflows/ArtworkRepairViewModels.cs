@@ -337,13 +337,28 @@ public static class ArtworkRepairPlanner
         IArtworkService artworkService,
         IThumbnailService? thumbnails,
         CancellationToken ct = default)
+        => BuildAsync(records, artwork, settings, library, artworkService, thumbnails,
+            null, ct);
+
+    public static Task<IReadOnlyList<ArtworkRepairItemViewModel>> BuildAsync(
+        IReadOnlyList<TrackRecord> records,
+        IReadOnlyList<ArtworkAuditFile> artwork,
+        LibraryArtworkHealthSettings settings,
+        ILibraryService library,
+        IArtworkService artworkService,
+        IThumbnailService? thumbnails,
+        LibraryConfiguration? configuration,
+        CancellationToken ct = default)
     {
         var byPath = artwork.ToDictionary(file => file.Path, PathComparer);
         var recordsByPath = records.ToDictionary(record => record.Path, PathComparer);
         var plans = new List<PlannedAction>();
         var coveredPaths = new HashSet<string>(PathComparer);
 
-        foreach (IGrouping<string, TrackRecord> album in records.GroupBy(AlbumKey))
+        Func<TrackRecord, string> albumKey = configuration is null
+            ? AlbumKey
+            : record => LibraryAlbumIdentityResolver.Key(record, configuration);
+        foreach (IGrouping<string, TrackRecord> album in records.GroupBy(albumKey))
         {
             ct.ThrowIfCancellationRequested();
             var scanned = album
@@ -367,8 +382,7 @@ public static class ArtworkRepairPlanner
                 .Select(group => group.First())
                 .ToArray();
             string artist = MostCommon(scanned.Select(item => item.Record.EffectiveAlbumArtist));
-            string albumName = MostCommon(scanned.Select(item =>
-                item.Record.StrippedAlbum ?? item.Record.Album));
+            string albumName = MostCommon(scanned.Select(item => item.Record.Album));
             string[] targets = scanned.Select(item => item.Record.Path)
                 .Distinct(PathComparer).ToArray();
             foreach (string path in targets)

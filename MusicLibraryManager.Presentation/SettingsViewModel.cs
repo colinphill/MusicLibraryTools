@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MusicFileUtilities;
 using MusicLibrary.Core.Services;
 using MusicLibraryTools;
 
@@ -15,7 +16,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     private readonly IFilePickerService _files;
     private readonly IDialogCoordinator _dialogs;
     private readonly IThemeService _theme;
-    private EditableLibraryConfig _editing = new();
+    private EditableLibraryConfig _editing = EditableLibraryConfig.CreateNew();
     private bool _suppressDirty = true;
     private readonly HashSet<INotifyPropertyChanged> _trackedRows = [];
 
@@ -24,6 +25,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     private string? _activeConfigurationPath;
     [ObservableProperty] private string? _selectedRecentConfiguration;
     [ObservableProperty] private string? _editorPath;
+    [ObservableProperty] private string? _machineBindingsFile;
     [ObservableProperty] private string _databaseFile = "cache.db";
     [ObservableProperty] private string? _itunesLibraryPath;
     [ObservableProperty] private string _ffmpegPath = "ffmpeg";
@@ -43,10 +45,13 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     [ObservableProperty] private bool _removeNonMusicAfterIngest;
     [ObservableProperty] private bool _deleteStaleCrossSyncFiles;
     [ObservableProperty] private bool _cleanCrossSyncPlaylists;
+    [ObservableProperty] private LibraryProfile? _selectedLibraryProfile;
+    [ObservableProperty] private LibraryProfileEditorRow? _advancedProfile;
     [ObservableProperty] private string _statusMessage = "Choose an existing configuration or create a new one.";
     [ObservableProperty] private string _selectedTheme;
     [ObservableProperty] private ThemeChoice? _selectedThemeChoice;
     [ObservableProperty] private int _selectedTabIndex;
+    [ObservableProperty] private bool _isGuidedSetupActive;
     [ObservableProperty] private int _validationTabIndex = 1;
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveConfigurationCommand))]
@@ -77,12 +82,17 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         PropertyChanged += OnOwnPropertyChanged;
         IndexTargets.CollectionChanged += OnTrackedCollectionChanged;
         SyncPlaylists.CollectionChanged += OnTrackedCollectionChanged;
+        PlaylistSources.CollectionChanged += OnTrackedCollectionChanged;
         PlaylistTargets.CollectionChanged += OnTrackedCollectionChanged;
+        ExportProfiles.CollectionChanged += OnTrackedCollectionChanged;
         settings.ConfigurationChanged += (_, _) => RefreshActiveConfiguration();
+        RefreshProfileChoices();
         RefreshActiveConfiguration();
         TrackRows(IndexTargets);
         TrackRows(SyncPlaylists);
+        TrackRows(PlaylistSources);
         TrackRows(PlaylistTargets);
+        TrackRows(ExportProfiles);
         _suppressDirty = false;
         HasUnsavedChanges = false;
     }
@@ -90,7 +100,10 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     public ObservableCollection<string> RecentConfigurations { get; }
     public ObservableCollection<IndexTargetEditorRow> IndexTargets { get; } = [];
     public ObservableCollection<SyncPlaylistEditorRow> SyncPlaylists { get; } = [];
+    public ObservableCollection<PlaylistSourceEditorRow> PlaylistSources { get; } = [];
     public ObservableCollection<PlaylistTargetEditorRow> PlaylistTargets { get; } = [];
+    public ObservableCollection<ExportProfileEditorRow> ExportProfiles { get; } = [];
+    public ObservableCollection<LibraryProfile> LibraryProfiles { get; } = [];
     public IReadOnlyList<string> Themes { get; } = ["System", "Light", "Dark", "Steel Blue"];
     public IReadOnlyList<ThemeChoice> ThemeChoices { get; } =
     [
@@ -101,9 +114,160 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     ];
     public IReadOnlyList<LibraryIngestRole> IngestRoles { get; } =
         Enum.GetValues<LibraryIngestRole>();
-    public IReadOnlyList<string> PlaylistTypes { get; } = ["m3u", "wpl"];
+    public IReadOnlyList<LibraryRepresentationRole> RepresentationRoles { get; } =
+        Enum.GetValues<LibraryRepresentationRole>();
+    public IReadOnlyList<LibraryPathCollisionPolicy> CollisionPolicies { get; } =
+        Enum.GetValues<LibraryPathCollisionPolicy>();
+    public IReadOnlyList<LibraryUnicodeNormalization> UnicodeNormalizations { get; } =
+        Enum.GetValues<LibraryUnicodeNormalization>();
+    public IReadOnlyList<LibraryDiscStrategy> DiscStrategies { get; } =
+        Enum.GetValues<LibraryDiscStrategy>();
+    public IReadOnlyList<LibraryTrackTotalScope> TrackTotalScopes { get; } =
+        Enum.GetValues<LibraryTrackTotalScope>();
+    public IReadOnlyList<LibraryHealthSeverity> HealthSeverities { get; } =
+        Enum.GetValues<LibraryHealthSeverity>();
+    public IReadOnlyList<LibrarySourceDisposition> SourceDispositions { get; } =
+        Enum.GetValues<LibrarySourceDisposition>();
+    public IReadOnlyList<LibraryIngestAction> IngestActions { get; } =
+        Enum.GetValues<LibraryIngestAction>();
+    public IReadOnlyList<LibraryArtworkStorage> ArtworkStorageChoices { get; } =
+        Enum.GetValues<LibraryArtworkStorage>();
+    public IReadOnlyList<LibraryArtworkRoleSelection> ArtworkRoleChoices { get; } =
+        Enum.GetValues<LibraryArtworkRoleSelection>();
+    public IReadOnlyList<LibraryArtworkEncoding> ArtworkEncodingChoices { get; } =
+        Enum.GetValues<LibraryArtworkEncoding>();
+    public IReadOnlyList<LibrarySidecarDisposition> SidecarDispositions { get; } =
+        Enum.GetValues<LibrarySidecarDisposition>();
+    public IReadOnlyList<string> PlaylistTypes { get; } = ["m3u", "m3u8", "wpl"];
+    public IReadOnlyList<string> PlaylistSourceTypes { get; } = ["m3u"];
+    public IReadOnlyList<string> PlaylistPathStyles { get; } =
+        ["legacy", "provided", "absolute", "relative"];
+    public IReadOnlyList<string> PlaylistEncodings { get; } =
+        ["utf-8", "utf-16", "utf-16be", "ascii"];
+    public IReadOnlyList<string> PlaylistLineEndings { get; } =
+        ["platform", "crlf", "lf"];
+    public IReadOnlyList<string> PlaylistFileNameTransforms { get; } =
+        ["legacy", "preserve", "sanitize", "sonos"];
+    public IReadOnlyList<ExportSelectionKind> ExportSelectionKinds { get; } =
+        Enum.GetValues<ExportSelectionKind>();
+    public IReadOnlyList<ExportTransformMode> ExportTransformModes { get; } =
+        Enum.GetValues<ExportTransformMode>();
+    public IReadOnlyList<ExportArtworkMode> ExportArtworkModes { get; } =
+        Enum.GetValues<ExportArtworkMode>();
+    public IReadOnlyList<ExportExtraFileDisposition> ExportExtraFileDispositions { get; } =
+        Enum.GetValues<ExportExtraFileDisposition>();
     public bool HasValidationError => !string.IsNullOrWhiteSpace(ValidationSummary);
     public bool IsEditorValid => ValidationIssues().Count == 0;
+    public string EffectivePolicySummary
+    {
+        get
+        {
+            LibraryProfile? profile = AdvancedProfile?.Build() ?? SelectedLibraryProfile;
+            if (profile is null)
+                return "No active library profile is selected.";
+
+            string permissions = FormatPermissions(profile.DefaultRootPermissions);
+            string naming = profile.Naming.UseItunesCanonicalNaming
+                ? "iTunes-compatible paths"
+                : profile.Preset == LibraryProfilePreset.CatalogOnly
+                    ? "existing paths are preserved"
+                    : $"{profile.Naming.DirectoryTemplate}/{profile.Naming.FileNameTemplate}";
+            string ingest = profile.Ingest.Enabled
+                ? $"enabled; sources {profile.Ingest.SourceDisposition.ToString().ToLowerInvariant()}"
+                : "disabled; sources preserved";
+            int writableRoots = IndexTargets.Count(root => !root.IsReadOnly);
+            int profileOverrides = IndexTargets.Count(root => !string.Equals(
+                root.ProfileId, profile.Id, StringComparison.OrdinalIgnoreCase));
+            return $"Active profile: {profile.Name}{Environment.NewLine}" +
+                   $"New-root permissions: {permissions}{Environment.NewLine}" +
+                   $"Naming: {naming}{Environment.NewLine}" +
+                   $"Discs: {FormatWords(profile.Disc.Strategy.ToString())}; ingest: {ingest}{Environment.NewLine}" +
+                   $"Configured roots: {IndexTargets.Count}; roots permitting changes: {writableRoots}; " +
+                   $"root policy overrides: {profileOverrides}";
+        }
+    }
+
+    public string EffectivePolicyDetails
+    {
+        get
+        {
+            LibraryProfile? profile = AdvancedProfile?.Build() ?? SelectedLibraryProfile;
+            if (profile is null)
+                return "No active policy is available.";
+
+            string formats = string.Join(", ", MediaFormatRegistry.Default
+                .GetExtensions(MediaFormatCapabilities.LibraryIndex));
+            string roots = IndexTargets.Count == 0
+                ? "  No roots configured."
+                : string.Join(Environment.NewLine, IndexTargets.Select(root =>
+                    $"  {(string.IsNullOrWhiteSpace(root.Path) ? "(path not set)" : root.Path)} - {FormatPermissions(root.Permissions)}" +
+                    (Directory.Exists(root.Path) ? "" : " (offline warning)") +
+                    $"; formats: {(string.IsNullOrWhiteSpace(root.IndexFormats) ? "all recognized" : root.IndexFormats)}" +
+                    $"; include: {(string.IsNullOrWhiteSpace(root.IndexIncludePatterns) ? "all" : root.IndexIncludePatterns)}" +
+                    $"; exclude: {(string.IsNullOrWhiteSpace(root.IndexExcludePatterns) ? "none" : root.IndexExcludePatterns)}" +
+                    $"; representation: {FormatWords(root.RepresentationRole.ToString())}"));
+            string example;
+            try
+            {
+                string exampleRoot = Path.Combine(Path.GetPathRoot(Environment.CurrentDirectory)!,
+                    "Music");
+                var metadata = new LibraryPathMetadata(
+                    "Example Artist", "Example Artist", "Example Album", "Example Song",
+                    3, 1, false, "2026", "03 Example Song", ".flac")
+                {
+                    Genre = "Rock",
+                };
+                example = Path.GetRelativePath(exampleRoot,
+                    LibraryPathLayoutResolver.Shared.Resolve(exampleRoot, profile, metadata,
+                        LengthLimit, DiscNumLengthLimit));
+            }
+            catch (Exception ex)
+            {
+                example = $"Unavailable: {ex.Message}";
+            }
+
+            LibraryHealthRulePolicy[] enabledRules = profile.Health.Rules
+                .Where(rule => rule.Enabled).ToArray();
+            string rules = enabledRules.Length == 0
+                ? "none"
+                : string.Join(", ", enabledRules.Select(rule =>
+                    $"{rule.Id} ({rule.Severity.ToString().ToLowerInvariant()}" +
+                    (rule.ApplyRepair ? ", apply" : rule.ProposeRepair ? ", propose" : "") + ")"));
+            LibraryIngestRecipe[] recipes = profile.Ingest.Recipes
+                .Where(recipe => recipe.Enabled).ToArray();
+            string ingest = !profile.Ingest.Enabled
+                ? "disabled"
+                : recipes.Length == 0
+                    ? "enabled, but no output recipes"
+                    : string.Join(", ", recipes.Select(recipe =>
+                        $"{recipe.Name}: {recipe.Action} to " +
+                        (recipe.DestinationRootId?.ToString() ?? recipe.DestinationLegacyRole.ToString())));
+            string integrations = string.IsNullOrWhiteSpace(ItunesLibraryPath)
+                ? "File playlists (M3U/M3U8); no media catalog integration configured"
+                : $"File playlists (M3U/M3U8); iTunes catalog: {ItunesLibraryPath}";
+            string exports = ExportProfiles.Count == 0
+                ? "none configured"
+                : string.Join(", ", ExportProfiles.Select(item =>
+                    $"{item.Name} ({(item.Enabled ? "enabled" : "disabled")})"));
+
+            return $"Profile ID: {profile.Id}; preset: {FormatWords(profile.Preset.ToString())}{Environment.NewLine}" +
+                   $"Machine bindings: {(string.IsNullOrWhiteSpace(MachineBindingsFile) ? "inline paths" : MachineBindingsFile)}{Environment.NewLine}" +
+                   $"Recognized index formats: {formats}{Environment.NewLine}" +
+                   $"Example destination: {example}{Environment.NewLine}" +
+                   $"Collision behavior: {profile.Naming.CollisionPolicy}; Unicode preserved: {profile.Naming.PreserveUnicode}{Environment.NewLine}" +
+                   $"Naming limits: components {profile.Naming.ComponentLengthLimit?.ToString() ?? "application default"}; complete path {profile.Naming.CompletePathLengthLimit?.ToString() ?? "platform default"}{Environment.NewLine}" +
+                   $"Disc identity: {FormatWords(profile.Disc.Strategy.ToString())}; preserve disc tags: {profile.Disc.PreserveDiscTags}{Environment.NewLine}" +
+                   $"Metadata fidelity: ReplayGain {OnOff(profile.Metadata.PreserveReplayGain)}, MusicBrainz IDs {OnOff(profile.Metadata.PreserveMusicBrainzIdentifiers)}, custom fields {OnOff(profile.Metadata.PreserveCustomFields)}, compilation {OnOff(profile.Metadata.PreserveCompilationSemantics)}{Environment.NewLine}" +
+                   $"Quality band: high resolution at {profile.Quality.HighResolutionMinimumSampleRateHz:N0} Hz or {profile.Quality.HighResolutionMinimumBitsPerSample}-bit{Environment.NewLine}" +
+                   $"Enabled health rules: {rules}{Environment.NewLine}" +
+                   $"Artwork: {profile.Artwork.Storage}, {FormatWords(profile.Artwork.Roles.ToString())}, {profile.Artwork.Encoding}{Environment.NewLine}" +
+                   $"Unknown sidecars: {profile.Sidecars.UnknownFileDisposition}{Environment.NewLine}" +
+                   $"Ingest recipes: {ingest}; source disposition: {profile.Ingest.SourceDisposition}{Environment.NewLine}" +
+                   $"Integrations: {integrations}{Environment.NewLine}" +
+                   $"Export profiles: {exports}{Environment.NewLine}" +
+                   $"Root permissions:{Environment.NewLine}{roots}";
+        }
+    }
     public decimal OversizedArtworkSizeThresholdMib
     {
         get => (decimal)OversizedArtworkByteThreshold / (1024 * 1024);
@@ -124,6 +288,36 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     partial void OnArtworkRepairTargetByteSizeChanged(int value) =>
         OnPropertyChanged(nameof(ArtworkRepairTargetSizeMib));
 
+    partial void OnSelectedLibraryProfileChanged(
+        LibraryProfile? oldValue,
+        LibraryProfile? newValue)
+    {
+        if (!_suppressDirty && oldValue is not null)
+            CommitAdvancedProfile(updateProfileChoices: true);
+        if (newValue is not null)
+            _editing.ActiveProfileId = newValue.Id;
+        if (!_suppressDirty && newValue is not null)
+        {
+            foreach (IndexTargetEditorRow root in IndexTargets.Where(root =>
+                         oldValue is null || string.IsNullOrWhiteSpace(root.ProfileId) ||
+                         string.Equals(root.ProfileId, oldValue.Id,
+                             StringComparison.OrdinalIgnoreCase)))
+            {
+                bool usesPreviousDefaults = oldValue is not null &&
+                    root.Permissions == oldValue.DefaultRootPermissions;
+                root.ProfileId = newValue.Id;
+                if (string.IsNullOrWhiteSpace(root.Path) || usesPreviousDefaults)
+                {
+                    root.Permissions = newValue.DefaultRootPermissions;
+                    root.UseItunesCanonicalNaming = newValue.Naming.UseItunesCanonicalNaming;
+                }
+            }
+        }
+        SetAdvancedProfile(newValue);
+        OnPropertyChanged(nameof(EffectivePolicySummary));
+        OnPropertyChanged(nameof(EffectivePolicyDetails));
+    }
+
     partial void OnSelectedThemeChanged(string value)
     {
         _settings.SetPreference(ThemePreference, value);
@@ -142,6 +336,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     private static readonly HashSet<string> EditorProperties =
     [
         nameof(DatabaseFile),
+        nameof(MachineBindingsFile),
         nameof(ItunesLibraryPath),
         nameof(FfmpegPath),
         nameof(LengthLimit),
@@ -156,6 +351,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         nameof(RemoveNonMusicAfterIngest),
         nameof(DeleteStaleCrossSyncFiles),
         nameof(CleanCrossSyncPlaylists),
+        nameof(SelectedLibraryProfile),
     ];
 
     private void OnOwnPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -172,6 +368,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         if (e.NewItems is not null)
             foreach (object item in e.NewItems)
                 TrackRow(item);
+        OnPropertyChanged(nameof(EffectivePolicySummary));
+        OnPropertyChanged(nameof(EffectivePolicyDetails));
         MarkDirty();
     }
 
@@ -191,6 +389,15 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             target.Memberships.CollectionChanged += OnTrackedCollectionChanged;
             TrackRows(target.Memberships);
         }
+        else if (row is LibraryProfileEditorRow profile)
+        {
+            profile.HealthRules.CollectionChanged += OnTrackedCollectionChanged;
+            profile.IngestRecipes.CollectionChanged += OnTrackedCollectionChanged;
+            profile.SidecarRules.CollectionChanged += OnTrackedCollectionChanged;
+            TrackRows(profile.HealthRules);
+            TrackRows(profile.IngestRecipes);
+            TrackRows(profile.SidecarRules);
+        }
     }
 
     private void UntrackRow(object row)
@@ -203,6 +410,18 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             foreach (IndexTargetSetEditorRow membership in target.Memberships)
                 UntrackRow(membership);
         }
+        else if (row is LibraryProfileEditorRow profile)
+        {
+            profile.HealthRules.CollectionChanged -= OnTrackedCollectionChanged;
+            profile.IngestRecipes.CollectionChanged -= OnTrackedCollectionChanged;
+            profile.SidecarRules.CollectionChanged -= OnTrackedCollectionChanged;
+            foreach (HealthRuleEditorRow rule in profile.HealthRules)
+                UntrackRow(rule);
+            foreach (IngestRecipeEditorRow recipe in profile.IngestRecipes)
+                UntrackRow(recipe);
+            foreach (SidecarRuleEditorRow rule in profile.SidecarRules)
+                UntrackRow(rule);
+        }
     }
 
     private void ClearEditorCollections()
@@ -211,14 +430,25 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             UntrackRow(row);
         foreach (SyncPlaylistEditorRow row in SyncPlaylists.ToArray())
             UntrackRow(row);
+        foreach (PlaylistSourceEditorRow row in PlaylistSources.ToArray())
+            UntrackRow(row);
         foreach (PlaylistTargetEditorRow row in PlaylistTargets.ToArray())
+            UntrackRow(row);
+        foreach (ExportProfileEditorRow row in ExportProfiles.ToArray())
             UntrackRow(row);
         IndexTargets.Clear();
         SyncPlaylists.Clear();
+        PlaylistSources.Clear();
         PlaylistTargets.Clear();
+        ExportProfiles.Clear();
     }
 
-    private void OnTrackedRowChanged(object? sender, PropertyChangedEventArgs e) => MarkDirty();
+    private void OnTrackedRowChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(EffectivePolicySummary));
+        OnPropertyChanged(nameof(EffectivePolicyDetails));
+        MarkDirty();
+    }
 
     private void MarkDirty()
     {
@@ -245,8 +475,128 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     private IReadOnlyList<(int Tab, string Message)> ValidationIssues()
     {
         var issues = new List<(int, string)>();
+        if (SelectedLibraryProfile is null)
+            issues.Add((1, "Choose an active library profile."));
         if (!IndexTargets.Any(target => !string.IsNullOrWhiteSpace(target.Path)))
             issues.Add((1, "Add at least one library root."));
+        foreach (IndexTargetEditorRow target in IndexTargets.Where(target =>
+                     !string.IsNullOrWhiteSpace(target.Path)))
+        {
+            try
+            {
+                _ = LibraryConfiguration.ParseIndexFormats(target.IndexFormats);
+                _ = LibraryConfiguration.ParseIndexPatterns(target.IndexIncludePatterns);
+                _ = LibraryConfiguration.ParseIndexPatterns(target.IndexExcludePatterns);
+            }
+            catch (InvalidDataException error)
+            {
+                issues.Add((1, $"Library root '{target.Path}': {error.Message}"));
+            }
+            if (target.IngestRole != LibraryIngestRole.None && !target.AllowIngestOutput)
+                issues.Add((1,
+                    $"Library root '{target.Path}' has an ingest role but does not allow ingest output."));
+            if (target.IsSyncTarget && !target.AllowSynchronizationOutput)
+                issues.Add((1,
+                    $"Library root '{target.Path}' is a sync target but does not allow sync output."));
+            if (!string.IsNullOrWhiteSpace(target.ProfileId) &&
+                _editing.Profiles.All(profile => !string.Equals(profile.Id,
+                    target.ProfileId, StringComparison.OrdinalIgnoreCase)))
+                issues.Add((1,
+                    $"Library root '{target.Path}' references unknown profile '{target.ProfileId}'."));
+        }
+        var configuredSets = IndexTargets.SelectMany(target => target.Memberships)
+            .SelectMany(membership => LibraryConfiguration.ParseScanSets(membership.Name))
+            .ToHashSet(LibraryConfiguration.ScanSetComparer);
+        foreach (PlaylistSourceEditorRow source in PlaylistSources.Where(source =>
+                     !string.IsNullOrWhiteSpace(source.Location)))
+            if (!string.Equals(source.Type, "m3u", StringComparison.OrdinalIgnoreCase))
+                issues.Add((2,
+                    $"Playlist source '{source.Location}' must have a type of m3u."));
+        foreach (PlaylistTargetEditorRow target in PlaylistTargets.Where(target =>
+                     !string.IsNullOrWhiteSpace(target.Target)))
+        {
+            if (!PlaylistTypes.Contains(target.Type, StringComparer.OrdinalIgnoreCase))
+                issues.Add((2,
+                    $"Playlist target '{target.Target}' has unsupported type '{target.Type}'."));
+            IReadOnlyList<string> selectedSets =
+                LibraryConfiguration.ParseScanSets(target.Sets);
+            if (selectedSets.Count == 0)
+                issues.Add((2,
+                    $"Playlist target '{target.Target}' must select at least one scan set."));
+            string[] unknownSets = selectedSets.Where(set => !configuredSets.Contains(set))
+                .ToArray();
+            if (unknownSets.Length > 0)
+                issues.Add((2,
+                    $"Playlist target '{target.Target}' references unknown scan set(s): " +
+                    string.Join(", ", unknownSets)));
+            if (!PlaylistPathStyles.Contains(target.PathStyle,
+                    StringComparer.OrdinalIgnoreCase) ||
+                !PlaylistEncodings.Contains(target.Encoding,
+                    StringComparer.OrdinalIgnoreCase) ||
+                !PlaylistLineEndings.Contains(target.LineEnding,
+                    StringComparer.OrdinalIgnoreCase) ||
+                !PlaylistFileNameTransforms.Contains(target.FileNameTransform,
+                    StringComparer.OrdinalIgnoreCase))
+                issues.Add((2,
+                    $"Playlist target '{target.Target}' contains an unsupported output option."));
+            if (target.MaxTrackCount <= 0)
+                issues.Add((2,
+                    $"Playlist target '{target.Target}' must allow at least one track."));
+        }
+        LibraryProfile? editedProfile = null;
+        if (AdvancedProfile is not null)
+        {
+            try
+            {
+                editedProfile = AdvancedProfile.Build();
+                LibraryProfileXml.Validate(editedProfile);
+                HashSet<Guid> rootIds = IndexTargets.Select(root => root.Id).ToHashSet();
+                foreach (LibraryIngestRecipe recipe in editedProfile.Ingest.Recipes)
+                {
+                    if (recipe.DestinationRootId is { } destinationRootId &&
+                        !rootIds.Contains(destinationRootId))
+                        issues.Add((5,
+                            $"Ingest recipe '{recipe.Id}' references unknown destination root " +
+                            $"'{destinationRootId:D}'."));
+                    if (recipe.NamingProfileId is { } namingId &&
+                        _editing.Profiles.All(profile => !string.Equals(profile.Id, namingId,
+                            StringComparison.OrdinalIgnoreCase)))
+                        issues.Add((5,
+                            $"Ingest recipe '{recipe.Id}' references unknown naming profile " +
+                            $"'{namingId}'."));
+                }
+            }
+            catch (Exception error) when (error is InvalidDataException or ArgumentException)
+            {
+                issues.Add((5, error.Message));
+            }
+        }
+        var exportIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (ExportProfileEditorRow row in ExportProfiles)
+        {
+            try
+            {
+                LibraryExportProfile profile = row.Build();
+                LibraryExportProfileXml.Validate(profile);
+                if (!exportIds.Add(profile.Id))
+                    issues.Add((2, $"Duplicate export profile ID '{profile.Id}'."));
+                if (profile.Naming.LibraryProfileId is { } namingId &&
+                    _editing.Profiles.All(item => !string.Equals(item.Id, namingId,
+                        StringComparison.OrdinalIgnoreCase)))
+                    issues.Add((2, $"Export profile '{profile.Id}' references unknown naming profile '{namingId}'."));
+                if (profile.Transform.RecipeId is { } recipeId &&
+                    (editedProfile?.Ingest.Recipes.All(recipe => !string.Equals(recipe.Id,
+                        recipeId, StringComparison.OrdinalIgnoreCase)) ?? true) &&
+                    _editing.Profiles.SelectMany(item => item.Ingest.Recipes).All(recipe =>
+                        !string.Equals(recipe.Id, recipeId,
+                            StringComparison.OrdinalIgnoreCase)))
+                    issues.Add((2, $"Export profile '{profile.Id}' references unknown ingest recipe '{recipeId}'."));
+            }
+            catch (Exception error) when (error is InvalidDataException or ArgumentException)
+            {
+                issues.Add((2, error.Message));
+            }
+        }
         if (LengthLimit <= 0)
             issues.Add((3, "Path length limit must be greater than zero."));
         if (DiscNumLengthLimit <= 0)
@@ -289,6 +639,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     {
         if (!HasUnsavedChanges)
             return;
+        IsGuidedSetupActive = false;
         if (!string.IsNullOrWhiteSpace(ActiveConfigurationPath))
         {
             LoadEditor(ActiveConfigurationPath);
@@ -299,6 +650,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         _suppressDirty = true;
         ClearEditorCollections();
         EditorPath = null;
+        MachineBindingsFile = null;
         DatabaseFile = "cache.db";
         ItunesLibraryPath = null;
         FfmpegPath = "ffmpeg";
@@ -318,6 +670,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         RemoveNonMusicAfterIngest = false;
         DeleteStaleCrossSyncFiles = false;
         CleanCrossSyncPlaylists = false;
+        _editing = EditableLibraryConfig.CreateNew();
+        RefreshProfileChoices();
         _suppressDirty = false;
         HasUnsavedChanges = false;
         ValidationSummary = null;
@@ -370,9 +724,12 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     {
         if (!await ConfirmDiscardChangesAsync())
             return;
+        IsGuidedSetupActive = false;
         _suppressDirty = true;
-        _editing = new EditableLibraryConfig();
+        _editing = EditableLibraryConfig.CreateNew();
+        RefreshProfileChoices();
         EditorPath = null;
+        MachineBindingsFile = null;
         DatabaseFile = "cache.db";
         ItunesLibraryPath = null;
         FfmpegPath = "ffmpeg";
@@ -393,7 +750,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         DeleteStaleCrossSyncFiles = false;
         CleanCrossSyncPlaylists = false;
         ClearEditorCollections();
-        IndexTargets.Add(new IndexTargetEditorRow());
+        IndexTargets.Add(CreateIndexTargetRow(_editing.CreateIndexTarget()));
         StatusMessage = "New configuration. Add at least one library root, then Save as.";
         SelectedTabIndex = 1;
         _suppressDirty = false;
@@ -404,7 +761,42 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     }
 
     [RelayCommand]
-    private void AddIndexTarget() => IndexTargets.Add(new IndexTargetEditorRow());
+    private async Task StartGuidedSetupAsync()
+    {
+        Guid previousLibraryId = _editing.LibraryId;
+        await NewConfigurationAsync();
+        if (_editing.LibraryId == previousLibraryId || !HasUnsavedChanges)
+            return;
+        IsGuidedSetupActive = true;
+        StatusMessage = "Guided setup: choose a preservation-first profile, add the library root, then review the effective policy.";
+        SelectedTabIndex = 1;
+    }
+
+    [RelayCommand]
+    private void ReviewGuidedSetup()
+    {
+        CommitAdvancedProfile(updateProfileChoices: false);
+        SelectedTabIndex = 6;
+    }
+
+    [RelayCommand]
+    private async Task FinishGuidedSetupAsync()
+    {
+        UpdateValidation();
+        if (!IsEditorValid)
+        {
+            StatusMessage = "Resolve the highlighted setup issues before saving.";
+            SelectedTabIndex = ValidationTabIndex;
+            return;
+        }
+        await SaveEditorAsync(null);
+        if (!HasUnsavedChanges)
+            IsGuidedSetupActive = false;
+    }
+
+    [RelayCommand]
+    private void AddIndexTarget() =>
+        IndexTargets.Add(CreateIndexTargetRow(_editing.CreateIndexTarget()));
 
     [RelayCommand]
     private void RemoveIndexTarget(IndexTargetEditorRow? row)
@@ -445,6 +837,17 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     }
 
     [RelayCommand]
+    private void AddPlaylistSource() =>
+        PlaylistSources.Add(new PlaylistSourceEditorRow());
+
+    [RelayCommand]
+    private void RemovePlaylistSource(PlaylistSourceEditorRow? row)
+    {
+        if (row is not null)
+            PlaylistSources.Remove(row);
+    }
+
+    [RelayCommand]
     private void AddPlaylistTarget() => PlaylistTargets.Add(new PlaylistTargetEditorRow());
 
     [RelayCommand]
@@ -452,6 +855,49 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     {
         if (row is not null)
             PlaylistTargets.Remove(row);
+    }
+
+    [RelayCommand]
+    private void AddExportProfile() =>
+        ExportProfiles.Add(ExportProfileEditorRow.Create());
+
+    [RelayCommand]
+    private void RemoveExportProfile(ExportProfileEditorRow? row)
+    {
+        if (row is not null)
+            ExportProfiles.Remove(row);
+    }
+
+    [RelayCommand]
+    private async Task BrowseExportDestinationAsync(ExportProfileEditorRow? row)
+    {
+        if (row is null)
+            return;
+        string? path = await _files.PickFolderAsync("Choose an export destination");
+        if (path is not null)
+            row.TransportDestination = path;
+    }
+
+    [RelayCommand]
+    private void AddIngestRecipe() =>
+        AdvancedProfile?.IngestRecipes.Add(IngestRecipeEditorRow.Create());
+
+    [RelayCommand]
+    private void RemoveIngestRecipe(IngestRecipeEditorRow? row)
+    {
+        if (row is not null)
+            AdvancedProfile?.IngestRecipes.Remove(row);
+    }
+
+    [RelayCommand]
+    private void AddSidecarRule() =>
+        AdvancedProfile?.SidecarRules.Add(SidecarRuleEditorRow.Create());
+
+    [RelayCommand]
+    private void RemoveSidecarRule(SidecarRuleEditorRow? row)
+    {
+        if (row is not null)
+            AdvancedProfile?.SidecarRules.Remove(row);
     }
 
     [RelayCommand]
@@ -475,11 +921,31 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     }
 
     [RelayCommand]
+    private async Task BrowsePlaylistSourceAsync(PlaylistSourceEditorRow? row)
+    {
+        if (row is null)
+            return;
+        string? path = await _files.PickFileAsync("Choose an M3U/M3U8 playlist source",
+            [new FilePickerType("File playlists", [".m3u", ".m3u8"])]);
+        if (path is not null)
+            row.Location = path;
+    }
+
+    [RelayCommand]
     private async Task BrowseDatabaseAsync()
     {
         string? path = await _files.SaveFileAsync("Choose metadata cache", "cache.db", ".db");
         if (path is not null)
             DatabaseFile = path;
+    }
+
+    [RelayCommand]
+    private async Task BrowseMachineBindingsAsync()
+    {
+        string? path = await _files.SaveFileAsync(
+            "Choose machine-local bindings file", "library.bindings.xml", ".xml");
+        if (path is not null)
+            MachineBindingsFile = path;
     }
 
     [RelayCommand]
@@ -494,8 +960,9 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     [RelayCommand]
     private async Task BrowseFfmpegAsync()
     {
-        string? path = await _files.PickFileAsync("Choose ffmpeg",
-            [new FilePickerType("Executable", [".exe"])]);
+        // Executables commonly have no extension on macOS and Linux. Leaving the picker
+        // unfiltered supports ffmpeg, ffmpeg.exe, and user-provided wrapper scripts.
+        string? path = await _files.PickFileAsync("Choose ffmpeg executable");
         if (path is not null)
             FfmpegPath = path;
     }
@@ -522,6 +989,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     {
         try
         {
+            IsGuidedSetupActive = false;
             _settings.LoadConfig(path);
             LoadEditor(path);
             SelectedTabIndex = 1;
@@ -540,7 +1008,9 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         try
         {
             _editing = EditableLibraryConfig.Load(path);
+            RefreshProfileChoices();
             EditorPath = path;
+            MachineBindingsFile = _editing.MachineBindingsFile;
             DatabaseFile = _editing.DatabaseFile;
             ItunesLibraryPath = _editing.ItunesLibraryPath;
             FfmpegPath = _editing.FfmpegPath;
@@ -559,16 +1029,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             ClearEditorCollections();
             foreach (IndexTargetEntry target in _editing.IndexTargets)
             {
-                var row = new IndexTargetEditorRow
-                {
-                    Path = target.Target,
-                    Filter = target.Filter,
-                    Organize = target.Organize,
-                    UseItunesCanonicalNaming = target.UseItunesCanonicalNaming,
-                    IngestRole = target.IngestRole,
-                    IsSyncTarget = target.IsSyncTarget,
-                    Source = target,
-                };
+                IndexTargetEditorRow row = CreateIndexTargetRow(target);
                 foreach (IGrouping<string?, IndexTargetSetEntry> memberships in target.Memberships
                              .GroupBy(membership => EffectiveOffset(membership, target),
                                  StringComparer.Ordinal))
@@ -580,16 +1041,35 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                 IndexTargets.Add(row);
             }
             if (IndexTargets.Count == 0)
-                IndexTargets.Add(new IndexTargetEditorRow());
+                IndexTargets.Add(CreateIndexTargetRow(_editing.CreateIndexTarget()));
             foreach (string playlist in _editing.SyncPlaylists)
                 SyncPlaylists.Add(new SyncPlaylistEditorRow { Name = playlist });
+            foreach (PlaylistSourceEntry source in _editing.PlaylistSources)
+                PlaylistSources.Add(new PlaylistSourceEditorRow
+                {
+                    Location = source.Location,
+                    Type = source.Type,
+                    Recursive = source.Recursive,
+                    Source = source,
+                });
             foreach (PlaylistTargetEntry target in _editing.PlaylistTargets)
                 PlaylistTargets.Add(new PlaylistTargetEditorRow
                 {
                     Target = target.Target,
                     Type = target.Type,
                     Sets = target.Sets.Count == 0 ? null : string.Join(",", target.Sets),
+                    PathStyle = target.PathStyle,
+                    Encoding = target.Encoding,
+                    EmitByteOrderMark = target.EmitByteOrderMark,
+                    LineEnding = target.LineEnding,
+                    IncludeExtendedInfo = target.IncludeExtendedInfo,
+                    FileNameTransform = target.FileNameTransform,
+                    MaxTrackCount = target.MaxTrackCount,
+                    CollisionPolicy = target.CollisionPolicy,
+                    Source = target,
                 });
+            foreach (LibraryExportProfile profile in _editing.ExportProfiles)
+                ExportProfiles.Add(ExportProfileEditorRow.From(profile));
             HasUnsavedChanges = false;
             ValidationSummary = null;
         }
@@ -619,6 +1099,10 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             return;
         try
         {
+            CommitAdvancedProfile(updateProfileChoices: false);
+            _editing.ActiveProfileId = SelectedLibraryProfile?.Id ??
+                throw new InvalidDataException("Choose an active library profile.");
+            _editing.MachineBindingsFile = CleanOptional(MachineBindingsFile);
             _editing.DatabaseFile = string.IsNullOrWhiteSpace(DatabaseFile) ? "cache.db" : DatabaseFile.Trim();
             _editing.ItunesLibraryPath = string.IsNullOrWhiteSpace(ItunesLibraryPath) ? null : ItunesLibraryPath.Trim();
             _editing.FfmpegPath = string.IsNullOrWhiteSpace(FfmpegPath) ? "ffmpeg" : FfmpegPath.Trim();
@@ -639,40 +1123,76 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                 .Where(row => !string.IsNullOrWhiteSpace(row.Path))
                 .Select(row =>
                 {
-                    return new IndexTargetEntry
-                    {
-                        Target = row.Path.Trim(),
-                        Filter = string.IsNullOrWhiteSpace(row.Filter) ? null : row.Filter.Trim(),
-                        Organize = row.Organize,
-                        UseItunesCanonicalNaming = row.UseItunesCanonicalNaming,
-                        IngestRole = row.IngestRole,
-                        IsSyncTarget = row.IsSyncTarget,
-                        Memberships = row.Memberships
-                            .SelectMany(membership => LibraryConfiguration
-                                .ParseScanSets(membership.Name)
-                                .Select(name => new IndexTargetSetEntry
-                                {
-                                    Name = name,
-                                    Offset = CleanOptional(membership.Offset),
-                                })).ToList(),
-                    };
+                    IndexTargetEntry target = row.Source ?? _editing.CreateIndexTarget();
+                    target.Id = row.Id;
+                    target.Target = row.Path.Trim();
+                    target.ProfileId = CleanOptional(row.ProfileId) ?? _editing.ActiveProfileId;
+                    target.Permissions = row.Permissions;
+                    target.DefaultOffset = null;
+                    target.IndexFormats = [.. LibraryConfiguration.ParseIndexFormats(
+                        row.IndexFormats)];
+                    target.IndexIncludePatterns = [.. LibraryConfiguration.ParseIndexPatterns(
+                        row.IndexIncludePatterns)];
+                    target.IndexExcludePatterns = [.. LibraryConfiguration.ParseIndexPatterns(
+                        row.IndexExcludePatterns)];
+                    target.Filter = string.IsNullOrWhiteSpace(row.Filter) ? null : row.Filter.Trim();
+                    target.Organize = row.AllowOrganization;
+                    target.UseItunesCanonicalNaming = row.UseItunesCanonicalNaming;
+                    target.IngestRole = row.IngestRole;
+                    target.RepresentationRole = row.RepresentationRole;
+                    target.IsSyncTarget = row.IsSyncTarget;
+                    target.Memberships = row.Memberships
+                        .SelectMany(membership => LibraryConfiguration
+                            .ParseScanSets(membership.Name)
+                            .Select(name => new IndexTargetSetEntry
+                            {
+                                Name = name,
+                                Offset = CleanOptional(membership.Offset),
+                            })).ToList();
+                    return target;
                 }).ToList();
             _editing.SyncPlaylists = SyncPlaylists
                 .Where(row => !string.IsNullOrWhiteSpace(row.Name))
                 .Select(row => row.Name.Trim()).ToList();
+            _editing.PlaylistSources = PlaylistSources
+                .Where(row => !string.IsNullOrWhiteSpace(row.Location))
+                .Select(row =>
+                {
+                    PlaylistSourceEntry source = row.Source ?? new PlaylistSourceEntry();
+                    source.Location = row.Location.Trim();
+                    source.Type = string.IsNullOrWhiteSpace(row.Type)
+                        ? "m3u"
+                        : row.Type.Trim();
+                    source.Recursive = row.Recursive;
+                    return source;
+                }).ToList();
             _editing.PlaylistTargets = PlaylistTargets
                 .Where(row => !string.IsNullOrWhiteSpace(row.Target))
-                .Select(row => new PlaylistTargetEntry
+                .Select(row =>
                 {
-                    Target = row.Target.Trim(),
-                    Type = string.IsNullOrWhiteSpace(row.Type) ? "m3u" : row.Type.Trim(),
-                    Sets = [.. LibraryConfiguration.ParseScanSets(row.Sets)],
+                    PlaylistTargetEntry target = row.Source ?? new PlaylistTargetEntry();
+                    target.Target = row.Target.Trim();
+                    target.Type = string.IsNullOrWhiteSpace(row.Type) ? "m3u" : row.Type.Trim();
+                    target.Sets = [.. LibraryConfiguration.ParseScanSets(row.Sets)];
+                    target.PathStyle = row.PathStyle;
+                    target.Encoding = row.Encoding;
+                    target.EmitByteOrderMark = row.EmitByteOrderMark;
+                    target.LineEnding = row.LineEnding;
+                    target.IncludeExtendedInfo = row.IncludeExtendedInfo;
+                    target.FileNameTransform = row.FileNameTransform;
+                    target.MaxTrackCount = row.MaxTrackCount;
+                    target.CollisionPolicy = row.CollisionPolicy;
+                    return target;
                 }).ToList();
+            _editing.ExportProfiles = ExportProfiles
+                .Select(row => row.Build())
+                .ToList();
             _editing.Save(path);
             _settings.LoadConfig(path);
             LoadEditor(path);
             StatusMessage = "Configuration saved and loaded.";
             HasUnsavedChanges = false;
+            IsGuidedSetupActive = false;
             ValidationSummary = null;
         }
         catch (Exception error)
@@ -705,10 +1225,95 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             RecentConfigurations.Add(path);
     }
 
+    private void RefreshProfileChoices()
+    {
+        LibraryProfiles.Clear();
+        foreach (LibraryProfile profile in _editing.Profiles)
+            LibraryProfiles.Add(profile);
+        SelectedLibraryProfile = LibraryProfiles.FirstOrDefault(profile => string.Equals(
+            profile.Id, _editing.ActiveProfileId, StringComparison.OrdinalIgnoreCase));
+        OnPropertyChanged(nameof(EffectivePolicySummary));
+        OnPropertyChanged(nameof(EffectivePolicyDetails));
+    }
+
+    private void SetAdvancedProfile(LibraryProfile? profile)
+    {
+        if (AdvancedProfile is not null)
+            UntrackRow(AdvancedProfile);
+        AdvancedProfile = profile is null
+            ? null
+            : LibraryProfileEditorRow.From(profile);
+        if (AdvancedProfile is not null)
+            TrackRow(AdvancedProfile);
+    }
+
+    private void CommitAdvancedProfile(bool updateProfileChoices)
+    {
+        if (AdvancedProfile is null)
+            return;
+        LibraryProfile updated = AdvancedProfile.Build();
+        int editingIndex = _editing.Profiles.FindIndex(profile => string.Equals(
+            profile.Id, updated.Id, StringComparison.OrdinalIgnoreCase));
+        if (editingIndex >= 0)
+            _editing.Profiles[editingIndex] = updated;
+        if (!updateProfileChoices)
+            return;
+        int choiceIndex = LibraryProfiles.ToList().FindIndex(profile => string.Equals(
+            profile.Id, updated.Id, StringComparison.OrdinalIgnoreCase));
+        if (choiceIndex >= 0)
+            LibraryProfiles[choiceIndex] = updated;
+    }
+
+    private IndexTargetEditorRow CreateIndexTargetRow(IndexTargetEntry target)
+    {
+        string profileId = CleanOptional(target.ProfileId) ?? _editing.ActiveProfileId;
+        LibraryProfile profile = _editing.Profiles.FirstOrDefault(candidate => string.Equals(
+            candidate.Id, profileId, StringComparison.OrdinalIgnoreCase)) ?? _editing.ActiveProfile;
+        return new IndexTargetEditorRow
+        {
+            Id = target.Id,
+            Path = target.Target,
+            ProfileId = profileId,
+            Filter = target.Filter,
+            IndexFormats = target.IndexFormats.Count == 0
+                ? null : string.Join(", ", target.IndexFormats),
+            IndexIncludePatterns = target.IndexIncludePatterns.Count == 0
+                ? null : string.Join("; ", target.IndexIncludePatterns),
+            IndexExcludePatterns = target.IndexExcludePatterns.Count == 0
+                ? null : string.Join("; ", target.IndexExcludePatterns),
+            UseItunesCanonicalNaming = target.UseItunesCanonicalNaming,
+            IngestRole = target.IngestRole,
+            RepresentationRole = target.RepresentationRole,
+            IsSyncTarget = target.IsSyncTarget,
+            Permissions = target.Permissions ?? profile.DefaultRootPermissions,
+            Source = target,
+        };
+    }
+
     private static string? EffectiveOffset(
         IndexTargetSetEntry membership,
         IndexTargetEntry target) =>
         CleanOptional(membership.Offset) ?? CleanOptional(target.DefaultOffset);
+
+    private static string FormatPermissions(LibraryRootPermissions permissions)
+    {
+        if (permissions == LibraryRootPermissions.None)
+            return "catalog only (read-only)";
+        var labels = new List<string>();
+        if (permissions.HasFlag(LibraryRootPermissions.WriteMetadata)) labels.Add("metadata");
+        if (permissions.HasFlag(LibraryRootPermissions.WriteArtwork)) labels.Add("artwork");
+        if (permissions.HasFlag(LibraryRootPermissions.OrganizeFiles)) labels.Add("organization");
+        if (permissions.HasFlag(LibraryRootPermissions.IngestOutput)) labels.Add("ingest output");
+        if (permissions.HasFlag(LibraryRootPermissions.SynchronizeOutput)) labels.Add("sync output");
+        return string.Join(", ", labels);
+    }
+
+    private static string FormatWords(string value) => string.Concat(value.Select(
+        (character, index) => index > 0 && char.IsUpper(character)
+            ? " " + char.ToLowerInvariant(character)
+            : char.ToLowerInvariant(character).ToString()));
+
+    private static string OnOff(bool value) => value ? "preserved" : "not copied";
 
     private static string? CleanOptional(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();

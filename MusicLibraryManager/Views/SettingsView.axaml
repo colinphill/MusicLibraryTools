@@ -55,7 +55,7 @@
             <StackPanel x:Name="ConfigurationSettingsContent" Classes="settings-content" Margin="18" Spacing="10">
               <TextBlock Classes="section-title" Text="Active configuration" />
               <Border Classes="status-banner info"><Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"><TextBlock Classes="status-icon" Text="i" /><TextBlock Grid.Column="1" Text="{Binding ActiveConfigurationPath, TargetNullValue=No configuration loaded}" TextWrapping="Wrap" /></Grid></Border>
-              <WrapPanel><Button Classes="app" Margin="0,0,8,6" Content="Open configuration" Command="{Binding BrowseConfigurationCommand}" /><Button Classes="app primary" Margin="0,0,8,6" Content="Edit full configuration" Command="{Binding EditCurrentConfigurationCommand}" /><Button Classes="app" Margin="0,0,8,6" Content="New configuration" Command="{Binding NewConfigurationCommand}" /></WrapPanel>
+              <WrapPanel><Button Classes="app" Margin="0,0,8,6" Content="Open configuration" Command="{Binding BrowseConfigurationCommand}" /><Button Classes="app" Margin="0,0,8,6" Content="Edit full configuration" Command="{Binding EditCurrentConfigurationCommand}" /><Button Classes="app" Margin="0,0,8,6" Content="New configuration" Command="{Binding NewConfigurationCommand}" /><Button Classes="app primary" Margin="0,0,8,6" Content="Guided setup" Command="{Binding StartGuidedSetupCommand}" /></WrapPanel>
               <TextBlock Classes="muted" Text="Recent configurations" FontSize="12" FontWeight="SemiBold" />
               <ComboBox Classes="app" ItemsSource="{Binding RecentConfigurations}" SelectedItem="{Binding SelectedRecentConfiguration, Mode=TwoWay}" PlaceholderText="Choose recent configuration" AutomationProperties.Name="Recent configurations" />
               <StackPanel Orientation="Horizontal" Spacing="8"><Button Classes="app" Content="Load selected" Command="{Binding LoadRecentConfigurationCommand}" /><Button Classes="app" Content="Clear history" Command="{Binding ClearRecentConfigurationsCommand}" /></StackPanel>
@@ -68,7 +68,29 @@
         <TabItem Header="Library roots">
           <ScrollViewer Classes="settings-scroll" VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="LibrarySettingsContent" Classes="settings-content" Margin="18" Spacing="10">
+              <Border Classes="status-banner info" IsVisible="{Binding IsGuidedSetupActive}"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8"><TextBlock Classes="status-icon" Text="1" /><TextBlock Grid.Column="1" Text="Step 1 of 2: choose a profile and root permissions. New libraries start catalog-only; enable only the writes you intend." TextWrapping="Wrap" /><Button Grid.Column="2" Classes="app primary" Content="Review policy" Command="{Binding ReviewGuidedSetupCommand}" /></Grid></Border>
               <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="section-title" Text="Library roots and set membership" /><Button Grid.Column="1" Classes="app" Content="Add root" Command="{Binding AddIndexTargetCommand}" /></Grid>
+              <Grid ColumnDefinitions="280,*" ColumnSpacing="14">
+                <StackPanel Spacing="5">
+                  <TextBlock Classes="muted" Text="Active library profile" FontSize="12" FontWeight="SemiBold" />
+                  <ComboBox x:Name="ProfilePresetPicker" Classes="app"
+                            ItemsSource="{Binding LibraryProfiles}"
+                            SelectedItem="{Binding SelectedLibraryProfile, Mode=TwoWay}"
+                            AutomationProperties.Name="Active library profile">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate><TextBlock Text="{Binding Name}" /></DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                </StackPanel>
+                <Border Grid.Column="1" Classes="status-banner info">
+                  <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                    <TextBlock Classes="status-icon" Text="i" AutomationProperties.Name="Information" />
+                    <TextBlock x:Name="EffectivePolicySummaryText" Grid.Column="1"
+                               Text="{Binding EffectivePolicySummary}" TextWrapping="Wrap"
+                               AutomationProperties.Name="Effective library policy summary" />
+                  </Grid>
+                </Border>
+              </Grid>
               <ItemsControl ItemsSource="{Binding IndexTargets}">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
@@ -79,11 +101,28 @@
                           <Button Grid.Column="1" Classes="app" VerticalAlignment="Bottom" Content="Browse" Command="{Binding DataContext.BrowseIndexTargetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
                           <Button Grid.Column="2" Classes="app danger" VerticalAlignment="Bottom" Content="Remove" Command="{Binding DataContext.RemoveIndexTargetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
                         </Grid>
-                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                          <StackPanel Spacing="5"><TextBlock Classes="muted" Text="Filter" FontSize="12" FontWeight="SemiBold" /><TextBox Classes="app" Text="{Binding Filter, Mode=TwoWay}" AutomationProperties.Name="Library root filter" /></StackPanel>
-                          <StackPanel Grid.Column="1" Spacing="5"><TextBlock Classes="muted" Text="Ingest role" FontSize="12" FontWeight="SemiBold" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.IngestRoles, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding IngestRole, Mode=TwoWay}" AutomationProperties.Name="Library root ingest role" /></StackPanel>
+                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+                          <StackPanel Spacing="5"><TextBlock Classes="muted" Text="Formats to index" FontSize="12" FontWeight="SemiBold" /><TextBox Classes="app" Text="{Binding IndexFormats, Mode=TwoWay}" PlaceholderText="All supported; or .flac, .m4a" AutomationProperties.Name="Library root formats to index" /></StackPanel>
+                          <StackPanel Grid.Column="1" Spacing="5"><TextBlock Classes="muted" Text="Include patterns" FontSize="12" FontWeight="SemiBold" /><TextBox Classes="app" Text="{Binding IndexIncludePatterns, Mode=TwoWay}" PlaceholderText="All; or Music/**; *.flac" AutomationProperties.Name="Library root index include patterns" /></StackPanel>
+                          <StackPanel Grid.Column="2" Spacing="5"><TextBlock Classes="muted" Text="Exclude patterns" FontSize="12" FontWeight="SemiBold" /><TextBox Classes="app" Text="{Binding IndexExcludePatterns, Mode=TwoWay}" PlaceholderText="None; or Temp/**; *.tmp" AutomationProperties.Name="Library root index exclude patterns" /></StackPanel>
                         </Grid>
-                        <WrapPanel><CheckBox Margin="0,0,14,6" Content="Organize" IsChecked="{Binding Organize, Mode=TwoWay}" /><CheckBox Margin="0,0,14,6" Content="iTunes canonical naming" IsChecked="{Binding UseItunesCanonicalNaming, Mode=TwoWay}" /><CheckBox Margin="0,0,14,6" Content="Sync target" IsChecked="{Binding IsSyncTarget, Mode=TwoWay}" /><Button Classes="app" Content="Add set" Command="{Binding DataContext.AddIndexTargetSetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" /></WrapPanel>
+                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+                          <StackPanel Spacing="5"><TextBlock Classes="muted" Text="Cross-set comparison extensions" FontSize="12" FontWeight="SemiBold" /><TextBox Classes="app" Text="{Binding Filter, Mode=TwoWay}" PlaceholderText="For example: .flac, .m4a" AutomationProperties.Name="Cross-set comparison extensions" /></StackPanel>
+                          <StackPanel Grid.Column="1" Spacing="5"><TextBlock Classes="muted" Text="Ingest role" FontSize="12" FontWeight="SemiBold" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.IngestRoles, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding IngestRole, Mode=TwoWay}" AutomationProperties.Name="Library root ingest role" /></StackPanel>
+                          <StackPanel Grid.Column="2" Spacing="5"><TextBlock Classes="muted" Text="Representation role" FontSize="12" FontWeight="SemiBold" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.RepresentationRoles, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding RepresentationRole, Mode=TwoWay}" AutomationProperties.Name="Library root representation role" /></StackPanel>
+                        </Grid>
+                        <StackPanel Spacing="6">
+                          <TextBlock Classes="muted" Text="Write permissions" FontSize="12" FontWeight="SemiBold" />
+                          <WrapPanel>
+                            <CheckBox Margin="0,0,14,6" Content="Metadata" IsChecked="{Binding AllowMetadataWrites, Mode=TwoWay}" />
+                            <CheckBox Margin="0,0,14,6" Content="Artwork" IsChecked="{Binding AllowArtworkWrites, Mode=TwoWay}" />
+                            <CheckBox Margin="0,0,14,6" Content="Organize files" IsChecked="{Binding AllowOrganization, Mode=TwoWay}" />
+                            <CheckBox Margin="0,0,14,6" Content="Ingest output" IsChecked="{Binding AllowIngestOutput, Mode=TwoWay}" />
+                            <CheckBox Margin="0,0,14,6" Content="Sync output" IsChecked="{Binding AllowSynchronizationOutput, Mode=TwoWay}" />
+                          </WrapPanel>
+                          <TextBlock Classes="muted" Text="{Binding PermissionSummary}" TextWrapping="Wrap" />
+                        </StackPanel>
+                        <WrapPanel><CheckBox Margin="0,0,14,6" Content="iTunes canonical naming" IsChecked="{Binding UseItunesCanonicalNaming, Mode=TwoWay}" /><CheckBox Margin="0,0,14,6" Content="Sync target" IsChecked="{Binding IsSyncTarget, Mode=TwoWay}" /><Button Classes="app" Content="Add set" Command="{Binding DataContext.AddIndexTargetSetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" /></WrapPanel>
                         <ItemsControl ItemsSource="{Binding Memberships}">
                           <ItemsControl.ItemTemplate><DataTemplate><Grid Margin="0,0,0,6" ColumnDefinitions="*,*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding Name, Mode=TwoWay}" PlaceholderText="Set names (comma separated)" AutomationProperties.Name="Scan set names" /><TextBox Grid.Column="1" Classes="app" Text="{Binding Offset, Mode=TwoWay}" PlaceholderText="Shared offset" AutomationProperties.Name="Scan set shared offset" /><Button Grid.Column="2" Classes="app danger" Content="Remove" Command="{Binding DataContext.RemoveIndexTargetSetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" /></Grid></DataTemplate></ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -101,6 +140,8 @@
             <StackPanel x:Name="PlaylistSettingsContent" Classes="settings-content" Margin="18" Spacing="10">
               <Grid ColumnDefinitions="*,Auto"><TextBlock Classes="section-title" Text="Sync playlists" /><Button Grid.Column="1" Classes="app" Content="Add playlist" Command="{Binding AddSyncPlaylistCommand}" /></Grid>
               <ItemsControl ItemsSource="{Binding SyncPlaylists}"><ItemsControl.ItemTemplate><DataTemplate><Grid Margin="0,0,0,6" ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding Name, Mode=TwoWay}" PlaceholderText="Playlist name" AutomationProperties.Name="Sync playlist name" /><Button Grid.Column="1" Classes="app danger" Content="Remove" Command="{Binding DataContext.RemoveSyncPlaylistCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" /></Grid></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+              <Grid Margin="0,12,0,0" ColumnDefinitions="*,Auto"><StackPanel><TextBlock Classes="section-title" Text="File playlist sources" /><TextBlock Classes="muted" Text="Use M3U/M3U8 files or directories when no iTunes catalog is configured." /></StackPanel><Button Grid.Column="1" Classes="app" Content="Add source" Command="{Binding AddPlaylistSourceCommand}" /></Grid>
+              <ItemsControl ItemsSource="{Binding PlaylistSources}"><ItemsControl.ItemTemplate><DataTemplate><Border Classes="card" Margin="0,0,0,8" Padding="10"><Grid ColumnDefinitions="*,130,Auto,Auto,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding Location, Mode=TwoWay}" PlaceholderText="Playlist file or directory" AutomationProperties.Name="File playlist source" /><ComboBox Grid.Column="1" Classes="app" ItemsSource="{Binding DataContext.PlaylistSourceTypes, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding Type, Mode=TwoWay}" /><CheckBox Grid.Column="2" Content="Recursive" IsChecked="{Binding Recursive, Mode=TwoWay}" VerticalAlignment="Center" /><Button Grid.Column="3" Classes="app" Content="Browse file" Command="{Binding DataContext.BrowsePlaylistSourceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" /><Button Grid.Column="4" Classes="app danger" Content="Remove" Command="{Binding DataContext.RemovePlaylistSourceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" /></Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
               <Border Classes="status-banner warning">
                 <StackPanel Spacing="8">
                   <TextBlock Text="Cross-sync cleanup" FontWeight="SemiBold" />
@@ -110,7 +151,32 @@
               </Border>
               <Grid Margin="0,12,0,0" ColumnDefinitions="*,Auto"><TextBlock Classes="section-title" Text="Playlist export targets" /><Button Grid.Column="1" Classes="app" Content="Add target" Command="{Binding AddPlaylistTargetCommand}" /></Grid>
               <ItemsControl ItemsSource="{Binding PlaylistTargets}">
-                <ItemsControl.ItemTemplate><DataTemplate><Border Classes="card" Margin="0,0,0,8" Padding="11"><Grid ColumnDefinitions="*,160,*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding Target, Mode=TwoWay}" PlaceholderText="Target" AutomationProperties.Name="Playlist export target" /><ComboBox Grid.Column="1" Classes="app" ItemsSource="{Binding DataContext.PlaylistTypes, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding Type, Mode=TwoWay}" AutomationProperties.Name="Playlist export format" /><TextBox Grid.Column="2" Classes="app" Text="{Binding Sets, Mode=TwoWay}" PlaceholderText="Sets" AutomationProperties.Name="Playlist export sets" /><StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8"><Button Classes="app" Content="Browse" Command="{Binding DataContext.BrowsePlaylistTargetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" /><Button Classes="app danger" Content="Remove" Command="{Binding DataContext.RemovePlaylistTargetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" /></StackPanel></Grid></Border></DataTemplate></ItemsControl.ItemTemplate>
+                <ItemsControl.ItemTemplate><DataTemplate><Border Classes="card" Margin="0,0,0,8" Padding="11"><StackPanel Spacing="8"><Grid ColumnDefinitions="*,140,*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding Target, Mode=TwoWay}" PlaceholderText="Target" AutomationProperties.Name="Playlist export target" /><ComboBox Grid.Column="1" Classes="app" ItemsSource="{Binding DataContext.PlaylistTypes, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding Type, Mode=TwoWay}" AutomationProperties.Name="Playlist export format" /><TextBox Grid.Column="2" Classes="app" Text="{Binding Sets, Mode=TwoWay}" PlaceholderText="Scan sets" AutomationProperties.Name="Playlist export sets" /><StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8"><Button Classes="app" Content="Browse" Command="{Binding DataContext.BrowsePlaylistTargetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" /><Button Classes="app danger" Content="Remove" Command="{Binding DataContext.RemovePlaylistTargetCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" /></StackPanel></Grid><Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8"><StackPanel Spacing="4"><TextBlock Classes="muted" Text="Path style" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.PlaylistPathStyles, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding PathStyle, Mode=TwoWay}" /></StackPanel><StackPanel Grid.Column="1" Spacing="4"><TextBlock Classes="muted" Text="Encoding" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.PlaylistEncodings, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding Encoding, Mode=TwoWay}" /></StackPanel><StackPanel Grid.Column="2" Spacing="4"><TextBlock Classes="muted" Text="Line endings" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.PlaylistLineEndings, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding LineEnding, Mode=TwoWay}" /></StackPanel><StackPanel Grid.Column="3" Spacing="4"><TextBlock Classes="muted" Text="Filename transform" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.PlaylistFileNameTransforms, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding FileNameTransform, Mode=TwoWay}" /></StackPanel></Grid><Grid ColumnDefinitions="Auto,Auto,*,*" ColumnSpacing="14"><CheckBox Content="Write BOM" IsChecked="{Binding EmitByteOrderMark, Mode=TwoWay}" VerticalAlignment="Center" /><CheckBox Grid.Column="1" Content="Write EXTINF" IsChecked="{Binding IncludeExtendedInfo, Mode=TwoWay}" VerticalAlignment="Center" /><StackPanel Grid.Column="2" Spacing="4"><TextBlock Classes="muted" Text="Maximum tracks" /><NumericUpDown Classes="app" Minimum="1" Value="{Binding MaxTrackCount, Mode=TwoWay}" /></StackPanel><StackPanel Grid.Column="3" Spacing="4"><TextBlock Classes="muted" Text="Collision behavior" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.CollisionPolicies, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding CollisionPolicy, Mode=TwoWay}" /></StackPanel></Grid></StackPanel></Border></DataTemplate></ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <Grid Margin="0,16,0,0" ColumnDefinitions="*,Auto"><StackPanel><TextBlock Classes="section-title" Text="Export profiles" /><TextBlock Classes="muted" Text="Combine selection, transforms, naming, artwork/playlists, transport, and reconciliation. Profiles stay hidden until enabled and configured." TextWrapping="Wrap" /></StackPanel><Button Grid.Column="1" Classes="app" Content="Add export" Command="{Binding AddExportProfileCommand}" /></Grid>
+              <ItemsControl ItemsSource="{Binding ExportProfiles}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Classes="card" Margin="0,0,0,10" Padding="11">
+                      <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="Auto,170,*,Auto" ColumnSpacing="8"><CheckBox IsChecked="{Binding Enabled, Mode=TwoWay}" VerticalAlignment="Center" ToolTip.Tip="Enable export profile" /><TextBox Grid.Column="1" Classes="app" Text="{Binding Id, Mode=TwoWay}" PlaceholderText="Stable ID" /><TextBox Grid.Column="2" Classes="app" Text="{Binding Name, Mode=TwoWay}" PlaceholderText="Name" /><Button Grid.Column="3" Classes="app danger" Content="Remove" Command="{Binding DataContext.RemoveExportProfileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" /></Grid>
+                        <TextBlock FontWeight="SemiBold" Text="Selection and transform" />
+                        <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8"><StackPanel Spacing="4"><TextBlock Classes="muted" Text="Selection" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.ExportSelectionKinds, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding SelectionKind, Mode=TwoWay}" /></StackPanel><StackPanel Grid.Column="1" Spacing="4"><TextBlock Classes="muted" Text="Values (playlists, views, or paths)" /><TextBox Classes="app" Text="{Binding SelectionValues, Mode=TwoWay}" /></StackPanel><StackPanel Grid.Column="2" Spacing="4"><TextBlock Classes="muted" Text="Saved-view query" /><TextBox Classes="app" Text="{Binding SelectionQuery, Mode=TwoWay}" /></StackPanel><StackPanel Grid.Column="3" Spacing="4"><TextBlock Classes="muted" Text="Transform" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.ExportTransformModes, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding TransformMode, Mode=TwoWay}" /></StackPanel></Grid>
+                        <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8"><StackPanel Spacing="4"><TextBlock Classes="muted" Text="Recipe ID" /><TextBox Classes="app" Text="{Binding TransformRecipeId, Mode=TwoWay}" /></StackPanel><StackPanel Grid.Column="1" Spacing="4"><TextBlock Classes="muted" Text="Transform provider" /><TextBox Classes="app" Text="{Binding TransformProviderId, Mode=TwoWay}" /></StackPanel><StackPanel Grid.Column="2" Spacing="4"><TextBlock Classes="muted" Text="Codec" /><TextBox Classes="app" Text="{Binding Codec, Mode=TwoWay}" /></StackPanel><StackPanel Grid.Column="3" Spacing="4"><TextBlock Classes="muted" Text="Container" /><TextBox Classes="app" Text="{Binding Container, Mode=TwoWay}" /></StackPanel></Grid>
+                        <TextBlock FontWeight="SemiBold" Text="Naming and artwork" />
+                        <Grid ColumnDefinitions="*,Auto,*,*" ColumnSpacing="8"><StackPanel Spacing="4"><TextBlock Classes="muted" Text="Library naming profile ID" /><TextBox Classes="app" Text="{Binding NamingProfileId, Mode=TwoWay}" /></StackPanel><CheckBox Grid.Column="1" Content="Preserve source layout" IsChecked="{Binding PreserveSourceLayout, Mode=TwoWay}" VerticalAlignment="Bottom" /><StackPanel Grid.Column="2" Spacing="4"><TextBlock Classes="muted" Text="Folder template" /><TextBox Classes="app" Text="{Binding FolderTemplate, Mode=TwoWay}" /></StackPanel><StackPanel Grid.Column="3" Spacing="4"><TextBlock Classes="muted" Text="Filename template" /><TextBox Classes="app" Text="{Binding FileNameTemplate, Mode=TwoWay}" /></StackPanel></Grid>
+                        <Grid ColumnDefinitions="Auto,180,*,*,*" ColumnSpacing="8"><CheckBox Content="Use naming-profile collision rule" IsChecked="{Binding UseNamingProfileCollision, Mode=TwoWay}" VerticalAlignment="Center" /><ComboBox Grid.Column="1" Classes="app" ItemsSource="{Binding DataContext.CollisionPolicies, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding CollisionPolicy, Mode=TwoWay}" /><StackPanel Grid.Column="2" Spacing="4"><TextBlock Classes="muted" Text="Artwork" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.ExportArtworkModes, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding ArtworkMode, Mode=TwoWay}" /></StackPanel><StackPanel Grid.Column="3" Spacing="4"><TextBlock Classes="muted" Text="Maximum dimension" /><NumericUpDown Classes="app" Minimum="1" Value="{Binding ArtworkMaximumDimension, Mode=TwoWay}" /></StackPanel><StackPanel Grid.Column="4" Spacing="4"><TextBlock Classes="muted" Text="Maximum bytes" /><NumericUpDown Classes="app" Minimum="1" Value="{Binding ArtworkMaximumBytes, Mode=TwoWay}" /></StackPanel></Grid>
+                        <WrapPanel><CheckBox Margin="0,0,14,6" Content="Front cover only" IsChecked="{Binding FrontCoverOnly, Mode=TwoWay}" /><CheckBox Content="Preserve artwork encoding" IsChecked="{Binding PreserveArtworkEncoding, Mode=TwoWay}" /></WrapPanel>
+                        <TextBlock FontWeight="SemiBold" Text="Generated playlists and transport" />
+                        <Grid ColumnDefinitions="Auto,120,Auto,Auto,*,120" ColumnSpacing="8"><CheckBox Content="Generate playlists" IsChecked="{Binding PlaylistEnabled, Mode=TwoWay}" VerticalAlignment="Center" /><ComboBox Grid.Column="1" Classes="app" ItemsSource="{Binding DataContext.PlaylistTypes, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding PlaylistFormat, Mode=TwoWay}" /><CheckBox Grid.Column="2" Content="Relative paths" IsChecked="{Binding PlaylistRelativePaths, Mode=TwoWay}" VerticalAlignment="Center" /><CheckBox Grid.Column="3" Content="EXTINF" IsChecked="{Binding PlaylistIncludeExtendedInfo, Mode=TwoWay}" VerticalAlignment="Center" /><ComboBox Grid.Column="4" Classes="app" ItemsSource="{Binding DataContext.PlaylistEncodings, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding PlaylistEncoding, Mode=TwoWay}" /><NumericUpDown Grid.Column="5" Classes="app" Minimum="1" Value="{Binding PlaylistMaximumTracks, Mode=TwoWay}" PlaceholderText="Max tracks" /></Grid>
+                        <Grid ColumnDefinitions="Auto,150,*,Auto" ColumnSpacing="8"><CheckBox Content="Write playlist BOM" IsChecked="{Binding PlaylistWriteBom, Mode=TwoWay}" VerticalAlignment="Center" /><ComboBox Grid.Column="1" Classes="app" ItemsSource="{Binding DataContext.PlaylistLineEndings, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding PlaylistLineEnding, Mode=TwoWay}" /><TextBox Grid.Column="2" Classes="app" Text="{Binding TransportProviderId, Mode=TwoWay}" PlaceholderText="Transport provider (local-filesystem)" /><TextBox Grid.Column="3" Width="320" Classes="app" Text="{Binding TransportOptions, Mode=TwoWay}" PlaceholderText="option=value; option2=value" /></Grid>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding TransportDestination, Mode=TwoWay}" PlaceholderText="Transport destination" /><Button Grid.Column="1" Classes="app" Content="Browse destination" Command="{Binding DataContext.BrowseExportDestinationCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" /></Grid>
+                        <TextBlock FontWeight="SemiBold" Text="Reconciliation" />
+                        <Grid ColumnDefinitions="*,Auto,Auto,*" ColumnSpacing="12"><ComboBox Classes="app" ItemsSource="{Binding DataContext.ExportExtraFileDispositions, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding ExtraFileDisposition, Mode=TwoWay}" /><CheckBox Grid.Column="1" Content="Replace changed files" IsChecked="{Binding ReplaceChangedFiles, Mode=TwoWay}" VerticalAlignment="Center" /><CheckBox Grid.Column="2" Content="Remove empty directories" IsChecked="{Binding RemoveEmptyDirectories, Mode=TwoWay}" VerticalAlignment="Center" /><StackPanel Grid.Column="3" Spacing="4"><TextBlock Classes="muted" Text="Maximum removals" /><NumericUpDown Classes="app" Minimum="0" Value="{Binding MaximumRemovals, Mode=TwoWay}" /></StackPanel></Grid>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
               </ItemsControl>
             </StackPanel>
           </ScrollViewer>
@@ -120,6 +186,7 @@
           <ScrollViewer Classes="settings-scroll" VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="ToolsSettingsContent" Classes="settings-content" Margin="18" Spacing="10">
               <TextBlock Classes="section-title" Text="Cache and tool paths" />
+              <TextBlock Classes="muted" Text="Machine-local bindings companion (optional)" FontSize="12" FontWeight="SemiBold" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding MachineBindingsFile, Mode=TwoWay}" PlaceholderText="Keep portable policy separate from root and tool paths" AutomationProperties.Name="Machine-local bindings companion" /><Button Grid.Column="1" Classes="app" Content="Browse" Command="{Binding BrowseMachineBindingsCommand}" /></Grid>
               <TextBlock Classes="muted" Text="Metadata database" FontSize="12" FontWeight="SemiBold" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding DatabaseFile, Mode=TwoWay}" AutomationProperties.Name="Metadata database" /><Button Grid.Column="1" Classes="app" Content="Browse" Command="{Binding BrowseDatabaseCommand}" /></Grid>
               <TextBlock Classes="muted" Text="iTunes library" FontSize="12" FontWeight="SemiBold" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding ItunesLibraryPath, Mode=TwoWay}" AutomationProperties.Name="iTunes library" /><Button Grid.Column="1" Classes="app" Content="Browse" Command="{Binding BrowseItunesLibraryCommand}" /></Grid>
               <TextBlock Classes="muted" Text="FFmpeg" FontSize="12" FontWeight="SemiBold" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding FfmpegPath, Mode=TwoWay}" AutomationProperties.Name="FFmpeg executable" /><Button Grid.Column="1" Classes="app" Content="Browse" Command="{Binding BrowseFfmpegCommand}" /></Grid>
@@ -187,6 +254,167 @@
                   <TextBlock Classes="status-icon" Text="i" AutomationProperties.Name="Information" />
                   <TextBlock Grid.Column="1" Text="Analysis defaults: 2 MiB and 2,000 pixels. Repair defaults: 225 KiB and 600 pixels. Artwork exactly equal to an analysis threshold is not flagged." TextWrapping="Wrap" />
                 </Grid>
+              </Border>
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+
+        <TabItem Header="Advanced policy">
+          <ScrollViewer Classes="settings-scroll" VerticalScrollBarVisibility="Auto">
+            <StackPanel Classes="settings-content" Margin="18" Spacing="12" DataContext="{Binding AdvancedProfile}">
+              <TextBlock Classes="section-title" Text="Advanced profile policy" />
+              <Border Classes="status-banner warning"><TextBlock Text="These settings alter every workflow using the selected profile. Existing previews become invalid and must be regenerated." TextWrapping="Wrap" /></Border>
+
+              <TextBlock FontSize="16" FontWeight="SemiBold" Text="Naming and collisions" />
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                <StackPanel Spacing="5"><TextBlock Classes="muted" Text="Folder template" /><TextBox Classes="app" Text="{Binding DirectoryTemplate, Mode=TwoWay}" AutomationProperties.Name="Profile folder template" /></StackPanel>
+                <StackPanel Grid.Column="1" Spacing="5"><TextBlock Classes="muted" Text="File-name template" /><TextBox Classes="app" Text="{Binding FileNameTemplate, Mode=TwoWay}" AutomationProperties.Name="Profile file name template" /></StackPanel>
+              </Grid>
+              <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="12">
+                <StackPanel Spacing="5"><TextBlock Classes="muted" Text="Track padding" /><NumericUpDown Classes="app" Minimum="1" Value="{Binding TrackPadding, Mode=TwoWay}" /></StackPanel>
+                <StackPanel Grid.Column="1" Spacing="5"><TextBlock Classes="muted" Text="Disc padding" /><NumericUpDown Classes="app" Minimum="1" Value="{Binding DiscPadding, Mode=TwoWay}" /></StackPanel>
+                <StackPanel Grid.Column="2" Spacing="5"><TextBlock Classes="muted" Text="Collision behavior" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.CollisionPolicies, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding CollisionPolicy, Mode=TwoWay}" /></StackPanel>
+                <StackPanel Grid.Column="3" Spacing="5"><TextBlock Classes="muted" Text="Invalid-character replacement" /><TextBox Classes="app" Text="{Binding InvalidCharacterReplacement, Mode=TwoWay}" /></StackPanel>
+              </Grid>
+              <CheckBox Content="Preserve Unicode" IsChecked="{Binding PreserveUnicode, Mode=TwoWay}" />
+              <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="12">
+                <StackPanel Spacing="5"><TextBlock Classes="muted" Text="Missing artist" /><TextBox Classes="app" Text="{Binding MissingArtistFallback, Mode=TwoWay}" /></StackPanel>
+                <StackPanel Grid.Column="1" Spacing="5"><TextBlock Classes="muted" Text="Missing album" /><TextBox Classes="app" Text="{Binding MissingAlbumFallback, Mode=TwoWay}" /></StackPanel>
+                <StackPanel Grid.Column="2" Spacing="5"><TextBlock Classes="muted" Text="Missing title" /><TextBox Classes="app" Text="{Binding MissingTitleFallback, Mode=TwoWay}" /></StackPanel>
+                <StackPanel Grid.Column="3" Spacing="5"><TextBlock Classes="muted" Text="Compilation token" /><TextBox Classes="app" Text="{Binding CompilationValue, Mode=TwoWay}" /></StackPanel>
+              </Grid>
+              <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+                <StackPanel Spacing="5"><TextBlock Classes="muted" Text="Unicode normalization" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.UnicodeNormalizations, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding UnicodeNormalization, Mode=TwoWay}" /></StackPanel>
+                <StackPanel Grid.Column="1" Spacing="5"><TextBlock Classes="muted" Text="Component limit (blank = application default)" /><NumericUpDown Classes="app" Minimum="1" Value="{Binding ComponentLengthLimit, Mode=TwoWay}" /></StackPanel>
+                <StackPanel Grid.Column="2" Spacing="5"><TextBlock Classes="muted" Text="Complete-path limit (blank = platform default)" /><NumericUpDown Classes="app" Minimum="1" Value="{Binding CompletePathLengthLimit, Mode=TwoWay}" /></StackPanel>
+              </Grid>
+
+              <TextBlock FontSize="16" FontWeight="SemiBold" Text="Disc and album identity" />
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                <StackPanel Spacing="5"><TextBlock Classes="muted" Text="Disc strategy" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.DiscStrategies, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding DiscStrategy, Mode=TwoWay}" /></StackPanel>
+                <StackPanel Grid.Column="1" Spacing="5"><TextBlock Classes="muted" Text="Track-total scope" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.TrackTotalScopes, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding TrackTotalScope, Mode=TwoWay}" /></StackPanel>
+              </Grid>
+              <WrapPanel>
+                <CheckBox Margin="0,0,14,6" Content="Infer legacy album suffixes" IsChecked="{Binding InferAlbumSuffix, Mode=TwoWay}" />
+                <CheckBox Margin="0,0,14,6" Content="Preserve disc tags" IsChecked="{Binding PreserveDiscTags, Mode=TwoWay}" />
+                <CheckBox Margin="0,0,14,6" Content="Identity uses Album Artist" IsChecked="{Binding IdentityUsesAlbumArtist, Mode=TwoWay}" />
+                <CheckBox Margin="0,0,14,6" Content="Identity strips format suffixes" IsChecked="{Binding IdentityStripsFormatSuffixes, Mode=TwoWay}" />
+                <CheckBox Margin="0,0,14,6" Content="Identity strips Disc N suffixes" IsChecked="{Binding IdentityStripsDiscSuffixes, Mode=TwoWay}" />
+                <CheckBox Margin="0,0,14,6" Content="Identity includes release year" IsChecked="{Binding IdentityIncludesReleaseYear, Mode=TwoWay}" />
+              </WrapPanel>
+
+              <TextBlock FontSize="16" FontWeight="SemiBold" Text="Metadata fidelity" />
+              <WrapPanel>
+                <CheckBox Margin="0,0,14,6" Content="Preserve ReplayGain" IsChecked="{Binding PreserveReplayGain, Mode=TwoWay}" />
+                <CheckBox Margin="0,0,14,6" Content="Preserve MusicBrainz identifiers" IsChecked="{Binding PreserveMusicBrainzIdentifiers, Mode=TwoWay}" />
+                <CheckBox Margin="0,0,14,6" Content="Preserve custom fields" IsChecked="{Binding PreserveCustomFields, Mode=TwoWay}" />
+                <CheckBox Margin="0,0,14,6" Content="Preserve compilation semantics" IsChecked="{Binding PreserveCompilationSemantics, Mode=TwoWay}" />
+              </WrapPanel>
+
+              <TextBlock FontSize="16" FontWeight="SemiBold" Text="Quality and ingest" />
+              <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+                <StackPanel Spacing="5"><TextBlock Classes="muted" Text="High-resolution sample rate (Hz)" /><NumericUpDown Classes="app" Minimum="1" Value="{Binding HighResolutionMinimumSampleRateHz, Mode=TwoWay}" /></StackPanel>
+                <StackPanel Grid.Column="1" Spacing="5"><TextBlock Classes="muted" Text="High-resolution bit depth" /><NumericUpDown Classes="app" Minimum="1" Value="{Binding HighResolutionMinimumBitsPerSample, Mode=TwoWay}" /></StackPanel>
+                <StackPanel Grid.Column="2" Spacing="5"><TextBlock Classes="muted" Text="Source disposition" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.SourceDispositions, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding SourceDisposition, Mode=TwoWay}" /></StackPanel>
+              </Grid>
+              <Grid ColumnDefinitions="*,Auto">
+                <WrapPanel><CheckBox Margin="0,0,14,6" Content="Enable ingest recipes" IsChecked="{Binding IngestEnabled, Mode=TwoWay}" /><CheckBox Content="Preserve sidecars by default" IsChecked="{Binding PreserveSidecars, Mode=TwoWay}" /></WrapPanel>
+                <Button Grid.Column="1" Classes="app" Content="Add recipe" Command="{Binding DataContext.AddIngestRecipeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+              </Grid>
+              <ItemsControl ItemsSource="{Binding IngestRecipes}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Classes="card" Margin="0,0,0,8" Padding="10">
+                      <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="Auto,*,*,Auto" ColumnSpacing="10">
+                          <CheckBox IsChecked="{Binding Enabled, Mode=TwoWay}" VerticalAlignment="Center" ToolTip.Tip="Enable recipe" />
+                          <TextBox Grid.Column="1" Classes="app" Text="{Binding Id, Mode=TwoWay}" PlaceholderText="Stable recipe ID" />
+                          <TextBox Grid.Column="2" Classes="app" Text="{Binding Name, Mode=TwoWay}" PlaceholderText="Display name" />
+                          <Button Grid.Column="3" Classes="app danger" Content="Remove" Command="{Binding DataContext.RemoveIngestRecipeCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
+                          <StackPanel Spacing="4"><TextBlock Classes="muted" Text="Accepted extensions" /><TextBox Classes="app" Text="{Binding InputExtensions, Mode=TwoWay}" PlaceholderText=".flac, .m4a" /></StackPanel>
+                          <StackPanel Grid.Column="1" Spacing="4"><TextBlock Classes="muted" Text="Lossless match (indeterminate = any)" /><CheckBox IsThreeState="True" IsChecked="{Binding RequireLossless, Mode=TwoWay}" Content="Require lossless" /></StackPanel>
+                          <StackPanel Grid.Column="2" Spacing="4"><TextBlock Classes="muted" Text="Action" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.IngestActions, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding Action, Mode=TwoWay}" /></StackPanel>
+                          <StackPanel Grid.Column="3" Spacing="4"><TextBlock Classes="muted" Text="Output representation" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.RepresentationRoles, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding OutputRepresentationRole, Mode=TwoWay}" /></StackPanel>
+                        </Grid>
+                        <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
+                          <StackPanel Spacing="4"><TextBlock Classes="muted" Text="Minimum sample rate" /><NumericUpDown Classes="app" Minimum="1" Value="{Binding MinimumSampleRateHz, Mode=TwoWay}" /></StackPanel>
+                          <StackPanel Grid.Column="1" Spacing="4"><TextBlock Classes="muted" Text="Minimum bit depth" /><NumericUpDown Classes="app" Minimum="1" Value="{Binding MinimumBitsPerSample, Mode=TwoWay}" /></StackPanel>
+                          <StackPanel Grid.Column="2" Spacing="4"><TextBlock Classes="muted" Text="Input channels" /><NumericUpDown Classes="app" Minimum="1" Value="{Binding InputChannels, Mode=TwoWay}" /></StackPanel>
+                          <CheckBox Grid.Column="3" Content="Match either quality minimum" IsChecked="{Binding MatchAnyQualityMinimum, Mode=TwoWay}" VerticalAlignment="Bottom" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
+                          <StackPanel Spacing="4"><TextBlock Classes="muted" Text="Destination root ID" /><TextBox Classes="app" Text="{Binding DestinationRootId, Mode=TwoWay}" PlaceholderText="Stable root GUID" /></StackPanel>
+                          <StackPanel Grid.Column="1" Spacing="4"><TextBlock Classes="muted" Text="Legacy destination role" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.IngestRoles, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding DestinationLegacyRole, Mode=TwoWay}" /></StackPanel>
+                          <StackPanel Grid.Column="2" Spacing="4"><TextBlock Classes="muted" Text="Naming profile ID" /><TextBox Classes="app" Text="{Binding NamingProfileId, Mode=TwoWay}" PlaceholderText="Blank = active profile" /></StackPanel>
+                          <StackPanel Grid.Column="3" Spacing="4"><TextBlock Classes="muted" Text="Output extension" /><TextBox Classes="app" Text="{Binding OutputExtension, Mode=TwoWay}" PlaceholderText="For example .flac" /></StackPanel>
+                        </Grid>
+                        <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
+                          <StackPanel Spacing="4"><TextBlock Classes="muted" Text="Codec" /><TextBox Classes="app" Text="{Binding Codec, Mode=TwoWay}" /></StackPanel>
+                          <StackPanel Grid.Column="1" Spacing="4"><TextBlock Classes="muted" Text="Encoder" /><TextBox Classes="app" Text="{Binding Encoder, Mode=TwoWay}" /></StackPanel>
+                          <StackPanel Grid.Column="2" Spacing="4"><TextBlock Classes="muted" Text="Bitrate (kbps)" /><NumericUpDown Classes="app" Minimum="1" Value="{Binding BitrateKbps, Mode=TwoWay}" /></StackPanel>
+                          <StackPanel Grid.Column="3" Spacing="4"><TextBlock Classes="muted" Text="Output sample rate" /><NumericUpDown Classes="app" Minimum="1" Value="{Binding SampleRateHz, Mode=TwoWay}" /></StackPanel>
+                        </Grid>
+                        <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
+                          <StackPanel Spacing="4"><TextBlock Classes="muted" Text="Output bit depth" /><NumericUpDown Classes="app" Minimum="1" Value="{Binding BitsPerSample, Mode=TwoWay}" /></StackPanel>
+                          <StackPanel Grid.Column="1" Spacing="4"><TextBlock Classes="muted" Text="Output channels" /><NumericUpDown Classes="app" Minimum="1" Value="{Binding OutputChannels, Mode=TwoWay}" /></StackPanel>
+                          <CheckBox Grid.Column="2" Content="Preserve metadata" IsChecked="{Binding PreserveMetadata, Mode=TwoWay}" VerticalAlignment="Bottom" />
+                          <CheckBox Grid.Column="3" Content="Preserve artwork" IsChecked="{Binding PreserveArtwork, Mode=TwoWay}" VerticalAlignment="Bottom" />
+                        </Grid>
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                          <CheckBox Content="Use profile collision behavior" IsChecked="{Binding UseProfileCollision, Mode=TwoWay}" VerticalAlignment="Center" />
+                          <ComboBox Grid.Column="1" Width="220" HorizontalAlignment="Left" Classes="app" ItemsSource="{Binding DataContext.CollisionPolicies, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding CollisionPolicy, Mode=TwoWay}" />
+                        </Grid>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <TextBlock FontSize="16" FontWeight="SemiBold" Text="Artwork" />
+              <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
+                <StackPanel Spacing="5"><TextBlock Classes="muted" Text="Storage" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.ArtworkStorageChoices, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding ArtworkStorage, Mode=TwoWay}" /></StackPanel>
+                <StackPanel Grid.Column="1" Spacing="5"><TextBlock Classes="muted" Text="Roles" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.ArtworkRoleChoices, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding ArtworkRoles, Mode=TwoWay}" /></StackPanel>
+                <StackPanel Grid.Column="2" Spacing="5"><TextBlock Classes="muted" Text="Encoding" /><ComboBox Classes="app" ItemsSource="{Binding DataContext.ArtworkEncodingChoices, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding ArtworkEncoding, Mode=TwoWay}" /></StackPanel>
+              </Grid>
+              <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="12">
+                <StackPanel Spacing="5"><TextBlock Classes="muted" Text="Maximum dimension (0 = unlimited)" /><NumericUpDown Classes="app" Minimum="0" Value="{Binding ArtworkMaximumDimension, Mode=TwoWay}" /></StackPanel>
+                <StackPanel Grid.Column="1" Spacing="5"><TextBlock Classes="muted" Text="Maximum bytes (0 = unlimited)" /><NumericUpDown Classes="app" Minimum="0" Value="{Binding ArtworkMaximumEncodedBytes, Mode=TwoWay}" /></StackPanel>
+                <StackPanel Grid.Column="2" Spacing="5"><TextBlock Classes="muted" Text="JPEG quality" /><NumericUpDown Classes="app" Minimum="1" Maximum="100" Value="{Binding ArtworkJpegQuality, Mode=TwoWay}" /></StackPanel>
+                <StackPanel Grid.Column="3" Spacing="5"><TextBlock Classes="muted" Text="Sidecar template" /><TextBox Classes="app" Text="{Binding ArtworkSidecarTemplate, Mode=TwoWay}" /></StackPanel>
+              </Grid>
+
+              <TextBlock FontSize="16" FontWeight="SemiBold" Text="Health rules" />
+              <ItemsControl ItemsSource="{Binding HealthRules}"><ItemsControl.ItemTemplate><DataTemplate><Border Classes="card" Margin="0,0,0,6" Padding="9"><Grid ColumnDefinitions="Auto,220,160,Auto,Auto" ColumnSpacing="10"><CheckBox IsChecked="{Binding Enabled, Mode=TwoWay}" /><TextBlock Grid.Column="1" Text="{Binding Id}" FontWeight="SemiBold" /><ComboBox Grid.Column="2" Classes="app" ItemsSource="{Binding DataContext.HealthSeverities, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding Severity, Mode=TwoWay}" /><CheckBox Grid.Column="3" Content="Propose" IsChecked="{Binding ProposeRepair, Mode=TwoWay}" /><CheckBox Grid.Column="4" Content="Apply" IsChecked="{Binding ApplyRepair, Mode=TwoWay}" /></Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+
+              <Grid ColumnDefinitions="*,Auto"><TextBlock FontSize="16" FontWeight="SemiBold" Text="Sidecar and unknown-file rules" /><Button Grid.Column="1" Classes="app" Content="Add sidecar rule" Command="{Binding DataContext.AddSidecarRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" /></Grid>
+              <StackPanel Spacing="5"><TextBlock Classes="muted" Text="Unknown-file disposition" /><ComboBox Width="260" HorizontalAlignment="Left" Classes="app" ItemsSource="{Binding DataContext.SidecarDispositions, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding UnknownSidecarDisposition, Mode=TwoWay}" /></StackPanel>
+              <ItemsControl ItemsSource="{Binding SidecarRules}"><ItemsControl.ItemTemplate><DataTemplate><Border Classes="card" Margin="0,0,0,6" Padding="9"><Grid ColumnDefinitions="Auto,150,200,*,180,Auto" ColumnSpacing="10"><CheckBox IsChecked="{Binding Enabled, Mode=TwoWay}" /><TextBox Grid.Column="1" Classes="app" Text="{Binding Id, Mode=TwoWay}" PlaceholderText="Stable ID" /><TextBox Grid.Column="2" Classes="app" Text="{Binding Name, Mode=TwoWay}" PlaceholderText="Name" /><TextBox Grid.Column="3" Classes="app" Text="{Binding Patterns, Mode=TwoWay}" PlaceholderText="*.cue, *.pdf" /><ComboBox Grid.Column="4" Classes="app" ItemsSource="{Binding DataContext.SidecarDispositions, RelativeSource={RelativeSource AncestorType=UserControl}}" SelectedItem="{Binding Disposition, Mode=TwoWay}" /><Button Grid.Column="5" Classes="app danger" Content="Remove" Command="{Binding DataContext.RemoveSidecarRuleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" /></Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+
+        <TabItem Header="Effective policy">
+          <ScrollViewer Classes="settings-scroll" VerticalScrollBarVisibility="Auto">
+            <StackPanel Classes="settings-content" Margin="18" Spacing="12">
+              <TextBlock Classes="section-title" Text="Effective library policy" />
+              <Border Classes="status-banner info" IsVisible="{Binding IsGuidedSetupActive}"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8"><TextBlock Classes="status-icon" Text="2" /><TextBlock Grid.Column="1" Text="Step 2 of 2: verify paths, permissions, repairs, ingest, and integrations before creating the library." TextWrapping="Wrap" /><Button Grid.Column="2" Classes="app primary" Content="Save library" Command="{Binding FinishGuidedSetupCommand}" /></Grid></Border>
+              <TextBlock Classes="muted"
+                         Text="Review the behavior that every preview will use. Offline paths are warnings; invalid policy references and contradictory permissions block saving."
+                         TextWrapping="Wrap" />
+              <Border Classes="status-banner info">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                  <TextBlock Classes="status-icon" Text="i" AutomationProperties.Name="Information" />
+                  <TextBlock Grid.Column="1" Text="{Binding EffectivePolicySummary}"
+                             TextWrapping="Wrap" />
+                </Grid>
+              </Border>
+              <Border Classes="card" Padding="14">
+                <TextBlock x:Name="EffectivePolicyDetailsText"
+                           Text="{Binding EffectivePolicyDetails}" TextWrapping="Wrap"
+                           FontFamily="Cascadia Mono,Consolas,monospace"
+                           AutomationProperties.Name="Effective policy details" />
               </Border>
             </StackPanel>
           </ScrollViewer>

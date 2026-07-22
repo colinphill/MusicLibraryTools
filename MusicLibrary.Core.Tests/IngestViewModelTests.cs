@@ -40,6 +40,9 @@ public sealed class IngestViewModelTests
             settings.LoadConfig(config);
 
             Assert.True(viewModel.IsConfigurationReady);
+            // Replacing the file with a new stable library ID intentionally restores that
+            // library's own workflow state rather than leaking the prior source selection.
+            viewModel.SourceDirectory = root;
             Assert.True(viewModel.PreviewCommand.CanExecute(null));
         }
         finally

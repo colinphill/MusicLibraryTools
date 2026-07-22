@@ -12,6 +12,69 @@ namespace MusicLibraryManager.Tests;
 public sealed class PresentationTests
 {
     [Fact]
+    public void Shell_navigation_capabilities_follow_the_active_library_policy()
+    {
+        string directory = Path.Combine(Path.GetTempPath(),
+            $"shell-policy-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        string configPath = Path.Combine(directory, "library.xml");
+        string settingsPath = Path.Combine(directory, "settings.json");
+        try
+        {
+            EditableLibraryConfig config = EditableLibraryConfig.CreateNew();
+            config.IndexTargets.Add(config.CreateIndexTarget(Path.Combine(directory, "music")));
+            config.Save(configPath);
+            var settings = new AppSettings(settingsPath);
+            settings.LoadConfig(configPath);
+            var shell = new ShellViewModel(settings, new NavigationService(),
+                new AppActivityService());
+
+            Assert.True(shell.CanOpenHealth);
+            Assert.False(shell.CanOpenIngest);
+            Assert.False(shell.CanOpenOrganize);
+            Assert.False(shell.CanOpenDevices);
+
+            config.ActiveProfileId = LibraryProfilePresets.ArtistAlbumId;
+            config.IndexTargets[0].ProfileId = LibraryProfilePresets.ArtistAlbumId;
+            config.IndexTargets[0].Permissions = LibraryRootPermissions.OrganizeFiles;
+            config.Save(configPath);
+            settings.LoadConfig(configPath);
+
+            Assert.True(shell.CanOpenOrganize);
+            Assert.False(shell.CanOpenIngest);
+
+            config.ExportProfiles.Add(new LibraryExportProfile(
+                "portable-copy", "Portable copy", true,
+                ExportSelectionPolicy.EntireLibrary,
+                new(ExportTransformMode.Copy),
+                new(PreserveSourceLayout: true),
+                new(ExportArtworkMode.Embedded),
+                new(),
+                new(LocalFileSystemExportTransport.ProviderId,
+                    Path.Combine(directory, "portable")),
+                new()));
+            config.Save(configPath);
+            settings.LoadConfig(configPath);
+
+            Assert.False(shell.CanOpenDevices);
+
+            config.ExportProfiles.Add(BuiltInExportProfiles.Android with
+            {
+                Enabled = true,
+                Transport = new("android-syncer", "configured-device"),
+            });
+            config.Save(configPath);
+            settings.LoadConfig(configPath);
+
+            Assert.True(shell.CanOpenDevices);
+        }
+        finally
+        {
+            try { Directory.Delete(directory, true); } catch { }
+        }
+    }
+
+    [Fact]
     public void Activity_service_tracks_lifecycle_and_retains_history()
     {
         var service = new AppActivityService();
@@ -736,6 +799,74 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public async Task Settings_new_library_and_roots_start_catalog_only()
+    {
+        var viewModel = new SettingsViewModel(
+            new FakeSettings(), new FakeFilePicker(), new FakeDialogs(), new FakeTheme());
+
+        await viewModel.NewConfigurationCommand.ExecuteAsync(null);
+
+        Assert.Equal(LibraryProfilePresets.CatalogOnlyId, viewModel.SelectedLibraryProfile?.Id);
+        Assert.Contains("catalog only (read-only)", viewModel.EffectivePolicySummary,
+            StringComparison.OrdinalIgnoreCase);
+        IndexTargetEditorRow first = Assert.Single(viewModel.IndexTargets);
+        Assert.Equal(LibraryProfilePresets.CatalogOnlyId, first.ProfileId);
+        Assert.Equal(LibraryRootPermissions.None, first.Permissions);
+        Assert.True(first.IsReadOnly);
+        Assert.False(first.Organize);
+
+        viewModel.AddIndexTargetCommand.Execute(null);
+
+        IndexTargetEditorRow second = viewModel.IndexTargets[1];
+        Assert.Equal(LibraryProfilePresets.CatalogOnlyId, second.ProfileId);
+        Assert.Equal(LibraryRootPermissions.None, second.Permissions);
+        viewModel.SelectedLibraryProfile = viewModel.LibraryProfiles.Single(profile =>
+            profile.Id == LibraryProfilePresets.ArtistAlbumId);
+        Assert.Equal(LibraryProfilePresets.ArtistAlbumId, first.ProfileId);
+        Assert.Equal(LibraryProfilePresets.ArtistAlbumId, second.ProfileId);
+        Assert.True(first.AllowOrganization);
+        Assert.False(first.IsReadOnly);
+        second.AllowMetadataWrites = true;
+        Assert.True(second.AllowMetadataWrites);
+        Assert.Contains("metadata", second.PermissionSummary, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Settings_guided_setup_starts_safe_and_reviews_effective_policy()
+    {
+        var viewModel = new SettingsViewModel(
+            new FakeSettings(), new FakeFilePicker(), new FakeDialogs(), new FakeTheme());
+
+        await viewModel.StartGuidedSetupCommand.ExecuteAsync(null);
+
+        Assert.True(viewModel.IsGuidedSetupActive);
+        Assert.Equal(1, viewModel.SelectedTabIndex);
+        Assert.Equal(LibraryProfilePresets.CatalogOnlyId,
+            viewModel.SelectedLibraryProfile?.Id);
+        Assert.True(Assert.Single(viewModel.IndexTargets).IsReadOnly);
+
+        viewModel.ReviewGuidedSetupCommand.Execute(null);
+
+        Assert.Equal(6, viewModel.SelectedTabIndex);
+        Assert.Contains("catalog only", viewModel.EffectivePolicySummary,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Settings_ffmpeg_picker_accepts_extensionless_executables()
+    {
+        var picker = new FakeFilePicker(selectedFile: "/usr/local/bin/ffmpeg");
+        var viewModel = new SettingsViewModel(
+            new FakeSettings(), picker, new FakeDialogs(), new FakeTheme());
+
+        await viewModel.BrowseFfmpegCommand.ExecuteAsync(null);
+
+        Assert.Equal("/usr/local/bin/ffmpeg", viewModel.FfmpegPath);
+        Assert.Equal("Choose ffmpeg executable", picker.LastPickTitle);
+        Assert.Null(picker.LastPickTypes);
+    }
+
+    [Fact]
     public async Task Settings_editor_round_trips_complete_library_configuration()
     {
         string directory = Path.Combine(Path.GetTempPath(), $"manager-settings-{Guid.NewGuid():N}");
@@ -765,10 +896,14 @@ public sealed class PresentationTests
                     {
                         Target = @"Z:\Lossless",
                         Filter = "*.flac",
+                        IndexFormats = [".flac", ".m4a"],
+                        IndexIncludePatterns = ["Music/**", "*.flac"],
+                        IndexExcludePatterns = ["Temp/**", "*.tmp"],
                         DefaultOffset = "/Music",
                         Organize = false,
                         UseItunesCanonicalNaming = true,
                         IngestRole = LibraryIngestRole.Cd,
+                        RepresentationRole = LibraryRepresentationRole.LosslessByQuality,
                         IsSyncTarget = true,
                         Memberships =
                         [
@@ -779,12 +914,41 @@ public sealed class PresentationTests
                     },
                 ],
                 SyncPlaylists = ["Favorites", "RoadTrip"],
+                PlaylistSources =
+                [
+                    new PlaylistSourceEntry
+                    {
+                        Location = @"Z:\Source Playlists",
+                        Type = "m3u",
+                        Recursive = false,
+                    },
+                ],
                 PlaylistTargets =
                 [
                     new PlaylistTargetEntry
                     {
                         Target = @"Z:\Playlists", Type = "wpl", Sets = ["Lossless"],
+                        PathStyle = "relative",
+                        Encoding = "utf-16",
+                        EmitByteOrderMark = false,
+                        LineEnding = "lf",
+                        IncludeExtendedInfo = false,
+                        FileNameTransform = "sanitize",
+                        MaxTrackCount = 900,
+                        CollisionPolicy = LibraryPathCollisionPolicy.Hash,
                     },
+                ],
+                ExportProfiles =
+                [
+                    new LibraryExportProfile(
+                        "portable", "Portable copy", false,
+                        ExportSelectionPolicy.EntireLibrary,
+                        new(ExportTransformMode.Copy),
+                        new(PreserveSourceLayout: true),
+                        new(ExportArtworkMode.Embedded),
+                        new(),
+                        new("local-filesystem", @"Z:\Portable"),
+                        new()),
                 ],
             }.Save(configurationPath);
             var settings = new AppSettings(settingsPath);
@@ -801,9 +965,21 @@ public sealed class PresentationTests
             // The active configuration is restored directly into the editor; users should not
             // need to click Edit active before their roots and workflow targets appear.
             IndexTargetEditorRow root = Assert.Single(viewModel.IndexTargets);
+            Assert.Equal(LibraryProfilePresets.LegacyId, viewModel.SelectedLibraryProfile?.Id);
+            Assert.Equal(LibraryProfilePresets.LegacyId, root.ProfileId);
+            Assert.True(root.AllowMetadataWrites);
+            Assert.True(root.AllowArtworkWrites);
+            Assert.False(root.AllowOrganization);
+            Assert.True(root.AllowIngestOutput);
+            Assert.True(root.AllowSynchronizationOutput);
             Assert.True(root.UseItunesCanonicalNaming);
             Assert.Equal(LibraryIngestRole.Cd, root.IngestRole);
+            Assert.Equal(LibraryRepresentationRole.LosslessByQuality,
+                root.RepresentationRole);
             Assert.True(root.IsSyncTarget);
+            Assert.Equal(".flac, .m4a", root.IndexFormats);
+            Assert.Equal("Music/**; *.flac", root.IndexIncludePatterns);
+            Assert.Equal("Temp/**; *.tmp", root.IndexExcludePatterns);
             Assert.Equal(2, root.Memberships.Count);
             Assert.Equal("Lossless, Mobile", root.Memberships[0].Name);
             Assert.Equal("/FLAC", root.Memberships[0].Offset);
@@ -821,11 +997,39 @@ public sealed class PresentationTests
             Assert.True(viewModel.DeleteStaleCrossSyncFiles);
             Assert.True(viewModel.CleanCrossSyncPlaylists);
             Assert.Equal(["Favorites", "RoadTrip"], viewModel.SyncPlaylists.Select(row => row.Name));
-            Assert.Equal("Lossless", Assert.Single(viewModel.PlaylistTargets).Sets);
+            PlaylistSourceEditorRow playlistSource = Assert.Single(viewModel.PlaylistSources);
+            Assert.Equal(@"Z:\Source Playlists", playlistSource.Location);
+            PlaylistTargetEditorRow playlistTarget = Assert.Single(viewModel.PlaylistTargets);
+            Assert.Equal("Lossless", playlistTarget.Sets);
+            Assert.Equal("relative", playlistTarget.PathStyle);
+            Assert.Equal("utf-16", playlistTarget.Encoding);
+            Assert.False(playlistTarget.EmitByteOrderMark);
+            Assert.Equal(LibraryPathCollisionPolicy.Hash, playlistTarget.CollisionPolicy);
+            ExportProfileEditorRow export = Assert.Single(viewModel.ExportProfiles);
+            Assert.Equal("Portable copy", export.Name);
+            Assert.False(export.Enabled);
 
             root.Memberships[0].Name = "Lossless, Mobile, Portable";
             root.Memberships[0].Offset = "/Portable/FLAC";
-            viewModel.PlaylistTargets[0].Type = "m3u";
+            root.IndexFormats = ".flac";
+            root.IndexExcludePatterns = "Temp/**; Drafts/**";
+            Assert.NotNull(viewModel.AdvancedProfile);
+            viewModel.AdvancedProfile!.CollisionPolicy = LibraryPathCollisionPolicy.Hash;
+            viewModel.AdvancedProfile.ComponentLengthLimit = 180;
+            viewModel.AdvancedProfile.IdentityStripsFormatSuffixes = false;
+            viewModel.AdvancedProfile.PreserveReplayGain = false;
+            viewModel.AdvancedProfile.HealthRules.Single(rule =>
+                rule.Id == LibraryHealthRuleIds.LossyFile).Enabled = false;
+            viewModel.AdvancedProfile.IngestRecipes[0].PreserveMetadata = false;
+            SidecarRuleEditorRow newSidecar = SidecarRuleEditorRow.Create();
+            newSidecar.Patterns = "*.lrc, lyrics/**";
+            viewModel.AdvancedProfile.SidecarRules.Add(newSidecar);
+            playlistSource.Recursive = true;
+            playlistTarget.Type = "m3u";
+            playlistTarget.MaxTrackCount = 750;
+            playlistTarget.LineEnding = "crlf";
+            export.Enabled = true;
+            export.ExtraFileDisposition = ExportExtraFileDisposition.Quarantine;
             viewModel.OversizedArtworkSizeThresholdMib = 3.5m;
             viewModel.OversizedArtworkDimensionThreshold = 2_500;
             Assert.True(viewModel.HasUnsavedChanges);
@@ -845,13 +1049,35 @@ public sealed class PresentationTests
             Assert.True(savedRoot.UseItunesCanonicalNaming);
             Assert.True(savedRoot.IsSyncTarget);
             Assert.Equal(LibraryIngestRole.Cd, savedRoot.IngestRole);
+            Assert.Equal(LibraryRepresentationRole.LosslessByQuality,
+                savedRoot.RepresentationRole);
+            Assert.Equal([".flac"], savedRoot.IndexFormats);
+            Assert.Equal(["Music/**", "*.flac"], savedRoot.IndexIncludePatterns);
+            Assert.Equal(["Temp/**", "Drafts/**"], savedRoot.IndexExcludePatterns);
+            Assert.Equal(LibraryPathCollisionPolicy.Hash,
+                saved.ActiveProfile.Naming.CollisionPolicy);
+            Assert.Equal(180, saved.ActiveProfile.Naming.ComponentLengthLimit);
+            Assert.False(saved.ActiveProfile.AlbumIdentity.StripFormatSuffixes);
+            Assert.False(saved.ActiveProfile.Metadata.PreserveReplayGain);
+            Assert.False(saved.ActiveProfile.Health.Find(
+                LibraryHealthRuleIds.LossyFile)!.Enabled);
+            Assert.False(saved.ActiveProfile.Ingest.Recipes[0].PreserveMetadata);
+            Assert.Contains(saved.ActiveProfile.Sidecars.Rules,
+                rule => rule.Patterns.Contains("*.lrc"));
             Assert.True(saved.DeleteStaleCrossSyncFiles);
             Assert.True(saved.CleanCrossSyncPlaylists);
             Assert.Equal((int)(3.5m * 1024 * 1024), saved.OversizedArtworkByteThreshold);
             Assert.Equal(2_500, saved.OversizedArtworkDimensionThreshold);
             Assert.Equal(["Favorites", "RoadTrip"], saved.SyncPlaylists);
+            Assert.True(Assert.Single(saved.PlaylistSources).Recursive);
             Assert.Equal("m3u", Assert.Single(saved.PlaylistTargets).Type);
             Assert.Equal(["Lossless"], saved.PlaylistTargets[0].Sets);
+            Assert.Equal(750, saved.PlaylistTargets[0].MaxTrackCount);
+            Assert.Equal("crlf", saved.PlaylistTargets[0].LineEnding);
+            LibraryExportProfile savedExport = Assert.Single(saved.ExportProfiles);
+            Assert.True(savedExport.Enabled);
+            Assert.Equal(ExportExtraFileDisposition.Quarantine,
+                savedExport.Reconciliation.ExtraFiles);
 
             viewModel.LengthLimit = 0;
             Assert.False(viewModel.SaveConfigurationCommand.CanExecute(null));
@@ -1092,7 +1318,14 @@ internal sealed class FakeFilePicker(
 {
     public string? LastSuggestedName { get; private set; }
     public string? LastSaveExtension { get; private set; }
-    public Task<string?> PickFileAsync(string title, IReadOnlyList<FilePickerType>? types = null) => Task.FromResult(selectedFile);
+    public string? LastPickTitle { get; private set; }
+    public IReadOnlyList<FilePickerType>? LastPickTypes { get; private set; }
+    public Task<string?> PickFileAsync(string title, IReadOnlyList<FilePickerType>? types = null)
+    {
+        LastPickTitle = title;
+        LastPickTypes = types;
+        return Task.FromResult(selectedFile);
+    }
     public Task<string?> PickFolderAsync(string title) => Task.FromResult<string?>(null);
     public Task<string?> SaveFileAsync(string title, string suggestedName, string extension)
     {

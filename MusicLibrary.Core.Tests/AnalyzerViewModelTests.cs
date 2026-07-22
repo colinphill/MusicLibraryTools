@@ -898,6 +898,46 @@ public sealed class AnalyzerViewModelTests
     }
 
     [Fact]
+    public async Task Analyzer_LossyAuditHonorsDisabledActiveProfileRule()
+    {
+        string directory = Path.Combine(Path.GetTempPath(),
+            $"analyzer-health-policy-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            string configurationPath = Path.Combine(directory, "library.xml");
+            var editable = EditableLibraryConfig.CreateNew();
+            LibraryProfile catalog = editable.Profiles.Single(profile =>
+                profile.Id == LibraryProfilePresets.CatalogOnlyId);
+            editable.Profiles[editable.Profiles.IndexOf(catalog)] = catalog with
+            {
+                Health = catalog.Health with
+                {
+                    Rules = catalog.Health.Rules.Select(rule =>
+                        rule.Id == LibraryHealthRuleIds.LossyFile
+                            ? rule with { Enabled = false }
+                            : rule).ToArray(),
+                },
+            };
+            editable.Save(configurationPath);
+            var settings = new AppSettings(Path.Combine(directory, "settings.json"));
+            settings.LoadConfig(configurationPath);
+            var viewModel = new AnalyzerViewModel(
+                new StubLibrary([Track("one.mp3", "AA", "Album", CodecType.Lossy)]),
+                new StubReconciler(), new StubRepairs(), settings);
+
+            await viewModel.RunLossyCommand.ExecuteAsync(null);
+
+            Assert.Empty(viewModel.FindingGroups);
+            Assert.Contains("No lossy files", viewModel.StatusText);
+        }
+        finally
+        {
+            try { Directory.Delete(directory, true); } catch { }
+        }
+    }
+
+    [Fact]
     public async Task Analyzer_RepresentationsHydratesArtworkOnlyForMatchedCandidates()
     {
         var cd = Track(@"Z:\FLAC\Album\01.flac", "AA", "Album", title: "Song", track: 1);

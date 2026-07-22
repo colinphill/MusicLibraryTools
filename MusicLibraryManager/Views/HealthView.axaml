@@ -33,7 +33,7 @@
             <TextBlock Text="Prepare repairs" FontWeight="SemiBold" />
             <TextBlock Classes="muted" Text="Build a reviewable plan. Nothing changes until you apply it." TextWrapping="Wrap" />
             <WrapPanel>
-              <Button Classes="app" Margin="0,0,8,7" Content="Metadata" Command="{Binding PreviewMetadataRepairsCommand}" />
+              <Button Classes="app" Margin="0,0,8,7" Content="Enabled policy repairs" Command="{Binding PreviewMetadataRepairsCommand}" />
               <Button Classes="app" Margin="0,0,8,7" Content="Files" Command="{Binding PreviewRepresentationRepairsCommand}" />
               <StackPanel Orientation="Horizontal" Margin="0,0,8,7" Spacing="6">
                 <Button Classes="app" Content="Similar artists" Command="{Binding RunSimilarArtistsCommand}" />

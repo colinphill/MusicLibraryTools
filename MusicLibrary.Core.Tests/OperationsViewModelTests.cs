@@ -82,6 +82,38 @@ public sealed class OperationsViewModelTests
     }
 
     [Fact]
+    public async Task ConfiguredExportJobUsesTypedPreviewAndApplyService()
+    {
+        using var temp = new TempDirectory();
+        var settings = new AppSettings(Path.Combine(temp.Path, "settings.json"));
+        var descriptor = new UnifiedJobDescriptor(
+            UnifiedJobService.ConfiguredExportJobPrefix + "portable",
+            "Export: Portable", "Configured export", UnifiedJobApplyMode.ApplyFlag,
+            [], "", 0);
+        var jobs = new StubJobService(descriptor);
+        var export = new StubConfiguredExportService();
+        var dialogs = new StubDialogs();
+        var viewModel = new OperationsViewModel(
+            new RecordingJournals(new([], [])), new StubFiles(), dialogs, settings,
+            jobs: jobs, configuredExport: export)
+        {
+            SelectedJob = descriptor,
+        };
+
+        await viewModel.PreviewJobCommand.ExecuteAsync(null);
+
+        Assert.Equal("portable", export.LastRequest?.ProfileId);
+        Assert.True(viewModel.ApplyJobCommand.CanExecute(null));
+        Assert.Contains("1 desired", viewModel.JobOutput);
+
+        await viewModel.ApplyJobCommand.ExecuteAsync(null);
+
+        Assert.Equal(1, export.ApplyCalls);
+        Assert.Contains("1 copied", viewModel.JobOutput);
+        Assert.Contains("Recovery is available", dialogs.ApplyMessage);
+    }
+
+    [Fact]
     public async Task ArtworkNormalizationPublishesUpdatedPathsAndCacheWarning()
     {
         using var temp = new TempDirectory();
@@ -389,6 +421,59 @@ public sealed class OperationsViewModelTests
             AppliedPlan = plan;
             return Task.FromResult(new CrossLibrarySyncResult(0, 0,
                 new FileMutationSummary(0, 0, 0, 0, null, []), []));
+        }
+    }
+
+    private sealed class StubJobService(params UnifiedJobDescriptor[] jobs) : IUnifiedJobService
+    {
+        public IReadOnlyList<UnifiedJobDescriptor> Catalog { get; } = jobs;
+    }
+
+    private sealed class StubConfiguredExportService : IConfiguredExportService
+    {
+        public ConfiguredExportRequest? LastRequest { get; private set; }
+        public int ApplyCalls { get; private set; }
+
+        public Task<ConfiguredExportPlan> PreviewAsync(
+            ConfiguredExportRequest request,
+            IProgress<OperationProgress>? progress = null,
+            CancellationToken ct = default)
+        {
+            LastRequest = request;
+            var profile = new LibraryExportProfile(
+                request.ProfileId, "Portable", true,
+                ExportSelectionPolicy.EntireLibrary,
+                new(ExportTransformMode.Copy),
+                new(PreserveSourceLayout: true),
+                new(ExportArtworkMode.Embedded, FrontCoverOnly: false),
+                new(),
+                new(LocalFileSystemExportTransport.ProviderId, "destination"),
+                new());
+            var mutations = new FileMutationPlan(
+                "ConfiguredExport", "destination", "recovery",
+                [new(FileMutationKind.Copy, "source.flac", "destination.flac",
+                    new(true, false, 1, DateTime.UtcNow),
+                    OperationPathSnapshot.Missing("destination.flac"))],
+                [], DateTimeOffset.UtcNow);
+            var transport = new ExportTransportPlan(
+                profile.Id, profile.Fingerprint, LocalFileSystemExportTransport.ProviderId,
+                "destination", mutations, []);
+            return Task.FromResult(new ConfiguredExportPlan(
+                request, profile, Guid.NewGuid(), "library-fingerprint", profile.Fingerprint,
+                "destination",
+                [new("source.flac", "destination.flac", FileMutationKind.Copy)],
+                0, 0, transport, []));
+        }
+
+        public Task<ConfiguredExportResult> ApplyAsync(
+            ConfiguredExportPlan plan,
+            IProgress<OperationProgress>? progress = null,
+            CancellationToken ct = default)
+        {
+            ApplyCalls++;
+            return Task.FromResult(new ConfiguredExportResult(
+                plan.Profile!.Id, plan.Files.Count, plan.UnchangedCount,
+                new(1, 0, 0, 0, "journal.tsv", []), []));
         }
     }
 

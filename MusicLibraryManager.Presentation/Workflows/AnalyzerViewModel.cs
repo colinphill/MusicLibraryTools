@@ -100,7 +100,7 @@ public partial class AnalyzerViewModel : ViewModelBase
 
     partial void OnArtistThresholdChanged(double value)
     {
-        _settings.SetPreference(ArtistThresholdPreference,
+        _settings.SetLibraryPreference(ArtistThresholdPreference,
             Math.Clamp(value, 0, 1).ToString("R", CultureInfo.InvariantCulture));
 
         if (string.IsNullOrWhiteSpace(_artistThresholdText))
@@ -418,7 +418,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         _dialogs = dialogs;
         _artwork = artwork;
         _thumbnails = thumbnails;
-        if (double.TryParse(settings.GetPreference(ArtistThresholdPreference),
+        if (double.TryParse(settings.GetLibraryPreference(ArtistThresholdPreference),
                 NumberStyles.Float, CultureInfo.InvariantCulture, out double storedThreshold))
         {
             _artistThreshold = Math.Clamp(storedThreshold, 0, 1);
@@ -428,6 +428,11 @@ public partial class AnalyzerViewModel : ViewModelBase
             StatusText = "Choose a library configuration in Settings before running an audit.";
         settings.ConfigurationChanged += (_, _) =>
         {
+            if (double.TryParse(settings.GetLibraryPreference(ArtistThresholdPreference),
+                    NumberStyles.Float, CultureInfo.InvariantCulture, out double threshold))
+                ArtistThreshold = Math.Clamp(threshold, 0, 1);
+            else
+                ArtistThreshold = 0.2;
             OnPropertyChanged(nameof(FfmpegPath));
             ClearRuns();
             _representationRecords = [];
@@ -521,10 +526,18 @@ public partial class AnalyzerViewModel : ViewModelBase
 
     private bool CanRun() => _library.IsReady && !IsBusy;
 
+    private AnalysisReport ApplyCurrentHealthPolicy(AnalysisReport report) =>
+        _settings.Configuration is { } configuration
+            ? LibraryHealthPolicyService.Default.ApplyToReport(report, configuration)
+            : LibraryHealthPolicyService.Default.ApplyToReport(
+                report,
+                LibraryProfilePresets.Create(
+                    LibraryProfilePreset.LegacyMusicLibraryTools).Health);
+
     [RelayCommand(CanExecute = nameof(CanRun))]
     private Task RunInconsistencies() => RunOverRecords("Inconsistencies", AnalysisResultView.Findings, (records, ct) =>
     {
-        var report = LibraryAnalyzer.Inconsistencies(records);
+        var report = ApplyCurrentHealthPolicy(LibraryAnalyzer.Inconsistencies(records));
         string status = report.Count == 0 ? "Inconsistencies: none found." : $"Inconsistencies: {report.Count:N0} finding(s).";
         return (status, AnalysisRunViewModel.ForFindings(report, records, status));
     });
@@ -532,7 +545,7 @@ public partial class AnalyzerViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanRun))]
     private Task RunLossy() => RunOverRecords("Lossy files", AnalysisResultView.Findings, (records, ct) =>
     {
-        var report = LibraryAnalyzer.Lossless(records);
+        var report = ApplyCurrentHealthPolicy(LibraryAnalyzer.Lossless(records));
         string status = report.Count == 0 ? "No lossy files." : $"Lossy files: {report.Count:N0}.";
         return (status, AnalysisRunViewModel.ForFindings(report, records, status));
     });
@@ -540,7 +553,9 @@ public partial class AnalyzerViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanRun))]
     private Task RunDuplicates() => RunOverRecords("Duplicates", AnalysisResultView.Duplicates, (records, ct) =>
     {
-        var dupes = DuplicateFinder.Find(records, ct);
+        var dupes = _settings.Configuration is { } configuration
+            ? DuplicateFinder.Find(records, configuration, ct)
+            : DuplicateFinder.Find(records, ct);
         string status = dupes.Count == 0 ? "No duplicates found." : $"{dupes.Count:N0} duplicate group(s).";
         return (status, AnalysisRunViewModel.ForDuplicates("Duplicates", dupes, status));
     });
@@ -645,7 +660,9 @@ public partial class AnalyzerViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanRun))]
     private Task RunAlbumMatrix() => RunOverRecords("Album metadata matrix", AnalysisResultView.Matrix, (records, ct) =>
     {
-        var matrices = AlbumMetadataMatrixBuilder.Build(records);
+        var matrices = _settings.Configuration is { } configuration
+            ? AlbumMetadataMatrixBuilder.Build(records, configuration)
+            : AlbumMetadataMatrixBuilder.Build(records);
         string status = matrices.Count == 0
             ? "Album metadata matrix: no inconsistent albums found."
             : $"Album metadata matrix: {matrices.Count:N0} album(s), " +
@@ -681,13 +698,15 @@ public partial class AnalyzerViewModel : ViewModelBase
         LibraryArtworkHealthSettings settings,
         CancellationToken ct)
     {
+        LibraryConfiguration? configuration = _settings.GetSnapshot().Configuration;
         AnalysisReport report = await Task.Run(() => ArtworkHealthAnalyzer.Analyze(
-            records, artwork, settings.OversizedByteThreshold,
+            records, artwork, configuration, settings.OversizedByteThreshold,
             settings.OversizedDimensionThreshold, ct), ct);
         IReadOnlyList<ArtworkRepairItemViewModel> repairs = _artwork is null
             ? []
             : await Task.Run(() => ArtworkRepairPlanner.BuildAsync(
-                records, artwork, settings, _library, _artwork, _thumbnails, ct), ct);
+                records, artwork, settings, _library, _artwork, _thumbnails,
+                configuration, ct), ct);
         int deferred = report.Findings.Count(finding =>
             finding.Problem == "Artwork scan deferred");
         int actionable = report.Count - deferred;
@@ -842,10 +861,18 @@ public partial class AnalyzerViewModel : ViewModelBase
         try
         {
             var records = await _library.GetAllRecordsAsync(scope.Token);
+            LibraryConfiguration? configuration = _settings.Configuration;
             var prepared = await Task.Run(() => (
-                Pairs: RepresentationAnalyzer.DecodedAudioCandidatePairs(records),
-                Report: RepresentationAnalyzer.Compare(records, scope.Token),
-                ArtworkPaths: RepresentationAnalyzer.ArtworkCandidatePaths(records)), scope.Token);
+                Pairs: configuration is null
+                    ? RepresentationAnalyzer.DecodedAudioCandidatePairs(records)
+                    : RepresentationAnalyzer.DecodedAudioCandidatePairs(records, configuration),
+                Report: configuration is null
+                    ? RepresentationAnalyzer.Compare(records, scope.Token)
+                    : RepresentationAnalyzer.Compare(records, configuration, scope.Token),
+                ArtworkPaths: configuration is null
+                    ? RepresentationAnalyzer.ArtworkCandidatePaths(records)
+                    : RepresentationAnalyzer.ArtworkCandidatePaths(records, configuration)),
+                scope.Token);
             _representationRecords = records;
             _decodedAudioPairs = prepared.Pairs;
             var artworkPaths = prepared.ArtworkPaths;
@@ -860,7 +887,10 @@ public partial class AnalyzerViewModel : ViewModelBase
                     {
                         var signatureMap = artworkPaths.Zip(signatures)
                             .ToDictionary(pair => pair.First, pair => pair.Second, StringComparer.OrdinalIgnoreCase);
-                        return RepresentationAnalyzer.CompareArtwork(records, signatureMap).Findings;
+                        return (configuration is null
+                            ? RepresentationAnalyzer.CompareArtwork(records, signatureMap)
+                            : RepresentationAnalyzer.CompareArtwork(
+                                records, signatureMap, configuration)).Findings;
                     }, scope.Token);
                 }
                 catch (OperationCanceledException) { throw; }
@@ -973,7 +1003,13 @@ public partial class AnalyzerViewModel : ViewModelBase
             var records = await _library.GetAllRecordsAsync(scope.Token);
             var run = await Task.Run(() =>
             {
-                var plan = _repairs.PreviewSafeRepairs(records);
+                AnalysisRepairPlan preview = _settings.Configuration is { } configuration
+                    ? _repairs.PreviewSafeRepairs(records, configuration)
+                    : _repairs.PreviewSafeRepairs(
+                        records,
+                        LibraryProfilePresets.Create(
+                            LibraryProfilePreset.LegacyMusicLibraryTools).Health);
+                AnalysisRepairPlan plan = StampPolicy(preview);
                 var repairItems = plan.Items.Select(CreateRepairItem).ToList();
                 int applicable = plan.Items.Count(item => item.CanApply);
                 string status = plan.Items.Count == 0
@@ -1035,7 +1071,8 @@ public partial class AnalyzerViewModel : ViewModelBase
             var records = await _library.GetAllRecordsAsync(scope.Token);
             var run = await Task.Run(() =>
             {
-                var plan = _repairs.PreviewConflictRepairs(resolutions);
+                AnalysisRepairPlan plan = StampPolicy(
+                    _repairs.PreviewConflictRepairs(resolutions));
                 var items = plan.Items.Select(CreateRepairItem).ToList();
                 string status = plan.Items.Count == 0
                     ? "The selected canonical values already match every file."
@@ -1154,8 +1191,15 @@ public partial class AnalyzerViewModel : ViewModelBase
             var selectedPlan = repairPlan with { Items = selected.Select(item => item.Repair).ToList() };
             var progress = new Progress<int>(done =>
                 StatusText = $"Applying metadata repairs… {done:N0}/{selectedRepairs:N0} repair(s)");
-            AnalysisRepairApplyResult result =
-                await _repairs.ApplyReviewedAsync(selectedPlan, progress, scope.Token);
+            AnalysisRepairApplyResult result = _settings.Configuration is { } configuration
+                ? await _repairs.ApplyReviewedAsync(
+                    selectedPlan, configuration, progress, scope.Token)
+                : await _repairs.ApplyReviewedAsync(
+                    selectedPlan,
+                    LibraryProfilePresets.Create(
+                        LibraryProfilePreset.LegacyMusicLibraryTools).Health,
+                    progress,
+                    scope.Token);
             var byRepair = result.Items.ToDictionary(item => item.Repair);
             foreach (var item in selected)
             {
@@ -1189,6 +1233,15 @@ public partial class AnalyzerViewModel : ViewModelBase
         catch (Exception ex) { scope.Fail(); StatusText = $"Metadata repair apply failed: {ex.Message}"; }
         finally { ApplyRepairsCommand.NotifyCanExecuteChanged(); }
     }
+
+    private AnalysisRepairPlan StampPolicy(AnalysisRepairPlan plan) =>
+        _settings.Configuration is { } configuration
+            ? plan with
+            {
+                PolicyFingerprint = configuration.PolicySnapshot.Fingerprint,
+                LibraryId = configuration.LibraryId,
+            }
+            : plan;
 
     private bool CanApplyRepresentationRepairs() =>
         !IsBusy &&

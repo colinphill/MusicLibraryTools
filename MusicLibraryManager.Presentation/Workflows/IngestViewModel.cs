@@ -109,9 +109,11 @@ public partial class IngestViewModel : ViewModelBase
         _journals = journals;
         _activities = activities;
         LoadRecentSources();
-        SourceDirectory = settings.GetPreference(SourcePreference);
+        SourceDirectory = settings.GetLibraryPreference(SourcePreference);
         settings.ConfigurationChanged += (_, _) =>
         {
+            LoadRecentSources();
+            SourceDirectory = settings.GetLibraryPreference(SourcePreference);
             OnPropertyChanged(nameof(IsConfigurationReady));
             OnPropertyChanged(nameof(ConfigurationReadinessText));
             OnPropertyChanged(nameof(ConfigurationReadinessIcon));
@@ -122,7 +124,7 @@ public partial class IngestViewModel : ViewModelBase
 
     partial void OnSourceDirectoryChanged(string? value)
     {
-        _settings.SetPreference(SourcePreference, string.IsNullOrWhiteSpace(value) ? null : value);
+        _settings.SetLibraryPreference(SourcePreference, string.IsNullOrWhiteSpace(value) ? null : value);
         InvalidatePreview();
     }
 
@@ -299,7 +301,7 @@ public partial class IngestViewModel : ViewModelBase
             HasPreviewSummary = true;
             RefilterFiles();
             HasApplicablePreview = plan.CanApply;
-            _settings.SetPreference(SourcePreference, plan.Request.SourceDirectory);
+            _settings.SetLibraryPreference(SourcePreference, plan.Request.SourceDirectory);
             AddRecentSource(plan.Request.SourceDirectory);
             StatusText = plan.CanApply
                 ? plan.Albums.Count == 0
@@ -459,10 +461,11 @@ public partial class IngestViewModel : ViewModelBase
 
     private void LoadRecentSources()
     {
+        RecentSources.Clear();
         try
         {
             var sources = JsonSerializer.Deserialize<List<string>>(
-                _settings.GetPreference(RecentSourcesPreference) ?? "[]") ?? [];
+                _settings.GetLibraryPreference(RecentSourcesPreference) ?? "[]") ?? [];
             foreach (string source in sources.Where(source => !string.IsNullOrWhiteSpace(source))
                          .Distinct(StringComparer.OrdinalIgnoreCase).Take(RecentSourceLimit))
                 RecentSources.Add(source);
@@ -480,7 +483,7 @@ public partial class IngestViewModel : ViewModelBase
         RecentSources.Insert(0, fullPath);
         while (RecentSources.Count > RecentSourceLimit)
             RecentSources.RemoveAt(RecentSources.Count - 1);
-        _settings.SetPreference(RecentSourcesPreference, JsonSerializer.Serialize(RecentSources));
+        _settings.SetLibraryPreference(RecentSourcesPreference, JsonSerializer.Serialize(RecentSources));
         SelectedRecentSource = fullPath;
     }
 

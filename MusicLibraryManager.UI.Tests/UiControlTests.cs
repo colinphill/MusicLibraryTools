@@ -59,6 +59,78 @@ public sealed class UiControlTests
     }
 
     [AvaloniaFact]
+    public async Task Settings_exposes_profile_summary_and_root_write_permissions()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        MainWindow window = services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Show();
+            services.GetRequiredService<INavigationService>().Navigate(ShellDestination.Settings);
+            Dispatcher.UIThread.RunJobs();
+
+            SettingsView settings = Assert.IsType<SettingsView>(
+                window.FindControl<ContentControl>("ContentHost")!.Content);
+            SettingsViewModel viewModel = Assert.IsType<SettingsViewModel>(settings.DataContext);
+            await viewModel.NewConfigurationCommand.ExecuteAsync(null);
+            settings.FindControl<TabControl>("SettingsTabs")!.SelectedIndex = 1;
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+
+            ComboBox profilePicker = settings.FindControl<ComboBox>("ProfilePresetPicker")!;
+            Assert.Equal(LibraryProfilePresets.CatalogOnlyId,
+                Assert.IsType<LibraryProfile>(profilePicker.SelectedItem).Id);
+            Assert.Contains("catalog only (read-only)",
+                settings.FindControl<TextBlock>("EffectivePolicySummaryText")!.Text!,
+                StringComparison.OrdinalIgnoreCase);
+            Assert.NotNull(viewModel.AdvancedProfile);
+            Assert.Contains(settings.FindControl<TabControl>("SettingsTabs")!.Items
+                .OfType<TabItem>(), item => Equals(item.Header, "Advanced policy"));
+            Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
+                text => text.Text == "Cross-set comparison extensions");
+            Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
+                text => text.Text == "Formats to index");
+            Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
+                text => text.Text == "Include patterns");
+            Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
+                text => text.Text == "Exclude patterns");
+            Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
+                text => text.Text == "Representation role");
+
+            string[] permissionLabels =
+                ["Metadata", "Artwork", "Organize files", "Ingest output", "Sync output"];
+            CheckBox[] permissions = settings.GetVisualDescendants().OfType<CheckBox>()
+                .Where(checkBox => permissionLabels.Contains(checkBox.Content as string))
+                .ToArray();
+            Assert.Equal(permissionLabels.Length, permissions.Length);
+            Assert.All(permissions, checkBox => Assert.False(checkBox.IsChecked));
+
+            Assert.True(viewModel.StartGuidedSetupCommand.CanExecute(null));
+            viewModel.AddPlaylistSourceCommand.Execute(null);
+            viewModel.AddPlaylistTargetCommand.Execute(null);
+            viewModel.AddExportProfileCommand.Execute(null);
+            settings.FindControl<TabControl>("SettingsTabs")!.SelectedIndex = 2;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
+                text => text.Text == "File playlist sources");
+            Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
+                text => text.Text == "Export profiles");
+
+            settings.FindControl<TabControl>("SettingsTabs")!.SelectedIndex = 5;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
+                text => text.Text == "Metadata fidelity");
+            Assert.Contains(settings.GetVisualDescendants().OfType<Button>(),
+                button => Equals(button.Content, "Add recipe"));
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
     public void Data_grid_preserves_app_metrics_and_column_contract()
     {
         var grid = new AppDataGrid();

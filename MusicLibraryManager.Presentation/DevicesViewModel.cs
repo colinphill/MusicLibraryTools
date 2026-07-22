@@ -184,6 +184,11 @@ public partial class DevicesViewModel : ViewModelBase
         _dialogs = dialogs;
         _activities = activities;
         LoadProfile();
+        settings.ConfigurationChanged += (_, _) =>
+        {
+            InvalidatePreview();
+            LoadProfile();
+        };
         _updatingDeviceSelection = true;
         AvailableDevices.Add(DeviceSelectionOption.Manual);
         SelectedDevice = DeviceSelectionOption.Manual;
@@ -618,8 +623,9 @@ public partial class DevicesViewModel : ViewModelBase
         _loadingProfile = true;
         try
         {
+            ResetProfile();
             Profile? profile = JsonSerializer.Deserialize<Profile>(
-                _settings.GetPreference(ProfilePreference) ?? "null");
+                _settings.GetLibraryPreference(ProfilePreference) ?? "null");
             if (profile is null) return;
             SourcePath = profile.SourcePath ?? "";
             DestinationPath = string.IsNullOrWhiteSpace(profile.DestinationPath) ? "music" : profile.DestinationPath;
@@ -682,6 +688,30 @@ public partial class DevicesViewModel : ViewModelBase
         finally { _loadingProfile = false; }
     }
 
+    private void ResetProfile()
+    {
+        SourcePath = "";
+        DestinationPath = "music";
+        DeviceSerial = "";
+        AdbPath = "";
+        Exclusions = "";
+        MtimeToleranceSeconds = 60;
+        MaxRemovals = null;
+        DeleteExtras = true;
+        Direct = false;
+        Adopt = false;
+        _deviceDirectories.Clear();
+        _activeDeviceKey = ManualProfileKey;
+        _manualDeviceSerial = "";
+        _selectedDeviceId = null;
+        _allowLegacySerialMigration = false;
+        _manualSelectionPreference = null;
+        _recoveryId = null;
+        _recoveryDestination = null;
+        _recoveryDeviceSerial = null;
+        _recoveryDeviceId = null;
+    }
+
     private void RememberCurrentDirectories() => _deviceDirectories[_activeDeviceKey] =
         new(SourcePath, DestinationPath);
 
@@ -715,7 +745,7 @@ public partial class DevicesViewModel : ViewModelBase
     private void SaveProfile()
     {
         if (!_loadingProfile) RememberCurrentDirectories();
-        _settings.SetPreference(ProfilePreference, JsonSerializer.Serialize(new Profile(
+        _settings.SetLibraryPreference(ProfilePreference, JsonSerializer.Serialize(new Profile(
             SourcePath, DestinationPath, DeviceSerial, AdbPath, Exclusions,
             MtimeToleranceSeconds, MaxRemovals, DeleteExtras, Direct, Adopt,
             _recoveryId, _recoveryDestination, _recoveryDeviceSerial,

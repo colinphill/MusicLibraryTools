@@ -151,6 +151,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
 
     private async void OnConfigurationChanged(object? sender, EventArgs args)
     {
+        SavedViews.Clear();
+        LoadViews();
+        LoadWorkspace();
         // Restore cached browsing first, then return to the UI loop before starting the root scan.
         // This mirrors the portable app and ensures Home is painted before progress begins.
         await ReloadAsync();
@@ -619,7 +622,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     {
         try
         {
-            string? json = _settings.GetPreference(ViewsPreference);
+            string? json = _settings.GetLibraryPreference(ViewsPreference);
             foreach (LibraryViewDefinition view in string.IsNullOrWhiteSpace(json)
                          ? []
                          : JsonSerializer.Deserialize<List<LibraryViewDefinition>>(json) ?? [])
@@ -631,14 +634,17 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     }
 
     private void PersistViews()
-        => _settings.SetPreference(ViewsPreference, JsonSerializer.Serialize(SavedViews));
+        => _settings.SetLibraryPreference(ViewsPreference, JsonSerializer.Serialize(SavedViews));
 
     private void LoadWorkspace()
     {
         _loadingWorkspace = true;
         try
         {
-            string? json = _settings.GetPreference(WorkspacePreference);
+            FilterText = null;
+            FilterMode = FilterMode.Substring;
+            IsInspectorOpen = true;
+            string? json = _settings.GetLibraryPreference(WorkspacePreference);
             if (string.IsNullOrWhiteSpace(json))
                 return;
             var state = JsonSerializer.Deserialize<LibraryWorkspaceSnapshot>(json);
@@ -659,7 +665,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     }
 
     private void SaveWorkspace()
-        => _settings.SetPreference(WorkspacePreference,
+        => _settings.SetLibraryPreference(WorkspacePreference,
             JsonSerializer.Serialize(new LibraryWorkspaceSnapshot(FilterText, FilterMode, IsInspectorOpen)));
 
     private sealed record LibraryWorkspaceSnapshot(string? Filter, FilterMode Mode, bool? InspectorOpen = null);

@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MusicLibrary.Core.Services;
+using MusicLibraryTools;
 
 namespace MusicLibraryManager.Presentation;
 
@@ -44,6 +45,19 @@ public partial class ShellViewModel : ObservableObject
     public ObservableCollection<string> RecentConfigurations { get; }
     public ReadOnlyObservableCollection<AppActivity> Activities => _activities.Activities;
     public string ActivityTitle => VisibleActivity?.Title ?? "Activity";
+    public bool CanOpenHealth => _settings.Configuration is not null;
+    public bool CanOpenIngest => _settings.Configuration is { } configuration &&
+        (configuration.ActiveProfile.Preset == LibraryProfilePreset.LegacyMusicLibraryTools ||
+         configuration.ActiveProfile.Ingest.Enabled && configuration.PolicySnapshot.Roots.Values.Any(
+             root => root.Permissions.HasFlag(LibraryRootPermissions.IngestOutput)));
+    public bool CanOpenOrganize => _settings.Configuration is { } configuration &&
+        configuration.PolicySnapshot.Roots.Values.Any(root =>
+            root.Permissions.HasFlag(LibraryRootPermissions.OrganizeFiles));
+    public bool CanOpenDevices => _settings.Configuration is { } configuration &&
+        (configuration.ActiveProfile.Preset == LibraryProfilePreset.LegacyMusicLibraryTools ||
+         configuration.ExportProfiles.Any(profile =>
+             profile.IsVisible &&
+             profile.Transform.Mode == ExportTransformMode.SpecializedProvider));
     public double ActivityProgress => VisibleActivity?.Progress ?? 0;
     public bool HasDeterminateActivityProgress =>
         VisibleActivity is { State: AppActivityState.Running, Progress: not null };
@@ -126,6 +140,10 @@ public partial class ShellViewModel : ObservableObject
         RecentConfigurations.Clear();
         foreach (string recentPath in _settings.RecentConfigPaths)
             RecentConfigurations.Add(recentPath);
+        OnPropertyChanged(nameof(CanOpenHealth));
+        OnPropertyChanged(nameof(CanOpenIngest));
+        OnPropertyChanged(nameof(CanOpenOrganize));
+        OnPropertyChanged(nameof(CanOpenDevices));
     }
 
     private void RefreshActivity()

@@ -47,6 +47,7 @@ public partial class OperationsViewModel : ViewModelBase
     private readonly ISmartStorageService? _smartStorage;
     private readonly ICarCardService? _carCard;
     private readonly IActivityService? _activities;
+    private readonly IConfiguredExportService? _configuredExport;
     private CancellationTokenSource? _cts;
 
     public event Action<IReadOnlyList<string>>? ArtworkNormalized;
@@ -99,6 +100,7 @@ public partial class OperationsViewModel : ViewModelBase
     private ArtworkNormalizationPlan? _artworkNormalizationPlan;
     private SmartStoragePlan? _smartStoragePlan;
     private CarCardPlan? _carCardPlan;
+    private ConfiguredExportPlan? _configuredExportPlan;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowJobApply))]
@@ -144,7 +146,8 @@ public partial class OperationsViewModel : ViewModelBase
     public bool ShowRebalance => JobIs("car-card");
     public bool ShowFixErrors => JobIs("car-card");
     public bool UsesActiveLibraryContext =>
-        JobIs("playlist-sync", "cross-library-sync", "car-card");
+        JobIs("playlist-sync", "cross-library-sync", "car-card") ||
+        IsConfiguredExportJob(SelectedJob?.Id);
 
     public OperationsViewModel(
         IOperationJournalService journals,
@@ -159,7 +162,8 @@ public partial class OperationsViewModel : ViewModelBase
         IArtworkNormalizationService? artworkNormalization = null,
         ISmartStorageService? smartStorage = null,
         ICarCardService? carCard = null,
-        IActivityService? activities = null)
+        IActivityService? activities = null,
+        IConfiguredExportService? configuredExport = null)
     {
         _journals = journals;
         _files = files;
@@ -174,12 +178,26 @@ public partial class OperationsViewModel : ViewModelBase
         _smartStorage = smartStorage;
         _carCard = carCard;
         _activities = activities;
-        SearchRoot = settings.GetPreference(SearchRootPreference);
-        if (int.TryParse(settings.GetPreference(RetentionDaysPreference), out int days))
+        _configuredExport = configuredExport;
+        SearchRoot = settings.GetLibraryPreference(SearchRootPreference);
+        if (int.TryParse(settings.GetLibraryPreference(RetentionDaysPreference), out int days))
             RetentionDays = Math.Clamp(days, 1, 3650);
         LoadJobHistory();
         SelectedJob = JobCatalog.FirstOrDefault();
-        _settings.ConfigurationChanged += (_, _) => PopulateDefaultJobInputs();
+        _settings.ConfigurationChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(JobCatalog));
+            if (SelectedJob is null || JobCatalog.All(job => job.Id != SelectedJob.Id))
+                SelectedJob = JobCatalog.FirstOrDefault();
+            JobHistory.Clear();
+            LoadJobHistory();
+            SearchRoot = _settings.GetLibraryPreference(SearchRootPreference);
+            if (int.TryParse(_settings.GetLibraryPreference(RetentionDaysPreference), out int scopedDays))
+                RetentionDays = Math.Clamp(scopedDays, 1, 3650);
+            else
+                RetentionDays = 90;
+            PopulateDefaultJobInputs();
+        };
     }
 
     partial void OnSelectedJobChanged(UnifiedJobDescriptor? value)
@@ -216,13 +234,13 @@ public partial class OperationsViewModel : ViewModelBase
         if (path is not null) JobValidationPath = path;
     }
     partial void OnSearchRootChanged(string? value) =>
-        _settings.SetPreference(SearchRootPreference, string.IsNullOrWhiteSpace(value) ? null : value);
+        _settings.SetLibraryPreference(SearchRootPreference, string.IsNullOrWhiteSpace(value) ? null : value);
 
     partial void OnRetentionDaysChanged(int value)
     {
         if (value < 1)
             return;
-        _settings.SetPreference(RetentionDaysPreference, value.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        _settings.SetLibraryPreference(RetentionDaysPreference, value.ToString(System.Globalization.CultureInfo.InvariantCulture));
         InvalidatePurgePreview();
         PreviewPurgeCommand.NotifyCanExecuteChanged();
     }
@@ -250,7 +268,19 @@ public partial class OperationsViewModel : ViewModelBase
         JobStatus = $"Previewing {SelectedJob.Name}…";
         try
         {
-            if (SelectedJob.Id == "cross-library-sync" && _crossLibrarySync is not null)
+            if (TryGetConfiguredExportProfileId(SelectedJob.Id, out string exportProfileId) &&
+                _configuredExport is not null)
+            {
+                IReadOnlyList<string> parsed = [];
+                var typedProgress = new Progress<OperationProgress>(value =>
+                    ReportJobProgress(activity, value));
+                _configuredExportPlan = await _configuredExport.PreviewAsync(
+                    new(exportProfileId), typedProgress, _cts.Token);
+                int exitCode = _configuredExportPlan.CanApply ? 0 : 4;
+                _jobPlan = new(SelectedJob, parsed, exitCode,
+                    RenderConfiguredExportPlan(_configuredExportPlan), DateTimeOffset.UtcNow);
+            }
+            else if (SelectedJob.Id == "cross-library-sync" && _crossLibrarySync is not null)
             {
                 IReadOnlyList<string> parsed = [];
                 CrossLibrarySyncRequest request = new(
@@ -392,7 +422,18 @@ public partial class OperationsViewModel : ViewModelBase
         try
         {
             UnifiedJobResult result;
-            if (plan.Job.Id == "cross-library-sync" && _crossLibrarySync is not null &&
+            if (IsConfiguredExportJob(plan.Job.Id) && _configuredExport is not null &&
+                _configuredExportPlan is { CanApply: true } exportPlan)
+            {
+                var clock = Stopwatch.StartNew();
+                var typedProgress = new Progress<OperationProgress>(value =>
+                    ReportJobProgress(activity, value));
+                ConfiguredExportResult typedResult = await _configuredExport.ApplyAsync(
+                    exportPlan, typedProgress, _cts.Token);
+                clock.Stop();
+                result = new(0, RenderConfiguredExportResult(typedResult), clock.Elapsed);
+            }
+            else if (plan.Job.Id == "cross-library-sync" && _crossLibrarySync is not null &&
                 _crossLibrarySyncPlan is { CanApply: true } typedPlan)
             {
                 var clock = Stopwatch.StartNew();
@@ -495,6 +536,9 @@ public partial class OperationsViewModel : ViewModelBase
             "car-card" when _carCardPlan is { } typed =>
                 (typed.MutationPlan.Actions.Count, typed.MutationPlan.RetainRecovery,
                     typed.MutationPlan.RecoveryRoot),
+            _ when IsConfiguredExportJob(plan.Job.Id) &&
+                   _configuredExportPlan?.TransportPlan?.MutationPlan is { } typed =>
+                (typed.Actions.Count, typed.RetainRecovery, typed.RecoveryRoot),
             _ => (0, false, null),
         };
         string recoveryText = recovery
@@ -512,6 +556,7 @@ public partial class OperationsViewModel : ViewModelBase
         _artworkNormalizationPlan = null;
         _smartStoragePlan = null;
         _carCardPlan = null;
+        _configuredExportPlan = null;
         HasJobPreview = false;
         if (clearOutput) JobOutput = "";
         ApplyJobCommand.NotifyCanExecuteChanged();
@@ -522,7 +567,7 @@ public partial class OperationsViewModel : ViewModelBase
         try
         {
             foreach (var item in JsonSerializer.Deserialize<List<UnifiedJobHistoryItem>>(
-                         _settings.GetPreference(JobHistoryPreference) ?? "[]") ?? [])
+                         _settings.GetLibraryPreference(JobHistoryPreference) ?? "[]") ?? [])
                 JobHistory.Add(item);
         }
         catch { }
@@ -532,7 +577,7 @@ public partial class OperationsViewModel : ViewModelBase
     {
         JobHistory.Insert(0, item);
         while (JobHistory.Count > 30) JobHistory.RemoveAt(JobHistory.Count - 1);
-        _settings.SetPreference(JobHistoryPreference, JsonSerializer.Serialize(JobHistory));
+        _settings.SetLibraryPreference(JobHistoryPreference, JsonSerializer.Serialize(JobHistory));
     }
 
     private static string TrimOutput(string output) => output.Length <= 20_000 ? output : output[^20_000..];
@@ -564,6 +609,48 @@ public partial class OperationsViewModel : ViewModelBase
         $"{result.UnchangedCount:N0} unchanged." +
         (result.Mutations.JournalPath is null ? "" :
             Environment.NewLine + "Recovery journal: " + result.Mutations.JournalPath);
+
+    private static string RenderConfiguredExportPlan(ConfiguredExportPlan plan)
+    {
+        var output = new StringBuilder();
+        foreach (OperationIssue issue in plan.Issues)
+            output.AppendLine($"{issue.Severity,-11} {issue.Code}: {issue.Message}" +
+                (issue.Path is null ? "" : " [" + issue.Path + "]"));
+        foreach (ConfiguredExportFile file in plan.Files)
+            output.AppendLine(file.Mutation is { } mutation
+                ? $"{mutation,-10} {file.SourcePath} -> {file.DestinationPath}"
+                : $"{"Unchanged",-10} {file.DestinationPath}");
+        output.AppendLine($"Plan: {plan.Files.Count:N0} desired, " +
+            $"{plan.UnchangedCount:N0} unchanged, {plan.ExtraFileCount:N0} extra, " +
+            $"{plan.TransportPlan?.MutationPlan.Actions.Count ?? 0:N0} mutations.");
+        return output.ToString();
+    }
+
+    private static string RenderConfiguredExportResult(ConfiguredExportResult result) =>
+        $"Applied export '{result.ProfileId}': {result.Mutations.Copied:N0} copied, " +
+        $"{result.Mutations.Replaced:N0} replaced, " +
+        $"{result.Mutations.Quarantined:N0} quarantined, " +
+        $"{result.Mutations.Deleted:N0} deleted, {result.UnchangedCount:N0} unchanged." +
+        (result.Mutations.JournalPath is null ? "" :
+            Environment.NewLine + "Recovery journal: " + result.Mutations.JournalPath);
+
+    private static bool IsConfiguredExportJob(string? jobId) =>
+        jobId?.StartsWith(UnifiedJobService.ConfiguredExportJobPrefix,
+            StringComparison.Ordinal) == true;
+
+    private static bool TryGetConfiguredExportProfileId(
+        string? jobId,
+        out string profileId)
+    {
+        if (IsConfiguredExportJob(jobId) &&
+            jobId!.Length > UnifiedJobService.ConfiguredExportJobPrefix.Length)
+        {
+            profileId = jobId[UnifiedJobService.ConfiguredExportJobPrefix.Length..];
+            return true;
+        }
+        profileId = "";
+        return false;
+    }
 
     private static string RenderArtworkNormalizationPlan(ArtworkNormalizationPlan plan)
     {
@@ -1085,9 +1172,9 @@ public partial class OperationsViewModel : ViewModelBase
 
         Add(SearchRoot);
 #if MUSIC_LIBRARY_MANAGER
-        Add(_settings.GetPreference("manager.ingest.source.v1"));
+        Add(_settings.GetLibraryPreference("manager.ingest.source.v1"));
 #else
-        Add(_settings.GetPreference("Ingest.SourceDirectory"));
+        Add(_settings.GetLibraryPreference("Ingest.SourceDirectory"));
 #endif
         var snapshot = _settings.GetSnapshot();
         if (snapshot.ConfigPath is not null)

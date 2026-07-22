@@ -22,7 +22,7 @@ public sealed class GridStateService(IAppSettings settings)
     {
         try
         {
-            string? json = settings.GetPreference(preference);
+            string? json = settings.GetLibraryPreference(preference);
             return string.IsNullOrWhiteSpace(json) ? null : JsonSerializer.Deserialize<GridSnapshot>(json);
         }
         catch
@@ -38,7 +38,7 @@ public sealed class GridStateService(IAppSettings settings)
         SavePreference($"{PreferencePrefix}{key}.v1", state);
 
     private void SavePreference(string preference, GridSnapshot state) =>
-        settings.SetPreference(preference, JsonSerializer.Serialize(state));
+        settings.SetLibraryPreference(preference, JsonSerializer.Serialize(state));
 }
 
 public sealed class SplitStateService(IAppSettings settings)
@@ -49,7 +49,7 @@ public sealed class SplitStateService(IAppSettings settings)
     {
         try
         {
-            string? json = settings.GetPreference(PreferenceKey(key));
+            string? json = settings.GetLibraryPreference(PreferenceKey(key));
             return string.IsNullOrWhiteSpace(json) ? null : JsonSerializer.Deserialize<double>(json);
         }
         catch
@@ -59,7 +59,7 @@ public sealed class SplitStateService(IAppSettings settings)
     }
 
     public void Save(string key, double width) =>
-        settings.SetPreference(PreferenceKey(key), JsonSerializer.Serialize(width));
+        settings.SetLibraryPreference(PreferenceKey(key), JsonSerializer.Serialize(width));
 
     private static string PreferenceKey(string key) => $"{PreferencePrefix}{key}.v1";
 }
