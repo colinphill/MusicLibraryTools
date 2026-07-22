@@ -89,6 +89,7 @@ public sealed class AppSettings : IAppSettings
         // the active configuration is replaced and remembered.
         var configuration = new LibraryConfiguration(path);
         var indexLocations = configuration.IndexLocations.ToList();
+        _ = configuration.PlaylistSources;
         var playlistTargets = configuration.PlaylistTargets;
         var configuredSets = indexLocations.SelectMany(location => location.Sets)
             .ToHashSet(LibraryConfiguration.ScanSetComparer);
@@ -130,6 +131,8 @@ public sealed class AppSettings : IAppSettings
         _ = configuration.DeleteStaleCrossSyncFiles;
         _ = configuration.CleanCrossSyncPlaylists;
         _ = configuration.DatabaseFile;
+        _ = configuration.ActiveProfile;
+        _ = configuration.PolicySnapshot;
         return configuration;
     }
 

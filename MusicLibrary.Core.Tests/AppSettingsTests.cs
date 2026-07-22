@@ -187,6 +187,38 @@ public sealed class AppSettingsTests
         Assert.Empty(Directory.EnumerateFiles(temp.Path, ".*.tmp"));
     }
 
+    [Fact]
+    public void LibraryPreferences_AreIsolatedByStableLibraryId_AndReadLegacyFallback()
+    {
+        using var temp = new TempDirectory();
+        string firstPath = Path.Combine(temp.Path, "first.xml");
+        string secondPath = Path.Combine(temp.Path, "second.xml");
+        string statePath = Path.Combine(temp.Path, "settings.json");
+        var first = EditableLibraryConfig.CreateNew();
+        first.IndexTargets.Add(first.CreateIndexTarget(temp.Path));
+        first.Save(firstPath);
+        var second = EditableLibraryConfig.CreateNew();
+        second.IndexTargets.Add(second.CreateIndexTarget(temp.Path));
+        second.Save(secondPath);
+
+        var settings = new AppSettings(statePath);
+        settings.SetPreference("workspace", "legacy");
+        settings.LoadConfig(firstPath);
+        Assert.Equal("legacy", settings.GetLibraryPreference("workspace"));
+        settings.SetLibraryPreference("workspace", "first");
+        Assert.Contains(first.LibraryId.ToString("N"),
+            settings.GetLibraryPreferenceKey("workspace"));
+
+        settings.LoadConfig(secondPath);
+        Assert.Equal("legacy", settings.GetLibraryPreference("workspace"));
+        settings.SetLibraryPreference("workspace", "second");
+
+        settings.LoadConfig(firstPath);
+        Assert.Equal("first", settings.GetLibraryPreference("workspace"));
+        settings.LoadConfig(secondPath);
+        Assert.Equal("second", settings.GetLibraryPreference("workspace"));
+    }
+
     private sealed class TempDirectory : IDisposable
     {
         public string Path { get; } = System.IO.Path.Combine(

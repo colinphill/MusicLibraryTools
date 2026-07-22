@@ -1,6 +1,7 @@
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
 using MusicLibraryTools;
+using System.Xml.Linq;
 using Xunit;
 
 namespace MusicLibrary.Core.Tests;
@@ -463,6 +464,675 @@ public class EditableLibraryConfigTests
         finally
         {
             File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void CreateNew_UsesCatalogOnlyPresetAndPersistsStableIds()
+    {
+        string path = Path.Combine(Path.GetTempPath(),
+            "cfg_" + Guid.NewGuid().ToString("N") + ".xml");
+        try
+        {
+            EditableLibraryConfig editable = EditableLibraryConfig.CreateNew();
+            IndexTargetEntry target = editable.CreateIndexTarget("music");
+            editable.IndexTargets.Add(target);
+            Guid libraryId = editable.LibraryId;
+            Guid rootId = target.Id;
+
+            editable.Save(path);
+
+            var runtime = new LibraryConfiguration(path);
+            LibraryIndexLocation location = Assert.Single(runtime.IndexLocations);
+            Assert.Equal(LibraryConfigurationSchema.CurrentVersion, runtime.SchemaVersion);
+            Assert.Equal(libraryId, runtime.LibraryId);
+            Assert.Equal(rootId, location.RootId);
+            Assert.Equal(LibraryProfilePresets.CatalogOnlyId, runtime.ActiveProfileId);
+            Assert.Equal(LibraryProfilePresets.CatalogOnlyId, location.ProfileId);
+            Assert.Equal(LibraryRootPermissions.None, location.Permissions);
+            Assert.False(location.Organize);
+            Assert.Contains(runtime.Profiles,
+                profile => profile.Preset == LibraryProfilePreset.LegacyMusicLibraryTools);
+            Assert.Contains(runtime.Profiles,
+                profile => profile.Preset == LibraryProfilePreset.ItunesMedia);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void UnversionedConfiguration_IsStableInMemoryAndBackedUpOnV2Save()
+    {
+        string path = Path.Combine(Path.GetTempPath(),
+            "cfg_" + Guid.NewGuid().ToString("N") + ".xml");
+        string backup = path + ".v1.bak";
+        const string original = "<LibraryConfiguration>" +
+            "<IndexTarget Path=\"music\" Organize=\"false\" IngestRole=\"Cd\" />" +
+            "</LibraryConfiguration>";
+        try
+        {
+            File.WriteAllText(path, original);
+            var first = new LibraryConfiguration(path);
+            var second = new LibraryConfiguration(path);
+            LibraryIndexLocation legacy = Assert.Single(first.IndexLocations);
+            Assert.Equal(LibraryConfigurationSchema.LegacyVersion, first.SchemaVersion);
+            Assert.Equal(first.LibraryId, second.LibraryId);
+            Assert.Equal(legacy.RootId, Assert.Single(second.IndexLocations).RootId);
+            Assert.Equal(LibraryProfilePresets.LegacyId, legacy.ProfileId);
+            Assert.True(legacy.Permissions.HasFlag(LibraryRootPermissions.WriteMetadata));
+            Assert.True(legacy.Permissions.HasFlag(LibraryRootPermissions.WriteArtwork));
+            Assert.True(legacy.Permissions.HasFlag(LibraryRootPermissions.IngestOutput));
+            Assert.False(legacy.Permissions.HasFlag(LibraryRootPermissions.OrganizeFiles));
+
+            EditableLibraryConfig editable = EditableLibraryConfig.Load(path);
+            editable.Save(path);
+
+            Assert.True(File.Exists(backup));
+            Assert.Equal(original, File.ReadAllText(backup));
+            var migrated = new LibraryConfiguration(path);
+            LibraryIndexLocation migratedRoot = Assert.Single(migrated.IndexLocations);
+            Assert.Equal(LibraryConfigurationSchema.CurrentVersion, migrated.SchemaVersion);
+            Assert.Equal(first.LibraryId, migrated.LibraryId);
+            Assert.Equal(legacy.RootId, migratedRoot.RootId);
+            Assert.Equal(LibraryProfilePresets.LegacyId, migrated.ActiveProfileId);
+            Assert.False(migratedRoot.Organize);
+            Assert.Equal(LibraryIngestRole.Cd, migratedRoot.IngestRole);
+        }
+        finally
+        {
+            File.Delete(path);
+            File.Delete(backup);
+        }
+    }
+
+    [Fact]
+    public void Profiles_RoundTripPoliciesAndOrderedLegacyRecipes()
+    {
+        string path = Path.Combine(Path.GetTempPath(),
+            "cfg_" + Guid.NewGuid().ToString("N") + ".xml");
+        try
+        {
+            var editable = new EditableLibraryConfig();
+            LibraryProfile custom = LibraryProfilePresets.Create(
+                LibraryProfilePreset.ArtistAlbum, "my-layout", "My layout") with
+            {
+                Naming = LibraryProfilePresets.Create(LibraryProfilePreset.ArtistAlbum).Naming with
+                {
+                    DirectoryTemplate = "{Genre}/{AlbumArtist}/{Album}",
+                    CollisionPolicy = LibraryPathCollisionPolicy.Hash,
+                },
+                Disc = new(LibraryDiscStrategy.DiscFolder,
+                    LibraryTrackTotalScope.Album, false, true),
+            };
+            editable.Profiles.Add(custom);
+            editable.ActiveProfileId = custom.Id;
+            editable.IndexTargets.Add(new IndexTargetEntry
+            {
+                Target = "music",
+                ProfileId = custom.Id,
+                Permissions = custom.DefaultRootPermissions,
+            });
+
+            editable.Save(path);
+
+            var runtime = new LibraryConfiguration(path);
+            LibraryProfile loaded = runtime.ActiveProfile;
+            Assert.Equal("My layout", loaded.Name);
+            Assert.Equal("{Genre}/{AlbumArtist}/{Album}", loaded.Naming.DirectoryTemplate);
+            Assert.Equal(LibraryPathCollisionPolicy.Hash, loaded.Naming.CollisionPolicy);
+            Assert.Equal(LibraryDiscStrategy.DiscFolder, loaded.Disc.Strategy);
+            LibraryProfile legacy = Assert.Single(runtime.Profiles,
+                profile => profile.Preset == LibraryProfilePreset.LegacyMusicLibraryTools);
+            Assert.Equal(
+                ["legacy-hires-flac", "legacy-cd-flac", "legacy-aac"],
+                legacy.Ingest.Recipes.Select(recipe => recipe.Id));
+            Assert.Empty(loaded.Ingest.Recipes);
+            Assert.Equal(64, runtime.PolicySnapshot.Fingerprint.Length);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void V2Save_PreservesUnknownAttributesAndNestedElements()
+    {
+        string path = Path.Combine(Path.GetTempPath(),
+            "cfg_" + Guid.NewGuid().ToString("N") + ".xml");
+        try
+        {
+            var editable = new EditableLibraryConfig
+            {
+                IndexTargets = [new IndexTargetEntry { Target = "music" }],
+            };
+            editable.Save(path);
+            XDocument document = XDocument.Load(path);
+            document.Root!.SetAttributeValue("FutureRoot", "keep");
+            XElement profile = document.Root.Elements("LibraryProfile").First();
+            profile.SetAttributeValue("FutureProfile", "keep");
+            profile.Element("Naming")!.SetAttributeValue(
+                "LibraryProfileId", "keep-profile-naming-attribute");
+            profile.Element("Naming")!.Add(new XElement("FutureNaming", "keep"));
+            XElement sidecarRule = profile.Element("Sidecars")!.Element("Rule")!;
+            sidecarRule.SetAttributeValue("Severity", "keep-sidecar-rule-attribute");
+            XElement indexTarget = document.Root.Element("IndexTarget")!;
+            indexTarget.SetAttributeValue("FutureTarget", "keep");
+            indexTarget.Add(new XElement("FutureTargetChild", "keep"));
+            document.Root.Add(new XElement("SyncPlaylist",
+                new XAttribute("FuturePlaylist", "keep"),
+                "Road Trip",
+                new XElement("FuturePlaylistChild")));
+            document.Save(path);
+
+            EditableLibraryConfig.Load(path).Save(path);
+
+            XDocument reloaded = XDocument.Load(path);
+            Assert.Equal("keep", (string?)reloaded.Root!.Attribute("FutureRoot"));
+            XElement savedProfile = reloaded.Root.Elements("LibraryProfile").First();
+            Assert.Equal("keep", (string?)savedProfile.Attribute("FutureProfile"));
+            Assert.Equal("keep", (string?)savedProfile.Element("Naming")
+                ?.Element("FutureNaming"));
+            Assert.Equal("keep-profile-naming-attribute",
+                (string?)savedProfile.Element("Naming")?.Attribute("LibraryProfileId"));
+            Assert.Equal("keep-sidecar-rule-attribute",
+                (string?)savedProfile.Element("Sidecars")?.Element("Rule")
+                    ?.Attribute("Severity"));
+            XElement savedTarget = reloaded.Root.Element("IndexTarget")!;
+            Assert.Equal("keep", (string?)savedTarget.Attribute("FutureTarget"));
+            Assert.Equal("keep", (string?)savedTarget.Element("FutureTargetChild"));
+            XElement savedPlaylist = Assert.Single(reloaded.Root.Elements("SyncPlaylist"));
+            Assert.Equal("keep", (string?)savedPlaylist.Attribute("FuturePlaylist"));
+            Assert.NotNull(savedPlaylist.Element("FuturePlaylistChild"));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void Validate_RejectsRecipeDestinationWithoutIngestPermission()
+    {
+        EditableLibraryConfig editable = EditableLibraryConfig.CreateNew();
+        LibraryProfile custom = LibraryProfilePresets.Create(
+            LibraryProfilePreset.Custom, "recipe-policy", "Recipe policy");
+        IndexTargetEntry root = editable.CreateIndexTarget("catalog");
+        root.ProfileId = custom.Id;
+        root.Permissions = LibraryRootPermissions.None;
+        root.Organize = false;
+        LibraryIngestRecipe recipe = new(
+            "copy-flac", "Copy FLAC", true, [".flac"], true,
+            null, null, null, false, LibraryIngestAction.Copy,
+            root.Id, LibraryIngestRole.None, ".flac", "flac", null,
+            null, null, null, null, custom.Id, true, true,
+            LibraryPathCollisionPolicy.Stop);
+        custom = custom with
+        {
+            Ingest = new LibraryIngestPolicy(
+                true, LibrarySourceDisposition.Preserve, true, [recipe]),
+        };
+        editable.Profiles.Add(custom);
+        editable.IndexTargets.Add(root);
+
+        LibraryConfigurationIssue issue = Assert.Single(editable.Validate(), candidate =>
+            candidate.Code == "recipe-root-permission");
+
+        Assert.Contains("does not permit IngestOutput", issue.Message);
+    }
+
+    [Fact]
+    public void MachineBindingsAndPortableConfigurationRollbackTogetherOnSaveFailure()
+    {
+        string work = Path.Combine(Path.GetTempPath(),
+            "cfg_transaction_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(work);
+        string bindingsPath = Path.Combine(work, "bindings.xml");
+        string invalidConfigurationTarget = Path.Combine(work, "configuration-is-a-directory");
+        Directory.CreateDirectory(invalidConfigurationTarget);
+        const string originalBindings = "<LibraryBindings Original=\"keep\" />";
+        File.WriteAllText(bindingsPath, originalBindings);
+        try
+        {
+            EditableLibraryConfig editable = EditableLibraryConfig.CreateNew();
+            editable.MachineBindingsFile = "bindings.xml";
+
+            Exception? error = Record.Exception(() =>
+                editable.Save(invalidConfigurationTarget));
+
+            Assert.True(error is IOException or UnauthorizedAccessException,
+                $"Unexpected failure type: {error?.GetType().FullName ?? "none"}");
+
+            Assert.Equal(originalBindings, File.ReadAllText(bindingsPath));
+            Assert.Empty(Directory.EnumerateFiles(work, "*.tmp"));
+            Assert.Empty(Directory.EnumerateFiles(work, "*.rollback"));
+        }
+        finally
+        {
+            Directory.Delete(work, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void MachineBindings_SeparatePathsAndRoundTripThroughRuntimeConfiguration()
+    {
+        string work = Path.Combine(Path.GetTempPath(),
+            "cfg_bindings_" + Guid.NewGuid().ToString("N"));
+        string configPath = Path.Combine(work, "library.xml");
+        string bindingsPath = Path.Combine(work, "machine", "bindings.xml");
+        string musicPath = Path.Combine(work, "Music");
+        string databasePath = Path.Combine(work, "Cache", "library.db");
+        string ffmpegPath = Path.Combine(work, "Tools", "ffmpeg");
+        string itunesPath = Path.Combine(work, "Catalog", "Library.itl");
+        try
+        {
+            var editable = new EditableLibraryConfig
+            {
+                MachineBindingsFile = Path.Combine("machine", "bindings.xml"),
+                DatabaseFile = databasePath,
+                FfmpegPath = ffmpegPath,
+                ItunesLibraryPath = itunesPath,
+                IndexTargets = [new IndexTargetEntry { Target = musicPath }],
+            };
+            Guid rootId = editable.IndexTargets[0].Id;
+
+            editable.Save(configPath);
+
+            XDocument portable = XDocument.Load(configPath);
+            Assert.Equal(Path.Combine("machine", "bindings.xml"),
+                (string?)portable.Root!.Element("MachineBindings")?.Attribute("File"));
+            Assert.Null(portable.Root.Element("DatabaseFile"));
+            Assert.Null(portable.Root.Element("FfmpegPath"));
+            Assert.Null(portable.Root.Element("ItunesLibrary"));
+            Assert.Null(portable.Root.Element("IndexTarget")?.Attribute("Path"));
+
+            XDocument bindings = XDocument.Load(bindingsPath);
+            Assert.Equal(editable.LibraryId.ToString("D"),
+                (string?)bindings.Root!.Attribute("LibraryId"));
+            Assert.Equal(rootId.ToString("D"),
+                (string?)bindings.Root.Element("RootBinding")?.Attribute("RootId"));
+            Assert.Equal(musicPath,
+                (string?)bindings.Root.Element("RootBinding")?.Attribute("Path"));
+
+            var runtime = new LibraryConfiguration(configPath);
+            Assert.Equal(Path.GetFullPath(musicPath),
+                Assert.Single(runtime.IndexLocations).Target);
+            Assert.Equal(Path.GetFullPath(databasePath), runtime.DatabaseFile);
+            Assert.Equal(Path.GetFullPath(ffmpegPath), runtime.FfmpegPath);
+            Assert.Equal(Path.GetFullPath(itunesPath), runtime.ItunesLibraryPath);
+
+            EditableLibraryConfig reloaded = EditableLibraryConfig.Load(configPath);
+            Assert.Equal(Path.Combine("machine", "bindings.xml"),
+                reloaded.MachineBindingsFile);
+            reloaded.Save(configPath);
+            Assert.Null(XDocument.Load(configPath).Root!
+                .Element("IndexTarget")?.Attribute("Path"));
+        }
+        finally
+        {
+            try { Directory.Delete(work, true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void MachineBindings_InlinePathsRemainFallbackAndBoundPathsOverrideThem()
+    {
+        string work = Path.Combine(Path.GetTempPath(),
+            "cfg_bindings_" + Guid.NewGuid().ToString("N"));
+        string configPath = Path.Combine(work, "library.xml");
+        string bindingsPath = Path.Combine(work, "bindings.xml");
+        try
+        {
+            var editable = new EditableLibraryConfig
+            {
+                IndexTargets = [new IndexTargetEntry { Target = "inline-music" }],
+            };
+            editable.Save(configPath);
+            Guid rootId = editable.IndexTargets[0].Id;
+            XDocument portable = XDocument.Load(configPath);
+            portable.Root!.AddFirst(new XElement("MachineBindings",
+                new XAttribute("File", "bindings.xml")));
+            portable.Save(configPath);
+
+            new XDocument(new XElement("LibraryBindings",
+                new XAttribute("SchemaVersion", 1),
+                new XAttribute("LibraryId", editable.LibraryId.ToString("D"))))
+                .Save(bindingsPath);
+            Assert.Equal("inline-music",
+                Assert.Single(new LibraryConfiguration(configPath).IndexLocations).Target);
+
+            XDocument bindings = XDocument.Load(bindingsPath);
+            bindings.Root!.Add(new XElement("RootBinding",
+                new XAttribute("RootId", rootId.ToString("D")),
+                new XAttribute("Path", "bound-music")));
+            bindings.Save(bindingsPath);
+            Assert.Equal(Path.GetFullPath(Path.Combine(work, "bound-music")),
+                Assert.Single(new LibraryConfiguration(configPath).IndexLocations).Target);
+        }
+        finally
+        {
+            try { Directory.Delete(work, true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void MachineBindings_RejectMismatchedLibraryAndRootReferences()
+    {
+        string work = Path.Combine(Path.GetTempPath(),
+            "cfg_bindings_" + Guid.NewGuid().ToString("N"));
+        string configPath = Path.Combine(work, "library.xml");
+        string bindingsPath = Path.Combine(work, "bindings.xml");
+        try
+        {
+            var editable = new EditableLibraryConfig
+            {
+                MachineBindingsFile = "bindings.xml",
+                IndexTargets = [new IndexTargetEntry { Target = "music" }],
+            };
+            editable.Save(configPath);
+
+            XDocument bindings = XDocument.Load(bindingsPath);
+            bindings.Root!.SetAttributeValue("LibraryId", Guid.NewGuid().ToString("D"));
+            bindings.Save(bindingsPath);
+            Assert.Throws<InvalidDataException>(() =>
+                new LibraryConfiguration(configPath));
+
+            bindings.Root.SetAttributeValue("LibraryId", editable.LibraryId.ToString("D"));
+            bindings.Root.Add(new XElement("RootBinding",
+                new XAttribute("RootId", Guid.NewGuid().ToString("D")),
+                new XAttribute("Path", "unrecognized-root")));
+            bindings.Save(bindingsPath);
+            var runtime = new LibraryConfiguration(configPath);
+            InvalidDataException error = Assert.Throws<InvalidDataException>(() =>
+                runtime.IndexLocations.ToList());
+            Assert.Contains("unknown", error.Message, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            try { Directory.Delete(work, true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void MachineBindings_PathlessPortableRootRequiresALocalBinding()
+    {
+        string work = Path.Combine(Path.GetTempPath(),
+            "cfg_bindings_" + Guid.NewGuid().ToString("N"));
+        string configPath = Path.Combine(work, "library.xml");
+        string bindingsPath = Path.Combine(work, "bindings.xml");
+        try
+        {
+            new EditableLibraryConfig
+            {
+                MachineBindingsFile = "bindings.xml",
+                IndexTargets = [new IndexTargetEntry { Target = "music" }],
+            }.Save(configPath);
+
+            XDocument bindings = XDocument.Load(bindingsPath);
+            bindings.Root!.Element("RootBinding")!.Remove();
+            bindings.Save(bindingsPath);
+
+            var runtime = new LibraryConfiguration(configPath);
+            InvalidDataException error = Assert.Throws<InvalidDataException>(() =>
+                runtime.IndexLocations.ToList());
+            Assert.Contains("no inline Path", error.Message,
+                StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            try { Directory.Delete(work, true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void MachineBindings_PreserveUnknownXmlDuringRoundTrip()
+    {
+        string work = Path.Combine(Path.GetTempPath(),
+            "cfg_bindings_" + Guid.NewGuid().ToString("N"));
+        string configPath = Path.Combine(work, "library.xml");
+        string bindingsPath = Path.Combine(work, "bindings.xml");
+        try
+        {
+            var editable = new EditableLibraryConfig
+            {
+                MachineBindingsFile = "bindings.xml",
+                IndexTargets = [new IndexTargetEntry { Target = "music" }],
+            };
+            editable.Save(configPath);
+
+            XDocument portable = XDocument.Load(configPath);
+            portable.Root!.Element("MachineBindings")!
+                .SetAttributeValue("FutureReference", "keep");
+            portable.Save(configPath);
+
+            XDocument bindings = XDocument.Load(bindingsPath);
+            bindings.Root!.SetAttributeValue("FutureRoot", "keep");
+            XElement rootBinding = bindings.Root.Element("RootBinding")!;
+            rootBinding.SetAttributeValue("FutureBinding", "keep");
+            rootBinding.Add(new XElement("FutureChild", "keep"));
+            bindings.Root.Add(new XElement("ToolBinding",
+                new XAttribute("Name", "FutureEncoder"),
+                new XAttribute("Path", "future-tool"),
+                new XAttribute("FutureTool", "keep")));
+            bindings.Root.Add(new XElement("FutureBindings", "keep"));
+            bindings.Save(bindingsPath);
+
+            EditableLibraryConfig.Load(configPath).Save(configPath);
+
+            portable = XDocument.Load(configPath);
+            Assert.Equal("keep", (string?)portable.Root!.Element("MachineBindings")
+                ?.Attribute("FutureReference"));
+            bindings = XDocument.Load(bindingsPath);
+            Assert.Equal("keep", (string?)bindings.Root!.Attribute("FutureRoot"));
+            rootBinding = bindings.Root.Element("RootBinding")!;
+            Assert.Equal("keep", (string?)rootBinding.Attribute("FutureBinding"));
+            Assert.Equal("keep", (string?)rootBinding.Element("FutureChild"));
+            Assert.Equal("keep", (string?)bindings.Root.Elements("ToolBinding")
+                .Single(element => (string?)element.Attribute("Name") == "FutureEncoder")
+                .Attribute("FutureTool"));
+            Assert.Equal("keep", (string?)bindings.Root.Element("FutureBindings"));
+        }
+        finally
+        {
+            try { Directory.Delete(work, true); } catch { }
+        }
+    }
+
+    [Fact]
+    public void IndexTargetFormatAndPatternPolicies_RoundTripNormalized()
+    {
+        string path = Path.Combine(Path.GetTempPath(),
+            "cfg_" + Guid.NewGuid().ToString("N") + ".xml");
+        try
+        {
+            var target = new IndexTargetEntry
+            {
+                Target = "music",
+                IndexFormats = [" FLAC ", ".m4a", ".FLAC"],
+                IndexIncludePatterns = [" Music/** ", "*.flac", "music/**"],
+                IndexExcludePatterns = [" Temp/** ", "*.tmp", "temp/**"],
+            };
+            new EditableLibraryConfig { IndexTargets = [target] }.Save(path);
+
+            XElement element = XDocument.Load(path).Root!.Element("IndexTarget")!;
+            Assert.Equal(".flac,.m4a", (string?)element.Attribute("IndexFormats"));
+            Assert.Equal("Music/**;*.flac", (string?)element.Attribute("IndexInclude"));
+            Assert.Equal("Temp/**;*.tmp", (string?)element.Attribute("IndexExclude"));
+
+            LibraryIndexLocation runtime = Assert.Single(
+                new LibraryConfiguration(path).IndexLocations);
+            Assert.Equal([".flac", ".m4a"], runtime.IndexFormats);
+            Assert.Equal(["Music/**", "*.flac"], runtime.IndexIncludePatterns);
+            Assert.Equal(["Temp/**", "*.tmp"], runtime.IndexExcludePatterns);
+
+            IndexTargetEntry editable = Assert.Single(
+                EditableLibraryConfig.Load(path).IndexTargets);
+            Assert.Equal(runtime.IndexFormats, editable.IndexFormats);
+            Assert.Equal(runtime.IndexIncludePatterns, editable.IndexIncludePatterns);
+            Assert.Equal(runtime.IndexExcludePatterns, editable.IndexExcludePatterns);
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void IndexTargetFormatPolicy_RejectsFormatsWithoutLibraryIndexCapability()
+    {
+        var editable = new EditableLibraryConfig
+        {
+            IndexTargets =
+            [
+                new IndexTargetEntry
+                {
+                    Target = "music",
+                    IndexFormats = [".mp4"],
+                },
+            ],
+        };
+
+        LibraryConfigurationIssue issue = Assert.Single(editable.Validate(), candidate =>
+            candidate.Code == "root-index-format");
+        Assert.Contains("not registered for library indexing", issue.Message,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void Validate_SeparatesOfflineWarningsFromPermissionErrors()
+    {
+        EditableLibraryConfig editable = EditableLibraryConfig.CreateNew();
+        IndexTargetEntry target = editable.CreateIndexTarget(
+            Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")));
+        target.IngestRole = LibraryIngestRole.Cd;
+        editable.IndexTargets.Add(target);
+
+        IReadOnlyList<LibraryConfigurationIssue> issues = editable.Validate(
+            includePathAvailabilityWarnings: true);
+
+        Assert.Contains(issues, issue => issue.Code == "root-offline" &&
+            issue.Severity == LibraryConfigurationIssueSeverity.Warning);
+        Assert.Contains(issues, issue => issue.Code == "root-ingest-permission" &&
+            issue.Severity == LibraryConfigurationIssueSeverity.Error);
+    }
+
+    [Fact]
+    public void Validate_RejectsUnknownNamingTemplateTokensBeforeSaving()
+    {
+        var editable = new EditableLibraryConfig();
+        LibraryProfile legacy = editable.Profiles.Single(profile =>
+            profile.Id == LibraryProfilePresets.LegacyId);
+        editable.Profiles[editable.Profiles.IndexOf(legacy)] = legacy with
+        {
+            Naming = legacy.Naming with { DirectoryTemplate = "{Label}/{Album}" },
+        };
+
+        LibraryConfigurationIssue issue = Assert.Single(editable.Validate(), candidate =>
+            candidate.Code == "profile-invalid");
+
+        Assert.Contains("unknown naming token", issue.Message,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void PolicyFingerprintIncludesResolvedRootPathAndIndexPolicy()
+    {
+        string firstPath = Path.Combine(Path.GetTempPath(),
+            "cfg_" + Guid.NewGuid().ToString("N") + ".xml");
+        string secondPath = Path.Combine(Path.GetTempPath(),
+            "cfg_" + Guid.NewGuid().ToString("N") + ".xml");
+        try
+        {
+            var editable = EditableLibraryConfig.CreateNew();
+            IndexTargetEntry root = editable.CreateIndexTarget("music-a");
+            editable.IndexTargets.Add(root);
+            editable.Save(firstPath);
+            string first = new LibraryConfiguration(firstPath).PolicySnapshot.Fingerprint;
+
+            root.Target = "music-b";
+            root.IndexFormats = [".flac"];
+            root.IndexIncludePatterns = ["Albums/**"];
+            root.IndexExcludePatterns = ["Temp/**"];
+            editable.Save(secondPath);
+            string second = new LibraryConfiguration(secondPath).PolicySnapshot.Fingerprint;
+
+            Assert.NotEqual(first, second);
+        }
+        finally
+        {
+            File.Delete(firstPath);
+            File.Delete(secondPath);
+        }
+    }
+
+    [Fact]
+    public void PlaylistSourcesAndWriterOptionsRoundTrip()
+    {
+        string directory = Path.Combine(Path.GetTempPath(),
+            "playlist_cfg_" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        string path = Path.Combine(directory, "library.xml");
+        try
+        {
+            EditableLibraryConfig editable = EditableLibraryConfig.CreateNew();
+            IndexTargetEntry root = editable.CreateIndexTarget("music");
+            root.Memberships.Add(new() { Name = "Portable" });
+            editable.IndexTargets.Add(root);
+            editable.PlaylistSources.Add(new()
+            {
+                Type = "m3u",
+                Location = Path.Combine("inputs", "playlists"),
+                Recursive = true,
+            });
+            editable.PlaylistTargets.Add(new()
+            {
+                Target = "output",
+                Type = "m3u8",
+                Sets = ["Portable"],
+                PathStyle = "relative",
+                Encoding = "utf-8",
+                EmitByteOrderMark = false,
+                LineEnding = "lf",
+                IncludeExtendedInfo = false,
+                FileNameTransform = "preserve",
+                MaxTrackCount = 123,
+                CollisionPolicy = LibraryPathCollisionPolicy.Suffix,
+            });
+
+            editable.Save(path);
+
+            var configuration = new LibraryConfiguration(path);
+            LibraryPlaylistSource source = Assert.Single(configuration.PlaylistSources);
+            Assert.Equal("m3u", source.Type);
+            Assert.Equal(Path.GetFullPath(Path.Combine(directory, "inputs", "playlists")),
+                source.Location);
+            Assert.True(source.Recursive);
+            LibraryPlaylistTarget target = Assert.Single(configuration.PlaylistTargets);
+            Assert.Equal("relative", target.PathStyle);
+            Assert.False(target.EmitByteOrderMark);
+            Assert.Equal("lf", target.LineEnding);
+            Assert.False(target.IncludeExtendedInfo);
+            Assert.Equal("preserve", target.FileNameTransform);
+            Assert.Equal(123, target.MaxTrackCount);
+            Assert.Equal(LibraryPathCollisionPolicy.Suffix, target.CollisionPolicy);
+            string firstFingerprint = configuration.PolicySnapshot.Fingerprint;
+
+            EditableLibraryConfig reloaded = EditableLibraryConfig.Load(path);
+            Assert.Single(reloaded.PlaylistSources);
+            Assert.Equal("inputs" + Path.DirectorySeparatorChar + "playlists",
+                reloaded.PlaylistSources[0].Location.Replace(Path.AltDirectorySeparatorChar,
+                    Path.DirectorySeparatorChar));
+            Assert.Equal(123, Assert.Single(reloaded.PlaylistTargets).MaxTrackCount);
+            reloaded.PlaylistTargets[0].MaxTrackCount = 124;
+            reloaded.Save(path);
+            Assert.NotEqual(firstFingerprint,
+                new LibraryConfiguration(path).PolicySnapshot.Fingerprint);
+        }
+        finally
+        {
+            try { Directory.Delete(directory, recursive: true); } catch { }
         }
     }
 }

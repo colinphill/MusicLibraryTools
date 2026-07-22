@@ -15,7 +15,7 @@ public static class LibraryOrganizationPolicy
         IEnumerable<LibraryIndexLocation> locations) =>
         locations
             .GroupBy(location => Path.TrimEndingDirectorySeparator(location.Target), PathComparer)
-            .Where(group => group.All(location => location.Organize))
+            .Where(group => group.All(CanOrganize))
             .Select(group =>
             {
                 LibraryIndexLocation[] targets = group.ToArray();
@@ -38,7 +38,7 @@ public static class LibraryOrganizationPolicy
         LibraryIndexLocation[] matches = locations
             .Where(location => IsWithinOrEqual(path, location.Target))
             .ToArray();
-        return matches.Length > 0 && matches.All(location => location.Organize);
+        return matches.Length > 0 && matches.All(CanOrganize);
     }
 
     /// <summary>
@@ -50,7 +50,7 @@ public static class LibraryOrganizationPolicy
     {
         LibraryIndexLocation[] materialized = locations.ToArray();
         string[] excludedRoots = materialized
-            .Where(location => !location.Organize)
+            .Where(location => !CanOrganize(location))
             .Select(location => Path.TrimEndingDirectorySeparator(location.Target))
             .Distinct(PathComparer)
             .ToArray();
@@ -67,6 +67,10 @@ public static class LibraryOrganizationPolicy
                normalizedPath.StartsWith(normalizedRoot + Path.DirectorySeparatorChar,
                    PathComparison);
     }
+
+    private static bool CanOrganize(LibraryIndexLocation location) =>
+        location.Organize &&
+        location.Permissions.HasFlag(LibraryRootPermissions.OrganizeFiles);
 
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase
