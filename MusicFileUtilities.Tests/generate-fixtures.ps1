@@ -27,6 +27,23 @@ function Resolve-Ffmpeg {
     throw "ffmpeg not found on PATH or in known locations. Install ffmpeg to generate test fixtures."
 }
 
+function Resolve-VorbisEncoderArgs {
+    param([Parameter(Mandatory = $true)][string]$Ffmpeg)
+
+    $encoders = (& $Ffmpeg -hide_banner -encoders 2>&1) | Out-String
+    if ($LASTEXITCODE -ne 0) { throw "ffmpeg failed while listing available encoders." }
+
+    if ($encoders -match '(?m)^\s*A\S{5}\s+libvorbis\s') {
+        return @('-c:a', 'libvorbis')
+    }
+    if ($encoders -match '(?m)^\s*A\S{5}\s+vorbis\s') {
+        # FFmpeg's built-in Vorbis encoder is marked experimental in current releases.
+        return @('-c:a', 'vorbis', '-strict', 'experimental')
+    }
+
+    throw "ffmpeg provides neither the libvorbis nor native Vorbis audio encoder."
+}
+
 # --- ffmpeg-encoded fixtures ----------------------------------------------------------------
 $meta = @(
     '-metadata', 'title=TestTitle',
@@ -41,7 +58,7 @@ $sine = @('-f', 'lavfi', '-i', 'sine=frequency=440:duration=0.3', '-ac', '2', '-
 $jobs = @(
     @{ File = 'sample.flac';      Args = @('-sample_fmt', 's16') + $meta },
     @{ File = 'sample.mp3';       Args = @('-c:a', 'libmp3lame', '-b:a', '128k', '-write_xing', '1', '-id3v2_version', '3') + $meta },
-    @{ File = 'sample.ogg';       Args = @('-c:a', 'libvorbis') + $meta },
+    @{ File = 'sample.ogg';       Args = $null },
     @{ File = 'sample_alac.m4a';  Args = @('-c:a', 'alac') + $meta },
     @{ File = 'sample_aac.m4a';   Args = @('-c:a', 'aac', '-b:a', '128k') + $meta },
     @{ File = 'sample.wv';        Args = @('-c:a', 'wavpack') + $meta }
@@ -50,6 +67,10 @@ $jobs = @(
 $needFfmpeg = $jobs | Where-Object { -not (Test-Path (Join-Path $OutDir $_.File)) }
 if ($needFfmpeg) {
     $ffmpeg = Resolve-Ffmpeg
+    $oggJob = $needFfmpeg | Where-Object { $_.File -eq 'sample.ogg' }
+    if ($oggJob) {
+        $oggJob.Args = @(Resolve-VorbisEncoderArgs -Ffmpeg $ffmpeg) + $meta
+    }
     foreach ($j in $needFfmpeg) {
         $out = Join-Path $OutDir $j.File
         & $ffmpeg -y -hide_banner -loglevel error @sine @($j.Args) $out
