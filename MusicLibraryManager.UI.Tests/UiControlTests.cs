@@ -29,6 +29,36 @@ namespace MusicLibraryManager.UI.Tests;
 public sealed class UiControlTests
 {
     [AvaloniaFact]
+    public void Top_search_focus_is_drawn_by_the_full_composite_control()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        MainWindow window = services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Show();
+            window.Activate();
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+
+            Border chrome = window.FindControl<Border>("SearchChrome")!;
+            TextBox search = window.FindControl<TextBox>("SearchBox")!;
+            search.Focus();
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(new Thickness(2), chrome.BorderThickness);
+            Border inputBorder = search.GetVisualDescendants().OfType<Border>()
+                .Single(border => border.Name == "PART_BorderElement");
+            Assert.Equal(Colors.Transparent,
+                Assert.IsAssignableFrom<ISolidColorBrush>(inputBorder.Background).Color);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
     public void Data_grid_preserves_app_metrics_and_column_contract()
     {
         var grid = new AppDataGrid();
@@ -1342,6 +1372,62 @@ public sealed class UiControlTests
         finally
         {
             Application.Current.RequestedThemeVariant = previousTheme;
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Launch_time_search_loads_artwork_for_every_realized_library_row()
+    {
+        TrackRecord[] records = Enumerable.Range(0, 40).Select(index => new TrackRecord
+        {
+            Path = $@"X:\Fixture\Track {index:00}.flac",
+            Title = $"Track {index:00}",
+            Artist = "The Fixtures",
+            Album = "Launch Search",
+            CodecName = "FLAC",
+        }).ToArray();
+        using ServiceProvider services = BuildIsolatedServices(records);
+        App.UseServicesForTests(services);
+        MainWindow window = services.GetRequiredService<MainWindow>();
+        LibraryViewModel viewModel = services.GetRequiredService<LibraryViewModel>();
+        try
+        {
+            window.Show();
+            window.Width = 1440;
+            window.Height = 900;
+            window.Activate();
+
+            // This is the launch race: filtering navigates to Library while its first cached-row
+            // load and the DataGrid's initial layout are both still being scheduled.
+            viewModel.SetGlobalFilter("Track");
+            for (int attempt = 0; attempt < 40 && viewModel.Rows.Count != records.Length; attempt++)
+            {
+                Dispatcher.UIThread.RunJobs();
+                AvaloniaHeadlessPlatform.ForceRenderTimerTick(1);
+                await Task.Delay(5);
+            }
+
+            LibraryView library = Assert.IsType<LibraryView>(
+                window.FindControl<ContentControl>("ContentHost")!.Content);
+            AppDataGrid grid = library.FindControl<AppDataGrid>("LibraryGrid")!;
+            LibraryRow[] realized = [];
+            for (int attempt = 0; attempt < 40; attempt++)
+            {
+                Dispatcher.UIThread.RunJobs();
+                AvaloniaHeadlessPlatform.ForceRenderTimerTick(1);
+                realized = grid.GetVisualDescendants().OfType<DataGridRow>()
+                    .Select(row => row.DataContext).OfType<LibraryRow>().Distinct().ToArray();
+                if (realized.Length > 1 && realized.All(row => row.ThumbnailLoaded))
+                    break;
+                await Task.Delay(5);
+            }
+
+            Assert.True(realized.Length > 1);
+            Assert.All(realized, row => Assert.True(row.ThumbnailLoaded, row.Path));
+        }
+        finally
+        {
+            window.Hide();
         }
     }
 

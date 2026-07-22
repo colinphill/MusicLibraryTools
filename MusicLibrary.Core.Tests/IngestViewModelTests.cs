@@ -208,6 +208,68 @@ public sealed class IngestViewModelTests
     }
 
     [Fact]
+    public async Task ApplyProgressUpdatesEveryOutputRowForTheSource()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"ingest-progress-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        string configPath = Path.Combine(root, "library.xml");
+        string settingsPath = Path.Combine(root, "settings.json");
+        try
+        {
+            WriteReadyLibraryConfig(configPath);
+            var settings = new AppSettings(settingsPath);
+            settings.LoadConfig(configPath);
+            string source = Path.Combine(root, "track.flac");
+            var track = new IngestTrackPlan
+            {
+                Identity = "track", SourcePath = source, Title = "Song", Artist = "Artist",
+                AlbumArtist = "Artist", Album = "Album", TrackNumber = 1, TrackTotal = 1,
+                OriginalDiscNumber = 1, SampleRate = 44_100, BitsPerSample = 16, Channels = 2,
+                DurationInSeconds = 180, IsAlac = false, IsHighResolution = false,
+            };
+            IngestOutputPlan[] outputs =
+            [
+                new() { Identity = "track", Kind = IngestOutputKind.CdFlac, Metadata = track,
+                    SourcePath = source, DestinationPath = Path.Combine(root, "cd.flac") },
+                new() { Identity = "track", Kind = IngestOutputKind.Aac, Metadata = track,
+                    SourcePath = source, DestinationPath = Path.Combine(root, "aac.m4a") },
+            ];
+            var plan = new IngestPlan
+            {
+                Request = new(root),
+                Configuration = new IngestMusicConfiguration
+                {
+                    FfmpegPath = "ffmpeg", AacDestination = "aac", CdDestination = "cd",
+                    PairedCdDestination = "paired", HighResolutionDestination = "hires",
+                },
+                Albums = [new IngestAlbumPlan { Key = "album", Display = "Artist — Album",
+                    Tracks = [track], Outputs = outputs,
+                    Sources = [new IngestFileSnapshot(source, 10, DateTime.UtcNow)] }],
+                Files = [new(source, "CD FLAC", "Create outputs")],
+                RequiredApprovals = [], Conflicts = [], IgnoredFiles = [],
+            };
+            var ingest = new StubIngest(plan)
+            {
+                ApplyProgress = new IngestProgress("Artist — Album", "Encoding", 1, 3,
+                    source, IngestFileProgressState.InProgress),
+            };
+            var viewModel = new IngestViewModel(ingest, new StubFiles(), new StubDialogs(),
+                settings, new StubLibrary()) { SourceDirectory = root };
+
+            await viewModel.PreviewCommand.ExecuteAsync(null);
+            viewModel.SelectedPreviewFilter = IngestPreviewFilter.Outputs;
+            await viewModel.ApplyCommand.ExecuteAsync(null);
+
+            Assert.Equal(2, viewModel.Files.Count);
+            Assert.All(viewModel.Files, item => Assert.Contains("Encoding", item.ProgressText));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task RecentDropsAndPreflightPersistAsWorkflowState()
     {
         string root = Path.Combine(Path.GetTempPath(), $"ingest-vm-{Guid.NewGuid():N}");
@@ -297,14 +359,20 @@ public sealed class IngestViewModelTests
     private sealed class StubIngest(IngestPlan? plan = null) : IIngestMusicService
     {
         public int ApplyCalls { get; private set; }
+        public IngestProgress? ApplyProgress { get; init; }
         public Task<IngestPlan> PreviewAsync(IngestRequest request, CancellationToken ct = default) =>
             plan is null ? throw new NotSupportedException() : Task.FromResult(plan);
-        public Task<IngestResult> ApplyAsync(IngestPlan plan,
+        public async Task<IngestResult> ApplyAsync(IngestPlan plan,
             IReadOnlyList<IngestApprovalDecision> approvals, IProgress<IngestProgress>? progress = null,
             CancellationToken ct = default)
         {
             ApplyCalls++;
-            return Task.FromResult(new IngestResult([], false));
+            if (ApplyProgress is { } update)
+            {
+                progress?.Report(update);
+                await Task.Delay(20, ct);
+            }
+            return new IngestResult([], false);
         }
     }
 

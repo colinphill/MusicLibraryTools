@@ -368,9 +368,14 @@ public partial class IngestViewModel : ViewModelBase
                 ApplyProgress = p.CompletedItems;
                 StatusText = $"{p.Operation}: {p.Album} ({p.CompletedItems}/{p.TotalItems})";
                 if (p.SourcePath is not null && p.FileState is { } state)
-                    _allFiles.FirstOrDefault(file => !file.IsConflict &&
-                        string.Equals(file.Source, p.SourcePath, StringComparison.OrdinalIgnoreCase))
-                        ?.SetProgress(state, p.Operation);
+                {
+                    // A source row can have several output rows. Updating only the first match
+                    // leaves the Progress column blank whenever the Outputs filter is selected.
+                    foreach (IngestFileItemViewModel file in _allFiles.Where(file =>
+                                 !file.IsConflict && string.Equals(file.Source, p.SourcePath,
+                                     StringComparison.OrdinalIgnoreCase)))
+                        file.SetProgress(state, p.Operation);
+                }
                 if (activity is { } id)
                     _activities?.Report(id, StatusText,
                         p.TotalItems <= 0 ? null : (double)p.CompletedItems / p.TotalItems);

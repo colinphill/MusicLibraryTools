@@ -80,15 +80,14 @@
         <Border Grid.Row="0" Background="{DynamicResource AppPanelBrush}"
                 BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1">
           <Grid Margin="18,8" ColumnDefinitions="*,Auto" ColumnSpacing="10">
-            <Border MaxWidth="650" HorizontalAlignment="Stretch" Height="38" Padding="11,0"
-                    Background="{DynamicResource AppInsetBrush}"
-                    BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="9">
+            <Border x:Name="SearchChrome" Classes="top-search" MaxWidth="650" HorizontalAlignment="Stretch" Height="38" Padding="11,0"
+                    Background="{DynamicResource AppInsetBrush}" CornerRadius="9">
               <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
                 <Viewbox Width="16" Height="16" VerticalAlignment="Center" AutomationProperties.Name="Search">
                   <Path Data="M10,4 A6,6 0 1 0 10,16 A6,6 0 1 0 10,4 M14.5,14.5 L20,20"
                         Fill="Transparent" Stroke="{DynamicResource AppFaintTextBrush}" StrokeThickness="2" />
                 </Viewbox>
-                <TextBox x:Name="SearchBox" Grid.Column="1" Padding="0" BorderThickness="0" Background="Transparent"
+                <TextBox x:Name="SearchBox" Classes="top-search-input" Grid.Column="1" Padding="0" BorderThickness="0" Background="Transparent"
                          VerticalContentAlignment="Center"
                          Text="{Binding GlobalSearchText, Mode=TwoWay}" PlaceholderText="Search the library"
                          AutomationProperties.Name="Search the library"

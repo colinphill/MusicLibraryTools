@@ -389,6 +389,24 @@
     <Setter Property="Opacity" Value="0.58" />
   </Style>
 
+  <!-- The top search is one composite input. Keep the TextBox template transparent so its
+       focused fill does not stop short of the icon and shortcut, and focus the outer chrome. -->
+  <Style Selector="TextBox.top-search-input /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Border.top-search">
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+  </Style>
+  <Style Selector="Border.top-search:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
+  </Style>
+  <Style Selector="Border.top-search:focus-within">
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+
   <Style Selector="Border.result-card">
     <Setter Property="Background" Value="{DynamicResource AppRaisedBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />

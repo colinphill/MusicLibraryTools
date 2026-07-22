@@ -55,6 +55,15 @@ public partial class LibraryView : UserControl
         {
             var image = new Image { Width = 28, Height = 28, Stretch = Stretch.UniformToFill };
             image.Bind(Image.SourceProperty, new Binding(nameof(LibraryRow.ThumbnailSource)));
+            // LoadingRow can be raised before every initially visible row has completed its
+            // first layout when launch-time search navigation replaces ItemsSource. The artwork
+            // cell itself is the authoritative virtualization boundary, so also load when it is
+            // attached. LoadThumbnailAsync is idempotent when LoadingRow already did the work.
+            image.AttachedToVisualTree += (_, _) =>
+            {
+                if (image.DataContext is LibraryRow row)
+                    _ = _viewModel.LoadThumbnailAsync(row);
+            };
             return image;
         });
         _columns.AddRange([
