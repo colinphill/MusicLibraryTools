@@ -18,6 +18,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     private readonly IThemeService _theme;
     private EditableLibraryConfig _editing = EditableLibraryConfig.CreateNew();
     private bool _suppressDirty = true;
+    private bool _refreshingSyncTargetChoices;
     private readonly HashSet<INotifyPropertyChanged> _trackedRows = [];
 
     [ObservableProperty]
@@ -44,6 +45,9 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     [ObservableProperty] private bool _cleanCrossSyncPlaylists;
     [ObservableProperty] private LibraryProfile? _selectedLibraryProfile;
     [ObservableProperty] private LibraryProfileEditorRow? _advancedProfile;
+    [ObservableProperty] private LibraryIngestProfile? _selectedIngestProfile;
+    [ObservableProperty] private IngestProfileEditorRow? _advancedIngestProfile;
+    [ObservableProperty] private SettingsRootChoice? _selectedSyncTargetRoot;
     [ObservableProperty] private string _statusMessage = "Choose an existing configuration or create a new one.";
     [ObservableProperty] private string _selectedTheme;
     [ObservableProperty] private ThemeChoice? _selectedThemeChoice;
@@ -84,6 +88,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         ExportProfiles.CollectionChanged += OnTrackedCollectionChanged;
         settings.ConfigurationChanged += (_, _) => RefreshActiveConfiguration();
         RefreshProfileChoices();
+        RefreshIngestProfileChoices();
         RefreshActiveConfiguration();
         TrackRows(IndexTargets);
         TrackRows(SyncPlaylists);
@@ -101,8 +106,14 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     public ObservableCollection<PlaylistTargetEditorRow> PlaylistTargets { get; } = [];
     public ObservableCollection<ExportProfileEditorRow> ExportProfiles { get; } = [];
     public ObservableCollection<LibraryProfile> LibraryProfiles { get; } = [];
+    public ObservableCollection<LibraryIngestProfile> IngestProfiles { get; } = [];
+    public ObservableCollection<SettingsRootChoice> SyncTargetRootChoices { get; } = [];
     public bool CanDeleteSelectedProfile =>
         SelectedLibraryProfile?.Preset == LibraryProfilePreset.Custom;
+    public bool CanDeleteSelectedIngestProfile =>
+        SelectedIngestProfile is not null && IngestProfiles.Count > 1 &&
+        LibraryIngestProfilePresets.All.All(profile => !string.Equals(
+            profile.Id, SelectedIngestProfile.Id, StringComparison.OrdinalIgnoreCase));
     public IReadOnlyList<string> Themes { get; } = ["System", "Light", "Dark", "Steel Blue"];
     public IReadOnlyList<ThemeChoice> ThemeChoices { get; } =
     [
@@ -155,7 +166,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         {
             LibraryProfile? profile = AdvancedProfile?.Build() ?? SelectedLibraryProfile;
             if (profile is null)
-                return "No active library profile is selected.";
+                return "No root policy profile is selected.";
 
             string permissions = FormatPermissions(profile.DefaultRootPermissions);
             string naming = profile.Naming.UseItunesCanonicalNaming
@@ -163,16 +174,19 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                 : profile.Preset == LibraryProfilePreset.CatalogOnly
                     ? "existing paths are preserved"
                     : $"{profile.Naming.DirectoryTemplate}/{profile.Naming.FileNameTemplate}";
-            string ingest = profile.Ingest.Enabled
-                ? $"enabled; sources {profile.Ingest.SourceDisposition.ToString().ToLowerInvariant()}"
+            LibraryIngestProfile? ingestProfile = AdvancedIngestProfile?.Build() ??
+                SelectedIngestProfile;
+            string ingest = ingestProfile?.Ingest.Enabled == true
+                ? $"enabled; sources {ingestProfile.Ingest.SourceDisposition.ToString().ToLowerInvariant()}"
                 : "disabled; sources preserved";
             int writableRoots = IndexTargets.Count(root => !root.IsReadOnly);
             int profileOverrides = IndexTargets.Count(root => !string.Equals(
                 root.ProfileId, profile.Id, StringComparison.OrdinalIgnoreCase));
-            return $"Active profile: {profile.Name}{Environment.NewLine}" +
+            return $"Root policy being edited: {profile.Name}{Environment.NewLine}" +
                    $"New-root permissions: {permissions}{Environment.NewLine}" +
                    $"Naming: {naming}{Environment.NewLine}" +
-                   $"Discs: {FormatWords(profile.Disc.Strategy.ToString())}; ingest: {ingest}{Environment.NewLine}" +
+                   $"Discs: {FormatWords(profile.Disc.Strategy.ToString())}{Environment.NewLine}" +
+                   $"Ingest profile: {ingestProfile?.Name ?? "none"}; {ingest}{Environment.NewLine}" +
                    $"Configured roots: {IndexTargets.Count}; roots permitting changes: {writableRoots}; " +
                    $"root policy overrides: {profileOverrides}";
         }
@@ -223,9 +237,11 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                 : string.Join(", ", enabledRules.Select(rule =>
                     $"{rule.Id} ({rule.Severity.ToString().ToLowerInvariant()}" +
                     (rule.ApplyRepair ? ", apply" : rule.ProposeRepair ? ", propose" : "") + ")"));
-            LibraryIngestRecipe[] recipes = profile.Ingest.Recipes
+            LibraryIngestProfile? ingestProfile = AdvancedIngestProfile?.Build() ??
+                SelectedIngestProfile;
+            LibraryIngestRecipe[] recipes = (ingestProfile?.Ingest.Recipes ?? [])
                 .Where(recipe => recipe.Enabled).ToArray();
-            string ingest = !profile.Ingest.Enabled
+            string ingest = ingestProfile?.Ingest.Enabled != true
                 ? "disabled"
                 : recipes.Length == 0
                     ? "enabled, but no output recipes"
@@ -249,14 +265,15 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                    $"Recognized index formats: {formats}{Environment.NewLine}" +
                    $"Example destination: {example}{Environment.NewLine}" +
                    $"Collision behavior: {profile.Naming.CollisionPolicy}; Unicode preserved: {profile.Naming.PreserveUnicode}{Environment.NewLine}" +
-                   $"Naming limits: components {profile.Naming.ComponentLengthLimit?.ToString() ?? "application default"}; complete path {profile.Naming.CompletePathLengthLimit?.ToString() ?? "platform default"}{Environment.NewLine}" +
-                   $"Disc identity: {FormatWords(profile.Disc.Strategy.ToString())}; preserve disc tags: {profile.Disc.PreserveDiscTags}{Environment.NewLine}" +
+                   $"Naming limits: components {profile.Naming.ComponentLengthLimit?.ToString() ?? "application default"}; disc albums {profile.Naming.DiscAlbumLengthLimit?.ToString() ?? "component limit"}; complete path {profile.Naming.CompletePathLengthLimit?.ToString() ?? "platform default"}{Environment.NewLine}" +
+                   $"Disc identity: {FormatWords(profile.Disc.Strategy.ToString())}; disc tags: {(profile.Disc.Strategy == LibraryDiscStrategy.PreserveTags ? "preserved" : "removed")}{Environment.NewLine}" +
                    $"Metadata fidelity: ReplayGain {OnOff(profile.Metadata.PreserveReplayGain)}, MusicBrainz IDs {OnOff(profile.Metadata.PreserveMusicBrainzIdentifiers)}, custom fields {OnOff(profile.Metadata.PreserveCustomFields)}, compilation {OnOff(profile.Metadata.PreserveCompilationSemantics)}{Environment.NewLine}" +
                    $"Quality band: high resolution at {profile.Quality.HighResolutionMinimumSampleRateHz:N0} Hz or {profile.Quality.HighResolutionMinimumBitsPerSample}-bit{Environment.NewLine}" +
                    $"Enabled health rules: {rules}{Environment.NewLine}" +
                    $"Artwork: {profile.Artwork.Storage}, {FormatWords(profile.Artwork.Roles.ToString())}, {profile.Artwork.Encoding}{Environment.NewLine}" +
                    $"Unknown sidecars: {profile.Sidecars.UnknownFileDisposition}{Environment.NewLine}" +
-                   $"Ingest recipes: {ingest}; source disposition: {profile.Ingest.SourceDisposition}{Environment.NewLine}" +
+                   $"Ingest profile: {ingestProfile?.Name ?? "none"}; recipes: {ingest}; " +
+                   $"source disposition: {ingestProfile?.Ingest.SourceDisposition.ToString() ?? "Preserve"}{Environment.NewLine}" +
                    $"Integrations: {integrations}{Environment.NewLine}" +
                    $"Export profiles: {exports}{Environment.NewLine}" +
                    $"Root permissions:{Environment.NewLine}{roots}";
@@ -290,28 +307,49 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             CommitAdvancedProfile(updateProfileChoices: true);
         if (newValue is not null)
             _editing.ActiveProfileId = newValue.Id;
-        if (!_suppressDirty && newValue is not null)
-        {
-            foreach (IndexTargetEditorRow root in IndexTargets.Where(root =>
-                         oldValue is null || string.IsNullOrWhiteSpace(root.ProfileId) ||
-                         string.Equals(root.ProfileId, oldValue.Id,
-                             StringComparison.OrdinalIgnoreCase)))
-            {
-                bool usesPreviousDefaults = oldValue is not null &&
-                    root.Permissions == oldValue.DefaultRootPermissions;
-                root.ProfileId = newValue.Id;
-                if (string.IsNullOrWhiteSpace(root.Path) || usesPreviousDefaults)
-                {
-                    root.Permissions = newValue.DefaultRootPermissions;
-                    root.UseItunesCanonicalNaming = newValue.Naming.UseItunesCanonicalNaming;
-                }
-            }
-        }
         SetAdvancedProfile(newValue);
         DeleteLibraryProfileCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(CanDeleteSelectedProfile));
         OnPropertyChanged(nameof(EffectivePolicySummary));
         OnPropertyChanged(nameof(EffectivePolicyDetails));
+        if (!_suppressDirty && newValue is not null)
+            MarkDirty();
+    }
+
+    partial void OnSelectedIngestProfileChanged(
+        LibraryIngestProfile? oldValue,
+        LibraryIngestProfile? newValue)
+    {
+        if (!_suppressDirty && oldValue is not null)
+            CommitAdvancedIngestProfile(updateProfileChoices: true);
+        if (newValue is not null)
+            _editing.ActiveIngestProfileId = newValue.Id;
+        SetAdvancedIngestProfile(newValue);
+        DeleteIngestProfileCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(CanDeleteSelectedIngestProfile));
+        OnPropertyChanged(nameof(EffectivePolicySummary));
+        OnPropertyChanged(nameof(EffectivePolicyDetails));
+        if (!_suppressDirty && newValue is not null)
+            MarkDirty();
+    }
+
+    partial void OnSelectedSyncTargetRootChanged(SettingsRootChoice? value)
+    {
+        if (_refreshingSyncTargetChoices || value is null)
+            return;
+        _refreshingSyncTargetChoices = true;
+        try
+        {
+            foreach (IndexTargetEditorRow target in IndexTargets)
+                target.IsSyncTarget = value.Id is { } selectedId && target.Id == selectedId;
+        }
+        finally
+        {
+            _refreshingSyncTargetChoices = false;
+        }
+        OnPropertyChanged(nameof(EffectivePolicySummary));
+        OnPropertyChanged(nameof(EffectivePolicyDetails));
+        MarkDirty();
     }
 
     partial void OnSelectedThemeChanged(string value)
@@ -345,6 +383,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         nameof(DeleteStaleCrossSyncFiles),
         nameof(CleanCrossSyncPlaylists),
         nameof(SelectedLibraryProfile),
+        nameof(SelectedIngestProfile),
     ];
 
     private void OnOwnPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -362,6 +401,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             foreach (object item in e.NewItems)
                 TrackRow(item);
         RefreshDestinationRootChoices();
+        RefreshSyncTargetChoices();
         OnPropertyChanged(nameof(EffectivePolicySummary));
         OnPropertyChanged(nameof(EffectivePolicyDetails));
         MarkDirty();
@@ -386,11 +426,14 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         else if (row is LibraryProfileEditorRow profile)
         {
             profile.HealthRules.CollectionChanged += OnTrackedCollectionChanged;
-            profile.IngestRecipes.CollectionChanged += OnTrackedCollectionChanged;
             profile.SidecarRules.CollectionChanged += OnTrackedCollectionChanged;
             TrackRows(profile.HealthRules);
-            TrackRows(profile.IngestRecipes);
             TrackRows(profile.SidecarRules);
+        }
+        else if (row is IngestProfileEditorRow ingestProfile)
+        {
+            ingestProfile.Recipes.CollectionChanged += OnTrackedCollectionChanged;
+            TrackRows(ingestProfile.Recipes);
         }
     }
 
@@ -407,14 +450,17 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         else if (row is LibraryProfileEditorRow profile)
         {
             profile.HealthRules.CollectionChanged -= OnTrackedCollectionChanged;
-            profile.IngestRecipes.CollectionChanged -= OnTrackedCollectionChanged;
             profile.SidecarRules.CollectionChanged -= OnTrackedCollectionChanged;
             foreach (HealthRuleEditorRow rule in profile.HealthRules)
                 UntrackRow(rule);
-            foreach (IngestRecipeEditorRow recipe in profile.IngestRecipes)
-                UntrackRow(recipe);
             foreach (SidecarRuleEditorRow rule in profile.SidecarRules)
                 UntrackRow(rule);
+        }
+        else if (row is IngestProfileEditorRow ingestProfile)
+        {
+            ingestProfile.Recipes.CollectionChanged -= OnTrackedCollectionChanged;
+            foreach (IngestRecipeEditorRow recipe in ingestProfile.Recipes)
+                UntrackRow(recipe);
         }
     }
 
@@ -442,7 +488,14 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         if (sender is IndexTargetEditorRow && e.PropertyName is
             nameof(IndexTargetEditorRow.Id) or
             nameof(IndexTargetEditorRow.Path))
+        {
             RefreshDestinationRootChoices();
+            RefreshSyncTargetChoices();
+        }
+        else if (sender is IndexTargetEditorRow &&
+                 e.PropertyName == nameof(IndexTargetEditorRow.IsSyncTarget) &&
+                 !_refreshingSyncTargetChoices)
+            RefreshSyncTargetChoices();
         OnPropertyChanged(nameof(EffectivePolicySummary));
         OnPropertyChanged(nameof(EffectivePolicyDetails));
         MarkDirty();
@@ -474,7 +527,9 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     {
         var issues = new List<(int, string)>();
         if (SelectedLibraryProfile is null)
-            issues.Add((1, "Choose an active library profile."));
+            issues.Add((5, "Choose a root/naming policy."));
+        if (SelectedIngestProfile is null)
+            issues.Add((6, "Choose an active ingest profile."));
         if (!IndexTargets.Any(target => !string.IsNullOrWhiteSpace(target.Path)))
             issues.Add((1, "Add at least one library root."));
         foreach (IndexTargetEditorRow target in IndexTargets.Where(target =>
@@ -544,26 +599,31 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             try
             {
                 editedProfile = AdvancedProfile.Build();
-                LibraryProfileXml.Validate(editedProfile);
-                HashSet<Guid> rootIds = IndexTargets.Select(root => root.Id).ToHashSet();
-                foreach (LibraryIngestRecipe recipe in editedProfile.Ingest.Recipes)
-                {
-                    if (recipe.DestinationRootId is { } destinationRootId &&
-                        !rootIds.Contains(destinationRootId))
-                        issues.Add((5,
-                            $"Ingest recipe '{recipe.Id}' references unknown destination root " +
-                            $"'{destinationRootId:D}'."));
-                    if (recipe.NamingProfileId is { } namingId &&
-                        _editing.Profiles.All(profile => !string.Equals(profile.Id, namingId,
-                            StringComparison.OrdinalIgnoreCase)))
-                        issues.Add((5,
-                            $"Ingest recipe '{recipe.Id}' references unknown naming profile " +
-                            $"'{namingId}'."));
-                }
+                LibraryProfileXml.Validate(editedProfile, includeLegacyIngest: false);
             }
             catch (Exception error) when (error is InvalidDataException or ArgumentException)
             {
                 issues.Add((5, error.Message));
+            }
+        }
+        LibraryIngestProfile? editedIngestProfile = null;
+        if (AdvancedIngestProfile is not null)
+        {
+            try
+            {
+                editedIngestProfile = AdvancedIngestProfile.Build();
+                LibraryIngestProfileXml.Validate(editedIngestProfile);
+                HashSet<Guid> rootIds = IndexTargets.Select(root => root.Id).ToHashSet();
+                foreach (LibraryIngestRecipe recipe in editedIngestProfile.Ingest.Recipes)
+                    if (recipe.DestinationRootId is { } destinationRootId &&
+                        !rootIds.Contains(destinationRootId))
+                        issues.Add((6,
+                            $"Ingest recipe '{recipe.Id}' references unknown destination root " +
+                            $"'{destinationRootId:D}'."));
+            }
+            catch (Exception error) when (error is InvalidDataException or ArgumentException)
+            {
+                issues.Add((6, error.Message));
             }
         }
         var exportIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -580,9 +640,9 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                         StringComparison.OrdinalIgnoreCase)))
                     issues.Add((2, $"Export profile '{profile.Id}' references unknown naming profile '{namingId}'."));
                 if (profile.Transform.RecipeId is { } recipeId &&
-                    (editedProfile?.Ingest.Recipes.All(recipe => !string.Equals(recipe.Id,
+                    (editedIngestProfile?.Ingest.Recipes.All(recipe => !string.Equals(recipe.Id,
                         recipeId, StringComparison.OrdinalIgnoreCase)) ?? true) &&
-                    _editing.Profiles.SelectMany(item => item.Ingest.Recipes).All(recipe =>
+                    _editing.IngestProfiles.SelectMany(item => item.Ingest.Recipes).All(recipe =>
                         !string.Equals(recipe.Id, recipeId,
                             StringComparison.OrdinalIgnoreCase)))
                     issues.Add((2, $"Export profile '{profile.Id}' references unknown ingest recipe '{recipeId}'."));
@@ -658,6 +718,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         CleanCrossSyncPlaylists = false;
         _editing = EditableLibraryConfig.CreateNew();
         RefreshProfileChoices();
+        RefreshIngestProfileChoices();
         _suppressDirty = false;
         HasUnsavedChanges = false;
         ValidationSummary = null;
@@ -714,6 +775,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         _suppressDirty = true;
         _editing = EditableLibraryConfig.CreateNew();
         RefreshProfileChoices();
+        RefreshIngestProfileChoices();
         EditorPath = null;
         MachineBindingsFile = null;
         DatabaseFile = "cache.db";
@@ -759,7 +821,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     private void ReviewGuidedSetup()
     {
         CommitAdvancedProfile(updateProfileChoices: false);
-        SelectedTabIndex = 6;
+        SelectedTabIndex = 7;
     }
 
     [RelayCommand]
@@ -782,25 +844,16 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     {
         if (SelectedLibraryProfile is null)
             return;
+        string sourceId = SelectedLibraryProfile.Id;
         CommitAdvancedProfile(updateProfileChoices: true);
         LibraryProfile source = _editing.Profiles.Single(profile => string.Equals(
-            profile.Id, SelectedLibraryProfile.Id, StringComparison.OrdinalIgnoreCase));
+            profile.Id, sourceId, StringComparison.OrdinalIgnoreCase));
         string id = UniqueProfileId();
         LibraryProfile duplicate = source with
         {
             Id = id,
             Name = UniqueProfileName(source.Name + " copy"),
             Preset = LibraryProfilePreset.Custom,
-            Ingest = source.Ingest with
-            {
-                Recipes = source.Ingest.Recipes.Select(recipe => recipe with
-                {
-                    NamingProfileId = string.Equals(recipe.NamingProfileId, source.Id,
-                        StringComparison.OrdinalIgnoreCase)
-                            ? id
-                            : recipe.NamingProfileId,
-                }).ToArray(),
-            },
         };
         _editing.Profiles.Add(duplicate);
         LibraryProfiles.Add(duplicate);
@@ -825,10 +878,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                 profile.Id, selected.Id, StringComparison.OrdinalIgnoreCase));
         int rootReferences = IndexTargets.Count(root => string.Equals(
             root.ProfileId, selected.Id, StringComparison.OrdinalIgnoreCase));
-        int workflowReferences = _editing.Profiles.SelectMany(profile =>
-                profile.Ingest.Recipes).Count(recipe => string.Equals(
-                recipe.NamingProfileId, selected.Id, StringComparison.OrdinalIgnoreCase)) +
-            ExportProfiles.Count(profile => string.Equals(
+        int workflowReferences = ExportProfiles.Count(profile => string.Equals(
                 profile.NamingProfileId, selected.Id, StringComparison.OrdinalIgnoreCase));
         string reassignment = rootReferences + workflowReferences == 0
             ? "It has no configured references."
@@ -847,25 +897,6 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             foreach (IndexTargetEditorRow root in IndexTargets.Where(root => string.Equals(
                          root.ProfileId, selected.Id, StringComparison.OrdinalIgnoreCase)))
                 root.ProfileId = fallback.Id;
-            for (int index = 0; index < _editing.Profiles.Count; index++)
-            {
-                LibraryProfile profile = _editing.Profiles[index];
-                if (string.Equals(profile.Id, selected.Id, StringComparison.OrdinalIgnoreCase))
-                    continue;
-                _editing.Profiles[index] = profile with
-                {
-                    Ingest = profile.Ingest with
-                    {
-                        Recipes = profile.Ingest.Recipes.Select(recipe => recipe with
-                        {
-                            NamingProfileId = string.Equals(recipe.NamingProfileId,
-                                selected.Id, StringComparison.OrdinalIgnoreCase)
-                                    ? fallback.Id
-                                    : recipe.NamingProfileId,
-                        }).ToArray(),
-                    },
-                };
-            }
             foreach (ExportProfileEditorRow export in ExportProfiles.Where(export =>
                          string.Equals(export.NamingProfileId, selected.Id,
                              StringComparison.OrdinalIgnoreCase)))
@@ -885,6 +916,75 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             _suppressDirty = previousSuppression;
         }
         StatusMessage = $"Deleted profile '{selected.Name}' and reassigned its references.";
+        MarkDirty();
+    }
+
+    [RelayCommand]
+    private void CreateIngestProfile()
+    {
+        CommitAdvancedIngestProfile(updateProfileChoices: true);
+        string id = UniqueIngestProfileId();
+        var profile = new LibraryIngestProfile(
+            id,
+            UniqueIngestProfileName("New ingest profile"),
+            new(false, LibrarySourceDisposition.Preserve, true, []));
+        _editing.IngestProfiles.Add(profile);
+        IngestProfiles.Add(profile);
+        SelectedIngestProfile = profile;
+        StatusMessage = $"Created ingest profile '{profile.Name}'.";
+        MarkDirty();
+    }
+
+    [RelayCommand]
+    private void DuplicateIngestProfile()
+    {
+        if (SelectedIngestProfile is null)
+            return;
+        string sourceId = SelectedIngestProfile.Id;
+        CommitAdvancedIngestProfile(updateProfileChoices: true);
+        LibraryIngestProfile source = _editing.IngestProfiles.Single(profile => string.Equals(
+            profile.Id, sourceId, StringComparison.OrdinalIgnoreCase));
+        var duplicate = source with
+        {
+            Id = UniqueIngestProfileId(),
+            Name = UniqueIngestProfileName(source.Name + " copy"),
+        };
+        _editing.IngestProfiles.Add(duplicate);
+        IngestProfiles.Add(duplicate);
+        SelectedIngestProfile = duplicate;
+        StatusMessage = $"Duplicated ingest profile '{source.Name}'.";
+        MarkDirty();
+    }
+
+    private bool CanDeleteIngestProfile() => CanDeleteSelectedIngestProfile;
+
+    [RelayCommand(CanExecute = nameof(CanDeleteIngestProfile))]
+    private async Task DeleteIngestProfileAsync()
+    {
+        if (SelectedIngestProfile is null || !CanDeleteSelectedIngestProfile)
+            return;
+        string selectedId = SelectedIngestProfile.Id;
+        CommitAdvancedIngestProfile(updateProfileChoices: true);
+        LibraryIngestProfile selected = _editing.IngestProfiles.Single(profile =>
+            string.Equals(profile.Id, selectedId, StringComparison.OrdinalIgnoreCase));
+        LibraryIngestProfile fallback = IngestProfiles.First(profile =>
+            !string.Equals(profile.Id, selected.Id, StringComparison.OrdinalIgnoreCase));
+        if (!await _dialogs.ConfirmAsync(
+                $"Delete ingest profile '{selected.Name}'?",
+                $"The active ingest workflow will change to '{fallback.Name}'. " +
+                "This cannot be undone after saving.",
+                "Delete ingest profile"))
+            return;
+        _editing.IngestProfiles.RemoveAll(profile => string.Equals(
+            profile.Id, selected.Id, StringComparison.OrdinalIgnoreCase));
+        LibraryIngestProfile? selectedChoice = IngestProfiles.FirstOrDefault(profile =>
+            string.Equals(profile.Id, selectedId, StringComparison.OrdinalIgnoreCase));
+        if (selectedChoice is not null)
+            IngestProfiles.Remove(selectedChoice);
+        _editing.ActiveIngestProfileId = fallback.Id;
+        SelectedIngestProfile = IngestProfiles.Single(profile => string.Equals(
+            profile.Id, fallback.Id, StringComparison.OrdinalIgnoreCase));
+        StatusMessage = $"Deleted ingest profile '{selected.Name}'.";
         MarkDirty();
     }
 
@@ -926,13 +1026,6 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         foreach (IndexTargetEditorRow target in IndexTargets)
             if (target.Memberships.Remove(membership))
                 return;
-    }
-
-    [RelayCommand]
-    private void ClearSyncTarget()
-    {
-        foreach (IndexTargetEditorRow target in IndexTargets)
-            target.IsSyncTarget = false;
     }
 
     [RelayCommand]
@@ -989,13 +1082,13 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
 
     [RelayCommand]
     private void AddIngestRecipe() =>
-        AdvancedProfile?.IngestRecipes.Add(IngestRecipeEditorRow.Create());
+        AdvancedIngestProfile?.Recipes.Add(IngestRecipeEditorRow.Create());
 
     [RelayCommand]
     private void RemoveIngestRecipe(IngestRecipeEditorRow? row)
     {
         if (row is not null)
-            AdvancedProfile?.IngestRecipes.Remove(row);
+            AdvancedIngestProfile?.Recipes.Remove(row);
     }
 
     [RelayCommand]
@@ -1127,6 +1220,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         {
             _editing = EditableLibraryConfig.Load(path);
             RefreshProfileChoices();
+            RefreshIngestProfileChoices();
             EditorPath = path;
             MachineBindingsFile = _editing.MachineBindingsFile;
             DatabaseFile = _editing.DatabaseFile;
@@ -1215,9 +1309,13 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         try
         {
             CommitAdvancedProfile(updateProfileChoices: false);
+            CommitAdvancedIngestProfile(updateProfileChoices: false);
             _editing.ActiveProfileId = SelectedLibraryProfile?.Id ??
-                throw new InvalidDataException("Choose an active library profile.");
-            ApplyAdvancedCompatibilityDefaults(_editing.ActiveProfile);
+                throw new InvalidDataException("Choose a root/naming policy.");
+            _editing.ActiveIngestProfileId = SelectedIngestProfile?.Id ??
+                throw new InvalidDataException("Choose an active ingest profile.");
+            ApplyAdvancedCompatibilityDefaults(
+                _editing.ActiveProfile, _editing.ActiveIngestProfile);
             _editing.MachineBindingsFile = CleanOptional(MachineBindingsFile);
             _editing.DatabaseFile = string.IsNullOrWhiteSpace(DatabaseFile) ? "cache.db" : DatabaseFile.Trim();
             _editing.ItunesLibraryPath = string.IsNullOrWhiteSpace(ItunesLibraryPath) ? null : ItunesLibraryPath.Trim();
@@ -1249,7 +1347,6 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                         row.IndexExcludePatterns)];
                     target.Filter = string.IsNullOrWhiteSpace(row.Filter) ? null : row.Filter.Trim();
                     target.Organize = row.AllowOrganization;
-                    target.UseItunesCanonicalNaming = row.UseItunesCanonicalNaming;
                     target.IsSyncTarget = row.IsSyncTarget;
                     target.Memberships = row.Memberships
                         .SelectMany(membership => LibraryConfiguration
@@ -1342,8 +1439,19 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             LibraryProfiles.Add(profile);
         SelectedLibraryProfile = LibraryProfiles.FirstOrDefault(profile => string.Equals(
             profile.Id, _editing.ActiveProfileId, StringComparison.OrdinalIgnoreCase));
+        foreach (IndexTargetEditorRow root in IndexTargets)
+            root.RefreshProfileChoices(LibraryProfiles);
         OnPropertyChanged(nameof(EffectivePolicySummary));
         OnPropertyChanged(nameof(EffectivePolicyDetails));
+    }
+
+    private void RefreshIngestProfileChoices()
+    {
+        IngestProfiles.Clear();
+        foreach (LibraryIngestProfile profile in _editing.IngestProfiles)
+            IngestProfiles.Add(profile);
+        SelectedIngestProfile = IngestProfiles.FirstOrDefault(profile => string.Equals(
+            profile.Id, _editing.ActiveIngestProfileId, StringComparison.OrdinalIgnoreCase));
     }
 
     private void SetAdvancedProfile(LibraryProfile? profile)
@@ -1358,12 +1466,48 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         RefreshDestinationRootChoices();
     }
 
+    private void SetAdvancedIngestProfile(LibraryIngestProfile? profile)
+    {
+        if (AdvancedIngestProfile is not null)
+            UntrackRow(AdvancedIngestProfile);
+        AdvancedIngestProfile = profile is null
+            ? null
+            : IngestProfileEditorRow.From(profile);
+        if (AdvancedIngestProfile is not null)
+            TrackRow(AdvancedIngestProfile);
+        RefreshDestinationRootChoices();
+    }
+
     private void RefreshDestinationRootChoices()
     {
-        if (AdvancedProfile is null)
+        if (AdvancedIngestProfile is null)
             return;
-        foreach (IngestRecipeEditorRow recipe in AdvancedProfile.IngestRecipes)
+        foreach (IngestRecipeEditorRow recipe in AdvancedIngestProfile.Recipes)
             recipe.RefreshDestinationRootChoices(IndexTargets);
+    }
+
+    private void RefreshSyncTargetChoices()
+    {
+        Guid? selectedId = IndexTargets.FirstOrDefault(target => target.IsSyncTarget)?.Id;
+        _refreshingSyncTargetChoices = true;
+        try
+        {
+            SyncTargetRootChoices.Clear();
+            SyncTargetRootChoices.Add(new(null, "No sync target"));
+            foreach (IndexTargetEditorRow root in IndexTargets)
+            {
+                string label = string.IsNullOrWhiteSpace(root.Path)
+                    ? "New library root"
+                    : root.Path.Trim();
+                SyncTargetRootChoices.Add(new(root.Id, label));
+            }
+            SelectedSyncTargetRoot = SyncTargetRootChoices.First(choice =>
+                choice.Id == selectedId);
+        }
+        finally
+        {
+            _refreshingSyncTargetChoices = false;
+        }
     }
 
     private void CommitAdvancedProfile(bool updateProfileChoices)
@@ -1383,14 +1527,30 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             LibraryProfiles[choiceIndex] = updated;
     }
 
-    private void ApplyAdvancedCompatibilityDefaults(LibraryProfile profile)
+    private void CommitAdvancedIngestProfile(bool updateProfileChoices)
     {
-        if (profile.Naming.ComponentLengthLimit is { } componentLimit)
-        {
-            _editing.LengthLimit = componentLimit;
-            _editing.DiscNumLengthLimit = componentLimit;
-        }
-        LibraryIngestRecipe? aac = profile.Ingest.Recipes.FirstOrDefault(recipe =>
+        if (AdvancedIngestProfile is null)
+            return;
+        LibraryIngestProfile updated = AdvancedIngestProfile.Build();
+        int editingIndex = _editing.IngestProfiles.FindIndex(profile => string.Equals(
+            profile.Id, updated.Id, StringComparison.OrdinalIgnoreCase));
+        if (editingIndex >= 0)
+            _editing.IngestProfiles[editingIndex] = updated;
+        if (!updateProfileChoices)
+            return;
+        int choiceIndex = IngestProfiles.ToList().FindIndex(profile => string.Equals(
+            profile.Id, updated.Id, StringComparison.OrdinalIgnoreCase));
+        if (choiceIndex >= 0)
+            IngestProfiles[choiceIndex] = updated;
+    }
+
+    private void ApplyAdvancedCompatibilityDefaults(
+        LibraryProfile profile,
+        LibraryIngestProfile ingestProfile)
+    {
+        _editing.LengthLimit = profile.Naming.ComponentLengthLimit ?? 255;
+        _editing.DiscNumLengthLimit = profile.Naming.DiscAlbumLengthLimit ?? 255;
+        LibraryIngestRecipe? aac = ingestProfile.Ingest.Recipes.FirstOrDefault(recipe =>
             recipe.Action == LibraryIngestAction.Transcode &&
             (string.Equals(recipe.Codec, "aac", StringComparison.OrdinalIgnoreCase) ||
              string.Equals(recipe.OutputExtension, ".m4a",
@@ -1411,6 +1571,26 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         return id;
     }
 
+    private string UniqueIngestProfileId()
+    {
+        string id;
+        do
+            id = "ingest-" + Guid.NewGuid().ToString("N")[..12];
+        while (_editing.IngestProfiles.Any(profile => string.Equals(
+            profile.Id, id, StringComparison.OrdinalIgnoreCase)));
+        return id;
+    }
+
+    private string UniqueIngestProfileName(string basis)
+    {
+        string name = basis;
+        int suffix = 2;
+        while (_editing.IngestProfiles.Any(profile => string.Equals(
+                   profile.Name, name, StringComparison.OrdinalIgnoreCase)))
+            name = $"{basis} {suffix++}";
+        return name;
+    }
+
     private string UniqueProfileName(string desired)
     {
         string name = desired;
@@ -1426,7 +1606,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         string profileId = CleanOptional(target.ProfileId) ?? _editing.ActiveProfileId;
         LibraryProfile profile = _editing.Profiles.FirstOrDefault(candidate => string.Equals(
             candidate.Id, profileId, StringComparison.OrdinalIgnoreCase)) ?? _editing.ActiveProfile;
-        return new IndexTargetEditorRow
+        var row = new IndexTargetEditorRow
         {
             Id = target.Id,
             Path = target.Target,
@@ -1438,11 +1618,12 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                 ? null : string.Join("; ", target.IndexIncludePatterns),
             IndexExcludePatterns = target.IndexExcludePatterns.Count == 0
                 ? null : string.Join("; ", target.IndexExcludePatterns),
-            UseItunesCanonicalNaming = target.UseItunesCanonicalNaming,
             IsSyncTarget = target.IsSyncTarget,
             Permissions = target.Permissions ?? profile.DefaultRootPermissions,
             Source = target,
         };
+        row.RefreshProfileChoices(LibraryProfiles);
+        return row;
     }
 
     private static string? EffectiveOffset(

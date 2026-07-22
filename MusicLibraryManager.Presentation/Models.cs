@@ -257,6 +257,7 @@ public partial class ArtworkPreviewItem : ObservableObject
 
 public partial class IndexTargetEditorRow : ObservableObject
 {
+    private bool _refreshingProfileChoices;
     [ObservableProperty]
     private Guid _id = Guid.NewGuid();
 
@@ -265,6 +266,11 @@ public partial class IndexTargetEditorRow : ObservableObject
 
     [ObservableProperty]
     private string? _profileId;
+
+    [ObservableProperty]
+    private SettingsProfileChoice? _profileChoice;
+
+    public ObservableCollection<SettingsProfileChoice> ProfileChoices { get; } = [];
 
     [ObservableProperty]
     private string? _filter;
@@ -342,9 +348,6 @@ public partial class IndexTargetEditorRow : ObservableObject
         : "Allowed changes: " + string.Join(", ", PermissionLabels());
 
     [ObservableProperty]
-    private bool _useItunesCanonicalNaming;
-
-    [ObservableProperty]
     private bool _isSyncTarget;
 
     public ObservableCollection<IndexTargetSetEditorRow> Memberships { get; } = [];
@@ -355,6 +358,45 @@ public partial class IndexTargetEditorRow : ObservableObject
     {
         if (value)
             AllowSynchronizationOutput = true;
+    }
+
+    partial void OnProfileChoiceChanged(SettingsProfileChoice? value)
+    {
+        if (!_refreshingProfileChoices && value is not null)
+            ProfileId = value.Id;
+    }
+
+    partial void OnProfileIdChanged(string? value)
+    {
+        if (_refreshingProfileChoices)
+            return;
+        _refreshingProfileChoices = true;
+        try
+        {
+            ProfileChoice = ProfileChoices.FirstOrDefault(choice => string.Equals(
+                choice.Id, value, StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            _refreshingProfileChoices = false;
+        }
+    }
+
+    public void RefreshProfileChoices(IEnumerable<LibraryProfile> profiles)
+    {
+        _refreshingProfileChoices = true;
+        try
+        {
+            ProfileChoices.Clear();
+            foreach (LibraryProfile profile in profiles)
+                ProfileChoices.Add(new(profile.Id, profile.Name));
+            ProfileChoice = ProfileChoices.FirstOrDefault(choice => string.Equals(
+                choice.Id, ProfileId, StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            _refreshingProfileChoices = false;
+        }
     }
 
     private bool HasPermission(LibraryRootPermissions permission) =>
@@ -584,6 +626,11 @@ public sealed record SettingsRootChoice(Guid? Id, string Label)
     public override string ToString() => Label;
 }
 
+public sealed record SettingsProfileChoice(string Id, string Label)
+{
+    public override string ToString() => Label;
+}
+
 public partial class IngestRecipeEditorRow : ObservableObject
 {
     public required LibraryIngestRecipe Source { get; init; }
@@ -613,7 +660,6 @@ public partial class IngestRecipeEditorRow : ObservableObject
     [ObservableProperty] private int? _bitsPerSample;
     [ObservableProperty] private SettingsChannelChoice _outputChannelChoice =
         SettingsChoiceLists.ChannelChoices[0];
-    [ObservableProperty] private string? _namingProfileId;
     [ObservableProperty] private bool _preserveMetadata = true;
     [ObservableProperty] private bool _preserveArtwork = true;
     [ObservableProperty] private bool _useProfileCollision = true;
@@ -653,7 +699,6 @@ public partial class IngestRecipeEditorRow : ObservableObject
         SampleRateHz = recipe.SampleRateHz,
         BitsPerSample = recipe.BitsPerSample,
         OutputChannelChoice = SettingsChoiceLists.ChannelChoice(recipe.OutputChannels),
-        NamingProfileId = recipe.NamingProfileId,
         PreserveMetadata = recipe.PreserveMetadata,
         PreserveArtwork = recipe.PreserveArtwork,
         UseProfileCollision = recipe.CollisionPolicy is null,
@@ -680,7 +725,6 @@ public partial class IngestRecipeEditorRow : ObservableObject
         SampleRateHz: null,
         BitsPerSample: null,
         OutputChannels: LibraryChannelSelection.Stereo,
-        NamingProfileId: null,
         PreserveMetadata: true,
         PreserveArtwork: true,
         CollisionPolicy: null));
@@ -715,7 +759,6 @@ public partial class IngestRecipeEditorRow : ObservableObject
             SampleRateHz = SampleRateHz,
             BitsPerSample = BitsPerSample,
             OutputChannels = OutputChannelChoice.Value,
-            NamingProfileId = Clean(NamingProfileId),
             PreserveMetadata = PreserveMetadata,
             PreserveArtwork = PreserveArtwork,
             CollisionPolicy = UseProfileCollision ? null : CollisionPolicy,
@@ -763,6 +806,46 @@ public partial class IngestRecipeEditorRow : ObservableObject
             _refreshingDestinationRoots = false;
         }
     }
+}
+
+public partial class IngestProfileEditorRow : ObservableObject
+{
+    public required LibraryIngestProfile Source { get; init; }
+    public string Id => Source.Id;
+    public bool IsBuiltIn => LibraryIngestProfilePresets.All.Any(profile => string.Equals(
+        profile.Id, Id, StringComparison.OrdinalIgnoreCase));
+    [ObservableProperty] private string _name = "";
+    [ObservableProperty] private bool _enabled;
+    [ObservableProperty] private LibrarySourceDisposition _sourceDisposition;
+    [ObservableProperty] private bool _preserveSidecars;
+    public ObservableCollection<IngestRecipeEditorRow> Recipes { get; } = [];
+
+    public static IngestProfileEditorRow From(LibraryIngestProfile profile)
+    {
+        var editor = new IngestProfileEditorRow
+        {
+            Source = profile,
+            Name = profile.Name,
+            Enabled = profile.Ingest.Enabled,
+            SourceDisposition = profile.Ingest.SourceDisposition,
+            PreserveSidecars = profile.Ingest.PreserveSidecars,
+        };
+        foreach (LibraryIngestRecipe recipe in profile.Ingest.Recipes)
+            editor.Recipes.Add(IngestRecipeEditorRow.From(recipe));
+        return editor;
+    }
+
+    public LibraryIngestProfile Build() => Source with
+    {
+        Name = Name.Trim(),
+        Ingest = Source.Ingest with
+        {
+            Enabled = Enabled,
+            SourceDisposition = SourceDisposition,
+            PreserveSidecars = PreserveSidecars,
+            Recipes = Recipes.Select(recipe => recipe.Build()).ToArray(),
+        },
+    };
 }
 
 public partial class SidecarRuleEditorRow : ObservableObject
@@ -815,6 +898,7 @@ public partial class LibraryProfileEditorRow : ObservableObject
     [ObservableProperty] private int _trackPadding;
     [ObservableProperty] private int _discPadding;
     [ObservableProperty] private LibraryPathCollisionPolicy _collisionPolicy;
+    [ObservableProperty] private bool _useItunesCanonicalNaming;
     [ObservableProperty] private bool _preserveUnicode;
     [ObservableProperty] private string _invalidCharacterReplacement = "_";
     [ObservableProperty] private string _missingArtistFallback = "Unknown Artist";
@@ -823,11 +907,11 @@ public partial class LibraryProfileEditorRow : ObservableObject
     [ObservableProperty] private string _compilationValue = "Compilations";
     [ObservableProperty] private LibraryUnicodeNormalization _unicodeNormalization;
     [ObservableProperty] private int? _componentLengthLimit;
+    [ObservableProperty] private int? _discAlbumLengthLimit;
     [ObservableProperty] private int? _completePathLengthLimit;
     [ObservableProperty] private LibraryDiscStrategy _discStrategy;
     [ObservableProperty] private LibraryTrackTotalScope _trackTotalScope;
     [ObservableProperty] private bool _inferAlbumSuffix;
-    [ObservableProperty] private bool _preserveDiscTags;
     [ObservableProperty] private bool _identityUsesAlbumArtist;
     [ObservableProperty] private bool _identityStripsFormatSuffixes;
     [ObservableProperty] private bool _identityStripsDiscSuffixes;
@@ -838,9 +922,6 @@ public partial class LibraryProfileEditorRow : ObservableObject
     [ObservableProperty] private bool _preserveCompilationSemantics;
     [ObservableProperty] private int _highResolutionMinimumSampleRateHz;
     [ObservableProperty] private int _highResolutionMinimumBitsPerSample;
-    [ObservableProperty] private bool _ingestEnabled;
-    [ObservableProperty] private LibrarySourceDisposition _sourceDisposition;
-    [ObservableProperty] private bool _preserveSidecars;
     [ObservableProperty] private LibraryArtworkStorage _artworkStorage;
     [ObservableProperty] private LibraryArtworkRoleSelection _artworkRoles;
     [ObservableProperty] private LibraryArtworkEncoding _artworkEncoding;
@@ -851,7 +932,6 @@ public partial class LibraryProfileEditorRow : ObservableObject
     [ObservableProperty] private LibrarySidecarDisposition _unknownSidecarDisposition;
 
     public ObservableCollection<HealthRuleEditorRow> HealthRules { get; } = [];
-    public ObservableCollection<IngestRecipeEditorRow> IngestRecipes { get; } = [];
     public ObservableCollection<SidecarRuleEditorRow> SidecarRules { get; } = [];
 
     public static LibraryProfileEditorRow From(LibraryProfile profile)
@@ -865,6 +945,7 @@ public partial class LibraryProfileEditorRow : ObservableObject
             TrackPadding = profile.Naming.TrackPadding,
             DiscPadding = profile.Naming.DiscPadding,
             CollisionPolicy = profile.Naming.CollisionPolicy,
+            UseItunesCanonicalNaming = profile.Naming.UseItunesCanonicalNaming,
             PreserveUnicode = profile.Naming.PreserveUnicode,
             InvalidCharacterReplacement = profile.Naming.InvalidCharacterReplacement,
             MissingArtistFallback = profile.Naming.MissingArtistFallback,
@@ -873,11 +954,11 @@ public partial class LibraryProfileEditorRow : ObservableObject
             CompilationValue = profile.Naming.CompilationValue,
             UnicodeNormalization = profile.Naming.UnicodeNormalization,
             ComponentLengthLimit = profile.Naming.ComponentLengthLimit,
+            DiscAlbumLengthLimit = profile.Naming.DiscAlbumLengthLimit,
             CompletePathLengthLimit = profile.Naming.CompletePathLengthLimit,
             DiscStrategy = profile.Disc.Strategy,
             TrackTotalScope = profile.Disc.TrackTotalScope,
             InferAlbumSuffix = profile.Disc.InferAlbumSuffix,
-            PreserveDiscTags = profile.Disc.PreserveDiscTags,
             IdentityUsesAlbumArtist = profile.AlbumIdentity.UseAlbumArtist,
             IdentityStripsFormatSuffixes = profile.AlbumIdentity.StripFormatSuffixes,
             IdentityStripsDiscSuffixes = profile.AlbumIdentity.StripDiscSuffixes,
@@ -892,9 +973,6 @@ public partial class LibraryProfileEditorRow : ObservableObject
                 profile.Quality.HighResolutionMinimumSampleRateHz,
             HighResolutionMinimumBitsPerSample =
                 profile.Quality.HighResolutionMinimumBitsPerSample,
-            IngestEnabled = profile.Ingest.Enabled,
-            SourceDisposition = profile.Ingest.SourceDisposition,
-            PreserveSidecars = profile.Ingest.PreserveSidecars,
             ArtworkStorage = profile.Artwork.Storage,
             ArtworkRoles = profile.Artwork.Roles,
             ArtworkEncoding = profile.Artwork.Encoding,
@@ -913,8 +991,6 @@ public partial class LibraryProfileEditorRow : ObservableObject
                 ProposeRepair = rule.ProposeRepair,
                 ApplyRepair = rule.ApplyRepair,
             });
-        foreach (LibraryIngestRecipe recipe in profile.Ingest.Recipes)
-            editor.IngestRecipes.Add(IngestRecipeEditorRow.From(recipe));
         foreach (LibrarySidecarRule rule in profile.Sidecars.Rules)
             editor.SidecarRules.Add(SidecarRuleEditorRow.From(rule));
         return editor;
@@ -930,6 +1006,7 @@ public partial class LibraryProfileEditorRow : ObservableObject
             TrackPadding = TrackPadding,
             DiscPadding = DiscPadding,
             CollisionPolicy = CollisionPolicy,
+            UseItunesCanonicalNaming = UseItunesCanonicalNaming,
             PreserveUnicode = PreserveUnicode,
             InvalidCharacterReplacement = InvalidCharacterReplacement,
             MissingArtistFallback = MissingArtistFallback,
@@ -938,6 +1015,7 @@ public partial class LibraryProfileEditorRow : ObservableObject
             CompilationValue = CompilationValue,
             UnicodeNormalization = UnicodeNormalization,
             ComponentLengthLimit = ComponentLengthLimit,
+            DiscAlbumLengthLimit = DiscAlbumLengthLimit,
             CompletePathLengthLimit = CompletePathLengthLimit,
         },
         Disc = Source.Disc with
@@ -945,7 +1023,6 @@ public partial class LibraryProfileEditorRow : ObservableObject
             Strategy = DiscStrategy,
             TrackTotalScope = TrackTotalScope,
             InferAlbumSuffix = InferAlbumSuffix,
-            PreserveDiscTags = PreserveDiscTags,
         },
         AlbumIdentity = Source.AlbumIdentity with
         {
@@ -967,13 +1044,6 @@ public partial class LibraryProfileEditorRow : ObservableObject
             HighResolutionMinimumBitsPerSample = HighResolutionMinimumBitsPerSample,
         },
         Health = new(HealthRules.Select(rule => rule.Build()).ToArray()),
-        Ingest = Source.Ingest with
-        {
-            Enabled = IngestEnabled,
-            SourceDisposition = SourceDisposition,
-            PreserveSidecars = PreserveSidecars,
-            Recipes = IngestRecipes.Select(recipe => recipe.Build()).ToArray(),
-        },
         Artwork = Source.Artwork with
         {
             Storage = ArtworkStorage,

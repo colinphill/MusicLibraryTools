@@ -60,14 +60,7 @@ public sealed record IngestMusicConfiguration
             LibrarySidecarDisposition.Quarantine or LibrarySidecarDisposition.Delete);
 
     public LibraryProfile ResolveProfile(LibraryIngestRecipe recipe)
-    {
-        string profileId = string.IsNullOrWhiteSpace(recipe.NamingProfileId)
-            ? Profile.Id
-            : recipe.NamingProfileId;
-        return Profiles.TryGetValue(profileId, out LibraryProfile? profile)
-            ? profile
-            : Profile;
-    }
+        => ResolveDestinationProfile(recipe);
 
     public LibraryIndexLocation? ResolveTarget(LibraryIngestRecipe recipe)
     {
@@ -91,11 +84,14 @@ public sealed record IngestMusicConfiguration
         ArgumentNullException.ThrowIfNull(configuration);
         LibraryIndexLocation[] locations = configuration.IndexLocations.ToArray();
         LibraryProfile profile = ResolveLegacyRecipeDestinations(
-            configuration.ActiveProfile, locations, configuration.ItunesLibraryPath);
+            configuration.ActiveProfile with
+            {
+                Ingest = configuration.ActiveIngestProfile.Ingest,
+            }, locations, configuration.ItunesLibraryPath);
         if (!profile.Ingest.Enabled)
             return [
-                $"The active profile '{profile.Name}' does not enable ingest. " +
-                "Choose an ingest-enabled profile or add an ingest recipe."
+            $"The active ingest profile '{configuration.ActiveIngestProfile.Name}' does not " +
+                "enable ingest. Choose an ingest-enabled profile or add an ingest recipe."
             ];
         var missing = new List<string>();
         foreach (LibraryIngestRecipe recipe in profile.Ingest.Recipes.Where(item => item.Enabled))
@@ -133,7 +129,10 @@ public sealed record IngestMusicConfiguration
         LibraryIndexLocation[] locations = configuration.IndexLocations.ToArray();
         LibraryIngestSettings settings = configuration.IngestSettings;
         LibraryProfile profile = ResolveLegacyRecipeDestinations(
-            configuration.ActiveProfile, locations, configuration.ItunesLibraryPath);
+            configuration.ActiveProfile with
+            {
+                Ingest = configuration.ActiveIngestProfile.Ingest,
+            }, locations, configuration.ItunesLibraryPath);
         string RecipeDestination(string recipeId) => profile.Ingest.Recipes
             .FirstOrDefault(recipe => string.Equals(
                 recipe.Id, recipeId, StringComparison.OrdinalIgnoreCase)) is { } recipe

@@ -249,7 +249,7 @@ public sealed class GenericProfileLegacyCompatibilityGoldenTests
             .Save(configurationPath);
 
         EditableLibraryConfig editable = EditableLibraryConfig.Load(configurationPath);
-        LibraryProfile projectedLegacy = Assert.Single(editable.Profiles,
+        LibraryIngestProfile projectedLegacy = Assert.Single(editable.IngestProfiles,
             profile => profile.Id == LibraryProfilePresets.LegacyId);
         Assert.Equal(LibrarySourceDisposition.Delete,
             projectedLegacy.Ingest.SourceDisposition);
@@ -257,7 +257,7 @@ public sealed class GenericProfileLegacyCompatibilityGoldenTests
         editable.Save(configurationPath);
 
         var migrated = new LibraryConfiguration(configurationPath);
-        LibraryProfile persistedLegacy = Assert.Single(migrated.Profiles,
+        LibraryIngestProfile persistedLegacy = Assert.Single(migrated.IngestProfiles,
             profile => profile.Id == LibraryProfilePresets.LegacyId);
         Assert.Equal(LibraryConfigurationSchema.CurrentVersion, migrated.SchemaVersion);
         Assert.Equal(LibrarySourceDisposition.Delete,

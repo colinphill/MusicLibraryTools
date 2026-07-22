@@ -38,25 +38,12 @@ Keep separate configurations for an archival library and a portable player. Open
 
 Library roots define where music is indexed, what each root may be used for, and how roots participate in named library sets.
 
-### Active library profile
-
-A profile bundles naming, metadata, ingest, artwork, health, and sidecar policies. Built-in profiles are protected; duplicate one before changing its advanced policy.
-
-| Built-in profile | Intended behavior |
-| --- | --- |
-| Catalog only | Indexes a library without granting write or ingest permissions. |
-| Preserve layout + tag editing | Allows metadata and artwork updates while preserving the existing file layout. |
-| Artist/Album organizer | Allows metadata, artwork, moves, and renames using generic Artist/Album naming. |
-| iTunes Media | Organizes with iTunes-compatible naming and layout. |
-| Legacy MusicLibraryTools | Preserves the historical MusicLibraryTools behavior, including legacy ingest and organization choices. |
-
-**New** creates a custom profile. **Duplicate** is the normal way to customize a built-in profile. **Delete** removes a custom profile only; any roots, recipes, or exports that refer to it must first be corrected.
-
 ### Root settings
 
 | Parameter | Description | Example |
 | --- | --- | --- |
 | Root path | Directory to index. A relative path is resolved beside the configuration file. An offline path produces a warning rather than making the configuration unsavable. | D:\Music or ../Library |
+| Naming and root policy | Policy assigned to this root. Policies are created and edited on **Root/Naming policy**. Ingest output sent to this root always uses this policy's naming rules. | Select **Artist/Album organizer** for an archive root and **iTunes Media** for an iTunes-compatible root. |
 | Formats to index | Comma-separated registered extensions to index. Leave blank to use all supported formats. This affects catalog indexing. | .flac, .m4a |
 | Include patterns | Optional semicolon-separated simple glob patterns. A pattern containing a slash matches the root-relative path; otherwise it matches the filename. Matching is case-insensitive on Windows and case-sensitive on macOS/Linux. | Music/**; *.flac |
 | Exclude patterns | Optional glob patterns using the same rules as includes. Exclusions win over inclusions. | Temp/**; *.tmp |
@@ -66,8 +53,6 @@ A profile bundles naming, metadata, ingest, artwork, health, and sidecar policie
 | Organize files | Grants permission to move or rename files according to a naming profile. | Enable for an Artist/Album managed library. |
 | Ingest output | Allows enabled ingest recipes to create output in this root. | Enable on the normalized destination library. |
 | Sync output | Allows sync or export operations to mutate this root. | Enable on a mirrored portable-device library. |
-| iTunes canonical naming | Uses iTunes-compatible canonical naming for this root. | Use for an iTunes Media directory. |
-| Sync target | Marks the root as the cross-library sync destination. Only one root may be selected. Selecting it also enables **Sync output**. | Select the portable copy that should receive archive changes. |
 
 Permissions are deny-by-default. A path outside configured roots cannot be written, and when roots overlap, the most restrictive applicable root controls the operation.
 
@@ -83,7 +68,7 @@ Sets group roots for comparisons, playlist exports, and other multi-library work
 
 ### Library roots use case
 
-Create an **Archive** set containing a read-only FLAC root and a **Portable** set containing a writable AAC root. Grant the portable root **Ingest output** and **Sync output**, select it as **Sync target**, and use a shared offset of Music so exported playlists contain device-friendly paths.
+Create an **Archive** set containing a read-only FLAC root and a **Portable** set containing a writable AAC root. Grant the portable root **Ingest output** and **Sync output**, select it as the cross-library sync target on the **Playlists** tab, and use a shared offset of Music so exported playlists contain device-friendly paths.
 
 ## Playlists tab
 
@@ -103,7 +88,15 @@ This tab covers playlist discovery, cross-sync cleanup, file playlist export, an
 | Type | Playlist parser. The current value is **m3u**, which covers M3U and M3U8 files. | m3u |
 | Recursive | When the location is a directory, also scans its subdirectories. | Enable for Playlists/Genres/Rock.m3u8. |
 
-### Cross-sync cleanup
+### Cross-library synchronization
+
+| Parameter | Description | Example |
+| --- | --- | --- |
+| Cross-library sync target | Selects one configured library root as the destination for cross-library music synchronization, or **No sync target**. Selecting a root grants its **Sync output** permission. | Select the portable-device root that should receive archive changes. |
+
+The sync target is selected here because it is part of the synchronization workflow, not an intrinsic property edited on each root card.
+
+#### Cleanup
 
 These switches authorize destructive cleanup and should be enabled deliberately.
 
@@ -202,7 +195,7 @@ Remux and transcode profiles must identify enough conversion behavior through a 
 
 For a car player, select the **Portable** set, export M3U8 playlists with relative UTF-8 paths and a 500-track limit, and use a **local-filesystem** export profile that transcodes to AAC. Set extra files to **Quarantine** and cap removals so a bad selection cannot empty the device.
 
-## Tools & ingest tab
+## Tools tab
 
 ### Machine and integration paths
 
@@ -214,16 +207,7 @@ For a car player, select the **Portable** set, export M3U8 playlists with relati
 | FFmpeg | FFmpeg command name or full executable path used by conversion operations. The default is ffmpeg. | /opt/homebrew/bin/ffmpeg |
 | WavPack | WavPack command name or full executable path used for lossless DSF-to-WavPack DSD encoding. The default is wavpack. | /opt/homebrew/bin/wavpack |
 
-### Successful-ingest cleanup
-
-| Parameter | Description | Example |
-| --- | --- | --- |
-| Delete source music after successful ingest | Legacy top-level compatibility switch for deleting successfully ingested source audio. In schema version 2, the active profile's **Source disposition** is authoritative. | Prefer **Quarantine** in Advanced policy while validating a new recipe. |
-| Remove non-music files after successful ingest | Enables cleanup of non-audio sidecars after successful ingest. Ordered sidecar rules determine whether matching files are preserved, quarantined, deleted, or follow source disposition. | Preserve cover images and cue sheets but quarantine logs. |
-
-Cleanup is considered only after a successful operation; preview and validation still enforce root permissions and applicable policy.
-
-### Tools & ingest use case
+### Tools use case
 
 Commit a portable main configuration to source control and set **Machine-local bindings companion** to bindings/my-mac.xml. Put Homebrew's FFmpeg and WavPack paths, the local cache database, iTunes catalog, root paths, and export destinations in that companion without changing shared policy.
 
@@ -244,9 +228,19 @@ Artwork equal to a threshold is not oversized; it must exceed the size or dimens
 
 For a phone library, flag covers above 2 MiB or 2000 px while repairing them to at most 600 px and roughly 225 KiB. This keeps analysis broad but makes the proposed output consistently device-friendly.
 
-## Advanced policy tab
+## Root/Naming policy tab
 
-Advanced policy edits the currently selected library profile. Duplicate a built-in profile first if its settings need to change.
+A root/naming policy bundles naming, metadata, artwork, health, quality-classification, and sidecar behavior. The selector on this tab chooses the policy being edited and the defaults for newly added roots; it does not reassign existing roots. Root assignments are made explicitly on **Library roots**.
+
+| Built-in policy | Intended behavior |
+| --- | --- |
+| Catalog only | Indexes a library without granting write or ingest permissions. |
+| Preserve layout + tag editing | Allows metadata and artwork updates while preserving the existing file layout. |
+| Artist/Album organizer | Allows metadata, artwork, moves, and renames using generic Artist/Album naming. |
+| iTunes Media | Organizes with iTunes-compatible naming and layout. |
+| Legacy MusicLibraryTools | Preserves the historical MusicLibraryTools naming, organization, metadata, artwork, health, and sidecar choices. |
+
+**New** creates a custom policy. **Duplicate** is the normal way to customize a built-in policy. **Delete** removes a custom policy and reassigns its root and export references after confirmation.
 
 ### Naming
 
@@ -258,6 +252,7 @@ Advanced policy edits the currently selected library profile. Duplicate a built-
 | Track padding | Positive default digit width for track numbers. | 2 produces 01. |
 | Disc padding | Positive default digit width for disc numbers. | 2 produces 01. |
 | Collision behavior | **Stop** reports an error; **Suffix** adds a numeric suffix; **Hash** adds a stable source-path hash; **PreserveExisting** leaves the existing destination and skips that remap. | Stop for a curated archive. |
+| iTunes canonical naming | Uses iTunes-compatible canonical folder and filename behavior for every root assigned to this policy. Legacy per-root overrides are converted to custom policies when the configuration is opened and saved. | Enable on a policy assigned to an iTunes Media directory. |
 | Invalid-character replacement | Replacement used when sanitizing path components. It cannot contain a directory separator. | _ |
 | Preserve Unicode | Retains Unicode characters during name sanitization and normalization. When disabled, names are folded to ASCII. | Enable for multilingual metadata. |
 | Missing artist fallback | Nonblank replacement when Artist is unavailable. | Unknown Artist |
@@ -265,7 +260,8 @@ Advanced policy edits the currently selected library profile. Duplicate a built-
 | Missing title fallback | Nonblank replacement when Title is unavailable. | Unknown Title |
 | Compilation token | Name used for compilation grouping. | Compilations |
 | Unicode normalization | **None**, **FormC**, **FormD**, **FormKC**, or **FormKD**. | FormC |
-| Component length limit | Optional positive maximum for one path component. Blank uses application/platform behavior. | 120 |
+| Component length limit | Positive maximum for one path component. Existing `LengthLimit` values migrate here so the policy remains the source of naming behavior. | 120 |
+| Disc-album length limit | Positive maximum for an album component before the legacy `(Disc N)` suffix is appended. Existing `DiscNumLengthLimit` values migrate here independently from the general component limit. | 110 |
 | Complete path limit | Optional positive maximum for the complete output path. Blank uses platform behavior. | 240 |
 
 Available template tokens are **AlbumArtist**, **Artist**, **Album**, **Title**, **Compilation**, **Year**, **Genre**, **Disc**, **Track**, **OriginalName**, and **Extension**. A format such as {Track:00} pads a number. Square brackets make a fragment optional, for example [{Year} - ]{Album}.
@@ -274,16 +270,17 @@ Available template tokens are **AlbumArtist**, **Artist**, **Album**, **Title**,
 
 | Parameter | Description and values | Example |
 | --- | --- | --- |
-| Disc layout | **PreserveTags** makes no disc-specific path projection; **AlbumSuffix** adds (Disc N) to the album; **DiscFolder** adds a Disc N folder when the template does not already use Disc; **FileNamePrefix** adds a padded disc prefix when needed; **FlattenContinuous** renumbers tracks continuously across the album and clears projected disc information. | DiscFolder for a multidisc box set. |
+| Disc strategy | Selects one authoritative destination representation. **PreserveTags** keeps the base album and disc number/total tags (iTunes canonical naming reflects them as `N-TT`). **AlbumSuffix** removes disc tags and writes `(Disc N)` only in the album. **DiscFolder** removes disc tags and adds a `Disc N` folder. **FileNamePrefix** removes disc tags and adds `N-TT` to the filename. **FlattenContinuous** removes disc tags and continuously renumbers tracks across the album. | AlbumSuffix produces `Some Album (Disc 2)/03 Title` without disc tags. |
 | Track-total scope | **PerDisc** treats totals as disc totals; **Album** treats them as whole-album totals. | PerDisc for 1/10 on each disc. |
 | Infer legacy album suffixes | Recognizes historical album names ending in forms such as (Disc 2). | Enable while migrating an old layout. |
-| Preserve disc tags | Keeps disc metadata when projecting metadata. | Enable even if paths are flattened. |
 | Use Album Artist for identity | Uses Album Artist rather than track Artist to group album context. | Enable for compilations with many performers. |
 | Strip format suffixes | Removes recognized format suffixes such as (Hi-Res), (DSD), or (DVD-A) from album identity comparisons. | Group Album and Album (Hi-Res) as one album. |
 | Strip Disc N suffixes | Removes disc suffixes when determining album identity. | Group Album (Disc 1) and Album (Disc 2). |
 | Include release year | Includes year in album identity, separating same-title releases. | Distinguish a 1990 issue from a 2020 remaster. |
 
 **FlattenContinuous** needs album context to calculate continuous numbering reliably.
+
+Older configurations may contain a `PreserveDiscTags` attribute. It is accepted for compatibility but is no longer an independent choice and is omitted on the next save: **PreserveTags** retains disc number/total metadata, while every other strategy removes it.
 
 ### Metadata preservation
 
@@ -305,17 +302,28 @@ Core track metadata is projected normally. These switches preserve additional me
 
 The generic defaults are 48 kHz and 24-bit. The legacy profile uses thresholds chosen to preserve historical behavior.
 
-### Ingest policy
+## Ingest policy tab
+
+The **Active ingest profile** selector chooses the workflow used by ingest. **New**, **Duplicate**, and **Delete** manage ingest profiles without changing root/naming policies or root assignments. The stable ingest profile ID preserves this selection across renames. A recipe chooses a destination root, and that root's policy always controls output naming and layout.
 
 | Parameter | Description and values | Example |
 | --- | --- | --- |
 | Enable ingest recipes | Allows enabled recipe matching and output. Root-level **Ingest output** permission is still required. | Enable on a staging-to-library workflow. |
 | Source disposition | **Preserve**, **Quarantine**, or **Delete** source audio after successful ingest. | Quarantine while proving a new transcode recipe. |
-| Preserve sidecars by default | Legacy compatibility switch. For the **Legacy MusicLibraryTools** profile it forces sidecars to be preserved; other profiles use the ordered sidecar policy below. | Enable when reproducing the legacy ingest behavior. |
+| Preserve sidecars by default | Legacy compatibility switch. For the **Legacy MusicLibraryTools** ingest profile it forces sidecars to be preserved; other workflows use the destination root's ordered sidecar policy below. | Enable when reproducing the legacy ingest behavior. |
+
+### Successful-ingest cleanup
+
+| Parameter | Description | Example |
+| --- | --- | --- |
+| Delete source music after successful ingest | Legacy top-level compatibility switch for deleting successfully ingested source audio. The active ingest profile's **Source disposition** is authoritative. | Prefer **Quarantine** while validating a new recipe. |
+| Remove non-music files after successful ingest | Enables cleanup of non-audio sidecars after successful ingest. Ordered sidecar rules determine whether matching files are preserved, quarantined, deleted, or follow source disposition. | Preserve cover images and cue sheets but quarantine logs. |
+
+Cleanup is considered only after a successful operation; preview and validation still enforce root permissions and applicable policy.
 
 ### Ingest recipes
 
-Recipes are evaluated by their matching policy and define how selected source audio is written.
+Recipes are evaluated in order by their matching policy and define how selected source audio is written. More than one recipe may match a source. Recipes do not contain naming-profile overrides: selecting a destination root unambiguously selects its naming and collision policy.
 
 #### Recipe identity and matching
 
@@ -340,10 +348,9 @@ Recipes are evaluated by their matching policy and define how selected source au
 | Parameter | Description and values | Example |
 | --- | --- | --- |
 | Destination root | Existing root that grants **Ingest output**. It may be omitted only for a supported catalog-only destination flow. | D:\Music\Portable |
-| Naming profile ID | Profile used for output naming; blank means the active profile. | portable-aac |
 | Output extension | Required when remuxing or transcoding. Use .wv with a .dsf-only recipe for lossless WavPack DSD. | .m4a |
 | Codec | Output codec. Use wavpack or wv with a .wv WavPack DSD destination. | aac |
-| Encoder | Optional explicit FFmpeg encoder; blank lets the conversion layer choose. WavPack DSD recipes must leave this blank and use the executable configured in **Tools & ingest**. | aac_at |
+| Encoder | Optional explicit FFmpeg encoder; blank lets the conversion layer choose. WavPack DSD recipes must leave this blank and use the executable configured in **Tools**. | aac_at |
 | Bitrate (kbps) | Optional positive audio bitrate. | 256 |
 | Output sample rate | Optional positive output sample rate. | 48000 |
 | Extra FFmpeg options | Additional tokenized FFmpeg arguments for FFmpeg transcode recipes. WavPack DSD recipes must leave this blank. | -movflags +faststart |
@@ -352,10 +359,14 @@ Recipes are evaluated by their matching policy and define how selected source au
 | Output channels | **Stereo** forces two channels; **Multi** preserves multichannel output. | Stereo |
 | Preserve metadata | Copies supported metadata to output. | Enable for normal library ingest. |
 | Preserve artwork | Copies artwork subject to the artwork policy. | Enable for normal library ingest. |
-| Use profile collision | Uses the selected naming profile's collision behavior. | Enable for consistent organization. |
+| Use destination root collision | Uses the destination root profile's collision behavior. | Enable for consistent organization. |
 | Collision override | Recipe-specific **Stop**, **Suffix**, **Hash**, or **PreserveExisting** behavior. | Hash for deterministic batch imports. |
 
 For lossless DSF compression, configure a transcode recipe whose only accepted extension is .dsf, output extension is .wv, and codec is wavpack or wv. The operation uses the WavPack executable rather than FFmpeg, imports the DSF ID3v2 metadata into the WavPack APEv2 tag, preserves the source DSD sample rate, bit depth, and channel count, and runs WavPack's verification pass before the staged output can be committed.
+
+## Root/Naming policy: artwork, health, and sidecars
+
+These remaining sections are also part of the selected policy on the **Root/Naming policy** tab.
 
 ### Artwork policy
 
@@ -407,15 +418,16 @@ Sidecar rules are ordered: the first enabled, case-insensitive glob match wins.
 
 The generic policy starts conservatively, preserving common cover images, cue sheets, logs, lyrics, PDFs, and checksum files.
 
-### Advanced policy use case
+### Root/Naming and ingest policy use case
 
-Duplicate **Artist/Album organizer** as **Curated FLAC**, use FormC normalization and strict collision stopping, classify 48 kHz or 24-bit files as high resolution, and create a lossless-copy recipe into an ingest-enabled archive root. Quarantine successful sources and preserve cue sheets until the workflow has been reviewed.
+Duplicate **Artist/Album organizer** as **Curated FLAC**, assign it to the archive root, use FormC normalization and strict collision stopping, and classify 48 kHz or 24-bit files as high resolution. Separately duplicate an ingest profile, add a lossless-copy recipe targeting that archive root, and quarantine successful sources until the workflow has been reviewed. The copied file uses **Curated FLAC** naming because that is the destination root's policy.
 
 ## Effective policy tab
 
 This tab is read-only. It composes the current unsaved editor values into the policy the application would use and summarizes:
 
-- active profile, permissions, naming, disc, metadata, quality, ingest, artwork, health, and sidecar behavior;
+- selected root policy, per-root assignments and permissions, naming, disc, metadata, quality, artwork, health, and sidecar behavior;
+- selected ingest profile, source handling, recipes, and destination roots;
 - configured roots, sets, formats, example destinations, and collision decisions;
 - database, FFmpeg, iTunes, machine-binding, playlist, and export integrations;
 - offline-path warnings, missing references, policy contradictions, and other validation issues.

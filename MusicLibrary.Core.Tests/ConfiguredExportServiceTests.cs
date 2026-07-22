@@ -117,8 +117,7 @@ public sealed class ConfiguredExportServiceTests
             LibraryProfilePreset.Custom, "flattened-export", "Flattened export") with
         {
             Disc = new(LibraryDiscStrategy.FlattenContinuous,
-                LibraryTrackTotalScope.PerDisc, InferAlbumSuffix: false,
-                PreserveDiscTags: true),
+                LibraryTrackTotalScope.PerDisc, InferAlbumSuffix: false),
         };
         LibraryExportProfile profile = TestWorkspace.Profile(
             workspace.Path("target"), ExportSelectionPolicy.EntireLibrary,

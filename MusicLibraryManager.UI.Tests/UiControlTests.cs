@@ -75,7 +75,8 @@ public sealed class UiControlTests
                 window.FindControl<ContentControl>("ContentHost")!.Content);
             SettingsViewModel viewModel = Assert.IsType<SettingsViewModel>(settings.DataContext);
             await viewModel.NewConfigurationCommand.ExecuteAsync(null);
-            settings.FindControl<TabControl>("SettingsTabs")!.SelectedIndex = 1;
+            TabControl tabs = settings.FindControl<TabControl>("SettingsTabs")!;
+            tabs.SelectedIndex = 5;
             Dispatcher.UIThread.RunJobs();
             AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
 
@@ -86,8 +87,18 @@ public sealed class UiControlTests
                 settings.FindControl<TextBlock>("EffectivePolicySummaryText")!.Text!,
                 StringComparison.OrdinalIgnoreCase);
             Assert.NotNull(viewModel.AdvancedProfile);
-            Assert.Contains(settings.FindControl<TabControl>("SettingsTabs")!.Items
-                .OfType<TabItem>(), item => Equals(item.Header, "Advanced policy"));
+            Assert.Contains(tabs.Items.OfType<TabItem>(),
+                item => Equals(item.Header, "Root/Naming policy"));
+            Assert.Contains(tabs.Items.OfType<TabItem>(),
+                item => Equals(item.Header, "Ingest policy"));
+            Assert.Contains(settings.GetVisualDescendants().OfType<Button>(),
+                button => Equals(button.Content, "New"));
+            Assert.Contains(settings.GetVisualDescendants().OfType<Button>(),
+                button => Equals(button.Content, "Duplicate"));
+            Assert.Contains(settings.GetVisualDescendants().OfType<Button>(),
+                button => Equals(button.Content, "Delete"));
+            tabs.SelectedIndex = 1;
+            Dispatcher.UIThread.RunJobs();
             Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
                 text => text.Text == "Cross-set comparison extensions");
             Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
@@ -98,13 +109,9 @@ public sealed class UiControlTests
                 text => text.Text == "Exclude patterns");
             Assert.DoesNotContain(settings.GetVisualDescendants().OfType<TextBlock>(),
                 text => text.Text is "Ingest role" or "Representation role");
-            Assert.Contains(settings.GetVisualDescendants().OfType<Button>(),
-                button => Equals(button.Content, "New"));
-            Assert.Contains(settings.GetVisualDescendants().OfType<Button>(),
-                button => Equals(button.Content, "Duplicate"));
-            Assert.Contains(settings.GetVisualDescendants().OfType<Button>(),
-                button => Equals(button.Content, "Delete"));
-
+            Assert.DoesNotContain(settings.GetVisualDescendants().OfType<CheckBox>(),
+                checkBox => checkBox.Content as string is
+                    "iTunes canonical naming" or "Sync target");
             string[] permissionLabels =
                 ["Metadata", "Artwork", "Organize files", "Ingest output", "Sync output"];
             CheckBox[] permissions = settings.GetVisualDescendants().OfType<CheckBox>()
@@ -123,6 +130,8 @@ public sealed class UiControlTests
                 text => text.Text == "File playlist sources");
             Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
                 text => text.Text == "Export profiles");
+            Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
+                text => text.Text == "Cross-library sync target");
 
             settings.FindControl<TabControl>("SettingsTabs")!.SelectedIndex = 3;
             Dispatcher.UIThread.RunJobs();
@@ -137,10 +146,23 @@ public sealed class UiControlTests
             Dispatcher.UIThread.RunJobs();
             Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
                 text => text.Text == "Metadata fidelity");
-            Assert.Contains(settings.GetVisualDescendants().OfType<Button>(),
-                button => Equals(button.Content, "Add recipe"));
             Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
                 text => text.Text == "Profile name");
+            Assert.Contains(settings.GetVisualDescendants().OfType<CheckBox>(),
+                checkBox => Equals(checkBox.Content, "iTunes canonical naming"));
+            Assert.DoesNotContain(settings.GetVisualDescendants().OfType<CheckBox>(),
+                checkBox => Equals(checkBox.Content, "Preserve disc tags"));
+            Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(), text =>
+                text.Text?.StartsWith("The disc strategy is the destination representation",
+                    StringComparison.Ordinal) == true);
+            Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
+                text => text.Text == "Component limit (legacy LengthLimit)");
+            Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
+                text => text.Text == "Disc-album limit (legacy DiscNumLengthLimit)");
+            settings.FindControl<TabControl>("SettingsTabs")!.SelectedIndex = 6;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Contains(settings.GetVisualDescendants().OfType<Button>(),
+                button => Equals(button.Content, "Add recipe"));
             Assert.DoesNotContain(settings.GetVisualDescendants().OfType<TextBlock>(), text =>
                 text.Text is "Legacy destination role" or "Output representation");
         }
@@ -201,14 +223,16 @@ public sealed class UiControlTests
             advanced.UnicodeNormalization = LibraryUnicodeNormalization.FormKD;
             advanced.DiscStrategy = LibraryDiscStrategy.DiscFolder;
             advanced.TrackTotalScope = LibraryTrackTotalScope.Album;
-            advanced.SourceDisposition = LibrarySourceDisposition.Quarantine;
+            IngestProfileEditorRow advancedIngest = Assert.IsType<IngestProfileEditorRow>(
+                viewModel.AdvancedIngestProfile);
+            advancedIngest.SourceDisposition = LibrarySourceDisposition.Quarantine;
             advanced.ArtworkStorage = LibraryArtworkStorage.Both;
             advanced.ArtworkRoles = LibraryArtworkRoleSelection.AllRoles;
             advanced.ArtworkEncoding = LibraryArtworkEncoding.Png;
             advanced.UnknownSidecarDisposition = LibrarySidecarDisposition.Quarantine;
 
             viewModel.AddIngestRecipeCommand.Execute(null);
-            IngestRecipeEditorRow recipe = Assert.Single(advanced.IngestRecipes);
+            IngestRecipeEditorRow recipe = Assert.Single(advancedIngest.Recipes);
             recipe.Action = LibraryIngestAction.Transcode;
             recipe.AddToMediaCatalog = true;
             recipe.CollisionPolicy = LibraryPathCollisionPolicy.Suffix;
@@ -240,6 +264,8 @@ public sealed class UiControlTests
             ActivateTab(tabs, 5);
             AssertVisibleChoicesSelected(settings);
             ActivateTab(tabs, 6);
+            AssertVisibleChoicesSelected(settings);
+            ActivateTab(tabs, 7);
             ActivateTab(tabs, 2);
             AssertVisibleChoicesSelected(settings);
 
@@ -260,7 +286,10 @@ public sealed class UiControlTests
             Assert.Equal(LibraryUnicodeNormalization.FormKD, advanced.UnicodeNormalization);
             Assert.Equal(LibraryDiscStrategy.DiscFolder, advanced.DiscStrategy);
             Assert.Equal(LibraryTrackTotalScope.Album, advanced.TrackTotalScope);
-            Assert.Equal(LibrarySourceDisposition.Quarantine, advanced.SourceDisposition);
+            Assert.Equal(LibrarySourceDisposition.Quarantine,
+                advancedIngest.SourceDisposition);
+            ActivateTab(tabs, 6);
+            AssertVisibleChoicesSelected(settings);
             Assert.Equal(LibraryIngestAction.Transcode, recipe.Action);
             Assert.Equal(["Stereo", "Multi"],
                 SettingsChoiceLists.ChannelChoices.Select(choice => choice.Label));
@@ -308,6 +337,51 @@ public sealed class UiControlTests
             Assert.NotEmpty(choices);
             Assert.All(choices, choice => Assert.NotNull(choice.ItemsSource));
             Assert.All(choices, choice => Assert.NotNull(choice.SelectedItem));
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Settings_can_duplicate_both_policy_types_while_pickers_are_bound()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        MainWindow window = services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Show();
+            services.GetRequiredService<INavigationService>().Navigate(
+                ShellDestination.Settings);
+            Dispatcher.UIThread.RunJobs();
+
+            SettingsView settings = Assert.IsType<SettingsView>(
+                window.FindControl<ContentControl>("ContentHost")!.Content);
+            SettingsViewModel viewModel = Assert.IsType<SettingsViewModel>(
+                settings.DataContext);
+            await viewModel.NewConfigurationCommand.ExecuteAsync(null);
+            TabControl tabs = settings.FindControl<TabControl>("SettingsTabs")!;
+
+            tabs.SelectedIndex = 5;
+            Dispatcher.UIThread.RunJobs();
+            int namingCount = viewModel.LibraryProfiles.Count;
+            viewModel.DuplicateLibraryProfileCommand.Execute(null);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(namingCount + 1, viewModel.LibraryProfiles.Count);
+            Assert.Equal(LibraryProfilePreset.Custom,
+                viewModel.SelectedLibraryProfile?.Preset);
+
+            tabs.SelectedIndex = 6;
+            Dispatcher.UIThread.RunJobs();
+            int ingestCount = viewModel.IngestProfiles.Count;
+            viewModel.DuplicateIngestProfileCommand.Execute(null);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(ingestCount + 1, viewModel.IngestProfiles.Count);
+            Assert.StartsWith("ingest-", viewModel.SelectedIngestProfile?.Id);
+        }
+        finally
+        {
+            window.Hide();
         }
     }
 

@@ -94,7 +94,7 @@ public sealed record LibraryPathMetadata(
         track.Album,
         track.Title,
         track.HadTrackNumber ? track.TrackNumber : null,
-        track.OriginalDiscNumber > 0 ? track.OriginalDiscNumber : null,
+        track.PathDiscNumber,
         track.Compilation,
         null,
         Path.GetFileNameWithoutExtension(track.SourcePath),
@@ -159,17 +159,28 @@ public sealed class LibraryPathLayoutResolver : IPathLayoutResolver
             throw new ArgumentOutOfRangeException(nameof(componentLengthLimit));
 
         LibraryNamingPolicy naming = profile.Naming;
-        if (naming.UseItunesCanonicalNaming)
-            return ResolveItunes(root, ApplyNamingFallbacks(metadata, naming));
-
-        if (naming.LegacySanitization)
-            return ResolveLegacy(root, metadata, componentLengthLimit, discAlbumLengthLimit);
-
-        int effectiveComponentLimit = naming.ComponentLengthLimit is { } configuredLimit
-            ? Math.Min(componentLengthLimit, configuredLimit)
-            : componentLengthLimit;
+        LibraryPathMetadata normalized = ApplyNamingFallbacks(metadata, naming);
+        int effectiveComponentLimit = naming.ComponentLengthLimit ?? componentLengthLimit;
+        int effectiveDiscAlbumLimit = naming.DiscAlbumLengthLimit ?? discAlbumLengthLimit;
         LibraryPathMetadata projected = ApplyDiscPolicy(
-            ApplyNamingFallbacks(metadata, naming), profile.Disc);
+            normalized, profile.Disc);
+        if (naming.UseItunesCanonicalNaming)
+        {
+            if (profile.Disc.Strategy == LibraryDiscStrategy.DiscFolder &&
+                projected.DiscNumber is > 0)
+            {
+                int discNumber = projected.DiscNumber.Value;
+                string canonical = ResolveItunes(root,
+                    projected with { DiscNumber = null });
+                return Path.Combine(Path.GetDirectoryName(canonical)!,
+                    $"Disc {discNumber}", Path.GetFileName(canonical)).Normalize();
+            }
+            return ResolveItunes(root, projected);
+        }
+        if (naming.LegacySanitization)
+            return ResolveLegacy(root, normalized, effectiveComponentLimit,
+                effectiveDiscAlbumLimit);
+
         string directoryTemplate = naming.DirectoryTemplate;
         string fileTemplate = naming.FileNameTemplate;
         if (profile.Disc.Strategy == LibraryDiscStrategy.DiscFolder &&
@@ -277,7 +288,7 @@ public sealed class LibraryPathLayoutResolver : IPathLayoutResolver
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)
             ? metadata.Album
             : $"{metadata.Album} (Disc {metadata.DiscNumber})";
-        return metadata with { Album = album };
+        return metadata with { Album = album, DiscNumber = null };
     }
 
     private static LibraryPathMetadata ApplyNamingFallbacks(

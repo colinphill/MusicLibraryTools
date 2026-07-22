@@ -91,6 +91,9 @@ public sealed class EditableLibraryConfig
     public Guid LibraryId { get; set; } = Guid.NewGuid();
     public string ActiveProfileId { get; set; } = LibraryProfilePresets.LegacyId;
     public List<LibraryProfile> Profiles { get; set; } = [.. LibraryProfilePresets.All];
+    public string ActiveIngestProfileId { get; set; } = LibraryProfilePresets.LegacyId;
+    public List<LibraryIngestProfile> IngestProfiles { get; set; } =
+        [.. LibraryIngestProfilePresets.All];
     /// <summary>
     /// Explicitly configured export profiles. Disabled built-in definitions are intentionally not
     /// copied here until a user configures one.
@@ -131,15 +134,24 @@ public sealed class EditableLibraryConfig
         throw new InvalidDataException(
             $"ActiveProfileId '{ActiveProfileId}' does not identify a configured profile.");
 
+    public LibraryIngestProfile ActiveIngestProfile => IngestProfiles.SingleOrDefault(profile =>
+        string.Equals(profile.Id, ActiveIngestProfileId, StringComparison.OrdinalIgnoreCase)) ??
+        throw new InvalidDataException(
+            $"ActiveIngestProfileId '{ActiveIngestProfileId}' does not identify a configured " +
+            "ingest profile.");
+
     /// <summary>Creates a new library with the catalog-only profile active.</summary>
     public static EditableLibraryConfig CreateNew()
     {
         var configuration = new EditableLibraryConfig
         {
             ActiveProfileId = LibraryProfilePresets.CatalogOnlyId,
+            ActiveIngestProfileId = LibraryProfilePresets.CatalogOnlyId,
         };
         configuration.Profiles.RemoveAll(profile =>
             profile.Preset == LibraryProfilePreset.LegacyMusicLibraryTools);
+        configuration.IngestProfiles.RemoveAll(profile =>
+            profile.Id == LibraryProfilePresets.LegacyId);
         return configuration;
     }
 
@@ -170,7 +182,8 @@ public sealed class EditableLibraryConfig
         "DiscNumLengthLimit",
         "SyncTarget", "SyncPlaylist", "PlaylistSource", "PlaylistTarget", "PlaylistType", "IndexTarget",
         "IngestSettings", "ArtworkHealthSettings", "CrossSyncMusicSettings",
-        "CrossSyncPlaylistsSettings", "LibraryProfile", "ExportProfile", "MachineBindings",
+        "CrossSyncPlaylistsSettings", "LibraryProfile", "IngestProfile", "ExportProfile",
+        "MachineBindings",
     };
 
     public static EditableLibraryConfig Load(string path)
@@ -185,6 +198,8 @@ public sealed class EditableLibraryConfig
             LibraryId = parsed.LibraryId,
             ActiveProfileId = parsed.ActiveProfileId,
             Profiles = [.. parsed.Profiles],
+            ActiveIngestProfileId = parsed.ActiveIngestProfileId,
+            IngestProfiles = [.. parsed.IngestProfiles],
             ExportProfiles = [.. parsed.ExportProfiles],
             MachineBindingsFile = CleanOptional(
                 (string?)root.Element("MachineBindings")?.Attribute("File")),
@@ -210,6 +225,7 @@ public sealed class EditableLibraryConfig
 
         if (int.TryParse((string?)root.Element("LengthLimit"), out var ll)) config.LengthLimit = ll;
         if (int.TryParse((string?)root.Element("DiscNumLengthLimit"), out var dl)) config.DiscNumLengthLimit = dl;
+        config.MigrateLegacyNamingLimits();
 
         LibraryIngestSettings ingest = parsed.IngestSettings;
         config.AacEncoder = ingest.AacEncoder;
@@ -228,8 +244,11 @@ public sealed class EditableLibraryConfig
                 StringComparison.OrdinalIgnoreCase));
             if (legacyIndex >= 0)
             {
-                LibraryProfile legacy = config.Profiles[legacyIndex];
-                config.Profiles[legacyIndex] = legacy with
+                LibraryIngestProfile legacy = config.IngestProfiles.Single(profile =>
+                    string.Equals(profile.Id, LibraryProfilePresets.LegacyId,
+                        StringComparison.OrdinalIgnoreCase));
+                int ingestIndex = config.IngestProfiles.IndexOf(legacy);
+                config.IngestProfiles[ingestIndex] = legacy with
                 {
                     Ingest = legacy.Ingest with
                     {
@@ -351,12 +370,15 @@ public sealed class EditableLibraryConfig
             if (e.Name.Namespace != XNamespace.None || !Known.Contains(e.Name.LocalName))
                 config._passthrough.Add(new XElement(e));
 
+        config.MigrateLegacyRootNamingOverrides();
         config.MigrateLegacyRoleAssignments();
         return config;
     }
 
     public void Save(string path)
     {
+        MigrateLegacyNamingLimits();
+        MigrateLegacyRootNamingOverrides();
         MigrateLegacyRoleAssignments();
         IReadOnlyList<LibraryConfigurationIssue> validation = Validate();
         LibraryConfigurationIssue? firstError = validation.FirstOrDefault(issue =>
@@ -378,12 +400,24 @@ public sealed class EditableLibraryConfig
         var root = new XElement("LibraryConfiguration",
             new XAttribute("SchemaVersion", LibraryConfigurationSchema.CurrentVersion),
             new XAttribute("LibraryId", LibraryId.ToString("D")),
-            new XAttribute("ActiveProfileId", ActiveProfileId));
+            new XAttribute("ActiveProfileId", ActiveProfileId),
+            new XAttribute("ActiveIngestProfileId", ActiveIngestProfileId));
 
         foreach (LibraryProfile profile in Profiles)
         {
-            XElement element = LibraryProfileXml.Write(profile);
+            XElement element = LibraryProfileXml.Write(profile, includeLegacyIngest: false);
             XElement? source = _sourceRoot?.Elements("LibraryProfile").FirstOrDefault(candidate =>
+                string.Equals((string?)candidate.Attribute("Id"), profile.Id,
+                    StringComparison.OrdinalIgnoreCase));
+            if (source is not null)
+                MergeUnknownElementData(element, source);
+            root.Add(element);
+        }
+
+        foreach (LibraryIngestProfile profile in IngestProfiles)
+        {
+            XElement element = LibraryIngestProfileXml.Write(profile);
+            XElement? source = _sourceRoot?.Elements("IngestProfile").FirstOrDefault(candidate =>
                 string.Equals((string?)candidate.Attribute("Id"), profile.Id,
                     StringComparison.OrdinalIgnoreCase));
             if (source is not null)
@@ -452,8 +486,6 @@ public sealed class EditableLibraryConfig
                 e.SetAttributeValue("IndexExclude", string.Join(';', indexExcludes));
             if (!string.IsNullOrEmpty(t.Filter)) e.SetAttributeValue("Filter", t.Filter);
             if (!t.Organize) e.SetAttributeValue("Organize", false);
-            if (t.UseItunesCanonicalNaming)
-                e.SetAttributeValue("ItunesCanonicalNaming", true);
             if (t.IsSyncTarget)
                 e.SetAttributeValue("SyncTarget", true);
             var seen = new HashSet<string>(LibraryConfiguration.ScanSetComparer);
@@ -637,7 +669,7 @@ public sealed class EditableLibraryConfig
         {
             try
             {
-                LibraryProfileXml.Validate(profile);
+                LibraryProfileXml.Validate(profile, includeLegacyIngest: false);
             }
             catch (Exception exception) when (exception is InvalidDataException or ArgumentException)
             {
@@ -653,6 +685,29 @@ public sealed class EditableLibraryConfig
         if (duplicateProfiles.Length > 0)
             Error("profile-duplicate",
                 "Library profile IDs must be unique: " + string.Join(", ", duplicateProfiles));
+
+        if (IngestProfiles.Count == 0)
+            Error("ingest-profiles-empty", "At least one ingest profile is required.");
+        foreach (LibraryIngestProfile profile in IngestProfiles)
+        {
+            try
+            {
+                LibraryIngestProfileXml.Validate(profile);
+            }
+            catch (Exception exception) when (exception is InvalidDataException or ArgumentException)
+            {
+                Error("ingest-profile-invalid", exception.Message);
+            }
+        }
+        string[] duplicateIngestProfiles = IngestProfiles
+            .GroupBy(profile => profile.Id, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToArray();
+        if (duplicateIngestProfiles.Length > 0)
+            Error("ingest-profile-duplicate",
+                "Ingest profile IDs must be unique: " +
+                string.Join(", ", duplicateIngestProfiles));
 
         foreach (LibraryExportProfile exportProfile in ExportProfiles)
         {
@@ -680,6 +735,12 @@ public sealed class EditableLibraryConfig
                 string.Equals(profile.Id, ActiveProfileId, StringComparison.OrdinalIgnoreCase)))
             Error("profile-active",
                 $"ActiveProfileId '{ActiveProfileId}' does not identify a configured profile.");
+        if (string.IsNullOrWhiteSpace(ActiveIngestProfileId) || !IngestProfiles.Any(profile =>
+                string.Equals(profile.Id, ActiveIngestProfileId,
+                    StringComparison.OrdinalIgnoreCase)))
+            Error("ingest-profile-active",
+                $"ActiveIngestProfileId '{ActiveIngestProfileId}' does not identify a " +
+                "configured ingest profile.");
 
         var rootIds = new HashSet<Guid>();
         var rootsById = new Dictionary<Guid, (IndexTargetEntry Target,
@@ -779,30 +840,25 @@ public sealed class EditableLibraryConfig
 
         var profileIds = Profiles.Select(profile => profile.Id)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var recipeIds = Profiles.SelectMany(profile => profile.Ingest.Recipes)
+        var recipeIds = IngestProfiles.SelectMany(profile => profile.Ingest.Recipes)
             .Select(recipe => recipe.Id)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        foreach (LibraryProfile profile in Profiles)
+        foreach (LibraryIngestProfile profile in IngestProfiles)
         {
             foreach (LibraryIngestRecipe recipe in profile.Ingest.Recipes)
             {
                 if (recipe.DestinationRootId is { } destinationRootId &&
                     !rootIds.Contains(destinationRootId))
                     Error("recipe-root",
-                        $"Ingest recipe '{recipe.Id}' in profile '{profile.Id}' references " +
+                        $"Ingest recipe '{recipe.Id}' in ingest profile '{profile.Id}' references " +
                         $"unknown destination root '{destinationRootId:D}'.");
                 else if (recipe.DestinationRootId is { } configuredRootId &&
                          rootsById.TryGetValue(configuredRootId, out var destination) &&
                          !destination.Permissions.HasFlag(
                              LibraryRootPermissions.IngestOutput))
                     Error("recipe-root-permission",
-                        $"Ingest recipe '{recipe.Id}' in profile '{profile.Id}' targets " +
+                        $"Ingest recipe '{recipe.Id}' in ingest profile '{profile.Id}' targets " +
                         $"'{destination.Target.Target}', which does not permit IngestOutput.");
-                if (recipe.NamingProfileId is { } namingProfileId &&
-                    !profileIds.Contains(namingProfileId))
-                    Error("recipe-naming-profile",
-                        $"Ingest recipe '{recipe.Id}' in profile '{profile.Id}' references " +
-                        $"unknown naming profile '{namingProfileId}'.");
             }
         }
 
@@ -1044,9 +1100,9 @@ public sealed class EditableLibraryConfig
             target.Permissions = permissions | LibraryRootPermissions.IngestOutput;
         }
 
-        for (int profileIndex = 0; profileIndex < Profiles.Count; profileIndex++)
+        for (int profileIndex = 0; profileIndex < IngestProfiles.Count; profileIndex++)
         {
-            LibraryProfile profile = Profiles[profileIndex];
+            LibraryIngestProfile profile = IngestProfiles[profileIndex];
             LibraryIngestRecipe[] recipes = profile.Ingest.Recipes.Select(recipe =>
             {
                 bool catalogFallback = recipe.DestinationLegacyRole ==
@@ -1071,7 +1127,7 @@ public sealed class EditableLibraryConfig
                     AddToMediaCatalog = recipe.AddToMediaCatalog || catalogFallback,
                 };
             }).ToArray();
-            Profiles[profileIndex] = profile with
+            IngestProfiles[profileIndex] = profile with
             {
                 Ingest = profile.Ingest with
                 {
@@ -1085,6 +1141,76 @@ public sealed class EditableLibraryConfig
         {
             target.IngestRole = LibraryIngestRole.None;
             target.RepresentationRole = LibraryRepresentationRole.Ignore;
+        }
+    }
+
+    private void MigrateLegacyRootNamingOverrides()
+    {
+        var migratedProfileIds = new Dictionary<string, string>(
+            StringComparer.OrdinalIgnoreCase);
+        foreach (IndexTargetEntry target in IndexTargets.Where(target =>
+                     target.UseItunesCanonicalNaming))
+        {
+            string sourceId = CleanOptional(target.ProfileId) ?? ActiveProfileId;
+            LibraryProfile source = Profiles.SingleOrDefault(profile => string.Equals(
+                profile.Id, sourceId, StringComparison.OrdinalIgnoreCase)) ??
+                throw new InvalidDataException(
+                    $"Index target '{target.Target}' references unknown profile '{sourceId}'.");
+            if (source.Naming.UseItunesCanonicalNaming)
+            {
+                target.UseItunesCanonicalNaming = false;
+                continue;
+            }
+
+            if (!migratedProfileIds.TryGetValue(source.Id, out string? migratedId))
+            {
+                string stem = "itunes-" + LibraryConfigurationSchema.CreateStableId(
+                    $"itunes-naming|{LibraryId:D}|{source.Id}").ToString("N")[..12];
+                migratedId = stem;
+                int suffix = 2;
+                while (Profiles.Any(profile => string.Equals(
+                           profile.Id, migratedId, StringComparison.OrdinalIgnoreCase)))
+                    migratedId = $"{stem}-{suffix++}";
+
+                string nameStem = source.Name + " (iTunes naming)";
+                string name = nameStem;
+                suffix = 2;
+                while (Profiles.Any(profile => string.Equals(
+                           profile.Name, name, StringComparison.OrdinalIgnoreCase)))
+                    name = $"{nameStem} {suffix++}";
+                Profiles.Add(source with
+                {
+                    Id = migratedId,
+                    Name = name,
+                    Preset = LibraryProfilePreset.Custom,
+                    Naming = source.Naming with { UseItunesCanonicalNaming = true },
+                    Disc = source.Disc with { Strategy = LibraryDiscStrategy.PreserveTags },
+                });
+                migratedProfileIds[source.Id] = migratedId;
+            }
+
+            target.ProfileId = migratedId;
+            target.UseItunesCanonicalNaming = false;
+        }
+    }
+
+    private void MigrateLegacyNamingLimits()
+    {
+        for (int index = 0; index < Profiles.Count; index++)
+        {
+            LibraryProfile profile = Profiles[index];
+            if (profile.Naming.ComponentLengthLimit is not null &&
+                profile.Naming.DiscAlbumLengthLimit is not null)
+                continue;
+            Profiles[index] = profile with
+            {
+                Naming = profile.Naming with
+                {
+                    ComponentLengthLimit = profile.Naming.ComponentLengthLimit ?? LengthLimit,
+                    DiscAlbumLengthLimit = profile.Naming.DiscAlbumLengthLimit ??
+                        DiscNumLengthLimit,
+                },
+            };
         }
     }
 
@@ -1106,8 +1232,8 @@ public sealed class EditableLibraryConfig
         if (_sourceRoot is null)
             return;
         CopyUnknownAttributes(root, _sourceRoot);
-        string[] repeatable = ["LibraryProfile", "ExportProfile", "IndexTarget", "PlaylistSource",
-            "PlaylistTarget", "SyncPlaylist"];
+        string[] repeatable = ["LibraryProfile", "IngestProfile", "ExportProfile", "IndexTarget",
+            "PlaylistSource", "PlaylistTarget", "SyncPlaylist"];
         foreach (XElement target in root.Elements().Where(element =>
                      !repeatable.Contains(element.Name.LocalName, StringComparer.Ordinal)))
         {
@@ -1152,7 +1278,7 @@ public sealed class EditableLibraryConfig
     {
         string? identityAttribute = sourceChild.Name.LocalName switch
         {
-            "LibraryProfile" or "ExportProfile" or "Rule" or "Recipe" => "Id",
+            "LibraryProfile" or "IngestProfile" or "ExportProfile" or "Rule" or "Recipe" => "Id",
             "Set" => "Name",
             "Option" => "Name",
             "RootBinding" => "RootId",
@@ -1174,7 +1300,8 @@ public sealed class EditableLibraryConfig
     private static HashSet<string> KnownAttributeNames(XElement element) => new(
         (element.Name.LocalName, element.Parent?.Name.LocalName) switch
         {
-            ("LibraryConfiguration", _) => ["SchemaVersion", "LibraryId", "ActiveProfileId"],
+            ("LibraryConfiguration", _) => ["SchemaVersion", "LibraryId", "ActiveProfileId",
+                "ActiveIngestProfileId"],
             ("LibraryBindings", _) => ["SchemaVersion", "LibraryId"],
             ("MachineBindings", _) => ["File"],
             ("DatabaseBinding", _) => ["Path"],
@@ -1182,6 +1309,8 @@ public sealed class EditableLibraryConfig
             ("RootBinding", _) => ["RootId", "Path"],
             ("ExportBinding", _) => ["ProfileId", "Destination"],
             ("LibraryProfile", _) => ["Id", "Name", "Preset", "DefaultRootPermissions"],
+            ("IngestProfile", _) => ["Id", "Name", "Enabled", "SourceDisposition",
+                "PreserveSidecars"],
             ("ExportProfile", _) => ["Id", "Name", "Enabled"],
             ("Selection", _) => ["Kind", "Query"],
             ("Transform", _) => ["Mode", "RecipeId", "ProviderId", "Codec", "Container"],
@@ -1191,7 +1320,7 @@ public sealed class EditableLibraryConfig
                 "UseItunesCanonicalNaming", "LegacySanitization", "StripFormatSuffixes",
                 "MissingArtistFallback", "MissingAlbumFallback", "MissingTitleFallback",
                 "CompilationValue", "UnicodeNormalization", "ComponentLengthLimit",
-                "CompletePathLengthLimit"],
+                "DiscAlbumLengthLimit", "CompletePathLengthLimit"],
             ("Naming", "ExportProfile") => ["LibraryProfileId", "PreserveSourceLayout",
                 "FolderTemplate", "FileNameTemplate", "CollisionPolicy"],
             ("Disc", _) => ["Strategy", "TrackTotalScope", "InferAlbumSuffix", "PreserveDiscTags"],
@@ -1246,6 +1375,7 @@ public sealed class EditableLibraryConfig
             "LibraryConfiguration" => Known,
             "LibraryProfile" => ["Naming", "Disc", "AlbumIdentity", "Health", "Quality", "Ingest",
                 "Artwork", "Sidecars", "Metadata"],
+            "IngestProfile" => ["Recipe"],
             "ExportProfile" => ["Selection", "Transform", "Naming", "Artwork", "Playlists",
                 "Transport", "Reconciliation"],
             "Selection" => ["Value"],

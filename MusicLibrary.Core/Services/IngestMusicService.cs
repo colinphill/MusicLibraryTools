@@ -112,6 +112,8 @@ public sealed class IngestMusicService : IIngestMusicService
             else
                 scanResults[index] = PreviewFileResult.Ignored(scanFiles[index].Snapshot);
         }
+        bool inferSuffixForGrouping = enabledRecipes.Any(recipe =>
+            config.ResolveDestinationProfile(recipe).Disc.InferAlbumSuffix);
 
         // Parsing is independent per file. Bound the global reader count so high-latency opens can
         // overlap without allowing a large incoming tree to flood the share or retain unbounded tag
@@ -120,7 +122,8 @@ public sealed class IngestMusicService : IIngestMusicService
             supportedIndexes,
             new ParallelOptions { MaxDegreeOfParallelism = _previewParallelism, CancellationToken = ct },
             index => scanResults[index] = ScanPreviewFile(
-                scanFiles[index].Snapshot, ingestProfile, enabledRecipes));
+                scanFiles[index].Snapshot, ingestProfile, enabledRecipes,
+                inferSuffixForGrouping));
 
         var conflicts = new List<IngestConflict>();
         var ignoredSnapshots = new List<IngestFileSnapshot>();
@@ -327,13 +330,33 @@ public sealed class IngestMusicService : IIngestMusicService
                     Artist = track.Artist,
                     AlbumArtist = track.AlbumArtist,
                     Album = projectedAlbum,
+                    SourceAlbum = track.SourceAlbum,
+                    InferredBaseAlbum = track.InferredBaseAlbum,
                     TrackNumber = projectedTrack,
                     HadTrackNumber = track.HadTrackNumber ||
                         profile.Disc.Strategy == LibraryDiscStrategy.FlattenContinuous,
+                    OriginalTrackNumber = track.HadTrackNumber ? track.TrackNumber : null,
+                    HadOriginalTrackNumber = track.HadTrackNumber,
                     TrackTotal = projectedTotal,
                     OriginalDiscNumber = discGroup.Key,
                     HadDiscNumber = track.DiscNumber.HasValue ||
                         profile.Preset == LibraryProfilePreset.LegacyMusicLibraryTools,
+                    TaggedDiscNumber = track.TaggedDiscNumber,
+                    InferredDiscNumber = track.InferredDiscNumber,
+                    ProjectedDiscNumber = profile.Disc.Strategy ==
+                                              LibraryDiscStrategy.PreserveTags &&
+                                          (track.DiscNumber.HasValue ||
+                                           profile.Preset ==
+                                           LibraryProfilePreset.LegacyMusicLibraryTools)
+                        ? discGroup.Key
+                        : null,
+                    ProjectedDiscTotal = profile.Disc.Strategy ==
+                                             LibraryDiscStrategy.PreserveTags
+                        ? track.DiscTotal
+                        : null,
+                    PathDiscNumber = PathDiscNumber(profile.Disc.Strategy,
+                        track.DiscNumber.HasValue || profile.Preset ==
+                        LibraryProfilePreset.LegacyMusicLibraryTools, discGroup.Key),
                     OriginalTrackTotal = track.TrackTotal,
                     OriginalDiscTotal = track.DiscTotal,
                     SampleRate = track.SampleRate,
@@ -350,6 +373,131 @@ public sealed class IngestMusicService : IIngestMusicService
             }
         }
         return plans;
+    }
+
+    private static IngestTrackPlan ProjectForDestination(
+        IngestTrackPlan selected,
+        IReadOnlyList<IngestTrackPlan> albumTracks,
+        LibraryProfile profile)
+    {
+        int? EffectiveDisc(IngestTrackPlan track) => track.TaggedDiscNumber is > 0
+            ? track.TaggedDiscNumber
+            : profile.Disc.InferAlbumSuffix && track.InferredDiscNumber is > 0
+                ? track.InferredDiscNumber
+                : null;
+
+        bool legacy = profile.Preset == LibraryProfilePreset.LegacyMusicLibraryTools;
+        int? selectedEffectiveDisc = EffectiveDisc(selected);
+        bool hadDiscNumber = selectedEffectiveDisc is > 0 || legacy;
+        int discNumber = selectedEffectiveDisc ??
+                         (selected.OriginalDiscNumber > 0
+                             ? selected.OriginalDiscNumber
+                             : 1);
+        int[] representedDiscs = albumTracks
+            .Select(EffectiveDisc)
+            .Where(number => number is > 0)
+            .Select(number => number!.Value)
+            .Distinct()
+            .ToArray();
+        bool multiDisc = representedDiscs.Length > 1;
+
+        int OriginalTrack(IngestTrackPlan track) =>
+            track.OriginalTrackNumber ?? track.TrackNumber;
+        bool HadOriginalTrack(IngestTrackPlan track) =>
+            track.HadOriginalTrackNumber ||
+            track.OriginalTrackNumber is null && track.HadTrackNumber;
+        int DiscSlot(IngestTrackPlan track) => EffectiveDisc(track) ??
+            (legacy && track.OriginalDiscNumber > 0 ? track.OriginalDiscNumber : 1);
+
+        var flattened = albumTracks
+            .Select(track => (
+                Disc: DiscSlot(track),
+                Track: OriginalTrack(track),
+                MissingKey: HadOriginalTrack(track) ? "" : track.SourcePath))
+            .Distinct()
+            .OrderBy(slot => slot.Disc)
+            .ThenBy(slot => slot.Track)
+            .ThenBy(slot => slot.MissingKey, PathComparer)
+            .Select((slot, index) => (slot, Number: index + 1))
+            .ToDictionary(item => item.slot, item => item.Number);
+        IngestTrackPlan[] discTracks = albumTracks.Where(track =>
+            DiscSlot(track) == discNumber).ToArray();
+        int[] numberedTracks = discTracks
+            .Where(HadOriginalTrack)
+            .Select(OriginalTrack)
+            .Where(number => legacy || number > 0)
+            .ToArray();
+        int legacyOffset = legacy && multiDisc && numberedTracks.Length > 0
+            ? numberedTracks.Min() - 1
+            : 0;
+        int inferredDiscTrackTotal = numberedTracks.Length == 0
+            ? 0
+            : numberedTracks.Max() - legacyOffset;
+        bool hadOriginalTrack = HadOriginalTrack(selected);
+        int originalTrack = OriginalTrack(selected);
+        bool flatten = profile.Disc.Strategy == LibraryDiscStrategy.FlattenContinuous;
+        int projectedTrack = flatten
+            ? flattened[(discNumber, originalTrack,
+                hadOriginalTrack ? "" : selected.SourcePath)]
+            : hadOriginalTrack ? originalTrack - legacyOffset : 0;
+        int projectedTotal = profile.Disc.TrackTotalScope == LibraryTrackTotalScope.Album
+            ? flattened.Count
+            : legacy
+                ? inferredDiscTrackTotal
+                : selected.OriginalTrackTotal is > 0
+                    ? selected.OriginalTrackTotal.Value
+                    : inferredDiscTrackTotal;
+
+        string sourceAlbum = string.IsNullOrWhiteSpace(selected.SourceAlbum)
+            ? selected.Album
+            : selected.SourceAlbum;
+        string baseAlbum = profile.Disc.InferAlbumSuffix &&
+                           !string.IsNullOrWhiteSpace(selected.InferredBaseAlbum)
+            ? selected.InferredBaseAlbum
+            : sourceAlbum;
+        string projectedAlbum = profile.Disc.Strategy == LibraryDiscStrategy.AlbumSuffix &&
+                                multiDisc && hadDiscNumber
+            ? WithDiscSuffix(baseAlbum, discNumber)
+            : baseAlbum;
+        bool preserveDiscTags = profile.Disc.Strategy == LibraryDiscStrategy.PreserveTags;
+
+        return selected with
+        {
+            Album = projectedAlbum,
+            TrackNumber = projectedTrack,
+            HadTrackNumber = hadOriginalTrack || flatten,
+            TrackTotal = projectedTotal,
+            OriginalDiscNumber = discNumber,
+            HadDiscNumber = hadDiscNumber,
+            ProjectedDiscNumber = preserveDiscTags && hadDiscNumber
+                ? discNumber
+                : null,
+            ProjectedDiscTotal = preserveDiscTags
+                ? selected.OriginalDiscTotal
+                : null,
+            PathDiscNumber = PathDiscNumber(
+                profile.Disc.Strategy, hadDiscNumber, discNumber),
+        };
+    }
+
+    private static int? PathDiscNumber(
+        LibraryDiscStrategy strategy,
+        bool hadDiscNumber,
+        int discNumber) => hadDiscNumber && strategy is
+        LibraryDiscStrategy.PreserveTags or
+        LibraryDiscStrategy.DiscFolder or
+        LibraryDiscStrategy.FileNamePrefix
+            ? discNumber
+            : null;
+
+    private static string WithDiscSuffix(string album, int discNumber)
+    {
+        Match suffix = DiscSuffix.Match(album);
+        return suffix.Success && int.TryParse(
+                   suffix.Groups["disc"].Value, out int existingDisc) &&
+               existingDisc == discNumber
+            ? album
+            : $"{album} (Disc {discNumber})";
     }
 
     private static void BuildRecipeOutputs(
@@ -416,9 +564,11 @@ public sealed class IngestMusicService : IIngestMusicService
                     conflicts.Add(new(albumKey, selected.SourcePath, wavpackError));
                     continue;
                 }
-                LibraryProfile namingProfile = config.ResolveProfile(recipe);
                 LibraryProfile destinationProfile =
                     config.ResolveDestinationProfile(recipe);
+                IngestTrackPlan projected = ProjectForDestination(
+                    selected, trackPlans, destinationProfile);
+                LibraryProfile namingProfile = destinationProfile;
                 if (recipe.CollisionPolicy is LibraryPathCollisionPolicy collision)
                     namingProfile = namingProfile with
                     {
@@ -428,8 +578,8 @@ public sealed class IngestMusicService : IIngestMusicService
                 try
                 {
                     destination = catalogTarget
-                        ? ClaimItunesCanonical(itunesMediaFolder!, selected, claimed)
-                        : ClaimProfilePath(target!.Target, selected, extension, config,
+                        ? ClaimItunesCanonical(itunesMediaFolder!, projected, claimed)
+                        : ClaimProfilePath(target!.Target, projected, extension, config,
                             namingProfile, claimed);
                 }
                 catch (Exception error) when (error is InvalidDataException or ArgumentException)
@@ -482,7 +632,7 @@ public sealed class IngestMusicService : IIngestMusicService
                 {
                     Identity = selected.Identity,
                     Kind = IngestOutputKind.Recipe,
-                    Metadata = selected,
+                    Metadata = projected,
                     SourcePath = selected.SourcePath,
                     DestinationPath = destination,
                     DestinationRoot = target?.Target ?? itunesMediaFolder,
@@ -499,7 +649,8 @@ public sealed class IngestMusicService : IIngestMusicService
                     DeriveCd = usedHighResolutionFallback,
                     PreserveMetadata = recipe.PreserveMetadata,
                     PreserveArtwork = recipe.PreserveArtwork,
-                    PreserveDiscTags = destinationProfile.Disc.PreserveDiscTags,
+                    PreserveDiscTags = destinationProfile.Disc.Strategy ==
+                        LibraryDiscStrategy.PreserveTags,
                     OutputRepresentationRole = recipe.OutputRepresentationRole,
                     ArtworkPolicy = destinationProfile.Artwork,
                     MetadataPolicy = destinationProfile.Metadata,
@@ -689,7 +840,8 @@ public sealed class IngestMusicService : IIngestMusicService
     private static PreviewFileResult ScanPreviewFile(
         IngestFileSnapshot snapshot,
         LibraryProfile profile,
-        IReadOnlyList<LibraryIngestRecipe> recipes)
+        IReadOnlyList<LibraryIngestRecipe> recipes,
+        bool inferSuffixForGrouping)
     {
         string path = snapshot.Path;
         string extension = Path.GetExtension(path);
@@ -733,16 +885,23 @@ public sealed class IngestMusicService : IIngestMusicService
                 throw new InvalidDataException($"Below-CD-quality input is unsupported ({codec.Samplerate} Hz/{codec.BitsPerSample}-bit).");
 
             var suffix = DiscSuffix.Match(album);
-            bool inferSuffix = suffix.Success && profile.Disc.InferAlbumSuffix;
+            string? inferredBaseAlbum = suffix.Success
+                ? suffix.Groups["album"].Value.Trim()
+                : null;
+            int? inferredDiscNumber = suffix.Success && int.TryParse(
+                suffix.Groups["disc"].Value, out int parsedDisc)
+                    ? parsedDisc
+                    : null;
+            bool inferSuffix = inferredBaseAlbum is not null && inferSuffixForGrouping;
             string baseAlbum = inferSuffix ? suffix.Groups["album"].Value.Trim() : album;
-            int? discNumber = tag.DiscNumber;
-            if (discNumber is null && inferSuffix &&
-                int.TryParse(suffix.Groups["disc"].Value, out int parsedDisc))
-                discNumber = parsedDisc;
+            int? taggedDiscNumber = tag.DiscNumber;
+            int? discNumber = taggedDiscNumber ?? (inferSuffix ? inferredDiscNumber : null);
             return PreviewFileResult.Scanned(new ScannedTrack(
-                path, artist, albumArtist, baseAlbum, title, tag.TrackNumber ?? 0,
+                path, artist, albumArtist, album, baseAlbum, inferredBaseAlbum, title,
+                tag.TrackNumber ?? 0,
                 legacy ? tag.TrackNumber.HasValue : tag.TrackNumber is > 0,
-                tag.TrackTotal, discNumber, tag.DiscTotal, codec.Samplerate,
+                tag.TrackTotal, discNumber, taggedDiscNumber, inferredDiscNumber,
+                tag.DiscTotal, codec.Samplerate,
                 codec.BitsPerSample, codec.Channels, codec.DurationInSeconds, alac,
                 codec.CodecType == CodecType.Lossless, codec.CodecName, extension,
                 compilation, snapshot));
@@ -1339,14 +1498,13 @@ public sealed class IngestMusicService : IIngestMusicService
                                    output.PreserveMetadata && output.PreserveArtwork &&
                                    output.PreserveDiscTags &&
                                    metadataPolicy.PreservesAllSupportedMetadata &&
+                                   IsIdentityMetadataProjection(output.Metadata,
+                                       discPolicy) &&
                                    identityArtwork;
         IReadOnlyList<PreparedArtworkTransfer> transfers;
         if (!exactPreservingCopy)
             transfers = Normalize(stage, output.Metadata, output.SourcePath,
-                discPolicy with
-                {
-                    PreserveDiscTags = output.PreserveDiscTags,
-                },
+                discPolicy,
                 metadataPolicy,
                 output.PreserveArtwork,
                 preserveAdditionalMetadata: output.PreserveMetadata,
@@ -1616,6 +1774,13 @@ public sealed class IngestMusicService : IIngestMusicService
         bool preserveAdditionalMetadata = false,
         LibraryArtworkPolicy? artworkPolicy = null)
     {
+        // File.Copy preserves the source attributes on Windows. A read-only source therefore
+        // produces a read-only staging file, even though staging is intentionally mutable while
+        // destination metadata and artwork are projected. Never alter the source; only clear the
+        // attribute on the private staged copy immediately before saving its tags.
+        FileAttributes attributes = File.GetAttributes(path);
+        if (attributes.HasFlag(FileAttributes.ReadOnly))
+            File.SetAttributes(path, attributes & ~FileAttributes.ReadOnly);
         var media = MediaFile.GetFile(path);
         IMetadataWriter writer = media as IMetadataWriter
             ?? media.Tags.FirstOrDefault() as IMetadataWriter
@@ -1662,12 +1827,13 @@ public sealed class IngestMusicService : IIngestMusicService
             writer.SetField(TagFields.Compilation, "1");
         else
             writer.RemoveField(TagFields.Compilation);
-        if (discPolicy.PreserveDiscTags && track.HadDiscNumber &&
-            track.OriginalDiscNumber > 0)
+        int? projectedDiscNumber = ExpectedDiscNumber(track, discPolicy);
+        int? projectedDiscTotal = ExpectedDiscTotal(track, discPolicy);
+        if (projectedDiscNumber is > 0)
         {
-            writer.SetField(TagFields.DiscNumber, track.OriginalDiscNumber.ToString());
-            if (track.OriginalDiscTotal is > 0)
-                writer.SetField(TagFields.TotalDiscs, track.OriginalDiscTotal.Value.ToString());
+            writer.SetField(TagFields.DiscNumber, projectedDiscNumber.Value.ToString());
+            if (projectedDiscTotal is > 0)
+                writer.SetField(TagFields.TotalDiscs, projectedDiscTotal.Value.ToString());
             else
                 writer.RemoveField(TagFields.TotalDiscs);
         }
@@ -1785,18 +1951,17 @@ public sealed class IngestMusicService : IIngestMusicService
                  tag.TrackTotal != ExpectedTrackTotal(output.Metadata)))
                 throw new InvalidDataException(
                     $"Recipe output metadata validation failed: {path}");
-            if (output.PreserveDiscTags)
-            {
-                IMetadataProvider sourceTag = MediaFile.GetFile(
-                    output.SourcePath, readOnly: true).Tags.First();
-                if (tag.DiscNumber != sourceTag.DiscNumber ||
-                    tag.DiscTotal != sourceTag.DiscTotal)
-                    throw new InvalidDataException(
-                        $"Recipe output did not preserve disc metadata: {path}");
-            }
-            if (!output.PreserveDiscTags && tag.DiscNumber is not null)
+            LibraryDiscPolicy outputDiscPolicy = output.DiscPolicy ??
+                (output.PreserveDiscTags
+                    ? new LibraryDiscPolicy(LibraryDiscStrategy.PreserveTags,
+                        LibraryTrackTotalScope.PerDisc, false)
+                    : new LibraryDiscPolicy(LibraryDiscStrategy.AlbumSuffix,
+                        LibraryTrackTotalScope.PerDisc, false));
+            if (tag.DiscNumber != ExpectedDiscNumber(output.Metadata, outputDiscPolicy) ||
+                tag.DiscTotal != ExpectedDiscTotal(output.Metadata, outputDiscPolicy))
                 throw new InvalidDataException(
-                    $"Recipe output retained disc metadata contrary to policy: {path}");
+                    $"Recipe output disc metadata does not match its destination projection: " +
+                    path);
             int recipeDelta = Math.Abs((int)codec.DurationInSeconds -
                                        (int)output.Metadata.DurationInSeconds);
             if (recipeDelta > 1)
@@ -1831,6 +1996,39 @@ public sealed class IngestMusicService : IIngestMusicService
 
     private static int? ExpectedTrackTotal(IngestTrackPlan track) =>
         track.HadTrackNumber ? track.TrackTotal : null;
+
+    private static int? ExpectedDiscNumber(
+        IngestTrackPlan track,
+        LibraryDiscPolicy policy) => track.ProjectedDiscNumber is > 0
+        ? track.ProjectedDiscNumber
+        : policy.Strategy == LibraryDiscStrategy.PreserveTags &&
+          track.HadDiscNumber && track.OriginalDiscNumber > 0
+            ? track.OriginalDiscNumber
+            : null;
+
+    private static int? ExpectedDiscTotal(
+        IngestTrackPlan track,
+        LibraryDiscPolicy policy) => ExpectedDiscNumber(track, policy) is not null
+        ? track.ProjectedDiscTotal ?? track.OriginalDiscTotal
+        : null;
+
+    private static bool IsIdentityMetadataProjection(
+        IngestTrackPlan track,
+        LibraryDiscPolicy policy)
+    {
+        string sourceAlbum = string.IsNullOrWhiteSpace(track.SourceAlbum)
+            ? track.Album
+            : track.SourceAlbum;
+        int? originalTrack = track.HadOriginalTrackNumber
+            ? track.OriginalTrackNumber
+            : track.HadTrackNumber
+                ? track.TrackNumber
+                : null;
+        return Same(track.Album, sourceAlbum) &&
+               ExpectedTrackNumber(track) == originalTrack &&
+               ExpectedDiscNumber(track, policy) == track.TaggedDiscNumber &&
+               ExpectedDiscTotal(track, policy) == track.OriginalDiscTotal;
+    }
 
     private static void EnsureFresh(IngestPlan plan)
     {
@@ -1889,7 +2087,7 @@ public sealed class IngestMusicService : IIngestMusicService
     {
         string destination = ItlMediaOrganization.CanonicalMusicPath(mediaFolder,
             track.AlbumArtist, track.Artist, track.Album, track.TrackNumber, track.Title,
-            track.Compilation, discNumber: null);
+            track.Compilation, discNumber: track.PathDiscNumber);
         string directory = Path.GetDirectoryName(destination)!;
         string extension = Path.GetExtension(destination);
         string stem = Path.GetFileNameWithoutExtension(destination);
@@ -1963,12 +2161,16 @@ public sealed class IngestMusicService : IIngestMusicService
         string Path,
         string Artist,
         string? AlbumArtist,
+        string SourceAlbum,
         string BaseAlbum,
+        string? InferredBaseAlbum,
         string Title,
         int TrackNumber,
         bool HadTrackNumber,
         int? TrackTotal,
         int? DiscNumber,
+        int? TaggedDiscNumber,
+        int? InferredDiscNumber,
         int? DiscTotal,
         uint SampleRate,
         uint BitsPerSample,

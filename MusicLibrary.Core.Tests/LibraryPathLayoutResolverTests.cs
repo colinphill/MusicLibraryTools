@@ -32,6 +32,85 @@ public sealed class LibraryPathLayoutResolverTests
     }
 
     [Fact]
+    public void LegacyProfileUsesItsIndependentMigratedNamingLimits()
+    {
+        LibraryProfile baseline = LibraryProfilePresets.Create(
+            LibraryProfilePreset.LegacyMusicLibraryTools);
+        LibraryProfile profile = baseline with
+        {
+            Naming = baseline.Naming with
+            {
+                ComponentLengthLimit = 12,
+                DiscAlbumLengthLimit = 8,
+            },
+        };
+        LibraryPathMetadata track = Track with
+        {
+            AlbumArtist = "Very Long Album Artist",
+            Album = "Very Long Album Name (Disc 2)",
+            Title = "Very Long Track Title",
+        };
+
+        string path = LibraryPathLayoutResolver.Shared.Resolve(
+            "library", profile, track, 255, 255);
+
+        Assert.Equal(Path.GetFullPath(Path.Combine(
+            "library", "Very Long Al", "Very Lon (Disc 2)",
+            "03 Very Long Tr.flac")), path);
+    }
+
+    [Fact]
+    public void ItunesNamingAppliesAlbumSuffixWithoutAlsoAddingDiscFilePrefix()
+    {
+        LibraryProfile baseline = LibraryProfilePresets.Create(
+            LibraryProfilePreset.ItunesMedia);
+        LibraryProfile profile = baseline with
+        {
+            Disc = baseline.Disc with { Strategy = LibraryDiscStrategy.AlbumSuffix },
+        };
+        LibraryPathMetadata metadata = Track with
+        {
+            Album = "Some Album",
+            Title = "Some Track",
+            TrackNumber = 3,
+            DiscNumber = 2,
+        };
+
+        string path = LibraryPathLayoutResolver.Shared.Resolve(
+            "library", profile, metadata, 255, 255);
+
+        Assert.Equal("Some Album (Disc 2)",
+            Path.GetFileName(Path.GetDirectoryName(path)));
+        Assert.Equal("03 Some Track.flac", Path.GetFileName(path));
+    }
+
+    [Fact]
+    public void ItunesNamingHonorsDiscFolderAsTheOnlyPathRepresentation()
+    {
+        LibraryProfile baseline = LibraryProfilePresets.Create(
+            LibraryProfilePreset.ItunesMedia);
+        LibraryProfile profile = baseline with
+        {
+            Disc = baseline.Disc with { Strategy = LibraryDiscStrategy.DiscFolder },
+        };
+        LibraryPathMetadata metadata = Track with
+        {
+            Album = "Some Album",
+            Title = "Some Track",
+            TrackNumber = 3,
+            DiscNumber = 2,
+        };
+
+        string path = LibraryPathLayoutResolver.Shared.Resolve(
+            "library", profile, metadata, 255, 255);
+
+        Assert.Equal("Disc 2", Path.GetFileName(Path.GetDirectoryName(path)));
+        Assert.Equal("Some Album", Path.GetFileName(
+            Path.GetDirectoryName(Path.GetDirectoryName(path))));
+        Assert.Equal("03 Some Track.flac", Path.GetFileName(path));
+    }
+
+    [Fact]
     public void GenericTemplatePreservesEditionUnicodeAndOptionalYear()
     {
         LibraryProfile profile = LibraryProfilePresets.Create(

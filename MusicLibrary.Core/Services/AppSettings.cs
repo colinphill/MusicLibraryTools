@@ -132,6 +132,7 @@ public sealed class AppSettings : IAppSettings
         _ = configuration.CleanCrossSyncPlaylists;
         _ = configuration.DatabaseFile;
         _ = configuration.ActiveProfile;
+        _ = configuration.ActiveIngestProfile;
         _ = configuration.PolicySnapshot;
         return configuration;
     }

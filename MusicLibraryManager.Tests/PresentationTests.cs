@@ -822,10 +822,13 @@ public sealed class PresentationTests
         Assert.Equal(LibraryRootPermissions.None, second.Permissions);
         viewModel.SelectedLibraryProfile = viewModel.LibraryProfiles.Single(profile =>
             profile.Id == LibraryProfilePresets.ArtistAlbumId);
+        Assert.Equal(LibraryProfilePresets.CatalogOnlyId, first.ProfileId);
+        Assert.Equal(LibraryProfilePresets.CatalogOnlyId, second.ProfileId);
+        first.ProfileChoice = first.ProfileChoices.Single(profile =>
+            profile.Id == LibraryProfilePresets.ArtistAlbumId);
         Assert.Equal(LibraryProfilePresets.ArtistAlbumId, first.ProfileId);
-        Assert.Equal(LibraryProfilePresets.ArtistAlbumId, second.ProfileId);
-        Assert.True(first.AllowOrganization);
-        Assert.False(first.IsReadOnly);
+        Assert.False(first.AllowOrganization);
+        Assert.True(first.IsReadOnly);
         second.AllowMetadataWrites = true;
         Assert.True(second.AllowMetadataWrites);
         Assert.Contains("metadata", second.PermissionSummary, StringComparison.OrdinalIgnoreCase);
@@ -844,8 +847,8 @@ public sealed class PresentationTests
         root.AllowIngestOutput = true;
         viewModel.AddIngestRecipeCommand.Execute(null);
         IngestRecipeEditorRow recipe = Assert.Single(
-            Assert.IsType<LibraryProfileEditorRow>(viewModel.AdvancedProfile)
-                .IngestRecipes);
+            Assert.IsType<IngestProfileEditorRow>(viewModel.AdvancedIngestProfile)
+                .Recipes);
 
         recipe.DestinationRootChoice = Assert.Single(
             recipe.DestinationRootChoices, choice => choice.Id == root.Id);
@@ -863,6 +866,32 @@ public sealed class PresentationTests
         Assert.Equal(root.Id, recipe.DestinationRootId);
         Assert.StartsWith("Missing root", recipe.DestinationRootChoice?.Label);
         Assert.Equal(root.Id, recipe.Build().DestinationRootId);
+    }
+
+    [Fact]
+    public async Task Settings_playlist_sync_target_picker_selects_one_library_root()
+    {
+        var viewModel = new SettingsViewModel(
+            new FakeSettings(), new FakeFilePicker(), new FakeDialogs(), new FakeTheme());
+        await viewModel.NewConfigurationCommand.ExecuteAsync(null);
+        IndexTargetEditorRow first = Assert.Single(viewModel.IndexTargets);
+        first.Path = @"D:\Music\Archive";
+        viewModel.AddIndexTargetCommand.Execute(null);
+        IndexTargetEditorRow second = viewModel.IndexTargets[1];
+        second.Path = @"E:\Music\Portable";
+
+        viewModel.SelectedSyncTargetRoot = viewModel.SyncTargetRootChoices.Single(choice =>
+            choice.Id == second.Id);
+
+        Assert.False(first.IsSyncTarget);
+        Assert.True(second.IsSyncTarget);
+        Assert.True(second.AllowSynchronizationOutput);
+        Assert.Equal(second.Id, viewModel.SelectedSyncTargetRoot.Id);
+
+        viewModel.SelectedSyncTargetRoot = viewModel.SyncTargetRootChoices.Single(choice =>
+            choice.Id is null);
+
+        Assert.All(viewModel.IndexTargets, root => Assert.False(root.IsSyncTarget));
     }
 
     [Fact]
@@ -892,7 +921,8 @@ public sealed class PresentationTests
         Assert.Equal(LibraryProfilePreset.Custom, duplicate.Preset);
         Assert.Equal("Home archive copy", duplicate.Name);
         Assert.NotEqual(created.Id, duplicate.Id);
-        Assert.Equal(duplicate.Id, Assert.Single(viewModel.IndexTargets).ProfileId);
+        Assert.Equal(LibraryProfilePresets.CatalogOnlyId,
+            Assert.Single(viewModel.IndexTargets).ProfileId);
 
         await viewModel.DeleteLibraryProfileCommand.ExecuteAsync(null);
 
@@ -921,7 +951,7 @@ public sealed class PresentationTests
 
         viewModel.ReviewGuidedSetupCommand.Execute(null);
 
-        Assert.Equal(6, viewModel.SelectedTabIndex);
+        Assert.Equal(7, viewModel.SelectedTabIndex);
         Assert.Contains("catalog only", viewModel.EffectivePolicySummary,
             StringComparison.OrdinalIgnoreCase);
     }
@@ -1035,19 +1065,28 @@ public sealed class PresentationTests
 
             viewModel.EditCurrentConfigurationCommand.Execute(null);
             Assert.Equal(1, viewModel.SelectedTabIndex);
+            Assert.False(viewModel.AdvancedIngestProfile!.Recipes.Single(recipe =>
+                recipe.Id == "legacy-hires-flac").Enabled);
 
             // The active configuration is restored directly into the editor; users should not
             // need to click Edit active before their roots and workflow targets appear.
             IndexTargetEditorRow root = Assert.Single(viewModel.IndexTargets);
             Assert.Equal(LibraryProfilePresets.LegacyId, viewModel.SelectedLibraryProfile?.Id);
-            Assert.Equal(LibraryProfilePresets.LegacyId, root.ProfileId);
+            Assert.NotEqual(LibraryProfilePresets.LegacyId, root.ProfileId);
             Assert.True(root.AllowMetadataWrites);
             Assert.True(root.AllowArtworkWrites);
             Assert.False(root.AllowOrganization);
             Assert.True(root.AllowIngestOutput);
             Assert.True(root.AllowSynchronizationOutput);
-            Assert.True(root.UseItunesCanonicalNaming);
+            Assert.True(viewModel.LibraryProfiles.Single(profile => string.Equals(
+                profile.Id, root.ProfileId, StringComparison.OrdinalIgnoreCase))
+                .Naming.UseItunesCanonicalNaming);
+            Assert.Equal(LibraryDiscStrategy.PreserveTags,
+                viewModel.LibraryProfiles.Single(profile => string.Equals(
+                    profile.Id, root.ProfileId, StringComparison.OrdinalIgnoreCase))
+                    .Disc.Strategy);
             Assert.True(root.IsSyncTarget);
+            Assert.Equal(root.Id, viewModel.SelectedSyncTargetRoot?.Id);
             Assert.Equal(".flac, .m4a", root.IndexFormats);
             Assert.Equal("Music/**; *.flac", root.IndexIncludePatterns);
             Assert.Equal("Temp/**; *.tmp", root.IndexExcludePatterns);
@@ -1059,6 +1098,8 @@ public sealed class PresentationTests
             Assert.Equal(5m, viewModel.OversizedArtworkSizeThresholdMib);
             Assert.Equal(5 * 1024 * 1024, viewModel.OversizedArtworkByteThreshold);
             Assert.Equal(3_200, viewModel.OversizedArtworkDimensionThreshold);
+            Assert.Equal(220, viewModel.AdvancedProfile!.ComponentLengthLimit);
+            Assert.Equal(180, viewModel.AdvancedProfile.DiscAlbumLengthLimit);
             Assert.True(viewModel.DeleteSourcesAfterIngest);
             Assert.True(viewModel.RemoveNonMusicAfterIngest);
             Assert.True(viewModel.DeleteStaleCrossSyncFiles);
@@ -1082,13 +1123,15 @@ public sealed class PresentationTests
             root.IndexExcludePatterns = "Temp/**; Drafts/**";
             Assert.NotNull(viewModel.AdvancedProfile);
             viewModel.AdvancedProfile!.CollisionPolicy = LibraryPathCollisionPolicy.Hash;
+            viewModel.AdvancedProfile.UseItunesCanonicalNaming = true;
             viewModel.AdvancedProfile.ComponentLengthLimit = 180;
+            viewModel.AdvancedProfile.DiscAlbumLengthLimit = 170;
             viewModel.AdvancedProfile.IdentityStripsFormatSuffixes = false;
             viewModel.AdvancedProfile.PreserveReplayGain = false;
             viewModel.AdvancedProfile.HealthRules.Single(rule =>
                 rule.Id == LibraryHealthRuleIds.LossyFile).Enabled = false;
-            viewModel.AdvancedProfile.IngestRecipes[0].PreserveMetadata = false;
-            IngestRecipeEditorRow aacRecipe = viewModel.AdvancedProfile.IngestRecipes.Single(
+            viewModel.AdvancedIngestProfile!.Recipes[0].PreserveMetadata = false;
+            IngestRecipeEditorRow aacRecipe = viewModel.AdvancedIngestProfile.Recipes.Single(
                 recipe => recipe.Id == "legacy-aac");
             aacRecipe.Encoder = "aac-advanced";
             aacRecipe.BitrateKbps = 320;
@@ -1107,7 +1150,8 @@ public sealed class PresentationTests
             viewModel.OversizedArtworkSizeThresholdMib = 3.5m;
             viewModel.OversizedArtworkDimensionThreshold = 2_500;
             Assert.True(viewModel.HasUnsavedChanges);
-            Assert.True(viewModel.SaveConfigurationCommand.CanExecute(null));
+            Assert.True(viewModel.SaveConfigurationCommand.CanExecute(null),
+                viewModel.ValidationSummary);
             await viewModel.SaveConfigurationCommand.ExecuteAsync(null);
             Assert.False(viewModel.HasUnsavedChanges);
             Assert.False(viewModel.SaveConfigurationCommand.CanExecute(null));
@@ -1120,7 +1164,10 @@ public sealed class PresentationTests
             Assert.All(savedRoot.Memberships.Take(3), membership =>
                 Assert.Equal("/Portable/FLAC", membership.Offset));
             Assert.Equal("/Music", savedRoot.Memberships[3].Offset);
-            Assert.True(savedRoot.UseItunesCanonicalNaming);
+            Assert.False(savedRoot.UseItunesCanonicalNaming);
+            Assert.True(saved.Profiles.Single(profile => string.Equals(
+                profile.Id, savedRoot.ProfileId, StringComparison.OrdinalIgnoreCase))
+                .Naming.UseItunesCanonicalNaming);
             Assert.True(savedRoot.IsSyncTarget);
             Assert.Equal(LibraryIngestRole.None, savedRoot.IngestRole);
             Assert.Equal(LibraryRepresentationRole.Ignore,
@@ -1130,21 +1177,23 @@ public sealed class PresentationTests
             Assert.Equal(["Temp/**", "Drafts/**"], savedRoot.IndexExcludePatterns);
             Assert.Equal(LibraryPathCollisionPolicy.Hash,
                 saved.ActiveProfile.Naming.CollisionPolicy);
+            Assert.True(saved.ActiveProfile.Naming.UseItunesCanonicalNaming);
             Assert.Equal(180, saved.ActiveProfile.Naming.ComponentLengthLimit);
+            Assert.Equal(170, saved.ActiveProfile.Naming.DiscAlbumLengthLimit);
             Assert.Equal(180, saved.LengthLimit);
-            Assert.Equal(180, saved.DiscNumLengthLimit);
+            Assert.Equal(170, saved.DiscNumLengthLimit);
             Assert.Equal("aac-advanced", saved.AacEncoder);
             Assert.Equal(320, saved.AacBitrateKbps);
             Assert.Equal("-af \"loudnorm=I=-16:LRA=11\" -movflags +faststart",
-                saved.ActiveProfile.Ingest.Recipes.Single(recipe =>
+                saved.ActiveIngestProfile.Ingest.Recipes.Single(recipe =>
                     recipe.Id == "legacy-aac").ExtraFfmpegOptions);
-            Assert.True(saved.ActiveProfile.Ingest.Recipes.Single(recipe =>
+            Assert.True(saved.ActiveIngestProfile.Ingest.Recipes.Single(recipe =>
                 recipe.Id == "legacy-aac").AddToMediaCatalog);
             Assert.False(saved.ActiveProfile.AlbumIdentity.StripFormatSuffixes);
             Assert.False(saved.ActiveProfile.Metadata.PreserveReplayGain);
             Assert.False(saved.ActiveProfile.Health.Find(
                 LibraryHealthRuleIds.LossyFile)!.Enabled);
-            Assert.False(saved.ActiveProfile.Ingest.Recipes[0].PreserveMetadata);
+            Assert.False(saved.ActiveIngestProfile.Ingest.Recipes[0].PreserveMetadata);
             Assert.Contains(saved.ActiveProfile.Sidecars.Rules,
                 rule => rule.Patterns.Contains("*.lrc"));
             Assert.True(saved.DeleteStaleCrossSyncFiles);

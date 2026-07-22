@@ -281,6 +281,49 @@ namespace MusicLibraryTools
             throw new InvalidDataException(
                 $"ActiveProfileId '{ActiveProfileId}' does not identify a configured LibraryProfile.");
 
+        public string ActiveIngestProfileId
+        {
+            get
+            {
+                if (SchemaVersion == LibraryConfigurationSchema.LegacyVersion)
+                    return LibraryProfilePresets.LegacyId;
+                string value = CleanOptional(
+                    (string?)root_.Attribute("ActiveIngestProfileId")) ?? ActiveProfileId;
+                LibraryProfileXml.ValidateId(value, "active ingest profile");
+                return value;
+            }
+        }
+
+        public IReadOnlyList<LibraryIngestProfile> IngestProfiles
+        {
+            get
+            {
+                if (SchemaVersion == LibraryConfigurationSchema.LegacyVersion)
+                    return LibraryIngestProfilePresets.All;
+                LibraryIngestProfile[] profiles = root_.Elements("IngestProfile")
+                    .Select(LibraryIngestProfileXml.Parse)
+                    .ToArray();
+                if (profiles.Length == 0)
+                    profiles = Profiles.Select(
+                        LibraryIngestProfilePresets.FromLibraryProfile).ToArray();
+                string[] duplicateIds = profiles
+                    .GroupBy(profile => profile.Id, StringComparer.OrdinalIgnoreCase)
+                    .Where(group => group.Count() > 1)
+                    .Select(group => group.Key)
+                    .ToArray();
+                if (duplicateIds.Length > 0)
+                    throw new InvalidDataException(
+                        "Ingest profile IDs must be unique: " + string.Join(", ", duplicateIds));
+                return profiles;
+            }
+        }
+
+        public LibraryIngestProfile ActiveIngestProfile => IngestProfiles.SingleOrDefault(profile =>
+            string.Equals(profile.Id, ActiveIngestProfileId, StringComparison.OrdinalIgnoreCase)) ??
+            throw new InvalidDataException(
+                $"ActiveIngestProfileId '{ActiveIngestProfileId}' does not identify a " +
+                "configured IngestProfile.");
+
         /// <summary>
         /// Portable export definitions explicitly configured for this library. Specialized built-in
         /// exports are not implicitly enabled; they appear here only after being configured.
@@ -342,6 +385,7 @@ namespace MusicLibraryTools
                 ? profile with
                 {
                     Naming = profile.Naming with { UseItunesCanonicalNaming = true },
+                    Disc = profile.Disc with { Strategy = LibraryDiscStrategy.PreserveTags },
                 }
                 : profile;
         }

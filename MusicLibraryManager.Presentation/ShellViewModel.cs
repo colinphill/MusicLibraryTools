@@ -48,7 +48,7 @@ public partial class ShellViewModel : ObservableObject
     public bool CanOpenHealth => _settings.Configuration is not null;
     public bool CanOpenIngest => _settings.Configuration is { } configuration &&
         (configuration.ActiveProfile.Preset == LibraryProfilePreset.LegacyMusicLibraryTools ||
-         configuration.ActiveProfile.Ingest.Enabled && configuration.PolicySnapshot.Roots.Values.Any(
+         configuration.ActiveIngestProfile.Ingest.Enabled && configuration.PolicySnapshot.Roots.Values.Any(
              root => root.Permissions.HasFlag(LibraryRootPermissions.IngestOutput)));
     public bool CanOpenOrganize => _settings.Configuration is { } configuration &&
         configuration.PolicySnapshot.Roots.Values.Any(root =>

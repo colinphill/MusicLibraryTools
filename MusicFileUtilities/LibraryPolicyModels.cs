@@ -101,6 +101,7 @@ namespace MusicLibraryTools
         public LibraryUnicodeNormalization UnicodeNormalization { get; init; } =
             LibraryUnicodeNormalization.FormC;
         public int? ComponentLengthLimit { get; init; }
+        public int? DiscAlbumLengthLimit { get; init; }
         public int? CompletePathLengthLimit { get; init; }
     }
 
@@ -122,8 +123,7 @@ namespace MusicLibraryTools
     public sealed record LibraryDiscPolicy(
         LibraryDiscStrategy Strategy,
         LibraryTrackTotalScope TrackTotalScope,
-        bool InferAlbumSuffix,
-        bool PreserveDiscTags);
+        bool InferAlbumSuffix);
 
     /// <summary>Controls exact album grouping without collapsing edition qualifiers.</summary>
     public sealed record LibraryAlbumIdentityPolicy(
@@ -242,7 +242,6 @@ namespace MusicLibraryTools
         int? SampleRateHz,
         int? BitsPerSample,
         LibraryChannelSelection? OutputChannels,
-        string? NamingProfileId,
         bool PreserveMetadata,
         bool PreserveArtwork,
         LibraryPathCollisionPolicy? CollisionPolicy)
@@ -266,6 +265,15 @@ namespace MusicLibraryTools
         LibrarySourceDisposition SourceDisposition,
         bool PreserveSidecars,
         IReadOnlyList<LibraryIngestRecipe> Recipes);
+
+    /// <summary>
+    /// A named ingest workflow. Ingest profiles own source handling and recipes; destination
+    /// naming is always supplied by the selected library root's profile.
+    /// </summary>
+    public sealed record LibraryIngestProfile(
+        string Id,
+        string Name,
+        LibraryIngestPolicy Ingest);
 
     /// <summary>Where artwork managed by a profile is stored.</summary>
     public enum LibraryArtworkStorage
@@ -417,7 +425,7 @@ namespace MusicLibraryTools
                     new(DefaultDirectoryTemplate, DefaultFileTemplate, 2, 1,
                         LibraryPathCollisionPolicy.Suffix, true, "_", false, true, true),
                     new(LibraryDiscStrategy.AlbumSuffix, LibraryTrackTotalScope.PerDisc,
-                        true, false),
+                        true),
                     LegacyHealth(),
                     new(44_101, 17),
                     new(true, LibrarySourceDisposition.Quarantine, false, LegacyRecipes()),
@@ -501,18 +509,6 @@ namespace MusicLibraryTools
                 Id = string.IsNullOrWhiteSpace(id) ? profile.Id : id.Trim(),
                 Name = string.IsNullOrWhiteSpace(name) ? profile.Name : name.Trim(),
             };
-            if (renamed.Preset == LibraryProfilePreset.LegacyMusicLibraryTools &&
-                !string.Equals(renamed.Id, LegacyId, StringComparison.OrdinalIgnoreCase))
-                renamed = renamed with
-                {
-                    Ingest = renamed.Ingest with
-                    {
-                        Recipes = renamed.Ingest.Recipes.Select(recipe => recipe with
-                        {
-                            NamingProfileId = renamed.Id,
-                        }).ToArray(),
-                    },
-                };
             return renamed;
         }
 
@@ -531,8 +527,7 @@ namespace MusicLibraryTools
         private static LibraryDiscPolicy GenericDisc() => new(
             LibraryDiscStrategy.PreserveTags,
             LibraryTrackTotalScope.PerDisc,
-            false,
-            true);
+            false);
 
         private static LibraryArtworkPolicy LegacyArtwork() => new(
             LibraryArtworkStorage.Embedded,
@@ -618,7 +613,6 @@ namespace MusicLibraryTools
                 null,
                 null,
                 LibraryChannelSelection.Stereo,
-                LegacyId,
                 true,
                 true,
                 LibraryPathCollisionPolicy.Suffix),
@@ -642,7 +636,6 @@ namespace MusicLibraryTools
                 44_100,
                 16,
                 LibraryChannelSelection.Stereo,
-                LegacyId,
                 true,
                 true,
                 LibraryPathCollisionPolicy.Suffix)
@@ -670,7 +663,6 @@ namespace MusicLibraryTools
                 44_100,
                 16,
                 LibraryChannelSelection.Stereo,
-                LegacyId,
                 true,
                 true,
                 LibraryPathCollisionPolicy.Suffix)
@@ -699,7 +691,6 @@ namespace MusicLibraryTools
                 44_100,
                 null,
                 LibraryChannelSelection.Stereo,
-                LegacyId,
                 true,
                 true,
                 LibraryPathCollisionPolicy.Suffix)
@@ -707,6 +698,19 @@ namespace MusicLibraryTools
                 SourceSelection = LibraryIngestSourceSelection.PreferCdQuality,
             },
         ];
+    }
+
+    /// <summary>Built-in ingest workflows separated from destination/root policy profiles.</summary>
+    public static class LibraryIngestProfilePresets
+    {
+        public static IReadOnlyList<LibraryIngestProfile> All =>
+            LibraryProfilePresets.All.Select(FromLibraryProfile).ToArray();
+
+        public static LibraryIngestProfile FromLibraryProfile(LibraryProfile profile)
+        {
+            ArgumentNullException.ThrowIfNull(profile);
+            return new(profile.Id, profile.Name, profile.Ingest);
+        }
     }
 
     /// <summary>XML reader/writer for named profile definitions in schema v2.</summary>
@@ -772,6 +776,8 @@ namespace MusicLibraryTools
                     "UnicodeNormalization", fallback.Naming.UnicodeNormalization),
                 ComponentLengthLimit = ParseOptionalPositiveInteger(namingElement,
                     "ComponentLengthLimit"),
+                DiscAlbumLengthLimit = ParseOptionalPositiveInteger(namingElement,
+                    "DiscAlbumLengthLimit"),
                 CompletePathLengthLimit = ParseOptionalPositiveInteger(namingElement,
                     "CompletePathLengthLimit"),
             };
@@ -784,8 +790,6 @@ namespace MusicLibraryTools
                     discElement, "TrackTotalScope", fallback.Disc.TrackTotalScope),
                 InferAlbumSuffix = ParseBoolean(
                     discElement, "InferAlbumSuffix", fallback.Disc.InferAlbumSuffix),
-                PreserveDiscTags = ParseBoolean(
-                    discElement, "PreserveDiscTags", fallback.Disc.PreserveDiscTags),
             };
 
             XElement? identityElement = element.Element("AlbumIdentity");
@@ -887,9 +891,9 @@ namespace MusicLibraryTools
             return result;
         }
 
-        public static XElement Write(LibraryProfile profile)
+        public static XElement Write(LibraryProfile profile, bool includeLegacyIngest = true)
         {
-            Validate(profile);
+            Validate(profile, includeLegacyIngest);
             return new XElement("LibraryProfile",
                 new XAttribute("Id", profile.Id),
                 new XAttribute("Name", profile.Name),
@@ -920,14 +924,16 @@ namespace MusicLibraryTools
                     profile.Naming.ComponentLengthLimit is { } componentLimit
                         ? new XAttribute("ComponentLengthLimit", componentLimit)
                         : null,
+                    profile.Naming.DiscAlbumLengthLimit is { } discAlbumLimit
+                        ? new XAttribute("DiscAlbumLengthLimit", discAlbumLimit)
+                        : null,
                     profile.Naming.CompletePathLengthLimit is { } pathLimit
                         ? new XAttribute("CompletePathLengthLimit", pathLimit)
                         : null),
                 new XElement("Disc",
                     new XAttribute("Strategy", profile.Disc.Strategy),
                     new XAttribute("TrackTotalScope", profile.Disc.TrackTotalScope),
-                    new XAttribute("InferAlbumSuffix", profile.Disc.InferAlbumSuffix),
-                    new XAttribute("PreserveDiscTags", profile.Disc.PreserveDiscTags)),
+                    new XAttribute("InferAlbumSuffix", profile.Disc.InferAlbumSuffix)),
                 new XElement("AlbumIdentity",
                     new XAttribute("UseAlbumArtist", profile.AlbumIdentity.UseAlbumArtist),
                     new XAttribute("StripFormatSuffixes",
@@ -957,11 +963,13 @@ namespace MusicLibraryTools
                         profile.Quality.HighResolutionMinimumSampleRateHz),
                     new XAttribute("HighResolutionMinimumBitsPerSample",
                         profile.Quality.HighResolutionMinimumBitsPerSample)),
-                new XElement("Ingest",
-                    new XAttribute("Enabled", profile.Ingest.Enabled),
-                    new XAttribute("SourceDisposition", profile.Ingest.SourceDisposition),
-                    new XAttribute("PreserveSidecars", profile.Ingest.PreserveSidecars),
-                    profile.Ingest.Recipes.Select(WriteIngestRecipe)),
+                includeLegacyIngest
+                    ? new XElement("Ingest",
+                        new XAttribute("Enabled", profile.Ingest.Enabled),
+                        new XAttribute("SourceDisposition", profile.Ingest.SourceDisposition),
+                        new XAttribute("PreserveSidecars", profile.Ingest.PreserveSidecars),
+                        profile.Ingest.Recipes.Select(WriteIngestRecipe))
+                    : null,
                 new XElement("Artwork",
                     new XAttribute("Storage", profile.Artwork.Storage),
                     new XAttribute("Roles", profile.Artwork.Roles),
@@ -983,7 +991,9 @@ namespace MusicLibraryTools
                             new XAttribute("Disposition", rule.Disposition)))));
         }
 
-        public static void Validate(LibraryProfile profile)
+        public static void Validate(
+            LibraryProfile profile,
+            bool includeLegacyIngest = true)
         {
             ArgumentNullException.ThrowIfNull(profile);
             ValidateId(profile.Id, "profile");
@@ -995,8 +1005,9 @@ namespace MusicLibraryTools
                 "Unicode normalization policy");
             ValidateEnum(profile.Disc.Strategy, profile.Id, "disc strategy");
             ValidateEnum(profile.Disc.TrackTotalScope, profile.Id, "track-total scope");
-            ValidateEnum(profile.Ingest.SourceDisposition, profile.Id,
-                "ingest source disposition");
+            if (includeLegacyIngest)
+                ValidateEnum(profile.Ingest.SourceDisposition, profile.Id,
+                    "ingest source disposition");
             ValidateEnum(profile.Artwork.Storage, profile.Id, "artwork storage policy");
             ValidateEnum(profile.Artwork.Roles, profile.Id, "artwork role policy");
             ValidateEnum(profile.Artwork.Encoding, profile.Id, "artwork encoding policy");
@@ -1036,6 +1047,8 @@ namespace MusicLibraryTools
                     $"Library profile '{profile.Id}' naming fallbacks cannot be blank.");
             ValidateOptionalPositive(profile.Naming.ComponentLengthLimit,
                 profile.Id, "component length limit");
+            ValidateOptionalPositive(profile.Naming.DiscAlbumLengthLimit,
+                profile.Id, "disc-album length limit");
             ValidateOptionalPositive(profile.Naming.CompletePathLengthLimit,
                 profile.Id, "complete path length limit");
 
@@ -1055,27 +1068,30 @@ namespace MusicLibraryTools
                     $"health rule '{rule.Id}' severity");
             }
 
-            string[] duplicateRecipes = profile.Ingest.Recipes
-                .GroupBy(recipe => recipe.Id, StringComparer.OrdinalIgnoreCase)
-                .Where(group => group.Count() > 1)
-                .Select(group => group.Key)
-                .ToArray();
-            if (duplicateRecipes.Length > 0)
-                throw new InvalidDataException(
-                    $"Library profile '{profile.Id}' contains duplicate ingest recipe(s): " +
-                    string.Join(", ", duplicateRecipes));
-            foreach (LibraryIngestRecipe recipe in profile.Ingest.Recipes)
+            if (includeLegacyIngest)
             {
-                ValidateEnum(recipe.Action, profile.Id,
-                    $"ingest recipe '{recipe.Id}' action");
-                ValidateEnum(recipe.DestinationLegacyRole, profile.Id,
-                    $"ingest recipe '{recipe.Id}' legacy destination role");
-                if (recipe.CollisionPolicy is { } collisionPolicy)
-                    ValidateEnum(collisionPolicy, profile.Id,
-                        $"ingest recipe '{recipe.Id}' collision policy");
-                ValidateEnum(recipe.OutputRepresentationRole, profile.Id,
-                    $"ingest recipe '{recipe.Id}' representation role");
-                ValidateIngestRecipe(profile.Id, recipe, profile.Artwork);
+                string[] duplicateRecipes = profile.Ingest.Recipes
+                    .GroupBy(recipe => recipe.Id, StringComparer.OrdinalIgnoreCase)
+                    .Where(group => group.Count() > 1)
+                    .Select(group => group.Key)
+                    .ToArray();
+                if (duplicateRecipes.Length > 0)
+                    throw new InvalidDataException(
+                        $"Library profile '{profile.Id}' contains duplicate ingest recipe(s): " +
+                        string.Join(", ", duplicateRecipes));
+                foreach (LibraryIngestRecipe recipe in profile.Ingest.Recipes)
+                {
+                    ValidateEnum(recipe.Action, profile.Id,
+                        $"ingest recipe '{recipe.Id}' action");
+                    ValidateEnum(recipe.DestinationLegacyRole, profile.Id,
+                        $"ingest recipe '{recipe.Id}' legacy destination role");
+                    if (recipe.CollisionPolicy is { } collisionPolicy)
+                        ValidateEnum(collisionPolicy, profile.Id,
+                            $"ingest recipe '{recipe.Id}' collision policy");
+                    ValidateEnum(recipe.OutputRepresentationRole, profile.Id,
+                        $"ingest recipe '{recipe.Id}' representation role");
+                    ValidateIngestRecipe(profile.Id, recipe, profile.Artwork);
+                }
             }
 
             if (profile.Artwork.MaximumDimension < 0 ||
@@ -1264,7 +1280,7 @@ namespace MusicLibraryTools
                 ParseEnum(element, "Disposition", LibrarySidecarDisposition.Preserve));
         }
 
-        private static LibraryIngestRecipe ParseIngestRecipe(XElement element)
+        internal static LibraryIngestRecipe ParseIngestRecipe(XElement element)
         {
             string id = Required(element, "Id");
             ValidateId(id, "ingest recipe");
@@ -1301,7 +1317,6 @@ namespace MusicLibraryTools
                 ParseOptionalPositiveInteger(output, "SampleRateHz"),
                 ParseOptionalPositiveInteger(output, "BitsPerSample"),
                 ParseOptionalChannelSelection(output, "OutputChannels"),
-                Optional(output, "NamingProfileId"),
                 ParseBoolean(output, "PreserveMetadata", true),
                 ParseBoolean(output, "PreserveArtwork", true),
                 collision)
@@ -1319,7 +1334,7 @@ namespace MusicLibraryTools
             };
         }
 
-        private static XElement WriteIngestRecipe(LibraryIngestRecipe recipe)
+        internal static XElement WriteIngestRecipe(LibraryIngestRecipe recipe)
         {
             var match = new XElement("Match");
             if (recipe.InputExtensions.Count > 0)
@@ -1349,7 +1364,6 @@ namespace MusicLibraryTools
             SetOptional(output, "SampleRateHz", recipe.SampleRateHz);
             SetOptional(output, "BitsPerSample", recipe.BitsPerSample);
             SetChannelSelection(output, "OutputChannels", recipe.OutputChannels);
-            SetOptional(output, "NamingProfileId", recipe.NamingProfileId);
             output.SetAttributeValue("PreserveMetadata", recipe.PreserveMetadata);
             output.SetAttributeValue("PreserveArtwork", recipe.PreserveArtwork);
             SetOptional(output, "CollisionPolicy", recipe.CollisionPolicy);
@@ -1363,7 +1377,7 @@ namespace MusicLibraryTools
                 output);
         }
 
-        private static void ValidateIngestRecipe(
+        internal static void ValidateIngestRecipe(
             string profileId,
             LibraryIngestRecipe recipe,
             LibraryArtworkPolicy artworkPolicy)
@@ -1391,8 +1405,6 @@ namespace MusicLibraryTools
                 throw new InvalidDataException(
                     $"Enabled ingest recipe '{recipe.Id}' must select a destination root or " +
                     "the configured media catalog.");
-            if (recipe.NamingProfileId is { } namingProfileId)
-                ValidateId(namingProfileId, "naming profile");
             ValidateOptionalPositive(recipe.MinimumSampleRateHz, recipe.Id, "minimum sample rate");
             ValidateOptionalPositive(recipe.MinimumBitsPerSample, recipe.Id, "minimum bit depth");
             ValidateOptionalPositive(recipe.BitrateKbps, recipe.Id, "bitrate");
@@ -1677,6 +1689,108 @@ namespace MusicLibraryTools
             ParsePermissions((string?)element.Attribute(attributeName), fallback);
     }
 
+    /// <summary>XML reader/writer for ingest workflows stored independently of root profiles.</summary>
+    public static class LibraryIngestProfileXml
+    {
+        public static LibraryIngestProfile Parse(XElement element)
+        {
+            ArgumentNullException.ThrowIfNull(element);
+            string id = Required(element, "Id");
+            LibraryProfileXml.ValidateId(id, "ingest profile");
+            string name = Required(element, "Name");
+            LibraryIngestProfile? preset = LibraryIngestProfilePresets.All.FirstOrDefault(
+                profile => string.Equals(profile.Id, id, StringComparison.OrdinalIgnoreCase));
+            LibraryIngestPolicy fallback = preset?.Ingest ??
+                new(false, LibrarySourceDisposition.Preserve, true, []);
+            var result = new LibraryIngestProfile(
+                id,
+                name,
+                fallback with
+                {
+                    Enabled = Boolean(element, "Enabled", fallback.Enabled),
+                    SourceDisposition = EnumValue(
+                        element, "SourceDisposition", fallback.SourceDisposition),
+                    PreserveSidecars = Boolean(
+                        element, "PreserveSidecars", fallback.PreserveSidecars),
+                    Recipes = element.Elements("Recipe")
+                        .Select(LibraryProfileXml.ParseIngestRecipe)
+                        .ToArray(),
+                });
+            Validate(result);
+            return result;
+        }
+
+        public static XElement Write(LibraryIngestProfile profile)
+        {
+            Validate(profile);
+            return new XElement("IngestProfile",
+                new XAttribute("Id", profile.Id),
+                new XAttribute("Name", profile.Name),
+                new XAttribute("Enabled", profile.Ingest.Enabled),
+                new XAttribute("SourceDisposition", profile.Ingest.SourceDisposition),
+                new XAttribute("PreserveSidecars", profile.Ingest.PreserveSidecars),
+                profile.Ingest.Recipes.Select(LibraryProfileXml.WriteIngestRecipe));
+        }
+
+        public static void Validate(LibraryIngestProfile profile)
+        {
+            ArgumentNullException.ThrowIfNull(profile);
+            LibraryProfileXml.ValidateId(profile.Id, "ingest profile");
+            if (string.IsNullOrWhiteSpace(profile.Name))
+                throw new InvalidDataException(
+                    $"Ingest profile '{profile.Id}' must have a name.");
+            if (!Enum.IsDefined(profile.Ingest.SourceDisposition))
+                throw new InvalidDataException(
+                    $"Ingest profile '{profile.Id}' has an invalid source disposition.");
+            string[] duplicates = profile.Ingest.Recipes
+                .GroupBy(recipe => recipe.Id, StringComparer.OrdinalIgnoreCase)
+                .Where(group => group.Count() > 1)
+                .Select(group => group.Key)
+                .ToArray();
+            if (duplicates.Length > 0)
+                throw new InvalidDataException(
+                    $"Ingest profile '{profile.Id}' contains duplicate recipe(s): " +
+                    string.Join(", ", duplicates));
+            LibraryArtworkPolicy validationArtwork = LibraryProfilePresets.Create(
+                LibraryProfilePreset.ArtistAlbum).Artwork;
+            foreach (LibraryIngestRecipe recipe in profile.Ingest.Recipes)
+                LibraryProfileXml.ValidateIngestRecipe(
+                    profile.Id, recipe, validationArtwork);
+        }
+
+        private static string Required(XElement element, string attributeName)
+        {
+            string? value = ((string?)element.Attribute(attributeName))?.Trim();
+            return string.IsNullOrWhiteSpace(value)
+                ? throw new InvalidDataException(
+                    $"Missing required {attributeName} on <{element.Name.LocalName}>.")
+                : value;
+        }
+
+        private static bool Boolean(XElement element, string attributeName, bool fallback)
+        {
+            string? value = ((string?)element.Attribute(attributeName))?.Trim();
+            if (value is null)
+                return fallback;
+            return bool.TryParse(value, out bool parsed)
+                ? parsed
+                : throw new InvalidDataException(
+                    $"Invalid {attributeName} '{value}' on <{element.Name.LocalName}>.");
+        }
+
+        private static T EnumValue<T>(XElement element, string attributeName, T fallback)
+            where T : struct, Enum
+        {
+            string? value = ((string?)element.Attribute(attributeName))?.Trim();
+            if (value is null)
+                return fallback;
+            return Enum.TryParse(value, true, out T parsed) && Enum.IsDefined(parsed)
+                ? parsed
+                : throw new InvalidDataException(
+                    $"Invalid {attributeName} '{value}' on <{element.Name.LocalName}>.");
+        }
+    }
+
     public sealed record LibraryRootPolicySnapshot(
         Guid RootId,
         string ProfileId,
@@ -1700,23 +1814,18 @@ namespace MusicLibraryTools
             var rootIds = locations.Select(location => location.RootId).ToHashSet();
             var profileIds = configuration.Profiles.Select(profile => profile.Id)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            var recipeIds = configuration.Profiles.SelectMany(profile => profile.Ingest.Recipes)
+            var recipeIds = configuration.IngestProfiles.SelectMany(profile => profile.Ingest.Recipes)
                 .Select(recipe => recipe.Id)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            foreach (LibraryProfile profile in configuration.Profiles)
+            foreach (LibraryIngestProfile profile in configuration.IngestProfiles)
             {
                 foreach (LibraryIngestRecipe recipe in profile.Ingest.Recipes)
                 {
                     if (recipe.DestinationRootId is { } destinationRootId &&
                         !rootIds.Contains(destinationRootId))
                         throw new InvalidDataException(
-                            $"Ingest recipe '{recipe.Id}' in profile '{profile.Id}' references " +
+                            $"Ingest recipe '{recipe.Id}' in ingest profile '{profile.Id}' references " +
                             $"unknown destination root '{destinationRootId:D}'.");
-                    if (recipe.NamingProfileId is { } namingProfileId &&
-                        !profileIds.Contains(namingProfileId))
-                        throw new InvalidDataException(
-                            $"Ingest recipe '{recipe.Id}' in profile '{profile.Id}' references " +
-                            $"unknown naming profile '{namingProfileId}'.");
                 }
             }
             foreach (LibraryExportProfile exportProfile in configuration.ExportProfiles)
@@ -1774,6 +1883,8 @@ namespace MusicLibraryTools
                 .Append("cross-sync|")
                 .Append(configuration.DeleteStaleCrossSyncFiles).Append('|')
                 .Append(configuration.CleanCrossSyncPlaylists).AppendLine()
+                .Append("active-ingest-profile|")
+                .Append(configuration.ActiveIngestProfileId).AppendLine()
                 .Append("legacy-file-policy|")
                 .Append(configuration["DeleteNonMusic"].Length != 0).Append('|')
                 .Append(configuration["KeepFolderImages"].Length != 0).AppendLine();
@@ -1802,11 +1913,11 @@ namespace MusicLibraryTools
                     .Append(profile.Naming.CompilationValue).Append('|')
                     .Append(profile.Naming.UnicodeNormalization).Append('|')
                     .Append(profile.Naming.ComponentLengthLimit).Append('|')
+                    .Append(profile.Naming.DiscAlbumLengthLimit).Append('|')
                     .Append(profile.Naming.CompletePathLengthLimit).Append('|')
                     .Append(profile.Disc.Strategy).Append('|')
                     .Append(profile.Disc.TrackTotalScope).Append('|')
                     .Append(profile.Disc.InferAlbumSuffix).Append('|')
-                    .Append(profile.Disc.PreserveDiscTags).Append('|')
                     .Append(profile.AlbumIdentity.UseAlbumArtist).Append('|')
                     .Append(profile.AlbumIdentity.StripFormatSuffixes).Append('|')
                     .Append(profile.AlbumIdentity.StripDiscSuffixes).Append('|')
@@ -1817,9 +1928,6 @@ namespace MusicLibraryTools
                     .Append(profile.Metadata.PreserveCompilationSemantics).Append('|')
                     .Append(profile.Quality.HighResolutionMinimumSampleRateHz).Append('|')
                     .Append(profile.Quality.HighResolutionMinimumBitsPerSample).Append('|')
-                    .Append(profile.Ingest.Enabled).Append('|')
-                    .Append(profile.Ingest.SourceDisposition).Append('|')
-                    .Append(profile.Ingest.PreserveSidecars).Append('|')
                     .Append(profile.Artwork.Storage).Append('|')
                     .Append(profile.Artwork.Roles).Append('|')
                     .Append(profile.Artwork.Encoding).Append('|')
@@ -1833,6 +1941,19 @@ namespace MusicLibraryTools
                     value.Append(rule.Id).Append('|').Append(rule.Enabled).Append('|')
                         .Append(rule.Severity).Append('|').Append(rule.ProposeRepair).Append('|')
                         .Append(rule.ApplyRepair).AppendLine();
+                foreach (LibrarySidecarRule rule in profile.Sidecars.Rules)
+                    value.Append(rule.Id).Append('|').Append(rule.Name).Append('|')
+                        .Append(rule.Enabled).Append('|')
+                        .Append(string.Join(',', rule.Patterns)).Append('|')
+                        .Append(rule.Disposition).AppendLine();
+            }
+            foreach (LibraryIngestProfile profile in configuration.IngestProfiles.OrderBy(
+                         item => item.Id, StringComparer.OrdinalIgnoreCase))
+            {
+                value.Append("ingest-profile|").Append(profile.Id).Append('|')
+                    .Append(profile.Name).Append('|').Append(profile.Ingest.Enabled).Append('|')
+                    .Append(profile.Ingest.SourceDisposition).Append('|')
+                    .Append(profile.Ingest.PreserveSidecars).AppendLine();
                 foreach (LibraryIngestRecipe recipe in profile.Ingest.Recipes)
                 {
                     value.Append(recipe.Id).Append('|').Append(recipe.Name).Append('|')
@@ -1853,17 +1974,12 @@ namespace MusicLibraryTools
                         .Append('|').Append(recipe.AddToMediaCatalog).Append('|')
                         .Append(recipe.BitrateKbps).Append('|')
                         .Append(recipe.SampleRateHz).Append('|').Append(recipe.BitsPerSample).Append('|')
-                        .Append(recipe.OutputChannels).Append('|').Append(recipe.NamingProfileId)
-                        .Append('|').Append(recipe.PreserveMetadata).Append('|')
+                        .Append(recipe.OutputChannels).Append('|')
+                        .Append(recipe.PreserveMetadata).Append('|')
                         .Append(recipe.PreserveArtwork).Append('|').Append(recipe.CollisionPolicy)
                         .Append('|').Append(recipe.OutputRepresentationRole)
                         .AppendLine();
                 }
-                foreach (LibrarySidecarRule rule in profile.Sidecars.Rules)
-                    value.Append(rule.Id).Append('|').Append(rule.Name).Append('|')
-                        .Append(rule.Enabled).Append('|')
-                        .Append(string.Join(',', rule.Patterns)).Append('|')
-                        .Append(rule.Disposition).AppendLine();
             }
             foreach (LibraryExportProfile exportProfile in configuration.ExportProfiles.OrderBy(
                          item => item.Id, StringComparer.OrdinalIgnoreCase))

@@ -45,12 +45,25 @@ public sealed record IngestTrackPlan
     public string EffectiveAlbumArtist =>
         !string.IsNullOrWhiteSpace(AlbumArtist) ? AlbumArtist : Artist;
     public required string Album { get; init; }
+    /// <summary>The album tag exactly as read from the selected source.</summary>
+    public string SourceAlbum { get; init; } = "";
+    /// <summary>The base album parsed from a legacy <c>(Disc N)</c> suffix, when present.</summary>
+    public string? InferredBaseAlbum { get; init; }
     public required int TrackNumber { get; init; }
     /// <summary>Whether the source contained a positive track-number tag.</summary>
     public bool HadTrackNumber { get; init; } = true;
+    public int? OriginalTrackNumber { get; init; }
+    public bool HadOriginalTrackNumber { get; init; }
     public required int TrackTotal { get; init; }
     public required int OriginalDiscNumber { get; init; }
     public bool HadDiscNumber { get; init; }
+    public int? TaggedDiscNumber { get; init; }
+    public int? InferredDiscNumber { get; init; }
+    /// <summary>Disc metadata to write to the destination, or null when represented elsewhere.</summary>
+    public int? ProjectedDiscNumber { get; init; }
+    public int? ProjectedDiscTotal { get; init; }
+    /// <summary>Disc identity available to the destination path strategy.</summary>
+    public int? PathDiscNumber { get; init; }
     public required uint SampleRate { get; init; }
     public required uint BitsPerSample { get; init; }
     public required uint Channels { get; init; }

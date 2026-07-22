@@ -373,19 +373,99 @@ public class IngestMusicTests
     }
 
     [Fact]
+    public async Task RecipeCopy_CanNormalizeMetadataFromReadOnlySource()
+    {
+        using var tree = new TempTree();
+        string source = tree.FileFromFixture("incoming", "original.flac", "sample.flac");
+        WriteTags(source, "Some Album", "Disc one", 1, 1);
+        (string configPath, _, EditableLibraryConfig editable) = CreateRecipeLibrary(tree);
+        LibraryProfile profile = editable.Profiles.Single(item => item.Id == "copy-recipe");
+        editable.Profiles[editable.Profiles.IndexOf(profile)] = profile with
+        {
+            Disc = new LibraryDiscPolicy(
+                LibraryDiscStrategy.AlbumSuffix,
+                LibraryTrackTotalScope.PerDisc,
+                InferAlbumSuffix: false),
+        };
+        editable.Save(configPath);
+        File.SetAttributes(source, File.GetAttributes(source) | FileAttributes.ReadOnly);
+
+        try
+        {
+            var service = new IngestMusicService(new FakeFfmpeg());
+            IngestPlan plan = await service.PreviewAsync(
+                new(tree.Path("incoming"), configPath));
+            IngestOutputPlan output = Assert.Single(Assert.Single(plan.Albums).Outputs);
+
+            IngestResult result = await service.ApplyAsync(plan, []);
+
+            Assert.True(result.Failed == 0,
+                string.Join(Environment.NewLine, result.Albums.Select(album => album.Error)));
+            Assert.True(File.Exists(output.DestinationPath));
+            Assert.False(File.GetAttributes(output.DestinationPath)
+                .HasFlag(FileAttributes.ReadOnly));
+            IMediaFile media = MediaFile.GetFile(output.DestinationPath, readOnly: true);
+            IMetadataProvider tag = Assert.Single(media.Tags);
+            Assert.Equal("Some Album", tag.Album);
+            Assert.Null(tag.DiscNumber);
+            Assert.Null(tag.DiscTotal);
+        }
+        finally
+        {
+            File.SetAttributes(source,
+                File.GetAttributes(source) & ~FileAttributes.ReadOnly);
+        }
+    }
+
+    [Fact]
+    public void RecipeNamingAlwaysComesFromDestinationRootProfile()
+    {
+        Guid rootId = Guid.NewGuid();
+        LibraryProfile active = LibraryProfilePresets.Create(
+            LibraryProfilePreset.ItunesMedia);
+        LibraryProfile destination = LibraryProfilePresets.Create(
+            LibraryProfilePreset.ArtistAlbum);
+        var root = new LibraryIndexLocation(
+            "destination", null, [], null,
+            RootId: rootId, ProfileId: destination.Id,
+            Permissions: LibraryRootPermissions.IngestOutput);
+        LibraryIngestRecipe recipe = CreateRecipe(
+            "root-naming", rootId, LibraryChannelSelection.Stereo,
+            LibraryChannelSelection.Stereo);
+        var configuration = new IngestMusicConfiguration
+        {
+            FfmpegPath = "ffmpeg",
+            AacDestination = "",
+            CdDestination = "",
+            PairedCdDestination = "",
+            HighResolutionDestination = "",
+            Profile = active,
+            RootTargets = new Dictionary<Guid, LibraryIndexLocation> { [rootId] = root },
+            Profiles = new Dictionary<string, LibraryProfile>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+                [active.Id] = active,
+                [destination.Id] = destination,
+            },
+        };
+
+        Assert.Equal(destination.Id, configuration.ResolveProfile(recipe).Id);
+    }
+
+    [Fact]
     public async Task RecipeTranscode_SameAudioFormatShortCircuitsToCopy()
     {
         using var tree = new TempTree();
         tree.FileFromFixture("incoming", "original.flac", "sample.flac");
         (string configPath, _, EditableLibraryConfig editable) =
             CreateRecipeLibrary(tree);
-        LibraryProfile profile = editable.Profiles.Single(item =>
-            item.Id == editable.ActiveProfileId);
+        LibraryIngestProfile profile = editable.IngestProfiles.Single(item =>
+            item.Id == editable.ActiveIngestProfileId);
         LibraryIngestRecipe recipe = Assert.Single(profile.Ingest.Recipes) with
         {
             Action = LibraryIngestAction.Transcode,
         };
-        editable.Profiles[editable.Profiles.IndexOf(profile)] = profile with
+        editable.IngestProfiles[editable.IngestProfiles.IndexOf(profile)] = profile with
         {
             Ingest = profile.Ingest with { Recipes = [recipe] },
         };
@@ -427,13 +507,13 @@ public class IngestMusicTests
             null, null, null, false, LibraryIngestAction.Transcode,
             root.Id, LibraryIngestRole.None, ".m4a", "aac", null,
             null, null, null, LibraryChannelSelection.Stereo,
-            profile.Id, true, false, LibraryPathCollisionPolicy.Stop);
-        profile = profile with
-        {
-            Ingest = new(true, LibrarySourceDisposition.Preserve, true, [recipe]),
-        };
+            true, false, LibraryPathCollisionPolicy.Stop);
         editable.Profiles.Add(profile);
         editable.ActiveProfileId = profile.Id;
+        editable.IngestProfiles.Add(new LibraryIngestProfile(
+            profile.Id, profile.Name,
+            new(true, LibrarySourceDisposition.Preserve, true, [recipe])));
+        editable.ActiveIngestProfileId = profile.Id;
         editable.IndexTargets.Add(root);
         string configPath = tree.Path("aac-library.xml");
         editable.Save(configPath);
@@ -467,7 +547,7 @@ public class IngestMusicTests
             null, null, null, false, LibraryIngestAction.Transcode,
             root.Id, LibraryIngestRole.None, ".wv", "wavpack", null,
             null, null, null, LibraryChannelSelection.Stereo,
-            profile.Id, true, false, LibraryPathCollisionPolicy.Stop);
+            true, false, LibraryPathCollisionPolicy.Stop);
         profile = profile with
         {
             Naming = profile.Naming with
@@ -475,10 +555,13 @@ public class IngestMusicTests
                 DirectoryTemplate = "{AlbumArtist}/{Album}",
                 FileNameTemplate = "{OriginalName}{Extension}",
             },
-            Ingest = new(true, LibrarySourceDisposition.Preserve, true, [recipe]),
         };
         editable.Profiles.Add(profile);
         editable.ActiveProfileId = profile.Id;
+        editable.IngestProfiles.Add(new LibraryIngestProfile(
+            profile.Id, profile.Name,
+            new(true, LibrarySourceDisposition.Preserve, true, [recipe])));
+        editable.ActiveIngestProfileId = profile.Id;
         editable.IndexTargets.Add(root);
         editable.WavpackPath = "configured-wavpack";
         string configPath = tree.Path("wavpack-library.xml");
@@ -596,12 +679,12 @@ public class IngestMusicTests
         var recipe = CreateRecipe(
             "multi-copy", root.Id, LibraryChannelSelection.Multi,
             LibraryChannelSelection.Multi);
-        profile = profile with
-        {
-            Ingest = new(true, LibrarySourceDisposition.Preserve, true, [recipe]),
-        };
         editable.Profiles.Add(profile);
         editable.ActiveProfileId = profile.Id;
+        editable.IngestProfiles.Add(new LibraryIngestProfile(
+            profile.Id, profile.Name,
+            new(true, LibrarySourceDisposition.Preserve, true, [recipe])));
+        editable.ActiveIngestProfileId = profile.Id;
         editable.IndexTargets.Add(root);
         string configPath = tree.Path("multi-library.xml");
         editable.Save(configPath);
@@ -730,6 +813,121 @@ public class IngestMusicTests
         Assert.Equal(2, track.OriginalDiscNumber);
         Assert.Equal(3, track.TrackNumber);
         Assert.True(Assert.Single(Assert.Single(plan.Albums).Outputs).PreserveDiscTags);
+    }
+
+    [Fact]
+    public async Task DestinationDiscStrategiesDriveBothItunesNamingAndOutputTags()
+    {
+        using var tree = new TempTree();
+        string discOne = tree.FileFromFixture(
+            "incoming", "disc-one.flac", "sample.flac");
+        string discTwo = tree.FileFromFixture(
+            "incoming", "disc-two.flac", "sample.flac");
+        WriteTags(discOne, "Some Album", "Disc one", 1, 1);
+        WriteTags(discTwo, "Some Album", "Disc two", 1, 2);
+        foreach (string source in new[] { discOne, discTwo })
+        {
+            IMediaFile media = MediaFile.GetFile(source);
+            IMetadataWriter writer = Assert.IsAssignableFrom<IMetadataWriter>(media);
+            writer.SetField(TagFields.TotalDiscs, "2");
+            writer.Save();
+        }
+
+        var editable = EditableLibraryConfig.CreateNew();
+        LibraryProfile suffixProfile = LibraryProfilePresets.Create(
+            LibraryProfilePreset.Custom, "itunes-album-suffix", "iTunes album suffix") with
+        {
+            DefaultRootPermissions = LibraryRootPermissions.IngestOutput,
+            Naming = LibraryProfilePresets.Create(LibraryProfilePreset.ItunesMedia).Naming,
+            Disc = new(LibraryDiscStrategy.AlbumSuffix,
+                LibraryTrackTotalScope.PerDisc, InferAlbumSuffix: true),
+        };
+        LibraryProfile taggedProfile = LibraryProfilePresets.Create(
+            LibraryProfilePreset.Custom, "itunes-disc-tags", "iTunes disc tags") with
+        {
+            DefaultRootPermissions = LibraryRootPermissions.IngestOutput,
+            Naming = LibraryProfilePresets.Create(LibraryProfilePreset.ItunesMedia).Naming,
+            Disc = new(LibraryDiscStrategy.PreserveTags,
+                LibraryTrackTotalScope.PerDisc, InferAlbumSuffix: true),
+        };
+        var suffixRoot = new IndexTargetEntry
+        {
+            Target = tree.Path("suffix-output"),
+            ProfileId = suffixProfile.Id,
+            Permissions = LibraryRootPermissions.IngestOutput,
+            Organize = false,
+        };
+        var taggedRoot = new IndexTargetEntry
+        {
+            Target = tree.Path("tagged-output"),
+            ProfileId = taggedProfile.Id,
+            Permissions = LibraryRootPermissions.IngestOutput,
+            Organize = false,
+        };
+        LibraryIngestRecipe AacRecipe(string id, Guid rootId) => CreateRecipe(
+            id, rootId, LibraryChannelSelection.Stereo,
+            LibraryChannelSelection.Stereo) with
+        {
+            Action = LibraryIngestAction.Transcode,
+            OutputExtension = ".m4a",
+            Codec = "aac",
+            Encoder = "aac",
+            BitrateKbps = 256,
+        };
+        var ingest = new LibraryIngestProfile(
+            "disc-projection", "Disc projection",
+            new(true, LibrarySourceDisposition.Preserve, true,
+            [
+                AacRecipe("album-suffix-aac", suffixRoot.Id),
+                AacRecipe("tagged-aac", taggedRoot.Id),
+            ]));
+        editable.Profiles.Add(suffixProfile);
+        editable.Profiles.Add(taggedProfile);
+        editable.IngestProfiles.Add(ingest);
+        editable.ActiveIngestProfileId = ingest.Id;
+        editable.IndexTargets.Add(suffixRoot);
+        editable.IndexTargets.Add(taggedRoot);
+        string configPath = tree.Path("disc-projection.xml");
+        editable.Save(configPath);
+        var service = new IngestMusicService(new FakeFfmpeg());
+
+        IngestPlan plan = await service.PreviewAsync(
+            new(tree.Path("incoming"), configPath));
+
+        Assert.Empty(plan.Conflicts);
+        IngestOutputPlan suffix = plan.Albums.SelectMany(album => album.Outputs)
+            .Single(output => output.RecipeId == "album-suffix-aac" &&
+                              output.Metadata.OriginalDiscNumber == 1);
+        Assert.Equal("Some Album (Disc 1)", suffix.Metadata.Album);
+        Assert.Null(suffix.Metadata.ProjectedDiscNumber);
+        Assert.Null(suffix.Metadata.PathDiscNumber);
+        Assert.False(suffix.PreserveDiscTags);
+        Assert.Equal("01 Disc one.m4a", Path.GetFileName(suffix.DestinationPath));
+        Assert.Equal("Some Album (Disc 1)",
+            Path.GetFileName(Path.GetDirectoryName(suffix.DestinationPath)));
+
+        IngestOutputPlan tagged = plan.Albums.SelectMany(album => album.Outputs)
+            .Single(output => output.RecipeId == "tagged-aac" &&
+                              output.Metadata.OriginalDiscNumber == 1);
+        Assert.Equal("Some Album", tagged.Metadata.Album);
+        Assert.Equal(1, tagged.Metadata.ProjectedDiscNumber);
+        Assert.Equal(1, tagged.Metadata.PathDiscNumber);
+        Assert.True(tagged.PreserveDiscTags);
+        Assert.Equal("1-01 Disc one.m4a", Path.GetFileName(tagged.DestinationPath));
+
+        IngestResult result = await service.ApplyAsync(plan, []);
+
+        Assert.Equal(0, result.Failed);
+        IMetadataProvider suffixTags = MediaFile.GetFile(
+            suffix.DestinationPath, readOnly: true).Tags.First();
+        Assert.Equal("Some Album (Disc 1)", suffixTags.Album);
+        Assert.Null(suffixTags.DiscNumber);
+        Assert.Null(suffixTags.DiscTotal);
+        IMetadataProvider taggedTags = MediaFile.GetFile(
+            tagged.DestinationPath, readOnly: true).Tags.First();
+        Assert.Equal("Some Album", taggedTags.Album);
+        Assert.Equal(1, taggedTags.DiscNumber);
+        Assert.Equal(2, taggedTags.DiscTotal);
     }
 
     [Fact]
@@ -898,7 +1096,7 @@ public class IngestMusicTests
             "copy-flac", "Copy FLAC", true, [".flac"], true,
             null, null, null, false, LibraryIngestAction.Copy,
             root.Id, LibraryIngestRole.None, ".flac", "flac", null,
-            null, null, null, null, custom.Id, true, true,
+            null, null, null, null, true, true,
             LibraryPathCollisionPolicy.Stop);
         custom = custom with
         {
@@ -908,12 +1106,15 @@ public class IngestMusicTests
                 DirectoryTemplate = "{AlbumArtist}/{Album}",
                 FileNameTemplate = "{OriginalName}{Extension}",
             },
-            Ingest = new LibraryIngestPolicy(
-                true, LibrarySourceDisposition.Preserve, true, [recipe]),
             Artwork = artworkPolicy ?? custom.Artwork,
         };
         editable.Profiles.Add(custom);
         editable.ActiveProfileId = custom.Id;
+        editable.IngestProfiles.Add(new LibraryIngestProfile(
+            custom.Id, custom.Name,
+            new LibraryIngestPolicy(
+                true, LibrarySourceDisposition.Preserve, true, [recipe])));
+        editable.ActiveIngestProfileId = custom.Id;
         editable.IndexTargets.Add(root);
         string configPath = tree.Path("recipe-library.xml");
         editable.Save(configPath);
@@ -950,12 +1151,12 @@ public class IngestMusicTests
                 "-af \"aresample=44100:resampler=soxr\" -compression_level 10",
             OutputRepresentationRole = LibraryRepresentationRole.CdLossless,
         };
-        profile = profile with
-        {
-            Ingest = new(true, LibrarySourceDisposition.Preserve, true, [recipe]),
-        };
         editable.Profiles.Add(profile);
         editable.ActiveProfileId = profile.Id;
+        editable.IngestProfiles.Add(new LibraryIngestProfile(
+            profile.Id, profile.Name,
+            new(true, LibrarySourceDisposition.Preserve, true, [recipe])));
+        editable.ActiveIngestProfileId = profile.Id;
         editable.IndexTargets.Add(root);
         string configPath = tree.Path("paired-library.xml");
         editable.Save(configPath);
@@ -986,7 +1187,6 @@ public class IngestMusicTests
             SampleRateHz: null,
             BitsPerSample: null,
             OutputChannels: outputChannels,
-            NamingProfileId: null,
             PreserveMetadata: true,
             PreserveArtwork: false,
             CollisionPolicy: LibraryPathCollisionPolicy.Stop);
