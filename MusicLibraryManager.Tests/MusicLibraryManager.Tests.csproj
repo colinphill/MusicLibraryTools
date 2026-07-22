@@ -8,6 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\BuildTools\SyncerResourceVerifier\SyncerResourceVerifier.cs"
+             Link="BuildTools\SyncerResourceVerifier.cs" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
@@ -15,5 +17,24 @@
     </PackageReference>
     <PackageReference Include="xunit.v3" />
     <ProjectReference Include="..\MusicLibraryManager.Presentation\MusicLibraryManager.Presentation.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Fixtures\SyncerServers\arm64-v8a\syncerd"
+                      LogicalName="Syncer.Servers.arm64-v8a.syncerd" />
+    <EmbeddedResource Include="Fixtures\SyncerServers\armeabi-v7a\syncerd"
+                      LogicalName="Syncer.Servers.armeabi-v7a.syncerd" />
+    <EmbeddedResource Include="Fixtures\SyncerServers\x86_64\syncerd"
+                      LogicalName="Syncer.Servers.x86_64.syncerd" />
+    <EmbeddedResource Include="Fixtures\SyncerServers\x86-fixture\syncerd"
+                      LogicalName="Syncer.Servers.x86.syncerd" />
+    <None Update="Fixtures\SyncerServers\arm64-v8a\syncerd"
+          CopyToOutputDirectory="PreserveNewest" TargetPath="syncer-server-inputs\arm64-v8a\syncerd" />
+    <None Update="Fixtures\SyncerServers\armeabi-v7a\syncerd"
+          CopyToOutputDirectory="PreserveNewest" TargetPath="syncer-server-inputs\armeabi-v7a\syncerd" />
+    <None Update="Fixtures\SyncerServers\x86_64\syncerd"
+          CopyToOutputDirectory="PreserveNewest" TargetPath="syncer-server-inputs\x86_64\syncerd" />
+    <None Update="Fixtures\SyncerServers\x86-fixture\syncerd"
+          CopyToOutputDirectory="PreserveNewest" TargetPath="syncer-server-inputs\x86\syncerd" />
   </ItemGroup>
 </Project>

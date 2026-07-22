@@ -166,6 +166,130 @@ jobs:
         shell: pwsh
         run: ./MusicLibraryManager/Package.ps1 -Version "${{ steps.version.outputs.value }}" -Rids ${{ matrix.rid }} -SyncerRuntimeRoot .ci/syncer-runtime -Installers
 
+      - name: Sign in to Azure for Artifact Signing
+        if: runner.os == 'Windows' && (github.ref_type == 'tag' || github.ref == 'refs/heads/master')
+        uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43 # v3
+        with:
+          creds: >-
+            {"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}
+
+      - name: Resolve Artifact Signing profile
+        if: runner.os == 'Windows' && (github.ref_type == 'tag' || github.ref == 'refs/heads/master')
+        id: artifact_signing
+        shell: pwsh
+        run: ./MusicLibraryManager/Resolve-ArtifactSigning.ps1 -SubscriptionId "${{ secrets.AZURE_SUBSCRIPTION_ID }}" -OutputFile $env:GITHUB_OUTPUT
+
+      - name: Create Windows signing catalog
+        if: runner.os == 'Windows' && (github.ref_type == 'tag' || github.ref == 'refs/heads/master')
+        shell: pwsh
+        run: ./MusicLibraryManager/WindowsPackageSigning.ps1 -Operation CreateCatalog -Version "${{ steps.version.outputs.value }}"
+
+      - name: Sign Windows application binaries
+        if: runner.os == 'Windows' && (github.ref_type == 'tag' || github.ref == 'refs/heads/master')
+        uses: azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2
+        with:
+          endpoint: ${{ steps.artifact_signing.outputs.endpoint }}
+          signing-account-name: ${{ steps.artifact_signing.outputs.account_name }}
+          certificate-profile-name: ${{ steps.artifact_signing.outputs.profile_name }}
+          files-catalog: ${{ github.workspace }}\.artifacts\music-library-manager\${{ steps.version.outputs.value }}\win-x64\authenticode-payload.txt
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: Music Library Manager
+          description-url: https://github.com/colinphill/MusicLibraryTools
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          exclude-environment-credential: false
+          exclude-workload-identity-credential: true
+          exclude-managed-identity-credential: true
+          exclude-shared-token-cache-credential: true
+          exclude-visual-studio-credential: true
+          exclude-visual-studio-code-credential: true
+          exclude-azure-cli-credential: true
+          exclude-azure-powershell-credential: true
+          exclude-azure-developer-cli-credential: true
+          exclude-interactive-browser-credential: true
+
+      - name: Verify signed Windows application binaries
+        if: runner.os == 'Windows' && (github.ref_type == 'tag' || github.ref == 'refs/heads/master')
+        shell: pwsh
+        run: ./MusicLibraryManager/WindowsPackageSigning.ps1 -Operation Verify -Version "${{ steps.version.outputs.value }}"
+
+      - name: Prepare signed Windows uninstaller
+        if: runner.os == 'Windows' && (github.ref_type == 'tag' || github.ref == 'refs/heads/master')
+        shell: pwsh
+        run: ./MusicLibraryManager/WindowsPackageSigning.ps1 -Operation PrepareSignedUninstaller -Version "${{ steps.version.outputs.value }}"
+
+      - name: Sign Windows uninstaller
+        if: runner.os == 'Windows' && (github.ref_type == 'tag' || github.ref == 'refs/heads/master')
+        uses: azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2
+        with:
+          endpoint: ${{ steps.artifact_signing.outputs.endpoint }}
+          signing-account-name: ${{ steps.artifact_signing.outputs.account_name }}
+          certificate-profile-name: ${{ steps.artifact_signing.outputs.profile_name }}
+          files-catalog: ${{ github.workspace }}\.artifacts\music-library-manager\${{ steps.version.outputs.value }}\win-x64\authenticode-uninstaller-payload.txt
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: Music Library Manager uninstaller
+          description-url: https://github.com/colinphill/MusicLibraryTools
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          exclude-environment-credential: false
+          exclude-workload-identity-credential: true
+          exclude-managed-identity-credential: true
+          exclude-shared-token-cache-credential: true
+          exclude-visual-studio-credential: true
+          exclude-visual-studio-code-credential: true
+          exclude-azure-cli-credential: true
+          exclude-azure-powershell-credential: true
+          exclude-azure-developer-cli-credential: true
+          exclude-interactive-browser-credential: true
+
+      - name: Verify signed Windows uninstaller
+        if: runner.os == 'Windows' && (github.ref_type == 'tag' || github.ref == 'refs/heads/master')
+        shell: pwsh
+        run: ./MusicLibraryManager/WindowsPackageSigning.ps1 -Operation Verify -Version "${{ steps.version.outputs.value }}" -IncludeUninstaller
+
+      - name: Rebuild Windows package from signed binaries
+        if: runner.os == 'Windows' && (github.ref_type == 'tag' || github.ref == 'refs/heads/master')
+        shell: pwsh
+        run: ./MusicLibraryManager/WindowsPackageSigning.ps1 -Operation RebuildArtifacts -Version "${{ steps.version.outputs.value }}"
+
+      - name: Sign Windows installer
+        if: runner.os == 'Windows' && (github.ref_type == 'tag' || github.ref == 'refs/heads/master')
+        uses: azure/artifact-signing-action@c7ab2a863ab5f9a846ddb8265964877ef296ee82 # v2
+        with:
+          endpoint: ${{ steps.artifact_signing.outputs.endpoint }}
+          signing-account-name: ${{ steps.artifact_signing.outputs.account_name }}
+          certificate-profile-name: ${{ steps.artifact_signing.outputs.profile_name }}
+          files: ${{ github.workspace }}\.artifacts\music-library-manager\MusicLibraryManager-${{ steps.version.outputs.value }}-win-x64-setup.exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          description: Music Library Manager installer
+          description-url: https://github.com/colinphill/MusicLibraryTools
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          exclude-environment-credential: false
+          exclude-workload-identity-credential: true
+          exclude-managed-identity-credential: true
+          exclude-shared-token-cache-credential: true
+          exclude-visual-studio-credential: true
+          exclude-visual-studio-code-credential: true
+          exclude-azure-cli-credential: true
+          exclude-azure-powershell-credential: true
+          exclude-azure-developer-cli-credential: true
+          exclude-interactive-browser-credential: true
+
+      - name: Verify signed Windows package
+        if: runner.os == 'Windows' && (github.ref_type == 'tag' || github.ref == 'refs/heads/master')
+        shell: pwsh
+        run: ./MusicLibraryManager/WindowsPackageSigning.ps1 -Operation Verify -Version "${{ steps.version.outputs.value }}" -IncludeUninstaller -IncludeInstaller -WriteChecksums
+
       - name: Upload release package
         uses: actions/upload-artifact@v7
         with:
