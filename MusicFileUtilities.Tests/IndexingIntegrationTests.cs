@@ -46,6 +46,8 @@ namespace MusicFileUtilities.Tests
                         Assert.Equal("TestTitle", e.Title);
                         Assert.Equal("TestArtist", e.Artist);
                         Assert.Equal("TestAlbum", e.Album);
+                        Assert.Equal("Rock", e.Genre);
+                        Assert.Equal(2021, e.Year);
                     });
                     Assert.NotEmpty(cache.AlbumCache);
                     var health = Assert.Single(db.GetScanRootHealth());
@@ -141,6 +143,56 @@ namespace MusicFileUtilities.Tests
             }
         }
 
+        [Fact]
+        public void PerRootFormatAndPathPoliciesControlIndexingAndRemoveNewlyExcludedFiles()
+        {
+            string scanDir = Path.Combine(
+                Path.GetTempPath(), "mlt_idx_policy_" + Guid.NewGuid().ToString("N"));
+            string musicDir = Path.Combine(scanDir, "Music");
+            string skippedDir = Path.Combine(musicDir, "Skip");
+            string otherDir = Path.Combine(scanDir, "Other");
+            Directory.CreateDirectory(skippedDir);
+            Directory.CreateDirectory(otherDir);
+            string included = Path.Combine(musicDir, "included.flac");
+            File.Copy(MediaFixtures.Path_("sample.flac"), included);
+            File.Copy(MediaFixtures.Path_("sample.mp3"), Path.Combine(musicDir, "wrong-format.mp3"));
+            File.Copy(MediaFixtures.Path_("sample.flac"), Path.Combine(skippedDir, "excluded.flac"));
+            File.Copy(MediaFixtures.Path_("sample.flac"), Path.Combine(otherDir, "outside.flac"));
+            string dbPath = Path.Combine(scanDir, "cache.db");
+
+            try
+            {
+                using var db = MetadataDatabase.OpenDatabase("sqlite:" + dbPath);
+                var policy = new ScanRootDefinition(scanDir, [])
+                {
+                    Formats = [".flac"],
+                    IncludePatterns = ["Music/**"],
+                    ExcludePatterns = ["Music/Skip/**"],
+                };
+
+                var indexed = db.IndexFiles([policy],
+                    ct: TestContext.Current.CancellationToken);
+
+                Assert.Equal(1, indexed.Added);
+                Assert.Equal([included], db.BuildCache([scanDir]).FileCache.Keys);
+
+                var excludeEverything = policy with
+                {
+                    ExcludePatterns = ["Music/**"],
+                };
+                var rescanned = db.IndexFiles([excludeEverything],
+                    ct: TestContext.Current.CancellationToken);
+
+                Assert.Equal(1, rescanned.Removed);
+                Assert.Empty(db.BuildCache([scanDir]).FileCache);
+            }
+            finally
+            {
+                SqliteConnection.ClearAllPools();
+                try { Directory.Delete(scanDir, true); } catch { }
+            }
+        }
+
         private sealed class CollectingProgress : IProgress<IndexProgress>
         {
             private readonly object sync = new();
@@ -227,6 +279,47 @@ namespace MusicFileUtilities.Tests
 
                 using var migrated = MetadataDatabase.OpenDatabase("sqlite:" + dbPath);
                 Assert.True(migrated.BuildCache([directory]).FileCache[song].HasAlbumArtist);
+            }
+            finally
+            {
+                SqliteConnection.ClearAllPools();
+                try { Directory.Delete(directory, true); } catch { /* best effort */ }
+            }
+        }
+
+        [Fact]
+        public void ExistingDatabaseProjectsBrowseMetadataWithoutRescanningFiles()
+        {
+            string directory = Path.Combine(Path.GetTempPath(), "mlt_idx_" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            string song = Path.Combine(directory, "sample.flac");
+            string dbPath = Path.Combine(directory, "cache.db");
+            File.Copy(MediaFixtures.Path_("sample.flac"), song);
+
+            try
+            {
+                using (var database = MetadataDatabase.OpenDatabase("sqlite:" + dbPath))
+                    database.IndexFiles([directory], ct: TestContext.Current.CancellationToken);
+
+                using (var connection = new SqliteConnection(
+                           new SqliteConnectionStringBuilder { DataSource = dbPath }.ConnectionString))
+                {
+                    connection.Open();
+                    using var command = connection.CreateCommand();
+                    command.CommandText =
+                        "INSERT OR IGNORE INTO MetadataKeys (\"Key\") VALUES ('Composer');" +
+                        "INSERT OR IGNORE INTO MetadataKeys (\"Key\") VALUES ('Grouping');" +
+                        "INSERT INTO Metadata (FileID, KeyID, Value) " +
+                        "SELECT f.ID, k.ID, 'Legacy Composer' FROM Files f, MetadataKeys k WHERE k.\"Key\" = 'Composer';" +
+                        "INSERT INTO Metadata (FileID, KeyID, Value) " +
+                        "SELECT f.ID, k.ID, 'Legacy Group' FROM Files f, MetadataKeys k WHERE k.\"Key\" = 'Grouping';";
+                    command.ExecuteNonQuery();
+                }
+
+                using var reopened = MetadataDatabase.OpenDatabase("sqlite:" + dbPath);
+                MetadataCacheEntry entry = reopened.BuildCache([directory]).FileCache[song];
+                Assert.Equal("Legacy Composer", entry.Composer);
+                Assert.Equal("Legacy Group", entry.Grouping);
             }
             finally
             {

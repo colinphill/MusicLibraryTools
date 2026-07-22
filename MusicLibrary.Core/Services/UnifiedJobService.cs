@@ -1,4 +1,5 @@
 using MusicLibrary.Core.Models;
+using MusicLibraryTools;
 
 namespace MusicLibrary.Core.Services;
 
@@ -13,30 +14,50 @@ public interface IUnifiedJobService
 
 public sealed class UnifiedJobService : IUnifiedJobService
 {
-    public IReadOnlyList<UnifiedJobDescriptor> Catalog { get; } =
-    [
-        new("playlist-sync", "Playlist sync",
-            "Synchronize every playlist export target from the active library configuration.",
-            UnifiedJobApplyMode.ApplyFlag, [], "", 0),
-        new("artwork-normalization", "Artwork normalization",
-            "Normalize embedded artwork for the tracks in an iTunes playlist.",
-            UnifiedJobApplyMode.ApplyFlag, [], "<playlist>", 1),
-        new("smart-storage", "Smart storage",
-            "Project the iTunes library into a bucketed portable-storage catalog.",
-            UnifiedJobApplyMode.ApplyFlag, [],
-            "<destination> [--initialize] [--max-removals <count>]", 1),
-        new("car-card", "Car card",
-            "Project the indexed library into a balanced removable-media layout.",
-            UnifiedJobApplyMode.ApplyFlag, [],
-            "[rebalance] [fixerrors] [--initialize] [--max-removals <count>]", 0),
-        new("cross-library-sync", "Cross-library sync",
-            "Synchronize configured playlists into the library target.",
-            UnifiedJobApplyMode.ApplyFlag, [], "", 0),
-        new("redundancies", "Redundancy report",
-            "Report likely duplicate iTunes tracks.", UnifiedJobApplyMode.ReadOnly,
-            [], "", 0),
-        new("itunes-validation", "iTunes library validation",
-            "Validate structural and referential invariants in an ITL file.",
-            UnifiedJobApplyMode.ReadOnly, [], "<iTunes Library.itl>", 1),
-    ];
+    public const string ConfiguredExportJobPrefix = "configured-export:";
+
+    private readonly IReadOnlyList<ILibraryOperationProvider> _providers;
+    private readonly IAppSettings? _settings;
+
+    /// <summary>Compatibility constructor used by headless callers: exposes the full catalog.</summary>
+    public UnifiedJobService() : this(BuiltInLibraryOperationProviders.All, null)
+    {
+    }
+
+    public UnifiedJobService(
+        IEnumerable<ILibraryOperationProvider> providers,
+        IAppSettings? settings)
+    {
+        _providers = providers.ToArray();
+        _settings = settings;
+    }
+
+    public IReadOnlyList<UnifiedJobDescriptor> Catalog
+    {
+        get
+        {
+            LibraryConfiguration? configuration = _settings?.Configuration;
+            IEnumerable<UnifiedJobDescriptor> builtIns = _providers
+                .Where(provider => _settings is null ||
+                    provider.GetAvailability(configuration).Available)
+                .Select(provider => provider.Descriptor);
+            if (configuration is null)
+                return builtIns.ToArray();
+
+            IEnumerable<UnifiedJobDescriptor> configuredExports = configuration.ExportProfiles
+                .Where(profile => profile.IsVisible &&
+                    profile.Transform.Mode != ExportTransformMode.SpecializedProvider)
+                .OrderBy(profile => profile.Name, StringComparer.CurrentCultureIgnoreCase)
+                .Select(profile => new UnifiedJobDescriptor(
+                    ConfiguredExportJobPrefix + profile.Id,
+                    "Export: " + profile.Name,
+                    "Preview and apply the configured selection, naming, transport, and " +
+                    "reconciliation policy.",
+                    UnifiedJobApplyMode.ApplyFlag,
+                    [],
+                    "",
+                    0));
+            return builtIns.Concat(configuredExports).ToArray();
+        }
+    }
 }

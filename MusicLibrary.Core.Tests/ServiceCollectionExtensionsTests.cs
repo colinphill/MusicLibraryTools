@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using MusicFileUtilities;
 using MusicLibrary.Core;
 using MusicLibrary.Core.Services;
 using Xunit;
@@ -14,6 +15,12 @@ public sealed class ServiceCollectionExtensionsTests
         services.AddMusicLibraryCore();
         using ServiceProvider provider = services.BuildServiceProvider();
 
+        Assert.Same(MediaFormatRegistry.Default,
+            provider.GetRequiredService<IMediaFormatRegistry>());
+        Assert.IsType<LibraryHealthPolicyService>(
+            provider.GetRequiredService<ILibraryHealthPolicyService>());
+        Assert.Equal(BuiltInHealthRules.All.Count,
+            provider.GetServices<IHealthRule>().Count());
         Assert.IsType<IngestMusicService>(provider.GetRequiredService<IIngestMusicService>());
         Assert.IsType<IngestPreflightService>(
             provider.GetRequiredService<IIngestPreflightService>());
@@ -21,5 +28,15 @@ public sealed class ServiceCollectionExtensionsTests
             provider.GetRequiredService<ILibraryOperationContextFactory>());
         Assert.IsType<ItlMetadataRepairService>(
             provider.GetRequiredService<IItlMetadataRepairService>());
+        Assert.IsType<M3uPlaylistSource>(
+            provider.GetRequiredService<IPlaylistSource>());
+        Assert.IsType<ItunesMediaCatalogIntegration>(
+            provider.GetRequiredService<IMediaCatalogIntegration>());
+        Assert.IsType<LocalFileSystemExportTransport>(
+            provider.GetRequiredService<IExportTransport>());
+        Assert.Equal(BuiltInLibraryOperationProviders.All.Count,
+            provider.GetServices<ILibraryOperationProvider>().Count());
+        Assert.Equal(["itunes-validation"],
+            provider.GetRequiredService<IUnifiedJobService>().Catalog.Select(job => job.Id));
     }
 }

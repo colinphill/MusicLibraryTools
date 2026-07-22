@@ -1,7 +1,9 @@
 using System.Security.Cryptography;
+using iTunes.Binary;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
 using MusicFileUtilities;
+using MusicLibraryTools;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Png;
@@ -126,6 +128,99 @@ public sealed class ArtworkNormalizationServiceTests
             TestContext.Current.CancellationToken)).ArtworkScanned);
     }
 
+    [Fact]
+    public async Task CatalogOnlyPolicyBlocksPreviewAndApplyWithoutMutatingFiles()
+    {
+        using var fixture = CreateMediaPlan();
+        string configPath = Path.Combine(fixture.Workspace.Path, "catalog-only.xml");
+        var editable = EditableLibraryConfig.CreateNew();
+        editable.DatabaseFile = Path.Combine(fixture.Workspace.Path, "catalog-only.db");
+        editable.ItunesLibraryPath = fixture.Plan.LibraryPath;
+        editable.IndexTargets.Add(editable.CreateIndexTarget(
+            Path.GetDirectoryName(fixture.MediaPath)!));
+        editable.Save(configPath);
+        var settings = new AppSettings(Path.Combine(fixture.Workspace.Path, "settings.json"));
+        settings.LoadConfig(configPath);
+        var reindex = new RecordingReindexService();
+        var service = new ArtworkNormalizationService(
+            settings, reindex, new FileMutationCoordinator());
+        byte[] mediaBefore = await File.ReadAllBytesAsync(
+            fixture.MediaPath, TestContext.Current.CancellationToken);
+        byte[] libraryBefore = await File.ReadAllBytesAsync(
+            fixture.Plan.LibraryPath, TestContext.Current.CancellationToken);
+
+        ArtworkNormalizationPlan plan = await service.PreviewAsync(
+            new("####!####", fixture.Plan.LibraryPath),
+            ct: TestContext.Current.CancellationToken);
+
+        Assert.Equal(settings.Configuration!.LibraryId, plan.LibraryId);
+        Assert.Equal(settings.Configuration.PolicySnapshot.Fingerprint, plan.PolicyFingerprint);
+        Assert.False(plan.CanApply);
+        Assert.Contains(plan.Issues, issue =>
+            issue.Code == "artwork-policy-denied" &&
+            issue.Severity == OperationIssueSeverity.Blocker);
+
+        InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.ApplyAsync(plan with { Issues = [] },
+                ct: TestContext.Current.CancellationToken));
+
+        Assert.Contains("no root", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(mediaBefore, await File.ReadAllBytesAsync(
+            fixture.MediaPath, TestContext.Current.CancellationToken));
+        Assert.Equal(libraryBefore, await File.ReadAllBytesAsync(
+            fixture.Plan.LibraryPath, TestContext.Current.CancellationToken));
+        Assert.Empty(reindex.Batches);
+        Assert.False(Directory.Exists(plan.RecoveryRoot));
+    }
+
+    [Fact]
+    public async Task ApplyRejectsPolicyChangedAfterArtworkPreview()
+    {
+        using var fixture = CreateMediaPlan();
+        string configPath = Path.Combine(fixture.Workspace.Path, "policy-change.xml");
+        var editable = new EditableLibraryConfig
+        {
+            ActiveProfileId = LibraryProfilePresets.PreserveLayoutAndTagsId,
+            DatabaseFile = Path.Combine(fixture.Workspace.Path, "policy-change.db"),
+            ItunesLibraryPath = fixture.Plan.LibraryPath,
+        };
+        editable.IndexTargets.Add(editable.CreateIndexTarget(
+            Path.GetDirectoryName(fixture.MediaPath)!));
+        editable.Save(configPath);
+        var settings = new AppSettings(Path.Combine(fixture.Workspace.Path, "settings.json"));
+        settings.LoadConfig(configPath);
+        var service = new ArtworkNormalizationService(
+            settings, new RecordingReindexService(), new FileMutationCoordinator());
+        ArtworkNormalizationPlan plan = await service.PreviewAsync(
+            new("####!####", fixture.Plan.LibraryPath),
+            ct: TestContext.Current.CancellationToken);
+        Assert.True(plan.CanApply);
+        Assert.Single(plan.Items);
+
+        EditableLibraryConfig changed = EditableLibraryConfig.Load(configPath);
+        changed.ActiveProfileId = LibraryProfilePresets.CatalogOnlyId;
+        IndexTargetEntry root = Assert.Single(changed.IndexTargets);
+        root.ProfileId = LibraryProfilePresets.CatalogOnlyId;
+        root.Permissions = LibraryRootPermissions.None;
+        root.Organize = false;
+        changed.Save(configPath);
+        settings.LoadConfig(configPath);
+        byte[] mediaBefore = await File.ReadAllBytesAsync(
+            fixture.MediaPath, TestContext.Current.CancellationToken);
+        byte[] libraryBefore = await File.ReadAllBytesAsync(
+            fixture.Plan.LibraryPath, TestContext.Current.CancellationToken);
+
+        InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.ApplyAsync(plan, ct: TestContext.Current.CancellationToken));
+
+        Assert.Contains("policy changed", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(mediaBefore, await File.ReadAllBytesAsync(
+            fixture.MediaPath, TestContext.Current.CancellationToken));
+        Assert.Equal(libraryBefore, await File.ReadAllBytesAsync(
+            fixture.Plan.LibraryPath, TestContext.Current.CancellationToken));
+        Assert.False(Directory.Exists(plan.RecoveryRoot));
+    }
+
     private static ArtworkNormalizationPlan CreatePlan(string library)
     {
         var info = new FileInfo(library);
@@ -154,6 +249,9 @@ public sealed class ArtworkNormalizationServiceTests
 
         string library = Path.Combine(workspace.Path, "iTunes Library.itl");
         File.WriteAllBytes(library, SyntheticItunesLibrary.CreateFile(mediaFolder));
+        ItlDocument document = ItlDocument.Load(library);
+        document.SetTrackString(document.Tracks.Single(), ItlDataType.Location, mediaPath);
+        ItlFileEditor.SaveValidated(document, library);
         byte[] proposedArtwork = CreateImage("jpeg", 48, 48, Color.Red);
         var mediaInfo = new FileInfo(mediaPath);
         var libraryInfo = new FileInfo(library);

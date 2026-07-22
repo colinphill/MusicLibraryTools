@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 #endif
 using System.IO;
+using System.IO.Enumeration;
 using MusicFileUtilities;
 using MusicLibraryTools;
 using System.Threading;
@@ -66,7 +67,20 @@ namespace MetadataCaching
     /// An indexed root and its optional logical scan-set memberships. Membership affects logical
     /// grouping only; the root is indexed even when <see cref="Sets"/> is empty.
     /// </summary>
-    public sealed record ScanRootDefinition(string Path, IReadOnlyList<string> Sets);
+    public sealed record ScanRootDefinition(string Path, IReadOnlyList<string> Sets)
+    {
+        /// <summary>
+        /// Registered media extensions to index. Empty means every format that advertises the
+        /// LibraryIndex capability.
+        /// </summary>
+        public IReadOnlyList<string> Formats { get; init; } = [];
+
+        /// <summary>Relative-path or file-name globs. Empty means every media file.</summary>
+        public IReadOnlyList<string> IncludePatterns { get; init; } = [];
+
+        /// <summary>Relative-path or file-name globs that take precedence over includes.</summary>
+        public IReadOnlyList<string> ExcludePatterns { get; init; } = [];
+    }
 
     public sealed record IndexedFileSnapshot(
         string Path,
@@ -203,6 +217,12 @@ namespace MetadataCaching
         // bytes, so an unbounded queue can balloon to GBs on a big scan).
         internal static int IndexScanParallelism = GetDefaultIndexScanParallelism();
         internal static int IndexFileQueueBound = 256;
+        private static readonly StringComparer FilePathComparer = OperatingSystem.IsWindows()
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
+        private static readonly StringComparison FilePathComparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
 
         /// <summary>
         /// Global cap on concurrent filesystem/metadata readers used by this database instance.
@@ -674,24 +694,34 @@ namespace MetadataCaching
 
             MetadataCache cache = new MetadataCache(buildSecondaryIndexes);
             var sharedStrings = new Dictionary<string, string>(StringComparer.Ordinal);
-            var compilationFiles = new HashSet<long>();
-            using (var compilationCommand = conn_.CreateCommand())
+            var browseMetadata = new Dictionary<long, BrowseMetadata>();
+            using (var browseCommand = conn_.CreateCommand())
             {
-                // Resolve this sparse flag once. A correlated EXISTS here previously repeated a
-                // Metadata lookup for every cached track and made large-library startup appear hung.
-                compilationCommand.CommandText =
-                    "SELECT m.FileID FROM Metadata m WHERE m.KeyID = " +
-                    "(SELECT ID FROM MetadataKeys WHERE \"Key\" = 'Compilation') " +
-                    "AND LOWER(m.Value) IN ('1','true','yes')";
-                using var compilationReader = compilationCommand.ExecuteReader();
-                while (compilationReader.Read())
-                    compilationFiles.Add(compilationReader.GetInt64(0));
+                // Resolve the sparse browse fields once. A correlated lookup per cached track is
+                // prohibitively expensive on large libraries, while Metadata's existing FileID and
+                // KeyID indexes make this one pass work for old databases without a rescan.
+                browseCommand.CommandText =
+                    "SELECT m.FileID, k.\"Key\", m.Value FROM Metadata m " +
+                    "JOIN MetadataKeys k ON m.KeyID = k.ID WHERE k.\"Key\" IN " +
+                    "('Compilation','Genre','Composer','Grouping') ORDER BY m.ID";
+                using var browseReader = browseCommand.ExecuteReader();
+                while (browseReader.Read())
+                {
+                    long fileId = browseReader.GetInt64(0);
+                    if (!browseMetadata.TryGetValue(fileId, out BrowseMetadata fields))
+                    {
+                        fields = new BrowseMetadata();
+                        browseMetadata.Add(fileId, fields);
+                    }
+                    fields.Add(browseReader.GetString(1), browseReader.GetString(2));
+                }
             }
 
             foreach (var path in paths)
             {
                 string requestedPath = Path.TrimEndingDirectorySeparator(path.Path);
-                var set = dbsets.FirstOrDefault(s => Path.TrimEndingDirectorySeparator(s.Path).Equals(requestedPath, StringComparison.InvariantCultureIgnoreCase));
+                var set = dbsets.FirstOrDefault(s => FilePathComparer.Equals(
+                    Path.TrimEndingDirectorySeparator(s.Path), requestedPath));
                 if (set == default)
                     continue;
                 HashSet<string> extensions = path.Extensions is null
@@ -710,8 +740,9 @@ namespace MetadataCaching
                 int oAlbumPath = reader.GetOrdinal("AlbumPath"), oPath = reader.GetOrdinal("Path");
                 while (reader.Read())
                 {
-                    var ce = new MetadataCacheEntry(
-                        reader, compilationFiles.Contains(reader.GetInt64("ID")));
+                    browseMetadata.TryGetValue(reader.GetInt64("ID"), out BrowseMetadata fields);
+                    var ce = new MetadataCacheEntry(reader, fields?.Compilation ?? false);
+                    ce.SetIndexedMetadata(fields?.Genre, fields?.Composer, fields?.Grouping);
                     ce.Strip(sharedStrings);
                     var fullpath = Path.Combine(set.Path, reader.GetString(oAlbumPath), reader.GetString(oPath));
                     if (extensions is null || extensions.Count == 0)
@@ -721,6 +752,48 @@ namespace MetadataCaching
                 }
             }
             return cache;
+        }
+
+        private sealed class BrowseMetadata
+        {
+            public bool Compilation { get; private set; }
+            public string Genre { get; private set; }
+            public string Composer { get; private set; }
+            public string Grouping { get; private set; }
+
+            public void Add(string key, string value)
+            {
+                switch (key)
+                {
+                    case "Compilation":
+                        Compilation |= value is not null &&
+                            (value.Equals("1", StringComparison.OrdinalIgnoreCase) ||
+                             value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                             value.Equals("yes", StringComparison.OrdinalIgnoreCase));
+                        break;
+                    case "Genre":
+                        Genre = Append(Genre, value);
+                        break;
+                    case "Composer":
+                        Composer = Append(Composer, value);
+                        break;
+                    case "Grouping":
+                        Grouping = Append(Grouping, value);
+                        break;
+                }
+            }
+
+            private static string Append(string existing, string value)
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                    return existing;
+                if (string.IsNullOrWhiteSpace(existing))
+                    return value;
+                return existing.Split(';', StringSplitOptions.TrimEntries)
+                    .Contains(value, StringComparer.Ordinal)
+                    ? existing
+                    : existing + "; " + value;
+            }
         }
 
         private static string NormalizeExtensionFilter(string extension)
@@ -767,9 +840,8 @@ namespace MetadataCaching
                              : StringComparer.Ordinal))
             {
                 string requestedPath = Path.TrimEndingDirectorySeparator(path);
-                var set = dbsets.FirstOrDefault(candidate =>
-                    Path.TrimEndingDirectorySeparator(candidate.Path).Equals(
-                        requestedPath, StringComparison.InvariantCultureIgnoreCase));
+                var set = dbsets.FirstOrDefault(candidate => FilePathComparer.Equals(
+                    Path.TrimEndingDirectorySeparator(candidate.Path), requestedPath));
                 if (set == default)
                     continue;
 
@@ -842,6 +914,65 @@ namespace MetadataCaching
             return IndexFilesAsync(roots, deletemissingsets, progress, ct).GetAwaiter().GetResult();
         }
 
+        private static ScanRootDefinition MergeDuplicateRootDefinitions(
+            IGrouping<string, ScanRootDefinition> group)
+        {
+            ScanRootDefinition first = group.First();
+            if (group.Skip(1).Any(candidate => !HaveSameIndexPolicy(first, candidate)))
+                throw new InvalidDataException(
+                    $"Duplicate scan root '{first.Path}' has conflicting format or pattern policies.");
+            return new ScanRootDefinition(
+                first.Path,
+                group.SelectMany(root => root.Sets)
+                    .Distinct(LibraryConfiguration.ScanSetComparer)
+                    .OrderBy(set => set, LibraryConfiguration.ScanSetComparer).ToArray())
+            {
+                Formats = first.Formats,
+                IncludePatterns = first.IncludePatterns,
+                ExcludePatterns = first.ExcludePatterns,
+            };
+        }
+
+        private static bool HaveSameIndexPolicy(
+            ScanRootDefinition left,
+            ScanRootDefinition right) =>
+            new HashSet<string>(left.Formats, StringComparer.OrdinalIgnoreCase)
+                .SetEquals(right.Formats) &&
+            new HashSet<string>(left.IncludePatterns, StringComparer.OrdinalIgnoreCase)
+                .SetEquals(right.IncludePatterns) &&
+            new HashSet<string>(left.ExcludePatterns, StringComparer.OrdinalIgnoreCase)
+                .SetEquals(right.ExcludePatterns);
+
+        private static bool IsIncludedByRootPolicy(
+            ScanRootDefinition root,
+            string relativePath,
+            string fullPath)
+        {
+            if (root.Formats.Count > 0 && !root.Formats.Contains(
+                    Path.GetExtension(fullPath), StringComparer.OrdinalIgnoreCase))
+                return false;
+
+            string normalized = relativePath.Replace('\\', '/');
+            int slash = normalized.LastIndexOf('/');
+            string fileName = slash >= 0 ? normalized[(slash + 1)..] : normalized;
+            bool included = root.IncludePatterns.Count == 0 ||
+                root.IncludePatterns.Any(pattern => IndexPatternMatches(
+                    pattern, normalized, fileName));
+            return included && !root.ExcludePatterns.Any(pattern => IndexPatternMatches(
+                pattern, normalized, fileName));
+        }
+
+        private static bool IndexPatternMatches(
+            string pattern,
+            string relativePath,
+            string fileName)
+        {
+            string normalizedPattern = pattern.Replace('\\', '/');
+            string candidate = normalizedPattern.Contains('/') ? relativePath : fileName;
+            return FileSystemName.MatchesSimpleExpression(
+                normalizedPattern, candidate, ignoreCase: OperatingSystem.IsWindows());
+        }
+
         // progress (optional): when supplied, periodic IndexProgress snapshots are reported instead
         // of the console "Scanned: N" line, so a GUI can drive its own progress UI. ct (optional):
         // cooperative cancellation — the file walk stops at the next file boundary; whatever was
@@ -897,6 +1028,7 @@ namespace MetadataCaching
             ReportPhase(IndexPhase.Preparing, preparingClock, 0, "Loading cache scan sets");
             var sets = new List<(string Path, long ID)>();
             var missedsets = new List<long>();
+            var rootDefinitions = new Dictionary<long, ScanRootDefinition>();
 
             using (var setscomm = conn_.CreateCommand())
             {
@@ -907,13 +1039,17 @@ namespace MetadataCaching
                         Path.TrimEndingDirectorySeparator(root.Path),
                         (root.Sets ?? []).Select(LibraryConfiguration.ParseScanSetName)
                         .Distinct(LibraryConfiguration.ScanSetComparer)
-                        .OrderBy(set => set, LibraryConfiguration.ScanSetComparer).ToArray()))
-                    .GroupBy(root => root.Path, StringComparer.InvariantCultureIgnoreCase)
-                    .Select(group => new ScanRootDefinition(
-                        group.First().Path,
-                        group.SelectMany(root => root.Sets)
-                            .Distinct(LibraryConfiguration.ScanSetComparer)
-                            .OrderBy(set => set, LibraryConfiguration.ScanSetComparer).ToArray()))
+                        .OrderBy(set => set, LibraryConfiguration.ScanSetComparer).ToArray())
+                    {
+                        Formats = LibraryConfiguration.NormalizeIndexFormats(
+                            root.Formats ?? []),
+                        IncludePatterns = LibraryConfiguration.NormalizeIndexPatterns(
+                            root.IncludePatterns ?? []),
+                        ExcludePatterns = LibraryConfiguration.NormalizeIndexPatterns(
+                            root.ExcludePatterns ?? []),
+                    })
+                    .GroupBy(root => root.Path, FilePathComparer)
+                    .Select(MergeDuplicateRootDefinitions)
                     .ToList();
                 var modpaths = requestedRoots.Select(root => root.Path).ToList();
                 var dbsets = new List<(string Path, long ID, bool Hit)>();
@@ -923,7 +1059,8 @@ namespace MetadataCaching
                     while (reader.Read())
                         dbsets.Add((reader.GetString(0), reader.GetInt64(1), false));
                 // O(1) membership instead of an O(sets) LINQ scan per requested path.
-                var dbsetpaths = new HashSet<string>(dbsets.Select(s => Path.TrimEndingDirectorySeparator(s.Path)), StringComparer.InvariantCultureIgnoreCase);
+                var dbsetpaths = new HashSet<string>(dbsets.Select(s =>
+                    Path.TrimEndingDirectorySeparator(s.Path)), FilePathComparer);
                 foreach (var path in modpaths)
                     if (!dbsetpaths.Contains(path))
                         missing.Add(path);
@@ -943,7 +1080,7 @@ namespace MetadataCaching
                 setscomm.Parameters.Clear();
                 setscomm.Transaction = null;
                 dbsets.Clear();
-                var requestedpaths = new HashSet<string>(modpaths, StringComparer.InvariantCultureIgnoreCase);
+                var requestedpaths = new HashSet<string>(modpaths, FilePathComparer);
                 using (var reader = setscomm.ExecuteReader())
                     while (reader.Read())
                     {
@@ -951,12 +1088,12 @@ namespace MetadataCaching
                         dbsets.Add((setpath, reader.GetInt64(1), requestedpaths.Contains(Path.TrimEndingDirectorySeparator(setpath))));
                     }
                 sets.AddRange(dbsets.Where(s => s.Hit)
-                    .GroupBy(s => Path.TrimEndingDirectorySeparator(s.Path), StringComparer.InvariantCultureIgnoreCase)
+                    .GroupBy(s => Path.TrimEndingDirectorySeparator(s.Path), FilePathComparer)
                     .Select(g => (Path.TrimEndingDirectorySeparator(g.First().Path), g.First().ID)));
                 missedsets.AddRange(dbsets.Where(s => !s.Hit).Select(s => (s.ID)));
 
                 var requestedByPath = requestedRoots.ToDictionary(
-                    root => root.Path, root => root.Sets, StringComparer.InvariantCultureIgnoreCase);
+                    root => root.Path, FilePathComparer);
                 using (var transaction = conn_.BeginTransaction())
                 using (var deleteMemberships = transaction.CreateCommand())
                 using (var insertMembership = transaction.CreateCommand())
@@ -972,7 +1109,7 @@ namespace MetadataCaching
                     {
                         deleteId.Value = root.ID;
                         deleteMemberships.ExecuteNonQuery();
-                        foreach (string membership in requestedByPath[root.Path])
+                        foreach (string membership in requestedByPath[root.Path].Sets)
                         {
                             insertId.Value = root.ID;
                             setName.Value = membership;
@@ -981,6 +1118,8 @@ namespace MetadataCaching
                     }
                     transaction.Commit();
                 }
+                foreach ((string path, long id) in sets)
+                    rootDefinitions[id] = requestedByPath[path];
                 scanSetsCache_ = null;
             }
 
@@ -1115,13 +1254,16 @@ namespace MetadataCaching
                    }
                    if (file.FileType != MFEType.MusicFile)
                        return;
+                   var relativename = Path.GetRelativePath(setPath, file.Name);
+                   if (!IsIncludedByRootPolicy(
+                           rootDefinitions[setID], relativename, file.Name))
+                       return;
                    int found = Interlocked.Increment(ref enumerated);
                    var stats = rootStats.GetOrAdd(setID, _ => new());
                    Interlocked.Increment(ref stats.Enumerated);
                    if ((found % 250) == 0)
                        ReportPhase(IndexPhase.Enumeration, enumerationClock, found,
                            "Enumerating music files", setPath);
-                   var relativename = Path.GetRelativePath(setPath, file.Name);
                    var key = (SetID: setID, RelativeName: relativename);
                    var scan = false;
                    var isAdded = false;
@@ -1687,7 +1829,7 @@ namespace MetadataCaching
             {
                 var root = s.Path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
                 if (fullPath.Length > root.Length + 1 &&
-                    fullPath.StartsWith(root, StringComparison.InvariantCultureIgnoreCase) &&
+                    fullPath.StartsWith(root, FilePathComparison) &&
                     (fullPath[root.Length] == Path.DirectorySeparatorChar || fullPath[root.Length] == Path.AltDirectorySeparatorChar) &&
                     root.Length > (bestRoot?.Length ?? -1))
                 {
@@ -1756,6 +1898,7 @@ namespace MetadataCaching
                 details.TagType = reader.GetString("TagType");
             }
 
+            var browseFields = new BrowseMetadata();
             using (var cmd = conn_.CreateCommand())
             {
                 cmd.CommandText = "SELECT k.\"Key\", m.Value FROM Metadata m JOIN MetadataKeys k ON m.KeyID = k.ID WHERE m.FileID = @id";
@@ -1765,12 +1908,15 @@ namespace MetadataCaching
                 {
                     var field = new KeyValuePair<string, string>(reader.GetString(0), reader.GetString(1));
                     details.KnownFields.Add(field);
+                    browseFields.Add(field.Key, field.Value);
                     // GetTextMetadata() is currently the TagFields.ToString() projection of
                     // GetKnownMetadata() for every parser. Preserve the public raw/text collection
                     // without querying the duplicate Metadata rows a second time.
                     details.TextFields.Add(field);
                 }
             }
+            details.Entry.SetIndexedMetadata(
+                browseFields.Genre, browseFields.Composer, browseFields.Grouping);
 
             if (includeImages)
             {
@@ -1855,7 +2001,7 @@ namespace MetadataCaching
             while (reader.Read())
             {
                 string path = Path.Combine(reader.GetString(0), reader.GetString(1), reader.GetString(2));
-                if (current is null || !StringComparer.InvariantCultureIgnoreCase.Equals(current.Path, path))
+                if (current is null || !FilePathComparer.Equals(current.Path, path))
                 {
                     current = new FileArtworkSummary
                     {

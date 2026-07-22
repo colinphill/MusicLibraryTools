@@ -17,6 +17,9 @@ namespace MetadataCaching
     public partial class MetadataCacheEntry
     {
         private static Regex stripre_ = new Regex(@" \((DSD|DSD64|DSD128|DSD256|DVD-V|DVD-A|HiRes|Hi-Res|DTS-CD)\)$", RegexOptions.IgnoreCase);
+        private static readonly Regex releaseyearre_ = new(
+            @"(?<!\d)(?<year>\d{4})(?!\d)",
+            RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
         private string _title = null;
         private string _album = null;
@@ -39,6 +42,9 @@ namespace MetadataCaching
         private uint _maxbitrate = 0;
         private int _durationinseconds = 0;
         private string _releasedate = null;
+        private string _genre = null;
+        private string _composer = null;
+        private string _grouping = null;
         private int? _discnumber = null;
         private int? _disctotal = null;
         [NonSerialized]
@@ -56,8 +62,7 @@ namespace MetadataCaching
             _hasalbumartist = mp.HasAlbumArtist &&
                 !string.IsNullOrWhiteSpace(mp.AlbumArtist);
             _albumartist = _hasalbumartist ? mp.AlbumArtist : string.Empty;
-            _compilation = mp.GetKnownMetadata().Any(item =>
-                item.Key == TagFields.Compilation && IsTrue(item.Value));
+            SetIndexedMetadata(mp.GetKnownMetadata());
             _tracknumber = mp.TrackNumber;
             _tracktotal = mp.TrackTotal;
             _discnumber = mp.DiscNumber;
@@ -99,6 +104,10 @@ namespace MetadataCaching
         public int? DiscNumber => _discnumber;
         public int? DiscTotal => _disctotal;
         public string ReleaseDate => _releasedate;
+        public string Genre => _genre;
+        public string Composer => _composer;
+        public string Grouping => _grouping;
+        public int? Year => ParseYear(_releasedate);
         public DateTime LastWriteTime => _lastwritetime;
         public long Length => _length;
         public int DurationInSeconds => _durationinseconds;
@@ -108,6 +117,61 @@ namespace MetadataCaching
             (value.Equals("1", StringComparison.OrdinalIgnoreCase) ||
              value.Equals("true", StringComparison.OrdinalIgnoreCase) ||
              value.Equals("yes", StringComparison.OrdinalIgnoreCase));
+
+        internal void SetIndexedMetadata(
+            string genre,
+            string composer,
+            string grouping)
+        {
+            _genre = genre;
+            _composer = composer;
+            _grouping = grouping;
+        }
+
+        private void SetIndexedMetadata(
+            IEnumerable<KeyValuePair<TagFields, string>> metadata)
+        {
+            foreach (KeyValuePair<TagFields, string> item in metadata)
+            {
+                switch (item.Key)
+                {
+                    case TagFields.Compilation:
+                        _compilation |= IsTrue(item.Value);
+                        break;
+                    case TagFields.Genre:
+                        _genre = AppendDistinct(_genre, item.Value);
+                        break;
+                    case TagFields.Composer:
+                        _composer = AppendDistinct(_composer, item.Value);
+                        break;
+                    case TagFields.Grouping:
+                        _grouping = AppendDistinct(_grouping, item.Value);
+                        break;
+                }
+            }
+        }
+
+        private static string AppendDistinct(string existing, string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return existing;
+            if (string.IsNullOrWhiteSpace(existing))
+                return value;
+            return existing.Split(';', StringSplitOptions.TrimEntries)
+                .Contains(value, StringComparer.Ordinal)
+                ? existing
+                : existing + "; " + value;
+        }
+
+        private static int? ParseYear(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return null;
+            Match match = releaseyearre_.Match(value);
+            return match.Success && int.TryParse(match.Groups["year"].Value, out int year)
+                ? year
+                : null;
+        }
         public void Touch()
         {
             _touched = true;
@@ -135,6 +199,9 @@ namespace MetadataCaching
             _album = Share(sharedStrings, _album);
             _codecname = Share(sharedStrings, _codecname);
             _releasedate = Share(sharedStrings, _releasedate);
+            _genre = Share(sharedStrings, _genre);
+            _composer = Share(sharedStrings, _composer);
+            _grouping = Share(sharedStrings, _grouping);
             _strippedalbum = Share(sharedStrings, stripre_.Replace(_album, ""));
         }
 
@@ -167,8 +234,9 @@ namespace MetadataCaching
 
     public class MetadataCache
     {
-        // Single source of truth: derived from MetadataExtensions so the two lists can't drift.
-        public static readonly string[] ValidExtensions = MetadataExtensions.ValidExtensions.ToArray();
+        // Compatibility view for older callers. MediaFormatRegistry owns the capability data.
+        public static readonly string[] ValidExtensions = MediaFormatRegistry.Default
+            .GetExtensions(MediaFormatCapabilities.LibraryIndex).ToArray();
 
         private Dictionary<string, MetadataCacheEntry> _filecache = new Dictionary<string, MetadataCacheEntry>();
         private Dictionary<string, List<string>> _albumcache = new Dictionary<string, List<string>>();
@@ -335,7 +403,9 @@ namespace MetadataCaching
             LogConsole.WriteLine(LogVerbosity.Chatty, "Checking Directory - " + basepath);
 
             DirectoryInfo di = new DirectoryInfo(basepath);
-            var files = di.EnumerateFileSystemInfos("*", SearchOption.AllDirectories).Where(fsi => ValidExtensions.Contains(Path.GetExtension(fsi.FullName).ToLower()) && ((fsi.Attributes & FileAttributes.Directory) == 0)).ToArray();
+            var files = di.EnumerateFileSystemInfos("*", SearchOption.AllDirectories).Where(fsi =>
+                MediaFormatRegistry.Default.SupportsPath(fsi.FullName, MediaFormatCapabilities.LibraryIndex) &&
+                ((fsi.Attributes & FileAttributes.Directory) == 0)).ToArray();
 
             /*string[] subdirs = Directory.GetDirectories(basepath);
             foreach (string subdir in subdirs)

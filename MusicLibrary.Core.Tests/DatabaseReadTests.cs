@@ -1,4 +1,5 @@
 using MusicFileUtilities;
+using MetadataCaching;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
 using SixLabors.ImageSharp;
@@ -63,7 +64,10 @@ public class DatabaseReadTests
             Assert.Equal("TestTitle", details!.Entry.Title);
             Assert.Equal("TestArtist", details.Entry.Artist);
             Assert.Equal(new FileInfo(song).Length, details.Entry.Length);
-            Assert.Equal(new FileInfo(song).Length, Assert.Single(await library.GetAllRecordsAsync()).Length);
+            TrackRecord record = Assert.Single(await library.GetAllRecordsAsync());
+            Assert.Equal(new FileInfo(song).Length, record.Length);
+            Assert.Equal("Rock", record.Genre);
+            Assert.Equal(2021, record.Year);
 
             // Genre is not a structured column — its presence proves GetKnownMetadata() was persisted
             // to the canonical Metadata table and read back from the cache.
@@ -132,6 +136,44 @@ public class DatabaseReadTests
             // The cache is synced automatically: the old path is gone and the new path is indexed.
             Assert.Null(await library.GetFileDetailsAsync(song, includeArtwork: false));
             Assert.NotNull(await library.GetFileDetailsAsync(dest, includeArtwork: false));
+        }
+        finally
+        {
+            try { Directory.Delete(work, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task BrowseMetadata_RoundTripsGenreComposerGroupingAndYear()
+    {
+        var (work, _, config, song) = Setup("sample.flac");
+        try
+        {
+            IMediaFile media = MediaFile.GetFile(song);
+            var writer = Assert.IsAssignableFrom<IMetadataWriter>(media);
+            writer.SetField(TagFields.Genre, "Modal Jazz");
+            writer.SetField(TagFields.Composer, "Miles Davis");
+            writer.SetField(TagFields.Grouping, "Studio masters");
+            writer.SetField(TagFields.Date, "1959-08-17");
+            writer.Save();
+
+            var settings = new AppSettings(Path.Combine(work, "settings.json"));
+            settings.LoadConfig(config);
+            using var library = new LibraryService(settings);
+            await library.IndexAsync();
+
+            TrackRecord record = Assert.Single(await library.GetAllRecordsAsync());
+            Assert.Equal("Modal Jazz", record.Genre);
+            Assert.Equal("Miles Davis", record.Composer);
+            Assert.Equal("Studio masters", record.Grouping);
+            Assert.Equal(1959, record.Year);
+
+            FileDetails details = Assert.IsType<FileDetails>(
+                await library.GetFileDetailsAsync(song, includeArtwork: false));
+            Assert.Equal(record.Genre, details.Entry.Genre);
+            Assert.Equal(record.Composer, details.Entry.Composer);
+            Assert.Equal(record.Grouping, details.Entry.Grouping);
+            Assert.Equal(record.Year, details.Entry.Year);
         }
         finally
         {

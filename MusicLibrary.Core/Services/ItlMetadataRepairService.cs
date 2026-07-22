@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using iTunes.Binary;
 using MetadataCaching;
 using MusicLibrary.Core.Models;
+using MusicLibraryTools;
 
 namespace MusicLibrary.Core.Services;
 
@@ -20,7 +21,12 @@ public sealed record ItlMetadataRepairPlan(
     string LibraryPath,
     string LibrarySha256,
     DateTimeOffset CreatedAt,
-    IReadOnlyList<ItlMetadataRepairItem> Items);
+    IReadOnlyList<ItlMetadataRepairItem> Items)
+{
+    public Guid? LibraryId { get; init; }
+    public string? PolicyFingerprint { get; init; }
+    public string? ConfigurationPath { get; init; }
+}
 
 public enum ItlMetadataRepairOutcome
 {
@@ -63,12 +69,31 @@ public interface IItlMetadataRepairService
 /// repairs atomically. The plan is pinned to a hash of the ITL so a stale preview can never
 /// overwrite changes made by iTunes or another operation.
 /// </summary>
-public sealed class ItlMetadataRepairService(
-    ILibraryOperationContextFactory contextFactory) : IItlMetadataRepairService
+public sealed class ItlMetadataRepairService : IItlMetadataRepairService
 {
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase
         : StringComparer.Ordinal;
+
+    private readonly ILibraryOperationContextFactory _contextFactory;
+    private readonly IAppSettings? _settings;
+
+    /// <summary>Compatibility constructor for command-line and isolated test callers.</summary>
+    public ItlMetadataRepairService(ILibraryOperationContextFactory contextFactory)
+    {
+        ArgumentNullException.ThrowIfNull(contextFactory);
+        _contextFactory = contextFactory;
+    }
+
+    public ItlMetadataRepairService(
+        ILibraryOperationContextFactory contextFactory,
+        IAppSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(contextFactory);
+        ArgumentNullException.ThrowIfNull(settings);
+        _contextFactory = contextFactory;
+        _settings = settings;
+    }
 
     public async Task<ItlMetadataRepairPlan> PreviewAsync(
         string? configurationPath = null,
@@ -76,9 +101,17 @@ public sealed class ItlMetadataRepairService(
         IProgress<OperationProgress>? progress = null,
         CancellationToken ct = default)
     {
-        LibraryOperationContext context = await contextFactory.CreateAsync(
+        LibraryOperationContext context = await _contextFactory.CreateAsync(
             configurationPath, itunesLibraryPath, progress, ct).ConfigureAwait(false);
         ct.ThrowIfCancellationRequested();
+
+        LibraryConfiguration configuration = context.Configuration;
+        if (_settings is not null)
+            EnsureConfiguredCatalog(configuration, context.ItunesLibraryPath);
+        EnsureAnyMetadataWriteRoot(configuration);
+        string? reviewedConfigurationPath = !string.IsNullOrWhiteSpace(configurationPath)
+            ? Path.GetFullPath(configurationPath)
+            : _settings?.GetSnapshot().ConfigPath;
 
         string hash = await ComputeSha256Async(context.ItunesLibraryPath, ct).ConfigureAwait(false);
         ItlDocument document = ItlDocument.Parse(context.ItunesLibrary.Envelope);
@@ -101,6 +134,8 @@ public sealed class ItlMetadataRepairService(
             if (differences.Count == 0)
                 continue;
 
+            EnsureMetadataWriteAllowed(configuration, normalized);
+
             items.Add(new(
                 Guid.NewGuid(),
                 track.GetTrackId(),
@@ -113,7 +148,12 @@ public sealed class ItlMetadataRepairService(
                 differences));
         }
 
-        return new(context.ItunesLibraryPath, hash, DateTimeOffset.UtcNow, items);
+        return new(context.ItunesLibraryPath, hash, DateTimeOffset.UtcNow, items)
+        {
+            LibraryId = configuration.LibraryId,
+            PolicyFingerprint = configuration.PolicySnapshot.Fingerprint,
+            ConfigurationPath = reviewedConfigurationPath,
+        };
     }
 
     public async Task<ItlMetadataRepairApplyResult> ApplyAsync(
@@ -128,6 +168,12 @@ public sealed class ItlMetadataRepairService(
         ItlMetadataRepairItem[] items = [.. plan.Items.Where(item => selected.Contains(item.Id))];
         if (items.Length == 0)
             return new(plan.LibraryPath, []);
+
+        LibraryConfiguration currentConfiguration = await LoadCurrentConfigurationAsync(
+            plan, ct).ConfigureAwait(false);
+        ValidateCurrentPolicy(plan, currentConfiguration, items);
+        if (_settings is not null)
+            EnsureConfiguredCatalog(currentConfiguration, plan.LibraryPath);
 
         ItlFileEditor.EnsureItunesIsClosed();
         string currentHash = await ComputeSha256Async(plan.LibraryPath, ct).ConfigureAwait(false);
@@ -178,6 +224,76 @@ public sealed class ItlMetadataRepairService(
             progress?.Report(++completed);
         }
         return new(plan.LibraryPath, results);
+    }
+
+    private async Task<LibraryConfiguration> LoadCurrentConfigurationAsync(
+        ItlMetadataRepairPlan plan,
+        CancellationToken ct)
+    {
+        if (!string.IsNullOrWhiteSpace(plan.ConfigurationPath))
+            return new LibraryConfiguration(Path.GetFullPath(plan.ConfigurationPath));
+
+        LibraryConfiguration? active = _settings?.GetSnapshot().Configuration;
+        if (active is not null)
+            return active;
+
+        IndexedLibraryOperationContext context = await _contextFactory.CreateIndexedAsync(
+            null, ct: ct).ConfigureAwait(false);
+        return context.Configuration;
+    }
+
+    private static void ValidateCurrentPolicy(
+        ItlMetadataRepairPlan plan,
+        LibraryConfiguration configuration,
+        IEnumerable<ItlMetadataRepairItem> items)
+    {
+        if (plan.LibraryId is not Guid libraryId ||
+            string.IsNullOrWhiteSpace(plan.PolicyFingerprint))
+            throw new InvalidOperationException(
+                "The metadata-repair plan does not identify its reviewed library policy. " +
+                "Preview the repairs again.");
+        if (configuration.LibraryId != libraryId ||
+            !StringComparer.Ordinal.Equals(
+                configuration.PolicySnapshot.Fingerprint, plan.PolicyFingerprint))
+            throw new InvalidOperationException(
+                "The library policy changed after this preview. Preview the repairs again before applying them.");
+
+        EnsureAnyMetadataWriteRoot(configuration);
+        foreach (ItlMetadataRepairItem item in items)
+            EnsureMetadataWriteAllowed(configuration, item.Path);
+    }
+
+    private static void EnsureAnyMetadataWriteRoot(LibraryConfiguration configuration)
+    {
+        if (!configuration.IndexLocations.Any(location =>
+                location.Permissions.HasFlag(LibraryRootPermissions.WriteMetadata)))
+            throw new InvalidOperationException(
+                "The active library policy has no root that permits catalog metadata repairs.");
+    }
+
+    private static void EnsureMetadataWriteAllowed(
+        LibraryConfiguration configuration,
+        string path)
+    {
+        if (!LibraryRootPermissionPolicy.Allows(
+                path, configuration.IndexLocations, LibraryRootPermissions.WriteMetadata))
+            throw new InvalidOperationException(
+                $"The effective library root policy does not permit catalog metadata repairs " +
+                $"for '{path}'.");
+    }
+
+    private static void EnsureConfiguredCatalog(
+        LibraryConfiguration configuration,
+        string libraryPath)
+    {
+        if (string.IsNullOrWhiteSpace(configuration.ItunesLibraryPath))
+            throw new InvalidOperationException(
+                "The active library policy does not configure a media catalog.");
+        if (!PathComparer.Equals(
+                Path.GetFullPath(configuration.ItunesLibraryPath),
+                Path.GetFullPath(libraryPath)))
+            throw new InvalidOperationException(
+                "The reviewed iTunes library is not the catalog configured by the active library policy.");
     }
 
     private static Dictionary<string, MetadataCacheEntry> BuildPathIndex(MetadataCache cache)

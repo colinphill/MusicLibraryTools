@@ -28,11 +28,14 @@ public sealed class ItlMetadataRepairServiceTests
         source.SetTrackString(sourceTrack, ItlDataType.Comment, "Preserve this comment");
         ItlFileEditor.SaveValidated(source, libraryPath);
 
-        var service = new ItlMetadataRepairService(new StubContextFactory(
-            CreateContext(workspace.Path, mediaPath, libraryPath)));
+        LibraryOperationContext context = CreateContext(
+            workspace.Path, mediaPath, libraryPath);
+        var service = new ItlMetadataRepairService(new StubContextFactory(context));
         ItlMetadataRepairPlan plan = await service.PreviewAsync(
             ct: TestContext.Current.CancellationToken);
 
+        Assert.Equal(context.Configuration.LibraryId, plan.LibraryId);
+        Assert.False(string.IsNullOrWhiteSpace(plan.PolicyFingerprint));
         ItlMetadataRepairItem item = Assert.Single(plan.Items);
         Assert.Contains(item.Differences, value => value.Field == "Title" &&
             value.Before == "Wrong title" && value.After == "Cached title");
@@ -126,6 +129,124 @@ public sealed class ItlMetadataRepairServiceTests
             .GetString(ItlDataType.AlbumArtist));
     }
 
+    [Fact]
+    public async Task CatalogOnlyPolicyRejectsPreviewWithoutMutatingTheCatalog()
+    {
+        using var workspace = new TemporaryDirectory();
+        string mediaPath = Path.Combine(workspace.Path, "Track.m4a");
+        string libraryPath = Path.Combine(workspace.Path, "Library.itl");
+        ItlDocument source = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+        source.SetTrackString(source.Tracks.Single(), ItlDataType.Location, mediaPath);
+        ItlFileEditor.SaveValidated(source, libraryPath);
+        LibraryOperationContext context = CreateProfileContext(
+            workspace.Path, mediaPath, libraryPath,
+            LibraryProfilePresets.CatalogOnlyId, Guid.NewGuid());
+        var service = new ItlMetadataRepairService(new StubContextFactory(context));
+        byte[] before = await File.ReadAllBytesAsync(
+            libraryPath, TestContext.Current.CancellationToken);
+
+        InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.PreviewAsync(ct: TestContext.Current.CancellationToken));
+
+        Assert.Contains("no root", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(before, await File.ReadAllBytesAsync(
+            libraryPath, TestContext.Current.CancellationToken));
+        Assert.False(File.Exists(libraryPath + ".bak"));
+    }
+
+    [Fact]
+    public async Task ApplyRejectsPolicyChangedToCatalogOnlyWithoutMutatingTheCatalog()
+    {
+        using var workspace = new TemporaryDirectory();
+        string mediaPath = Path.Combine(workspace.Path, "Track.m4a");
+        string libraryPath = Path.Combine(workspace.Path, "Library.itl");
+        ItlDocument source = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+        ItlRecord track = source.Tracks.Single();
+        source.SetTrackString(track, ItlDataType.Location, mediaPath);
+        source.SetTrackString(track, ItlDataType.Title, "Wrong title");
+        ItlFileEditor.SaveValidated(source, libraryPath);
+        Guid libraryId = Guid.NewGuid();
+        LibraryOperationContext context = CreateProfileContext(
+            workspace.Path, mediaPath, libraryPath,
+            LibraryProfilePresets.PreserveLayoutAndTagsId, libraryId);
+        string configPath = Path.Combine(workspace.Path, "library.xml");
+        var service = new ItlMetadataRepairService(new StubContextFactory(context));
+        ItlMetadataRepairPlan plan = await service.PreviewAsync(
+            configPath, ct: TestContext.Current.CancellationToken);
+        Assert.Equal(libraryId, plan.LibraryId);
+        Assert.Equal(context.Configuration.PolicySnapshot.Fingerprint,
+            plan.PolicyFingerprint);
+
+        EditableLibraryConfig catalogOnly = EditableLibraryConfig.Load(configPath);
+        catalogOnly.ActiveProfileId = LibraryProfilePresets.CatalogOnlyId;
+        IndexTargetEntry root = Assert.Single(catalogOnly.IndexTargets);
+        root.ProfileId = LibraryProfilePresets.CatalogOnlyId;
+        root.Permissions = LibraryRootPermissions.None;
+        root.Organize = false;
+        catalogOnly.Save(configPath);
+        byte[] before = await File.ReadAllBytesAsync(
+            libraryPath, TestContext.Current.CancellationToken);
+
+        InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.ApplyAsync(plan, plan.Items.Select(item => item.Id).ToArray(),
+                ct: TestContext.Current.CancellationToken));
+
+        Assert.Contains("policy changed", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(before, await File.ReadAllBytesAsync(
+            libraryPath, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task PolicyAwareServiceRejectsAnUnconfiguredCatalogAtPreviewAndApply()
+    {
+        using var workspace = new TemporaryDirectory();
+        string mediaPath = Path.Combine(workspace.Path, "Track.m4a");
+        string configuredLibraryPath = Path.Combine(workspace.Path, "Configured.itl");
+        string overrideLibraryPath = Path.Combine(workspace.Path, "Override.itl");
+        ItlDocument source = ItlDocument.Parse(ItlEnvelope.Parse(SyntheticLibrary.CreateFile()));
+        ItlRecord track = source.Tracks.Single();
+        source.SetTrackString(track, ItlDataType.Location, mediaPath);
+        source.SetTrackString(track, ItlDataType.Title, "Wrong title");
+        ItlFileEditor.SaveValidated(source, configuredLibraryPath);
+        ItlFileEditor.SaveValidated(source, overrideLibraryPath);
+        LibraryOperationContext configured = CreateProfileContext(
+            workspace.Path, mediaPath, configuredLibraryPath,
+            LibraryProfilePresets.PreserveLayoutAndTagsId, Guid.NewGuid());
+        ItlLibrary overrideLibrary = ItlLibrary.Load(overrideLibraryPath);
+        LibraryOperationContext overridden = configured with
+        {
+            ItunesLibrary = overrideLibrary,
+            TracksById = overrideLibrary.Tracks.ToDictionary(value => value.Id),
+            ItunesLibraryPath = overrideLibraryPath,
+        };
+        var factory = new StubContextFactory(overridden);
+
+        // The compatibility constructor keeps the command-line --itunes override behavior.
+        ItlMetadataRepairPlan compatibilityPlan = await new ItlMetadataRepairService(factory)
+            .PreviewAsync(ct: TestContext.Current.CancellationToken);
+        ItlMetadataRepairItem item = Assert.Single(compatibilityPlan.Items);
+
+        string configPath = Path.Combine(workspace.Path, "library.xml");
+        var settings = new AppSettings(Path.Combine(workspace.Path, "settings.json"));
+        settings.LoadConfig(configPath);
+        var policyAware = new ItlMetadataRepairService(factory, settings);
+        byte[] before = await File.ReadAllBytesAsync(
+            overrideLibraryPath, TestContext.Current.CancellationToken);
+
+        InvalidOperationException previewError = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => policyAware.PreviewAsync(ct: TestContext.Current.CancellationToken));
+        InvalidOperationException applyError = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => policyAware.ApplyAsync(compatibilityPlan, [item.Id],
+                ct: TestContext.Current.CancellationToken));
+
+        Assert.Contains("not the catalog", previewError.Message,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not the catalog", applyError.Message,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(before, await File.ReadAllBytesAsync(
+            overrideLibraryPath, TestContext.Current.CancellationToken));
+    }
+
     private static LibraryOperationContext CreateContext(
         string workspace,
         string mediaPath,
@@ -135,12 +256,38 @@ public sealed class ItlMetadataRepairServiceTests
         string configPath = Path.Combine(workspace, "library.xml");
         new XDocument(new XElement("LibraryConfiguration",
             new XElement("DatabaseFile", Path.Combine(workspace, "cache.db")),
-            new XElement("ItunesLibrary", libraryPath))).Save(configPath);
+            new XElement("ItunesLibrary", libraryPath),
+            new XElement("IndexTarget", workspace))).Save(configPath);
         var configuration = new LibraryConfiguration(configPath);
         var cache = new MetadataCache(buildSecondaryIndexes: false);
         cache.FileCache[mediaPath] = CacheEntry(explicitAlbumArtist);
         ItlLibrary library = ItlLibrary.Load(libraryPath);
-        return new(configuration, [], cache, library,
+        return new(configuration, configuration.IndexLocations.ToArray(), cache, library,
+            library.Tracks.ToDictionary(track => track.Id), libraryPath);
+    }
+
+    private static LibraryOperationContext CreateProfileContext(
+        string workspace,
+        string mediaPath,
+        string libraryPath,
+        string profileId,
+        Guid libraryId)
+    {
+        string configPath = Path.Combine(workspace, "library.xml");
+        var editable = new EditableLibraryConfig
+        {
+            LibraryId = libraryId,
+            ActiveProfileId = profileId,
+            DatabaseFile = Path.Combine(workspace, "cache.db"),
+            ItunesLibraryPath = libraryPath,
+        };
+        editable.IndexTargets.Add(editable.CreateIndexTarget(workspace));
+        editable.Save(configPath);
+        var configuration = new LibraryConfiguration(configPath);
+        var cache = new MetadataCache(buildSecondaryIndexes: false);
+        cache.FileCache[mediaPath] = CacheEntry(explicitAlbumArtist: true);
+        ItlLibrary library = ItlLibrary.Load(libraryPath);
+        return new(configuration, configuration.IndexLocations.ToArray(), cache, library,
             library.Tracks.ToDictionary(track => track.Id), libraryPath);
     }
 

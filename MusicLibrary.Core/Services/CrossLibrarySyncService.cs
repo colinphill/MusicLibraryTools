@@ -1,6 +1,7 @@
 using MetadataCaching;
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
+using MusicLibraryTools;
 
 namespace MusicLibrary.Core.Services;
 
@@ -21,9 +22,11 @@ public sealed record CrossLibrarySyncPlan(
     int UnchangedCount,
     int StaleCount,
     FileMutationPlan MutationPlan,
-    IReadOnlyList<OperationIssue> Issues)
+    IReadOnlyList<OperationIssue> Issues,
+    LibraryExportProfile? ExportProfile = null,
+    ExportTransportPlan? TransportPlan = null)
 {
-    public bool CanApply => MutationPlan.CanApply;
+    public bool CanApply => MutationPlan.CanApply && (TransportPlan?.CanApply ?? true);
 }
 
 public sealed record CrossLibrarySyncResult(
@@ -55,15 +58,21 @@ public sealed class CrossLibrarySyncService : ICrossLibrarySyncService
     private readonly ILibraryOperationContextFactory _contexts;
     private readonly IFileInventoryService _inventories;
     private readonly IFileMutationPlanExecutor _executor;
+    private readonly IMediaFormatRegistry _formats;
+    private readonly IExportTransport _transport;
 
     public CrossLibrarySyncService(
         ILibraryOperationContextFactory contexts,
         IFileInventoryService inventories,
-        IFileMutationPlanExecutor executor)
+        IFileMutationPlanExecutor executor,
+        IMediaFormatRegistry? formats = null,
+        IExportTransport? transport = null)
     {
         _contexts = contexts;
         _inventories = inventories;
         _executor = executor;
+        _formats = formats ?? MediaFormatRegistry.Default;
+        _transport = transport ?? new LocalFileSystemExportTransport(executor);
     }
 
     public async Task<CrossLibrarySyncPlan> PreviewAsync(
@@ -87,6 +96,16 @@ public sealed class CrossLibrarySyncService : ICrossLibrarySyncService
         }
 
         string targetRoot = Path.TrimEndingDirectorySeparator(Path.GetFullPath(configuredTarget));
+        LibraryIndexLocation? syncTarget = context.IndexLocations.FirstOrDefault(location =>
+            location.IsSyncTarget && PathComparer.Equals(
+                Path.TrimEndingDirectorySeparator(Path.GetFullPath(location.Target)), targetRoot));
+        LibraryProfile targetProfile = syncTarget is null
+            ? context.Configuration.ActiveProfile
+            : context.Configuration.GetEffectiveProfile(syncTarget);
+        if (syncTarget is not null &&
+            !syncTarget.Permissions.HasFlag(LibraryRootPermissions.SynchronizeOutput))
+            issues.Add(new("sync-not-permitted", OperationIssueSeverity.Blocker,
+                "The selected root does not permit synchronization output.", targetRoot));
         string? filesystemRoot = Path.GetPathRoot(targetRoot);
         if (filesystemRoot is not null && PathComparer.Equals(
                 targetRoot, Path.TrimEndingDirectorySeparator(filesystemRoot)))
@@ -117,8 +136,7 @@ public sealed class CrossLibrarySyncService : ICrossLibrarySyncService
         bool deleteStaleFiles = context.Configuration.DeleteStaleCrossSyncFiles;
         bool IncludeDestinationFile(string path)
         {
-            if (MetadataCache.ValidExtensions.Contains(Path.GetExtension(path),
-                    StringComparer.OrdinalIgnoreCase))
+            if (_formats.SupportsPath(path, MediaFormatCapabilities.LibraryIndex))
                 return true;
             return includeNonMusic && !(keepFolderImages &&
                 Path.GetFileNameWithoutExtension(path).Equals("folder",
@@ -131,7 +149,18 @@ public sealed class CrossLibrarySyncService : ICrossLibrarySyncService
 
         var cachedByPath = new Dictionary<string, MetadataCacheEntry>(context.Cache.FileCache,
             PathComparer);
+        IReadOnlyDictionary<string, int> continuousTrackNumbers =
+            targetProfile.Disc.Strategy == LibraryDiscStrategy.FlattenContinuous
+                ? LibraryAlbumIdentityResolver.ContinuousTrackNumbers(
+                    cachedByPath,
+                    item => LibraryAlbumIdentityResolver.Key(
+                        item.Value, targetProfile.AlbumIdentity),
+                    item => item.Key,
+                    item => item.Value.DiscNumber,
+                    item => item.Value.TrackNumber)
+                : new Dictionary<string, int>(PathComparer);
         var candidates = new List<Candidate>();
+        var claimedDestinations = new Dictionary<string, string>(PathComparer);
         int examined = 0;
         foreach (var playlist in playlists)
         {
@@ -175,9 +204,72 @@ public sealed class CrossLibrarySyncService : ICrossLibrarySyncService
                     }
                 }
 
-                string destination = Path.Combine(targetRoot,
-                    entry.FormatPath(context.Configuration.LengthLimit,
-                        context.Configuration.DiscNumLengthLimit) + Path.GetExtension(source));
+                string destination;
+                try
+                {
+                    destination = LibraryPathLayoutResolver.Shared.Resolve(
+                        targetRoot,
+                        targetProfile,
+                        LibraryPathMetadata.From(entry, source) with
+                        {
+                            FlattenedTrackNumber = continuousTrackNumbers
+                                .GetValueOrDefault(source),
+                        },
+                        context.Configuration.LengthLimit,
+                        context.Configuration.DiscNumLengthLimit);
+                }
+                catch (Exception error) when (error is InvalidDataException or ArgumentException)
+                {
+                    issues.Add(new("naming-policy", OperationIssueSeverity.Blocker,
+                        error.Message, source));
+                    continue;
+                }
+                if (claimedDestinations.TryGetValue(destination, out string? claimedSource) &&
+                    !PathComparer.Equals(claimedSource, source))
+                {
+                    if (targetProfile.Naming.CollisionPolicy ==
+                        LibraryPathCollisionPolicy.PreserveExisting)
+                    {
+                        issues.Add(new("destination-preserved",
+                            OperationIssueSeverity.Warning,
+                            $"Skipped '{source}' because '{destination}' is already claimed and " +
+                            "the naming profile preserves existing destinations.", destination));
+                        continue;
+                    }
+
+                    string initial = destination;
+                    try
+                    {
+                        int collisionNumber = 2;
+                        do
+                        {
+                            destination = LibraryPathLayoutResolver.Shared.ResolveCollision(
+                                initial, source, targetProfile, collisionNumber++);
+                            if (targetProfile.Naming.CollisionPolicy ==
+                                LibraryPathCollisionPolicy.Hash)
+                                break;
+                        }
+                        while (claimedDestinations.TryGetValue(destination,
+                            out claimedSource) && !PathComparer.Equals(claimedSource, source));
+                    }
+                    catch (InvalidDataException error)
+                    {
+                        issues.Add(new("destination-collision",
+                            OperationIssueSeverity.Blocker, error.Message, initial));
+                        continue;
+                    }
+
+                    if (claimedDestinations.TryGetValue(destination, out claimedSource) &&
+                        !PathComparer.Equals(claimedSource, source))
+                    {
+                        issues.Add(new("destination-collision",
+                            OperationIssueSeverity.Blocker,
+                            "The naming collision policy could not produce a unique destination.",
+                            destination));
+                        continue;
+                    }
+                }
+                claimedDestinations.TryAdd(destination, source);
                 candidates.Add(new(id, source, destination,
                     CaptureExisting(source), entry.LastWriteTime));
                 if ((examined & 127) == 0)
@@ -210,10 +302,9 @@ public sealed class CrossLibrarySyncService : ICrossLibrarySyncService
             .OrderBy(snapshot => snapshot.Path, PathComparer)
             .ToArray();
         DateTimeOffset createdAt = DateTimeOffset.UtcNow;
-        string recoveryRoot = deleteStaleFiles
-            ? ""
-            : targetRoot + ".CrossSyncMusic-quarantine" + Path.DirectorySeparatorChar +
-              createdAt.UtcDateTime.ToString("yyyyMMdd-HHmmssfff");
+        string recoveryRoot = targetRoot + ".CrossSyncMusic-recovery" +
+            Path.DirectorySeparatorChar +
+            createdAt.UtcDateTime.ToString("yyyyMMdd-HHmmssfff");
         var actions = new List<FileMutationAction>();
         var plannedFiles = new List<CrossLibrarySyncPlannedFile>();
         int unchanged = 0;
@@ -248,7 +339,9 @@ public sealed class CrossLibrarySyncService : ICrossLibrarySyncService
         {
             if (deleteStaleFiles)
             {
-                actions.Add(new(FileMutationKind.Delete, staleFile.Path!, targetRoot,
+                string stagedDelete = Path.Combine(recoveryRoot, "deleted",
+                    Path.GetRelativePath(targetRoot, staleFile.Path!));
+                actions.Add(new(FileMutationKind.Delete, staleFile.Path!, stagedDelete,
                     staleFile, null));
             }
             else
@@ -261,9 +354,15 @@ public sealed class CrossLibrarySyncService : ICrossLibrarySyncService
         }
 
         var mutationPlan = new FileMutationPlan("CrossSyncMusic", targetRoot, recoveryRoot,
-            actions, issues, createdAt, RetainRecovery: !deleteStaleFiles);
+            actions, issues, createdAt, RetainRecovery: true,
+            PolicyFingerprint: context.Configuration.PolicySnapshot.Fingerprint,
+            LibraryId: context.Configuration.LibraryId);
+        LibraryExportProfile exportProfile = LibraryExportProfile.LegacyCrossLibrary(
+            targetRoot, requestedPlaylists, targetProfile.Id, deleteStaleFiles);
+        ExportTransportPlan transportPlan = _transport.Prepare(exportProfile, mutationPlan);
+        OperationIssue[] planIssues = issues.Concat(transportPlan.Issues).ToArray();
         return new(request, targetRoot, plannedFiles, unchanged, stale.Length,
-            mutationPlan, issues);
+            mutationPlan, planIssues, exportProfile, transportPlan);
     }
 
     public async Task<CrossLibrarySyncResult> ApplyAsync(
@@ -274,8 +373,19 @@ public sealed class CrossLibrarySyncService : ICrossLibrarySyncService
         ArgumentNullException.ThrowIfNull(plan);
         if (!plan.CanApply)
             throw new InvalidOperationException("The reviewed cross-library sync plan is blocked.");
-        FileMutationSummary summary = await _executor.ApplyAsync(
-            plan.MutationPlan, progress, ct).ConfigureAwait(false);
+        FileMutationSummary summary;
+        if (plan.ExportProfile is not null && plan.TransportPlan is not null)
+        {
+            ExportTransportResult result = await _transport.ApplyAsync(
+                plan.TransportPlan, plan.ExportProfile, progress, ct).ConfigureAwait(false);
+            summary = result.Mutations;
+        }
+        else
+        {
+            // Compatibility for plans serialized or constructed before export transports existed.
+            summary = await _executor.ApplyAsync(
+                plan.MutationPlan, progress, ct).ConfigureAwait(false);
+        }
         return new(plan.Files.Count, plan.UnchangedCount, summary, plan.Issues);
     }
 

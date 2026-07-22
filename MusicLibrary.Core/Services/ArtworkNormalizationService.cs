@@ -4,6 +4,7 @@ using System.Text;
 using iTunes.Binary;
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
+using MusicLibraryTools;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Jpeg;
 
@@ -45,6 +46,13 @@ public sealed record ArtworkNormalizationPlan(
     string RecoveryRoot,
     DateTimeOffset CreatedAtUtc)
 {
+    /// <summary>
+    /// Identifies the reviewed library policy. Compatibility/headless plans created without an
+    /// application configuration leave both values unset.
+    /// </summary>
+    public Guid? LibraryId { get; init; }
+    public string? PolicyFingerprint { get; init; }
+
     public bool CanApply => Issues.All(issue => issue.Severity != OperationIssueSeverity.Blocker);
 }
 
@@ -84,6 +92,7 @@ public sealed class ArtworkNormalizationService : IArtworkNormalizationService
 
     private readonly IFileMutationCoordinator _mutations;
     private readonly IReindexService? _reindex;
+    private readonly IAppSettings? _settings;
 
     public ArtworkNormalizationService(IFileMutationCoordinator? mutations = null)
     {
@@ -99,6 +108,20 @@ public sealed class ArtworkNormalizationService : IArtworkNormalizationService
         _mutations = mutations ?? FileMutationCoordinator.Shared;
     }
 
+    /// <summary>Policy-aware application constructor. The shorter overloads retain headless use.</summary>
+    public ArtworkNormalizationService(
+        IAppSettings settings,
+        IReindexService reindex,
+        IFileMutationCoordinator mutations)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        ArgumentNullException.ThrowIfNull(reindex);
+        ArgumentNullException.ThrowIfNull(mutations);
+        _settings = settings;
+        _reindex = reindex;
+        _mutations = mutations;
+    }
+
     public Task<ArtworkNormalizationPlan> PreviewAsync(
         ArtworkNormalizationRequest request,
         IProgress<OperationProgress>? progress = null,
@@ -106,7 +129,8 @@ public sealed class ArtworkNormalizationService : IArtworkNormalizationService
     {
         ArgumentNullException.ThrowIfNull(request);
         ValidateRequest(request);
-        return Task.Run(() => Preview(request, progress, ct), ct);
+        LibraryConfiguration? configuration = CurrentConfiguration(required: _settings is not null);
+        return Task.Run(() => Preview(request, configuration, progress, ct), ct);
     }
 
     public async Task<ArtworkNormalizationResult> ApplyAsync(
@@ -122,6 +146,7 @@ public sealed class ArtworkNormalizationService : IArtworkNormalizationService
         progress?.Report(new(OperationPhase.Validating,
             Message: "Waiting to validate the reviewed artwork plan"));
         using IDisposable lease = await _mutations.AcquireAsync(paths, ct).ConfigureAwait(false);
+        ValidateCurrentPolicy(plan);
         ApplyOutcome applied = await Task.Run(() => Apply(plan, progress, ct), CancellationToken.None)
             .ConfigureAwait(false);
 
@@ -155,15 +180,35 @@ public sealed class ArtworkNormalizationService : IArtworkNormalizationService
 
     private static ArtworkNormalizationPlan Preview(
         ArtworkNormalizationRequest request,
+        LibraryConfiguration? configuration,
         IProgress<OperationProgress>? progress,
         CancellationToken ct)
     {
-        string libraryPath = ItlFileEditor.ResolveLibraryPath(request.ItunesLibraryPath);
-        progress?.Report(new(OperationPhase.LoadingLibrary, Message: "Loading iTunes library"));
-        ItlDocument document = ItlDocument.Load(libraryPath);
+        string libraryPath = ItlFileEditor.ResolveLibraryPath(
+            request.ItunesLibraryPath ?? configuration?.ItunesLibraryPath);
+        Guid? libraryId = configuration?.LibraryId;
+        string? policyFingerprint = configuration?.PolicySnapshot.Fingerprint;
         OperationPathSnapshot librarySnapshot = CaptureSnapshot(libraryPath);
         string libraryHash = HashFile(libraryPath, ct);
         var issues = new List<OperationIssue>();
+        if (configuration is not null &&
+            CatalogPolicyError(configuration, libraryPath) is { } catalogError)
+        {
+            issues.Add(new("catalog-policy-denied", OperationIssueSeverity.Blocker,
+                catalogError, libraryPath));
+            return Stamp(EmptyPlan(request, libraryPath, librarySnapshot, libraryHash, issues),
+                libraryId, policyFingerprint);
+        }
+        if (configuration is not null && !HasArtworkWriteTarget(configuration))
+        {
+            issues.Add(new("artwork-policy-denied", OperationIssueSeverity.Blocker,
+                "The active library policy has no root that permits embedded-artwork writes."));
+            return Stamp(EmptyPlan(request, libraryPath, librarySnapshot, libraryHash, issues),
+                libraryId, policyFingerprint);
+        }
+
+        progress?.Report(new(OperationPhase.LoadingLibrary, Message: "Loading iTunes library"));
+        ItlDocument document = ItlDocument.Load(libraryPath);
         ItlRecord[] playlists = [.. document.FindPlaylists(
             request.PlaylistName, StringComparison.OrdinalIgnoreCase)];
         if (playlists.Length != 1)
@@ -171,7 +216,8 @@ public sealed class ArtworkNormalizationService : IArtworkNormalizationService
             issues.Add(new("playlist-ambiguous", OperationIssueSeverity.Blocker,
                 $"Expected one playlist named '{request.PlaylistName}', found {playlists.Length}.",
                 libraryPath));
-            return EmptyPlan(request, libraryPath, librarySnapshot, libraryHash, issues);
+            return Stamp(EmptyPlan(request, libraryPath, librarySnapshot, libraryHash, issues),
+                libraryId, policyFingerprint);
         }
 
         Dictionary<int, ItlRecord> tracksById = document.Tracks.ToDictionary(ItlDocument.TrackIdOf);
@@ -207,6 +253,13 @@ public sealed class ArtworkNormalizationService : IArtworkNormalizationService
                 "Inspecting and encoding embedded artwork"));
             try
             {
+                if (configuration is not null &&
+                    ArtworkPolicyError(configuration, path) is { } policyError)
+                {
+                    issues.Add(new("artwork-policy-denied", OperationIssueSeverity.Blocker,
+                        policyError, path));
+                    continue;
+                }
                 OperationPathSnapshot snapshot = CaptureSnapshot(path);
                 if (!snapshot.Exists || snapshot.IsDirectory)
                     throw new FileNotFoundException("The media file does not exist.", path);
@@ -275,8 +328,9 @@ public sealed class ArtworkNormalizationService : IArtworkNormalizationService
             DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff"));
         progress?.Report(new(OperationPhase.Completed, paths.Count, paths.Count,
             Message: $"Planned {items.Count:N0} artwork replacement(s)"));
-        return new(request, libraryPath, librarySnapshot, libraryHash, items, scannedTracks,
-            artworkTracks, unchanged, issues, recoveryRoot, DateTimeOffset.UtcNow);
+        return Stamp(new(request, libraryPath, librarySnapshot, libraryHash, items,
+            scannedTracks, artworkTracks, unchanged, issues, recoveryRoot,
+            DateTimeOffset.UtcNow), libraryId, policyFingerprint);
     }
 
     private static ApplyOutcome Apply(
@@ -396,6 +450,91 @@ public sealed class ArtworkNormalizationService : IArtworkNormalizationService
             throw;
         }
     }
+
+    private LibraryConfiguration? CurrentConfiguration(bool required)
+    {
+        LibraryConfiguration? configuration = _settings?.GetSnapshot().Configuration;
+        if (required && configuration is null)
+            throw new InvalidOperationException(
+                "Load a library configuration before normalizing artwork.");
+        return configuration;
+    }
+
+    private void ValidateCurrentPolicy(ArtworkNormalizationPlan plan)
+    {
+        if (_settings is null)
+        {
+            if (plan.LibraryId is not null || plan.PolicyFingerprint is not null)
+                throw new InvalidOperationException(
+                    "The reviewed library policy is unavailable. Preview the artwork operation again.");
+            return;
+        }
+
+        if (plan.LibraryId is not Guid libraryId ||
+            string.IsNullOrWhiteSpace(plan.PolicyFingerprint))
+            throw new InvalidOperationException(
+                "The artwork plan does not identify its reviewed library policy. Preview again.");
+
+        LibraryConfiguration configuration = CurrentConfiguration(required: true)!;
+        if (configuration.LibraryId != libraryId ||
+            !StringComparer.Ordinal.Equals(
+                configuration.PolicySnapshot.Fingerprint, plan.PolicyFingerprint))
+            throw new InvalidOperationException(
+                "The library policy changed after preview. Preview artwork normalization again.");
+
+        if (CatalogPolicyError(configuration, plan.LibraryPath) is { } catalogError)
+            throw new InvalidOperationException(catalogError);
+        if (!HasArtworkWriteTarget(configuration))
+            throw new InvalidOperationException(
+                "The active library policy has no root that permits embedded-artwork writes.");
+        foreach (ArtworkNormalizationItem item in plan.Items)
+            if (ArtworkPolicyError(configuration, item.Path) is { } policyError)
+                throw new InvalidOperationException(policyError);
+    }
+
+    private static string? CatalogPolicyError(
+        LibraryConfiguration configuration,
+        string libraryPath)
+    {
+        if (string.IsNullOrWhiteSpace(configuration.ItunesLibraryPath))
+            return "The active library policy does not configure a media catalog.";
+        return PathComparer.Equals(
+            Path.GetFullPath(configuration.ItunesLibraryPath), Path.GetFullPath(libraryPath))
+            ? null
+            : "The reviewed iTunes library is not the catalog configured by the active library policy.";
+    }
+
+    private static bool HasArtworkWriteTarget(LibraryConfiguration configuration) =>
+        configuration.IndexLocations.Any(location =>
+            location.Permissions.HasFlag(LibraryRootPermissions.WriteArtwork) &&
+            WritesEmbedded(configuration.GetEffectiveProfile(location).Artwork));
+
+    private static string? ArtworkPolicyError(
+        LibraryConfiguration configuration,
+        string path)
+    {
+        LibraryIndexLocation[] roots = configuration.IndexLocations.ToArray();
+        if (!LibraryRootPermissionPolicy.Allows(
+                path, roots, LibraryRootPermissions.WriteArtwork))
+            return $"The effective library root policy does not permit artwork writes to '{path}'.";
+
+        LibraryIndexLocation? root = LibraryRootPermissionPolicy.MostSpecific(path, roots);
+        if (root is null || !WritesEmbedded(configuration.GetEffectiveProfile(root).Artwork))
+            return $"The effective artwork policy does not permit embedded artwork at '{path}'.";
+        return null;
+    }
+
+    private static bool WritesEmbedded(LibraryArtworkPolicy policy) =>
+        policy.Storage is LibraryArtworkStorage.Embedded or LibraryArtworkStorage.Both;
+
+    private static ArtworkNormalizationPlan Stamp(
+        ArtworkNormalizationPlan plan,
+        Guid? libraryId,
+        string? policyFingerprint) => plan with
+    {
+        LibraryId = libraryId,
+        PolicyFingerprint = policyFingerprint,
+    };
 
     private static void ValidateRequest(ArtworkNormalizationRequest request)
     {

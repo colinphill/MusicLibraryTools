@@ -31,6 +31,10 @@ public sealed class CrossLibrarySyncServiceTests
             request, ct: TestContext.Current.CancellationToken);
 
         Assert.True(plan.CanApply);
+        Assert.NotNull(plan.ExportProfile);
+        Assert.Equal("legacy-cross-library", plan.ExportProfile.Id);
+        Assert.NotNull(plan.TransportPlan);
+        Assert.Equal(LocalFileSystemExportTransport.ProviderId, plan.TransportPlan.TransportId);
         Assert.Contains(plan.MutationPlan.Actions, action => action.Kind == FileMutationKind.Copy);
         FileMutationAction quarantine = Assert.Single(plan.MutationPlan.Actions,
             action => action.Kind == FileMutationKind.Quarantine);
@@ -50,7 +54,7 @@ public sealed class CrossLibrarySyncServiceTests
     }
 
     [Fact]
-    public async Task ConfiguredDeletionPermanentlyDeletesWithoutRecoveryArtifacts()
+    public async Task ConfiguredDeletionUsesARecoveryJournalBeforePermanentRemoval()
     {
         using var workspace = new TempDirectory();
         string sourceRoot = Directory.CreateDirectory(Path.Combine(workspace.Path, "source")).FullName;
@@ -72,8 +76,8 @@ public sealed class CrossLibrarySyncServiceTests
         FileMutationAction delete = Assert.Single(plan.MutationPlan.Actions,
             action => action.Kind == FileMutationKind.Delete);
         Assert.Equal(stale, delete.SourcePath);
-        Assert.False(plan.MutationPlan.RetainRecovery);
-        Assert.Equal(string.Empty, plan.MutationPlan.RecoveryRoot);
+        Assert.True(plan.MutationPlan.RetainRecovery);
+        Assert.NotEmpty(plan.MutationPlan.RecoveryRoot);
         Assert.True(File.Exists(stale));
 
         CrossLibrarySyncResult result = await service.ApplyAsync(
@@ -82,8 +86,8 @@ public sealed class CrossLibrarySyncServiceTests
         Assert.Equal(1, result.Mutations.Deleted);
         Assert.Equal(0, result.Mutations.Quarantined);
         Assert.False(File.Exists(stale));
-        Assert.Null(result.Mutations.JournalPath);
-        Assert.Empty(Directory.GetDirectories(workspace.Path, "target.CrossSyncMusic-*"));
+        Assert.True(File.Exists(result.Mutations.JournalPath));
+        Assert.Single(Directory.GetDirectories(workspace.Path, "target.CrossSyncMusic-*"));
     }
 
     [Fact]
@@ -116,10 +120,10 @@ public sealed class CrossLibrarySyncServiceTests
 
         Assert.Equal(1, result.Mutations.Replaced);
         Assert.Equal(0, result.Mutations.Quarantined);
-        Assert.Null(result.Mutations.JournalPath);
+        Assert.True(File.Exists(result.Mutations.JournalPath));
         Assert.Equal(await File.ReadAllBytesAsync(source, TestContext.Current.CancellationToken),
             await File.ReadAllBytesAsync(destination, TestContext.Current.CancellationToken));
-        Assert.Empty(Directory.GetDirectories(workspace.Path, "target.CrossSyncMusic-*"));
+        Assert.Single(Directory.GetDirectories(workspace.Path, "target.CrossSyncMusic-*"));
     }
 
     [Fact]
