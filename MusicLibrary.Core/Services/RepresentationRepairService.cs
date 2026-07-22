@@ -67,7 +67,7 @@ public sealed class RepresentationRepairService : IRepresentationRepairService
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(records);
-        var metadata = PreviewMetadataCopies(records, ct);
+        var metadata = PreviewMetadataCopies(records, libraryConfiguration, ct);
         var actions = new List<RepresentationRepairAction>();
         var warnings = new List<string>();
 
@@ -81,7 +81,8 @@ public sealed class RepresentationRepairService : IRepresentationRepairService
             try
             {
                 configuration = IngestMusicConfiguration.FromLibraryConfiguration(libraryConfiguration);
-                actions.AddRange(PreviewDerivations(records, configuration, ct));
+                actions.AddRange(PreviewDerivations(
+                    records, configuration, libraryConfiguration, ct));
                 if (string.IsNullOrWhiteSpace(configuration.AacDestination))
                     warnings.Add(
                         "AAC derivation preview unavailable: assign an AAC fallback IndexTarget. " +
@@ -96,7 +97,10 @@ public sealed class RepresentationRepairService : IRepresentationRepairService
         try
         {
             var representedPaths = records
-                .Where(record => RepresentationAnalyzer.Classify(record) != LibraryRepresentation.Other)
+                .Where(record => (libraryConfiguration is null
+                    ? RepresentationAnalyzer.Classify(record)
+                    : RepresentationAnalyzer.Classify(record, libraryConfiguration)) !=
+                    LibraryRepresentation.Other)
                 .Select(record => record.Path)
                 .ToHashSet(PathComparer);
             var moves = await _organizer.PreviewMovesAsync(ct);
@@ -116,6 +120,22 @@ public sealed class RepresentationRepairService : IRepresentationRepairService
             warnings.Add($"Organization preview unavailable: {ex.Message}");
         }
 
+        if (libraryConfiguration is not null)
+        {
+            string fingerprint = libraryConfiguration.PolicySnapshot.Fingerprint;
+            Guid libraryId = libraryConfiguration.LibraryId;
+            metadata = metadata with
+            {
+                PolicyFingerprint = fingerprint,
+                LibraryId = libraryId,
+            };
+            actions = actions.Select(action => action with
+            {
+                PolicyFingerprint = fingerprint,
+                LibraryId = libraryId,
+            }).ToList();
+        }
+
         return new RepresentationRepairPreview(
             metadata,
             actions.OrderBy(action => action.Kind)
@@ -133,6 +153,21 @@ public sealed class RepresentationRepairService : IRepresentationRepairService
         ArgumentNullException.ThrowIfNull(actions);
         if (actions.Count == 0)
             return new([]);
+
+        RepresentationRepairAction? policyAction = actions.FirstOrDefault(action =>
+            action.PolicyFingerprint is not null);
+        if (policyAction is not null &&
+            (libraryConfiguration is null ||
+             policyAction.LibraryId is Guid libraryId &&
+             libraryConfiguration.LibraryId != libraryId ||
+             !StringComparer.Ordinal.Equals(policyAction.PolicyFingerprint,
+                 libraryConfiguration.PolicySnapshot.Fingerprint) ||
+             actions.Any(action => action.PolicyFingerprint is not null &&
+                 (!StringComparer.Ordinal.Equals(
+                     action.PolicyFingerprint, policyAction.PolicyFingerprint) ||
+                  action.LibraryId != policyAction.LibraryId))))
+            throw new InvalidOperationException(
+                "The library policy changed after preview. Preview representation repairs again before applying them.");
 
         IngestMusicConfiguration? configuration = null;
         if (actions.Any(action => action.Kind != RepresentationRepairKind.Organize))
@@ -208,7 +243,9 @@ public sealed class RepresentationRepairService : IRepresentationRepairService
                     action.SourcePath,
                     action.DestinationPath,
                     action.ExpectedSource,
-                    action.ExpectedDestination)));
+                    action.ExpectedDestination,
+                    action.PolicyFingerprint,
+                    action.LibraryId)));
             }
         }
 
@@ -258,16 +295,27 @@ public sealed class RepresentationRepairService : IRepresentationRepairService
 
     internal static AnalysisRepairPlan PreviewMetadataCopies(
         IReadOnlyList<TrackRecord> records,
+        CancellationToken ct = default) =>
+        PreviewMetadataCopies(records, null, ct);
+
+    internal static AnalysisRepairPlan PreviewMetadataCopies(
+        IReadOnlyList<TrackRecord> records,
+        LibraryConfiguration? libraryConfiguration,
         CancellationToken ct = default)
     {
         var repairs = new List<AnalysisTagRepair>();
-        foreach (var album in records.GroupBy(AlbumKey))
+        Func<TrackRecord, string> albumKey = libraryConfiguration is null
+            ? AlbumKey
+            : record => LibraryAlbumIdentityResolver.Key(record, libraryConfiguration);
+        foreach (var album in records.GroupBy(albumKey))
         {
             ct.ThrowIfCancellationRequested();
             foreach (var track in album.GroupBy(TrackKey))
             {
                 var candidates = track
-                    .Select(record => (Record: record, Role: RepresentationAnalyzer.Classify(record)))
+                    .Select(record => (Record: record, Role: libraryConfiguration is null
+                        ? RepresentationAnalyzer.Classify(record)
+                        : RepresentationAnalyzer.Classify(record, libraryConfiguration)))
                     .Where(item => item.Role != LibraryRepresentation.Other)
                     .GroupBy(item => item.Role)
                     .Where(group => group.Count() == 1)
@@ -315,16 +363,32 @@ public sealed class RepresentationRepairService : IRepresentationRepairService
     internal static IReadOnlyList<RepresentationRepairAction> PreviewDerivations(
         IReadOnlyList<TrackRecord> records,
         IngestMusicConfiguration configuration,
+        CancellationToken ct = default) =>
+        PreviewDerivations(records, configuration, null, ct);
+
+    internal static IReadOnlyList<RepresentationRepairAction> PreviewDerivations(
+        IReadOnlyList<TrackRecord> records,
+        IngestMusicConfiguration configuration,
+        LibraryConfiguration? libraryConfiguration,
         CancellationToken ct = default)
     {
         var actions = new List<RepresentationRepairAction>();
         var claimed = new HashSet<string>(records.Select(record => record.Path), PathComparer);
-        foreach (var album in records.GroupBy(AlbumKey))
+        Func<TrackRecord, string> albumKey = libraryConfiguration is null
+            ? AlbumKey
+            : record => LibraryAlbumIdentityResolver.Key(record, libraryConfiguration);
+        IReadOnlyDictionary<string, int> continuousTrackNumbers =
+            LibraryAlbumIdentityResolver.ContinuousTrackNumbers(
+                records, albumKey, record => record.Path,
+                record => record.DiscNumber, record => record.TrackNumber);
+        foreach (var album in records.GroupBy(albumKey))
         foreach (var track in album.GroupBy(TrackKey))
         {
             ct.ThrowIfCancellationRequested();
             var byRole = track
-                .Select(record => (Record: record, Role: RepresentationAnalyzer.Classify(record)))
+                .Select(record => (Record: record, Role: libraryConfiguration is null
+                    ? RepresentationAnalyzer.Classify(record)
+                    : RepresentationAnalyzer.Classify(record, libraryConfiguration)))
                 .Where(item => item.Role != LibraryRepresentation.Other)
                 .GroupBy(item => item.Role)
                 .Where(group => group.Count() == 1)
@@ -334,7 +398,8 @@ public sealed class RepresentationRepairService : IRepresentationRepairService
                 byRole.TryGetValue(LibraryRepresentation.HighResolutionFlac, out var highResolution))
             {
                 string destination = ClaimCanonical(configuration.PairedCdDestination, highResolution,
-                    ".flac", configuration, claimed);
+                    ".flac", configuration, claimed,
+                    continuousTrackNumbers.GetValueOrDefault(highResolution.Path));
                 actions.Add(new(RepresentationRepairKind.DeriveCdFlac, highResolution.Path, destination,
                     "Downsample the high-resolution FLAC to a paired CD-quality FLAC, then copy normalized metadata.",
                     SourceSnapshot(highResolution),
@@ -351,7 +416,8 @@ public sealed class RepresentationRepairService : IRepresentationRepairService
                 if (source is not null)
                 {
                     string destination = ClaimCanonical(configuration.AacDestination, source,
-                        ".m4a", configuration, claimed);
+                        ".m4a", configuration, claimed,
+                        continuousTrackNumbers.GetValueOrDefault(source.Path));
                     actions.Add(new(RepresentationRepairKind.DeriveAac, source.Path, destination,
                         $"Encode AAC at {configuration.AacBitrateKbps:N0} kbit/s with " +
                         $"{configuration.AacEncoder}, then copy normalized metadata.",
@@ -586,18 +652,36 @@ public sealed class RepresentationRepairService : IRepresentationRepairService
     }
 
     private static string ClaimCanonical(string root, TrackRecord record, string extension,
-        IngestMusicConfiguration configuration, HashSet<string> claimed)
+        IngestMusicConfiguration configuration, HashSet<string> claimed,
+        int? flattenedTrackNumber)
     {
-        string artist = record.EffectiveAlbumArtist.LimitLength(configuration.LengthLimit).FixPath();
-        string album = (record.StrippedAlbum ?? record.Album ?? "Unknown Album")
-            .FormatDisc(configuration.LengthLimit, configuration.DiscNumLengthLimit).FixPath();
-        string title = (record.Title ?? "Untitled").LimitLength(configuration.LengthLimit).FixPath();
-        string name = (record.TrackNumber is int number ? $"{number:D2} " : "") + title;
-        string basePath = Path.Combine(root, artist, album, name);
-        string destination = basePath + extension;
+        LibraryIndexLocation? target = configuration.RootTargets.Values.FirstOrDefault(candidate =>
+            PathComparer.Equals(Path.TrimEndingDirectorySeparator(Path.GetFullPath(candidate.Target)),
+                Path.TrimEndingDirectorySeparator(Path.GetFullPath(root))));
+        LibraryProfile profile = target is not null &&
+            configuration.Profiles.TryGetValue(target.ProfileId, out LibraryProfile? configured)
+                ? configured
+                : configuration.Profile;
+        string initial = LibraryPathLayoutResolver.Shared.Resolve(
+            root, profile, LibraryPathMetadata.From(record, extension) with
+            {
+                FlattenedTrackNumber = flattenedTrackNumber,
+            },
+            configuration.LengthLimit, configuration.DiscNumLengthLimit);
+        string destination = initial;
         int suffix = 2;
         while (!claimed.Add(destination))
-            destination = basePath + $"_{suffix++}" + extension;
+        {
+            string next = LibraryPathLayoutResolver.Shared.ResolveCollision(
+                initial, record.Path, profile, suffix++);
+            if (PathComparer.Equals(next, record.Path) ||
+                profile.Naming.CollisionPolicy == LibraryPathCollisionPolicy.Hash &&
+                PathComparer.Equals(next, destination))
+                throw new InvalidDataException(
+                    $"Naming policy '{profile.Name}' preserves an existing representation " +
+                    $"destination: {initial}");
+            destination = next;
+        }
         return destination;
     }
 

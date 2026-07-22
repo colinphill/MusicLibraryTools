@@ -19,14 +19,21 @@ public interface IFileMutationPlanExecutor
 public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
 {
     private readonly IFileMutationCoordinator _coordinator;
-    private readonly IItunesMediaMutationService? _itunes;
+    private readonly IReadOnlyList<IMediaCatalogIntegration> _catalogs;
+    private readonly IAppSettings? _settings;
 
     public FileMutationPlanExecutor(
         IFileMutationCoordinator? coordinator = null,
-        IItunesMediaMutationService? itunes = null)
+        IItunesMediaMutationService? itunes = null,
+        IEnumerable<IMediaCatalogIntegration>? catalogIntegrations = null,
+        IAppSettings? settings = null)
     {
         _coordinator = coordinator ?? FileMutationCoordinator.Shared;
-        _itunes = itunes;
+        IMediaCatalogIntegration[] configured = catalogIntegrations?.ToArray() ?? [];
+        _catalogs = configured.Length > 0
+            ? configured
+            : itunes is null ? [] : [new ItunesMediaCatalogIntegration(itunes)];
+        _settings = settings;
     }
 
     public async Task<FileMutationSummary> ApplyAsync(
@@ -35,6 +42,7 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(plan);
+        ValidatePolicy(plan);
         if (!plan.CanApply)
             throw new InvalidOperationException("The mutation plan contains blocking issues.");
 
@@ -47,11 +55,12 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
             .Distinct(PathComparer)
             .ToArray();
         using var lease = await _coordinator.AcquireAsync(paths, ct).ConfigureAwait(false);
-        await using IItunesMediaMutationSession? itunesSession = _itunes is null
-            ? null
-            : await _itunes.BeginAsync(paths, backupFiles: false, ct).ConfigureAwait(false);
+        await using MediaCatalogMutationSessionGroup? catalogSession =
+            await MediaCatalogMutationSessionGroup.BeginAsync(
+                _catalogs, paths, backupFiles: false, ct).ConfigureAwait(false);
 
         // Revalidate after acquiring the in-process mutation lease and still before the first write.
+        ValidatePolicy(plan);
         ValidateAll(plan.Actions, ct);
         if (plan.Actions.Count == 0)
         {
@@ -61,7 +70,7 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
         }
 
         if (!plan.RetainRecovery)
-            return await ApplyWithoutRecoveryAsync(plan, itunesSession, progress, ct)
+            return await ApplyWithoutRecoveryAsync(plan, catalogSession, progress, ct)
                 .ConfigureAwait(false);
 
         Directory.CreateDirectory(plan.RecoveryRoot);
@@ -107,14 +116,14 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
                 }
             }
 
-            if (itunesSession is not null)
-                await itunesSession.CommitAsync(
-                    plan.Actions.Select(ToItunesMutation).ToArray(),
+            if (catalogSession is not null)
+                await catalogSession.CommitAsync(
+                    plan.Actions.Select(ToCatalogMutation).ToArray(),
                     CancellationToken.None).ConfigureAwait(false);
 
             await WriteJournalAsync(journal, journalStream, $"COMMIT\t{operationId}", ct);
-            if (itunesSession is not null)
-                await itunesSession.CompleteAsync(CancellationToken.None).ConfigureAwait(false);
+            if (catalogSession is not null)
+                await catalogSession.CompleteAsync(CancellationToken.None).ConfigureAwait(false);
 
             // Delete actions are recoverable moves until the complete plan and any iTunes update
             // have committed. Purge only afterward; an individual purge failure safely leaves that
@@ -183,9 +192,23 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
         }
     }
 
+    private void ValidatePolicy(FileMutationPlan plan)
+    {
+        if (plan.PolicyFingerprint is null || _settings is null)
+            return;
+        MusicLibraryTools.LibraryConfiguration? configuration =
+            _settings.GetSnapshot().Configuration;
+        if (configuration is null ||
+            plan.LibraryId is Guid libraryId && configuration.LibraryId != libraryId ||
+            !StringComparer.Ordinal.Equals(
+                plan.PolicyFingerprint, configuration.PolicySnapshot.Fingerprint))
+            throw new InvalidOperationException(
+                "The library policy changed after preview. Preview the operation again before applying it.");
+    }
+
     private static async Task<FileMutationSummary> ApplyWithoutRecoveryAsync(
         FileMutationPlan plan,
-        IItunesMediaMutationSession? itunesSession,
+        MediaCatalogMutationSessionGroup? catalogSession,
         IProgress<OperationProgress>? progress,
         CancellationToken ct)
     {
@@ -234,11 +257,11 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
             }
         }
 
-        if (itunesSession is not null)
+        if (catalogSession is not null)
         {
-            await itunesSession.CommitAsync(plan.Actions.Select(ToItunesMutation).ToArray(),
+            await catalogSession.CommitAsync(plan.Actions.Select(ToCatalogMutation).ToArray(),
                 CancellationToken.None).ConfigureAwait(false);
-            await itunesSession.CompleteAsync(CancellationToken.None).ConfigureAwait(false);
+            await catalogSession.CompleteAsync(CancellationToken.None).ConfigureAwait(false);
         }
         progress?.Report(new(OperationPhase.Completed, plan.Actions.Count, plan.Actions.Count,
             Message: "Mutation plan completed"));
@@ -504,15 +527,15 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
         _ => throw new ArgumentOutOfRangeException(nameof(action.Kind)),
     };
 
-    private static ItunesMediaMutation ToItunesMutation(FileMutationAction action) =>
+    private static MediaCatalogMutation ToCatalogMutation(FileMutationAction action) =>
         action.Kind switch
         {
             FileMutationKind.Copy or FileMutationKind.Write =>
-                ItunesMediaMutation.Add(action.DestinationPath),
+                MediaCatalogMutation.Add(action.DestinationPath),
             FileMutationKind.Replace or FileMutationKind.ReplaceGenerated =>
-                ItunesMediaMutation.Refresh(action.DestinationPath),
+                MediaCatalogMutation.Refresh(action.DestinationPath),
             FileMutationKind.Quarantine or FileMutationKind.Delete =>
-                ItunesMediaMutation.Remove(action.SourcePath),
+                MediaCatalogMutation.Remove(action.SourcePath),
             _ => throw new ArgumentOutOfRangeException(nameof(action.Kind)),
         };
 

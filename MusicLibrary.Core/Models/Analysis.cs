@@ -1,4 +1,5 @@
 using MusicFileUtilities;
+using MusicLibraryTools;
 
 namespace MusicLibrary.Core.Models;
 
@@ -13,6 +14,10 @@ public sealed record TrackRecord
     public string? StrippedAlbum { get; init; }
     public string? Title { get; init; }
     public string? ReleaseDate { get; init; }
+    public string? Genre { get; init; }
+    public string? Composer { get; init; }
+    public string? Grouping { get; init; }
+    public int? Year { get; init; }
     public int? TrackNumber { get; init; }
     public int? TrackTotal { get; init; }
     public int? DiscNumber { get; init; }
@@ -52,13 +57,18 @@ public sealed record AnalysisTagRepair(
     AnalysisRepairKind Kind = AnalysisRepairKind.Tag,
     OperationPathSnapshot? ExpectedDestination = null,
     string? BlockingReason = null,
-    ID3v2Version? TargetId3Version = null)
+    ID3v2Version? TargetId3Version = null,
+    string? RuleId = null)
 {
     public bool CanApply => string.IsNullOrWhiteSpace(BlockingReason);
 }
 
 /// <summary>A stale-checked set of reviewed analysis repairs.</summary>
-public sealed record AnalysisRepairPlan(string Name, IReadOnlyList<AnalysisTagRepair> Items)
+public sealed record AnalysisRepairPlan(
+    string Name,
+    IReadOnlyList<AnalysisTagRepair> Items,
+    string? PolicyFingerprint = null,
+    Guid? LibraryId = null)
 {
     public bool CanApply => Items.Any(item => item.CanApply);
 }
@@ -108,7 +118,12 @@ public sealed record AnalysisConflictResolution(
     string SelectedValue);
 
 /// <summary>One finding within an analyzer report; deep-links back to a file.</summary>
-public sealed record AnalysisFinding(string Path, string Description, string? Problem = null);
+public sealed record AnalysisFinding(
+    string Path,
+    string Description,
+    string? Problem = null,
+    string? RuleId = null,
+    LibraryHealthSeverity Severity = LibraryHealthSeverity.Warning);
 
 /// <summary>The output of one analyzer.</summary>
 public sealed record AnalysisReport(string Name, IReadOnlyList<AnalysisFinding> Findings)
@@ -162,7 +177,9 @@ public sealed record RepresentationRepairAction(
     string DestinationPath,
     string Description,
     OperationPathSnapshot? ExpectedSource = null,
-    OperationPathSnapshot? ExpectedDestination = null);
+    OperationPathSnapshot? ExpectedDestination = null,
+    string? PolicyFingerprint = null,
+    Guid? LibraryId = null);
 
 public enum RepresentationRepairOutcome
 {

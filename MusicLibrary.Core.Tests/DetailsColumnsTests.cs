@@ -17,4 +17,23 @@ public sealed class DetailsColumnsTests
 
         Assert.Equal("25:02:03", DetailsColumns.Get("Duration").Get(record));
     }
+
+    [Fact]
+    public void BrowseMetadataColumnsExposeTypedValues()
+    {
+        var record = new TrackRecord
+        {
+            Path = "song.flac",
+            Genre = "Jazz",
+            Composer = "Alice Composer",
+            Grouping = "Reference",
+            Year = 1997,
+        };
+
+        Assert.Equal("Jazz", DetailsColumns.Get("Genre").Get(record));
+        Assert.Equal("Alice Composer", DetailsColumns.Get("Composer").Get(record));
+        Assert.Equal("Reference", DetailsColumns.Get("Grouping").Get(record));
+        Assert.Equal("1997", DetailsColumns.Get("Year").Get(record));
+        Assert.Equal(1997, DetailsColumns.Get("Year").SortKey!(record));
+    }
 }

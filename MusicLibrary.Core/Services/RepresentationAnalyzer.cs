@@ -1,5 +1,6 @@
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
+using MusicLibraryTools;
 
 namespace MusicLibrary.Core.Services;
 
@@ -16,12 +17,26 @@ public enum LibraryRepresentation
 public static class RepresentationAnalyzer
 {
     public static AnalysisReport Compare(IReadOnlyList<TrackRecord> records, CancellationToken ct = default)
+        => Compare(records, Classify, AlbumKey, ct);
+
+    public static AnalysisReport Compare(
+        IReadOnlyList<TrackRecord> records,
+        LibraryConfiguration configuration,
+        CancellationToken ct = default) =>
+        Compare(records, record => Classify(record, configuration),
+            record => LibraryAlbumIdentityResolver.Key(record, configuration), ct);
+
+    private static AnalysisReport Compare(
+        IReadOnlyList<TrackRecord> records,
+        Func<TrackRecord, LibraryRepresentation> classify,
+        Func<TrackRecord, string> albumKey,
+        CancellationToken ct)
     {
         var findings = new List<AnalysisFinding>();
-        foreach (var album in records.GroupBy(AlbumKey))
+        foreach (var album in records.GroupBy(albumKey))
         {
             ct.ThrowIfCancellationRequested();
-            var represented = album.Select(record => (Record: record, Role: Classify(record)))
+            var represented = album.Select(record => (Record: record, Role: classify(record)))
                 .Where(item => item.Role != LibraryRepresentation.Other)
                 .ToList();
             var roles = represented.Select(item => item.Role).Distinct().Order().ToList();
@@ -60,7 +75,8 @@ public static class RepresentationAnalyzer
                         "Missing representation counterpart"));
                 }
                 if (byRole.Count >= 2 && byRole.Values.All(candidates => candidates.Count == 1))
-                    AddTrackDrift(byRole.Values.Select(candidates => candidates[0].Record).ToList(), findings);
+                    AddTrackDrift(byRole.Values.Select(candidates => candidates[0].Record).ToList(),
+                        classify, findings);
             }
         }
         return new("Album representations", findings
@@ -69,12 +85,24 @@ public static class RepresentationAnalyzer
 
     /// <summary>Paths whose artwork is worth hydrating: unique, matched counterparts only.</summary>
     public static IReadOnlyList<string> ArtworkCandidatePaths(IReadOnlyList<TrackRecord> records)
+        => ArtworkCandidatePaths(records, Classify, AlbumKey);
+
+    public static IReadOnlyList<string> ArtworkCandidatePaths(
+        IReadOnlyList<TrackRecord> records,
+        LibraryConfiguration configuration) =>
+        ArtworkCandidatePaths(records, record => Classify(record, configuration),
+            record => LibraryAlbumIdentityResolver.Key(record, configuration));
+
+    private static IReadOnlyList<string> ArtworkCandidatePaths(
+        IReadOnlyList<TrackRecord> records,
+        Func<TrackRecord, LibraryRepresentation> classify,
+        Func<TrackRecord, string> albumKey)
     {
         var paths = new HashSet<string>(OperatingSystem.IsWindows()
             ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
-        foreach (var album in records.GroupBy(AlbumKey))
+        foreach (var album in records.GroupBy(albumKey))
         {
-            var represented = album.Select(record => (Record: record, Role: Classify(record)))
+            var represented = album.Select(record => (Record: record, Role: classify(record)))
                 .Where(item => item.Role != LibraryRepresentation.Other).ToList();
             if (represented.Select(item => item.Role).Distinct().Count() < 2)
                 continue;
@@ -91,11 +119,25 @@ public static class RepresentationAnalyzer
     public static AnalysisReport CompareArtwork(
         IReadOnlyList<TrackRecord> records,
         IReadOnlyDictionary<string, string> signatures)
+        => CompareArtwork(records, signatures, Classify, AlbumKey);
+
+    public static AnalysisReport CompareArtwork(
+        IReadOnlyList<TrackRecord> records,
+        IReadOnlyDictionary<string, string> signatures,
+        LibraryConfiguration configuration) =>
+        CompareArtwork(records, signatures, record => Classify(record, configuration),
+            record => LibraryAlbumIdentityResolver.Key(record, configuration));
+
+    private static AnalysisReport CompareArtwork(
+        IReadOnlyList<TrackRecord> records,
+        IReadOnlyDictionary<string, string> signatures,
+        Func<TrackRecord, LibraryRepresentation> classify,
+        Func<TrackRecord, string> albumKey)
     {
         var findings = new List<AnalysisFinding>();
-        foreach (var album in records.GroupBy(AlbumKey))
+        foreach (var album in records.GroupBy(albumKey))
         {
-            var represented = album.Select(record => (Record: record, Role: Classify(record)))
+            var represented = album.Select(record => (Record: record, Role: classify(record)))
                 .Where(item => item.Role != LibraryRepresentation.Other && signatures.ContainsKey(item.Record.Path))
                 .ToList();
             if (represented.Select(item => item.Role).Distinct().Count() < 2)
@@ -128,11 +170,23 @@ public static class RepresentationAnalyzer
 
     public static IReadOnlyList<DecodedAudioPair> DecodedAudioCandidatePairs(
         IReadOnlyList<TrackRecord> records)
+        => DecodedAudioCandidatePairs(records, Classify, AlbumKey);
+
+    public static IReadOnlyList<DecodedAudioPair> DecodedAudioCandidatePairs(
+        IReadOnlyList<TrackRecord> records,
+        LibraryConfiguration configuration) =>
+        DecodedAudioCandidatePairs(records, record => Classify(record, configuration),
+            record => LibraryAlbumIdentityResolver.Key(record, configuration));
+
+    private static IReadOnlyList<DecodedAudioPair> DecodedAudioCandidatePairs(
+        IReadOnlyList<TrackRecord> records,
+        Func<TrackRecord, LibraryRepresentation> classify,
+        Func<TrackRecord, string> albumKey)
     {
         var pairs = new List<DecodedAudioPair>();
-        foreach (var album in records.GroupBy(AlbumKey))
+        foreach (var album in records.GroupBy(albumKey))
         {
-            var represented = album.Select(record => (Record: record, Role: Classify(record)))
+            var represented = album.Select(record => (Record: record, Role: classify(record)))
                 .Where(item => item.Role != LibraryRepresentation.Other).ToList();
             foreach (var track in represented.GroupBy(item => TrackKey(item.Record)))
             {
@@ -156,7 +210,10 @@ public static class RepresentationAnalyzer
         return pairs;
     }
 
-    private static void AddTrackDrift(IReadOnlyList<TrackRecord> counterparts, List<AnalysisFinding> findings)
+    private static void AddTrackDrift(
+        IReadOnlyList<TrackRecord> counterparts,
+        Func<TrackRecord, LibraryRepresentation> classify,
+        List<AnalysisFinding> findings)
     {
         var source = counterparts[0];
         AddField("title", counterparts.Select(record => record.Title), Normalize, source, findings);
@@ -169,7 +226,7 @@ public static class RepresentationAnalyzer
         if (durations.Count == counterparts.Count && durations.Max() - durations.Min() > 2)
             findings.Add(new(source.Path,
                 $"{TrackDisplay(source)} duration differs by {durations.Max() - durations.Min():N0} seconds across counterparts " +
-                $"({string.Join(", ", counterparts.Select(record => $"{Display(Classify(record))} {record.DurationInSeconds}s"))}).",
+                $"({string.Join(", ", counterparts.Select(record => $"{Display(classify(record))} {record.DurationInSeconds}s"))}).",
                 "Representation duration drift"));
     }
 
@@ -208,6 +265,45 @@ public static class RepresentationAnalyzer
              (record.CodecName?.Contains("AAC", StringComparison.OrdinalIgnoreCase) ?? false)))
             return LibraryRepresentation.GeneratedAac;
         return LibraryRepresentation.Other;
+    }
+
+    public static LibraryRepresentation Classify(
+        TrackRecord record,
+        LibraryConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        ArgumentNullException.ThrowIfNull(configuration);
+        LibraryIndexLocation? root = LibraryRootPermissionPolicy.MostSpecific(
+            record.Path, configuration.IndexLocations);
+        if (root is null)
+            return LibraryRepresentation.Other;
+
+        return root.RepresentationRole switch
+        {
+            LibraryRepresentationRole.LegacyAutomatic => Classify(record),
+            LibraryRepresentationRole.Ignore => LibraryRepresentation.Other,
+            LibraryRepresentationRole.CdLossless => LibraryRepresentation.CdFlac,
+            LibraryRepresentationRole.HighResolutionLossless =>
+                LibraryRepresentation.HighResolutionFlac,
+            LibraryRepresentationRole.Purchased => LibraryRepresentation.Purchased,
+            LibraryRepresentationRole.GeneratedLossy => LibraryRepresentation.GeneratedAac,
+            LibraryRepresentationRole.LosslessByQuality => ClassifyLosslessByQuality(
+                record, configuration.GetEffectiveProfile(root).Quality),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(root.RepresentationRole), root.RepresentationRole, null),
+        };
+    }
+
+    private static LibraryRepresentation ClassifyLosslessByQuality(
+        TrackRecord record,
+        LibraryQualityPolicy quality)
+    {
+        if (record.CodecType != CodecType.Lossless)
+            return LibraryRepresentation.Other;
+        return record.SampleRate >= quality.HighResolutionMinimumSampleRateHz ||
+               record.BitsPerSample >= quality.HighResolutionMinimumBitsPerSample
+            ? LibraryRepresentation.HighResolutionFlac
+            : LibraryRepresentation.CdFlac;
     }
 
     private static string AlbumKey(TrackRecord record) =>

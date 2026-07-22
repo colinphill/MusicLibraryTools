@@ -134,8 +134,26 @@ public sealed class LibraryFilterQueryTests
         Assert.Contains("pattern", query.Error!, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void RichBrowseFieldsSupportQualifiedAndOrdinarySearch()
+    {
+        DetailsRow row = Row("Blue in Green", "Miles Davis", "Kind of Blue", "FLAC",
+            genre: "Modal Jazz", composer: "Bill Evans", grouping: "Studio",
+            year: 1959);
+
+        LibraryFilterQuery qualified = LibraryFilterQuery.Create(
+            "Genre:Modal Composer:Evans Grouping:Studio Year:1959",
+            FilterMode.Substring);
+        LibraryFilterQuery ordinary = LibraryFilterQuery.Create(
+            "Bill Evans", FilterMode.Substring);
+
+        Assert.True(qualified.IsMatch(row, row.SearchText));
+        Assert.True(ordinary.IsMatch(row, row.SearchText));
+    }
+
     private static DetailsRow Row(string title, string artist, string album, string codec,
-        string? albumArtist = null, int sampleRate = 0)
+        string? albumArtist = null, int sampleRate = 0, string? genre = null,
+        string? composer = null, string? grouping = null, int? year = null)
     {
         var row = new DetailsRow(new TrackRecord
         {
@@ -146,6 +164,10 @@ public sealed class LibraryFilterQueryTests
             Album = album,
             CodecName = codec,
             SampleRate = (uint)sampleRate,
+            Genre = genre,
+            Composer = composer,
+            Grouping = grouping,
+            Year = year,
         });
         row.RebuildSearchText(DetailsColumns.All.Select(column => column.Key).ToArray());
         return row;

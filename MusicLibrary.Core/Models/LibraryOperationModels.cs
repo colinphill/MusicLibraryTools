@@ -60,7 +60,9 @@ public sealed record FileMutationPlan(
     IReadOnlyList<FileMutationAction> Actions,
     IReadOnlyList<OperationIssue> Issues,
     DateTimeOffset CreatedAtUtc,
-    bool RetainRecovery = true)
+    bool RetainRecovery = true,
+    string? PolicyFingerprint = null,
+    Guid? LibraryId = null)
 {
     public bool CanApply => Issues.All(issue => issue.Severity != OperationIssueSeverity.Blocker);
 }

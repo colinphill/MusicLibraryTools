@@ -9,6 +9,38 @@ namespace MusicLibrary.Core.Tests;
 public sealed class LibraryOperationContextFactoryTests
 {
     [Fact]
+    public async Task IndexedContextDoesNotRequireAnItunesLibrary()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"operation-context-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            string configPath = Path.Combine(root, "library.xml");
+            new EditableLibraryConfig().Save(configPath);
+            var configuration = new LibraryConfiguration(configPath);
+            var cache = new MetadataCache(buildSecondaryIndexes: false);
+            var library = new SnapshotLibrary(new(
+                configuration,
+                configPath,
+                7,
+                [],
+                cache));
+            var factory = new LibraryOperationContextFactory(library);
+
+            IndexedLibraryOperationContext context = await factory.CreateIndexedAsync(null);
+
+            Assert.Same(configuration, context.Configuration);
+            Assert.Same(cache, context.Cache);
+            Assert.Empty(context.IndexLocations);
+            Assert.Equal(1, library.SnapshotCalls);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task NullConfigurationPathUsesTheActiveLibraryCacheSnapshot()
     {
         string root = Path.Combine(Path.GetTempPath(), $"operation-context-{Guid.NewGuid():N}");

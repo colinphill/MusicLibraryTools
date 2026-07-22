@@ -2,6 +2,7 @@ using MetadataCaching;
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
+using MusicLibraryTools;
 using Xunit;
 
 namespace MusicLibrary.Core.Tests;
@@ -246,6 +247,39 @@ public sealed class LibraryServiceRegressionTests
 
         Assert.True(File.Exists(source));
         Assert.False(File.Exists(destination));
+    }
+
+    [Fact]
+    public async Task ApplyMoves_RejectsReviewedPlanWhenLibraryPolicyChanges()
+    {
+        using var temp = new TempDirectory();
+        string root = temp.CreateDirectory("music");
+        string source = temp.CopyFixture(root, "loose.flac");
+        string configPath = temp.WriteConfig(
+            "library.xml", "cache.db", new IndexTargetEntry { Target = root });
+        var settings = new AppSettings(temp.File("settings.json"));
+        settings.LoadConfig(configPath);
+        using var library = new LibraryService(settings);
+        await library.IndexAsync();
+        IReadOnlyList<PlannedMove> moves = await library.PreviewMovesAsync();
+        Assert.NotEmpty(moves);
+
+        EditableLibraryConfig editable = EditableLibraryConfig.Load(configPath);
+        int profileIndex = editable.Profiles.FindIndex(profile =>
+            profile.Id == editable.ActiveProfileId);
+        editable.Profiles[profileIndex] = editable.Profiles[profileIndex] with
+        {
+            Quality = new LibraryQualityPolicy(192_000, 32),
+        };
+        editable.Save(configPath);
+        settings.LoadConfig(configPath);
+
+        InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => library.ApplyMovesAsync(moves));
+
+        Assert.Contains("policy changed", error.Message,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.True(File.Exists(source));
     }
 
     [Fact]

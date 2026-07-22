@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using MusicLibrary.Core.Models;
+using MusicLibraryTools;
 
 namespace MusicLibrary.Core.Services;
 
@@ -15,6 +16,18 @@ public static class DuplicateFinder
         new(@"[ \t]*[\(\[][^)\]]*[\)\]]\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     public static IReadOnlyList<DuplicateGroup> Find(IReadOnlyList<TrackRecord> records, CancellationToken ct = default)
+        => Find(records, BuildKey, ct);
+
+    public static IReadOnlyList<DuplicateGroup> Find(
+        IReadOnlyList<TrackRecord> records,
+        LibraryConfiguration configuration,
+        CancellationToken ct = default) =>
+        Find(records, record => BuildKey(record, configuration), ct);
+
+    private static IReadOnlyList<DuplicateGroup> Find(
+        IReadOnlyList<TrackRecord> records,
+        Func<TrackRecord, DuplicateKey> keyFor,
+        CancellationToken ct)
     {
         var buckets = new Dictionary<DuplicateKey, List<TrackRecord>>();
         foreach (var record in records)
@@ -22,7 +35,7 @@ public static class DuplicateFinder
             ct.ThrowIfCancellationRequested();
             if (string.IsNullOrWhiteSpace(record.Title))
                 continue;
-            var key = BuildKey(record);
+            var key = keyFor(record);
             if (!buckets.TryGetValue(key, out var bucket))
                 buckets[key] = bucket = [];
             bucket.Add(record);
@@ -50,6 +63,14 @@ public static class DuplicateFinder
         Normalize(r.StrippedAlbum ?? r.Album ?? ""),
         r.TrackNumber,
         Normalize(BaseTitle(r.Title ?? "")));
+
+    private static DuplicateKey BuildKey(
+        TrackRecord record,
+        LibraryConfiguration configuration) => new(
+        Normalize(record.EffectiveAlbumArtist),
+        LibraryAlbumIdentityResolver.Key(record, configuration),
+        record.TrackNumber,
+        Normalize(BaseTitle(record.Title ?? "")));
 
     private readonly record struct DuplicateKey(string Artist, string Album, int? Track, string Title)
     {

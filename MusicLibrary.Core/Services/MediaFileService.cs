@@ -9,15 +9,17 @@ namespace MusicLibrary.Core.Services;
 public sealed class MediaFileService : IMediaFileService
 {
     private readonly ILibraryService? _library;
+    private readonly IMediaFormatRegistry _formats;
 
     // The library is optional so this service can still be constructed standalone (e.g. unit tests),
     // in which case it always parses the file directly.
-    public MediaFileService(ILibraryService? library = null) => _library = library;
-
-    private static readonly HashSet<string> WritableExtensions = new(StringComparer.OrdinalIgnoreCase)
+    public MediaFileService(
+        ILibraryService? library = null,
+        IMediaFormatRegistry? formats = null)
     {
-        ".mp3", ".dsf", ".flac", ".ogg", ".m4a", ".mp4", ".m4p", ".m4r", ".wv",
-    };
+        _library = library;
+        _formats = formats ?? MediaFormatRegistry.Default;
+    }
 
     public Task<OperationResult<MediaFileModel>> LoadAsync(string path, CancellationToken ct = default)
         => LoadAsync(path, includeArtwork: true, ct);
@@ -32,7 +34,8 @@ public sealed class MediaFileService : IMediaFileService
             {
                 var details = await _library.GetFileDetailsAsync(path, includeArtwork, ct);
                 if (details is not null)
-                    return OperationResult<MediaFileModel>.Ok(MapFromCache(path, details, includeArtwork));
+                    return OperationResult<MediaFileModel>.Ok(
+                        MapFromCache(path, details, includeArtwork, _formats));
             }
             catch (OperationCanceledException)
             {
@@ -44,16 +47,20 @@ public sealed class MediaFileService : IMediaFileService
             }
         }
 
-        return await Task.Run(() => Load(path, includeArtwork), ct);
+        return await Task.Run(() => Load(path, includeArtwork, _formats), ct);
     }
 
     public Task<OperationResult<MediaFileModel>> LoadDirectAsync(
         string path,
         bool includeArtwork,
         CancellationToken ct = default) =>
-        Task.Run(() => Load(path, includeArtwork), ct);
+        Task.Run(() => Load(path, includeArtwork, _formats), ct);
 
-    private static MediaFileModel MapFromCache(string path, FileDetails d, bool includeArtwork)
+    private static MediaFileModel MapFromCache(
+        string path,
+        FileDetails d,
+        bool includeArtwork,
+        IMediaFormatRegistry formats)
     {
         var e = d.Entry;
 
@@ -79,7 +86,7 @@ public sealed class MediaFileService : IMediaFileService
             DiscTotal = e.DiscTotal,
             ReleaseDate = e.ReleaseDate,
             TagType = d.TagType,
-            IsWritable = WritableExtensions.Contains(Path.GetExtension(path)),
+            IsWritable = formats.SupportsPath(path, MediaFormatCapabilities.WriteMetadata),
             KnownFields = knownFields,
             TextFields = d.TextFields.Select(kv => new TextField(kv.Key, kv.Value)).ToList(),
             Artwork = includeArtwork
@@ -122,6 +129,9 @@ public sealed class MediaFileService : IMediaFileService
         Add(TagFields.Artist, e.Artist);
         Add(TagFields.AlbumArtist, e.AlbumArtist);
         Add(TagFields.Album, e.Album);
+        Add(TagFields.Genre, e.Genre);
+        Add(TagFields.Composer, e.Composer);
+        Add(TagFields.Grouping, e.Grouping);
         Add(TagFields.TrackNumber, e.TrackNumber?.ToString());
         Add(TagFields.TotalTracks, e.TrackTotal?.ToString());
         Add(TagFields.DiscNumber, e.DiscNumber?.ToString());
@@ -130,13 +140,17 @@ public sealed class MediaFileService : IMediaFileService
         return fields;
     }
 
-    private static OperationResult<MediaFileModel> Load(string path, bool includeArtwork)
+    private static OperationResult<MediaFileModel> Load(
+        string path,
+        bool includeArtwork,
+        IMediaFormatRegistry formats)
     {
         try
         {
             // Pass a hash so embedded artwork gets hashed during the single parse pass.
             using var sha = SHA256.Create();
-            var file = MediaFile.GetFile(path, includeArtwork ? sha : null, readOnly: true);
+            var file = MediaFile.GetFile(path, includeArtwork ? sha : null, readOnly: true,
+                formatRegistry: formats);
             var tag = file.Tags.FirstOrDefault();
             var codec = file.Codecs.FirstOrDefault();
 
@@ -153,7 +167,7 @@ public sealed class MediaFileService : IMediaFileService
                 DiscTotal = tag?.DiscTotal,
                 ReleaseDate = tag?.ReleaseDate,
                 TagType = tag?.TagType,
-                IsWritable = tag is IMetadataWriter,
+                IsWritable = formats.SupportsPath(path, MediaFormatCapabilities.WriteMetadata),
                 KnownFields = tag is null
                     ? []
                     : tag.GetKnownMetadata().Select(kv => new TagFieldValue(kv.Key, kv.Value)).ToList(),

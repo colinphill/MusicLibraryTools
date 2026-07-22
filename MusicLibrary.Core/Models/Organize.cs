@@ -8,7 +8,9 @@ public sealed record PlannedMove(
     string Source,
     string Destination,
     OperationPathSnapshot? ExpectedSource = null,
-    OperationPathSnapshot? ExpectedDestination = null);
+    OperationPathSnapshot? ExpectedDestination = null,
+    string? PolicyFingerprint = null,
+    Guid? LibraryId = null);
 
 /// <summary>Outcome of applying a set of planned moves.</summary>
 public sealed record OrganizeResult(int Moved, IReadOnlyList<(string Source, string Error)> Errors)

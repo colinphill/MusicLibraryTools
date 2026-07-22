@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using MusicLibrary.Core.Models;
+using MusicLibraryTools;
 
 namespace MusicLibrary.Core.Services;
 
@@ -18,17 +19,37 @@ public static class AlbumMetadataMatrixBuilder
 
     public static IReadOnlyList<AlbumMetadataMatrix> Build(IReadOnlyList<TrackRecord> records)
     {
+        LibraryProfile legacy = LibraryProfilePresets.Create(
+            LibraryProfilePreset.LegacyMusicLibraryTools);
+        return Build(records, AlbumIdentity, _ => legacy.Disc);
+    }
+
+    public static IReadOnlyList<AlbumMetadataMatrix> Build(
+        IReadOnlyList<TrackRecord> records,
+        LibraryConfiguration configuration) =>
+        Build(records,
+            record => LibraryAlbumIdentityResolver.Key(record, configuration),
+            record => EffectiveProfile(record, configuration).Disc);
+
+    private static IReadOnlyList<AlbumMetadataMatrix> Build(
+        IReadOnlyList<TrackRecord> records,
+        Func<TrackRecord, string> identity,
+        Func<TrackRecord, LibraryDiscPolicy> discPolicy)
+    {
         ArgumentNullException.ThrowIfNull(records);
         return records
-            .GroupBy(record => new AlbumKey(PackageRoot(record.Path), AlbumIdentity(record)), AlbumKeyComparer.Instance)
-            .Select(BuildMatrix)
+            .GroupBy(record => new AlbumKey(PackageRoot(record.Path), identity(record)),
+                AlbumKeyComparer.Instance)
+            .Select(album => BuildMatrix(album, discPolicy(album.First())))
             .Where(matrix => matrix.InconsistentCellCount > 0)
             .OrderBy(matrix => matrix.DisplayName, StringComparer.CurrentCultureIgnoreCase)
             .ThenBy(matrix => matrix.Root, PathComparer)
             .ToList();
     }
 
-    private static AlbumMetadataMatrix BuildMatrix(IGrouping<AlbumKey, TrackRecord> album)
+    private static AlbumMetadataMatrix BuildMatrix(
+        IGrouping<AlbumKey, TrackRecord> album,
+        LibraryDiscPolicy discPolicy)
     {
         var records = album.ToList();
         var issues = new Dictionary<(string Path, MatrixField Field), List<string>>(new IssueKeyComparer());
@@ -90,7 +111,8 @@ public static class AlbumMetadataMatrixBuilder
         bool multiDisc = distinctDiscs.Count > 1 || records.Any(record => record.DiscTotal is > 1);
         bool canonicalDiscNamesKnown = !discLocationConflict && distinctDiscs.Count >= 2 &&
             IsCompleteSequence(distinctDiscs);
-        if (canonicalDiscNamesKnown)
+        if (canonicalDiscNamesKnown &&
+            discPolicy.Strategy == LibraryDiscStrategy.AlbumSuffix)
         {
             var baseNames = records
                 .Where(record => !string.IsNullOrWhiteSpace(record.Album))
@@ -234,6 +256,17 @@ public static class AlbumMetadataMatrixBuilder
         return match.Success && int.TryParse(match.Groups["number"].Value, out int number) && number > 0
             ? number
             : null;
+    }
+
+    private static LibraryProfile EffectiveProfile(
+        TrackRecord record,
+        LibraryConfiguration configuration)
+    {
+        LibraryIndexLocation? root = LibraryRootPermissionPolicy.MostSpecific(
+            record.Path, configuration.IndexLocations);
+        return root is null
+            ? configuration.ActiveProfile
+            : configuration.GetEffectiveProfile(root);
     }
 
     private static string AlbumIdentity(TrackRecord record) =>

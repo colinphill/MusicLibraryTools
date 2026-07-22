@@ -1,6 +1,7 @@
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
+using MusicLibraryTools;
 using Xunit;
 
 namespace MusicLibrary.Core.Tests;
@@ -334,5 +335,60 @@ public class AnalyzerTests
         Assert.Equal(cd.Path, pair.FirstPath);
         Assert.Equal(purchasedAlac.Path, pair.SecondPath);
         Assert.DoesNotContain(high.Path, new[] { pair.FirstPath, pair.SecondPath });
+    }
+
+    [Fact]
+    public void ConfiguredRepresentationRolesUseTheProfileQualityBandWithoutPathHeuristics()
+    {
+        string workspace = Path.Combine(Path.GetTempPath(),
+            "representation-policy-" + Guid.NewGuid().ToString("N"));
+        string standardRoot = Path.Combine(workspace, "archive-a");
+        string highRoot = Path.Combine(workspace, "archive-b");
+        Directory.CreateDirectory(standardRoot);
+        Directory.CreateDirectory(highRoot);
+        string configurationPath = Path.Combine(workspace, "library.xml");
+        try
+        {
+            var editable = new EditableLibraryConfig
+            {
+                ActiveProfileId = LibraryProfilePresets.ArtistAlbumId,
+                IndexTargets =
+                [
+                    new IndexTargetEntry
+                    {
+                        Target = standardRoot,
+                        ProfileId = LibraryProfilePresets.ArtistAlbumId,
+                        Permissions = LibraryRootPermissions.None,
+                        Organize = false,
+                        RepresentationRole = LibraryRepresentationRole.LosslessByQuality,
+                    },
+                    new IndexTargetEntry
+                    {
+                        Target = highRoot,
+                        ProfileId = LibraryProfilePresets.ArtistAlbumId,
+                        Permissions = LibraryRootPermissions.None,
+                        Organize = false,
+                        RepresentationRole = LibraryRepresentationRole.LosslessByQuality,
+                    },
+                ],
+            };
+            editable.Save(configurationPath);
+            var configuration = new LibraryConfiguration(configurationPath);
+            TrackRecord standard = Rec(Path.Combine(standardRoot, "01.flac"),
+                "Artist", "Album", "Song", track: 1);
+            TrackRecord high = Rec(Path.Combine(highRoot, "01.flac"),
+                "Artist", "Album", "Song", track: 1, sr: 96_000, bps: 24);
+
+            Assert.Equal(LibraryRepresentation.CdFlac,
+                RepresentationAnalyzer.Classify(standard, configuration));
+            Assert.Equal(LibraryRepresentation.HighResolutionFlac,
+                RepresentationAnalyzer.Classify(high, configuration));
+            Assert.Empty(RepresentationAnalyzer.Compare(
+                [standard, high], configuration).Findings);
+        }
+        finally
+        {
+            try { Directory.Delete(workspace, recursive: true); } catch { }
+        }
     }
 }

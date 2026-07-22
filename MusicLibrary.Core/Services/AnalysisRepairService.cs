@@ -9,6 +9,18 @@ public interface IAnalysisRepairService
 {
     AnalysisRepairPlan PreviewSafeRepairs(IReadOnlyList<TrackRecord> records);
 
+    AnalysisRepairPlan PreviewSafeRepairs(
+        IReadOnlyList<TrackRecord> records,
+        LibraryHealthPolicy policy) =>
+        LibraryHealthPolicyService.Default.FilterProposedRepairs(
+            PreviewSafeRepairs(records), policy);
+
+    AnalysisRepairPlan PreviewSafeRepairs(
+        IReadOnlyList<TrackRecord> records,
+        LibraryConfiguration configuration) =>
+        LibraryHealthPolicyService.Default.FilterProposedRepairs(
+            PreviewSafeRepairs(records), configuration);
+
     AnalysisRepairPlan PreviewMissingAlbumArtists(IReadOnlyList<TrackRecord> records);
 
     AnalysisRepairPlan PreviewNumberingAndTotals(IReadOnlyList<TrackRecord> records);
@@ -27,6 +39,36 @@ public interface IAnalysisRepairService
         AnalysisRepairPlan plan,
         IProgress<int>? progress = null,
         CancellationToken ct = default);
+
+    Task<BatchWriteResult> ApplyAsync(
+        AnalysisRepairPlan plan,
+        LibraryHealthPolicy policy,
+        IProgress<int>? progress = null,
+        CancellationToken ct = default) =>
+        ApplyAsync(
+            LibraryHealthPolicyService.Default.FilterApplicableRepairs(plan, policy),
+            progress,
+            ct);
+
+    Task<AnalysisRepairApplyResult> ApplyReviewedAsync(
+        AnalysisRepairPlan plan,
+        LibraryHealthPolicy policy,
+        IProgress<int>? progress = null,
+        CancellationToken ct = default) =>
+        ApplyReviewedAsync(
+            LibraryHealthPolicyService.Default.FilterApplicableRepairs(plan, policy),
+            progress,
+            ct);
+
+    Task<AnalysisRepairApplyResult> ApplyReviewedAsync(
+        AnalysisRepairPlan plan,
+        LibraryConfiguration configuration,
+        IProgress<int>? progress = null,
+        CancellationToken ct = default) =>
+        ApplyReviewedAsync(
+            LibraryHealthPolicyService.Default.FilterApplicableRepairs(plan, configuration),
+            progress,
+            ct);
 
     async Task<AnalysisRepairApplyResult> ApplyReviewedAsync(
         AnalysisRepairPlan plan,
@@ -81,15 +123,18 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
     private readonly ITagWriteService _writer;
     private readonly ILibraryOrganizer? _organizer;
     private readonly IAppSettings? _settings;
+    private readonly ILibraryHealthPolicyService _healthPolicy;
 
     public AnalysisRepairService(
         ITagWriteService writer,
         ILibraryOrganizer? organizer = null,
-        IAppSettings? settings = null)
+        IAppSettings? settings = null,
+        ILibraryHealthPolicyService? healthPolicy = null)
     {
         _writer = writer;
         _organizer = organizer;
         _settings = settings;
+        _healthPolicy = healthPolicy ?? LibraryHealthPolicyService.Default;
     }
 
     public AnalysisRepairPlan PreviewSafeRepairs(IReadOnlyList<TrackRecord> records)
@@ -111,6 +156,16 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
         return new AnalysisRepairPlan("Safe metadata repairs", repairs);
     }
 
+    public AnalysisRepairPlan PreviewSafeRepairs(
+        IReadOnlyList<TrackRecord> records,
+        LibraryHealthPolicy policy) =>
+        _healthPolicy.FilterProposedRepairs(PreviewSafeRepairs(records), policy);
+
+    public AnalysisRepairPlan PreviewSafeRepairs(
+        IReadOnlyList<TrackRecord> records,
+        LibraryConfiguration configuration) =>
+        _healthPolicy.FilterProposedRepairs(PreviewSafeRepairs(records), configuration);
+
     public AnalysisRepairPlan PreviewId3VersionUpgrades(IReadOnlyList<TrackRecord> records)
     {
         ArgumentNullException.ThrowIfNull(records);
@@ -127,7 +182,8 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
                 "be represented safely.",
                 record.Length,
                 record.LastWriteTime,
-                TargetId3Version: ID3v2Version.V23))
+                TargetId3Version: ID3v2Version.V23,
+                RuleId: LibraryHealthRuleIds.Id3Version))
             .OrderBy(repair => repair.Path, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
         return new AnalysisRepairPlan("Upgrade ID3 tags", repairs);
@@ -169,7 +225,8 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
                     candidate,
                     reason,
                     record.Length,
-                    record.LastWriteTime));
+                    record.LastWriteTime,
+                    RuleId: LibraryHealthRuleIds.MissingAlbumArtist));
             }
         }
 
@@ -228,7 +285,8 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
                         _ => "Removes leading or trailing whitespace from this tag value.",
                     };
                     repairs[(record.Path, field)] = Repair(
-                        record, field, value, normalized, reason);
+                        record, field, value, normalized, reason,
+                        LibraryHealthRuleIds.NormalizeWhitespace);
                 }
             }
         }
@@ -266,7 +324,8 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
                     {
                         repairs[(entry.Record.Path, field)] = Repair(
                             entry.Record, field, entry.Value, canonical,
-                            "Matches the clean spelling used by a strict majority of peers in this folder.");
+                            "Matches the clean spelling used by a strict majority of peers in this folder.",
+                            LibraryHealthRuleIds.NormalizeWhitespace);
                     }
                 }
             }
@@ -340,7 +399,8 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
                     record.LastWriteTime,
                     AnalysisRepairKind.Path,
                     expectedDestination,
-                    blockingReason));
+                    blockingReason,
+                    RuleId: LibraryHealthRuleIds.NormalizeWhitespace));
             }
             catch (Exception ex)
             {
@@ -353,7 +413,8 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
                     record.Length,
                     record.LastWriteTime,
                     AnalysisRepairKind.Path,
-                    BlockingReason: ex.Message));
+                    BlockingReason: ex.Message,
+                    RuleId: LibraryHealthRuleIds.NormalizeWhitespace));
             }
         }
 
@@ -435,7 +496,8 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
                 if (StringComparer.Ordinal.Equals(record.Album, expected))
                     continue;
                 repairs.Add(Repair(record, TagFields.Album, record.Album, expected,
-                    "Matches the canonical album name for this complete, unambiguous multi-disc package."));
+                    "Matches the canonical album name for this complete, unambiguous multi-disc package.",
+                    LibraryHealthRuleIds.DiscAlbumTitle));
             }
         }
 
@@ -562,7 +624,8 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
             effectiveNumbers[record.Path] = candidate;
             repairs.Add(Repair(record, TagFields.TrackNumber, NumberBefore(record.TrackNumber),
                 candidate.ToString(),
-                "The leading filename number matches every numbered peer in this disc folder."));
+                "The leading filename number matches every numbered peer in this disc folder.",
+                LibraryHealthRuleIds.MissingTrackTotal));
         }
 
         if (effectiveNumbers.Count != disc.Count)
@@ -592,7 +655,7 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
         foreach (var record in disc.Where(record => record.TrackTotal is null or <= 0 || record.TrackTotal < maxTrack))
         {
             repairs.Add(Repair(record, TagFields.TotalTracks, NumberBefore(record.TrackTotal),
-                total.Value.ToString(), reason));
+                total.Value.ToString(), reason, LibraryHealthRuleIds.MissingTrackTotal));
         }
     }
 
@@ -636,7 +699,8 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
                 effectiveDiscs[entry.Record.Path] = candidate;
                 repairs.Add(Repair(entry.Record, TagFields.DiscNumber,
                     NumberBefore(entry.Record.DiscNumber), candidate.ToString(),
-                    "The file is inside a complete set of explicitly numbered disc folders."));
+                    "The file is inside a complete set of explicitly numbered disc folders.",
+                    LibraryHealthRuleIds.DiscMetadata));
             }
 
             if (effectiveDiscs.Count != entries.Count)
@@ -666,10 +730,27 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
                          entry.Record.DiscTotal is null or <= 0 || entry.Record.DiscTotal < maxDisc))
             {
                 repairs.Add(Repair(entry.Record, TagFields.TotalDiscs,
-                    NumberBefore(entry.Record.DiscTotal), total.Value.ToString(), reason));
+                    NumberBefore(entry.Record.DiscTotal), total.Value.ToString(), reason,
+                    LibraryHealthRuleIds.DiscMetadata));
             }
         }
     }
+
+    public Task<AnalysisRepairApplyResult> ApplyReviewedAsync(
+        AnalysisRepairPlan plan,
+        LibraryHealthPolicy policy,
+        IProgress<int>? progress = null,
+        CancellationToken ct = default) =>
+        ApplyReviewedAsync(
+            _healthPolicy.FilterApplicableRepairs(plan, policy), progress, ct);
+
+    public Task<AnalysisRepairApplyResult> ApplyReviewedAsync(
+        AnalysisRepairPlan plan,
+        LibraryConfiguration configuration,
+        IProgress<int>? progress = null,
+        CancellationToken ct = default) =>
+        ApplyReviewedAsync(
+            _healthPolicy.FilterApplicableRepairs(plan, configuration), progress, ct);
 
     public async Task<AnalysisRepairApplyResult> ApplyReviewedAsync(
         AnalysisRepairPlan plan,
@@ -677,6 +758,7 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(plan);
+        ValidatePolicy(plan);
         var results = new Dictionary<AnalysisTagRepair, AnalysisRepairItemResult>();
         AnalysisTagRepair[] blocked = plan.Items.Where(repair => !repair.CanApply).ToArray();
         foreach (AnalysisTagRepair repair in blocked)
@@ -708,7 +790,9 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
                         repair.Path,
                         repair.After,
                         SourcePathSnapshot(repair),
-                        repair.ExpectedDestination)).ToList();
+                        repair.ExpectedDestination,
+                        plan.PolicyFingerprint,
+                        plan.LibraryId)).ToList();
                     OrganizeResult organized = await _organizer.ApplyMovesAsync(moves, null, ct);
                     var errors = organized.Errors.ToDictionary(
                         error => error.Source, error => error.Error, FilePathComparer);
@@ -753,8 +837,10 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
             .ToList();
         if (tagRepairs.Count > 0)
         {
-            var tagPlan = new AnalysisRepairPlan(
-                plan.Name, tagRepairs.Select(item => item.Rebased).ToList());
+            AnalysisRepairPlan tagPlan = plan with
+            {
+                Items = tagRepairs.Select(item => item.Rebased).ToList(),
+            };
             try
             {
                 // Once a reviewed rename has committed, finish its rebased tag edits even if the
@@ -801,12 +887,20 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
             .ToList());
     }
 
+    public Task<BatchWriteResult> ApplyAsync(
+        AnalysisRepairPlan plan,
+        LibraryHealthPolicy policy,
+        IProgress<int>? progress = null,
+        CancellationToken ct = default) =>
+        ApplyAsync(_healthPolicy.FilterApplicableRepairs(plan, policy), progress, ct);
+
     public async Task<BatchWriteResult> ApplyAsync(
         AnalysisRepairPlan plan,
         IProgress<int>? progress = null,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(plan);
+        ValidatePolicy(plan);
         if (!plan.CanApply)
             return new BatchWriteResult([]);
         if (plan.Items.Any(repair => repair.Kind != AnalysisRepairKind.Tag))
@@ -875,6 +969,19 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
         return new BatchWriteResult(results);
     }
 
+    private void ValidatePolicy(AnalysisRepairPlan plan)
+    {
+        if (plan.PolicyFingerprint is null || _settings is null)
+            return;
+        LibraryConfiguration? configuration = _settings.GetSnapshot().Configuration;
+        if (configuration is null ||
+            plan.LibraryId is Guid libraryId && configuration.LibraryId != libraryId ||
+            !StringComparer.Ordinal.Equals(
+                plan.PolicyFingerprint, configuration.PolicySnapshot.Fingerprint))
+            throw new InvalidOperationException(
+                "The library policy changed after preview. Preview repairs again before applying them.");
+    }
+
     private static IEnumerable<IGrouping<(string Directory, string Album), TrackRecord>> AlbumFolders(
         IReadOnlyList<TrackRecord> records) =>
         records
@@ -888,8 +995,10 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
         TagFields field,
         string? before,
         string after,
-        string reason) =>
-        new(record.Path, field, before, after, reason, record.Length, record.LastWriteTime);
+        string reason,
+        string ruleId) =>
+        new(record.Path, field, before, after, reason, record.Length, record.LastWriteTime,
+            RuleId: ruleId);
 
     private static string? NumberBefore(int? value) => value?.ToString();
 

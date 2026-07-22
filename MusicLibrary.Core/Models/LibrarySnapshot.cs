@@ -34,6 +34,10 @@ public sealed record TrackItem
 {
     public required string Path { get; init; }
     public string? Title { get; init; }
+    public string? Genre { get; init; }
+    public string? Composer { get; init; }
+    public string? Grouping { get; init; }
+    public int? Year { get; init; }
     public int? TrackNumber { get; init; }
     public int? DiscNumber { get; init; }
     public string? CodecName { get; init; }

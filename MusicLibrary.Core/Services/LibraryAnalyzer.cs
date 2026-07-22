@@ -1,5 +1,6 @@
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
+using MusicLibraryTools;
 
 namespace MusicLibrary.Core.Services;
 
@@ -21,20 +22,29 @@ public static class LibraryAnalyzer
                      record => record.Path, StringComparer.CurrentCultureIgnoreCase))
         {
             if (record.TrackTotal == 0)
-                findings.Add(new(record.Path, "0 TrackTotal", "Zero track total"));
+                findings.Add(new(record.Path, "0 TrackTotal", "Zero track total",
+                    LibraryHealthRuleIds.MissingTrackTotal));
             else if (record.TrackTotal is null)
-                findings.Add(new(record.Path, "Missing TrackTotal", "Missing track total"));
+                findings.Add(new(record.Path, "Missing TrackTotal", "Missing track total",
+                    LibraryHealthRuleIds.MissingTrackTotal));
             if ((record.TrackNumber ?? 0) == 0)
                 findings.Add(new(record.Path, "0/Missing TrackNumber",
-                    "Missing or zero track number"));
+                    "Missing or zero track number", LibraryHealthRuleIds.MissingTrackTotal));
             if (record.DiscNumber is not null || record.DiscTotal is not null)
                 findings.Add(new(record.Path,
-                    $"({record.DiscNumber}/{record.DiscTotal}) Disc", "Disc metadata present"));
+                    $"({record.DiscNumber}/{record.DiscTotal}) Disc", "Disc metadata present",
+                    LibraryHealthRuleIds.DiscMetadata));
             if (record.Path.Contains('\u00A0'))
-                findings.Add(new(record.Path, "Contains nbsp", "Non-breaking space in path"));
+                findings.Add(new(record.Path, "Contains nbsp", "Non-breaking space in path",
+                    LibraryHealthRuleIds.NormalizeWhitespace));
         }
         return new("Basic metadata check", findings);
     }
+
+    public static AnalysisReport BasicMetadata(
+        IReadOnlyList<TrackRecord> records,
+        LibraryHealthPolicy policy) =>
+        LibraryHealthPolicyService.Default.ApplyToReport(BasicMetadata(records), policy);
 
     /// <summary>
     /// Basic metadata hygiene plus album-folder track-total disagreements.
@@ -53,12 +63,19 @@ public static class LibraryAnalyzer
             {
                 string path = folder.Key;
                 findings.Add(new(path, "Multiple Track Totals",
-                    "Album folder contains multiple track totals"));
+                    "Album folder contains multiple track totals",
+                    LibraryHealthRuleIds.MissingTrackTotal));
             }
         }
         findings.AddRange(BasicMetadata(records).Findings);
         return new("Metadata inconsistencies", findings);
     }
+
+    public static AnalysisReport MetadataInconsistencies(
+        IReadOnlyList<TrackRecord> records,
+        LibraryHealthPolicy policy) =>
+        LibraryHealthPolicyService.Default.ApplyToReport(
+            MetadataInconsistencies(records), policy);
 
     /// <summary>Low-resolution files stored anywhere beneath a HiRes directory.</summary>
     public static AnalysisReport LowResolutionInHighResolutionTree(
@@ -182,10 +199,16 @@ public static class LibraryAnalyzer
         var findings = records
             .Where(r => r.CodecType == CodecType.Lossy)
             .OrderBy(r => r.Path, StringComparer.CurrentCultureIgnoreCase)
-            .Select(r => new AnalysisFinding(r.Path, $"{r.CodecName} (lossy)", "Lossy codec"))
+            .Select(r => new AnalysisFinding(r.Path, $"{r.CodecName} (lossy)", "Lossy codec",
+                LibraryHealthRuleIds.LossyFile))
             .ToList();
         return new AnalysisReport("Lossy files", findings);
     }
+
+    public static AnalysisReport Lossless(
+        IReadOnlyList<TrackRecord> records,
+        LibraryHealthPolicy policy) =>
+        LibraryHealthPolicyService.Default.ApplyToReport(Lossless(records), policy);
 
     /// <summary>
     /// Albums whose track/disc totals are inconsistent: disagreeing TrackTotal within a disc,
@@ -219,7 +242,8 @@ public static class LibraryAnalyzer
                     foreach (var r in disc)
                         findings.Add(new AnalysisFinding(r.Path,
                             $"{label}: disagreeing total tracks ({string.Join("/", totals)})",
-                            "Disagreeing track totals"));
+                            "Disagreeing track totals",
+                            LibraryHealthRuleIds.MissingTrackTotal));
                     continue;
                 }
 
@@ -227,7 +251,8 @@ public static class LibraryAnalyzer
                     if (r.TrackNumber is int tn && r.TrackTotal is int tt && tn > tt)
                         findings.Add(new AnalysisFinding(r.Path,
                             $"track {tn} exceeds total {tt} on '{r.Album}'",
-                            "Track number exceeds total"));
+                            "Track number exceeds total",
+                            LibraryHealthRuleIds.MissingTrackTotal));
             }
 
             var discTotals = album.Where(r => r.DiscTotal is > 0)
@@ -238,17 +263,22 @@ public static class LibraryAnalyzer
                 foreach (var r in album)
                     findings.Add(new AnalysisFinding(r.Path,
                         $"{label}: disagreeing total discs ({string.Join("/", discTotals)})",
-                        "Disagreeing disc totals"));
+                        "Disagreeing disc totals", LibraryHealthRuleIds.DiscMetadata));
 
             foreach (var r in album)
                 if (r.DiscNumber is int dn && r.DiscTotal is int dt && dn > dt)
                     findings.Add(new AnalysisFinding(r.Path,
                         $"disc {dn} exceeds total {dt} on '{r.Album}'",
-                        "Disc number exceeds total"));
+                        "Disc number exceeds total", LibraryHealthRuleIds.DiscMetadata));
         }
 
         return new AnalysisReport("Inconsistent track/disc totals", findings);
     }
+
+    public static AnalysisReport InconsistentTotals(
+        IReadOnlyList<TrackRecord> records,
+        LibraryHealthPolicy policy) =>
+        LibraryHealthPolicyService.Default.ApplyToReport(InconsistentTotals(records), policy);
 
     /// <summary>
     /// A broader tag-hygiene pass (mirrors AnalyzeMetadata's "incon"): the album-level total-track
@@ -262,19 +292,28 @@ public static class LibraryAnalyzer
         foreach (var r in records.OrderBy(r => r.Path, StringComparer.CurrentCultureIgnoreCase))
         {
             if (r.TrackTotal is null)
-                findings.Add(new AnalysisFinding(r.Path, "missing total-tracks", "Missing track total"));
+                findings.Add(new AnalysisFinding(r.Path, "missing total-tracks",
+                    "Missing track total", LibraryHealthRuleIds.MissingTrackTotal));
             else if (r.TrackTotal == 0)
-                findings.Add(new AnalysisFinding(r.Path, "zero total-tracks", "Zero track total"));
+                findings.Add(new AnalysisFinding(r.Path, "zero total-tracks",
+                    "Zero track total", LibraryHealthRuleIds.MissingTrackTotal));
 
             if ((r.TrackNumber ?? 0) == 0)
-                findings.Add(new AnalysisFinding(r.Path, "missing/zero track number", "Missing or zero track number"));
+                findings.Add(new AnalysisFinding(r.Path, "missing/zero track number",
+                    "Missing or zero track number", LibraryHealthRuleIds.MissingTrackTotal));
 
             if (r.Path.Contains('\u00A0'))
-                findings.Add(new AnalysisFinding(r.Path, "path contains a non-breaking space", "Non-breaking space in path"));
+                findings.Add(new AnalysisFinding(r.Path, "path contains a non-breaking space",
+                    "Non-breaking space in path", LibraryHealthRuleIds.NormalizeWhitespace));
         }
 
         return new AnalysisReport("Inconsistencies", findings);
     }
+
+    public static AnalysisReport Inconsistencies(
+        IReadOnlyList<TrackRecord> records,
+        LibraryHealthPolicy policy) =>
+        LibraryHealthPolicyService.Default.ApplyToReport(Inconsistencies(records), policy);
 
     /// <summary>
     /// Artist name variants that are near-duplicates of each other (e.g. "Beatles" vs "The Beatles"),
@@ -324,6 +363,17 @@ public static class LibraryAnalyzer
         Lossless(records),
         InconsistentTotals(records),
         SimilarArtists(records, ct: ct),
+    ];
+
+    public static IReadOnlyList<AnalysisReport> RunAll(
+        IReadOnlyList<TrackRecord> records,
+        LibraryHealthPolicy policy,
+        CancellationToken ct = default) =>
+    [
+        Lossless(records, policy),
+        InconsistentTotals(records, policy),
+        LibraryHealthPolicyService.Default.ApplyToReport(
+            SimilarArtists(records, ct: ct), policy),
     ];
 
     private static ResolutionAlbum[] MatchingAlbums(

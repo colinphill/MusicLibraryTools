@@ -133,9 +133,16 @@ public interface IItunesMediaMutationService
 public sealed class ItunesMediaMutationService : IItunesMediaMutationService
 {
     private readonly IAppSettings? _settings;
+    private readonly IMediaFormatRegistry _formats;
     private readonly SemaphoreSlim _libraryGate = new(1, 1);
 
-    public ItunesMediaMutationService(IAppSettings? settings = null) => _settings = settings;
+    public ItunesMediaMutationService(
+        IAppSettings? settings = null,
+        IMediaFormatRegistry? formats = null)
+    {
+        _settings = settings;
+        _formats = formats ?? MediaFormatRegistry.Default;
+    }
 
     public async Task<ItunesMediaReconciliationResult> ReconcileAsync(
         IReadOnlyCollection<ItunesMediaIndexedFile> indexedFiles,
@@ -396,7 +403,7 @@ public sealed class ItunesMediaMutationService : IItunesMediaMutationService
                         {
                             string path = Required(mutation.CurrentPath, "refresh path");
                             if (!IsWithin(path, MediaFolder) || !File.Exists(path) ||
-                                !IsMusicPath(path))
+                                !_owner.IsMusicPath(path))
                                 break;
                             IReadOnlyList<ItlRecord> matches = _document.FindTracksByPath(path);
                             ItlLocalTrackMetadata metadata = ReadMetadata(path);
@@ -426,7 +433,7 @@ public sealed class ItunesMediaMutationService : IItunesMediaMutationService
                                 break;
                             IReadOnlyList<ItlRecord> matches = _document.RelocateTracks(original, current);
                             if (matches.Count == 0 && IsWithin(current, MediaFolder) &&
-                                File.Exists(current) && IsMusicPath(current))
+                                File.Exists(current) && _owner.IsMusicPath(current))
                             {
                                 FileInfo file = new(current);
                                 _document.ImportLocalTrack(current, ReadMetadata(current), file.Length,
@@ -437,7 +444,7 @@ public sealed class ItunesMediaMutationService : IItunesMediaMutationService
                             {
                                 relocated += matches.Count;
                                 AddDuplicateWarning(matches, original, warnings);
-                                if (File.Exists(current) && IsMusicPath(current))
+                                if (File.Exists(current) && _owner.IsMusicPath(current))
                                 {
                                     FileInfo file = new(current);
                                     ItlLocalTrackMetadata metadata = ReadMetadata(current);
@@ -454,7 +461,7 @@ public sealed class ItunesMediaMutationService : IItunesMediaMutationService
                         {
                             string path = Required(mutation.CurrentPath, "added path");
                             if (!IsWithin(path, MediaFolder) || !File.Exists(path) ||
-                                !IsMusicPath(path))
+                                !_owner.IsMusicPath(path))
                                 break;
                             IReadOnlyList<ItlRecord> existing = _document.FindTracksByPath(path);
                             FileInfo file = new(path);
@@ -712,8 +719,8 @@ public sealed class ItunesMediaMutationService : IItunesMediaMutationService
                    PathComparison);
     }
 
-    private static bool IsMusicPath(string path) =>
-        SupportedExtensions.Contains(Path.GetExtension(path));
+    private bool IsMusicPath(string path) =>
+        _formats.SupportsPath(path, MediaFormatCapabilities.ReadMetadata);
 
     private static bool FileChanged(ItlTrack track, ItunesMediaIndexedFile file)
     {
@@ -800,11 +807,6 @@ public sealed class ItunesMediaMutationService : IItunesMediaMutationService
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase
         : StringComparer.Ordinal;
-    private static readonly HashSet<string> SupportedExtensions =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ".dsf", ".m4a", ".mp4", ".m4p", ".m4r", ".mp3", ".flac", ".ogg", ".wv",
-        };
     private static readonly StringComparison PathComparison = OperatingSystem.IsWindows()
         ? StringComparison.OrdinalIgnoreCase
         : StringComparison.Ordinal;

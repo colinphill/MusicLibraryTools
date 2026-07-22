@@ -23,6 +23,16 @@ public static class ArtworkHealthAnalyzer
         int oversizedByteThreshold,
         int oversizedDimensionThreshold,
         CancellationToken ct = default)
+        => Analyze(records, artwork, null, oversizedByteThreshold,
+            oversizedDimensionThreshold, ct);
+
+    public static AnalysisReport Analyze(
+        IReadOnlyList<TrackRecord> records,
+        IReadOnlyList<ArtworkAuditFile> artwork,
+        LibraryConfiguration? configuration,
+        int oversizedByteThreshold,
+        int oversizedDimensionThreshold,
+        CancellationToken ct = default)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(oversizedByteThreshold);
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(oversizedDimensionThreshold);
@@ -64,7 +74,10 @@ public static class ArtworkHealthAnalyzer
                     "Duplicate embedded artwork"));
         }
 
-        foreach (var album in records.GroupBy(AlbumKey))
+        Func<TrackRecord, string> albumKey = configuration is null
+            ? AlbumKey
+            : record => LibraryAlbumIdentityResolver.Key(record, configuration);
+        foreach (var album in records.GroupBy(albumKey))
         {
             var scanned = album.Select(record => (Record: record, Artwork: byPath.GetValueOrDefault(record.Path)))
                 .Where(item => item.Artwork?.ArtworkScanned == true).ToList();

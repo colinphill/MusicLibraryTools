@@ -1,4 +1,5 @@
 using MusicFileUtilities;
+using MusicLibraryTools;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
 using Xunit;
@@ -71,6 +72,49 @@ public sealed class ArtworkHealthAnalyzerTests
             2_000_000, 1_499);
         Assert.Contains(dimensionExceeded.Findings,
             finding => finding.Problem == "Oversized artwork");
+    }
+
+    [Fact]
+    public void GenericAlbumIdentityKeepsEditionsSeparateForArtworkComparison()
+    {
+        string path = Path.Combine(Path.GetTempPath(),
+            "artwork-identity-" + Guid.NewGuid().ToString("N") + ".xml");
+        try
+        {
+            EditableLibraryConfig editable = EditableLibraryConfig.CreateNew();
+            editable.ActiveProfileId = LibraryProfilePresets.ArtistAlbumId;
+            editable.Save(path);
+            var configuration = new LibraryConfiguration(path);
+            TrackRecord first = Track("original.flac") with
+            {
+                Album = "Album (Original)",
+                StrippedAlbum = "Album",
+            };
+            TrackRecord remaster = Track("remaster.flac") with
+            {
+                Album = "Album (Remastered)",
+                StrippedAlbum = "Album",
+            };
+            ArtworkAuditFile[] artwork =
+            [
+                new(first.Path, true,
+                    [new("original", "image/jpeg", "FrontCover", 500, 500, 50_000)]),
+                new(remaster.Path, true,
+                    [new("remaster", "image/jpeg", "FrontCover", 500, 500, 50_000)]),
+            ];
+
+            AnalysisReport report = ArtworkHealthAnalyzer.Analyze(
+                [first, remaster], artwork, configuration,
+                ArtworkHealthAnalyzer.OversizedByteThreshold,
+                ArtworkHealthAnalyzer.OversizedDimensionThreshold);
+
+            Assert.DoesNotContain(report.Findings,
+                finding => finding.Problem == "Mixed album artwork");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 
     private static TrackRecord Track(string path) => new()

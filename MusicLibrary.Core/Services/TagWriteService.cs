@@ -1,6 +1,7 @@
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
 using System.Runtime.ExceptionServices;
+using MusicLibraryTools;
 
 namespace MusicLibrary.Core.Services;
 
@@ -11,18 +12,21 @@ public sealed class TagWriteService : ITagWriteService
     private readonly IFileMutationCoordinator _mutations;
     private readonly int _maxParallelism;
     private readonly IItunesMediaMutationService? _itunes;
+    private readonly IAppSettings? _settings;
 
     // The reindex service is optional so this service can be constructed standalone (unit tests).
     public TagWriteService(
         IReindexService? reindex = null,
         IFileMutationCoordinator? mutations = null,
         int maxParallelism = 4,
-        IItunesMediaMutationService? itunes = null)
+        IItunesMediaMutationService? itunes = null,
+        IAppSettings? settings = null)
     {
         _reindex = reindex;
         _mutations = mutations ?? FileMutationCoordinator.Shared;
         _maxParallelism = Math.Clamp(maxParallelism, 1, 16);
         _itunes = itunes;
+        _settings = settings;
     }
 
     public Task<BatchWriteResult> ApplyAsync(
@@ -32,6 +36,7 @@ public sealed class TagWriteService : ITagWriteService
         CancellationToken ct = default)
         => Task.Run(async () =>
         {
+            ValidatePermissions(paths);
             var results = new FileWriteResult[paths.Count];
             var savedFiles = new IMediaFile?[paths.Count];
             int nextIndex = -1;
@@ -108,6 +113,19 @@ public sealed class TagWriteService : ITagWriteService
                 ExceptionDispatchInfo.Capture(workerError).Throw();
             return new BatchWriteResult(results);
         }, ct);
+
+    private void ValidatePermissions(IReadOnlyList<string> paths)
+    {
+        LibraryConfiguration? configuration = _settings?.GetSnapshot().Configuration;
+        if (configuration is null)
+            return;
+        LibraryIndexLocation[] roots = configuration.IndexLocations.ToArray();
+        string? denied = paths.FirstOrDefault(path => !LibraryRootPermissionPolicy.Allows(
+            path, roots, LibraryRootPermissions.WriteMetadata));
+        if (denied is not null)
+            throw new InvalidOperationException(
+                $"The active library policy does not permit metadata writes to '{denied}'.");
+    }
 
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase

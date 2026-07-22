@@ -1,6 +1,7 @@
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
+using MusicLibraryTools;
 using Xunit;
 
 namespace MusicLibrary.Core.Tests;
@@ -9,6 +10,37 @@ public class TagWriteServiceTests
 {
     private readonly TagWriteService _writer = new();
     private readonly MediaFileService _reader = new();
+
+    [Fact]
+    public async Task CatalogOnlyRootCannotProduceMetadataMutation()
+    {
+        using var media = MediaFixtures.Copy("sample.flac");
+        string directory = Path.GetDirectoryName(media.Path)!;
+        string configPath = Path.Combine(directory, $"catalog-{Guid.NewGuid():N}.xml");
+        string statePath = Path.Combine(directory, $"settings-{Guid.NewGuid():N}.json");
+        try
+        {
+            EditableLibraryConfig editable = EditableLibraryConfig.CreateNew();
+            editable.IndexTargets.Add(editable.CreateIndexTarget(directory));
+            editable.Save(configPath);
+            var settings = new AppSettings(statePath);
+            settings.LoadConfig(configPath);
+            var writer = new TagWriteService(settings: settings);
+
+            InvalidOperationException error = await Assert.ThrowsAsync<InvalidOperationException>(
+                () => writer.ApplyAsync(
+                    [media.Path], [new TagEdit(TagFields.Title, "Should not be written")]));
+
+            Assert.Contains("does not permit metadata writes", error.Message,
+                StringComparison.OrdinalIgnoreCase);
+            Assert.Equal("TestTitle", MediaFile.GetFile(media.Path, readOnly: true).Tags.First().Title);
+        }
+        finally
+        {
+            try { File.Delete(configPath); } catch { }
+            try { File.Delete(statePath); } catch { }
+        }
+    }
 
     [Theory]
     [InlineData("sample.flac")]

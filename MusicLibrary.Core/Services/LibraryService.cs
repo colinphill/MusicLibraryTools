@@ -152,6 +152,10 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                         StrippedAlbum = e.StrippedAlbum,
                         Title = e.Title,
                         ReleaseDate = e.ReleaseDate,
+                        Genre = e.Genre,
+                        Composer = e.Composer,
+                        Grouping = e.Grouping,
+                        Year = e.Year,
                         TrackNumber = e.TrackNumber,
                         TrackTotal = e.TrackTotal,
                         DiscNumber = e.DiscNumber,
@@ -373,13 +377,26 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
             var locations = config.IndexLocations.ToList();
             var targets = LibraryOrganizationPolicy.EligibleTargets(locations);
             var (lengthLimit, discLimit) = GetLimits(config);
+            string policyFingerprint = config.PolicySnapshot.Fingerprint;
+            Guid libraryId = config.LibraryId;
             var db = GetDatabase(context);
             return await Task.Run(() =>
             {
                 var moves = new List<PlannedMove>();
                 foreach (var target in targets)
                 {
+                    LibraryProfile profile = config.GetEffectiveProfile(target);
                     var cache = db.BuildCache([target.Target], buildSecondaryIndexes: false);
+                    IReadOnlyDictionary<string, int> continuousTrackNumbers =
+                        profile.Disc.Strategy == LibraryDiscStrategy.FlattenContinuous
+                            ? LibraryAlbumIdentityResolver.ContinuousTrackNumbers(
+                                cache.FileCache,
+                                item => LibraryAlbumIdentityResolver.Key(
+                                    item.Value, profile.AlbumIdentity),
+                                item => item.Key,
+                                item => item.Value.DiscNumber,
+                                item => item.Value.TrackNumber)
+                            : new Dictionary<string, int>(FilePathComparer);
                     // Track destinations already claimed in this preview so two sources don't plan
                     // the same target (the console tool relied on File.Move happening between checks).
                     var claimed = new HashSet<string>(FilePathComparer);
@@ -388,8 +405,9 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                         ct.ThrowIfCancellationRequested();
                         if (!LibraryOrganizationPolicy.IsPathEligible(source, locations))
                             continue;
-                        var dest = CanonicalPath(target, entry, source,
-                            lengthLimit, discLimit, claimed);
+                        var dest = CanonicalPath(target, profile, entry, source,
+                            lengthLimit, discLimit, claimed,
+                            continuousTrackNumbers.GetValueOrDefault(source));
                         if (dest is not null)
                         {
                             claimed.Add(dest);
@@ -397,7 +415,9 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                                 source,
                                 dest,
                                 CaptureOrganizationSnapshot(source),
-                                CaptureOrganizationSnapshot(dest)));
+                                CaptureOrganizationSnapshot(dest),
+                                policyFingerprint,
+                                libraryId));
                         }
                     }
                 }
@@ -413,21 +433,29 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
     // Returns null when the file is already in place. Internal naming uses _N collision suffixes;
     // iTunes naming uses the native space-N convention.
     private static string? CanonicalPath(LibraryIndexLocation target,
+        LibraryProfile profile,
         MetadataCacheEntry entry, string source,
-        int lengthLimit, int discLimit, HashSet<string> claimed)
+        int lengthLimit, int discLimit, HashSet<string> claimed,
+        int? flattenedTrackNumber)
     {
-        string tgt = LibraryCanonicalPath.Initial(target, entry, source, lengthLimit, discLimit);
+        LibraryPathMetadata metadata = LibraryPathMetadata.From(entry, source) with
+        {
+            FlattenedTrackNumber = flattenedTrackNumber,
+        };
+        string initial = LibraryPathLayoutResolver.Shared.Resolve(
+            target.Target, profile, metadata, lengthLimit, discLimit);
+        string tgt = initial;
 
         if (FilePathComparer.Equals(source, tgt) && source.IsNormalized())
             return null; // already canonical
 
-        int index = target.UseItunesCanonicalNaming ? 1 : 2;
+        int index = profile.Naming.UseItunesCanonicalNaming ? 1 : 2;
         while ((File.Exists(tgt) && !FilePathComparer.Equals(source, tgt)) || claimed.Contains(tgt))
         {
-            tgt = LibraryCanonicalPath.Collision(target, entry, source,
-                lengthLimit, discLimit, index++);
-            if (FilePathComparer.Equals(source, tgt) && source.IsNormalized())
-                return null; // the numbered target is the file itself
+            tgt = LibraryPathLayoutResolver.Shared.ResolveCollision(
+                initial, source, profile, index++);
+            if (FilePathComparer.Equals(source, tgt))
+                return null; // PreserveExisting selected the source itself.
         }
         return tgt;
     }
@@ -438,6 +466,18 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         ArgumentNullException.ThrowIfNull(moves);
         var context = GetContext();
         var config = context.Configuration;
+        PlannedMove? policyMove = moves.FirstOrDefault(move =>
+            move.PolicyFingerprint is not null);
+        if (policyMove is not null &&
+            (policyMove.LibraryId is Guid libraryId && libraryId != config.LibraryId ||
+             !StringComparer.Ordinal.Equals(
+                 policyMove.PolicyFingerprint, config.PolicySnapshot.Fingerprint) ||
+             moves.Any(move => move.PolicyFingerprint is not null &&
+                 (!StringComparer.Ordinal.Equals(
+                     move.PolicyFingerprint, policyMove.PolicyFingerprint) ||
+                  move.LibraryId != policyMove.LibraryId))))
+            throw new InvalidOperationException(
+                "The library policy changed after preview. Preview organization again before applying it.");
         var locations = config.IndexLocations.ToList();
         var baseDirs = LibraryOrganizationPolicy.EligibleRoots(locations);
         PlannedMove? excluded = moves.FirstOrDefault(move =>
@@ -445,7 +485,12 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         if (excluded is not null)
             throw new InvalidOperationException(
                 $"Organization is disabled for '{excluded.Source}' by its IndexTarget configuration.");
-        bool deleteNonMusic = config["DeleteNonMusic"].Length != 0;
+        // Broad non-music deletion is a legacy-only compatibility switch. Versioned generic
+        // profiles preserve sidecars and unknown files; explicit sidecar rules are applied by
+        // the ingest cleanup workflow where every affected path is previewed.
+        bool deleteNonMusic = config.ActiveProfile.Preset ==
+                LibraryProfilePreset.LegacyMusicLibraryTools &&
+            config["DeleteNonMusic"].Length != 0;
         bool keepFolderImages = config["KeepFolderImages"].Length != 0;
         string[] mutationPaths = moves
             .SelectMany(move => new[] { move.Source, move.Destination })
@@ -1061,6 +1106,10 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                     {
                         Path = kv.Key,
                         Title = kv.Value.Title,
+                        Genre = kv.Value.Genre,
+                        Composer = kv.Value.Composer,
+                        Grouping = kv.Value.Grouping,
+                        Year = kv.Value.Year,
                         TrackNumber = kv.Value.TrackNumber,
                         DiscNumber = kv.Value.DiscNumber,
                         CodecName = kv.Value.CodecName,
@@ -1103,12 +1152,12 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
 
     private static List<ScanRootDefinition> GetScanRootDefinitions(LibraryConfiguration config)
         => config.IndexLocations
-            .GroupBy(location => Path.TrimEndingDirectorySeparator(location.Target), FilePathComparer)
-            .Select(group => new ScanRootDefinition(
-                group.First().Target,
-                group.SelectMany(location => location.Sets)
-                    .Distinct(LibraryConfiguration.ScanSetComparer)
-                    .OrderBy(set => set, LibraryConfiguration.ScanSetComparer).ToArray()))
+            .Select(location => new ScanRootDefinition(location.Target, location.Sets)
+            {
+                Formats = location.IndexFormats,
+                IncludePatterns = location.IndexIncludePatterns,
+                ExcludePatterns = location.IndexExcludePatterns,
+            })
             .ToList();
 
     private MetadataDatabase GetDatabase(LibraryContext context)
