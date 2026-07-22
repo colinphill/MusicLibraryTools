@@ -29,6 +29,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     [ObservableProperty] private string _databaseFile = "cache.db";
     [ObservableProperty] private string? _itunesLibraryPath;
     [ObservableProperty] private string _ffmpegPath = "ffmpeg";
+    [ObservableProperty] private string _wavpackPath = "wavpack";
     [ObservableProperty] private int _oversizedArtworkByteThreshold =
         LibraryArtworkHealthSettings.DefaultOversizedByteThreshold;
     [ObservableProperty] private int _oversizedArtworkDimensionThreshold =
@@ -244,6 +245,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
 
             return $"Profile ID: {profile.Id}; preset: {FormatWords(profile.Preset.ToString())}{Environment.NewLine}" +
                    $"Machine bindings: {(string.IsNullOrWhiteSpace(MachineBindingsFile) ? "inline paths" : MachineBindingsFile)}{Environment.NewLine}" +
+                   $"Tools: FFmpeg {FfmpegPath}; WavPack {WavpackPath}{Environment.NewLine}" +
                    $"Recognized index formats: {formats}{Environment.NewLine}" +
                    $"Example destination: {example}{Environment.NewLine}" +
                    $"Collision behavior: {profile.Naming.CollisionPolicy}; Unicode preserved: {profile.Naming.PreserveUnicode}{Environment.NewLine}" +
@@ -333,6 +335,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         nameof(MachineBindingsFile),
         nameof(ItunesLibraryPath),
         nameof(FfmpegPath),
+        nameof(WavpackPath),
         nameof(OversizedArtworkByteThreshold),
         nameof(OversizedArtworkDimensionThreshold),
         nameof(ArtworkRepairTargetByteSize),
@@ -640,6 +643,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         DatabaseFile = "cache.db";
         ItunesLibraryPath = null;
         FfmpegPath = "ffmpeg";
+        WavpackPath = "wavpack";
         OversizedArtworkByteThreshold =
             LibraryArtworkHealthSettings.DefaultOversizedByteThreshold;
         OversizedArtworkDimensionThreshold =
@@ -715,6 +719,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         DatabaseFile = "cache.db";
         ItunesLibraryPath = null;
         FfmpegPath = "ffmpeg";
+        WavpackPath = "wavpack";
         OversizedArtworkByteThreshold =
             LibraryArtworkHealthSettings.DefaultOversizedByteThreshold;
         OversizedArtworkDimensionThreshold =
@@ -1071,6 +1076,15 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             FfmpegPath = path;
     }
 
+    [RelayCommand]
+    private async Task BrowseWavpackAsync()
+    {
+        // Executables commonly have no extension on macOS and Linux.
+        string? path = await _files.PickFileAsync("Choose WavPack executable");
+        if (path is not null)
+            WavpackPath = path;
+    }
+
     private bool CanSaveConfiguration() => HasUnsavedChanges && IsEditorValid;
 
     [RelayCommand(CanExecute = nameof(CanSaveConfiguration))]
@@ -1118,6 +1132,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             DatabaseFile = _editing.DatabaseFile;
             ItunesLibraryPath = _editing.ItunesLibraryPath;
             FfmpegPath = _editing.FfmpegPath;
+            WavpackPath = _editing.WavpackPath;
             OversizedArtworkByteThreshold = _editing.OversizedArtworkByteThreshold;
             OversizedArtworkDimensionThreshold = _editing.OversizedArtworkDimensionThreshold;
             ArtworkRepairTargetByteSize = _editing.ArtworkRepairTargetByteSize;
@@ -1207,6 +1222,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             _editing.DatabaseFile = string.IsNullOrWhiteSpace(DatabaseFile) ? "cache.db" : DatabaseFile.Trim();
             _editing.ItunesLibraryPath = string.IsNullOrWhiteSpace(ItunesLibraryPath) ? null : ItunesLibraryPath.Trim();
             _editing.FfmpegPath = string.IsNullOrWhiteSpace(FfmpegPath) ? "ffmpeg" : FfmpegPath.Trim();
+            _editing.WavpackPath = string.IsNullOrWhiteSpace(WavpackPath) ? "wavpack" : WavpackPath.Trim();
             _editing.OversizedArtworkByteThreshold = OversizedArtworkByteThreshold;
             _editing.OversizedArtworkDimensionThreshold = OversizedArtworkDimensionThreshold;
             _editing.ArtworkRepairTargetByteSize = ArtworkRepairTargetByteSize;

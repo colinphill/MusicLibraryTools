@@ -17,6 +17,7 @@ public sealed record IngestMusicConfiguration
         };
 
     public required string FfmpegPath { get; init; }
+    public string WavpackPath { get; init; } = "wavpack";
     public required string AacDestination { get; init; }
     public string? ItunesLibraryPath { get; init; }
     public required string CdDestination { get; init; }
@@ -148,6 +149,7 @@ public sealed record IngestMusicConfiguration
         return new IngestMusicConfiguration
         {
             FfmpegPath = configuration.FfmpegPath,
+            WavpackPath = configuration.WavpackPath,
             ItunesLibraryPath = configuration.ItunesLibraryPath,
             CdDestination = RecipeDestination("legacy-cd-flac"),
             PairedCdDestination = RecipeDestination("legacy-paired-cd-flac"),
@@ -307,6 +309,7 @@ public sealed record IngestMusicConfiguration
         return new IngestMusicConfiguration
         {
             FfmpegPath = Required("FfmpegPath"),
+            WavpackPath = ((string?)root.Element("WavpackPath") ?? "wavpack").Trim(),
             AacDestination = aacDestination,
             ItunesLibraryPath = itunesLibraryPath,
             CdDestination = cdDestination,
@@ -328,6 +331,7 @@ public sealed record IngestMusicConfiguration
     public void Save(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(FfmpegPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(WavpackPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(AacDestination);
         ArgumentException.ThrowIfNullOrWhiteSpace(CdDestination);
         ArgumentException.ThrowIfNullOrWhiteSpace(PairedCdDestination);
@@ -339,6 +343,7 @@ public sealed record IngestMusicConfiguration
         var document = new XDocument(
             new XElement("IngestMusicConfiguration",
                 new XElement("FfmpegPath", FfmpegPath),
+                new XElement("WavpackPath", WavpackPath),
                 new XElement("AacDestination", AacDestination),
                 string.IsNullOrWhiteSpace(ItunesLibraryPath) ? null : new XElement("ItunesLibrary", ItunesLibraryPath),
                 new XElement("CdDestination", CdDestination),

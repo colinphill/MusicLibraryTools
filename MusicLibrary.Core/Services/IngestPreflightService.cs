@@ -10,7 +10,8 @@ public interface IIngestPreflightService
 /// <summary>Checks ingest inputs and external tools without enumerating or reading source media.</summary>
 public sealed class IngestPreflightService(
     IFfmpegRunner ffmpeg,
-    IAppSettings? settings = null) : IIngestPreflightService
+    IAppSettings? settings = null,
+    IWavpackRunner? wavpack = null) : IIngestPreflightService
 {
     public async Task<IngestPreflightResult> CheckAsync(IngestRequest request, CancellationToken ct = default)
     {
@@ -78,7 +79,7 @@ public sealed class IngestPreflightService(
         {
             string[] encoders = RequiredEncoders(configuration);
             if (encoders.Length == 0 && !RequiresFfmpeg(configuration))
-                checks.Add(Pass("ffmpeg", "Not required by the active copy-only ingest recipes."));
+                checks.Add(Pass("ffmpeg", "Not required by the active ingest recipes."));
             else
             {
                 if (encoders.Length == 0)
@@ -114,18 +115,54 @@ public sealed class IngestPreflightService(
             checks.Add(Warning("ffmpeg", $"Transcoding is not ready: {ex.Message}"));
         }
 
+        if (!RequiresWavpack(configuration))
+            checks.Add(Pass("WavPack", "Not required by the active ingest recipes."));
+        else
+        {
+            try
+            {
+                await (wavpack ?? new WavpackRunner()).PreflightAsync(
+                    configuration.WavpackPath, ct);
+                checks.Add(Pass("WavPack",
+                    $"Found WavPack via {configuration.WavpackPath}."));
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                checks.Add(Warning("WavPack",
+                    $"DSF-to-WavPack DSD encoding is not ready: {ex.Message}"));
+            }
+        }
+
         return new(checks);
     }
 
     internal static bool RequiresFfmpeg(IngestMusicConfiguration configuration) =>
         configuration.Profile.Ingest.Recipes.Any(recipe => recipe.Enabled &&
-            recipe.Action != MusicLibraryTools.LibraryIngestAction.Copy);
+            recipe.Action != MusicLibraryTools.LibraryIngestAction.Copy &&
+            !RequiresWavpack(recipe));
+
+    internal static bool RequiresWavpack(IngestMusicConfiguration configuration) =>
+        configuration.Profile.Ingest.Recipes.Any(recipe =>
+            recipe.Enabled && RequiresWavpack(recipe));
+
+    private static bool RequiresWavpack(MusicLibraryTools.LibraryIngestRecipe recipe) =>
+        recipe.Action == MusicLibraryTools.LibraryIngestAction.Transcode &&
+        recipe.InputExtensions.Count > 0 &&
+        recipe.InputExtensions.All(extension =>
+            extension.Equals(".dsf", StringComparison.OrdinalIgnoreCase)) &&
+        recipe.OutputExtension?.Equals(".wv", StringComparison.OrdinalIgnoreCase) == true &&
+        (recipe.Codec ?? "wv").Trim().ToLowerInvariant() is "wv" or "wavpack";
 
     internal static string[] RequiredEncoders(IngestMusicConfiguration configuration)
     {
         return configuration.Profile.Ingest.Recipes
             .Where(recipe => recipe.Enabled &&
-                recipe.Action == MusicLibraryTools.LibraryIngestAction.Transcode)
+                recipe.Action == MusicLibraryTools.LibraryIngestAction.Transcode &&
+                !RequiresWavpack(recipe))
             .Select(recipe =>
             {
                 string codec = (recipe.Codec ?? recipe.OutputExtension ?? "")

@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using MusicFileUtilities;
 using MusicLibraryTools;
 using MusicLibrary.Core.Models;
@@ -372,6 +373,146 @@ public class IngestMusicTests
     }
 
     [Fact]
+    public async Task RecipeTranscode_SameAudioFormatShortCircuitsToCopy()
+    {
+        using var tree = new TempTree();
+        tree.FileFromFixture("incoming", "original.flac", "sample.flac");
+        (string configPath, _, EditableLibraryConfig editable) =
+            CreateRecipeLibrary(tree);
+        LibraryProfile profile = editable.Profiles.Single(item =>
+            item.Id == editable.ActiveProfileId);
+        LibraryIngestRecipe recipe = Assert.Single(profile.Ingest.Recipes) with
+        {
+            Action = LibraryIngestAction.Transcode,
+        };
+        editable.Profiles[editable.Profiles.IndexOf(profile)] = profile with
+        {
+            Ingest = profile.Ingest with { Recipes = [recipe] },
+        };
+        editable.Save(configPath);
+        var ffmpeg = new FakeFfmpeg();
+        var service = new IngestMusicService(ffmpeg);
+
+        IngestPlan plan = await service.PreviewAsync(
+            new(tree.Path("incoming"), configPath));
+
+        IngestOutputPlan output = Assert.Single(Assert.Single(plan.Albums).Outputs);
+        Assert.Equal(LibraryIngestAction.Copy, output.Action);
+
+        IngestResult result = await service.ApplyAsync(plan, []);
+
+        Assert.Equal(0, result.Failed);
+        Assert.Equal(0, ffmpeg.PreflightCalls);
+        Assert.Null(ffmpeg.LastTranscodeOptions);
+    }
+
+    [Fact]
+    public async Task RecipeTranscode_SameContainerWithDifferentCodecStillTranscodes()
+    {
+        using var tree = new TempTree();
+        tree.FileFromFixture("incoming", "original.m4a", "sample_alac.m4a");
+        string destination = tree.Path("aac-output");
+        var editable = EditableLibraryConfig.CreateNew();
+        LibraryProfile profile = LibraryProfilePresets.Create(
+            LibraryProfilePreset.Custom, "aac-ingest", "AAC ingest");
+        var root = new IndexTargetEntry
+        {
+            Target = destination,
+            ProfileId = profile.Id,
+            Permissions = LibraryRootPermissions.IngestOutput,
+            Organize = false,
+        };
+        var recipe = new LibraryIngestRecipe(
+            "aac-transcode", "AAC transcode", true, [".m4a"], true,
+            null, null, null, false, LibraryIngestAction.Transcode,
+            root.Id, LibraryIngestRole.None, ".m4a", "aac", null,
+            null, null, null, LibraryChannelSelection.Stereo,
+            profile.Id, true, false, LibraryPathCollisionPolicy.Stop);
+        profile = profile with
+        {
+            Ingest = new(true, LibrarySourceDisposition.Preserve, true, [recipe]),
+        };
+        editable.Profiles.Add(profile);
+        editable.ActiveProfileId = profile.Id;
+        editable.IndexTargets.Add(root);
+        string configPath = tree.Path("aac-library.xml");
+        editable.Save(configPath);
+
+        IngestPlan plan = await new IngestMusicService(new FakeFfmpeg())
+            .PreviewAsync(new(tree.Path("incoming"), configPath));
+
+        IngestOutputPlan output = Assert.Single(Assert.Single(plan.Albums).Outputs);
+        Assert.Equal("ALAC", output.Metadata.CodecName);
+        Assert.Equal(LibraryIngestAction.Transcode, output.Action);
+    }
+
+    [Fact]
+    public async Task RecipeTranscode_DsfToWavpackDsdUsesWavpackRunner()
+    {
+        using var tree = new TempTree();
+        tree.FileFromFixture("incoming", "original.dsf", "sample.dsf");
+        string destination = tree.Path("wavpack-output");
+        var editable = EditableLibraryConfig.CreateNew();
+        LibraryProfile profile = LibraryProfilePresets.Create(
+            LibraryProfilePreset.Custom, "wavpack-dsd", "WavPack DSD");
+        var root = new IndexTargetEntry
+        {
+            Target = destination,
+            ProfileId = profile.Id,
+            Permissions = LibraryRootPermissions.IngestOutput,
+            Organize = false,
+        };
+        var recipe = new LibraryIngestRecipe(
+            "dsf-wavpack", "DSF to WavPack DSD", true, [".dsf"], true,
+            null, null, null, false, LibraryIngestAction.Transcode,
+            root.Id, LibraryIngestRole.None, ".wv", "wavpack", null,
+            null, null, null, LibraryChannelSelection.Stereo,
+            profile.Id, true, false, LibraryPathCollisionPolicy.Stop);
+        profile = profile with
+        {
+            Naming = profile.Naming with
+            {
+                DirectoryTemplate = "{AlbumArtist}/{Album}",
+                FileNameTemplate = "{OriginalName}{Extension}",
+            },
+            Ingest = new(true, LibrarySourceDisposition.Preserve, true, [recipe]),
+        };
+        editable.Profiles.Add(profile);
+        editable.ActiveProfileId = profile.Id;
+        editable.IndexTargets.Add(root);
+        editable.WavpackPath = "configured-wavpack";
+        string configPath = tree.Path("wavpack-library.xml");
+        editable.Save(configPath);
+        var ffmpeg = new FakeFfmpeg();
+        var wavpack = new FakeWavpack();
+        var service = new IngestMusicService(
+            ffmpeg, wavpack: wavpack);
+
+        IngestPlan plan = await service.PreviewAsync(
+            new(tree.Path("incoming"), configPath));
+
+        Assert.Empty(plan.Conflicts);
+        IngestOutputPlan output = Assert.Single(Assert.Single(plan.Albums).Outputs);
+        Assert.Equal(LibraryIngestAction.Transcode, output.Action);
+        Assert.EndsWith(".wv", output.DestinationPath,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("configured-wavpack", plan.Configuration.WavpackPath);
+
+        IngestResult result = await service.ApplyAsync(plan, []);
+
+        Assert.Equal(0, result.Failed);
+        Assert.Equal(0, ffmpeg.PreflightCalls);
+        Assert.Equal(1, wavpack.PreflightCalls);
+        Assert.Equal(1, wavpack.EncodeCalls);
+        Assert.True(File.Exists(output.DestinationPath));
+        ICodecProvider encoded = Assert.Single(
+            MediaFile.GetFile(output.DestinationPath).Codecs);
+        Assert.Equal("WavPack", encoded.CodecName);
+        Assert.Equal((uint)1, encoded.BitsPerSample);
+        Assert.Equal(output.Metadata.SampleRate, encoded.Samplerate);
+    }
+
+    [Fact]
     public async Task RecipePrefersMatchedCdSourceForHighResolutionAlbum()
     {
         using var tree = new TempTree();
@@ -387,6 +528,7 @@ public class IngestMusicTests
         Assert.True(album.HasHighResolution);
         IngestOutputPlan output = Assert.Single(album.Outputs);
         Assert.Equal(cd, output.SourcePath);
+        Assert.Equal(LibraryIngestAction.Transcode, output.Action);
         Assert.StartsWith(destination, output.DestinationPath,
             StringComparison.OrdinalIgnoreCase);
         Assert.False(output.DeriveCd);
@@ -688,7 +830,8 @@ public class IngestMusicTests
         string path = tree.Path("saved.xml");
         var expected = new IngestMusicConfiguration
         {
-            FfmpegPath = "custom-ffmpeg", AacDestination = tree.Path("aac-out"),
+            FfmpegPath = "custom-ffmpeg", WavpackPath = "custom-wavpack",
+            AacDestination = tree.Path("aac-out"),
             CdDestination = tree.Path("cd-out"), PairedCdDestination = tree.Path("paired-out"),
             HighResolutionDestination = tree.Path("hires-out"), LengthLimit = 180,
             DiscNumLengthLimit = 160, AacEncoder = "libfdk_aac", AacBitrateKbps = 256,
@@ -700,6 +843,7 @@ public class IngestMusicTests
         var actual = IngestMusicConfiguration.Load(path);
 
         Assert.Equal(expected.FfmpegPath, actual.FfmpegPath);
+        Assert.Equal(expected.WavpackPath, actual.WavpackPath);
         Assert.Equal(expected.AacDestination, actual.AacDestination);
         Assert.Equal(expected.ItunesLibraryPath, actual.ItunesLibraryPath);
         Assert.Equal(expected.CdDestination, actual.CdDestination);
@@ -949,6 +1093,48 @@ public class IngestMusicTests
                 File.Copy(Path.Combine(AppContext.BaseDirectory, "TestFiles", fixture), output);
             }
             finally { Interlocked.Decrement(ref _active); }
+        }
+    }
+
+    private sealed class FakeWavpack : IWavpackRunner
+    {
+        public int PreflightCalls { get; private set; }
+        public int EncodeCalls { get; private set; }
+
+        public Task PreflightAsync(
+            string executable,
+            CancellationToken ct = default)
+        {
+            Assert.Equal("configured-wavpack", executable);
+            PreflightCalls++;
+            return Task.CompletedTask;
+        }
+
+        public Task EncodeDsdAsync(
+            string executable,
+            string input,
+            string output,
+            CancellationToken ct = default)
+        {
+            Assert.Equal("configured-wavpack", executable);
+            EncodeCalls++;
+            ICodecProvider source = Assert.Single(MediaFile.GetFile(input).Codecs);
+            Assert.Equal((uint)2_822_400, source.Samplerate);
+            Assert.Equal((uint)1, source.BitsPerSample);
+
+            byte[] block = new byte[36];
+            "wvpk"u8.CopyTo(block);
+            BinaryPrimitives.WriteUInt32LittleEndian(block.AsSpan(4), 28);
+            BinaryPrimitives.WriteUInt16LittleEndian(block.AsSpan(8), 0x410);
+            uint flags = 0x80000000u | (9u << 23);
+            if (source.Channels == 1)
+                flags |= 4;
+            BinaryPrimitives.WriteUInt32LittleEndian(block.AsSpan(24), flags);
+            block[32] = 0x0e;
+            block[33] = 1;
+            block[34] = 3;
+            File.WriteAllBytes(output, block);
+            return Task.CompletedTask;
         }
     }
 

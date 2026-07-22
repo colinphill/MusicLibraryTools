@@ -15,6 +15,7 @@ public sealed class IngestMusicService : IIngestMusicService
         @"^(?<album>.+?)\s+\(Disc\s+(?<disc>\d+)\)$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private readonly IFfmpegRunner _ffmpeg;
+    private readonly IWavpackRunner _wavpack;
     private readonly IAppSettings? _settings;
     private readonly int _previewParallelism;
     private readonly IItunesMediaMutationService _itunes;
@@ -23,9 +24,11 @@ public sealed class IngestMusicService : IIngestMusicService
         IFfmpegRunner ffmpeg,
         IAppSettings? settings = null,
         int? previewParallelism = null,
-        IItunesMediaMutationService? itunes = null)
+        IItunesMediaMutationService? itunes = null,
+        IWavpackRunner? wavpack = null)
     {
         _ffmpeg = ffmpeg;
+        _wavpack = wavpack ?? new WavpackRunner();
         _settings = settings;
         _previewParallelism = Math.Clamp(previewParallelism ?? GetDefaultPreviewParallelism(), 1, 64);
         _itunes = itunes ?? new ItunesMediaMutationService(settings);
@@ -403,6 +406,16 @@ public sealed class IngestMusicService : IIngestMusicService
                 string extension = string.IsNullOrWhiteSpace(recipe.OutputExtension)
                     ? selected.SourceExtension
                     : NormalizeExtension(recipe.OutputExtension);
+                int? outputChannels = ResolveOutputChannels(
+                    recipe.OutputChannels, selected.Channels);
+                LibraryIngestAction action = ResolveRecipeAction(
+                    recipe, selected, extension, outputChannels);
+                if (WavpackDsdConstraintError(
+                        recipe, selected, extension, outputChannels) is { } wavpackError)
+                {
+                    conflicts.Add(new(albumKey, selected.SourcePath, wavpackError));
+                    continue;
+                }
                 LibraryProfile namingProfile = config.ResolveProfile(recipe);
                 LibraryProfile destinationProfile =
                     config.ResolveDestinationProfile(recipe);
@@ -474,7 +487,7 @@ public sealed class IngestMusicService : IIngestMusicService
                     DestinationPath = destination,
                     DestinationRoot = target?.Target ?? itunesMediaFolder,
                     RecipeId = recipe.Id,
-                    Action = recipe.Action,
+                    Action = action,
                     OutputCodec = recipe.Codec,
                     Encoder = recipe.Encoder,
                     ExtraFfmpegOptions = recipe.ExtraFfmpegOptions,
@@ -482,8 +495,7 @@ public sealed class IngestMusicService : IIngestMusicService
                     BitrateKbps = recipe.BitrateKbps,
                     SampleRateHz = recipe.SampleRateHz,
                     BitsPerSample = recipe.BitsPerSample,
-                    OutputChannels = ResolveOutputChannels(
-                        recipe.OutputChannels, selected.Channels),
+                    OutputChannels = outputChannels,
                     DeriveCd = usedHighResolutionFallback,
                     PreserveMetadata = recipe.PreserveMetadata,
                     PreserveArtwork = recipe.PreserveArtwork,
@@ -531,6 +543,92 @@ public sealed class IngestMusicService : IIngestMusicService
             null => null,
             _ => throw new ArgumentOutOfRangeException(nameof(selection)),
         };
+
+    private static LibraryIngestAction ResolveRecipeAction(
+        LibraryIngestRecipe recipe,
+        IngestTrackPlan source,
+        string outputExtension,
+        int? outputChannels)
+    {
+        if (recipe.Action != LibraryIngestAction.Transcode ||
+            !source.SourceExtension.Equals(outputExtension,
+                StringComparison.OrdinalIgnoreCase))
+            return recipe.Action;
+
+        string sourceCodec = NormalizeCodecName(source.CodecName);
+        string outputCodec = NormalizeCodecName(
+            recipe.Codec ?? outputExtension.TrimStart('.'));
+        if (sourceCodec.Length == 0 ||
+            !sourceCodec.Equals(outputCodec, StringComparison.OrdinalIgnoreCase))
+            return recipe.Action;
+
+        bool audioFormatChanges =
+            recipe.SampleRateHz is int sampleRate &&
+                source.SampleRate != (uint)sampleRate ||
+            recipe.BitsPerSample is int bitsPerSample &&
+                source.BitsPerSample != (uint)bitsPerSample ||
+            outputChannels is int channels &&
+                source.Channels != (uint)channels;
+        bool encodingRequested =
+            recipe.BitrateKbps is not null ||
+            !string.IsNullOrWhiteSpace(recipe.Encoder) ||
+            !string.IsNullOrWhiteSpace(recipe.ExtraFfmpegOptions);
+        return audioFormatChanges || encodingRequested
+            ? recipe.Action
+            : LibraryIngestAction.Copy;
+    }
+
+    private static string NormalizeCodecName(string value) =>
+        value.Trim().ToLowerInvariant() switch
+        {
+            "m4a" => "aac",
+            "ogg" or "libvorbis" => "vorbis",
+            "wavpack" => "wv",
+            var codec => codec,
+        };
+
+    private static string? WavpackDsdConstraintError(
+        LibraryIngestRecipe recipe,
+        IngestTrackPlan source,
+        string outputExtension,
+        int? outputChannels)
+    {
+        if (!IsWavpackDsdTranscode(
+                recipe.Action, source.SourceExtension, outputExtension, recipe.Codec))
+            return null;
+        if (recipe.SampleRateHz is int sampleRate &&
+            source.SampleRate != (uint)sampleRate)
+            return $"WavPack DSD preserves the source sample rate of " +
+                   $"{source.SampleRate:N0} Hz; recipe '{recipe.Name}' requests " +
+                   $"{sampleRate:N0} Hz.";
+        if (recipe.BitsPerSample is int bitsPerSample &&
+            source.BitsPerSample != (uint)bitsPerSample)
+            return $"WavPack DSD preserves the source bit depth of " +
+                   $"{source.BitsPerSample}; recipe '{recipe.Name}' requests " +
+                   $"{bitsPerSample}.";
+        if (outputChannels is int channels &&
+            source.Channels != (uint)channels)
+            return $"WavPack DSD preserves the source channel count of " +
+                   $"{source.Channels}; recipe '{recipe.Name}' requests {channels}.";
+        return null;
+    }
+
+    private static bool IsWavpackDsdTranscode(
+        LibraryIngestAction action,
+        string sourceExtension,
+        string outputExtension,
+        string? codec) =>
+        action == LibraryIngestAction.Transcode &&
+        sourceExtension.Equals(".dsf", StringComparison.OrdinalIgnoreCase) &&
+        outputExtension.Equals(".wv", StringComparison.OrdinalIgnoreCase) &&
+        NormalizeCodecName(codec ?? "wv") == "wv";
+
+    private static bool UsesWavpackDsd(IngestOutputPlan output) =>
+        IsWavpackDsdTranscode(
+            output.Action,
+            output.Metadata.SourceExtension,
+            Path.GetExtension(output.DestinationPath),
+            output.OutputCodec);
 
     private static bool RecipeMatches(
         LibraryIngestRecipe recipe,
@@ -698,8 +796,11 @@ public sealed class IngestMusicService : IIngestMusicService
         if (hasAlbums && plan.ItunesLibrarySnapshot is not null)
             ItlFileEditor.EnsureItunesIsClosed();
         EnsureFresh(plan);
-        bool needsFfmpeg = plan.Albums.SelectMany(album => album.Outputs).Any(output =>
-            output.Action != LibraryIngestAction.Copy);
+        IngestOutputPlan[] plannedOutputs = plan.Albums
+            .SelectMany(album => album.Outputs).ToArray();
+        bool needsFfmpeg = plannedOutputs.Any(output =>
+            output.Action != LibraryIngestAction.Copy && !UsesWavpackDsd(output));
+        bool needsWavpack = plannedOutputs.Any(UsesWavpackDsd);
         string? automaticAacEncoder = null;
         if (hasAlbums && needsFfmpeg)
         {
@@ -717,6 +818,11 @@ public sealed class IngestMusicService : IIngestMusicService
                 automaticAacEncoder = await _ffmpeg.ResolveEncoderAsync(
                     plan.Configuration.FfmpegPath,
                     [plan.Configuration.AacEncoder, "aac"], ct);
+            EnsureFresh(plan);
+        }
+        if (hasAlbums && needsWavpack)
+        {
+            await _wavpack.PreflightAsync(plan.Configuration.WavpackPath, ct);
             EnsureFresh(plan);
         }
 
@@ -1176,6 +1282,14 @@ public sealed class IngestMusicService : IIngestMusicService
             case LibraryIngestAction.Remux:
                 await _ffmpeg.RemuxAsync(configuration.FfmpegPath,
                     output.SourcePath, stage, ct).ConfigureAwait(false);
+                break;
+
+            case LibraryIngestAction.Transcode when UsesWavpackDsd(output):
+                await _wavpack.EncodeDsdAsync(
+                    configuration.WavpackPath,
+                    output.SourcePath,
+                    stage,
+                    ct).ConfigureAwait(false);
                 break;
 
             case LibraryIngestAction.Transcode:
@@ -1656,7 +1770,8 @@ public sealed class IngestMusicService : IIngestMusicService
                 throw new InvalidDataException(
                     $"Recipe output has an unexpected audio format: {path}");
             if (!string.IsNullOrWhiteSpace(output.OutputCodec) &&
-                !codec.CodecName.Contains(output.OutputCodec,
+                !NormalizeCodecName(codec.CodecName).Equals(
+                    NormalizeCodecName(output.OutputCodec),
                     StringComparison.OrdinalIgnoreCase) &&
                 !(output.OutputCodec.Equals("aac", StringComparison.OrdinalIgnoreCase) &&
                   codec.CodecType == CodecType.Lossy))

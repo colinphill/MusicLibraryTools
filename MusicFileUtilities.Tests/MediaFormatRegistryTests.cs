@@ -48,6 +48,8 @@ public sealed class MediaFormatRegistryTests
             MediaFormatCapabilities.TranscodeSource));
         Assert.False(registry.SupportsExtension(".mp3",
             MediaFormatCapabilities.TranscodeDestination));
+        Assert.True(registry.SupportsExtension(".wv",
+            MediaFormatCapabilities.TranscodeDestination));
         Assert.Contains(".m4a", registry.GetExtensions(MediaFormatCapabilities.Remux));
         Assert.Contains(".mp4", registry.GetExtensions(MediaFormatCapabilities.Remux));
         Assert.True(registry.TryGetByExtension(".m4a", out MediaFormatDefinition m4a));

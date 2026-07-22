@@ -764,6 +764,21 @@ namespace MusicLibraryTools
             }
         }
 
+        public string WavpackPath
+        {
+            get
+            {
+                if (machineBindings_?.WavpackPath is { } boundWavpack)
+                    return boundWavpack;
+                string? value = CleanOptional((string?)root_.Element("WavpackPath"));
+                if (value is null) return "wavpack";
+                return Path.IsPathRooted(value) || value.Contains(Path.DirectorySeparatorChar) ||
+                       value.Contains(Path.AltDirectorySeparatorChar)
+                    ? Path.GetFullPath(value, configurationDirectory_)
+                    : value;
+            }
+        }
+
         public LibraryIngestSettings IngestSettings
         {
             get

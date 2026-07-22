@@ -104,6 +104,7 @@ public sealed class EditableLibraryConfig
     public string DatabaseFile { get; set; } = "cache.db";
     public string? ItunesLibraryPath { get; set; }
     public string FfmpegPath { get; set; } = "ffmpeg";
+    public string WavpackPath { get; set; } = "wavpack";
     public int LengthLimit { get; set; } = 255;
     public int DiscNumLengthLimit { get; set; } = 255;
     public string AacEncoder { get; set; } = "libfdk_aac";
@@ -165,7 +166,8 @@ public sealed class EditableLibraryConfig
 
     private static readonly HashSet<string> Known = new(StringComparer.Ordinal)
     {
-        "DatabaseFile", "ItunesLibrary", "FfmpegPath", "LengthLimit", "DiscNumLengthLimit",
+        "DatabaseFile", "ItunesLibrary", "FfmpegPath", "WavpackPath", "LengthLimit",
+        "DiscNumLengthLimit",
         "SyncTarget", "SyncPlaylist", "PlaylistSource", "PlaylistTarget", "PlaylistType", "IndexTarget",
         "IngestSettings", "ArtworkHealthSettings", "CrossSyncMusicSettings",
         "CrossSyncPlaylistsSettings", "LibraryProfile", "ExportProfile", "MachineBindings",
@@ -192,6 +194,8 @@ public sealed class EditableLibraryConfig
                 (string?)root.Element("ItunesLibrary"),
             FfmpegPath = parsed.MachineBindings?.FfmpegPath ??
                 (string?)root.Element("FfmpegPath") ?? "ffmpeg",
+            WavpackPath = parsed.MachineBindings?.WavpackPath ??
+                (string?)root.Element("WavpackPath") ?? "wavpack",
             _sourceRoot = new XElement(root),
             _loadedPath = Path.GetFullPath(path),
         };
@@ -414,6 +418,8 @@ public sealed class EditableLibraryConfig
                 root.Add(new XElement("ItunesLibrary", ItunesLibraryPath.Trim()));
             root.Add(new XElement("FfmpegPath",
                 string.IsNullOrWhiteSpace(FfmpegPath) ? "ffmpeg" : FfmpegPath.Trim()));
+            root.Add(new XElement("WavpackPath",
+                string.IsNullOrWhiteSpace(WavpackPath) ? "wavpack" : WavpackPath.Trim()));
         }
 
         foreach (var t in IndexTargets)
@@ -932,7 +938,11 @@ public sealed class EditableLibraryConfig
             new XElement("ToolBinding",
                 new XAttribute("Name", "Ffmpeg"),
                 new XAttribute("Path",
-                    string.IsNullOrWhiteSpace(FfmpegPath) ? "ffmpeg" : FfmpegPath.Trim())));
+                    string.IsNullOrWhiteSpace(FfmpegPath) ? "ffmpeg" : FfmpegPath.Trim())),
+            new XElement("ToolBinding",
+                new XAttribute("Name", "Wavpack"),
+                new XAttribute("Path",
+                    string.IsNullOrWhiteSpace(WavpackPath) ? "wavpack" : WavpackPath.Trim())));
 
         if (!string.IsNullOrWhiteSpace(ItunesLibraryPath))
             root.Add(new XElement("ToolBinding",

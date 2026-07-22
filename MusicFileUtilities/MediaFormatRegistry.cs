@@ -203,7 +203,8 @@ namespace MusicFileUtilities
                 indexed | MediaFormatCapabilities.TranscodeDestination | remux);
             yield return new(".ogg", "Ogg Vorbis", MediaFormatFamily.OggVorbis,
                 indexed | remux);
-            yield return new(".wv", "WavPack", MediaFormatFamily.WavPack, indexed | remux);
+            yield return new(".wv", "WavPack", MediaFormatFamily.WavPack,
+                indexed | MediaFormatCapabilities.TranscodeDestination | remux);
 
             // These variants have long been supported by direct metadata/artwork editing and by
             // iTunes reconciliation, but not by automatic library indexing. Preserve that boundary.

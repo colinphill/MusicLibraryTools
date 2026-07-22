@@ -49,6 +49,9 @@ Embedded artwork is parsed, hashed, measured, and preserved byte-for-byte across
   packaging instructions are in
   [`MusicLibraryManager/DEPLOYMENT.md`](MusicLibraryManager/DEPLOYMENT.md).
 
+The complete desktop Settings reference, including examples for every tab, is in
+[MusicLibraryManager/SETTINGS_REFERENCE.md](MusicLibraryManager/SETTINGS_REFERENCE.md).
+
 ### Tools
 
 Sync and devices:

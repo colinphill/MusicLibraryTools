@@ -126,6 +126,9 @@ public sealed class UiControlTests
 
             settings.FindControl<TabControl>("SettingsTabs")!.SelectedIndex = 3;
             Dispatcher.UIThread.RunJobs();
+            Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
+                text => text.Text == "WavPack");
+            Assert.Equal("wavpack", viewModel.WavpackPath);
             Assert.DoesNotContain(settings.GetVisualDescendants().OfType<TextBlock>(), text =>
                 text.Text is "Path length limit" or "Disc number length limit" or
                     "AAC encoder" or "AAC bitrate (kbps)");

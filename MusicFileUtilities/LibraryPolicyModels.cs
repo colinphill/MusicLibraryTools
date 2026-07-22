@@ -1456,12 +1456,25 @@ namespace MusicLibraryTools
                     {
                         ".flac" => codec == "flac",
                         ".m4a" => codec is "aac" or "m4a" or "alac",
+                        ".wv" => codec is "wv" or "wavpack",
                         _ => false,
                     };
                     if (!compatible)
                         throw new InvalidDataException(
                             $"Transcode recipe '{recipe.Id}' codec '{codec}' is not compatible " +
                             $"with container '{outputExtension}'.");
+                    if (outputExtension == ".wv")
+                    {
+                        if (inputExtensions.Any(extension => extension != ".dsf"))
+                            throw new InvalidDataException(
+                                $"WavPack DSD recipe '{recipe.Id}' accepts only .dsf inputs.");
+                        if (recipe.BitrateKbps is not null ||
+                            !string.IsNullOrWhiteSpace(recipe.Encoder) ||
+                            !string.IsNullOrWhiteSpace(recipe.ExtraFfmpegOptions))
+                            throw new InvalidDataException(
+                                $"WavPack DSD recipe '{recipe.Id}' cannot specify a bitrate, " +
+                                "encoder, or extra FFmpeg options.");
+                    }
                     break;
             }
 
@@ -1746,7 +1759,8 @@ namespace MusicLibraryTools
                 .Append("machine-bindings|")
                 .Append(configuration.DatabaseFile).Append('|')
                 .Append(configuration.ItunesLibraryPath).Append('|')
-                .Append(configuration.FfmpegPath).AppendLine()
+                .Append(configuration.FfmpegPath).Append('|')
+                .Append(configuration.WavpackPath).AppendLine()
                 .Append("ingest-settings|")
                 .Append(ingestSettings.AacEncoder).Append('|')
                 .Append(ingestSettings.AacBitrateKbps).Append('|')

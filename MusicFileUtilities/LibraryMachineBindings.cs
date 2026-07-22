@@ -32,6 +32,7 @@ namespace MusicLibraryTools
             Dictionary<Guid, string> rootPaths,
             string? databaseFile,
             string? ffmpegPath,
+            string? wavpackPath,
             string? itunesLibraryPath,
             Dictionary<string, LibraryExportTransportBinding> exportTransports)
         {
@@ -40,6 +41,7 @@ namespace MusicLibraryTools
             rootPaths_ = rootPaths;
             DatabaseFile = databaseFile;
             FfmpegPath = ffmpegPath;
+            WavpackPath = wavpackPath;
             ItunesLibraryPath = itunesLibraryPath;
             exportTransports_ = exportTransports;
         }
@@ -49,6 +51,7 @@ namespace MusicLibraryTools
         public IReadOnlyDictionary<Guid, string> RootPaths => rootPaths_;
         public string? DatabaseFile { get; }
         public string? FfmpegPath { get; }
+        public string? WavpackPath { get; }
         public string? ItunesLibraryPath { get; }
         public IReadOnlyDictionary<string, LibraryExportTransportBinding> ExportTransports =>
             new ReadOnlyDictionary<string, LibraryExportTransportBinding>(exportTransports_);
@@ -121,6 +124,7 @@ namespace MusicLibraryTools
             ValidateToolBindings(root);
             string? database = SinglePath(root, "DatabaseBinding", "Path");
             string? ffmpeg = SingleToolPath(root, "Ffmpeg");
+            string? wavpack = SingleToolPath(root, "Wavpack");
             string? itunes = SingleToolPath(root, "ItunesLibrary");
             var exportTransports = new Dictionary<string, LibraryExportTransportBinding>(
                 StringComparer.OrdinalIgnoreCase);
@@ -154,6 +158,7 @@ namespace MusicLibraryTools
                 rootPaths,
                 database is null ? null : ResolveDatabase(database, directory),
                 ffmpeg is null ? null : ResolveExecutable(ffmpeg, directory),
+                wavpack is null ? null : ResolveExecutable(wavpack, directory),
                 itunes is null ? null : ResolveFileSystemPath(itunes, directory),
                 exportTransports);
         }

@@ -19,6 +19,7 @@ public class EditableLibraryConfigTests
                 DatabaseFile = "mycache.db",
                 ItunesLibraryPath = @"C:\Music\iTunes Library.itl",
                 FfmpegPath = @"C:\ffmpeg\ffmpeg.exe",
+                WavpackPath = @"C:\wavpack\wavpack.exe",
                 LengthLimit = 200,
                 DiscNumLengthLimit = 180,
                 AacEncoder = "aac-test",
@@ -65,6 +66,7 @@ public class EditableLibraryConfigTests
             Assert.Equal("mycache.db", reloaded.DatabaseFile);
             Assert.Equal(@"C:\Music\iTunes Library.itl", reloaded.ItunesLibraryPath);
             Assert.Equal(@"C:\ffmpeg\ffmpeg.exe", reloaded.FfmpegPath);
+            Assert.Equal(@"C:\wavpack\wavpack.exe", reloaded.WavpackPath);
             Assert.Equal(200, reloaded.LengthLimit);
             Assert.Equal(180, reloaded.DiscNumLengthLimit);
             Assert.Equal("aac-test", reloaded.AacEncoder);
@@ -765,6 +767,7 @@ public class EditableLibraryConfigTests
         string musicPath = Path.Combine(work, "Music");
         string databasePath = Path.Combine(work, "Cache", "library.db");
         string ffmpegPath = Path.Combine(work, "Tools", "ffmpeg");
+        string wavpackPath = Path.Combine(work, "Tools", "wavpack");
         string itunesPath = Path.Combine(work, "Catalog", "Library.itl");
         try
         {
@@ -773,6 +776,7 @@ public class EditableLibraryConfigTests
                 MachineBindingsFile = Path.Combine("machine", "bindings.xml"),
                 DatabaseFile = databasePath,
                 FfmpegPath = ffmpegPath,
+                WavpackPath = wavpackPath,
                 ItunesLibraryPath = itunesPath,
                 IndexTargets = [new IndexTargetEntry { Target = musicPath }],
             };
@@ -785,6 +789,7 @@ public class EditableLibraryConfigTests
                 (string?)portable.Root!.Element("MachineBindings")?.Attribute("File"));
             Assert.Null(portable.Root.Element("DatabaseFile"));
             Assert.Null(portable.Root.Element("FfmpegPath"));
+            Assert.Null(portable.Root.Element("WavpackPath"));
             Assert.Null(portable.Root.Element("ItunesLibrary"));
             Assert.Null(portable.Root.Element("IndexTarget")?.Attribute("Path"));
 
@@ -801,6 +806,7 @@ public class EditableLibraryConfigTests
                 Assert.Single(runtime.IndexLocations).Target);
             Assert.Equal(Path.GetFullPath(databasePath), runtime.DatabaseFile);
             Assert.Equal(Path.GetFullPath(ffmpegPath), runtime.FfmpegPath);
+            Assert.Equal(Path.GetFullPath(wavpackPath), runtime.WavpackPath);
             Assert.Equal(Path.GetFullPath(itunesPath), runtime.ItunesLibraryPath);
 
             EditableLibraryConfig reloaded = EditableLibraryConfig.Load(configPath);

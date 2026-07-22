@@ -12,6 +12,8 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\AppIcon.ico" />
+    <None Update="SETTINGS_REFERENCE.md"
+          CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>

@@ -69,6 +69,8 @@ requires an Apple Developer ID with hardened-runtime signing and notarization.
 The configured `ffmpeg` executable must exist on the target computer for audio verification and
 transcoding workflows. Library configuration, cache, window state, saved grids, and split widths
 use the shared application settings services.
+The configured WavPack executable is additionally required for lossless DSF-to-WavPack DSD
+ingest recipes.
 
 ## CI/CD
 

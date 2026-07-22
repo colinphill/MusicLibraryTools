@@ -124,6 +124,7 @@ public sealed class AppSettings : IAppSettings
             !Path.GetExtension(library).Equals(".itl", StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("<ItunesLibrary> must identify an .itl file.");
         _ = configuration.FfmpegPath;
+        _ = configuration.WavpackPath;
         _ = configuration.IngestSettings;
         _ = configuration.ArtworkHealthSettings;
         _ = configuration.CrossSyncTarget;
