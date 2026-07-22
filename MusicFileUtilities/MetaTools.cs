@@ -321,7 +321,11 @@ namespace MusicFileUtilities
 
     public static class MetadataExtensions
     {
-        public static readonly HashSet<string> ValidExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".dsf", ".m4a", ".mp3", ".flac", ".ogg", ".wv" };
+        // Compatibility view for older callers. MediaFormatRegistry is the authoritative source;
+        // this set intentionally contains only formats enabled for automatic library indexing.
+        public static readonly HashSet<string> ValidExtensions = new HashSet<string>(
+            MediaFormatRegistry.Default.GetExtensions(MediaFormatCapabilities.LibraryIndex),
+            StringComparer.OrdinalIgnoreCase);
 
         public static readonly HashSet<string>.AlternateLookup<ReadOnlySpan<char>> ValidExtensionSpans = ValidExtensions.GetAlternateLookup<ReadOnlySpan<char>>();
 

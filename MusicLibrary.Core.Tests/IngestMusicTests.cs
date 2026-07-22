@@ -1,6 +1,11 @@
 using MusicFileUtilities;
+using MusicLibraryTools;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using Xunit;
 
 namespace MusicLibrary.Core.Tests;
@@ -68,7 +73,8 @@ public class IngestMusicTests
         var result = await new IngestMusicService(fake).ApplyAsync(plan, []);
 
         Assert.False(result.Cancelled);
-        Assert.Equal(0, result.Failed);
+        Assert.True(result.Failed == 0,
+            string.Join(Environment.NewLine, result.Albums.Select(album => album.Error)));
         Assert.Equal(Math.Min(2, Environment.ProcessorCount), fake.MaxConcurrent);
         Assert.False(File.Exists(first));
         Assert.False(File.Exists(second));
@@ -310,6 +316,217 @@ public class IngestMusicTests
     }
 
     [Fact]
+    public async Task RecipeCopy_PreservesSourceSidecarsAndTags_WithoutFfmpeg()
+    {
+        using var tree = new TempTree();
+        string source = tree.FileFromFixture("incoming", "original.flac", "sample.flac");
+        string sidecar = tree.TestFile("incoming", "booklet.pdf");
+        (string configPath, string destination, _) = CreateRecipeLibrary(tree);
+        var ffmpeg = new FakeFfmpeg();
+        var service = new IngestMusicService(ffmpeg);
+
+        IngestPlan plan = await service.PreviewAsync(new(tree.Path("incoming"), configPath));
+
+        IngestOutputPlan output = Assert.Single(Assert.Single(plan.Albums).Outputs);
+        Assert.Equal(IngestOutputKind.Recipe, output.Kind);
+        Assert.Equal(LibraryIngestAction.Copy, output.Action);
+        Assert.StartsWith(destination, output.DestinationPath,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(plan.Configuration.PolicySnapshot?.Fingerprint, plan.PolicyFingerprint);
+        Assert.DoesNotContain(plan.Files, file => file.Source == sidecar &&
+            file.Summary.Contains("Delete", StringComparison.OrdinalIgnoreCase));
+
+        IngestResult result = await service.ApplyAsync(plan, []);
+
+        Assert.True(result.Failed == 0,
+            string.Join(Environment.NewLine, result.Albums.Select(album => album.Error)));
+        Assert.Equal(0, ffmpeg.PreflightCalls);
+        Assert.True(File.Exists(source));
+        Assert.True(File.Exists(sidecar));
+        Assert.True(File.Exists(output.DestinationPath));
+        Assert.Equal(File.ReadAllBytes(source), File.ReadAllBytes(output.DestinationPath));
+    }
+
+    [Fact]
+    public async Task RecipeIngestStagesFrontCoverSidecarInsideReviewedTransaction()
+    {
+        using var tree = new TempTree();
+        string source = tree.FileFromFixture("incoming", "artwork.flac", "sample.flac");
+        WriteArtwork(source,
+        [
+            new ArtworkImage(ID3v2Util.APICType.FrontCover, "image/png", "front",
+                MakePng(40, 20, Color.Red)),
+            new ArtworkImage(ID3v2Util.APICType.BackCover, "image/png", "back",
+                MakePng(20, 40, Color.Blue)),
+        ]);
+        var policy = new LibraryArtworkPolicy(
+            LibraryArtworkStorage.Sidecar,
+            LibraryArtworkRoleSelection.FrontCoverOnly,
+            LibraryArtworkEncoding.Png,
+            MaximumDimension: 16,
+            MaximumEncodedBytes: 1_000_000,
+            JpegQuality: 85,
+            SidecarFileNameTemplate: "{Role}{Extension}");
+        (string configPath, _, _) = CreateRecipeLibrary(
+            tree, policy, grantArtworkPermission: true);
+        var service = new IngestMusicService(new FakeFfmpeg());
+
+        IngestPlan plan = await service.PreviewAsync(
+            new(tree.Path("incoming"), configPath));
+
+        IngestOutputPlan output = Assert.Single(Assert.Single(plan.Albums).Outputs);
+        IngestArtworkArtifactPlan artifact = Assert.Single(output.ArtworkArtifacts);
+        Assert.Equal("cover", artifact.Role);
+        Assert.Equal("image/png", artifact.MimeType);
+        Assert.Equal(16, artifact.Width);
+        Assert.EndsWith("cover.png", artifact.SidecarDestination,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.Contains(artifact.SidecarDestination!,
+            Assert.Single(plan.Files).Summary, StringComparison.Ordinal);
+
+        IngestResult result = await service.ApplyAsync(plan, []);
+
+        Assert.Equal(0, result.Failed);
+        Assert.True(File.Exists(output.DestinationPath));
+        Assert.True(File.Exists(artifact.SidecarDestination));
+        Assert.Empty(MediaFile.GetFile(output.DestinationPath, readOnly: true).Tags
+            .SelectMany(tag => tag.GetImageMetadata()));
+        using Image sidecar = Image.Load(artifact.SidecarDestination!);
+        Assert.Equal(16, sidecar.Width);
+        Assert.Equal(8, sidecar.Height);
+    }
+
+    [Fact]
+    public async Task RecipeIngestArtworkNoneRemovesEmbeddedImagesWithoutArtworkPermission()
+    {
+        using var tree = new TempTree();
+        string source = tree.FileFromFixture("incoming", "artwork.flac", "sample.flac");
+        WriteArtwork(source,
+        [
+            new ArtworkImage(ID3v2Util.APICType.FrontCover, "image/png", "front",
+                MakePng(16, 16, Color.Red)),
+        ]);
+        LibraryArtworkPolicy policy = LibraryProfilePresets.Create(
+            LibraryProfilePreset.Custom).Artwork;
+        (string configPath, _, _) = CreateRecipeLibrary(tree, policy);
+        var service = new IngestMusicService(new FakeFfmpeg());
+
+        IngestPlan plan = await service.PreviewAsync(
+            new(tree.Path("incoming"), configPath));
+        IngestOutputPlan output = Assert.Single(Assert.Single(plan.Albums).Outputs);
+
+        Assert.Empty(output.ArtworkArtifacts);
+        Assert.Empty(plan.Conflicts);
+        IngestResult result = await service.ApplyAsync(plan, []);
+        Assert.Equal(0, result.Failed);
+        Assert.Empty(MediaFile.GetFile(output.DestinationPath, readOnly: true).Tags
+            .SelectMany(tag => tag.GetImageMetadata()));
+    }
+
+    [Fact]
+    public async Task RecipeArtworkTransferRequiresDestinationArtworkPermission()
+    {
+        using var tree = new TempTree();
+        string source = tree.FileFromFixture("incoming", "artwork.flac", "sample.flac");
+        WriteArtwork(source,
+        [
+            new ArtworkImage(ID3v2Util.APICType.FrontCover, "image/png", "front",
+                MakePng(16, 16, Color.Red)),
+        ]);
+        LibraryArtworkPolicy policy = LibraryProfilePresets.Create(
+            LibraryProfilePreset.ArtistAlbum).Artwork;
+        (string configPath, _, _) = CreateRecipeLibrary(tree, policy);
+
+        IngestPlan plan = await new IngestMusicService(new FakeFfmpeg()).PreviewAsync(
+            new(tree.Path("incoming"), configPath));
+
+        Assert.Contains(plan.Conflicts, conflict => conflict.Message.Contains(
+            "does not permit artwork writes", StringComparison.OrdinalIgnoreCase));
+        Assert.False(plan.CanApply);
+    }
+
+    [Fact]
+    public async Task GenericDiscPolicy_PreservesAlbumTitleAndDiscTag()
+    {
+        using var tree = new TempTree();
+        string source = tree.FileFromFixture("incoming", "disc-track.flac", "sample.flac");
+        WriteTags(source, "Edition (Disc 9)", "Disc track", 3, 2);
+        (string configPath, _, _) = CreateRecipeLibrary(tree);
+
+        IngestPlan plan = await new IngestMusicService(new FakeFfmpeg())
+            .PreviewAsync(new(tree.Path("incoming"), configPath));
+
+        IngestTrackPlan track = Assert.Single(Assert.Single(plan.Albums).Tracks);
+        Assert.Equal("Edition (Disc 9)", track.Album);
+        Assert.Equal(2, track.OriginalDiscNumber);
+        Assert.Equal(3, track.TrackNumber);
+        Assert.True(Assert.Single(Assert.Single(plan.Albums).Outputs).PreserveDiscTags);
+    }
+
+    [Fact]
+    public async Task GenericRecipeUsesNamingFallbacksForMissingCoreTags()
+    {
+        using var tree = new TempTree();
+        string source = tree.FileFromFixture("incoming", "untagged.flac", "sample.flac");
+        RemoveCoreTags(source);
+        (string configPath, string destination, EditableLibraryConfig editable) =
+            CreateRecipeLibrary(tree);
+        int profileIndex = editable.Profiles.FindIndex(profile =>
+            profile.Id == editable.ActiveProfileId);
+        LibraryProfile profile = editable.Profiles[profileIndex];
+        editable.Profiles[profileIndex] = profile with
+        {
+            Naming = profile.Naming with
+            {
+                DirectoryTemplate = "{AlbumArtist}/{Album}",
+                FileNameTemplate = "[{Track} ]{Title}{Extension}",
+            },
+        };
+        editable.Save(configPath);
+        var service = new IngestMusicService(new FakeFfmpeg());
+
+        IngestPlan generic = await service.PreviewAsync(
+            new(tree.Path("incoming"), configPath));
+
+        Assert.Empty(generic.Conflicts);
+        IngestTrackPlan track = Assert.Single(Assert.Single(generic.Albums).Tracks);
+        Assert.False(track.HadTrackNumber);
+        Assert.Equal("", track.Artist);
+        Assert.Equal("", track.Album);
+        Assert.Equal("", track.Title);
+        Assert.Equal(
+            Path.Combine(destination, "Unknown Artist", "Unknown Album", "Untitled.flac"),
+            Assert.Single(Assert.Single(generic.Albums).Outputs).DestinationPath);
+
+        IngestPlan legacy = await service.PreviewAsync(
+            new(tree.Path("incoming"), tree.Config()));
+        Assert.Contains(legacy.Conflicts, conflict => conflict.Message.Contains(
+            "required", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Apply_RejectsRecipePreviewAfterPolicyChanges()
+    {
+        using var tree = new TempTree();
+        string source = tree.FileFromFixture("incoming", "one.flac", "sample.flac");
+        (string configPath, _, EditableLibraryConfig editable) = CreateRecipeLibrary(tree);
+        var service = new IngestMusicService(new FakeFfmpeg());
+        IngestPlan plan = await service.PreviewAsync(new(tree.Path("incoming"), configPath));
+        int index = editable.Profiles.FindIndex(profile => profile.Id == editable.ActiveProfileId);
+        editable.Profiles[index] = editable.Profiles[index] with
+        {
+            Quality = new LibraryQualityPolicy(96_000, 32),
+        };
+        editable.Save(configPath);
+
+        IngestResult result = await service.ApplyAsync(plan, []);
+
+        Assert.True(result.Cancelled);
+        Assert.Contains("policy changed", result.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.True(File.Exists(source));
+    }
+
+    [Fact]
     public async Task Apply_RemoveNonMusicRejectsAFileChangedSincePreview()
     {
         using var tree = new TempTree();
@@ -374,6 +591,71 @@ public class IngestMusicTests
         };
     }
 
+    private static (string ConfigPath, string Destination, EditableLibraryConfig Editable)
+        CreateRecipeLibrary(
+            TempTree tree,
+            LibraryArtworkPolicy? artworkPolicy = null,
+            bool grantArtworkPermission = false)
+    {
+        string destination = tree.Path("recipe-output");
+        var editable = EditableLibraryConfig.CreateNew();
+        var root = new IndexTargetEntry
+        {
+            Target = destination,
+            ProfileId = "copy-recipe",
+            Permissions = LibraryRootPermissions.IngestOutput |
+                (grantArtworkPermission ? LibraryRootPermissions.WriteArtwork :
+                    LibraryRootPermissions.None),
+            Organize = false,
+        };
+        LibraryProfile custom = LibraryProfilePresets.Create(
+            LibraryProfilePreset.Custom, "copy-recipe", "Preserving copy recipe");
+        var recipe = new LibraryIngestRecipe(
+            "copy-flac", "Copy FLAC", true, [".flac"], true,
+            null, null, null, false, LibraryIngestAction.Copy,
+            root.Id, LibraryIngestRole.None, ".flac", "flac", null,
+            null, null, null, null, custom.Id, true, true,
+            LibraryPathCollisionPolicy.Stop);
+        custom = custom with
+        {
+            DefaultRootPermissions = LibraryRootPermissions.IngestOutput,
+            Naming = custom.Naming with
+            {
+                DirectoryTemplate = "{AlbumArtist}/{Album}",
+                FileNameTemplate = "{OriginalName}{Extension}",
+            },
+            Ingest = new LibraryIngestPolicy(
+                true, LibrarySourceDisposition.Preserve, true, [recipe]),
+            Artwork = artworkPolicy ?? custom.Artwork,
+        };
+        editable.Profiles.Add(custom);
+        editable.ActiveProfileId = custom.Id;
+        editable.IndexTargets.Add(root);
+        string configPath = tree.Path("recipe-library.xml");
+        editable.Save(configPath);
+        return (configPath, destination, editable);
+    }
+
+    private static byte[] MakePng(int width, int height, Color color)
+    {
+        using var image = new Image<Rgba32>(width, height);
+        image.Mutate(context => context.BackgroundColor(color));
+        using var stream = new MemoryStream();
+        image.Save(stream, new PngEncoder());
+        return stream.ToArray();
+    }
+
+    private static void WriteArtwork(
+        string path,
+        IReadOnlyList<ArtworkImage> images)
+    {
+        IMediaFile media = MediaFile.GetFile(path);
+        IArtworkWriter writer = media as IArtworkWriter ??
+            media.Tags.OfType<IArtworkWriter>().First();
+        writer.SetImages(images);
+        media.SaveTags();
+    }
+
     private static IngestPlan ManualPlan(TempTree tree, IReadOnlyList<string> sources, bool requireApproval)
     {
         var config = IngestMusicConfiguration.Load(tree.Config());
@@ -410,6 +692,19 @@ public class IngestMusicTests
         writer.SetField(TagFields.Title, title);
         writer.SetField(TagFields.TrackNumber, track.ToString());
         writer.SetField(TagFields.DiscNumber, disc.ToString());
+        writer.Save();
+    }
+
+    private static void RemoveCoreTags(string path)
+    {
+        var media = MediaFile.GetFile(path);
+        var writer = Assert.IsAssignableFrom<IMetadataWriter>(media);
+        writer.RemoveField(TagFields.Artist);
+        writer.RemoveField(TagFields.AlbumArtist);
+        writer.RemoveField(TagFields.Album);
+        writer.RemoveField(TagFields.Title);
+        writer.RemoveField(TagFields.TrackNumber);
+        writer.RemoveField(TagFields.TotalTracks);
         writer.Save();
     }
 

@@ -50,9 +50,15 @@ public sealed class IngestPreflightService(
             configuration.CdDestination,
             configuration.PairedCdDestination,
             configuration.HighResolutionDestination,
+            .. configuration.Profile.Ingest.Recipes
+                .Where(recipe => recipe.Enabled)
+                .Select(configuration.ResolveTarget)
+                .Where(target => target is not null)
+                .Select(target => target!.Target),
         ];
         destinations = destinations.Where(destination =>
-            !string.IsNullOrWhiteSpace(destination)).ToArray();
+                !string.IsNullOrWhiteSpace(destination))
+            .Distinct(PathComparer).ToArray();
         if (destinations.Any(destination => PathsOverlap(source, destination)))
             checks.Add(Error("Path isolation", "The source directory overlaps an ingestion destination."));
         else if (destinations.SelectMany((left, index) => destinations.Skip(index + 1)
@@ -74,8 +80,36 @@ public sealed class IngestPreflightService(
 
         try
         {
-            await ffmpeg.PreflightAsync(configuration.FfmpegPath, configuration.AacEncoder, ct);
-            checks.Add(Pass("ffmpeg", $"Found {configuration.AacEncoder} via {configuration.FfmpegPath}."));
+            string[] encoders = RequiredEncoders(configuration);
+            if (encoders.Length == 0 && !RequiresFfmpeg(configuration))
+                checks.Add(Pass("ffmpeg", "Not required by the active copy-only ingest recipes."));
+            else
+            {
+                if (encoders.Length == 0)
+                    encoders = [""];
+                foreach (string encoder in encoders)
+                    await ffmpeg.PreflightAsync(configuration.FfmpegPath, encoder, ct);
+                string? automaticAac = null;
+                bool needsAutomaticAac = configuration.Profile.Preset !=
+                                         MusicLibraryTools.LibraryProfilePreset.LegacyMusicLibraryTools &&
+                    configuration.Profile.Ingest.Recipes.Any(recipe => recipe.Enabled &&
+                        recipe.Action == MusicLibraryTools.LibraryIngestAction.Transcode &&
+                        string.IsNullOrWhiteSpace(recipe.Encoder) &&
+                        (recipe.Codec ?? recipe.OutputExtension ?? "").Trim()
+                            .TrimStart('.').Equals("aac", StringComparison.OrdinalIgnoreCase));
+                if (needsAutomaticAac)
+                    automaticAac = await ffmpeg.ResolveEncoderAsync(
+                        configuration.FfmpegPath,
+                        [configuration.AacEncoder, "aac"], ct);
+                string capabilities = string.Join(", ", encoders
+                    .Where(encoder => !string.IsNullOrWhiteSpace(encoder))
+                    .Append(automaticAac)
+                    .Where(encoder => !string.IsNullOrWhiteSpace(encoder))
+                    .Distinct(StringComparer.Ordinal));
+                checks.Add(Pass("ffmpeg", string.IsNullOrWhiteSpace(capabilities)
+                    ? $"Found ffmpeg via {configuration.FfmpegPath}."
+                    : $"Found {capabilities} via {configuration.FfmpegPath}."));
+            }
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
@@ -86,6 +120,32 @@ public sealed class IngestPreflightService(
         }
 
         return new(checks);
+    }
+
+    internal static bool RequiresFfmpeg(IngestMusicConfiguration configuration) =>
+        configuration.Profile.Preset == MusicLibraryTools.LibraryProfilePreset.LegacyMusicLibraryTools ||
+        configuration.Profile.Ingest.Recipes.Any(recipe => recipe.Enabled &&
+            recipe.Action != MusicLibraryTools.LibraryIngestAction.Copy);
+
+    internal static string[] RequiredEncoders(IngestMusicConfiguration configuration)
+    {
+        if (configuration.Profile.Preset == MusicLibraryTools.LibraryProfilePreset.LegacyMusicLibraryTools)
+            return [configuration.AacEncoder];
+        return configuration.Profile.Ingest.Recipes
+            .Where(recipe => recipe.Enabled &&
+                recipe.Action == MusicLibraryTools.LibraryIngestAction.Transcode)
+            .Select(recipe =>
+            {
+                string codec = (recipe.Codec ?? recipe.OutputExtension ?? "")
+                    .Trim().TrimStart('.').ToLowerInvariant();
+                return codec is "aac" or "m4a"
+                    ? recipe.Encoder
+                    : codec == "flac" ? "flac" : recipe.Encoder ?? codec;
+            })
+            .Where(encoder => !string.IsNullOrWhiteSpace(encoder))
+            .Select(encoder => encoder!)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
     }
 
     private static bool PathsOverlap(string first, string second)

@@ -281,41 +281,43 @@ namespace MusicFileUtilities
             HashAlgorithm hash = null,
             bool readOnly = false,
             bool readArtwork = true,
-            long? knownLength = null)
+            long? knownLength = null,
+            IMediaFormatRegistry formatRegistry = null)
         {
-            string extension = Path.GetExtension(path).ToLower();
+            formatRegistry ??= MediaFormatRegistry.Default;
+            if (!formatRegistry.TryGetForPath(path, out MediaFormatDefinition format) ||
+                !format.Supports(MediaFormatCapabilities.ReadMetadata))
+                throw new ArgumentException("Invalid File Type", "path");
+
             // No File.Exists pre-check: on a network share it costs a full round-trip per file,
             // and the parser's own open throws FileNotFoundException for a missing file anyway.
             // Indexing callers may provide the length captured by the same directory enumeration
             // so parsers do not issue another handle-length request over the share.
 
             IMediaFile file = null;
-            switch (extension)
+            switch (format.Family)
             {
-                case ".wv":
+                case MediaFormatFamily.WavPack:
                     file = new WavPackFile(path, readArtwork, knownLength);
                     break;
 
-                case ".mp3":
+                case MediaFormatFamily.Mp3:
                     file = new MP3File(path, readArtwork, knownLength);
                     break;
 
-                case ".dsf":
+                case MediaFormatFamily.Dsf:
                     file = new DSFFile(path, readArtwork, knownLength);
                     break;
 
-                case ".m4a":
-                case ".mp4":
-                case ".m4p":
-                case ".m4r":
+                case MediaFormatFamily.Mp4:
                     file = new MP4File(path, readOnly, readArtwork, knownLength);
                     break;
 
-                case ".ogg":
+                case MediaFormatFamily.OggVorbis:
                     file = new OggVorbisFile(path, readArtwork);
                     break;
 
-                case ".flac":
+                case MediaFormatFamily.Flac:
                     file = new FLACFile(path, readOnly, readArtwork, knownLength);
                     break;
 

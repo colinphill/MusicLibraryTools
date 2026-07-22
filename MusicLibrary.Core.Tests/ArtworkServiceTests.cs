@@ -1,6 +1,8 @@
 using MusicFileUtilities;
+using MusicLibraryTools;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
+using System.Xml.Linq;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
@@ -124,6 +126,30 @@ public class ArtworkServiceTests
         {
             File.Delete(frontPng);
             File.Delete(backPng);
+        }
+    }
+
+    [Fact]
+    public async Task LegacySaveImagesPreservesCallerEncoding()
+    {
+        using var media = MediaFixtures.Copy("sample.flac");
+        string png = MakePng(90, 60);
+        try
+        {
+            ArtworkOpResult result = await _art.SaveImagesAsync(media.Path,
+            [
+                new ArtworkInput(ID3v2Util.APICType.FrontCover, "image/png",
+                    File.ReadAllBytes(png)),
+            ]);
+
+            Assert.True(result.Success, result.Error);
+            ArtworkModel cover = Assert.Single(
+                (await _reader.LoadAsync(media.Path)).Value!.Artwork);
+            Assert.Equal("image/png", cover.ImageType);
+        }
+        finally
+        {
+            File.Delete(png);
         }
     }
 
@@ -298,6 +324,167 @@ public class ArtworkServiceTests
         }
     }
 
+    [Fact]
+    public async Task SidecarOnlyPolicyPreservesSourceEncodingWithoutEmbedding()
+    {
+        using var library = new PolicyLibrary();
+        string musicPath = library.CopyFixture("sample.flac");
+        string png = MakePng(180, 120);
+        LibraryProfile profile = LibraryProfilePresets.Create(
+            LibraryProfilePreset.PreserveLayoutAndTags, "sidecars", "Sidecars") with
+        {
+            Artwork = new(
+                LibraryArtworkStorage.Sidecar,
+                LibraryArtworkRoleSelection.AllRoles,
+                LibraryArtworkEncoding.PreserveSource,
+                0,
+                0,
+                90,
+                "{Role}{Extension}"),
+        };
+        var service = new ArtworkService(settings: library.Settings(
+            profile, LibraryRootPermissions.WriteArtwork));
+        try
+        {
+            ArtworkOpResult result = await service.SetCoverFromFileAsync(musicPath, png);
+
+            Assert.True(result.Success, result.Error);
+            string sidecar = Path.Combine(library.Root, "cover.png");
+            Assert.True(File.Exists(sidecar));
+            using Image image = Image.Load(sidecar);
+            Assert.Equal(180, image.Width);
+            Assert.Equal(120, image.Height);
+            Assert.Empty((await _reader.LoadAsync(musicPath)).Value!.Artwork);
+        }
+        finally
+        {
+            File.Delete(png);
+        }
+    }
+
+    [Fact]
+    public async Task FrontCoverOnlyPolicyDropsOtherRolesAndAppliesLimits()
+    {
+        using var library = new PolicyLibrary();
+        string musicPath = library.CopyFixture("sample.flac");
+        string png = MakePng(400, 200);
+        LibraryProfile profile = LibraryProfilePresets.Create(
+            LibraryProfilePreset.PreserveLayoutAndTags, "front-only", "Front only") with
+        {
+            Artwork = new(
+                LibraryArtworkStorage.Sidecar,
+                LibraryArtworkRoleSelection.FrontCoverOnly,
+                LibraryArtworkEncoding.Png,
+                100,
+                0,
+                90,
+                "{Role}{Extension}"),
+        };
+        var service = new ArtworkService(settings: library.Settings(
+            profile, LibraryRootPermissions.WriteArtwork));
+        try
+        {
+            byte[] bytes = File.ReadAllBytes(png);
+            ArtworkOpResult result = await service.SaveImagesAsync(musicPath,
+            [
+                new ArtworkInput(ID3v2Util.APICType.FrontCover, "image/png", bytes),
+                new ArtworkInput(ID3v2Util.APICType.BackCover, "image/png", bytes),
+            ]);
+
+            Assert.True(result.Success, result.Error);
+            string cover = Path.Combine(library.Root, "cover.png");
+            Assert.True(File.Exists(cover));
+            Assert.False(File.Exists(Path.Combine(library.Root, "back.png")));
+            using Image image = Image.Load(cover);
+            Assert.Equal(100, image.Width);
+            Assert.Equal(50, image.Height);
+        }
+        finally
+        {
+            File.Delete(png);
+        }
+    }
+
+    [Fact]
+    public async Task RootWithoutArtworkPermissionCannotWriteEvenWithSidecarProfile()
+    {
+        using var library = new PolicyLibrary();
+        string musicPath = library.CopyFixture("sample.flac");
+        string png = MakePng(50, 50);
+        LibraryProfile profile = LibraryProfilePresets.Create(
+            LibraryProfilePreset.PreserveLayoutAndTags, "locked", "Locked") with
+        {
+            Artwork = LibraryProfilePresets.Create(
+                LibraryProfilePreset.PreserveLayoutAndTags).Artwork with
+            {
+                Storage = LibraryArtworkStorage.Sidecar,
+            },
+        };
+        var service = new ArtworkService(settings: library.Settings(
+            profile, LibraryRootPermissions.None));
+        try
+        {
+            Assert.False(service.SupportsWrite(musicPath));
+            ArtworkOpResult result = await service.SetCoverFromFileAsync(musicPath, png);
+            Assert.False(result.Success);
+            Assert.Contains("does not permit", result.Error);
+            Assert.False(File.Exists(Path.Combine(library.Root, "cover.png")));
+        }
+        finally
+        {
+            File.Delete(png);
+        }
+    }
+
+    [Fact]
+    public async Task ArtworkWritesOutsideConfiguredRootsAreRejected()
+    {
+        using var library = new PolicyLibrary();
+        using var outside = MediaFixtures.Copy("sample.flac");
+        string png = MakePng(50, 50);
+        LibraryProfile profile = LibraryProfilePresets.Create(
+            LibraryProfilePreset.PreserveLayoutAndTags);
+        var service = new ArtworkService(settings: library.Settings(
+            profile, LibraryRootPermissions.WriteArtwork));
+        try
+        {
+            Assert.False(service.SupportsWrite(outside.Path));
+            ArtworkOpResult result = await service.SetCoverFromFileAsync(outside.Path, png);
+            Assert.False(result.Success);
+            Assert.Contains("does not permit", result.Error);
+        }
+        finally
+        {
+            File.Delete(png);
+        }
+    }
+
+    [Fact]
+    public async Task NestedReadOnlyRootOverridesWritableOuterArtworkRoot()
+    {
+        using var library = new PolicyLibrary();
+        string nested = Directory.CreateDirectory(Path.Combine(library.Root, "locked")).FullName;
+        string musicPath = Path.Combine(nested, "sample.flac");
+        File.Copy(MediaFixtures.Path_("sample.flac"), musicPath);
+        string png = MakePng(50, 50);
+        LibraryProfile profile = LibraryProfilePresets.Create(
+            LibraryProfilePreset.PreserveLayoutAndTags);
+        var service = new ArtworkService(settings: library.Settings(profile,
+            (library.Root, LibraryRootPermissions.WriteArtwork),
+            (nested, LibraryRootPermissions.None)));
+        try
+        {
+            Assert.False(service.SupportsWrite(musicPath));
+            ArtworkOpResult result = await service.SetCoverFromFileAsync(musicPath, png);
+            Assert.False(result.Success);
+            Assert.Contains("does not permit", result.Error);
+        }
+        finally
+        {
+            File.Delete(png);
+        }
+    }
+
     private sealed class ThrowingReindexService : IReindexService
     {
         public CancellationToken ReceivedToken { get; private set; }
@@ -307,6 +494,73 @@ public class ArtworkServiceTests
             ReceivedToken = ct;
             throw new InvalidOperationException("cache unavailable");
         }
+    }
+
+    private sealed class PolicyLibrary : IDisposable
+    {
+        public string Root { get; } = Path.Combine(
+            Path.GetTempPath(), "art-policy-" + Guid.NewGuid().ToString("N"));
+
+        public PolicyLibrary() => Directory.CreateDirectory(Root);
+
+        public string CopyFixture(string fixture)
+        {
+            string destination = Path.Combine(Root, fixture);
+            File.Copy(MediaFixtures.Path_(fixture), destination);
+            return destination;
+        }
+
+        public IAppSettings Settings(
+            LibraryProfile profile,
+            LibraryRootPermissions permissions) =>
+            Settings(profile, (Root, permissions));
+
+        public IAppSettings Settings(
+            LibraryProfile profile,
+            params (string Path, LibraryRootPermissions Permissions)[] roots)
+        {
+            string configPath = Path.Combine(Root, "library.xml");
+            var document = new XDocument(
+                new XElement("LibraryConfiguration",
+                    new XAttribute("SchemaVersion", LibraryConfigurationSchema.CurrentVersion),
+                    new XAttribute("LibraryId", Guid.NewGuid()),
+                    new XAttribute("ActiveProfileId", profile.Id),
+                    LibraryProfileXml.Write(profile),
+                    roots.Select(root => new XElement("IndexTarget",
+                        new XAttribute("Path", root.Path),
+                        new XAttribute("Id", Guid.NewGuid()),
+                        new XAttribute("ProfileId", profile.Id),
+                        new XAttribute("Permissions",
+                            LibraryProfileXml.FormatFlags(root.Permissions)),
+                        new XAttribute("Organize", false)))));
+            document.Save(configPath);
+            return new PolicySettings(configPath);
+        }
+
+        public void Dispose()
+        {
+            try { Directory.Delete(Root, recursive: true); } catch { }
+        }
+    }
+
+    private sealed class PolicySettings : IAppSettings
+    {
+        public PolicySettings(string path)
+        {
+            ConfigPath = path;
+            Configuration = new LibraryConfiguration(path);
+        }
+
+        public string? ConfigPath { get; }
+        public LibraryConfiguration? Configuration { get; }
+        public AppConfigurationSnapshot GetSnapshot() => new(ConfigPath, Configuration, 1);
+        public event EventHandler? ConfigurationChanged { add { } remove { } }
+        public void LoadConfig(string path) => throw new NotSupportedException();
+        public string? GetRememberedConfigPath() => ConfigPath;
+        public IReadOnlyList<string> RecentConfigPaths => [ConfigPath!];
+        public void ClearRecentConfigs() { }
+        public string? GetPreference(string key) => null;
+        public void SetPreference(string key, string? value) { }
     }
 
     private static void AssertMostlyRed(Rgba32 pixel)
