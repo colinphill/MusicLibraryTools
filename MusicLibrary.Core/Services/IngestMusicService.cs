@@ -51,8 +51,6 @@ public sealed class IngestMusicService : IIngestMusicService
         LibraryIngestRecipe[] enabledRecipes = ingestProfile.Ingest.Recipes
             .Where(recipe => recipe.Enabled)
             .ToArray();
-        bool legacyPipeline = ingestProfile.Preset ==
-            LibraryProfilePreset.LegacyMusicLibraryTools;
         string? itunesMediaFolder = null;
         IngestFileSnapshot? itunesLibrarySnapshot = null;
         if (!string.IsNullOrWhiteSpace(config.ItunesLibraryPath))
@@ -66,13 +64,10 @@ public sealed class IngestMusicService : IIngestMusicService
                 libraryFile.FullName, libraryFile.Length, libraryFile.LastWriteTimeUtc);
             config = config with { AacDestination = Path.Combine(itunesMediaFolder, "Music") };
         }
-        string[] destinations = (legacyPipeline
-                ? [config.AacDestination, config.CdDestination,
-                    config.PairedCdDestination, config.HighResolutionDestination]
-                : enabledRecipes.Select(recipe => config.ResolveTarget(recipe)?.Target)
-                    .Where(path => !string.IsNullOrWhiteSpace(path))
-                    .Cast<string>())
+        string[] destinations = enabledRecipes
+            .Select(recipe => config.ResolveTarget(recipe)?.Target)
             .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Cast<string>()
             .Distinct(PathComparer)
             .ToArray();
         if (destinations.Any(d => PathsOverlap(sourceRoot, d)))
@@ -178,13 +173,9 @@ public sealed class IngestMusicService : IIngestMusicService
             bool hasHigh = trackPlans.Any(t => t.IsHighResolution);
             var outputs = new List<IngestOutputPlan>();
             var missing = new List<string>();
-            if (legacyPipeline)
-                BuildLegacyOutputs(config, trackPlans, hasHigh, itunesMediaFolder,
-                    claimed, outputs, missing);
-            else
-                BuildRecipeOutputs(config, trackPlans, enabledRecipes,
-                    itunesMediaFolder, claimed, claimedSidecars, outputs,
-                    conflicts, group.Key);
+            BuildRecipeOutputs(config, trackPlans, enabledRecipes,
+                itunesMediaFolder, claimed, claimedSidecars, outputs,
+                conflicts, missing, group.Key, hasHigh);
             if (conflicts.Count != before)
                 continue;
 
@@ -223,9 +214,7 @@ public sealed class IngestMusicService : IIngestMusicService
                             $"{output.RecipeId}: {output.Action}, " +
                             (output.PreserveMetadata ? "preserve metadata" : "normalize metadata") +
                             ArtworkPlanSummary(output) +
-                            (output.OutputRepresentationRole == LibraryRepresentationRole.Ignore
-                                ? ""
-                                : $", representation {output.OutputRepresentationRole}") +
+                            (output.AddToMediaCatalog ? ", add to media catalog" : "") +
                             $", install at {output.DestinationPath}",
                         _ => throw new ArgumentOutOfRangeException(),
                     })
@@ -360,55 +349,6 @@ public sealed class IngestMusicService : IIngestMusicService
         return plans;
     }
 
-    private static void BuildLegacyOutputs(
-        IngestMusicConfiguration config,
-        IReadOnlyList<IngestTrackPlan> trackPlans,
-        bool hasHigh,
-        string? itunesMediaFolder,
-        HashSet<string> claimed,
-        List<IngestOutputPlan> outputs,
-        List<string> missing)
-    {
-        string cdRoot = hasHigh ? config.PairedCdDestination : config.CdDestination;
-        foreach (IGrouping<string, IngestTrackPlan> identity in trackPlans.GroupBy(
-                     track => track.Identity))
-        {
-            List<IngestTrackPlan> candidates = identity.ToList();
-            foreach (IngestTrackPlan high in candidates.Where(track => track.IsHighResolution)
-                         .OrderByDescending(track => track.SampleRate)
-                         .ThenByDescending(track => track.BitsPerSample)
-                         .ThenBy(track => track.SourcePath))
-            {
-                string destination = ClaimCanonical(
-                    config.HighResolutionDestination, high, ".flac", config, claimed);
-                outputs.Add(Output(high, IngestOutputKind.HighResolutionFlac,
-                    high.SourcePath, destination));
-            }
-
-            IngestTrackPlan? cd = candidates.SingleOrDefault(track => !track.IsHighResolution);
-            bool derive = cd is null;
-            if (derive)
-            {
-                cd = candidates.Where(track => track.IsHighResolution)
-                    .OrderByDescending(track => track.SampleRate)
-                    .ThenByDescending(track => track.BitsPerSample)
-                    .ThenBy(track => track.SourcePath, StringComparer.OrdinalIgnoreCase)
-                    .First();
-                missing.Add($"{cd.TrackNumber:D2} {cd.Title}");
-            }
-            IngestTrackPlan selectedCd = cd!;
-            string cdDestination = ClaimCanonical(
-                cdRoot, selectedCd, ".flac", config, claimed);
-            outputs.Add(Output(selectedCd, IngestOutputKind.CdFlac,
-                selectedCd.SourcePath, cdDestination, derive));
-            string aacDestination = itunesMediaFolder is null
-                ? ClaimCanonical(config.AacDestination, selectedCd, ".m4a", config, claimed)
-                : ClaimItunesCanonical(itunesMediaFolder, selectedCd, claimed);
-            outputs.Add(Output(selectedCd, IngestOutputKind.Aac,
-                selectedCd.SourcePath, aacDestination));
-        }
-    }
-
     private static void BuildRecipeOutputs(
         IngestMusicConfiguration config,
         IReadOnlyList<IngestTrackPlan> trackPlans,
@@ -418,27 +358,35 @@ public sealed class IngestMusicService : IIngestMusicService
         Dictionary<string, string> claimedSidecars,
         List<IngestOutputPlan> outputs,
         List<IngestConflict> conflicts,
-        string albumKey)
+        List<string> missing,
+        string albumKey,
+        bool albumHasHighResolution)
     {
         foreach (IGrouping<string, IngestTrackPlan> identity in trackPlans.GroupBy(
                      track => track.Identity))
         {
             foreach (LibraryIngestRecipe recipe in recipes)
             {
-                IngestTrackPlan? selected = identity
+                if (!AlbumMatches(recipe.AlbumCondition, albumHasHighResolution))
+                    continue;
+                IngestTrackPlan[] candidates = identity
                     .Where(track => RecipeMatches(recipe, track))
-                    .OrderByDescending(track => track.SampleRate)
-                    .ThenByDescending(track => track.BitsPerSample)
-                    .ThenBy(track => track.SourcePath, StringComparer.OrdinalIgnoreCase)
-                    .FirstOrDefault();
+                    .ToArray();
+                IngestTrackPlan? selected = SelectRecipeSource(
+                    candidates, recipe.SourceSelection);
                 if (selected is null)
                     continue;
+                bool usedHighResolutionFallback =
+                    recipe.SourceSelection == LibraryIngestSourceSelection.PreferCdQuality &&
+                    selected.IsHighResolution &&
+                    !candidates.Any(track => !track.IsHighResolution);
+                if (usedHighResolutionFallback && recipe.RequireFallbackApproval)
+                    missing.Add($"{selected.TrackNumber:D2} {selected.Title}");
 
                 LibraryIndexLocation? target = config.ResolveTarget(recipe);
-                bool itunesTarget = target is null &&
-                    recipe.DestinationLegacyRole == LibraryIngestRole.AacFallback &&
+                bool catalogTarget = target is null && recipe.AddToMediaCatalog &&
                     !string.IsNullOrWhiteSpace(itunesMediaFolder);
-                if (target is null && !itunesTarget)
+                if (target is null && !catalogTarget)
                 {
                     conflicts.Add(new(albumKey, selected.SourcePath,
                         $"Ingest recipe '{recipe.Name}' has no available destination."));
@@ -466,7 +414,7 @@ public sealed class IngestMusicService : IIngestMusicService
                 string destination;
                 try
                 {
-                    destination = itunesTarget
+                    destination = catalogTarget
                         ? ClaimItunesCanonical(itunesMediaFolder!, selected, claimed)
                         : ClaimProfilePath(target!.Target, selected, extension, config,
                             namingProfile, claimed);
@@ -474,6 +422,15 @@ public sealed class IngestMusicService : IIngestMusicService
                 catch (Exception error) when (error is InvalidDataException or ArgumentException)
                 {
                     conflicts.Add(new(albumKey, selected.SourcePath, error.Message));
+                    continue;
+                }
+                if (recipe.AddToMediaCatalog &&
+                    (string.IsNullOrWhiteSpace(itunesMediaFolder) ||
+                     !IsWithin(destination, itunesMediaFolder)))
+                {
+                    conflicts.Add(new(albumKey, destination,
+                        $"Ingest recipe '{recipe.Name}' requests catalog insertion, but its " +
+                        "destination is outside the configured iTunes Media folder."));
                     continue;
                 }
                 IReadOnlyList<IngestArtworkArtifactPlan> artworkArtifacts = [];
@@ -520,10 +477,14 @@ public sealed class IngestMusicService : IIngestMusicService
                     Action = recipe.Action,
                     OutputCodec = recipe.Codec,
                     Encoder = recipe.Encoder,
+                    ExtraFfmpegOptions = recipe.ExtraFfmpegOptions,
+                    AddToMediaCatalog = recipe.AddToMediaCatalog,
                     BitrateKbps = recipe.BitrateKbps,
                     SampleRateHz = recipe.SampleRateHz,
                     BitsPerSample = recipe.BitsPerSample,
-                    OutputChannels = recipe.OutputChannels,
+                    OutputChannels = ResolveOutputChannels(
+                        recipe.OutputChannels, selected.Channels),
+                    DeriveCd = usedHighResolutionFallback,
                     PreserveMetadata = recipe.PreserveMetadata,
                     PreserveArtwork = recipe.PreserveArtwork,
                     PreserveDiscTags = destinationProfile.Disc.PreserveDiscTags,
@@ -537,6 +498,40 @@ public sealed class IngestMusicService : IIngestMusicService
         }
     }
 
+    private static bool AlbumMatches(
+        LibraryIngestAlbumCondition condition,
+        bool hasHighResolution) => condition switch
+        {
+            LibraryIngestAlbumCondition.Any => true,
+            LibraryIngestAlbumCondition.HasHighResolution => hasHighResolution,
+            LibraryIngestAlbumCondition.HasNoHighResolution => !hasHighResolution,
+            _ => false,
+        };
+
+    private static IngestTrackPlan? SelectRecipeSource(
+        IReadOnlyList<IngestTrackPlan> candidates,
+        LibraryIngestSourceSelection selection)
+    {
+        IEnumerable<IngestTrackPlan> ordered = candidates
+            .OrderByDescending(track => track.SampleRate)
+            .ThenByDescending(track => track.BitsPerSample)
+            .ThenBy(track => track.SourcePath, StringComparer.OrdinalIgnoreCase);
+        if (selection == LibraryIngestSourceSelection.PreferCdQuality)
+            return ordered.FirstOrDefault(track => !track.IsHighResolution) ??
+                   ordered.FirstOrDefault();
+        return ordered.FirstOrDefault();
+    }
+
+    private static int? ResolveOutputChannels(
+        LibraryChannelSelection? selection,
+        uint sourceChannels) => selection switch
+        {
+            LibraryChannelSelection.Stereo => 2,
+            LibraryChannelSelection.Multi => checked((int)sourceChannels),
+            null => null,
+            _ => throw new ArgumentOutOfRangeException(nameof(selection)),
+        };
+
     private static bool RecipeMatches(
         LibraryIngestRecipe recipe,
         IngestTrackPlan track)
@@ -546,7 +541,7 @@ public sealed class IngestMusicService : IIngestMusicService
             return false;
         if (recipe.RequireLossless is bool lossless && track.IsLossless != lossless)
             return false;
-        if (recipe.InputChannels is int channels && track.Channels != channels)
+        if (!ChannelsMatch(recipe.InputChannels, track.Channels))
             return false;
         bool rate = recipe.MinimumSampleRateHz is not int minimumRate ||
                     track.SampleRate >= minimumRate;
@@ -557,6 +552,16 @@ public sealed class IngestMusicService : IIngestMusicService
             ? rate || bits
             : rate && bits;
     }
+
+    private static bool ChannelsMatch(
+        LibraryChannelSelection? selection,
+        uint channels) => selection switch
+        {
+            LibraryChannelSelection.Stereo => channels == 2,
+            LibraryChannelSelection.Multi => channels > 2,
+            null => true,
+            _ => false,
+        };
 
     private static string ClaimProfilePath(
         string root,
@@ -661,7 +666,7 @@ public sealed class IngestMusicService : IIngestMusicService
         bool lossless = codec.CodecType == CodecType.Lossless;
         if (recipe.RequireLossless is bool requiredLossless && lossless != requiredLossless)
             return false;
-        if (recipe.InputChannels is int channels && codec.Channels != channels)
+        if (!ChannelsMatch(recipe.InputChannels, codec.Channels))
             return false;
 
         bool rateMatches = recipe.MinimumSampleRateHz is not int minimumRate ||
@@ -694,7 +699,7 @@ public sealed class IngestMusicService : IIngestMusicService
             ItlFileEditor.EnsureItunesIsClosed();
         EnsureFresh(plan);
         bool needsFfmpeg = plan.Albums.SelectMany(album => album.Outputs).Any(output =>
-            output.Kind != IngestOutputKind.Recipe || output.Action != LibraryIngestAction.Copy);
+            output.Action != LibraryIngestAction.Copy);
         string? automaticAacEncoder = null;
         if (hasAlbums && needsFfmpeg)
         {
@@ -703,10 +708,7 @@ public sealed class IngestMusicService : IIngestMusicService
                 encoders = [""];
             foreach (string encoder in encoders)
                 await _ffmpeg.PreflightAsync(plan.Configuration.FfmpegPath, encoder, ct);
-            bool needsAutomaticAac = plan.Configuration.Profile.Preset !=
-                                     LibraryProfilePreset.LegacyMusicLibraryTools &&
-                plan.Albums.SelectMany(album => album.Outputs).Any(output =>
-                    output.Kind == IngestOutputKind.Recipe &&
+            bool needsAutomaticAac = plan.Albums.SelectMany(album => album.Outputs).Any(output =>
                     output.Action == LibraryIngestAction.Transcode &&
                     string.IsNullOrWhiteSpace(output.Encoder) &&
                     (output.OutputCodec ?? Path.GetExtension(output.DestinationPath)
@@ -1080,7 +1082,7 @@ public sealed class IngestMusicService : IIngestMusicService
                 await itunesSession.CommitAsync(
                 [
                     .. album.Outputs
-                        .Where(output => output.Kind == IngestOutputKind.Aac)
+                        .Where(output => output.AddToMediaCatalog)
                         .Select(output => ItunesMediaMutation.Add(output.DestinationPath)),
                     .. quarantined.Select(move =>
                         ItunesMediaMutation.Remove(move.Original)),
@@ -1195,7 +1197,10 @@ public sealed class IngestMusicService : IIngestMusicService
                             : null),
                         output.SampleRateHz,
                         output.BitsPerSample,
-                        output.OutputChannels),
+                        output.OutputChannels)
+                    {
+                        ExtraOptions = output.ExtraFfmpegOptions,
+                    },
                     ct).ConfigureAwait(false);
                 break;
 
@@ -1764,23 +1769,6 @@ public sealed class IngestMusicService : IIngestMusicService
             throw new InvalidOperationException($"Source changed since preview; preview again: {source.Path}");
     }
 
-    private static IngestOutputPlan Output(IngestTrackPlan track, IngestOutputKind kind, string source, string destination, bool derive = false)
-        => new() { Identity = track.Identity, Kind = kind, Metadata = track, SourcePath = source, DestinationPath = destination, DeriveCd = derive };
-
-    private static string ClaimCanonical(string root, IngestTrackPlan track, string extension,
-        IngestMusicConfiguration config, HashSet<string> claimed)
-    {
-        string artist = track.EffectiveAlbumArtist.LimitLength(config.LengthLimit).FixPath();
-        string album = track.Album.FormatDisc(config.LengthLimit, config.DiscNumLengthLimit).FixPath();
-        string title = track.Title.LimitLength(config.LengthLimit).FixPath();
-        string relative = Path.Combine(artist, album, $"{track.TrackNumber:D2} {title}");
-        string destination = Path.Combine(root, relative + extension).Normalize();
-        int suffix = 2;
-        while (!claimed.Add(destination))
-            destination = Path.Combine(root, relative + $"_{suffix++}" + extension).Normalize();
-        return destination;
-    }
-
     private static string ClaimItunesCanonical(string mediaFolder, IngestTrackPlan track,
         HashSet<string> claimed)
     {
@@ -1808,6 +1796,15 @@ public sealed class IngestMusicService : IIngestMusicService
         string a = Path.GetFullPath(first).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
         string b = Path.GetFullPath(second).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
         return a.StartsWith(b, PathComparison) || b.StartsWith(a, PathComparison);
+    }
+
+    private static bool IsWithin(string path, string root)
+    {
+        string candidate = Path.GetFullPath(path);
+        string parent = Path.GetFullPath(root)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) +
+            Path.DirectorySeparatorChar;
+        return candidate.StartsWith(parent, PathComparison);
     }
 
     private static void WriteJournal(string path, IEnumerable<string> lines)

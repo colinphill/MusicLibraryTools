@@ -77,24 +77,25 @@ public sealed class GenericProfileLegacyCompatibilityGoldenTests
         Assert.Equal(LibrarySourceDisposition.Quarantine,
             plan.Configuration.SourceDisposition);
         Assert.Empty(plan.Conflicts);
-        IngestOutputPlan[] outputs = Assert.Single(plan.Albums).Outputs
-            .OrderBy(output => output.Kind)
-            .ToArray();
+        IngestOutputPlan[] outputs = Assert.Single(plan.Albums).Outputs.ToArray();
         Assert.Collection(outputs,
             output =>
             {
-                Assert.Equal(IngestOutputKind.CdFlac, output.Kind);
+                Assert.Equal(IngestOutputKind.Recipe, output.Kind);
+                Assert.Equal("legacy-cd-flac", output.RecipeId);
                 Assert.False(output.DeriveCd);
                 Assert.Equal(3, output.Metadata.TrackTotal);
                 Assert.Equal(Path.GetFullPath(Path.Combine(
-                    cd, "Album Artist", "Album (HiRes)", "03 A song.flac")),
+                    cd, "Album Artist", "Album", "03 A song.flac")),
                     output.DestinationPath);
             },
             output =>
             {
-                Assert.Equal(IngestOutputKind.Aac, output.Kind);
+                Assert.Equal(IngestOutputKind.Recipe, output.Kind);
+                Assert.Equal("legacy-aac", output.RecipeId);
+                Assert.False(output.AddToMediaCatalog);
                 Assert.Equal(Path.GetFullPath(Path.Combine(
-                    aac, "Album Artist", "Album (HiRes)", "03 A song.m4a")),
+                    aac, "Album Artist", "Album", "03 A song.m4a")),
                     output.DestinationPath);
             });
     }

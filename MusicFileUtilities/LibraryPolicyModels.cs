@@ -202,6 +202,25 @@ namespace MusicLibraryTools
         Transcode,
     }
 
+    public enum LibraryChannelSelection
+    {
+        Stereo,
+        Multi,
+    }
+
+    public enum LibraryIngestAlbumCondition
+    {
+        Any,
+        HasHighResolution,
+        HasNoHighResolution,
+    }
+
+    public enum LibraryIngestSourceSelection
+    {
+        HighestQuality,
+        PreferCdQuality,
+    }
+
     /// <summary>One ordered input match and output operation in an ingest profile.</summary>
     public sealed record LibraryIngestRecipe(
         string Id,
@@ -211,7 +230,7 @@ namespace MusicLibraryTools
         bool? RequireLossless,
         int? MinimumSampleRateHz,
         int? MinimumBitsPerSample,
-        int? InputChannels,
+        LibraryChannelSelection? InputChannels,
         bool MatchAnyQualityMinimum,
         LibraryIngestAction Action,
         Guid? DestinationRootId,
@@ -222,7 +241,7 @@ namespace MusicLibraryTools
         int? BitrateKbps,
         int? SampleRateHz,
         int? BitsPerSample,
-        int? OutputChannels,
+        LibraryChannelSelection? OutputChannels,
         string? NamingProfileId,
         bool PreserveMetadata,
         bool PreserveArtwork,
@@ -230,6 +249,13 @@ namespace MusicLibraryTools
     {
         public LibraryRepresentationRole OutputRepresentationRole { get; init; } =
             LibraryRepresentationRole.Ignore;
+        public string? ExtraFfmpegOptions { get; init; }
+        public bool AddToMediaCatalog { get; init; }
+        public LibraryIngestAlbumCondition AlbumCondition { get; init; } =
+            LibraryIngestAlbumCondition.Any;
+        public LibraryIngestSourceSelection SourceSelection { get; init; } =
+            LibraryIngestSourceSelection.HighestQuality;
+        public bool RequireFallbackApproval { get; init; }
     }
 
     /// <summary>
@@ -580,7 +606,7 @@ namespace MusicLibraryTools
                 true,
                 44_101,
                 17,
-                2,
+                LibraryChannelSelection.Stereo,
                 true,
                 LibraryIngestAction.Transcode,
                 null,
@@ -591,7 +617,7 @@ namespace MusicLibraryTools
                 null,
                 null,
                 null,
-                2,
+                LibraryChannelSelection.Stereo,
                 LegacyId,
                 true,
                 true,
@@ -602,9 +628,9 @@ namespace MusicLibraryTools
                 true,
                 [".flac", ".m4a"],
                 true,
-                null,
-                null,
-                2,
+                44_100,
+                16,
+                LibraryChannelSelection.Stereo,
                 false,
                 LibraryIngestAction.Transcode,
                 null,
@@ -615,20 +641,53 @@ namespace MusicLibraryTools
                 null,
                 44_100,
                 16,
-                2,
+                LibraryChannelSelection.Stereo,
                 LegacyId,
                 true,
                 true,
-                LibraryPathCollisionPolicy.Suffix),
+                LibraryPathCollisionPolicy.Suffix)
+            {
+                AlbumCondition = LibraryIngestAlbumCondition.HasNoHighResolution,
+                SourceSelection = LibraryIngestSourceSelection.PreferCdQuality,
+            },
+            new(
+                "legacy-paired-cd-flac",
+                "Paired CD-quality FLAC",
+                true,
+                [".flac", ".m4a"],
+                true,
+                44_100,
+                16,
+                LibraryChannelSelection.Stereo,
+                false,
+                LibraryIngestAction.Transcode,
+                null,
+                LibraryIngestRole.CdFallback,
+                ".flac",
+                "flac",
+                null,
+                null,
+                44_100,
+                16,
+                LibraryChannelSelection.Stereo,
+                LegacyId,
+                true,
+                true,
+                LibraryPathCollisionPolicy.Suffix)
+            {
+                AlbumCondition = LibraryIngestAlbumCondition.HasHighResolution,
+                SourceSelection = LibraryIngestSourceSelection.PreferCdQuality,
+                RequireFallbackApproval = true,
+            },
             new(
                 "legacy-aac",
                 "Portable AAC",
                 true,
                 [".flac", ".m4a"],
                 true,
-                null,
-                null,
-                2,
+                44_100,
+                16,
+                LibraryChannelSelection.Stereo,
                 false,
                 LibraryIngestAction.Transcode,
                 null,
@@ -639,11 +698,14 @@ namespace MusicLibraryTools
                 256,
                 44_100,
                 null,
-                2,
+                LibraryChannelSelection.Stereo,
                 LegacyId,
                 true,
                 true,
-                LibraryPathCollisionPolicy.Suffix),
+                LibraryPathCollisionPolicy.Suffix)
+            {
+                SourceSelection = LibraryIngestSourceSelection.PreferCdQuality,
+            },
         ];
     }
 
@@ -1227,7 +1289,7 @@ namespace MusicLibraryTools
                 ParseOptionalBoolean(match, "RequireLossless"),
                 ParseOptionalPositiveInteger(match, "MinimumSampleRateHz"),
                 ParseOptionalPositiveInteger(match, "MinimumBitsPerSample"),
-                ParseOptionalPositiveInteger(match, "InputChannels"),
+                ParseOptionalChannelSelection(match, "InputChannels"),
                 ParseBoolean(match, "MatchAnyQualityMinimum", false),
                 ParseEnum(element, "Action", LibraryIngestAction.Copy),
                 destinationRootId,
@@ -1238,7 +1300,7 @@ namespace MusicLibraryTools
                 ParseOptionalPositiveInteger(output, "BitrateKbps"),
                 ParseOptionalPositiveInteger(output, "SampleRateHz"),
                 ParseOptionalPositiveInteger(output, "BitsPerSample"),
-                ParseOptionalPositiveInteger(output, "OutputChannels"),
+                ParseOptionalChannelSelection(output, "OutputChannels"),
                 Optional(output, "NamingProfileId"),
                 ParseBoolean(output, "PreserveMetadata", true),
                 ParseBoolean(output, "PreserveArtwork", true),
@@ -1246,6 +1308,14 @@ namespace MusicLibraryTools
             {
                 OutputRepresentationRole = ParseEnum(output,
                     "RepresentationRole", LibraryRepresentationRole.Ignore),
+                AlbumCondition = ParseEnum(match, "AlbumCondition",
+                    LibraryIngestAlbumCondition.Any),
+                SourceSelection = ParseEnum(match, "SourceSelection",
+                    LibraryIngestSourceSelection.HighestQuality),
+                RequireFallbackApproval = ParseBoolean(match,
+                    "RequireFallbackApproval", false),
+                ExtraFfmpegOptions = Optional(output, "ExtraFfmpegOptions"),
+                AddToMediaCatalog = ParseBoolean(output, "AddToMediaCatalog", false),
             };
         }
 
@@ -1257,27 +1327,32 @@ namespace MusicLibraryTools
             SetOptional(match, "RequireLossless", recipe.RequireLossless);
             SetOptional(match, "MinimumSampleRateHz", recipe.MinimumSampleRateHz);
             SetOptional(match, "MinimumBitsPerSample", recipe.MinimumBitsPerSample);
-            SetOptional(match, "InputChannels", recipe.InputChannels);
+            SetChannelSelection(match, "InputChannels", recipe.InputChannels);
             if (recipe.MatchAnyQualityMinimum)
                 match.SetAttributeValue("MatchAnyQualityMinimum", true);
+            if (recipe.AlbumCondition != LibraryIngestAlbumCondition.Any)
+                match.SetAttributeValue("AlbumCondition", recipe.AlbumCondition);
+            if (recipe.SourceSelection != LibraryIngestSourceSelection.HighestQuality)
+                match.SetAttributeValue("SourceSelection", recipe.SourceSelection);
+            if (recipe.RequireFallbackApproval)
+                match.SetAttributeValue("RequireFallbackApproval", true);
 
             var output = new XElement("Output");
             SetOptional(output, "DestinationRootId", recipe.DestinationRootId);
-            if (recipe.DestinationLegacyRole != LibraryIngestRole.None)
-                output.SetAttributeValue("DestinationLegacyRole", recipe.DestinationLegacyRole);
             SetOptional(output, "OutputExtension", recipe.OutputExtension);
             SetOptional(output, "Codec", recipe.Codec);
             SetOptional(output, "Encoder", recipe.Encoder);
+            SetOptional(output, "ExtraFfmpegOptions", recipe.ExtraFfmpegOptions);
+            if (recipe.AddToMediaCatalog)
+                output.SetAttributeValue("AddToMediaCatalog", true);
             SetOptional(output, "BitrateKbps", recipe.BitrateKbps);
             SetOptional(output, "SampleRateHz", recipe.SampleRateHz);
             SetOptional(output, "BitsPerSample", recipe.BitsPerSample);
-            SetOptional(output, "OutputChannels", recipe.OutputChannels);
+            SetChannelSelection(output, "OutputChannels", recipe.OutputChannels);
             SetOptional(output, "NamingProfileId", recipe.NamingProfileId);
             output.SetAttributeValue("PreserveMetadata", recipe.PreserveMetadata);
             output.SetAttributeValue("PreserveArtwork", recipe.PreserveArtwork);
             SetOptional(output, "CollisionPolicy", recipe.CollisionPolicy);
-            output.SetAttributeValue("RepresentationRole",
-                recipe.OutputRepresentationRole);
 
             return new XElement("Recipe",
                 new XAttribute("Id", recipe.Id),
@@ -1311,19 +1386,28 @@ namespace MusicLibraryTools
                 throw new InvalidDataException(
                     $"Ingest recipe '{recipe.Id}' has an empty DestinationRootId.");
             if (recipe.Enabled && recipe.DestinationRootId is null &&
-                recipe.DestinationLegacyRole == LibraryIngestRole.None)
+                recipe.DestinationLegacyRole == LibraryIngestRole.None &&
+                !recipe.AddToMediaCatalog)
                 throw new InvalidDataException(
                     $"Enabled ingest recipe '{recipe.Id}' must select a destination root or " +
-                    "legacy ingest role.");
+                    "the configured media catalog.");
             if (recipe.NamingProfileId is { } namingProfileId)
                 ValidateId(namingProfileId, "naming profile");
             ValidateOptionalPositive(recipe.MinimumSampleRateHz, recipe.Id, "minimum sample rate");
             ValidateOptionalPositive(recipe.MinimumBitsPerSample, recipe.Id, "minimum bit depth");
-            ValidateOptionalPositive(recipe.InputChannels, recipe.Id, "input channel count");
             ValidateOptionalPositive(recipe.BitrateKbps, recipe.Id, "bitrate");
             ValidateOptionalPositive(recipe.SampleRateHz, recipe.Id, "output sample rate");
             ValidateOptionalPositive(recipe.BitsPerSample, recipe.Id, "output bit depth");
-            ValidateOptionalPositive(recipe.OutputChannels, recipe.Id, "output channel count");
+            _ = FfmpegOptionTokenizer.Parse(recipe.ExtraFfmpegOptions);
+            if (recipe.InputChannels is { } inputChannels && !Enum.IsDefined(inputChannels))
+                throw new InvalidDataException(
+                    $"Ingest recipe '{recipe.Id}' has an invalid input channel selection.");
+            if (recipe.OutputChannels is { } outputChannels && !Enum.IsDefined(outputChannels))
+                throw new InvalidDataException(
+                    $"Ingest recipe '{recipe.Id}' has an invalid output channel selection.");
+            if (!Enum.IsDefined(recipe.AlbumCondition) || !Enum.IsDefined(recipe.SourceSelection))
+                throw new InvalidDataException(
+                    $"Ingest recipe '{recipe.Id}' has an invalid source-selection policy.");
             string? outputExtension = NormalizeOptionalExtension(recipe.OutputExtension);
             switch (recipe.Action)
             {
@@ -1431,6 +1515,16 @@ namespace MusicLibraryTools
                 element.SetAttributeValue(name, value);
         }
 
+        private static void SetChannelSelection(
+            XElement element,
+            string name,
+            LibraryChannelSelection? value)
+        {
+            if (value is not null)
+                element.SetAttributeValue(name,
+                    value == LibraryChannelSelection.Stereo ? "Stereo" : "Multi");
+        }
+
         private static string Required(XElement element, string attributeName)
         {
             string? result = Optional(element, attributeName);
@@ -1507,6 +1601,25 @@ namespace MusicLibraryTools
                 return parsed;
             throw new InvalidDataException(
                 $"Attribute '{attributeName}' on <{element!.Name.LocalName}> must be a positive integer.");
+        }
+
+        private static LibraryChannelSelection? ParseOptionalChannelSelection(
+            XElement? element,
+            string attributeName)
+        {
+            string? value = Optional(element, attributeName);
+            if (value is null)
+                return null;
+            if (value.Equals("2", StringComparison.OrdinalIgnoreCase) ||
+                value.Equals("Stereo", StringComparison.OrdinalIgnoreCase))
+                return LibraryChannelSelection.Stereo;
+            if (value.Equals("Multi", StringComparison.OrdinalIgnoreCase))
+                return LibraryChannelSelection.Multi;
+            if (int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture,
+                    out int legacyChannels) && legacyChannels > 2)
+                return LibraryChannelSelection.Multi;
+            throw new InvalidDataException(
+                $"Attribute '{attributeName}' on <{element!.Name.LocalName}> must be Stereo or Multi.");
         }
 
         private static Guid? ParseOptionalGuid(XElement? element, string attributeName)
@@ -1716,10 +1829,15 @@ namespace MusicLibraryTools
                         .Append(recipe.MinimumBitsPerSample).Append('|')
                         .Append(recipe.InputChannels).Append('|')
                         .Append(recipe.MatchAnyQualityMinimum).Append('|')
+                        .Append(recipe.AlbumCondition).Append('|')
+                        .Append(recipe.SourceSelection).Append('|')
+                        .Append(recipe.RequireFallbackApproval).Append('|')
                         .Append(recipe.Action).Append('|').Append(recipe.DestinationRootId).Append('|')
                         .Append(recipe.DestinationLegacyRole).Append('|')
                         .Append(recipe.OutputExtension).Append('|').Append(recipe.Codec).Append('|')
-                        .Append(recipe.Encoder).Append('|').Append(recipe.BitrateKbps).Append('|')
+                        .Append(recipe.Encoder).Append('|').Append(recipe.ExtraFfmpegOptions)
+                        .Append('|').Append(recipe.AddToMediaCatalog).Append('|')
+                        .Append(recipe.BitrateKbps).Append('|')
                         .Append(recipe.SampleRateHz).Append('|').Append(recipe.BitsPerSample).Append('|')
                         .Append(recipe.OutputChannels).Append('|').Append(recipe.NamingProfileId)
                         .Append('|').Append(recipe.PreserveMetadata).Append('|')

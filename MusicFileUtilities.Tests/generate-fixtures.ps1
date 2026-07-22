@@ -5,7 +5,7 @@
   Run automatically at build time by a target in MusicFileUtilities.Tests.csproj, so the
   binary fixtures are produced by the toolchain rather than committed to the repo.
 
-  The six audio formats come from ffmpeg (0.3s 44.1kHz/16-bit/stereo tone clips tagged with
+  The audio formats come from ffmpeg (mostly 0.3s 44.1kHz/16-bit/stereo tone clips tagged with
   a fixed baseline). The .dsf file is hand-crafted here because no DSD encoder is bundled;
   it is a minimal-but-valid DSF container (DSD64, stereo, 1-bit) with no metadata chunk, so
   the DSF tag-write path is exercised by the tests writing tags into it.
@@ -53,6 +53,29 @@ if ($needFfmpeg) {
     foreach ($j in $needFfmpeg) {
         $out = Join-Path $OutDir $j.File
         & $ffmpeg -y -hide_banner -loglevel error @sine @($j.Args) $out
+        if ($LASTEXITCODE -ne 0) { throw "ffmpeg failed for $($j.File)" }
+    }
+}
+
+# Additional quality/channel fixtures used by ingest policy tests.
+$specialJobs = @(
+    @{
+        File = 'sample_hires.flac'
+        Input = @('-f', 'lavfi', '-i', 'sine=frequency=440:duration=0.3', '-ac', '2', '-ar', '96000')
+        Args = @('-sample_fmt', 's32') + $meta
+    },
+    @{
+        File = 'sample_multi.flac'
+        Input = @('-f', 'lavfi', '-i', 'anullsrc=r=48000:cl=5.1:d=0.3')
+        Args = @('-sample_fmt', 's32') + $meta
+    }
+)
+$needSpecial = $specialJobs | Where-Object { -not (Test-Path (Join-Path $OutDir $_.File)) }
+if ($needSpecial) {
+    $ffmpeg = Resolve-Ffmpeg
+    foreach ($j in $needSpecial) {
+        $out = Join-Path $OutDir $j.File
+        & $ffmpeg -y -hide_banner -loglevel error @($j.Input) @($j.Args) $out
         if ($LASTEXITCODE -ne 0) { throw "ffmpeg failed for $($j.File)" }
     }
 }

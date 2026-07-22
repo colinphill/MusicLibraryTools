@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using System.Text;
+using MusicLibraryTools;
 
 namespace MusicLibrary.Core.Services;
 
@@ -89,6 +89,7 @@ public sealed class FfmpegRunner : IFfmpegRunner
             arguments.Add("-sample_fmt");
             arguments.Add(options.BitsPerSample <= 16 ? "s16" : "s32");
         }
+        arguments.AddRange(FfmpegOptionTokenizer.Parse(options.ExtraOptions));
         arguments.Add(output);
         return RunNoOutputAsync(executable, arguments, ct);
     }

@@ -29,10 +29,6 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     [ObservableProperty] private string _databaseFile = "cache.db";
     [ObservableProperty] private string? _itunesLibraryPath;
     [ObservableProperty] private string _ffmpegPath = "ffmpeg";
-    [ObservableProperty] private int _lengthLimit = 255;
-    [ObservableProperty] private int _discNumLengthLimit = 255;
-    [ObservableProperty] private string _aacEncoder = "libfdk_aac";
-    [ObservableProperty] private int _aacBitrateKbps = 256;
     [ObservableProperty] private int _oversizedArtworkByteThreshold =
         LibraryArtworkHealthSettings.DefaultOversizedByteThreshold;
     [ObservableProperty] private int _oversizedArtworkDimensionThreshold =
@@ -104,6 +100,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     public ObservableCollection<PlaylistTargetEditorRow> PlaylistTargets { get; } = [];
     public ObservableCollection<ExportProfileEditorRow> ExportProfiles { get; } = [];
     public ObservableCollection<LibraryProfile> LibraryProfiles { get; } = [];
+    public bool CanDeleteSelectedProfile =>
+        SelectedLibraryProfile?.Preset == LibraryProfilePreset.Custom;
     public IReadOnlyList<string> Themes { get; } = ["System", "Light", "Dark", "Steel Blue"];
     public IReadOnlyList<ThemeChoice> ThemeChoices { get; } =
     [
@@ -112,50 +110,42 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         new("Dark", "#0D1417", "#18262B", "#2CC7BC"),
         new("Steel Blue", "#101C2A", "#1D3043", "#3AAFB8"),
     ];
-    public IReadOnlyList<LibraryIngestRole> IngestRoles { get; } =
-        Enum.GetValues<LibraryIngestRole>();
-    public IReadOnlyList<LibraryRepresentationRole> RepresentationRoles { get; } =
-        Enum.GetValues<LibraryRepresentationRole>();
-    public IReadOnlyList<LibraryPathCollisionPolicy> CollisionPolicies { get; } =
-        Enum.GetValues<LibraryPathCollisionPolicy>();
-    public IReadOnlyList<LibraryUnicodeNormalization> UnicodeNormalizations { get; } =
-        Enum.GetValues<LibraryUnicodeNormalization>();
-    public IReadOnlyList<LibraryDiscStrategy> DiscStrategies { get; } =
-        Enum.GetValues<LibraryDiscStrategy>();
-    public IReadOnlyList<LibraryTrackTotalScope> TrackTotalScopes { get; } =
-        Enum.GetValues<LibraryTrackTotalScope>();
-    public IReadOnlyList<LibraryHealthSeverity> HealthSeverities { get; } =
-        Enum.GetValues<LibraryHealthSeverity>();
-    public IReadOnlyList<LibrarySourceDisposition> SourceDispositions { get; } =
-        Enum.GetValues<LibrarySourceDisposition>();
-    public IReadOnlyList<LibraryIngestAction> IngestActions { get; } =
-        Enum.GetValues<LibraryIngestAction>();
-    public IReadOnlyList<LibraryArtworkStorage> ArtworkStorageChoices { get; } =
-        Enum.GetValues<LibraryArtworkStorage>();
-    public IReadOnlyList<LibraryArtworkRoleSelection> ArtworkRoleChoices { get; } =
-        Enum.GetValues<LibraryArtworkRoleSelection>();
-    public IReadOnlyList<LibraryArtworkEncoding> ArtworkEncodingChoices { get; } =
-        Enum.GetValues<LibraryArtworkEncoding>();
-    public IReadOnlyList<LibrarySidecarDisposition> SidecarDispositions { get; } =
-        Enum.GetValues<LibrarySidecarDisposition>();
-    public IReadOnlyList<string> PlaylistTypes { get; } = ["m3u", "m3u8", "wpl"];
-    public IReadOnlyList<string> PlaylistSourceTypes { get; } = ["m3u"];
-    public IReadOnlyList<string> PlaylistPathStyles { get; } =
-        ["legacy", "provided", "absolute", "relative"];
-    public IReadOnlyList<string> PlaylistEncodings { get; } =
-        ["utf-8", "utf-16", "utf-16be", "ascii"];
-    public IReadOnlyList<string> PlaylistLineEndings { get; } =
-        ["platform", "crlf", "lf"];
-    public IReadOnlyList<string> PlaylistFileNameTransforms { get; } =
-        ["legacy", "preserve", "sanitize", "sonos"];
-    public IReadOnlyList<ExportSelectionKind> ExportSelectionKinds { get; } =
-        Enum.GetValues<ExportSelectionKind>();
-    public IReadOnlyList<ExportTransformMode> ExportTransformModes { get; } =
-        Enum.GetValues<ExportTransformMode>();
-    public IReadOnlyList<ExportArtworkMode> ExportArtworkModes { get; } =
-        Enum.GetValues<ExportArtworkMode>();
-    public IReadOnlyList<ExportExtraFileDisposition> ExportExtraFileDispositions { get; } =
-        Enum.GetValues<ExportExtraFileDisposition>();
+    public IReadOnlyList<LibraryPathCollisionPolicy> CollisionPolicies =>
+        SettingsChoiceLists.CollisionPolicies;
+    public IReadOnlyList<LibraryUnicodeNormalization> UnicodeNormalizations =>
+        SettingsChoiceLists.UnicodeNormalizations;
+    public IReadOnlyList<LibraryDiscStrategy> DiscStrategies =>
+        SettingsChoiceLists.DiscStrategies;
+    public IReadOnlyList<LibraryTrackTotalScope> TrackTotalScopes =>
+        SettingsChoiceLists.TrackTotalScopes;
+    public IReadOnlyList<LibraryHealthSeverity> HealthSeverities =>
+        SettingsChoiceLists.HealthSeverities;
+    public IReadOnlyList<LibrarySourceDisposition> SourceDispositions =>
+        SettingsChoiceLists.SourceDispositions;
+    public IReadOnlyList<LibraryIngestAction> IngestActions => SettingsChoiceLists.IngestActions;
+    public IReadOnlyList<LibraryArtworkStorage> ArtworkStorageChoices =>
+        SettingsChoiceLists.ArtworkStorageChoices;
+    public IReadOnlyList<LibraryArtworkRoleSelection> ArtworkRoleChoices =>
+        SettingsChoiceLists.ArtworkRoleChoices;
+    public IReadOnlyList<LibraryArtworkEncoding> ArtworkEncodingChoices =>
+        SettingsChoiceLists.ArtworkEncodingChoices;
+    public IReadOnlyList<LibrarySidecarDisposition> SidecarDispositions =>
+        SettingsChoiceLists.SidecarDispositions;
+    public IReadOnlyList<string> PlaylistTypes => SettingsChoiceLists.PlaylistTypes;
+    public IReadOnlyList<string> PlaylistSourceTypes => SettingsChoiceLists.PlaylistSourceTypes;
+    public IReadOnlyList<string> PlaylistPathStyles => SettingsChoiceLists.PlaylistPathStyles;
+    public IReadOnlyList<string> PlaylistEncodings => SettingsChoiceLists.PlaylistEncodings;
+    public IReadOnlyList<string> PlaylistLineEndings => SettingsChoiceLists.PlaylistLineEndings;
+    public IReadOnlyList<string> PlaylistFileNameTransforms =>
+        SettingsChoiceLists.PlaylistFileNameTransforms;
+    public IReadOnlyList<ExportSelectionKind> ExportSelectionKinds =>
+        SettingsChoiceLists.ExportSelectionKinds;
+    public IReadOnlyList<ExportTransformMode> ExportTransformModes =>
+        SettingsChoiceLists.ExportTransformModes;
+    public IReadOnlyList<ExportArtworkMode> ExportArtworkModes =>
+        SettingsChoiceLists.ExportArtworkModes;
+    public IReadOnlyList<ExportExtraFileDisposition> ExportExtraFileDispositions =>
+        SettingsChoiceLists.ExportExtraFileDispositions;
     public bool HasValidationError => !string.IsNullOrWhiteSpace(ValidationSummary);
     public bool IsEditorValid => ValidationIssues().Count == 0;
     public string EffectivePolicySummary
@@ -204,8 +194,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                     (Directory.Exists(root.Path) ? "" : " (offline warning)") +
                     $"; formats: {(string.IsNullOrWhiteSpace(root.IndexFormats) ? "all recognized" : root.IndexFormats)}" +
                     $"; include: {(string.IsNullOrWhiteSpace(root.IndexIncludePatterns) ? "all" : root.IndexIncludePatterns)}" +
-                    $"; exclude: {(string.IsNullOrWhiteSpace(root.IndexExcludePatterns) ? "none" : root.IndexExcludePatterns)}" +
-                    $"; representation: {FormatWords(root.RepresentationRole.ToString())}"));
+                    $"; exclude: {(string.IsNullOrWhiteSpace(root.IndexExcludePatterns) ? "none" : root.IndexExcludePatterns)}"));
             string example;
             try
             {
@@ -219,7 +208,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                 };
                 example = Path.GetRelativePath(exampleRoot,
                     LibraryPathLayoutResolver.Shared.Resolve(exampleRoot, profile, metadata,
-                        LengthLimit, DiscNumLengthLimit));
+                        _editing.LengthLimit, _editing.DiscNumLengthLimit));
             }
             catch (Exception ex)
             {
@@ -241,7 +230,10 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                     ? "enabled, but no output recipes"
                     : string.Join(", ", recipes.Select(recipe =>
                         $"{recipe.Name}: {recipe.Action} to " +
-                        (recipe.DestinationRootId?.ToString() ?? recipe.DestinationLegacyRole.ToString())));
+                        (recipe.DestinationRootId is { } rootId
+                            ? IndexTargets.FirstOrDefault(root => root.Id == rootId)?.Path ??
+                              "missing root"
+                            : "no direct root")));
             string integrations = string.IsNullOrWhiteSpace(ItunesLibraryPath)
                 ? "File playlists (M3U/M3U8); no media catalog integration configured"
                 : $"File playlists (M3U/M3U8); iTunes catalog: {ItunesLibraryPath}";
@@ -314,6 +306,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             }
         }
         SetAdvancedProfile(newValue);
+        DeleteLibraryProfileCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(CanDeleteSelectedProfile));
         OnPropertyChanged(nameof(EffectivePolicySummary));
         OnPropertyChanged(nameof(EffectivePolicyDetails));
     }
@@ -339,10 +333,6 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         nameof(MachineBindingsFile),
         nameof(ItunesLibraryPath),
         nameof(FfmpegPath),
-        nameof(LengthLimit),
-        nameof(DiscNumLengthLimit),
-        nameof(AacEncoder),
-        nameof(AacBitrateKbps),
         nameof(OversizedArtworkByteThreshold),
         nameof(OversizedArtworkDimensionThreshold),
         nameof(ArtworkRepairTargetByteSize),
@@ -368,6 +358,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         if (e.NewItems is not null)
             foreach (object item in e.NewItems)
                 TrackRow(item);
+        RefreshDestinationRootChoices();
         OnPropertyChanged(nameof(EffectivePolicySummary));
         OnPropertyChanged(nameof(EffectivePolicyDetails));
         MarkDirty();
@@ -445,6 +436,10 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
 
     private void OnTrackedRowChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (sender is IndexTargetEditorRow && e.PropertyName is
+            nameof(IndexTargetEditorRow.Id) or
+            nameof(IndexTargetEditorRow.Path))
+            RefreshDestinationRootChoices();
         OnPropertyChanged(nameof(EffectivePolicySummary));
         OnPropertyChanged(nameof(EffectivePolicyDetails));
         MarkDirty();
@@ -492,9 +487,6 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             {
                 issues.Add((1, $"Library root '{target.Path}': {error.Message}"));
             }
-            if (target.IngestRole != LibraryIngestRole.None && !target.AllowIngestOutput)
-                issues.Add((1,
-                    $"Library root '{target.Path}' has an ingest role but does not allow ingest output."));
             if (target.IsSyncTarget && !target.AllowSynchronizationOutput)
                 issues.Add((1,
                     $"Library root '{target.Path}' is a sync target but does not allow sync output."));
@@ -597,12 +589,6 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                 issues.Add((2, error.Message));
             }
         }
-        if (LengthLimit <= 0)
-            issues.Add((3, "Path length limit must be greater than zero."));
-        if (DiscNumLengthLimit <= 0)
-            issues.Add((3, "Disc number length limit must be greater than zero."));
-        if (AacBitrateKbps <= 0)
-            issues.Add((3, "AAC bitrate must be greater than zero."));
         if (OversizedArtworkByteThreshold is < 262_144 or > 1_073_741_824)
             issues.Add((4, "Oversized artwork size threshold must be between 0.25 and 1,024 MiB."));
         if (OversizedArtworkDimensionThreshold is < 64 or > 100_000)
@@ -654,10 +640,6 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         DatabaseFile = "cache.db";
         ItunesLibraryPath = null;
         FfmpegPath = "ffmpeg";
-        LengthLimit = 255;
-        DiscNumLengthLimit = 255;
-        AacEncoder = "libfdk_aac";
-        AacBitrateKbps = 256;
         OversizedArtworkByteThreshold =
             LibraryArtworkHealthSettings.DefaultOversizedByteThreshold;
         OversizedArtworkDimensionThreshold =
@@ -733,10 +715,6 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         DatabaseFile = "cache.db";
         ItunesLibraryPath = null;
         FfmpegPath = "ffmpeg";
-        LengthLimit = 255;
-        DiscNumLengthLimit = 255;
-        AacEncoder = "libfdk_aac";
-        AacBitrateKbps = 256;
         OversizedArtworkByteThreshold =
             LibraryArtworkHealthSettings.DefaultOversizedByteThreshold;
         OversizedArtworkDimensionThreshold =
@@ -777,6 +755,132 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     {
         CommitAdvancedProfile(updateProfileChoices: false);
         SelectedTabIndex = 6;
+    }
+
+    [RelayCommand]
+    private void CreateLibraryProfile()
+    {
+        CommitAdvancedProfile(updateProfileChoices: true);
+        LibraryProfile profile = LibraryProfilePresets.Create(
+            LibraryProfilePreset.Custom,
+            UniqueProfileId(),
+            UniqueProfileName("New profile"));
+        _editing.Profiles.Add(profile);
+        LibraryProfiles.Add(profile);
+        SelectedLibraryProfile = profile;
+        StatusMessage = $"Created profile '{profile.Name}'.";
+        MarkDirty();
+    }
+
+    [RelayCommand]
+    private void DuplicateLibraryProfile()
+    {
+        if (SelectedLibraryProfile is null)
+            return;
+        CommitAdvancedProfile(updateProfileChoices: true);
+        LibraryProfile source = _editing.Profiles.Single(profile => string.Equals(
+            profile.Id, SelectedLibraryProfile.Id, StringComparison.OrdinalIgnoreCase));
+        string id = UniqueProfileId();
+        LibraryProfile duplicate = source with
+        {
+            Id = id,
+            Name = UniqueProfileName(source.Name + " copy"),
+            Preset = LibraryProfilePreset.Custom,
+            Ingest = source.Ingest with
+            {
+                Recipes = source.Ingest.Recipes.Select(recipe => recipe with
+                {
+                    NamingProfileId = string.Equals(recipe.NamingProfileId, source.Id,
+                        StringComparison.OrdinalIgnoreCase)
+                            ? id
+                            : recipe.NamingProfileId,
+                }).ToArray(),
+            },
+        };
+        _editing.Profiles.Add(duplicate);
+        LibraryProfiles.Add(duplicate);
+        SelectedLibraryProfile = duplicate;
+        StatusMessage = $"Duplicated '{source.Name}' as '{duplicate.Name}'.";
+        MarkDirty();
+    }
+
+    private bool CanDeleteLibraryProfile() => CanDeleteSelectedProfile;
+
+    [RelayCommand(CanExecute = nameof(CanDeleteLibraryProfile))]
+    private async Task DeleteLibraryProfileAsync()
+    {
+        if (SelectedLibraryProfile is not { Preset: LibraryProfilePreset.Custom } selectedChoice)
+            return;
+        CommitAdvancedProfile(updateProfileChoices: true);
+        LibraryProfile selected = _editing.Profiles.Single(profile => string.Equals(
+            profile.Id, selectedChoice.Id, StringComparison.OrdinalIgnoreCase));
+        LibraryProfile fallback = LibraryProfiles.FirstOrDefault(profile =>
+            profile.Id == LibraryProfilePresets.CatalogOnlyId) ??
+            LibraryProfiles.First(profile => !string.Equals(
+                profile.Id, selected.Id, StringComparison.OrdinalIgnoreCase));
+        int rootReferences = IndexTargets.Count(root => string.Equals(
+            root.ProfileId, selected.Id, StringComparison.OrdinalIgnoreCase));
+        int workflowReferences = _editing.Profiles.SelectMany(profile =>
+                profile.Ingest.Recipes).Count(recipe => string.Equals(
+                recipe.NamingProfileId, selected.Id, StringComparison.OrdinalIgnoreCase)) +
+            ExportProfiles.Count(profile => string.Equals(
+                profile.NamingProfileId, selected.Id, StringComparison.OrdinalIgnoreCase));
+        string reassignment = rootReferences + workflowReferences == 0
+            ? "It has no configured references."
+            : $"{rootReferences} root reference(s) and {workflowReferences} workflow " +
+              $"reference(s) will be reassigned to '{fallback.Name}'.";
+        if (!await _dialogs.ConfirmAsync(
+                $"Delete profile '{selected.Name}'?",
+                reassignment + " This cannot be undone after saving.",
+                "Delete profile"))
+            return;
+
+        bool previousSuppression = _suppressDirty;
+        _suppressDirty = true;
+        try
+        {
+            foreach (IndexTargetEditorRow root in IndexTargets.Where(root => string.Equals(
+                         root.ProfileId, selected.Id, StringComparison.OrdinalIgnoreCase)))
+                root.ProfileId = fallback.Id;
+            for (int index = 0; index < _editing.Profiles.Count; index++)
+            {
+                LibraryProfile profile = _editing.Profiles[index];
+                if (string.Equals(profile.Id, selected.Id, StringComparison.OrdinalIgnoreCase))
+                    continue;
+                _editing.Profiles[index] = profile with
+                {
+                    Ingest = profile.Ingest with
+                    {
+                        Recipes = profile.Ingest.Recipes.Select(recipe => recipe with
+                        {
+                            NamingProfileId = string.Equals(recipe.NamingProfileId,
+                                selected.Id, StringComparison.OrdinalIgnoreCase)
+                                    ? fallback.Id
+                                    : recipe.NamingProfileId,
+                        }).ToArray(),
+                    },
+                };
+            }
+            foreach (ExportProfileEditorRow export in ExportProfiles.Where(export =>
+                         string.Equals(export.NamingProfileId, selected.Id,
+                             StringComparison.OrdinalIgnoreCase)))
+                export.NamingProfileId = fallback.Id;
+            _editing.Profiles.RemoveAll(profile => string.Equals(
+                profile.Id, selected.Id, StringComparison.OrdinalIgnoreCase));
+            LibraryProfile? profileChoice = LibraryProfiles.FirstOrDefault(profile =>
+                string.Equals(profile.Id, selected.Id, StringComparison.OrdinalIgnoreCase));
+            if (profileChoice is not null)
+                LibraryProfiles.Remove(profileChoice);
+            _editing.ActiveProfileId = fallback.Id;
+            SelectedLibraryProfile = LibraryProfiles.Single(profile => string.Equals(
+                profile.Id, fallback.Id, StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            _suppressDirty = previousSuppression;
+        }
+        StatusMessage = $"Deleted profile '{selected.Name}' and reassigned its references.";
+        MarkDirty();
     }
 
     [RelayCommand]
@@ -1014,10 +1118,6 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             DatabaseFile = _editing.DatabaseFile;
             ItunesLibraryPath = _editing.ItunesLibraryPath;
             FfmpegPath = _editing.FfmpegPath;
-            LengthLimit = _editing.LengthLimit;
-            DiscNumLengthLimit = _editing.DiscNumLengthLimit;
-            AacEncoder = _editing.AacEncoder;
-            AacBitrateKbps = _editing.AacBitrateKbps;
             OversizedArtworkByteThreshold = _editing.OversizedArtworkByteThreshold;
             OversizedArtworkDimensionThreshold = _editing.OversizedArtworkDimensionThreshold;
             ArtworkRepairTargetByteSize = _editing.ArtworkRepairTargetByteSize;
@@ -1102,15 +1202,11 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             CommitAdvancedProfile(updateProfileChoices: false);
             _editing.ActiveProfileId = SelectedLibraryProfile?.Id ??
                 throw new InvalidDataException("Choose an active library profile.");
+            ApplyAdvancedCompatibilityDefaults(_editing.ActiveProfile);
             _editing.MachineBindingsFile = CleanOptional(MachineBindingsFile);
             _editing.DatabaseFile = string.IsNullOrWhiteSpace(DatabaseFile) ? "cache.db" : DatabaseFile.Trim();
             _editing.ItunesLibraryPath = string.IsNullOrWhiteSpace(ItunesLibraryPath) ? null : ItunesLibraryPath.Trim();
             _editing.FfmpegPath = string.IsNullOrWhiteSpace(FfmpegPath) ? "ffmpeg" : FfmpegPath.Trim();
-            _editing.LengthLimit = LengthLimit;
-            _editing.DiscNumLengthLimit = DiscNumLengthLimit;
-            _editing.AacEncoder = string.IsNullOrWhiteSpace(AacEncoder)
-                ? "libfdk_aac" : AacEncoder.Trim();
-            _editing.AacBitrateKbps = AacBitrateKbps;
             _editing.OversizedArtworkByteThreshold = OversizedArtworkByteThreshold;
             _editing.OversizedArtworkDimensionThreshold = OversizedArtworkDimensionThreshold;
             _editing.ArtworkRepairTargetByteSize = ArtworkRepairTargetByteSize;
@@ -1138,8 +1234,6 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                     target.Filter = string.IsNullOrWhiteSpace(row.Filter) ? null : row.Filter.Trim();
                     target.Organize = row.AllowOrganization;
                     target.UseItunesCanonicalNaming = row.UseItunesCanonicalNaming;
-                    target.IngestRole = row.IngestRole;
-                    target.RepresentationRole = row.RepresentationRole;
                     target.IsSyncTarget = row.IsSyncTarget;
                     target.Memberships = row.Memberships
                         .SelectMany(membership => LibraryConfiguration
@@ -1245,6 +1339,15 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             : LibraryProfileEditorRow.From(profile);
         if (AdvancedProfile is not null)
             TrackRow(AdvancedProfile);
+        RefreshDestinationRootChoices();
+    }
+
+    private void RefreshDestinationRootChoices()
+    {
+        if (AdvancedProfile is null)
+            return;
+        foreach (IngestRecipeEditorRow recipe in AdvancedProfile.IngestRecipes)
+            recipe.RefreshDestinationRootChoices(IndexTargets);
     }
 
     private void CommitAdvancedProfile(bool updateProfileChoices)
@@ -1262,6 +1365,44 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             profile.Id, updated.Id, StringComparison.OrdinalIgnoreCase));
         if (choiceIndex >= 0)
             LibraryProfiles[choiceIndex] = updated;
+    }
+
+    private void ApplyAdvancedCompatibilityDefaults(LibraryProfile profile)
+    {
+        if (profile.Naming.ComponentLengthLimit is { } componentLimit)
+        {
+            _editing.LengthLimit = componentLimit;
+            _editing.DiscNumLengthLimit = componentLimit;
+        }
+        LibraryIngestRecipe? aac = profile.Ingest.Recipes.FirstOrDefault(recipe =>
+            recipe.Action == LibraryIngestAction.Transcode &&
+            (string.Equals(recipe.Codec, "aac", StringComparison.OrdinalIgnoreCase) ||
+             string.Equals(recipe.OutputExtension, ".m4a",
+                 StringComparison.OrdinalIgnoreCase)));
+        if (!string.IsNullOrWhiteSpace(aac?.Encoder))
+            _editing.AacEncoder = aac.Encoder.Trim();
+        if (aac?.BitrateKbps is { } bitrate)
+            _editing.AacBitrateKbps = bitrate;
+    }
+
+    private string UniqueProfileId()
+    {
+        string id;
+        do
+            id = "profile-" + Guid.NewGuid().ToString("N")[..12];
+        while (_editing.Profiles.Any(profile => string.Equals(
+            profile.Id, id, StringComparison.OrdinalIgnoreCase)));
+        return id;
+    }
+
+    private string UniqueProfileName(string desired)
+    {
+        string name = desired;
+        int suffix = 2;
+        while (_editing.Profiles.Any(profile => string.Equals(
+                   profile.Name, name, StringComparison.OrdinalIgnoreCase)))
+            name = $"{desired} {suffix++}";
+        return name;
     }
 
     private IndexTargetEditorRow CreateIndexTargetRow(IndexTargetEntry target)
@@ -1282,8 +1423,6 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             IndexExcludePatterns = target.IndexExcludePatterns.Count == 0
                 ? null : string.Join("; ", target.IndexExcludePatterns),
             UseItunesCanonicalNaming = target.UseItunesCanonicalNaming,
-            IngestRole = target.IngestRole,
-            RepresentationRole = target.RepresentationRole,
             IsSyncTarget = target.IsSyncTarget,
             Permissions = target.Permissions ?? profile.DefaultRootPermissions,
             Source = target,

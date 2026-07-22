@@ -10,7 +10,7 @@ namespace MusicLibrary.Core.Tests;
 public sealed class IngestViewModelTests
 {
     [Fact]
-    public void IngestReadinessReportsMissingRolesWithoutRejectingTheLibraryConfiguration()
+    public void IngestReadinessUsesRecipesMigratedFromAvailableLegacyRoles()
     {
         string root = Path.Combine(Path.GetTempPath(), $"ingest-readiness-{Guid.NewGuid():N}");
         Directory.CreateDirectory(root);
@@ -29,11 +29,9 @@ public sealed class IngestViewModelTests
             var viewModel = Create(settings, new StubPreflight());
             viewModel.SourceDirectory = root;
 
-            Assert.False(viewModel.IsConfigurationReady);
-            Assert.False(viewModel.PreviewCommand.CanExecute(null));
-            Assert.Contains("CD fallback", viewModel.ConfigurationReadinessText,
-                StringComparison.OrdinalIgnoreCase);
-            Assert.Contains("Hi-res", viewModel.ConfigurationReadinessText,
+            Assert.True(viewModel.IsConfigurationReady);
+            Assert.True(viewModel.PreviewCommand.CanExecute(null));
+            Assert.Contains("configured", viewModel.ConfigurationReadinessText,
                 StringComparison.OrdinalIgnoreCase);
 
             WriteReadyLibraryConfig(config);

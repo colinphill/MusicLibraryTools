@@ -18,7 +18,7 @@ public sealed class IngestPreflightServiceTests
             .CheckAsync(new IngestRequest(source, config));
 
         Assert.True(result.CanProceed);
-        Assert.Equal(1, ffmpeg.PreflightCalls);
+        Assert.Equal(2, ffmpeg.PreflightCalls);
         Assert.Contains(result.Checks, check => check.Name == "Path isolation" &&
             check.Severity == IngestPreflightSeverity.Pass);
     }

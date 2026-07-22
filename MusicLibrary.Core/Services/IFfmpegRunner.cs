@@ -6,7 +6,10 @@ public sealed record FfmpegTranscodeOptions(
     int? BitrateKbps = null,
     int? SampleRateHz = null,
     int? BitsPerSample = null,
-    int? Channels = null);
+    int? Channels = null)
+{
+    public string? ExtraOptions { get; init; }
+}
 
 public interface IFfmpegRunner
 {

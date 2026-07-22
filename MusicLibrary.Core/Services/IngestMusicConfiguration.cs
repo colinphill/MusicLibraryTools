@@ -73,8 +73,7 @@ public sealed record IngestMusicConfiguration
         if (recipe.DestinationRootId is Guid rootId &&
             RootTargets.TryGetValue(rootId, out LibraryIndexLocation? root))
             return root;
-        return RootTargets.Values.SingleOrDefault(target =>
-            target.IngestRole == recipe.DestinationLegacyRole);
+        return null;
     }
 
     public LibraryProfile ResolveDestinationProfile(LibraryIngestRecipe recipe)
@@ -89,29 +88,28 @@ public sealed record IngestMusicConfiguration
     public static IReadOnlyList<string> MissingLibrarySettings(LibraryConfiguration configuration)
     {
         ArgumentNullException.ThrowIfNull(configuration);
-        LibraryProfile profile = configuration.ActiveProfile;
+        LibraryIndexLocation[] locations = configuration.IndexLocations.ToArray();
+        LibraryProfile profile = ResolveLegacyRecipeDestinations(
+            configuration.ActiveProfile, locations, configuration.ItunesLibraryPath);
         if (!profile.Ingest.Enabled)
             return [
                 $"The active profile '{profile.Name}' does not enable ingest. " +
                 "Choose an ingest-enabled profile or add an ingest recipe."
             ];
-        IReadOnlyDictionary<LibraryIngestRole, LibraryIndexLocation> targets;
-        try
-        {
-            targets = configuration.IngestTargets;
-        }
-        catch (InvalidDataException ex)
-        {
-            return [ex.Message];
-        }
-
         var missing = new List<string>();
         foreach (LibraryIngestRecipe recipe in profile.Ingest.Recipes.Where(item => item.Enabled))
         {
+            if (recipe.AddToMediaCatalog &&
+                string.IsNullOrWhiteSpace(configuration.ItunesLibraryPath))
+            {
+                missing.Add($"Ingest recipe '{recipe.Name}' adds output to the media catalog, " +
+                    "but no iTunes library is configured.");
+                continue;
+            }
             LibraryIndexLocation? target = recipe.DestinationRootId is Guid rootId
-                ? configuration.IndexLocations.SingleOrDefault(location => location.RootId == rootId)
-                : targets.GetValueOrDefault(recipe.DestinationLegacyRole);
-            if (target is null && !(recipe.DestinationLegacyRole == LibraryIngestRole.AacFallback &&
+                ? locations.SingleOrDefault(location => location.RootId == rootId)
+                : null;
+            if (target is null && !(recipe.AddToMediaCatalog &&
                                     !string.IsNullOrWhiteSpace(configuration.ItunesLibraryPath)))
             {
                 missing.Add($"Ingest recipe '{recipe.Name}' has no destination root.");
@@ -122,19 +120,7 @@ public sealed record IngestMusicConfiguration
                 missing.Add($"Ingest recipe '{recipe.Name}' targets '{target.Target}', which does " +
                     "not permit ingest output.");
         }
-        if (profile.Preset != LibraryProfilePreset.LegacyMusicLibraryTools)
-            return missing.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-
-        if (!targets.ContainsKey(LibraryIngestRole.Cd))
-            missing.Add("Assign an IndexTarget to the CD ingest role.");
-        if (!targets.ContainsKey(LibraryIngestRole.CdFallback))
-            missing.Add("Assign an IndexTarget to the CD fallback ingest role.");
-        if (!targets.ContainsKey(LibraryIngestRole.HiRes))
-            missing.Add("Assign an IndexTarget to the Hi-res ingest role.");
-        if (string.IsNullOrWhiteSpace(configuration.ItunesLibraryPath) &&
-            !targets.ContainsKey(LibraryIngestRole.AacFallback))
-            missing.Add("Assign an IndexTarget to the AAC fallback role, or configure an iTunes library.");
-        return missing;
+        return missing.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
     public static IngestMusicConfiguration FromLibraryConfiguration(
@@ -143,11 +129,16 @@ public sealed record IngestMusicConfiguration
         IReadOnlyList<string> missing = MissingLibrarySettings(configuration);
         if (missing.Count > 0)
             throw new InvalidDataException(string.Join(" ", missing));
-        IReadOnlyDictionary<LibraryIngestRole, LibraryIndexLocation> targets =
-            configuration.IngestTargets;
         LibraryIndexLocation[] locations = configuration.IndexLocations.ToArray();
         LibraryIngestSettings settings = configuration.IngestSettings;
-        LibraryProfile profile = configuration.ActiveProfile;
+        LibraryProfile profile = ResolveLegacyRecipeDestinations(
+            configuration.ActiveProfile, locations, configuration.ItunesLibraryPath);
+        string RecipeDestination(string recipeId) => profile.Ingest.Recipes
+            .FirstOrDefault(recipe => string.Equals(
+                recipe.Id, recipeId, StringComparison.OrdinalIgnoreCase)) is { } recipe
+            ? locations.SingleOrDefault(location =>
+                location.RootId == recipe.DestinationRootId)?.Target ?? ""
+            : "";
         LibrarySourceDisposition disposition = configuration.SchemaVersion ==
             LibraryConfigurationSchema.LegacyVersion
             ? settings.DeleteSourcesAfterIngest
@@ -158,12 +149,10 @@ public sealed record IngestMusicConfiguration
         {
             FfmpegPath = configuration.FfmpegPath,
             ItunesLibraryPath = configuration.ItunesLibraryPath,
-            CdDestination = targets.GetValueOrDefault(LibraryIngestRole.Cd)?.Target ?? "",
-            PairedCdDestination = targets.GetValueOrDefault(LibraryIngestRole.CdFallback)?.Target ?? "",
-            HighResolutionDestination = targets.GetValueOrDefault(LibraryIngestRole.HiRes)?.Target ?? "",
-            AacDestination = targets.TryGetValue(LibraryIngestRole.AacFallback, out var aac)
-                ? aac.Target
-                : "",
+            CdDestination = RecipeDestination("legacy-cd-flac"),
+            PairedCdDestination = RecipeDestination("legacy-paired-cd-flac"),
+            HighResolutionDestination = RecipeDestination("legacy-hires-flac"),
+            AacDestination = RecipeDestination("legacy-aac"),
             LengthLimit = configuration.LengthLimit,
             DiscNumLengthLimit = configuration.DiscNumLengthLimit,
             AacEncoder = settings.AacEncoder,
@@ -174,10 +163,68 @@ public sealed record IngestMusicConfiguration
             PolicySnapshot = configuration.PolicySnapshot,
             RootTargets = locations.ToDictionary(location => location.RootId),
             Profiles = configuration.Profiles.ToDictionary(
-                item => item.Id, StringComparer.OrdinalIgnoreCase),
+                item => item.Id,
+                item => item.Id == profile.Id ? profile : item,
+                StringComparer.OrdinalIgnoreCase),
             ConfiguredSourceDisposition = disposition,
             PreserveSidecars = profile.Ingest.PreserveSidecars,
         };
+    }
+
+    private static LibraryProfile ResolveLegacyRecipeDestinations(
+        LibraryProfile profile,
+        IReadOnlyList<LibraryIndexLocation> locations,
+        string? itunesLibraryPath)
+    {
+        IReadOnlyDictionary<LibraryIngestRole, LibraryIndexLocation> targets =
+            LegacyTargets(locations);
+        LibraryIngestRecipe[] recipes = profile.Ingest.Recipes.Select(recipe =>
+        {
+            bool catalogFallback = recipe.DestinationLegacyRole ==
+                LibraryIngestRole.AacFallback &&
+                !string.IsNullOrWhiteSpace(itunesLibraryPath);
+            Guid? destinationRootId = recipe.DestinationRootId;
+            if (catalogFallback)
+                destinationRootId = null;
+            else if (destinationRootId is null &&
+                     recipe.DestinationLegacyRole != LibraryIngestRole.None &&
+                     targets.TryGetValue(recipe.DestinationLegacyRole, out var target))
+                destinationRootId = target.RootId;
+            bool unresolvedLegacyDestination = destinationRootId is null &&
+                !catalogFallback &&
+                recipe.DestinationLegacyRole != LibraryIngestRole.None;
+            return recipe with
+            {
+                Enabled = recipe.Enabled && !unresolvedLegacyDestination,
+                DestinationRootId = destinationRootId,
+                DestinationLegacyRole = LibraryIngestRole.None,
+                OutputRepresentationRole = LibraryRepresentationRole.Ignore,
+                AddToMediaCatalog = recipe.AddToMediaCatalog || catalogFallback,
+            };
+        }).ToArray();
+        return profile with
+        {
+            Ingest = profile.Ingest with
+            {
+                Enabled = profile.Ingest.Enabled && recipes.Any(recipe => recipe.Enabled),
+                Recipes = recipes,
+            },
+        };
+    }
+
+    private static IReadOnlyDictionary<LibraryIngestRole, LibraryIndexLocation> LegacyTargets(
+        IEnumerable<LibraryIndexLocation> locations)
+    {
+        var targets = new Dictionary<LibraryIngestRole, LibraryIndexLocation>();
+        foreach (LibraryIndexLocation location in locations.Where(location =>
+                     location.IngestRole != LibraryIngestRole.None))
+        {
+            if (!targets.TryAdd(location.IngestRole, location))
+                throw new InvalidDataException(
+                    $"More than one IndexTarget is assigned legacy ingest role " +
+                    $"'{location.IngestRole}'.");
+        }
+        return targets;
     }
 
     public static (IngestMusicConfiguration Configuration, string? ConfigurationPath) Resolve(
@@ -236,20 +283,45 @@ public sealed record IngestMusicConfiguration
             return string.IsNullOrWhiteSpace(value) ? null : ResolveRoot(value.Trim());
         }
 
+        string aacDestination = ResolveRoot(Required("AacDestination"));
+        string cdDestination = ResolveRoot(Required("CdDestination"));
+        string pairedCdDestination = ResolveRoot(Required("PairedCdDestination"));
+        string highResolutionDestination = ResolveRoot(Required("HighResolutionDestination"));
+        string? itunesLibraryPath = OptionalPath("ItunesLibrary");
+        LibraryIndexLocation LegacyRoot(string destination, LibraryIngestRole role) => new(
+            destination, null, [], null, false, role, false, false,
+            LibraryConfigurationSchema.CreateStableId(
+                $"legacy-ingest-root|{fullPath}|{role}"),
+            LibraryProfilePresets.LegacyId,
+            LibraryRootPermissions.IngestOutput);
+        LibraryIndexLocation[] locations =
+        [
+            LegacyRoot(cdDestination, LibraryIngestRole.Cd),
+            LegacyRoot(pairedCdDestination, LibraryIngestRole.CdFallback),
+            LegacyRoot(highResolutionDestination, LibraryIngestRole.HiRes),
+            LegacyRoot(aacDestination, LibraryIngestRole.AacFallback),
+        ];
+        LibraryProfile profile = ResolveLegacyRecipeDestinations(
+            LegacyProfile, locations, itunesLibraryPath);
+
         return new IngestMusicConfiguration
         {
             FfmpegPath = Required("FfmpegPath"),
-            AacDestination = ResolveRoot(Required("AacDestination")),
-            ItunesLibraryPath = OptionalPath("ItunesLibrary"),
-            CdDestination = ResolveRoot(Required("CdDestination")),
-            PairedCdDestination = ResolveRoot(Required("PairedCdDestination")),
-            HighResolutionDestination = ResolveRoot(Required("HighResolutionDestination")),
+            AacDestination = aacDestination,
+            ItunesLibraryPath = itunesLibraryPath,
+            CdDestination = cdDestination,
+            PairedCdDestination = pairedCdDestination,
+            HighResolutionDestination = highResolutionDestination,
             LengthLimit = Positive("LengthLimit", 255),
             DiscNumLengthLimit = Positive("DiscNumLengthLimit", 255),
             AacEncoder = ((string?)root.Element("AacEncoder") ?? "libfdk_aac").Trim(),
             AacBitrateKbps = Positive("AacBitrateKbps", 256),
             DeleteSourcesAfterIngest = (bool?)root.Element("DeleteSourcesAfterIngest") ?? false,
             RemoveNonMusicAfterIngest = (bool?)root.Element("RemoveNonMusicAfterIngest") ?? false,
+            Profile = profile,
+            Profiles = new Dictionary<string, LibraryProfile>(
+                StringComparer.OrdinalIgnoreCase) { [profile.Id] = profile },
+            RootTargets = locations.ToDictionary(location => location.RootId),
         };
     }
 

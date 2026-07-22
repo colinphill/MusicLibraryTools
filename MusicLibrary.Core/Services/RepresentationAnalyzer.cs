@@ -278,20 +278,10 @@ public static class RepresentationAnalyzer
         if (root is null)
             return LibraryRepresentation.Other;
 
-        return root.RepresentationRole switch
-        {
-            LibraryRepresentationRole.LegacyAutomatic => Classify(record),
-            LibraryRepresentationRole.Ignore => LibraryRepresentation.Other,
-            LibraryRepresentationRole.CdLossless => LibraryRepresentation.CdFlac,
-            LibraryRepresentationRole.HighResolutionLossless =>
-                LibraryRepresentation.HighResolutionFlac,
-            LibraryRepresentationRole.Purchased => LibraryRepresentation.Purchased,
-            LibraryRepresentationRole.GeneratedLossy => LibraryRepresentation.GeneratedAac,
-            LibraryRepresentationRole.LosslessByQuality => ClassifyLosslessByQuality(
-                record, configuration.GetEffectiveProfile(root).Quality),
-            _ => throw new ArgumentOutOfRangeException(
-                nameof(root.RepresentationRole), root.RepresentationRole, null),
-        };
+        return record.CodecType == CodecType.Lossless
+            ? ClassifyLosslessByQuality(
+                record, configuration.GetEffectiveProfile(root).Quality)
+            : Classify(record);
     }
 
     private static LibraryRepresentation ClassifyLosslessByQuality(

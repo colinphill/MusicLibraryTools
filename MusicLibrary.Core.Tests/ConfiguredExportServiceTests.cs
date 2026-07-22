@@ -367,6 +367,10 @@ public sealed class ConfiguredExportServiceTests
             // Keep catalog-only active; export naming explicitly selects another profile.
             var editable = EditableLibraryConfig.CreateNew();
             editable.ActiveProfileId = activeProfileId ?? editable.ActiveProfileId;
+            if (activeProfileId == LibraryProfilePresets.LegacyId &&
+                editable.Profiles.All(candidate => candidate.Id != activeProfileId))
+                editable.Profiles.Add(LibraryProfilePresets.Create(
+                    LibraryProfilePreset.LegacyMusicLibraryTools));
             if (additionalProfiles is not null)
                 editable.Profiles.AddRange(additionalProfiles);
             editable.DatabaseFile = Path("cache.db");

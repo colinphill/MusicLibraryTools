@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Controls.Presenters;
@@ -95,8 +96,14 @@ public sealed class UiControlTests
                 text => text.Text == "Include patterns");
             Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
                 text => text.Text == "Exclude patterns");
-            Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
-                text => text.Text == "Representation role");
+            Assert.DoesNotContain(settings.GetVisualDescendants().OfType<TextBlock>(),
+                text => text.Text is "Ingest role" or "Representation role");
+            Assert.Contains(settings.GetVisualDescendants().OfType<Button>(),
+                button => Equals(button.Content, "New"));
+            Assert.Contains(settings.GetVisualDescendants().OfType<Button>(),
+                button => Equals(button.Content, "Duplicate"));
+            Assert.Contains(settings.GetVisualDescendants().OfType<Button>(),
+                button => Equals(button.Content, "Delete"));
 
             string[] permissionLabels =
                 ["Metadata", "Artwork", "Organize files", "Ingest output", "Sync output"];
@@ -117,16 +124,187 @@ public sealed class UiControlTests
             Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
                 text => text.Text == "Export profiles");
 
+            settings.FindControl<TabControl>("SettingsTabs")!.SelectedIndex = 3;
+            Dispatcher.UIThread.RunJobs();
+            Assert.DoesNotContain(settings.GetVisualDescendants().OfType<TextBlock>(), text =>
+                text.Text is "Path length limit" or "Disc number length limit" or
+                    "AAC encoder" or "AAC bitrate (kbps)");
+
             settings.FindControl<TabControl>("SettingsTabs")!.SelectedIndex = 5;
             Dispatcher.UIThread.RunJobs();
             Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
                 text => text.Text == "Metadata fidelity");
             Assert.Contains(settings.GetVisualDescendants().OfType<Button>(),
                 button => Equals(button.Content, "Add recipe"));
+            Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
+                text => text.Text == "Profile name");
+            Assert.DoesNotContain(settings.GetVisualDescendants().OfType<TextBlock>(), text =>
+                text.Text is "Legacy destination role" or "Output representation");
         }
         finally
         {
             window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Settings_tab_switching_preserves_required_choice_fields()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        MainWindow window = services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Show();
+            services.GetRequiredService<INavigationService>().Navigate(ShellDestination.Settings);
+            Dispatcher.UIThread.RunJobs();
+
+            SettingsView settings = Assert.IsType<SettingsView>(
+                window.FindControl<ContentControl>("ContentHost")!.Content);
+            SettingsViewModel viewModel = Assert.IsType<SettingsViewModel>(settings.DataContext);
+            await viewModel.NewConfigurationCommand.ExecuteAsync(null);
+
+            IndexTargetEditorRow root = Assert.Single(viewModel.IndexTargets);
+            root.Path = @"C:\Music";
+            root.AllowIngestOutput = true;
+
+            viewModel.AddPlaylistSourceCommand.Execute(null);
+            PlaylistSourceEditorRow source = Assert.Single(viewModel.PlaylistSources);
+            source.Location = @"C:\Playlists";
+
+            viewModel.AddPlaylistTargetCommand.Execute(null);
+            PlaylistTargetEditorRow target = Assert.Single(viewModel.PlaylistTargets);
+            target.Target = @"C:\Playlist Exports";
+            target.Type = "wpl";
+            target.PathStyle = "relative";
+            target.Encoding = "utf-16";
+            target.LineEnding = "lf";
+            target.FileNameTransform = "sanitize";
+            target.CollisionPolicy = LibraryPathCollisionPolicy.Hash;
+
+            viewModel.AddExportProfileCommand.Execute(null);
+            ExportProfileEditorRow export = Assert.Single(viewModel.ExportProfiles);
+            export.SelectionKind = ExportSelectionKind.Playlists;
+            export.TransformMode = ExportTransformMode.Remux;
+            export.CollisionPolicy = LibraryPathCollisionPolicy.Suffix;
+            export.ArtworkMode = ExportArtworkMode.Sidecar;
+            export.PlaylistFormat = "m3u";
+            export.PlaylistEncoding = "utf-16";
+            export.PlaylistLineEnding = "lf";
+            export.ExtraFileDisposition = ExportExtraFileDisposition.Quarantine;
+
+            LibraryProfileEditorRow advanced = Assert.IsType<LibraryProfileEditorRow>(
+                viewModel.AdvancedProfile);
+            advanced.UnicodeNormalization = LibraryUnicodeNormalization.FormKD;
+            advanced.DiscStrategy = LibraryDiscStrategy.DiscFolder;
+            advanced.TrackTotalScope = LibraryTrackTotalScope.Album;
+            advanced.SourceDisposition = LibrarySourceDisposition.Quarantine;
+            advanced.ArtworkStorage = LibraryArtworkStorage.Both;
+            advanced.ArtworkRoles = LibraryArtworkRoleSelection.AllRoles;
+            advanced.ArtworkEncoding = LibraryArtworkEncoding.Png;
+            advanced.UnknownSidecarDisposition = LibrarySidecarDisposition.Quarantine;
+
+            viewModel.AddIngestRecipeCommand.Execute(null);
+            IngestRecipeEditorRow recipe = Assert.Single(advanced.IngestRecipes);
+            recipe.Action = LibraryIngestAction.Transcode;
+            recipe.AddToMediaCatalog = true;
+            recipe.CollisionPolicy = LibraryPathCollisionPolicy.Suffix;
+            recipe.InputChannelChoice = SettingsChoiceLists.ChannelChoice(
+                LibraryChannelSelection.Multi);
+            recipe.OutputChannelChoice = SettingsChoiceLists.ChannelChoice(
+                LibraryChannelSelection.Stereo);
+            recipe.AlbumCondition = LibraryIngestAlbumCondition.HasHighResolution;
+            recipe.SourceSelection = LibraryIngestSourceSelection.PreferCdQuality;
+            recipe.RequireFallbackApproval = true;
+            recipe.ExtraFfmpegOptions = "-af \"volume=0.9\"";
+            recipe.DestinationRootChoice = Assert.Single(
+                recipe.DestinationRootChoices, choice => choice.Id == root.Id);
+
+            viewModel.AddSidecarRuleCommand.Execute(null);
+            SidecarRuleEditorRow sidecar = advanced.SidecarRules[^1];
+            sidecar.Disposition = LibrarySidecarDisposition.Quarantine;
+            HealthRuleEditorRow health = advanced.HealthRules[0];
+            health.Severity = LibraryHealthSeverity.Error;
+
+            Dispatcher.UIThread.RunJobs();
+            string? validationBefore = viewModel.ValidationSummary;
+            TabControl tabs = settings.FindControl<TabControl>("SettingsTabs")!;
+
+            ActivateTab(tabs, 1);
+            AssertVisibleChoicesSelected(settings);
+            ActivateTab(tabs, 2);
+            AssertVisibleChoicesSelected(settings);
+            ActivateTab(tabs, 5);
+            AssertVisibleChoicesSelected(settings);
+            ActivateTab(tabs, 6);
+            ActivateTab(tabs, 2);
+            AssertVisibleChoicesSelected(settings);
+
+            Assert.Equal("m3u", source.Type);
+            Assert.Equal("wpl", target.Type);
+            Assert.Equal("relative", target.PathStyle);
+            Assert.Equal("utf-16", target.Encoding);
+            Assert.Equal("lf", target.LineEnding);
+            Assert.Equal("sanitize", target.FileNameTransform);
+            Assert.Equal(ExportTransformMode.Remux, export.TransformMode);
+            Assert.Equal("m3u", export.PlaylistFormat);
+            Assert.Equal("utf-16", export.PlaylistEncoding);
+            Assert.Equal("lf", export.PlaylistLineEnding);
+
+            ActivateTab(tabs, 5);
+            AssertVisibleChoicesSelected(settings);
+            Assert.Same(advanced, viewModel.AdvancedProfile);
+            Assert.Equal(LibraryUnicodeNormalization.FormKD, advanced.UnicodeNormalization);
+            Assert.Equal(LibraryDiscStrategy.DiscFolder, advanced.DiscStrategy);
+            Assert.Equal(LibraryTrackTotalScope.Album, advanced.TrackTotalScope);
+            Assert.Equal(LibrarySourceDisposition.Quarantine, advanced.SourceDisposition);
+            Assert.Equal(LibraryIngestAction.Transcode, recipe.Action);
+            Assert.Equal(["Stereo", "Multi"],
+                SettingsChoiceLists.ChannelChoices.Select(choice => choice.Label));
+            Assert.Equal(LibraryChannelSelection.Multi, recipe.InputChannelChoice.Value);
+            Assert.Equal(LibraryChannelSelection.Stereo, recipe.OutputChannelChoice.Value);
+            Assert.Equal(LibraryIngestAlbumCondition.HasHighResolution,
+                recipe.AlbumCondition);
+            Assert.Equal(LibraryIngestSourceSelection.PreferCdQuality,
+                recipe.SourceSelection);
+            Assert.True(recipe.RequireFallbackApproval);
+            Assert.Equal("-af \"volume=0.9\"", recipe.ExtraFfmpegOptions);
+            Assert.True(recipe.AddToMediaCatalog);
+            Assert.Contains(settings.GetVisualDescendants().OfType<TextBox>(), textBox =>
+                AutomationProperties.GetName(textBox) == "Extra FFmpeg options");
+            Assert.Equal(root.Id, recipe.DestinationRootId);
+            Assert.Equal(@"C:\Music", recipe.DestinationRootChoice?.Label);
+            ComboBox destinationRootPicker = Assert.Single(
+                settings.GetVisualDescendants().OfType<ComboBox>(), combo =>
+                    ReferenceEquals(combo.ItemsSource, recipe.DestinationRootChoices));
+            Assert.Equal(recipe.DestinationRootChoice,
+                destinationRootPicker.SelectedItem);
+            Assert.Equal(LibraryHealthSeverity.Error, health.Severity);
+            Assert.Equal(LibrarySidecarDisposition.Quarantine, sidecar.Disposition);
+
+            ActivateTab(tabs, 1);
+            AssertVisibleChoicesSelected(settings);
+            Assert.Equal(validationBefore, viewModel.ValidationSummary);
+        }
+        finally
+        {
+            window.Hide();
+        }
+
+        static void ActivateTab(TabControl tabs, int index)
+        {
+            tabs.SelectedIndex = index;
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+            Dispatcher.UIThread.RunJobs();
+        }
+
+        static void AssertVisibleChoicesSelected(SettingsView settings)
+        {
+            ComboBox[] choices = settings.GetVisualDescendants().OfType<ComboBox>().ToArray();
+            Assert.NotEmpty(choices);
+            Assert.All(choices, choice => Assert.NotNull(choice.ItemsSource));
+            Assert.All(choices, choice => Assert.NotNull(choice.SelectedItem));
         }
     }
 
@@ -1132,7 +1310,7 @@ public sealed class UiControlTests
                         {
                             SettingsView settings = Assert.IsType<SettingsView>(activeView);
                             SettingsViewModel viewModel = Assert.IsType<SettingsViewModel>(settings.DataContext);
-                            viewModel.LengthLimit = 254;
+                            viewModel.DatabaseFile += ".changed";
                             settings.FindControl<TabControl>("SettingsTabs")!.SelectedIndex = 4;
                             Dispatcher.UIThread.RunJobs();
                             AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);

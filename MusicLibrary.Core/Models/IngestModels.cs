@@ -89,6 +89,8 @@ public sealed record IngestOutputPlan
     public LibraryIngestAction Action { get; init; } = LibraryIngestAction.Transcode;
     public string? OutputCodec { get; init; }
     public string? Encoder { get; init; }
+    public string? ExtraFfmpegOptions { get; init; }
+    public bool AddToMediaCatalog { get; init; }
     public int? BitrateKbps { get; init; }
     public int? SampleRateHz { get; init; }
     public int? BitsPerSample { get; init; }

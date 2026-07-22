@@ -832,6 +832,80 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public async Task Settings_ingest_recipe_root_picker_tracks_path_and_stable_id()
+    {
+        var viewModel = new SettingsViewModel(
+            new FakeSettings(), new FakeFilePicker(), new FakeDialogs(), new FakeTheme());
+        await viewModel.NewConfigurationCommand.ExecuteAsync(null);
+        viewModel.SelectedLibraryProfile = viewModel.LibraryProfiles.Single(profile =>
+            profile.Id == LibraryProfilePresets.ArtistAlbumId);
+        IndexTargetEditorRow root = Assert.Single(viewModel.IndexTargets);
+        root.Path = @"D:\Music\Paired CD";
+        root.AllowIngestOutput = true;
+        viewModel.AddIngestRecipeCommand.Execute(null);
+        IngestRecipeEditorRow recipe = Assert.Single(
+            Assert.IsType<LibraryProfileEditorRow>(viewModel.AdvancedProfile)
+                .IngestRecipes);
+
+        recipe.DestinationRootChoice = Assert.Single(
+            recipe.DestinationRootChoices, choice => choice.Id == root.Id);
+
+        Assert.Equal(root.Id, recipe.DestinationRootId);
+        Assert.Equal(@"D:\Music\Paired CD",
+            recipe.DestinationRootChoice?.Label);
+        root.Path = @"E:\Archive\CD Fallback";
+        Assert.Equal(root.Id, recipe.DestinationRootId);
+        Assert.Equal(@"E:\Archive\CD Fallback",
+            recipe.DestinationRootChoice?.Label);
+
+        viewModel.RemoveIndexTargetCommand.Execute(root);
+
+        Assert.Equal(root.Id, recipe.DestinationRootId);
+        Assert.StartsWith("Missing root", recipe.DestinationRootChoice?.Label);
+        Assert.Equal(root.Id, recipe.Build().DestinationRootId);
+    }
+
+    [Fact]
+    public async Task Settings_creates_duplicates_renames_and_deletes_custom_profiles()
+    {
+        var viewModel = new SettingsViewModel(
+            new FakeSettings(), new FakeFilePicker(), new FakeDialogs(), new FakeTheme());
+        await viewModel.NewConfigurationCommand.ExecuteAsync(null);
+        int builtInCount = viewModel.LibraryProfiles.Count;
+        Assert.False(viewModel.DeleteLibraryProfileCommand.CanExecute(null));
+
+        viewModel.CreateLibraryProfileCommand.Execute(null);
+
+        LibraryProfile created = Assert.IsType<LibraryProfile>(
+            viewModel.SelectedLibraryProfile);
+        Assert.Equal(LibraryProfilePreset.Custom, created.Preset);
+        Assert.Equal(builtInCount + 1, viewModel.LibraryProfiles.Count);
+        Assert.True(viewModel.DeleteLibraryProfileCommand.CanExecute(null));
+        LibraryProfileEditorRow editor = Assert.IsType<LibraryProfileEditorRow>(
+            viewModel.AdvancedProfile);
+        editor.Name = "Home archive";
+
+        viewModel.DuplicateLibraryProfileCommand.Execute(null);
+
+        LibraryProfile duplicate = Assert.IsType<LibraryProfile>(
+            viewModel.SelectedLibraryProfile);
+        Assert.Equal(LibraryProfilePreset.Custom, duplicate.Preset);
+        Assert.Equal("Home archive copy", duplicate.Name);
+        Assert.NotEqual(created.Id, duplicate.Id);
+        Assert.Equal(duplicate.Id, Assert.Single(viewModel.IndexTargets).ProfileId);
+
+        await viewModel.DeleteLibraryProfileCommand.ExecuteAsync(null);
+
+        Assert.DoesNotContain(viewModel.LibraryProfiles,
+            profile => profile.Id == duplicate.Id);
+        Assert.Equal(LibraryProfilePresets.CatalogOnlyId,
+            viewModel.SelectedLibraryProfile?.Id);
+        Assert.Equal(LibraryProfilePresets.CatalogOnlyId,
+            Assert.Single(viewModel.IndexTargets).ProfileId);
+        Assert.False(viewModel.DeleteLibraryProfileCommand.CanExecute(null));
+    }
+
+    [Fact]
     public async Task Settings_guided_setup_starts_safe_and_reviews_effective_policy()
     {
         var viewModel = new SettingsViewModel(
@@ -973,9 +1047,6 @@ public sealed class PresentationTests
             Assert.True(root.AllowIngestOutput);
             Assert.True(root.AllowSynchronizationOutput);
             Assert.True(root.UseItunesCanonicalNaming);
-            Assert.Equal(LibraryIngestRole.Cd, root.IngestRole);
-            Assert.Equal(LibraryRepresentationRole.LosslessByQuality,
-                root.RepresentationRole);
             Assert.True(root.IsSyncTarget);
             Assert.Equal(".flac, .m4a", root.IndexFormats);
             Assert.Equal("Music/**; *.flac", root.IndexIncludePatterns);
@@ -985,10 +1056,6 @@ public sealed class PresentationTests
             Assert.Equal("/FLAC", root.Memberships[0].Offset);
             Assert.Equal("Desktop", root.Memberships[1].Name);
             Assert.Equal("/Music", root.Memberships[1].Offset);
-            Assert.Equal(220, viewModel.LengthLimit);
-            Assert.Equal(180, viewModel.DiscNumLengthLimit);
-            Assert.Equal("aac_encoder", viewModel.AacEncoder);
-            Assert.Equal(288, viewModel.AacBitrateKbps);
             Assert.Equal(5m, viewModel.OversizedArtworkSizeThresholdMib);
             Assert.Equal(5 * 1024 * 1024, viewModel.OversizedArtworkByteThreshold);
             Assert.Equal(3_200, viewModel.OversizedArtworkDimensionThreshold);
@@ -1021,6 +1088,13 @@ public sealed class PresentationTests
             viewModel.AdvancedProfile.HealthRules.Single(rule =>
                 rule.Id == LibraryHealthRuleIds.LossyFile).Enabled = false;
             viewModel.AdvancedProfile.IngestRecipes[0].PreserveMetadata = false;
+            IngestRecipeEditorRow aacRecipe = viewModel.AdvancedProfile.IngestRecipes.Single(
+                recipe => recipe.Id == "legacy-aac");
+            aacRecipe.Encoder = "aac-advanced";
+            aacRecipe.BitrateKbps = 320;
+            aacRecipe.ExtraFfmpegOptions =
+                "-af \"loudnorm=I=-16:LRA=11\" -movflags +faststart";
+            aacRecipe.AddToMediaCatalog = true;
             SidecarRuleEditorRow newSidecar = SidecarRuleEditorRow.Create();
             newSidecar.Patterns = "*.lrc, lyrics/**";
             viewModel.AdvancedProfile.SidecarRules.Add(newSidecar);
@@ -1048,8 +1122,8 @@ public sealed class PresentationTests
             Assert.Equal("/Music", savedRoot.Memberships[3].Offset);
             Assert.True(savedRoot.UseItunesCanonicalNaming);
             Assert.True(savedRoot.IsSyncTarget);
-            Assert.Equal(LibraryIngestRole.Cd, savedRoot.IngestRole);
-            Assert.Equal(LibraryRepresentationRole.LosslessByQuality,
+            Assert.Equal(LibraryIngestRole.None, savedRoot.IngestRole);
+            Assert.Equal(LibraryRepresentationRole.Ignore,
                 savedRoot.RepresentationRole);
             Assert.Equal([".flac"], savedRoot.IndexFormats);
             Assert.Equal(["Music/**", "*.flac"], savedRoot.IndexIncludePatterns);
@@ -1057,6 +1131,15 @@ public sealed class PresentationTests
             Assert.Equal(LibraryPathCollisionPolicy.Hash,
                 saved.ActiveProfile.Naming.CollisionPolicy);
             Assert.Equal(180, saved.ActiveProfile.Naming.ComponentLengthLimit);
+            Assert.Equal(180, saved.LengthLimit);
+            Assert.Equal(180, saved.DiscNumLengthLimit);
+            Assert.Equal("aac-advanced", saved.AacEncoder);
+            Assert.Equal(320, saved.AacBitrateKbps);
+            Assert.Equal("-af \"loudnorm=I=-16:LRA=11\" -movflags +faststart",
+                saved.ActiveProfile.Ingest.Recipes.Single(recipe =>
+                    recipe.Id == "legacy-aac").ExtraFfmpegOptions);
+            Assert.True(saved.ActiveProfile.Ingest.Recipes.Single(recipe =>
+                recipe.Id == "legacy-aac").AddToMediaCatalog);
             Assert.False(saved.ActiveProfile.AlbumIdentity.StripFormatSuffixes);
             Assert.False(saved.ActiveProfile.Metadata.PreserveReplayGain);
             Assert.False(saved.ActiveProfile.Health.Find(
@@ -1079,13 +1162,6 @@ public sealed class PresentationTests
             Assert.Equal(ExportExtraFileDisposition.Quarantine,
                 savedExport.Reconciliation.ExtraFiles);
 
-            viewModel.LengthLimit = 0;
-            Assert.False(viewModel.SaveConfigurationCommand.CanExecute(null));
-            Assert.Contains("Path length limit", viewModel.ValidationSummary);
-            viewModel.OpenValidationCommand.Execute(null);
-            Assert.Equal(3, viewModel.SelectedTabIndex);
-
-            viewModel.LengthLimit = 255;
             viewModel.OversizedArtworkDimensionThreshold = 0;
             Assert.False(viewModel.SaveConfigurationCommand.CanExecute(null));
             Assert.Contains("Oversized artwork dimension", viewModel.ValidationSummary);

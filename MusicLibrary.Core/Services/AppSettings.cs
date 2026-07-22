@@ -126,7 +126,6 @@ public sealed class AppSettings : IAppSettings
         _ = configuration.FfmpegPath;
         _ = configuration.IngestSettings;
         _ = configuration.ArtworkHealthSettings;
-        _ = configuration.IngestTargets;
         _ = configuration.CrossSyncTarget;
         _ = configuration.DeleteStaleCrossSyncFiles;
         _ = configuration.CleanCrossSyncPlaylists;

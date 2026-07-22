@@ -88,8 +88,8 @@ public class EditableLibraryConfigTests
             Assert.Equal("*.flac", reloaded.IndexTargets[0].Filter);
             Assert.False(reloaded.IndexTargets[0].Organize);
             Assert.True(reloaded.IndexTargets[1].Organize);
-            Assert.Equal(LibraryIngestRole.Cd, reloaded.IndexTargets[0].IngestRole);
-            Assert.Equal(LibraryIngestRole.HiRes, reloaded.IndexTargets[1].IngestRole);
+            Assert.Equal(LibraryIngestRole.None, reloaded.IndexTargets[0].IngestRole);
+            Assert.Equal(LibraryIngestRole.None, reloaded.IndexTargets[1].IngestRole);
             Assert.True(reloaded.IndexTargets[0].IsSyncTarget);
             Assert.False(reloaded.IndexTargets[1].IsSyncTarget);
             Assert.True(reloaded.IndexTargets[0].UseItunesCanonicalNaming);
@@ -308,7 +308,7 @@ public class EditableLibraryConfigTests
     }
 
     [Fact]
-    public void PartialAndUnavailableIngestTargetsAreValidButReportedAsNotReady()
+    public void PartialLegacyIngestRolesMigrateToTheAvailableRecipe()
     {
         string path = Path.Combine(Path.GetTempPath(), "cfg_" + Guid.NewGuid().ToString("N") + ".xml");
         try
@@ -328,18 +328,15 @@ public class EditableLibraryConfigTests
 
             var configuration = new LibraryConfiguration(path);
             Assert.False(Directory.Exists(unavailable));
-            Assert.Equal(unavailable,
-                configuration.IngestTargets[LibraryIngestRole.Cd].Target);
+            Assert.Empty(configuration.IngestTargets);
+            LibraryIngestRecipe recipe = Assert.Single(
+                configuration.ActiveProfile.Ingest.Recipes, candidate => candidate.Enabled);
+            Assert.Equal("legacy-cd-flac", recipe.Id);
+            Assert.Equal(configuration.IndexLocations.Single().RootId,
+                recipe.DestinationRootId);
             IReadOnlyList<string> missing =
                 IngestMusicConfiguration.MissingLibrarySettings(configuration);
-            Assert.DoesNotContain(missing,
-                item => item.Contains("CD ingest", StringComparison.OrdinalIgnoreCase));
-            Assert.Contains(missing,
-                item => item.Contains("CD fallback", StringComparison.OrdinalIgnoreCase));
-            Assert.Contains(missing,
-                item => item.Contains("Hi-res", StringComparison.OrdinalIgnoreCase));
-            Assert.Contains(missing,
-                item => item.Contains("AAC fallback", StringComparison.OrdinalIgnoreCase));
+            Assert.Empty(missing);
         }
         finally
         {
@@ -491,7 +488,7 @@ public class EditableLibraryConfigTests
             Assert.Equal(LibraryProfilePresets.CatalogOnlyId, location.ProfileId);
             Assert.Equal(LibraryRootPermissions.None, location.Permissions);
             Assert.False(location.Organize);
-            Assert.Contains(runtime.Profiles,
+            Assert.DoesNotContain(runtime.Profiles,
                 profile => profile.Preset == LibraryProfilePreset.LegacyMusicLibraryTools);
             Assert.Contains(runtime.Profiles,
                 profile => profile.Preset == LibraryProfilePreset.ItunesMedia);
@@ -538,7 +535,7 @@ public class EditableLibraryConfigTests
             Assert.Equal(legacy.RootId, migratedRoot.RootId);
             Assert.Equal(LibraryProfilePresets.LegacyId, migrated.ActiveProfileId);
             Assert.False(migratedRoot.Organize);
-            Assert.Equal(LibraryIngestRole.Cd, migratedRoot.IngestRole);
+            Assert.Equal(LibraryIngestRole.None, migratedRoot.IngestRole);
         }
         finally
         {
@@ -566,6 +563,17 @@ public class EditableLibraryConfigTests
                 Disc = new(LibraryDiscStrategy.DiscFolder,
                     LibraryTrackTotalScope.Album, false, true),
             };
+            LibraryIngestRecipe customRecipe = LibraryProfilePresets.Create(
+                LibraryProfilePreset.LegacyMusicLibraryTools).Ingest.Recipes[^1] with
+            {
+                Id = "custom-aac",
+                ExtraFfmpegOptions = "-af \"loudnorm=I=-16:LRA=11\" -movflags +faststart",
+                AddToMediaCatalog = true,
+            };
+            custom = custom with
+            {
+                Ingest = custom.Ingest with { Recipes = [customRecipe] },
+            };
             editable.Profiles.Add(custom);
             editable.ActiveProfileId = custom.Id;
             editable.IndexTargets.Add(new IndexTargetEntry
@@ -583,12 +591,44 @@ public class EditableLibraryConfigTests
             Assert.Equal("{Genre}/{AlbumArtist}/{Album}", loaded.Naming.DirectoryTemplate);
             Assert.Equal(LibraryPathCollisionPolicy.Hash, loaded.Naming.CollisionPolicy);
             Assert.Equal(LibraryDiscStrategy.DiscFolder, loaded.Disc.Strategy);
+            Assert.Equal("-af \"loudnorm=I=-16:LRA=11\" -movflags +faststart",
+                Assert.Single(loaded.Ingest.Recipes).ExtraFfmpegOptions);
+            Assert.True(Assert.Single(loaded.Ingest.Recipes).AddToMediaCatalog);
+            Assert.Equal("-af \"loudnorm=I=-16:LRA=11\" -movflags +faststart",
+                (string?)XDocument.Load(path).Root!.Elements("LibraryProfile")
+                    .Single(profile => (string?)profile.Attribute("Id") == custom.Id)
+                    .Element("Ingest")!.Element("Recipe")!.Element("Output")!
+                    .Attribute("ExtraFfmpegOptions"));
             LibraryProfile legacy = Assert.Single(runtime.Profiles,
                 profile => profile.Preset == LibraryProfilePreset.LegacyMusicLibraryTools);
             Assert.Equal(
-                ["legacy-hires-flac", "legacy-cd-flac", "legacy-aac"],
+                ["legacy-hires-flac", "legacy-cd-flac", "legacy-paired-cd-flac", "legacy-aac"],
                 legacy.Ingest.Recipes.Select(recipe => recipe.Id));
-            Assert.Empty(loaded.Ingest.Recipes);
+            LibraryIngestRecipe paired = legacy.Ingest.Recipes[2];
+            Assert.Equal(LibraryIngestRole.None, paired.DestinationLegacyRole);
+            Assert.Equal(LibraryIngestAlbumCondition.HasHighResolution,
+                paired.AlbumCondition);
+            Assert.Equal(LibraryIngestSourceSelection.PreferCdQuality,
+                paired.SourceSelection);
+            Assert.True(paired.RequireFallbackApproval);
+            Assert.Equal(LibraryChannelSelection.Stereo, paired.InputChannels);
+            Assert.Equal(LibraryChannelSelection.Stereo, paired.OutputChannels);
+            XElement pairedXml = XDocument.Load(path).Root!
+                .Elements("LibraryProfile")
+                .Elements("Ingest")
+                .Elements("Recipe")
+                .Single(recipe => (string?)recipe.Attribute("Id") == paired.Id);
+            Assert.Equal("Stereo", (string?)pairedXml.Element("Match")?
+                .Attribute("InputChannels"));
+            Assert.Equal("Stereo", (string?)pairedXml.Element("Output")?
+                .Attribute("OutputChannels"));
+            pairedXml.Element("Match")!.SetAttributeValue("InputChannels", "6");
+            pairedXml.Document!.Save(path);
+            LibraryProfile legacyNumeric = new LibraryConfiguration(path).Profiles.Single(
+                profile => profile.Preset == LibraryProfilePreset.LegacyMusicLibraryTools);
+            Assert.Equal(LibraryChannelSelection.Multi,
+                legacyNumeric.Ingest.Recipes[2].InputChannels);
+            Assert.Equal("custom-aac", Assert.Single(loaded.Ingest.Recipes).Id);
             Assert.Equal(64, runtime.PolicySnapshot.Fingerprint.Length);
         }
         finally
@@ -1006,15 +1046,28 @@ public class EditableLibraryConfigTests
         EditableLibraryConfig editable = EditableLibraryConfig.CreateNew();
         IndexTargetEntry target = editable.CreateIndexTarget(
             Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")));
-        target.IngestRole = LibraryIngestRole.Cd;
         editable.IndexTargets.Add(target);
+        LibraryProfile profile = LibraryProfilePresets.Create(
+            LibraryProfilePreset.Custom, "validation-ingest", "Validation ingest");
+        LibraryIngestRecipe recipe = new(
+            "copy-flac", "Copy FLAC", true, [".flac"], true,
+            null, null, null, false, LibraryIngestAction.Copy,
+            target.Id, LibraryIngestRole.None, ".flac", "flac", null,
+            null, null, null, null, profile.Id, true, true,
+            LibraryPathCollisionPolicy.Stop);
+        profile = profile with
+        {
+            Ingest = new(true, LibrarySourceDisposition.Preserve, true, [recipe]),
+        };
+        editable.Profiles.Add(profile);
+        editable.ActiveProfileId = profile.Id;
 
         IReadOnlyList<LibraryConfigurationIssue> issues = editable.Validate(
             includePathAvailabilityWarnings: true);
 
         Assert.Contains(issues, issue => issue.Code == "root-offline" &&
             issue.Severity == LibraryConfigurationIssueSeverity.Warning);
-        Assert.Contains(issues, issue => issue.Code == "root-ingest-permission" &&
+        Assert.Contains(issues, issue => issue.Code == "recipe-root-permission" &&
             issue.Severity == LibraryConfigurationIssueSeverity.Error);
     }
 

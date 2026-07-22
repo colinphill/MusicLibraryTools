@@ -345,24 +345,11 @@ public partial class IndexTargetEditorRow : ObservableObject
     private bool _useItunesCanonicalNaming;
 
     [ObservableProperty]
-    private LibraryIngestRole _ingestRole;
-
-    [ObservableProperty]
-    private LibraryRepresentationRole _representationRole =
-        LibraryRepresentationRole.Ignore;
-
-    [ObservableProperty]
     private bool _isSyncTarget;
 
     public ObservableCollection<IndexTargetSetEditorRow> Memberships { get; } = [];
 
     public IndexTargetEntry? Source { get; set; }
-
-    partial void OnIngestRoleChanged(LibraryIngestRole value)
-    {
-        if (value != LibraryIngestRole.None)
-            AllowIngestOutput = true;
-    }
 
     partial void OnIsSyncTargetChanged(bool value)
     {
@@ -592,6 +579,11 @@ public partial class HealthRuleEditorRow : ObservableObject
         Id, Enabled, Severity, ProposeRepair, ApplyRepair);
 }
 
+public sealed record SettingsRootChoice(Guid? Id, string Label)
+{
+    public override string ToString() => Label;
+}
+
 public partial class IngestRecipeEditorRow : ObservableObject
 {
     public required LibraryIngestRecipe Source { get; init; }
@@ -602,29 +594,38 @@ public partial class IngestRecipeEditorRow : ObservableObject
     [ObservableProperty] private bool? _requireLossless;
     [ObservableProperty] private int? _minimumSampleRateHz;
     [ObservableProperty] private int? _minimumBitsPerSample;
-    [ObservableProperty] private int? _inputChannels;
+    [ObservableProperty] private SettingsChannelChoice _inputChannelChoice =
+        SettingsChoiceLists.ChannelChoices[0];
     [ObservableProperty] private bool _matchAnyQualityMinimum;
+    [ObservableProperty] private LibraryIngestAlbumCondition _albumCondition;
+    [ObservableProperty] private LibraryIngestSourceSelection _sourceSelection;
+    [ObservableProperty] private bool _requireFallbackApproval;
     [ObservableProperty] private LibraryIngestAction _action;
-    [ObservableProperty] private string? _destinationRootId;
-    [ObservableProperty] private LibraryIngestRole _destinationLegacyRole;
+    [ObservableProperty] private Guid? _destinationRootId;
+    [ObservableProperty] private SettingsRootChoice? _destinationRootChoice;
     [ObservableProperty] private string? _outputExtension;
     [ObservableProperty] private string? _codec;
     [ObservableProperty] private string? _encoder;
+    [ObservableProperty] private string? _extraFfmpegOptions;
+    [ObservableProperty] private bool _addToMediaCatalog;
     [ObservableProperty] private int? _bitrateKbps;
     [ObservableProperty] private int? _sampleRateHz;
     [ObservableProperty] private int? _bitsPerSample;
-    [ObservableProperty] private int? _outputChannels;
+    [ObservableProperty] private SettingsChannelChoice _outputChannelChoice =
+        SettingsChoiceLists.ChannelChoices[0];
     [ObservableProperty] private string? _namingProfileId;
     [ObservableProperty] private bool _preserveMetadata = true;
     [ObservableProperty] private bool _preserveArtwork = true;
     [ObservableProperty] private bool _useProfileCollision = true;
     [ObservableProperty] private LibraryPathCollisionPolicy _collisionPolicy;
-    [ObservableProperty] private LibraryRepresentationRole _outputRepresentationRole;
+    private bool _refreshingDestinationRoots;
+
+    public ObservableCollection<SettingsRootChoice> DestinationRootChoices { get; } = [];
 
     public string Summary => $"{Action}; {InputExtensions} to " +
-        (!string.IsNullOrWhiteSpace(DestinationRootId)
-            ? DestinationRootId
-            : DestinationLegacyRole.ToString());
+        (DestinationRootId is not null
+            ? DestinationRootChoice?.Label ?? DestinationRootId.Value.ToString("D")
+            : AddToMediaCatalog ? "configured media catalog" : "no destination");
 
     public static IngestRecipeEditorRow From(LibraryIngestRecipe recipe) => new()
     {
@@ -636,58 +637,56 @@ public partial class IngestRecipeEditorRow : ObservableObject
         RequireLossless = recipe.RequireLossless,
         MinimumSampleRateHz = recipe.MinimumSampleRateHz,
         MinimumBitsPerSample = recipe.MinimumBitsPerSample,
-        InputChannels = recipe.InputChannels,
+        InputChannelChoice = SettingsChoiceLists.ChannelChoice(recipe.InputChannels),
         MatchAnyQualityMinimum = recipe.MatchAnyQualityMinimum,
+        AlbumCondition = recipe.AlbumCondition,
+        SourceSelection = recipe.SourceSelection,
+        RequireFallbackApproval = recipe.RequireFallbackApproval,
         Action = recipe.Action,
-        DestinationRootId = recipe.DestinationRootId?.ToString("D"),
-        DestinationLegacyRole = recipe.DestinationLegacyRole,
+        DestinationRootId = recipe.DestinationRootId,
         OutputExtension = recipe.OutputExtension,
         Codec = recipe.Codec,
         Encoder = recipe.Encoder,
+        ExtraFfmpegOptions = recipe.ExtraFfmpegOptions,
+        AddToMediaCatalog = recipe.AddToMediaCatalog,
         BitrateKbps = recipe.BitrateKbps,
         SampleRateHz = recipe.SampleRateHz,
         BitsPerSample = recipe.BitsPerSample,
-        OutputChannels = recipe.OutputChannels,
+        OutputChannelChoice = SettingsChoiceLists.ChannelChoice(recipe.OutputChannels),
         NamingProfileId = recipe.NamingProfileId,
         PreserveMetadata = recipe.PreserveMetadata,
         PreserveArtwork = recipe.PreserveArtwork,
         UseProfileCollision = recipe.CollisionPolicy is null,
         CollisionPolicy = recipe.CollisionPolicy ?? LibraryPathCollisionPolicy.Stop,
-        OutputRepresentationRole = recipe.OutputRepresentationRole,
     };
 
     public static IngestRecipeEditorRow Create() => From(new(
-        "recipe-" + Guid.NewGuid().ToString("N")[..12],
-        "New recipe",
-        false,
-        [".flac"],
-        null,
-        null,
-        null,
-        null,
-        false,
-        LibraryIngestAction.Copy,
-        null,
-        LibraryIngestRole.None,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        true,
-        true,
-        null));
+        Id: "recipe-" + Guid.NewGuid().ToString("N")[..12],
+        Name: "New recipe",
+        Enabled: false,
+        InputExtensions: [".flac"],
+        RequireLossless: null,
+        MinimumSampleRateHz: null,
+        MinimumBitsPerSample: null,
+        InputChannels: LibraryChannelSelection.Stereo,
+        MatchAnyQualityMinimum: false,
+        Action: LibraryIngestAction.Copy,
+        DestinationRootId: null,
+        DestinationLegacyRole: LibraryIngestRole.None,
+        OutputExtension: null,
+        Codec: null,
+        Encoder: null,
+        BitrateKbps: null,
+        SampleRateHz: null,
+        BitsPerSample: null,
+        OutputChannels: LibraryChannelSelection.Stereo,
+        NamingProfileId: null,
+        PreserveMetadata: true,
+        PreserveArtwork: true,
+        CollisionPolicy: null));
 
     public LibraryIngestRecipe Build()
     {
-        Guid? destinationRoot = null;
-        if (!string.IsNullOrWhiteSpace(DestinationRootId))
-            destinationRoot = Guid.TryParse(DestinationRootId.Trim(), out Guid parsed)
-                ? parsed
-                : Guid.Empty;
         return Source with
         {
             Id = Id.Trim(),
@@ -699,28 +698,71 @@ public partial class IngestRecipeEditorRow : ObservableObject
             RequireLossless = RequireLossless,
             MinimumSampleRateHz = MinimumSampleRateHz,
             MinimumBitsPerSample = MinimumBitsPerSample,
-            InputChannels = InputChannels,
+            InputChannels = InputChannelChoice.Value,
             MatchAnyQualityMinimum = MatchAnyQualityMinimum,
+            AlbumCondition = AlbumCondition,
+            SourceSelection = SourceSelection,
+            RequireFallbackApproval = RequireFallbackApproval,
             Action = Action,
-            DestinationRootId = destinationRoot,
-            DestinationLegacyRole = DestinationLegacyRole,
+            DestinationRootId = DestinationRootId,
+            DestinationLegacyRole = LibraryIngestRole.None,
             OutputExtension = Clean(OutputExtension),
             Codec = Clean(Codec),
             Encoder = Clean(Encoder),
+            ExtraFfmpegOptions = Clean(ExtraFfmpegOptions),
+            AddToMediaCatalog = AddToMediaCatalog,
             BitrateKbps = BitrateKbps,
             SampleRateHz = SampleRateHz,
             BitsPerSample = BitsPerSample,
-            OutputChannels = OutputChannels,
+            OutputChannels = OutputChannelChoice.Value,
             NamingProfileId = Clean(NamingProfileId),
             PreserveMetadata = PreserveMetadata,
             PreserveArtwork = PreserveArtwork,
             CollisionPolicy = UseProfileCollision ? null : CollisionPolicy,
-            OutputRepresentationRole = OutputRepresentationRole,
+            OutputRepresentationRole = LibraryRepresentationRole.Ignore,
         };
     }
 
     private static string? Clean(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    partial void OnDestinationRootChoiceChanged(SettingsRootChoice? value)
+    {
+        if (!_refreshingDestinationRoots)
+            DestinationRootId = value?.Id;
+    }
+
+    public void RefreshDestinationRootChoices(
+        IEnumerable<IndexTargetEditorRow> roots)
+    {
+        Guid? selectedId = DestinationRootId;
+        _refreshingDestinationRoots = true;
+        try
+        {
+            DestinationRootChoices.Clear();
+            DestinationRootChoices.Add(new(null, "No direct root"));
+            foreach (IndexTargetEditorRow root in roots)
+            {
+                string path = string.IsNullOrWhiteSpace(root.Path)
+                    ? "New library root"
+                    : root.Path.Trim();
+                DestinationRootChoices.Add(new(root.Id, path));
+            }
+            SettingsRootChoice? selected = DestinationRootChoices.FirstOrDefault(choice =>
+                choice.Id == selectedId);
+            if (selected is null && selectedId is not null)
+            {
+                selected = new(selectedId,
+                    $"Missing root ({selectedId.Value:D})");
+                DestinationRootChoices.Add(selected);
+            }
+            DestinationRootChoice = selected ?? DestinationRootChoices[0];
+        }
+        finally
+        {
+            _refreshingDestinationRoots = false;
+        }
+    }
 }
 
 public partial class SidecarRuleEditorRow : ObservableObject
@@ -764,7 +806,9 @@ public partial class LibraryProfileEditorRow : ObservableObject
 {
     public required LibraryProfile Source { get; init; }
     public string Id => Source.Id;
-    public string Name => Source.Name;
+    public bool IsCustom => Source.Preset == LibraryProfilePreset.Custom;
+
+    [ObservableProperty] private string _name = "";
 
     [ObservableProperty] private string _directoryTemplate = "";
     [ObservableProperty] private string _fileNameTemplate = "";
@@ -815,6 +859,7 @@ public partial class LibraryProfileEditorRow : ObservableObject
         var editor = new LibraryProfileEditorRow
         {
             Source = profile,
+            Name = profile.Name,
             DirectoryTemplate = profile.Naming.DirectoryTemplate,
             FileNameTemplate = profile.Naming.FileNameTemplate,
             TrackPadding = profile.Naming.TrackPadding,
@@ -877,6 +922,7 @@ public partial class LibraryProfileEditorRow : ObservableObject
 
     public LibraryProfile Build() => Source with
     {
+        Name = Name.Trim(),
         Naming = Source.Naming with
         {
             DirectoryTemplate = DirectoryTemplate,

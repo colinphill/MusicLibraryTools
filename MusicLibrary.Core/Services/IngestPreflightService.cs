@@ -46,10 +46,6 @@ public sealed class IngestPreflightService(
 
         string[] destinations =
         [
-            configuration.AacDestination,
-            configuration.CdDestination,
-            configuration.PairedCdDestination,
-            configuration.HighResolutionDestination,
             .. configuration.Profile.Ingest.Recipes
                 .Where(recipe => recipe.Enabled)
                 .Select(configuration.ResolveTarget)
@@ -90,9 +86,8 @@ public sealed class IngestPreflightService(
                 foreach (string encoder in encoders)
                     await ffmpeg.PreflightAsync(configuration.FfmpegPath, encoder, ct);
                 string? automaticAac = null;
-                bool needsAutomaticAac = configuration.Profile.Preset !=
-                                         MusicLibraryTools.LibraryProfilePreset.LegacyMusicLibraryTools &&
-                    configuration.Profile.Ingest.Recipes.Any(recipe => recipe.Enabled &&
+                bool needsAutomaticAac = configuration.Profile.Ingest.Recipes.Any(
+                    recipe => recipe.Enabled &&
                         recipe.Action == MusicLibraryTools.LibraryIngestAction.Transcode &&
                         string.IsNullOrWhiteSpace(recipe.Encoder) &&
                         (recipe.Codec ?? recipe.OutputExtension ?? "").Trim()
@@ -123,14 +118,11 @@ public sealed class IngestPreflightService(
     }
 
     internal static bool RequiresFfmpeg(IngestMusicConfiguration configuration) =>
-        configuration.Profile.Preset == MusicLibraryTools.LibraryProfilePreset.LegacyMusicLibraryTools ||
         configuration.Profile.Ingest.Recipes.Any(recipe => recipe.Enabled &&
             recipe.Action != MusicLibraryTools.LibraryIngestAction.Copy);
 
     internal static string[] RequiredEncoders(IngestMusicConfiguration configuration)
     {
-        if (configuration.Profile.Preset == MusicLibraryTools.LibraryProfilePreset.LegacyMusicLibraryTools)
-            return [configuration.AacEncoder];
         return configuration.Profile.Ingest.Recipes
             .Where(recipe => recipe.Enabled &&
                 recipe.Action == MusicLibraryTools.LibraryIngestAction.Transcode)

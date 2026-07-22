@@ -131,10 +131,16 @@ public sealed class EditableLibraryConfig
             $"ActiveProfileId '{ActiveProfileId}' does not identify a configured profile.");
 
     /// <summary>Creates a new library with the catalog-only profile active.</summary>
-    public static EditableLibraryConfig CreateNew() => new()
+    public static EditableLibraryConfig CreateNew()
     {
-        ActiveProfileId = LibraryProfilePresets.CatalogOnlyId,
-    };
+        var configuration = new EditableLibraryConfig
+        {
+            ActiveProfileId = LibraryProfilePresets.CatalogOnlyId,
+        };
+        configuration.Profiles.RemoveAll(profile =>
+            profile.Preset == LibraryProfilePreset.LegacyMusicLibraryTools);
+        return configuration;
+    }
 
     public IndexTargetEntry CreateIndexTarget(string target = "") => new()
     {
@@ -341,11 +347,13 @@ public sealed class EditableLibraryConfig
             if (e.Name.Namespace != XNamespace.None || !Known.Contains(e.Name.LocalName))
                 config._passthrough.Add(new XElement(e));
 
+        config.MigrateLegacyRoleAssignments();
         return config;
     }
 
     public void Save(string path)
     {
+        MigrateLegacyRoleAssignments();
         IReadOnlyList<LibraryConfigurationIssue> validation = Validate();
         LibraryConfigurationIssue? firstError = validation.FirstOrDefault(issue =>
             issue.Severity == LibraryConfigurationIssueSeverity.Error);
@@ -436,13 +444,10 @@ public sealed class EditableLibraryConfig
                 e.SetAttributeValue("IndexInclude", string.Join(';', indexIncludes));
             if (indexExcludes.Count > 0)
                 e.SetAttributeValue("IndexExclude", string.Join(';', indexExcludes));
-            e.SetAttributeValue("RepresentationRole", t.RepresentationRole);
             if (!string.IsNullOrEmpty(t.Filter)) e.SetAttributeValue("Filter", t.Filter);
             if (!t.Organize) e.SetAttributeValue("Organize", false);
             if (t.UseItunesCanonicalNaming)
                 e.SetAttributeValue("ItunesCanonicalNaming", true);
-            if (t.IngestRole != LibraryIngestRole.None)
-                e.SetAttributeValue("IngestRole", t.IngestRole);
             if (t.IsSyncTarget)
                 e.SetAttributeValue("SyncTarget", true);
             var seen = new HashSet<string>(LibraryConfiguration.ScanSetComparer);
@@ -572,17 +577,6 @@ public sealed class EditableLibraryConfig
             new XAttribute("RepairTargetByteSize", ArtworkRepairTargetByteSize),
             new XAttribute("RepairTargetDimension", ArtworkRepairTargetDimension)));
 
-        string[] duplicateRoles = IndexTargets
-            .Where(target => target.IngestRole != LibraryIngestRole.None)
-            .GroupBy(target => target.IngestRole)
-            .Where(group => group.Count() > 1)
-            .Select(group => group.Key.ToString())
-            .ToArray();
-        if (duplicateRoles.Length > 0)
-            throw new InvalidDataException(
-                "Each ingest role may be assigned to only one IndexTarget: " +
-                string.Join(", ", duplicateRoles));
-
         root.Add(new XElement("LengthLimit", LengthLimit));
         root.Add(new XElement("DiscNumLengthLimit", DiscNumLengthLimit));
 
@@ -684,7 +678,6 @@ public sealed class EditableLibraryConfig
         var rootIds = new HashSet<Guid>();
         var rootsById = new Dictionary<Guid, (IndexTargetEntry Target,
             LibraryRootPermissions Permissions)>();
-        var ingestRoles = new HashSet<LibraryIngestRole>();
         int syncTargetCount = 0;
         var configuredSets = new HashSet<string>(LibraryConfiguration.ScanSetComparer);
         foreach (IndexTargetEntry target in IndexTargets.Where(target =>
@@ -695,11 +688,6 @@ public sealed class EditableLibraryConfig
             else if (!rootIds.Add(target.Id))
                 Error("root-id-duplicate",
                     $"More than one IndexTarget uses root ID '{target.Id:D}'.");
-            if (!Enum.IsDefined(target.IngestRole) ||
-                !Enum.IsDefined(target.RepresentationRole))
-                Error("root-role",
-                    $"Index target '{target.Target}' contains an unsupported role value.");
-
             try
             {
                 _ = LibraryConfiguration.NormalizeIndexFormats(target.IndexFormats);
@@ -732,11 +720,6 @@ public sealed class EditableLibraryConfig
                     Error("root-organize-permission",
                         $"Index target '{target.Target}' enables Organize but does not permit " +
                         "OrganizeFiles.");
-                if (target.IngestRole != LibraryIngestRole.None &&
-                    !permissions.HasFlag(LibraryRootPermissions.IngestOutput))
-                    Error("root-ingest-permission",
-                        $"Index target '{target.Target}' has an ingest role but does not permit " +
-                        "IngestOutput.");
                 if (target.IsSyncTarget &&
                     !permissions.HasFlag(LibraryRootPermissions.SynchronizeOutput))
                     Error("root-sync-permission",
@@ -746,11 +729,6 @@ public sealed class EditableLibraryConfig
                     rootsById[target.Id] = (target, permissions);
             }
 
-            if (target.IngestRole != LibraryIngestRole.None &&
-                !ingestRoles.Add(target.IngestRole))
-                Error("ingest-role-duplicate",
-                    $"Each ingest role may be assigned to only one IndexTarget: " +
-                    target.IngestRole);
             if (target.IsSyncTarget)
                 syncTargetCount++;
 
@@ -814,16 +792,6 @@ public sealed class EditableLibraryConfig
                     Error("recipe-root-permission",
                         $"Ingest recipe '{recipe.Id}' in profile '{profile.Id}' targets " +
                         $"'{destination.Target.Target}', which does not permit IngestOutput.");
-                if (recipe.DestinationRootId is { } representationRootId &&
-                    rootsById.TryGetValue(representationRootId, out var representationTarget) &&
-                    recipe.OutputRepresentationRole != LibraryRepresentationRole.Ignore &&
-                    representationTarget.Target.RepresentationRole !=
-                        recipe.OutputRepresentationRole)
-                    Error("recipe-representation-role",
-                        $"Ingest recipe '{recipe.Id}' declares representation role " +
-                        $"'{recipe.OutputRepresentationRole}', but destination root " +
-                        $"'{representationTarget.Target.Target}' is assigned " +
-                        $"'{representationTarget.Target.RepresentationRole}'.");
                 if (recipe.NamingProfileId is { } namingProfileId &&
                     !profileIds.Contains(namingProfileId))
                     Error("recipe-naming-profile",
@@ -1041,11 +1009,73 @@ public sealed class EditableLibraryConfig
                                         LibraryRootPermissions.WriteArtwork;
         if (target.Organize)
             legacy |= LibraryRootPermissions.OrganizeFiles;
-        if (target.IngestRole != LibraryIngestRole.None)
-            legacy |= LibraryRootPermissions.IngestOutput;
         if (target.IsSyncTarget)
             legacy |= LibraryRootPermissions.SynchronizeOutput;
         return legacy;
+    }
+
+    private void MigrateLegacyRoleAssignments()
+    {
+        var targets = new Dictionary<LibraryIngestRole, IndexTargetEntry>();
+        foreach (IndexTargetEntry target in IndexTargets.Where(target =>
+                     target.IngestRole != LibraryIngestRole.None))
+        {
+            if (!targets.TryAdd(target.IngestRole, target))
+                throw new InvalidDataException(
+                    $"Only one IndexTarget may be assigned legacy ingest role " +
+                    $"'{target.IngestRole}'.");
+            LibraryRootPermissions permissions = target.Permissions ??
+                (LibraryRootPermissions.WriteMetadata |
+                 LibraryRootPermissions.WriteArtwork);
+            if (target.Organize)
+                permissions |= LibraryRootPermissions.OrganizeFiles;
+            if (target.IsSyncTarget)
+                permissions |= LibraryRootPermissions.SynchronizeOutput;
+            target.Permissions = permissions | LibraryRootPermissions.IngestOutput;
+        }
+
+        for (int profileIndex = 0; profileIndex < Profiles.Count; profileIndex++)
+        {
+            LibraryProfile profile = Profiles[profileIndex];
+            LibraryIngestRecipe[] recipes = profile.Ingest.Recipes.Select(recipe =>
+            {
+                bool catalogFallback = recipe.DestinationLegacyRole ==
+                    LibraryIngestRole.AacFallback &&
+                    !string.IsNullOrWhiteSpace(ItunesLibraryPath);
+                Guid? destinationRootId = recipe.DestinationRootId;
+                if (catalogFallback)
+                    destinationRootId = null;
+                else if (destinationRootId is null &&
+                         recipe.DestinationLegacyRole != LibraryIngestRole.None &&
+                         targets.TryGetValue(recipe.DestinationLegacyRole, out var target))
+                    destinationRootId = target.Id;
+                bool unresolvedLegacyDestination = destinationRootId is null &&
+                    !catalogFallback &&
+                    recipe.DestinationLegacyRole != LibraryIngestRole.None;
+                return recipe with
+                {
+                    Enabled = recipe.Enabled && !unresolvedLegacyDestination,
+                    DestinationRootId = destinationRootId,
+                    DestinationLegacyRole = LibraryIngestRole.None,
+                    OutputRepresentationRole = LibraryRepresentationRole.Ignore,
+                    AddToMediaCatalog = recipe.AddToMediaCatalog || catalogFallback,
+                };
+            }).ToArray();
+            Profiles[profileIndex] = profile with
+            {
+                Ingest = profile.Ingest with
+                {
+                    Enabled = profile.Ingest.Enabled && recipes.Any(recipe => recipe.Enabled),
+                    Recipes = recipes,
+                },
+            };
+        }
+
+        foreach (IndexTargetEntry target in IndexTargets)
+        {
+            target.IngestRole = LibraryIngestRole.None;
+            target.RepresentationRole = LibraryRepresentationRole.Ignore;
+        }
     }
 
     private void CreateLegacyBackupIfNeeded(string path)
@@ -1178,9 +1208,10 @@ public sealed class EditableLibraryConfig
             ("Sidecars", _) => ["UnknownFileDisposition"],
             ("Recipe", _) => ["Id", "Name", "Enabled", "Action"],
             ("Match", _) => ["InputExtensions", "RequireLossless", "MinimumSampleRateHz",
-                "MinimumBitsPerSample", "InputChannels", "MatchAnyQualityMinimum"],
+                "MinimumBitsPerSample", "InputChannels", "MatchAnyQualityMinimum",
+                "AlbumCondition", "SourceSelection", "RequireFallbackApproval"],
             ("Output", _) => ["DestinationRootId", "DestinationLegacyRole", "OutputExtension",
-                "Codec", "Encoder", "BitrateKbps", "SampleRateHz", "BitsPerSample",
+                "Codec", "Encoder", "ExtraFfmpegOptions", "AddToMediaCatalog", "BitrateKbps", "SampleRateHz", "BitsPerSample",
                 "OutputChannels", "NamingProfileId", "PreserveMetadata", "PreserveArtwork",
                 "CollisionPolicy", "RepresentationRole"],
             ("IndexTarget", _) => ["Id", "ProfileId", "Permissions", "Path", "Offset", "Filter",

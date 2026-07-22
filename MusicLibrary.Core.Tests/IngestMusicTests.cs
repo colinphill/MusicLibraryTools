@@ -33,13 +33,13 @@ public class IngestMusicTests
         Assert.Equal(new[] { 1, 2, 1, 2 }, tracks.Select(t => t.TrackNumber));
         Assert.All(tracks, t => Assert.Equal(2, t.TrackTotal));
         Assert.Equal(new[] { "Album (Disc 1)", "Album (Disc 1)", "Album (Disc 2)", "Album (Disc 2)" }, tracks.Select(t => t.Album));
-        Assert.All(plan.Albums.Single().Outputs.Where(o => o.Kind == IngestOutputKind.CdFlac),
+        Assert.All(plan.Albums.Single().Outputs.Where(o => o.RecipeId == "legacy-cd-flac"),
             o => Assert.StartsWith(tree.Path("cd"), o.DestinationPath, StringComparison.OrdinalIgnoreCase));
         Assert.Equal(4, plan.Files.Count);
         Assert.All(plan.Files, file =>
         {
-            Assert.Contains("CD FLAC", file.Summary);
-            Assert.Contains("AAC", file.Summary);
+            Assert.Contains("legacy-cd-flac", file.Summary);
+            Assert.Contains("legacy-aac", file.Summary);
             Assert.Contains("Quarantine after successful ingest", file.Summary);
         });
     }
@@ -124,6 +124,30 @@ public class IngestMusicTests
         {
             Configuration = plan.Configuration with { ItunesLibraryPath = libraryPath },
         };
+        IngestAlbumPlan album = Assert.Single(plan.Albums);
+        plan = plan with
+        {
+            Albums =
+            [
+                album with
+                {
+                    Outputs = album.Outputs.Select(output =>
+                        output.Kind == IngestOutputKind.Aac
+                            ? output with
+                            {
+                                Kind = IngestOutputKind.Recipe,
+                                RecipeId = "catalog-aac",
+                                Action = LibraryIngestAction.Transcode,
+                                OutputCodec = "aac",
+                                Encoder = "aac",
+                                BitrateKbps = 256,
+                                SampleRateHz = 44_100,
+                                OutputChannels = 2,
+                            }
+                            : output).ToArray(),
+                },
+            ],
+        };
         var itunes = new RecordingItunesMutationService();
 
         IngestResult result = await new IngestMusicService(
@@ -134,7 +158,7 @@ public class IngestMusicTests
         Assert.Contains(itunes.Mutations, mutation =>
             mutation.Kind == ItunesMediaMutationKind.Add &&
             mutation.CurrentPath == plan.Albums.Single().Outputs.Single(
-                output => output.Kind == IngestOutputKind.Aac).DestinationPath);
+                output => output.RecipeId == "catalog-aac").DestinationPath);
         Assert.Contains(itunes.Mutations, mutation =>
             mutation.Kind == ItunesMediaMutationKind.Remove &&
             mutation.OriginalPath == source);
@@ -345,6 +369,109 @@ public class IngestMusicTests
         Assert.True(File.Exists(sidecar));
         Assert.True(File.Exists(output.DestinationPath));
         Assert.Equal(File.ReadAllBytes(source), File.ReadAllBytes(output.DestinationPath));
+    }
+
+    [Fact]
+    public async Task RecipePrefersMatchedCdSourceForHighResolutionAlbum()
+    {
+        using var tree = new TempTree();
+        string cd = tree.FileFromFixture("incoming", "cd.flac", "sample.flac");
+        tree.FileFromFixture("incoming", "hires.flac", "sample_hires.flac");
+        (string configPath, string destination) = CreatePairedCdRecipeLibrary(tree);
+
+        IngestPlan plan = await new IngestMusicService(new FakeFfmpeg())
+            .PreviewAsync(new(tree.Path("incoming"), configPath));
+
+        Assert.Empty(plan.Conflicts);
+        IngestAlbumPlan album = Assert.Single(plan.Albums);
+        Assert.True(album.HasHighResolution);
+        IngestOutputPlan output = Assert.Single(album.Outputs);
+        Assert.Equal(cd, output.SourcePath);
+        Assert.StartsWith(destination, output.DestinationPath,
+            StringComparison.OrdinalIgnoreCase);
+        Assert.False(output.DeriveCd);
+        Assert.Empty(plan.RequiredApprovals);
+        Assert.Equal(2, output.OutputChannels);
+        Assert.Equal("-af \"aresample=44100:resampler=soxr\" -compression_level 10",
+            output.ExtraFfmpegOptions);
+    }
+
+    [Fact]
+    public async Task RecipeApplyPassesExtraOptionsToFfmpeg()
+    {
+        using var tree = new TempTree();
+        tree.FileFromFixture("incoming", "cd.flac", "sample.flac");
+        tree.FileFromFixture("incoming", "hires.flac", "sample_hires.flac");
+        (string configPath, _) = CreatePairedCdRecipeLibrary(tree);
+        var ffmpeg = new FakeFfmpeg();
+        var service = new IngestMusicService(ffmpeg);
+        IngestPlan plan = await service.PreviewAsync(
+            new(tree.Path("incoming"), configPath));
+
+        IngestResult result = await service.ApplyAsync(plan, []);
+
+        Assert.Equal(0, result.Failed);
+        Assert.Equal("-af \"aresample=44100:resampler=soxr\" -compression_level 10",
+            ffmpeg.LastTranscodeOptions?.ExtraOptions);
+    }
+
+    [Fact]
+    public async Task RecipeFallsBackToMatchedHighResolutionSourceAndRequiresApproval()
+    {
+        using var tree = new TempTree();
+        string hires = tree.FileFromFixture(
+            "incoming", "hires.flac", "sample_hires.flac");
+        (string configPath, _) = CreatePairedCdRecipeLibrary(tree);
+
+        IngestPlan plan = await new IngestMusicService(new FakeFfmpeg())
+            .PreviewAsync(new(tree.Path("incoming"), configPath));
+
+        Assert.Empty(plan.Conflicts);
+        IngestOutputPlan output = Assert.Single(Assert.Single(plan.Albums).Outputs);
+        Assert.Equal(hires, output.SourcePath);
+        Assert.True(output.DeriveCd);
+        IngestApprovalItem approval = Assert.Single(plan.RequiredApprovals);
+        Assert.Contains("TestTitle", Assert.Single(approval.MissingTracks));
+    }
+
+    [Fact]
+    public async Task MultiChannelRecipeMatchesAndPreservesSourceChannelCount()
+    {
+        using var tree = new TempTree();
+        string source = tree.FileFromFixture(
+            "incoming", "multi.flac", "sample_multi.flac");
+        string destination = tree.Path("multi-output");
+        var editable = EditableLibraryConfig.CreateNew();
+        LibraryProfile profile = LibraryProfilePresets.Create(
+            LibraryProfilePreset.Custom, "multi-ingest", "Multi-channel ingest");
+        var root = new IndexTargetEntry
+        {
+            Target = destination,
+            ProfileId = profile.Id,
+            Permissions = LibraryRootPermissions.IngestOutput,
+            Organize = false,
+        };
+        var recipe = CreateRecipe(
+            "multi-copy", root.Id, LibraryChannelSelection.Multi,
+            LibraryChannelSelection.Multi);
+        profile = profile with
+        {
+            Ingest = new(true, LibrarySourceDisposition.Preserve, true, [recipe]),
+        };
+        editable.Profiles.Add(profile);
+        editable.ActiveProfileId = profile.Id;
+        editable.IndexTargets.Add(root);
+        string configPath = tree.Path("multi-library.xml");
+        editable.Save(configPath);
+
+        IngestPlan plan = await new IngestMusicService(new FakeFfmpeg())
+            .PreviewAsync(new(tree.Path("incoming"), configPath));
+
+        Assert.Empty(plan.Conflicts);
+        IngestOutputPlan output = Assert.Single(Assert.Single(plan.Albums).Outputs);
+        Assert.Equal(source, output.SourcePath);
+        Assert.Equal((uint)6, output.Metadata.Channels);
+        Assert.Equal(6, output.OutputChannels);
     }
 
     [Fact]
@@ -572,7 +699,20 @@ public class IngestMusicTests
         expected.Save(path);
         var actual = IngestMusicConfiguration.Load(path);
 
-        Assert.Equal(expected, actual);
+        Assert.Equal(expected.FfmpegPath, actual.FfmpegPath);
+        Assert.Equal(expected.AacDestination, actual.AacDestination);
+        Assert.Equal(expected.ItunesLibraryPath, actual.ItunesLibraryPath);
+        Assert.Equal(expected.CdDestination, actual.CdDestination);
+        Assert.Equal(expected.PairedCdDestination, actual.PairedCdDestination);
+        Assert.Equal(expected.HighResolutionDestination, actual.HighResolutionDestination);
+        Assert.Equal(expected.LengthLimit, actual.LengthLimit);
+        Assert.Equal(expected.DiscNumLengthLimit, actual.DiscNumLengthLimit);
+        Assert.Equal(expected.AacEncoder, actual.AacEncoder);
+        Assert.Equal(expected.AacBitrateKbps, actual.AacBitrateKbps);
+        Assert.Equal(expected.DeleteSourcesAfterIngest, actual.DeleteSourcesAfterIngest);
+        Assert.Equal(expected.RemoveNonMusicAfterIngest, actual.RemoveNonMusicAfterIngest);
+        Assert.All(actual.Profile.Ingest.Recipes, recipe =>
+            Assert.Equal(LibraryIngestRole.None, recipe.DestinationLegacyRole));
     }
 
     private static IngestPlan WithNonMusicCleanup(IngestPlan plan, TempTree tree, params string[] files)
@@ -636,6 +776,77 @@ public class IngestMusicTests
         return (configPath, destination, editable);
     }
 
+    private static (string ConfigPath, string Destination) CreatePairedCdRecipeLibrary(
+        TempTree tree)
+    {
+        string destination = tree.Path("paired-output");
+        var editable = EditableLibraryConfig.CreateNew();
+        LibraryProfile profile = LibraryProfilePresets.Create(
+            LibraryProfilePreset.Custom, "paired-cd-ingest", "Paired CD ingest");
+        var root = new IndexTargetEntry
+        {
+            Target = destination,
+            ProfileId = profile.Id,
+            Permissions = LibraryRootPermissions.IngestOutput,
+            RepresentationRole = LibraryRepresentationRole.CdLossless,
+            Organize = false,
+        };
+        LibraryIngestRecipe recipe = CreateRecipe(
+            "paired-cd", root.Id, LibraryChannelSelection.Stereo,
+            LibraryChannelSelection.Stereo) with
+        {
+            Action = LibraryIngestAction.Transcode,
+            Codec = "flac",
+            SampleRateHz = 44_100,
+            BitsPerSample = 16,
+            AlbumCondition = LibraryIngestAlbumCondition.HasHighResolution,
+            SourceSelection = LibraryIngestSourceSelection.PreferCdQuality,
+            RequireFallbackApproval = true,
+            ExtraFfmpegOptions =
+                "-af \"aresample=44100:resampler=soxr\" -compression_level 10",
+            OutputRepresentationRole = LibraryRepresentationRole.CdLossless,
+        };
+        profile = profile with
+        {
+            Ingest = new(true, LibrarySourceDisposition.Preserve, true, [recipe]),
+        };
+        editable.Profiles.Add(profile);
+        editable.ActiveProfileId = profile.Id;
+        editable.IndexTargets.Add(root);
+        string configPath = tree.Path("paired-library.xml");
+        editable.Save(configPath);
+        return (configPath, destination);
+    }
+
+    private static LibraryIngestRecipe CreateRecipe(
+        string id,
+        Guid destinationRootId,
+        LibraryChannelSelection inputChannels,
+        LibraryChannelSelection outputChannels) => new(
+            Id: id,
+            Name: id,
+            Enabled: true,
+            InputExtensions: [".flac"],
+            RequireLossless: true,
+            MinimumSampleRateHz: null,
+            MinimumBitsPerSample: null,
+            InputChannels: inputChannels,
+            MatchAnyQualityMinimum: false,
+            Action: LibraryIngestAction.Copy,
+            DestinationRootId: destinationRootId,
+            DestinationLegacyRole: LibraryIngestRole.None,
+            OutputExtension: ".flac",
+            Codec: "flac",
+            Encoder: null,
+            BitrateKbps: null,
+            SampleRateHz: null,
+            BitsPerSample: null,
+            OutputChannels: outputChannels,
+            NamingProfileId: null,
+            PreserveMetadata: true,
+            PreserveArtwork: false,
+            CollisionPolicy: LibraryPathCollisionPolicy.Stop);
+
     private static byte[] MakePng(int width, int height, Color color)
     {
         using var image = new Image<Rgba32>(width, height);
@@ -671,7 +882,8 @@ public class IngestMusicTests
             new IngestOutputPlan { Identity = t.Identity, Kind = IngestOutputKind.CdFlac, Metadata = t,
                 SourcePath = t.SourcePath, DestinationPath = tree.Path("paired", t.Identity + ".flac"), DeriveCd = true },
             new IngestOutputPlan { Identity = t.Identity, Kind = IngestOutputKind.Aac, Metadata = t,
-                SourcePath = t.SourcePath, DestinationPath = tree.Path("aac", t.Identity + ".m4a") },
+                SourcePath = t.SourcePath, DestinationPath = tree.Path("aac", t.Identity + ".m4a"),
+                AddToMediaCatalog = true },
         }).ToList();
         var snapshots = sources.Select(p => { var f = new FileInfo(p); return new IngestFileSnapshot(p, f.Length, f.LastWriteTimeUtc); }).ToList();
         var album = new IngestAlbumPlan { Key = "album", Display = "Artist — Album", Tracks = tracks, Outputs = outputs,
@@ -713,10 +925,19 @@ public class IngestMusicTests
         private int _active;
         public int MaxConcurrent { get; private set; }
         public int PreflightCalls { get; private set; }
+        public FfmpegTranscodeOptions? LastTranscodeOptions { get; private set; }
         public Task PreflightAsync(string executable, string requiredEncoder, CancellationToken ct = default) { PreflightCalls++; return Task.CompletedTask; }
         public Task ConvertAlacToFlacAsync(string executable, string input, string output, CancellationToken ct = default) => Copy("sample.flac", output, ct);
         public Task DeriveCdFlacAsync(string executable, string input, string output, CancellationToken ct = default) => Copy("sample.flac", output, ct);
         public Task EncodeAacAsync(string executable, string encoder, int bitrateKbps, string input, string output, CancellationToken ct = default) => Copy("sample_aac.m4a", output, ct);
+        public Task TranscodeAsync(string executable, string input, string output,
+            FfmpegTranscodeOptions options, CancellationToken ct = default)
+        {
+            LastTranscodeOptions = options;
+            return Copy(options.Codec.Equals("aac", StringComparison.OrdinalIgnoreCase)
+                ? "sample_aac.m4a"
+                : "sample.flac", output, ct);
+        }
         public Task<string> ComputeDecodedAudioHashAsync(string executable, string input, CancellationToken ct = default) => Task.FromResult("SHA256=test");
         private async Task Copy(string fixture, string output, CancellationToken ct)
         {
