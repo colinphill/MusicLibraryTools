@@ -11,6 +11,13 @@ public interface IRepresentationRepairService
         LibraryConfiguration? configuration,
         CancellationToken ct = default);
 
+    Task<RepresentationRepairPreview> PreviewAsync(
+        IReadOnlyList<TrackRecord> records,
+        LibraryConfiguration? configuration,
+        IProgress<AnalysisProgress>? progress,
+        CancellationToken ct = default) =>
+        PreviewAsync(records, configuration, ct);
+
     Task<RepresentationRepairApplyResult> ApplyAsync(
         IReadOnlyList<RepresentationRepairAction> actions,
         LibraryConfiguration? configuration,
@@ -61,13 +68,30 @@ public sealed class RepresentationRepairService : IRepresentationRepairService
         (TagFields.TotalDiscs, record => record.DiscTotal?.ToString()),
     ];
 
-    public async Task<RepresentationRepairPreview> PreviewAsync(
+    public Task<RepresentationRepairPreview> PreviewAsync(
         IReadOnlyList<TrackRecord> records,
         LibraryConfiguration? libraryConfiguration,
         CancellationToken ct = default)
+        => PreviewAsync(records, libraryConfiguration, null, ct);
+
+    public Task<RepresentationRepairPreview> PreviewAsync(
+        IReadOnlyList<TrackRecord> records,
+        LibraryConfiguration? libraryConfiguration,
+        IProgress<AnalysisProgress>? progress,
+        CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(records);
-        var metadata = PreviewMetadataCopies(records, libraryConfiguration, ct);
+        return Task.Run(
+            () => PreviewCoreAsync(records, libraryConfiguration, progress, ct), ct);
+    }
+
+    private async Task<RepresentationRepairPreview> PreviewCoreAsync(
+        IReadOnlyList<TrackRecord> records,
+        LibraryConfiguration? libraryConfiguration,
+        IProgress<AnalysisProgress>? progress,
+        CancellationToken ct)
+    {
+        var metadata = PreviewMetadataCopies(records, libraryConfiguration, progress, ct);
         var actions = new List<RepresentationRepairAction>();
         var warnings = new List<string>();
 
@@ -82,7 +106,7 @@ public sealed class RepresentationRepairService : IRepresentationRepairService
             {
                 configuration = IngestMusicConfiguration.FromLibraryConfiguration(libraryConfiguration);
                 actions.AddRange(PreviewDerivations(
-                    records, configuration, libraryConfiguration, ct));
+                    records, configuration, libraryConfiguration, progress, ct));
                 if (string.IsNullOrWhiteSpace(configuration.AacDestination))
                     warnings.Add(
                         "AAC derivation preview unavailable: assign an AAC fallback IndexTarget. " +
@@ -96,6 +120,7 @@ public sealed class RepresentationRepairService : IRepresentationRepairService
 
         try
         {
+            progress?.Report(new(0, 0, "moves", "Previewing organization moves"));
             var representedPaths = records
                 .Where(record => (libraryConfiguration is null
                     ? RepresentationAnalyzer.Classify(record)
@@ -104,15 +129,24 @@ public sealed class RepresentationRepairService : IRepresentationRepairService
                 .Select(record => record.Path)
                 .ToHashSet(PathComparer);
             var moves = await _organizer.PreviewMovesAsync(ct);
-            actions.AddRange(moves
-                .Where(move => representedPaths.Contains(move.Source))
-                .Select(move => new RepresentationRepairAction(
-                    RepresentationRepairKind.Organize,
-                    move.Source,
-                    move.Destination,
-                    "Move this representation to its canonical artist/album/track path.",
-                    move.ExpectedSource,
-                    move.ExpectedDestination)));
+            progress?.Report(new(0, moves.Count, "moves", "Selecting organization repairs"));
+            for (int index = 0; index < moves.Count; index++)
+            {
+                ct.ThrowIfCancellationRequested();
+                PlannedMove move = moves[index];
+                if (representedPaths.Contains(move.Source))
+                    actions.Add(new RepresentationRepairAction(
+                        RepresentationRepairKind.Organize,
+                        move.Source,
+                        move.Destination,
+                        "Move this representation to its canonical artist/album/track path.",
+                        move.ExpectedSource,
+                        move.ExpectedDestination));
+                int completed = index + 1;
+                if ((completed & 127) == 0 || completed == moves.Count)
+                    progress?.Report(new(completed, moves.Count, "moves",
+                        "Selecting organization repairs", move.Source));
+            }
         }
         catch (OperationCanceledException) { throw; }
         catch (Exception ex)
@@ -144,13 +178,23 @@ public sealed class RepresentationRepairService : IRepresentationRepairService
             warnings);
     }
 
-    public async Task<RepresentationRepairApplyResult> ApplyAsync(
+    public Task<RepresentationRepairApplyResult> ApplyAsync(
         IReadOnlyList<RepresentationRepairAction> actions,
         LibraryConfiguration? libraryConfiguration,
         IProgress<RepresentationRepairProgress>? progress = null,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(actions);
+        return Task.Run(
+            () => ApplyCoreAsync(actions, libraryConfiguration, progress, ct), ct);
+    }
+
+    private async Task<RepresentationRepairApplyResult> ApplyCoreAsync(
+        IReadOnlyList<RepresentationRepairAction> actions,
+        LibraryConfiguration? libraryConfiguration,
+        IProgress<RepresentationRepairProgress>? progress,
+        CancellationToken ct)
+    {
         if (actions.Count == 0)
             return new([]);
 
@@ -296,22 +340,35 @@ public sealed class RepresentationRepairService : IRepresentationRepairService
     internal static AnalysisRepairPlan PreviewMetadataCopies(
         IReadOnlyList<TrackRecord> records,
         CancellationToken ct = default) =>
-        PreviewMetadataCopies(records, null, ct);
+        PreviewMetadataCopies(records, null, null, ct);
 
     internal static AnalysisRepairPlan PreviewMetadataCopies(
         IReadOnlyList<TrackRecord> records,
         LibraryConfiguration? libraryConfiguration,
+        CancellationToken ct = default)
+        => PreviewMetadataCopies(records, libraryConfiguration, null, ct);
+
+    internal static AnalysisRepairPlan PreviewMetadataCopies(
+        IReadOnlyList<TrackRecord> records,
+        LibraryConfiguration? libraryConfiguration,
+        IProgress<AnalysisProgress>? progress,
         CancellationToken ct = default)
     {
         var repairs = new List<AnalysisTagRepair>();
         Func<TrackRecord, string> albumKey = libraryConfiguration is null
             ? AlbumKey
             : record => LibraryAlbumIdentityResolver.Key(record, libraryConfiguration);
-        foreach (var album in records.GroupBy(albumKey))
+        int completedTracks = 0;
+        int lastReportedTracks = 0;
+        progress?.Report(new(0, records.Count, "tracks",
+            "Previewing representation metadata copies"));
+        foreach (IGrouping<string, TrackRecord> album in records.GroupBy(albumKey))
         {
             ct.ThrowIfCancellationRequested();
             foreach (var track in album.GroupBy(TrackKey))
             {
+                ct.ThrowIfCancellationRequested();
+                int trackCount = track.Count();
                 var candidates = track
                     .Select(record => (Record: record, Role: libraryConfiguration is null
                         ? RepresentationAnalyzer.Classify(record)
@@ -321,33 +378,42 @@ public sealed class RepresentationRepairService : IRepresentationRepairService
                     .Where(group => group.Count() == 1)
                     .Select(group => group.Single())
                     .ToList();
-                if (candidates.Count < 2)
-                    continue;
-
-                foreach (var (field, value) in CopyFields)
+                if (candidates.Count >= 2)
                 {
-                    var canonical = CanonicalOrder
-                        .Select(role => candidates.FirstOrDefault(candidate => candidate.Role == role))
-                        .FirstOrDefault(candidate => candidate.Record is not null &&
-                            !string.IsNullOrWhiteSpace(value(candidate.Record)));
-                    if (canonical.Record is null)
-                        continue;
-                    string after = value(canonical.Record)!.Trim();
-
-                    foreach (var target in candidates.Where(candidate => candidate.Role != canonical.Role))
+                    foreach (var (field, value) in CopyFields)
                     {
-                        string? before = value(target.Record);
-                        if (Normalize(before) == Normalize(after))
+                        var canonical = CanonicalOrder
+                            .Select(role => candidates.FirstOrDefault(candidate => candidate.Role == role))
+                            .FirstOrDefault(candidate => candidate.Record is not null &&
+                                !string.IsNullOrWhiteSpace(value(candidate.Record)));
+                        if (canonical.Record is null)
                             continue;
-                        repairs.Add(new AnalysisTagRepair(
-                            target.Record.Path,
-                            field,
-                            before,
-                            after,
-                            $"Copies {FieldName(field)} from the matched {Display(canonical.Role)} counterpart.",
-                            target.Record.Length,
-                            target.Record.LastWriteTime));
+                        string after = value(canonical.Record)!.Trim();
+
+                        foreach (var target in candidates.Where(candidate => candidate.Role != canonical.Role))
+                        {
+                            string? before = value(target.Record);
+                            if (Normalize(before) == Normalize(after))
+                                continue;
+                            repairs.Add(new AnalysisTagRepair(
+                                target.Record.Path,
+                                field,
+                                before,
+                                after,
+                                $"Copies {FieldName(field)} from the matched {Display(canonical.Role)} counterpart.",
+                                target.Record.Length,
+                                target.Record.LastWriteTime));
+                        }
                     }
+                }
+
+                completedTracks += trackCount;
+                if (completedTracks - lastReportedTracks >= 128 ||
+                    completedTracks == records.Count)
+                {
+                    progress?.Report(new(completedTracks, records.Count, "tracks",
+                        "Previewing representation metadata copies", track.First().Path));
+                    lastReportedTracks = completedTracks;
                 }
             }
         }
@@ -364,14 +430,24 @@ public sealed class RepresentationRepairService : IRepresentationRepairService
         IReadOnlyList<TrackRecord> records,
         IngestMusicConfiguration configuration,
         CancellationToken ct = default) =>
-        PreviewDerivations(records, configuration, null, ct);
+        PreviewDerivations(records, configuration, null, null, ct);
 
     internal static IReadOnlyList<RepresentationRepairAction> PreviewDerivations(
         IReadOnlyList<TrackRecord> records,
         IngestMusicConfiguration configuration,
         LibraryConfiguration? libraryConfiguration,
         CancellationToken ct = default)
+        => PreviewDerivations(records, configuration, libraryConfiguration, null, ct);
+
+    internal static IReadOnlyList<RepresentationRepairAction> PreviewDerivations(
+        IReadOnlyList<TrackRecord> records,
+        IngestMusicConfiguration configuration,
+        LibraryConfiguration? libraryConfiguration,
+        IProgress<AnalysisProgress>? progress,
+        CancellationToken ct = default)
     {
+        progress?.Report(new(0, records.Count, "tracks",
+            "Previewing representation derivations"));
         var actions = new List<RepresentationRepairAction>();
         var claimed = new HashSet<string>(records.Select(record => record.Path), PathComparer);
         Func<TrackRecord, string> albumKey = libraryConfiguration is null
@@ -381,48 +457,61 @@ public sealed class RepresentationRepairService : IRepresentationRepairService
             LibraryAlbumIdentityResolver.ContinuousTrackNumbers(
                 records, albumKey, record => record.Path,
                 record => record.DiscNumber, record => record.TrackNumber);
-        foreach (var album in records.GroupBy(albumKey))
-        foreach (var track in album.GroupBy(TrackKey))
+        int completedTracks = 0;
+        int lastReportedTracks = 0;
+        foreach (IGrouping<string, TrackRecord> album in records.GroupBy(albumKey))
         {
-            ct.ThrowIfCancellationRequested();
-            var byRole = track
-                .Select(record => (Record: record, Role: libraryConfiguration is null
-                    ? RepresentationAnalyzer.Classify(record)
-                    : RepresentationAnalyzer.Classify(record, libraryConfiguration)))
-                .Where(item => item.Role != LibraryRepresentation.Other)
-                .GroupBy(item => item.Role)
-                .Where(group => group.Count() == 1)
-                .ToDictionary(group => group.Key, group => group.Single().Record);
-
-            if (!byRole.ContainsKey(LibraryRepresentation.CdFlac) &&
-                byRole.TryGetValue(LibraryRepresentation.HighResolutionFlac, out var highResolution))
+            foreach (var track in album.GroupBy(TrackKey))
             {
-                string destination = ClaimCanonical(configuration.PairedCdDestination, highResolution,
-                    ".flac", configuration, claimed,
-                    continuousTrackNumbers.GetValueOrDefault(highResolution.Path));
-                actions.Add(new(RepresentationRepairKind.DeriveCdFlac, highResolution.Path, destination,
-                    "Downsample the high-resolution FLAC to a paired CD-quality FLAC, then copy normalized metadata.",
-                    SourceSnapshot(highResolution),
-                    DestinationSnapshot(destination)));
-            }
+                ct.ThrowIfCancellationRequested();
+                int trackCount = track.Count();
+                var byRole = track
+                    .Select(record => (Record: record, Role: libraryConfiguration is null
+                        ? RepresentationAnalyzer.Classify(record)
+                        : RepresentationAnalyzer.Classify(record, libraryConfiguration)))
+                    .Where(item => item.Role != LibraryRepresentation.Other)
+                    .GroupBy(item => item.Role)
+                    .Where(group => group.Count() == 1)
+                    .ToDictionary(group => group.Key, group => group.Single().Record);
 
-            bool hasPortableCounterpart = byRole.ContainsKey(LibraryRepresentation.GeneratedAac) ||
-                byRole.ContainsKey(LibraryRepresentation.Purchased);
-            if (!hasPortableCounterpart &&
-                !string.IsNullOrWhiteSpace(configuration.AacDestination))
-            {
-                TrackRecord? source = byRole.GetValueOrDefault(LibraryRepresentation.CdFlac) ??
-                    byRole.GetValueOrDefault(LibraryRepresentation.HighResolutionFlac);
-                if (source is not null)
+                if (!byRole.ContainsKey(LibraryRepresentation.CdFlac) &&
+                    byRole.TryGetValue(LibraryRepresentation.HighResolutionFlac, out var highResolution))
                 {
-                    string destination = ClaimCanonical(configuration.AacDestination, source,
-                        ".m4a", configuration, claimed,
-                        continuousTrackNumbers.GetValueOrDefault(source.Path));
-                    actions.Add(new(RepresentationRepairKind.DeriveAac, source.Path, destination,
-                        $"Encode AAC at {configuration.AacBitrateKbps:N0} kbit/s with " +
-                        $"{configuration.AacEncoder}, then copy normalized metadata.",
-                        SourceSnapshot(source),
+                    string destination = ClaimCanonical(configuration.PairedCdDestination, highResolution,
+                        ".flac", configuration, claimed,
+                        continuousTrackNumbers.GetValueOrDefault(highResolution.Path));
+                    actions.Add(new(RepresentationRepairKind.DeriveCdFlac, highResolution.Path, destination,
+                        "Downsample the high-resolution FLAC to a paired CD-quality FLAC, then copy normalized metadata.",
+                        SourceSnapshot(highResolution),
                         DestinationSnapshot(destination)));
+                }
+
+                bool hasPortableCounterpart = byRole.ContainsKey(LibraryRepresentation.GeneratedAac) ||
+                    byRole.ContainsKey(LibraryRepresentation.Purchased);
+                if (!hasPortableCounterpart &&
+                    !string.IsNullOrWhiteSpace(configuration.AacDestination))
+                {
+                    TrackRecord? source = byRole.GetValueOrDefault(LibraryRepresentation.CdFlac) ??
+                        byRole.GetValueOrDefault(LibraryRepresentation.HighResolutionFlac);
+                    if (source is not null)
+                    {
+                        string destination = ClaimCanonical(configuration.AacDestination, source,
+                            ".m4a", configuration, claimed,
+                            continuousTrackNumbers.GetValueOrDefault(source.Path));
+                        actions.Add(new(RepresentationRepairKind.DeriveAac, source.Path, destination,
+                            $"Encode AAC at {configuration.AacBitrateKbps:N0} kbit/s with " +
+                            $"{configuration.AacEncoder}, then copy normalized metadata.",
+                            SourceSnapshot(source),
+                            DestinationSnapshot(destination)));
+                    }
+                }
+                completedTracks += trackCount;
+                if (completedTracks - lastReportedTracks >= 128 ||
+                    completedTracks == records.Count)
+                {
+                    progress?.Report(new(completedTracks, records.Count, "tracks",
+                        "Previewing representation derivations", track.First().Path));
+                    lastReportedTracks = completedTracks;
                 }
             }
         }

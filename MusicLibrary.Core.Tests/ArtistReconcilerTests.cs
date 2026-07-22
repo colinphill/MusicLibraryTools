@@ -39,6 +39,29 @@ public class ArtistReconcilerTests
     }
 
     [Fact]
+    public void FindSimilarArtists_ReportsTrackScanAndPairwiseComparisonProgress()
+    {
+        TrackRecord[] records =
+        [
+            Rec("1.flac", "Portishead"),
+            Rec("2.flac", "Portished"),
+            Rec("3.flac", "Radiohead"),
+        ];
+        var updates = new List<AnalysisProgress>();
+
+        _ = _reconciler.FindSimilarArtists(records, 0.2,
+            new SynchronousProgress<AnalysisProgress>(updates.Add));
+
+        AnalysisProgress trackFinal = updates.Last(update => update.Unit == "tracks");
+        Assert.Equal(records.Length, trackFinal.Completed);
+        Assert.Equal(records.Length, trackFinal.Total);
+        AnalysisProgress comparisonFinal = updates.Last(
+            update => update.Unit == "artist-name comparisons");
+        Assert.Equal(3, comparisonFinal.Completed);
+        Assert.Equal(3, comparisonFinal.Total);
+    }
+
+    [Fact]
     public void FindSimilarArtists_ClustersNormalizedVariations()
     {
         var records = new[]

@@ -56,7 +56,10 @@ public sealed class WorkflowIntegrationService : IDisposable
         Observe(_health, "Health analysis", ShellDestination.Health,
             () => _health.IsBusy, () => _health.StatusText,
             () => _health.LastActivityState,
-            () => ExecuteIfAvailable(_health.CancelCommand));
+            () => ExecuteIfAvailable(_health.CancelCommand),
+            () => _health.IsAnalysisProgressIndeterminate
+                ? null
+                : _health.AnalysisProgressFraction);
     }
 
     private void Observe(
@@ -66,9 +69,11 @@ public sealed class WorkflowIntegrationService : IDisposable
         Func<bool> busy,
         Func<string?> status,
         Func<AppActivityState> outcome,
-        Action cancel)
+        Action cancel,
+        Func<double?>? progress = null)
     {
-        _workflows[source] = new WorkflowState(title, destination, busy, status, outcome, cancel);
+        _workflows[source] = new WorkflowState(
+            title, destination, busy, status, outcome, cancel, progress);
         source.PropertyChanged += WorkflowChanged;
     }
 
@@ -97,9 +102,12 @@ public sealed class WorkflowIntegrationService : IDisposable
                 state.ActivityId = null;
             }
         }
-        else if (e.PropertyName is nameof(AnalyzerViewModel.StatusText) && state.ActivityId is Guid id)
+        else if ((e.PropertyName is nameof(AnalyzerViewModel.StatusText) or
+                  nameof(AnalyzerViewModel.AnalysisProgressFraction) or
+                  nameof(AnalyzerViewModel.IsAnalysisProgressIndeterminate)) &&
+                 state.ActivityId is Guid id)
         {
-            _activities.Report(id, state.Status() ?? "Working…");
+            _activities.Report(id, state.Status() ?? "Working…", state.Progress?.Invoke());
         }
     }
 
@@ -140,7 +148,8 @@ public sealed class WorkflowIntegrationService : IDisposable
         Func<bool> isBusy,
         Func<string?> status,
         Func<AppActivityState> outcome,
-        Action cancel)
+        Action cancel,
+        Func<double?>? progress)
     {
         public string Title { get; } = title;
         public ShellDestination Destination { get; } = destination;
@@ -148,6 +157,7 @@ public sealed class WorkflowIntegrationService : IDisposable
         public Func<string?> Status { get; } = status;
         public Func<AppActivityState> Outcome { get; } = outcome;
         public Action Cancel { get; } = cancel;
+        public Func<double?>? Progress { get; } = progress;
         public Guid? ActivityId { get; set; }
     }
 }

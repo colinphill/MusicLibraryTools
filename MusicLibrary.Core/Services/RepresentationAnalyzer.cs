@@ -17,31 +17,55 @@ public enum LibraryRepresentation
 public static class RepresentationAnalyzer
 {
     public static AnalysisReport Compare(IReadOnlyList<TrackRecord> records, CancellationToken ct = default)
-        => Compare(records, Classify, AlbumKey, ct);
+        => Compare(records, Classify, AlbumKey, null, ct);
+
+    public static AnalysisReport Compare(
+        IReadOnlyList<TrackRecord> records,
+        IProgress<AnalysisProgress>? progress,
+        CancellationToken ct = default)
+        => Compare(records, Classify, AlbumKey, progress, ct);
 
     public static AnalysisReport Compare(
         IReadOnlyList<TrackRecord> records,
         LibraryConfiguration configuration,
         CancellationToken ct = default) =>
         Compare(records, record => Classify(record, configuration),
-            record => LibraryAlbumIdentityResolver.Key(record, configuration), ct);
+            record => LibraryAlbumIdentityResolver.Key(record, configuration), null, ct);
+
+    public static AnalysisReport Compare(
+        IReadOnlyList<TrackRecord> records,
+        LibraryConfiguration configuration,
+        IProgress<AnalysisProgress>? progress,
+        CancellationToken ct = default) =>
+        Compare(records, record => Classify(record, configuration),
+            record => LibraryAlbumIdentityResolver.Key(record, configuration), progress, ct);
 
     private static AnalysisReport Compare(
         IReadOnlyList<TrackRecord> records,
         Func<TrackRecord, LibraryRepresentation> classify,
         Func<TrackRecord, string> albumKey,
+        IProgress<AnalysisProgress>? progress,
         CancellationToken ct)
     {
         var findings = new List<AnalysisFinding>();
-        foreach (var album in records.GroupBy(albumKey))
+        var albums = records.GroupBy(albumKey).ToList();
+        int completed = 0;
+        int lastReported = 0;
+        progress?.Report(new(0, records.Count, "tracks", "Comparing album representations"));
+        foreach (IGrouping<string, TrackRecord> album in albums)
         {
             ct.ThrowIfCancellationRequested();
+            int albumCount = album.Count();
             var represented = album.Select(record => (Record: record, Role: classify(record)))
                 .Where(item => item.Role != LibraryRepresentation.Other)
                 .ToList();
             var roles = represented.Select(item => item.Role).Distinct().Order().ToList();
             if (roles.Count < 2)
+            {
+                completed += albumCount;
+                ReportProgress();
                 continue;
+            }
 
             var counts = roles.ToDictionary(role => role,
                 role => represented.Where(item => item.Role == role)
@@ -78,9 +102,20 @@ public static class RepresentationAnalyzer
                     AddTrackDrift(byRole.Values.Select(candidates => candidates[0].Record).ToList(),
                         classify, findings);
             }
+            completed += albumCount;
+            ReportProgress();
         }
         return new("Album representations", findings
             .OrderBy(finding => finding.Path, StringComparer.CurrentCultureIgnoreCase).ToList());
+
+        void ReportProgress()
+        {
+            if (completed - lastReported < 128 && completed != records.Count)
+                return;
+            progress?.Report(new(completed, records.Count, "tracks",
+                "Comparing album representations"));
+            lastReported = completed;
+        }
     }
 
     /// <summary>Paths whose artwork is worth hydrating: unique, matched counterparts only.</summary>
@@ -273,14 +308,12 @@ public static class RepresentationAnalyzer
     {
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(configuration);
-        LibraryIndexLocation? root = LibraryRootPermissionPolicy.MostSpecific(
-            record.Path, configuration.IndexLocations);
-        if (root is null)
+        if (!LibraryAlbumIdentityResolver.TryGetEffectiveProfile(
+                record, configuration, out LibraryProfile profile))
             return LibraryRepresentation.Other;
 
         return record.CodecType == CodecType.Lossless
-            ? ClassifyLosslessByQuality(
-                record, configuration.GetEffectiveProfile(root).Quality)
+            ? ClassifyLosslessByQuality(record, profile.Quality)
             : Classify(record);
     }
 

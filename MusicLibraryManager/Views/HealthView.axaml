@@ -51,7 +51,13 @@
             </WrapPanel>
           </StackPanel>
         </Grid>
-        <ProgressBar Classes="app" IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
+        <Grid IsVisible="{Binding IsBusy}">
+          <ProgressBar Classes="app" Minimum="0" Maximum="1"
+                       Value="{Binding AnalysisProgressFraction}"
+                       IsVisible="{Binding HasDeterminateAnalysisProgress}" />
+          <ProgressBar Classes="app" IsIndeterminate="True"
+                       IsVisible="{Binding HasIndeterminateAnalysisProgress}" />
+        </Grid>
         <Border Classes="status-banner"
                 Classes.info="{Binding IsStatusInfo}"
                 Classes.success="{Binding IsStatusSuccess}"

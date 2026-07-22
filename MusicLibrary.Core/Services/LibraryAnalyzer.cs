@@ -195,13 +195,29 @@ public static class LibraryAnalyzer
 
     /// <summary>Files that are lossy (candidates that should perhaps be lossless).</summary>
     public static AnalysisReport Lossless(IReadOnlyList<TrackRecord> records)
+        => Lossless(records, (IProgress<AnalysisProgress>?)null);
+
+    public static AnalysisReport Lossless(
+        IReadOnlyList<TrackRecord> records,
+        IProgress<AnalysisProgress>? progress,
+        CancellationToken ct = default)
     {
-        var findings = records
-            .Where(r => r.CodecType == CodecType.Lossy)
-            .OrderBy(r => r.Path, StringComparer.CurrentCultureIgnoreCase)
-            .Select(r => new AnalysisFinding(r.Path, $"{r.CodecName} (lossy)", "Lossy codec",
-                LibraryHealthRuleIds.LossyFile))
-            .ToList();
+        var findings = new List<AnalysisFinding>();
+        progress?.Report(new(0, records.Count, "tracks", "Checking audio formats"));
+        for (int index = 0; index < records.Count; index++)
+        {
+            ct.ThrowIfCancellationRequested();
+            TrackRecord record = records[index];
+            if (record.CodecType == CodecType.Lossy)
+                findings.Add(new AnalysisFinding(record.Path, $"{record.CodecName} (lossy)",
+                    "Lossy codec", LibraryHealthRuleIds.LossyFile));
+            int completed = index + 1;
+            if ((completed & 127) == 0 || completed == records.Count)
+                progress?.Report(new(completed, records.Count, "tracks",
+                    "Checking audio formats", record.Path));
+        }
+        findings.Sort((left, right) => StringComparer.CurrentCultureIgnoreCase.Compare(
+            left.Path, right.Path));
         return new AnalysisReport("Lossy files", findings);
     }
 
@@ -215,6 +231,11 @@ public static class LibraryAnalyzer
     /// disagreeing DiscTotal across the album, or a track/disc number that exceeds its stated total.
     /// </summary>
     public static AnalysisReport InconsistentTotals(IReadOnlyList<TrackRecord> records)
+        => InconsistentTotals(records, CancellationToken.None);
+
+    public static AnalysisReport InconsistentTotals(
+        IReadOnlyList<TrackRecord> records,
+        CancellationToken ct)
     {
         var findings = new List<AnalysisFinding>();
 
@@ -226,6 +247,7 @@ public static class LibraryAnalyzer
 
         foreach (var album in albums)
         {
+            ct.ThrowIfCancellationRequested();
             var first = album.First();
             var label = $"{first.EffectiveAlbumArtist} — {first.StrippedAlbum ?? first.Album}";
 
@@ -286,11 +308,22 @@ public static class LibraryAnalyzer
     /// total and non-breaking-space characters in the path.
     /// </summary>
     public static AnalysisReport Inconsistencies(IReadOnlyList<TrackRecord> records)
-    {
-        var findings = new List<AnalysisFinding>(InconsistentTotals(records).Findings);
+        => Inconsistencies(records, (IProgress<AnalysisProgress>?)null);
 
-        foreach (var r in records.OrderBy(r => r.Path, StringComparer.CurrentCultureIgnoreCase))
+    public static AnalysisReport Inconsistencies(
+        IReadOnlyList<TrackRecord> records,
+        IProgress<AnalysisProgress>? progress,
+        CancellationToken ct = default)
+    {
+        progress?.Report(new(0, records.Count, "tracks", "Checking metadata consistency"));
+        var findings = new List<AnalysisFinding>(InconsistentTotals(records, ct).Findings);
+
+        TrackRecord[] ordered = records.OrderBy(
+            record => record.Path, StringComparer.CurrentCultureIgnoreCase).ToArray();
+        for (int index = 0; index < ordered.Length; index++)
         {
+            ct.ThrowIfCancellationRequested();
+            TrackRecord r = ordered[index];
             if (r.TrackTotal is null)
                 findings.Add(new AnalysisFinding(r.Path, "missing total-tracks",
                     "Missing track total", LibraryHealthRuleIds.MissingTrackTotal));
@@ -305,6 +338,11 @@ public static class LibraryAnalyzer
             if (r.Path.Contains('\u00A0'))
                 findings.Add(new AnalysisFinding(r.Path, "path contains a non-breaking space",
                     "Non-breaking space in path", LibraryHealthRuleIds.NormalizeWhitespace));
+
+            int completed = index + 1;
+            if ((completed & 127) == 0 || completed == ordered.Length)
+                progress?.Report(new(completed, ordered.Length, "tracks",
+                    "Checking metadata consistency", r.Path));
         }
 
         return new AnalysisReport("Inconsistencies", findings);

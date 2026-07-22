@@ -18,10 +18,16 @@ public static class AlbumMetadataMatrixBuilder
         OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
     public static IReadOnlyList<AlbumMetadataMatrix> Build(IReadOnlyList<TrackRecord> records)
+        => Build(records, (IProgress<AnalysisProgress>?)null);
+
+    public static IReadOnlyList<AlbumMetadataMatrix> Build(
+        IReadOnlyList<TrackRecord> records,
+        IProgress<AnalysisProgress>? progress,
+        CancellationToken ct = default)
     {
         LibraryProfile legacy = LibraryProfilePresets.Create(
             LibraryProfilePreset.LegacyMusicLibraryTools);
-        return Build(records, AlbumIdentity, _ => legacy.Disc);
+        return Build(records, AlbumIdentity, _ => legacy.Disc, progress, ct);
     }
 
     public static IReadOnlyList<AlbumMetadataMatrix> Build(
@@ -29,19 +35,48 @@ public static class AlbumMetadataMatrixBuilder
         LibraryConfiguration configuration) =>
         Build(records,
             record => LibraryAlbumIdentityResolver.Key(record, configuration),
-            record => EffectiveProfile(record, configuration).Disc);
+            record => EffectiveProfile(record, configuration).Disc, null, default);
+
+    public static IReadOnlyList<AlbumMetadataMatrix> Build(
+        IReadOnlyList<TrackRecord> records,
+        LibraryConfiguration configuration,
+        IProgress<AnalysisProgress>? progress,
+        CancellationToken ct = default) =>
+        Build(records,
+            record => LibraryAlbumIdentityResolver.Key(record, configuration),
+            record => EffectiveProfile(record, configuration).Disc, progress, ct);
 
     private static IReadOnlyList<AlbumMetadataMatrix> Build(
         IReadOnlyList<TrackRecord> records,
         Func<TrackRecord, string> identity,
-        Func<TrackRecord, LibraryDiscPolicy> discPolicy)
+        Func<TrackRecord, LibraryDiscPolicy> discPolicy,
+        IProgress<AnalysisProgress>? progress,
+        CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(records);
-        return records
+        var albums = records
             .GroupBy(record => new AlbumKey(PackageRoot(record.Path), identity(record)),
                 AlbumKeyComparer.Instance)
-            .Select(album => BuildMatrix(album, discPolicy(album.First())))
-            .Where(matrix => matrix.InconsistentCellCount > 0)
+            .ToList();
+        var matrices = new List<AlbumMetadataMatrix>();
+        int completed = 0;
+        int lastReported = 0;
+        progress?.Report(new(0, records.Count, "tracks", "Building album metadata matrix"));
+        foreach (IGrouping<AlbumKey, TrackRecord> album in albums)
+        {
+            ct.ThrowIfCancellationRequested();
+            AlbumMetadataMatrix matrix = BuildMatrix(album, discPolicy(album.First()));
+            if (matrix.InconsistentCellCount > 0)
+                matrices.Add(matrix);
+            completed += album.Count();
+            if (completed - lastReported >= 128 || completed == records.Count)
+            {
+                progress?.Report(new(completed, records.Count, "tracks",
+                    "Building album metadata matrix", album.Key.Root));
+                lastReported = completed;
+            }
+        }
+        return matrices
             .OrderBy(matrix => matrix.DisplayName, StringComparer.CurrentCultureIgnoreCase)
             .ThenBy(matrix => matrix.Root, PathComparer)
             .ToList();

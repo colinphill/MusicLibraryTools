@@ -274,11 +274,13 @@ public partial class OperationsViewModel : ViewModelBase
                 IReadOnlyList<string> parsed = [];
                 var typedProgress = new Progress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
-                _configuredExportPlan = await _configuredExport.PreviewAsync(
-                    new(exportProfileId), typedProgress, _cts.Token);
+                _configuredExportPlan = await Task.Run(() => _configuredExport.PreviewAsync(
+                    new(exportProfileId), typedProgress, _cts.Token), _cts.Token);
                 int exitCode = _configuredExportPlan.CanApply ? 0 : 4;
+                string output = await Task.Run(
+                    () => RenderConfiguredExportPlan(_configuredExportPlan), _cts.Token);
                 _jobPlan = new(SelectedJob, parsed, exitCode,
-                    RenderConfiguredExportPlan(_configuredExportPlan), DateTimeOffset.UtcNow);
+                    output, DateTimeOffset.UtcNow);
             }
             else if (SelectedJob.Id == "cross-library-sync" && _crossLibrarySync is not null)
             {
@@ -288,11 +290,13 @@ public partial class OperationsViewModel : ViewModelBase
                     ItunesLibraryPath: null);
                 var typedProgress = new Progress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
-                _crossLibrarySyncPlan = await _crossLibrarySync.PreviewAsync(
-                    request, typedProgress, _cts.Token);
+                _crossLibrarySyncPlan = await Task.Run(() => _crossLibrarySync.PreviewAsync(
+                    request, typedProgress, _cts.Token), _cts.Token);
                 int exitCode = _crossLibrarySyncPlan.CanApply ? 0 : 4;
+                string output = await Task.Run(
+                    () => RenderCrossLibrarySyncPlan(_crossLibrarySyncPlan), _cts.Token);
                 _jobPlan = new(SelectedJob, parsed, exitCode,
-                    RenderCrossLibrarySyncPlan(_crossLibrarySyncPlan), DateTimeOffset.UtcNow);
+                    output, DateTimeOffset.UtcNow);
             }
             else if (SelectedJob.Id == "playlist-sync" && _playlistExport is not null)
             {
@@ -302,11 +306,13 @@ public partial class OperationsViewModel : ViewModelBase
                     ItunesLibraryPath: null);
                 var typedProgress = new Progress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
-                _playlistExportPlan = await _playlistExport.PreviewAsync(
-                    request, typedProgress, _cts.Token);
+                _playlistExportPlan = await Task.Run(() => _playlistExport.PreviewAsync(
+                    request, typedProgress, _cts.Token), _cts.Token);
                 int exitCode = _playlistExportPlan.CanApply ? 0 : 4;
+                string output = await Task.Run(
+                    () => RenderPlaylistExportPlan(_playlistExportPlan), _cts.Token);
                 _jobPlan = new(SelectedJob, parsed, exitCode,
-                    RenderPlaylistExportPlan(_playlistExportPlan), DateTimeOffset.UtcNow);
+                    output, DateTimeOffset.UtcNow);
             }
             else if (SelectedJob.Id == "artwork-normalization" && _artworkNormalization is not null)
             {
@@ -315,11 +321,13 @@ public partial class OperationsViewModel : ViewModelBase
                     "An iTunes playlist name is required."), ConfiguredLibraryPath());
                 var typedProgress = new Progress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
-                _artworkNormalizationPlan = await _artworkNormalization.PreviewAsync(
-                    request, typedProgress, _cts.Token);
+                _artworkNormalizationPlan = await Task.Run(() => _artworkNormalization.PreviewAsync(
+                    request, typedProgress, _cts.Token), _cts.Token);
                 int exitCode = _artworkNormalizationPlan.CanApply ? 0 : 4;
+                string output = await Task.Run(
+                    () => RenderArtworkNormalizationPlan(_artworkNormalizationPlan), _cts.Token);
                 _jobPlan = new(SelectedJob, parsed, exitCode,
-                    RenderArtworkNormalizationPlan(_artworkNormalizationPlan), DateTimeOffset.UtcNow);
+                    output, DateTimeOffset.UtcNow);
             }
             else if (SelectedJob.Id == "smart-storage" && _smartStorage is not null)
             {
@@ -329,11 +337,13 @@ public partial class OperationsViewModel : ViewModelBase
                     ConfiguredLibraryPath());
                 var typedProgress = new Progress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
-                _smartStoragePlan = await _smartStorage.PreviewAsync(
-                    request, typedProgress, _cts.Token);
+                _smartStoragePlan = await Task.Run(() => _smartStorage.PreviewAsync(
+                    request, typedProgress, _cts.Token), _cts.Token);
                 int exitCode = _smartStoragePlan.CanApply ? 0 : 4;
+                string output = await Task.Run(
+                    () => RenderSmartStoragePlan(_smartStoragePlan), _cts.Token);
                 _jobPlan = new(SelectedJob, parsed, exitCode,
-                    RenderSmartStoragePlan(_smartStoragePlan), DateTimeOffset.UtcNow);
+                    output, DateTimeOffset.UtcNow);
             }
             else if (SelectedJob.Id == "car-card" && _carCard is not null)
             {
@@ -342,10 +352,13 @@ public partial class OperationsViewModel : ViewModelBase
                     JobInitialize, JobMaxRemovals, null);
                 var typedProgress = new Progress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
-                _carCardPlan = await _carCard.PreviewAsync(request, typedProgress, _cts.Token);
+                _carCardPlan = await Task.Run(() =>
+                    _carCard.PreviewAsync(request, typedProgress, _cts.Token), _cts.Token);
                 int exitCode = _carCardPlan.CanApply ? 0 : 4;
+                string output = await Task.Run(
+                    () => RenderCarCardPlan(_carCardPlan), _cts.Token);
                 _jobPlan = new(SelectedJob, parsed, exitCode,
-                    RenderCarCardPlan(_carCardPlan), DateTimeOffset.UtcNow);
+                    output, DateTimeOffset.UtcNow);
             }
             else if (SelectedJob.Id == "redundancies" && _redundancyAnalysis is not null)
             {
@@ -353,9 +366,12 @@ public partial class OperationsViewModel : ViewModelBase
                 string? library = ConfiguredLibraryPath();
                 var typedProgress = new Progress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
-                RedundancyAnalysisResult result = await _redundancyAnalysis.AnalyzeAsync(
-                    library, typedProgress, _cts.Token);
-                _jobPlan = new(SelectedJob, parsed, 0, RenderRedundancyResult(result),
+                RedundancyAnalysisResult result = await Task.Run(() =>
+                    _redundancyAnalysis.AnalyzeAsync(
+                        library, typedProgress, _cts.Token), _cts.Token);
+                string output = await Task.Run(
+                    () => RenderRedundancyResult(result), _cts.Token);
+                _jobPlan = new(SelectedJob, parsed, 0, output,
                     DateTimeOffset.UtcNow);
             }
             else if (SelectedJob.Id == "itunes-validation" && _itunesValidation is not null)
@@ -365,10 +381,13 @@ public partial class OperationsViewModel : ViewModelBase
                     "An iTunes Library.itl path is required.");
                 var typedProgress = new Progress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
-                ItunesValidationResult result = await _itunesValidation.ValidateAsync(
-                    validationPath, typedProgress, _cts.Token);
+                ItunesValidationResult result = await Task.Run(() =>
+                    _itunesValidation.ValidateAsync(
+                        validationPath, typedProgress, _cts.Token), _cts.Token);
+                string output = await Task.Run(
+                    () => RenderValidationResult(result), _cts.Token);
                 _jobPlan = new(SelectedJob, parsed, result.IsValid ? 0 : 4,
-                    RenderValidationResult(result), DateTimeOffset.UtcNow);
+                    output, DateTimeOffset.UtcNow);
             }
             else
             {
@@ -428,8 +447,9 @@ public partial class OperationsViewModel : ViewModelBase
                 var clock = Stopwatch.StartNew();
                 var typedProgress = new Progress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
-                ConfiguredExportResult typedResult = await _configuredExport.ApplyAsync(
-                    exportPlan, typedProgress, _cts.Token);
+                ConfiguredExportResult typedResult = await Task.Run(() =>
+                    _configuredExport.ApplyAsync(
+                        exportPlan, typedProgress, _cts.Token), _cts.Token);
                 clock.Stop();
                 result = new(0, RenderConfiguredExportResult(typedResult), clock.Elapsed);
             }
@@ -439,8 +459,9 @@ public partial class OperationsViewModel : ViewModelBase
                 var clock = Stopwatch.StartNew();
                 var typedProgress = new Progress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
-                CrossLibrarySyncResult typedResult = await _crossLibrarySync.ApplyAsync(
-                    typedPlan, typedProgress, _cts.Token);
+                CrossLibrarySyncResult typedResult = await Task.Run(() =>
+                    _crossLibrarySync.ApplyAsync(
+                        typedPlan, typedProgress, _cts.Token), _cts.Token);
                 clock.Stop();
                 string output = RenderCrossLibrarySyncResult(typedResult);
                 result = new(0, output, clock.Elapsed);
@@ -451,8 +472,9 @@ public partial class OperationsViewModel : ViewModelBase
                 var clock = Stopwatch.StartNew();
                 var typedProgress = new Progress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
-                PlaylistExportResult typedResult = await _playlistExport.ApplyAsync(
-                    playlistPlan, typedProgress, _cts.Token);
+                PlaylistExportResult typedResult = await Task.Run(() =>
+                    _playlistExport.ApplyAsync(
+                        playlistPlan, typedProgress, _cts.Token), _cts.Token);
                 clock.Stop();
                 result = new(0, RenderPlaylistExportResult(typedResult), clock.Elapsed);
             }
@@ -462,8 +484,9 @@ public partial class OperationsViewModel : ViewModelBase
                 var clock = Stopwatch.StartNew();
                 var typedProgress = new Progress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
-                ArtworkNormalizationResult typedResult = await _artworkNormalization.ApplyAsync(
-                    artworkPlan, typedProgress, _cts.Token);
+                ArtworkNormalizationResult typedResult = await Task.Run(() =>
+                    _artworkNormalization.ApplyAsync(
+                        artworkPlan, typedProgress, _cts.Token), _cts.Token);
                 clock.Stop();
                 if (typedResult.UpdatedPaths.Count > 0)
                     ArtworkNormalized?.Invoke(typedResult.UpdatedPaths);
@@ -475,8 +498,9 @@ public partial class OperationsViewModel : ViewModelBase
                 var clock = Stopwatch.StartNew();
                 var typedProgress = new Progress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
-                SmartStorageResult typedResult = await _smartStorage.ApplyAsync(
-                    smartPlan, typedProgress, _cts.Token);
+                SmartStorageResult typedResult = await Task.Run(() =>
+                    _smartStorage.ApplyAsync(
+                        smartPlan, typedProgress, _cts.Token), _cts.Token);
                 clock.Stop();
                 result = new(0, RenderSmartStorageResult(typedResult), clock.Elapsed);
             }
@@ -486,8 +510,9 @@ public partial class OperationsViewModel : ViewModelBase
                 var clock = Stopwatch.StartNew();
                 var typedProgress = new Progress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
-                CarCardResult typedResult = await _carCard.ApplyAsync(
-                    carCardPlan, typedProgress, _cts.Token);
+                CarCardResult typedResult = await Task.Run(() =>
+                    _carCard.ApplyAsync(
+                        carCardPlan, typedProgress, _cts.Token), _cts.Token);
                 clock.Stop();
                 result = new(0, RenderCarCardResult(typedResult), clock.Elapsed);
             }

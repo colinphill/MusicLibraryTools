@@ -82,12 +82,20 @@ public sealed class OperationJournalService : IOperationJournalService
         return Task.Run(() => PreviewRestore(run, entries, ct), ct);
     }
 
-    public async Task<OperationRestoreResult> ApplyRestoreAsync(
+    public Task<OperationRestoreResult> ApplyRestoreAsync(
         OperationRestorePlan plan,
         IProgress<int>? progress = null,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(plan);
+        return Task.Run(() => ApplyRestoreCoreAsync(plan, progress, ct), ct);
+    }
+
+    private async Task<OperationRestoreResult> ApplyRestoreCoreAsync(
+        OperationRestorePlan plan,
+        IProgress<int>? progress,
+        CancellationToken ct)
+    {
         if (!plan.CanApply)
             return new(0, 0);
 
@@ -205,12 +213,20 @@ public sealed class OperationJournalService : IOperationJournalService
         return Task.Run(() => PreviewPurge(runs, retentionDays, nowUtc ?? DateTimeOffset.UtcNow, ct), ct);
     }
 
-    public async Task<OperationPurgeResult> ApplyPurgeAsync(
+    public Task<OperationPurgeResult> ApplyPurgeAsync(
         OperationPurgePlan plan,
         IProgress<int>? progress = null,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(plan);
+        return Task.Run(() => ApplyPurgeCoreAsync(plan, progress, ct), ct);
+    }
+
+    private async Task<OperationPurgeResult> ApplyPurgeCoreAsync(
+        OperationPurgePlan plan,
+        IProgress<int>? progress,
+        CancellationToken ct)
+    {
         if (!plan.CanApply)
             return new(0, 0, 0);
 

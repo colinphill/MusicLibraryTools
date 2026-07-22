@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Runtime.CompilerServices;
 using MetadataCaching;
 using MusicLibrary.Core.Models;
 using MusicLibraryTools;
@@ -9,6 +10,9 @@ namespace MusicLibrary.Core.Services;
 /// <summary>Builds exact album identities from the effective root profile.</summary>
 public static class LibraryAlbumIdentityResolver
 {
+    private static readonly ConditionalWeakTable<LibraryConfiguration, ConfigurationSnapshot>
+        ConfigurationSnapshots = new();
+
     private static readonly Regex FormatSuffix = new(
         @" \((DSD|DSD64|DSD128|DSD256|DVD-V|DVD-A|HiRes|Hi-Res|DTS-CD)\)$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -22,12 +26,34 @@ public static class LibraryAlbumIdentityResolver
     {
         ArgumentNullException.ThrowIfNull(record);
         ArgumentNullException.ThrowIfNull(configuration);
+        ConfigurationSnapshot snapshot = ConfigurationSnapshots.GetValue(
+            configuration, static value => new ConfigurationSnapshot(value));
         LibraryIndexLocation? root = LibraryRootPermissionPolicy.MostSpecific(
-            record.Path, configuration.IndexLocations);
+            record.Path, snapshot.Locations);
         LibraryProfile profile = root is null
-            ? configuration.ActiveProfile
-            : configuration.GetEffectiveProfile(root);
+            ? snapshot.FallbackProfile
+            : snapshot.Profiles[root.RootId];
         return Key(record, profile.AlbumIdentity);
+    }
+
+    internal static bool TryGetEffectiveProfile(
+        TrackRecord record,
+        LibraryConfiguration configuration,
+        out LibraryProfile profile)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        ArgumentNullException.ThrowIfNull(configuration);
+        ConfigurationSnapshot snapshot = ConfigurationSnapshots.GetValue(
+            configuration, static value => new ConfigurationSnapshot(value));
+        LibraryIndexLocation? root = LibraryRootPermissionPolicy.MostSpecific(
+            record.Path, snapshot.Locations);
+        if (root is null)
+        {
+            profile = null!;
+            return false;
+        }
+        profile = snapshot.Profiles[root.RootId];
+        return true;
     }
 
     public static string Key(TrackRecord record, LibraryAlbumIdentityPolicy policy)
@@ -134,4 +160,20 @@ public static class LibraryAlbumIdentityResolver
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase
         : StringComparer.Ordinal;
+
+    private sealed class ConfigurationSnapshot
+    {
+        public LibraryIndexLocation[] Locations { get; }
+        public LibraryProfile FallbackProfile { get; }
+        public IReadOnlyDictionary<Guid, LibraryProfile> Profiles { get; }
+
+        public ConfigurationSnapshot(LibraryConfiguration configuration)
+        {
+            Locations = configuration.IndexLocations.ToArray();
+            FallbackProfile = configuration.ActiveProfile;
+            Profiles = Locations.ToDictionary(
+                location => location.RootId,
+                configuration.GetEffectiveProfile);
+        }
+    }
 }

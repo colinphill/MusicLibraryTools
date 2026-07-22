@@ -274,8 +274,10 @@ public partial class DevicesViewModel : ViewModelBase
 
         await RunAsync("Initialize Android destination", async (progress, ct) =>
         {
-            DeviceSyncInitializationResult result = await _sync.InitializeAsync(
-                new(DestinationPath.Trim(), Clean(DeviceSerial), Clean(AdbPath), Adopt), progress, ct);
+            var request = new DeviceSyncInitializationRequest(
+                DestinationPath.Trim(), Clean(DeviceSerial), Clean(AdbPath), Adopt);
+            DeviceSyncInitializationResult result = await Task.Run(() => _sync.InitializeAsync(
+                request, progress, ct), ct);
             StatusText = string.IsNullOrWhiteSpace(result.Message)
                 ? "Android destination initialized."
                 : result.Message;
@@ -288,7 +290,9 @@ public partial class DevicesViewModel : ViewModelBase
         InvalidatePreview();
         await RunAsync("Preview Android synchronization", async (progress, ct) =>
         {
-            DeviceSyncPlan plan = await _sync.PreviewAsync(CreateRequest(), progress, ct);
+            DeviceSyncRequest request = CreateRequest();
+            DeviceSyncPlan plan = await Task.Run(
+                () => _sync.PreviewAsync(request, progress, ct), ct);
             _plan = plan;
             foreach (DeviceSyncAction action in plan.Actions) Actions.Add(new(action));
             OnPropertyChanged(nameof(IsActionListEmpty));
@@ -318,7 +322,7 @@ public partial class DevicesViewModel : ViewModelBase
             DeviceSyncResult result;
             try
             {
-                result = await _sync.ApplyAsync(plan, progress, ct);
+                result = await Task.Run(() => _sync.ApplyAsync(plan, progress, ct), ct);
             }
             catch
             {
@@ -354,8 +358,10 @@ public partial class DevicesViewModel : ViewModelBase
 
         await RunAsync("Restore Android synchronization", async (progress, ct) =>
         {
-            DeviceSyncRestoreResult result = await _sync.RestoreAsync(
-                new(destination, recoveryId, _recoveryDeviceSerial, Clean(AdbPath)), progress, ct);
+            var request = new DeviceSyncRestoreRequest(
+                destination, recoveryId, _recoveryDeviceSerial, Clean(AdbPath));
+            DeviceSyncRestoreResult result = await Task.Run(() => _sync.RestoreAsync(
+                request, progress, ct), ct);
             ClearRecovery();
             InvalidatePreview();
             StatusText = $"Restored recovery run {result.RecoveryId} on {result.DeviceSerial}.";

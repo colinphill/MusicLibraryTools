@@ -163,6 +163,14 @@ public sealed record DecodedAudioPair(string FirstPath, string SecondPath, strin
 
 public sealed record DecodedAudioProgress(int CompletedFiles, int TotalFiles, string Path);
 
+/// <summary>Progress for a bounded analysis phase, with a user-facing unit and stage.</summary>
+public sealed record AnalysisProgress(
+    long Completed,
+    long Total,
+    string Unit,
+    string Stage,
+    string? CurrentItem = null);
+
 public enum RepresentationRepairKind
 {
     DeriveCdFlac,

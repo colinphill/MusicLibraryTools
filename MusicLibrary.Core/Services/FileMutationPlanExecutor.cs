@@ -36,12 +36,20 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
         _settings = settings;
     }
 
-    public async Task<FileMutationSummary> ApplyAsync(
+    public Task<FileMutationSummary> ApplyAsync(
         FileMutationPlan plan,
         IProgress<OperationProgress>? progress = null,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(plan);
+        return Task.Run(() => ApplyCoreAsync(plan, progress, ct), ct);
+    }
+
+    private async Task<FileMutationSummary> ApplyCoreAsync(
+        FileMutationPlan plan,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct)
+    {
         ValidatePolicy(plan);
         if (!plan.CanApply)
             throw new InvalidOperationException("The mutation plan contains blocking issues.");

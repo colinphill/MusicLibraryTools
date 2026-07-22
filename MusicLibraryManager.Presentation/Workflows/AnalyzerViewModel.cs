@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -48,9 +49,25 @@ public partial class AnalyzerViewModel : ViewModelBase
     private IReadOnlyList<TrackRecord> _representationRecords = [];
     private IReadOnlyList<DecodedAudioPair> _decodedAudioPairs = [];
     private bool _clearingFilterDispositions;
+    private Stopwatch? _analysisProgressClock;
+    private string? _analysisProgressStage;
+    private string? _analysisProgressUnit;
+    private long _analysisProgressTotal;
+    private long _analysisProgressOrigin;
+    private long _analysisProgressCompleted;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDeterminateAnalysisProgress))]
+    [NotifyPropertyChangedFor(nameof(HasIndeterminateAnalysisProgress))]
     private bool _isBusy;
+
+    [ObservableProperty]
+    private double _analysisProgressFraction;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDeterminateAnalysisProgress))]
+    [NotifyPropertyChangedFor(nameof(HasIndeterminateAnalysisProgress))]
+    private bool _isAnalysisProgressIndeterminate = true;
 
     [ObservableProperty]
     private string? _statusText = "Choose an analysis to run.";
@@ -151,6 +168,8 @@ public partial class AnalyzerViewModel : ViewModelBase
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .ToArray();
     public bool HasRuns => Runs.Count > 0;
+    public bool HasDeterminateAnalysisProgress => IsBusy && !IsAnalysisProgressIndeterminate;
+    public bool HasIndeterminateAnalysisProgress => IsBusy && IsAnalysisProgressIndeterminate;
     public bool IsStatusInfo => StatusTone == MessageTone.Info;
     public bool IsStatusSuccess => StatusTone == MessageTone.Success;
     public bool IsStatusWarning => StatusTone == MessageTone.Warning;
@@ -535,35 +554,35 @@ public partial class AnalyzerViewModel : ViewModelBase
                     LibraryProfilePreset.LegacyMusicLibraryTools).Health);
 
     [RelayCommand(CanExecute = nameof(CanRun))]
-    private Task RunInconsistencies() => RunOverRecords("Inconsistencies", AnalysisResultView.Findings, (records, ct) =>
+    private Task RunInconsistencies() => RunOverRecords("Inconsistencies", AnalysisResultView.Findings, (records, progress, ct) =>
     {
-        var report = ApplyCurrentHealthPolicy(LibraryAnalyzer.Inconsistencies(records));
+        var report = ApplyCurrentHealthPolicy(LibraryAnalyzer.Inconsistencies(records, progress, ct));
         string status = report.Count == 0 ? "Inconsistencies: none found." : $"Inconsistencies: {report.Count:N0} finding(s).";
         return (status, AnalysisRunViewModel.ForFindings(report, records, status));
     });
 
     [RelayCommand(CanExecute = nameof(CanRun))]
-    private Task RunLossy() => RunOverRecords("Lossy files", AnalysisResultView.Findings, (records, ct) =>
+    private Task RunLossy() => RunOverRecords("Lossy files", AnalysisResultView.Findings, (records, progress, ct) =>
     {
-        var report = ApplyCurrentHealthPolicy(LibraryAnalyzer.Lossless(records));
+        var report = ApplyCurrentHealthPolicy(LibraryAnalyzer.Lossless(records, progress, ct));
         string status = report.Count == 0 ? "No lossy files." : $"Lossy files: {report.Count:N0}.";
         return (status, AnalysisRunViewModel.ForFindings(report, records, status));
     });
 
     [RelayCommand(CanExecute = nameof(CanRun))]
-    private Task RunDuplicates() => RunOverRecords("Duplicates", AnalysisResultView.Duplicates, (records, ct) =>
+    private Task RunDuplicates() => RunOverRecords("Duplicates", AnalysisResultView.Duplicates, (records, progress, ct) =>
     {
         var dupes = _settings.Configuration is { } configuration
-            ? DuplicateFinder.Find(records, configuration, ct)
-            : DuplicateFinder.Find(records, ct);
+            ? DuplicateFinder.Find(records, configuration, progress, ct)
+            : DuplicateFinder.Find(records, progress, ct);
         string status = dupes.Count == 0 ? "No duplicates found." : $"{dupes.Count:N0} duplicate group(s).";
         return (status, AnalysisRunViewModel.ForDuplicates("Duplicates", dupes, status));
     });
 
     [RelayCommand(CanExecute = nameof(CanRun))]
-    private Task RunSimilarArtists() => RunOverRecords("Similar artists", AnalysisResultView.Artists, (records, ct) =>
+    private Task RunSimilarArtists() => RunOverRecords("Similar artists", AnalysisResultView.Artists, (records, progress, ct) =>
     {
-        var groups = _reconciler.FindSimilarArtists(records, ArtistThreshold, ct);
+        var groups = _reconciler.FindSimilarArtists(records, ArtistThreshold, progress, ct);
         string status = groups.Count == 0
             ? $"No similar artist names found at threshold {ArtistThreshold:0.00}."
             : $"{groups.Count:N0} cluster(s) of similar artist names at threshold " +
@@ -658,11 +677,11 @@ public partial class AnalyzerViewModel : ViewModelBase
     }
 
     [RelayCommand(CanExecute = nameof(CanRun))]
-    private Task RunAlbumMatrix() => RunOverRecords("Album metadata matrix", AnalysisResultView.Matrix, (records, ct) =>
+    private Task RunAlbumMatrix() => RunOverRecords("Album metadata matrix", AnalysisResultView.Matrix, (records, progress, ct) =>
     {
         var matrices = _settings.Configuration is { } configuration
-            ? AlbumMetadataMatrixBuilder.Build(records, configuration)
-            : AlbumMetadataMatrixBuilder.Build(records);
+            ? AlbumMetadataMatrixBuilder.Build(records, configuration, progress, ct)
+            : AlbumMetadataMatrixBuilder.Build(records, progress, ct);
         string status = matrices.Count == 0
             ? "Album metadata matrix: no inconsistent albums found."
             : $"Album metadata matrix: {matrices.Count:N0} album(s), " +
@@ -679,7 +698,7 @@ public partial class AnalyzerViewModel : ViewModelBase
             var records = await _library.GetAllRecordsAsync(scope.Token);
             var artwork = await _library.GetArtworkAuditFilesAsync(scope.Token);
             AnalysisRunViewModel run = await BuildArtworkHealthRunAsync(
-                records, artwork, GetArtworkHealthSettings(), scope.Token);
+                records, artwork, GetArtworkHealthSettings(), CreateAnalysisProgress(), scope.Token);
             AddRun(run);
         }
         catch (OperationCanceledException) { scope.Cancel(); StatusText = "Artwork health audit cancelled."; }
@@ -696,17 +715,18 @@ public partial class AnalyzerViewModel : ViewModelBase
         IReadOnlyList<TrackRecord> records,
         IReadOnlyList<ArtworkAuditFile> artwork,
         LibraryArtworkHealthSettings settings,
+        IProgress<AnalysisProgress> progress,
         CancellationToken ct)
     {
         LibraryConfiguration? configuration = _settings.GetSnapshot().Configuration;
         AnalysisReport report = await Task.Run(() => ArtworkHealthAnalyzer.Analyze(
             records, artwork, configuration, settings.OversizedByteThreshold,
-            settings.OversizedDimensionThreshold, ct), ct);
+            settings.OversizedDimensionThreshold, progress, ct), ct);
         IReadOnlyList<ArtworkRepairItemViewModel> repairs = _artwork is null
             ? []
             : await Task.Run(() => ArtworkRepairPlanner.BuildAsync(
                 records, artwork, settings, _library, _artwork, _thumbnails,
-                configuration, ct), ct);
+                configuration, progress, ct), ct);
         int deferred = report.Findings.Count(finding =>
             finding.Problem == "Artwork scan deferred");
         int actionable = report.Count - deferred;
@@ -715,7 +735,8 @@ public partial class AnalyzerViewModel : ViewModelBase
             : $"Artwork health: {actionable:N0} issue(s), {repairs.Count:N0} repair action(s), " +
               $"{deferred:N0} deferred file(s).";
         return await Task.Run(
-            () => AnalysisRunViewModel.ForArtwork(report, records, repairs, status), ct);
+            () => AnalysisRunViewModel.ForArtwork(
+                report, records, repairs, status, progress, ct), ct);
     }
 
     private bool CanForceScanDeferredArtwork() =>
@@ -736,7 +757,7 @@ public partial class AnalyzerViewModel : ViewModelBase
             var records = await _library.GetAllRecordsAsync(scope.Token);
             var artwork = await _library.GetArtworkAuditFilesAsync(scope.Token);
             AnalysisRunViewModel run = await BuildArtworkHealthRunAsync(
-                records, artwork, GetArtworkHealthSettings(), scope.Token);
+                records, artwork, GetArtworkHealthSettings(), CreateAnalysisProgress(), scope.Token);
             AddRun(run);
             StatusText = run.Summary;
         }
@@ -862,13 +883,14 @@ public partial class AnalyzerViewModel : ViewModelBase
         {
             var records = await _library.GetAllRecordsAsync(scope.Token);
             LibraryConfiguration? configuration = _settings.Configuration;
+            IProgress<AnalysisProgress> progress = CreateAnalysisProgress();
             var prepared = await Task.Run(() => (
                 Pairs: configuration is null
                     ? RepresentationAnalyzer.DecodedAudioCandidatePairs(records)
                     : RepresentationAnalyzer.DecodedAudioCandidatePairs(records, configuration),
                 Report: configuration is null
-                    ? RepresentationAnalyzer.Compare(records, scope.Token)
-                    : RepresentationAnalyzer.Compare(records, configuration, scope.Token),
+                    ? RepresentationAnalyzer.Compare(records, progress, scope.Token)
+                    : RepresentationAnalyzer.Compare(records, configuration, progress, scope.Token),
                 ArtworkPaths: configuration is null
                     ? RepresentationAnalyzer.ArtworkCandidatePaths(records)
                     : RepresentationAnalyzer.ArtworkCandidatePaths(records, configuration)),
@@ -929,7 +951,8 @@ public partial class AnalyzerViewModel : ViewModelBase
         try
         {
             var progress = new Progress<DecodedAudioProgress>(item =>
-                StatusText = $"Decoding audio… {item.CompletedFiles:N0}/{item.TotalFiles:N0}: {item.Path}");
+                ReportAnalysisProgress(new(item.CompletedFiles, item.TotalFiles, "files",
+                    "Decoding audio", item.Path)));
             var report = await _decodedAudio.VerifyAsync(
                 FfmpegPath, _decodedAudioPairs, progress, scope.Token);
             string status = report.Count == 0
@@ -956,8 +979,13 @@ public partial class AnalyzerViewModel : ViewModelBase
         try
         {
             var records = await _library.GetAllRecordsAsync(scope.Token);
-            var preview = await _representationRepairs.PreviewAsync(
-                records, _settings.Configuration, scope.Token);
+            IProgress<AnalysisProgress> progress = CreateAnalysisProgress();
+            var preview = await Task.Run(
+                () => _representationRepairs.PreviewAsync(
+                    records, _settings.Configuration, progress, scope.Token),
+                scope.Token);
+            progress.Report(new(0, 0, "results",
+                "Preparing representation repair results"));
             var runs = await Task.Run(() =>
             {
                 var projected = new List<AnalysisRunViewModel>(2);
@@ -1346,13 +1374,16 @@ public partial class AnalyzerViewModel : ViewModelBase
     // Shared runner for the analyses that operate on the flat record list: fetch records, run `body`
     // off the UI thread, including result projection, then publish one completed snapshot.
     private async Task RunOverRecords(string label, AnalysisResultView view,
-        Func<IReadOnlyList<TrackRecord>, CancellationToken, (string Status, AnalysisRunViewModel Run)> body)
+        Func<IReadOnlyList<TrackRecord>, IProgress<AnalysisProgress>, CancellationToken,
+            (string Status, AnalysisRunViewModel Run)> body)
     {
         using var scope = BeginRun(label, view);
         try
         {
             var records = await _library.GetAllRecordsAsync(scope.Token);
-            var (status, run) = await Task.Run(() => body(records, scope.Token), scope.Token);
+            IProgress<AnalysisProgress> progress = CreateAnalysisProgress();
+            var (status, run) = await Task.Run(
+                () => body(records, progress, scope.Token), scope.Token);
             AddRun(run);
             StatusText = status;
         }
@@ -1364,6 +1395,14 @@ public partial class AnalyzerViewModel : ViewModelBase
     private RunScope BeginRun(string label, AnalysisResultView view)
     {
         IsBusy = true;
+        AnalysisProgressFraction = 0;
+        IsAnalysisProgressIndeterminate = true;
+        _analysisProgressClock = null;
+        _analysisProgressStage = null;
+        _analysisProgressUnit = null;
+        _analysisProgressTotal = 0;
+        _analysisProgressOrigin = 0;
+        _analysisProgressCompleted = 0;
         // Keep the selected retained result visible while another analysis runs. With no history
         // yet, show the destination surface so the first run still has a natural empty state.
         if (SelectedRun is null)
@@ -1374,6 +1413,75 @@ public partial class AnalyzerViewModel : ViewModelBase
         _cts = new CancellationTokenSource();
         NotifyCommands();
         return new RunScope(this);
+    }
+
+    private IProgress<AnalysisProgress> CreateAnalysisProgress() =>
+        new Progress<AnalysisProgress>(ReportAnalysisProgress);
+
+    private void ReportAnalysisProgress(AnalysisProgress value)
+    {
+        if (!IsBusy || LastActivityState != AppActivityState.Running)
+            return;
+
+        long completed = Math.Clamp(value.Completed, 0, Math.Max(0, value.Total));
+        long total = Math.Max(0, value.Total);
+        if (total == 0)
+        {
+            IsAnalysisProgressIndeterminate = true;
+            StatusText = $"{value.Stage}…";
+            return;
+        }
+
+        bool newPhase = !string.Equals(_analysisProgressStage, value.Stage, StringComparison.Ordinal) ||
+            !string.Equals(_analysisProgressUnit, value.Unit, StringComparison.Ordinal) ||
+            _analysisProgressTotal != total || completed < _analysisProgressCompleted;
+        if (newPhase)
+        {
+            _analysisProgressStage = value.Stage;
+            _analysisProgressUnit = value.Unit;
+            _analysisProgressTotal = total;
+            _analysisProgressOrigin = completed;
+            _analysisProgressClock = Stopwatch.StartNew();
+        }
+        _analysisProgressCompleted = completed;
+        IsAnalysisProgressIndeterminate = false;
+        AnalysisProgressFraction = Math.Clamp((double)completed / total, 0, 1);
+
+        long phaseCompleted = completed - _analysisProgressOrigin;
+        double elapsedSeconds = _analysisProgressClock?.Elapsed.TotalSeconds ?? 0;
+        string estimate;
+        if (phaseCompleted <= 0 || elapsedSeconds < 0.5)
+        {
+            estimate = "ETA calculating…";
+        }
+        else
+        {
+            double rate = phaseCompleted / elapsedSeconds;
+            double remainingSeconds = (total - completed) / rate;
+            estimate = $"{FormatRate(rate)} {value.Unit}/sec · ETA {FormatDuration(remainingSeconds)}";
+        }
+
+        StatusText = $"{value.Stage}… {completed:N0}/{total:N0} {value.Unit} " +
+            $"({AnalysisProgressFraction:P0}) · {estimate}";
+    }
+
+    private static string FormatRate(double rate) => rate switch
+    {
+        >= 100 => rate.ToString("N0", CultureInfo.CurrentCulture),
+        >= 10 => rate.ToString("N1", CultureInfo.CurrentCulture),
+        _ => rate.ToString("N2", CultureInfo.CurrentCulture),
+    };
+
+    private static string FormatDuration(double seconds)
+    {
+        if (!double.IsFinite(seconds) || seconds < 0)
+            return "calculating…";
+        TimeSpan duration = TimeSpan.FromSeconds(Math.Ceiling(seconds));
+        if (duration.TotalHours >= 1)
+            return $"{(int)duration.TotalHours:N0}h {duration.Minutes:N0}m";
+        if (duration.TotalMinutes >= 1)
+            return $"{duration.Minutes:N0}m {duration.Seconds:N0}s";
+        return $"{Math.Max(0, duration.Seconds):N0}s";
     }
 
     private sealed class RunScope(AnalyzerViewModel vm) : IDisposable

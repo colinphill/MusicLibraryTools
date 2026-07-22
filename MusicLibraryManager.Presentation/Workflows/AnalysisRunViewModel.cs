@@ -102,6 +102,7 @@ public sealed class AnalysisRunViewModel : ViewModelBase
         AnalysisRepairPlan? repairPlan = null,
         IReadOnlyList<AlbumMetadataMatrix>? matrices = null,
         IReadOnlyList<ArtworkRepairItemViewModel>? artworkRepairItems = null,
+        IReadOnlyList<ArtworkRepairCategoryGroupViewModel>? artworkRepairGroups = null,
         IReadOnlyList<ItlMetadataRepairItemViewModel>? itlRepairItems = null,
         ItlMetadataRepairPlan? itlRepairPlan = null)
     {
@@ -122,7 +123,8 @@ public sealed class AnalysisRunViewModel : ViewModelBase
         RepairPlan = repairPlan;
         Matrices = matrices ?? [];
         ArtworkRepairItems = artworkRepairItems ?? [];
-        ArtworkRepairGroups = ArtworkRepairCategoryGroupViewModel.Build(ArtworkRepairItems);
+        ArtworkRepairGroups = artworkRepairGroups ??
+            ArtworkRepairCategoryGroupViewModel.Build(ArtworkRepairItems);
         ItlRepairItems = itlRepairItems ?? [];
         ItlRepairGroups = ItlMetadataRepairCategoryGroupViewModel.Build(ItlRepairItems);
         ItlRepairPlan = itlRepairPlan;
@@ -208,9 +210,25 @@ public sealed class AnalysisRunViewModel : ViewModelBase
         IReadOnlyList<TrackRecord> records,
         IReadOnlyList<ArtworkRepairItemViewModel> repairs,
         string summary) =>
-        new("Artwork health", summary, AnalysisResultView.ArtworkRepairs,
-            report.Count, findingGroups: AnalysisProblemGroupViewModel.Build(report.Findings, records),
-            artworkRepairItems: repairs);
+        ForArtwork(report, records, repairs, summary, null, default);
+
+    public static AnalysisRunViewModel ForArtwork(
+        AnalysisReport report,
+        IReadOnlyList<TrackRecord> records,
+        IReadOnlyList<ArtworkRepairItemViewModel> repairs,
+        string summary,
+        IProgress<AnalysisProgress>? progress,
+        CancellationToken ct)
+    {
+        IReadOnlyList<AnalysisProblemGroupViewModel> findingGroups =
+            AnalysisProblemGroupViewModel.Build(report.Findings, records, progress, ct,
+                "Preparing artwork findings");
+        IReadOnlyList<ArtworkRepairCategoryGroupViewModel> repairGroups =
+            ArtworkRepairCategoryGroupViewModel.Build(repairs, progress, ct);
+        return new("Artwork health", summary, AnalysisResultView.ArtworkRepairs,
+            report.Count, findingGroups: findingGroups,
+            artworkRepairItems: repairs, artworkRepairGroups: repairGroups);
+    }
 
     public static AnalysisRunViewModel ForItlRepairs(
         ItlMetadataRepairPlan plan,
@@ -821,17 +839,42 @@ public sealed class AnalysisProblemGroupViewModel : ViewModelBase
 
     public static IReadOnlyList<AnalysisProblemGroupViewModel> Build(
         IReadOnlyList<AnalysisFinding> findings,
-        IReadOnlyList<TrackRecord> records)
+        IReadOnlyList<TrackRecord> records,
+        IProgress<AnalysisProgress>? progress = null,
+        CancellationToken ct = default,
+        string stage = "Preparing analysis findings")
     {
-        var recordsByPath = records
-            .GroupBy(record => record.Path, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+        var recordsByPath = new Dictionary<string, TrackRecord>(
+            StringComparer.OrdinalIgnoreCase);
+        progress?.Report(new(0, records.Count, "tracks",
+            "Indexing tracks for artwork results"));
+        for (int index = 0; index < records.Count; index++)
+        {
+            ct.ThrowIfCancellationRequested();
+            TrackRecord record = records[index];
+            recordsByPath.TryAdd(record.Path, record);
+            int completed = index + 1;
+            if ((completed & 127) == 0 || completed == records.Count)
+                progress?.Report(new(completed, records.Count, "tracks",
+                    "Indexing tracks for artwork results", record.Path));
+        }
 
-        return findings
-            .Select(finding => new AnalysisFindingViewModel(
+        var items = new List<AnalysisFindingViewModel>(findings.Count);
+        progress?.Report(new(0, findings.Count, "findings", stage));
+        for (int index = 0; index < findings.Count; index++)
+        {
+            ct.ThrowIfCancellationRequested();
+            AnalysisFinding finding = findings[index];
+            items.Add(new AnalysisFindingViewModel(
                 finding,
                 ArtistLabel(recordsByPath.GetValueOrDefault(finding.Path)),
-                AlbumLabel(finding.Path, recordsByPath.GetValueOrDefault(finding.Path))))
+                AlbumLabel(finding.Path, recordsByPath.GetValueOrDefault(finding.Path))));
+            int completed = index + 1;
+            if ((completed & 127) == 0 || completed == findings.Count)
+                progress?.Report(new(completed, findings.Count, "findings", stage, finding.Path));
+        }
+
+        return items
             .GroupBy(item => item.Problem, StringComparer.CurrentCultureIgnoreCase)
             .OrderBy(group => group.Key, StringComparer.CurrentCultureIgnoreCase)
             .Select(group => new AnalysisProblemGroupViewModel(

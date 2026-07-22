@@ -16,6 +16,14 @@ public interface IArtistReconciler
     /// <summary>Find clusters of similar artist names (each cluster has 2+ spellings).</summary>
     IReadOnlyList<SimilarArtistGroup> FindSimilarArtists(IReadOnlyList<TrackRecord> records, double threshold = 0.2, CancellationToken ct = default);
 
+    /// <summary>Find clusters while reporting both the track scan and pairwise comparison phases.</summary>
+    IReadOnlyList<SimilarArtistGroup> FindSimilarArtists(
+        IReadOnlyList<TrackRecord> records,
+        double threshold,
+        IProgress<AnalysisProgress>? progress,
+        CancellationToken ct = default) =>
+        FindSimilarArtists(records, threshold, ct);
+
     /// <summary>
     /// Rewrite the Artist and/or AlbumArtist tag (whichever currently equals <paramref name="from"/>)
     /// to <paramref name="to"/> across the given files. Returns the number of files changed.
@@ -37,22 +45,44 @@ public sealed class ArtistReconciler : IArtistReconciler
     }
 
     public IReadOnlyList<SimilarArtistGroup> FindSimilarArtists(IReadOnlyList<TrackRecord> records, double threshold = 0.2, CancellationToken ct = default)
+        => FindSimilarArtists(records, threshold, null, ct);
+
+    public IReadOnlyList<SimilarArtistGroup> FindSimilarArtists(
+        IReadOnlyList<TrackRecord> records,
+        double threshold,
+        IProgress<AnalysisProgress>? progress,
+        CancellationToken ct = default)
     {
         // AnalyzeMetadata historically compared the union of Artist and AlbumArtist spellings.
         // Keep each file once per spelling so a differing track artist is not hidden merely because
         // the file also has an album artist.
-        var byName = records
-            .SelectMany(record => new[] { record.Artist, record.AlbumArtist }
-                .Where(value => !string.IsNullOrWhiteSpace(value))
-                .Distinct(StringComparer.Ordinal)
-                .Select(value => (Name: value!, record.Path)))
-            .GroupBy(item => item.Name, StringComparer.Ordinal)
-            .ToDictionary(
-                group => group.Key,
-                group => group.Select(item => item.Path)
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .ToList(),
-                StringComparer.Ordinal);
+        var byNameEntries = new Dictionary<string,
+            (List<string> Paths, HashSet<string> Seen)>(StringComparer.Ordinal);
+        progress?.Report(new(0, records.Count, "tracks", "Reading artist names"));
+        for (int recordIndex = 0; recordIndex < records.Count; recordIndex++)
+        {
+            ct.ThrowIfCancellationRequested();
+            TrackRecord record = records[recordIndex];
+            foreach (string name in new[] { record.Artist, record.AlbumArtist }
+                         .Where(value => !string.IsNullOrWhiteSpace(value))
+                         .Select(value => value!)
+                         .Distinct(StringComparer.Ordinal))
+            {
+                if (!byNameEntries.TryGetValue(name, out var entry))
+                {
+                    entry = ([], new(StringComparer.OrdinalIgnoreCase));
+                    byNameEntries[name] = entry;
+                }
+                if (entry.Seen.Add(record.Path))
+                    entry.Paths.Add(record.Path);
+            }
+            int completed = recordIndex + 1;
+            if ((completed & 127) == 0 || completed == records.Count)
+                progress?.Report(new(completed, records.Count, "tracks",
+                    "Reading artist names", record.Path));
+        }
+        var byName = byNameEntries.ToDictionary(
+            pair => pair.Key, pair => pair.Value.Paths, StringComparer.Ordinal);
 
         var names = byName.Keys.OrderBy(n => n, StringComparer.CurrentCultureIgnoreCase).ToList();
 
@@ -81,6 +111,12 @@ public sealed class ArtistReconciler : IArtistReconciler
         // Fuzzy (AnalyzeMetadata's checkartists, lines 453-500): the O(n²) pairwise pass — edit distance
         // between the canonical forms as a fraction of the longer *original* name, under the threshold.
         // Exact-canonical pairs are skipped (already merged by the variations pass above).
+        long totalComparisons = (long)names.Count * (names.Count - 1) / 2;
+        long completedComparisons = 0;
+        long reportInterval = Math.Max(1, totalComparisons / 1000);
+        long nextReport = reportInterval;
+        progress?.Report(new(0, totalComparisons, "artist-name comparisons",
+            "Comparing artist names"));
         for (int i = 0; i < names.Count; i++)
         {
             ct.ThrowIfCancellationRequested();
@@ -94,6 +130,13 @@ public sealed class ArtistReconciler : IArtistReconciler
                 int dist = canonical[i].EditDistance(canonical[j]);
                 if ((double)dist / checkLen <= threshold)
                     Union(i, j);
+            }
+            completedComparisons += names.Count - i - 1;
+            if (completedComparisons >= nextReport || completedComparisons == totalComparisons)
+            {
+                progress?.Report(new(completedComparisons, totalComparisons,
+                    "artist-name comparisons", "Comparing artist names", names[i]));
+                nextReport = completedComparisons + reportInterval;
             }
         }
 

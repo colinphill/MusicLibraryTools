@@ -22,8 +22,10 @@ public sealed class RepresentationRepairServiceTests
             string organized = Path.Combine(root, "cd", "Artist", "Album", "01 Canonical title.flac");
             var service = new RepresentationRepairService(
                 new StubOrganizer([new PlannedMove(cd.Path, organized)]));
+            var updates = new List<AnalysisProgress>();
 
-            var preview = await service.PreviewAsync([high, cd], configuration);
+            var preview = await service.PreviewAsync([high, cd], configuration,
+                new SynchronousProgress<AnalysisProgress>(updates.Add));
 
             var titleCopy = Assert.Single(preview.MetadataCopies.Items,
                 repair => repair.Path == cd.Path && repair.Field == TagFields.Title);
@@ -38,6 +40,15 @@ public sealed class RepresentationRepairServiceTests
             Assert.DoesNotContain(preview.FileActions,
                 action => action.Kind == RepresentationRepairKind.DeriveCdFlac);
             Assert.Empty(preview.Warnings);
+            Assert.Contains(updates, update =>
+                update.Stage == "Previewing representation metadata copies" &&
+                update.Completed == 2 && update.Total == 2);
+            Assert.Contains(updates, update =>
+                update.Stage == "Previewing representation derivations" &&
+                update.Completed == 2 && update.Total == 2);
+            Assert.Contains(updates, update =>
+                update.Stage == "Selecting organization repairs" &&
+                update.Completed == 1 && update.Total == 1);
         }
         finally
         {
@@ -64,6 +75,42 @@ public sealed class RepresentationRepairServiceTests
             Assert.Contains(preview.FileActions,
                 action => action.Kind == RepresentationRepairKind.DeriveAac &&
                     action.DestinationPath.StartsWith(Path.Combine(root, "aac"), StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task MetadataCopyProgressAdvancesWithinOneLargeAlbum()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"representation-progress-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            LibraryConfiguration configuration = CreateConfiguration(root);
+            TrackRecord[] records = Enumerable.Range(1, 300)
+                .Select(number => Track(
+                    Path.Combine(root, "cd", $"{number:D3}.flac"),
+                    $"Track {number}", 44_100, 16) with
+                {
+                    TrackNumber = number,
+                    TrackTotal = 300,
+                })
+                .ToArray();
+            var updates = new List<AnalysisProgress>();
+
+            _ = await new RepresentationRepairService(new StubOrganizer([])).PreviewAsync(
+                records,
+                configuration,
+                new SynchronousProgress<AnalysisProgress>(updates.Add));
+
+            AnalysisProgress[] phase = updates
+                .Where(update => update.Stage == "Previewing representation metadata copies")
+                .ToArray();
+            Assert.Contains(phase, update => update.Completed > 0 && update.Completed < records.Length);
+            Assert.Equal(records.Length, phase[^1].Completed);
         }
         finally
         {

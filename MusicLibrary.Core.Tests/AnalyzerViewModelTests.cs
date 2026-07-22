@@ -1019,9 +1019,22 @@ public sealed class AnalyzerViewModelTests
             new StubLibrary(records), new StubReconciler(), new StubRepairs(), settings,
             representationRepairs: previewer);
 
-        await viewModel.PreviewRepresentationRepairsCommand.ExecuteAsync(null);
+        SynchronizationContext? previousContext = SynchronizationContext.Current;
+        var callerContext = new SynchronizationContext();
+        Task previewTask;
+        try
+        {
+            SynchronizationContext.SetSynchronizationContext(callerContext);
+            previewTask = viewModel.PreviewRepresentationRepairsCommand.ExecuteAsync(null);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previousContext);
+        }
+        await previewTask;
 
         Assert.Same(settings.Configuration, previewer.Configuration);
+        Assert.Null(previewer.PreviewSynchronizationContext);
         Assert.Equal(2, viewModel.Runs.Count);
         Assert.Equal("Copy representation metadata", viewModel.SelectedRun!.Name);
         Assert.Equal(4, viewModel.RepairItems.Count);
@@ -1267,11 +1280,13 @@ public sealed class AnalyzerViewModelTests
         : IRepresentationRepairService
     {
         public LibraryConfiguration? Configuration { get; private set; }
+        public SynchronizationContext? PreviewSynchronizationContext { get; private set; }
         public IReadOnlyList<RepresentationRepairAction>? AppliedActions { get; private set; }
         public Task<RepresentationRepairPreview> PreviewAsync(IReadOnlyList<TrackRecord> records,
             LibraryConfiguration? configuration, CancellationToken ct = default)
         {
             Configuration = configuration;
+            PreviewSynchronizationContext = SynchronizationContext.Current;
             return Task.FromResult(preview);
         }
 

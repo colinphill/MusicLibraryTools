@@ -382,7 +382,8 @@ public partial class IngestViewModel : ViewModelBase
                     _activities?.Report(id, StatusText,
                         p.TotalItems <= 0 ? null : (double)p.CompletedItems / p.TotalItems);
             });
-            var result = await _service.ApplyAsync(plan, decisions, progress, _cts.Token);
+            var result = await Task.Run(() =>
+                _service.ApplyAsync(plan, decisions, progress, _cts.Token), _cts.Token);
             if (!result.Cancelled && result.Albums.Any(a => a.Success) && _library.IsReady)
             {
                 // Once ingestion commits files, finish the cache refresh even if the user presses

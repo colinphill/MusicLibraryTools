@@ -13,7 +13,15 @@ public sealed class IngestPreflightService(
     IAppSettings? settings = null,
     IWavpackRunner? wavpack = null) : IIngestPreflightService
 {
-    public async Task<IngestPreflightResult> CheckAsync(IngestRequest request, CancellationToken ct = default)
+    public Task<IngestPreflightResult> CheckAsync(IngestRequest request, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return Task.Run(() => CheckCoreAsync(request, ct), ct);
+    }
+
+    private async Task<IngestPreflightResult> CheckCoreAsync(
+        IngestRequest request,
+        CancellationToken ct)
     {
         var checks = new List<IngestPreflightCheck>();
         string source;

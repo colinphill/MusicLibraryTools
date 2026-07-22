@@ -269,11 +269,17 @@ public sealed class ArtworkRepairCategoryGroupViewModel : ArtworkRepairGroupView
     }
 
     public static IReadOnlyList<ArtworkRepairCategoryGroupViewModel> Build(
-        IReadOnlyList<ArtworkRepairItemViewModel> items) => items
-        .GroupBy(item => item.Kind)
-        .OrderBy(group => group.Key)
-        .Select(category =>
+        IReadOnlyList<ArtworkRepairItemViewModel> items,
+        IProgress<AnalysisProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        var result = new List<ArtworkRepairCategoryGroupViewModel>();
+        int completed = 0;
+        progress?.Report(new(0, items.Count, "repair actions", "Grouping artwork repairs"));
+        foreach (IGrouping<ArtworkRepairKind, ArtworkRepairItemViewModel> category in items
+                     .GroupBy(item => item.Kind).OrderBy(group => group.Key))
         {
+            ct.ThrowIfCancellationRequested();
             IReadOnlyList<ArtworkRepairItemViewModel> categoryItems = category
                 .OrderBy(item => item.Artist, StringComparer.CurrentCultureIgnoreCase)
                 .ThenBy(item => item.Album, StringComparer.CurrentCultureIgnoreCase)
@@ -288,9 +294,14 @@ public sealed class ArtworkRepairCategoryGroupViewModel : ArtworkRepairGroupView
                             album.Key, album.ToList()))
                         .ToList()))
                 .ToList();
-            return new ArtworkRepairCategoryGroupViewModel(category.Key, categoryItems, artists);
-        })
-        .ToList();
+            result.Add(new ArtworkRepairCategoryGroupViewModel(
+                category.Key, categoryItems, artists));
+            completed += categoryItems.Count;
+            progress?.Report(new(completed, items.Count, "repair actions",
+                "Grouping artwork repairs", category.Key.ToString()));
+        }
+        return result;
+    }
 }
 
 public sealed class ArtworkRepairArtistGroupViewModel : ArtworkRepairGroupViewModel
@@ -349,30 +360,75 @@ public static class ArtworkRepairPlanner
         IThumbnailService? thumbnails,
         LibraryConfiguration? configuration,
         CancellationToken ct = default)
+        => BuildAsync(records, artwork, settings, library, artworkService, thumbnails,
+            configuration, null, ct);
+
+    public static Task<IReadOnlyList<ArtworkRepairItemViewModel>> BuildAsync(
+        IReadOnlyList<TrackRecord> records,
+        IReadOnlyList<ArtworkAuditFile> artwork,
+        LibraryArtworkHealthSettings settings,
+        ILibraryService library,
+        IArtworkService artworkService,
+        IThumbnailService? thumbnails,
+        LibraryConfiguration? configuration,
+        IProgress<AnalysisProgress>? progress,
+        CancellationToken ct = default)
     {
-        var byPath = artwork.ToDictionary(file => file.Path, PathComparer);
-        var recordsByPath = records.ToDictionary(record => record.Path, PathComparer);
+        var byPath = new Dictionary<string, ArtworkAuditFile>(artwork.Count, PathComparer);
+        progress?.Report(new(0, artwork.Count, "files", "Indexing artwork audit"));
+        for (int index = 0; index < artwork.Count; index++)
+        {
+            ct.ThrowIfCancellationRequested();
+            ArtworkAuditFile file = artwork[index];
+            byPath.Add(file.Path, file);
+            int completed = index + 1;
+            if ((completed & 127) == 0 || completed == artwork.Count)
+                progress?.Report(new(completed, artwork.Count, "files",
+                    "Indexing artwork audit", file.Path));
+        }
+        var recordsByPath = new Dictionary<string, TrackRecord>(records.Count, PathComparer);
+        progress?.Report(new(0, records.Count, "tracks", "Indexing tracks for artwork repairs"));
+        for (int index = 0; index < records.Count; index++)
+        {
+            ct.ThrowIfCancellationRequested();
+            TrackRecord record = records[index];
+            recordsByPath.Add(record.Path, record);
+            int completed = index + 1;
+            if ((completed & 127) == 0 || completed == records.Count)
+                progress?.Report(new(completed, records.Count, "tracks",
+                    "Indexing tracks for artwork repairs", record.Path));
+        }
         var plans = new List<PlannedAction>();
         var coveredPaths = new HashSet<string>(PathComparer);
 
         Func<TrackRecord, string> albumKey = configuration is null
             ? AlbumKey
             : record => LibraryAlbumIdentityResolver.Key(record, configuration);
+        int completedTracks = 0;
+        int lastReportedTracks = 0;
+        progress?.Report(new(0, records.Count, "tracks", "Planning album artwork repairs"));
         foreach (IGrouping<string, TrackRecord> album in records.GroupBy(albumKey))
         {
             ct.ThrowIfCancellationRequested();
+            int albumTrackCount = album.Count();
             var scanned = album
                 .Select(record => (Record: record, Artwork: byPath.GetValueOrDefault(record.Path)))
                 .Where(item => item.Artwork?.ArtworkScanned == true)
                 .ToList();
             if (scanned.Count < 2)
+            {
+                CompleteAlbum();
                 continue;
+            }
 
             int signatureCount = scanned.Select(item => Signature(item.Artwork!))
                 .Distinct(StringComparer.Ordinal).Count();
             bool hasMissing = scanned.Any(item => item.Artwork!.Images.Count == 0);
             if (signatureCount <= 1 && !hasMissing)
+            {
+                CompleteAlbum();
                 continue;
+            }
 
             CandidateDescriptor[] candidates = scanned
                 .Select(item => Candidate(item.Record, item.Artwork!))
@@ -398,55 +454,78 @@ public static class ArtworkRepairPlanner
                 artist,
                 albumName,
                 ShowGallery: true));
+            CompleteAlbum();
+
+            void CompleteAlbum()
+            {
+                completedTracks += albumTrackCount;
+                if (completedTracks - lastReportedTracks < 128 && completedTracks != records.Count)
+                    return;
+                progress?.Report(new(completedTracks, records.Count, "tracks",
+                    "Planning album artwork repairs"));
+                lastReportedTracks = completedTracks;
+            }
         }
 
-        foreach (ArtworkAuditFile file in artwork.Where(file => file.ArtworkScanned &&
-                     !coveredPaths.Contains(file.Path)))
+        progress?.Report(new(0, artwork.Count, "files", "Planning file artwork repairs"));
+        for (int fileIndex = 0; fileIndex < artwork.Count; fileIndex++)
         {
+            ArtworkAuditFile file = artwork[fileIndex];
             ct.ThrowIfCancellationRequested();
-            bool oversized = file.Images.Any(image => image.Size > settings.OversizedByteThreshold ||
-                image.Width > settings.OversizedDimensionThreshold ||
-                image.Height > settings.OversizedDimensionThreshold);
-            bool duplicates = file.Images.Where(image => !string.IsNullOrWhiteSpace(image.Hash))
-                .GroupBy(image => image.Hash, StringComparer.Ordinal).Any(group => group.Count() > 1);
-            bool unreadable = file.Images.Any(image =>
-                string.IsNullOrWhiteSpace(image.Hash) ||
-                string.IsNullOrWhiteSpace(image.ImageType) || image.Width <= 0 ||
-                image.Height <= 0 || image.Size <= 0);
-            if (!oversized && !duplicates && !unreadable)
-                continue;
-            TrackRecord? record = recordsByPath.GetValueOrDefault(file.Path);
-            CandidateDescriptor? candidate = record is null ? null : Candidate(record, file);
-            string artist = string.IsNullOrWhiteSpace(record?.EffectiveAlbumArtist)
-                ? "Unknown Artist"
-                : record.EffectiveAlbumArtist!;
-            string? taggedAlbum = record is null
-                ? null
-                : !string.IsNullOrWhiteSpace(record.StrippedAlbum)
-                    ? record.StrippedAlbum
-                    : record.Album;
-            string albumName = string.IsNullOrWhiteSpace(taggedAlbum)
-                ? Path.GetFileName(Path.GetDirectoryName(file.Path)) ?? "Unknown Album"
-                : taggedAlbum;
-            plans.Add(new(
-                ArtworkRepairKind.NormalizeFile,
-                Path.GetFileName(file.Path),
-                unreadable
-                    ? "Re-encode the first readable image and replace the invalid embedded-artwork set."
-                    : oversized && duplicates
-                    ? "Re-encode the first image within the configured limits and remove duplicate embedded images."
-                    : oversized
-                        ? "Re-encode the first image within the configured artwork limits."
-                        : "Keep the first image and remove duplicate embedded images.",
-                [file.Path],
-                candidate is null ? [] : [candidate],
-                artist,
-                albumName,
-                ShowGallery: false));
+            if (file.ArtworkScanned && !coveredPaths.Contains(file.Path))
+            {
+                bool oversized = file.Images.Any(image => image.Size > settings.OversizedByteThreshold ||
+                    image.Width > settings.OversizedDimensionThreshold ||
+                    image.Height > settings.OversizedDimensionThreshold);
+                bool duplicates = file.Images.Where(image => !string.IsNullOrWhiteSpace(image.Hash))
+                    .GroupBy(image => image.Hash, StringComparer.Ordinal).Any(group => group.Count() > 1);
+                bool unreadable = file.Images.Any(image =>
+                    string.IsNullOrWhiteSpace(image.Hash) ||
+                    string.IsNullOrWhiteSpace(image.ImageType) || image.Width <= 0 ||
+                    image.Height <= 0 || image.Size <= 0);
+                if (oversized || duplicates || unreadable)
+                {
+                    TrackRecord? record = recordsByPath.GetValueOrDefault(file.Path);
+                    CandidateDescriptor? candidate = record is null ? null : Candidate(record, file);
+                    string artist = string.IsNullOrWhiteSpace(record?.EffectiveAlbumArtist)
+                        ? "Unknown Artist"
+                        : record.EffectiveAlbumArtist!;
+                    string? taggedAlbum = record is null
+                        ? null
+                        : !string.IsNullOrWhiteSpace(record.StrippedAlbum)
+                            ? record.StrippedAlbum
+                            : record.Album;
+                    string albumName = string.IsNullOrWhiteSpace(taggedAlbum)
+                        ? Path.GetFileName(Path.GetDirectoryName(file.Path)) ?? "Unknown Album"
+                        : taggedAlbum;
+                    plans.Add(new(
+                        ArtworkRepairKind.NormalizeFile,
+                        Path.GetFileName(file.Path),
+                        unreadable
+                            ? "Re-encode the first readable image and replace the invalid embedded-artwork set."
+                            : oversized && duplicates
+                            ? "Re-encode the first image within the configured limits and remove duplicate embedded images."
+                            : oversized
+                                ? "Re-encode the first image within the configured artwork limits."
+                                : "Keep the first image and remove duplicate embedded images.",
+                        [file.Path],
+                        candidate is null ? [] : [candidate],
+                        artist,
+                        albumName,
+                        ShowGallery: false));
+                }
+            }
+            int completedFiles = fileIndex + 1;
+            if ((completedFiles & 127) == 0 || completedFiles == artwork.Count)
+                progress?.Report(new(completedFiles, artwork.Count, "files",
+                    "Planning file artwork repairs", file.Path));
         }
 
-        IReadOnlyList<ArtworkRepairItemViewModel> result = plans.Select(plan =>
+        var result = new List<ArtworkRepairItemViewModel>(plans.Count);
+        progress?.Report(new(0, plans.Count, "repair actions", "Preparing artwork repair choices"));
+        for (int planIndex = 0; planIndex < plans.Count; planIndex++)
         {
+            PlannedAction plan = plans[planIndex];
             var candidates = plan.Candidates
                 .Select(candidate => new ArtworkRepairCandidateViewModel(
                     candidate.Path, candidate.Label, candidate.Hash, candidate.Details,
@@ -459,12 +538,16 @@ public static class ArtworkRepairPlanner
                 : candidates.Count == 0
                     ? "No readable source image is available for this repair."
                     : null;
-            return new ArtworkRepairItemViewModel(
+            result.Add(new ArtworkRepairItemViewModel(
                 plan.Kind, plan.Title, plan.Description, plan.Paths, candidates,
                 plan.ShowGallery, settings.RepairTargetByteSize,
-                settings.RepairTargetDimension, blocking, plan.Artist, plan.Album);
-        }).ToList();
-        return Task.FromResult(result);
+                settings.RepairTargetDimension, blocking, plan.Artist, plan.Album));
+            int completedPlans = planIndex + 1;
+            if ((completedPlans & 63) == 0 || completedPlans == plans.Count)
+                progress?.Report(new(completedPlans, plans.Count, "repair actions",
+                    "Preparing artwork repair choices", plan.Title));
+        }
+        return Task.FromResult<IReadOnlyList<ArtworkRepairItemViewModel>>(result);
     }
 
     private static CandidateDescriptor? Candidate(TrackRecord record, ArtworkAuditFile artwork)

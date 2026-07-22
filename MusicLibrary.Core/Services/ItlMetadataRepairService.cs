@@ -156,7 +156,7 @@ public sealed class ItlMetadataRepairService : IItlMetadataRepairService
         };
     }
 
-    public async Task<ItlMetadataRepairApplyResult> ApplyAsync(
+    public Task<ItlMetadataRepairApplyResult> ApplyAsync(
         ItlMetadataRepairPlan plan,
         IReadOnlyCollection<Guid> selectedItemIds,
         IProgress<int>? progress = null,
@@ -164,6 +164,16 @@ public sealed class ItlMetadataRepairService : IItlMetadataRepairService
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(selectedItemIds);
+        return Task.Run(
+            () => ApplyCoreAsync(plan, selectedItemIds, progress, ct), ct);
+    }
+
+    private async Task<ItlMetadataRepairApplyResult> ApplyCoreAsync(
+        ItlMetadataRepairPlan plan,
+        IReadOnlyCollection<Guid> selectedItemIds,
+        IProgress<int>? progress,
+        CancellationToken ct)
+    {
         HashSet<Guid> selected = selectedItemIds.ToHashSet();
         ItlMetadataRepairItem[] items = [.. plan.Items.Where(item => selected.Contains(item.Id))];
         if (items.Length == 0)

@@ -14,13 +14,23 @@ public interface IDecodedAudioVerificationService
 
 public sealed class DecodedAudioVerificationService(IFfmpegRunner ffmpeg) : IDecodedAudioVerificationService
 {
-    public async Task<AnalysisReport> VerifyAsync(
+    public Task<AnalysisReport> VerifyAsync(
         string ffmpegExecutable,
         IReadOnlyList<DecodedAudioPair> pairs,
         IProgress<DecodedAudioProgress>? progress = null,
         CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(ffmpegExecutable);
+        ArgumentNullException.ThrowIfNull(pairs);
+        return Task.Run(() => VerifyCoreAsync(ffmpegExecutable, pairs, progress, ct), ct);
+    }
+
+    private async Task<AnalysisReport> VerifyCoreAsync(
+        string ffmpegExecutable,
+        IReadOnlyList<DecodedAudioPair> pairs,
+        IProgress<DecodedAudioProgress>? progress,
+        CancellationToken ct)
+    {
         var paths = pairs.SelectMany(pair => new[] { pair.FirstPath, pair.SecondPath })
             .Distinct(OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal)
             .ToList();

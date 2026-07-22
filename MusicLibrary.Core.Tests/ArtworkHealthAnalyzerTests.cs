@@ -75,6 +75,30 @@ public sealed class ArtworkHealthAnalyzerTests
     }
 
     [Fact]
+    public void AnalyzeReportsAlbumComparisonAfterTheFileScan()
+    {
+        TrackRecord[] records = [Track("one.flac"), Track("two.flac")];
+        ArtworkAuditFile[] artwork =
+        [
+            new("one.flac", true,
+                [new("one", "image/jpeg", "FrontCover", 500, 500, 50_000)]),
+            new("two.flac", true,
+                [new("two", "image/jpeg", "FrontCover", 500, 500, 50_000)]),
+        ];
+        var updates = new List<AnalysisProgress>();
+
+        _ = ArtworkHealthAnalyzer.Analyze(records, artwork, null,
+            ArtworkHealthAnalyzer.OversizedByteThreshold,
+            ArtworkHealthAnalyzer.OversizedDimensionThreshold,
+            new SynchronousProgress<AnalysisProgress>(updates.Add));
+
+        Assert.Contains(updates, update => update.Stage == "Checking artwork metadata" &&
+            update.Completed == records.Length);
+        Assert.Contains(updates, update => update.Stage == "Comparing album artwork" &&
+            update.Completed == records.Length);
+    }
+
+    [Fact]
     public void GenericAlbumIdentityKeepsEditionsSeparateForArtworkComparison()
     {
         string path = Path.Combine(Path.GetTempPath(),

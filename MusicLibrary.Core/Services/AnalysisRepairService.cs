@@ -752,12 +752,20 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
         ApplyReviewedAsync(
             _healthPolicy.FilterApplicableRepairs(plan, configuration), progress, ct);
 
-    public async Task<AnalysisRepairApplyResult> ApplyReviewedAsync(
+    public Task<AnalysisRepairApplyResult> ApplyReviewedAsync(
         AnalysisRepairPlan plan,
         IProgress<int>? progress = null,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(plan);
+        return Task.Run(() => ApplyReviewedCoreAsync(plan, progress, ct), ct);
+    }
+
+    private async Task<AnalysisRepairApplyResult> ApplyReviewedCoreAsync(
+        AnalysisRepairPlan plan,
+        IProgress<int>? progress,
+        CancellationToken ct)
+    {
         ValidatePolicy(plan);
         var results = new Dictionary<AnalysisTagRepair, AnalysisRepairItemResult>();
         AnalysisTagRepair[] blocked = plan.Items.Where(repair => !repair.CanApply).ToArray();
@@ -848,7 +856,7 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
                 // the command-level cancellation message.
                 CancellationToken tagToken =
                     movedPaths.Count > 0 ? CancellationToken.None : ct;
-                BatchWriteResult tagResult = await ApplyAsync(tagPlan, null, tagToken);
+                BatchWriteResult tagResult = await ApplyCoreAsync(tagPlan, null, tagToken);
                 var byPath = tagResult.Files
                     .GroupBy(file => file.Path, FilePathComparer)
                     .ToDictionary(group => group.Key, group => group.Last(), FilePathComparer);
@@ -894,12 +902,20 @@ public sealed class AnalysisRepairService : IAnalysisRepairService
         CancellationToken ct = default) =>
         ApplyAsync(_healthPolicy.FilterApplicableRepairs(plan, policy), progress, ct);
 
-    public async Task<BatchWriteResult> ApplyAsync(
+    public Task<BatchWriteResult> ApplyAsync(
         AnalysisRepairPlan plan,
         IProgress<int>? progress = null,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(plan);
+        return Task.Run(() => ApplyCoreAsync(plan, progress, ct), ct);
+    }
+
+    private async Task<BatchWriteResult> ApplyCoreAsync(
+        AnalysisRepairPlan plan,
+        IProgress<int>? progress,
+        CancellationToken ct)
+    {
         ValidatePolicy(plan);
         if (!plan.CanApply)
             return new BatchWriteResult([]);

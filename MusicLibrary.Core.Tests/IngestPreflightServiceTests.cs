@@ -40,12 +40,38 @@ public sealed class IngestPreflightServiceTests
             check.Severity == IngestPreflightSeverity.Warning);
     }
 
+    [Fact]
+    public async Task Check_DoesNotRunFilesystemPreflightOnTheCallerContext()
+    {
+        using var tree = new TempTree();
+        var ffmpeg = new StubFfmpeg();
+        var service = new IngestPreflightService(ffmpeg);
+        SynchronizationContext? previous = SynchronizationContext.Current;
+        var callerContext = new SynchronizationContext();
+        Task<IngestPreflightResult> task;
+        try
+        {
+            SynchronizationContext.SetSynchronizationContext(callerContext);
+            task = service.CheckAsync(new IngestRequest(tree.Dir("source"), tree.Config()));
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previous);
+        }
+
+        await task;
+
+        Assert.Null(ffmpeg.PreflightSynchronizationContext);
+    }
+
     private sealed class StubFfmpeg(bool fail = false) : IFfmpegRunner
     {
         public int PreflightCalls { get; private set; }
+        public SynchronizationContext? PreflightSynchronizationContext { get; private set; }
         public Task PreflightAsync(string executable, string requiredEncoder, CancellationToken ct = default)
         {
             PreflightCalls++;
+            PreflightSynchronizationContext = SynchronizationContext.Current;
             return fail ? Task.FromException(new InvalidOperationException("encoder missing")) : Task.CompletedTask;
         }
         public Task ConvertAlacToFlacAsync(string executable, string input, string output,

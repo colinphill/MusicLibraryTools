@@ -114,6 +114,40 @@ public sealed class OperationsViewModelTests
     }
 
     [Fact]
+    public async Task TypedJobPreviewStartsOutsideTheCallerContext()
+    {
+        using var temp = new TempDirectory();
+        var settings = new AppSettings(Path.Combine(temp.Path, "settings.json"));
+        var descriptor = new UnifiedJobDescriptor(
+            UnifiedJobService.ConfiguredExportJobPrefix + "portable",
+            "Export: Portable", "Configured export", UnifiedJobApplyMode.ApplyFlag,
+            [], "", 0);
+        var export = new StubConfiguredExportService();
+        var viewModel = new OperationsViewModel(
+            new RecordingJournals(new([], [])), new StubFiles(), new StubDialogs(), settings,
+            jobs: new StubJobService(descriptor), configuredExport: export)
+        {
+            SelectedJob = descriptor,
+        };
+        SynchronizationContext? previous = SynchronizationContext.Current;
+        var callerContext = new SynchronizationContext();
+        Task task;
+        try
+        {
+            SynchronizationContext.SetSynchronizationContext(callerContext);
+            task = viewModel.PreviewJobCommand.ExecuteAsync(null);
+        }
+        finally
+        {
+            SynchronizationContext.SetSynchronizationContext(previous);
+        }
+
+        await task;
+
+        Assert.Null(export.PreviewSynchronizationContext);
+    }
+
+    [Fact]
     public async Task ArtworkNormalizationPublishesUpdatedPathsAndCacheWarning()
     {
         using var temp = new TempDirectory();
@@ -433,6 +467,7 @@ public sealed class OperationsViewModelTests
     {
         public ConfiguredExportRequest? LastRequest { get; private set; }
         public int ApplyCalls { get; private set; }
+        public SynchronizationContext? PreviewSynchronizationContext { get; private set; }
 
         public Task<ConfiguredExportPlan> PreviewAsync(
             ConfiguredExportRequest request,
@@ -440,6 +475,7 @@ public sealed class OperationsViewModelTests
             CancellationToken ct = default)
         {
             LastRequest = request;
+            PreviewSynchronizationContext = SynchronizationContext.Current;
             var profile = new LibraryExportProfile(
                 request.ProfileId, "Portable", true,
                 ExportSelectionPolicy.EntireLibrary,

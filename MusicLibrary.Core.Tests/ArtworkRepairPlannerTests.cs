@@ -105,6 +105,33 @@ public sealed class ArtworkRepairPlannerTests
         Assert.NotNull(repair.Candidates[0].ImageSource);
     }
 
+    [Fact]
+    public async Task PlannerReportsEveryPostScanPhaseToCompletion()
+    {
+        TrackRecord[] records = [Track("one.flac", "One"), Track("two.flac", "Two")];
+        ArtworkAuditFile[] audit =
+        [
+            new("one.flac", true,
+                [new("hash-one", "image/jpeg", "FrontCover", 900, 900, 300_000)]),
+            new("two.flac", true,
+                [new("hash-two", "image/jpeg", "FrontCover", 700, 700, 200_000)]),
+        ];
+        var settings = new LibraryArtworkHealthSettings(2_000_000, 2_000);
+        var library = new PlannerLibrary(records, audit, new Dictionary<string, byte[]>());
+        var updates = new List<AnalysisProgress>();
+
+        _ = await ArtworkRepairPlanner.BuildAsync(
+            records, audit, settings, library, new WritableArtworkService(), null,
+            null, new SynchronousProgress<AnalysisProgress>(updates.Add));
+
+        Assert.Contains(updates, update => update.Stage == "Planning album artwork repairs" &&
+            update.Completed == records.Length && update.Total == records.Length);
+        Assert.Contains(updates, update => update.Stage == "Planning file artwork repairs" &&
+            update.Completed == audit.Length && update.Total == audit.Length);
+        Assert.Contains(updates, update => update.Stage == "Preparing artwork repair choices" &&
+            update.Completed == 1 && update.Total == 1);
+    }
+
     private static TrackRecord Track(string path, string title) => new()
     {
         Path = path,

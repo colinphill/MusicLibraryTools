@@ -16,29 +16,50 @@ public static class DuplicateFinder
         new(@"[ \t]*[\(\[][^)\]]*[\)\]]\s*$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
     public static IReadOnlyList<DuplicateGroup> Find(IReadOnlyList<TrackRecord> records, CancellationToken ct = default)
-        => Find(records, BuildKey, ct);
+        => Find(records, BuildKey, null, ct);
+
+    public static IReadOnlyList<DuplicateGroup> Find(
+        IReadOnlyList<TrackRecord> records,
+        IProgress<AnalysisProgress>? progress,
+        CancellationToken ct = default)
+        => Find(records, BuildKey, progress, ct);
 
     public static IReadOnlyList<DuplicateGroup> Find(
         IReadOnlyList<TrackRecord> records,
         LibraryConfiguration configuration,
         CancellationToken ct = default) =>
-        Find(records, record => BuildKey(record, configuration), ct);
+        Find(records, record => BuildKey(record, configuration), null, ct);
+
+    public static IReadOnlyList<DuplicateGroup> Find(
+        IReadOnlyList<TrackRecord> records,
+        LibraryConfiguration configuration,
+        IProgress<AnalysisProgress>? progress,
+        CancellationToken ct = default) =>
+        Find(records, record => BuildKey(record, configuration), progress, ct);
 
     private static IReadOnlyList<DuplicateGroup> Find(
         IReadOnlyList<TrackRecord> records,
         Func<TrackRecord, DuplicateKey> keyFor,
+        IProgress<AnalysisProgress>? progress,
         CancellationToken ct)
     {
         var buckets = new Dictionary<DuplicateKey, List<TrackRecord>>();
-        foreach (var record in records)
+        progress?.Report(new(0, records.Count, "tracks", "Analyzing duplicate candidates"));
+        for (int index = 0; index < records.Count; index++)
         {
+            TrackRecord record = records[index];
             ct.ThrowIfCancellationRequested();
-            if (string.IsNullOrWhiteSpace(record.Title))
-                continue;
-            var key = keyFor(record);
-            if (!buckets.TryGetValue(key, out var bucket))
-                buckets[key] = bucket = [];
-            bucket.Add(record);
+            if (!string.IsNullOrWhiteSpace(record.Title))
+            {
+                var key = keyFor(record);
+                if (!buckets.TryGetValue(key, out var bucket))
+                    buckets[key] = bucket = [];
+                bucket.Add(record);
+            }
+            int completed = index + 1;
+            if ((completed & 127) == 0 || completed == records.Count)
+                progress?.Report(new(completed, records.Count, "tracks",
+                    "Analyzing duplicate candidates", record.Path));
         }
 
         var groups = buckets

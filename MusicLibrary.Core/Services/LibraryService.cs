@@ -460,10 +460,16 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
         return tgt;
     }
 
-    public async Task<OrganizeResult> ApplyMovesAsync(
+    public Task<OrganizeResult> ApplyMovesAsync(
         IReadOnlyList<PlannedMove> moves, IProgress<int>? progress = null, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(moves);
+        return Task.Run(() => ApplyMovesCoreAsync(moves, progress, ct), ct);
+    }
+
+    private async Task<OrganizeResult> ApplyMovesCoreAsync(
+        IReadOnlyList<PlannedMove> moves, IProgress<int>? progress, CancellationToken ct)
+    {
         var context = GetContext();
         var config = context.Configuration;
         PlannedMove? policyMove = moves.FirstOrDefault(move =>
@@ -600,21 +606,24 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
     public async Task<LibraryOperationCacheSnapshot> GetOperationCacheSnapshotAsync(
         CancellationToken ct = default)
     {
-        await _gate.WaitAsync(ct);
+        await _gate.WaitAsync(ct).ConfigureAwait(false);
         try
         {
-            LibraryContext context = GetContext();
-            LibraryIndexLocation[] locations = context.Configuration.IndexLocations.ToArray();
-            MetadataCache cache = GetDatabase(context).BuildCache(
-                locations.Select(location => location.Target)
-                    .Distinct(FilePathComparer),
-                buildSecondaryIndexes: false);
-            return new(
-                context.Configuration,
-                context.ConfigPath,
-                context.Version,
-                locations,
-                cache);
+            return await Task.Run(() =>
+            {
+                LibraryContext context = GetContext();
+                LibraryIndexLocation[] locations = context.Configuration.IndexLocations.ToArray();
+                MetadataCache cache = GetDatabase(context).BuildCache(
+                    locations.Select(location => location.Target)
+                        .Distinct(FilePathComparer),
+                    buildSecondaryIndexes: false);
+                return new LibraryOperationCacheSnapshot(
+                    context.Configuration,
+                    context.ConfigPath,
+                    context.Version,
+                    locations,
+                    cache);
+            }, ct).ConfigureAwait(false);
         }
         finally
         {

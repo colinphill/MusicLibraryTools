@@ -45,6 +45,24 @@ public class AnalyzerTests
     }
 
     [Fact]
+    public void Lossless_ReportsCompletedAndTotalTracks()
+    {
+        TrackRecord[] records = Enumerable.Range(0, 257)
+            .Select(index => Rec($"{index}.flac", "AA", "Album", $"Track {index}"))
+            .ToArray();
+        var updates = new List<AnalysisProgress>();
+
+        _ = LibraryAnalyzer.Lossless(records,
+            new SynchronousProgress<AnalysisProgress>(updates.Add));
+
+        Assert.Equal(0, updates[0].Completed);
+        AnalysisProgress final = updates[^1];
+        Assert.Equal(records.Length, final.Completed);
+        Assert.Equal(records.Length, final.Total);
+        Assert.Equal("tracks", final.Unit);
+    }
+
+    [Fact]
     public void InconsistentTotals_FlagsDisagreeingTotals()
     {
         var records = new[]
