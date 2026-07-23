@@ -14,7 +14,8 @@ namespace MusicFileUtilities
         ICodecProvider,
         IMetadataWriter,
         IUserStringMetadata,
-        IArtworkWriter
+        IArtworkWriter,
+        ITagLayerEditor
     {
         private static readonly uint[] SampleRates =
         [
@@ -30,6 +31,7 @@ namespace MusicFileUtilities
         private string _filename;
         private bool _hasId3;
         private bool _hasApe;
+        private bool _allowEmptyTagLayers;
         private long _audioStart;
         private long _audioEnd;
 
@@ -77,8 +79,29 @@ namespace MusicFileUtilities
         public uint DurationInFrames { get; private set; }
         public uint DurationInSeconds => DurationInFrames / 75;
 
-        public void SetField(TagFields field, string value) =>
+        public IReadOnlyList<TagLayerDescriptor> EditableTagLayers =>
+        [
+            new(
+                TagLayerKind.Id3v2,
+                "ID3v2",
+                _hasId3,
+                !_hasId3,
+                _hasId3,
+                _hasId3 || !_hasApe),
+            new(
+                TagLayerKind.ApeV2,
+                "APEv2",
+                _hasApe,
+                !_hasApe,
+                _hasApe,
+                !_hasId3 && _hasApe),
+        ];
+
+        public void SetField(TagFields field, string value)
+        {
+            EnsureWritablePrimaryLayer();
             PrimaryWriter.SetField(field, value);
+        }
 
         public void RemoveField(TagFields field) =>
             PrimaryWriter.RemoveField(field);
@@ -86,19 +109,80 @@ namespace MusicFileUtilities
         public IEnumerable<KeyValuePair<string, string>> GetUserStrings() =>
             PrimaryUserStrings.GetUserStrings();
 
-        public void SetUserString(string key, string value) =>
+        public void SetUserString(string key, string value)
+        {
+            EnsureWritablePrimaryLayer();
             PrimaryUserStrings.SetUserString(key, value);
+        }
 
         public void RemoveUserString(string key) =>
             PrimaryUserStrings.RemoveUserString(key);
 
-        public void SetFrontCover(byte[] imageData, string mimeType) =>
+        public void SetFrontCover(byte[] imageData, string mimeType)
+        {
+            if (imageData is { Length: > 0 })
+                EnsureWritablePrimaryLayer();
             PrimaryArtwork.SetFrontCover(imageData, mimeType);
+        }
 
         public void RemoveImages() => PrimaryArtwork.RemoveImages();
 
-        public void SetImages(IReadOnlyList<ArtworkImage> images) =>
+        public void SetImages(IReadOnlyList<ArtworkImage> images)
+        {
+            if (images.Count > 0)
+                EnsureWritablePrimaryLayer();
             PrimaryArtwork.SetImages(images);
+        }
+
+        public void AddTagLayer(
+            TagLayerKind kind,
+            TagLayerCopyMode copyMode = TagLayerCopyMode.CopyPrimary)
+        {
+            if (EditableTagLayers.Single(layer => layer.Kind == kind).IsPresent)
+                throw new InvalidOperationException(
+                    $"The {kind} tag layer is already present.");
+
+            IMetadataProvider source = copyMode == TagLayerCopyMode.CopyPrimary
+                ? PresentPrimaryTag
+                : null;
+            switch (kind)
+            {
+                case TagLayerKind.Id3v2:
+                    _hasId3 = true;
+                    if (source is not null)
+                        CopyMetadata(source, _id3, _id3, _id3);
+                    break;
+                case TagLayerKind.ApeV2:
+                    _hasApe = true;
+                    if (source is not null)
+                        CopyMetadata(source, _ape, _ape, _ape);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(kind));
+            }
+            _allowEmptyTagLayers = false;
+        }
+
+        public void RemoveTagLayer(TagLayerKind kind)
+        {
+            TagLayerDescriptor layer =
+                EditableTagLayers.Single(candidate => candidate.Kind == kind);
+            if (!layer.IsPresent)
+                throw new InvalidOperationException(
+                    $"The {kind} tag layer is not present.");
+            switch (kind)
+            {
+                case TagLayerKind.Id3v2:
+                    _hasId3 = false;
+                    break;
+                case TagLayerKind.ApeV2:
+                    _hasApe = false;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(kind));
+            }
+            _allowEmptyTagLayers = !_hasId3 && !_hasApe;
+        }
 
         public void Save(string outputPath = null) => SaveTags(outputPath);
 
@@ -107,7 +191,7 @@ namespace MusicFileUtilities
             string target = outputPath ?? _filename
                 ?? throw new InvalidOperationException(
                     "No filename associated with this file.");
-            bool writeId3 = _hasId3 || !_hasApe;
+            bool writeId3 = _hasId3 || (!_hasApe && !_allowEmptyTagLayers);
             bool writeApe = _hasApe;
             long audioLength = _audioEnd - _audioStart;
             byte[] id3Bytes = writeId3 ? _id3.Serialize() : [];
@@ -151,6 +235,56 @@ namespace MusicFileUtilities
 
         private IArtworkWriter PrimaryArtwork =>
             !_hasId3 && _hasApe ? _ape : _id3;
+
+        private IMetadataProvider PresentPrimaryTag =>
+            _hasId3 ? _id3 : _hasApe ? _ape : null;
+
+        private void EnsureWritablePrimaryLayer()
+        {
+            if (!_hasId3 && !_hasApe)
+                _hasId3 = true;
+            _allowEmptyTagLayers = false;
+        }
+
+        private static void CopyMetadata(
+            IMetadataProvider source,
+            IMetadataWriter writer,
+            IUserStringMetadata custom,
+            IArtworkWriter artwork)
+        {
+            foreach (IGrouping<TagFields, KeyValuePair<TagFields, string>> field
+                     in source.GetKnownMetadata().GroupBy(pair => pair.Key))
+            {
+                try
+                {
+                    writer.SetField(field.Key, field.Last().Value);
+                }
+                catch (ArgumentException)
+                {
+                    // The destination layer has no native representation for this field.
+                }
+            }
+            if (source is IUserStringMetadata sourceCustom)
+            {
+                foreach (KeyValuePair<string, string> value in
+                         sourceCustom.GetUserStrings())
+                    custom.SetUserString(value.Key, value.Value);
+            }
+            ArtworkImage[] images = source.GetImageMetadata()
+                .Select(image => new ArtworkImage(
+                    ParseArtworkType(image.Category),
+                    image.ImageType,
+                    image.Description,
+                    image.Data))
+                .ToArray();
+            if (images.Length > 0)
+                artwork.SetImages(images);
+        }
+
+        private static ID3v2Util.APICType ParseArtworkType(string category) =>
+            Enum.TryParse(category, ignoreCase: true, out ID3v2Util.APICType type)
+                ? type
+                : ID3v2Util.APICType.FrontCover;
 
         private void Parse(bool readArtwork, long? knownLength)
         {

@@ -78,6 +78,18 @@ public interface IMetadataOperationService
             new NotSupportedException(
                 "Artwork-aware metadata preview is not implemented."));
 
+    Task<MetadataOperationPlan> PreviewTagLayerEditsAsync(
+        IReadOnlyDictionary<string, IReadOnlyList<TagLayerEdit>> editsByPath,
+        string name,
+        CancellationToken ct = default);
+
+    Task<MetadataOperationPlan> PreviewTagLayerEditsAsync(
+        IReadOnlyDictionary<string, IReadOnlyList<TagLayerEdit>> editsByPath,
+        string name,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct = default) =>
+        PreviewTagLayerEditsAsync(editsByPath, name, ct);
+
     Task<MetadataApplyResult> ApplyAsync(
         MetadataOperationPlan plan,
         IProgress<OperationProgress>? progress = null,
@@ -148,6 +160,10 @@ public sealed class MetadataDocumentService(
             file is IChapterMetadata chapterMetadata
                 ? chapterMetadata.Chapters.ToImmutableArray()
                 : [];
+        ImmutableArray<TagLayerDescriptor> editableTagLayers =
+            file is ITagLayerEditor layerEditor
+                ? layerEditor.EditableTagLayers.ToImmutableArray()
+                : [];
         ICodecProvider? codec = file.Codecs.FirstOrDefault();
         CodecModel? codecModel = codec is null ? null : new CodecModel
         {
@@ -160,7 +176,8 @@ public sealed class MetadataDocumentService(
             Channels = codec.Channels,
             DurationInSeconds = codec.DurationInSeconds,
         };
-        string hash = HashMetadata(layers, artwork, chapters);
+        string hash = HashMetadata(
+            layers, artwork, chapters, editableTagLayers);
         return new(
             fullPath,
             layers,
@@ -170,6 +187,7 @@ public sealed class MetadataDocumentService(
             formats.SupportsPath(fullPath, MediaFormatCapabilities.WriteMetadata))
         {
             Chapters = chapters,
+            EditableTagLayers = editableTagLayers,
         };
     }
 
@@ -227,7 +245,8 @@ public sealed class MetadataDocumentService(
     private static string HashMetadata(
         ImmutableArray<TagLayerDocument> layers,
         ImmutableArray<ArtworkModel> artwork,
-        ImmutableArray<MediaChapter> chapters)
+        ImmutableArray<MediaChapter> chapters,
+        ImmutableArray<TagLayerDescriptor> editableTagLayers)
     {
         var text = new StringBuilder();
         foreach (TagLayerDocument layer in layers)
@@ -253,6 +272,11 @@ public sealed class MetadataDocumentService(
                 .Append(chapter.Language).Append(':')
                 .Append(chapter.Title).Append(':')
                 .Append(chapter.Uid).Append('\n');
+        foreach (TagLayerDescriptor layer in editableTagLayers)
+            text.Append("editable-layer:")
+                .Append(layer.Kind).Append(':')
+                .Append(layer.IsPresent).Append(':')
+                .Append(layer.IsPrimary).Append('\n');
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text.ToString())))
             .ToLowerInvariant();
     }
@@ -640,6 +664,135 @@ public sealed class MetadataOperationService(
         return new(Guid.NewGuid(), name, [.. plans], DateTimeOffset.UtcNow);
     }
 
+    public async Task<MetadataOperationPlan> PreviewTagLayerEditsAsync(
+        IReadOnlyDictionary<string, IReadOnlyList<TagLayerEdit>> editsByPath,
+        string name,
+        CancellationToken ct = default) =>
+        await PreviewTagLayerEditsAsync(
+            editsByPath, name, progress: null, ct);
+
+    public async Task<MetadataOperationPlan> PreviewTagLayerEditsAsync(
+        IReadOnlyDictionary<string, IReadOnlyList<TagLayerEdit>> editsByPath,
+        string name,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(editsByPath);
+        var plans = new List<MetadataFilePlan>(editsByPath.Count);
+        int index = 0;
+        foreach ((string path, IReadOnlyList<TagLayerEdit> requested) in editsByPath)
+        {
+            ct.ThrowIfCancellationRequested();
+            progress?.Report(new(
+                OperationPhase.Planning,
+                index,
+                editsByPath.Count,
+                path,
+                $"Previewing tag layers {index + 1:N0} of {editsByPath.Count:N0}"));
+            index++;
+            MediaDocument document;
+            try
+            {
+                document = await documents.LoadAsync(path, true, ct);
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                plans.Add(Unavailable(path, error));
+                continue;
+            }
+
+            var issues = new List<OperationIssue>();
+            if (!document.IsWritable)
+                issues.Add(new(
+                    "metadata.read-only",
+                    OperationIssueSeverity.Blocker,
+                    "This media format is not writable.",
+                    document.Path));
+            ValidatePolicy(document.Path, issues);
+            var supported = document.EditableTagLayers
+                .ToDictionary(layer => layer.Kind);
+            var state = supported.ToDictionary(
+                pair => pair.Key,
+                pair => pair.Value.IsPresent);
+            var effective = new List<TagLayerEdit>();
+            var seen = new HashSet<TagLayerKind>();
+            foreach (TagLayerEdit edit in requested)
+            {
+                if (!seen.Add(edit.Kind))
+                {
+                    issues.Add(new(
+                        "tag-layer.duplicate",
+                        OperationIssueSeverity.Blocker,
+                        $"Only one operation per tag layer may be previewed at a time: " +
+                        $"{edit.Kind}.",
+                        document.Path));
+                    continue;
+                }
+                if (!supported.TryGetValue(
+                        edit.Kind, out TagLayerDescriptor? descriptor))
+                {
+                    issues.Add(new(
+                        "tag-layer.unsupported",
+                        OperationIssueSeverity.Blocker,
+                        $"The native format handler cannot add or remove {edit.Kind} tags.",
+                        document.Path));
+                    continue;
+                }
+
+                bool isPresent = state[edit.Kind];
+                bool canApply = edit.Mode switch
+                {
+                    TagLayerEditMode.Add =>
+                        !isPresent && descriptor.CanAdd,
+                    TagLayerEditMode.Remove =>
+                        isPresent && descriptor.CanRemove,
+                    _ => false,
+                };
+                if (!canApply)
+                {
+                    issues.Add(new(
+                        edit.Mode == TagLayerEditMode.Add
+                            ? "tag-layer.already-present"
+                            : "tag-layer.not-present",
+                        OperationIssueSeverity.Blocker,
+                        edit.Mode == TagLayerEditMode.Add
+                            ? $"The {descriptor.DisplayName} tag layer is already present."
+                            : $"The {descriptor.DisplayName} tag layer is not present.",
+                        document.Path));
+                    continue;
+                }
+                state[edit.Kind] = edit.Mode == TagLayerEditMode.Add;
+                effective.Add(edit);
+            }
+
+            ImmutableArray<TagLayerDifference> differences =
+                [.. supported.Values
+                    .Where(layer =>
+                        layer.IsPresent != state[layer.Kind])
+                    .OrderBy(layer => layer.Kind)
+                    .Select(layer => new TagLayerDifference(
+                        layer.Kind,
+                        layer.IsPresent,
+                        state[layer.Kind]))];
+            plans.Add(new(
+                document.Path,
+                document.Snapshot,
+                [],
+                [],
+                [.. issues],
+                TagLayerEdits: [.. effective],
+                TagLayerDifferences: differences));
+        }
+        AddRecoverySpaceIssues(plans);
+        progress?.Report(new(
+            OperationPhase.Completed,
+            editsByPath.Count,
+            editsByPath.Count,
+            Message: $"Previewed tag layers for {editsByPath.Count:N0} file(s)"));
+        return new(
+            Guid.NewGuid(), name, [.. plans], DateTimeOffset.UtcNow);
+    }
+
     public async Task<MetadataOperationPlan> PreviewArtworkEditsAsync(
         IReadOnlyDictionary<string, ArtworkValueEdit> editsByPath,
         string name,
@@ -801,7 +954,10 @@ public sealed class MetadataOperationService(
         {
             ct.ThrowIfCancellationRequested();
             MediaDocument current = await documents.LoadAsync(
-                filePlan.Path, filePlan.ArtworkEdit is not null, ct);
+                filePlan.Path,
+                filePlan.ArtworkEdit is not null ||
+                !filePlan.TagLayerEdits.IsDefaultOrEmpty,
+                ct);
             if (current.Snapshot.Length != filePlan.Snapshot.Length ||
                 current.Snapshot.LastWriteTimeUtc != filePlan.Snapshot.LastWriteTimeUtc ||
                 !StringComparer.Ordinal.Equals(
@@ -1256,6 +1412,19 @@ public sealed class MetadataOperationService(
                 file.Tags.OfType<VorbisComments>().FirstOrDefault();
             IUserStringMetadata? custom = file as IUserStringMetadata ??
                 file.Tags.OfType<IUserStringMetadata>().FirstOrDefault();
+            if (!plan.TagLayerEdits.IsDefaultOrEmpty)
+            {
+                if (file is not ITagLayerEditor layerEditor)
+                    throw new InvalidOperationException(
+                        "The file has no editable tag-layer envelope.");
+                foreach (TagLayerEdit edit in plan.TagLayerEdits)
+                {
+                    if (edit.Mode == TagLayerEditMode.Add)
+                        layerEditor.AddTagLayer(edit.Kind, edit.CopyMode);
+                    else
+                        layerEditor.RemoveTagLayer(edit.Kind);
+                }
+            }
             if (writer is null && vorbis is null && custom is null &&
                 plan.Edits.Length > 0)
                 throw new InvalidOperationException("The file has no writable metadata layer.");

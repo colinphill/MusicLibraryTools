@@ -92,6 +92,191 @@ public sealed class AacFormatTests
         }
     }
 
+    [Theory]
+    [InlineData("id3", TagLayerKind.ApeV2, "APE")]
+    [InlineData("ape", TagLayerKind.Id3v2, "ID3v23")]
+    public void AddTagLayerCopiesPrimaryMetadataAndPreservesAudio(
+        string initialLayer,
+        TagLayerKind addedKind,
+        string addedTagType)
+    {
+        string path = TempPath();
+        byte[] audio = WriteFixture(path, initialLayer);
+        try
+        {
+            var media = Assert.IsType<AACFile>(
+                MediaFile.GetFile(path, readOnly: false));
+            ITagLayerEditor editor = media;
+
+            editor.AddTagLayer(addedKind, TagLayerCopyMode.CopyPrimary);
+            media.SaveTags();
+
+            var reloaded = Assert.IsType<AACFile>(MediaFile.GetFile(path));
+            Assert.All(reloaded.EditableTagLayers, layer =>
+                Assert.True(layer.IsPresent));
+            IMetadataProvider added = Assert.Single(
+                reloaded.Tags, tag => tag.TagType == addedTagType);
+            Assert.Equal(
+                initialLayer == "id3" ? "ID3 title" : "APE title",
+                added.Title);
+            Assert.Equal(audio, ReadAudio(path));
+        }
+        finally
+        {
+            try { File.Delete(path); } catch { }
+        }
+    }
+
+    [Theory]
+    [InlineData(TagLayerKind.Id3v2, "APE", "APE title")]
+    [InlineData(TagLayerKind.ApeV2, "ID3v23", "ID3 title")]
+    public void RemoveSpecificTagLayerPreservesTheOtherLayerAndAudio(
+        TagLayerKind removedKind,
+        string remainingTagType,
+        string remainingTitle)
+    {
+        string path = TempPath();
+        byte[] audio = WriteFixture(path, "both");
+        try
+        {
+            var media = Assert.IsType<AACFile>(
+                MediaFile.GetFile(path, readOnly: false));
+
+            media.RemoveTagLayer(removedKind);
+            media.SaveTags();
+
+            var reloaded = Assert.IsType<AACFile>(MediaFile.GetFile(path));
+            IMetadataProvider remaining = Assert.Single(reloaded.Tags);
+            Assert.Equal(remainingTagType, remaining.TagType);
+            Assert.Equal(remainingTitle, remaining.Title);
+            Assert.Equal(audio, ReadAudio(path));
+            Assert.False(Assert.Single(
+                reloaded.EditableTagLayers,
+                layer => layer.Kind == removedKind).IsPresent);
+        }
+        finally
+        {
+            try { File.Delete(path); } catch { }
+        }
+    }
+
+    [Theory]
+    [InlineData("id3", TagLayerKind.Id3v2)]
+    [InlineData("ape", TagLayerKind.ApeV2)]
+    public void RemoveLastTagLayerProducesDeliberatelyUntaggedAac(
+        string initialLayer,
+        TagLayerKind removedKind)
+    {
+        string path = TempPath();
+        byte[] audio = WriteFixture(path, initialLayer);
+        try
+        {
+            var media = Assert.IsType<AACFile>(
+                MediaFile.GetFile(path, readOnly: false));
+
+            media.RemoveTagLayer(removedKind);
+            media.SaveTags();
+
+            Assert.Equal(audio, File.ReadAllBytes(path));
+            var reloaded = Assert.IsType<AACFile>(MediaFile.GetFile(path));
+            Assert.All(reloaded.EditableTagLayers, layer =>
+                Assert.False(layer.IsPresent));
+            Assert.Empty(reloaded.Tags.First().GetKnownMetadata());
+        }
+        finally
+        {
+            try { File.Delete(path); } catch { }
+        }
+    }
+
+    [Fact]
+    public void EmptyLayerCreationDoesNotDuplicatePrimaryMetadata()
+    {
+        string path = TempPath();
+        byte[] audio = WriteFixture(path, "id3");
+        try
+        {
+            var media = Assert.IsType<AACFile>(
+                MediaFile.GetFile(path, readOnly: false));
+
+            media.AddTagLayer(
+                TagLayerKind.ApeV2, TagLayerCopyMode.Empty);
+            media.SaveTags();
+
+            var reloaded = Assert.IsType<AACFile>(MediaFile.GetFile(path));
+            Assert.Equal("ID3 title", reloaded.Tags.First().Title);
+            Assert.Equal("", reloaded.Tags.Last().Title);
+            Assert.Equal(audio, ReadAudio(path));
+        }
+        finally
+        {
+            try { File.Delete(path); } catch { }
+        }
+    }
+
+    [Fact]
+    public void CopiedLayerIncludesCustomTextAndArtwork()
+    {
+        string path = TempPath();
+        byte[] audio = WriteFixture(path, "id3");
+        try
+        {
+            var media = Assert.IsType<AACFile>(
+                MediaFile.GetFile(path, readOnly: false));
+            media.SetUserString("DJ_SET", "Night");
+            media.SetImages(
+            [
+                new(
+                    ID3v2Util.APICType.BackCover,
+                    "image/png",
+                    "back",
+                    Cover),
+            ]);
+
+            media.AddTagLayer(
+                TagLayerKind.ApeV2, TagLayerCopyMode.CopyPrimary);
+            media.SaveTags();
+
+            var reloaded = Assert.IsType<AACFile>(
+                MediaFile.GetFile(path, readArtwork: true));
+            IMetadataProvider ape = reloaded.Tags.Last();
+            Assert.Contains(
+                Assert.IsAssignableFrom<IUserStringMetadata>(ape)
+                    .GetUserStrings(),
+                value => value.Key == "DJ_SET" &&
+                    value.Value == "Night");
+            IMetadataImage image = Assert.Single(
+                ape.GetImageMetadata());
+            Assert.Equal(Cover, image.Data);
+            Assert.Equal(audio, ReadAudio(path));
+        }
+        finally
+        {
+            try { File.Delete(path); } catch { }
+        }
+    }
+
+    [Fact]
+    public void LayerEditorRejectsImpossibleTransitionsBeforeWriting()
+    {
+        string path = TempPath();
+        WriteFixture(path, "id3");
+        try
+        {
+            var media = Assert.IsType<AACFile>(
+                MediaFile.GetFile(path, readOnly: false));
+
+            Assert.Throws<InvalidOperationException>(
+                () => media.AddTagLayer(TagLayerKind.Id3v2));
+            Assert.Throws<InvalidOperationException>(
+                () => media.RemoveTagLayer(TagLayerKind.ApeV2));
+        }
+        finally
+        {
+            try { File.Delete(path); } catch { }
+        }
+    }
+
     [Fact]
     public void SaveToSeparatePathLeavesBothSourceLayersUntouched()
     {

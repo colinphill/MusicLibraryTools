@@ -88,6 +88,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(PreviewLocalArtworkCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewRemoveFrontCoverCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewRemoveAllArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewAddId3LayerCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewRemoveId3LayerCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewAddApeLayerCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewRemoveApeLayerCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -109,6 +113,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(PreviewLocalArtworkCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewRemoveFrontCoverCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewRemoveAllArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewAddId3LayerCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewRemoveId3LayerCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewAddApeLayerCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewRemoveApeLayerCommand))]
     private WorkbenchTrackViewModel? _selectedFile;
 
     [ObservableProperty]
@@ -145,6 +153,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [ObservableProperty]
     private WorkbenchFieldEditMode _selectedFieldEditMode =
         WorkbenchFieldEditMode.Replace;
+
+    [ObservableProperty]
+    private bool _copyPrimaryMetadataToNewLayer = true;
 
     [ObservableProperty]
     private bool _recursive = true;
@@ -624,6 +635,74 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             edits, $"Edit {field.DisplayName} values", progress, ct));
     }
 
+    [RelayCommand(CanExecute = nameof(CanPreviewAddId3Layer))]
+    private Task PreviewAddId3LayerAsync() =>
+        PreviewTagLayerAsync(TagLayerKind.Id3v2, TagLayerEditMode.Add);
+
+    [RelayCommand(CanExecute = nameof(CanPreviewRemoveId3Layer))]
+    private Task PreviewRemoveId3LayerAsync() =>
+        PreviewTagLayerAsync(TagLayerKind.Id3v2, TagLayerEditMode.Remove);
+
+    [RelayCommand(CanExecute = nameof(CanPreviewAddApeLayer))]
+    private Task PreviewAddApeLayerAsync() =>
+        PreviewTagLayerAsync(TagLayerKind.ApeV2, TagLayerEditMode.Add);
+
+    [RelayCommand(CanExecute = nameof(CanPreviewRemoveApeLayer))]
+    private Task PreviewRemoveApeLayerAsync() =>
+        PreviewTagLayerAsync(TagLayerKind.ApeV2, TagLayerEditMode.Remove);
+
+    private async Task PreviewTagLayerAsync(
+        TagLayerKind kind,
+        TagLayerEditMode mode)
+    {
+        if (SelectedFile is null)
+            return;
+        var edits = new Dictionary<string, IReadOnlyList<TagLayerEdit>>(
+            PathComparer)
+        {
+            [SelectedFile.Path] =
+            [
+                new(
+                    kind,
+                    mode,
+                    CopyPrimaryMetadataToNewLayer
+                        ? TagLayerCopyMode.CopyPrimary
+                        : TagLayerCopyMode.Empty),
+            ],
+        };
+        string action = mode == TagLayerEditMode.Add ? "Add" : "Remove";
+        string layerName = kind == TagLayerKind.Id3v2
+            ? "ID3v2"
+            : "APEv2";
+        await PreviewAsync((progress, ct) =>
+            _operations.PreviewTagLayerEditsAsync(
+                edits,
+                $"{action} {layerName} tag layer",
+                progress,
+                ct));
+    }
+
+    private bool CanPreviewAddId3Layer() =>
+        CanEditTagLayer(TagLayerKind.Id3v2, add: true);
+
+    private bool CanPreviewRemoveId3Layer() =>
+        CanEditTagLayer(TagLayerKind.Id3v2, add: false);
+
+    private bool CanPreviewAddApeLayer() =>
+        CanEditTagLayer(TagLayerKind.ApeV2, add: true);
+
+    private bool CanPreviewRemoveApeLayer() =>
+        CanEditTagLayer(TagLayerKind.ApeV2, add: false);
+
+    private bool CanEditTagLayer(TagLayerKind kind, bool add)
+    {
+        TagLayerDescriptor? layer =
+            SelectedFile?.Document.EditableTagLayers.FirstOrDefault(
+                candidate => candidate.Kind == kind);
+        return !IsBusy && layer is not null &&
+            (add ? layer.CanAdd : layer.CanRemove);
+    }
+
     private async Task PreviewAsync(
         Func<IProgress<OperationProgress>, CancellationToken,
             Task<MetadataOperationPlan>> action)
@@ -640,7 +719,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                 .Count(issue => issue.Severity == OperationIssueSeverity.Blocker);
             StatusText = blockers > 0
                 ? $"Preview has {blockers:N0} blocker(s). No files have been changed."
-                : $"Preview: {plan.ChangeCount:N0} field change(s) in " +
+                : $"Preview: {plan.ChangeCount:N0} metadata change(s) in " +
                   $"{plan.ChangedFileCount:N0} file(s). No files have been changed.";
         }
         catch (OperationCanceledException)
@@ -2173,6 +2252,9 @@ public partial class WorkbenchTrackViewModel : ObservableObject
         : "";
     public string LayerSummary => string.Join(", ",
         Document.TagLayers.Select(layer => layer.TagType));
+
+    public bool HasEditableTagLayers =>
+        !Document.EditableTagLayers.IsDefaultOrEmpty;
     public int ArtworkCount => Document.Artwork.Length;
     public int FieldCount => Document.TagLayers.Sum(layer => layer.Fields.Length);
     public string FileSize => FormatBytes(Document.Snapshot.Length);

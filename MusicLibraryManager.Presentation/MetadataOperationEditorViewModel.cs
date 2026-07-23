@@ -15,7 +15,7 @@ public sealed record MetadataPreviewRow(
     string Before,
     string After);
 
-internal static class MetadataPreviewRowBuilder
+public static class MetadataPreviewRowBuilder
 {
     public static void Populate(
         ObservableCollection<MetadataPreviewRow> destination,
@@ -41,6 +41,19 @@ internal static class MetadataPreviewRowBuilder
                     DescribeArtwork(artwork.Before),
                     DescribeArtwork(artwork.After)));
             }
+
+            if (!file.TagLayerDifferences.IsDefaultOrEmpty)
+            {
+                foreach (TagLayerDifference difference in
+                         file.TagLayerDifferences)
+                {
+                    destination.Add(new(
+                        Path.GetFileName(file.Path),
+                        $"{DescribeTagLayer(difference.Kind)} tag layer",
+                        difference.WasPresent ? "Present" : "Absent",
+                        difference.WillBePresent ? "Present" : "Absent"));
+                }
+            }
         }
     }
 
@@ -53,6 +66,13 @@ internal static class MetadataPreviewRowBuilder
                 (string.IsNullOrWhiteSpace(image.Description)
                     ? ""
                     : $" ({image.Description})")));
+
+    private static string DescribeTagLayer(TagLayerKind kind) => kind switch
+    {
+        TagLayerKind.Id3v2 => "ID3v2",
+        TagLayerKind.ApeV2 => "APEv2",
+        _ => kind.ToString(),
+    };
 }
 
 public partial class MetadataRecipeStepViewModel(

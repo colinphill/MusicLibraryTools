@@ -167,6 +167,42 @@ namespace MusicFileUtilities
         void Save(string outputPath = null);
     }
 
+    /// <summary>Identifies a physical metadata envelope supported by a media format.</summary>
+    public enum TagLayerKind
+    {
+        Id3v2,
+        ApeV2,
+    }
+
+    /// <summary>Controls whether a newly-created tag layer starts empty or mirrors the primary layer.</summary>
+    public enum TagLayerCopyMode
+    {
+        Empty,
+        CopyPrimary,
+    }
+
+    /// <summary>Describes one physical tag type that a container can independently add or remove.</summary>
+    public sealed record TagLayerDescriptor(
+        TagLayerKind Kind,
+        string DisplayName,
+        bool IsPresent,
+        bool CanAdd,
+        bool CanRemove,
+        bool IsPrimary);
+
+    /// <summary>
+    /// Adds and removes independent physical tag envelopes without transcoding the media payload.
+    /// Implementations advertise only combinations they can serialize losslessly.
+    /// </summary>
+    public interface ITagLayerEditor
+    {
+        IReadOnlyList<TagLayerDescriptor> EditableTagLayers { get; }
+        void AddTagLayer(
+            TagLayerKind kind,
+            TagLayerCopyMode copyMode = TagLayerCopyMode.CopyPrimary);
+        void RemoveTagLayer(TagLayerKind kind);
+    }
+
     /// <summary>
     /// Writes ordered values without collapsing them into a display string. Implementations
     /// advertise support per field because some native formats only permit one value for number,

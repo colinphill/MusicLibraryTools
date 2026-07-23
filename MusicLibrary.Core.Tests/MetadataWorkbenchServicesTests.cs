@@ -155,6 +155,22 @@ public sealed class MetadataWorkbenchServicesTests
             document.TagLayers[1].Fields,
             field => field.Field.KnownField == TagFields.Title &&
                      field.Values.SequenceEqual(["APE layer"]));
+        Assert.Collection(
+            document.EditableTagLayers.OrderBy(layer => layer.Kind),
+            id3 =>
+            {
+                Assert.Equal(TagLayerKind.Id3v2, id3.Kind);
+                Assert.True(id3.IsPresent);
+                Assert.True(id3.IsPrimary);
+                Assert.True(id3.CanRemove);
+            },
+            apeLayer =>
+            {
+                Assert.Equal(TagLayerKind.ApeV2, apeLayer.Kind);
+                Assert.True(apeLayer.IsPresent);
+                Assert.False(apeLayer.IsPrimary);
+                Assert.True(apeLayer.CanRemove);
+            });
     }
 
     [Fact]
@@ -548,6 +564,193 @@ public sealed class MetadataWorkbenchServicesTests
         {
             try { Directory.Delete(session, recursive: true); } catch { }
             try { Directory.Delete(recovery, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task TagLayerPreview_AddsCopiedApeAndUndoRestoresExactFile()
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(), "mlm-layers-" + Guid.NewGuid().ToString("N"));
+        string recovery = session + ".MusicLibraryManager-recovery";
+        Directory.CreateDirectory(session);
+        string mediaPath = Path.Combine(session, "track.aac");
+        File.Copy(MediaFixtures.Path_("sample.aac"), mediaPath);
+        string statePath = Path.Combine(session, "settings.json");
+        try
+        {
+            var seed = Assert.IsType<AACFile>(
+                MediaFile.GetFile(mediaPath, readOnly: false));
+            seed.SetField(TagFields.Title, "Layer title");
+            seed.SaveTags();
+            byte[] original = await File.ReadAllBytesAsync(mediaPath);
+            var settings = new AppSettings(statePath);
+            var history = new EditHistoryService(
+                settings, new OperationJournalService());
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings,
+                history: history);
+
+            MetadataOperationPlan plan =
+                await service.PreviewTagLayerEditsAsync(
+                    new Dictionary<string, IReadOnlyList<TagLayerEdit>>
+                    {
+                        [mediaPath] =
+                        [
+                            new(
+                                TagLayerKind.ApeV2,
+                                TagLayerEditMode.Add,
+                                TagLayerCopyMode.CopyPrimary),
+                        ],
+                    },
+                    "Add APEv2 layer");
+
+            MetadataFilePlan filePlan = Assert.Single(plan.Files);
+            TagLayerDifference difference =
+                Assert.Single(filePlan.TagLayerDifferences);
+            Assert.Equal(TagLayerKind.ApeV2, difference.Kind);
+            Assert.False(difference.WasPresent);
+            Assert.True(difference.WillBePresent);
+            Assert.True(plan.CanApply);
+            Assert.Equal(original, await File.ReadAllBytesAsync(mediaPath));
+
+            MetadataApplyResult result = await service.ApplyAsync(plan);
+
+            Assert.Equal(1, result.ChangedFiles);
+            var applied = Assert.IsType<AACFile>(
+                MediaFile.GetFile(mediaPath));
+            Assert.All(applied.EditableTagLayers, layer =>
+                Assert.True(layer.IsPresent));
+            Assert.Equal(
+                ["Layer title", "Layer title"],
+                applied.Tags.Select(tag => tag.Title));
+
+            Assert.Equal(1, await history.UndoLatestAsync());
+            Assert.Equal(original, await File.ReadAllBytesAsync(mediaPath));
+        }
+        finally
+        {
+            try { Directory.Delete(session, recursive: true); } catch { }
+            try { Directory.Delete(recovery, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task TagLayerPreview_RemovesOnlyRequestedEnvelope()
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(), "mlm-layer-remove-" + Guid.NewGuid().ToString("N"));
+        string recovery = session + ".MusicLibraryManager-recovery";
+        Directory.CreateDirectory(session);
+        string mediaPath = Path.Combine(session, "track.aac");
+        File.Copy(MediaFixtures.Path_("sample.aac"), mediaPath);
+        string statePath = Path.Combine(session, "settings.json");
+        try
+        {
+            var seed = Assert.IsType<AACFile>(
+                MediaFile.GetFile(mediaPath, readOnly: false));
+            seed.SetField(TagFields.Title, "Keep ID3");
+            seed.AddTagLayer(
+                TagLayerKind.ApeV2, TagLayerCopyMode.CopyPrimary);
+            seed.SaveTags();
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings);
+
+            MetadataOperationPlan plan =
+                await service.PreviewTagLayerEditsAsync(
+                    new Dictionary<string, IReadOnlyList<TagLayerEdit>>
+                    {
+                        [mediaPath] =
+                        [
+                            new(
+                                TagLayerKind.ApeV2,
+                                TagLayerEditMode.Remove),
+                        ],
+                    },
+                    "Remove APEv2 layer");
+            await service.ApplyAsync(plan);
+
+            var applied = Assert.IsType<AACFile>(
+                MediaFile.GetFile(mediaPath));
+            IMetadataProvider remaining = Assert.Single(applied.Tags);
+            Assert.Equal("ID3v23", remaining.TagType);
+            Assert.Equal("Keep ID3", remaining.Title);
+            Assert.False(Assert.Single(
+                applied.EditableTagLayers,
+                layer => layer.Kind == TagLayerKind.ApeV2).IsPresent);
+        }
+        finally
+        {
+            try { Directory.Delete(session, recursive: true); } catch { }
+            try { Directory.Delete(recovery, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task TagLayerPreview_RejectsUnsupportedFormatAndStaleSource()
+    {
+        using var flac = MediaFixtures.Copy("sample.flac");
+        using var aac = MediaFixtures.Copy("sample.aac");
+        string statePath = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-layer-stale-" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings);
+            MetadataOperationPlan unsupported =
+                await service.PreviewTagLayerEditsAsync(
+                    new Dictionary<string, IReadOnlyList<TagLayerEdit>>
+                    {
+                        [flac.Path] =
+                        [
+                            new(
+                                TagLayerKind.ApeV2,
+                                TagLayerEditMode.Add),
+                        ],
+                    },
+                    "Unsupported layer");
+            Assert.Contains(
+                Assert.Single(unsupported.Files).Issues,
+                issue => issue.Code == "tag-layer.unsupported" &&
+                    issue.Severity == OperationIssueSeverity.Blocker);
+            Assert.False(unsupported.CanApply);
+
+            MetadataOperationPlan stale =
+                await service.PreviewTagLayerEditsAsync(
+                    new Dictionary<string, IReadOnlyList<TagLayerEdit>>
+                    {
+                        [aac.Path] =
+                        [
+                            new(
+                                TagLayerKind.ApeV2,
+                                TagLayerEditMode.Add),
+                        ],
+                    },
+                    "Stale layer plan");
+            var changed = Assert.IsType<AACFile>(
+                MediaFile.GetFile(aac.Path, readOnly: false));
+            changed.SetField(TagFields.Title, "Changed after preview");
+            changed.SaveTags();
+
+            InvalidOperationException error = await Assert.ThrowsAsync<
+                InvalidOperationException>(() => service.ApplyAsync(stale));
+            Assert.Contains("Stale plan", error.Message);
+        }
+        finally
+        {
+            try { File.Delete(statePath); } catch { }
         }
     }
 

@@ -1807,6 +1807,45 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public void Metadata_preview_projects_physical_tag_layer_changes()
+    {
+        var preview = new System.Collections.ObjectModel.ObservableCollection<
+            MetadataPreviewRow>();
+        string path = Path.Combine(Path.GetTempPath(), "track.aac");
+        var file = new MetadataFilePlan(
+            path,
+            new(path, 1, DateTime.UtcNow, "hash"),
+            [],
+            [],
+            [],
+            TagLayerEdits:
+            [
+                new(
+                    TagLayerKind.ApeV2,
+                    TagLayerEditMode.Add),
+            ],
+            TagLayerDifferences:
+            [
+                new(
+                    TagLayerKind.ApeV2,
+                    WasPresent: false,
+                    WillBePresent: true),
+            ]);
+        var plan = new MetadataOperationPlan(
+            Guid.NewGuid(),
+            "Add layer",
+            [file],
+            DateTimeOffset.UtcNow);
+
+        MetadataPreviewRowBuilder.Populate(preview, plan);
+
+        MetadataPreviewRow row = Assert.Single(preview);
+        Assert.Equal("APEv2 tag layer", row.Field);
+        Assert.Equal("Absent", row.Before);
+        Assert.Equal("Present", row.After);
+    }
+
+    [Fact]
     public void Dynamic_metadata_columns_use_configured_numeric_and_date_sorting()
     {
         MetadataFieldKey field =
@@ -2298,6 +2337,9 @@ internal sealed class FakeMetadataOperationService : IMetadataOperationService
     public IReadOnlyDictionary<string, ArtworkValueEdit>
         PreviewedArtworkEdits { get; private set; } =
             new Dictionary<string, ArtworkValueEdit>();
+    public IReadOnlyDictionary<string, IReadOnlyList<TagLayerEdit>>
+        PreviewedTagLayerEdits { get; private set; } =
+            new Dictionary<string, IReadOnlyList<TagLayerEdit>>();
     public bool WaitForCancellation { get; init; }
     public bool CancellationObserved { get; private set; }
     public TaskCompletionSource<bool> PreviewStarted { get; } =
@@ -2446,6 +2488,30 @@ internal sealed class FakeMetadataOperationService : IMetadataOperationService
         }).ToArray();
         return Task.FromResult(new MetadataOperationPlan(
             Guid.NewGuid(), name, [.. files], DateTimeOffset.UtcNow));
+    }
+
+    public Task<MetadataOperationPlan> PreviewTagLayerEditsAsync(
+        IReadOnlyDictionary<string, IReadOnlyList<TagLayerEdit>> editsByPath,
+        string name,
+        CancellationToken ct = default)
+    {
+        PreviewedTagLayerEdits = editsByPath;
+        (string path, IReadOnlyList<TagLayerEdit> edits) =
+            editsByPath.First();
+        TagLayerEdit edit = edits.First();
+        bool adding = edit.Mode == TagLayerEditMode.Add;
+        var difference = new TagLayerDifference(
+            edit.Kind, !adding, adding);
+        var file = new MetadataFilePlan(
+            path,
+            new(path, 1, DateTime.UtcNow, "hash"),
+            [],
+            [],
+            [],
+            TagLayerEdits: [edit],
+            TagLayerDifferences: [difference]);
+        return Task.FromResult(new MetadataOperationPlan(
+            Guid.NewGuid(), name, [file], DateTimeOffset.UtcNow));
     }
 
     public Task<MetadataApplyResult> ApplyAsync(

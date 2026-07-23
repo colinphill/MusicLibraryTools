@@ -433,7 +433,13 @@ application concepts.
   M4B and M4V remain Workbench/direct-edit formats after passing MP4
   preservation tests; each later family must pass its own release gate.
 - [~] Inspect all layers present in a file.
-- [ ] Add or remove specific tag types.
+- [x] Add or remove specific tag types.
+  - Raw AAC exposes honest ID3v2/APEv2 layer descriptors and can add either
+    layer empty or by copying the primary layer's known fields, custom text,
+    and artwork.
+  - Workbench previews and applies individual layer additions/removals through
+    the ordinary stale-plan, recovery-journal, and undo pipeline; removing the
+    final layer deliberately produces tagless AAC without touching ADTS bytes.
 - [ ] Convert ID3v2.2/2.3/2.4.
 - [ ] Configure ID3 encoding and ID3v1 compatibility.
 - [ ] Preview truncation, unsupported fields, and lossy conversions.

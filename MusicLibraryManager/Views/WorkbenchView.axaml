@@ -52,7 +52,7 @@
     <Border Grid.Row="2" Classes="card" Padding="12" ClipToBounds="True">
       <TabControl>
         <TabItem Header="Session">
-          <Grid Margin="0,12,0,0" RowDefinitions="Auto,*,Auto,Auto" RowSpacing="10">
+          <Grid Margin="0,12,0,0" RowDefinitions="Auto,*,Auto,Auto,Auto" RowSpacing="10">
             <WrapPanel>
               <Button Classes="app" Margin="0,0,8,6" Content="Remove"
                       Command="{Binding RemoveCurrentCommand}" />
@@ -91,7 +91,35 @@
               </Grid>
             </Border>
 
-            <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="16"
+            <Border Grid.Row="3" Padding="10" CornerRadius="7"
+                    BorderBrush="{DynamicResource AppBorderBrush}"
+                    BorderThickness="1"
+                    IsVisible="{Binding SelectedFile.HasEditableTagLayers}">
+              <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*"
+                    ColumnSpacing="8">
+                <TextBlock VerticalAlignment="Center"
+                           FontWeight="SemiBold"
+                           Text="Physical tag layers" />
+                <Button Grid.Column="1" Classes="app"
+                        Content="Add ID3v2"
+                        Command="{Binding PreviewAddId3LayerCommand}" />
+                <Button Grid.Column="2" Classes="app"
+                        Content="Remove ID3v2"
+                        Command="{Binding PreviewRemoveId3LayerCommand}" />
+                <Button Grid.Column="3" Classes="app"
+                        Content="Add APEv2"
+                        Command="{Binding PreviewAddApeLayerCommand}" />
+                <Button Grid.Column="4" Classes="app"
+                        Content="Remove APEv2"
+                        Command="{Binding PreviewRemoveApeLayerCommand}" />
+                <CheckBox Grid.Column="5" HorizontalAlignment="Right"
+                          VerticalAlignment="Center"
+                          Content="Copy primary metadata into a new layer"
+                          IsChecked="{Binding CopyPrimaryMetadataToNewLayer, Mode=TwoWay}" />
+              </Grid>
+            </Border>
+
+            <Grid Grid.Row="4" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="16"
                   IsVisible="{Binding SelectedFile}">
               <TextBlock Classes="muted" Text="{Binding SelectedFile.Path}"
                          TextTrimming="CharacterEllipsis" />

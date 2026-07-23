@@ -78,6 +78,7 @@ public sealed record MediaDocument(
     bool IsWritable)
 {
     public ImmutableArray<MediaChapter> Chapters { get; init; } = [];
+    public ImmutableArray<TagLayerDescriptor> EditableTagLayers { get; init; } = [];
 
     public ImmutableArray<string> Values(MetadataFieldKey field) => TagLayers
         .SelectMany(layer => layer.Fields)
@@ -316,6 +317,22 @@ public sealed record MetadataValueEdit(
     MetadataFieldKey Field,
     ImmutableArray<string> Values);
 
+public enum TagLayerEditMode
+{
+    Add,
+    Remove,
+}
+
+public sealed record TagLayerEdit(
+    TagLayerKind Kind,
+    TagLayerEditMode Mode,
+    TagLayerCopyMode CopyMode = TagLayerCopyMode.CopyPrimary);
+
+public sealed record TagLayerDifference(
+    TagLayerKind Kind,
+    bool WasPresent,
+    bool WillBePresent);
+
 public enum ArtworkValueEditMode
 {
     ReplaceFrontCover,
@@ -349,10 +366,14 @@ public sealed record MetadataFilePlan(
     ImmutableArray<MetadataValueEdit> Edits,
     ImmutableArray<OperationIssue> Issues,
     ArtworkSetEdit? ArtworkEdit = null,
-    ArtworkSetDifference? ArtworkDifference = null)
+    ArtworkSetDifference? ArtworkDifference = null,
+    ImmutableArray<TagLayerEdit> TagLayerEdits = default,
+    ImmutableArray<TagLayerDifference> TagLayerDifferences = default)
 {
     public bool HasChanges =>
-        Differences.Length > 0 || ArtworkDifference is not null;
+        Differences.Length > 0 ||
+        ArtworkDifference is not null ||
+        !TagLayerDifferences.IsDefaultOrEmpty;
     public bool CanApply => HasChanges &&
         Issues.All(issue => issue.Severity != OperationIssueSeverity.Blocker);
 }
@@ -366,7 +387,11 @@ public sealed record MetadataOperationPlan(
 {
     public int ChangedFileCount => Files.Count(file => file.HasChanges);
     public int ChangeCount => Files.Sum(file =>
-        file.Differences.Length + (file.ArtworkDifference is null ? 0 : 1));
+        file.Differences.Length +
+        (file.ArtworkDifference is null ? 0 : 1) +
+        (file.TagLayerDifferences.IsDefault
+            ? 0
+            : file.TagLayerDifferences.Length));
     public bool CanApply => ChangedFileCount > 0 && Files
         .SelectMany(file => file.Issues)
         .All(issue => issue.Severity != OperationIssueSeverity.Blocker);
