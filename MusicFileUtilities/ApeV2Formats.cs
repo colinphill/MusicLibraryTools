@@ -598,7 +598,7 @@ namespace MusicFileUtilities
                 BinaryPrimitives.ReadUInt16LittleEndian(
                     header[20..22]);
             EncoderVersion = checked(
-                (uint)(packedVersion >> 4) + 4200);
+                (uint)(packedVersion >> 4) + 4500);
             BitsPerSample = format <= 7
                 ? checked((uint)(format / 2 + 1) * 8)
                 : format <= 10

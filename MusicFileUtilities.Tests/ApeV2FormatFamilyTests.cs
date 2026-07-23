@@ -1,3 +1,4 @@
+using System.Text;
 using MusicFileUtilities;
 using Xunit;
 
@@ -39,6 +40,27 @@ public sealed class ApeV2FormatFamilyTests
         Assert.Equal("APE", tag.TagType);
         Assert.Equal("TestTitle", tag.Title);
         Assert.IsAssignableFrom<IMetadataWriter>(tag);
+    }
+
+    [Theory]
+    [InlineData("sample.ofr", "OFR ")]
+    [InlineData("sample.ofs", "OFR ")]
+    [InlineData("sample.off", "OFRX")]
+    public void OfficialOptimFrogFixturesExposeNativeChunkChains(
+        string fixture,
+        string signature)
+    {
+        byte[] bytes = File.ReadAllBytes(
+            MediaFixtures.Path_(fixture));
+        Assert.Equal(signature, Encoding.ASCII.GetString(bytes, 0, 4));
+        int headerSize = checked((int)BitConverter.ToUInt32(bytes, 4));
+        Assert.Equal(
+            "HEAD",
+            Encoding.ASCII.GetString(bytes, 8 + headerSize, 4));
+
+        OptimFrogFile file = Assert.IsType<OptimFrogFile>(
+            MediaFile.GetFile(MediaFixtures.Path_(fixture)));
+        Assert.Equal(5100u, file.EncoderVersion);
     }
 
     [Theory]
