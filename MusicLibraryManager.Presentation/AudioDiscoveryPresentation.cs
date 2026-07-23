@@ -83,7 +83,7 @@ public static class AudioDiscoveryRows
 
 public sealed record MusicBrainzReleaseRow(
     string SourcePath,
-    Guid RecordingId,
+    Guid? RecordingId,
     Guid ReleaseId,
     string Title,
     string Artist,
@@ -105,15 +105,33 @@ public static class MusicBrainzReleaseRows
     public static IEnumerable<MusicBrainzReleaseRow> Create(
         string sourcePath,
         MusicBrainzReleaseResult result)
+        => Create(sourcePath, result.Releases, result.RecordingId);
+
+    public static IEnumerable<MusicBrainzReleaseRow> CreateSearch(
+        string sourcePath,
+        MusicBrainzReleaseSearchResult result)
+        => Create(sourcePath, result.Releases, recordingId: null);
+
+    public static MusicBrainzReleaseRow CreateDetailed(
+        string sourcePath,
+        MusicBrainzReleaseCandidate release,
+        Guid? recordingId = null) =>
+        Create(sourcePath, [release], recordingId).Single();
+
+    private static IEnumerable<MusicBrainzReleaseRow> Create(
+        string sourcePath,
+        IEnumerable<MusicBrainzReleaseCandidate> releases,
+        Guid? recordingId)
     {
-        foreach (MusicBrainzReleaseCandidate release in result.Releases)
+        foreach (MusicBrainzReleaseCandidate release in releases)
         {
             MusicBrainzTrackCandidate[] matches = release.Tracks
-                .Where(track => track.RecordingId == result.RecordingId)
+                .Where(track => recordingId is not null &&
+                    track.RecordingId == recordingId.Value)
                 .ToArray();
             yield return new(
                 sourcePath,
-                result.RecordingId,
+                recordingId,
                 release.ReleaseId,
                 release.Title,
                 release.ArtistCredit,
@@ -128,6 +146,54 @@ public static class MusicBrainzReleaseRows
                 release.Tracks.Length,
                 release);
         }
+    }
+}
+
+public partial class MusicBrainzReleaseSearchViewModel : ObservableObject
+{
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCriteria))]
+    private string? _artist;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCriteria))]
+    private string? _album;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCriteria))]
+    private string? _barcode;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCriteria))]
+    private string? _catalogNumber;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCriteria))]
+    private string? _releaseId;
+
+    public bool HasCriteria =>
+        !string.IsNullOrWhiteSpace(Artist) ||
+        !string.IsNullOrWhiteSpace(Album) ||
+        !string.IsNullOrWhiteSpace(Barcode) ||
+        !string.IsNullOrWhiteSpace(CatalogNumber) ||
+        !string.IsNullOrWhiteSpace(ReleaseId);
+
+    public MusicBrainzReleaseSearchQuery CreateQuery()
+    {
+        Guid? releaseId = null;
+        if (!string.IsNullOrWhiteSpace(ReleaseId))
+        {
+            if (!Guid.TryParse(ReleaseId.Trim(), out Guid parsed))
+                throw new InvalidOperationException(
+                    "The MusicBrainz release ID is not a valid GUID.");
+            releaseId = parsed;
+        }
+        return new(
+            Artist?.Trim(),
+            Album?.Trim(),
+            Barcode?.Trim(),
+            CatalogNumber?.Trim(),
+            releaseId);
     }
 }
 

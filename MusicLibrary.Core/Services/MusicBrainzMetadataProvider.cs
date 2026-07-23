@@ -38,10 +38,39 @@ public sealed record MusicBrainzReleaseResult(
     ImmutableArray<MusicBrainzReleaseCandidate> Releases,
     DateTimeOffset RetrievedAtUtc);
 
+public sealed record MusicBrainzReleaseSearchQuery(
+    string? Artist = null,
+    string? Album = null,
+    string? Barcode = null,
+    string? CatalogNumber = null,
+    Guid? ReleaseId = null)
+{
+    public bool IsEmpty =>
+        string.IsNullOrWhiteSpace(Artist) &&
+        string.IsNullOrWhiteSpace(Album) &&
+        string.IsNullOrWhiteSpace(Barcode) &&
+        string.IsNullOrWhiteSpace(CatalogNumber) &&
+        ReleaseId is null;
+}
+
+public sealed record MusicBrainzReleaseSearchResult(
+    ImmutableArray<MusicBrainzReleaseCandidate> Releases,
+    DateTimeOffset RetrievedAtUtc);
+
 public interface IMusicBrainzMetadataProvider
 {
     Task<MusicBrainzReleaseResult> ResolveRecordingAsync(
         Guid recordingId,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default);
+
+    Task<MusicBrainzReleaseSearchResult> SearchReleasesAsync(
+        MusicBrainzReleaseSearchQuery query,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default);
+
+    Task<MusicBrainzReleaseCandidate> GetReleaseAsync(
+        Guid releaseId,
         IProgress<OperationProgress>? progress = null,
         CancellationToken ct = default);
 }
@@ -99,6 +128,7 @@ public sealed class MusicBrainzMetadataProvider(
     IMusicBrainzHttpTransport transport) : IMusicBrainzMetadataProvider
 {
     private const int PageSize = 100;
+    private const int MaximumSearchResults = 250;
     private static readonly TimeSpan MinimumRequestInterval =
         TimeSpan.FromSeconds(1);
     private readonly SemaphoreSlim _requestGate = new(1, 1);
@@ -146,6 +176,75 @@ public sealed class MusicBrainzMetadataProvider(
         return new(recordingId, releases.ToImmutable(), DateTimeOffset.UtcNow);
     }
 
+    public async Task<MusicBrainzReleaseSearchResult> SearchReleasesAsync(
+        MusicBrainzReleaseSearchQuery query,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        if (query.IsEmpty)
+            throw new ArgumentException(
+                "Supply an artist, album, barcode, catalog number, or release ID.",
+                nameof(query));
+        var releases = ImmutableArray.CreateBuilder<MusicBrainzReleaseCandidate>();
+        int offset = 0;
+        int total = 0;
+        do
+        {
+            ct.ThrowIfCancellationRequested();
+            progress?.Report(new(
+                OperationPhase.LoadingConfiguration,
+                offset,
+                total > 0 ? Math.Min(total, MaximumSearchResults) : null,
+                Message: $"Searching MusicBrainz releases {offset + 1:N0}" +
+                    (total > 0 ? $" of {total:N0}" : "")));
+            MusicBrainzHttpResult response = await SendWithRetryAsync(
+                BuildSearchUri(query, offset), ct).ConfigureAwait(false);
+            EnsureSuccess(response, "search");
+            MusicBrainzReleasePage page = ParseReleasePage(response.Content);
+            total = page.Total;
+            releases.AddRange(page.Releases.Take(
+                MaximumSearchResults - releases.Count));
+            offset += page.Releases.Length;
+            if (page.Releases.Length == 0)
+                break;
+        }
+        while (offset < Math.Min(total, MaximumSearchResults));
+        progress?.Report(new(
+            OperationPhase.Completed,
+            releases.Count,
+            releases.Count,
+            Message: $"Found {releases.Count:N0} MusicBrainz release edition(s)" +
+                (total > releases.Count ? "; refine the search to see other results" : "")));
+        return new(releases.ToImmutable(), DateTimeOffset.UtcNow);
+    }
+
+    public async Task<MusicBrainzReleaseCandidate> GetReleaseAsync(
+        Guid releaseId,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        if (releaseId == Guid.Empty)
+            throw new ArgumentException(
+                "A MusicBrainz release ID is required.", nameof(releaseId));
+        progress?.Report(new(
+            OperationPhase.LoadingConfiguration,
+            0,
+            1,
+            Message: "Loading complete MusicBrainz release details"));
+        MusicBrainzHttpResult response = await SendWithRetryAsync(
+            BuildReleaseUri(releaseId), ct).ConfigureAwait(false);
+        EnsureSuccess(response, "release lookup");
+        MusicBrainzReleaseCandidate release =
+            ParseReleaseDocument(response.Content);
+        progress?.Report(new(
+            OperationPhase.Completed,
+            1,
+            1,
+            Message: $"Loaded {release.Tracks.Length:N0} release track(s)"));
+        return release;
+    }
+
     public static Uri BuildBrowseUri(Guid recordingId, int offset = 0)
     {
         string includes =
@@ -155,6 +254,37 @@ public sealed class MusicBrainzMetadataProvider(
             $"?recording={recordingId:D}" +
             $"&inc={includes}" +
             $"&limit={PageSize}&offset={Math.Max(0, offset)}&fmt=json");
+    }
+
+    public static Uri BuildSearchUri(
+        MusicBrainzReleaseSearchQuery query,
+        int offset = 0)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        var clauses = new List<string>();
+        AddClause(clauses, "artist", query.Artist);
+        AddClause(clauses, "release", query.Album);
+        AddClause(clauses, "barcode", query.Barcode);
+        AddClause(clauses, "catno", query.CatalogNumber);
+        if (query.ReleaseId is not null)
+            clauses.Add($"reid:{query.ReleaseId.Value:D}");
+        if (clauses.Count == 0)
+            throw new ArgumentException(
+                "At least one release search field is required.", nameof(query));
+        string encoded = Uri.EscapeDataString(string.Join(" AND ", clauses));
+        return new Uri(
+            "https://musicbrainz.org/ws/2/release" +
+            $"?query={encoded}&limit={PageSize}" +
+            $"&offset={Math.Max(0, offset)}&fmt=json");
+    }
+
+    public static Uri BuildReleaseUri(Guid releaseId)
+    {
+        string includes =
+            "artist-credits+labels+release-groups+media+recordings";
+        return new Uri(
+            $"https://musicbrainz.org/ws/2/release/{releaseId:D}" +
+            $"?inc={includes}&fmt=json");
     }
 
     private async Task<MusicBrainzHttpResult> SendWithRetryAsync(
@@ -199,8 +329,10 @@ public sealed class MusicBrainzMetadataProvider(
         {
             using JsonDocument document = JsonDocument.Parse(content);
             JsonElement root = document.RootElement;
-            int total = ReadInt(root, "release-count") ?? 0;
-            int offset = ReadInt(root, "release-offset") ?? 0;
+            int total = ReadInt(root, "release-count") ??
+                ReadInt(root, "count") ?? 0;
+            int offset = ReadInt(root, "release-offset") ??
+                ReadInt(root, "offset") ?? 0;
             if (!root.TryGetProperty("releases", out JsonElement items) ||
                 items.ValueKind != JsonValueKind.Array)
                 return new(total, offset, []);
@@ -208,6 +340,22 @@ public sealed class MusicBrainzMetadataProvider(
             foreach (JsonElement item in items.EnumerateArray())
                 releases.Add(ParseRelease(item));
             return new(total, offset, releases.ToImmutable());
+        }
+        catch (JsonException error)
+        {
+            throw new InvalidDataException(
+                "MusicBrainz returned malformed JSON.", error);
+        }
+    }
+
+    public static MusicBrainzReleaseCandidate ParseReleaseDocument(
+        string content)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(content);
+        try
+        {
+            using JsonDocument document = JsonDocument.Parse(content);
+            return ParseRelease(document.RootElement);
         }
         catch (JsonException error)
         {
@@ -340,6 +488,29 @@ public sealed class MusicBrainzMetadataProvider(
         value.TryGetInt32(out int result)
             ? result
             : null;
+
+    private static void AddClause(
+        ICollection<string> clauses,
+        string field,
+        string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return;
+        string escaped = value.Trim()
+            .Replace(@"\", @"\\", StringComparison.Ordinal)
+            .Replace("\"", "\\\"", StringComparison.Ordinal);
+        clauses.Add($"{field}:\"{escaped}\"");
+    }
+
+    private static void EnsureSuccess(
+        MusicBrainzHttpResult response,
+        string operation)
+    {
+        if (response.StatusCode != HttpStatusCode.OK)
+            throw new InvalidOperationException(
+                $"MusicBrainz {operation} failed with HTTP " +
+                $"{(int)response.StatusCode}.");
+    }
 }
 
 public sealed record MusicBrainzReleasePage(

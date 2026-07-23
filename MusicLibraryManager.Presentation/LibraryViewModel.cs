@@ -59,6 +59,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(ResolveLibraryRecordingCommand))]
     [NotifyCanExecuteChangedFor(nameof(BuildLibraryReleaseMappingCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryReleaseMetadataCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SearchLibraryMusicBrainzReleasesCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -105,6 +106,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(ResolveLibraryRecordingCommand))]
     [NotifyCanExecuteChangedFor(nameof(BuildLibraryReleaseMappingCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryReleaseMetadataCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SearchLibraryMusicBrainzReleasesCommand))]
     private bool _isOperationBusy;
 
     [ObservableProperty]
@@ -180,6 +182,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             recipeStore);
         OperationEditor.PropertyChanged += (_, _) => InvalidateLibraryOperationPreview();
         ReleaseImport.PropertyChanged += OnReleaseImportChanged;
+        ReleaseSearch.PropertyChanged += (_, _) =>
+            SearchLibraryMusicBrainzReleasesCommand.NotifyCanExecuteChanged();
         Indexing = indexing;
         foreach (DetailsColumn column in DetailsColumns.All)
             Columns.Add(new LibraryColumnChoice(column.Key, column.Header, DetailsColumns.DefaultVisible.Contains(column.Key)));
@@ -202,6 +206,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     public ObservableCollection<MusicBrainzTrackMappingRow> ReleaseTrackMappings { get; } = [];
     public ObservableCollection<MetadataPreviewRow> OperationPreviewChanges { get; } = [];
     public MusicBrainzImportSelectionViewModel ReleaseImport { get; } = new();
+    public MusicBrainzReleaseSearchViewModel ReleaseSearch { get; } = new();
     public IReadOnlyList<FilterMode> FilterModes { get; } = Enum.GetValues<FilterMode>();
     public IReadOnlyList<LibraryOperationScope> OperationScopes { get; } =
         Enum.GetValues<LibraryOperationScope>();
@@ -703,6 +708,46 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanSearchLibraryMusicBrainzReleases))]
+    private async Task SearchLibraryMusicBrainzReleasesAsync()
+    {
+        if (_musicBrainz is null)
+            return;
+        BeginLibraryOperation("Searching MusicBrainz releases");
+        try
+        {
+            MusicBrainzReleaseSearchResult result =
+                await _musicBrainz.SearchReleasesAsync(
+                    ReleaseSearch.CreateQuery(),
+                    CreateOperationProgress(),
+                    _operationCancellation!.Token);
+            SelectedRelease = null;
+            ReleaseMatches.Clear();
+            ClearReleaseTrackMappings();
+            string sourcePath =
+                ResolveOperationPaths().FirstOrDefault() ?? "";
+            foreach (MusicBrainzReleaseRow row in
+                     MusicBrainzReleaseRows.CreateSearch(sourcePath, result))
+                ReleaseMatches.Add(row);
+            SelectedRelease = ReleaseMatches.FirstOrDefault();
+            OperationStatus =
+                $"MusicBrainz found {ReleaseMatches.Count:N0} release edition(s). " +
+                "Choose one and build a file-to-track mapping.";
+        }
+        catch (OperationCanceledException)
+        {
+            OperationStatus = "MusicBrainz release search cancelled.";
+        }
+        catch (Exception error)
+        {
+            OperationStatus = $"MusicBrainz release search failed: {error.Message}";
+        }
+        finally
+        {
+            EndLibraryOperation();
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanBuildLibraryReleaseMapping))]
     private async Task BuildLibraryReleaseMappingAsync()
     {
@@ -714,6 +759,10 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         BeginLibraryOperation("Matching Library files to release tracks");
         try
         {
+            MusicBrainzReleaseCandidate release =
+                await EnsureSelectedReleaseDetailsAsync(
+                    CreateOperationProgress(),
+                    _operationCancellation!.Token);
             var rows = _allRows.ToDictionary(row => row.Path, PathComparer);
             MusicBrainzSourceFile[] sources = paths.Select(path =>
             {
@@ -737,7 +786,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             }).ToArray();
             MusicBrainzReleaseMapping mapping =
                 await _releaseMapping.MapAsync(
-                    SelectedRelease.Candidate,
+                    release,
                     sources,
                     CreateOperationProgress(),
                     _operationCancellation!.Token);
@@ -946,6 +995,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private bool CanResolveLibraryRecording() =>
         !IsBusy && !IsOperationBusy && _musicBrainz is not null &&
         SelectedAudioMatch?.MusicBrainzRecordingIdValues.Length == 1;
+    private bool CanSearchLibraryMusicBrainzReleases() =>
+        !IsBusy && !IsOperationBusy && _musicBrainz is not null &&
+        ReleaseSearch.HasCriteria;
     private bool CanBuildLibraryReleaseMapping() =>
         !IsBusy && !IsOperationBusy && _releaseMapping is not null &&
         SelectedRelease is not null && ResolveOperationPaths().Length > 0;
@@ -992,6 +1044,27 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     {
         InvalidateLibraryOperationPreview();
         PreviewLibraryReleaseMetadataCommand.NotifyCanExecuteChanged();
+    }
+
+    private async Task<MusicBrainzReleaseCandidate>
+        EnsureSelectedReleaseDetailsAsync(
+            IProgress<OperationProgress> progress,
+            CancellationToken ct)
+    {
+        MusicBrainzReleaseRow selected = SelectedRelease ??
+            throw new InvalidOperationException("Choose a MusicBrainz release.");
+        if (selected.Candidate.Tracks.Length > 0)
+            return selected.Candidate;
+        MusicBrainzReleaseCandidate detailed =
+            await _musicBrainz!.GetReleaseAsync(
+                selected.ReleaseId, progress, ct);
+        var row = MusicBrainzReleaseRows.CreateDetailed(
+            selected.SourcePath, detailed, selected.RecordingId);
+        int index = ReleaseMatches.IndexOf(selected);
+        if (index >= 0)
+            ReleaseMatches[index] = row;
+        SelectedRelease = row;
+        return detailed;
     }
 
     public Task ApplyFilterNowAsync(CancellationToken cancellationToken = default)

@@ -74,6 +74,38 @@ public sealed class MusicBrainzMetadataProviderTests
           ]
         }
         """;
+    private const string RecordedReleaseDocument =
+        """
+        {
+          "id": "11111111-1111-1111-1111-111111111111",
+          "title": "Example Album",
+          "date": "2001-02-03",
+          "country": "US",
+          "status": "Official",
+          "artist-credit": [{ "name": "Example Artist" }],
+          "release-group": {
+            "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+            "title": "Example Album",
+            "primary-type": "Album"
+          },
+          "media": [{
+            "position": 1,
+            "format": "CD",
+            "tracks": [{
+              "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+              "position": 1,
+              "number": "1",
+              "title": "Example Song",
+              "length": 241000,
+              "recording": {
+                "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+                "title": "Example Song",
+                "artist-credit": [{ "name": "Example Artist" }]
+              }
+            }]
+          }]
+        }
+        """;
 
     [Fact]
     public void RecordedPage_PreservesEditionAndTrackDetails()
@@ -136,6 +168,68 @@ public sealed class MusicBrainzMetadataProviderTests
         Assert.Contains("release-groups", uri.Query);
         Assert.Contains("media", uri.Query);
         Assert.Contains("labels", uri.Query);
+    }
+
+    [Fact]
+    public async Task Search_UsesTypedFieldsAndReturnsEditionSummaries()
+    {
+        var transport = new RecordingTransport(new(
+            HttpStatusCode.OK, RecordedReleasePage));
+        var provider = new MusicBrainzMetadataProvider(transport);
+        var query = new MusicBrainzReleaseSearchQuery(
+            Artist: "Example Artist",
+            Album: "Example Album",
+            Barcode: "0123456789012",
+            CatalogNumber: "CAT-001",
+            ReleaseId:
+                Guid.Parse("11111111-1111-1111-1111-111111111111"));
+
+        MusicBrainzReleaseSearchResult result =
+            await provider.SearchReleasesAsync(query);
+
+        Assert.Equal(2, result.Releases.Length);
+        string decoded = Uri.UnescapeDataString(transport.Uri!.Query);
+        Assert.Contains("artist:\"Example Artist\"", decoded);
+        Assert.Contains("release:\"Example Album\"", decoded);
+        Assert.Contains("barcode:\"0123456789012\"", decoded);
+        Assert.Contains("catno:\"CAT-001\"", decoded);
+        Assert.Contains(
+            "reid:11111111-1111-1111-1111-111111111111", decoded);
+    }
+
+    [Fact]
+    public void SearchPage_UsesSearchCountAndOffsetProperties()
+    {
+        string searchPage = RecordedReleasePage
+            .Replace("\"release-count\"", "\"count\"",
+                StringComparison.Ordinal)
+            .Replace("\"release-offset\"", "\"offset\"",
+                StringComparison.Ordinal);
+
+        MusicBrainzReleasePage page =
+            MusicBrainzMetadataProvider.ParseReleasePage(searchPage);
+
+        Assert.Equal(2, page.Total);
+        Assert.Equal(0, page.Offset);
+        Assert.Equal(2, page.Releases.Length);
+    }
+
+    [Fact]
+    public async Task ReleaseLookup_LoadsCompleteTrackDetails()
+    {
+        var transport = new RecordingTransport(new(
+            HttpStatusCode.OK, RecordedReleaseDocument));
+        var provider = new MusicBrainzMetadataProvider(transport);
+        Guid releaseId =
+            Guid.Parse("11111111-1111-1111-1111-111111111111");
+
+        MusicBrainzReleaseCandidate result =
+            await provider.GetReleaseAsync(releaseId);
+
+        Assert.Equal(releaseId, result.ReleaseId);
+        Assert.Single(result.Tracks);
+        Assert.Contains($"/release/{releaseId:D}", transport.Uri!.AbsolutePath);
+        Assert.Contains("recordings", transport.Uri.Query);
     }
 
     [Theory]

@@ -246,7 +246,8 @@ capability comparison is possible through typed operations without scripting.
     submission feature is separately opt-in, uses `ISecretStore` for the user's
     key, previews submitted data, and clearly identifies the external write.
 - [~] Ship MusicBrainz and Cover Art Archive providers:
-  - [ ] Search by artist/album, barcode, catalog number, or release ID.
+  - [x] Search MusicBrainz by artist/album, barcode, catalog number, or release
+    ID, then load complete details only for the selected edition.
   - [x] Compare recording-linked editions, dates, countries, status, labels,
     catalog numbers, media formats, track positions, and tracklists.
   - [x] Suggest mappings using recording ID, disc/track number, normalized
@@ -513,3 +514,8 @@ per-operation capability flags.
 - Mapped metadata enters the same authoritative per-file preview, stale-plan
   validation, staged apply, recovery, and history path as every other metadata
   operation. Mapping and preview both report progress and support cancellation.
+- Added direct, paged MusicBrainz release search by artist/album, barcode,
+  catalog number, or release ID in both Workbench and Library. Search results
+  remain lightweight; building a mapping loads the chosen edition's complete
+  media and track details through the same throttled, retryable, cancellable
+  provider.

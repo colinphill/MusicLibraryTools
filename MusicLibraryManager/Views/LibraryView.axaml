@@ -332,10 +332,32 @@
                     SelectedItem="{Binding SelectedAudioMatch, Mode=TwoWay}" />
               </TabItem>
               <TabItem Header="Release editions">
-                <controls:AppDataGrid x:Name="LibraryReleaseDiscoveryGrid"
-                    Margin="0,6,0,0"
-                    ItemsSource="{Binding ReleaseMatches}"
-                    SelectedItem="{Binding SelectedRelease, Mode=TwoWay}" />
+                <Grid Margin="0,6,0,0" RowDefinitions="Auto,*" RowSpacing="6">
+                  <Grid ColumnDefinitions="*,*,*,*,*,Auto" ColumnSpacing="6">
+                    <TextBox Classes="app"
+                             Text="{Binding ReleaseSearch.Artist, Mode=TwoWay}"
+                             PlaceholderText="Artist" />
+                    <TextBox Grid.Column="1" Classes="app"
+                             Text="{Binding ReleaseSearch.Album, Mode=TwoWay}"
+                             PlaceholderText="Album" />
+                    <TextBox Grid.Column="2" Classes="app"
+                             Text="{Binding ReleaseSearch.Barcode, Mode=TwoWay}"
+                             PlaceholderText="Barcode" />
+                    <TextBox Grid.Column="3" Classes="app"
+                             Text="{Binding ReleaseSearch.CatalogNumber, Mode=TwoWay}"
+                             PlaceholderText="Catalog no." />
+                    <TextBox Grid.Column="4" Classes="app"
+                             Text="{Binding ReleaseSearch.ReleaseId, Mode=TwoWay}"
+                             PlaceholderText="Release ID" />
+                    <Button Grid.Column="5" Classes="app primary"
+                            Content="Search"
+                            Command="{Binding SearchLibraryMusicBrainzReleasesCommand}" />
+                  </Grid>
+                  <controls:AppDataGrid x:Name="LibraryReleaseDiscoveryGrid"
+                      Grid.Row="1"
+                      ItemsSource="{Binding ReleaseMatches}"
+                      SelectedItem="{Binding SelectedRelease, Mode=TwoWay}" />
+                </Grid>
               </TabItem>
               <TabItem Header="Track mapping">
                 <Grid Margin="0,6,0,0" RowDefinitions="Auto,*,Auto" RowSpacing="6">

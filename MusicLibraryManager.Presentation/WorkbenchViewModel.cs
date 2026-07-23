@@ -57,6 +57,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(ResolveSelectedRecordingCommand))]
     [NotifyCanExecuteChangedFor(nameof(BuildReleaseMappingCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewReleaseMetadataCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SearchMusicBrainzReleasesCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -140,6 +141,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         OperationEditor = new(
             operationCatalog, MetadataOperationSurface.Workbench, recipeStore);
         ReleaseImport.PropertyChanged += OnReleaseImportChanged;
+        ReleaseSearch.PropertyChanged += (_, _) =>
+            SearchMusicBrainzReleasesCommand.NotifyCanExecuteChanged();
         KnownFieldChoices = Enum.GetValues<TagFields>()
             .Where(field => field != TagFields.NullField)
             .Select(field => new MetadataFieldChoice(field, field.ToString()))
@@ -156,6 +159,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     public ObservableCollection<MusicBrainzTrackMappingRow> ReleaseTrackMappings { get; } = [];
     public ObservableCollection<string> RecentLocations { get; } = [];
     public MusicBrainzImportSelectionViewModel ReleaseImport { get; } = new();
+    public MusicBrainzReleaseSearchViewModel ReleaseSearch { get; } = new();
     public MetadataOperationEditorViewModel OperationEditor { get; }
     public IReadOnlyList<MetadataFieldChoice> KnownFieldChoices { get; }
     public IReadOnlyList<WorkbenchFieldEditMode> FieldEditModes { get; } =
@@ -633,6 +637,44 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanSearchMusicBrainzReleases))]
+    private async Task SearchMusicBrainzReleasesAsync()
+    {
+        BeginOperation("Searching MusicBrainz releases");
+        try
+        {
+            MusicBrainzReleaseSearchResult result =
+                await _musicBrainz.SearchReleasesAsync(
+                    ReleaseSearch.CreateQuery(),
+                    CreateProgress(),
+                    _cancellation!.Token);
+            SelectedRelease = null;
+            ReleaseMatches.Clear();
+            ClearReleaseTrackMappings();
+            string sourcePath = SelectedFile?.Path ?? "";
+            foreach (MusicBrainzReleaseRow row in
+                     MusicBrainzReleaseRows.CreateSearch(sourcePath, result))
+                ReleaseMatches.Add(row);
+            SelectedRelease = ReleaseMatches.FirstOrDefault();
+            StatusText =
+                $"MusicBrainz found {ReleaseMatches.Count:N0} release edition(s). " +
+                "Choose one and build a file-to-track mapping.";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "MusicBrainz release search cancelled.";
+        }
+        catch (Exception error)
+        {
+            StatusText = $"MusicBrainz release search failed: {error.Message}";
+        }
+        finally
+        {
+            EndOperation();
+            NotifySessionChanged();
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanBuildReleaseMapping))]
     private async Task BuildReleaseMappingAsync()
     {
@@ -641,6 +683,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         BeginOperation("Matching Workbench files to release tracks");
         try
         {
+            MusicBrainzReleaseCandidate release =
+                await EnsureSelectedReleaseDetailsAsync(
+                    CreateProgress(), _cancellation!.Token);
             MusicBrainzSourceFile[] sources = Files.Select(file =>
                 new MusicBrainzSourceFile(
                     file.Path,
@@ -656,7 +701,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                 .ToArray();
             MusicBrainzReleaseMapping mapping =
                 await _releaseMapping.MapAsync(
-                    SelectedRelease.Candidate,
+                    release,
                     sources,
                     CreateProgress(),
                     _cancellation!.Token);
@@ -958,6 +1003,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private bool CanResolveSelectedRecording() =>
         !IsBusy &&
         SelectedAudioMatch?.MusicBrainzRecordingIdValues.Length == 1;
+    private bool CanSearchMusicBrainzReleases() =>
+        !IsBusy && ReleaseSearch.HasCriteria;
     private bool CanBuildReleaseMapping() =>
         !IsBusy && SelectedRelease is not null && Files.Count > 0;
     private bool CanPreviewReleaseMetadata() =>
@@ -1008,6 +1055,27 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
 
     private static int? ParsePositive(string? value) =>
         int.TryParse(value, out int parsed) && parsed > 0 ? parsed : null;
+
+    private async Task<MusicBrainzReleaseCandidate>
+        EnsureSelectedReleaseDetailsAsync(
+            IProgress<OperationProgress> progress,
+            CancellationToken ct)
+    {
+        MusicBrainzReleaseRow selected = SelectedRelease ??
+            throw new InvalidOperationException("Choose a MusicBrainz release.");
+        if (selected.Candidate.Tracks.Length > 0)
+            return selected.Candidate;
+        MusicBrainzReleaseCandidate detailed =
+            await _musicBrainz.GetReleaseAsync(
+                selected.ReleaseId, progress, ct);
+        var row = MusicBrainzReleaseRows.CreateDetailed(
+            selected.SourcePath, detailed, selected.RecordingId);
+        int index = ReleaseMatches.IndexOf(selected);
+        if (index >= 0)
+            ReleaseMatches[index] = row;
+        SelectedRelease = row;
+        return detailed;
+    }
 
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase

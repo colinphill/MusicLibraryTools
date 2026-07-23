@@ -1517,6 +1517,21 @@ public sealed class PresentationTests
 
         Assert.Empty(viewModel.ReleaseTrackMappings);
         Assert.False(viewModel.HasApplicableOperationPreview);
+
+        viewModel.ReleaseSearch.Artist = "Matched Artist";
+        viewModel.ReleaseSearch.Album = "Matched Album";
+        await viewModel.SearchLibraryMusicBrainzReleasesCommand.ExecuteAsync(null);
+
+        Assert.Equal("Matched Artist", musicBrainz.SearchQuery!.Artist);
+        MusicBrainzReleaseRow searchResult =
+            Assert.Single(viewModel.ReleaseMatches);
+        Assert.Empty(searchResult.Candidate.Tracks);
+
+        await viewModel.BuildLibraryReleaseMappingCommand.ExecuteAsync(null);
+
+        Assert.Equal(searchResult.ReleaseId, musicBrainz.RequestedReleaseId);
+        Assert.Contains(viewModel.ReleaseTrackMappings,
+            row => row.Path == @"C:\music\one.flac" && row.IsIncluded);
     }
 
     private static TrackRecord Track(string artist, string album, string title, string codec, string path) => new()
@@ -1753,6 +1768,8 @@ internal sealed class FakeAcoustIdDiscoveryService : IAcoustIdDiscoveryService
 internal sealed class FakeMusicBrainzMetadataProvider : IMusicBrainzMetadataProvider
 {
     public Guid? RecordingId { get; private set; }
+    public Guid? RequestedReleaseId { get; private set; }
+    public MusicBrainzReleaseSearchQuery? SearchQuery { get; private set; }
 
     public Task<MusicBrainzReleaseResult> ResolveRecordingAsync(
         Guid recordingId,
@@ -1760,6 +1777,40 @@ internal sealed class FakeMusicBrainzMetadataProvider : IMusicBrainzMetadataProv
         CancellationToken ct = default)
     {
         RecordingId = recordingId;
+        MusicBrainzReleaseCandidate release = CreateRelease(recordingId);
+        progress?.Report(new(
+            OperationPhase.Completed, 1, 1, Message: "Release lookup complete"));
+        return Task.FromResult(new MusicBrainzReleaseResult(
+            recordingId, [release], DateTimeOffset.UtcNow));
+    }
+
+    public Task<MusicBrainzReleaseSearchResult> SearchReleasesAsync(
+        MusicBrainzReleaseSearchQuery query,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        SearchQuery = query;
+        MusicBrainzReleaseCandidate summary = CreateRelease(
+            Guid.Parse("cd2e7c47-16f5-46c6-a37c-a1eb7bf599ff")) with
+        {
+            Tracks = [],
+        };
+        return Task.FromResult(new MusicBrainzReleaseSearchResult(
+            [summary], DateTimeOffset.UtcNow));
+    }
+
+    public Task<MusicBrainzReleaseCandidate> GetReleaseAsync(
+        Guid releaseId,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        RequestedReleaseId = releaseId;
+        return Task.FromResult(CreateRelease(
+            Guid.Parse("cd2e7c47-16f5-46c6-a37c-a1eb7bf599ff")));
+    }
+
+    private static MusicBrainzReleaseCandidate CreateRelease(Guid recordingId)
+    {
         var track = new MusicBrainzTrackCandidate(
             Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"),
             1,
@@ -1770,7 +1821,7 @@ internal sealed class FakeMusicBrainzMetadataProvider : IMusicBrainzMetadataProv
             recordingId,
             "Matched Song",
             "Matched Artist");
-        var release = new MusicBrainzReleaseCandidate(
+        return new MusicBrainzReleaseCandidate(
             Guid.Parse("11111111-1111-1111-1111-111111111111"),
             "Matched Album",
             "Matched Artist",
@@ -1785,10 +1836,6 @@ internal sealed class FakeMusicBrainzMetadataProvider : IMusicBrainzMetadataProv
             "CAT-1",
             ["Digital Media"],
             [track]);
-        progress?.Report(new(
-            OperationPhase.Completed, 1, 1, Message: "Release lookup complete"));
-        return Task.FromResult(new MusicBrainzReleaseResult(
-            recordingId, [release], DateTimeOffset.UtcNow));
     }
 }
 
