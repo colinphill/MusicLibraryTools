@@ -826,6 +826,43 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public async Task Settings_stores_Discogs_token_only_in_secret_store()
+    {
+        var settings = new FakeSettings();
+        var secrets = new SessionSecretStore();
+        var viewModel = new SettingsViewModel(
+            settings,
+            new FakeFilePicker(),
+            new FakeDialogs(),
+            new FakeTheme(),
+            secrets);
+        viewModel.DiscogsToken = "personal-token";
+
+        await viewModel.SaveDiscogsTokenCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            "personal-token",
+            await secrets.ReadAsync(
+                DiscogsMetadataProvider.TokenSecretKey,
+                TestContext.Current.CancellationToken));
+        Assert.Null(viewModel.DiscogsToken);
+        Assert.DoesNotContain(
+            settings.Preferences.Keys,
+            key => key.Contains("discogs",
+                StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(
+            "session",
+            viewModel.DiscogsCredentialStatus,
+            StringComparison.OrdinalIgnoreCase);
+
+        await viewModel.ClearDiscogsTokenCommand.ExecuteAsync(null);
+
+        Assert.Null(await secrets.ReadAsync(
+            DiscogsMetadataProvider.TokenSecretKey,
+            TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
     public void Audio_discovery_labels_offline_cached_candidates()
     {
         var fingerprint = new AudioFingerprint(
@@ -1481,6 +1518,7 @@ public sealed class PresentationTests
         var discovery = new FakeAcoustIdDiscoveryService();
         var metadataOperations = new FakeMetadataOperationService();
         var musicBrainz = new FakeMusicBrainzMetadataProvider();
+        var discogs = new FakeDiscogsMetadataProvider();
         var coverArt = new FakeCoverArtArchiveProvider();
         var viewModel = new LibraryViewModel(
             library,
@@ -1496,7 +1534,8 @@ public sealed class PresentationTests
             releaseMapping: new MusicBrainzReleaseMappingService(),
             coverArt: coverArt,
             files: new FakeFilePicker(
-                typeof(PresentationTests).Assembly.Location));
+                typeof(PresentationTests).Assembly.Location),
+            discogs: discogs);
         await viewModel.ReloadAsync();
         await viewModel.SelectAsync(
             [viewModel.Rows.Single(row => row.Title == "One")]);
@@ -1574,6 +1613,23 @@ public sealed class PresentationTests
         Assert.Equal(searchResult.ReleaseId, musicBrainz.RequestedReleaseId);
         Assert.Contains(viewModel.ReleaseTrackMappings,
             row => row.Path == @"C:\music\one.flac" && row.IsIncluded);
+
+        viewModel.DiscogsSearch.Artist = "Matched Artist";
+        viewModel.DiscogsSearch.Album = "Matched Album";
+        await viewModel.SearchLibraryDiscogsReleasesCommand.ExecuteAsync(null);
+
+        Assert.Equal("Matched Artist", discogs.SearchQuery!.Artist);
+        DiscogsReleaseRow discogsResult =
+            Assert.Single(viewModel.DiscogsMatches);
+        Assert.Equal(4242, discogsResult.ReleaseId);
+        Assert.Equal("Discogs", discogsResult.Source);
+        Assert.Equal(0, discogsResult.TrackCount);
+
+        await viewModel.LoadLibraryDiscogsReleaseDetailsCommand
+            .ExecuteAsync(null);
+
+        Assert.Equal(4242, discogs.RequestedReleaseId);
+        Assert.Equal(1, viewModel.SelectedDiscogsRelease!.TrackCount);
 
         await viewModel.FindLibraryReleaseArtworkCommand.ExecuteAsync(null);
 
@@ -2000,6 +2056,73 @@ internal sealed class FakeMusicBrainzMetadataProvider : IMusicBrainzMetadataProv
             ["Digital Media"],
             [track]);
     }
+}
+
+internal sealed class FakeDiscogsMetadataProvider : IDiscogsMetadataProvider
+{
+    public MetadataSourceDescriptor Descriptor { get; } = new(
+        "fake-discogs",
+        "Fake Discogs",
+        MetadataSourceCapabilities.ReleaseSearch |
+        MetadataSourceCapabilities.ReleaseDetails,
+        RequiresCredential: true);
+
+    public DiscogsReleaseSearchQuery? SearchQuery { get; private set; }
+    public long? RequestedReleaseId { get; private set; }
+
+    public Task<DiscogsReleaseSearchResult> SearchReleasesAsync(
+        DiscogsReleaseSearchQuery query,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        SearchQuery = query;
+        progress?.Report(new(
+            OperationPhase.Completed,
+            1,
+            1,
+            Message: "Discogs search complete"));
+        return Task.FromResult(new DiscogsReleaseSearchResult(
+            [CreateRelease(withTracks: false)],
+            DateTimeOffset.UtcNow));
+    }
+
+    public Task<DiscogsReleaseCandidate> GetReleaseAsync(
+        long releaseId,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        RequestedReleaseId = releaseId;
+        progress?.Report(new(
+            OperationPhase.Completed,
+            1,
+            1,
+            Message: "Discogs release loaded"));
+        return Task.FromResult(CreateRelease(withTracks: true));
+    }
+
+    private static DiscogsReleaseCandidate CreateRelease(bool withTracks) =>
+        new(
+            4242,
+            4000,
+            "Matched Album",
+            "Matched Artist",
+            2001,
+            "2001-02-03",
+            "US",
+            ["Matched Label"],
+            ["CAT-42"],
+            ["1 CD (Album)"],
+            ["Electronic"],
+            ["Downtempo"],
+            ["0123456789012"],
+            new Uri("https://www.discogs.com/release/4242"),
+            null,
+            null,
+            withTracks
+                ? [new("1", "Matched Song", "0:42", "Matched Artist")]
+                : []);
 }
 
 internal sealed class FakeCoverArtArchiveProvider : ICoverArtArchiveProvider

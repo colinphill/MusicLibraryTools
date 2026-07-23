@@ -33,6 +33,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private readonly IMusicBrainzMetadataProvider? _musicBrainz;
     private readonly IMusicBrainzReleaseMappingService? _releaseMapping;
     private readonly ICoverArtArchiveProvider? _coverArt;
+    private readonly IDiscogsMetadataProvider? _discogs;
     private readonly IFilePickerService? _files;
     private readonly IDialogCoordinator? _dialogs;
     private MetadataOperationPlan? _libraryOperationPlan;
@@ -62,6 +63,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(BuildLibraryReleaseMappingCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryReleaseMetadataCommand))]
     [NotifyCanExecuteChangedFor(nameof(SearchLibraryMusicBrainzReleasesCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SearchLibraryDiscogsReleasesCommand))]
+    [NotifyCanExecuteChangedFor(nameof(LoadLibraryDiscogsReleaseDetailsCommand))]
     [NotifyCanExecuteChangedFor(nameof(FindLibraryReleaseArtworkCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryReleaseArtworkCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLocalLibraryArtworkCommand))]
@@ -114,6 +117,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(BuildLibraryReleaseMappingCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryReleaseMetadataCommand))]
     [NotifyCanExecuteChangedFor(nameof(SearchLibraryMusicBrainzReleasesCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SearchLibraryDiscogsReleasesCommand))]
+    [NotifyCanExecuteChangedFor(nameof(LoadLibraryDiscogsReleaseDetailsCommand))]
     [NotifyCanExecuteChangedFor(nameof(FindLibraryReleaseArtworkCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryReleaseArtworkCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLocalLibraryArtworkCommand))]
@@ -165,6 +170,10 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private MusicBrainzReleaseRow? _selectedRelease;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(LoadLibraryDiscogsReleaseDetailsCommand))]
+    private DiscogsReleaseRow? _selectedDiscogsRelease;
+
+    [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryReleaseArtworkCommand))]
     private CoverArtCandidateRow? _selectedArtworkMatch;
 
@@ -188,7 +197,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         IMusicBrainzMetadataProvider? musicBrainz = null,
         IMusicBrainzReleaseMappingService? releaseMapping = null,
         ICoverArtArchiveProvider? coverArt = null,
-        IFilePickerService? files = null)
+        IFilePickerService? files = null,
+        IDiscogsMetadataProvider? discogs = null)
     {
         _library = library;
         _reindex = reindex;
@@ -202,6 +212,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         _musicBrainz = musicBrainz;
         _releaseMapping = releaseMapping;
         _coverArt = coverArt;
+        _discogs = discogs;
         _files = files;
         _dialogs = dialogs;
         OperationEditor = new(
@@ -212,6 +223,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         ReleaseImport.PropertyChanged += OnReleaseImportChanged;
         ReleaseSearch.PropertyChanged += (_, _) =>
             SearchLibraryMusicBrainzReleasesCommand.NotifyCanExecuteChanged();
+        DiscogsSearch.PropertyChanged += (_, _) =>
+            SearchLibraryDiscogsReleasesCommand.NotifyCanExecuteChanged();
         Indexing = indexing;
         foreach (DetailsColumn column in DetailsColumns.All)
             Columns.Add(new LibraryColumnChoice(column.Key, column.Header, DetailsColumns.DefaultVisible.Contains(column.Key)));
@@ -233,9 +246,11 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     public ObservableCollection<MusicBrainzReleaseRow> ReleaseMatches { get; } = [];
     public ObservableCollection<MusicBrainzTrackMappingRow> ReleaseTrackMappings { get; } = [];
     public ObservableCollection<CoverArtCandidateRow> ArtworkMatches { get; } = [];
+    public ObservableCollection<DiscogsReleaseRow> DiscogsMatches { get; } = [];
     public ObservableCollection<MetadataPreviewRow> OperationPreviewChanges { get; } = [];
     public MusicBrainzImportSelectionViewModel ReleaseImport { get; } = new();
     public MusicBrainzReleaseSearchViewModel ReleaseSearch { get; } = new();
+    public DiscogsReleaseSearchViewModel DiscogsSearch { get; } = new();
     public IReadOnlyList<FilterMode> FilterModes { get; } = Enum.GetValues<FilterMode>();
     public IReadOnlyList<LibraryOperationScope> OperationScopes { get; } =
         Enum.GetValues<LibraryOperationScope>();
@@ -768,6 +783,86 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanSearchLibraryDiscogsReleases))]
+    private async Task SearchLibraryDiscogsReleasesAsync()
+    {
+        if (_discogs is null)
+            return;
+        BeginLibraryOperation("Searching Discogs releases");
+        try
+        {
+            DiscogsReleaseSearchResult result =
+                await _discogs.SearchReleasesAsync(
+                    DiscogsSearch.CreateQuery(),
+                    CreateOperationProgress(),
+                    _operationCancellation!.Token);
+            SelectedDiscogsRelease = null;
+            DiscogsMatches.Clear();
+            string source = result.OfflineFallback
+                ? "Offline cache"
+                : result.FromCache ? "Cache" : "Discogs";
+            foreach (DiscogsReleaseCandidate candidate in result.Releases)
+                DiscogsMatches.Add(
+                    DiscogsReleaseRow.Create(candidate, source));
+            SelectedDiscogsRelease = DiscogsMatches.FirstOrDefault();
+            OperationStatus =
+                $"Discogs found {DiscogsMatches.Count:N0} release edition(s). " +
+                "Select one to load its complete track and edition details.";
+        }
+        catch (OperationCanceledException)
+        {
+            OperationStatus = "Discogs release search cancelled.";
+        }
+        catch (Exception error)
+        {
+            OperationStatus =
+                $"Discogs release search failed: {error.Message}";
+        }
+        finally
+        {
+            EndLibraryOperation();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanLoadLibraryDiscogsReleaseDetails))]
+    private async Task LoadLibraryDiscogsReleaseDetailsAsync()
+    {
+        if (_discogs is null || SelectedDiscogsRelease is null)
+            return;
+        BeginLibraryOperation("Loading Discogs release details");
+        try
+        {
+            DiscogsReleaseRow selected = SelectedDiscogsRelease;
+            DiscogsReleaseCandidate release =
+                await _discogs.GetReleaseAsync(
+                    selected.ReleaseId,
+                    CreateOperationProgress(),
+                    _operationCancellation!.Token);
+            var detailed = DiscogsReleaseRow.Create(
+                release, selected.Source);
+            int index = DiscogsMatches.IndexOf(selected);
+            if (index >= 0)
+                DiscogsMatches[index] = detailed;
+            SelectedDiscogsRelease = detailed;
+            OperationStatus =
+                $"Loaded Discogs release {release.ReleaseId} with " +
+                $"{release.Tracks.Length:N0} track(s). No metadata was changed.";
+        }
+        catch (OperationCanceledException)
+        {
+            OperationStatus = "Discogs release detail lookup cancelled.";
+        }
+        catch (Exception error)
+        {
+            OperationStatus =
+                $"Discogs release detail lookup failed: {error.Message}";
+        }
+        finally
+        {
+            EndLibraryOperation();
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanFindLibraryReleaseArtwork))]
     private async Task FindLibraryReleaseArtworkAsync()
     {
@@ -1249,6 +1344,12 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private bool CanSearchLibraryMusicBrainzReleases() =>
         !IsBusy && !IsOperationBusy && _musicBrainz is not null &&
         ReleaseSearch.HasCriteria;
+    private bool CanSearchLibraryDiscogsReleases() =>
+        !IsBusy && !IsOperationBusy && _discogs is not null &&
+        DiscogsSearch.HasCriteria;
+    private bool CanLoadLibraryDiscogsReleaseDetails() =>
+        !IsBusy && !IsOperationBusy && _discogs is not null &&
+        SelectedDiscogsRelease is not null;
     private bool CanFindLibraryReleaseArtwork() =>
         !IsBusy && !IsOperationBusy && _coverArt is not null &&
         SelectedRelease is not null;

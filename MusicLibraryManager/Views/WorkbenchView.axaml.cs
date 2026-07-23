@@ -74,9 +74,27 @@ public partial class WorkbenchView : UserControl
             new("Tracks", "Tracks", "TrackCount", 75, 60),
             new("ReleaseID", "MusicBrainz release ID", "ReleaseId", 280, 180),
         ]);
+        ConfigureDiscogsGrid(DiscogsDiscoveryGrid);
         ConfigureReleaseTrackMappingGrid(ReleaseTrackMappingGrid);
         ConfigureReleaseArtworkGrid(ReleaseArtworkGrid);
     }
+
+    private static void ConfigureDiscogsGrid(AppDataGrid grid) =>
+        grid.ConfigureColumns(
+        [
+            new("Title", "Release", "Title", 220, 130),
+            new("Artist", "Artist credit", "Artist", 180, 105),
+            new("Year", "Year", "Year", 75, 60),
+            new("Country", "Country", "Country", 75, 62),
+            new("Labels", "Labels", "Labels", 160, 95),
+            new("Catalog", "Catalog no.", "CatalogNumbers", 130, 85),
+            new("Formats", "Formats", "Formats", 150, 90),
+            new("Genres", "Genres", "Genres", 130, 85),
+            new("Styles", "Styles", "Styles", 140, 90),
+            new("Tracks", "Tracks", "TrackCount", 70, 55),
+            new("Source", "Source", "Source", 100, 75),
+            new("ReleaseID", "Discogs release ID", "ReleaseId", 150, 100),
+        ]);
 
     private static void ConfigureReleaseArtworkGrid(AppDataGrid grid)
     {

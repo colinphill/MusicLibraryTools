@@ -16,6 +16,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     private readonly IFilePickerService _files;
     private readonly IDialogCoordinator _dialogs;
     private readonly IThemeService _theme;
+    private readonly ISecretStore _secrets;
     private EditableLibraryConfig _editing = EditableLibraryConfig.CreateNew();
     private bool _suppressDirty = true;
     private bool _refreshingSyncTargetChoices;
@@ -34,6 +35,12 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     [ObservableProperty] private string _fpcalcPath = "fpcalc";
     [ObservableProperty] private string? _acoustIdClientKey;
     [ObservableProperty] private bool _offlineMode;
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveDiscogsTokenCommand))]
+    private string? _discogsToken;
+    [ObservableProperty]
+    private string _discogsCredentialStatus =
+        "Checking secure credential storage...";
     [ObservableProperty] private int _oversizedArtworkByteThreshold =
         LibraryArtworkHealthSettings.DefaultOversizedByteThreshold;
     [ObservableProperty] private int _oversizedArtworkDimensionThreshold =
@@ -70,12 +77,14 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         IAppSettings settings,
         IFilePickerService files,
         IDialogCoordinator dialogs,
-        IThemeService theme)
+        IThemeService theme,
+        ISecretStore? secrets = null)
     {
         _settings = settings;
         _files = files;
         _dialogs = dialogs;
         _theme = theme;
+        _secrets = secrets ?? new SessionSecretStore();
         _fpcalcPath =
             settings.GetPreference(AudioFingerprintService.ExecutablePreferenceKey) ??
             "fpcalc";
@@ -109,6 +118,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         TrackRows(ExportProfiles);
         _suppressDirty = false;
         HasUnsavedChanges = false;
+        _ = RefreshDiscogsCredentialStatusAsync();
     }
 
     public ObservableCollection<string> RecentConfigurations { get; }
@@ -393,6 +403,68 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         _settings.SetPreference(
             ProviderNetworkPolicy.OfflinePreferenceKey,
             value ? bool.TrueString : null);
+
+    private bool CanSaveDiscogsToken() =>
+        !string.IsNullOrWhiteSpace(DiscogsToken);
+
+    [RelayCommand(CanExecute = nameof(CanSaveDiscogsToken))]
+    private async Task SaveDiscogsTokenAsync()
+    {
+        string token = DiscogsToken?.Trim() ??
+            throw new InvalidOperationException(
+                "Enter a Discogs personal access token.");
+        try
+        {
+            await _secrets.WriteAsync(
+                DiscogsMetadataProvider.TokenSecretKey,
+                token);
+            DiscogsToken = null;
+            DiscogsCredentialStatus = _secrets.IsPersistent
+                ? $"Discogs token stored in {_secrets.Kind}."
+                : "Discogs token stored for this application session only.";
+        }
+        catch (Exception error)
+        {
+            DiscogsCredentialStatus =
+                $"Could not store the Discogs token: {error.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private async Task ClearDiscogsTokenAsync()
+    {
+        try
+        {
+            await _secrets.DeleteAsync(
+                DiscogsMetadataProvider.TokenSecretKey);
+            DiscogsToken = null;
+            DiscogsCredentialStatus = "No Discogs token is stored.";
+        }
+        catch (Exception error)
+        {
+            DiscogsCredentialStatus =
+                $"Could not clear the Discogs token: {error.Message}";
+        }
+    }
+
+    private async Task RefreshDiscogsCredentialStatusAsync()
+    {
+        try
+        {
+            string? token = await _secrets.ReadAsync(
+                DiscogsMetadataProvider.TokenSecretKey);
+            DiscogsCredentialStatus = string.IsNullOrWhiteSpace(token)
+                ? "No Discogs token is stored."
+                : _secrets.IsPersistent
+                    ? $"A Discogs token is stored in {_secrets.Kind}."
+                    : "A Discogs token is stored for this application session only.";
+        }
+        catch (Exception error)
+        {
+            DiscogsCredentialStatus =
+                $"Secure credential storage is unavailable: {error.Message}";
+        }
+    }
 
     private static readonly HashSet<string> EditorProperties =
     [

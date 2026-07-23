@@ -67,6 +67,7 @@ public partial class LibraryView : UserControl
             new("Position", "Matched position", "MatchedTrackPositions", 130, 90),
             new("ReleaseID", "MusicBrainz release ID", "ReleaseId", 260, 170),
         ]);
+        ConfigureDiscogsGrid(LibraryDiscogsDiscoveryGrid);
         ConfigureReleaseTrackMappingGrid(LibraryReleaseTrackMappingGrid);
         ConfigureReleaseArtworkGrid(LibraryReleaseArtworkGrid);
         LibraryGrid.ApplySort(_sort);
@@ -79,6 +80,23 @@ public partial class LibraryView : UserControl
         if (_viewModel.Rows.Count == 0)
             _ = _viewModel.ReloadAsync();
     }
+
+    private static void ConfigureDiscogsGrid(AppDataGrid grid) =>
+        grid.ConfigureColumns(
+        [
+            new("Title", "Release", "Title", 210, 125),
+            new("Artist", "Artist credit", "Artist", 170, 100),
+            new("Year", "Year", "Year", 70, 58),
+            new("Country", "Country", "Country", 72, 60),
+            new("Labels", "Labels", "Labels", 150, 90),
+            new("Catalog", "Catalog no.", "CatalogNumbers", 125, 82),
+            new("Formats", "Formats", "Formats", 140, 88),
+            new("Genres", "Genres", "Genres", 125, 82),
+            new("Styles", "Styles", "Styles", 135, 88),
+            new("Tracks", "Tracks", "TrackCount", 68, 54),
+            new("Source", "Source", "Source", 95, 72),
+            new("ReleaseID", "Discogs release ID", "ReleaseId", 145, 95),
+        ]);
 
     private static void ConfigureReleaseTrackMappingGrid(AppDataGrid grid)
     {

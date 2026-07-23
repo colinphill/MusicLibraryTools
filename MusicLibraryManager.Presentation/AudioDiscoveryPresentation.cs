@@ -201,6 +201,87 @@ public partial class MusicBrainzReleaseSearchViewModel : ObservableObject
     }
 }
 
+public sealed record DiscogsReleaseRow(
+    long ReleaseId,
+    string Title,
+    string Artist,
+    string Year,
+    string Country,
+    string Labels,
+    string CatalogNumbers,
+    string Formats,
+    string Genres,
+    string Styles,
+    int TrackCount,
+    string Source,
+    DiscogsReleaseCandidate Candidate)
+{
+    public static DiscogsReleaseRow Create(
+        DiscogsReleaseCandidate release,
+        string source) =>
+        new(
+            release.ReleaseId,
+            release.Title,
+            release.ArtistCredit,
+            release.Year?.ToString() ?? "",
+            release.Country ?? "",
+            string.Join("; ", release.Labels),
+            string.Join("; ", release.CatalogNumbers),
+            string.Join("; ", release.Formats),
+            string.Join("; ", release.Genres),
+            string.Join("; ", release.Styles),
+            release.Tracks.Length,
+            source,
+            release);
+}
+
+public partial class DiscogsReleaseSearchViewModel : ObservableObject
+{
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCriteria))]
+    private string? _artist;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCriteria))]
+    private string? _album;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCriteria))]
+    private string? _barcode;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCriteria))]
+    private string? _catalogNumber;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCriteria))]
+    private string? _releaseId;
+
+    public bool HasCriteria =>
+        !string.IsNullOrWhiteSpace(Artist) ||
+        !string.IsNullOrWhiteSpace(Album) ||
+        !string.IsNullOrWhiteSpace(Barcode) ||
+        !string.IsNullOrWhiteSpace(CatalogNumber) ||
+        !string.IsNullOrWhiteSpace(ReleaseId);
+
+    public DiscogsReleaseSearchQuery CreateQuery()
+    {
+        long? releaseId = null;
+        if (!string.IsNullOrWhiteSpace(ReleaseId))
+        {
+            if (!long.TryParse(ReleaseId, out long parsed) || parsed <= 0)
+                throw new InvalidOperationException(
+                    "The Discogs release ID must be a positive number.");
+            releaseId = parsed;
+        }
+        return new(
+            EmptyToNull(Artist),
+            EmptyToNull(Album),
+            EmptyToNull(Barcode),
+            EmptyToNull(CatalogNumber),
+            releaseId);
+    }
+
+    private static string? EmptyToNull(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}
+
 public partial class CoverArtCandidateRow(
     CoverArtArchiveCandidate candidate) : ObservableObject
 {

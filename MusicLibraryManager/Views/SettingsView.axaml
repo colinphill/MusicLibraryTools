@@ -182,6 +182,21 @@
               <TextBlock Classes="muted" Text="AcoustID application client key" FontSize="12" FontWeight="SemiBold" />
               <TextBox Classes="app" Text="{Binding AcoustIdClientKey, Mode=TwoWay}"
                        AutomationProperties.Name="AcoustID application client key" />
+              <TextBlock Classes="muted" Margin="0,8,0,0" TextWrapping="Wrap"
+                         Text="Discogs search requires a personal access token. The token is stored in the operating-system credential service when available, with session-only storage as a fallback." />
+              <TextBlock Classes="muted" Text="Discogs personal access token" FontSize="12" FontWeight="SemiBold" />
+              <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                <TextBox Classes="app" Text="{Binding DiscogsToken, Mode=TwoWay}"
+                         PasswordChar="●"
+                         PlaceholderText="Enter a new token to store"
+                         AutomationProperties.Name="Discogs personal access token" />
+                <Button Grid.Column="1" Classes="app" Content="Store token"
+                        Command="{Binding SaveDiscogsTokenCommand}" />
+                <Button Grid.Column="2" Classes="app" Content="Clear"
+                        Command="{Binding ClearDiscogsTokenCommand}" />
+              </Grid>
+              <TextBlock Classes="muted" TextWrapping="Wrap"
+                         Text="{Binding DiscogsCredentialStatus}" />
             </StackPanel>
           </ScrollViewer>
         </TabItem>

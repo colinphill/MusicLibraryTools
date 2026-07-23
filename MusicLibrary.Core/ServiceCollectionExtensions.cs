@@ -90,6 +90,12 @@ public static class ServiceCollectionExtensions
             sp.GetRequiredService<CoverArtArchiveProvider>());
         services.AddSingleton<IMetadataSourceProvider>(sp =>
             sp.GetRequiredService<CoverArtArchiveProvider>());
+        services.AddSingleton<IDiscogsHttpTransport, DiscogsHttpTransport>();
+        services.AddSingleton<DiscogsMetadataProvider>();
+        services.AddSingleton<IDiscogsMetadataProvider>(sp =>
+            sp.GetRequiredService<DiscogsMetadataProvider>());
+        services.AddSingleton<IMetadataSourceProvider>(sp =>
+            sp.GetRequiredService<DiscogsMetadataProvider>());
         services.AddSingleton<IMetadataSourceCatalog, MetadataSourceCatalog>();
         services.AddSingleton<IWavpackRunner, WavpackRunner>();
         services.AddSingleton<IDecodedAudioVerificationService, DecodedAudioVerificationService>();

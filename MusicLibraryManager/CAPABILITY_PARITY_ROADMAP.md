@@ -274,7 +274,16 @@ capability comparison is possible through typed operations without scripting.
 - [x] Introduce `ISecretStore`.
 - [x] Implement Windows Credential Manager, macOS Keychain, and Linux Secret
   Service support, with session-only fallback.
-- [ ] Add Discogs after secret storage is available.
+- [~] Add Discogs after secret storage is available:
+  - [x] Store the personal access token only through `ISecretStore`.
+  - [x] Add typed artist/album, barcode, catalog-number, and release-ID
+    search plus complete edition and track-detail lookup.
+  - [x] Use the shared provider cache, offline policy, retry/backoff,
+    rate limiting, progress, and cancellation behavior.
+  - [x] Expose release comparison and detail loading in both Workbench and
+    Library.
+  - [ ] Convert a confirmed Discogs edition and file-to-track mapping into
+    selective metadata and artwork previews.
 - [x] Do not create an mp3tag-compatible web-source language.
 
 **Acceptance:** An album can be searched, matched, selectively enriched,
@@ -586,3 +595,12 @@ per-operation capability flags.
   native facility is unavailable, the service latches to a process-local
   session store. Secrets are not written to app settings, portable library XML,
   logs, or diagnostics.
+- Added the first native Discogs provider slice. A personal token is managed
+  from Settings through `ISecretStore`; typed searches cover artist/album,
+  barcode, catalog number, and direct release ID, followed by complete edition
+  and track-detail loading. Workbench and Library expose the same comparison
+  grid and commands. Requests use an identifiable user agent, one-per-second
+  pacing, retry/backoff, the shared persistent cache and offline policy,
+  progress reporting, and cancellation. Recorded fixtures keep CI independent
+  of the live service. Selective Discogs-to-file mapping remains the next
+  unchecked part of this item.

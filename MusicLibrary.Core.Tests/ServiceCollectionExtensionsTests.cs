@@ -55,12 +55,14 @@ public sealed class ServiceCollectionExtensionsTests
             provider.GetRequiredService<IMusicBrainzReleaseMappingService>());
         Assert.IsType<CoverArtArchiveProvider>(
             provider.GetRequiredService<ICoverArtArchiveProvider>());
+        Assert.IsType<DiscogsMetadataProvider>(
+            provider.GetRequiredService<IDiscogsMetadataProvider>());
         Assert.IsType<ArtworkDownloadCache>(
             provider.GetRequiredService<IArtworkDownloadCache>());
         IMetadataSourceCatalog metadataSources =
             provider.GetRequiredService<IMetadataSourceCatalog>();
         Assert.Equal(
-            ["cover-art-archive", "musicbrainz"],
+            ["cover-art-archive", "discogs", "musicbrainz"],
             metadataSources.Providers.Select(source => source.Descriptor.Id));
         Assert.Same(
             provider.GetRequiredService<IMusicBrainzMetadataProvider>(),
@@ -68,6 +70,9 @@ public sealed class ServiceCollectionExtensionsTests
         Assert.Same(
             provider.GetRequiredService<ICoverArtArchiveProvider>(),
             metadataSources.Find("cover-art-archive"));
+        Assert.Same(
+            provider.GetRequiredService<IDiscogsMetadataProvider>(),
+            metadataSources.Find("discogs"));
         Assert.IsType<LibraryOperationContextFactory>(
             provider.GetRequiredService<ILibraryOperationContextFactory>());
         Assert.IsType<ItlMetadataRepairService>(
