@@ -77,6 +77,8 @@ public sealed record MediaDocument(
     MediaFileSnapshot Snapshot,
     bool IsWritable)
 {
+    public ImmutableArray<MediaChapter> Chapters { get; init; } = [];
+
     public ImmutableArray<string> Values(MetadataFieldKey field) => TagLayers
         .SelectMany(layer => layer.Fields)
         .Where(value => Equals(value.Field, field))

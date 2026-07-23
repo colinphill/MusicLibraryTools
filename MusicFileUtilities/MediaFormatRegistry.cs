@@ -45,6 +45,7 @@ namespace MusicFileUtilities
         Tak = 12,
         OptimFrog = 13,
         Asf = 14,
+        Matroska = 15,
     }
 
     /// <summary>Describes one extension and the operations supported for it.</summary>
@@ -207,6 +208,9 @@ namespace MusicFileUtilities
             const MediaFormatCapabilities remux = MediaFormatCapabilities.Remux;
             const MediaFormatCapabilities indexedWithoutTranscode =
                 MediaFormatCapabilities.LibraryIndex | readableAndWritable;
+            const MediaFormatCapabilities writableText =
+                MediaFormatCapabilities.ReadMetadata |
+                MediaFormatCapabilities.WriteMetadata;
 
             yield return new(".dsf", "DSF", MediaFormatFamily.Dsf, indexed | remux);
             yield return new(".m4a", "MPEG-4 audio", MediaFormatFamily.Mp4,
@@ -253,6 +257,15 @@ namespace MusicFileUtilities
             yield return new(".asf", "Advanced Systems Format", MediaFormatFamily.Asf,
                 readableAndWritable | MediaFormatCapabilities.TranscodeSource | remux);
             yield return new(".wmv", "Windows Media Video", MediaFormatFamily.Asf,
+                readableAndWritable | MediaFormatCapabilities.TranscodeSource | remux);
+            yield return new(".mka", "Matroska audio", MediaFormatFamily.Matroska,
+                indexed | remux);
+            yield return new(".weba", "WebM audio", MediaFormatFamily.Matroska,
+                MediaFormatCapabilities.LibraryIndex | writableText |
+                MediaFormatCapabilities.TranscodeSource | remux);
+            yield return new(".webm", "WebM", MediaFormatFamily.Matroska,
+                writableText | MediaFormatCapabilities.TranscodeSource | remux);
+            yield return new(".mkv", "Matroska", MediaFormatFamily.Matroska,
                 readableAndWritable | MediaFormatCapabilities.TranscodeSource | remux);
 
             // These variants have long been supported by direct metadata/artwork editing and by

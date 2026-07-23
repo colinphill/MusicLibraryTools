@@ -216,6 +216,27 @@ public sealed class MetadataWorkbenchServicesTests
     }
 
     [Fact]
+    public async Task Document_ExposesMatroskaTagsArtworkAndChapters()
+    {
+        using var media = MediaFixtures.Copy("sample.mka");
+
+        MediaDocument document = await _documents.LoadAsync(media.Path);
+
+        TagLayerDocument layer = Assert.Single(document.TagLayers);
+        Assert.Equal("Matroska Tags", layer.TagType);
+        Assert.True(layer.SupportsCustomFields);
+        Assert.True(layer.SupportsMultipleValues);
+        Assert.True(layer.IsWritable);
+        Assert.Equal("TestTitle", document.FirstValue(TagFields.Title));
+        Assert.Equal("FLAC", document.Codec?.CodecName);
+        Assert.Single(document.Artwork);
+        Assert.Equal(
+            ["Opening", "Closing"],
+            document.Chapters.Select(chapter => chapter.Title));
+        Assert.True(document.IsWritable);
+    }
+
+    [Fact]
     public async Task Workbench_LoadsFoldersAndPlaylistOrderWithoutDuplicates()
     {
         using var first = MediaFixtures.Copy("sample.flac");

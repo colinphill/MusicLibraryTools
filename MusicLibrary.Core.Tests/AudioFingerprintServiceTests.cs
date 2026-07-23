@@ -81,6 +81,7 @@ public sealed class AudioFingerprintServiceTests
     [InlineData("sample.ofs")]
     [InlineData("sample.off")]
     [InlineData("sample.wma")]
+    [InlineData("sample.mka")]
     public async Task PayloadIdentity_IgnoresNativeMetadataChanges(
         string fixture)
     {
@@ -235,6 +236,38 @@ public sealed class AudioFingerprintServiceTests
         int packetOffset = checked((int)headerSize + 50);
         Assert.InRange(packetOffset, 0, bytes.Length - 1);
         bytes[packetOffset] ^= 0x5a;
+        await File.WriteAllBytesAsync(media.Path, bytes);
+
+        string after = await identities.ComputeAsync(media.Path);
+        Assert.NotEqual(before, after);
+    }
+
+    [Fact]
+    public async Task PayloadIdentity_TracksMatroskaClusterChanges()
+    {
+        using var media = MediaFixtures.Copy("sample.mka");
+        var identities = new AudioPayloadIdentityService(
+            MediaFormatRegistry.Default);
+        string before = await identities.ComputeAsync(media.Path);
+        Assert.StartsWith(
+            "payload-v1:matroska-clusters:", before);
+
+        byte[] bytes = await File.ReadAllBytesAsync(media.Path);
+        ReadOnlySpan<byte> clusterId = [0x1f, 0x43, 0xb6, 0x75];
+        int cluster = -1;
+        for (int index = 0;
+             index <= bytes.Length - clusterId.Length;
+             index++)
+        {
+            if (!bytes.AsSpan(index, clusterId.Length)
+                    .SequenceEqual(clusterId))
+                continue;
+            cluster = index;
+            break;
+        }
+        Assert.True(cluster >= 0);
+        int mutation = Math.Min(cluster + 32, bytes.Length - 1);
+        bytes[mutation] ^= 0x5a;
         await File.WriteAllBytesAsync(media.Path, bytes);
 
         string after = await identities.ComputeAsync(media.Path);

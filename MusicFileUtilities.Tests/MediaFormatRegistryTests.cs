@@ -16,6 +16,7 @@ public sealed class MediaFormatRegistryTests
                 ".wv", ".wav", ".rf64", ".aif", ".aiff", ".aifc", ".aac",
                 ".ape",
                 ".mpc", ".tta", ".tak", ".ofr", ".ofs", ".off", ".wma",
+                ".mka", ".weba",
             ];
         IMediaFormatRegistry registry = MediaFormatRegistry.Default;
 

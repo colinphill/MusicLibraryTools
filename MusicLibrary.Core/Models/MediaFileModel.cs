@@ -37,6 +37,9 @@ public sealed record MediaFileModel
     /// <summary>Embedded artwork (may be empty).</summary>
     public IReadOnlyList<ArtworkModel> Artwork { get; init; } = [];
 
+    /// <summary>Container timeline chapters (may be empty).</summary>
+    public IReadOnlyList<MediaChapter> Chapters { get; init; } = [];
+
     /// <summary>Audio codec properties (first codec).</summary>
     public CodecModel? Codec { get; init; }
 }

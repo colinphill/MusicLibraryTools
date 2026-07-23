@@ -219,6 +219,24 @@ namespace MusicFileUtilities
         void SetImages(IReadOnlyList<ArtworkImage> images);
     }
 
+    /// <summary>Reads and replaces simple timeline chapters in containers that support them.</summary>
+    public interface IChapterMetadata
+    {
+        IReadOnlyList<MediaChapter> Chapters { get; }
+        void SetChapters(IReadOnlyList<MediaChapter> chapters);
+    }
+
+    /// <summary>
+    /// A chapter interval expressed in the nanosecond time base used by Matroska.
+    /// A null end is an open-ended chapter marker.
+    /// </summary>
+    public sealed record MediaChapter(
+        ulong StartNanoseconds,
+        ulong? EndNanoseconds,
+        string Title,
+        string Language = "und",
+        ulong? Uid = null);
+
     /// <summary>A single image to embed: its picture type, MIME type, description, and bytes.</summary>
     public sealed record ArtworkImage(ID3v2Util.APICType Type, string MimeType, string Description, byte[] Data);
 
@@ -372,6 +390,11 @@ namespace MusicFileUtilities
 
                 case MediaFormatFamily.Asf:
                     file = new AsfFile(path, readArtwork, knownLength);
+                    break;
+
+                case MediaFormatFamily.Matroska:
+                    file = new MatroskaFile(
+                        path, readArtwork, knownLength);
                     break;
 
                 default:

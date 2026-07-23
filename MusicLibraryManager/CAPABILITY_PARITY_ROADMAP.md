@@ -413,7 +413,19 @@ application concepts.
     saves.
   - [x] Keep ASF Data Object identities stable across metadata/artwork edits,
     release `.wma` for indexing, and expose `.asf`/`.wmv` for direct editing.
-- [ ] Matroska/WebM tags, chapters, and image attachments.
+- [x] Matroska/WebM tags, chapters, and image attachments.
+  - [x] Parse bounded EBML headers, Segment Info, audio Track Entries,
+    global/audio-targeted SimpleTags, simple/nested chapters, and Matroska
+    image attachments with codec and technical-property projection.
+  - [x] Write ordered standard/custom tags, Segment titles, simple chapters,
+    and typed Matroska cover attachments while preserving unedited tag
+    structures, non-image attachments, and unknown top-level elements.
+  - [x] Follow the Matroska edit layout by voiding replaced metadata,
+    appending replacements, and rebuilding a pre-Cluster SeekHead without
+    moving or rewriting any Cluster or Cue bytes.
+  - [x] Release `.mka` and `.weba` for indexing and keep video-oriented
+    `.mkv` and `.webm` available for direct editing; WebM advertises tag and
+    chapter support but not Attachments, which its container subset forbids.
 
 ### Tag-layer controls and release gates
 
@@ -796,3 +808,15 @@ per-operation capability flags.
   `.tta`, `.tak`, `.ofr`, `.off`, and `.ofs` are released for indexing; only
   transform operations actually supported by the bundled codec toolchain are
   advertised.
+- Added a native bounded EBML handler for Matroska and WebM. It projects
+  FLAC, Opus, Vorbis, AAC, MPEG audio, PCM, WavPack, and TTA Track Entries;
+  exposes ordered native tags and simple/nested chapters to the Workbench;
+  and reads/writes typed JPEG/PNG Matroska cover attachments while preserving
+  non-image attachments. Edits replace old metadata with equal-sized Void
+  elements, append the new Info/Tags/Chapters/Attachments, and rebuild the
+  early SeekHead, leaving every Cluster and Cue byte at its original offset.
+  FFmpeg-generated `.mka`/`.webm` fixtures, reference decode/probe checks,
+  repeated/staged saves, malformed inputs, and Cluster-only payload identities
+  cover the release gate. `.mka` and `.weba` are indexed; `.mkv` and `.webm`
+  remain direct-edit formats, and WebM correctly omits artwork capabilities
+  because its subset does not support Attachments.

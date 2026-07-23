@@ -144,6 +144,10 @@ public sealed class MetadataDocumentService(
                 Hash = image.Hash,
                 Data = image.Data,
             }).ToImmutableArray();
+        ImmutableArray<MediaChapter> chapters =
+            file is IChapterMetadata chapterMetadata
+                ? chapterMetadata.Chapters.ToImmutableArray()
+                : [];
         ICodecProvider? codec = file.Codecs.FirstOrDefault();
         CodecModel? codecModel = codec is null ? null : new CodecModel
         {
@@ -156,14 +160,17 @@ public sealed class MetadataDocumentService(
             Channels = codec.Channels,
             DurationInSeconds = codec.DurationInSeconds,
         };
-        string hash = HashMetadata(layers, artwork);
+        string hash = HashMetadata(layers, artwork, chapters);
         return new(
             fullPath,
             layers,
             artwork,
             codecModel,
             new(fullPath, info.Length, info.LastWriteTimeUtc, hash),
-            formats.SupportsPath(fullPath, MediaFormatCapabilities.WriteMetadata));
+            formats.SupportsPath(fullPath, MediaFormatCapabilities.WriteMetadata))
+        {
+            Chapters = chapters,
+        };
     }
 
     private static TagLayerDocument ProjectLayer(
@@ -219,7 +226,8 @@ public sealed class MetadataDocumentService(
 
     private static string HashMetadata(
         ImmutableArray<TagLayerDocument> layers,
-        ImmutableArray<ArtworkModel> artwork)
+        ImmutableArray<ArtworkModel> artwork,
+        ImmutableArray<MediaChapter> chapters)
     {
         var text = new StringBuilder();
         foreach (TagLayerDocument layer in layers)
@@ -238,6 +246,13 @@ public sealed class MetadataDocumentService(
             text.Append("art:").Append(image.Category).Append(':')
                 .Append(image.Description).Append(':').Append(image.Hash).Append(':')
                 .Append(image.Size).Append('\n');
+        foreach (MediaChapter chapter in chapters)
+            text.Append("chapter:")
+                .Append(chapter.StartNanoseconds).Append(':')
+                .Append(chapter.EndNanoseconds).Append(':')
+                .Append(chapter.Language).Append(':')
+                .Append(chapter.Title).Append(':')
+                .Append(chapter.Uid).Append('\n');
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text.ToString())))
             .ToLowerInvariant();
     }

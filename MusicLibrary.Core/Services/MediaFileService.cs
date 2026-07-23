@@ -102,6 +102,7 @@ public sealed class MediaFileService : IMediaFileService
                     Data = i.Data,
                 }).ToList()
                 : [],
+            Chapters = [],
             Codec = new CodecModel
             {
                 CodecName = e.CodecName,
@@ -177,6 +178,9 @@ public sealed class MediaFileService : IMediaFileService
                         .ToList()
                     : [],
                 Artwork = tag is null || !includeArtwork ? [] : ProjectArtwork(tag),
+                Chapters = file is IChapterMetadata chapterMetadata
+                    ? chapterMetadata.Chapters.ToArray()
+                    : [],
                 Codec = codec is null ? null : new CodecModel
                 {
                     CodecName = codec.CodecName,

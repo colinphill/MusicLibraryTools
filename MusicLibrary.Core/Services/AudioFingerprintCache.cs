@@ -108,6 +108,8 @@ public sealed class AudioPayloadIdentityService(
                     stream, hash, progress, ct),
                 MediaFormatFamily.Asf => HashAsf(
                     stream, hash, progress, ct),
+                MediaFormatFamily.Matroska => HashMatroska(
+                    stream, hash, progress, ct),
                 _ => HashWholeFile(stream, hash, progress, ct),
             }
             : HashWholeFile(stream, hash, progress, ct);
@@ -258,6 +260,146 @@ public sealed class AudioPayloadIdentityService(
         }
         return HashWholeFile(
             stream, hash, progress, ct, rewind: true);
+    }
+
+    private static string HashMatroska(
+        FileStream stream,
+        IncrementalHash hash,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct)
+    {
+        const ulong ebmlId = 0x1A45DFA3;
+        const ulong segmentId = 0x18538067;
+        const ulong clusterId = 0x1F43B675;
+        stream.Position = 0;
+        if (!TryReadEbmlElement(
+                stream, stream.Length,
+                out ulong id, out _, out long firstEnd) ||
+            id != ebmlId)
+            return HashWholeFile(
+                stream, hash, progress, ct, rewind: true);
+
+        long position = firstEnd;
+        long segmentData = 0;
+        long segmentEnd = 0;
+        while (position < stream.Length)
+        {
+            stream.Position = position;
+            if (!TryReadEbmlElement(
+                    stream, stream.Length,
+                    out id, out segmentData, out long end))
+                return HashWholeFile(
+                    stream, hash, progress, ct, rewind: true);
+            if (id == segmentId)
+            {
+                segmentEnd = end;
+                break;
+            }
+            position = end;
+        }
+        if (segmentEnd <= segmentData)
+            return HashWholeFile(
+                stream, hash, progress, ct, rewind: true);
+
+        int clusterCount = 0;
+        position = segmentData;
+        while (position < segmentEnd)
+        {
+            ct.ThrowIfCancellationRequested();
+            stream.Position = position;
+            if (!TryReadEbmlElement(
+                    stream, segmentEnd,
+                    out id, out _, out long end))
+                return HashWholeFile(
+                    stream, hash, progress, ct, rewind: true);
+            if (id == clusterId)
+            {
+                AppendLength(hash, end - position);
+                AppendRange(
+                    stream, hash, position, end, progress, ct);
+                clusterCount++;
+            }
+            position = end;
+        }
+        if (clusterCount == 0)
+            return HashWholeFile(
+                stream, hash, progress, ct, rewind: true);
+        return "matroska-clusters";
+    }
+
+    private static bool TryReadEbmlElement(
+        FileStream stream,
+        long limit,
+        out ulong id,
+        out long dataOffset,
+        out long end)
+    {
+        id = 0;
+        dataOffset = end = stream.Position;
+        if (!TryReadEbmlVint(
+                stream, limit, removeMarker: false,
+                out id, out _, out _))
+            return false;
+        if (!TryReadEbmlVint(
+                stream, limit, removeMarker: true,
+                out ulong size, out int sizeWidth,
+                out bool unknown))
+            return false;
+        dataOffset = stream.Position;
+        if (unknown)
+        {
+            end = limit;
+            return true;
+        }
+        if (size > long.MaxValue ||
+            size > checked((ulong)(limit - dataOffset)))
+            return false;
+        end = checked(dataOffset + (long)size);
+        return sizeWidth > 0;
+    }
+
+    private static bool TryReadEbmlVint(
+        FileStream stream,
+        long limit,
+        bool removeMarker,
+        out ulong value,
+        out int width,
+        out bool unknown)
+    {
+        value = 0;
+        width = 0;
+        unknown = false;
+        if (stream.Position >= limit)
+            return false;
+        int first = stream.ReadByte();
+        if (first <= 0)
+            return false;
+        int marker = 0x80;
+        width = 1;
+        while ((first & marker) == 0)
+        {
+            marker >>= 1;
+            width++;
+            if (width > 8)
+                return false;
+        }
+        if (stream.Position + width - 1 > limit)
+            return false;
+        value = removeMarker
+            ? checked((ulong)(first & (marker - 1)))
+            : checked((ulong)first);
+        for (int index = 1; index < width; index++)
+        {
+            int next = stream.ReadByte();
+            if (next < 0)
+                return false;
+            value = (value << 8) | checked((byte)next);
+        }
+        ulong unknownValue = width == 8
+            ? 0x00FFFFFFFFFFFFFFUL
+            : (1UL << (width * 7)) - 1;
+        unknown = removeMarker && value == unknownValue;
+        return true;
     }
 
     private static long Id3v2End(FileStream stream)

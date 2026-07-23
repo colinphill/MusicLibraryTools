@@ -27,7 +27,11 @@ New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 function Resolve-Ffmpeg {
     $cmd = Get-Command ffmpeg -ErrorAction SilentlyContinue
     if ($cmd) { return $cmd.Source }
-    foreach ($p in @('C:\ffmpeg\bin\ffmpeg.exe', 'C:\Program Files\ffmpeg\bin\ffmpeg.exe')) {
+    foreach ($p in @(
+        'C:\ffmpeg\nonfree\ffmpeg.exe',
+        'C:\ffmpeg\ffmpeg.exe',
+        'C:\ffmpeg\bin\ffmpeg.exe',
+        'C:\Program Files\ffmpeg\bin\ffmpeg.exe')) {
         if (Test-Path $p) { return $p }
     }
     throw "ffmpeg not found on PATH or in known locations. Install ffmpeg to generate test fixtures."
@@ -140,6 +144,76 @@ if ($needSpecial) {
         $out = Join-Path $OutDir $j.File
         & $ffmpeg -y -hide_banner -loglevel error @($j.Input) @($j.Args) $out
         if ($LASTEXITCODE -ne 0) { throw "ffmpeg failed for $($j.File)" }
+    }
+}
+
+# Matroska/WebM exercise native EBML tags and chapters; the Matroska fixture also carries a
+# real JPEG Attachment. Temporary generator inputs are removed after muxing.
+$matroskaOutputs = @(
+    Join-Path $OutDir 'sample.mka'
+    Join-Path $OutDir 'sample.webm'
+)
+if ($matroskaOutputs | Where-Object { -not (Test-Path $_) }) {
+    $ffmpeg = Resolve-Ffmpeg
+    $chapterMetadata = Join-Path $OutDir '_matroska-fixture.ffmeta'
+    $cover = Join-Path $OutDir '_matroska-cover.jpg'
+    $chapterText = @'
+;FFMETADATA1
+title=TestTitle
+artist=TestArtist
+album=TestAlbum
+album_artist=TestAlbumArtist
+track=3/12
+disc=1/2
+date=2021
+genre=Rock
+comment=Matroska fixture
+CUSTOM_FIELD=CustomValue
+
+[CHAPTER]
+TIMEBASE=1/1000
+START=0
+END=150
+title=Opening
+
+[CHAPTER]
+TIMEBASE=1/1000
+START=150
+END=300
+title=Closing
+'@
+    [System.IO.File]::WriteAllText(
+        $chapterMetadata,
+        $chapterText,
+        [System.Text.UTF8Encoding]::new($false))
+    try {
+        & $ffmpeg -y -hide_banner -loglevel error `
+            -f lavfi -i 'color=c=blue:s=16x16:d=0.04' `
+            -frames:v 1 -q:v 2 $cover
+        if ($LASTEXITCODE -ne 0) { throw 'ffmpeg failed to create the Matroska cover.' }
+
+        $mka = $matroskaOutputs[0]
+        if (-not (Test-Path $mka)) {
+            & $ffmpeg -y -hide_banner -loglevel error `
+                -f lavfi -i 'sine=frequency=440:duration=0.3' `
+                -i $chapterMetadata -map 0:a -map_metadata 1 -map_chapters 1 `
+                -ac 2 -ar 44100 -c:a flac -sample_fmt s16 `
+                -attach $cover -metadata:s:t mimetype=image/jpeg `
+                -metadata:s:t filename=cover.jpg $mka
+            if ($LASTEXITCODE -ne 0) { throw 'ffmpeg failed for sample.mka' }
+        }
+
+        $webm = $matroskaOutputs[1]
+        if (-not (Test-Path $webm)) {
+            & $ffmpeg -y -hide_banner -loglevel error `
+                -f lavfi -i 'sine=frequency=440:duration=0.3' `
+                -i $chapterMetadata -map 0:a -map_metadata 1 -map_chapters 1 `
+                -ac 2 -ar 48000 -c:a libopus -b:a 64k $webm
+            if ($LASTEXITCODE -ne 0) { throw 'ffmpeg failed for sample.webm' }
+        }
+    }
+    finally {
+        Remove-Item -LiteralPath $chapterMetadata, $cover -Force -ErrorAction SilentlyContinue
     }
 }
 
