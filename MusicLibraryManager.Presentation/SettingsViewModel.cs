@@ -17,6 +17,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     private readonly IDialogCoordinator _dialogs;
     private readonly IThemeService _theme;
     private readonly ISecretStore _secrets;
+    private readonly IMetadataFieldMappingService _fieldMappings;
     private EditableLibraryConfig _editing = EditableLibraryConfig.CreateNew();
     private bool _suppressDirty = true;
     private bool _refreshingSyncTargetChoices;
@@ -63,6 +64,9 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     [ObservableProperty] private ThemeChoice? _selectedThemeChoice;
     [ObservableProperty] private int _selectedTabIndex;
     [ObservableProperty] private bool _isGuidedSetupActive;
+    [ObservableProperty]
+    private string _fieldMappingStatus =
+        "Mappings are personal application settings and apply to Workbench and Library edits.";
     [ObservableProperty] private int _validationTabIndex = 1;
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveConfigurationCommand))]
@@ -78,13 +82,16 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         IFilePickerService files,
         IDialogCoordinator dialogs,
         IThemeService theme,
-        ISecretStore? secrets = null)
+        ISecretStore? secrets = null,
+        IMetadataFieldMappingService? fieldMappings = null)
     {
         _settings = settings;
         _files = files;
         _dialogs = dialogs;
         _theme = theme;
         _secrets = secrets ?? new SessionSecretStore();
+        _fieldMappings = fieldMappings ??
+            new MetadataFieldMappingService(settings, MediaFormatRegistry.Default);
         _fpcalcPath =
             settings.GetPreference(AudioFingerprintService.ExecutablePreferenceKey) ??
             "fpcalc";
@@ -107,6 +114,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         PlaylistSources.CollectionChanged += OnTrackedCollectionChanged;
         PlaylistTargets.CollectionChanged += OnTrackedCollectionChanged;
         ExportProfiles.CollectionChanged += OnTrackedCollectionChanged;
+        foreach (MetadataFieldMapping mapping in _fieldMappings.Load())
+            FieldMappings.Add(MetadataFieldMappingEditorRow.From(mapping));
         settings.ConfigurationChanged += (_, _) => RefreshActiveConfiguration();
         RefreshProfileChoices();
         RefreshIngestProfileChoices();
@@ -127,6 +136,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     public ObservableCollection<PlaylistSourceEditorRow> PlaylistSources { get; } = [];
     public ObservableCollection<PlaylistTargetEditorRow> PlaylistTargets { get; } = [];
     public ObservableCollection<ExportProfileEditorRow> ExportProfiles { get; } = [];
+    public ObservableCollection<MetadataFieldMappingEditorRow> FieldMappings { get; } = [];
     public ObservableCollection<LibraryProfile> LibraryProfiles { get; } = [];
     public ObservableCollection<LibraryIngestProfile> IngestProfiles { get; } = [];
     public ObservableCollection<SettingsRootChoice> SyncTargetRootChoices { get; } = [];
@@ -137,6 +147,12 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         LibraryIngestProfilePresets.All.All(profile => !string.Equals(
             profile.Id, SelectedIngestProfile.Id, StringComparison.OrdinalIgnoreCase));
     public IReadOnlyList<string> Themes { get; } = ["System", "Light", "Dark", "Steel Blue"];
+    public IReadOnlyList<MediaFormatFamily> MetadataFormatFamilies { get; } =
+        Enum.GetValues<MediaFormatFamily>();
+    public IReadOnlyList<TagFields> MetadataCanonicalFields { get; } =
+        Enum.GetValues<TagFields>()
+            .Where(field => field != TagFields.NullField)
+            .ToArray();
     public IReadOnlyList<ThemeChoice> ThemeChoices { get; } =
     [
         new("System", "#0D1417", "#F8FBFA", "#2CC7BC"),
@@ -1161,6 +1177,38 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     [RelayCommand]
     private void AddExportProfile() =>
         ExportProfiles.Add(ExportProfileEditorRow.Create());
+
+    [RelayCommand]
+    private void AddFieldMapping() =>
+        FieldMappings.Add(new MetadataFieldMappingEditorRow
+        {
+            Format = MediaFormatFamily.Flac,
+            Field = TagFields.Title,
+            NativeFieldName = "TITLE",
+        });
+
+    [RelayCommand]
+    private void RemoveFieldMapping(MetadataFieldMappingEditorRow? row)
+    {
+        if (row is not null)
+            FieldMappings.Remove(row);
+    }
+
+    [RelayCommand]
+    private void SaveFieldMappings()
+    {
+        try
+        {
+            _fieldMappings.Save(
+                FieldMappings.Select(row => row.Build()).ToArray());
+            FieldMappingStatus =
+                $"Saved {FieldMappings.Count:N0} format-specific field mapping(s).";
+        }
+        catch (Exception error)
+        {
+            FieldMappingStatus = $"Could not save field mappings: {error.Message}";
+        }
+    }
 
     [RelayCommand]
     private void RemoveExportProfile(ExportProfileEditorRow? row)

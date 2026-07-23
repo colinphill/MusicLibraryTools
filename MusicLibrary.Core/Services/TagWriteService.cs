@@ -13,6 +13,7 @@ public sealed class TagWriteService : ITagWriteService
     private readonly int _maxParallelism;
     private readonly IItunesMediaMutationService? _itunes;
     private readonly IAppSettings? _settings;
+    private readonly IMetadataFieldMappingService? _fieldMappings;
 
     // The reindex service is optional so this service can be constructed standalone (unit tests).
     public TagWriteService(
@@ -20,13 +21,15 @@ public sealed class TagWriteService : ITagWriteService
         IFileMutationCoordinator? mutations = null,
         int maxParallelism = 4,
         IItunesMediaMutationService? itunes = null,
-        IAppSettings? settings = null)
+        IAppSettings? settings = null,
+        IMetadataFieldMappingService? fieldMappings = null)
     {
         _reindex = reindex;
         _mutations = mutations ?? FileMutationCoordinator.Shared;
         _maxParallelism = Math.Clamp(maxParallelism, 1, 16);
         _itunes = itunes;
         _settings = settings;
+        _fieldMappings = fieldMappings;
     }
 
     public Task<BatchWriteResult> ApplyAsync(
@@ -98,7 +101,15 @@ public sealed class TagWriteService : ITagWriteService
                     try
                     {
                         await _reindex.ReindexFilesAsync(
-                            batch.Select(item => (paths[item.index], item.file!)).ToArray(),
+                            batch.Select(item =>
+                            {
+                                string path = paths[item.index];
+                                IMediaFile file = item.file!;
+                                return (
+                                    path,
+                                    _fieldMappings?.ProjectForCache(path, file) ??
+                                    file);
+                            }).ToArray(),
                             CancellationToken.None);
                     }
                     catch (Exception ex)
@@ -133,7 +144,7 @@ public sealed class TagWriteService : ITagWriteService
 
     private sealed record ApplyResult(FileWriteResult Result, IMediaFile? SavedFile = null);
 
-    private static ApplyResult ApplyToFile(string path, IReadOnlyList<TagEdit> edits)
+    private ApplyResult ApplyToFile(string path, IReadOnlyList<TagEdit> edits)
     {
         try
         {
@@ -225,6 +236,52 @@ public sealed class TagWriteService : ITagWriteService
                             userStrings.RemoveUserString(key);
                         else
                             userStrings.SetUserString(key, edit.Value);
+                        applied++;
+                        continue;
+                    }
+
+                    if (_fieldMappings?.TryGet(
+                            path, edit.Field, out string nativeFieldName) == true)
+                    {
+                        if (userStrings is null)
+                            return new(new FileWriteResult
+                            {
+                                Path = path,
+                                Outcome = WriteOutcome.Failed,
+                                Error = $"This tag format cannot map '{edit.Field}' " +
+                                        $"to native field '{nativeFieldName}'.",
+                            });
+
+                        string[] existingMappedValues = userStrings.GetUserStrings()
+                            .Where(item => string.Equals(
+                                item.Key,
+                                nativeFieldName,
+                                StringComparison.OrdinalIgnoreCase))
+                            .Select(item => item.Value)
+                            .ToArray();
+                        bool hasBuiltInValue = provider.GetKnownMetadata()
+                            .Any(item => item.Key == edit.Field);
+                        if (edit.Value is null
+                                ? existingMappedValues.Length == 0 &&
+                                  !hasBuiltInValue
+                                : existingMappedValues.Length == 1 &&
+                                  existingMappedValues[0] == edit.Value &&
+                                  !hasBuiltInValue)
+                            continue;
+
+                        try
+                        {
+                            removeField(edit.Field);
+                        }
+                        catch (ArgumentException)
+                        {
+                            // The mapping may provide a native representation for a field
+                            // which has no built-in representation in this format.
+                        }
+                        if (edit.Value is null)
+                            userStrings.RemoveUserString(nativeFieldName);
+                        else
+                            userStrings.SetUserString(nativeFieldName, edit.Value);
                         applied++;
                         continue;
                     }

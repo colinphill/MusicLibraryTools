@@ -308,7 +308,12 @@ and then resolved to a user-confirmed release.
 - [x] Add present/missing checks, equality, numeric comparisons, Boolean
   grouping, and regular expressions.
 - [x] Add a visual filter builder alongside the existing text filter.
-- [ ] Add format-specific canonical-to-native field mapping settings.
+- [x] Add format-specific canonical-to-native field mapping settings.
+  - [x] Persist validated per-format overrides in personal application settings.
+  - [x] Promote mapped native values into canonical fields during authoritative
+    Workbench and Library preview reads.
+  - [x] Route both staged Workbench/Library operations and the legacy Library
+    field editor through the configured native key.
 
 ### Reports
 

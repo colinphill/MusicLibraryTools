@@ -165,6 +165,16 @@ public sealed class UiControlTests
                 button => Equals(button.Content, "Add recipe"));
             Assert.DoesNotContain(settings.GetVisualDescendants().OfType<TextBlock>(), text =>
                 text.Text is "Legacy destination role" or "Output representation");
+
+            int mappingCount = viewModel.FieldMappings.Count;
+            viewModel.AddFieldMappingCommand.Execute(null);
+            settings.FindControl<TabControl>("SettingsTabs")!.SelectedIndex = 8;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Contains(settings.GetVisualDescendants().OfType<TextBlock>(),
+                text => text.Text == "Canonical-to-native field mappings");
+            Assert.Equal(mappingCount + 1, viewModel.FieldMappings.Count);
+            viewModel.SaveFieldMappingsCommand.Execute(null);
+            Assert.StartsWith("Saved ", viewModel.FieldMappingStatus);
         }
         finally
         {

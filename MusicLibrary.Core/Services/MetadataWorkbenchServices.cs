@@ -98,18 +98,22 @@ public interface IEditHistoryService
 
 /// <summary>Reads complete tag layers directly from disk for the workbench.</summary>
 public sealed class MetadataDocumentService(
-    IMediaFormatRegistry formats) : IMetadataDocumentService
+    IMediaFormatRegistry formats,
+    IMetadataFieldMappingService? fieldMappings = null) : IMetadataDocumentService
 {
     public Task<MediaDocument> LoadAsync(
         string path,
         bool includeArtwork = true,
         CancellationToken ct = default) =>
-        Task.Run(() => Load(path, includeArtwork, formats, ct), ct);
+        Task.Run(
+            () => Load(path, includeArtwork, formats, fieldMappings, ct),
+            ct);
 
     private static MediaDocument Load(
         string path,
         bool includeArtwork,
         IMediaFormatRegistry formats,
+        IMetadataFieldMappingService? fieldMappings,
         CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
@@ -120,7 +124,11 @@ public sealed class MetadataDocumentService(
 
         IMediaFile file = MediaFile.GetFile(fullPath, readOnly: true,
             readArtwork: includeArtwork, knownLength: info.Length, formatRegistry: formats);
-        var layers = file.Tags.Select(ProjectLayer).ToImmutableArray();
+        IReadOnlyList<MetadataFieldMapping> mappings =
+            fieldMappings?.GetForPath(fullPath) ?? [];
+        var layers = file.Tags
+            .Select(layer => ProjectLayer(layer, mappings))
+            .ToImmutableArray();
         IMetadataProvider? artworkLayer = file.Tags.FirstOrDefault(layer =>
             layer.GetImageMetadata().Any());
         ImmutableArray<ArtworkModel> artwork = !includeArtwork || artworkLayer is null
@@ -158,7 +166,9 @@ public sealed class MetadataDocumentService(
             formats.SupportsPath(fullPath, MediaFormatCapabilities.WriteMetadata));
     }
 
-    private static TagLayerDocument ProjectLayer(IMetadataProvider layer)
+    private static TagLayerDocument ProjectLayer(
+        IMetadataProvider layer,
+        IReadOnlyList<MetadataFieldMapping> mappings)
     {
         var fields = layer.GetKnownMetadata()
             .GroupBy(pair => MetadataFieldKey.Known(pair.Key))
@@ -168,11 +178,34 @@ public sealed class MetadataDocumentService(
             .ToList();
         if (layer is IUserStringMetadata custom)
         {
-            fields.AddRange(custom.GetUserStrings()
+            KeyValuePair<string, string>[] customValues =
+                custom.GetUserStrings().ToArray();
+            fields.AddRange(customValues
                 .GroupBy(pair => MetadataFieldKey.Custom(pair.Key))
                 .Select(group => new MetadataValueSet(
                     group.Key,
                     group.Select(pair => pair.Value).ToImmutableArray())));
+            foreach (MetadataFieldMapping mapping in mappings)
+            {
+                ImmutableArray<string> values = customValues
+                    .Where(pair => string.Equals(
+                        pair.Key,
+                        mapping.NativeFieldName,
+                        StringComparison.OrdinalIgnoreCase))
+                    .Select(pair => pair.Value)
+                    .ToImmutableArray();
+                if (values.IsDefaultOrEmpty)
+                    continue;
+                fields.RemoveAll(field =>
+                    field.Field.KnownField == mapping.Field ||
+                    string.Equals(
+                        field.Field.CustomName,
+                        mapping.NativeFieldName,
+                        StringComparison.OrdinalIgnoreCase));
+                fields.Add(new(
+                    MetadataFieldKey.Known(mapping.Field),
+                    values));
+            }
         }
         return new(
             layer.TagType ?? "Unknown",
@@ -409,7 +442,8 @@ public sealed class MetadataOperationService(
     IFileMutationPlanExecutor mutations,
     IAppSettings settings,
     IReindexService? reindex = null,
-    IEditHistoryService? history = null) : IMetadataOperationService
+    IEditHistoryService? history = null,
+    IMetadataFieldMappingService? fieldMappings = null) : IMetadataOperationService
 {
     private static readonly TimeSpan RegexTimeout = TimeSpan.FromMilliseconds(250);
 
@@ -782,7 +816,7 @@ public sealed class MetadataOperationService(
                     ct.ThrowIfCancellationRequested();
                     progress?.Report(new(OperationPhase.Applying, completed, changed.Length,
                         filePlan.Path, "Staging metadata changes"));
-                    string stage = Stage(filePlan, formats);
+                    string stage = Stage(filePlan, formats, fieldMappings);
                     staged.Add(stage);
                     var stageInfo = new FileInfo(stage);
                     actions.Add(new(
@@ -824,7 +858,19 @@ public sealed class MetadataOperationService(
         {
             foreach (MetadataFilePlan changedFile in changed)
             {
-                try { await reindex.ReindexFileAsync(changedFile.Path, CancellationToken.None); }
+                try
+                {
+                    IMediaFile saved = MediaFile.GetFile(
+                        changedFile.Path,
+                        readOnly: true,
+                        readArtwork: false,
+                        formatRegistry: formats);
+                    await reindex.ReindexFileAsync(
+                        changedFile.Path,
+                        fieldMappings?.ProjectForCache(
+                            changedFile.Path, saved) ?? saved,
+                        CancellationToken.None);
+                }
                 catch { /* The files are authoritative; the next index pass repairs the cache. */ }
             }
         }
@@ -1179,7 +1225,8 @@ public sealed class MetadataOperationService(
 
     private static string Stage(
         MetadataFilePlan plan,
-        IMediaFormatRegistry formats)
+        IMediaFormatRegistry formats,
+        IMetadataFieldMappingService? fieldMappings)
     {
         string stage = Path.Combine(
             Path.GetDirectoryName(plan.Path)!,
@@ -1194,7 +1241,8 @@ public sealed class MetadataOperationService(
                 file.Tags.OfType<VorbisComments>().FirstOrDefault();
             IUserStringMetadata? custom = file as IUserStringMetadata ??
                 file.Tags.OfType<IUserStringMetadata>().FirstOrDefault();
-            if (writer is null && vorbis is null && plan.Edits.Length > 0)
+            if (writer is null && vorbis is null && custom is null &&
+                plan.Edits.Length > 0)
                 throw new InvalidOperationException("The file has no writable metadata layer.");
 
             foreach (MetadataValueEdit edit in plan.Edits)
@@ -1217,6 +1265,36 @@ public sealed class MetadataOperationService(
                     continue;
                 }
                 TagFields field = edit.Field.KnownField!.Value;
+                if (fieldMappings?.TryGet(
+                        plan.Path, field, out string nativeFieldName) == true)
+                {
+                    if (custom is null)
+                        throw new InvalidOperationException(
+                            $"The tag format cannot map '{field}' to native field " +
+                            $"'{nativeFieldName}'.");
+                    // Remove the built-in representation so the configured native field
+                    // becomes the unambiguous canonical value on the next read.
+                    try
+                    {
+                        if (writer is not null) writer.RemoveField(field);
+                        else vorbis?.RemoveField(field);
+                    }
+                    catch (ArgumentException)
+                    {
+                        // The format has no built-in representation for this canonical field.
+                    }
+                    if (edit.Values.Length == 0)
+                        custom.RemoveUserString(nativeFieldName);
+                    else if (edit.Values.Length == 1)
+                        custom.SetUserString(nativeFieldName, edit.Values[0]);
+                    else if (custom is IMultiValueUserStringMetadata multiCustom)
+                        multiCustom.SetUserStringValues(nativeFieldName, edit.Values);
+                    else
+                        throw new InvalidOperationException(
+                            $"The tag format cannot store multiple values for mapped field " +
+                            $"'{nativeFieldName}'.");
+                    continue;
+                }
                 if (edit.Values.Length == 0)
                 {
                     if (writer is not null) writer.RemoveField(field);

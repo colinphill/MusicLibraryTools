@@ -500,6 +500,25 @@ public partial class PlaylistSourceEditorRow : ObservableObject
     public PlaylistSourceEntry? Source { get; set; }
 }
 
+public partial class MetadataFieldMappingEditorRow : ObservableObject
+{
+    [ObservableProperty] private MediaFormatFamily _format;
+    [ObservableProperty] private TagFields _field = TagFields.Title;
+    [ObservableProperty] private string _nativeFieldName = "";
+
+    public MetadataFieldMapping Build() =>
+        new(Format, Field, NativeFieldName);
+
+    public static MetadataFieldMappingEditorRow From(
+        MetadataFieldMapping mapping) =>
+        new()
+        {
+            Format = mapping.Format,
+            Field = mapping.Field,
+            NativeFieldName = mapping.NativeFieldName,
+        };
+}
+
 public partial class ExportProfileEditorRow : ObservableObject
 {
     public required LibraryExportProfile Source { get; init; }

@@ -474,6 +474,60 @@
           </ScrollViewer>
         </TabItem>
 
+        <TabItem Header="Field mappings">
+          <ScrollViewer Classes="settings-scroll" VerticalScrollBarVisibility="Auto">
+            <StackPanel Classes="settings-content" Margin="18" Spacing="10">
+              <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                <StackPanel>
+                  <TextBlock Classes="section-title" Text="Canonical-to-native field mappings" />
+                  <TextBlock Classes="muted"
+                             Text="Override the native text key used for a canonical field in one format family. Unlisted fields continue to use the built-in parser mapping."
+                             TextWrapping="Wrap" />
+                </StackPanel>
+                <Button Grid.Column="1" Classes="app" Content="Add mapping"
+                        Command="{Binding AddFieldMappingCommand}" VerticalAlignment="Bottom" />
+                <Button Grid.Column="2" Classes="app primary" Content="Save mappings"
+                        Command="{Binding SaveFieldMappingsCommand}" VerticalAlignment="Bottom" />
+              </Grid>
+              <Border Classes="status-banner info">
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                  <TextBlock Classes="status-icon" Text="i" />
+                  <TextBlock Grid.Column="1" Text="{Binding FieldMappingStatus}"
+                             TextWrapping="Wrap" />
+                </Grid>
+              </Border>
+              <Grid ColumnDefinitions="180,260,*,Auto" ColumnSpacing="8">
+                <TextBlock Classes="muted" Text="Format family" FontWeight="SemiBold" />
+                <TextBlock Grid.Column="1" Classes="muted" Text="Canonical field" FontWeight="SemiBold" />
+                <TextBlock Grid.Column="2" Classes="muted" Text="Native field name" FontWeight="SemiBold" />
+              </Grid>
+              <ItemsControl ItemsSource="{Binding FieldMappings}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Grid Margin="0,0,0,7" ColumnDefinitions="180,260,*,Auto" ColumnSpacing="8">
+                      <ComboBox Classes="app"
+                                ItemsSource="{Binding DataContext.MetadataFormatFamilies, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                SelectedItem="{Binding Format, Mode=TwoWay}" />
+                      <ComboBox Grid.Column="1" Classes="app"
+                                ItemsSource="{Binding DataContext.MetadataCanonicalFields, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                SelectedItem="{Binding Field, Mode=TwoWay}" />
+                      <TextBox Grid.Column="2" Classes="app"
+                               Text="{Binding NativeFieldName, Mode=TwoWay}"
+                               PlaceholderText="Format-native key" />
+                      <Button Grid.Column="3" Classes="app danger" Content="Remove"
+                              Command="{Binding DataContext.RemoveFieldMappingCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              CommandParameter="{Binding}" />
+                    </Grid>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <TextBlock Classes="muted"
+                         Text="Mapped writes remove the built-in representation first, then write the configured native key through the format's own parser. Preview and recovery requirements remain unchanged."
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </ScrollViewer>
+        </TabItem>
+
         <TabItem Header="Appearance">
           <StackPanel x:Name="AppearanceSettingsContent" Classes="settings-content" Margin="18" Spacing="10">
             <TextBlock Classes="section-title" Text="Appearance" />
