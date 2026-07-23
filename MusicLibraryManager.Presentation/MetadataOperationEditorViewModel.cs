@@ -54,6 +54,18 @@ public static class MetadataPreviewRowBuilder
                         difference.WillBePresent ? "Present" : "Absent"));
                 }
             }
+
+            if (file.Id3VersionDifference is { } version)
+            {
+                string issueSummary = version.Issues.Length == 0
+                    ? ""
+                    : $" ({version.Issues.Length:N0} compatibility issue(s))";
+                destination.Add(new(
+                    Path.GetFileName(file.Path),
+                    "ID3 version",
+                    $"ID3v2.{(int)version.SourceVersion}",
+                    $"ID3v2.{(int)version.TargetVersion}{issueSummary}"));
+            }
         }
     }
 

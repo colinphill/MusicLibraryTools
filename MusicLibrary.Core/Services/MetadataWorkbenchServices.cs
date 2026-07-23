@@ -90,6 +90,18 @@ public interface IMetadataOperationService
         CancellationToken ct = default) =>
         PreviewTagLayerEditsAsync(editsByPath, name, ct);
 
+    Task<MetadataOperationPlan> PreviewId3VersionEditsAsync(
+        IReadOnlyDictionary<string, Id3VersionEdit> editsByPath,
+        string name,
+        CancellationToken ct = default);
+
+    Task<MetadataOperationPlan> PreviewId3VersionEditsAsync(
+        IReadOnlyDictionary<string, Id3VersionEdit> editsByPath,
+        string name,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct = default) =>
+        PreviewId3VersionEditsAsync(editsByPath, name, ct);
+
     Task<MetadataApplyResult> ApplyAsync(
         MetadataOperationPlan plan,
         IProgress<OperationProgress>? progress = null,
@@ -164,6 +176,14 @@ public sealed class MetadataDocumentService(
             file is ITagLayerEditor layerEditor
                 ? layerEditor.EditableTagLayers.ToImmutableArray()
                 : [];
+        bool hasExplicitlyAbsentId3 = editableTagLayers.Any(layer =>
+            layer.Kind == TagLayerKind.Id3v2 && !layer.IsPresent);
+        ID3v2Version? id3Version = hasExplicitlyAbsentId3
+            ? null
+            : file.Tags
+                .OfType<ID3v2Tag>()
+                .Select(tag => (ID3v2Version?)tag.Version)
+                .FirstOrDefault();
         ICodecProvider? codec = file.Codecs.FirstOrDefault();
         CodecModel? codecModel = codec is null ? null : new CodecModel
         {
@@ -188,6 +208,7 @@ public sealed class MetadataDocumentService(
         {
             Chapters = chapters,
             EditableTagLayers = editableTagLayers,
+            Id3Version = id3Version,
         };
     }
 
@@ -923,6 +944,162 @@ public sealed class MetadataOperationService(
         return new(Guid.NewGuid(), name, [.. plans], DateTimeOffset.UtcNow);
     }
 
+    public async Task<MetadataOperationPlan> PreviewId3VersionEditsAsync(
+        IReadOnlyDictionary<string, Id3VersionEdit> editsByPath,
+        string name,
+        CancellationToken ct = default) =>
+        await PreviewId3VersionEditsAsync(
+            editsByPath, name, progress: null, ct);
+
+    public async Task<MetadataOperationPlan> PreviewId3VersionEditsAsync(
+        IReadOnlyDictionary<string, Id3VersionEdit> editsByPath,
+        string name,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(editsByPath);
+        var plans = new List<MetadataFilePlan>(editsByPath.Count);
+        int index = 0;
+        foreach ((string path, Id3VersionEdit edit) in editsByPath)
+        {
+            ct.ThrowIfCancellationRequested();
+            progress?.Report(new(
+                OperationPhase.Planning,
+                index,
+                editsByPath.Count,
+                path,
+                $"Previewing ID3 conversion {index + 1:N0} of " +
+                $"{editsByPath.Count:N0}"));
+            index++;
+            MediaDocument document;
+            try
+            {
+                document = await documents.LoadAsync(path, true, ct);
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                plans.Add(Unavailable(path, error));
+                continue;
+            }
+
+            var issues = new List<OperationIssue>();
+            if (!document.IsWritable)
+                issues.Add(new(
+                    "metadata.read-only",
+                    OperationIssueSeverity.Blocker,
+                    "This media format is not writable.",
+                    document.Path));
+            ValidatePolicy(document.Path, issues);
+            if (document.Id3Version is not { } sourceVersion)
+            {
+                issues.Add(new(
+                    "id3-version.unsupported",
+                    OperationIssueSeverity.Blocker,
+                    "The file does not contain a native writable ID3v2 tag.",
+                    document.Path));
+                plans.Add(new(
+                    document.Path,
+                    document.Snapshot,
+                    [],
+                    [],
+                    [.. issues]));
+                continue;
+            }
+            if (sourceVersion == edit.TargetVersion)
+            {
+                issues.Add(new(
+                    "id3-version.already-target",
+                    OperationIssueSeverity.Blocker,
+                    $"The tag is already ID3v2.{(int)edit.TargetVersion}.",
+                    document.Path));
+                plans.Add(new(
+                    document.Path,
+                    document.Snapshot,
+                    [],
+                    [],
+                    [.. issues]));
+                continue;
+            }
+
+            ID3VersionConversionResult? conversion = null;
+            ImmutableArray<ID3VersionConversionIssue> conversionIssues = [];
+            bool converted = false;
+            try
+            {
+                IMediaFile media = MediaFile.GetFile(
+                    document.Path,
+                    readOnly: false,
+                    readArtwork: true,
+                    formatRegistry: formats);
+                ID3v2Tag? tag = media as ID3v2Tag ??
+                    media.Tags.OfType<ID3v2Tag>().FirstOrDefault();
+                if (tag is null)
+                    throw new InvalidOperationException(
+                        "The native ID3v2 tag is not writable.");
+                conversion = tag.ChangeVersion(
+                    edit.TargetVersion,
+                    new ID3VersionConversionOptions
+                    {
+                        DropUnsupportedFrames =
+                            edit.DropUnsupportedFrames,
+                        CoalesceTextValues =
+                            edit.CoalesceTextValues,
+                        MultiValueSeparator =
+                            edit.MultiValueSeparator,
+                    });
+                conversionIssues = [.. conversion.Issues];
+                converted = true;
+            }
+            catch (ID3VersionConversionException error)
+            {
+                conversionIssues = [.. error.Issues];
+                foreach (ID3VersionConversionIssue issue in error.Issues)
+                    issues.Add(new(
+                        "id3-version.lossy",
+                        OperationIssueSeverity.Blocker,
+                        $"{issue.FrameID}: {issue.Message}",
+                        document.Path));
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                issues.Add(new(
+                    "id3-version.convert",
+                    OperationIssueSeverity.Blocker,
+                    error.Message,
+                    document.Path));
+            }
+            if (converted)
+            {
+                foreach (ID3VersionConversionIssue issue in conversionIssues)
+                    issues.Add(new(
+                        "id3-version.lossy",
+                        OperationIssueSeverity.Warning,
+                        $"{issue.FrameID}: {issue.Message}",
+                        document.Path));
+            }
+            plans.Add(new(
+                document.Path,
+                document.Snapshot,
+                [],
+                [],
+                [.. issues],
+                Id3VersionEdit: converted ? edit : null,
+                Id3VersionDifference: new(
+                    sourceVersion,
+                    edit.TargetVersion,
+                    conversion?.ConvertedFrameCount ?? 0,
+                    conversionIssues)));
+        }
+        AddRecoverySpaceIssues(plans);
+        progress?.Report(new(
+            OperationPhase.Completed,
+            editsByPath.Count,
+            editsByPath.Count,
+            Message: $"Previewed {editsByPath.Count:N0} ID3 conversion(s)"));
+        return new(
+            Guid.NewGuid(), name, [.. plans], DateTimeOffset.UtcNow);
+    }
+
     private static MetadataFilePlan Unavailable(string path, Exception error)
     {
         string fullPath;
@@ -956,7 +1133,8 @@ public sealed class MetadataOperationService(
             MediaDocument current = await documents.LoadAsync(
                 filePlan.Path,
                 filePlan.ArtworkEdit is not null ||
-                !filePlan.TagLayerEdits.IsDefaultOrEmpty,
+                !filePlan.TagLayerEdits.IsDefaultOrEmpty ||
+                filePlan.Id3VersionEdit is not null,
                 ct);
             if (current.Snapshot.Length != filePlan.Snapshot.Length ||
                 current.Snapshot.LastWriteTimeUtc != filePlan.Snapshot.LastWriteTimeUtc ||
@@ -1424,6 +1602,25 @@ public sealed class MetadataOperationService(
                     else
                         layerEditor.RemoveTagLayer(edit.Kind);
                 }
+            }
+            if (plan.Id3VersionEdit is { } versionEdit)
+            {
+                ID3v2Tag? id3 = file as ID3v2Tag ??
+                    file.Tags.OfType<ID3v2Tag>().FirstOrDefault();
+                if (id3 is null)
+                    throw new InvalidOperationException(
+                        "The file has no writable ID3v2 tag.");
+                id3.ChangeVersion(
+                    versionEdit.TargetVersion,
+                    new ID3VersionConversionOptions
+                    {
+                        DropUnsupportedFrames =
+                            versionEdit.DropUnsupportedFrames,
+                        CoalesceTextValues =
+                            versionEdit.CoalesceTextValues,
+                        MultiValueSeparator =
+                            versionEdit.MultiValueSeparator,
+                    });
             }
             if (writer is null && vorbis is null && custom is null &&
                 plan.Edits.Length > 0)

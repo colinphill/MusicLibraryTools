@@ -52,7 +52,7 @@
     <Border Grid.Row="2" Classes="card" Padding="12" ClipToBounds="True">
       <TabControl>
         <TabItem Header="Session">
-          <Grid Margin="0,12,0,0" RowDefinitions="Auto,*,Auto,Auto,Auto" RowSpacing="10">
+          <Grid Margin="0,12,0,0" RowDefinitions="Auto,*,Auto,Auto,Auto,Auto" RowSpacing="10">
             <WrapPanel>
               <Button Classes="app" Margin="0,0,8,6" Content="Remove"
                       Command="{Binding RemoveCurrentCommand}" />
@@ -119,7 +119,34 @@
               </Grid>
             </Border>
 
-            <Grid Grid.Row="4" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="16"
+            <Border Grid.Row="4" Padding="10" CornerRadius="7"
+                    BorderBrush="{DynamicResource AppBorderBrush}"
+                    BorderThickness="1"
+                    IsVisible="{Binding SelectedFile.HasId3Tag}">
+              <Grid ColumnDefinitions="Auto,150,Auto,Auto,Auto,*"
+                    ColumnSpacing="8">
+                <TextBlock VerticalAlignment="Center"
+                           FontWeight="SemiBold"
+                           Text="ID3 version" />
+                <ComboBox Grid.Column="1" Classes="app"
+                          ItemsSource="{Binding Id3Versions}"
+                          SelectedItem="{Binding TargetId3Version, Mode=TwoWay}" />
+                <CheckBox Grid.Column="2" VerticalAlignment="Center"
+                          Content="Drop unsupported frames"
+                          IsChecked="{Binding DropUnsupportedId3Frames, Mode=TwoWay}" />
+                <CheckBox Grid.Column="3" VerticalAlignment="Center"
+                          Content="Join multi-value text"
+                          IsChecked="{Binding CoalesceId3TextValues, Mode=TwoWay}" />
+                <Button Grid.Column="4" Classes="app primary"
+                        Content="Preview conversion"
+                        Command="{Binding PreviewId3VersionCommand}" />
+                <TextBlock Grid.Column="5" Classes="muted"
+                           VerticalAlignment="Center"
+                           Text="{Binding SelectedFile.Document.Id3Version, StringFormat='Current: {0}'}" />
+              </Grid>
+            </Border>
+
+            <Grid Grid.Row="5" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="16"
                   IsVisible="{Binding SelectedFile}">
               <TextBlock Classes="muted" Text="{Binding SelectedFile.Path}"
                          TextTrimming="CharacterEllipsis" />

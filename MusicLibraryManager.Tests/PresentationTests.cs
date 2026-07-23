@@ -1846,6 +1846,46 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public void Metadata_preview_projects_id3_version_and_compatibility_issues()
+    {
+        var preview = new System.Collections.ObjectModel.ObservableCollection<
+            MetadataPreviewRow>();
+        string path = Path.Combine(Path.GetTempPath(), "track.mp3");
+        var issue = new ID3VersionConversionIssue(
+            "SIGN",
+            "No legacy representation.",
+            Dropped: true);
+        var file = new MetadataFilePlan(
+            path,
+            new(path, 1, DateTime.UtcNow, "hash"),
+            [],
+            [],
+            [],
+            Id3VersionEdit: new(
+                ID3v2Version.V23,
+                DropUnsupportedFrames: true),
+            Id3VersionDifference: new(
+                ID3v2Version.V24,
+                ID3v2Version.V23,
+                4,
+                [issue]));
+        var plan = new MetadataOperationPlan(
+            Guid.NewGuid(),
+            "Convert ID3",
+            [file],
+            DateTimeOffset.UtcNow);
+
+        MetadataPreviewRowBuilder.Populate(preview, plan);
+
+        MetadataPreviewRow row = Assert.Single(preview);
+        Assert.Equal("ID3 version", row.Field);
+        Assert.Equal("ID3v2.4", row.Before);
+        Assert.Equal(
+            "ID3v2.3 (1 compatibility issue(s))",
+            row.After);
+    }
+
+    [Fact]
     public void Dynamic_metadata_columns_use_configured_numeric_and_date_sorting()
     {
         MetadataFieldKey field =
@@ -2340,6 +2380,9 @@ internal sealed class FakeMetadataOperationService : IMetadataOperationService
     public IReadOnlyDictionary<string, IReadOnlyList<TagLayerEdit>>
         PreviewedTagLayerEdits { get; private set; } =
             new Dictionary<string, IReadOnlyList<TagLayerEdit>>();
+    public IReadOnlyDictionary<string, Id3VersionEdit>
+        PreviewedId3VersionEdits { get; private set; } =
+            new Dictionary<string, Id3VersionEdit>();
     public bool WaitForCancellation { get; init; }
     public bool CancellationObserved { get; private set; }
     public TaskCompletionSource<bool> PreviewStarted { get; } =
@@ -2510,6 +2553,30 @@ internal sealed class FakeMetadataOperationService : IMetadataOperationService
             [],
             TagLayerEdits: [edit],
             TagLayerDifferences: [difference]);
+        return Task.FromResult(new MetadataOperationPlan(
+            Guid.NewGuid(), name, [file], DateTimeOffset.UtcNow));
+    }
+
+    public Task<MetadataOperationPlan> PreviewId3VersionEditsAsync(
+        IReadOnlyDictionary<string, Id3VersionEdit> editsByPath,
+        string name,
+        CancellationToken ct = default)
+    {
+        PreviewedId3VersionEdits = editsByPath;
+        (string path, Id3VersionEdit edit) = editsByPath.First();
+        var difference = new Id3VersionDifference(
+            ID3v2Version.V23,
+            edit.TargetVersion,
+            1,
+            []);
+        var file = new MetadataFilePlan(
+            path,
+            new(path, 1, DateTime.UtcNow, "hash"),
+            [],
+            [],
+            [],
+            Id3VersionEdit: edit,
+            Id3VersionDifference: difference);
         return Task.FromResult(new MetadataOperationPlan(
             Guid.NewGuid(), name, [file], DateTimeOffset.UtcNow));
     }

@@ -150,6 +150,7 @@ public sealed class MetadataWorkbenchServicesTests
         Assert.Equal(["ID3v23", "APE"],
             document.TagLayers.Select(layer => layer.TagType));
         Assert.Equal("ID3 layer", document.FirstValue(TagFields.Title));
+        Assert.Equal(ID3v2Version.V23, document.Id3Version);
         Assert.All(document.TagLayers, layer => Assert.True(layer.IsWritable));
         Assert.Contains(
             document.TagLayers[1].Fields,
@@ -747,6 +748,175 @@ public sealed class MetadataWorkbenchServicesTests
             InvalidOperationException error = await Assert.ThrowsAsync<
                 InvalidOperationException>(() => service.ApplyAsync(stale));
             Assert.Contains("Stale plan", error.Message);
+        }
+        finally
+        {
+            try { File.Delete(statePath); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task Id3VersionPreview_AppliesThroughRecoveryAndUndo()
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(), "mlm-id3-version-" + Guid.NewGuid().ToString("N"));
+        string recovery = session + ".MusicLibraryManager-recovery";
+        Directory.CreateDirectory(session);
+        string mediaPath = Path.Combine(session, "track.mp3");
+        File.Copy(MediaFixtures.Path_("sample.mp3"), mediaPath);
+        string statePath = Path.Combine(session, "settings.json");
+        try
+        {
+            var seed = Assert.IsType<MP3File>(
+                MediaFile.GetFile(mediaPath, readOnly: false));
+            seed.ChangeVersion(ID3v2Version.V22);
+            seed.SaveTags();
+            byte[] original = await File.ReadAllBytesAsync(mediaPath);
+            var settings = new AppSettings(statePath);
+            var history = new EditHistoryService(
+                settings, new OperationJournalService());
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings,
+                history: history);
+
+            MetadataOperationPlan plan =
+                await service.PreviewId3VersionEditsAsync(
+                    new Dictionary<string, Id3VersionEdit>
+                    {
+                        [mediaPath] = new(ID3v2Version.V24),
+                    },
+                    "Upgrade ID3");
+
+            MetadataFilePlan filePlan = Assert.Single(plan.Files);
+            Id3VersionDifference difference = Assert.IsType<
+                Id3VersionDifference>(filePlan.Id3VersionDifference);
+            Assert.Equal(ID3v2Version.V22, difference.SourceVersion);
+            Assert.Equal(ID3v2Version.V24, difference.TargetVersion);
+            Assert.True(difference.ConvertedFrameCount > 0);
+            Assert.True(plan.CanApply);
+            Assert.Equal(original, await File.ReadAllBytesAsync(mediaPath));
+
+            await service.ApplyAsync(plan);
+
+            var applied = Assert.IsType<MP3File>(
+                MediaFile.GetFile(mediaPath));
+            Assert.Equal(4, applied.Version);
+            Assert.Equal("TestTitle", applied.Title);
+            Assert.Equal(1, await history.UndoLatestAsync());
+            Assert.Equal(original, await File.ReadAllBytesAsync(mediaPath));
+        }
+        finally
+        {
+            try { Directory.Delete(session, recursive: true); } catch { }
+            try { Directory.Delete(recovery, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task Id3VersionPreview_BlocksLossUnlessDropIsExplicit()
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(), "mlm-id3-loss-" + Guid.NewGuid().ToString("N"));
+        string recovery = session + ".MusicLibraryManager-recovery";
+        Directory.CreateDirectory(session);
+        string mediaPath = Path.Combine(session, "track.mp3");
+        File.Copy(MediaFixtures.Path_("sample.mp3"), mediaPath);
+        string statePath = Path.Combine(session, "settings.json");
+        try
+        {
+            var seed = Assert.IsType<MP3File>(
+                MediaFile.GetFile(mediaPath, readOnly: false));
+            seed.ChangeVersion(ID3v2Version.V24);
+            seed.Frames.Add(new ID3v2Frame(seed)
+            {
+                FrameID = "SIGN",
+                Data = [1, 2, 3],
+            });
+            seed.SaveTags();
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings);
+
+            MetadataOperationPlan strict =
+                await service.PreviewId3VersionEditsAsync(
+                    new Dictionary<string, Id3VersionEdit>
+                    {
+                        [mediaPath] = new(ID3v2Version.V23),
+                    },
+                    "Strict downgrade");
+
+            Assert.False(strict.CanApply);
+            Assert.Contains(
+                Assert.Single(strict.Files).Issues,
+                issue => issue.Code == "id3-version.lossy" &&
+                    issue.Severity == OperationIssueSeverity.Blocker &&
+                    issue.Message.Contains("SIGN"));
+
+            MetadataOperationPlan permissive =
+                await service.PreviewId3VersionEditsAsync(
+                    new Dictionary<string, Id3VersionEdit>
+                    {
+                        [mediaPath] = new(
+                            ID3v2Version.V23,
+                            DropUnsupportedFrames: true),
+                    },
+                    "Lossy downgrade");
+
+            Assert.True(permissive.CanApply);
+            Assert.Contains(
+                Assert.Single(permissive.Files).Issues,
+                issue => issue.Code == "id3-version.lossy" &&
+                    issue.Severity == OperationIssueSeverity.Warning);
+            await service.ApplyAsync(permissive);
+            var applied = Assert.IsType<MP3File>(
+                MediaFile.GetFile(mediaPath));
+            Assert.Equal(3, applied.Version);
+            Assert.DoesNotContain(
+                applied.Frames, frame => frame.FrameID == "SIGN");
+            Assert.Equal("TestTitle", applied.Title);
+        }
+        finally
+        {
+            try { Directory.Delete(session, recursive: true); } catch { }
+            try { Directory.Delete(recovery, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task Id3VersionPreview_RejectsNonId3Format()
+    {
+        using var media = MediaFixtures.Copy("sample.flac");
+        string statePath = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-id3-unsupported-" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings);
+
+            MetadataOperationPlan plan =
+                await service.PreviewId3VersionEditsAsync(
+                    new Dictionary<string, Id3VersionEdit>
+                    {
+                        [media.Path] = new(ID3v2Version.V24),
+                    },
+                    "Unsupported conversion");
+
+            Assert.Contains(
+                Assert.Single(plan.Files).Issues,
+                issue => issue.Code == "id3-version.unsupported" &&
+                    issue.Severity == OperationIssueSeverity.Blocker);
+            Assert.False(plan.CanApply);
         }
         finally
         {

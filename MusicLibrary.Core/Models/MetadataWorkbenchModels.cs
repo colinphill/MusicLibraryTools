@@ -79,6 +79,7 @@ public sealed record MediaDocument(
 {
     public ImmutableArray<MediaChapter> Chapters { get; init; } = [];
     public ImmutableArray<TagLayerDescriptor> EditableTagLayers { get; init; } = [];
+    public ID3v2Version? Id3Version { get; init; }
 
     public ImmutableArray<string> Values(MetadataFieldKey field) => TagLayers
         .SelectMany(layer => layer.Fields)
@@ -333,6 +334,18 @@ public sealed record TagLayerDifference(
     bool WasPresent,
     bool WillBePresent);
 
+public sealed record Id3VersionEdit(
+    ID3v2Version TargetVersion,
+    bool DropUnsupportedFrames = false,
+    bool CoalesceTextValues = false,
+    string MultiValueSeparator = "/");
+
+public sealed record Id3VersionDifference(
+    ID3v2Version SourceVersion,
+    ID3v2Version TargetVersion,
+    int ConvertedFrameCount,
+    ImmutableArray<ID3VersionConversionIssue> Issues);
+
 public enum ArtworkValueEditMode
 {
     ReplaceFrontCover,
@@ -368,12 +381,15 @@ public sealed record MetadataFilePlan(
     ArtworkSetEdit? ArtworkEdit = null,
     ArtworkSetDifference? ArtworkDifference = null,
     ImmutableArray<TagLayerEdit> TagLayerEdits = default,
-    ImmutableArray<TagLayerDifference> TagLayerDifferences = default)
+    ImmutableArray<TagLayerDifference> TagLayerDifferences = default,
+    Id3VersionEdit? Id3VersionEdit = null,
+    Id3VersionDifference? Id3VersionDifference = null)
 {
     public bool HasChanges =>
         Differences.Length > 0 ||
         ArtworkDifference is not null ||
-        !TagLayerDifferences.IsDefaultOrEmpty;
+        !TagLayerDifferences.IsDefaultOrEmpty ||
+        Id3VersionDifference is not null;
     public bool CanApply => HasChanges &&
         Issues.All(issue => issue.Severity != OperationIssueSeverity.Blocker);
 }
@@ -391,7 +407,8 @@ public sealed record MetadataOperationPlan(
         (file.ArtworkDifference is null ? 0 : 1) +
         (file.TagLayerDifferences.IsDefault
             ? 0
-            : file.TagLayerDifferences.Length));
+            : file.TagLayerDifferences.Length) +
+        (file.Id3VersionDifference is null ? 0 : 1));
     public bool CanApply => ChangedFileCount > 0 && Files
         .SelectMany(file => file.Issues)
         .All(issue => issue.Severity != OperationIssueSeverity.Blocker);

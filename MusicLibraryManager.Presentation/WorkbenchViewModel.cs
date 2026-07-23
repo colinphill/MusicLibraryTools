@@ -92,6 +92,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(PreviewRemoveId3LayerCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewAddApeLayerCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewRemoveApeLayerCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewId3VersionCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -117,6 +118,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(PreviewRemoveId3LayerCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewAddApeLayerCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewRemoveApeLayerCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewId3VersionCommand))]
     private WorkbenchTrackViewModel? _selectedFile;
 
     [ObservableProperty]
@@ -156,6 +158,16 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
 
     [ObservableProperty]
     private bool _copyPrimaryMetadataToNewLayer = true;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PreviewId3VersionCommand))]
+    private ID3v2Version _targetId3Version = ID3v2Version.V24;
+
+    [ObservableProperty]
+    private bool _dropUnsupportedId3Frames;
+
+    [ObservableProperty]
+    private bool _coalesceId3TextValues;
 
     [ObservableProperty]
     private bool _recursive = true;
@@ -264,6 +276,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     public IReadOnlyList<MetadataFieldChoice> KnownFieldChoices { get; }
     public IReadOnlyList<WorkbenchFieldEditMode> FieldEditModes { get; } =
         Enum.GetValues<WorkbenchFieldEditMode>();
+    public IReadOnlyList<ID3v2Version> Id3Versions { get; } =
+        Enum.GetValues<ID3v2Version>();
     public bool HasFiles => Files.Count > 0;
     public bool HasPreview => PreviewChanges.Count > 0;
     public bool HasUnsavedChanges =>
@@ -702,6 +716,32 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         return !IsBusy && layer is not null &&
             (add ? layer.CanAdd : layer.CanRemove);
     }
+
+    [RelayCommand(CanExecute = nameof(CanPreviewId3Version))]
+    private async Task PreviewId3VersionAsync()
+    {
+        if (SelectedFile is null)
+            return;
+        var edits = new Dictionary<string, Id3VersionEdit>(
+            PathComparer)
+        {
+            [SelectedFile.Path] = new(
+                TargetId3Version,
+                DropUnsupportedId3Frames,
+                CoalesceId3TextValues),
+        };
+        await PreviewAsync((progress, ct) =>
+            _operations.PreviewId3VersionEditsAsync(
+                edits,
+                $"Convert to ID3v2.{(int)TargetId3Version}",
+                progress,
+                ct));
+    }
+
+    private bool CanPreviewId3Version() =>
+        !IsBusy &&
+        SelectedFile?.Document.Id3Version is { } source &&
+        source != TargetId3Version;
 
     private async Task PreviewAsync(
         Func<IProgress<OperationProgress>, CancellationToken,
@@ -2255,6 +2295,7 @@ public partial class WorkbenchTrackViewModel : ObservableObject
 
     public bool HasEditableTagLayers =>
         !Document.EditableTagLayers.IsDefaultOrEmpty;
+    public bool HasId3Tag => Document.Id3Version is not null;
     public int ArtworkCount => Document.Artwork.Length;
     public int FieldCount => Document.TagLayers.Sum(layer => layer.Fields.Length);
     public string FileSize => FormatBytes(Document.Snapshot.Length);

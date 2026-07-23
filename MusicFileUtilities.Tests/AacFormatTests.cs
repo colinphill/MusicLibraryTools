@@ -277,6 +277,37 @@ public sealed class AacFormatTests
         }
     }
 
+    [Theory]
+    [InlineData(ID3v2Version.V22, "ID3v22")]
+    [InlineData(ID3v2Version.V24, "ID3v24")]
+    public void Id3LayerVersionConversionPreservesApeAndAudio(
+        ID3v2Version targetVersion,
+        string expectedTagType)
+    {
+        string path = TempPath();
+        byte[] audio = WriteFixture(path, "both");
+        try
+        {
+            var media = Assert.IsType<AACFile>(
+                MediaFile.GetFile(path, readOnly: false));
+            ID3v2Tag id3 = Assert.IsAssignableFrom<ID3v2Tag>(
+                media.Tags.First());
+
+            id3.ChangeVersion(targetVersion);
+            media.SaveTags();
+
+            var reloaded = Assert.IsType<AACFile>(MediaFile.GetFile(path));
+            Assert.Equal(expectedTagType, reloaded.Tags.First().TagType);
+            Assert.Equal("ID3 title", reloaded.Tags.First().Title);
+            Assert.Equal("APE title", reloaded.Tags.Last().Title);
+            Assert.Equal(audio, ReadAudio(path));
+        }
+        finally
+        {
+            try { File.Delete(path); } catch { }
+        }
+    }
+
     [Fact]
     public void SaveToSeparatePathLeavesBothSourceLayersUntouched()
     {

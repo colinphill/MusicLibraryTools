@@ -440,7 +440,15 @@ application concepts.
   - Workbench previews and applies individual layer additions/removals through
     the ordinary stale-plan, recovery-journal, and undo pipeline; removing the
     final layer deliberately produces tagless AAC without touching ADTS bytes.
-- [ ] Convert ID3v2.2/2.3/2.4.
+- [x] Convert ID3v2.2/2.3/2.4.
+  - The native ID3 engine converts every direction among v2.2, v2.3, and
+    v2.4, including date frames, comments, lyrics, identifiers, pictures,
+    user text, and version-specific frame sizing.
+  - Workbench exposes the current physical ID3 version, previews the target
+    version and frame count, blocks lossy conversions by default, and offers
+    explicit drop-unsupported and join-multi-value options with warnings.
+  - Conversion uses staged writes, stale-plan validation, recovery journals,
+    and undo across MP3, DSF, chunked WAVE/AIFF, and raw AAC ID3 layers.
 - [ ] Configure ID3 encoding and ID3v1 compatibility.
 - [ ] Preview truncation, unsupported fields, and lossy conversions.
 - [x] Preserve native-parser ownership; do not add a general tagging library.
