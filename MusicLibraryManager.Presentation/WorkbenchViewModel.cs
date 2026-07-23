@@ -35,6 +35,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private readonly IWorkbenchService _workbench;
     private readonly IMetadataOperationService _operations;
     private readonly IAcoustIdDiscoveryService _audioDiscovery;
+    private readonly IMusicBrainzMetadataProvider _musicBrainz;
     private readonly IEditHistoryService _history;
     private readonly IFilePickerService _files;
     private readonly IDialogCoordinator _dialogs;
@@ -52,6 +53,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(DiscoverSelectedAudioCommand))]
     [NotifyCanExecuteChangedFor(nameof(DiscoverAllAudioCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewAudioIdentifiersCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ResolveSelectedRecordingCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -112,6 +114,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         IMetadataOperationCatalog operationCatalog,
         IOperationRecipeStore recipeStore,
         IAcoustIdDiscoveryService audioDiscovery,
+        IMusicBrainzMetadataProvider musicBrainz,
         IEditHistoryService history,
         IFilePickerService files,
         IDialogCoordinator dialogs,
@@ -120,6 +123,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         _workbench = workbench;
         _operations = operations;
         _audioDiscovery = audioDiscovery;
+        _musicBrainz = musicBrainz;
         _history = history;
         _files = files;
         _dialogs = dialogs;
@@ -138,6 +142,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     public ObservableCollection<MetadataPreviewRow> PreviewChanges { get; } = [];
     public ObservableCollection<WorkbenchMetadataFieldRow> MetadataFields { get; } = [];
     public ObservableCollection<AudioDiscoveryRow> AudioMatches { get; } = [];
+    public ObservableCollection<MusicBrainzReleaseRow> ReleaseMatches { get; } = [];
     public ObservableCollection<string> RecentLocations { get; } = [];
     public MetadataOperationEditorViewModel OperationEditor { get; }
     public IReadOnlyList<MetadataFieldChoice> KnownFieldChoices { get; }
@@ -165,6 +170,12 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     {
         if (value is not null)
             FieldValuesText = string.Join(Environment.NewLine, value.Values);
+    }
+
+    partial void OnSelectedAudioMatchChanged(AudioDiscoveryRow? value)
+    {
+        PreviewAudioIdentifiersCommand.NotifyCanExecuteChanged();
+        ResolveSelectedRecordingCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand]
@@ -265,6 +276,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                      .Where(row => PathComparer.Equals(row.Path, current.Path))
                      .ToArray())
             AudioMatches.Remove(row);
+        foreach (MusicBrainzReleaseRow row in ReleaseMatches
+                     .Where(row => PathComparer.Equals(row.SourcePath, current.Path))
+                     .ToArray())
+            ReleaseMatches.Remove(row);
         SelectedFile = Files.Count == 0
             ? null
             : Files[Math.Min(index, Files.Count - 1)];
@@ -287,6 +302,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             file.PropertyChanged -= OnTrackChanged;
         Files.Clear();
         AudioMatches.Clear();
+        ReleaseMatches.Clear();
         PreviewChanges.Clear();
         _plan = null;
         SelectedFile = null;
@@ -554,6 +570,43 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             "Audio identifiers were added to the normal metadata preview. Review before applying.";
     }
 
+    [RelayCommand(CanExecute = nameof(CanResolveSelectedRecording))]
+    private async Task ResolveSelectedRecordingAsync()
+    {
+        if (SelectedAudioMatch is null ||
+            SelectedAudioMatch.MusicBrainzRecordingIdValues.Length != 1)
+            return;
+        BeginOperation("Resolving MusicBrainz release editions");
+        try
+        {
+            MusicBrainzReleaseResult result =
+                await _musicBrainz.ResolveRecordingAsync(
+                    SelectedAudioMatch.MusicBrainzRecordingIdValues[0],
+                    CreateProgress(),
+                    _cancellation!.Token);
+            ReleaseMatches.Clear();
+            foreach (MusicBrainzReleaseRow row in MusicBrainzReleaseRows.Create(
+                         SelectedAudioMatch.Path, result))
+                ReleaseMatches.Add(row);
+            StatusText =
+                $"MusicBrainz returned {ReleaseMatches.Count:N0} release edition(s). " +
+                "No metadata was selected or changed.";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "MusicBrainz release lookup cancelled.";
+        }
+        catch (Exception error)
+        {
+            StatusText = $"MusicBrainz release lookup failed: {error.Message}";
+        }
+        finally
+        {
+            EndOperation();
+            NotifySessionChanged();
+        }
+    }
+
     private async Task DiscoverAudioAsync(IReadOnlyList<string> paths)
     {
         BeginOperation("Preparing audio fingerprint discovery");
@@ -562,6 +615,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             AcoustIdDiscoveryResult result = await _audioDiscovery.DiscoverAsync(
                 paths, CreateProgress(), _cancellation!.Token);
             AudioMatches.Clear();
+            ReleaseMatches.Clear();
             foreach (AudioDiscoveryRow row in AudioDiscoveryRows.Create(result))
                 AudioMatches.Add(row);
             SelectedAudioMatch = AudioMatches.FirstOrDefault();
@@ -681,6 +735,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         DiscoverSelectedAudioCommand.NotifyCanExecuteChanged();
         DiscoverAllAudioCommand.NotifyCanExecuteChanged();
         PreviewAudioIdentifiersCommand.NotifyCanExecuteChanged();
+        ResolveSelectedRecordingCommand.NotifyCanExecuteChanged();
         RemoveCurrentCommand.NotifyCanExecuteChanged();
         MoveUpCommand.NotifyCanExecuteChanged();
         MoveDownCommand.NotifyCanExecuteChanged();
@@ -790,6 +845,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private bool CanPreviewAudioIdentifiers() =>
         !IsBusy && SelectedAudioMatch?.AcoustId is not null &&
         !string.IsNullOrWhiteSpace(SelectedAudioMatch.Fingerprint);
+    private bool CanResolveSelectedRecording() =>
+        !IsBusy &&
+        SelectedAudioMatch?.MusicBrainzRecordingIdValues.Length == 1;
 
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase

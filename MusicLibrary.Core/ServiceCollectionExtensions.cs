@@ -64,6 +64,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAcoustIdHttpTransport, AcoustIdHttpTransport>();
         services.AddSingleton<IAcoustIdLookupService, AcoustIdLookupService>();
         services.AddSingleton<IAcoustIdDiscoveryService, AcoustIdDiscoveryService>();
+        services.AddSingleton<IMusicBrainzHttpTransport, MusicBrainzHttpTransport>();
+        services.AddSingleton<IMusicBrainzMetadataProvider, MusicBrainzMetadataProvider>();
         services.AddSingleton<IWavpackRunner, WavpackRunner>();
         services.AddSingleton<IDecodedAudioVerificationService, DecodedAudioVerificationService>();
         services.AddSingleton<IRepresentationRepairService, RepresentationRepairService>();

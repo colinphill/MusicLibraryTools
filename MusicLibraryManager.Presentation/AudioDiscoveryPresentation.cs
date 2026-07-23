@@ -79,3 +79,51 @@ public static class AudioDiscoveryRows
             $"Audio identifiers: {row.File}", [.. operations]);
     }
 }
+
+public sealed record MusicBrainzReleaseRow(
+    string SourcePath,
+    Guid RecordingId,
+    Guid ReleaseId,
+    string Title,
+    string Artist,
+    string? Date,
+    string? Country,
+    string? Status,
+    string? Label,
+    string? CatalogNumber,
+    string Formats,
+    string MatchedTrackPositions,
+    int TrackCount)
+{
+    public string File => System.IO.Path.GetFileName(SourcePath);
+}
+
+public static class MusicBrainzReleaseRows
+{
+    public static IEnumerable<MusicBrainzReleaseRow> Create(
+        string sourcePath,
+        MusicBrainzReleaseResult result)
+    {
+        foreach (MusicBrainzReleaseCandidate release in result.Releases)
+        {
+            MusicBrainzTrackCandidate[] matches = release.Tracks
+                .Where(track => track.RecordingId == result.RecordingId)
+                .ToArray();
+            yield return new(
+                sourcePath,
+                result.RecordingId,
+                release.ReleaseId,
+                release.Title,
+                release.ArtistCredit,
+                release.Date,
+                release.Country,
+                release.Status,
+                release.Label,
+                release.CatalogNumber,
+                string.Join(", ", release.Formats),
+                string.Join(", ", matches.Select(track =>
+                    $"{track.MediumPosition}-{track.Number}")),
+                release.Tracks.Length);
+        }
+    }
+}

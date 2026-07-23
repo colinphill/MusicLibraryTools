@@ -331,9 +331,14 @@
                     ItemsSource="{Binding AudioMatches}"
                     SelectedItem="{Binding SelectedAudioMatch, Mode=TwoWay}" />
               </TabItem>
+              <TabItem Header="Release editions">
+                <controls:AppDataGrid x:Name="LibraryReleaseDiscoveryGrid"
+                    Margin="0,6,0,0"
+                    ItemsSource="{Binding ReleaseMatches}" />
+              </TabItem>
             </TabControl>
 
-            <Grid Grid.Row="6" ColumnDefinitions="*,220,Auto,Auto,Auto,Auto" ColumnSpacing="8">
+            <Grid Grid.Row="6" ColumnDefinitions="*,190,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="7">
               <TextBlock Classes="muted" VerticalAlignment="Center"
                          Text="{Binding OperationStatus}" TextWrapping="Wrap"
                          AutomationProperties.LiveSetting="Polite" />
@@ -355,7 +360,9 @@
                       Command="{Binding DiscoverLibraryAudioCommand}" />
               <Button Grid.Column="4" Classes="app" Content="Preview selected IDs"
                       Command="{Binding PreviewLibraryAudioIdentifiersCommand}" />
-              <Button Grid.Column="5" Classes="app primary" Content="Apply preview"
+              <Button Grid.Column="5" Classes="app" Content="Find releases"
+                      Command="{Binding ResolveLibraryRecordingCommand}" />
+              <Button Grid.Column="6" Classes="app primary" Content="Apply preview"
                       Command="{Binding ApplyLibraryOperationCommand}" />
             </Grid>
           </Grid>

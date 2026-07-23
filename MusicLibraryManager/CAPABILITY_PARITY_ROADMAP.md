@@ -112,7 +112,9 @@ appropriate build or test.
   - [~] `IWorkbenchService` manages ad-hoc source loading and ordering.
   - [~] `IEditHistoryService` provides persistent operation history and undo.
   - [x] Persistent redo and repeat.
-  - [ ] `IMetadataSourceProvider`.
+  - [~] Code-backed metadata provider extension points; the first
+    `IMusicBrainzMetadataProvider` is implemented, while the broader provider
+    abstraction and additional sources remain.
   - [~] `IAudioFingerprintService` decodes audio and generates a Chromaprint
     fingerprint plus whole-file duration.
   - [x] `IAcoustIdLookupService` resolves fingerprints to scored AcoustID and
@@ -227,7 +229,7 @@ capability comparison is possible through typed operations without scripting.
     recording IDs; never silently accept the first match.
   - [ ] Combine fingerprint confidence, duration, existing artist/title,
     track/disc position, and album context when ranking MusicBrainz candidates.
-  - [ ] Use matched MusicBrainz recording IDs to locate releases and editions
+  - [x] Use matched MusicBrainz recording IDs to locate releases and editions
     through the normal MusicBrainz provider.
   - [~] Require confirmation of recording matches, release, file-to-track
     mapping, imported fields, and artwork before mutation.
@@ -240,17 +242,19 @@ capability comparison is possible through typed operations without scripting.
   - [x] Do not submit fingerprints to AcoustID as part of lookup. Any future
     submission feature is separately opt-in, uses `ISecretStore` for the user's
     key, previews submitted data, and clearly identifies the external write.
-- [ ] Ship MusicBrainz and Cover Art Archive providers:
+- [~] Ship MusicBrainz and Cover Art Archive providers:
   - [ ] Search by artist/album, barcode, catalog number, or release ID.
-  - [ ] Compare editions, dates, countries, labels, media, and tracklists.
+  - [x] Compare recording-linked editions, dates, countries, status, labels,
+    catalog numbers, media formats, track positions, and tracklists.
   - [ ] Suggest mappings using disc/track number, normalized title, and
     duration.
   - [ ] Confirm release, mapping, imported fields, and artwork.
   - [ ] Route changes through normal preview and recovery.
 - [ ] Cache release data in an application-local database.
 - [ ] Cache artwork thumbnails in a bounded application-data cache.
-- [ ] Add provider rate limiting, identifiable user agent, cancellation,
-  retry/backoff, and offline behavior.
+- [~] Add provider rate limiting, identifiable user agent, cancellation,
+  retry/backoff, and offline behavior. MusicBrainz request behavior is
+  implemented; caching and explicit offline behavior remain.
 - [ ] Introduce `ISecretStore`.
 - [ ] Implement Windows Credential Manager, macOS Keychain, and Linux Secret
   Service support, with session-only fallback.
@@ -482,3 +486,15 @@ per-operation capability flags.
   `ACOUSTID_ID`, and an unambiguous MusicBrainz recording ID in either
   Workbench or Library; the existing staged apply and recovery path remains the
   only way to commit those fields.
+- Added the first code-backed MusicBrainz metadata provider. It resolves a
+  confirmed recording ID to every paged release edition while preserving
+  release-group, country, date, status, label, catalog-number, medium, track,
+  artist-credit, and duration details. Requests use provider-specific
+  throttling, retry/backoff, an identifiable user agent, progress, and
+  cancellation.
+- Added release-edition comparison tables to both Workbench and Library. The
+  user explicitly starts resolution from one unambiguous recording candidate;
+  the shared workflow displays editions and matching disc/track positions
+  without selecting a release or mutating metadata.
+- Added recorded MusicBrainz response tests plus shared presentation coverage,
+  so normal test runs do not depend on the live service.

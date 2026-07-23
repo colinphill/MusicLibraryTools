@@ -57,6 +57,20 @@ public partial class WorkbenchView : UserControl
                 "MusicBrainzRecordingIds", 390, 220),
             new("Status", "Status", "Status", 280, 160),
         ]);
+        ReleaseDiscoveryGrid.ConfigureColumns(
+        [
+            new("Title", "Release", "Title", 240, 140),
+            new("Artist", "Artist credit", "Artist", 190, 110),
+            new("Date", "Date", "Date", 100, 75),
+            new("Country", "Country", "Country", 80, 65),
+            new("Status", "Status", "Status", 90, 70),
+            new("Label", "Label", "Label", 170, 100),
+            new("Catalog", "Catalog no.", "CatalogNumber", 120, 85),
+            new("Formats", "Formats", "Formats", 140, 90),
+            new("Position", "Matched position", "MatchedTrackPositions", 140, 95),
+            new("Tracks", "Tracks", "TrackCount", 75, 60),
+            new("ReleaseID", "MusicBrainz release ID", "ReleaseId", 280, 180),
+        ]);
     }
 
     private void OnDragOver(object? sender, DragEventArgs e)

@@ -1442,6 +1442,7 @@ public sealed class PresentationTests
         var indexing = new IndexingViewModel(library, settings, activity);
         var discovery = new FakeAcoustIdDiscoveryService();
         var metadataOperations = new FakeMetadataOperationService();
+        var musicBrainz = new FakeMusicBrainzMetadataProvider();
         var viewModel = new LibraryViewModel(
             library,
             new FakeReindex(),
@@ -1451,7 +1452,8 @@ public sealed class PresentationTests
             indexing,
             new FakeThumbnails(),
             metadataOperations: metadataOperations,
-            audioDiscovery: discovery);
+            audioDiscovery: discovery,
+            musicBrainz: musicBrainz);
         await viewModel.ReloadAsync();
         await viewModel.SelectAsync(
             [viewModel.Rows.Single(row => row.Title == "One")]);
@@ -1480,6 +1482,15 @@ public sealed class PresentationTests
             operation => operation is AssignFieldOperation assign &&
                 assign.Field.KnownField == TagFields.MusicBrainz_RecordingID);
         Assert.True(viewModel.HasApplicableOperationPreview);
+
+        await viewModel.ResolveLibraryRecordingCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            Guid.Parse("cd2e7c47-16f5-46c6-a37c-a1eb7bf599ff"),
+            musicBrainz.RecordingId);
+        MusicBrainzReleaseRow release = Assert.Single(viewModel.ReleaseMatches);
+        Assert.Equal("Matched Album", release.Title);
+        Assert.Equal("1-1", release.MatchedTrackPositions);
     }
 
     private static TrackRecord Track(string artist, string album, string title, string codec, string path) => new()
@@ -1678,6 +1689,47 @@ internal sealed class FakeAcoustIdDiscoveryService : IAcoustIdDiscoveryService
             OperationPhase.Completed, 2, 2, path, "Discovery complete"));
         return Task.FromResult(new AcoustIdDiscoveryResult(
             [new(path, fingerprint, lookup, [])]));
+    }
+}
+
+internal sealed class FakeMusicBrainzMetadataProvider : IMusicBrainzMetadataProvider
+{
+    public Guid? RecordingId { get; private set; }
+
+    public Task<MusicBrainzReleaseResult> ResolveRecordingAsync(
+        Guid recordingId,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        RecordingId = recordingId;
+        var track = new MusicBrainzTrackCandidate(
+            1,
+            1,
+            "1",
+            "Matched Song",
+            42000,
+            recordingId,
+            "Matched Song",
+            "Matched Artist");
+        var release = new MusicBrainzReleaseCandidate(
+            Guid.Parse("11111111-1111-1111-1111-111111111111"),
+            "Matched Album",
+            "Matched Artist",
+            "2026",
+            "US",
+            "Official",
+            null,
+            Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+            "Matched Album",
+            "Album",
+            "Matched Label",
+            "CAT-1",
+            ["Digital Media"],
+            [track]);
+        progress?.Report(new(
+            OperationPhase.Completed, 1, 1, Message: "Release lookup complete"));
+        return Task.FromResult(new MusicBrainzReleaseResult(
+            recordingId, [release], DateTimeOffset.UtcNow));
     }
 }
 

@@ -55,6 +55,18 @@ public partial class LibraryView : UserControl
                 "MusicBrainzRecordingIds", 360, 210),
             new("Status", "Status", "Status", 240, 140),
         ]);
+        LibraryReleaseDiscoveryGrid.ConfigureColumns(
+        [
+            new("Title", "Release", "Title", 220, 130),
+            new("Artist", "Artist credit", "Artist", 180, 105),
+            new("Date", "Date", "Date", 95, 72),
+            new("Country", "Country", "Country", 75, 62),
+            new("Label", "Label", "Label", 150, 90),
+            new("Catalog", "Catalog no.", "CatalogNumber", 110, 80),
+            new("Formats", "Formats", "Formats", 125, 85),
+            new("Position", "Matched position", "MatchedTrackPositions", 130, 90),
+            new("ReleaseID", "MusicBrainz release ID", "ReleaseId", 260, 170),
+        ]);
         LibraryGrid.ApplySort(_sort);
         BuildColumnOptions();
         LibraryGrid.LayoutChanged += (_, _) => PersistLayout();

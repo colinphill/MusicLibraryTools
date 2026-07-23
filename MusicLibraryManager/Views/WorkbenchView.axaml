@@ -331,7 +331,7 @@
 
         <TabItem Header="Online metadata">
           <Grid Margin="0,12,0,0" RowDefinitions="Auto,*" RowSpacing="10">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
               <StackPanel Spacing="3">
                 <TextBlock Classes="section-title" Text="Find metadata by audio" />
                 <TextBlock Classes="muted" TextWrapping="Wrap"
@@ -346,10 +346,21 @@
               <Button Grid.Column="3" Classes="app" VerticalAlignment="Center"
                       Content="Preview selected IDs"
                       Command="{Binding PreviewAudioIdentifiersCommand}" />
+              <Button Grid.Column="4" Classes="app" VerticalAlignment="Center"
+                      Content="Find release editions"
+                      Command="{Binding ResolveSelectedRecordingCommand}" />
             </Grid>
-            <controls:AppDataGrid x:Name="AudioDiscoveryGrid" Grid.Row="1"
-                ItemsSource="{Binding AudioMatches}"
-                SelectedItem="{Binding SelectedAudioMatch, Mode=TwoWay}" />
+            <TabControl Grid.Row="1">
+              <TabItem Header="Audio candidates">
+                <controls:AppDataGrid x:Name="AudioDiscoveryGrid"
+                    ItemsSource="{Binding AudioMatches}"
+                    SelectedItem="{Binding SelectedAudioMatch, Mode=TwoWay}" />
+              </TabItem>
+              <TabItem Header="Release editions">
+                <controls:AppDataGrid x:Name="ReleaseDiscoveryGrid"
+                    ItemsSource="{Binding ReleaseMatches}" />
+              </TabItem>
+            </TabControl>
           </Grid>
         </TabItem>
       </TabControl>

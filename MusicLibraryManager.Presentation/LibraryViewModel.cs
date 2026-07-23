@@ -28,6 +28,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private readonly WorkbenchViewModel? _workbench;
     private readonly IMetadataOperationService? _metadataOperations;
     private readonly IAcoustIdDiscoveryService? _audioDiscovery;
+    private readonly IMusicBrainzMetadataProvider? _musicBrainz;
     private readonly IDialogCoordinator? _dialogs;
     private MetadataOperationPlan? _libraryOperationPlan;
     private readonly SemaphoreSlim _thumbnailGate = new(4, 4);
@@ -52,6 +53,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryOperationCommand))]
     [NotifyCanExecuteChangedFor(nameof(DiscoverLibraryAudioCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryAudioIdentifiersCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ResolveLibraryRecordingCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -95,6 +97,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(ApplyLibraryOperationCommand))]
     [NotifyCanExecuteChangedFor(nameof(DiscoverLibraryAudioCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryAudioIdentifiersCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ResolveLibraryRecordingCommand))]
     private bool _isOperationBusy;
 
     [ObservableProperty]
@@ -128,6 +131,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryAudioIdentifiersCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ResolveLibraryRecordingCommand))]
     private AudioDiscoveryRow? _selectedAudioMatch;
 
     public LibraryViewModel(
@@ -143,7 +147,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         IMetadataOperationCatalog? operationCatalog = null,
         IOperationRecipeStore? recipeStore = null,
         IDialogCoordinator? dialogs = null,
-        IAcoustIdDiscoveryService? audioDiscovery = null)
+        IAcoustIdDiscoveryService? audioDiscovery = null,
+        IMusicBrainzMetadataProvider? musicBrainz = null)
     {
         _library = library;
         _reindex = reindex;
@@ -154,6 +159,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         _workbench = workbench;
         _metadataOperations = metadataOperations;
         _audioDiscovery = audioDiscovery;
+        _musicBrainz = musicBrainz;
         _dialogs = dialogs;
         OperationEditor = new(
             operationCatalog ?? new MetadataOperationCatalog(),
@@ -178,6 +184,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     public ObservableCollection<LibraryViewDefinition> SavedViews { get; } = [];
     public ObservableCollection<LibraryColumnChoice> Columns { get; } = [];
     public ObservableCollection<AudioDiscoveryRow> AudioMatches { get; } = [];
+    public ObservableCollection<MusicBrainzReleaseRow> ReleaseMatches { get; } = [];
     public ObservableCollection<MetadataPreviewRow> OperationPreviewChanges { get; } = [];
     public IReadOnlyList<FilterMode> FilterModes { get; } = Enum.GetValues<FilterMode>();
     public IReadOnlyList<LibraryOperationScope> OperationScopes { get; } =
@@ -568,6 +575,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             AcoustIdDiscoveryResult result = await _audioDiscovery.DiscoverAsync(
                 paths, CreateOperationProgress(), _operationCancellation!.Token);
             AudioMatches.Clear();
+            ReleaseMatches.Clear();
             foreach (AudioDiscoveryRow row in AudioDiscoveryRows.Create(result))
                 AudioMatches.Add(row);
             SelectedAudioMatch = AudioMatches.FirstOrDefault();
@@ -626,6 +634,42 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         catch (Exception error)
         {
             OperationStatus = $"Audio identifier preview failed: {error.Message}";
+        }
+        finally
+        {
+            EndLibraryOperation();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanResolveLibraryRecording))]
+    private async Task ResolveLibraryRecordingAsync()
+    {
+        if (_musicBrainz is null || SelectedAudioMatch is null ||
+            SelectedAudioMatch.MusicBrainzRecordingIdValues.Length != 1)
+            return;
+        BeginLibraryOperation("Resolving MusicBrainz release editions");
+        try
+        {
+            MusicBrainzReleaseResult result =
+                await _musicBrainz.ResolveRecordingAsync(
+                    SelectedAudioMatch.MusicBrainzRecordingIdValues[0],
+                    CreateOperationProgress(),
+                    _operationCancellation!.Token);
+            ReleaseMatches.Clear();
+            foreach (MusicBrainzReleaseRow row in MusicBrainzReleaseRows.Create(
+                         SelectedAudioMatch.Path, result))
+                ReleaseMatches.Add(row);
+            OperationStatus =
+                $"MusicBrainz returned {ReleaseMatches.Count:N0} release edition(s). " +
+                "No metadata was selected or changed.";
+        }
+        catch (OperationCanceledException)
+        {
+            OperationStatus = "MusicBrainz release lookup cancelled.";
+        }
+        catch (Exception error)
+        {
+            OperationStatus = $"MusicBrainz release lookup failed: {error.Message}";
         }
         finally
         {
@@ -747,6 +791,10 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         !IsBusy && !IsOperationBusy && _metadataOperations is not null &&
         SelectedAudioMatch?.AcoustId is not null &&
         !string.IsNullOrWhiteSpace(SelectedAudioMatch.Fingerprint);
+
+    private bool CanResolveLibraryRecording() =>
+        !IsBusy && !IsOperationBusy && _musicBrainz is not null &&
+        SelectedAudioMatch?.MusicBrainzRecordingIdValues.Length == 1;
 
     public Task ApplyFilterNowAsync(CancellationToken cancellationToken = default)
         => ApplyFilterAsync(immediate: true, cancellationToken);
