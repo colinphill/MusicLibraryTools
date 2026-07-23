@@ -78,6 +78,13 @@ public partial class WorkbenchView : UserControl
         ConfigureDiscogsTrackMappingGrid(DiscogsTrackMappingGrid);
         ConfigureReleaseTrackMappingGrid(ReleaseTrackMappingGrid);
         ConfigureReleaseArtworkGrid(ReleaseArtworkGrid);
+        ReportOutputGrid.ConfigureColumns(
+        [
+            new("Group", "Group", "Group", 150, 90),
+            new("File", "Destination", "File", 420, 220),
+            new("Rows", "Rows", "Rows", 80, 60),
+            new("Bytes", "Bytes", "Bytes", 100, 70),
+        ]);
     }
 
     private static void ConfigureDiscogsGrid(AppDataGrid grid) =>

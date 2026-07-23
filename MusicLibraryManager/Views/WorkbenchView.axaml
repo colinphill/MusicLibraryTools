@@ -505,6 +505,123 @@
             </TabControl>
           </Grid>
         </TabItem>
+
+        <TabItem Header="Reports">
+          <Grid Margin="0,12,0,0" ColumnDefinitions="0.9*,14,1.1*">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+              <StackPanel Spacing="9">
+                <TextBlock Classes="section-title"
+                           Text="Structured report" />
+                <TextBox Classes="app"
+                         Text="{Binding ReportEditor.Name, Mode=TwoWay}"
+                         PlaceholderText="Report name" />
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                  <ComboBox Classes="app"
+                            ItemsSource="{Binding ReportEditor.Formats}"
+                            SelectedItem="{Binding ReportEditor.Format, Mode=TwoWay}" />
+                  <ComboBox Grid.Column="1" Classes="app"
+                            ItemsSource="{Binding ReportEditor.Encodings}"
+                            SelectedItem="{Binding ReportEditor.Encoding, Mode=TwoWay}" />
+                </Grid>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                  <TextBox Classes="app"
+                           Text="{Binding ReportEditor.OutputPath, Mode=TwoWay}"
+                           PlaceholderText="Output file or folder" />
+                  <Button Grid.Column="1" Classes="app" Content="Browse"
+                          Command="{Binding BrowseReportOutputCommand}" />
+                </Grid>
+                <CheckBox Content="Write one file per group"
+                          IsChecked="{Binding ReportEditor.OneFilePerGroup, Mode=TwoWay}" />
+                <TextBox Classes="app"
+                         Text="{Binding ReportEditor.GroupFileNameTemplate, Mode=TwoWay}"
+                         PlaceholderText="{}{Group}.{Format}" />
+
+                <TextBlock Classes="section-title" Margin="0,8,0,0"
+                           Text="Columns" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                  <ComboBox Classes="app"
+                            ItemsSource="{Binding ReportEditor.AvailableFields}"
+                            DisplayMemberBinding="{Binding Label}"
+                            SelectedItem="{Binding ReportEditor.SelectedAvailableField, Mode=TwoWay}" />
+                  <Button Grid.Column="1" Classes="app" Content="Add"
+                          Command="{Binding ReportEditor.AddSelectedFieldCommand}" />
+                </Grid>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                  <TextBox Classes="app"
+                           Text="{Binding ReportEditor.CustomFieldName, Mode=TwoWay}"
+                           PlaceholderText="Native custom field name" />
+                  <Button Grid.Column="1" Classes="app"
+                          Content="Add custom"
+                          Command="{Binding ReportEditor.AddCustomFieldCommand}" />
+                </Grid>
+                <ListBox MinHeight="150" MaxHeight="230"
+                         ItemsSource="{Binding ReportEditor.Fields}"
+                         SelectedItem="{Binding ReportEditor.SelectedField, Mode=TwoWay}">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                        <TextBlock Text="{Binding Label}" />
+                        <TextBlock Grid.Column="1" Classes="muted"
+                                   Text="{Binding Source}" />
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+                <WrapPanel>
+                  <Button Classes="app" Content="Remove"
+                          Command="{Binding ReportEditor.RemoveFieldCommand}" />
+                  <Button Classes="app" Content="Move up"
+                          Command="{Binding ReportEditor.MoveFieldUpCommand}" />
+                  <Button Classes="app" Content="Move down"
+                          Command="{Binding ReportEditor.MoveFieldDownCommand}" />
+                </WrapPanel>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                  <StackPanel Spacing="4">
+                    <TextBlock Classes="muted" Text="Group by" />
+                    <ComboBox Classes="app"
+                              ItemsSource="{Binding ReportEditor.Fields}"
+                              DisplayMemberBinding="{Binding Label}"
+                              SelectedItem="{Binding ReportEditor.SelectedGroupField, Mode=TwoWay}"
+                              PlaceholderText="No grouping" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Spacing="4">
+                    <TextBlock Classes="muted" Text="Sort by" />
+                    <ComboBox Classes="app"
+                              ItemsSource="{Binding ReportEditor.Fields}"
+                              DisplayMemberBinding="{Binding Label}"
+                              SelectedItem="{Binding ReportEditor.SelectedSortField, Mode=TwoWay}"
+                              PlaceholderText="Source order" />
+                  </StackPanel>
+                </Grid>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                  <ComboBox Classes="app"
+                            ItemsSource="{Binding ReportEditor.SortTypes}"
+                            SelectedItem="{Binding ReportEditor.SortType, Mode=TwoWay}" />
+                  <CheckBox Grid.Column="1" VerticalAlignment="Center"
+                            Content="Descending"
+                            IsChecked="{Binding ReportEditor.SortDescending, Mode=TwoWay}" />
+                </Grid>
+              </StackPanel>
+            </ScrollViewer>
+
+            <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto,Auto"
+                  RowSpacing="9">
+              <TextBlock Classes="section-title"
+                         Text="Reviewed output" />
+              <controls:AppDataGrid x:Name="ReportOutputGrid" Grid.Row="1"
+                  ItemsSource="{Binding ReportOutputs}" />
+              <Border Grid.Row="2" Classes="status-banner info">
+                <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
+              </Border>
+              <WrapPanel Grid.Row="3" HorizontalAlignment="Right">
+                <Button Classes="app" Content="Preview report"
+                        Command="{Binding PreviewReportCommand}" />
+                <Button Classes="app primary" Content="Write reviewed report"
+                        Command="{Binding ApplyReportCommand}" />
+              </WrapPanel>
+            </Grid>
+          </Grid>
+        </TabItem>
       </TabControl>
     </Border>
   </Grid>

@@ -40,12 +40,14 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private readonly ICoverArtArchiveProvider _coverArt;
     private readonly IDiscogsMetadataProvider? _discogs;
     private readonly IDiscogsReleaseMappingService? _discogsMapping;
+    private readonly IReportExportService? _reports;
     private readonly IThumbnailService _thumbnails;
     private readonly IEditHistoryService _history;
     private readonly IFilePickerService _files;
     private readonly IDialogCoordinator _dialogs;
     private readonly IAppSettings _settings;
     private MetadataOperationPlan? _plan;
+    private ReportExportPlan? _reportPlan;
     private CancellationTokenSource? _cancellation;
 
     [ObservableProperty]
@@ -67,6 +69,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(BuildDiscogsReleaseMappingCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewDiscogsReleaseMetadataCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewDiscogsReleaseArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(BrowseReportOutputCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewReportCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ApplyReportCommand))]
     [NotifyCanExecuteChangedFor(nameof(FindReleaseArtworkCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewReleaseArtworkCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLocalArtworkCommand))]
@@ -156,7 +161,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         IDialogCoordinator dialogs,
         IAppSettings settings,
         IDiscogsMetadataProvider? discogs = null,
-        IDiscogsReleaseMappingService? discogsMapping = null)
+        IDiscogsReleaseMappingService? discogsMapping = null,
+        IReportExportService? reports = null)
     {
         _workbench = workbench;
         _operations = operations;
@@ -166,6 +172,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         _coverArt = coverArt;
         _discogs = discogs;
         _discogsMapping = discogsMapping;
+        _reports = reports;
         _thumbnails = thumbnails;
         _history = history;
         _files = files;
@@ -183,6 +190,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             CancelPlan();
             PreviewDiscogsReleaseMetadataCommand.NotifyCanExecuteChanged();
         };
+        ReportEditor.Changed += InvalidateReportPlan;
         KnownFieldChoices = Enum.GetValues<TagFields>()
             .Where(field => field != TagFields.NullField)
             .Select(field => new MetadataFieldChoice(field, field.ToString()))
@@ -201,11 +209,13 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     public ObservableCollection<DiscogsReleaseRow> DiscogsMatches { get; } = [];
     public ObservableCollection<DiscogsTrackMappingRow>
         DiscogsTrackMappings { get; } = [];
+    public ObservableCollection<ReportOutputRow> ReportOutputs { get; } = [];
     public ObservableCollection<string> RecentLocations { get; } = [];
     public MusicBrainzImportSelectionViewModel ReleaseImport { get; } = new();
     public MusicBrainzReleaseSearchViewModel ReleaseSearch { get; } = new();
     public DiscogsReleaseSearchViewModel DiscogsSearch { get; } = new();
     public DiscogsImportSelectionViewModel DiscogsImport { get; } = new();
+    public ReportEditorViewModel ReportEditor { get; } = new();
     public MetadataOperationEditorViewModel OperationEditor { get; }
     public IReadOnlyList<MetadataFieldChoice> KnownFieldChoices { get; }
     public IReadOnlyList<WorkbenchFieldEditMode> FieldEditModes { get; } =
@@ -213,7 +223,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     public bool HasFiles => Files.Count > 0;
     public bool HasPreview => PreviewChanges.Count > 0;
     public bool HasUnsavedChanges =>
-        _plan is not null || Files.Any(file => file.HasChanges);
+        _plan is not null ||
+        _reportPlan is not null ||
+        Files.Any(file => file.HasChanges);
     public bool CanUndoLatest => _history.CanUndo && !IsBusy;
     public bool CanRedoLatest => _history.CanRedo && !IsBusy;
     public bool CanRepeatLatest =>
@@ -357,6 +369,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         int index = Files.IndexOf(current);
         current.PropertyChanged -= OnTrackChanged;
         Files.Remove(current);
+        InvalidateReportPlan();
         foreach (AudioDiscoveryRow row in AudioMatches
                      .Where(row => PathComparer.Equals(row.Path, current.Path))
                      .ToArray())
@@ -396,6 +409,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         ClearReleaseTrackMappings();
         PreviewChanges.Clear();
         _plan = null;
+        InvalidateReportPlan();
         SelectedFile = null;
         StatusText = "Workbench cleared. Files on disk were not changed.";
         NotifySessionChanged();
@@ -409,6 +423,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             return;
         Files.Move(index, index - 1);
         CancelPlan();
+        InvalidateReportPlan();
         MoveUpCommand.NotifyCanExecuteChanged();
         MoveDownCommand.NotifyCanExecuteChanged();
     }
@@ -421,6 +436,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             return;
         Files.Move(index, index + 1);
         CancelPlan();
+        InvalidateReportPlan();
         MoveUpCommand.NotifyCanExecuteChanged();
         MoveDownCommand.NotifyCanExecuteChanged();
     }
@@ -933,6 +949,103 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanBrowseReportOutput))]
+    private async Task BrowseReportOutputAsync()
+    {
+        string? path = ReportEditor.OneFilePerGroup
+            ? await _files.PickFolderAsync(
+                "Choose report output folder")
+            : await _files.SaveFileAsync(
+                "Choose report output",
+                "music-library-report." +
+                ReportEditor.SuggestedExtension,
+                ReportEditor.SuggestedExtension);
+        if (!string.IsNullOrWhiteSpace(path))
+            ReportEditor.OutputPath = path;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPreviewReport))]
+    private async Task PreviewReportAsync()
+    {
+        if (_reports is null)
+            return;
+        BeginOperation("Building report preview");
+        try
+        {
+            ReportExportPlan plan = await _reports.PreviewAsync(
+                new(
+                    Files.Select(file => file.Path).ToArray(),
+                    ReportEditor.CreateConfiguration()),
+                CreateProgress(),
+                _cancellation!.Token);
+            _reportPlan = plan;
+            ReportOutputs.Clear();
+            foreach (ReportFilePlan file in plan.Files)
+                ReportOutputs.Add(new(
+                    string.IsNullOrWhiteSpace(file.Group)
+                        ? "All"
+                        : file.Group,
+                    file.DestinationPath,
+                    file.RowCount,
+                    file.ByteCount));
+            int blockers = plan.Issues.Count(issue =>
+                issue.Severity == OperationIssueSeverity.Blocker);
+            StatusText = blockers > 0
+                ? $"Report preview has {blockers:N0} blocker(s). No output was written."
+                : $"Previewed {plan.Files.Count:N0} report file(s). " +
+                  "Review the destinations before applying.";
+            ApplyReportCommand.NotifyCanExecuteChanged();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+        catch (OperationCanceledException)
+        {
+            InvalidateReportPlan();
+            StatusText = "Report preview cancelled.";
+        }
+        catch (Exception error)
+        {
+            InvalidateReportPlan();
+            StatusText = $"Report preview failed: {error.Message}";
+        }
+        finally
+        {
+            EndOperation();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanApplyReport))]
+    private async Task ApplyReportAsync()
+    {
+        if (_reports is null || _reportPlan is null)
+            return;
+        BeginOperation("Writing reviewed report");
+        try
+        {
+            ReportExportResult result = await _reports.ApplyAsync(
+                _reportPlan,
+                CreateProgress(),
+                _cancellation!.Token);
+            _reportPlan = null;
+            StatusText =
+                $"Wrote {result.FileCount:N0} report file(s) with " +
+                $"{result.RowCount:N0} row(s).";
+            ApplyReportCommand.NotifyCanExecuteChanged();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Report output cancelled.";
+        }
+        catch (Exception error)
+        {
+            StatusText = $"Report output failed: {error.Message}";
+        }
+        finally
+        {
+            EndOperation();
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanFindReleaseArtwork))]
     private async Task FindReleaseArtworkAsync()
     {
@@ -1264,6 +1377,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     {
         track.PropertyChanged += OnTrackChanged;
         Files.Add(track);
+        InvalidateReportPlan();
         SelectedFile ??= track;
     }
 
@@ -1458,6 +1572,15 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         SelectedDiscogsRelease?.Candidate.CoverImageUri is not null &&
         DiscogsTrackMappings.Any(row =>
             row.IsIncluded && row.SelectedTrack is not null);
+    private bool CanBrowseReportOutput() =>
+        !IsBusy && _reports is not null;
+    private bool CanPreviewReport() =>
+        !IsBusy && _reports is not null && Files.Count > 0 &&
+        ReportEditor.Fields.Count > 0 &&
+        !string.IsNullOrWhiteSpace(ReportEditor.OutputPath);
+    private bool CanApplyReport() =>
+        !IsBusy && _reports is not null &&
+        _reportPlan?.CanApply == true;
     private bool CanFindReleaseArtwork() =>
         !IsBusy && SelectedRelease is not null;
     private bool CanPreviewReleaseArtwork() =>
@@ -1505,6 +1628,20 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         DiscogsTrackMappings.Clear();
         PreviewDiscogsReleaseMetadataCommand.NotifyCanExecuteChanged();
         PreviewDiscogsReleaseArtworkCommand.NotifyCanExecuteChanged();
+    }
+
+    private void InvalidateReportPlan()
+    {
+        if (_reportPlan is null && ReportOutputs.Count == 0)
+        {
+            PreviewReportCommand.NotifyCanExecuteChanged();
+            return;
+        }
+        _reportPlan = null;
+        ReportOutputs.Clear();
+        PreviewReportCommand.NotifyCanExecuteChanged();
+        ApplyReportCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(HasUnsavedChanges));
     }
 
     private void OnDiscogsMappingChanged(

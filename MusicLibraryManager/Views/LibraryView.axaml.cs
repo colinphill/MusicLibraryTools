@@ -72,6 +72,13 @@ public partial class LibraryView : UserControl
             LibraryDiscogsTrackMappingGrid);
         ConfigureReleaseTrackMappingGrid(LibraryReleaseTrackMappingGrid);
         ConfigureReleaseArtworkGrid(LibraryReleaseArtworkGrid);
+        LibraryReportOutputGrid.ConfigureColumns(
+        [
+            new("Group", "Group", "Group", 140, 85),
+            new("File", "Destination", "File", 380, 210),
+            new("Rows", "Rows", "Rows", 75, 58),
+            new("Bytes", "Bytes", "Bytes", 95, 68),
+        ]);
         LibraryGrid.ApplySort(_sort);
         BuildColumnOptions();
         LibraryGrid.LayoutChanged += (_, _) => PersistLayout();

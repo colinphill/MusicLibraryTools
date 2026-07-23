@@ -29,6 +29,11 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMetadataOperationService, MetadataOperationService>();
         services.AddSingleton<IExportTransport, LocalFileSystemExportTransport>();
         services.AddSingleton<IConfiguredExportService, ConfiguredExportService>();
+        services.AddSingleton<IReportRenderer, TextReportRenderer>();
+        services.AddSingleton<IReportRenderer, CsvReportRenderer>();
+        services.AddSingleton<IReportRenderer, HtmlReportRenderer>();
+        services.AddSingleton<IReportRenderer, RtfReportRenderer>();
+        services.AddSingleton<IReportExportService, ReportExportService>();
         services.AddSingleton<ILibraryOperationContextFactory, LibraryOperationContextFactory>();
         services.AddSingleton<IItlMetadataRepairService>(sp => new ItlMetadataRepairService(
             sp.GetRequiredService<ILibraryOperationContextFactory>(),

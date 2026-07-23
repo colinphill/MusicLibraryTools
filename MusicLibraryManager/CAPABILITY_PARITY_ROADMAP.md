@@ -79,7 +79,7 @@ the same editor, preview, policy checks, recovery behavior, and history.
   - [x] End-to-end preview, apply, restart-safe undo, and redo verified.
 - [~] Phase 2: Typed bulk operations and recipes
 - [~] Phase 3: Online metadata and artwork
-- [ ] Phase 4: Flexible views, reporting, playlists, and tools
+- [~] Phase 4: Flexible views, reporting, playlists, and tools
 - [ ] Phase 5: Native format and tag-layer expansion
 - [ ] Phase 6: Integration and parity hardening
 
@@ -119,7 +119,7 @@ appropriate build or test.
     fingerprint plus whole-file duration.
   - [x] `IAcoustIdLookupService` resolves fingerprints to scored AcoustID and
     MusicBrainz recording candidates.
-  - [ ] `IReportExportService`.
+  - [x] `IReportExportService`.
   - [ ] `IPlaylistWorkspaceService`.
   - [ ] `IExternalToolService`.
 - [x] Preserve the existing `{Field}` convention where composition is useful;
@@ -308,12 +308,12 @@ and then resolved to a user-confirmed release.
 
 ### Reports
 
-- [ ] Structured report configuration for fields, column order, grouping,
+- [x] Structured report configuration for fields, column order, grouping,
   sorting, output path, encoding, and grouping behavior.
-- [ ] Safe TXT renderer.
-- [ ] Safe CSV renderer.
-- [ ] Safe HTML renderer.
-- [ ] Safe RTF renderer.
+- [x] Safe TXT renderer.
+- [x] Safe CSV renderer.
+- [x] Safe HTML renderer.
+- [x] Safe RTF renderer.
 
 ### Playlists and external tools
 
@@ -614,3 +614,11 @@ per-operation capability flags.
   download now uses the same authenticated request pacing and bounded artwork
   cache; a confirmed mapping can add the primary image to the standard staged
   artwork preview on either surface.
+- Added the shared structured report service and matching editors to Workbench
+  and Library. Reports select known, custom, file, and technical fields; support
+  column ordering, typed sorting, grouping, one-file-per-group naming, and
+  UTF-8 or UTF-16 output. Dedicated TXT, formula-safe CSV, encoded HTML, and
+  escaped RTF renderers build immutable reviewed output plans. New and replaced
+  files use the mutation coordinator and recovery journal, while preview and
+  apply use each surface's existing progress indicator and cancellation
+  command.

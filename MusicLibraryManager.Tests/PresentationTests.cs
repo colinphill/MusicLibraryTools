@@ -1499,6 +1499,56 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public void Report_editor_builds_and_reorders_typed_configuration()
+    {
+        var editor = new ReportEditorViewModel
+        {
+            Name = "Album inventory",
+            Format = ReportFormat.Html,
+            Encoding = ReportEncoding.Utf8WithBom,
+            OutputPath = @"C:\reports\albums.html",
+            CustomFieldName = "CATALOGNUMBER",
+            OneFilePerGroup = true,
+            GroupFileNameTemplate = "{Group}-inventory.{Format}",
+        };
+
+        editor.AddCustomFieldCommand.Execute(null);
+        ReportFieldEditorRow custom = Assert.Single(
+            editor.Fields,
+            field => field.Descriptor.Kind ==
+                ReportFieldKind.CustomMetadata);
+        editor.SelectedField = custom;
+        editor.MoveFieldUpCommand.Execute(null);
+        editor.SelectedGroupField = editor.Fields.Single(field =>
+            field.Descriptor.KnownField == TagFields.Album);
+        editor.SelectedSortField = editor.Fields.Single(field =>
+            field.Descriptor.KnownField == TagFields.TrackNumber);
+        editor.SortType = ReportSortType.Numeric;
+        editor.SortDescending = true;
+
+        ReportConfiguration configuration =
+            editor.CreateConfiguration();
+
+        Assert.Equal("Album inventory", configuration.Name);
+        Assert.Equal(ReportFormat.Html, configuration.Format);
+        Assert.Equal(ReportEncoding.Utf8WithBom,
+            configuration.Encoding);
+        Assert.Equal("metadata.Album",
+            configuration.GroupByFieldId);
+        Assert.True(configuration.OneFilePerGroup);
+        Assert.Equal("{Group}-inventory.{Format}",
+            configuration.GroupFileNameTemplate);
+        Assert.Contains(configuration.Fields, field =>
+            field.Kind == ReportFieldKind.CustomMetadata &&
+            field.Name == "CATALOGNUMBER");
+        ReportSortDescriptor sort =
+            Assert.Single(configuration.Sorting);
+        Assert.Equal("metadata.TrackNumber", sort.FieldId);
+        Assert.Equal(ReportSortType.Numeric, sort.Type);
+        Assert.True(sort.Descending);
+    }
+
+    [Fact]
     public async Task Library_audio_discovery_uses_explicit_scope_and_preserves_candidates()
     {
         TrackRecord[] records =
@@ -1520,6 +1570,7 @@ public sealed class PresentationTests
         var musicBrainz = new FakeMusicBrainzMetadataProvider();
         var discogs = new FakeDiscogsMetadataProvider();
         var coverArt = new FakeCoverArtArchiveProvider();
+        var reports = new FakeReportExportService();
         var viewModel = new LibraryViewModel(
             library,
             new FakeReindex(),
@@ -1536,7 +1587,8 @@ public sealed class PresentationTests
             files: new FakeFilePicker(
                 typeof(PresentationTests).Assembly.Location),
             discogs: discogs,
-            discogsMapping: new DiscogsReleaseMappingService());
+            discogsMapping: new DiscogsReleaseMappingService(),
+            reports: reports);
         await viewModel.ReloadAsync();
         await viewModel.SelectAsync(
             [viewModel.Rows.Single(row => row.Title == "One")]);
@@ -1551,6 +1603,22 @@ public sealed class PresentationTests
         Assert.Equal(0.92, row.Score);
         Assert.Contains("candidate", viewModel.OperationStatus,
             StringComparison.OrdinalIgnoreCase);
+
+        viewModel.ReportEditor.OutputPath =
+            @"C:\reports\selected-album.csv";
+        await viewModel.PreviewLibraryReportCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            [@"C:\music\one.flac", @"C:\music\two.flac"],
+            reports.PreviewedPaths);
+        Assert.Single(viewModel.ReportOutputs);
+        Assert.True(viewModel.HasUnsavedChanges);
+
+        await viewModel.ApplyLibraryReportCommand.ExecuteAsync(null);
+
+        Assert.True(reports.Applied);
+        Assert.False(viewModel.HasUnsavedChanges);
+        Assert.Contains("2 row(s)", viewModel.OperationStatus);
 
         await viewModel.PreviewLibraryAudioIdentifiersCommand.ExecuteAsync(null);
 
@@ -1979,6 +2047,59 @@ internal sealed class FakeMetadataOperationService : IMetadataOperationService
         CancellationToken ct = default) =>
         Task.FromResult(new MetadataApplyResult(
             plan.ChangedFileCount, [], []));
+}
+
+internal sealed class FakeReportExportService : IReportExportService
+{
+    public IReadOnlyList<string> PreviewedPaths { get; private set; } = [];
+    public bool Applied { get; private set; }
+
+    public Task<ReportExportPlan> PreviewAsync(
+        ReportExportRequest request,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        PreviewedPaths = request.Paths.ToArray();
+        progress?.Report(new(
+            OperationPhase.Planning,
+            request.Paths.Count,
+            request.Paths.Count,
+            Message: "Report preview complete"));
+        string output = Path.GetFullPath(
+            request.Configuration.OutputPath);
+        var mutation = new FileMutationPlan(
+            "ReportExport",
+            Path.GetDirectoryName(output)!,
+            "",
+            [],
+            [],
+            DateTimeOffset.UtcNow);
+        return Task.FromResult(new ReportExportPlan(
+            request,
+            [new("", output, request.Paths.Count, 128)],
+            mutation,
+            []));
+    }
+
+    public Task<ReportExportResult> ApplyAsync(
+        ReportExportPlan plan,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        Applied = true;
+        progress?.Report(new(
+            OperationPhase.Completed,
+            plan.Files.Count,
+            plan.Files.Count,
+            Message: "Report written"));
+        return Task.FromResult(new ReportExportResult(
+            plan.Files.Count,
+            plan.Files.Sum(file => file.RowCount),
+            new(0, 0, 0, 0, null, []),
+            []));
+    }
 }
 
 internal sealed class FakeAcoustIdDiscoveryService : IAcoustIdDiscoveryService
