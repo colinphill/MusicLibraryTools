@@ -232,6 +232,106 @@ public sealed class MusicBrainzMetadataProviderTests
         Assert.Contains("recordings", transport.Uri.Query);
     }
 
+    [Fact]
+    public async Task ReleaseCache_PersistsAcrossProviderRestarts()
+    {
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-musicbrainz-cache-" + Guid.NewGuid().ToString("N"));
+        string databasePath = Path.Combine(root, "metadata.db");
+        Guid releaseId =
+            Guid.Parse("11111111-1111-1111-1111-111111111111");
+        try
+        {
+            var online = new RecordingTransport(new(
+                HttpStatusCode.OK, RecordedReleaseDocument));
+            var first = new MusicBrainzMetadataProvider(
+                online,
+                new MusicBrainzReleaseCache(databasePath));
+
+            MusicBrainzReleaseCandidate downloaded =
+                await first.GetReleaseAsync(releaseId);
+
+            Assert.Equal(1, online.RequestCount);
+            var offline = new RecordingTransport(new(
+                HttpStatusCode.ServiceUnavailable, ""));
+            var restarted = new MusicBrainzMetadataProvider(
+                offline,
+                new MusicBrainzReleaseCache(databasePath));
+            var progress = new RecordingProgress();
+
+            MusicBrainzReleaseCandidate cached =
+                await restarted.GetReleaseAsync(releaseId, progress);
+
+            Assert.Equal(downloaded.ReleaseId, cached.ReleaseId);
+            Assert.Equal(downloaded.Title, cached.Title);
+            Assert.Equal(
+                downloaded.Tracks.Select(track => track.TrackId),
+                cached.Tracks.Select(track => track.TrackId));
+            Assert.Equal(0, offline.RequestCount);
+            Assert.Contains(
+                "cached",
+                progress.Items[^1].Message!,
+                StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task Provider_UsesExpiredCacheWhenMusicBrainzIsOffline()
+    {
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-musicbrainz-stale-" + Guid.NewGuid().ToString("N"));
+        string databasePath = Path.Combine(root, "metadata.db");
+        Guid recordingId =
+            Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        try
+        {
+            var cache = new MusicBrainzReleaseCache(databasePath);
+            MusicBrainzReleasePage page =
+                MusicBrainzMetadataProvider.ParseReleasePage(
+                    RecordedReleasePage);
+            var cachedResult = new MusicBrainzReleaseResult(
+                recordingId,
+                page.Releases,
+                DateTimeOffset.UtcNow.AddDays(-60));
+            await cache.WriteAsync(
+                $"recording:{recordingId:D}",
+                cachedResult,
+                cachedResult.RetrievedAtUtc);
+            var unavailable = new RecordingTransport(new(
+                HttpStatusCode.BadGateway, ""));
+            var provider = new MusicBrainzMetadataProvider(
+                unavailable, cache);
+            var progress = new RecordingProgress();
+
+            MusicBrainzReleaseResult result =
+                await provider.ResolveRecordingAsync(recordingId, progress);
+
+            Assert.Equal(cachedResult.RecordingId, result.RecordingId);
+            Assert.Equal(
+                cachedResult.Releases.Select(release => release.ReleaseId),
+                result.Releases.Select(release => release.ReleaseId));
+            Assert.Equal(
+                cachedResult.RetrievedAtUtc,
+                result.RetrievedAtUtc,
+                TimeSpan.FromMilliseconds(1));
+            Assert.Equal(3, unavailable.RequestCount);
+            Assert.Contains(
+                "unavailable",
+                progress.Items[^1].Message!,
+                StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
     [Theory]
     [InlineData("not-json")]
     [InlineData(
@@ -246,12 +346,14 @@ public sealed class MusicBrainzMetadataProviderTests
         : IMusicBrainzHttpTransport
     {
         public Uri? Uri { get; private set; }
+        public int RequestCount { get; private set; }
 
         public Task<MusicBrainzHttpResult> GetAsync(
             Uri uri,
             CancellationToken ct = default)
         {
             Uri = uri;
+            RequestCount++;
             return Task.FromResult(result);
         }
     }

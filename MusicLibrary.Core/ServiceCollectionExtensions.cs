@@ -65,6 +65,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAcoustIdLookupService, AcoustIdLookupService>();
         services.AddSingleton<IAcoustIdDiscoveryService, AcoustIdDiscoveryService>();
         services.AddSingleton<IMusicBrainzHttpTransport, MusicBrainzHttpTransport>();
+        services.AddSingleton<IMusicBrainzReleaseCache, MusicBrainzReleaseCache>();
         services.AddSingleton<IMusicBrainzMetadataProvider, MusicBrainzMetadataProvider>();
         services.AddSingleton<IMusicBrainzReleaseMappingService,
             MusicBrainzReleaseMappingService>();

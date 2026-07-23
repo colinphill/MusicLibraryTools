@@ -38,6 +38,8 @@ public sealed class ServiceCollectionExtensionsTests
             provider.GetRequiredService<IMusicBrainzHttpTransport>());
         Assert.IsType<MusicBrainzMetadataProvider>(
             provider.GetRequiredService<IMusicBrainzMetadataProvider>());
+        Assert.IsType<MusicBrainzReleaseCache>(
+            provider.GetRequiredService<IMusicBrainzReleaseCache>());
         Assert.IsType<MusicBrainzReleaseMappingService>(
             provider.GetRequiredService<IMusicBrainzReleaseMappingService>());
         Assert.IsType<CoverArtArchiveProvider>(

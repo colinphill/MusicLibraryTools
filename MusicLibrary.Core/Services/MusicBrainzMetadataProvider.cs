@@ -1,6 +1,8 @@
 using System.Collections.Immutable;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using MusicLibrary.Core.Models;
 
@@ -125,10 +127,13 @@ public sealed class MusicBrainzHttpTransport :
 }
 
 public sealed class MusicBrainzMetadataProvider(
-    IMusicBrainzHttpTransport transport) : IMusicBrainzMetadataProvider
+    IMusicBrainzHttpTransport transport,
+    IMusicBrainzReleaseCache? cache = null) : IMusicBrainzMetadataProvider
 {
     private const int PageSize = 100;
     private const int MaximumSearchResults = 250;
+    private static readonly TimeSpan CacheMaximumAge =
+        TimeSpan.FromDays(30);
     private static readonly TimeSpan MinimumRequestInterval =
         TimeSpan.FromSeconds(1);
     private readonly SemaphoreSlim _requestGate = new(1, 1);
@@ -142,6 +147,44 @@ public sealed class MusicBrainzMetadataProvider(
         if (recordingId == Guid.Empty)
             throw new ArgumentException(
                 "A MusicBrainz recording ID is required.", nameof(recordingId));
+        string cacheKey = $"recording:{recordingId:D}";
+        MusicBrainzCacheEntry<MusicBrainzReleaseResult>? cached =
+            await ReadCacheAsync<MusicBrainzReleaseResult>(cacheKey, ct)
+                .ConfigureAwait(false);
+        if (cached?.IsFresh == true)
+        {
+            ReportCached(
+                progress,
+                cached.Value.Releases.Length,
+                "MusicBrainz release editions");
+            return cached.Value;
+        }
+        try
+        {
+            MusicBrainzReleaseResult result =
+                await ResolveRecordingOnlineAsync(recordingId, progress, ct)
+                    .ConfigureAwait(false);
+            await WriteCacheAsync(
+                    cacheKey, result, result.RetrievedAtUtc, ct)
+                .ConfigureAwait(false);
+            return result;
+        }
+        catch (Exception error) when (
+            error is not OperationCanceledException && cached is not null)
+        {
+            ReportStaleCache(
+                progress,
+                cached.Value.Releases.Length,
+                "MusicBrainz is unavailable; using cached release editions");
+            return cached.Value;
+        }
+    }
+
+    private async Task<MusicBrainzReleaseResult> ResolveRecordingOnlineAsync(
+        Guid recordingId,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct)
+    {
         var releases = ImmutableArray.CreateBuilder<MusicBrainzReleaseCandidate>();
         int offset = 0;
         int total = 0;
@@ -186,6 +229,45 @@ public sealed class MusicBrainzMetadataProvider(
             throw new ArgumentException(
                 "Supply an artist, album, barcode, catalog number, or release ID.",
                 nameof(query));
+        string cacheKey = SearchCacheKey(query);
+        MusicBrainzCacheEntry<MusicBrainzReleaseSearchResult>? cached =
+            await ReadCacheAsync<MusicBrainzReleaseSearchResult>(cacheKey, ct)
+                .ConfigureAwait(false);
+        if (cached?.IsFresh == true)
+        {
+            ReportCached(
+                progress,
+                cached.Value.Releases.Length,
+                "MusicBrainz search results");
+            return cached.Value;
+        }
+        try
+        {
+            MusicBrainzReleaseSearchResult result =
+                await SearchReleasesOnlineAsync(query, progress, ct)
+                    .ConfigureAwait(false);
+            await WriteCacheAsync(
+                    cacheKey, result, result.RetrievedAtUtc, ct)
+                .ConfigureAwait(false);
+            return result;
+        }
+        catch (Exception error) when (
+            error is not OperationCanceledException && cached is not null)
+        {
+            ReportStaleCache(
+                progress,
+                cached.Value.Releases.Length,
+                "MusicBrainz is unavailable; using cached search results");
+            return cached.Value;
+        }
+    }
+
+    private async Task<MusicBrainzReleaseSearchResult>
+        SearchReleasesOnlineAsync(
+        MusicBrainzReleaseSearchQuery query,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct)
+    {
         var releases = ImmutableArray.CreateBuilder<MusicBrainzReleaseCandidate>();
         int offset = 0;
         int total = 0;
@@ -227,6 +309,44 @@ public sealed class MusicBrainzMetadataProvider(
         if (releaseId == Guid.Empty)
             throw new ArgumentException(
                 "A MusicBrainz release ID is required.", nameof(releaseId));
+        string cacheKey = $"release:{releaseId:D}";
+        MusicBrainzCacheEntry<MusicBrainzReleaseCandidate>? cached =
+            await ReadCacheAsync<MusicBrainzReleaseCandidate>(cacheKey, ct)
+                .ConfigureAwait(false);
+        if (cached?.IsFresh == true)
+        {
+            ReportCached(
+                progress,
+                cached.Value.Tracks.Length,
+                "MusicBrainz release tracks");
+            return cached.Value;
+        }
+        try
+        {
+            MusicBrainzReleaseCandidate result =
+                await GetReleaseOnlineAsync(releaseId, progress, ct)
+                    .ConfigureAwait(false);
+            await WriteCacheAsync(
+                    cacheKey, result, DateTimeOffset.UtcNow, ct)
+                .ConfigureAwait(false);
+            return result;
+        }
+        catch (Exception error) when (
+            error is not OperationCanceledException && cached is not null)
+        {
+            ReportStaleCache(
+                progress,
+                cached.Value.Tracks.Length,
+                "MusicBrainz is unavailable; using cached release details");
+            return cached.Value;
+        }
+    }
+
+    private async Task<MusicBrainzReleaseCandidate> GetReleaseOnlineAsync(
+        Guid releaseId,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct)
+    {
         progress?.Report(new(
             OperationPhase.LoadingConfiguration,
             0,
@@ -244,6 +364,82 @@ public sealed class MusicBrainzMetadataProvider(
             Message: $"Loaded {release.Tracks.Length:N0} release track(s)"));
         return release;
     }
+
+    private async Task<MusicBrainzCacheEntry<T>?> ReadCacheAsync<T>(
+        string key,
+        CancellationToken ct)
+    {
+        if (cache is null)
+            return null;
+        try
+        {
+            return await cache.ReadAsync<T>(key, CacheMaximumAge, ct)
+                .ConfigureAwait(false);
+        }
+        catch (Exception error) when (
+            error is not OperationCanceledException)
+        {
+            return null;
+        }
+    }
+
+    private async Task WriteCacheAsync<T>(
+        string key,
+        T value,
+        DateTimeOffset retrievedAtUtc,
+        CancellationToken ct)
+    {
+        if (cache is null)
+            return;
+        try
+        {
+            await cache.WriteAsync(key, value, retrievedAtUtc, ct)
+                .ConfigureAwait(false);
+        }
+        catch (Exception error) when (
+            error is not OperationCanceledException)
+        {
+            // Cache failures do not invalidate a successful provider response.
+        }
+    }
+
+    private static void ReportCached(
+        IProgress<OperationProgress>? progress,
+        int count,
+        string description) =>
+        progress?.Report(new(
+            OperationPhase.Completed,
+            count,
+            count,
+            Message: $"Loaded {count:N0} cached {description}"));
+
+    private static void ReportStaleCache(
+        IProgress<OperationProgress>? progress,
+        int count,
+        string message) =>
+        progress?.Report(new(
+            OperationPhase.Completed,
+            count,
+            count,
+            Message: message));
+
+    internal static string SearchCacheKey(
+        MusicBrainzReleaseSearchQuery query)
+    {
+        string normalized = string.Join(
+            "\n",
+            Normalize(query.Artist),
+            Normalize(query.Album),
+            Normalize(query.Barcode),
+            Normalize(query.CatalogNumber),
+            query.ReleaseId?.ToString("D") ?? "");
+        return "search:" + Convert.ToHexString(
+            SHA256.HashData(Encoding.UTF8.GetBytes(normalized)))
+            .ToLowerInvariant();
+    }
+
+    private static string Normalize(string? value) =>
+        value?.Trim().ToUpperInvariant() ?? "";
 
     public static Uri BuildBrowseUri(Guid recordingId, int offset = 0)
     {

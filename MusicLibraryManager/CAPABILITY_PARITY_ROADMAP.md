@@ -256,12 +256,16 @@ capability comparison is possible through typed operations without scripting.
   - [x] Confirm release, mapping, imported fields, and artwork.
   - [x] Route selective metadata and embedded-artwork changes through the
     normal staged preview, stale-plan validation, recovery, and history path.
-- [ ] Cache release data in an application-local database.
+- [x] Cache recording-linked editions, typed release searches, and complete
+  release details in a bounded application-local SQLite database. Fresh
+  results avoid network calls and expired results remain an explicit fallback
+  when MusicBrainz is unavailable.
 - [x] Cache downloaded artwork and thumbnails in a bounded application-data
   cache with least-recently-used pruning.
 - [~] Add provider rate limiting, identifiable user agent, cancellation,
-  retry/backoff, and offline behavior. MusicBrainz request behavior is
-  implemented; caching and explicit offline behavior remain.
+  retry/backoff, and offline behavior. MusicBrainz request behavior, persistent
+  caching, and cached offline fallback are implemented; a user-selected global
+  offline mode remains.
 - [ ] Introduce `ISecretStore`.
 - [ ] Implement Windows Credential Manager, macOS Keychain, and Linux Secret
   Service support, with session-only fallback.
@@ -537,3 +541,8 @@ per-operation capability flags.
   mutation path as metadata edits and preserves non-front embedded images.
 - Sidecar and combined embedded/sidecar policies remain blocked until the
   operation plan can recover multiple output artifacts atomically.
+- Added a bounded application-local SQLite cache for MusicBrainz
+  recording-linked editions, exact typed searches, and complete release
+  details. Cache hits report progress, survive application restarts, avoid
+  repeat provider calls for 30 days, and fall back to expired data when a live
+  request fails without swallowing cancellation.
