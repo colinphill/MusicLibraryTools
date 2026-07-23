@@ -833,6 +833,74 @@ public sealed class UiControlTests
     }
 
     [AvaloniaFact]
+    public void Workbench_grid_multi_selection_projects_mixed_metadata()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Show();
+            INavigationService navigation =
+                services.GetRequiredService<INavigationService>();
+            navigation.Navigate(ShellDestination.Workbench);
+            Dispatcher.UIThread.RunJobs();
+            WorkbenchView view = Assert.IsType<WorkbenchView>(
+                window.FindControl<ContentControl>(
+                    "ContentHost")!.Content);
+            WorkbenchViewModel model =
+                services.GetRequiredService<WorkbenchViewModel>();
+            model.Files.Add(Track("first.flac", "First artist"));
+            model.Files.Add(Track("second.flac", "Second artist"));
+            Dispatcher.UIThread.RunJobs();
+
+            AppDataGrid grid =
+                view.FindControl<AppDataGrid>("WorkbenchGrid")!;
+            grid.SelectedItems.Add(model.Files[0]);
+            grid.SelectedItems.Add(model.Files[1]);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(2, model.SelectedFileCount);
+            Assert.Equal("2 files selected", model.FieldSelectionSummary);
+            WorkbenchMetadataFieldRow artist =
+                model.MetadataFields.Single(row =>
+                    row.Field.KnownField == TagFields.Artist);
+            Assert.True(artist.IsMixed);
+            Assert.Equal("2/2 files", artist.Coverage);
+            Assert.Empty(model.FieldValuesText ?? "");
+
+            static WorkbenchTrackViewModel Track(
+                string path,
+                string artist) =>
+                new(new MediaDocument(
+                    path,
+                    [new(
+                        "VorbisComment",
+                        [new(
+                            MetadataFieldKey.Known(
+                                TagFields.Artist),
+                            [artist])],
+                        true,
+                        true,
+                        true,
+                        true)],
+                    [],
+                    null,
+                    new(
+                        path,
+                        10,
+                        DateTime.UtcNow,
+                        "hash"),
+                    true));
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
     public void Native_shell_constructs_and_routes_every_destination()
     {
         using ServiceProvider services = BuildIsolatedServices();

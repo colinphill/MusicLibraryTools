@@ -156,12 +156,20 @@ appropriate build or test.
 - [x] Configurable Workbench grid with persisted visibility, order, widths,
   sorting, and technical-property columns.
 - [x] Inline editing of the first set of actual metadata fields.
-- [~] Multi-selection and mixed-value handling. The Library inspector verifies
-  common and mixed values across complete selections; the Workbench field
-  inspector still targets one focused file.
-- [~] Multiple values with keep, replace, append, remove-value, and remove-field
-  semantics. These are available for a focused Workbench file; multi-selection
-  mixed-value editing remains.
+- [x] Multi-selection and mixed-value handling.
+  - The Workbench extended grid selection projects common, mixed, and
+    partially present fields across the complete selected set, including tag
+    layers and per-field file coverage.
+  - Selection survives staged reload by stable path, while file-specific
+    physical-layer and artwork tools retain an explicit focused file.
+- [x] Multiple values with keep, replace, append, remove-value, and remove-field
+  semantics.
+  - Workbench field actions build an independent value result for every
+    selected file, so append/remove operations preserve each file's original
+    ordered values instead of applying the focused file's state to the batch.
+  - Presentation and headless UI tests cover common/mixed projection,
+    partial presence, per-file append/remove results, and grid-selection
+    propagation.
 - [x] Inspect and edit arbitrary known and native custom fields.
 - [~] Multiple artwork items, types, descriptions, and previews. The shared
   staged plan now preserves non-front artwork and previews a selected front
@@ -553,9 +561,9 @@ per-operation capability flags.
   staged sequential track/disc numbering with totals, and ordered known/custom
   multi-value APEv2 writes across every APEv2-backed codec, plus ordered
   ID3v2.4 standard text values across every ID3-backed container.
-- Remaining Phase 1 work: Workbench multi-selection/mixed-value editing,
-  complete staged multi-artwork controls, and migration of the legacy Library
-  inspector/fields dialog onto the shared document and mutation services.
+- Remaining Phase 1 work: complete staged multi-artwork controls and migration
+  of the legacy Library inspector/fields dialog onto the shared document and
+  mutation services.
 - Remaining Phase 2 work: delimited/CSV metadata import, ad-hoc shared file
   mutations, live representative draft preview, tag-aware copy/paste, and
   fully symmetric artwork controls.

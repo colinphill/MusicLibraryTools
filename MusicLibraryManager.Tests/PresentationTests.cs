@@ -1807,6 +1807,107 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public void Workbench_selection_projects_mixed_values_and_builds_per_file_edits()
+    {
+        MetadataFieldKey title =
+            MetadataFieldKey.Known(TagFields.Title);
+        MetadataFieldKey artist =
+            MetadataFieldKey.Known(TagFields.Artist);
+        MetadataFieldKey custom =
+            MetadataFieldKey.Custom("DJ_SET");
+        WorkbenchTrackViewModel[] files =
+        [
+            Track(
+                "first.flac",
+                new(title, ["Shared title"]),
+                new(artist, ["First artist"]),
+                new(custom, ["Morning"])),
+            Track(
+                "second.flac",
+                new(title, ["Shared title"]),
+                new(
+                    artist,
+                    ["Second artist", "Guest artist"])),
+        ];
+
+        IReadOnlyList<WorkbenchMetadataFieldRow> rows =
+            WorkbenchViewModel.BuildMetadataFieldRows(files);
+
+        WorkbenchMetadataFieldRow common =
+            rows.Single(row => row.Field == title);
+        Assert.False(common.IsMixed);
+        Assert.Equal(["Shared title"], common.Values);
+        Assert.Equal("2/2 files", common.Coverage);
+        WorkbenchMetadataFieldRow mixed =
+            rows.Single(row => row.Field == artist);
+        Assert.True(mixed.IsMixed);
+        Assert.Empty(mixed.Values);
+        Assert.Equal(
+            "Mixed across 2 selected files",
+            mixed.DisplayValue);
+        WorkbenchMetadataFieldRow partial =
+            rows.Single(row => row.Field == custom);
+        Assert.True(partial.IsMixed);
+        Assert.Equal(1, partial.PresentFileCount);
+        Assert.Equal("1/2 files", partial.Coverage);
+
+        IReadOnlyDictionary<
+            string,
+            IReadOnlyList<MetadataValueEdit>> append =
+                WorkbenchViewModel.BuildValueEdits(
+                    files,
+                    artist,
+                    WorkbenchFieldEditMode.Append,
+                    ["Added artist"]);
+        Assert.Equal(
+            ["First artist", "Added artist"],
+            Assert.Single(append["first.flac"]).Values);
+        Assert.Equal(
+            [
+                "Second artist",
+                "Guest artist",
+                "Added artist",
+            ],
+            Assert.Single(append["second.flac"]).Values);
+
+        IReadOnlyDictionary<
+            string,
+            IReadOnlyList<MetadataValueEdit>> remove =
+                WorkbenchViewModel.BuildValueEdits(
+                    files,
+                    artist,
+                    WorkbenchFieldEditMode.RemoveValues,
+                    ["Guest artist"]);
+        Assert.Equal(
+            ["First artist"],
+            Assert.Single(remove["first.flac"]).Values);
+        Assert.Equal(
+            ["Second artist"],
+            Assert.Single(remove["second.flac"]).Values);
+
+        static WorkbenchTrackViewModel Track(
+            string path,
+            params MetadataValueSet[] fields) =>
+            new(new MediaDocument(
+                path,
+                [new(
+                    "VorbisComment",
+                    fields.ToImmutableArray(),
+                    true,
+                    true,
+                    true,
+                    true)],
+                [],
+                null,
+                new(
+                    path,
+                    10,
+                    DateTime.UtcNow,
+                    "hash"),
+                true));
+    }
+
+    [Fact]
     public void Metadata_preview_projects_physical_tag_layer_changes()
     {
         var preview = new System.Collections.ObjectModel.ObservableCollection<

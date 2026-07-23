@@ -73,7 +73,8 @@
             <Grid Grid.Row="1">
               <controls:AppDataGrid x:Name="WorkbenchGrid"
                   ItemsSource="{Binding Files}"
-                  SelectedItem="{Binding SelectedFile, Mode=TwoWay}" />
+                  SelectedItem="{Binding SelectedFile, Mode=TwoWay}"
+                  SelectionChanged="OnWorkbenchSelectionChanged" />
               <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
                           Spacing="7" IsVisible="{Binding !HasFiles}" MaxWidth="430">
                 <TextBlock HorizontalAlignment="Center" FontSize="18"
@@ -166,7 +167,7 @@
 
             <Grid Grid.Row="5" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="16"
                   IsVisible="{Binding SelectedFile}">
-              <TextBlock Classes="muted" Text="{Binding SelectedFile.Path}"
+              <TextBlock Classes="muted" Text="{Binding FieldSelectionSummary}"
                          TextTrimming="CharacterEllipsis" />
               <TextBlock Grid.Column="1" Classes="summary-label"
                          Text="{Binding SelectedFile.LayerSummary, StringFormat='Tags: {0}'}" />

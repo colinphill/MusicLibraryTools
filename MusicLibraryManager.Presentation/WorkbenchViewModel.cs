@@ -21,11 +21,19 @@ public enum WorkbenchFieldEditMode
 public sealed record WorkbenchMetadataFieldRow(
     MetadataFieldKey Field,
     string Layers,
-    ImmutableArray<string> Values)
+    ImmutableArray<string> Values,
+    bool IsMixed = false,
+    int SelectedFileCount = 1,
+    int PresentFileCount = 1)
 {
     public string Name => Field.DisplayName;
     public string Kind => Field.IsKnown ? "Known" : "Custom";
-    public string DisplayValue => string.Join("; ", Values);
+    public string DisplayValue => IsMixed
+        ? $"Mixed across {SelectedFileCount:N0} selected files"
+        : string.Join("; ", Values);
+    public string Coverage => SelectedFileCount <= 1
+        ? ""
+        : $"{PresentFileCount:N0}/{SelectedFileCount:N0} files";
 }
 
 public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
@@ -53,6 +61,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private PlaylistWorkspacePlan? _playlistPlan;
     private ExternalToolPlan? _externalToolPlan;
     private CancellationTokenSource? _cancellation;
+    private IReadOnlyList<WorkbenchTrackViewModel> _selectedFiles = [];
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(BrowseFilesCommand))]
@@ -296,6 +305,15 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     public IReadOnlyList<ID3TextEncodingPolicy> Id3EncodingPolicies { get; } =
         Enum.GetValues<ID3TextEncodingPolicy>();
     public bool HasFiles => Files.Count > 0;
+    public IReadOnlyList<WorkbenchTrackViewModel> SelectedFiles =>
+        _selectedFiles;
+    public int SelectedFileCount => EditTargets.Count;
+    public string FieldSelectionSummary => SelectedFileCount switch
+    {
+        0 => "",
+        1 => EditTargets[0].Path,
+        _ => $"{SelectedFileCount:N0} files selected",
+    };
     public bool HasPreview => PreviewChanges.Count > 0;
     public bool HasUnsavedChanges =>
         _plan is not null ||
@@ -382,6 +400,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
 
     partial void OnSelectedFileChanged(WorkbenchTrackViewModel? value)
     {
+        if (value is null)
+            SetSelectedFiles([]);
+        else if (!_selectedFiles.Contains(value))
+            SetSelectedFiles([value]);
         RebuildMetadataFields();
         DiscoverSelectedAudioCommand.NotifyCanExecuteChanged();
         MoveUpCommand.NotifyCanExecuteChanged();
@@ -391,7 +413,27 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     partial void OnSelectedMetadataFieldChanged(WorkbenchMetadataFieldRow? value)
     {
         if (value is not null)
-            FieldValuesText = string.Join(Environment.NewLine, value.Values);
+            FieldValuesText = value.IsMixed
+                ? ""
+                : string.Join(Environment.NewLine, value.Values);
+    }
+
+    public void SetSelectedFiles(
+        IEnumerable<WorkbenchTrackViewModel> files)
+    {
+        WorkbenchTrackViewModel[] selected = files
+            .Where(Files.Contains)
+            .Distinct()
+            .OrderBy(Files.IndexOf)
+            .ToArray();
+        if (_selectedFiles.SequenceEqual(selected))
+            return;
+        _selectedFiles = selected;
+        OnPropertyChanged(nameof(SelectedFiles));
+        OnPropertyChanged(nameof(SelectedFileCount));
+        OnPropertyChanged(nameof(FieldSelectionSummary));
+        RebuildMetadataFields();
+        PreviewFieldValuesCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedAudioMatchChanged(AudioDiscoveryRow? value)
@@ -623,47 +665,42 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [RelayCommand(CanExecute = nameof(CanPreviewFieldValues))]
     private async Task PreviewFieldValuesAsync()
     {
-        if (SelectedFile is null)
+        IReadOnlyList<WorkbenchTrackViewModel> targets =
+            EditTargets;
+        if (targets.Count == 0)
             return;
         MetadataFieldKey field;
-        ImmutableArray<string> current;
         if (SelectedMetadataField is { } selected)
         {
             field = selected.Field;
-            current = selected.Values;
         }
         else if (!string.IsNullOrWhiteSpace(CustomFieldName))
         {
             field = MetadataFieldKey.Custom(CustomFieldName);
-            current = SelectedFile.Document.Values(field);
         }
         else
         {
             field = MetadataFieldKey.Known(SelectedNewKnownField!.Field);
-            current = SelectedFile.Document.Values(field);
         }
 
         ImmutableArray<string> entered = (FieldValuesText ?? "")
             .Split(["\r\n", "\n"], StringSplitOptions.None)
             .Where(value => value.Length > 0)
             .ToImmutableArray();
-        ImmutableArray<string> result = SelectedFieldEditMode switch
-        {
-            WorkbenchFieldEditMode.Replace => entered,
-            WorkbenchFieldEditMode.Append => current.AddRange(entered),
-            WorkbenchFieldEditMode.RemoveValues => current
-                .Where(value => !entered.Contains(value, StringComparer.Ordinal))
-                .ToImmutableArray(),
-            WorkbenchFieldEditMode.RemoveField => [],
-            _ => entered,
-        };
-        var edits = new Dictionary<string, IReadOnlyList<MetadataValueEdit>>(
-            PathComparer)
-        {
-            [SelectedFile.Path] = [new(field, result)],
-        };
+        IReadOnlyDictionary<
+            string,
+            IReadOnlyList<MetadataValueEdit>> edits =
+                BuildValueEdits(
+                    targets,
+                    field,
+                    SelectedFieldEditMode,
+                    entered);
         await PreviewAsync((progress, ct) => _operations.PreviewValueEditsAsync(
-            edits, $"Edit {field.DisplayName} values", progress, ct));
+            edits,
+            $"Edit {field.DisplayName} values for " +
+            $"{targets.Count:N0} file(s)",
+            progress,
+            ct));
     }
 
     [RelayCommand(CanExecute = nameof(CanPreviewAddId3Layer))]
@@ -1887,6 +1924,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     {
         if (paths.Count == 0)
             return;
+        HashSet<string> selectedPaths = EditTargets
+            .Select(file => file.Path)
+            .ToHashSet(PathComparer);
         WorkbenchLoadResult loaded = await _workbench.LoadAsync(
             new(paths, Recursive: false), progress, ct);
         var documents = loaded.Documents.ToDictionary(document => document.Path, PathComparer);
@@ -1902,6 +1942,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             if (ReferenceEquals(SelectedFile, previous))
                 SelectedFile = replacement;
         }
+        SetSelectedFiles(Files.Where(file =>
+            selectedPaths.Contains(file.Path)));
         InvalidateReportPlan();
         InvalidatePlaylistPlan();
         InvalidateExternalToolPlan();
@@ -1920,24 +1962,131 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private void RebuildMetadataFields()
     {
         MetadataFields.Clear();
-        if (SelectedFile is null)
+        IReadOnlyList<WorkbenchTrackViewModel> targets =
+            EditTargets;
+        if (targets.Count == 0)
         {
             SelectedMetadataField = null;
             return;
         }
-        foreach (var group in SelectedFile.Document.TagLayers
-                     .SelectMany(layer => layer.Fields.Select(field => (layer, field)))
-                     .GroupBy(item => item.field.Field)
-                     .OrderBy(group => group.Key.DisplayName,
-                         StringComparer.OrdinalIgnoreCase))
-        {
-            MetadataFields.Add(new(
-                group.Key,
-                string.Join(", ", group.Select(item => item.layer.TagType).Distinct()),
-                group.SelectMany(item => item.field.Values).ToImmutableArray()));
-        }
+        foreach (WorkbenchMetadataFieldRow row in
+                 BuildMetadataFieldRows(targets))
+            MetadataFields.Add(row);
         SelectedMetadataField = MetadataFields.FirstOrDefault();
     }
+
+    public static IReadOnlyList<WorkbenchMetadataFieldRow>
+        BuildMetadataFieldRows(
+            IReadOnlyList<WorkbenchTrackViewModel> files)
+    {
+        if (files.Count == 0)
+            return [];
+        Dictionary<MetadataFieldKey, (
+            HashSet<string> Layers,
+            ImmutableArray<string> Values)>[] byFile = files
+            .Select(file => file.Document.TagLayers
+                .SelectMany(layer => layer.Fields.Select(field =>
+                    (layer.TagType, Field: field)))
+                .GroupBy(item => item.Field.Field)
+                .ToDictionary(
+                    group => group.Key,
+                    group => (
+                        group.Select(item => item.TagType)
+                            .ToHashSet(
+                                StringComparer.OrdinalIgnoreCase),
+                        group.SelectMany(item => item.Field.Values)
+                            .ToImmutableArray())))
+            .ToArray();
+        MetadataFieldKey[] fields = byFile
+            .SelectMany(file => file.Keys)
+            .Distinct()
+            .OrderBy(
+                field => field.DisplayName,
+                StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var rows = new List<WorkbenchMetadataFieldRow>(
+            fields.Length);
+        foreach (MetadataFieldKey field in fields)
+        {
+            var values =
+                new ImmutableArray<string>[files.Count];
+            var layers = new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase);
+            int present = 0;
+            for (int index = 0;
+                 index < byFile.Length;
+                 index++)
+            {
+                if (byFile[index].TryGetValue(
+                        field, out var entry))
+                {
+                    values[index] = entry.Values;
+                    layers.UnionWith(entry.Layers);
+                    present++;
+                }
+                else
+                {
+                    values[index] = [];
+                }
+            }
+            bool mixed = values.Skip(1).Any(value =>
+                !values[0].SequenceEqual(
+                    value,
+                    StringComparer.Ordinal));
+            rows.Add(new(
+                field,
+                string.Join(
+                    ", ",
+                    layers.Order(
+                        StringComparer.OrdinalIgnoreCase)),
+                mixed ? [] : values[0],
+                mixed,
+                files.Count,
+                present));
+        }
+        return rows;
+    }
+
+    public static IReadOnlyDictionary<
+        string,
+        IReadOnlyList<MetadataValueEdit>> BuildValueEdits(
+            IReadOnlyList<WorkbenchTrackViewModel> files,
+            MetadataFieldKey field,
+            WorkbenchFieldEditMode mode,
+            ImmutableArray<string> entered)
+    {
+        var edits = new Dictionary<
+            string,
+            IReadOnlyList<MetadataValueEdit>>(PathComparer);
+        foreach (WorkbenchTrackViewModel file in files)
+        {
+            ImmutableArray<string> current =
+                file.Document.Values(field);
+            ImmutableArray<string> result = mode switch
+            {
+                WorkbenchFieldEditMode.Replace => entered,
+                WorkbenchFieldEditMode.Append =>
+                    current.AddRange(entered),
+                WorkbenchFieldEditMode.RemoveValues =>
+                    current.Where(value =>
+                            !entered.Contains(
+                                value,
+                                StringComparer.Ordinal))
+                        .ToImmutableArray(),
+                WorkbenchFieldEditMode.RemoveField => [],
+                _ => entered,
+            };
+            edits[file.Path] = [new(field, result)];
+        }
+        return edits;
+    }
+
+    private IReadOnlyList<WorkbenchTrackViewModel> EditTargets =>
+        _selectedFiles.Count > 0
+            ? _selectedFiles
+            : SelectedFile is null
+                ? []
+                : [SelectedFile];
 
     private void OnTrackChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -2070,7 +2219,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private bool CanPreviewOperation() =>
         !IsBusy && Files.Count > 0 && OperationEditor.CanCreate;
     private bool CanPreviewFieldValues() =>
-        !IsBusy && SelectedFile is not null &&
+        !IsBusy && EditTargets.Count > 0 &&
         (SelectedMetadataField is not null ||
          !string.IsNullOrWhiteSpace(CustomFieldName) ||
          SelectedNewKnownField is not null);

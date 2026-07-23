@@ -58,6 +58,7 @@ public partial class WorkbenchView : UserControl
             new("Name", "Field", "Name", 210, 120),
             new("Kind", "Kind", "Kind", 90, 70),
             new("Layers", "Tag layers", "Layers", 150, 100),
+            new("Coverage", "Selected files", "Coverage", 105, 80),
             new("Value", "Values", "DisplayValue", 340, 180),
         ]);
         AudioDiscoveryGrid.ConfigureColumns(
@@ -260,6 +261,13 @@ public partial class WorkbenchView : UserControl
         WorkbenchGrid.ConfigureColumns(_workbenchColumns);
         WorkbenchGrid.ApplySort(_workbenchSort);
     }
+
+    private void OnWorkbenchSelectionChanged(
+        object? sender,
+        SelectionChangedEventArgs e) =>
+        _viewModel.SetSelectedFiles(
+            WorkbenchGrid.SelectedItems
+                .OfType<WorkbenchTrackViewModel>());
 
     private void BuildWorkbenchColumnOptions()
     {
