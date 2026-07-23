@@ -21,6 +21,7 @@ public sealed class MediaFormatConsumerTests
     [InlineData("sample.ofr")]
     [InlineData("sample.ofs")]
     [InlineData("sample.off")]
+    [InlineData("sample.wma")]
     public async Task MediaModelWritabilityComesFromRegistry(string fixture)
     {
         IMediaFormatRegistry registry = MediaFormatRegistry.Default;

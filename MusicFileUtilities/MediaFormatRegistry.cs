@@ -44,6 +44,7 @@ namespace MusicFileUtilities
         TrueAudio = 11,
         Tak = 12,
         OptimFrog = 13,
+        Asf = 14,
     }
 
     /// <summary>Describes one extension and the operations supported for it.</summary>
@@ -247,6 +248,12 @@ namespace MusicFileUtilities
                 indexedWithoutTranscode);
             yield return new(".off", "OptimFROG Float", MediaFormatFamily.OptimFrog,
                 indexedWithoutTranscode);
+            yield return new(".wma", "Windows Media Audio", MediaFormatFamily.Asf,
+                indexed | remux);
+            yield return new(".asf", "Advanced Systems Format", MediaFormatFamily.Asf,
+                readableAndWritable | MediaFormatCapabilities.TranscodeSource | remux);
+            yield return new(".wmv", "Windows Media Video", MediaFormatFamily.Asf,
+                readableAndWritable | MediaFormatCapabilities.TranscodeSource | remux);
 
             // These variants have long been supported by direct metadata/artwork editing and by
             // iTunes reconciliation, but not by automatic library indexing. Preserve that boundary.

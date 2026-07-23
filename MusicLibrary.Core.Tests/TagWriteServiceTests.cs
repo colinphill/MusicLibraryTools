@@ -55,6 +55,7 @@ public class TagWriteServiceTests
     [InlineData("sample.ofr")]
     [InlineData("sample.ofs")]
     [InlineData("sample.off")]
+    [InlineData("sample.wma")]
     public async Task RoundTrips_TitleAndAlbumArtist(string fixture)
     {
         using var media = MediaFixtures.Copy(fixture);
@@ -90,6 +91,7 @@ public class TagWriteServiceTests
     [InlineData("sample.ofr")]
     [InlineData("sample.ofs")]
     [InlineData("sample.off")]
+    [InlineData("sample.wma")]
     public async Task RoundTrips_ArbitraryUserString(string fixture)
     {
         using var media = MediaFixtures.Copy(fixture);

@@ -298,6 +298,7 @@ public class ArtworkServiceTests
     [InlineData("sample.ofr")]
     [InlineData("sample.ofs")]
     [InlineData("sample.off")]
+    [InlineData("sample.wma")]
     public void SupportsWrite_TrueForEveryTaggableFormat(string fixture)
     {
         Assert.True(_art.SupportsWrite(MediaFixtures.Path_(fixture)));
@@ -310,7 +311,7 @@ public class ArtworkServiceTests
                  {
                      "sample_alac.m4a", "sample.wv", "sample.ape",
                      "sample.mpc", "sample.tta", "sample.tak",
-                     "sample.ofr", "sample.ofs", "sample.off",
+                     "sample.ofr", "sample.ofs", "sample.off", "sample.wma",
                  })
         {
             using var media = MediaFixtures.Copy(fixture);

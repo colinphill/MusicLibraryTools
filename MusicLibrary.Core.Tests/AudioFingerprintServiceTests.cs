@@ -80,6 +80,7 @@ public sealed class AudioFingerprintServiceTests
     [InlineData("sample.ofr")]
     [InlineData("sample.ofs")]
     [InlineData("sample.off")]
+    [InlineData("sample.wma")]
     public async Task PayloadIdentity_IgnoresNativeMetadataChanges(
         string fixture)
     {
@@ -215,6 +216,25 @@ public sealed class AudioFingerprintServiceTests
         byte[] bytes = await File.ReadAllBytesAsync(media.Path);
 
         bytes[80] ^= 0x5a;
+        await File.WriteAllBytesAsync(media.Path, bytes);
+
+        string after = await identities.ComputeAsync(media.Path);
+        Assert.NotEqual(before, after);
+    }
+
+    [Fact]
+    public async Task PayloadIdentity_TracksAsfDataObjectChanges()
+    {
+        using var media = MediaFixtures.Copy("sample.wma");
+        var identities = new AudioPayloadIdentityService(
+            MediaFormatRegistry.Default);
+        string before = await identities.ComputeAsync(media.Path);
+        byte[] bytes = await File.ReadAllBytesAsync(media.Path);
+        ulong headerSize = BinaryPrimitives.ReadUInt64LittleEndian(
+            bytes.AsSpan(16, 8));
+        int packetOffset = checked((int)headerSize + 50);
+        Assert.InRange(packetOffset, 0, bytes.Length - 1);
+        bytes[packetOffset] ^= 0x5a;
         await File.WriteAllBytesAsync(media.Path, bytes);
 
         string after = await identities.ComputeAsync(media.Path);

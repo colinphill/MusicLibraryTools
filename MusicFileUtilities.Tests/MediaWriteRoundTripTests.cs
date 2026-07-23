@@ -28,6 +28,7 @@ namespace MusicFileUtilities.Tests
             new object[] { "sample.ofr" },
             new object[] { "sample.ofs" },
             new object[] { "sample.off" },
+            new object[] { "sample.wma" },
         };
 
         private static Action<TagFields, string> Setter(IMediaFile mf) =>

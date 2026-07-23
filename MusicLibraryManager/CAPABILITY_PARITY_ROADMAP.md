@@ -402,7 +402,17 @@ application concepts.
 
 ### Complex native handlers
 
-- [ ] ASF/WMA metadata and artwork.
+- [x] ASF/WMA metadata and artwork.
+  - [x] Parse ASF Header, File Properties, audio Stream Properties, Content
+    Description, Extended Content Description, Metadata, and Metadata Library
+    objects with WMA codec, duration, bitrate, sample-rate, channel, and
+    bit-depth projection.
+  - [x] Read and write standard/custom UTF-16 metadata plus small and large
+    `WM/Picture` artwork while preserving unknown header objects and the
+    complete Data Object/index tail byte-for-byte across atomic and staged
+    saves.
+  - [x] Keep ASF Data Object identities stable across metadata/artwork edits,
+    release `.wma` for indexing, and expose `.asf`/`.wmv` for direct editing.
 - [ ] Matroska/WebM tags, chapters, and image attachments.
 
 ### Tag-layer controls and release gates

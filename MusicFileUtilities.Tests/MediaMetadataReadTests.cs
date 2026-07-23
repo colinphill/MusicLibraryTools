@@ -32,6 +32,7 @@ namespace MusicFileUtilities.Tests
         [InlineData("sample.ofr")]
         [InlineData("sample.ofs")]
         [InlineData("sample.off")]
+        [InlineData("sample.wma")]
         public void BaselineTagsAreReadFromEveryFormat(string file)
         {
             var tags = Read(file);
@@ -65,6 +66,7 @@ namespace MusicFileUtilities.Tests
             Assert.Equal("APE", MediaFile.GetFile(MediaFixtures.Path_("sample.tta")).Tags.First().TagType);
             Assert.Equal("APE", MediaFile.GetFile(MediaFixtures.Path_("sample.tak")).Tags.First().TagType);
             Assert.Equal("APE", MediaFile.GetFile(MediaFixtures.Path_("sample.ofr")).Tags.First().TagType);
+            Assert.Equal("ASF", MediaFile.GetFile(MediaFixtures.Path_("sample.wma")).Tags.First().TagType);
         }
 
         [Fact]

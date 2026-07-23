@@ -23,6 +23,7 @@ namespace MusicFileUtilities.Tests
         [InlineData("sample.tak", "TAK", CodecType.Lossless)]
         [InlineData("sample.ofr", "OptimFROG", CodecType.Lossless)]
         [InlineData("sample.ofs", "OptimFROG DualStream", CodecType.Lossy)]
+        [InlineData("sample.wma", "Windows Media Audio 2", CodecType.Lossy)]
         public void CodecIdentityAndFormatProperties(string file, string codecName, CodecType type)
         {
             var mf = MediaFile.GetFile(MediaFixtures.Path_(file));
@@ -51,6 +52,7 @@ namespace MusicFileUtilities.Tests
         [InlineData("sample.ofr")]
         [InlineData("sample.ofs")]
         [InlineData("sample.off")]
+        [InlineData("sample.wma")]
         public void DurationAndBitrateAreComputed(string file)
         {
             var c = MediaFile.GetFile(MediaFixtures.Path_(file)).Codecs.First();
@@ -86,6 +88,7 @@ namespace MusicFileUtilities.Tests
         [InlineData("sample.wav")]
         [InlineData("sample.aiff")]
         [InlineData("sample.aac")]
+        [InlineData("sample.wma")]
         public void KnownFileLengthPreservesCodecAndMetadataProjections(string file)
         {
             string path = MediaFixtures.Path_(file);

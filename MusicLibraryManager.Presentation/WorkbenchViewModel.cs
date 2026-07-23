@@ -402,7 +402,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             "Add media, playlists, or cuesheets",
             [new("Supported sources",
                 [".mp3", ".flac", ".ogg", ".wv", ".m4a", ".mp4", ".m4p", ".m4r",
-                 ".m4b", ".m4v",
+                 ".m4b", ".m4v", ".wma", ".asf", ".wmv",
                  ".dsf", ".m3u", ".m3u8", ".cue"])]);
         if (paths.Count > 0)
             await AddSourcesAsync(paths);

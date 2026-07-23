@@ -15,7 +15,7 @@ public sealed class MediaFormatRegistryTests
                 ".dsf", ".m4a", ".mp3", ".flac", ".ogg", ".opus", ".spx",
                 ".wv", ".wav", ".rf64", ".aif", ".aiff", ".aifc", ".aac",
                 ".ape",
-                ".mpc", ".tta", ".tak", ".ofr", ".ofs", ".off",
+                ".mpc", ".tta", ".tak", ".ofr", ".ofs", ".off", ".wma",
             ];
         IMediaFormatRegistry registry = MediaFormatRegistry.Default;
 

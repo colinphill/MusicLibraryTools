@@ -68,7 +68,8 @@ $jobs = @(
     @{ File = 'sample.wav';       Args = @('-c:a', 'pcm_s16le') + $meta },
     @{ File = 'sample.aiff';      Args = @('-c:a', 'pcm_s16be') + $meta },
     @{ File = 'sample.aac';       Args = @('-c:a', 'aac', '-b:a', '128k', '-f', 'adts') },
-    @{ File = 'sample.tta';       Args = @('-c:a', 'tta') + $meta }
+    @{ File = 'sample.tta';       Args = @('-c:a', 'tta') + $meta },
+    @{ File = 'sample.wma';       Args = @('-c:a', 'wmav2', '-b:a', '64k') + $meta }
 )
 
 $needFfmpeg = $jobs | Where-Object { -not (Test-Path (Join-Path $OutDir $_.File)) }

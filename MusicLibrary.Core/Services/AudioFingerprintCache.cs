@@ -106,6 +106,8 @@ public sealed class AudioPayloadIdentityService(
                     stream, hash, progress, ct),
                 MediaFormatFamily.OptimFrog => HashTaggedFrames(
                     stream, hash, progress, ct),
+                MediaFormatFamily.Asf => HashAsf(
+                    stream, hash, progress, ct),
                 _ => HashWholeFile(stream, hash, progress, ct),
             }
             : HashWholeFile(stream, hash, progress, ct);
@@ -191,6 +193,71 @@ public sealed class AudioPayloadIdentityService(
                 stream, hash, progress, ct, rewind: true);
         AppendRange(stream, hash, start, end, progress, ct);
         return "tagged-frames";
+    }
+
+    private static string HashAsf(
+        FileStream stream,
+        IncrementalHash hash,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct)
+    {
+        if (stream.Length < 30)
+            return HashWholeFile(
+                stream, hash, progress, ct, rewind: true);
+        stream.Position = 0;
+        Span<byte> header = stackalloc byte[30];
+        ReadExactly(stream, header);
+        ReadOnlySpan<byte> headerGuid =
+        [
+            0x30, 0x26, 0xb2, 0x75, 0x8e, 0x66, 0xcf, 0x11,
+            0xa6, 0xd9, 0x00, 0xaa, 0x00, 0x62, 0xce, 0x6c,
+        ];
+        if (!header[..16].SequenceEqual(headerGuid))
+            return HashWholeFile(
+                stream, hash, progress, ct, rewind: true);
+        ulong headerSize =
+            BinaryPrimitives.ReadUInt64LittleEndian(header.Slice(16, 8));
+        if (headerSize < 30 || headerSize > (ulong)stream.Length)
+            return HashWholeFile(
+                stream, hash, progress, ct, rewind: true);
+
+        long position = checked((long)headerSize);
+        Span<byte> objectHeader = stackalloc byte[24];
+        ReadOnlySpan<byte> dataGuid =
+        [
+            0x36, 0x26, 0xb2, 0x75, 0x8e, 0x66, 0xcf, 0x11,
+            0xa6, 0xd9, 0x00, 0xaa, 0x00, 0x62, 0xce, 0x6c,
+        ];
+        while (position + objectHeader.Length <= stream.Length)
+        {
+            stream.Position = position;
+            ReadExactly(stream, objectHeader);
+            ulong objectSize =
+                BinaryPrimitives.ReadUInt64LittleEndian(
+                    objectHeader.Slice(16, 8));
+            if (objectSize < 24 ||
+                objectSize > (ulong)(stream.Length - position))
+                return HashWholeFile(
+                    stream, hash, progress, ct, rewind: true);
+            if (objectHeader[..16].SequenceEqual(dataGuid))
+            {
+                long payloadStart = position + 24;
+                long payloadEnd =
+                    checked(position + (long)objectSize);
+                AppendLength(hash, payloadEnd - payloadStart);
+                AppendRange(
+                    stream,
+                    hash,
+                    payloadStart,
+                    payloadEnd,
+                    progress,
+                    ct);
+                return "asf-data";
+            }
+            position = checked(position + (long)objectSize);
+        }
+        return HashWholeFile(
+            stream, hash, progress, ct, rewind: true);
     }
 
     private static long Id3v2End(FileStream stream)

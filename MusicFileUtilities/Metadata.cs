@@ -370,6 +370,10 @@ namespace MusicFileUtilities
                     file = new OptimFrogFile(path, readArtwork, knownLength);
                     break;
 
+                case MediaFormatFamily.Asf:
+                    file = new AsfFile(path, readArtwork, knownLength);
+                    break;
+
                 default:
                     throw new ArgumentException("Invalid File Type", "path");
             }
