@@ -13,6 +13,30 @@ public sealed class MetadataWorkbenchServicesTests
     private readonly MetadataDocumentService _documents =
         new(MediaFormatRegistry.Default);
 
+    public static TheoryData<string> UnicodeWritableFixtures => new()
+    {
+        "sample.mp3",
+        "sample.dsf",
+        "sample.wav",
+        "sample.aiff",
+        "sample.aac",
+        "sample.flac",
+        "sample.ogg",
+        "sample_alac.m4a",
+        "sample_aac.m4a",
+        "sample.wv",
+        "sample.ape",
+        "sample.mpc",
+        "sample.tta",
+        "sample.tak",
+        "sample.ofr",
+        "sample.ofs",
+        "sample.off",
+        "sample.wma",
+        "sample.mka",
+        "sample.webm",
+    };
+
     [Fact]
     public void OperationCatalog_ExposesEveryBuiltInOperationToWorkbenchAndLibrary()
     {
@@ -251,6 +275,69 @@ public sealed class MetadataWorkbenchServicesTests
             ["Opening", "Closing"],
             document.Chapters.Select(chapter => chapter.Title));
         Assert.True(document.IsWritable);
+    }
+
+    [Theory]
+    [MemberData(nameof(UnicodeWritableFixtures))]
+    public async Task Workbench_RoundTripsUnicodePathAndMetadata(
+        string fixture)
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-音楽-Δ-😀-" + Guid.NewGuid().ToString("N"));
+        string recovery = session + ".MusicLibraryManager-recovery";
+        Directory.CreateDirectory(session);
+        string mediaPath = Path.Combine(
+            session,
+            "café-日本語-🎵" + Path.GetExtension(fixture));
+        File.Copy(MediaFixtures.Path_(fixture), mediaPath);
+        string statePath = Path.Combine(session, "設定.json");
+        const string title = "Déjà vu — 日本語 — 🦊";
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings);
+
+            MetadataOperationPlan plan =
+                await service.PreviewValueEditsAsync(
+                    new Dictionary<
+                        string,
+                        IReadOnlyList<MetadataValueEdit>>
+                    {
+                        [mediaPath] =
+                        [
+                            new(
+                                MetadataFieldKey.Known(TagFields.Title),
+                                [title]),
+                        ],
+                    },
+                    "Unicode round trip");
+
+            MetadataFilePlan filePlan = Assert.Single(plan.Files);
+            Assert.Equal(mediaPath, filePlan.Path);
+            Assert.True(
+                plan.CanApply,
+                string.Join(
+                    Environment.NewLine,
+                    filePlan.Issues.Select(issue => issue.Message)));
+
+            MetadataApplyResult result = await service.ApplyAsync(plan);
+
+            Assert.Equal(1, result.ChangedFiles);
+            MediaDocument reopened =
+                await _documents.LoadAsync(mediaPath);
+            Assert.Equal(mediaPath, reopened.Path);
+            Assert.Equal(title, reopened.FirstValue(TagFields.Title));
+        }
+        finally
+        {
+            try { Directory.Delete(session, recursive: true); } catch { }
+            try { Directory.Delete(recovery, recursive: true); } catch { }
+        }
     }
 
     [Fact]

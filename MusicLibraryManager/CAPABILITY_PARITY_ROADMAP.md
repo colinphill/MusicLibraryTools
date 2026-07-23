@@ -483,7 +483,13 @@ per-operation capability flags.
   workflows.
 - [ ] Audit large selections and network shares.
 - [ ] Audit offline roots.
-- [ ] Audit Unicode paths and metadata.
+- [x] Audit Unicode paths and metadata.
+  - Workbench preview, staged apply, and reload round-trip multilingual and
+    emoji paths and metadata across ID3 containers, Vorbis, MP4, every APEv2
+    codec family, ASF, and Matroska/WebM.
+  - Generated Opus and Speex preservation fixtures cover the remaining Ogg
+    codecs with Unicode filenames and metadata while retaining artwork and
+    audio packets.
 - [ ] Audit keyboard and accessibility behavior.
 - [ ] Audit high-DPI and malformed artwork.
 - [ ] Audit Windows, macOS, and Linux behavior.

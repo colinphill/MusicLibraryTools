@@ -22,7 +22,7 @@ public sealed class OggCodecFormatTests
     {
         string path = Path.Combine(
             Path.GetTempPath(),
-            $"ogg_codec_{Guid.NewGuid():N}{extension}");
+            $"ogg_音楽_Δ_😀_{Guid.NewGuid():N}{extension}");
         WriteFixture(path, extension);
         byte[][] audioBefore = ReadPackets(path).Skip(2).ToArray();
         try
@@ -33,14 +33,16 @@ public sealed class OggCodecFormatTests
             Assert.Equal(sampleRate, media.Samplerate);
             Assert.Equal(channels, media.Channels);
 
-            media.SetField(TagFields.Title, "Replacement title");
+            media.SetField(
+                TagFields.Title,
+                "Déjà vu — 日本語 — 🦊");
             Assert.IsAssignableFrom<IArtworkWriter>(media)
                 .SetFrontCover(Cover, "image/png");
             media.SaveTags();
 
             var reloaded = Assert.IsType<OggVorbisFile>(
                 MediaFile.GetFile(path, readOnly: true, readArtwork: true));
-            Assert.Equal("Replacement title", reloaded.Title);
+            Assert.Equal("Déjà vu — 日本語 — 🦊", reloaded.Title);
             Assert.Equal(
                 Cover,
                 Assert.Single(reloaded.GetImageMetadata()).Data);
