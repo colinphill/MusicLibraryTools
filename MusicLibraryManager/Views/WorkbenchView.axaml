@@ -415,13 +415,16 @@
               </TabItem>
               <TabItem Header="Artwork">
                 <Grid RowDefinitions="Auto,*" RowSpacing="8">
-                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                  <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                     <TextBlock Classes="muted" VerticalAlignment="Center"
-                               Text="Browse the images attached to the selected MusicBrainz release. Thumbnails are cached locally."
+                               Text="Browse the selected release, then preview its front cover for confirmed file-to-track mappings."
                                TextWrapping="Wrap" />
                     <Button Grid.Column="1" Classes="app primary"
                             Content="Find release artwork"
                             Command="{Binding FindReleaseArtworkCommand}" />
+                    <Button Grid.Column="2" Classes="app primary"
+                            Content="Preview as front cover"
+                            Command="{Binding PreviewReleaseArtworkCommand}" />
                   </Grid>
                   <controls:AppDataGrid x:Name="ReleaseArtworkGrid" Grid.Row="1"
                       ItemsSource="{Binding ArtworkMatches}"

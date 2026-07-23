@@ -61,6 +61,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(PreviewReleaseMetadataCommand))]
     [NotifyCanExecuteChangedFor(nameof(SearchMusicBrainzReleasesCommand))]
     [NotifyCanExecuteChangedFor(nameof(FindReleaseArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewReleaseArtworkCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -92,6 +93,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(BuildReleaseMappingCommand))]
     [NotifyCanExecuteChangedFor(nameof(FindReleaseArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewReleaseArtworkCommand))]
     private MusicBrainzReleaseRow? _selectedRelease;
 
     [ObservableProperty]
@@ -212,7 +214,11 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     }
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PreviewReleaseArtworkCommand))]
     private CoverArtCandidateRow? _selectedArtworkMatch;
+
+    partial void OnSelectedArtworkMatchChanged(CoverArtCandidateRow? value) =>
+        CancelPlan();
 
     [RelayCommand]
     private void BeginNewKnownField()
@@ -455,14 +461,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             MetadataOperationPlan plan = await action(
                 CreateProgress(), _cancellation!.Token);
             _plan = plan;
-            PreviewChanges.Clear();
-            foreach (MetadataFilePlan file in plan.Files)
-            foreach (MetadataFieldDifference difference in file.Differences)
-                PreviewChanges.Add(new(
-                    Path.GetFileName(file.Path),
-                    difference.Field.DisplayName,
-                    string.Join("; ", difference.Before),
-                    string.Join("; ", difference.After)));
+            MetadataPreviewRowBuilder.Populate(PreviewChanges, plan);
             HasApplicablePreview = plan.CanApply;
             int blockers = plan.Files.SelectMany(file => file.Issues)
                 .Count(issue => issue.Severity == OperationIssueSeverity.Blocker);
@@ -755,6 +754,48 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         {
             EndOperation();
             NotifySessionChanged();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPreviewReleaseArtwork))]
+    private async Task PreviewReleaseArtworkAsync()
+    {
+        if (SelectedArtworkMatch is null || SelectedRelease is null)
+            return;
+        string[] paths = ConfirmedReleasePaths();
+        CoverArtCandidateRow selected = SelectedArtworkMatch;
+        string releaseTitle = SelectedRelease.Title;
+        await PreviewAsync(async (progress, ct) =>
+        {
+            CoverArtDownload download = await _coverArt.DownloadAsync(
+                selected.Candidate,
+                thumbnail: false,
+                progress,
+                ct);
+            var image = new ArtworkInput(
+                ID3v2Util.APICType.FrontCover,
+                download.ContentType,
+                download.Data,
+                string.IsNullOrWhiteSpace(selected.Comment)
+                    ? null
+                    : selected.Comment);
+            var edits = paths.ToDictionary(
+                path => path,
+                _ => new ArtworkValueEdit(
+                    ArtworkValueEditMode.ReplaceFrontCover,
+                    image),
+                PathComparer);
+            return await _operations.PreviewArtworkEditsAsync(
+                edits,
+                $"Cover Art Archive: {releaseTitle}",
+                progress,
+                ct);
+        });
+        if (_plan is not null)
+        {
+            StatusText =
+                "The selected front cover was added to the normal metadata preview. " +
+                "Review every artwork change before applying.";
         }
     }
 
@@ -1090,6 +1131,11 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         !IsBusy && ReleaseSearch.HasCriteria;
     private bool CanFindReleaseArtwork() =>
         !IsBusy && SelectedRelease is not null;
+    private bool CanPreviewReleaseArtwork() =>
+        !IsBusy && SelectedRelease is not null &&
+        SelectedArtworkMatch is not null &&
+        ReleaseTrackMappings.Any(row =>
+            row.IsIncluded && row.SelectedTrack is not null);
     private bool CanBuildReleaseMapping() =>
         !IsBusy && SelectedRelease is not null && Files.Count > 0;
     private bool CanPreviewReleaseMetadata() =>
@@ -1118,6 +1164,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             row.PropertyChanged -= OnReleaseMappingChanged;
         ReleaseTrackMappings.Clear();
         PreviewReleaseMetadataCommand.NotifyCanExecuteChanged();
+        PreviewReleaseArtworkCommand.NotifyCanExecuteChanged();
     }
 
     private void OnReleaseMappingChanged(
@@ -1126,8 +1173,15 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     {
         CancelPlan();
         PreviewReleaseMetadataCommand.NotifyCanExecuteChanged();
+        PreviewReleaseArtworkCommand.NotifyCanExecuteChanged();
         NotifySessionChanged();
     }
+
+    private string[] ConfirmedReleasePaths() => ReleaseTrackMappings
+        .Where(row => row.IsIncluded && row.SelectedTrack is not null)
+        .Select(row => row.Path)
+        .Distinct(PathComparer)
+        .ToArray();
 
     private void OnReleaseImportChanged(
         object? sender,

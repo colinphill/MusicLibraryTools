@@ -314,14 +314,41 @@ public sealed record MetadataValueEdit(
     MetadataFieldKey Field,
     ImmutableArray<string> Values);
 
+public enum ArtworkValueEditMode
+{
+    ReplaceFrontCover,
+    ReplaceAll,
+}
+
+public sealed record ArtworkValueEdit(
+    ArtworkValueEditMode Mode,
+    ArtworkInput Image);
+
+public sealed record ArtworkDescriptor(
+    ID3v2Util.APICType Type,
+    string MimeType,
+    string Description,
+    int Size,
+    string Hash);
+
+public sealed record ArtworkSetEdit(
+    ImmutableArray<ArtworkInput> Images);
+
+public sealed record ArtworkSetDifference(
+    ImmutableArray<ArtworkDescriptor> Before,
+    ImmutableArray<ArtworkDescriptor> After);
+
 public sealed record MetadataFilePlan(
     string Path,
     MediaFileSnapshot Snapshot,
     ImmutableArray<MetadataFieldDifference> Differences,
     ImmutableArray<MetadataValueEdit> Edits,
-    ImmutableArray<OperationIssue> Issues)
+    ImmutableArray<OperationIssue> Issues,
+    ArtworkSetEdit? ArtworkEdit = null,
+    ArtworkSetDifference? ArtworkDifference = null)
 {
-    public bool HasChanges => Differences.Length > 0;
+    public bool HasChanges =>
+        Differences.Length > 0 || ArtworkDifference is not null;
     public bool CanApply => HasChanges &&
         Issues.All(issue => issue.Severity != OperationIssueSeverity.Blocker);
 }
@@ -334,7 +361,8 @@ public sealed record MetadataOperationPlan(
     OperationRecipe? Recipe = null)
 {
     public int ChangedFileCount => Files.Count(file => file.HasChanges);
-    public int ChangeCount => Files.Sum(file => file.Differences.Length);
+    public int ChangeCount => Files.Sum(file =>
+        file.Differences.Length + (file.ArtworkDifference is null ? 0 : 1));
     public bool CanApply => ChangedFileCount > 0 && Files
         .SelectMany(file => file.Issues)
         .All(issue => issue.Severity != OperationIssueSeverity.Blocker);

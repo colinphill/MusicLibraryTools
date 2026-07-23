@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Diagnostics;
 using MetadataCaching;
 using MusicFileUtilities;
@@ -1542,6 +1543,28 @@ public sealed class PresentationTests
         Assert.True(artwork.Candidate.IsFront);
         Assert.Equal("4 bytes", artwork.ThumbnailStatus);
         Assert.Equal(searchResult.ReleaseId, coverArt.ReleaseId);
+
+        string[] confirmedArtworkPaths = viewModel.ReleaseTrackMappings
+            .Where(row => row.IsIncluded && row.SelectedTrack is not null)
+            .Select(row => row.Path)
+            .ToArray();
+        await viewModel.PreviewLibraryReleaseArtworkCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            confirmedArtworkPaths,
+            metadataOperations.PreviewedArtworkEdits.Keys);
+        Assert.All(
+            metadataOperations.PreviewedArtworkEdits.Values,
+            edit => Assert.Equal(
+                ArtworkValueEditMode.ReplaceFrontCover, edit.Mode));
+        Assert.All(
+            metadataOperations.PreviewedArtworkEdits.Values,
+            edit => Assert.Equal(
+                ID3v2Util.APICType.FrontCover, edit.Image.Type));
+        Assert.Contains(
+            viewModel.OperationPreviewChanges,
+            row => row.Field == "Artwork");
+        Assert.True(viewModel.HasApplicableOperationPreview);
     }
 
     private static TrackRecord Track(string artist, string album, string title, string codec, string path) => new()
@@ -1643,6 +1666,9 @@ internal sealed class FakeMetadataOperationService : IMetadataOperationService
     public IReadOnlyDictionary<string, IReadOnlyList<MetadataValueEdit>>
         PreviewedValueEdits { get; private set; } =
             new Dictionary<string, IReadOnlyList<MetadataValueEdit>>();
+    public IReadOnlyDictionary<string, ArtworkValueEdit>
+        PreviewedArtworkEdits { get; private set; } =
+            new Dictionary<string, ArtworkValueEdit>();
     public bool WaitForCancellation { get; init; }
     public bool CancellationObserved { get; private set; }
     public TaskCompletionSource<bool> PreviewStarted { get; } =
@@ -1738,6 +1764,43 @@ internal sealed class FakeMetadataOperationService : IMetadataOperationService
             []);
         return Task.FromResult(new MetadataOperationPlan(
             Guid.NewGuid(), name, [file], DateTimeOffset.UtcNow));
+    }
+
+    public Task<MetadataOperationPlan> PreviewArtworkEditsAsync(
+        IReadOnlyDictionary<string, ArtworkValueEdit> editsByPath,
+        string name,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        PreviewedArtworkEdits = editsByPath;
+        progress?.Report(new(
+            OperationPhase.Planning,
+            0,
+            editsByPath.Count,
+            Message: "Reading mapped artwork"));
+        MetadataFilePlan[] files = editsByPath.Select(pair =>
+        {
+            var before = ImmutableArray<ArtworkDescriptor>.Empty;
+            ImmutableArray<ArtworkDescriptor> after =
+            [
+                new(
+                    pair.Value.Image.Type,
+                    pair.Value.Image.MimeType,
+                    pair.Value.Image.Description ?? "",
+                    pair.Value.Image.Data.Length,
+                    "hash"),
+            ];
+            return new MetadataFilePlan(
+                pair.Key,
+                new(pair.Key, 1, DateTime.UtcNow, "hash"),
+                [],
+                [],
+                [],
+                new([pair.Value.Image]),
+                new(before, after));
+        }).ToArray();
+        return Task.FromResult(new MetadataOperationPlan(
+            Guid.NewGuid(), name, [.. files], DateTimeOffset.UtcNow));
     }
 
     public Task<MetadataApplyResult> ApplyAsync(

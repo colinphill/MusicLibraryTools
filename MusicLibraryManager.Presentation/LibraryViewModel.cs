@@ -110,6 +110,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryReleaseMetadataCommand))]
     [NotifyCanExecuteChangedFor(nameof(SearchLibraryMusicBrainzReleasesCommand))]
     [NotifyCanExecuteChangedFor(nameof(FindLibraryReleaseArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewLibraryReleaseArtworkCommand))]
     private bool _isOperationBusy;
 
     [ObservableProperty]
@@ -149,10 +150,15 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(BuildLibraryReleaseMappingCommand))]
     [NotifyCanExecuteChangedFor(nameof(FindLibraryReleaseArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewLibraryReleaseArtworkCommand))]
     private MusicBrainzReleaseRow? _selectedRelease;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PreviewLibraryReleaseArtworkCommand))]
     private CoverArtCandidateRow? _selectedArtworkMatch;
+
+    partial void OnSelectedArtworkMatchChanged(CoverArtCandidateRow? value) =>
+        InvalidateLibraryOperationPreview();
 
     public LibraryViewModel(
         ILibraryService library,
@@ -527,14 +533,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                     CreateOperationProgress(),
                     _operationCancellation!.Token);
             _libraryOperationPlan = plan;
-            OperationPreviewChanges.Clear();
-            foreach (MetadataFilePlan file in plan.Files)
-            foreach (MetadataFieldDifference difference in file.Differences)
-                OperationPreviewChanges.Add(new(
-                    Path.GetFileName(file.Path),
-                    difference.Field.DisplayName,
-                    string.Join("; ", difference.Before),
-                    string.Join("; ", difference.After)));
+            MetadataPreviewRowBuilder.Populate(OperationPreviewChanges, plan);
             HasApplicableOperationPreview = plan.CanApply;
             int blockers = plan.Files.SelectMany(file => file.Issues)
                 .Count(issue => issue.Severity == OperationIssueSeverity.Blocker);
@@ -656,14 +655,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                 CreateOperationProgress(),
                 _operationCancellation!.Token);
             _libraryOperationPlan = plan;
-            OperationPreviewChanges.Clear();
-            foreach (MetadataFilePlan file in plan.Files)
-            foreach (MetadataFieldDifference difference in file.Differences)
-                OperationPreviewChanges.Add(new(
-                    Path.GetFileName(file.Path),
-                    difference.Field.DisplayName,
-                    string.Join("; ", difference.Before),
-                    string.Join("; ", difference.After)));
+            MetadataPreviewRowBuilder.Populate(OperationPreviewChanges, plan);
             HasApplicableOperationPreview = plan.CanApply;
             OperationStatus =
                 "Audio identifiers were added to the normal metadata preview. Review before applying.";
@@ -828,6 +820,70 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanPreviewLibraryReleaseArtwork))]
+    private async Task PreviewLibraryReleaseArtworkAsync()
+    {
+        if (_metadataOperations is null ||
+            _coverArt is null ||
+            SelectedArtworkMatch is null ||
+            SelectedRelease is null)
+            return;
+        string[] paths = ConfirmedReleasePaths();
+        CoverArtCandidateRow selected = SelectedArtworkMatch;
+        string releaseTitle = SelectedRelease.Title;
+        BeginLibraryOperation("Building artwork preview");
+        try
+        {
+            IProgress<OperationProgress> progress = CreateOperationProgress();
+            CoverArtDownload download = await _coverArt.DownloadAsync(
+                selected.Candidate,
+                thumbnail: false,
+                progress,
+                _operationCancellation!.Token);
+            var image = new ArtworkInput(
+                MusicFileUtilities.ID3v2Util.APICType.FrontCover,
+                download.ContentType,
+                download.Data,
+                string.IsNullOrWhiteSpace(selected.Comment)
+                    ? null
+                    : selected.Comment);
+            var edits = paths.ToDictionary(
+                path => path,
+                _ => new ArtworkValueEdit(
+                    ArtworkValueEditMode.ReplaceFrontCover,
+                    image),
+                PathComparer);
+            MetadataOperationPlan plan =
+                await _metadataOperations.PreviewArtworkEditsAsync(
+                    edits,
+                    $"Cover Art Archive: {releaseTitle}",
+                    progress,
+                    _operationCancellation.Token);
+            _libraryOperationPlan = plan;
+            MetadataPreviewRowBuilder.Populate(
+                OperationPreviewChanges, plan);
+            HasApplicableOperationPreview = plan.CanApply;
+            OperationStatus =
+                "The selected front cover was added to the normal metadata preview. " +
+                "Review every artwork change before applying.";
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+        catch (OperationCanceledException)
+        {
+            InvalidateLibraryOperationPreview();
+            OperationStatus = "Artwork preview cancelled.";
+        }
+        catch (Exception error)
+        {
+            InvalidateLibraryOperationPreview();
+            OperationStatus = $"Artwork preview failed: {error.Message}";
+        }
+        finally
+        {
+            EndLibraryOperation();
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanBuildLibraryReleaseMapping))]
     private async Task BuildLibraryReleaseMappingAsync()
     {
@@ -923,14 +979,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                     CreateOperationProgress(),
                     _operationCancellation!.Token);
             _libraryOperationPlan = plan;
-            OperationPreviewChanges.Clear();
-            foreach (MetadataFilePlan file in plan.Files)
-            foreach (MetadataFieldDifference difference in file.Differences)
-                OperationPreviewChanges.Add(new(
-                    Path.GetFileName(file.Path),
-                    difference.Field.DisplayName,
-                    string.Join("; ", difference.Before),
-                    string.Join("; ", difference.After)));
+            MetadataPreviewRowBuilder.Populate(OperationPreviewChanges, plan);
             HasApplicableOperationPreview = plan.CanApply;
             OperationStatus =
                 "Mapped MusicBrainz fields were added to the normal metadata preview. " +
@@ -1081,6 +1130,14 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private bool CanFindLibraryReleaseArtwork() =>
         !IsBusy && !IsOperationBusy && _coverArt is not null &&
         SelectedRelease is not null;
+    private bool CanPreviewLibraryReleaseArtwork() =>
+        !IsBusy && !IsOperationBusy &&
+        _metadataOperations is not null &&
+        _coverArt is not null &&
+        SelectedRelease is not null &&
+        SelectedArtworkMatch is not null &&
+        ReleaseTrackMappings.Any(row =>
+            row.IsIncluded && row.SelectedTrack is not null);
     private bool CanBuildLibraryReleaseMapping() =>
         !IsBusy && !IsOperationBusy && _releaseMapping is not null &&
         SelectedRelease is not null && ResolveOperationPaths().Length > 0;
@@ -1111,6 +1168,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             row.PropertyChanged -= OnReleaseMappingChanged;
         ReleaseTrackMappings.Clear();
         PreviewLibraryReleaseMetadataCommand.NotifyCanExecuteChanged();
+        PreviewLibraryReleaseArtworkCommand.NotifyCanExecuteChanged();
     }
 
     private void OnReleaseMappingChanged(
@@ -1119,7 +1177,14 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     {
         InvalidateLibraryOperationPreview();
         PreviewLibraryReleaseMetadataCommand.NotifyCanExecuteChanged();
+        PreviewLibraryReleaseArtworkCommand.NotifyCanExecuteChanged();
     }
+
+    private string[] ConfirmedReleasePaths() => ReleaseTrackMappings
+        .Where(row => row.IsIncluded && row.SelectedTrack is not null)
+        .Select(row => row.Path)
+        .Distinct(PathComparer)
+        .ToArray();
 
     private void OnReleaseImportChanged(
         object? sender,

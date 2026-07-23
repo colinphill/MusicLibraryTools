@@ -15,6 +15,46 @@ public sealed record MetadataPreviewRow(
     string Before,
     string After);
 
+internal static class MetadataPreviewRowBuilder
+{
+    public static void Populate(
+        ObservableCollection<MetadataPreviewRow> destination,
+        MetadataOperationPlan plan)
+    {
+        destination.Clear();
+        foreach (MetadataFilePlan file in plan.Files)
+        {
+            foreach (MetadataFieldDifference difference in file.Differences)
+            {
+                destination.Add(new(
+                    Path.GetFileName(file.Path),
+                    difference.Field.DisplayName,
+                    string.Join("; ", difference.Before),
+                    string.Join("; ", difference.After)));
+            }
+
+            if (file.ArtworkDifference is { } artwork)
+            {
+                destination.Add(new(
+                    Path.GetFileName(file.Path),
+                    "Artwork",
+                    DescribeArtwork(artwork.Before),
+                    DescribeArtwork(artwork.After)));
+            }
+        }
+    }
+
+    private static string DescribeArtwork(
+        IReadOnlyList<ArtworkDescriptor> images) =>
+        images.Count == 0
+            ? "(none)"
+            : string.Join("; ", images.Select(image =>
+                $"{image.Type} {image.MimeType} {image.Size:N0} bytes" +
+                (string.IsNullOrWhiteSpace(image.Description)
+                    ? ""
+                    : $" ({image.Description})")));
+}
+
 public partial class MetadataRecipeStepViewModel(
     Guid id,
     string name,

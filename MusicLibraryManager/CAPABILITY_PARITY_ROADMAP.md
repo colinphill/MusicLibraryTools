@@ -147,7 +147,9 @@ appropriate build or test.
   semantics. These are available for a focused Workbench file; multi-selection
   mixed-value editing remains.
 - [x] Inspect and edit arbitrary known and native custom fields.
-- [~] Multiple artwork items, types, descriptions, and previews.
+- [~] Multiple artwork items, types, descriptions, and previews. The shared
+  staged plan now preserves non-front artwork and previews a selected front
+  cover; general-purpose artwork editing remains.
 - [x] Read-only technical properties.
 - [ ] Refactor Library inspector and fields dialog onto shared document/write
   services.
@@ -233,9 +235,8 @@ capability comparison is possible through typed operations without scripting.
     track/disc position; AcoustID confidence and broader album context remain.
   - [x] Use matched MusicBrainz recording IDs to locate releases and editions
     through the normal MusicBrainz provider.
-  - [~] Require confirmation of recording matches, release, file-to-track
-    mapping, imported fields, and artwork before mutation. Release, mapping,
-    and metadata field-group confirmation are implemented; artwork remains.
+  - [x] Require confirmation of recording matches, release, file-to-track
+    mapping, imported fields, and artwork before mutation.
   - [~] Offer `ACOUSTID_FINGERPRINT`, `ACOUSTID_ID`, and MusicBrainz recording
     ID tag updates as ordinary optional previewed metadata changes.
   - [ ] Support local fingerprint generation offline; make lookup status and
@@ -252,10 +253,9 @@ capability comparison is possible through typed operations without scripting.
     catalog numbers, media formats, track positions, and tracklists.
   - [x] Suggest mappings using recording ID, disc/track number, normalized
     artist/title, and duration while leaving ties unselected.
-  - [~] Confirm release, mapping, imported fields, and artwork. Metadata
-    confirmation is implemented; artwork remains.
-  - [~] Route changes through normal preview and recovery. Selective metadata
-    imports use the shared staged operation plan; artwork remains.
+  - [x] Confirm release, mapping, imported fields, and artwork.
+  - [x] Route selective metadata and embedded-artwork changes through the
+    normal staged preview, stale-plan validation, recovery, and history path.
 - [ ] Cache release data in an application-local database.
 - [x] Cache downloaded artwork and thumbnails in a bounded application-data
   cache with least-recently-used pruning.
@@ -527,5 +527,13 @@ per-operation capability flags.
   URLs with least-recently-used pruning. Workbench and Library now browse every
   image attached to the selected release, including roles, approval state,
   comments, front/back classification, and cached thumbnails.
-- Artwork discovery is read-only in this increment. Import still requires the
-  planned artwork-aware staged operation model before it can be enabled.
+- Added artwork-aware operation plans with before/after descriptors, native
+  format capability checks, effective library-policy validation, full staged
+  output generation, stale-plan rejection, recovery-space checks, and
+  restart-safe undo.
+- Workbench and Library can download a user-selected Cover Art Archive image
+  with progress and cancellation, then preview it as the front cover only for
+  explicitly included release mappings. Applying uses the same recoverable
+  mutation path as metadata edits and preserves non-front embedded images.
+- Sidecar and combined embedded/sidecar policies remain blocked until the
+  operation plan can recover multiple output artifacts atomically.

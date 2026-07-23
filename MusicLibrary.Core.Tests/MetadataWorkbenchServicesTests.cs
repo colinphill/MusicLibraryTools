@@ -1,6 +1,9 @@
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.PixelFormats;
 using Xunit;
 
 namespace MusicLibrary.Core.Tests;
@@ -533,6 +536,86 @@ public sealed class MetadataWorkbenchServicesTests
             try { Directory.Delete(session, recursive: true); } catch { }
             try { Directory.Delete(recovery, recursive: true); } catch { }
         }
+    }
+
+    [Fact]
+    public async Task ArtworkPreview_StagesApplyAndPersistentUndo()
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(), "mlm-artwork-plan-" + Guid.NewGuid().ToString("N"));
+        string recovery = session + ".MusicLibraryManager-recovery";
+        Directory.CreateDirectory(session);
+        string mediaPath = Path.Combine(session, "track.flac");
+        File.Copy(MediaFixtures.Path_("sample.flac"), mediaPath);
+        string statePath = Path.Combine(session, "settings.json");
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var journals = new OperationJournalService();
+            var history = new EditHistoryService(settings, journals);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings,
+                history: history);
+            byte[] originalFile = await File.ReadAllBytesAsync(mediaPath);
+            byte[] imageBytes = CreatePngBytes(48, 48);
+            var edits = new Dictionary<string, ArtworkValueEdit>
+            {
+                [mediaPath] = new(
+                    ArtworkValueEditMode.ReplaceFrontCover,
+                    new(
+                        ID3v2Util.APICType.FrontCover,
+                        "image/png",
+                        imageBytes,
+                        "Cover Art Archive")),
+            };
+
+            MetadataOperationPlan plan =
+                await service.PreviewArtworkEditsAsync(
+                    edits, "Import release artwork");
+
+            MetadataFilePlan filePlan = Assert.Single(plan.Files);
+            ArtworkSetDifference difference =
+                Assert.IsType<ArtworkSetDifference>(filePlan.ArtworkDifference);
+            Assert.Empty(difference.Before);
+            ArtworkDescriptor after = Assert.Single(difference.After);
+            Assert.Equal(ID3v2Util.APICType.FrontCover, after.Type);
+            Assert.Equal("image/jpeg", after.MimeType);
+            Assert.True(plan.CanApply);
+            Assert.Equal(originalFile, await File.ReadAllBytesAsync(mediaPath));
+
+            MetadataApplyResult result = await service.ApplyAsync(plan);
+
+            Assert.Equal(1, result.ChangedFiles);
+            MediaDocument applied = await _documents.LoadAsync(mediaPath);
+            ArtworkModel cover = Assert.Single(applied.Artwork);
+            Assert.Contains(
+                "Front", cover.Category, StringComparison.OrdinalIgnoreCase);
+            Assert.Equal("image/jpeg", cover.ImageType);
+            Assert.True(history.CanUndo);
+
+            int restored = await history.UndoLatestAsync();
+
+            Assert.Equal(1, restored);
+            Assert.Equal(originalFile, await File.ReadAllBytesAsync(mediaPath));
+            Assert.Empty((await _documents.LoadAsync(mediaPath)).Artwork);
+        }
+        finally
+        {
+            try { Directory.Delete(session, recursive: true); } catch { }
+            try { Directory.Delete(recovery, recursive: true); } catch { }
+        }
+    }
+
+    private static byte[] CreatePngBytes(int width, int height)
+    {
+        using var image = new Image<Rgba32>(
+            width, height, new Rgba32(24, 96, 192));
+        using var stream = new MemoryStream();
+        image.Save(stream, new PngEncoder());
+        return stream.ToArray();
     }
 
     private sealed class RecordingProgress : IProgress<OperationProgress>

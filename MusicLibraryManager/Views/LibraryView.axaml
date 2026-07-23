@@ -391,13 +391,16 @@
               </TabItem>
               <TabItem Header="Artwork">
                 <Grid Margin="0,6,0,0" RowDefinitions="Auto,*" RowSpacing="6">
-                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="7">
+                  <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="7">
                     <TextBlock Classes="muted" VerticalAlignment="Center"
-                               Text="Browse cached thumbnails for the selected release."
+                               Text="Browse the selected release, then preview its front cover for confirmed file-to-track mappings."
                                TextWrapping="Wrap" />
                     <Button Grid.Column="1" Classes="app primary"
                             Content="Find release artwork"
                             Command="{Binding FindLibraryReleaseArtworkCommand}" />
+                    <Button Grid.Column="2" Classes="app primary"
+                            Content="Preview as front cover"
+                            Command="{Binding PreviewLibraryReleaseArtworkCommand}" />
                   </Grid>
                   <controls:AppDataGrid x:Name="LibraryReleaseArtworkGrid" Grid.Row="1"
                       ItemsSource="{Binding ArtworkMatches}"

@@ -69,6 +69,15 @@ public interface IMetadataOperationService
         CancellationToken ct = default) =>
         PreviewValueEditsAsync(editsByPath, name, ct);
 
+    Task<MetadataOperationPlan> PreviewArtworkEditsAsync(
+        IReadOnlyDictionary<string, ArtworkValueEdit> editsByPath,
+        string name,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default) =>
+        Task.FromException<MetadataOperationPlan>(
+            new NotSupportedException(
+                "Artwork-aware metadata preview is not implemented."));
+
     Task<MetadataApplyResult> ApplyAsync(
         MetadataOperationPlan plan,
         IProgress<OperationProgress>? progress = null,
@@ -582,6 +591,117 @@ public sealed class MetadataOperationService(
         return new(Guid.NewGuid(), name, [.. plans], DateTimeOffset.UtcNow);
     }
 
+    public async Task<MetadataOperationPlan> PreviewArtworkEditsAsync(
+        IReadOnlyDictionary<string, ArtworkValueEdit> editsByPath,
+        string name,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(editsByPath);
+        var plans = new List<MetadataFilePlan>(editsByPath.Count);
+        int index = 0;
+        foreach ((string path, ArtworkValueEdit edit) in editsByPath)
+        {
+            ct.ThrowIfCancellationRequested();
+            progress?.Report(new(
+                OperationPhase.Planning,
+                index,
+                editsByPath.Count,
+                path,
+                $"Previewing artwork {index + 1:N0} of {editsByPath.Count:N0}"));
+            index++;
+            MediaDocument document;
+            try
+            {
+                document = await documents.LoadAsync(path, true, ct);
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                plans.Add(Unavailable(path, error));
+                continue;
+            }
+            var issues = new List<OperationIssue>();
+            LibraryArtworkPolicy policy =
+                ResolveArtworkPolicy(document.Path, issues);
+            if (!formats.SupportsPath(
+                    document.Path, MediaFormatCapabilities.WriteArtwork))
+                issues.Add(new(
+                    "artwork.unsupported",
+                    OperationIssueSeverity.Blocker,
+                    "The native format handler cannot write embedded artwork.",
+                    document.Path));
+            ImmutableArray<ArtworkInput> before =
+                [.. document.Artwork.Select(ToArtworkInput)];
+            ArtworkInput replacement = edit.Mode ==
+                ArtworkValueEditMode.ReplaceFrontCover
+                    ? edit.Image with
+                    {
+                        Type = ID3v2Util.APICType.FrontCover,
+                    }
+                    : edit.Image;
+            ImmutableArray<ArtworkInput> requested = edit.Mode switch
+            {
+                ArtworkValueEditMode.ReplaceAll => [replacement],
+                ArtworkValueEditMode.ReplaceFrontCover =>
+                    [replacement, .. before.Where(image =>
+                        image.Type != ID3v2Util.APICType.FrontCover)],
+                _ => throw new ArgumentOutOfRangeException(nameof(edit.Mode)),
+            };
+            if (policy.Roles == LibraryArtworkRoleSelection.FrontCoverOnly)
+                requested = [replacement with
+                {
+                    Type = ID3v2Util.APICType.FrontCover,
+                }];
+            ImmutableArray<ArtworkInput> after;
+            try
+            {
+                after = [.. requested.Select(image =>
+                {
+                    ArtworkService.PreparedArtwork prepared =
+                        ArtworkService.PrepareArtwork(
+                            image.Data, image.MimeType, policy, 0);
+                    return image with
+                    {
+                        Data = prepared.Data,
+                        MimeType = prepared.MimeType,
+                    };
+                })];
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                issues.Add(new(
+                    "artwork.prepare",
+                    OperationIssueSeverity.Blocker,
+                    error.Message,
+                    document.Path));
+                after = before;
+            }
+            ImmutableArray<ArtworkDescriptor> beforeDescription =
+                [.. before.Select(DescribeArtwork)];
+            ImmutableArray<ArtworkDescriptor> afterDescription =
+                [.. after.Select(DescribeArtwork)];
+            ArtworkSetDifference? difference =
+                beforeDescription.SequenceEqual(afterDescription)
+                    ? null
+                    : new(beforeDescription, afterDescription);
+            plans.Add(new(
+                document.Path,
+                document.Snapshot,
+                [],
+                [],
+                [.. issues],
+                difference is null ? null : new(after),
+                difference));
+        }
+        AddRecoverySpaceIssues(plans);
+        progress?.Report(new(
+            OperationPhase.Completed,
+            editsByPath.Count,
+            editsByPath.Count,
+            Message: $"Previewed artwork for {editsByPath.Count:N0} file(s)"));
+        return new(Guid.NewGuid(), name, [.. plans], DateTimeOffset.UtcNow);
+    }
+
     private static MetadataFilePlan Unavailable(string path, Exception error)
     {
         string fullPath;
@@ -612,7 +732,8 @@ public sealed class MetadataOperationService(
         foreach (MetadataFilePlan filePlan in changed)
         {
             ct.ThrowIfCancellationRequested();
-            MediaDocument current = await documents.LoadAsync(filePlan.Path, false, ct);
+            MediaDocument current = await documents.LoadAsync(
+                filePlan.Path, filePlan.ArtworkEdit is not null, ct);
             if (current.Snapshot.Length != filePlan.Snapshot.Length ||
                 current.Snapshot.LastWriteTimeUtc != filePlan.Snapshot.LastWriteTimeUtc ||
                 !StringComparer.Ordinal.Equals(
@@ -755,6 +876,69 @@ public sealed class MetadataOperationService(
             issues.Add(new("metadata.permission", OperationIssueSeverity.Blocker,
                 "The active library policy does not permit metadata writes.", path));
     }
+
+    private LibraryArtworkPolicy ResolveArtworkPolicy(
+        string path,
+        List<OperationIssue> issues)
+    {
+        LibraryProfile legacy = LibraryProfilePresets.Create(
+            LibraryProfilePreset.LegacyMusicLibraryTools);
+        LibraryConfiguration? configuration =
+            settings.GetSnapshot().Configuration;
+        if (configuration is null)
+            return legacy.Artwork;
+        LibraryIndexLocation[] roots =
+            configuration.IndexLocations.ToArray();
+        LibraryIndexLocation? root =
+            LibraryRootPermissionPolicy.MostSpecific(path, roots);
+        if (root is null)
+            return legacy.Artwork;
+        if (!LibraryRootPermissionPolicy.Allows(
+                path, roots, LibraryRootPermissions.WriteArtwork))
+            issues.Add(new(
+                "artwork.permission",
+                OperationIssueSeverity.Blocker,
+                "The active library policy does not permit artwork writes.",
+                path));
+        LibraryArtworkPolicy policy =
+            configuration.GetEffectiveProfile(root).Artwork;
+        if (policy.Storage != LibraryArtworkStorage.Embedded)
+            issues.Add(new(
+                "artwork.storage",
+                OperationIssueSeverity.Blocker,
+                policy.Storage == LibraryArtworkStorage.None
+                    ? "The effective library policy disables artwork storage."
+                    : "This staged artwork operation currently supports embedded-only " +
+                      "policies; sidecar artwork requires a multi-artifact recovery plan.",
+                path));
+        return policy;
+    }
+
+    private static ArtworkInput ToArtworkInput(ArtworkModel image)
+    {
+        ID3v2Util.APICType type =
+            Enum.TryParse(
+                image.Category, ignoreCase: true,
+                out ID3v2Util.APICType parsed)
+                ? parsed
+                : ID3v2Util.APICType.Other;
+        return new(
+            type,
+            string.IsNullOrWhiteSpace(image.ImageType)
+                ? "image/jpeg"
+                : image.ImageType,
+            image.Data,
+            image.Description ?? "");
+    }
+
+    private static ArtworkDescriptor DescribeArtwork(ArtworkInput image) =>
+        new(
+            image.Type,
+            image.MimeType,
+            image.Description ?? "",
+            image.Data.Length,
+            Convert.ToHexString(SHA256.HashData(image.Data))
+                .ToLowerInvariant());
 
     private static Dictionary<MetadataFieldKey, ImmutableArray<string>> Flatten(
         MediaDocument document) => document.TagLayers
@@ -991,7 +1175,7 @@ public sealed class MetadataOperationService(
                 file.Tags.OfType<VorbisComments>().FirstOrDefault();
             IUserStringMetadata? custom = file as IUserStringMetadata ??
                 file.Tags.OfType<IUserStringMetadata>().FirstOrDefault();
-            if (writer is null && vorbis is null)
+            if (writer is null && vorbis is null && plan.Edits.Length > 0)
                 throw new InvalidOperationException("The file has no writable metadata layer.");
 
             foreach (MetadataValueEdit edit in plan.Edits)
@@ -1031,6 +1215,20 @@ public sealed class MetadataOperationService(
                 else
                     throw new InvalidOperationException(
                         $"The tag format cannot store multiple values for field '{field}'.");
+            }
+            if (plan.ArtworkEdit is not null)
+            {
+                IArtworkWriter? artworkWriter = file as IArtworkWriter ??
+                    file.Tags.OfType<IArtworkWriter>().FirstOrDefault();
+                if (artworkWriter is null)
+                    throw new InvalidOperationException(
+                        "The file has no writable artwork layer.");
+                artworkWriter.SetImages(
+                    plan.ArtworkEdit.Images.Select(image => new ArtworkImage(
+                        image.Type,
+                        image.MimeType,
+                        image.Description ?? "",
+                        image.Data)).ToArray());
             }
             file.SaveTags(stage);
             return stage;
