@@ -274,7 +274,7 @@ capability comparison is possible through typed operations without scripting.
 - [x] Introduce `ISecretStore`.
 - [x] Implement Windows Credential Manager, macOS Keychain, and Linux Secret
   Service support, with session-only fallback.
-- [~] Add Discogs after secret storage is available:
+- [x] Add Discogs after secret storage is available:
   - [x] Store the personal access token only through `ISecretStore`.
   - [x] Add typed artist/album, barcode, catalog-number, and release-ID
     search plus complete edition and track-detail lookup.
@@ -282,8 +282,9 @@ capability comparison is possible through typed operations without scripting.
     rate limiting, progress, and cancellation behavior.
   - [x] Expose release comparison and detail loading in both Workbench and
     Library.
-  - [ ] Convert a confirmed Discogs edition and file-to-track mapping into
-    selective metadata and artwork previews.
+  - [x] Convert a confirmed Discogs edition and user-reviewed file-to-track
+    mapping into a selective metadata preview.
+  - [x] Download a confirmed Discogs image into the normal artwork preview.
 - [x] Do not create an mp3tag-compatible web-source language.
 
 **Acceptance:** An album can be searched, matched, selectively enriched,
@@ -602,5 +603,14 @@ per-operation capability flags.
   grid and commands. Requests use an identifiable user agent, one-per-second
   pacing, retry/backoff, the shared persistent cache and offline policy,
   progress reporting, and cancellation. Recorded fixtures keep CI independent
-  of the live service. Selective Discogs-to-file mapping remains the next
-  unchecked part of this item.
+  of the live service.
+- Added cancellable Discogs file-to-track mapping to Workbench and Library.
+  Disc/track position, normalized title and artist, and duration contribute to
+  ranked suggestions; ties and duplicate track assignments remain unselected.
+  Users can replace or exclude every suggestion and choose title, artist,
+  release identity, numbering, release details, genre/style, and Discogs-ID
+  field groups. The result enters the ordinary staged metadata preview,
+  capability and policy validation, recovery, and undo path. Discogs image
+  download now uses the same authenticated request pacing and bounded artwork
+  cache; a confirmed mapping can add the primary image to the standard staged
+  artwork preview on either surface.

@@ -1535,7 +1535,8 @@ public sealed class PresentationTests
             coverArt: coverArt,
             files: new FakeFilePicker(
                 typeof(PresentationTests).Assembly.Location),
-            discogs: discogs);
+            discogs: discogs,
+            discogsMapping: new DiscogsReleaseMappingService());
         await viewModel.ReloadAsync();
         await viewModel.SelectAsync(
             [viewModel.Rows.Single(row => row.Title == "One")]);
@@ -1629,7 +1630,37 @@ public sealed class PresentationTests
             .ExecuteAsync(null);
 
         Assert.Equal(4242, discogs.RequestedReleaseId);
-        Assert.Equal(1, viewModel.SelectedDiscogsRelease!.TrackCount);
+        Assert.Equal(3, viewModel.SelectedDiscogsRelease!.TrackCount);
+
+        await viewModel.BuildLibraryDiscogsReleaseMappingCommand
+            .ExecuteAsync(null);
+
+        Assert.Equal(3, viewModel.DiscogsTrackMappings.Count);
+        Assert.All(
+            viewModel.DiscogsTrackMappings,
+            row => Assert.True(row.IsIncluded));
+
+        await viewModel.PreviewLibraryDiscogsReleaseMetadataCommand
+            .ExecuteAsync(null);
+
+        Assert.All(
+            metadataOperations.PreviewedValueEdits.Values,
+            edits => Assert.Contains(edits, edit =>
+                edit.Field.CustomName == "DISCOGS_RELEASE_ID" &&
+                edit.Values.SequenceEqual(["4242"])));
+        Assert.True(viewModel.HasApplicableOperationPreview);
+
+        await viewModel.PreviewLibraryDiscogsReleaseArtworkCommand
+            .ExecuteAsync(null);
+
+        Assert.Equal(
+            records.Select(record => Path.GetFullPath(record.Path)),
+            metadataOperations.PreviewedArtworkEdits.Keys);
+        Assert.All(
+            metadataOperations.PreviewedArtworkEdits.Values,
+            edit => Assert.Equal(
+                ArtworkValueEditMode.ReplaceFrontCover,
+                edit.Mode));
 
         await viewModel.FindLibraryReleaseArtworkCommand.ExecuteAsync(null);
 
@@ -2102,12 +2133,29 @@ internal sealed class FakeDiscogsMetadataProvider : IDiscogsMetadataProvider
         return Task.FromResult(CreateRelease(withTracks: true));
     }
 
+    public Task<CoverArtDownload> DownloadPrimaryArtworkAsync(
+        DiscogsReleaseCandidate release,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        progress?.Report(new(
+            OperationPhase.Completed,
+            4,
+            4,
+            Message: "Discogs artwork downloaded"));
+        return Task.FromResult(new CoverArtDownload(
+            [1, 2, 3, 4],
+            "image/jpeg",
+            FromCache: false));
+    }
+
     private static DiscogsReleaseCandidate CreateRelease(bool withTracks) =>
         new(
             4242,
             4000,
             "Matched Album",
-            "Matched Artist",
+            "Artist",
             2001,
             "2001-02-03",
             "US",
@@ -2119,9 +2167,14 @@ internal sealed class FakeDiscogsMetadataProvider : IDiscogsMetadataProvider
             ["0123456789012"],
             new Uri("https://www.discogs.com/release/4242"),
             null,
-            null,
+            new Uri("https://i.discogs.com/cover.jpg"),
             withTracks
-                ? [new("1", "Matched Song", "0:42", "Matched Artist")]
+                ?
+                [
+                    new("1", "One", null, "Artist"),
+                    new("2", "Two", null, "Artist"),
+                    new("3", "Three", null, "Artist"),
+                ]
                 : []);
 }
 

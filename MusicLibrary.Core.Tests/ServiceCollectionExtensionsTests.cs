@@ -57,6 +57,10 @@ public sealed class ServiceCollectionExtensionsTests
             provider.GetRequiredService<ICoverArtArchiveProvider>());
         Assert.IsType<DiscogsMetadataProvider>(
             provider.GetRequiredService<IDiscogsMetadataProvider>());
+        Assert.IsType<DiscogsImageHttpTransport>(
+            provider.GetRequiredService<IDiscogsImageHttpTransport>());
+        Assert.IsType<DiscogsReleaseMappingService>(
+            provider.GetRequiredService<IDiscogsReleaseMappingService>());
         Assert.IsType<ArtworkDownloadCache>(
             provider.GetRequiredService<IArtworkDownloadCache>());
         IMetadataSourceCatalog metadataSources =

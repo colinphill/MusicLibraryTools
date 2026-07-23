@@ -282,6 +282,102 @@ public partial class DiscogsReleaseSearchViewModel : ObservableObject
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
+public sealed record DiscogsTrackChoice(
+    DiscogsRankedTrack Track,
+    string Display)
+{
+    public string Position =>
+        $"{Track.DiscNumber}-{Track.TrackNumber}";
+}
+
+public partial class DiscogsTrackMappingRow : ObservableObject
+{
+    public DiscogsTrackMappingRow(DiscogsTrackMatch match)
+    {
+        Path = match.Source.Path;
+        File = System.IO.Path.GetFileName(match.Source.Path);
+        Confidence = match.Confidence.ToString();
+        Status = match.Status;
+        TrackChoices = match.Candidates
+            .Select(candidate => new DiscogsTrackChoice(
+                candidate,
+                $"{candidate.DiscNumber}-{candidate.TrackNumber} — " +
+                $"{candidate.Track.Title} — {candidate.Track.ArtistCredit} " +
+                $"({candidate.Score})"))
+            .ToArray();
+        _selectedTrack = match.SuggestedTrack is null
+            ? null
+            : TrackChoices.FirstOrDefault(choice =>
+                choice.Track.SourceIndex ==
+                match.SuggestedTrack.SourceIndex);
+        _isIncluded = _selectedTrack is not null &&
+            match.Confidence != DiscogsMappingConfidence.Ambiguous;
+    }
+
+    public string Path { get; }
+    public string File { get; }
+    public string Confidence { get; }
+    public string Status { get; }
+    public IReadOnlyList<DiscogsTrackChoice> TrackChoices { get; }
+    public string Position => SelectedTrack?.Position ?? "";
+
+    [ObservableProperty]
+    private bool _isIncluded;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Position))]
+    private DiscogsTrackChoice? _selectedTrack;
+
+    partial void OnSelectedTrackChanged(DiscogsTrackChoice? value)
+    {
+        if (value is not null)
+            IsIncluded = true;
+    }
+}
+
+public partial class DiscogsImportSelectionViewModel : ObservableObject
+{
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelection))]
+    private bool _trackTitles = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelection))]
+    private bool _trackArtists = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelection))]
+    private bool _releaseIdentity = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelection))]
+    private bool _numbering = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelection))]
+    private bool _releaseDetails = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelection))]
+    private bool _genresAndStyles = true;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelection))]
+    private bool _discogsIdentifier = true;
+
+    public bool HasSelection =>
+        TrackTitles ||
+        TrackArtists ||
+        ReleaseIdentity ||
+        Numbering ||
+        ReleaseDetails ||
+        GenresAndStyles ||
+        DiscogsIdentifier;
+
+    public DiscogsImportOptions CreateOptions() => new(
+        TrackTitles,
+        TrackArtists,
+        ReleaseIdentity,
+        Numbering,
+        ReleaseDetails,
+        GenresAndStyles,
+        DiscogsIdentifier);
+}
+
 public partial class CoverArtCandidateRow(
     CoverArtArchiveCandidate candidate) : ObservableObject
 {

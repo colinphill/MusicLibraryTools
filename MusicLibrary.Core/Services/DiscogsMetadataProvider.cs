@@ -65,6 +65,11 @@ public interface IDiscogsMetadataProvider : IMetadataSourceProvider
         long releaseId,
         IProgress<OperationProgress>? progress = null,
         CancellationToken ct = default);
+
+    Task<CoverArtDownload> DownloadPrimaryArtworkAsync(
+        DiscogsReleaseCandidate release,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default);
 }
 
 public sealed record DiscogsHttpResult(
@@ -75,6 +80,20 @@ public sealed record DiscogsHttpResult(
 public interface IDiscogsHttpTransport
 {
     Task<DiscogsHttpResult> GetAsync(
+        Uri uri,
+        string token,
+        CancellationToken ct = default);
+}
+
+public sealed record DiscogsImageHttpResult(
+    HttpStatusCode StatusCode,
+    byte[] Content,
+    string? ContentType = null,
+    TimeSpan? RetryAfter = null);
+
+public interface IDiscogsImageHttpTransport
+{
+    Task<DiscogsImageHttpResult> GetAsync(
         Uri uri,
         string token,
         CancellationToken ct = default);
@@ -122,6 +141,51 @@ public sealed class DiscogsHttpTransport : IDiscogsHttpTransport, IDisposable
     public void Dispose() => _client.Dispose();
 }
 
+public sealed class DiscogsImageHttpTransport :
+    IDiscogsImageHttpTransport, IDisposable
+{
+    private readonly HttpClient _client = new(
+        new HttpClientHandler { AllowAutoRedirect = true })
+    {
+        Timeout = TimeSpan.FromSeconds(45),
+    };
+
+    public DiscogsImageHttpTransport()
+    {
+        _client.DefaultRequestHeaders.UserAgent.Add(
+            new ProductInfoHeaderValue("MusicLibraryManager", "1.0"));
+        _client.DefaultRequestHeaders.UserAgent.Add(
+            new ProductInfoHeaderValue(
+                "(+https://github.com/colinphill/MusicLibraryTools)"));
+        _client.DefaultRequestHeaders.Accept.Add(
+            new MediaTypeWithQualityHeaderValue("image/*"));
+    }
+
+    public async Task<DiscogsImageHttpResult> GetAsync(
+        Uri uri,
+        string token,
+        CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(token);
+        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+        request.Headers.Authorization =
+            new AuthenticationHeaderValue("Discogs", $"token={token}");
+        using HttpResponseMessage response = await _client.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            ct).ConfigureAwait(false);
+        byte[] content = await response.Content
+            .ReadAsByteArrayAsync(ct).ConfigureAwait(false);
+        return new(
+            response.StatusCode,
+            content,
+            response.Content.Headers.ContentType?.MediaType,
+            response.Headers.RetryAfter?.Delta);
+    }
+
+    public void Dispose() => _client.Dispose();
+}
+
 public sealed class DiscogsCredentialRequiredException(string message)
     : InvalidOperationException(message);
 
@@ -132,7 +196,9 @@ public sealed class DiscogsMetadataProvider(
     IDiscogsHttpTransport transport,
     ISecretStore secrets,
     IMetadataSourceDataCache? cache = null,
-    IProviderNetworkPolicy? networkPolicy = null) :
+    IProviderNetworkPolicy? networkPolicy = null,
+    IDiscogsImageHttpTransport? imageTransport = null,
+    IArtworkDownloadCache? artworkCache = null) :
     IDiscogsMetadataProvider
 {
     public const string TokenSecretKey = "discogs.personal-token";
@@ -148,7 +214,8 @@ public sealed class DiscogsMetadataProvider(
         "discogs",
         "Discogs",
         MetadataSourceCapabilities.ReleaseSearch |
-        MetadataSourceCapabilities.ReleaseDetails,
+        MetadataSourceCapabilities.ReleaseDetails |
+        MetadataSourceCapabilities.ReleaseArtwork,
         RequiresCredential: true);
 
     public async Task<DiscogsReleaseSearchResult> SearchReleasesAsync(
@@ -285,6 +352,69 @@ public sealed class DiscogsMetadataProvider(
         }
     }
 
+    public async Task<CoverArtDownload> DownloadPrimaryArtworkAsync(
+        DiscogsReleaseCandidate release,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(release);
+        Uri uri = release.CoverImageUri ??
+            throw new InvalidOperationException(
+                "The selected Discogs release has no primary image.");
+        if (artworkCache is not null)
+        {
+            CoverArtDownload? cached =
+                await artworkCache.ReadAsync(uri, ct).ConfigureAwait(false);
+            if (cached is not null)
+            {
+                progress?.Report(new(
+                    OperationPhase.Completed,
+                    1,
+                    1,
+                    Message: "Loaded Discogs artwork from cache"));
+                return cached with { FromCache = true };
+            }
+        }
+        if (networkPolicy?.IsOffline == true)
+            throw new InvalidOperationException(
+                "Offline mode is enabled and this Discogs image is not cached.");
+        if (imageTransport is null)
+            throw new InvalidOperationException(
+                "Discogs artwork transport is unavailable.");
+        string token = await RequireTokenAsync(ct).ConfigureAwait(false);
+        progress?.Report(new(
+            OperationPhase.LoadingLibrary,
+            Message: "Downloading Discogs release artwork"));
+        DiscogsImageHttpResult response =
+            await SendImageWithRetryAsync(uri, token, ct)
+                .ConfigureAwait(false);
+        if (response.StatusCode is
+            HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+            throw new DiscogsAuthenticationException(
+                "Discogs rejected the stored personal access token.");
+        if (!response.StatusCode.IsSuccess())
+            throw new HttpRequestException(
+                "Discogs artwork download failed with HTTP " +
+                $"{(int)response.StatusCode}.");
+        if (response.Content.Length == 0)
+            throw new InvalidDataException(
+                "Discogs returned an empty artwork file.");
+        var result = new CoverArtDownload(
+            response.Content,
+            response.ContentType ?? "application/octet-stream",
+            FromCache: false);
+        if (artworkCache is not null)
+            await artworkCache.WriteAsync(uri, result, ct)
+                .ConfigureAwait(false);
+        progress?.Report(new(
+            OperationPhase.Completed,
+            response.Content.Length,
+            response.Content.Length,
+            Message:
+                $"Downloaded {response.Content.Length:N0} bytes of Discogs artwork"));
+        return result;
+    }
+
     private async Task<string> RequireTokenAsync(CancellationToken ct)
     {
         string? token = await secrets.ReadAsync(TokenSecretKey, ct)
@@ -330,6 +460,43 @@ public sealed class DiscogsMetadataProvider(
         }
         throw new HttpRequestException(
             "Discogs retry loop ended unexpectedly.");
+    }
+
+    private async Task<DiscogsImageHttpResult> SendImageWithRetryAsync(
+        Uri uri,
+        string token,
+        CancellationToken ct)
+    {
+        for (int attempt = 0; attempt < 3; attempt++)
+        {
+            await _requestGate.WaitAsync(ct).ConfigureAwait(false);
+            DiscogsImageHttpResult result;
+            try
+            {
+                TimeSpan wait = MinimumRequestInterval -
+                    (DateTimeOffset.UtcNow - _lastRequestUtc);
+                if (wait > TimeSpan.Zero)
+                    await Task.Delay(wait, ct).ConfigureAwait(false);
+                result = await imageTransport!.GetAsync(uri, token, ct)
+                    .ConfigureAwait(false);
+                _lastRequestUtc = DateTimeOffset.UtcNow;
+            }
+            finally
+            {
+                _requestGate.Release();
+            }
+            if (result.StatusCode != HttpStatusCode.TooManyRequests &&
+                (int)result.StatusCode < 500)
+                return result;
+            if (attempt < 2)
+            {
+                TimeSpan delay = result.RetryAfter ??
+                    TimeSpan.FromSeconds(Math.Pow(2, attempt + 1));
+                await Task.Delay(delay, ct).ConfigureAwait(false);
+            }
+        }
+        throw new HttpRequestException(
+            "Discogs artwork retry loop ended unexpectedly.");
     }
 
     private static void EnsureSuccess(

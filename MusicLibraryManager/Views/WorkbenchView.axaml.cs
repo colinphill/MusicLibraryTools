@@ -75,6 +75,7 @@ public partial class WorkbenchView : UserControl
             new("ReleaseID", "MusicBrainz release ID", "ReleaseId", 280, 180),
         ]);
         ConfigureDiscogsGrid(DiscogsDiscoveryGrid);
+        ConfigureDiscogsTrackMappingGrid(DiscogsTrackMappingGrid);
         ConfigureReleaseTrackMappingGrid(ReleaseTrackMappingGrid);
         ConfigureReleaseArtworkGrid(ReleaseArtworkGrid);
     }
@@ -95,6 +96,58 @@ public partial class WorkbenchView : UserControl
             new("Source", "Source", "Source", 100, 75),
             new("ReleaseID", "Discogs release ID", "ReleaseId", 150, 100),
         ]);
+
+    private static void ConfigureDiscogsTrackMappingGrid(
+        AppDataGrid grid)
+    {
+        var includeTemplate =
+            new FuncDataTemplate<DiscogsTrackMappingRow>(
+                (_, _) =>
+                {
+                    var check = new CheckBox();
+                    check.Bind(
+                        CheckBox.IsCheckedProperty,
+                        new Binding(
+                            nameof(DiscogsTrackMappingRow.IsIncluded))
+                        {
+                            Mode = BindingMode.TwoWay,
+                        });
+                    return check;
+                });
+        var trackTemplate =
+            new FuncDataTemplate<DiscogsTrackMappingRow>(
+                (_, _) =>
+                {
+                    var combo = new ComboBox
+                    {
+                        DisplayMemberBinding = new Binding(
+                            nameof(DiscogsTrackChoice.Display)),
+                    };
+                    combo.Bind(
+                        ItemsControl.ItemsSourceProperty,
+                        new Binding(
+                            nameof(DiscogsTrackMappingRow.TrackChoices)));
+                    combo.Bind(
+                        ComboBox.SelectedItemProperty,
+                        new Binding(
+                            nameof(DiscogsTrackMappingRow.SelectedTrack))
+                        {
+                            Mode = BindingMode.TwoWay,
+                        });
+                    return combo;
+                });
+        grid.ConfigureColumns(
+        [
+            new("Include", "Use", null, 58, 48,
+                CellTemplate: includeTemplate, Sortable: false),
+            new("File", "File", "File", 180, 110),
+            new("Track", "Discogs track", null, 330, 190,
+                CellTemplate: trackTemplate, Sortable: false),
+            new("Position", "Position", "Position", 80, 62),
+            new("Confidence", "Confidence", "Confidence", 100, 76),
+            new("Status", "Reason", "Status", 260, 150),
+        ]);
+    }
 
     private static void ConfigureReleaseArtworkGrid(AppDataGrid grid)
     {

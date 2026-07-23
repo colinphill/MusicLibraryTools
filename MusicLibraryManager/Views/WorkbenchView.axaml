@@ -383,7 +383,7 @@
                     SelectedItem="{Binding SelectedRelease, Mode=TwoWay}" />
               </TabItem>
               <TabItem Header="Discogs editions">
-                <Grid RowDefinitions="Auto,*" RowSpacing="6">
+                <Grid RowDefinitions="Auto,*,Auto,*,Auto" RowSpacing="6">
                   <Grid ColumnDefinitions="*,*,*,*,*,Auto,Auto" ColumnSpacing="6">
                     <TextBox Classes="app"
                              Text="{Binding DiscogsSearch.Artist, Mode=TwoWay}"
@@ -411,6 +411,39 @@
                       Grid.Row="1"
                       ItemsSource="{Binding DiscogsMatches}"
                       SelectedItem="{Binding SelectedDiscogsRelease, Mode=TwoWay}" />
+                  <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="7">
+                    <TextBlock Classes="muted" VerticalAlignment="Center"
+                               Text="Review every file-to-track suggestion before adding selected fields to the normal preview."
+                               TextWrapping="Wrap" />
+                    <Button Grid.Column="1" Classes="app"
+                            Content="Build mapping"
+                            Command="{Binding BuildDiscogsReleaseMappingCommand}" />
+                    <Button Grid.Column="2" Classes="app primary"
+                            Content="Preview mapped metadata"
+                            Command="{Binding PreviewDiscogsReleaseMetadataCommand}" />
+                    <Button Grid.Column="3" Classes="app"
+                            Content="Preview cover"
+                            Command="{Binding PreviewDiscogsReleaseArtworkCommand}" />
+                  </Grid>
+                  <controls:AppDataGrid x:Name="DiscogsTrackMappingGrid"
+                      Grid.Row="3"
+                      ItemsSource="{Binding DiscogsTrackMappings}" />
+                  <WrapPanel Grid.Row="4">
+                    <CheckBox Margin="0,0,12,0" Content="Titles"
+                              IsChecked="{Binding DiscogsImport.TrackTitles, Mode=TwoWay}" />
+                    <CheckBox Margin="0,0,12,0" Content="Track artists"
+                              IsChecked="{Binding DiscogsImport.TrackArtists, Mode=TwoWay}" />
+                    <CheckBox Margin="0,0,12,0" Content="Album/date"
+                              IsChecked="{Binding DiscogsImport.ReleaseIdentity, Mode=TwoWay}" />
+                    <CheckBox Margin="0,0,12,0" Content="Numbering"
+                              IsChecked="{Binding DiscogsImport.Numbering, Mode=TwoWay}" />
+                    <CheckBox Margin="0,0,12,0" Content="Release details"
+                              IsChecked="{Binding DiscogsImport.ReleaseDetails, Mode=TwoWay}" />
+                    <CheckBox Margin="0,0,12,0" Content="Genres/styles"
+                              IsChecked="{Binding DiscogsImport.GenresAndStyles, Mode=TwoWay}" />
+                    <CheckBox Content="Discogs release ID"
+                              IsChecked="{Binding DiscogsImport.DiscogsIdentifier, Mode=TwoWay}" />
+                  </WrapPanel>
                 </Grid>
               </TabItem>
               <TabItem Header="Track mapping">

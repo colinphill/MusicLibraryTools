@@ -97,6 +97,70 @@ public sealed class DiscogsMetadataProviderTests
     }
 
     [Fact]
+    public async Task ArtworkDownloadUsesCredentialAndSharedCache()
+    {
+        var secrets = new SessionSecretStore();
+        await secrets.WriteAsync(
+            DiscogsMetadataProvider.TokenSecretKey,
+            "test-token",
+            TestContext.Current.CancellationToken);
+        var images = new RecordedImageTransport(
+            new(
+                HttpStatusCode.OK,
+                [1, 2, 3, 4],
+                "image/jpeg"));
+        var cache = new MemoryArtworkCache();
+        var provider = new DiscogsMetadataProvider(
+            new RecordedTransport(new(HttpStatusCode.OK, "{}")),
+            secrets,
+            imageTransport: images,
+            artworkCache: cache);
+        DiscogsReleaseCandidate release =
+            DiscogsMetadataProvider.ParseRelease(ReleaseJson);
+
+        CoverArtDownload first =
+            await provider.DownloadPrimaryArtworkAsync(
+                release,
+                ct: TestContext.Current.CancellationToken);
+        CoverArtDownload second =
+            await provider.DownloadPrimaryArtworkAsync(
+                release,
+                ct: TestContext.Current.CancellationToken);
+
+        Assert.Equal([1, 2, 3, 4], first.Data);
+        Assert.Equal("image/jpeg", first.ContentType);
+        Assert.False(first.FromCache);
+        Assert.True(second.FromCache);
+        Assert.Equal("test-token", images.Token);
+        Assert.Equal(1, images.CallCount);
+    }
+
+    [Fact]
+    public async Task OfflineArtworkRequiresCachedImage()
+    {
+        var provider = new DiscogsMetadataProvider(
+            new RecordedTransport(new(HttpStatusCode.OK, "{}")),
+            new ThrowingSecretStore(),
+            networkPolicy: new OfflinePolicy(),
+            imageTransport: new RecordedImageTransport(
+                new(HttpStatusCode.OK, [1], "image/jpeg")),
+            artworkCache: new MemoryArtworkCache());
+        DiscogsReleaseCandidate release =
+            DiscogsMetadataProvider.ParseRelease(ReleaseJson);
+
+        InvalidOperationException error =
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => provider.DownloadPrimaryArtworkAsync(
+                    release,
+                    ct: TestContext.Current.CancellationToken));
+
+        Assert.Contains(
+            "Offline mode",
+            error.Message,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task MissingTokenIsReportedWithoutNetworkRequest()
     {
         var transport = new RecordedTransport(
@@ -227,6 +291,47 @@ public sealed class DiscogsMetadataProviderTests
             Uri = uri;
             Token = token;
             return Task.FromResult(response);
+        }
+    }
+
+    private sealed class RecordedImageTransport(
+        DiscogsImageHttpResult response) : IDiscogsImageHttpTransport
+    {
+        public string? Token { get; private set; }
+        public int CallCount { get; private set; }
+
+        public Task<DiscogsImageHttpResult> GetAsync(
+            Uri uri,
+            string token,
+            CancellationToken ct = default)
+        {
+            ct.ThrowIfCancellationRequested();
+            Token = token;
+            CallCount++;
+            return Task.FromResult(response);
+        }
+    }
+
+    private sealed class MemoryArtworkCache : IArtworkDownloadCache
+    {
+        private readonly Dictionary<Uri, CoverArtDownload> _values = [];
+
+        public Task<CoverArtDownload?> ReadAsync(
+            Uri uri,
+            CancellationToken ct = default)
+        {
+            ct.ThrowIfCancellationRequested();
+            return Task.FromResult(_values.GetValueOrDefault(uri));
+        }
+
+        public Task WriteAsync(
+            Uri uri,
+            CoverArtDownload value,
+            CancellationToken ct = default)
+        {
+            ct.ThrowIfCancellationRequested();
+            _values[uri] = value;
+            return Task.CompletedTask;
         }
     }
 
