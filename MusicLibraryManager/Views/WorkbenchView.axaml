@@ -415,16 +415,23 @@
               </TabItem>
               <TabItem Header="Artwork">
                 <Grid RowDefinitions="Auto,*" RowSpacing="8">
-                  <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                     <TextBlock Classes="muted" VerticalAlignment="Center"
-                               Text="Browse the selected release, then preview its front cover for confirmed file-to-track mappings."
+                               Text="Preview local artwork for the selected Workbench file, or use release artwork for confirmed mappings."
                                TextWrapping="Wrap" />
-                    <Button Grid.Column="1" Classes="app primary"
-                            Content="Find release artwork"
-                            Command="{Binding FindReleaseArtworkCommand}" />
-                    <Button Grid.Column="2" Classes="app primary"
-                            Content="Preview as front cover"
-                            Command="{Binding PreviewReleaseArtworkCommand}" />
+                    <WrapPanel Grid.Column="1">
+                      <Button Classes="app" Content="Local front cover"
+                              Command="{Binding PreviewLocalArtworkCommand}" />
+                      <Button Classes="app" Content="Remove front"
+                              Command="{Binding PreviewRemoveFrontCoverCommand}" />
+                      <Button Classes="app" Content="Remove all"
+                              Command="{Binding PreviewRemoveAllArtworkCommand}" />
+                      <Button Classes="app" Content="Find release artwork"
+                              Command="{Binding FindReleaseArtworkCommand}" />
+                      <Button Classes="app primary"
+                              Content="Preview release cover"
+                              Command="{Binding PreviewReleaseArtworkCommand}" />
+                    </WrapPanel>
                   </Grid>
                   <controls:AppDataGrid x:Name="ReleaseArtworkGrid" Grid.Row="1"
                       ItemsSource="{Binding ArtworkMatches}"

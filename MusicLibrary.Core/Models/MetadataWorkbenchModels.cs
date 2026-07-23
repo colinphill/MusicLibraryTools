@@ -318,11 +318,13 @@ public enum ArtworkValueEditMode
 {
     ReplaceFrontCover,
     ReplaceAll,
+    RemoveFrontCover,
+    RemoveAll,
 }
 
 public sealed record ArtworkValueEdit(
     ArtworkValueEditMode Mode,
-    ArtworkInput Image);
+    ArtworkInput? Image = null);
 
 public sealed record ArtworkDescriptor(
     ID3v2Util.APICType Type,

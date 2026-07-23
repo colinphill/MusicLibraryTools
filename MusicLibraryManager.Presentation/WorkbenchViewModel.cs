@@ -62,6 +62,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(SearchMusicBrainzReleasesCommand))]
     [NotifyCanExecuteChangedFor(nameof(FindReleaseArtworkCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewReleaseArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewLocalArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewRemoveFrontCoverCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewRemoveAllArtworkCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -80,6 +83,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(RemoveCurrentCommand))]
     [NotifyCanExecuteChangedFor(nameof(MoveUpCommand))]
     [NotifyCanExecuteChangedFor(nameof(MoveDownCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewLocalArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewRemoveFrontCoverCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewRemoveAllArtworkCommand))]
     private WorkbenchTrackViewModel? _selectedFile;
 
     [ObservableProperty]
@@ -799,6 +805,72 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanPreviewSelectedArtwork))]
+    private async Task PreviewLocalArtworkAsync()
+    {
+        string? artworkPath = await _files.PickFileAsync(
+            "Choose front-cover artwork",
+            [new("Artwork images",
+                [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"])]);
+        if (artworkPath is null || SelectedFile is null)
+            return;
+        string targetPath = SelectedFile.Path;
+        await PreviewAsync(async (progress, ct) =>
+        {
+            progress.Report(new(
+                OperationPhase.Planning,
+                0,
+                1,
+                artworkPath,
+                $"Reading {Path.GetFileName(artworkPath)}"));
+            byte[] data = await File.ReadAllBytesAsync(artworkPath, ct);
+            var edits = new Dictionary<string, ArtworkValueEdit>(
+                PathComparer)
+            {
+                [targetPath] = new(
+                    ArtworkValueEditMode.ReplaceFrontCover,
+                    new(
+                        ID3v2Util.APICType.FrontCover,
+                        MimeTypeFromPath(artworkPath),
+                        data,
+                        Path.GetFileNameWithoutExtension(artworkPath))),
+            };
+            return await _operations.PreviewArtworkEditsAsync(
+                edits, "Replace front cover", progress, ct);
+        });
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPreviewSelectedArtwork))]
+    private async Task PreviewRemoveFrontCoverAsync()
+    {
+        if (SelectedFile is null)
+            return;
+        var edits = new Dictionary<string, ArtworkValueEdit>(
+            PathComparer)
+        {
+            [SelectedFile.Path] = new(
+                ArtworkValueEditMode.RemoveFrontCover),
+        };
+        await PreviewAsync((progress, ct) =>
+            _operations.PreviewArtworkEditsAsync(
+                edits, "Remove front cover", progress, ct));
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPreviewSelectedArtwork))]
+    private async Task PreviewRemoveAllArtworkAsync()
+    {
+        if (SelectedFile is null)
+            return;
+        var edits = new Dictionary<string, ArtworkValueEdit>(
+            PathComparer)
+        {
+            [SelectedFile.Path] = new(ArtworkValueEditMode.RemoveAll),
+        };
+        await PreviewAsync((progress, ct) =>
+            _operations.PreviewArtworkEditsAsync(
+                edits, "Remove all artwork", progress, ct));
+    }
+
     [RelayCommand(CanExecute = nameof(CanBuildReleaseMapping))]
     private async Task BuildReleaseMappingAsync()
     {
@@ -1136,6 +1208,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         SelectedArtworkMatch is not null &&
         ReleaseTrackMappings.Any(row =>
             row.IsIncluded && row.SelectedTrack is not null);
+    private bool CanPreviewSelectedArtwork() =>
+        !IsBusy && SelectedFile is not null;
     private bool CanBuildReleaseMapping() =>
         !IsBusy && SelectedRelease is not null && Files.Count > 0;
     private bool CanPreviewReleaseMetadata() =>
@@ -1194,6 +1268,16 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
 
     private static int? ParsePositive(string? value) =>
         int.TryParse(value, out int parsed) && parsed > 0 ? parsed : null;
+
+    private static string MimeTypeFromPath(string path) =>
+        Path.GetExtension(path).ToLowerInvariant() switch
+        {
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            ".webp" => "image/webp",
+            ".bmp" => "image/bmp",
+            _ => "image/jpeg",
+        };
 
     private async Task<MusicBrainzReleaseCandidate>
         EnsureSelectedReleaseDetailsAsync(

@@ -632,26 +632,45 @@ public sealed class MetadataOperationService(
                     document.Path));
             ImmutableArray<ArtworkInput> before =
                 [.. document.Artwork.Select(ToArtworkInput)];
-            ArtworkInput replacement = edit.Mode ==
-                ArtworkValueEditMode.ReplaceFrontCover
-                    ? edit.Image with
+            ArtworkInput? replacement = edit.Image;
+            if (edit.Mode is ArtworkValueEditMode.ReplaceFrontCover or
+                    ArtworkValueEditMode.ReplaceAll &&
+                replacement is null)
+            {
+                issues.Add(new(
+                    "artwork.image-required",
+                    OperationIssueSeverity.Blocker,
+                    "This artwork operation requires an image.",
+                    document.Path));
+            }
+            if (edit.Mode == ArtworkValueEditMode.ReplaceFrontCover &&
+                replacement is not null)
+            {
+                replacement = replacement with
                     {
                         Type = ID3v2Util.APICType.FrontCover,
-                    }
-                    : edit.Image;
+                    };
+            }
             ImmutableArray<ArtworkInput> requested = edit.Mode switch
             {
-                ArtworkValueEditMode.ReplaceAll => [replacement],
-                ArtworkValueEditMode.ReplaceFrontCover =>
+                ArtworkValueEditMode.ReplaceAll when replacement is not null =>
+                    [replacement],
+                ArtworkValueEditMode.ReplaceFrontCover when replacement is not null =>
                     [replacement, .. before.Where(image =>
                         image.Type != ID3v2Util.APICType.FrontCover)],
+                ArtworkValueEditMode.RemoveFrontCover =>
+                    [.. before.Where(image =>
+                        image.Type != ID3v2Util.APICType.FrontCover)],
+                ArtworkValueEditMode.RemoveAll => [],
+                ArtworkValueEditMode.ReplaceAll or
+                    ArtworkValueEditMode.ReplaceFrontCover => before,
                 _ => throw new ArgumentOutOfRangeException(nameof(edit.Mode)),
             };
             if (policy.Roles == LibraryArtworkRoleSelection.FrontCoverOnly)
-                requested = [replacement with
-                {
-                    Type = ID3v2Util.APICType.FrontCover,
-                }];
+                requested = [.. requested
+                    .Where(image =>
+                        image.Type == ID3v2Util.APICType.FrontCover)
+                    .Take(1)];
             ImmutableArray<ArtworkInput> after;
             try
             {

@@ -33,6 +33,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private readonly IMusicBrainzMetadataProvider? _musicBrainz;
     private readonly IMusicBrainzReleaseMappingService? _releaseMapping;
     private readonly ICoverArtArchiveProvider? _coverArt;
+    private readonly IFilePickerService? _files;
     private readonly IDialogCoordinator? _dialogs;
     private MetadataOperationPlan? _libraryOperationPlan;
     private readonly SemaphoreSlim _thumbnailGate = new(4, 4);
@@ -62,6 +63,10 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryReleaseMetadataCommand))]
     [NotifyCanExecuteChangedFor(nameof(SearchLibraryMusicBrainzReleasesCommand))]
     [NotifyCanExecuteChangedFor(nameof(FindLibraryReleaseArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewLibraryReleaseArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewLocalLibraryArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewRemoveLibraryFrontCoverCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewRemoveAllLibraryArtworkCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -111,6 +116,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(SearchLibraryMusicBrainzReleasesCommand))]
     [NotifyCanExecuteChangedFor(nameof(FindLibraryReleaseArtworkCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryReleaseArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewLocalLibraryArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewRemoveLibraryFrontCoverCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewRemoveAllLibraryArtworkCommand))]
     private bool _isOperationBusy;
 
     [ObservableProperty]
@@ -119,6 +127,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryOperationCommand))]
     [NotifyCanExecuteChangedFor(nameof(DiscoverLibraryAudioCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewLocalLibraryArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewRemoveLibraryFrontCoverCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewRemoveAllLibraryArtworkCommand))]
     private LibraryOperationScope _selectedOperationScope =
         LibraryOperationScope.SelectedTracks;
 
@@ -176,7 +187,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         IAcoustIdDiscoveryService? audioDiscovery = null,
         IMusicBrainzMetadataProvider? musicBrainz = null,
         IMusicBrainzReleaseMappingService? releaseMapping = null,
-        ICoverArtArchiveProvider? coverArt = null)
+        ICoverArtArchiveProvider? coverArt = null,
+        IFilePickerService? files = null)
     {
         _library = library;
         _reindex = reindex;
@@ -190,6 +202,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         _musicBrainz = musicBrainz;
         _releaseMapping = releaseMapping;
         _coverArt = coverArt;
+        _files = files;
         _dialogs = dialogs;
         OperationEditor = new(
             operationCatalog ?? new MetadataOperationCatalog(),
@@ -486,6 +499,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         OpenInWorkbenchCommand.NotifyCanExecuteChanged();
         PreviewLibraryOperationCommand.NotifyCanExecuteChanged();
         DiscoverLibraryAudioCommand.NotifyCanExecuteChanged();
+        PreviewLocalLibraryArtworkCommand.NotifyCanExecuteChanged();
+        PreviewRemoveLibraryFrontCoverCommand.NotifyCanExecuteChanged();
+        PreviewRemoveAllLibraryArtworkCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand(CanExecute = nameof(CanOpenInWorkbench))]
@@ -884,6 +900,109 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanPreviewLocalLibraryArtwork))]
+    private async Task PreviewLocalLibraryArtworkAsync()
+    {
+        if (_files is null)
+            return;
+        string? artworkPath = await _files.PickFileAsync(
+            "Choose front-cover artwork",
+            [new("Artwork images",
+                [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"])]);
+        if (artworkPath is null)
+            return;
+        await PreviewLibraryArtworkEditAsync(
+            async (progress, ct) =>
+            {
+                progress.Report(new(
+                    OperationPhase.Planning,
+                    0,
+                    1,
+                    artworkPath,
+                    $"Reading {Path.GetFileName(artworkPath)}"));
+                byte[] data =
+                    await File.ReadAllBytesAsync(artworkPath, ct);
+                return new(
+                    ArtworkValueEditMode.ReplaceFrontCover,
+                    new(
+                        MusicFileUtilities.ID3v2Util.APICType.FrontCover,
+                        MimeTypeFromPath(artworkPath),
+                        data,
+                        Path.GetFileNameWithoutExtension(artworkPath)));
+            },
+            "Replace front cover");
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPreviewLibraryArtwork))]
+    private async Task PreviewRemoveLibraryFrontCoverAsync() =>
+        await PreviewLibraryArtworkEditAsync(
+            (_, _) => Task.FromResult(new ArtworkValueEdit(
+                ArtworkValueEditMode.RemoveFrontCover)),
+            "Remove front cover");
+
+    [RelayCommand(CanExecute = nameof(CanPreviewLibraryArtwork))]
+    private async Task PreviewRemoveAllLibraryArtworkAsync() =>
+        await PreviewLibraryArtworkEditAsync(
+            (_, _) => Task.FromResult(new ArtworkValueEdit(
+                ArtworkValueEditMode.RemoveAll)),
+            "Remove all artwork");
+
+    private async Task PreviewLibraryArtworkEditAsync(
+        Func<IProgress<OperationProgress>, CancellationToken,
+            Task<ArtworkValueEdit>> createEdit,
+        string name)
+    {
+        if (_metadataOperations is null)
+            return;
+        string[] paths = ResolveOperationPaths();
+        if (paths.Length == 0)
+            return;
+        BeginLibraryOperation("Building artwork preview");
+        try
+        {
+            IProgress<OperationProgress> progress =
+                CreateOperationProgress();
+            ArtworkValueEdit edit = await createEdit(
+                progress, _operationCancellation!.Token);
+            var edits = paths.ToDictionary(
+                path => path,
+                _ => edit,
+                PathComparer);
+            MetadataOperationPlan plan =
+                await _metadataOperations.PreviewArtworkEditsAsync(
+                    edits,
+                    name,
+                    progress,
+                    _operationCancellation.Token);
+            _libraryOperationPlan = plan;
+            MetadataPreviewRowBuilder.Populate(
+                OperationPreviewChanges, plan);
+            HasApplicableOperationPreview = plan.CanApply;
+            int blockers = plan.Files.SelectMany(file => file.Issues)
+                .Count(issue =>
+                    issue.Severity == OperationIssueSeverity.Blocker);
+            OperationStatus = blockers > 0
+                ? $"Artwork preview has {blockers:N0} blocker(s). No files were changed."
+                : $"Previewed artwork changes for {plan.ChangedFileCount:N0} " +
+                  $"of {paths.Length:N0} file(s). No files were changed.";
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+        catch (OperationCanceledException)
+        {
+            InvalidateLibraryOperationPreview();
+            OperationStatus = "Artwork preview cancelled.";
+        }
+        catch (Exception error)
+        {
+            InvalidateLibraryOperationPreview();
+            OperationStatus = $"Artwork preview failed: {error.Message}";
+        }
+        finally
+        {
+            EndLibraryOperation();
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanBuildLibraryReleaseMapping))]
     private async Task BuildLibraryReleaseMappingAsync()
     {
@@ -1102,6 +1221,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         PreviewLibraryOperationCommand.NotifyCanExecuteChanged();
         OpenOperationsCommand.NotifyCanExecuteChanged();
         DiscoverLibraryAudioCommand.NotifyCanExecuteChanged();
+        PreviewLocalLibraryArtworkCommand.NotifyCanExecuteChanged();
+        PreviewRemoveLibraryFrontCoverCommand.NotifyCanExecuteChanged();
+        PreviewRemoveAllLibraryArtworkCommand.NotifyCanExecuteChanged();
     }
 
     private bool CanPreviewLibraryOperation() =>
@@ -1138,6 +1260,12 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         SelectedArtworkMatch is not null &&
         ReleaseTrackMappings.Any(row =>
             row.IsIncluded && row.SelectedTrack is not null);
+    private bool CanPreviewLocalLibraryArtwork() =>
+        CanPreviewLibraryArtwork() && _files is not null;
+    private bool CanPreviewLibraryArtwork() =>
+        !IsBusy && !IsOperationBusy &&
+        _metadataOperations is not null &&
+        ResolveOperationPaths().Length > 0;
     private bool CanBuildLibraryReleaseMapping() =>
         !IsBusy && !IsOperationBusy && _releaseMapping is not null &&
         SelectedRelease is not null && ResolveOperationPaths().Length > 0;
@@ -1185,6 +1313,16 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         .Select(row => row.Path)
         .Distinct(PathComparer)
         .ToArray();
+
+    private static string MimeTypeFromPath(string path) =>
+        Path.GetExtension(path).ToLowerInvariant() switch
+        {
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            ".webp" => "image/webp",
+            ".bmp" => "image/bmp",
+            _ => "image/jpeg",
+        };
 
     private void OnReleaseImportChanged(
         object? sender,

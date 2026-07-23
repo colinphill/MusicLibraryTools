@@ -1457,7 +1457,9 @@ public sealed class PresentationTests
             audioDiscovery: discovery,
             musicBrainz: musicBrainz,
             releaseMapping: new MusicBrainzReleaseMappingService(),
-            coverArt: coverArt);
+            coverArt: coverArt,
+            files: new FakeFilePicker(
+                typeof(PresentationTests).Assembly.Location));
         await viewModel.ReloadAsync();
         await viewModel.SelectAsync(
             [viewModel.Rows.Single(row => row.Title == "One")]);
@@ -1560,11 +1562,39 @@ public sealed class PresentationTests
         Assert.All(
             metadataOperations.PreviewedArtworkEdits.Values,
             edit => Assert.Equal(
-                ID3v2Util.APICType.FrontCover, edit.Image.Type));
+                ID3v2Util.APICType.FrontCover,
+                Assert.IsType<ArtworkInput>(edit.Image).Type));
         Assert.Contains(
             viewModel.OperationPreviewChanges,
             row => row.Field == "Artwork");
         Assert.True(viewModel.HasApplicableOperationPreview);
+
+        await viewModel.PreviewLocalLibraryArtworkCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            records.Select(record => Path.GetFullPath(record.Path)),
+            metadataOperations.PreviewedArtworkEdits.Keys);
+        Assert.All(
+            metadataOperations.PreviewedArtworkEdits.Values,
+            edit =>
+            {
+                Assert.Equal(
+                    ArtworkValueEditMode.ReplaceFrontCover, edit.Mode);
+                Assert.NotNull(edit.Image);
+            });
+
+        await viewModel.PreviewRemoveAllLibraryArtworkCommand.ExecuteAsync(null);
+
+        Assert.All(
+            metadataOperations.PreviewedArtworkEdits.Values,
+            edit =>
+            {
+                Assert.Equal(ArtworkValueEditMode.RemoveAll, edit.Mode);
+                Assert.Null(edit.Image);
+            });
+        Assert.Contains(
+            viewModel.OperationPreviewChanges,
+            row => row.Field == "Artwork");
     }
 
     private static TrackRecord Track(string artist, string album, string title, string codec, string path) => new()
@@ -1780,23 +1810,39 @@ internal sealed class FakeMetadataOperationService : IMetadataOperationService
             Message: "Reading mapped artwork"));
         MetadataFilePlan[] files = editsByPath.Select(pair =>
         {
-            var before = ImmutableArray<ArtworkDescriptor>.Empty;
-            ImmutableArray<ArtworkDescriptor> after =
-            [
-                new(
-                    pair.Value.Image.Type,
-                    pair.Value.Image.MimeType,
-                    pair.Value.Image.Description ?? "",
-                    pair.Value.Image.Data.Length,
-                    "hash"),
-            ];
+            ArtworkInput? image = pair.Value.Image;
+            ImmutableArray<ArtworkDescriptor> before = image is null
+                ?
+                [
+                    new(
+                        ID3v2Util.APICType.FrontCover,
+                        "image/jpeg",
+                        "",
+                        4,
+                        "old-hash"),
+                ]
+                : [];
+            ImmutableArray<ArtworkDescriptor> after = image is null
+                ? []
+                :
+                [
+                    new(
+                        image.Type,
+                        image.MimeType,
+                        image.Description ?? "",
+                        image.Data.Length,
+                        "hash"),
+                ];
+            ImmutableArray<ArtworkInput> images = image is null
+                ? []
+                : [image];
             return new MetadataFilePlan(
                 pair.Key,
                 new(pair.Key, 1, DateTime.UtcNow, "hash"),
                 [],
                 [],
                 [],
-                new([pair.Value.Image]),
+                new(images),
                 new(before, after));
         }).ToArray();
         return Task.FromResult(new MetadataOperationPlan(

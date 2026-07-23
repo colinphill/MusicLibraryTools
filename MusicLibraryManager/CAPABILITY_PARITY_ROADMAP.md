@@ -189,7 +189,10 @@ and restored without creating or indexing a library.
 - [ ] Rearrange filename components.
 - [ ] Import metadata from delimited text or CSV.
 - [~] Sequential track and disc numbering.
-- [ ] Artwork add, replace, export, resize, classify, and remove.
+- [~] Artwork add, replace, export, resize, classify, and remove. Local and
+  Cover Art Archive front-cover replacement plus front/all removal are
+  implemented; policy normalization is applied during preview. Export,
+  explicit resize, and role classification remain.
 - [ ] Copy, move, rename, and quarantine files.
 - [ ] Generate reports or playlists as a recipe final step.
 
@@ -552,3 +555,10 @@ per-operation capability flags.
   singleton instances through their specific interfaces and the common
   extension contract; no provider scripting language or imported source
   definitions were introduced.
+- Added first-class local artwork operations to both surfaces. Workbench can
+  preview a local front-cover replacement or front/all removal for its focused
+  file; Library exposes the same operations for selected tracks, selected
+  albums, visible results, or the complete library. Image reads and per-file
+  planning report progress, accept cancellation, enforce native capabilities
+  and policy, preserve non-front roles when requested, and apply through the
+  shared recovery and undo path.

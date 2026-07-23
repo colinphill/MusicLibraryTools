@@ -609,6 +609,111 @@ public sealed class MetadataWorkbenchServicesTests
         }
     }
 
+    [Fact]
+    public async Task ArtworkPreview_RemovesFrontCoverAndPreservesOtherRoles()
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(), "mlm-artwork-remove-" + Guid.NewGuid().ToString("N"));
+        string recovery = session + ".MusicLibraryManager-recovery";
+        Directory.CreateDirectory(session);
+        string mediaPath = Path.Combine(session, "track.flac");
+        File.Copy(MediaFixtures.Path_("sample.flac"), mediaPath);
+        string statePath = Path.Combine(session, "settings.json");
+        try
+        {
+            byte[] front = CreatePngBytes(48, 48);
+            byte[] back = CreatePngBytes(40, 40);
+            IMediaFile media = MediaFile.GetFile(mediaPath);
+            IArtworkWriter writer = media as IArtworkWriter ??
+                media.Tags.OfType<IArtworkWriter>().First();
+            writer.SetImages(
+            [
+                new(
+                    ID3v2Util.APICType.FrontCover,
+                    "image/png",
+                    "front",
+                    front),
+                new(
+                    ID3v2Util.APICType.BackCover,
+                    "image/png",
+                    "back",
+                    back),
+            ]);
+            media.SaveTags();
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings);
+            var edits = new Dictionary<string, ArtworkValueEdit>
+            {
+                [mediaPath] = new(
+                    ArtworkValueEditMode.RemoveFrontCover),
+            };
+
+            MetadataOperationPlan plan =
+                await service.PreviewArtworkEditsAsync(
+                    edits, "Remove front cover");
+
+            ArtworkSetDifference difference = Assert.IsType<ArtworkSetDifference>(
+                Assert.Single(plan.Files).ArtworkDifference);
+            Assert.Equal(2, difference.Before.Length);
+            ArtworkDescriptor remaining = Assert.Single(difference.After);
+            Assert.Equal(ID3v2Util.APICType.BackCover, remaining.Type);
+            Assert.True(plan.CanApply);
+
+            await service.ApplyAsync(plan);
+
+            ArtworkModel stored = Assert.Single(
+                (await _documents.LoadAsync(mediaPath)).Artwork);
+            Assert.Contains(
+                "Back", stored.Category, StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            try { Directory.Delete(session, recursive: true); } catch { }
+            try { Directory.Delete(recovery, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task ArtworkPreview_RequiresImageForReplacement()
+    {
+        using var media = MediaFixtures.Copy("sample.flac");
+        string statePath = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-settings-" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings);
+
+            MetadataOperationPlan plan =
+                await service.PreviewArtworkEditsAsync(
+                    new Dictionary<string, ArtworkValueEdit>
+                    {
+                        [media.Path] = new(
+                            ArtworkValueEditMode.ReplaceFrontCover),
+                    },
+                    "Invalid replacement");
+
+            Assert.Contains(
+                Assert.Single(plan.Files).Issues,
+                issue => issue.Code == "artwork.image-required" &&
+                    issue.Severity == OperationIssueSeverity.Blocker);
+            Assert.False(plan.CanApply);
+        }
+        finally
+        {
+            try { File.Delete(statePath); } catch { }
+        }
+    }
+
     private static byte[] CreatePngBytes(int width, int height)
     {
         using var image = new Image<Rgba32>(
