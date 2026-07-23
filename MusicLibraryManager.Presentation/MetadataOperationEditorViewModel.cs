@@ -71,6 +71,7 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
         SelectedOperation = OperationDescriptors.FirstOrDefault();
         SelectedField = Fields[0];
         DestinationField = Fields[1];
+        SecondaryField = Fields[1];
         SelectedConditionField = Fields[0];
         ReloadRecipes();
         if (_recipes is not null)
@@ -83,6 +84,8 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
     public IReadOnlyList<MetadataFieldChoice> Fields { get; }
     public IReadOnlyList<MetadataCaseMode> CaseModes { get; } =
         Enum.GetValues<MetadataCaseMode>();
+    public IReadOnlyList<MetadataValueOrder> ValueOrders { get; } =
+        Enum.GetValues<MetadataValueOrder>();
     public IReadOnlyList<MetadataConditionOperator> ConditionOperators { get; } =
         Enum.GetValues<MetadataConditionOperator>()
             .Where(value => value != MetadataConditionOperator.Always)
@@ -98,6 +101,9 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
     private MetadataFieldChoice? _destinationField;
 
     [ObservableProperty]
+    private MetadataFieldChoice? _secondaryField;
+
+    [ObservableProperty]
     private string? _operationValue;
 
     [ObservableProperty]
@@ -107,10 +113,16 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
     private string? _replacementText;
 
     [ObservableProperty]
+    private string _separator = "; ";
+
+    [ObservableProperty]
     private bool _useRegularExpression;
 
     [ObservableProperty]
     private MetadataCaseMode _selectedCaseMode = MetadataCaseMode.Title;
+
+    [ObservableProperty]
+    private MetadataValueOrder _selectedValueOrder = MetadataValueOrder.Ascending;
 
     [ObservableProperty]
     private int _sequenceStart = 1;
@@ -265,20 +277,25 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
                 SelectedConditionOperator,
                 ConditionValue,
                 NegateCondition);
-        return _catalog.Create(new(
-            SelectedOperation.Kind,
-            MetadataFieldKey.Known(SelectedField.Field),
-            DestinationField is null
+        return _catalog.Create(new MetadataOperationDraft(
+            Kind: SelectedOperation.Kind,
+            Field: MetadataFieldKey.Known(SelectedField.Field),
+            DestinationField: DestinationField is null
                 ? null
                 : MetadataFieldKey.Known(DestinationField.Field),
-            OperationValue,
-            SearchText,
-            ReplacementText,
-            UseRegularExpression,
-            SelectedCaseMode,
-            SequenceStart,
-            SequencePadding,
-            condition));
+            SecondaryField: SecondaryField is null
+                ? null
+                : MetadataFieldKey.Known(SecondaryField.Field),
+            Value: OperationValue,
+            Search: SearchText,
+            Replacement: ReplacementText,
+            Separator: Separator,
+            UseRegularExpression: UseRegularExpression,
+            CaseMode: SelectedCaseMode,
+            ValueOrder: SelectedValueOrder,
+            SequenceStart: SequenceStart,
+            SequencePadding: SequencePadding,
+            Condition: condition));
     }
 
     private void ReloadRecipes()

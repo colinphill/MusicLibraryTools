@@ -742,6 +742,71 @@ public sealed class MetadataOperationService(
                 if (sequence.TotalField is not null)
                     fields[sequence.TotalField] = [count.ToString(CultureInfo.InvariantCulture)];
                 break;
+            case CombineFieldsOperation combine:
+                ImmutableArray<string> combinedValues =
+                    fields.GetValueOrDefault(combine.First, [])
+                        .Concat(fields.GetValueOrDefault(combine.Second, []))
+                        .Where(value => !string.IsNullOrEmpty(value))
+                        .ToImmutableArray();
+                if (combinedValues.Length == 0)
+                    fields.Remove(combine.Destination);
+                else
+                    fields[combine.Destination] =
+                        [string.Join(combine.Separator, combinedValues)];
+                break;
+            case SplitFieldOperation split:
+                if (fields.TryGetValue(split.Field, out ImmutableArray<string> splitValues))
+                {
+                    IEnumerable<string> values = splitValues.SelectMany(value =>
+                        split.RegularExpression
+                            ? Regex.Split(value, split.Separator,
+                                RegexOptions.CultureInvariant, RegexTimeout)
+                            : value.Split(split.Separator, StringSplitOptions.None));
+                    if (split.RemoveEmptyValues)
+                        values = values.Where(value => value.Length > 0);
+                    ImmutableArray<string> result = values.ToImmutableArray();
+                    if (result.Length == 0)
+                        fields.Remove(split.Field);
+                    else
+                        fields[split.Field] = result;
+                }
+                break;
+            case JoinFieldValuesOperation join:
+                if (fields.TryGetValue(join.Field, out ImmutableArray<string> joinValues))
+                {
+                    if (joinValues.Length == 0)
+                        fields.Remove(join.Field);
+                    else
+                        fields[join.Field] = [string.Join(join.Separator, joinValues)];
+                }
+                break;
+            case DeduplicateFieldValuesOperation deduplicate:
+                if (fields.TryGetValue(
+                        deduplicate.Field, out ImmutableArray<string> duplicateValues))
+                    fields[deduplicate.Field] = duplicateValues
+                        .Distinct(deduplicate.IgnoreCase
+                            ? StringComparer.CurrentCultureIgnoreCase
+                            : StringComparer.CurrentCulture)
+                        .ToImmutableArray();
+                break;
+            case ReorderFieldValuesOperation reorder:
+                if (fields.TryGetValue(reorder.Field, out ImmutableArray<string> reorderValues))
+                {
+                    StringComparer comparer = reorder.IgnoreCase
+                        ? StringComparer.CurrentCultureIgnoreCase
+                        : StringComparer.CurrentCulture;
+                    fields[reorder.Field] = reorder.Order switch
+                    {
+                        MetadataValueOrder.Ascending =>
+                            reorderValues.OrderBy(value => value, comparer).ToImmutableArray(),
+                        MetadataValueOrder.Descending =>
+                            reorderValues.OrderByDescending(value => value, comparer)
+                                .ToImmutableArray(),
+                        MetadataValueOrder.Reverse => reorderValues.Reverse().ToImmutableArray(),
+                        _ => reorderValues,
+                    };
+                }
+                break;
         }
     }
 

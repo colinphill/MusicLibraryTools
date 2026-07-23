@@ -47,9 +47,9 @@ public sealed class MetadataWorkbenchServicesTests
                                 MetadataConditionOperator.Present))),
                     new(
                         Guid.NewGuid(),
-                        "Remove comment",
-                        new RemoveFieldOperation(
-                            MetadataFieldKey.Known(TagFields.Comment)),
+                        "Split genre",
+                        new SplitFieldOperation(
+                            MetadataFieldKey.Known(TagFields.Genre), ";"),
                         Enabled: false),
                 ]);
 
@@ -58,9 +58,10 @@ public sealed class MetadataWorkbenchServicesTests
 
             OperationRecipe loaded = Assert.Single(restarted.Recipes);
             Assert.Equal("Cleanup", loaded.Name);
-            Assert.Equal(["Trim title", "Remove comment"],
+            Assert.Equal(["Trim title", "Split genre"],
                 loaded.Steps.Select(step => step.Name));
             Assert.False(loaded.Steps[1].Enabled);
+            Assert.IsType<SplitFieldOperation>(loaded.Steps[1].Operation);
             Assert.Single(loaded.EnabledOperations);
             Assert.Equal(MetadataConditionOperator.Present,
                 loaded.Steps[0].Operation.Condition?.Operator);
@@ -188,6 +189,69 @@ public sealed class MetadataWorkbenchServicesTests
             Assert.Equal(TagFields.Title, difference.Field.KnownField);
             Assert.Equal(["TestTitle"], difference.Before);
             Assert.Equal(["A New Title"], difference.After);
+            Assert.True(plan.CanApply);
+            Assert.Equal("TestTitle",
+                MediaFile.GetFile(media.Path, readOnly: true).Tags.First().Title);
+        }
+        finally
+        {
+            try { File.Delete(statePath); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task Preview_ShapesAndCombinesOrderedValuesWithoutWriting()
+    {
+        using var media = MediaFixtures.Copy("sample.flac");
+        string statePath = Path.Combine(
+            Path.GetTempPath(), "mlm-settings-" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings);
+            OperationRecipe recipe = OperationRecipe.Create(
+                "Shape values",
+                new CombineFieldsOperation(
+                    MetadataFieldKey.Known(TagFields.Artist),
+                    MetadataFieldKey.Known(TagFields.Title),
+                    MetadataFieldKey.Known(TagFields.Composer),
+                    " — "),
+                new AssignFieldOperation(
+                    MetadataFieldKey.Known(TagFields.Genre), " Rock ;Pop;rock "),
+                new SplitFieldOperation(
+                    MetadataFieldKey.Known(TagFields.Genre), ";"),
+                new TrimFieldOperation(
+                    MetadataFieldKey.Known(TagFields.Genre)),
+                new DeduplicateFieldValuesOperation(
+                    MetadataFieldKey.Known(TagFields.Genre)),
+                new ReorderFieldValuesOperation(
+                    MetadataFieldKey.Known(TagFields.Genre)),
+                new AssignFieldOperation(
+                    MetadataFieldKey.Known(TagFields.Comment), "one|two"),
+                new SplitFieldOperation(
+                    MetadataFieldKey.Known(TagFields.Comment), "|"),
+                new JoinFieldValuesOperation(
+                    MetadataFieldKey.Known(TagFields.Comment), " / "));
+
+            MetadataOperationPlan plan = await service.PreviewAsync([media.Path], recipe);
+
+            MetadataFilePlan file = Assert.Single(plan.Files);
+            Assert.Equal(
+                ["TestArtist — TestTitle"],
+                Assert.Single(file.Differences.Where(difference =>
+                    difference.Field.KnownField == TagFields.Composer)).After);
+            Assert.Equal(
+                ["Pop", "Rock"],
+                Assert.Single(file.Differences.Where(difference =>
+                    difference.Field.KnownField == TagFields.Genre)).After);
+            Assert.Equal(
+                ["one / two"],
+                Assert.Single(file.Differences.Where(difference =>
+                    difference.Field.KnownField == TagFields.Comment)).After);
             Assert.True(plan.CanApply);
             Assert.Equal("TestTitle",
                 MediaFile.GetFile(media.Path, readOnly: true).Tags.First().Title);

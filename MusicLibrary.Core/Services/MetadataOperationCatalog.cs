@@ -31,6 +31,16 @@ public sealed class MetadataOperationCatalog : IMetadataOperationCatalog
             "Trim surrounding whitespace and normalize internal runs."),
         Both(MetadataOperationKind.Sequence, "Sequence",
             "Assign ordered, optionally padded numbers."),
+        Both(MetadataOperationKind.Combine, "Combine fields",
+            "Combine two fields into an ordered destination value."),
+        Both(MetadataOperationKind.Split, "Split values",
+            "Split each field value using literal text or a regular expression."),
+        Both(MetadataOperationKind.Join, "Join values",
+            "Join ordered field values into one value."),
+        Both(MetadataOperationKind.Deduplicate, "Deduplicate values",
+            "Remove duplicate values while preserving their first occurrence."),
+        Both(MetadataOperationKind.Reorder, "Reorder values",
+            "Sort or reverse the ordered values in a field."),
     ];
 
     public MetadataOperation Create(MetadataOperationDraft draft)
@@ -70,9 +80,46 @@ public sealed class MetadataOperationCatalog : IMetadataOperationCatalog
                     Math.Max(0, draft.SequenceStart),
                     PadWidth: Math.Max(0, draft.SequencePadding),
                     When: draft.Condition),
+            MetadataOperationKind.Combine =>
+                new CombineFieldsOperation(
+                    draft.Field,
+                    draft.SecondaryField ?? throw new InvalidOperationException(
+                        "A second source field is required for Combine."),
+                    draft.DestinationField ?? throw new InvalidOperationException(
+                        "A destination field is required for Combine."),
+                    draft.Separator ?? " ",
+                    draft.Condition),
+            MetadataOperationKind.Split =>
+                new SplitFieldOperation(
+                    draft.Field,
+                    RequireSeparator(draft.Separator, "Split"),
+                    draft.UseRegularExpression,
+                    When: draft.Condition),
+            MetadataOperationKind.Join =>
+                new JoinFieldValuesOperation(
+                    draft.Field,
+                    draft.Separator ?? "; ",
+                    draft.Condition),
+            MetadataOperationKind.Deduplicate =>
+                new DeduplicateFieldValuesOperation(
+                    draft.Field,
+                    When: draft.Condition),
+            MetadataOperationKind.Reorder =>
+                new ReorderFieldValuesOperation(
+                    draft.Field,
+                    draft.ValueOrder,
+                    When: draft.Condition),
             _ => throw new NotSupportedException(
                 $"Unsupported metadata operation '{draft.Kind}'."),
         };
+    }
+
+    private static string RequireSeparator(string? separator, string operationName)
+    {
+        if (string.IsNullOrEmpty(separator))
+            throw new InvalidOperationException(
+                $"A separator is required for {operationName}.");
+        return separator;
     }
 
     private static MetadataOperationDescriptor Both(

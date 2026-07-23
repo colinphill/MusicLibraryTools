@@ -199,7 +199,7 @@
                       Command="{Binding CloseOperationsCommand}" />
             </Grid>
 
-            <Grid Grid.Row="1" ColumnDefinitions="220,210,210,210" ColumnSpacing="10">
+            <Grid Grid.Row="1" ColumnDefinitions="1*,1*,1*,1*,1*" ColumnSpacing="10">
               <StackPanel Spacing="4">
                 <TextBlock Classes="muted" Text="Scope" FontSize="12" FontWeight="SemiBold" />
                 <ComboBox Classes="app" ItemsSource="{Binding OperationScopes}"
@@ -224,9 +224,15 @@
                           DisplayMemberBinding="{Binding Label}"
                           SelectedItem="{Binding OperationEditor.DestinationField, Mode=TwoWay}" />
               </StackPanel>
+              <StackPanel Grid.Column="4" Spacing="4">
+                <TextBlock Classes="muted" Text="Second source field" FontSize="12" FontWeight="SemiBold" />
+                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.Fields}"
+                          DisplayMemberBinding="{Binding Label}"
+                          SelectedItem="{Binding OperationEditor.SecondaryField, Mode=TwoWay}" />
+              </StackPanel>
             </Grid>
 
-            <Grid Grid.Row="2" ColumnDefinitions="*,*,*,180" ColumnSpacing="10">
+            <Grid Grid.Row="2" ColumnDefinitions="*,*,*,150,150,150" ColumnSpacing="10">
               <StackPanel Spacing="4">
                 <TextBlock Classes="muted" Text="Value" FontSize="12" FontWeight="SemiBold" />
                 <TextBox Classes="app"
@@ -248,6 +254,16 @@
                 <TextBlock Classes="muted" Text="Case" FontSize="12" FontWeight="SemiBold" />
                 <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.CaseModes}"
                           SelectedItem="{Binding OperationEditor.SelectedCaseMode, Mode=TwoWay}" />
+              </StackPanel>
+              <StackPanel Grid.Column="4" Spacing="4">
+                <TextBlock Classes="muted" Text="Separator" FontSize="12" FontWeight="SemiBold" />
+                <TextBox Classes="app"
+                         Text="{Binding OperationEditor.Separator, Mode=TwoWay}" />
+              </StackPanel>
+              <StackPanel Grid.Column="5" Spacing="4">
+                <TextBlock Classes="muted" Text="Value order" FontSize="12" FontWeight="SemiBold" />
+                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.ValueOrders}"
+                          SelectedItem="{Binding OperationEditor.SelectedValueOrder, Mode=TwoWay}" />
               </StackPanel>
             </Grid>
 

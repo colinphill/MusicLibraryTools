@@ -111,6 +111,11 @@ public sealed record MetadataCondition(
 [JsonDerivedType(typeof(ChangeCaseOperation), "case")]
 [JsonDerivedType(typeof(TrimFieldOperation), "trim")]
 [JsonDerivedType(typeof(SequenceNumberOperation), "sequence")]
+[JsonDerivedType(typeof(CombineFieldsOperation), "combine")]
+[JsonDerivedType(typeof(SplitFieldOperation), "split")]
+[JsonDerivedType(typeof(JoinFieldValuesOperation), "join")]
+[JsonDerivedType(typeof(DeduplicateFieldValuesOperation), "deduplicate")]
+[JsonDerivedType(typeof(ReorderFieldValuesOperation), "reorder")]
 public abstract record MetadataOperation(MetadataCondition? Condition = null);
 
 public sealed record AssignFieldOperation(
@@ -155,6 +160,11 @@ public enum MetadataOperationKind
     ChangeCase,
     TrimWhitespace,
     Sequence,
+    Combine,
+    Split,
+    Join,
+    Deduplicate,
+    Reorder,
 }
 
 public sealed record MetadataOperationDescriptor(
@@ -171,14 +181,49 @@ public sealed record MetadataOperationDraft(
     MetadataOperationKind Kind,
     MetadataFieldKey Field,
     MetadataFieldKey? DestinationField = null,
+    MetadataFieldKey? SecondaryField = null,
     string? Value = null,
     string? Search = null,
     string? Replacement = null,
+    string? Separator = null,
     bool UseRegularExpression = false,
     MetadataCaseMode CaseMode = MetadataCaseMode.Title,
+    MetadataValueOrder ValueOrder = MetadataValueOrder.Ascending,
     int SequenceStart = 1,
     int SequencePadding = 0,
     MetadataCondition? Condition = null);
+
+public sealed record CombineFieldsOperation(
+    MetadataFieldKey First,
+    MetadataFieldKey Second,
+    MetadataFieldKey Destination,
+    string Separator = " ",
+    MetadataCondition? When = null) : MetadataOperation(When);
+
+public sealed record SplitFieldOperation(
+    MetadataFieldKey Field,
+    string Separator,
+    bool RegularExpression = false,
+    bool RemoveEmptyValues = true,
+    MetadataCondition? When = null) : MetadataOperation(When);
+
+public sealed record JoinFieldValuesOperation(
+    MetadataFieldKey Field,
+    string Separator,
+    MetadataCondition? When = null) : MetadataOperation(When);
+
+public sealed record DeduplicateFieldValuesOperation(
+    MetadataFieldKey Field,
+    bool IgnoreCase = true,
+    MetadataCondition? When = null) : MetadataOperation(When);
+
+public enum MetadataValueOrder { Ascending, Descending, Reverse }
+
+public sealed record ReorderFieldValuesOperation(
+    MetadataFieldKey Field,
+    MetadataValueOrder Order = MetadataValueOrder.Ascending,
+    bool IgnoreCase = true,
+    MetadataCondition? When = null) : MetadataOperation(When);
 
 public sealed record ChangeCaseOperation(
     MetadataFieldKey Field,

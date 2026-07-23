@@ -94,7 +94,7 @@
 
         <TabItem Header="Bulk operation">
           <Grid Margin="0,12,0,0" RowDefinitions="Auto,Auto,Auto,190,*" RowSpacing="12">
-            <Grid ColumnDefinitions="220,220,220,220,*" ColumnSpacing="10">
+            <Grid ColumnDefinitions="190,190,190,190,170,*" ColumnSpacing="10">
               <StackPanel Spacing="5">
                 <TextBlock Classes="muted" Text="Operation" FontSize="12" FontWeight="SemiBold" />
                 <ComboBox Classes="app"
@@ -115,16 +115,22 @@
                           SelectedItem="{Binding OperationEditor.DestinationField, Mode=TwoWay}" />
               </StackPanel>
               <StackPanel Grid.Column="3" Spacing="5">
+                <TextBlock Classes="muted" Text="Second source field" FontSize="12" FontWeight="SemiBold" />
+                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.Fields}"
+                          DisplayMemberBinding="{Binding Label}"
+                          SelectedItem="{Binding OperationEditor.SecondaryField, Mode=TwoWay}" />
+              </StackPanel>
+              <StackPanel Grid.Column="4" Spacing="5">
                 <TextBlock Classes="muted" Text="Case" FontSize="12" FontWeight="SemiBold" />
                 <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.CaseModes}"
                           SelectedItem="{Binding OperationEditor.SelectedCaseMode, Mode=TwoWay}" />
               </StackPanel>
-              <Button Grid.Column="4" VerticalAlignment="Bottom" HorizontalAlignment="Left"
+              <Button Grid.Column="5" VerticalAlignment="Bottom" HorizontalAlignment="Left"
                       Classes="app primary" Content="Preview operation"
                       Command="{Binding PreviewOperationCommand}" />
             </Grid>
 
-            <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="10">
+            <Grid Grid.Row="1" ColumnDefinitions="*,*,*,160,160" ColumnSpacing="10">
               <StackPanel Spacing="5">
                 <TextBlock Classes="muted" Text="Value" FontSize="12" FontWeight="SemiBold" />
                 <TextBox Classes="app" Text="{Binding OperationEditor.OperationValue, Mode=TwoWay}"
@@ -138,6 +144,15 @@
               <StackPanel Grid.Column="2" Spacing="5">
                 <TextBlock Classes="muted" Text="Replace with" FontSize="12" FontWeight="SemiBold" />
                 <TextBox Classes="app" Text="{Binding OperationEditor.ReplacementText, Mode=TwoWay}" />
+              </StackPanel>
+              <StackPanel Grid.Column="3" Spacing="5">
+                <TextBlock Classes="muted" Text="Separator" FontSize="12" FontWeight="SemiBold" />
+                <TextBox Classes="app" Text="{Binding OperationEditor.Separator, Mode=TwoWay}" />
+              </StackPanel>
+              <StackPanel Grid.Column="4" Spacing="5">
+                <TextBlock Classes="muted" Text="Value order" FontSize="12" FontWeight="SemiBold" />
+                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.ValueOrders}"
+                          SelectedItem="{Binding OperationEditor.SelectedValueOrder, Mode=TwoWay}" />
               </StackPanel>
             </Grid>
 

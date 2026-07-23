@@ -58,9 +58,9 @@ the same editor, preview, policy checks, recovery behavior, and history.
   - [x] Initial lossless metadata, operation, plan, and history model types added.
   - [x] Core document, workbench, operation, and edit-history services added and
     registered.
-  - [~] Core services compiled and covered by tests.
+  - [x] Core services compiled and covered by tests.
   - [x] Initial Workbench page and navigation implemented.
-  - [~] End-to-end preview, apply, restart-safe undo, and redo verified.
+  - [x] End-to-end preview, apply, restart-safe undo, and redo verified.
 - [~] Phase 2: Typed bulk operations and recipes
 - [ ] Phase 3: Online metadata and artwork
 - [ ] Phase 4: Flexible views, reporting, playlists, and tools
@@ -95,7 +95,7 @@ appropriate build or test.
 - [~] Add workflow services:
   - [~] `IWorkbenchService` manages ad-hoc source loading and ordering.
   - [~] `IEditHistoryService` provides persistent operation history and undo.
-  - [ ] Persistent redo and repeat.
+  - [x] Persistent redo and repeat.
   - [ ] `IMetadataSourceProvider`.
   - [ ] `IAudioFingerprintService` decodes audio and generates a Chromaprint
     fingerprint plus whole-file duration.
@@ -146,7 +146,7 @@ appropriate build or test.
 - [x] Reuse the existing recovery retention preference.
 - [x] Require sufficient recovery space before apply.
 - [x] Persist committed operations so undo survives application restarts.
-- [ ] Redo regenerates and reviews a new plan against current files.
+- [x] Redo regenerates and reviews a new plan against current files.
 
 **Acceptance:** Arbitrary files can be opened, batch-edited, previewed, applied,
 and restored without creating or indexing a library.
@@ -155,15 +155,15 @@ and restored without creating or indexing a library.
 
 ### Operations
 
-- [~] Assign metadata fields.
-- [~] Remove metadata fields.
-- [~] Copy metadata fields.
-- [ ] Combine metadata fields.
-- [~] Literal and regular-expression replacement.
-- [~] Upper, lower, title, sentence, and configurable case conversion.
-- [~] Trim and normalize whitespace.
-- [ ] Split a field into multiple values.
-- [ ] Join, deduplicate, or reorder multiple values.
+- [x] Assign metadata fields.
+- [x] Remove metadata fields.
+- [x] Copy metadata fields.
+- [x] Combine metadata fields.
+- [x] Literal and regular-expression replacement.
+- [x] Upper, lower, title, sentence, and configurable case conversion.
+- [x] Trim and normalize whitespace.
+- [x] Split a field into multiple values.
+- [x] Join, deduplicate, or reorder multiple values.
 - [ ] Extract metadata from file and folder components.
 - [ ] Generate filenames and directories using existing templates.
 - [ ] Rearrange filename components.
@@ -179,7 +179,7 @@ and restored without creating or indexing a library.
 - [x] Typed conditions per operation.
 - [x] Enable/disable, duplicate, rename, and reorder operations.
 - [ ] Representative-file preview while editing.
-- [~] Apply every applicable operation to Workbench or explicit Library scope
+- [x] Apply every applicable operation to Workbench or explicit Library scope
   through the same operation catalog and editor.
 - [x] Persist personal recipes through `IAppSettings`.
 - [x] Reserve configuration XML for shared library policies.
@@ -357,7 +357,7 @@ per-operation capability flags.
   offline cache behavior.
 - [ ] Audio-payload identity tests proving tag-only writes retain cached
   fingerprints and audio changes invalidate them.
-- [ ] Operation-catalog contract tests proving each operation marked applicable
+- [x] Operation-catalog contract tests proving each operation marked applicable
   to indexed files is exposed in both Workbench and Library.
 - [ ] Library-scope tests for selection, album, filtered results, full view,
   offline files, stale cache rows, policy denial, preview/apply equivalence,
@@ -433,3 +433,7 @@ per-operation capability flags.
   `IAppSettings`, shared by Workbench and Library, and retain typed conditions.
 - Added persistent redo candidates and repeat-recipe commands. Both regenerate
   a fresh plan against current files and require review before apply.
+- Added typed combine, split, join, deduplicate, and reorder operations to the
+  shared catalog and editor. Their ordered multi-value behavior is covered by
+  Core preview tests, and each operation is available in both Workbench and
+  Library.
