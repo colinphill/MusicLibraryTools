@@ -59,6 +59,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IUnifiedJobService, UnifiedJobService>();
         services.AddSingleton<IIndexBenchmarkService, IndexBenchmarkService>();
         services.AddSingleton<IFfmpegRunner, FfmpegRunner>();
+        services.AddSingleton<IFpcalcRunner, FpcalcRunner>();
+        services.AddSingleton<IAudioFingerprintService, AudioFingerprintService>();
         services.AddSingleton<IWavpackRunner, WavpackRunner>();
         services.AddSingleton<IDecodedAudioVerificationService, DecodedAudioVerificationService>();
         services.AddSingleton<IRepresentationRepairService, RepresentationRepairService>();

@@ -25,6 +25,9 @@ public sealed class ServiceCollectionExtensionsTests
         Assert.IsType<IngestPreflightService>(
             provider.GetRequiredService<IIngestPreflightService>());
         Assert.IsType<WavpackRunner>(provider.GetRequiredService<IWavpackRunner>());
+        Assert.IsType<FpcalcRunner>(provider.GetRequiredService<IFpcalcRunner>());
+        Assert.IsType<AudioFingerprintService>(
+            provider.GetRequiredService<IAudioFingerprintService>());
         Assert.IsType<LibraryOperationContextFactory>(
             provider.GetRequiredService<ILibraryOperationContextFactory>());
         Assert.IsType<ItlMetadataRepairService>(

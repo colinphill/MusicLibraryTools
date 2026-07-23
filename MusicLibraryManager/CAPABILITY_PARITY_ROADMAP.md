@@ -62,7 +62,7 @@ the same editor, preview, policy checks, recovery behavior, and history.
   - [x] Initial Workbench page and navigation implemented.
   - [x] End-to-end preview, apply, restart-safe undo, and redo verified.
 - [~] Phase 2: Typed bulk operations and recipes
-- [ ] Phase 3: Online metadata and artwork
+- [~] Phase 3: Online metadata and artwork
 - [ ] Phase 4: Flexible views, reporting, playlists, and tools
 - [ ] Phase 5: Native format and tag-layer expansion
 - [ ] Phase 6: Integration and parity hardening
@@ -97,7 +97,7 @@ appropriate build or test.
   - [~] `IEditHistoryService` provides persistent operation history and undo.
   - [x] Persistent redo and repeat.
   - [ ] `IMetadataSourceProvider`.
-  - [ ] `IAudioFingerprintService` decodes audio and generates a Chromaprint
+  - [~] `IAudioFingerprintService` decodes audio and generates a Chromaprint
     fingerprint plus whole-file duration.
   - [ ] `IAcoustIdLookupService` resolves fingerprints to scored AcoustID and
     MusicBrainz recording candidates.
@@ -195,11 +195,11 @@ capability comparison is possible through typed operations without scripting.
 ## Phase 3: Online metadata and artwork
 
 - [ ] Implement `IMetadataSourceProvider` as an internal extension point.
-- [ ] Add audio fingerprinting and AcoustID-assisted discovery before the
+- [~] Add audio fingerprinting and AcoustID-assisted discovery before the
   MusicBrainz release-selection workflow:
-  - [ ] Generate Chromaprint fingerprints locally from decoded audio for any
+  - [~] Generate Chromaprint fingerprints locally from decoded audio for any
     readable codec, independently of existing tags.
-  - [ ] Use bundled or explicitly configured `fpcalc`/Chromaprint through a
+  - [~] Use bundled or explicitly configured `fpcalc`/Chromaprint through a
     cross-platform `IAudioFingerprintService`; report tool availability and
     unsupported codecs without failing unrelated files.
   - [ ] Cache the fingerprint with an audio-payload identity guard so metadata-
@@ -441,3 +441,8 @@ per-operation capability flags.
   and full paths. Optional named regular-expression captures support focused
   parsing without introducing a general action language; invalid capture groups
   are reported as preview blockers.
+- Added the cross-platform `IAudioFingerprintService` foundation. It invokes a
+  personally configured `fpcalc` executable without a shell, fingerprints the
+  full decoded stream, parses compressed Chromaprint JSON plus whole-file
+  duration, supports cancellation, and keeps the local fingerprint distinct
+  from a server-assigned AcoustID.
