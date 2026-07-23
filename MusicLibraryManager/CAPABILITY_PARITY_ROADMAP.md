@@ -214,7 +214,8 @@ capability comparison is possible through typed operations without scripting.
 
 ## Phase 3: Online metadata and artwork
 
-- [ ] Implement `IMetadataSourceProvider` as an internal extension point.
+- [x] Implement `IMetadataSourceProvider` as a code-backed extension point
+  with typed capability interfaces and a shared provider catalog.
 - [~] Add audio fingerprinting and AcoustID-assisted discovery before the
   MusicBrainz release-selection workflow:
   - [~] Generate Chromaprint fingerprints locally from decoded audio for any
@@ -546,3 +547,8 @@ per-operation capability flags.
   details. Cache hits report progress, survive application restarts, avoid
   repeat provider calls for 30 days, and fall back to expired data when a live
   request fails without swallowing cancellation.
+- Added the shared code-backed metadata-source catalog. MusicBrainz and Cover
+  Art Archive advertise typed capability descriptors and resolve as the same
+  singleton instances through their specific interfaces and the common
+  extension contract; no provider scripting language or imported source
+  definitions were introduced.

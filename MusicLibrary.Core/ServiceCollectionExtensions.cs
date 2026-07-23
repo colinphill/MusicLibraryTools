@@ -66,14 +66,22 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAcoustIdDiscoveryService, AcoustIdDiscoveryService>();
         services.AddSingleton<IMusicBrainzHttpTransport, MusicBrainzHttpTransport>();
         services.AddSingleton<IMusicBrainzReleaseCache, MusicBrainzReleaseCache>();
-        services.AddSingleton<IMusicBrainzMetadataProvider, MusicBrainzMetadataProvider>();
+        services.AddSingleton<MusicBrainzMetadataProvider>();
+        services.AddSingleton<IMusicBrainzMetadataProvider>(sp =>
+            sp.GetRequiredService<MusicBrainzMetadataProvider>());
+        services.AddSingleton<IMetadataSourceProvider>(sp =>
+            sp.GetRequiredService<MusicBrainzMetadataProvider>());
         services.AddSingleton<IMusicBrainzReleaseMappingService,
             MusicBrainzReleaseMappingService>();
         services.AddSingleton<ICoverArtArchiveHttpTransport,
             CoverArtArchiveHttpTransport>();
         services.AddSingleton<IArtworkDownloadCache, ArtworkDownloadCache>();
-        services.AddSingleton<ICoverArtArchiveProvider,
-            CoverArtArchiveProvider>();
+        services.AddSingleton<CoverArtArchiveProvider>();
+        services.AddSingleton<ICoverArtArchiveProvider>(sp =>
+            sp.GetRequiredService<CoverArtArchiveProvider>());
+        services.AddSingleton<IMetadataSourceProvider>(sp =>
+            sp.GetRequiredService<CoverArtArchiveProvider>());
+        services.AddSingleton<IMetadataSourceCatalog, MetadataSourceCatalog>();
         services.AddSingleton<IWavpackRunner, WavpackRunner>();
         services.AddSingleton<IDecodedAudioVerificationService, DecodedAudioVerificationService>();
         services.AddSingleton<IRepresentationRepairService, RepresentationRepairService>();

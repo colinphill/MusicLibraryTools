@@ -1840,6 +1840,13 @@ internal sealed class FakeAcoustIdDiscoveryService : IAcoustIdDiscoveryService
 
 internal sealed class FakeMusicBrainzMetadataProvider : IMusicBrainzMetadataProvider
 {
+    public MetadataSourceDescriptor Descriptor { get; } = new(
+        "fake-musicbrainz",
+        "Fake MusicBrainz",
+        MetadataSourceCapabilities.RecordingReleaseLookup |
+        MetadataSourceCapabilities.ReleaseSearch |
+        MetadataSourceCapabilities.ReleaseDetails);
+
     public Guid? RecordingId { get; private set; }
     public Guid? RequestedReleaseId { get; private set; }
     public MusicBrainzReleaseSearchQuery? SearchQuery { get; private set; }
@@ -1914,6 +1921,11 @@ internal sealed class FakeMusicBrainzMetadataProvider : IMusicBrainzMetadataProv
 
 internal sealed class FakeCoverArtArchiveProvider : ICoverArtArchiveProvider
 {
+    public MetadataSourceDescriptor Descriptor { get; } = new(
+        "fake-cover-art",
+        "Fake Cover Art Archive",
+        MetadataSourceCapabilities.ReleaseArtwork);
+
     public Guid? ReleaseId { get; private set; }
 
     public Task<CoverArtArchiveResult> GetReleaseArtworkAsync(

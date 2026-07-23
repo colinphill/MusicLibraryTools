@@ -29,7 +29,7 @@ public sealed record CoverArtDownload(
     string ContentType,
     bool FromCache);
 
-public interface ICoverArtArchiveProvider
+public interface ICoverArtArchiveProvider : IMetadataSourceProvider
 {
     Task<CoverArtArchiveResult> GetReleaseArtworkAsync(
         Guid releaseId,
@@ -241,6 +241,11 @@ public sealed class CoverArtArchiveProvider(
     ICoverArtArchiveHttpTransport transport,
     IArtworkDownloadCache cache) : ICoverArtArchiveProvider
 {
+    public MetadataSourceDescriptor Descriptor { get; } = new(
+        "cover-art-archive",
+        "Cover Art Archive",
+        MetadataSourceCapabilities.ReleaseArtwork);
+
     private readonly SemaphoreSlim _requestGate = new(2, 2);
 
     public async Task<CoverArtArchiveResult> GetReleaseArtworkAsync(

@@ -59,7 +59,7 @@ public sealed record MusicBrainzReleaseSearchResult(
     ImmutableArray<MusicBrainzReleaseCandidate> Releases,
     DateTimeOffset RetrievedAtUtc);
 
-public interface IMusicBrainzMetadataProvider
+public interface IMusicBrainzMetadataProvider : IMetadataSourceProvider
 {
     Task<MusicBrainzReleaseResult> ResolveRecordingAsync(
         Guid recordingId,
@@ -130,6 +130,13 @@ public sealed class MusicBrainzMetadataProvider(
     IMusicBrainzHttpTransport transport,
     IMusicBrainzReleaseCache? cache = null) : IMusicBrainzMetadataProvider
 {
+    public MetadataSourceDescriptor Descriptor { get; } = new(
+        "musicbrainz",
+        "MusicBrainz",
+        MetadataSourceCapabilities.RecordingReleaseLookup |
+        MetadataSourceCapabilities.ReleaseSearch |
+        MetadataSourceCapabilities.ReleaseDetails);
+
     private const int PageSize = 100;
     private const int MaximumSearchResults = 250;
     private static readonly TimeSpan CacheMaximumAge =
