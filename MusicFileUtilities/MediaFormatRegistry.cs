@@ -36,6 +36,8 @@ namespace MusicFileUtilities
         // Compatibility alias for callers compiled against the original registry.
         OggVorbis = Ogg,
         WavPack = 5,
+        Wave = 6,
+        Aiff = 7,
     }
 
     /// <summary>Describes one extension and the operations supported for it.</summary>
@@ -210,6 +212,16 @@ namespace MusicFileUtilities
             yield return new(".spx", "Ogg Speex", MediaFormatFamily.Ogg,
                 indexed | remux);
             yield return new(".wv", "WavPack", MediaFormatFamily.WavPack,
+                indexed | MediaFormatCapabilities.TranscodeDestination | remux);
+            yield return new(".wav", "RIFF WAVE", MediaFormatFamily.Wave,
+                indexed | MediaFormatCapabilities.TranscodeDestination | remux);
+            yield return new(".rf64", "RF64 WAVE", MediaFormatFamily.Wave,
+                indexed | MediaFormatCapabilities.TranscodeDestination | remux);
+            yield return new(".aif", "AIFF", MediaFormatFamily.Aiff,
+                indexed | MediaFormatCapabilities.TranscodeDestination | remux);
+            yield return new(".aiff", "AIFF", MediaFormatFamily.Aiff,
+                indexed | MediaFormatCapabilities.TranscodeDestination | remux);
+            yield return new(".aifc", "AIFF-C", MediaFormatFamily.Aiff,
                 indexed | MediaFormatCapabilities.TranscodeDestination | remux);
 
             // These variants have long been supported by direct metadata/artwork editing and by

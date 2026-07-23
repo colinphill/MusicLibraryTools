@@ -17,9 +17,11 @@ legacy MusicFileUtilities iTunes-XML parser has been removed.
 | `.mp3` | MPEG audio | ID3v2.2/2.3/2.4 | ✔ | ✔ |
 | `.dsf` | DSD | ID3v2 (at metadata pointer) | ✔ | ✔ |
 | `.flac` | FLAC | Vorbis comments + PICTURE blocks | ✔ | ✔ |
-| `.ogg` | Ogg Vorbis | Vorbis comments | ✔ | ✔ |
-| `.m4a` `.mp4` `.m4p` `.m4r` | MP4 (AAC / ALAC) | iTunes-style atoms | ✔ | ✔ |
+| `.ogg` `.opus` `.spx` | Ogg (Vorbis / Opus / Speex) | Vorbis comments | ✔ | ✔ |
+| `.m4a` `.mp4` `.m4p` `.m4r` `.m4b` `.m4v` | MP4 (AAC / ALAC) | iTunes-style atoms | ✔ | ✔ |
 | `.wv` | WavPack | APEv2 | ✔ | ✔ |
+| `.wav` `.rf64` | RIFF/RF64 WAVE | ID3v2 chunk | ✔ | ✔ |
+| `.aif` `.aiff` `.aifc` | AIFF / AIFF-C | ID3v2 chunk | ✔ | ✔ |
 
 Tag coverage is a superset (`TagFields`) that includes MusicBrainz identifiers, ReplayGain,
 AcoustID, production credits (producer/engineer/mixer), and classical work/movement fields.
@@ -30,7 +32,7 @@ Embedded artwork is parsed, hashed, measured, and preserved byte-for-byte across
 ### Shared libraries
 
 - **MusicFileUtilities** — the core library. Per-format binary parsers (`ID3.cs`, `FLAC.cs`,
-  `MP4File.cs`, `Vorbis.cs`, `APE.cs`, `WavPack.cs`) behind common interfaces:
+  `MP4File.cs`, `Vorbis.cs`, `APE.cs`, `WavPack.cs`, `ChunkedAudio.cs`) behind common interfaces:
   `MediaFile.GetFile(path)` dispatches by extension to an `IMediaFile`, which exposes codec
   properties (`ICodecProvider`), tag reading (`IMetadataProvider`), and tag writing
   (`IMetadataWriter`: `SetField` / `RemoveField` / `Save`). Also home to the iTunes library

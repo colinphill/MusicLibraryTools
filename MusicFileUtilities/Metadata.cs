@@ -338,6 +338,14 @@ namespace MusicFileUtilities
                     file = new FLACFile(path, readOnly, readArtwork, knownLength);
                     break;
 
+                case MediaFormatFamily.Wave:
+                    file = new WaveFile(path, readArtwork, knownLength);
+                    break;
+
+                case MediaFormatFamily.Aiff:
+                    file = new AiffFile(path, readArtwork, knownLength);
+                    break;
+
                 default:
                     throw new ArgumentException("Invalid File Type", "path");
             }

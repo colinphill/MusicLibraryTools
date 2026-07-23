@@ -148,7 +148,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             profile.Id, SelectedIngestProfile.Id, StringComparison.OrdinalIgnoreCase));
     public IReadOnlyList<string> Themes { get; } = ["System", "Light", "Dark", "Steel Blue"];
     public IReadOnlyList<MediaFormatFamily> MetadataFormatFamilies { get; } =
-        Enum.GetValues<MediaFormatFamily>();
+        Enum.GetValues<MediaFormatFamily>().Distinct().ToArray();
     public IReadOnlyList<TagFields> MetadataCanonicalFields { get; } =
         Enum.GetValues<TagFields>()
             .Where(field => field != TagFields.NullField)

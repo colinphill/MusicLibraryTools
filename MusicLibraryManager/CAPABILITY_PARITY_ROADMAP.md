@@ -355,7 +355,13 @@ application concepts.
   - [x] Preserve every non-comment packet across metadata and artwork writes.
   - [x] Release `.opus` and `.spx` for indexing after native round-trip and
     compressed-audio identity coverage.
-- [ ] WAV/RF64 and AIFF/AIFC through chunk handlers using existing ID3.
+- [x] WAV/RF64 and AIFF/AIFC through chunk handlers using existing ID3.
+  - [x] Parse RIFF/RF64 and FORM chunks with their native byte order,
+    alignment, technical properties, and RF64 `ds64` size overrides.
+  - [x] Read, create, and rewrite container-owned ID3v2 metadata and artwork
+    while preserving audio and unknown chunks.
+  - [x] Keep PCM payload identities stable across ID3-only changes and release
+    `.wav`, `.rf64`, `.aif`, `.aiff`, and `.aifc` for indexing.
 - [ ] Raw AAC with ID3 and APE tag-layer support.
 
 ### Reuse APEv2
@@ -712,3 +718,12 @@ per-operation capability flags.
   advertise indexed metadata, artwork, remux, and transcode-source
   capabilities, and compressed-audio identities exclude their comment packets
   so tag-only changes retain cached Chromaprints.
+- Added native RIFF/RF64 WAVE and FORM AIFF/AIFF-C chunk handlers backed by
+  the existing ID3v2 frame implementation. Readers expose PCM technical
+  properties and honor little-/big-endian chunk sizes, odd-byte alignment,
+  AIFF extended sample rates, and RF64 `ds64` overrides. Writes replace or add
+  only the native ID3 chunk, preserve audio and unrelated chunks byte-for-byte,
+  update RIFF/FORM lengths and RF64 `riffSize`, and support the ordinary staged
+  output path. The five extensions now pass metadata, artwork, real-encoder,
+  unknown-chunk, output-staging, and PCM payload-identity release gates and are
+  enabled for automatic indexing.

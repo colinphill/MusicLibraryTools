@@ -525,7 +525,11 @@ namespace MusicFileUtilities
     public class ID3v2Frame
     {
 
-        public void Write(FileStream s)
+        // Retain the original FileStream API while allowing container tags to serialize into a
+        // bounded memory stream before their owning chunk is written.
+        public void Write(FileStream s) => Write((Stream)s);
+
+        public void Write(Stream s)
         {
             int datalen = Data.Length;
             if (tag_.Version == 2)
@@ -2122,7 +2126,11 @@ namespace MusicFileUtilities
             return frame;
         }
 
-        protected void WriteHeader(FileStream s)
+        // Retain the original protected signature for derived format handlers compiled against
+        // earlier versions of the library.
+        protected void WriteHeader(FileStream s) => WriteHeader((Stream)s);
+
+        protected void WriteHeader(Stream s)
         {
             byte[] header = new byte[10];
             header[0] = 0x49;
@@ -2136,6 +2144,21 @@ namespace MusicFileUtilities
             header[8] = (byte)((_tagsize >> 7) & 0x7f);
             header[9] = (byte)(_tagsize & 0x7f);
             s.Write(header, 0, 10);
+        }
+
+        /// <summary>
+        /// Serializes this tag without assuming that it lives at byte zero of the media file.
+        /// Chunked containers use the returned bytes as the payload of their native ID3 chunk.
+        /// </summary>
+        protected byte[] BuildTagBytes()
+        {
+            int frameHeaderSize = _headerversion == 2 ? 6 : 10;
+            _tagsize = _frames.Sum(frame => frameHeaderSize + frame.Data.Length);
+            using var stream = new MemoryStream(10 + _tagsize);
+            WriteHeader(stream);
+            foreach (ID3v2Frame frame in _frames)
+                frame.Write(stream);
+            return stream.ToArray();
         }
 
         #region IMetadataProvider Properties

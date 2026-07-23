@@ -90,6 +90,10 @@ public sealed class AudioPayloadIdentityService(
                     stream, hash, progress, ct),
                 MediaFormatFamily.Ogg => HashOgg(
                     stream, hash, progress, ct),
+                MediaFormatFamily.Wave => HashChunkedPcm(
+                    stream, hash, littleEndian: true, progress, ct),
+                MediaFormatFamily.Aiff => HashChunkedPcm(
+                    stream, hash, littleEndian: false, progress, ct),
                 _ => HashWholeFile(stream, hash, progress, ct),
             }
             : HashWholeFile(stream, hash, progress, ct);
@@ -343,6 +347,109 @@ public sealed class AudioPayloadIdentityService(
             return HashWholeFile(
                 stream, hash, progress, ct, rewind: true);
         return "ogg-packets";
+    }
+
+    private static string HashChunkedPcm(
+        FileStream stream,
+        IncrementalHash hash,
+        bool littleEndian,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct)
+    {
+        stream.Position = 0;
+        Span<byte> container = stackalloc byte[12];
+        if (!TryReadExactly(stream, container))
+            return HashWholeFile(
+                stream, hash, progress, ct, rewind: true);
+        bool valid = littleEndian
+            ? (container[..4].SequenceEqual("RIFF"u8) ||
+               container[..4].SequenceEqual("RF64"u8)) &&
+              container[8..].SequenceEqual("WAVE"u8)
+            : container[..4].SequenceEqual("FORM"u8) &&
+              (container[8..].SequenceEqual("AIFF"u8) ||
+               container[8..].SequenceEqual("AIFC"u8));
+        if (!valid)
+            return HashWholeFile(
+                stream, hash, progress, ct, rewind: true);
+
+        ulong? rf64DataSize = null;
+        bool foundFormat = false;
+        bool foundAudio = false;
+        Span<byte> chunkHeader = stackalloc byte[8];
+        Span<byte> ds64Header = stackalloc byte[16];
+        while (stream.Position + 8 <= stream.Length)
+        {
+            ct.ThrowIfCancellationRequested();
+            if (!TryReadExactly(stream, chunkHeader))
+                return HashWholeFile(
+                    stream, hash, progress, ct, rewind: true);
+            ReadOnlySpan<byte> id = chunkHeader[..4];
+            uint size32 = littleEndian
+                ? BinaryPrimitives.ReadUInt32LittleEndian(chunkHeader[4..])
+                : BinaryPrimitives.ReadUInt32BigEndian(chunkHeader[4..]);
+            long dataOffset = stream.Position;
+            ulong size = size32;
+            if (littleEndian && id.SequenceEqual("ds64"u8))
+            {
+                if (size32 < 28 || dataOffset + size32 > stream.Length)
+                    return HashWholeFile(
+                        stream, hash, progress, ct, rewind: true);
+                ReadExactly(stream, ds64Header);
+                rf64DataSize =
+                    BinaryPrimitives.ReadUInt64LittleEndian(ds64Header[8..]);
+                stream.Position = dataOffset;
+            }
+            else if (littleEndian &&
+                     id.SequenceEqual("data"u8) &&
+                     size32 == uint.MaxValue)
+            {
+                if (!rf64DataSize.HasValue)
+                    return HashWholeFile(
+                        stream, hash, progress, ct, rewind: true);
+                size = rf64DataSize.Value;
+            }
+
+            if (size > long.MaxValue)
+                return HashWholeFile(
+                    stream, hash, progress, ct, rewind: true);
+            long end;
+            long next;
+            try
+            {
+                end = checked(dataOffset + (long)size);
+                next = checked(end + ((size & 1) != 0 ? 1 : 0));
+            }
+            catch (OverflowException)
+            {
+                return HashWholeFile(
+                    stream, hash, progress, ct, rewind: true);
+            }
+            if (next > stream.Length)
+                return HashWholeFile(
+                    stream, hash, progress, ct, rewind: true);
+
+            bool isFormat = littleEndian
+                ? id.SequenceEqual("fmt "u8)
+                : id.SequenceEqual("COMM"u8);
+            bool isAudio = littleEndian
+                ? id.SequenceEqual("data"u8)
+                : id.SequenceEqual("SSND"u8);
+            if (isFormat || isAudio)
+            {
+                hash.AppendData(id);
+                AppendLength(hash, (long)size);
+                AppendRange(
+                    stream, hash, dataOffset, end, progress, ct);
+                foundFormat |= isFormat;
+                foundAudio |= isAudio;
+            }
+            stream.Position = next;
+        }
+
+        if (!foundFormat || !foundAudio)
+            return HashWholeFile(
+                stream, hash, progress, ct, rewind: true);
+        return littleEndian ? "wave-chunks" : "aiff-chunks";
     }
 
     private static string HashWholeFile(

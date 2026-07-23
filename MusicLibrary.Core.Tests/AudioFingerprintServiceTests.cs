@@ -139,6 +139,39 @@ public sealed class AudioFingerprintServiceTests
         }
     }
 
+    [Theory]
+    [InlineData(".wav")]
+    [InlineData(".aiff")]
+    public async Task PayloadIdentity_IgnoresChunkedId3ButTracksAudio(
+        string extension)
+    {
+        string path = Path.Combine(
+            Path.GetTempPath(),
+            $"payload_{Guid.NewGuid():N}{extension}");
+        WriteChunkedPcmFixture(path, extension == ".wav");
+        try
+        {
+            var identities = new AudioPayloadIdentityService(
+                MediaFormatRegistry.Default);
+            string before = await identities.ComputeAsync(path);
+
+            IMediaFile file = MediaFile.GetFile(path, readOnly: false);
+            Assert.IsAssignableFrom<IMetadataWriter>(file)
+                .SetField(TagFields.Title, "Chunked title");
+            file.SaveTags();
+            string afterTag = await identities.ComputeAsync(path);
+
+            Assert.Equal(before, afterTag);
+            MutateChunkedAudio(path, extension == ".wav");
+            string afterAudio = await identities.ComputeAsync(path);
+            Assert.NotEqual(afterTag, afterAudio);
+        }
+        finally
+        {
+            try { File.Delete(path); } catch { }
+        }
+    }
+
     [Fact]
     public async Task Service_ReusesFingerprintAfterMetadataOnlyEdit()
     {
@@ -258,5 +291,103 @@ public sealed class AudioFingerprintServiceTests
         page[27] = (byte)packet.Length;
         packet.CopyTo(page, 28);
         stream.Write(page);
+    }
+
+    private static void WriteChunkedPcmFixture(
+        string path,
+        bool wave)
+    {
+        using var stream = new MemoryStream();
+        stream.Write(wave ? "RIFF"u8 : "FORM"u8);
+        stream.Write(new byte[4]);
+        stream.Write(wave ? "WAVE"u8 : "AIFF"u8);
+        if (wave)
+        {
+            byte[] format = new byte[16];
+            BinaryPrimitives.WriteUInt16LittleEndian(format, 1);
+            BinaryPrimitives.WriteUInt16LittleEndian(format.AsSpan(2), 1);
+            BinaryPrimitives.WriteUInt32LittleEndian(
+                format.AsSpan(4), 8000);
+            BinaryPrimitives.WriteUInt32LittleEndian(
+                format.AsSpan(8), 16000);
+            BinaryPrimitives.WriteUInt16LittleEndian(
+                format.AsSpan(12), 2);
+            BinaryPrimitives.WriteUInt16LittleEndian(
+                format.AsSpan(14), 16);
+            WritePcmChunk(stream, "fmt ", format, littleEndian: true);
+            WritePcmChunk(
+                stream, "data", [1, 2, 3, 4], littleEndian: true);
+        }
+        else
+        {
+            byte[] common = new byte[18];
+            BinaryPrimitives.WriteUInt16BigEndian(common, 1);
+            BinaryPrimitives.WriteUInt32BigEndian(common.AsSpan(2), 2);
+            BinaryPrimitives.WriteUInt16BigEndian(common.AsSpan(6), 16);
+            Convert.FromHexString("400BFA00000000000000")
+                .CopyTo(common, 8); // 8000 Hz
+            WritePcmChunk(stream, "COMM", common, littleEndian: false);
+            WritePcmChunk(
+                stream,
+                "SSND",
+                [0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4],
+                littleEndian: false);
+        }
+        byte[] bytes = stream.ToArray();
+        if (wave)
+            BinaryPrimitives.WriteUInt32LittleEndian(
+                bytes.AsSpan(4), checked((uint)bytes.Length - 8));
+        else
+            BinaryPrimitives.WriteUInt32BigEndian(
+                bytes.AsSpan(4), checked((uint)bytes.Length - 8));
+        File.WriteAllBytes(path, bytes);
+    }
+
+    private static void WritePcmChunk(
+        Stream stream,
+        string id,
+        byte[] data,
+        bool littleEndian)
+    {
+        stream.Write(System.Text.Encoding.ASCII.GetBytes(id));
+        Span<byte> size = stackalloc byte[4];
+        if (littleEndian)
+            BinaryPrimitives.WriteUInt32LittleEndian(
+                size, checked((uint)data.Length));
+        else
+            BinaryPrimitives.WriteUInt32BigEndian(
+                size, checked((uint)data.Length));
+        stream.Write(size);
+        stream.Write(data);
+        if ((data.Length & 1) != 0)
+            stream.WriteByte(0);
+    }
+
+    private static void MutateChunkedAudio(string path, bool wave)
+    {
+        using var stream = new FileStream(
+            path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
+        stream.Position = 12;
+        Span<byte> header = stackalloc byte[8];
+        while (stream.Position + 8 <= stream.Length)
+        {
+            stream.ReadExactly(header);
+            string id = System.Text.Encoding.ASCII.GetString(header[..4]);
+            uint size = wave
+                ? BinaryPrimitives.ReadUInt32LittleEndian(header[4..])
+                : BinaryPrimitives.ReadUInt32BigEndian(header[4..]);
+            long dataOffset = stream.Position;
+            if (id == (wave ? "data" : "SSND"))
+            {
+                stream.Position = dataOffset + (wave ? 0 : 8);
+                int value = stream.ReadByte();
+                stream.Position--;
+                stream.WriteByte((byte)(value ^ 0xFF));
+                return;
+            }
+            stream.Position = checked(
+                dataOffset + size + (size & 1));
+        }
+        throw new InvalidDataException("Audio chunk was not found.");
     }
 }
