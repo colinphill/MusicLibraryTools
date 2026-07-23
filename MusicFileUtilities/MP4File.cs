@@ -2212,9 +2212,41 @@ namespace MusicFileUtilities
 
     }
 
-    public class MP4File : TagBase, ICodecProvider, IMediaFile, IMetadataWriter, IArtworkWriter,
-        IUserStringMetadata
+    public class MP4File :
+        TagBase,
+        ICodecProvider,
+        IMediaFile,
+        IMetadataWriter,
+        IArtworkWriter,
+        IUserStringMetadata,
+        IMultiValueMetadataWriter,
+        IMultiValueUserStringMetadata
     {
+        private static readonly HashSet<string>
+            MultiValueStandardTextAtoms =
+            [
+                "©alb",
+                "aART",
+                "soaa",
+                "soal",
+                "©ART",
+                "soar",
+                "©cmt",
+                "©wrt",
+                "soco",
+                "cprt",
+                "©day",
+                "©too",
+                "©gen",
+                "©grp",
+                "©lyr",
+                "©mvn",
+                "tvsh",
+                "sosn",
+                "©nam",
+                "sonm",
+                "©wrk",
+            ];
   
         #region IMetadataProvider Properties
 
@@ -2491,27 +2523,72 @@ namespace MusicFileUtilities
             try { isStandard = MP4Util.TypeEncoding.GetBytes(atomKey).Length == 4; }
             catch { }
 
-            if (isStandard)
+            if (!isStandard ||
+                MultiValueStandardTextAtoms.Contains(atomKey))
             {
-                if (value == null)
-                {
-                    var toRemove = ilst.Children.FirstOrDefault(a => a.Type == atomKey);
-                    if (toRemove != null) { ilst.Children.Remove(toRemove); ilst.Touch(-(long)toRemove.Size); }
-                    return;
-                }
-                GetOrCreateStandardDataAtom(ilst, atomKey).Text = value;
+                SetSingleTextDataAtom(
+                    ilst,
+                    atomKey,
+                    isStandard,
+                    value);
+                return;
             }
-            else
+
+            if (value == null)
             {
-                if (value == null)
+                var toRemove = ilst.Children.FirstOrDefault(
+                    atom => atom.Type == atomKey);
+                if (toRemove != null)
                 {
-                    var toRemove = ilst.Children.FirstOrDefault(a =>
-                        a.Type == "----" && (a as ContainerAtom)?.FindPath("name") is StringAtom sa && sa.Text == atomKey);
-                    if (toRemove != null) { ilst.Children.Remove(toRemove); ilst.Touch(-(long)toRemove.Size); }
-                    return;
+                    ilst.Children.Remove(toRemove);
+                    ilst.Touch(-(long)toRemove.Size);
                 }
-                GetOrCreateFreeformDataAtom(ilst, atomKey).Text = value;
+                return;
             }
+            GetOrCreateStandardDataAtom(ilst, atomKey).Text = value;
+        }
+
+        public bool SupportsMultipleValues(TagFields field)
+        {
+            if (!MP4Util.ReverseTagMapping.TryGetValue(
+                    field, out string atomKey))
+                return false;
+            return !IsStandardAtomKey(atomKey) ||
+                   MultiValueStandardTextAtoms.Contains(atomKey);
+        }
+
+        public void SetFieldValues(
+            TagFields field,
+            IReadOnlyList<string> values)
+        {
+            ArgumentNullException.ThrowIfNull(values);
+            if (values.Count <= 1)
+            {
+                SetField(
+                    field,
+                    values.Count == 0 ? null : values[0]);
+                return;
+            }
+            if (!MP4Util.ReverseTagMapping.TryGetValue(
+                    field, out string atomKey) ||
+                !SupportsMultipleValues(field))
+                throw new ArgumentException(
+                    $"MP4 does not support multiple values for {field}.",
+                    nameof(field));
+            if (values.Any(value => value is null))
+                throw new ArgumentException(
+                    "MP4 text values cannot be null.",
+                    nameof(values));
+
+            Atom_ilst ilst =
+                root_.FindPath("moov.udta.meta.ilst") as Atom_ilst ??
+                throw new InvalidOperationException(
+                    "No ilst atom found.");
+            ReplaceTextDataAtoms(
+                ilst,
+                atomKey,
+                IsStandardAtomKey(atomKey),
+                values);
         }
 
         public void RemoveField(TagFields field)
@@ -2551,24 +2628,39 @@ namespace MusicFileUtilities
             Atom_ilst ilst = root_.FindPath("moov.udta.meta.ilst") as Atom_ilst
                 ?? throw new InvalidOperationException("No ilst atom found.");
 
-            if (value is null)
-            {
-                Atom existing = ilst.Children.FirstOrDefault(atom =>
-                    atom.Type == "----" &&
-                    (atom as ContainerAtom)?.FindPath("name") is StringAtom name &&
-                    string.Equals(name.Text, key, StringComparison.OrdinalIgnoreCase));
-                if (existing is not null)
-                {
-                    ilst.Children.Remove(existing);
-                    ilst.Touch(-(long)existing.Size);
-                }
-                return;
-            }
-
-            GetOrCreateFreeformDataAtom(ilst, key).Text = value;
+            SetSingleTextDataAtom(
+                ilst,
+                key,
+                isStandard: false,
+                value);
         }
 
         public void RemoveUserString(string key) => SetUserString(key, null);
+
+        public void SetUserStringValues(
+            string key,
+            IReadOnlyList<string> values)
+        {
+            ArgumentNullException.ThrowIfNull(values);
+            if (string.IsNullOrWhiteSpace(key))
+                throw new ArgumentException(
+                    "A user-string key is required.",
+                    nameof(key));
+            if (values.Any(value => value is null))
+                throw new ArgumentException(
+                    "MP4 user-string values cannot be null.",
+                    nameof(values));
+
+            Atom_ilst ilst =
+                root_.FindPath("moov.udta.meta.ilst") as Atom_ilst ??
+                throw new InvalidOperationException(
+                    "No ilst atom found.");
+            ReplaceTextDataAtoms(
+                ilst,
+                key.Trim(),
+                isStandard: false,
+                values);
+        }
 
         // IArtworkWriter: write the cover into the 'covr' atom under ilst, creating it if absent
         // (same pattern as the text fields above). The atom tree resizes/reflows on Touch.
@@ -2625,6 +2717,128 @@ namespace MusicFileUtilities
             _ => Atom_data.DataTypes.JPEG,
         };
 
+        private static bool IsStandardAtomKey(string atomKey)
+        {
+            try
+            {
+                return MP4Util.TypeEncoding.GetBytes(atomKey).Length == 4;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void ReplaceTextDataAtoms(
+            Atom_ilst ilst,
+            string key,
+            bool isStandard,
+            IReadOnlyList<string> values)
+        {
+            List<Atom> existing = FindTextItems(
+                ilst, key, isStandard);
+            foreach (Atom atom in existing)
+            {
+                ilst.Children.Remove(atom);
+                ilst.Touch(-(long)atom.Size);
+            }
+            if (values.Count == 0)
+                return;
+
+            ContainerAtom container = isStandard
+                ? ilst.CreateChild(key) as ContainerAtom
+                : CreateFreeformContainer(ilst, key);
+            foreach (string value in values)
+            {
+                var data = new Atom_data(container) { Type = "data" };
+                container.Children.Add(data);
+                container.Touch((long)data.Size);
+                data.Text = value;
+            }
+        }
+
+        private void SetSingleTextDataAtom(
+            Atom_ilst ilst,
+            string key,
+            bool isStandard,
+            string value)
+        {
+            List<Atom> items = FindTextItems(
+                ilst, key, isStandard);
+            if (value is null)
+            {
+                foreach (Atom item in items)
+                {
+                    ilst.Children.Remove(item);
+                    ilst.Touch(-(long)item.Size);
+                }
+                return;
+            }
+
+            if (items.FirstOrDefault() is ContainerAtom first)
+            {
+                foreach (Atom extra in items.Skip(1))
+                {
+                    ilst.Children.Remove(extra);
+                    ilst.Touch(-(long)extra.Size);
+                }
+                List<Atom> dataItems = first.Children
+                    .Where(atom => atom.Type == "data")
+                    .ToList();
+                if (dataItems.FirstOrDefault() is Atom_data data)
+                {
+                    foreach (Atom extra in dataItems.Skip(1))
+                    {
+                        first.Children.Remove(extra);
+                        first.Touch(-(long)extra.Size);
+                    }
+                    data.Text = value;
+                    return;
+                }
+            }
+
+            ReplaceTextDataAtoms(
+                ilst, key, isStandard, [value]);
+        }
+
+        private static List<Atom> FindTextItems(
+            Atom_ilst ilst,
+            string key,
+            bool isStandard) =>
+            isStandard
+                ? ilst.Children
+                    .Where(atom => atom.Type == key)
+                    .ToList()
+                : ilst.Children
+                    .Where(atom =>
+                        atom.Type == "----" &&
+                        (atom as ContainerAtom)?
+                            .FindPath("name") is StringAtom name &&
+                        string.Equals(
+                            name.Text,
+                            key,
+                            StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+        private ContainerAtom CreateFreeformContainer(
+            Atom_ilst ilst,
+            string key)
+        {
+            ContainerAtom freeform =
+                ilst.CreateChild("----") as ContainerAtom;
+
+            var mean = new StringAtom(freeform) { Type = "mean" };
+            freeform.Children.Add(mean);
+            freeform.Touch((long)mean.Size);
+            mean.Text = "com.apple.iTunes";
+
+            var name = new StringAtom(freeform) { Type = "name" };
+            freeform.Children.Add(name);
+            freeform.Touch((long)name.Size);
+            name.Text = key;
+            return freeform;
+        }
+
         private Atom_data GetOrCreateStandardDataAtom(Atom_ilst ilst, string atomType)
         {
             var existing = ilst.Children.FirstOrDefault(a => a.Type == atomType) as ContainerAtom;
@@ -2669,33 +2883,6 @@ namespace MusicFileUtilities
             Atom_data da = new Atom_data(ca) { Type = "data" };
             ca.Children.Add(da);
             ca.Touch((long)da.Size);
-            return da;
-        }
-
-        private Atom_data GetOrCreateFreeformDataAtom(Atom_ilst ilst, string key)
-        {
-            var existing = ilst.Children
-                .Where(a => a.Type == "----")
-                .Select(a => a as ContainerAtom)
-                .FirstOrDefault(ca => (ca?.FindPath("name") as StringAtom)?.Text == key);
-            if (existing != null)
-                return existing.FindPath("data") as Atom_data;
-
-            ContainerAtom freeform = ilst.CreateChild("----") as ContainerAtom;
-
-            StringAtom mean = new StringAtom(freeform) { Type = "mean" };
-            freeform.Children.Add(mean);
-            freeform.Touch((long)mean.Size);
-            mean.Text = "com.apple.iTunes";
-
-            StringAtom name = new StringAtom(freeform) { Type = "name" };
-            freeform.Children.Add(name);
-            freeform.Touch((long)name.Size);
-            name.Text = key;
-
-            Atom_data da = new Atom_data(freeform) { Type = "data" };
-            freeform.Children.Add(da);
-            freeform.Touch((long)da.Size);
             return da;
         }
 

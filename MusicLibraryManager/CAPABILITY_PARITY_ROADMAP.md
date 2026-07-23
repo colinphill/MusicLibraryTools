@@ -95,16 +95,21 @@ appropriate build or test.
   - [x] `TagLayerDocument` describes individual tag layers.
   - [x] `MediaDocument` combines tag layers, artwork, codec properties, and the
     file snapshot.
-- [~] Add scalable native-format contracts:
+- [x] Add scalable native-format contracts:
   - [x] The existing `IMediaFormatRegistry` plus `IMediaFile` and focused
     native capability interfaces handle detection, capability views, reading,
     staged writing, artwork, and tag-layer operations. A second
     `IMediaFormatHandler` adapter hierarchy was intentionally not introduced.
-  - [~] `IMultiValueMetadataWriter` replaces the current first-value-only write
-    path where the native representation is ordered and repeatable. Vorbis,
-    FLAC, Matroska, every APEv2-backed format, and compatible ID3v2.4 standard
-    text frames are implemented; MP4, ASF, ID3 custom text, and legacy ID3
-    versions still require a per-field multi-value audit.
+  - [x] `IMultiValueMetadataWriter` replaces the first-value-only write path
+    wherever the native representation is ordered and repeatable. Vorbis,
+    FLAC, Matroska, every APEv2-backed format, compatible ID3v2.4 standard
+    text frames, compatible MP4 text/freeform atoms, and compatible ASF
+    Extended Content descriptors are implemented and covered by staged
+    round trips.
+  - [x] Per-field exclusions are explicit: ID3v1, legacy ID3 versions, ID3
+    TXXX descriptions, compound numbering fields, MP4 numeric/boolean atoms,
+    and ASF attributes outside its documented repeatable set do not advertise
+    multiple values.
   - [x] `ITagLayerEditor` adds, removes, and copies individual tag types.
   - [x] Existing format classes implement the focused native capability
     interfaces directly; separate adapters were deliberately unnecessary.
@@ -403,6 +408,25 @@ application concepts.
   - Keep ID3 downgrade previews loss-aware: multi-value frames remain blocked
     unless the user explicitly chooses the existing coalescing policy.
 
+### Complete the MP4 and ASF ordered-value audit
+
+- [x] Ordered values for compatible MP4 text and freeform atoms.
+  - Store values as ordered sibling `data` atoms under a single metadata item,
+    preserve empty values, and remove stale siblings when replacing them with
+    a single value.
+  - Keep binary track/disc, integer, boolean, artwork, and other non-text atoms
+    outside the advertised contract.
+- [x] Ordered values for compatible ASF descriptors.
+  - Store known and custom values as ordered repeated Extended Content
+    descriptors and preserve empty values.
+  - Advertise only the documented repeatable known attributes; when `Author`
+    has multiple values, move its values from the singleton Content
+    Description slot to repeated Extended Content descriptors.
+- [x] ID3 custom-text and legacy-version audit.
+  - Retain single-value semantics for ID3 TXXX descriptions and ID3v1 because
+    they do not provide the unambiguous ordered repeatable contract required
+    by the shared editor.
+
 ### Reuse APEv2
 
 - [x] Ordered known and custom multi-value text.
@@ -565,7 +589,11 @@ per-operation capability flags.
 
 ## Test plan
 
-- [ ] Multi-value round trips across every supported tag format.
+- [x] Multi-value round trips across every supported tag format.
+  - Native and staged tests cover Vorbis/FLAC, Matroska, APEv2 across every
+    backed codec, compatible ID3v2.4 containers, MP4 AAC/ALAC, and ASF.
+  - Per-field singleton representations are tested as unsupported instead of
+    being flattened into delimiter-separated text.
 - [ ] Preserve unknown fields, additional tag layers, artwork, and audio
   payloads.
 - [ ] Typed-operation tests for every operation and condition combination.

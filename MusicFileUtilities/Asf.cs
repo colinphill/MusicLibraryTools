@@ -17,7 +17,9 @@ public sealed class AsfFile :
     ICodecProvider,
     IMetadataWriter,
     IUserStringMetadata,
-    IArtworkWriter
+    IArtworkWriter,
+    IMultiValueMetadataWriter,
+    IMultiValueUserStringMetadata
 {
     internal static readonly Guid HeaderObject =
         new("75b22630-668e-11cf-a6d9-00aa0062ce6c");
@@ -95,6 +97,14 @@ public sealed class AsfFile :
     public void RemoveField(TagFields field) =>
         _tag.RemoveField(field);
 
+    public bool SupportsMultipleValues(TagFields field) =>
+        _tag.SupportsMultipleValues(field);
+
+    public void SetFieldValues(
+        TagFields field,
+        IReadOnlyList<string> values) =>
+        _tag.SetFieldValues(field, values);
+
     public IEnumerable<KeyValuePair<string, string>> GetUserStrings() =>
         _tag.GetUserStrings();
 
@@ -103,6 +113,11 @@ public sealed class AsfFile :
 
     public void RemoveUserString(string key) =>
         _tag.RemoveUserString(key);
+
+    public void SetUserStringValues(
+        string key,
+        IReadOnlyList<string> values) =>
+        _tag.SetUserStringValues(key, values);
 
     public void SetFrontCover(byte[] imageData, string mimeType) =>
         _tag.SetFrontCover(imageData, mimeType);
@@ -522,7 +537,9 @@ public sealed class AsfFile :
         TagBase,
         IMetadataWriter,
         IUserStringMetadata,
-        IArtworkWriter
+        IArtworkWriter,
+        IMultiValueMetadataWriter,
+        IMultiValueUserStringMetadata
     {
         private const ushort UnicodeType = 0;
         private const ushort ByteArrayType = 1;
@@ -563,6 +580,19 @@ public sealed class AsfFile :
                 [TagFields.Producer] = "WM/Producer",
                 [TagFields.OriginalYear] = "WM/OriginalReleaseYear",
             };
+
+        private static readonly HashSet<TagFields> MultiValueFields =
+        [
+            TagFields.Artist,
+            TagFields.AlbumArtist,
+            TagFields.Composer,
+            TagFields.Conductor,
+            TagFields.Genre,
+            TagFields.Language,
+            TagFields.Mood,
+            TagFields.Producer,
+            TagFields.Writer,
+        ];
 
         internal AsfTag(AsfFile owner) =>
             _owner = owner;
@@ -684,6 +714,42 @@ public sealed class AsfFile :
         public void RemoveField(TagFields field) =>
             SetField(field, null);
 
+        public bool SupportsMultipleValues(TagFields field) =>
+            MultiValueFields.Contains(field);
+
+        public void SetFieldValues(
+            TagFields field,
+            IReadOnlyList<string> values)
+        {
+            ArgumentNullException.ThrowIfNull(values);
+            if (values.Count <= 1)
+            {
+                SetField(
+                    field,
+                    values.Count == 0 ? null : values[0]);
+                return;
+            }
+            if (!SupportsMultipleValues(field))
+                throw new ArgumentException(
+                    $"ASF does not support multiple values for {field}.",
+                    nameof(field));
+            if (values.Any(value => value is null))
+                throw new ArgumentException(
+                    "ASF text values cannot be null.",
+                    nameof(values));
+
+            _attributes.RemoveAll(attribute =>
+                TryMap(attribute.Name, out TagFields mapped) &&
+                mapped == field);
+            string key = PreferredKey(field);
+            foreach (string value in values)
+                _attributes.Add(AsfAttribute.String(
+                    key,
+                    AsfAttributeSource.Extended,
+                    value));
+            RefreshStandardFields();
+        }
+
         public void SetUserString(string key, string value)
         {
             if (string.IsNullOrWhiteSpace(key))
@@ -701,6 +767,33 @@ public sealed class AsfFile :
 
         public void RemoveUserString(string key) =>
             SetUserString(key, null);
+
+        public void SetUserStringValues(
+            string key,
+            IReadOnlyList<string> values)
+        {
+            ArgumentNullException.ThrowIfNull(values);
+            if (string.IsNullOrWhiteSpace(key))
+                throw new ArgumentException(
+                    "A user-string key is required.",
+                    nameof(key));
+            if (values.Any(value => value is null))
+                throw new ArgumentException(
+                    "ASF user-string values cannot be null.",
+                    nameof(values));
+
+            key = key.Trim();
+            _attributes.RemoveAll(attribute =>
+                attribute.Name.Equals(
+                    key,
+                    StringComparison.OrdinalIgnoreCase));
+            foreach (string value in values)
+                _attributes.Add(AsfAttribute.String(
+                    key,
+                    AsfAttributeSource.Extended,
+                    value));
+            RefreshStandardFields();
+        }
 
         public void SetFrontCover(byte[] imageData, string mimeType)
         {

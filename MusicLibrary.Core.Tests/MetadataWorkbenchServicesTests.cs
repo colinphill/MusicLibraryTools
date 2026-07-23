@@ -1531,6 +1531,146 @@ public sealed class MetadataWorkbenchServicesTests
     }
 
     [Fact]
+    public async Task Apply_RoundTripsMp4AndAsfOrderedValues()
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-mp4-asf-values-" +
+            Guid.NewGuid().ToString("N"));
+        string recovery =
+            session + ".MusicLibraryManager-recovery";
+        Directory.CreateDirectory(session);
+        string mp4Path = Path.Combine(session, "track.m4a");
+        string asfPath = Path.Combine(session, "track.wma");
+        File.Copy(
+            MediaFixtures.Path_("sample_aac.m4a"),
+            mp4Path);
+        File.Copy(
+            MediaFixtures.Path_("sample.wma"),
+            asfPath);
+        string statePath =
+            Path.Combine(session, "settings.json");
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(
+                    settings: settings),
+                settings);
+            MetadataFieldKey custom =
+                MetadataFieldKey.Custom("CUSTOM_ORDER");
+
+            MetadataOperationPlan supported =
+                await service.PreviewValueEditsAsync(
+                    new Dictionary<
+                        string,
+                        IReadOnlyList<MetadataValueEdit>>
+                    {
+                        [mp4Path] =
+                        [
+                            new(
+                                MetadataFieldKey.Known(
+                                    TagFields.Artist),
+                                ["First artist", "Second artist"]),
+                            new(custom, ["first", "second"]),
+                        ],
+                        [asfPath] =
+                        [
+                            new(
+                                MetadataFieldKey.Known(
+                                    TagFields.Genre),
+                                ["Rock", "Electronic"]),
+                            new(custom, ["first", "second"]),
+                        ],
+                    },
+                    "Ordered MP4 and ASF values");
+
+            Assert.True(supported.CanApply);
+            Assert.All(
+                supported.Files,
+                file => Assert.DoesNotContain(
+                    file.Issues,
+                    issue => issue.Severity ==
+                        OperationIssueSeverity.Blocker));
+            await service.ApplyAsync(supported);
+
+            MediaDocument mp4 =
+                await _documents.LoadAsync(mp4Path);
+            Assert.Equal(
+                ["First artist", "Second artist"],
+                mp4.Values(
+                    MetadataFieldKey.Known(
+                        TagFields.Artist)));
+            Assert.Equal(
+                ["first", "second"],
+                mp4.Values(custom));
+            MediaDocument asf =
+                await _documents.LoadAsync(asfPath);
+            Assert.Equal(
+                ["Rock", "Electronic"],
+                asf.Values(
+                    MetadataFieldKey.Known(
+                        TagFields.Genre)));
+            Assert.Equal(
+                ["first", "second"],
+                asf.Values(custom));
+
+            MetadataOperationPlan unsupported =
+                await service.PreviewValueEditsAsync(
+                    new Dictionary<
+                        string,
+                        IReadOnlyList<MetadataValueEdit>>
+                    {
+                        [mp4Path] =
+                        [
+                            new(
+                                MetadataFieldKey.Known(
+                                    TagFields.BPM),
+                                ["120", "121"]),
+                        ],
+                        [asfPath] =
+                        [
+                            new(
+                                MetadataFieldKey.Known(
+                                    TagFields.Album),
+                                ["First", "Second"]),
+                        ],
+                    },
+                    "Unsupported native values");
+
+            Assert.False(unsupported.CanApply);
+            Assert.All(
+                unsupported.Files,
+                file => Assert.Contains(
+                    file.Issues,
+                    issue =>
+                        issue.Code ==
+                            "metadata.native-unsupported" &&
+                        issue.Severity ==
+                            OperationIssueSeverity.Blocker));
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(session, recursive: true);
+            }
+            catch
+            {
+            }
+            try
+            {
+                Directory.Delete(recovery, recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
     public async Task ValueEditor_RoundTripsOrderedCustomValues()
     {
         string session = Path.Combine(
