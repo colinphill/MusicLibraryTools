@@ -925,6 +925,138 @@ public sealed class UiControlTests
     }
 
     [AvaloniaFact]
+    public void Workbench_stages_and_reorders_complete_embedded_artwork_set()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Show();
+            services.GetRequiredService<INavigationService>()
+                .Navigate(ShellDestination.Workbench);
+            Dispatcher.UIThread.RunJobs();
+            WorkbenchView view = Assert.IsType<WorkbenchView>(
+                window.FindControl<ContentControl>(
+                    "ContentHost")!.Content);
+            WorkbenchViewModel model =
+                services.GetRequiredService<WorkbenchViewModel>();
+            var track = new WorkbenchTrackViewModel(
+                new MediaDocument(
+                    "artwork.flac",
+                    [],
+                    [
+                        new ArtworkModel
+                        {
+                            Category = "FrontCover",
+                            Description = "Front scan",
+                            ImageType = "image/jpeg",
+                            Width = 1200,
+                            Height = 1200,
+                            Size = 3,
+                            Data = [1, 2, 3],
+                        },
+                        new ArtworkModel
+                        {
+                            Category = "BackCover",
+                            Description = "Rear scan",
+                            ImageType = "image/png",
+                            Width = 900,
+                            Height = 880,
+                            Size = 3,
+                            Data = [4, 5, 6],
+                        },
+                    ],
+                    null,
+                    new(
+                        "artwork.flac",
+                        10,
+                        DateTime.UtcNow,
+                        "hash"),
+                    true));
+            model.Files.Add(track);
+            model.SelectedFile = track;
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(2, model.StagedArtworkItems.Count);
+            Assert.Equal(
+                ID3v2Util.APICType.FrontCover,
+                model.StagedArtworkItems[0].Type);
+            Assert.Equal(
+                "Rear scan",
+                model.StagedArtworkItems[1].Description);
+            Assert.NotNull(view.FindControl<ListBox>(
+                "StagedArtworkList"));
+            Assert.NotNull(view.FindControl<ComboBox>(
+                "StagedArtworkTypePicker"));
+            Assert.Equal(
+                "Add image",
+                view.FindControl<Button>(
+                    "AddStagedArtworkButton")!.Content);
+            Assert.Equal(
+                "Preview artwork set",
+                view.FindControl<Button>(
+                    "PreviewStagedArtworkButton")!.Content);
+            model.SelectedStagedArtwork =
+                model.StagedArtworkItems[0];
+            Assert.True(
+                model.MoveStagedArtworkDownCommand
+                    .CanExecute(null),
+                $"Selected index: {model.StagedArtworkItems.IndexOf(model.SelectedStagedArtwork!)}, busy: {model.IsBusy}");
+
+            model.MoveStagedArtworkDownCommand.Execute(null);
+
+            Assert.Equal(
+                ID3v2Util.APICType.BackCover,
+                model.StagedArtworkItems[0].Type);
+            Assert.Equal(
+                ID3v2Util.APICType.FrontCover,
+                model.StagedArtworkItems[1].Type);
+            Assert.True(
+                model.HasUnsavedChanges,
+                "Reordering the staged set should mark the Workbench draft dirty.");
+            Assert.True(
+                model.MoveStagedArtworkUpCommand
+                    .CanExecute(null),
+                $"Selected index after move: {model.StagedArtworkItems.IndexOf(model.SelectedStagedArtwork!)}, busy: {model.IsBusy}");
+
+            var second = new WorkbenchTrackViewModel(
+                new MediaDocument(
+                    "second.flac",
+                    [],
+                    [],
+                    null,
+                    new(
+                        "second.flac",
+                        10,
+                        DateTime.UtcNow,
+                        "second-hash"),
+                    true));
+            model.Files.Add(second);
+            model.SelectedFile = second;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Empty(model.StagedArtworkItems);
+            Assert.True(model.HasUnsavedChanges);
+
+            model.SelectedFile = track;
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(2, model.StagedArtworkItems.Count);
+            Assert.Equal(
+                ID3v2Util.APICType.BackCover,
+                model.StagedArtworkItems[0].Type);
+            Assert.Equal(
+                ID3v2Util.APICType.FrontCover,
+                model.StagedArtworkItems[1].Type);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Workbench_copy_command_emits_tag_aware_custom_values()
     {
         var clipboard = new RecordingClipboardService();

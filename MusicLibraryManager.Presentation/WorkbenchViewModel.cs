@@ -64,6 +64,14 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private ExternalToolPlan? _externalToolPlan;
     private CancellationTokenSource? _cancellation;
     private IReadOnlyList<WorkbenchTrackViewModel> _selectedFiles = [];
+    private int _artworkGeneration;
+    private bool _stagedArtworkDirty;
+    private string? _stagedArtworkPath;
+    private bool _settingArtworkMaxDimension;
+    private readonly Dictionary<
+        string,
+        ArtworkSetPreviewRequest> _artworkDrafts =
+            new(PathComparer);
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(BrowseFilesCommand))]
@@ -112,6 +120,13 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(PreviewId3EncodingCommand))]
     [NotifyCanExecuteChangedFor(nameof(CopyMetadataFieldCommand))]
     [NotifyCanExecuteChangedFor(nameof(PasteMetadataFieldCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AddStagedArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ReplaceStagedArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RemoveStagedArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ExportStagedArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewStagedArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(MoveStagedArtworkUpCommand))]
+    [NotifyCanExecuteChangedFor(nameof(MoveStagedArtworkDownCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -144,6 +159,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(PreviewId3v1ToId3v2Command))]
     [NotifyCanExecuteChangedFor(nameof(PreviewId3EncodingCommand))]
     [NotifyCanExecuteChangedFor(nameof(PasteMetadataFieldCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AddStagedArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewStagedArtworkCommand))]
     private WorkbenchTrackViewModel? _selectedFile;
 
     [ObservableProperty]
@@ -181,6 +198,18 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [ObservableProperty]
     private WorkbenchFieldEditMode _selectedFieldEditMode =
         WorkbenchFieldEditMode.Replace;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ReplaceStagedArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RemoveStagedArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ExportStagedArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(MoveStagedArtworkUpCommand))]
+    [NotifyCanExecuteChangedFor(nameof(MoveStagedArtworkDownCommand))]
+    private ArtworkPreviewItem? _selectedStagedArtwork;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PreviewStagedArtworkCommand))]
+    private int _artworkMaxDimension;
 
     [ObservableProperty]
     private DelimitedMetadataEmptyCellMode _importEmptyCellMode =
@@ -293,6 +322,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     public ObservableCollection<MusicBrainzReleaseRow> ReleaseMatches { get; } = [];
     public ObservableCollection<MusicBrainzTrackMappingRow> ReleaseTrackMappings { get; } = [];
     public ObservableCollection<CoverArtCandidateRow> ArtworkMatches { get; } = [];
+    public ObservableCollection<ArtworkPreviewItem>
+        StagedArtworkItems { get; } = [];
     public ObservableCollection<DiscogsReleaseRow> DiscogsMatches { get; } = [];
     public ObservableCollection<DiscogsTrackMappingRow>
         DiscogsTrackMappings { get; } = [];
@@ -322,6 +353,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         Enum.GetValues<ID3v2Version>();
     public IReadOnlyList<ID3TextEncodingPolicy> Id3EncodingPolicies { get; } =
         Enum.GetValues<ID3TextEncodingPolicy>();
+    public IReadOnlyList<ID3v2Util.APICType> ArtworkTypes { get; } =
+        Enum.GetValues<ID3v2Util.APICType>();
     public bool HasFiles => Files.Count > 0;
     public IReadOnlyList<WorkbenchTrackViewModel> SelectedFiles =>
         _selectedFiles;
@@ -338,6 +371,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         _reportPlan is not null ||
         _playlistPlan is not null ||
         _externalToolPlan is not null ||
+        _stagedArtworkDirty ||
+        _artworkDrafts.Count > 0 ||
         Files.Any(file => file.HasChanges);
     public bool CanUndoLatest => _history.CanUndo && !IsBusy;
     public bool CanRedoLatest => _history.CanRedo && !IsBusy;
@@ -423,6 +458,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         else if (!_selectedFiles.Contains(value))
             SetSelectedFiles([value]);
         RebuildMetadataFields();
+        _ = RebuildStagedArtworkAsync(value);
         DiscoverSelectedAudioCommand.NotifyCanExecuteChanged();
         MoveUpCommand.NotifyCanExecuteChanged();
         MoveDownCommand.NotifyCanExecuteChanged();
@@ -579,6 +615,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         int index = Files.IndexOf(current);
         current.PropertyChanged -= OnTrackChanged;
         Files.Remove(current);
+        _artworkDrafts.Remove(current.Path);
         InvalidateReportPlan();
         InvalidatePlaylistPlan();
         InvalidateExternalToolPlan();
@@ -615,6 +652,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         foreach (WorkbenchTrackViewModel file in Files)
             file.PropertyChanged -= OnTrackChanged;
         Files.Clear();
+        _artworkDrafts.Clear();
         AudioMatches.Clear();
         ReleaseMatches.Clear();
         SelectedRelease = null;
@@ -1057,6 +1095,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                 _plan, progress, _cancellation!.Token);
             string[] paths = _plan.Files.Where(file => file.HasChanges)
                 .Select(file => file.Path).ToArray();
+            foreach (MetadataFilePlan file in _plan.Files.Where(
+                         file => file.ArtworkEdit is not null))
+                _artworkDrafts.Remove(file.Path);
             await ReloadAsync(paths, progress, _cancellation.Token);
             _plan = null;
             PreviewChanges.Clear();
@@ -1921,6 +1962,143 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                 edits, "Remove all artwork", progress, ct));
     }
 
+    [RelayCommand(CanExecute = nameof(CanAddStagedArtwork))]
+    private async Task AddStagedArtworkAsync()
+    {
+        string? path = await PickArtworkFileAsync(
+            "Choose artwork to add");
+        if (path is null)
+            return;
+        byte[] data = await File.ReadAllBytesAsync(path);
+        object? source =
+            await _thumbnails.CreateImageSourceAsync(
+                data,
+                decodePixelWidth: 180);
+        ID3v2Util.APICType type =
+            StagedArtworkItems.Any(item =>
+                item.Type ==
+                ID3v2Util.APICType.FrontCover)
+                ? ID3v2Util.APICType.Other
+                : ID3v2Util.APICType.FrontCover;
+        var item = new ArtworkPreviewItem(
+            source,
+            type,
+            MimeTypeFromPath(path),
+            data,
+            $"{MimeTypeFromPath(path)} · " +
+            $"{FormatBytes(data.LongLength)}",
+            Path.GetFileNameWithoutExtension(path));
+        item.PropertyChanged += OnStagedArtworkChanged;
+        StagedArtworkItems.Add(item);
+        SelectedStagedArtwork = item;
+        MarkStagedArtworkDirty();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanEditStagedArtwork))]
+    private async Task ReplaceStagedArtworkAsync()
+    {
+        if (SelectedStagedArtwork is not { } item)
+            return;
+        string? path = await PickArtworkFileAsync(
+            "Choose replacement artwork");
+        if (path is null)
+            return;
+        byte[] data = await File.ReadAllBytesAsync(path);
+        object? source =
+            await _thumbnails.CreateImageSourceAsync(
+                data,
+                decodePixelWidth: 180);
+        item.ReplaceContent(
+            source,
+            MimeTypeFromPath(path),
+            data,
+            $"{MimeTypeFromPath(path)} · " +
+            $"{FormatBytes(data.LongLength)}");
+        CancelPlan();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanEditStagedArtwork))]
+    private void RemoveStagedArtwork()
+    {
+        if (SelectedStagedArtwork is not { } item)
+            return;
+        item.PropertyChanged -= OnStagedArtworkChanged;
+        StagedArtworkItems.Remove(item);
+        SelectedStagedArtwork =
+            StagedArtworkItems.FirstOrDefault();
+        MarkStagedArtworkDirty();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanMoveStagedArtworkUp))]
+    private void MoveStagedArtworkUp()
+    {
+        if (SelectedStagedArtwork is not { } item)
+            return;
+        int index = StagedArtworkItems.IndexOf(item);
+        if (index <= 0)
+            return;
+        StagedArtworkItems.Move(index, index - 1);
+        SelectedStagedArtwork = item;
+        MarkStagedArtworkDirty();
+        NotifyStagedArtworkMoveCommands();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanMoveStagedArtworkDown))]
+    private void MoveStagedArtworkDown()
+    {
+        if (SelectedStagedArtwork is not { } item)
+            return;
+        int index = StagedArtworkItems.IndexOf(item);
+        if (index < 0 ||
+            index >= StagedArtworkItems.Count - 1)
+            return;
+        StagedArtworkItems.Move(index, index + 1);
+        SelectedStagedArtwork = item;
+        MarkStagedArtworkDirty();
+        NotifyStagedArtworkMoveCommands();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanEditStagedArtwork))]
+    private async Task ExportStagedArtworkAsync()
+    {
+        if (SelectedStagedArtwork is not { } item)
+            return;
+        string extension = ArtworkFileExtension(
+            item.MimeType);
+        string baseName = Path.GetFileNameWithoutExtension(
+            SelectedFile?.Path) ?? "artwork";
+        string suggested =
+            $"{baseName}-{item.Type}{extension}";
+        string? path = await _files.SaveFileAsync(
+            "Export embedded artwork",
+            suggested,
+            extension);
+        if (path is null)
+            return;
+        await File.WriteAllBytesAsync(path, item.Data);
+        StatusText =
+            $"Exported {item.Label.ToLowerInvariant()} artwork to {path}.";
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPreviewStagedArtwork))]
+    private async Task PreviewStagedArtworkAsync()
+    {
+        IReadOnlyList<WorkbenchTrackViewModel> targets =
+            EditTargets;
+        IReadOnlyDictionary<string, ArtworkSetPreviewRequest>
+            requests = BuildArtworkSetRequests(
+                targets,
+                StagedArtworkItems,
+                ArtworkMaxDimension);
+        await PreviewAsync((progress, ct) =>
+            _operations.PreviewArtworkSetsAsync(
+                requests,
+                $"Edit embedded artwork for " +
+                $"{targets.Count:N0} file(s)",
+                progress,
+                ct));
+    }
+
     [RelayCommand(CanExecute = nameof(CanBuildReleaseMapping))]
     private async Task BuildReleaseMappingAsync()
     {
@@ -2214,6 +2392,38 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         return edits;
     }
 
+    public static IReadOnlyDictionary<
+        string,
+        ArtworkSetPreviewRequest> BuildArtworkSetRequests(
+            IReadOnlyList<WorkbenchTrackViewModel> files,
+            IReadOnlyList<ArtworkPreviewItem> images,
+            int maxDimension)
+    {
+        ArtworkSetPreviewRequest request =
+            BuildArtworkSetRequest(
+                images,
+                maxDimension);
+        return files.ToDictionary(
+            file => file.Path,
+            _ => request,
+            PathComparer);
+    }
+
+    private static ArtworkSetPreviewRequest
+        BuildArtworkSetRequest(
+            IEnumerable<ArtworkPreviewItem> images,
+            int maxDimension) =>
+        new(
+            [
+                .. images.Select(item =>
+                    new ArtworkInput(
+                        item.Type,
+                        item.MimeType,
+                        item.Data,
+                        item.Description)),
+            ],
+            maxDimension);
+
     private IReadOnlyList<WorkbenchTrackViewModel> EditTargets =>
         _selectedFiles.Count > 0
             ? _selectedFiles
@@ -2231,6 +2441,211 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             ? MetadataFieldKey.Known(known.Field)
             : null;
     }
+
+    private async Task RebuildStagedArtworkAsync(
+        WorkbenchTrackViewModel? file)
+    {
+        int generation = ++_artworkGeneration;
+        foreach (ArtworkPreviewItem item in
+                 StagedArtworkItems)
+            item.PropertyChanged -= OnStagedArtworkChanged;
+        StagedArtworkItems.Clear();
+        SelectedStagedArtwork = null;
+        _stagedArtworkPath = file?.Path;
+        _stagedArtworkDirty = false;
+        OnPropertyChanged(nameof(HasUnsavedChanges));
+        if (file is null)
+            return;
+
+        if (_artworkDrafts.TryGetValue(
+                file.Path,
+                out ArtworkSetPreviewRequest? draft))
+        {
+            _settingArtworkMaxDimension = true;
+            ArtworkMaxDimension = draft.MaxDimension;
+            _settingArtworkMaxDimension = false;
+            foreach (ArtworkInput image in draft.Images)
+            {
+                object? source = null;
+                try
+                {
+                    source = await _thumbnails
+                        .CreateImageSourceAsync(
+                            image.Data,
+                            decodePixelWidth: 180);
+                }
+                catch
+                {
+                    // Invalid artwork remains editable and removable.
+                }
+                if (generation != _artworkGeneration ||
+                    !ReferenceEquals(file, SelectedFile))
+                    return;
+                var draftItem = new ArtworkPreviewItem(
+                    source,
+                    image.Type,
+                    image.MimeType,
+                    image.Data,
+                    $"{image.MimeType} · " +
+                    $"{FormatBytes(image.Data.LongLength)}",
+                    image.Description);
+                draftItem.PropertyChanged +=
+                    OnStagedArtworkChanged;
+                StagedArtworkItems.Add(draftItem);
+            }
+            _stagedArtworkDirty = true;
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+            SelectedStagedArtwork =
+                StagedArtworkItems.FirstOrDefault();
+            PreviewStagedArtworkCommand
+                .NotifyCanExecuteChanged();
+            NotifyStagedArtworkMoveCommands();
+            return;
+        }
+
+        _settingArtworkMaxDimension = true;
+        ArtworkMaxDimension = 0;
+        _settingArtworkMaxDimension = false;
+        for (int index = 0;
+             index < file.Document.Artwork.Length;
+             index++)
+        {
+            ArtworkModel artwork =
+                file.Document.Artwork[index];
+            object? source = null;
+            try
+            {
+                source = await _thumbnails
+                    .CreateImageSourceAsync(
+                        artwork.Data,
+                        decodePixelWidth: 180);
+            }
+            catch
+            {
+                // Invalid artwork remains editable and removable.
+            }
+            if (generation != _artworkGeneration ||
+                !ReferenceEquals(file, SelectedFile))
+                return;
+            var item = new ArtworkPreviewItem(
+                source,
+                ArtworkType(artwork, index),
+                ArtworkMimeType(artwork),
+                artwork.Data,
+                ArtworkDetails(artwork),
+                artwork.Description);
+            item.PropertyChanged += OnStagedArtworkChanged;
+            StagedArtworkItems.Add(item);
+        }
+        SelectedStagedArtwork =
+            StagedArtworkItems.FirstOrDefault();
+        PreviewStagedArtworkCommand.NotifyCanExecuteChanged();
+        NotifyStagedArtworkMoveCommands();
+    }
+
+    partial void OnSelectedStagedArtworkChanged(
+        ArtworkPreviewItem? value) =>
+        NotifyStagedArtworkMoveCommands();
+
+    partial void OnArtworkMaxDimensionChanged(int value)
+    {
+        if (!_settingArtworkMaxDimension &&
+            SelectedFile is not null)
+            MarkStagedArtworkDirty();
+    }
+
+    private void OnStagedArtworkChanged(
+        object? sender,
+        PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is not (
+                nameof(ArtworkPreviewItem.Type) or
+                nameof(ArtworkPreviewItem.Description) or
+                nameof(ArtworkPreviewItem.Data)))
+            return;
+        MarkStagedArtworkDirty();
+    }
+
+    private void MarkStagedArtworkDirty()
+    {
+        _stagedArtworkDirty = true;
+        if (_stagedArtworkPath is not null)
+            _artworkDrafts[_stagedArtworkPath] =
+                BuildArtworkSetRequest(
+                    StagedArtworkItems,
+                    ArtworkMaxDimension);
+        CancelPlan();
+        NotifySessionChanged();
+        PreviewStagedArtworkCommand.NotifyCanExecuteChanged();
+    }
+
+    private void NotifyStagedArtworkMoveCommands()
+    {
+        MoveStagedArtworkUpCommand.NotifyCanExecuteChanged();
+        MoveStagedArtworkDownCommand.NotifyCanExecuteChanged();
+    }
+
+    private async Task<string?> PickArtworkFileAsync(
+        string title) =>
+        await _files.PickFileAsync(
+            title,
+            [new(
+                "Artwork images",
+                [
+                    ".jpg",
+                    ".jpeg",
+                    ".png",
+                    ".gif",
+                    ".webp",
+                    ".bmp",
+                ])]);
+
+    private static string ArtworkFileExtension(
+        string? mimeType) =>
+        mimeType?.ToLowerInvariant() switch
+        {
+            "image/png" => ".png",
+            "image/gif" => ".gif",
+            "image/webp" => ".webp",
+            "image/bmp" => ".bmp",
+            _ => ".jpg",
+        };
+
+    private static ID3v2Util.APICType ArtworkType(
+        ArtworkModel image,
+        int index) =>
+        Enum.TryParse(
+            image.Category?.Replace(" ", ""),
+            ignoreCase: true,
+            out ID3v2Util.APICType type)
+            ? type
+            : index == 0
+                ? ID3v2Util.APICType.FrontCover
+                : ID3v2Util.APICType.Other;
+
+    private static string ArtworkMimeType(
+        ArtworkModel image)
+    {
+        if (!string.IsNullOrWhiteSpace(image.ImageType))
+            return image.ImageType;
+        return image.Data.AsSpan().StartsWith(
+            new byte[] { 0x89, 0x50, 0x4e, 0x47 })
+                ? "image/png"
+                : "image/jpeg";
+    }
+
+    private static string ArtworkDetails(
+        ArtworkModel image) =>
+        $"{image.ImageType ?? "image"} · " +
+        $"{image.Width:N0} × {image.Height:N0} · " +
+        $"{FormatBytes(image.Size)}";
+
+    private static string FormatBytes(long bytes) => bytes switch
+    {
+        >= 1024 * 1024 => $"{bytes / 1024d / 1024d:N1} MB",
+        >= 1024 => $"{bytes / 1024d:N0} KB",
+        _ => $"{bytes:N0} bytes",
+    };
 
     private void OnTrackChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -2448,6 +2863,25 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             row.IsIncluded && row.SelectedTrack is not null);
     private bool CanPreviewSelectedArtwork() =>
         !IsBusy && SelectedFile is not null;
+    private bool CanAddStagedArtwork() =>
+        !IsBusy && SelectedFile is not null;
+    private bool CanEditStagedArtwork() =>
+        !IsBusy && SelectedStagedArtwork is not null;
+    private bool CanMoveStagedArtworkUp() =>
+        CanEditStagedArtwork() &&
+        StagedArtworkItems.IndexOf(SelectedStagedArtwork!) > 0;
+    private bool CanMoveStagedArtworkDown()
+    {
+        if (!CanEditStagedArtwork())
+            return false;
+        int index = StagedArtworkItems.IndexOf(
+            SelectedStagedArtwork!);
+        return index >= 0 &&
+            index < StagedArtworkItems.Count - 1;
+    }
+    private bool CanPreviewStagedArtwork() =>
+        !IsBusy && EditTargets.Count > 0 &&
+        ArtworkMaxDimension >= 0;
     private bool CanBuildReleaseMapping() =>
         !IsBusy && SelectedRelease is not null && Files.Count > 0;
     private bool CanPreviewReleaseMetadata() =>

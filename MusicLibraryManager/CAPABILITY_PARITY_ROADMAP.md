@@ -78,7 +78,7 @@ the same editor, preview, policy checks, recovery behavior, and history.
   - [x] Initial Workbench page and navigation implemented.
   - [x] End-to-end preview, apply, restart-safe undo, and redo verified.
 - [~] Phase 2: Typed bulk operations and recipes
-- [~] Phase 3: Online metadata and artwork
+- [x] Phase 3: Online metadata and artwork
 - [x] Phase 4: Flexible views, reporting, playlists, and tools
 - [x] Phase 5: Native format and tag-layer expansion
 - [ ] Phase 6: Integration and parity hardening
@@ -171,9 +171,12 @@ appropriate build or test.
     partial presence, per-file append/remove results, and grid-selection
     propagation.
 - [x] Inspect and edit arbitrary known and native custom fields.
-- [~] Multiple artwork items, types, descriptions, and previews. The shared
-  staged plan now preserves non-front artwork and previews a selected front
-  cover; general-purpose artwork editing remains.
+- [x] Multiple artwork items, types, descriptions, and previews.
+  - Workbench stages the focused file's complete ordered artwork set, including
+    roles and descriptions, with per-image thumbnails and selection.
+  - Add, replace, remove, reorder, classify, describe, export, and bounded
+    resizing all produce the ordinary native-validated, recoverable preview;
+    the same staged set can target a multi-file selection.
 - [x] Read-only technical properties.
 - [ ] Refactor Library inspector and fields dialog onto shared document/write
   services.
@@ -230,11 +233,11 @@ and restored without creating or indexing a library.
     cancellation, native validation, staged apply, recovery, and undo path.
 - [x] Sequential track and disc numbering, including configurable start, step,
   padding, totals, ordered preview, staged apply, and native round-trip.
-- [~] Artwork add, replace, export, resize, classify, and remove. Local and
-  Cover Art Archive replacement plus front/all removal are available through
-  the shared staged plan. The Library inspector and Core artwork service also
-  support multiple items, export, resize, and role classification; equivalent
-  staged controls are still required in Workbench.
+- [x] Artwork add, replace, export, resize, classify, reorder, and remove.
+  Workbench and the Library inspector expose complete multi-image sets with
+  roles and descriptions. Workbench changes route through the shared
+  authoritative preview, native-writer dry run, policy checks, recovery,
+  apply, and history path.
 - [~] Copy, move, rename, and quarantine files. Recoverable Organize, ingest,
   repair, export, and sync workflows cover policy-driven mutations; an ad-hoc
   shared Workbench/Library file-operation editor remains.
@@ -276,7 +279,7 @@ capability comparison is possible through typed operations without scripting.
 
 - [x] Implement `IMetadataSourceProvider` as a code-backed extension point
   with typed capability interfaces and a shared provider catalog.
-- [~] Add audio fingerprinting and AcoustID-assisted discovery before the
+- [x] Add audio fingerprinting and AcoustID-assisted discovery before the
   MusicBrainz release-selection workflow:
   - [x] Generate Chromaprint fingerprints locally from decoded audio for any
     readable codec, independently of existing tags. Native payload identities
@@ -590,14 +593,17 @@ per-operation capability flags.
   staged sequential track/disc numbering with totals, and ordered known/custom
   multi-value APEv2 writes across every APEv2-backed codec, plus ordered
   ID3v2.4 standard text values across every ID3-backed container.
-- Remaining Phase 1 work: complete staged multi-artwork controls and migration
-  of the legacy Library inspector/fields dialog onto the shared document and
-  mutation services.
+- Remaining Phase 1 work: migrate the legacy Library inspector/fields dialog
+  onto the shared document and mutation services.
 - Revisited and completed in this audit: versioned tag-aware copy/paste across
   Workbench and explicit Library scopes, including known/custom identity,
   ordered values, plain-text fallback, and preview-first application.
-- Remaining Phase 2 work: ad-hoc shared file mutations, live representative
-  draft preview, and fully symmetric artwork controls.
+- Revisited and completed in this audit: complete ordered multi-artwork staging
+  in Workbench, including add, replace, export, resize, classification,
+  descriptions, removal, reordering, thumbnails, multi-file preview, policy
+  checks, and native-writer validation.
+- Remaining Phase 2 work: ad-hoc shared file mutations and live representative
+  draft preview.
 - Revisited and completed in this audit: application-local/configured/system
   fpcalc resolution, explicit-path validation, OptimFROG decode bridging for
   all three registered variants, and real official-tool verification that

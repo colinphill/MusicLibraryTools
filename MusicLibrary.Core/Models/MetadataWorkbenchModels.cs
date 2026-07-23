@@ -379,6 +379,10 @@ public sealed record ArtworkDescriptor(
 public sealed record ArtworkSetEdit(
     ImmutableArray<ArtworkInput> Images);
 
+public sealed record ArtworkSetPreviewRequest(
+    ImmutableArray<ArtworkInput> Images,
+    int MaxDimension = 0);
+
 public sealed record ArtworkSetDifference(
     ImmutableArray<ArtworkDescriptor> Before,
     ImmutableArray<ArtworkDescriptor> After);

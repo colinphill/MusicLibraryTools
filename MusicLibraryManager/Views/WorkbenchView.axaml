@@ -671,15 +671,16 @@
                 <Grid RowDefinitions="Auto,*" RowSpacing="8">
                   <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                     <TextBlock Classes="muted" VerticalAlignment="Center"
-                               Text="Preview local artwork for the selected Workbench file, or use release artwork for confirmed mappings."
+                               Text="Edit the complete ordered artwork set for the selected Workbench file, or use release artwork for confirmed mappings."
                                TextWrapping="Wrap" />
                     <WrapPanel Grid.Column="1">
-                      <Button Classes="app" Content="Local front cover"
-                              Command="{Binding PreviewLocalArtworkCommand}" />
-                      <Button Classes="app" Content="Remove front"
-                              Command="{Binding PreviewRemoveFrontCoverCommand}" />
-                      <Button Classes="app" Content="Remove all"
-                              Command="{Binding PreviewRemoveAllArtworkCommand}" />
+                      <Button x:Name="AddStagedArtworkButton"
+                              Classes="app" Content="Add image"
+                              Command="{Binding AddStagedArtworkCommand}" />
+                      <Button x:Name="PreviewStagedArtworkButton"
+                              Classes="app primary"
+                              Content="Preview artwork set"
+                              Command="{Binding PreviewStagedArtworkCommand}" />
                       <Button Classes="app" Content="Find release artwork"
                               Command="{Binding FindReleaseArtworkCommand}" />
                       <Button Classes="app primary"
@@ -687,9 +688,77 @@
                               Command="{Binding PreviewReleaseArtworkCommand}" />
                     </WrapPanel>
                   </Grid>
-                  <controls:AppDataGrid x:Name="ReleaseArtworkGrid" Grid.Row="1"
-                      ItemsSource="{Binding ArtworkMatches}"
-                      SelectedItem="{Binding SelectedArtworkMatch, Mode=TwoWay}" />
+                  <TabControl Grid.Row="1">
+                    <TabItem Header="Embedded artwork set">
+                      <Grid Margin="0,8,0,0"
+                            ColumnDefinitions="1.1*,12,0.9*">
+                        <ListBox x:Name="StagedArtworkList"
+                                 ItemsSource="{Binding StagedArtworkItems}"
+                                 SelectedItem="{Binding SelectedStagedArtwork, Mode=TwoWay}">
+                          <ListBox.ItemTemplate>
+                            <DataTemplate>
+                              <Grid Margin="4" ColumnDefinitions="72,*"
+                                    ColumnSpacing="10">
+                                <Border Width="64" Height="64"
+                                        Background="{DynamicResource AppInsetBrush}"
+                                        CornerRadius="5">
+                                  <Image Source="{Binding Source}"
+                                         Stretch="Uniform" />
+                                </Border>
+                                <StackPanel Grid.Column="1"
+                                            VerticalAlignment="Center">
+                                  <TextBlock Text="{Binding Label}"
+                                             FontWeight="SemiBold" />
+                                  <TextBlock Classes="muted"
+                                             Text="{Binding Summary}"
+                                             TextWrapping="Wrap" />
+                                </StackPanel>
+                              </Grid>
+                            </DataTemplate>
+                          </ListBox.ItemTemplate>
+                        </ListBox>
+                        <StackPanel Grid.Column="2" Spacing="8">
+                          <TextBlock Classes="section-title"
+                                     Text="Selected image" />
+                          <TextBlock Classes="muted" Text="Artwork role" />
+                          <ComboBox x:Name="StagedArtworkTypePicker"
+                                    Classes="app"
+                                    ItemsSource="{Binding ArtworkTypes}"
+                                    SelectedItem="{Binding SelectedStagedArtwork.Type, Mode=TwoWay}" />
+                          <TextBlock Classes="muted" Text="Description" />
+                          <TextBox Classes="app"
+                                   Text="{Binding SelectedStagedArtwork.Description, Mode=TwoWay}" />
+                          <TextBlock Classes="muted"
+                                     Text="Maximum width or height for preview/apply (0 preserves size)" />
+                          <NumericUpDown Classes="app" Minimum="0"
+                                         Maximum="100000"
+                                         Value="{Binding ArtworkMaxDimension, Mode=TwoWay}" />
+                          <WrapPanel>
+                            <Button x:Name="MoveStagedArtworkUpButton"
+                                    Classes="app" Content="Move up"
+                                    Command="{Binding MoveStagedArtworkUpCommand}" />
+                            <Button x:Name="MoveStagedArtworkDownButton"
+                                    Classes="app" Content="Move down"
+                                    Command="{Binding MoveStagedArtworkDownCommand}" />
+                            <Button Classes="app" Content="Replace"
+                                    Command="{Binding ReplaceStagedArtworkCommand}" />
+                            <Button Classes="app" Content="Export"
+                                    Command="{Binding ExportStagedArtworkCommand}" />
+                            <Button Classes="app danger" Content="Remove"
+                                    Command="{Binding RemoveStagedArtworkCommand}" />
+                          </WrapPanel>
+                          <TextBlock Classes="muted" TextWrapping="Wrap"
+                                     Text="Role, order, description, image data, and resizing are validated by the native writer before the reviewed plan can be applied." />
+                        </StackPanel>
+                      </Grid>
+                    </TabItem>
+                    <TabItem Header="Release artwork candidates">
+                      <controls:AppDataGrid x:Name="ReleaseArtworkGrid"
+                          Margin="0,8,0,0"
+                          ItemsSource="{Binding ArtworkMatches}"
+                          SelectedItem="{Binding SelectedArtworkMatch, Mode=TwoWay}" />
+                    </TabItem>
+                  </TabControl>
                 </Grid>
               </TabItem>
             </TabControl>

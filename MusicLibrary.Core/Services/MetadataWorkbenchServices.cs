@@ -78,6 +78,17 @@ public interface IMetadataOperationService
             new NotSupportedException(
                 "Artwork-aware metadata preview is not implemented."));
 
+    Task<MetadataOperationPlan> PreviewArtworkSetsAsync(
+        IReadOnlyDictionary<
+            string,
+            ArtworkSetPreviewRequest> requestsByPath,
+        string name,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default) =>
+        Task.FromException<MetadataOperationPlan>(
+            new NotSupportedException(
+                "Multi-artwork metadata preview is not implemented."));
+
     Task<MetadataOperationPlan> PreviewTagLayerEditsAsync(
         IReadOnlyDictionary<string, IReadOnlyList<TagLayerEdit>> editsByPath,
         string name,
@@ -1136,6 +1147,182 @@ public sealed class MetadataOperationService(
             editsByPath.Count,
             Message: $"Previewed artwork for {editsByPath.Count:N0} file(s)"));
         return new(Guid.NewGuid(), name, [.. plans], DateTimeOffset.UtcNow);
+    }
+
+    public async Task<MetadataOperationPlan> PreviewArtworkSetsAsync(
+        IReadOnlyDictionary<
+            string,
+            ArtworkSetPreviewRequest> requestsByPath,
+        string name,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(requestsByPath);
+        var plans = new List<MetadataFilePlan>(
+            requestsByPath.Count);
+        int index = 0;
+        foreach ((
+                     string path,
+                     ArtworkSetPreviewRequest request)
+                 in requestsByPath)
+        {
+            ct.ThrowIfCancellationRequested();
+            progress?.Report(new(
+                OperationPhase.Planning,
+                index,
+                requestsByPath.Count,
+                path,
+                $"Previewing artwork set {index + 1:N0} of " +
+                $"{requestsByPath.Count:N0}"));
+            index++;
+            MediaDocument document;
+            try
+            {
+                document = await documents.LoadAsync(
+                    path,
+                    true,
+                    ct);
+            }
+            catch (Exception error) when (
+                error is not OperationCanceledException)
+            {
+                plans.Add(Unavailable(path, error));
+                continue;
+            }
+
+            var issues = new List<OperationIssue>();
+            LibraryArtworkPolicy policy =
+                ResolveArtworkPolicy(document.Path, issues);
+            if (!formats.SupportsPath(
+                    document.Path,
+                    MediaFormatCapabilities.WriteArtwork))
+                issues.Add(new(
+                    "artwork.unsupported",
+                    OperationIssueSeverity.Blocker,
+                    "The native format handler cannot write embedded artwork.",
+                    document.Path));
+            if (request.MaxDimension < 0)
+                issues.Add(new(
+                    "artwork.dimension",
+                    OperationIssueSeverity.Blocker,
+                    "The artwork maximum dimension cannot be negative.",
+                    document.Path));
+
+            ImmutableArray<ArtworkInput> before =
+                [.. document.Artwork.Select(ToArtworkInput)];
+            ImmutableArray<ArtworkInput> requested =
+                request.Images;
+            if (policy.Roles ==
+                LibraryArtworkRoleSelection.FrontCoverOnly)
+                requested =
+                [
+                    .. requested
+                        .Where(image =>
+                            image.Type ==
+                            ID3v2Util.APICType.FrontCover)
+                        .Take(1),
+                ];
+            ImmutableArray<ArtworkInput> after;
+            try
+            {
+                after =
+                [
+                    .. requested.Select(image =>
+                    {
+                        ArtworkService.PreparedArtwork prepared =
+                            ArtworkService.PrepareArtwork(
+                                image.Data,
+                                image.MimeType,
+                                policy,
+                                request.MaxDimension);
+                        return image with
+                        {
+                            Data = prepared.Data,
+                            MimeType = prepared.MimeType,
+                        };
+                    }),
+                ];
+            }
+            catch (Exception error) when (
+                error is not OperationCanceledException)
+            {
+                issues.Add(new(
+                    "artwork.prepare",
+                    OperationIssueSeverity.Blocker,
+                    error.Message,
+                    document.Path));
+                after = before;
+            }
+
+            ImmutableArray<ArtworkDescriptor> beforeDescription =
+                [.. before.Select(DescribeArtwork)];
+            ImmutableArray<ArtworkDescriptor> afterDescription =
+                [.. after.Select(DescribeArtwork)];
+            ArtworkSetDifference? difference =
+                beforeDescription.SequenceEqual(afterDescription)
+                    ? null
+                    : new(
+                        beforeDescription,
+                        afterDescription);
+            if (difference is not null)
+            {
+                try
+                {
+                    IMediaFile nativeFile = MediaFile.GetFile(
+                        document.Path,
+                        readOnly: false,
+                        readArtwork: true,
+                        formatRegistry: formats);
+                    IArtworkWriter? nativeArtwork =
+                        nativeFile as IArtworkWriter ??
+                        nativeFile.Tags
+                            .OfType<IArtworkWriter>()
+                            .FirstOrDefault();
+                    if (nativeArtwork is null)
+                        throw new InvalidOperationException(
+                            "The native tag layer cannot write artwork.");
+                    nativeArtwork.SetImages(
+                        after.Select(image =>
+                            new ArtworkImage(
+                                image.Type,
+                                image.MimeType,
+                                image.Description ?? "",
+                                image.Data))
+                            .ToArray());
+                }
+                catch (Exception error)
+                {
+                    issues.Add(new(
+                        "artwork.native-unsupported",
+                        OperationIssueSeverity.Blocker,
+                        error.Message,
+                        document.Path));
+                }
+            }
+            plans.Add(new(
+                document.Path,
+                document.Snapshot,
+                [],
+                [],
+                [.. issues],
+                difference is null
+                    ? null
+                    : new(after),
+                difference));
+        }
+        AddRecoverySpaceIssues(plans);
+        progress?.Report(new(
+            OperationPhase.Completed,
+            requestsByPath.Count,
+            requestsByPath.Count,
+            Message:
+                $"Previewed artwork sets for " +
+                $"{requestsByPath.Count:N0} file(s)"));
+        return new(
+            Guid.NewGuid(),
+            name,
+            [.. plans],
+            DateTimeOffset.UtcNow);
     }
 
     public async Task<MetadataOperationPlan> PreviewId3VersionEditsAsync(

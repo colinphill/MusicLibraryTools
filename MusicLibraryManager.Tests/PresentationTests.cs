@@ -2015,6 +2015,73 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public void Workbench_builds_ordered_multi_file_artwork_set_requests()
+    {
+        WorkbenchTrackViewModel[] files =
+        [
+            Track("first.flac"),
+            Track("second.flac"),
+        ];
+        ArtworkPreviewItem[] artwork =
+        [
+            new(
+                null,
+                ID3v2Util.APICType.BackCover,
+                "image/png",
+                [4, 5, 6],
+                "back details",
+                "Rear scan"),
+            new(
+                null,
+                ID3v2Util.APICType.FrontCover,
+                "image/jpeg",
+                [1, 2, 3],
+                "front details",
+                "Front scan"),
+        ];
+
+        IReadOnlyDictionary<string, ArtworkSetPreviewRequest>
+            requests =
+                WorkbenchViewModel.BuildArtworkSetRequests(
+                    files,
+                    artwork,
+                    720);
+
+        Assert.Equal(2, requests.Count);
+        foreach (ArtworkSetPreviewRequest request in
+                 requests.Values)
+        {
+            Assert.Equal(720, request.MaxDimension);
+            Assert.Equal(
+                [
+                    ID3v2Util.APICType.BackCover,
+                    ID3v2Util.APICType.FrontCover,
+                ],
+                request.Images.Select(image => image.Type));
+            Assert.Equal(
+                ["Rear scan", "Front scan"],
+                request.Images.Select(
+                    image => image.Description));
+            Assert.Equal(
+                [4, 5, 6],
+                request.Images[0].Data);
+        }
+
+        static WorkbenchTrackViewModel Track(string path) =>
+            new(new MediaDocument(
+                path,
+                [],
+                [],
+                null,
+                new(
+                    path,
+                    10,
+                    DateTime.UtcNow,
+                    "hash"),
+                true));
+    }
+
+    [Fact]
     public void Metadata_preview_projects_physical_tag_layer_changes()
     {
         var preview = new System.Collections.ObjectModel.ObservableCollection<
@@ -2608,6 +2675,9 @@ internal sealed class FakeMetadataOperationService : IMetadataOperationService
     public IReadOnlyDictionary<string, ArtworkValueEdit>
         PreviewedArtworkEdits { get; private set; } =
             new Dictionary<string, ArtworkValueEdit>();
+    public IReadOnlyDictionary<string, ArtworkSetPreviewRequest>
+        PreviewedArtworkSets { get; private set; } =
+            new Dictionary<string, ArtworkSetPreviewRequest>();
     public IReadOnlyDictionary<string, IReadOnlyList<TagLayerEdit>>
         PreviewedTagLayerEdits { get; private set; } =
             new Dictionary<string, IReadOnlyList<TagLayerEdit>>();
@@ -2765,6 +2835,47 @@ internal sealed class FakeMetadataOperationService : IMetadataOperationService
         }).ToArray();
         return Task.FromResult(new MetadataOperationPlan(
             Guid.NewGuid(), name, [.. files], DateTimeOffset.UtcNow));
+    }
+
+    public Task<MetadataOperationPlan> PreviewArtworkSetsAsync(
+        IReadOnlyDictionary<string, ArtworkSetPreviewRequest>
+            requestsByPath,
+        string name,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        PreviewedArtworkSets = requestsByPath;
+        progress?.Report(new(
+            OperationPhase.Planning,
+            0,
+            requestsByPath.Count,
+            Message: "Reading complete artwork sets"));
+        MetadataFilePlan[] files = requestsByPath.Select(pair =>
+        {
+            ImmutableArray<ArtworkDescriptor> after =
+            [
+                .. pair.Value.Images.Select(image =>
+                    new ArtworkDescriptor(
+                        image.Type,
+                        image.MimeType,
+                        image.Description ?? "",
+                        image.Data.Length,
+                        "hash")),
+            ];
+            return new MetadataFilePlan(
+                pair.Key,
+                new(pair.Key, 1, DateTime.UtcNow, "hash"),
+                [],
+                [],
+                [],
+                new(pair.Value.Images),
+                new([], after));
+        }).ToArray();
+        return Task.FromResult(new MetadataOperationPlan(
+            Guid.NewGuid(),
+            name,
+            [.. files],
+            DateTimeOffset.UtcNow));
     }
 
     public Task<MetadataOperationPlan> PreviewTagLayerEditsAsync(

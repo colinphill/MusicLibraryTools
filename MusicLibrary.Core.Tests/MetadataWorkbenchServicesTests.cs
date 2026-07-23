@@ -1852,6 +1852,111 @@ public sealed class MetadataWorkbenchServicesTests
     }
 
     [Fact]
+    public async Task ArtworkSetPreview_PreservesOrderRolesDescriptionsAndResize()
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-artwork-set-" +
+            Guid.NewGuid().ToString("N"));
+        string recovery =
+            session + ".MusicLibraryManager-recovery";
+        Directory.CreateDirectory(session);
+        string mediaPath =
+            Path.Combine(session, "track.flac");
+        File.Copy(
+            MediaFixtures.Path_("sample.flac"),
+            mediaPath);
+        string statePath =
+            Path.Combine(session, "settings.json");
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(
+                    settings: settings),
+                settings);
+            var requests = new Dictionary<
+                string,
+                ArtworkSetPreviewRequest>
+            {
+                [mediaPath] = new(
+                    [
+                        new(
+                            ID3v2Util.APICType.FrontCover,
+                            "image/png",
+                            CreatePngBytes(96, 72),
+                            "front"),
+                        new(
+                            ID3v2Util.APICType.BackCover,
+                            "image/png",
+                            CreatePngBytes(80, 64),
+                            "back"),
+                    ],
+                    MaxDimension: 48),
+            };
+
+            MetadataOperationPlan plan =
+                await service.PreviewArtworkSetsAsync(
+                    requests,
+                    "Edit artwork set");
+
+            MetadataFilePlan file = Assert.Single(plan.Files);
+            ArtworkSetDifference difference =
+                Assert.IsType<ArtworkSetDifference>(
+                    file.ArtworkDifference);
+            Assert.Equal(
+                [
+                    ID3v2Util.APICType.FrontCover,
+                    ID3v2Util.APICType.BackCover,
+                ],
+                difference.After.Select(item => item.Type));
+            Assert.Equal(
+                ["front", "back"],
+                file.ArtworkEdit!.Images.Select(
+                    item => item.Description));
+            Assert.All(
+                file.ArtworkEdit.Images,
+                item =>
+                {
+                    using Image image =
+                        Image.Load(item.Data);
+                    Assert.True(image.Width <= 48);
+                    Assert.True(image.Height <= 48);
+                });
+            Assert.True(plan.CanApply);
+
+            await service.ApplyAsync(plan);
+
+            MediaDocument stored =
+                await _documents.LoadAsync(mediaPath);
+            Assert.Equal(2, stored.Artwork.Length);
+            Assert.Contains(
+                "Front",
+                stored.Artwork[0].Category,
+                StringComparison.OrdinalIgnoreCase);
+            Assert.Contains(
+                "Back",
+                stored.Artwork[1].Category,
+                StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(session, recursive: true);
+            }
+            catch { }
+            try
+            {
+                Directory.Delete(recovery, recursive: true);
+            }
+            catch { }
+        }
+    }
+
+    [Fact]
     public async Task ArtworkPreview_RequiresImageForReplacement()
     {
         using var media = MediaFixtures.Copy("sample.flac");
