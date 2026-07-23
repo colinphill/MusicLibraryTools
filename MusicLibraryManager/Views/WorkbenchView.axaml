@@ -4,7 +4,8 @@
              xmlns:controls="using:MusicLibraryManager.Controls"
              DragDrop.AllowDrop="True"
              DragDrop.DragOver="OnDragOver"
-             DragDrop.Drop="OnDrop">
+             DragDrop.Drop="OnDrop"
+             KeyDown="OnWorkbenchKeyDown">
   <Grid Margin="26,22,26,26" RowDefinitions="Auto,Auto,*" RowSpacing="14">
     <controls:PageHeader Title="Metadata Workbench"
         Subtitle="Inspect, edit, and recover metadata for ad-hoc files without creating a library.">
@@ -787,6 +788,77 @@
                         Command="{Binding RunExternalToolCommand}" />
               </WrapPanel>
             </Grid>
+          </Grid>
+        </TabItem>
+
+        <TabItem Header="Shortcuts">
+          <Grid Margin="0,12,0,0" ColumnDefinitions="1.1*,14,0.9*">
+            <Grid RowDefinitions="Auto,*,Auto" RowSpacing="9">
+              <TextBlock Classes="section-title"
+                         Text="Personal Workbench shortcuts" />
+              <ListBox x:Name="ShortcutBindingList" Grid.Row="1"
+                       ItemsSource="{Binding ShortcutEditor.Bindings}"
+                       SelectedItem="{Binding ShortcutEditor.SelectedBinding, Mode=TwoWay}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="150,*" ColumnSpacing="12"
+                          Margin="4">
+                      <TextBlock FontWeight="SemiBold"
+                                 Text="{Binding Gesture}" />
+                      <TextBlock Grid.Column="1"
+                                 Text="{Binding Target}" />
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <Border Grid.Row="2" Classes="status-banner info">
+                <TextBlock TextWrapping="Wrap"
+                           Text="Recipe shortcuts only regenerate a preview for the current Workbench files. They never apply changes automatically." />
+              </Border>
+            </Grid>
+
+            <StackPanel Grid.Column="2" Spacing="9">
+              <TextBlock Classes="section-title"
+                         Text="Shortcut binding" />
+              <TextBox Classes="app"
+                       Text="{Binding ShortcutEditor.GestureText, Mode=TwoWay}"
+                       PlaceholderText="Ctrl+Shift+P" />
+              <TextBlock Classes="muted" TextWrapping="Wrap"
+                         Text="Use a modifier and an Avalonia key name, for example Ctrl+Alt+R, Meta+F8, or Ctrl+Shift+Enter." />
+              <ComboBox Classes="app"
+                        ItemsSource="{Binding ShortcutEditor.TargetKinds}"
+                        SelectedItem="{Binding ShortcutEditor.TargetKind, Mode=TwoWay}" />
+              <StackPanel Spacing="4">
+                <TextBlock Classes="muted" Text="Workbench command" />
+                <ComboBox Classes="app"
+                          ItemsSource="{Binding ShortcutEditor.Commands}"
+                          DisplayMemberBinding="{Binding Label}"
+                          SelectedItem="{Binding ShortcutEditor.SelectedCommand, Mode=TwoWay}" />
+              </StackPanel>
+              <StackPanel Spacing="4">
+                <TextBlock Classes="muted" Text="Saved recipe" />
+                <ComboBox Classes="app"
+                          ItemsSource="{Binding ShortcutEditor.Recipes}"
+                          DisplayMemberBinding="{Binding Name}"
+                          SelectedItem="{Binding ShortcutEditor.SelectedRecipe, Mode=TwoWay}"
+                          PlaceholderText="Choose a recipe target" />
+              </StackPanel>
+              <WrapPanel>
+                <Button Classes="app" Content="New"
+                        Command="{Binding ShortcutEditor.NewShortcutCommand}" />
+                <Button x:Name="SaveShortcutButton"
+                        Classes="app primary" Content="Save shortcut"
+                        Command="{Binding ShortcutEditor.SaveShortcutCommand}" />
+                <Button Classes="app danger" Content="Remove"
+                        Command="{Binding ShortcutEditor.RemoveShortcutCommand}" />
+              </WrapPanel>
+              <Border Classes="status-banner warning">
+                <TextBlock TextWrapping="Wrap"
+                           Text="Shortcuts are ignored while a text or choice editor has focus. Ctrl+K and Ctrl+I remain reserved for global search and indexing." />
+              </Border>
+              <TextBlock Classes="muted" TextWrapping="Wrap"
+                         Text="{Binding ShortcutEditor.Status}" />
+            </StackPanel>
           </Grid>
         </TabItem>
       </TabControl>

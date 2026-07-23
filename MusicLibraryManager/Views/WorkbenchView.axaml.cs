@@ -5,6 +5,7 @@ using global::Avalonia.Input;
 using global::Avalonia.Markup.Xaml;
 using global::Avalonia.Media;
 using global::Avalonia.Platform.Storage;
+using MusicLibrary.Core.Services;
 using MusicLibraryManager.Controls;
 using MusicLibraryManager.Presentation;
 
@@ -262,5 +263,37 @@ public partial class WorkbenchView : UserControl
         if (paths.Length > 0)
             await _viewModel.AddSourcesAsync(paths);
         e.Handled = true;
+    }
+
+    private async void OnWorkbenchKeyDown(
+        object? sender,
+        KeyEventArgs e)
+    {
+        object? focused = TopLevel.GetTopLevel(this)?
+            .FocusManager?
+            .GetFocusedElement();
+        if (focused is TextBox or ComboBox or NumericUpDown)
+            return;
+
+        WorkbenchShortcutModifiers modifiers =
+            WorkbenchShortcutModifiers.None;
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Control))
+            modifiers |= WorkbenchShortcutModifiers.Control;
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Alt))
+            modifiers |= WorkbenchShortcutModifiers.Alt;
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Shift))
+            modifiers |= WorkbenchShortcutModifiers.Shift;
+        if (e.KeyModifiers.HasFlag(KeyModifiers.Meta))
+            modifiers |= WorkbenchShortcutModifiers.Meta;
+        if (modifiers == WorkbenchShortcutModifiers.None ||
+            !_viewModel.ShortcutEditor.TryMatch(
+                modifiers,
+                e.Key.ToString(),
+                out WorkbenchShortcutBinding? binding) ||
+            binding is null)
+            return;
+
+        e.Handled = true;
+        await _viewModel.ExecuteShortcutAsync(binding);
     }
 }

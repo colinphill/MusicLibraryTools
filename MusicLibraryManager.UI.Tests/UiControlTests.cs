@@ -696,6 +696,12 @@ public sealed class UiControlTests
                 "Preview tool",
                 workbench.FindControl<Button>(
                     "PreviewExternalToolButton")!.Content);
+            Assert.NotNull(workbench.FindControl<ListBox>(
+                "ShortcutBindingList"));
+            Assert.Equal(
+                "Save shortcut",
+                workbench.FindControl<Button>(
+                    "SaveShortcutButton")!.Content);
 
             navigation.Navigate(ShellDestination.Library);
             Dispatcher.UIThread.RunJobs();

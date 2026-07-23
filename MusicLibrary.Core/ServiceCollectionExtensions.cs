@@ -49,6 +49,8 @@ public static class ServiceCollectionExtensions
             ExternalToolProcessRunner>();
         services.AddSingleton<IExternalToolService, ExternalToolService>();
         services.AddSingleton<IExternalToolStore, ExternalToolStore>();
+        services.AddSingleton<IWorkbenchShortcutStore,
+            WorkbenchShortcutStore>();
         services.AddSingleton<IItunesValidationService, ItunesValidationService>();
         services.AddSingleton<IRedundancyAnalysisService, RedundancyAnalysisService>();
         services.AddSingleton<IMediaFileService, MediaFileService>();

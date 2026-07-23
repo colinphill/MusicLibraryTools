@@ -1622,6 +1622,79 @@ public sealed class PresentationTests
         Assert.Empty(editor.SavedTools);
     }
 
+    [Theory]
+    [InlineData("control+shift+p", "Ctrl+Shift+P")]
+    [InlineData("cmd+alt+f8", "Alt+Meta+F8")]
+    [InlineData("CTRL+Enter", "Ctrl+Enter")]
+    public void Workbench_shortcut_parser_canonicalizes_supported_gestures(
+        string input,
+        string expected)
+    {
+        bool parsed = WorkbenchShortcutGestureParser.TryParse(
+            input,
+            out ParsedWorkbenchShortcut? gesture,
+            out string? error);
+
+        Assert.True(parsed, error);
+        Assert.Equal(expected, gesture!.Display);
+    }
+
+    [Theory]
+    [InlineData("P")]
+    [InlineData("Ctrl+Shift")]
+    [InlineData("Ctrl+Ctrl+P")]
+    [InlineData("Ctrl+P+R")]
+    public void Workbench_shortcut_parser_rejects_ambiguous_gestures(
+        string input)
+    {
+        Assert.False(WorkbenchShortcutGestureParser.TryParse(
+            input,
+            out _,
+            out string? error));
+        Assert.False(string.IsNullOrWhiteSpace(error));
+    }
+
+    [Fact]
+    public void Workbench_shortcut_editor_persists_matches_and_rejects_conflicts()
+    {
+        var store = new FakeWorkbenchShortcutStore();
+        var editor = new WorkbenchShortcutEditorViewModel(store)
+        {
+            GestureText = "control+shift+p",
+        };
+        editor.SelectedCommand = editor.Commands.Single(choice =>
+            choice.Command ==
+            WorkbenchShortcutCommand.PreviewCurrentRecipe);
+
+        editor.SaveShortcutCommand.Execute(null);
+
+        WorkbenchShortcutBinding saved = Assert.Single(store.Bindings);
+        Assert.Equal("Ctrl+Shift+P", saved.Gesture);
+        Assert.True(editor.TryMatch(
+            WorkbenchShortcutModifiers.Control |
+            WorkbenchShortcutModifiers.Shift,
+            "P",
+            out WorkbenchShortcutBinding? matched));
+        Assert.Equal(saved.Id, matched!.Id);
+
+        editor.NewShortcutCommand.Execute(null);
+        editor.GestureText = "CTRL+SHIFT+P";
+        editor.SelectedCommand = editor.Commands.Single(choice =>
+            choice.Command == WorkbenchShortcutCommand.Redo);
+        editor.SaveShortcutCommand.Execute(null);
+
+        Assert.Single(store.Bindings);
+        Assert.Contains("already assigned", editor.Status,
+            StringComparison.OrdinalIgnoreCase);
+
+        editor.GestureText = "Ctrl+K";
+        editor.SaveShortcutCommand.Execute(null);
+
+        Assert.Single(store.Bindings);
+        Assert.Contains("reserved", editor.Status,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
     [Fact]
     public async Task Library_audio_discovery_uses_explicit_scope_and_preserves_candidates()
     {
@@ -2331,6 +2404,22 @@ internal sealed class FakeExternalToolStore : IExternalToolStore
 
     public void Delete(Guid id) =>
         Tools.RemoveAll(tool => tool.Id == id);
+}
+
+internal sealed class FakeWorkbenchShortcutStore :
+    IWorkbenchShortcutStore
+{
+    public List<WorkbenchShortcutBinding> Bindings { get; } = [];
+
+    public IReadOnlyList<WorkbenchShortcutBinding> Load() =>
+        Bindings.ToArray();
+
+    public void Save(
+        IReadOnlyList<WorkbenchShortcutBinding> bindings)
+    {
+        Bindings.Clear();
+        Bindings.AddRange(bindings);
+    }
 }
 
 internal sealed class FakeAcoustIdDiscoveryService : IAcoustIdDiscoveryService

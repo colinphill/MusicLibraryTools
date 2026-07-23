@@ -176,7 +176,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         IReportExportService? reports = null,
         IPlaylistWorkspaceService? playlists = null,
         IExternalToolService? externalTools = null,
-        IExternalToolStore? externalToolStore = null)
+        IExternalToolStore? externalToolStore = null,
+        IWorkbenchShortcutStore? shortcutStore = null)
     {
         _workbench = workbench;
         _operations = operations;
@@ -196,6 +197,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         _settings = settings;
         OperationEditor = new(
             operationCatalog, MetadataOperationSurface.Workbench, recipeStore);
+        ShortcutEditor = new(shortcutStore, recipeStore);
         ReleaseImport.PropertyChanged += OnReleaseImportChanged;
         ReleaseSearch.PropertyChanged += (_, _) =>
             SearchMusicBrainzReleasesCommand.NotifyCanExecuteChanged();
@@ -241,6 +243,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     public ReportEditorViewModel ReportEditor { get; } = new();
     public PlaylistEditorViewModel PlaylistEditor { get; } = new();
     public ExternalToolEditorViewModel ExternalToolEditor { get; }
+    public WorkbenchShortcutEditorViewModel ShortcutEditor { get; }
     public MetadataOperationEditorViewModel OperationEditor { get; }
     public IReadOnlyList<MetadataFieldChoice> KnownFieldChoices { get; }
     public IReadOnlyList<WorkbenchFieldEditMode> FieldEditModes { get; } =
@@ -258,6 +261,77 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     public bool CanRepeatLatest =>
         _history.Entries.FirstOrDefault()?.Recipe is not null &&
         Files.Count > 0 && !IsBusy;
+
+    public async Task ExecuteShortcutAsync(
+        WorkbenchShortcutBinding binding)
+    {
+        ArgumentNullException.ThrowIfNull(binding);
+        if (binding.TargetKind ==
+            WorkbenchShortcutTargetKind.Recipe)
+        {
+            OperationRecipe? recipe =
+                OperationEditor.SavedRecipes.FirstOrDefault(candidate =>
+                    candidate.Id == binding.RecipeId);
+            if (recipe is null)
+            {
+                StatusText =
+                    $"Shortcut recipe '{binding.TargetLabel}' no longer exists.";
+                return;
+            }
+            if (IsBusy || Files.Count == 0)
+                return;
+            await PreviewAsync((progress, ct) =>
+                _operations.PreviewAsync(
+                    Files.Select(file => file.Path).ToArray(),
+                    recipe,
+                    progress,
+                    ct));
+            StatusText =
+                $"Shortcut regenerated '{recipe.Name}' for the current " +
+                "Workbench files. Review before applying.";
+            return;
+        }
+
+        switch (binding.Command)
+        {
+            case WorkbenchShortcutCommand.AddFiles:
+                if (BrowseFilesCommand.CanExecute(null))
+                    await BrowseFilesCommand.ExecuteAsync(null);
+                break;
+            case WorkbenchShortcutCommand.AddFolder:
+                if (BrowseFolderCommand.CanExecute(null))
+                    await BrowseFolderCommand.ExecuteAsync(null);
+                break;
+            case WorkbenchShortcutCommand.PreviewInlineEdits:
+                if (PreviewEditsCommand.CanExecute(null))
+                    await PreviewEditsCommand.ExecuteAsync(null);
+                break;
+            case WorkbenchShortcutCommand.PreviewCurrentRecipe:
+                if (PreviewOperationCommand.CanExecute(null))
+                    await PreviewOperationCommand.ExecuteAsync(null);
+                break;
+            case WorkbenchShortcutCommand.ApplyReviewedChanges:
+                if (ApplyCommand.CanExecute(null))
+                    await ApplyCommand.ExecuteAsync(null);
+                break;
+            case WorkbenchShortcutCommand.UndoLastApply:
+                if (UndoCommand.CanExecute(null))
+                    await UndoCommand.ExecuteAsync(null);
+                break;
+            case WorkbenchShortcutCommand.Redo:
+                if (RedoCommand.CanExecute(null))
+                    await RedoCommand.ExecuteAsync(null);
+                break;
+            case WorkbenchShortcutCommand.RepeatLastRecipe:
+                if (RepeatCommand.CanExecute(null))
+                    await RepeatCommand.ExecuteAsync(null);
+                break;
+            case WorkbenchShortcutCommand.CancelCurrentOperation:
+                if (CancelCommand.CanExecute(null))
+                    CancelCommand.Execute(null);
+                break;
+        }
+    }
 
     partial void OnSelectedFileChanged(WorkbenchTrackViewModel? value)
     {

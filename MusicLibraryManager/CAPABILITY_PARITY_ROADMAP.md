@@ -122,6 +122,7 @@ appropriate build or test.
   - [x] `IReportExportService`.
   - [x] `IPlaylistWorkspaceService`.
   - [x] `IExternalToolService`.
+  - [x] `IWorkbenchShortcutStore`.
 - [x] Preserve the existing `{Field}` convention where composition is useful;
   do not implement mp3tag's format-string language.
 
@@ -325,7 +326,7 @@ and then resolved to a user-confirmed release.
   invocation-mode configuration.
 - [x] Expand only documented placeholders.
 - [x] Use `ProcessStartInfo.ArgumentList`; never invoke a shell implicitly.
-- [ ] Add configurable shortcuts for Workbench commands and recipes.
+- [x] Add configurable shortcuts for Workbench commands and recipes.
 
 **Acceptance:** Custom views, advanced filtering, reports, manual playlists,
 and external integrations cover the remaining workflow gaps using native
@@ -644,3 +645,11 @@ per-operation capability flags.
   runner always sets `UseShellExecute` to false and populates
   `ProcessStartInfo.ArgumentList`; bounded output capture prevents an external
   process from growing diagnostics memory without limit.
+- Added personal configurable Workbench shortcuts for common commands and
+  saved recipes. A typed gesture parser canonicalizes modifier/key names,
+  rejects malformed, duplicate, and shell-reserved gestures, and ignores
+  shortcuts while text, combo-box, or numeric editors have focus. Command
+  shortcuts retain the existing availability guards; recipe shortcuts always
+  regenerate a fresh staged preview against the current session and require
+  review before apply. Bindings use versioned `IAppSettings` persistence and
+  tolerate deleted recipes without invoking stale work.
