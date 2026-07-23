@@ -271,8 +271,8 @@ capability comparison is possible through typed operations without scripting.
   retry/backoff, and offline behavior. A personal global offline mode now
   restricts AcoustID, MusicBrainz, and Cover Art Archive to persistent cached
   data and reports cache misses explicitly.
-- [ ] Introduce `ISecretStore`.
-- [ ] Implement Windows Credential Manager, macOS Keychain, and Linux Secret
+- [x] Introduce `ISecretStore`.
+- [x] Implement Windows Credential Manager, macOS Keychain, and Linux Secret
   Service support, with session-only fallback.
 - [ ] Add Discogs after secret storage is available.
 - [x] Do not create an mp3tag-compatible web-source language.
@@ -579,3 +579,10 @@ per-operation capability flags.
   hits avoid network access, expired entries provide an explicit fallback when
   a provider fails, and offline mode never attempts a request. Audio discovery
   rows distinguish live, cached, and offline-cached candidates.
+- Added the cross-platform secret-storage foundation required by authenticated
+  providers. Windows Credential Manager and macOS Keychain are accessed through
+  native APIs; Linux Secret Service uses `secret-tool` with an explicit
+  argument list and sends secret values only through standard input. If a
+  native facility is unavailable, the service latches to a process-local
+  session store. Secrets are not written to app settings, portable library XML,
+  logs, or diagnostics.

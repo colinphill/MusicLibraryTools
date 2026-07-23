@@ -19,6 +19,8 @@ public sealed class ServiceCollectionExtensionsTests
             provider.GetRequiredService<IMediaFormatRegistry>());
         Assert.IsType<LibraryHealthPolicyService>(
             provider.GetRequiredService<ILibraryHealthPolicyService>());
+        Assert.IsType<CrossPlatformSecretStore>(
+            provider.GetRequiredService<ISecretStore>());
         Assert.Equal(BuiltInHealthRules.All.Count,
             provider.GetServices<IHealthRule>().Count());
         Assert.IsType<IngestMusicService>(provider.GetRequiredService<IIngestMusicService>());

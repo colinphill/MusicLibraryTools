@@ -14,6 +14,8 @@ public static class ServiceCollectionExtensions
             services.AddSingleton(rule);
         services.AddSingleton<ILibraryHealthPolicyService, LibraryHealthPolicyService>();
         services.AddSingleton<IAppSettings, AppSettings>();
+        services.AddSingleton<ISecretStore>(_ =>
+            CrossPlatformSecretStore.CreateDefault());
         services.AddSingleton<IFileMutationCoordinator, FileMutationCoordinator>();
         services.AddSingleton<IItunesMediaMutationService, ItunesMediaMutationService>();
         services.AddSingleton<IMediaCatalogIntegration, ItunesMediaCatalogIntegration>();
