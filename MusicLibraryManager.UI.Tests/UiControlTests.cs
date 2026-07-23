@@ -445,9 +445,20 @@ public sealed class UiControlTests
         PersistedGridLayout.Configure(restored, state, "health.findings", definitions);
         var separate = new AppDataGrid();
         PersistedGridLayout.Configure(separate, state, "health.metadata-repairs", definitions);
+        IReadOnlyList<AppGridColumnDefinition> withHidden =
+            PersistedGridLayout.ApplySnapshot(
+                definitions,
+                new GridSnapshot(
+                [
+                    new("Path", 515, 0, false),
+                    new("Reason", 420, 1, true),
+                ],
+                null));
 
         Assert.Equal(515, restored.Columns[0].Width.Value);
         Assert.Equal(380, separate.Columns[0].Width.Value);
+        Assert.False(withHidden[0].Visible);
+        Assert.True(withHidden[1].Visible);
     }
 
     [AvaloniaFact]
@@ -696,6 +707,17 @@ public sealed class UiControlTests
                 "Preview tool",
                 workbench.FindControl<Button>(
                     "PreviewExternalToolButton")!.Content);
+            Button columns = workbench.FindControl<Button>(
+                "WorkbenchColumnsButton")!;
+            Popup columnPopover = workbench.FindControl<Popup>(
+                "WorkbenchColumnPopover")!;
+            StackPanel columnOptions =
+                workbench.FindControl<StackPanel>(
+                    "WorkbenchColumnOptions")!;
+            columns.RaiseEvent(
+                new RoutedEventArgs(Button.ClickEvent));
+            Assert.True(columnPopover.IsOpen);
+            Assert.True(columnOptions.Children.Count >= 20);
             Assert.NotNull(workbench.FindControl<ListBox>(
                 "ShortcutBindingList"));
             Assert.Equal(

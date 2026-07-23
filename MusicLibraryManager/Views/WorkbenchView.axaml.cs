@@ -2,41 +2,43 @@ using global::Avalonia.Controls;
 using global::Avalonia.Controls.Templates;
 using global::Avalonia.Data;
 using global::Avalonia.Input;
+using global::Avalonia.Interactivity;
 using global::Avalonia.Markup.Xaml;
 using global::Avalonia.Media;
 using global::Avalonia.Platform.Storage;
+using global::Avalonia.Threading;
 using MusicLibrary.Core.Services;
 using MusicLibraryManager.Controls;
 using MusicLibraryManager.Presentation;
+using MusicLibraryManager.Services;
 
 namespace MusicLibraryManager.Views;
 
 public partial class WorkbenchView : UserControl
 {
     private readonly WorkbenchViewModel _viewModel;
+    private readonly GridStateService _gridState;
+    private readonly List<AppGridColumnDefinition>
+        _workbenchColumns = [];
+    private LibrarySortState? _workbenchSort;
 
     public WorkbenchView()
     {
         InitializeComponent();
         _viewModel = App.GetService<WorkbenchViewModel>();
+        _gridState = App.GetService<GridStateService>();
         DataContext = _viewModel;
         WorkbenchGrid.IsReadOnly = false;
-        WorkbenchGrid.ConfigureColumns(
-        [
-            new("File", "File", "FileName", 220, 140),
-            new("Title", "Title", "Title", 220, 120, Editable: true),
-            new("Artist", "Artist", "Artist", 190, 110, Editable: true),
-            new("AlbumArtist", "Album artist", "AlbumArtist", 190, 110, Editable: true),
-            new("Album", "Album", "Album", 210, 120, Editable: true),
-            new("Genre", "Genre", "Genre", 130, 90, Editable: true),
-            new("Composer", "Composer", "Composer", 170, 100, Editable: true),
-            new("Date", "Date", "Date", 90, 70, Editable: true),
-            new("Track", "Track", "Track", 75, 60, Editable: true),
-            new("Disc", "Disc", "Disc", 70, 60, Editable: true),
-            new("Format", "Format", "Format", 80, 65),
-            new("Duration", "Duration", "Duration", 90, 75),
-            new("Bitrate", "Bitrate", "Bitrate", 100, 75),
-        ]);
+        BuildWorkbenchColumns();
+        ApplyWorkbenchSnapshot(
+            _gridState.Load("workbench.session"));
+        ConfigureWorkbenchGrid();
+        BuildWorkbenchColumnOptions();
+        WorkbenchGrid.LayoutChanged += (_, _) =>
+            PersistWorkbenchLayout();
+        WorkbenchGrid.SortChanged += (_, _) =>
+            Dispatcher.UIThread.Post(
+                CaptureWorkbenchSortAndPersist);
         PreviewGrid.ConfigureColumns(
         [
             new("File", "File", "File", 220, 140),
@@ -103,6 +105,183 @@ public partial class WorkbenchView : UserControl
             new("Files", "Files", "Files", 65, 52),
         ]);
     }
+
+    private void BuildWorkbenchColumns()
+    {
+        _workbenchColumns.AddRange(
+        [
+            new("File", "File", "FileName", 220, 140),
+            new("Title", "Title", "Title", 220, 120,
+                Editable: true),
+            new("Artist", "Artist", "Artist", 190, 110,
+                Editable: true),
+            new("AlbumArtist", "Album artist", "AlbumArtist",
+                190, 110, Editable: true),
+            new("Album", "Album", "Album", 210, 120,
+                Editable: true),
+            new("Genre", "Genre", "Genre", 130, 90,
+                Editable: true),
+            new("Composer", "Composer", "Composer", 170, 100,
+                Editable: true),
+            new("Date", "Date", "Date", 90, 70,
+                Editable: true),
+            new("Track", "Track", "Track", 75, 60,
+                Editable: true),
+            new("Disc", "Disc", "Disc", 70, 60,
+                Editable: true),
+            new("Format", "Format", "Format", 80, 65),
+            new("Codec", "Codec", "Codec", 110, 80, false),
+            new("CodecType", "Codec type", "CodecType",
+                105, 80, false),
+            new("SampleRate", "Sample rate", "SampleRate",
+                115, 85, false),
+            new("BitsPerSample", "Bits", "BitsPerSample",
+                70, 55, false),
+            new("Channels", "Channels", "Channels",
+                85, 65, false),
+            new("Duration", "Duration", "Duration", 90, 75),
+            new("Bitrate", "Bitrate", "Bitrate", 100, 75),
+            new("TagLayers", "Tag layers", "LayerSummary",
+                170, 105, false),
+            new("Artwork", "Artwork", "ArtworkCount",
+                85, 65, false),
+            new("FileSize", "File size", "FileSize",
+                105, 75, false),
+            new("Modified", "Modified", "Modified",
+                155, 110, false),
+            new("Path", "Path", "Path", 420, 180, false),
+        ]);
+    }
+
+    private void ApplyWorkbenchSnapshot(GridSnapshot? snapshot)
+    {
+        if (snapshot is null)
+            return;
+        IReadOnlyList<AppGridColumnDefinition> restored =
+            PersistedGridLayout.ApplySnapshot(
+                _workbenchColumns,
+                snapshot);
+        _workbenchColumns.Clear();
+        _workbenchColumns.AddRange(restored);
+        _workbenchSort = snapshot.Sort;
+    }
+
+    private void ConfigureWorkbenchGrid()
+    {
+        WorkbenchGrid.ConfigureColumns(_workbenchColumns);
+        WorkbenchGrid.ApplySort(_workbenchSort);
+    }
+
+    private void BuildWorkbenchColumnOptions()
+    {
+        WorkbenchColumnOptions.Children.Clear();
+        foreach (AppGridColumnDefinition definition in
+                 _workbenchColumns)
+        {
+            var check = new CheckBox
+            {
+                Content = definition.Header,
+                IsChecked = definition.Visible,
+                Tag = definition.Key,
+            };
+            check.IsCheckedChanged +=
+                OnWorkbenchColumnChecked;
+            WorkbenchColumnOptions.Children.Add(check);
+        }
+    }
+
+    private void OnWorkbenchColumnChecked(
+        object? sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not CheckBox
+            {
+                Tag: string key,
+                IsChecked: bool visible,
+            })
+            return;
+        int index = _workbenchColumns.FindIndex(column =>
+            column.Key == key);
+        if (index < 0)
+            return;
+        if (!visible &&
+            _workbenchColumns.Count(column => column.Visible) == 1)
+        {
+            ((CheckBox)sender).IsChecked = true;
+            return;
+        }
+        _workbenchColumns[index] =
+            _workbenchColumns[index] with { Visible = visible };
+        ConfigureWorkbenchGrid();
+        PersistWorkbenchLayout();
+    }
+
+    private IReadOnlyList<LibraryColumnState>
+        CaptureWorkbenchColumns()
+    {
+        IReadOnlyList<LibraryColumnState> visible =
+            WorkbenchGrid.CaptureColumnLayout();
+        Dictionary<string, LibraryColumnState> byKey =
+            visible.ToDictionary(
+                column => column.Key,
+                StringComparer.OrdinalIgnoreCase);
+        int displayIndex = 0;
+        var result = new List<LibraryColumnState>(
+            _workbenchColumns.Count);
+        foreach (AppGridColumnDefinition definition in
+                 _workbenchColumns.OrderBy(column =>
+                     byKey.TryGetValue(
+                         column.Key,
+                         out LibraryColumnState? state)
+                         ? state.DisplayIndex
+                         : int.MaxValue))
+        {
+            if (byKey.TryGetValue(
+                    definition.Key,
+                    out LibraryColumnState? state))
+                result.Add(state with
+                {
+                    DisplayIndex = displayIndex++,
+                    Visible = true,
+                });
+            else
+                result.Add(new(
+                    definition.Key,
+                    definition.Width,
+                    displayIndex++,
+                    false));
+        }
+        return result;
+    }
+
+    private void PersistWorkbenchLayout() =>
+        _gridState.Save(
+            "workbench.session",
+            new(
+                CaptureWorkbenchColumns(),
+                _workbenchSort));
+
+    private void CaptureWorkbenchSortAndPersist()
+    {
+        _workbenchSort =
+            WorkbenchGrid.CurrentSortKey is not { } key
+                ? null
+                : new(
+                    key,
+                    WorkbenchGrid.CurrentSortDescending);
+        PersistWorkbenchLayout();
+    }
+
+    private void OnWorkbenchColumnsClick(
+        object? sender,
+        RoutedEventArgs e) =>
+        WorkbenchColumnPopover.IsOpen =
+            !WorkbenchColumnPopover.IsOpen;
+
+    private void OnWorkbenchColumnsClose(
+        object? sender,
+        RoutedEventArgs e) =>
+        WorkbenchColumnPopover.IsOpen = false;
 
     private static void ConfigureDiscogsGrid(AppDataGrid grid) =>
         grid.ConfigureColumns(

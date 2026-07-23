@@ -33,12 +33,14 @@ public static class DetailsColumns
         new("DiscTotal", "Discs", r => Num(r.DiscTotal), r => r.DiscTotal ?? -1),
         new("Date", "Date", r => r.ReleaseDate ?? ""),
         new("Codec", "Codec", r => r.CodecName ?? ""),
+        new("TagType", "Tag Type", r => r.TagType ?? ""),
         new("Type", "Type", r => r.CodecType.ToString()),
         new("SampleRate", "Sample Rate", r => r.SampleRate == 0 ? "" : $"{r.SampleRate:N0} Hz", r => r.SampleRate),
         new("Bits", "Bits", r => r.BitsPerSample == 0 ? "" : r.BitsPerSample.ToString(), r => r.BitsPerSample),
         new("Bitrate", "Bitrate", r => r.AverageBitRate == 0 ? "" : $"{r.AverageBitRate:N0} kbps", r => r.AverageBitRate),
         new("Channels", "Channels", r => r.Channels == 0 ? "" : r.Channels.ToString(), r => r.Channels),
         new("Duration", "Duration", r => Duration(r.DurationInSeconds), r => r.DurationInSeconds),
+        new("FileSize", "File Size", r => Bytes(r.Length), r => r.Length),
         new("Modified", "Date Modified", r => r.LastWriteTime == default ? "" : r.LastWriteTime.ToLocalTime().ToString("yyyy-MM-dd HH:mm"), r => r.LastWriteTime),
         new("Path", "Path", r => r.Path),
     ];
@@ -60,6 +62,21 @@ public static class DetailsColumns
         var t = TimeSpan.FromSeconds(seconds);
         var totalHours = (long)t.TotalHours;
         return totalHours > 0 ? $"{totalHours}:{t.Minutes:D2}:{t.Seconds:D2}" : $"{t.Minutes}:{t.Seconds:D2}";
+    }
+
+    private static string Bytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        double value = Math.Max(0, bytes);
+        int unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+        return unit == 0
+            ? $"{value:N0} {units[unit]}"
+            : $"{value:N1} {units[unit]}";
     }
 }
 

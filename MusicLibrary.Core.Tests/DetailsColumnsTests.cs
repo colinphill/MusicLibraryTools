@@ -36,4 +36,28 @@ public sealed class DetailsColumnsTests
         Assert.Equal("1997", DetailsColumns.Get("Year").Get(record));
         Assert.Equal(1997, DetailsColumns.Get("Year").SortKey!(record));
     }
+
+    [Fact]
+    public void CatalogIncludesSelectableFileAndCodecProperties()
+    {
+        var record = new TrackRecord
+        {
+            Path = "song.flac",
+            TagType = "VorbisComment",
+            Length = 1536,
+            SampleRate = 96000,
+            BitsPerSample = 24,
+            AverageBitRate = 2800,
+            Channels = 2,
+        };
+
+        Assert.Equal("VorbisComment",
+            DetailsColumns.Get("TagType").Get(record));
+        Assert.Equal("1.5 KB",
+            DetailsColumns.Get("FileSize").Get(record));
+        Assert.Equal("96,000 Hz",
+            DetailsColumns.Get("SampleRate").Get(record));
+        Assert.Equal(1536L,
+            DetailsColumns.Get("FileSize").SortKey!(record));
+    }
 }

@@ -35,6 +35,7 @@ internal static class PersistedGridLayout
             restored.Insert(Math.Clamp(saved.DisplayIndex, 0, restored.Count), definition with
             {
                 Width = saved.Width is > 0 ? saved.Width.Value : definition.Width,
+                Visible = saved.Visible,
             });
         }
         return restored;

@@ -141,7 +141,8 @@ appropriate build or test.
 
 ### Grid and inspector
 
-- [ ] Configurable grid.
+- [x] Configurable Workbench grid with persisted visibility, order, widths,
+  sorting, and technical-property columns.
 - [x] Inline editing of the first set of actual metadata fields.
 - [ ] Multi-selection and mixed-value handling.
 - [~] Multiple values with keep, replace, append, remove-value, and remove-field
@@ -297,10 +298,14 @@ and then resolved to a user-confirmed release.
 
 ### Views and filters
 
-- [ ] Persist column descriptors containing label, field, visibility, order,
-  width, sort type, and optional edit target.
-- [ ] Allow technical and custom fields without code changes.
-- [ ] Keep saved views in the existing app-settings mechanism.
+- [~] Persist column descriptors containing label, field, visibility, order,
+  width, sort type, and optional edit target. Library and Workbench now persist
+  visibility, order, width, and sorting; user-defined labels, fields, and edit
+  targets remain.
+- [~] Allow technical and custom fields without code changes. The complete
+  cached file/codec property set is selectable on both surfaces; dynamic custom
+  metadata columns remain.
+- [x] Keep saved views in the existing app-settings mechanism.
 - [ ] Filter arbitrary known, custom, and technical fields.
 - [ ] Add present/missing checks, equality, numeric comparisons, Boolean
   grouping, and regular expressions.
@@ -653,3 +658,11 @@ per-operation capability flags.
   regenerate a fresh staged preview against the current session and require
   review before apply. Bindings use versioned `IAppSettings` persistence and
   tolerate deleted recipes without invoking stale work.
+- Added configurable, persisted Workbench columns using the same grid-state
+  conventions as Library. Visibility, display order, widths, and typed sort
+  state survive restarts, and the chooser prevents hiding every column.
+  Workbench and Library now expose tag type, codec type, sample rate, bit
+  depth, bitrate, channels, file size, modification time, and path alongside
+  ordinary metadata. Existing Library saved views continue to own their
+  filter/column/sort snapshots, and hidden-column restoration is shared by all
+  persisted grid layouts.

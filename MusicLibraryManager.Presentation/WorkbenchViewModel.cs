@@ -2136,6 +2136,17 @@ public partial class WorkbenchTrackViewModel : ObservableObject
     public string Path => Document.Path;
     public string FileName => System.IO.Path.GetFileName(Path);
     public string? Format => System.IO.Path.GetExtension(Path).TrimStart('.').ToUpperInvariant();
+    public string Codec => Document.Codec?.CodecName ?? "";
+    public string CodecType => Document.Codec?.CodecType.ToString() ?? "";
+    public string SampleRate => Document.Codec?.Samplerate is > 0
+        ? $"{Document.Codec.Samplerate:N0} Hz"
+        : "";
+    public string BitsPerSample => Document.Codec?.BitsPerSample is > 0
+        ? Document.Codec.BitsPerSample.ToString()
+        : "";
+    public string Channels => Document.Codec?.Channels is > 0
+        ? Document.Codec.Channels.ToString()
+        : "";
     public string Duration => Document.Codec is null
         ? ""
         : TimeSpan.FromSeconds(Document.Codec.DurationInSeconds).ToString(@"h\:mm\:ss");
@@ -2146,6 +2157,11 @@ public partial class WorkbenchTrackViewModel : ObservableObject
         Document.TagLayers.Select(layer => layer.TagType));
     public int ArtworkCount => Document.Artwork.Length;
     public int FieldCount => Document.TagLayers.Sum(layer => layer.Fields.Length);
+    public string FileSize => FormatBytes(Document.Snapshot.Length);
+    public string Modified => Document.Snapshot.LastWriteTimeUtc == default
+        ? ""
+        : Document.Snapshot.LastWriteTimeUtc.ToLocalTime()
+            .ToString("yyyy-MM-dd HH:mm");
 
     [ObservableProperty, NotifyPropertyChangedFor(nameof(HasChanges))]
     private string? _title;
@@ -2201,4 +2217,19 @@ public partial class WorkbenchTrackViewModel : ObservableObject
         TagFields.DiscNumber => Disc,
         _ => null,
     };
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        double value = Math.Max(0, bytes);
+        int unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+        return unit == 0
+            ? $"{value:N0} {units[unit]}"
+            : $"{value:N1} {units[unit]}";
+    }
 }

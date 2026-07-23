@@ -101,7 +101,14 @@ public partial class LibraryRow : ObservableObject
     public int? Disc => Record.DiscNumber;
     public int? DiscTotal => Record.DiscTotal;
     public string Codec => Record.CodecName ?? "";
+    public string TagType => Record.TagType ?? "";
+    public string CodecType => Record.CodecType.ToString();
+    public string SampleRate => Details["SampleRate"];
+    public string BitsPerSample => Details["Bits"];
+    public string Bitrate => Details["Bitrate"];
+    public string Channels => Details["Channels"];
     public string Duration => Details["Duration"];
+    public string FileSize => Details["FileSize"];
     public string Modified => Details["Modified"];
     public string SearchText => Details.SearchText;
 
