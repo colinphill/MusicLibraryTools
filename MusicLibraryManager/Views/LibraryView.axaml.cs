@@ -86,6 +86,15 @@ public partial class LibraryView : UserControl
             new("Tracks", "Tracks", "Tracks", 75, 58),
             new("Bytes", "Bytes", "Bytes", 95, 68),
         ]);
+        LibraryExternalToolInvocationGrid.ConfigureColumns(
+        [
+            new("Number", "#", "Number", 52, 44),
+            new("Executable", "Executable", "Executable", 175, 110),
+            new("Arguments", "Arguments", "Arguments", 330, 180),
+            new("WorkingDirectory", "Working directory",
+                "WorkingDirectory", 200, 120),
+            new("Files", "Files", "Files", 62, 50),
+        ]);
         LibraryGrid.ApplySort(_sort);
         BuildColumnOptions();
         LibraryGrid.LayoutChanged += (_, _) => PersistLayout();

@@ -1586,6 +1586,43 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public void External_tool_editor_persists_structured_arguments()
+    {
+        var store = new FakeExternalToolStore();
+        var editor = new ExternalToolEditorViewModel(store)
+        {
+            Name = "Waveform",
+            Executable = "waveform-tool",
+            ArgumentsText =
+                "--input" + Environment.NewLine +
+                "{File}" + Environment.NewLine +
+                "--position={Index}/{Count}",
+            WorkingDirectory = "{Directory}",
+            InvocationMode =
+                ExternalToolInvocationMode.OncePerFile,
+        };
+
+        editor.SaveToolCommand.Execute(null);
+
+        ExternalToolDefinition saved =
+            Assert.Single(store.Tools);
+        Assert.Equal(
+            ["--input", "{File}", "--position={Index}/{Count}"],
+            saved.Arguments);
+        Assert.Equal("{Directory}", saved.WorkingDirectory);
+        Assert.Equal(
+            ExternalToolInvocationMode.OncePerFile,
+            saved.InvocationMode);
+        Assert.Single(editor.SavedTools);
+
+        editor.SelectedSavedTool = editor.SavedTools[0];
+        editor.DeleteToolCommand.Execute(null);
+
+        Assert.Empty(store.Tools);
+        Assert.Empty(editor.SavedTools);
+    }
+
+    [Fact]
     public async Task Library_audio_discovery_uses_explicit_scope_and_preserves_candidates()
     {
         TrackRecord[] records =
@@ -1609,6 +1646,7 @@ public sealed class PresentationTests
         var coverArt = new FakeCoverArtArchiveProvider();
         var reports = new FakeReportExportService();
         var playlists = new FakePlaylistWorkspaceService();
+        var externalTools = new FakeExternalToolService();
         var viewModel = new LibraryViewModel(
             library,
             new FakeReindex(),
@@ -1618,6 +1656,7 @@ public sealed class PresentationTests
             indexing,
             new FakeThumbnails(),
             metadataOperations: metadataOperations,
+            dialogs: new FakeDialogs(),
             audioDiscovery: discovery,
             musicBrainz: musicBrainz,
             releaseMapping: new MusicBrainzReleaseMappingService(),
@@ -1627,7 +1666,8 @@ public sealed class PresentationTests
             discogs: discogs,
             discogsMapping: new DiscogsReleaseMappingService(),
             reports: reports,
-            playlists: playlists);
+            playlists: playlists,
+            externalTools: externalTools);
         await viewModel.ReloadAsync();
         await viewModel.SelectAsync(
             [viewModel.Rows.Single(row => row.Title == "One")]);
@@ -1675,6 +1715,22 @@ public sealed class PresentationTests
         Assert.False(viewModel.HasUnsavedChanges);
         Assert.Contains("2 track reference(s)",
             viewModel.OperationStatus);
+
+        viewModel.ExternalToolEditor.Executable = "selection-tool";
+        viewModel.ExternalToolEditor.ArgumentsText = "{Files}";
+        viewModel.PreviewLibraryExternalToolCommand.Execute(null);
+
+        Assert.Equal(
+            [@"C:\music\one.flac", @"C:\music\two.flac"],
+            externalTools.PreviewedPaths);
+        Assert.Single(viewModel.ExternalToolInvocations);
+        Assert.True(viewModel.HasUnsavedChanges);
+
+        await viewModel.RunLibraryExternalToolCommand.ExecuteAsync(null);
+
+        Assert.True(externalTools.Ran);
+        Assert.False(viewModel.HasUnsavedChanges);
+        Assert.Contains("1 succeeded", viewModel.OperationStatus);
 
         await viewModel.PreviewLibraryAudioIdentifiersCommand.ExecuteAsync(null);
 
@@ -2210,6 +2266,71 @@ internal sealed class FakePlaylistWorkspaceService :
             new(0, 0, 0, 0, null, []),
             []));
     }
+}
+
+internal sealed class FakeExternalToolService : IExternalToolService
+{
+    public IReadOnlyList<string> PreviewedPaths { get; private set; } = [];
+    public bool Ran { get; private set; }
+
+    public ExternalToolPlan Preview(
+        ExternalToolDefinition definition,
+        IReadOnlyList<string> paths)
+    {
+        PreviewedPaths = paths.ToArray();
+        var invocation = new ExternalToolInvocation(
+            definition.Executable,
+            paths.ToArray(),
+            null,
+            paths.ToArray());
+        return new(
+            definition,
+            [invocation],
+            [],
+            DateTimeOffset.UtcNow);
+    }
+
+    public Task<ExternalToolRunResult> RunAsync(
+        ExternalToolPlan plan,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        Ran = true;
+        progress?.Report(new(
+            OperationPhase.Completed,
+            plan.Invocations.Count,
+            plan.Invocations.Count,
+            Message: "Tool complete"));
+        return Task.FromResult(new ExternalToolRunResult(
+            plan.Invocations.Select(invocation =>
+                new ExternalToolInvocationResult(
+                    invocation,
+                    0,
+                    "",
+                    "")).ToArray()));
+    }
+}
+
+internal sealed class FakeExternalToolStore : IExternalToolStore
+{
+    public List<ExternalToolDefinition> Tools { get; } = [];
+
+    public IReadOnlyList<ExternalToolDefinition> Load() =>
+        Tools.ToArray();
+
+    public void Save(ExternalToolDefinition definition)
+    {
+        int index = Tools.FindIndex(tool =>
+            tool.Id == definition.Id);
+        if (index < 0)
+            Tools.Add(definition);
+        else
+            Tools[index] = definition;
+    }
+
+    public void Delete(Guid id) =>
+        Tools.RemoveAll(tool => tool.Id == id);
 }
 
 internal sealed class FakeAcoustIdDiscoveryService : IAcoustIdDiscoveryService

@@ -92,6 +92,15 @@ public partial class WorkbenchView : UserControl
             new("Tracks", "Tracks", "Tracks", 80, 60),
             new("Bytes", "Bytes", "Bytes", 100, 70),
         ]);
+        ExternalToolInvocationGrid.ConfigureColumns(
+        [
+            new("Number", "#", "Number", 55, 45),
+            new("Executable", "Executable", "Executable", 190, 120),
+            new("Arguments", "Arguments", "Arguments", 360, 190),
+            new("WorkingDirectory", "Working directory",
+                "WorkingDirectory", 220, 130),
+            new("Files", "Files", "Files", 65, 52),
+        ]);
     }
 
     private static void ConfigureDiscogsGrid(AppDataGrid grid) =>

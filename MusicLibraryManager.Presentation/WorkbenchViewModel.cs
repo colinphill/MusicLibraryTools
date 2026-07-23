@@ -42,6 +42,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private readonly IDiscogsReleaseMappingService? _discogsMapping;
     private readonly IReportExportService? _reports;
     private readonly IPlaylistWorkspaceService? _playlists;
+    private readonly IExternalToolService? _externalTools;
     private readonly IThumbnailService _thumbnails;
     private readonly IEditHistoryService _history;
     private readonly IFilePickerService _files;
@@ -50,6 +51,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private MetadataOperationPlan? _plan;
     private ReportExportPlan? _reportPlan;
     private PlaylistWorkspacePlan? _playlistPlan;
+    private ExternalToolPlan? _externalToolPlan;
     private CancellationTokenSource? _cancellation;
 
     [ObservableProperty]
@@ -77,6 +79,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(BrowsePlaylistOutputCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewPlaylistCommand))]
     [NotifyCanExecuteChangedFor(nameof(ApplyPlaylistCommand))]
+    [NotifyCanExecuteChangedFor(nameof(BrowseExternalToolExecutableCommand))]
+    [NotifyCanExecuteChangedFor(nameof(BrowseExternalToolWorkingDirectoryCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewExternalToolCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RunExternalToolCommand))]
     [NotifyCanExecuteChangedFor(nameof(FindReleaseArtworkCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewReleaseArtworkCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLocalArtworkCommand))]
@@ -168,7 +174,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         IDiscogsMetadataProvider? discogs = null,
         IDiscogsReleaseMappingService? discogsMapping = null,
         IReportExportService? reports = null,
-        IPlaylistWorkspaceService? playlists = null)
+        IPlaylistWorkspaceService? playlists = null,
+        IExternalToolService? externalTools = null,
+        IExternalToolStore? externalToolStore = null)
     {
         _workbench = workbench;
         _operations = operations;
@@ -180,6 +188,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         _discogsMapping = discogsMapping;
         _reports = reports;
         _playlists = playlists;
+        _externalTools = externalTools;
         _thumbnails = thumbnails;
         _history = history;
         _files = files;
@@ -199,6 +208,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         };
         ReportEditor.Changed += InvalidateReportPlan;
         PlaylistEditor.Changed += InvalidatePlaylistPlan;
+        ExternalToolEditor = new(externalToolStore);
+        ExternalToolEditor.Changed += InvalidateExternalToolPlan;
         KnownFieldChoices = Enum.GetValues<TagFields>()
             .Where(field => field != TagFields.NullField)
             .Select(field => new MetadataFieldChoice(field, field.ToString()))
@@ -220,6 +231,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     public ObservableCollection<ReportOutputRow> ReportOutputs { get; } = [];
     public ObservableCollection<PlaylistOutputRow>
         PlaylistOutputs { get; } = [];
+    public ObservableCollection<ExternalToolInvocationRow>
+        ExternalToolInvocations { get; } = [];
     public ObservableCollection<string> RecentLocations { get; } = [];
     public MusicBrainzImportSelectionViewModel ReleaseImport { get; } = new();
     public MusicBrainzReleaseSearchViewModel ReleaseSearch { get; } = new();
@@ -227,6 +240,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     public DiscogsImportSelectionViewModel DiscogsImport { get; } = new();
     public ReportEditorViewModel ReportEditor { get; } = new();
     public PlaylistEditorViewModel PlaylistEditor { get; } = new();
+    public ExternalToolEditorViewModel ExternalToolEditor { get; }
     public MetadataOperationEditorViewModel OperationEditor { get; }
     public IReadOnlyList<MetadataFieldChoice> KnownFieldChoices { get; }
     public IReadOnlyList<WorkbenchFieldEditMode> FieldEditModes { get; } =
@@ -237,6 +251,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         _plan is not null ||
         _reportPlan is not null ||
         _playlistPlan is not null ||
+        _externalToolPlan is not null ||
         Files.Any(file => file.HasChanges);
     public bool CanUndoLatest => _history.CanUndo && !IsBusy;
     public bool CanRedoLatest => _history.CanRedo && !IsBusy;
@@ -383,6 +398,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         Files.Remove(current);
         InvalidateReportPlan();
         InvalidatePlaylistPlan();
+        InvalidateExternalToolPlan();
         foreach (AudioDiscoveryRow row in AudioMatches
                      .Where(row => PathComparer.Equals(row.Path, current.Path))
                      .ToArray())
@@ -424,6 +440,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         _plan = null;
         InvalidateReportPlan();
         InvalidatePlaylistPlan();
+        InvalidateExternalToolPlan();
         SelectedFile = null;
         StatusText = "Workbench cleared. Files on disk were not changed.";
         NotifySessionChanged();
@@ -439,6 +456,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         CancelPlan();
         InvalidateReportPlan();
         InvalidatePlaylistPlan();
+        InvalidateExternalToolPlan();
         MoveUpCommand.NotifyCanExecuteChanged();
         MoveDownCommand.NotifyCanExecuteChanged();
     }
@@ -453,6 +471,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         CancelPlan();
         InvalidateReportPlan();
         InvalidatePlaylistPlan();
+        InvalidateExternalToolPlan();
         MoveUpCommand.NotifyCanExecuteChanged();
         MoveDownCommand.NotifyCanExecuteChanged();
     }
@@ -1163,6 +1182,104 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         }
     }
 
+    [RelayCommand(CanExecute =
+        nameof(CanBrowseExternalToolExecutable))]
+    private async Task BrowseExternalToolExecutableAsync()
+    {
+        string? path = await _files.PickFileAsync(
+            "Choose external tool executable");
+        if (!string.IsNullOrWhiteSpace(path))
+            ExternalToolEditor.Executable = path;
+    }
+
+    [RelayCommand(CanExecute =
+        nameof(CanBrowseExternalToolWorkingDirectory))]
+    private async Task BrowseExternalToolWorkingDirectoryAsync()
+    {
+        string? path = await _files.PickFolderAsync(
+            "Choose external tool working directory");
+        if (!string.IsNullOrWhiteSpace(path))
+            ExternalToolEditor.WorkingDirectory = path;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPreviewExternalTool))]
+    private void PreviewExternalTool()
+    {
+        if (_externalTools is null)
+            return;
+        ExternalToolPlan plan = _externalTools.Preview(
+            ExternalToolEditor.CreateDefinition(),
+            Files.Select(file => file.Path).ToArray());
+        _externalToolPlan = plan;
+        ExternalToolInvocations.Clear();
+        for (int index = 0; index < plan.Invocations.Count; index++)
+        {
+            ExternalToolInvocation invocation =
+                plan.Invocations[index];
+            ExternalToolInvocations.Add(new(
+                index + 1,
+                invocation.Executable,
+                string.Join(
+                    Environment.NewLine,
+                    invocation.Arguments),
+                invocation.WorkingDirectory ?? "(application default)",
+                invocation.SourcePaths.Count));
+        }
+        int blockers = plan.Issues.Count(issue =>
+            issue.Severity == OperationIssueSeverity.Blocker);
+        StatusText = blockers > 0
+            ? $"External-tool preview has {blockers:N0} blocker(s). Nothing can run."
+            : $"Previewed {plan.Invocations.Count:N0} process invocation(s). " +
+              "External tools run outside MusicLibraryManager recovery.";
+        RunExternalToolCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(HasUnsavedChanges));
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRunExternalTool))]
+    private async Task RunExternalToolAsync()
+    {
+        if (_externalTools is null || _externalToolPlan is null)
+            return;
+        if (!await _dialogs.ConfirmAsync(
+                "Run external tool?",
+                $"Run '{_externalToolPlan.Definition.Name}' " +
+                $"{_externalToolPlan.Invocations.Count:N0} time(s)? " +
+                "External tools can change files and are outside " +
+                "MusicLibraryManager recovery.",
+                "Run"))
+            return;
+        BeginOperation(
+            $"Running {_externalToolPlan.Definition.Name}");
+        try
+        {
+            ExternalToolRunResult result =
+                await _externalTools.RunAsync(
+                    _externalToolPlan,
+                    CreateProgress(),
+                    _cancellation!.Token);
+            _externalToolPlan = null;
+            StatusText =
+                $"External tool finished: {result.SucceededCount:N0} " +
+                $"succeeded, {result.FailedCount:N0} failed.";
+            RunExternalToolCommand.NotifyCanExecuteChanged();
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText =
+                "External tool cancelled. The active process was stopped.";
+        }
+        catch (Exception error)
+        {
+            StatusText =
+                $"External tool stopped: {error.Message}";
+        }
+        finally
+        {
+            EndOperation();
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanFindReleaseArtwork))]
     private async Task FindReleaseArtworkAsync()
     {
@@ -1490,6 +1607,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         }
         InvalidateReportPlan();
         InvalidatePlaylistPlan();
+        InvalidateExternalToolPlan();
     }
 
     private void AddTrack(WorkbenchTrackViewModel track)
@@ -1498,6 +1616,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         Files.Add(track);
         InvalidateReportPlan();
         InvalidatePlaylistPlan();
+        InvalidateExternalToolPlan();
         SelectedFile ??= track;
     }
 
@@ -1709,6 +1828,18 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private bool CanApplyPlaylist() =>
         !IsBusy && _playlists is not null &&
         _playlistPlan?.CanApply == true;
+    private bool CanBrowseExternalToolExecutable() =>
+        !IsBusy && _externalTools is not null;
+    private bool CanBrowseExternalToolWorkingDirectory() =>
+        !IsBusy && _externalTools is not null;
+    private bool CanPreviewExternalTool() =>
+        !IsBusy && _externalTools is not null &&
+        Files.Count > 0 &&
+        !string.IsNullOrWhiteSpace(
+            ExternalToolEditor.Executable);
+    private bool CanRunExternalTool() =>
+        !IsBusy && _externalTools is not null &&
+        _externalToolPlan?.CanRun == true;
     private bool CanFindReleaseArtwork() =>
         !IsBusy && SelectedRelease is not null;
     private bool CanPreviewReleaseArtwork() =>
@@ -1783,6 +1914,21 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         PlaylistOutputs.Clear();
         PreviewPlaylistCommand.NotifyCanExecuteChanged();
         ApplyPlaylistCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(HasUnsavedChanges));
+    }
+
+    private void InvalidateExternalToolPlan()
+    {
+        if (_externalToolPlan is null &&
+            ExternalToolInvocations.Count == 0)
+        {
+            PreviewExternalToolCommand.NotifyCanExecuteChanged();
+            return;
+        }
+        _externalToolPlan = null;
+        ExternalToolInvocations.Clear();
+        PreviewExternalToolCommand.NotifyCanExecuteChanged();
+        RunExternalToolCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(HasUnsavedChanges));
     }
 

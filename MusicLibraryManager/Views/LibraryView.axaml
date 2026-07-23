@@ -645,6 +645,80 @@
                   </Grid>
                 </Grid>
               </TabItem>
+              <TabItem Header="Tools">
+                <Grid Margin="0,6,0,0"
+                      ColumnDefinitions="0.95*,12,1.05*">
+                  <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="7">
+                      <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto"
+                            ColumnSpacing="6">
+                        <ComboBox Classes="app"
+                                  ItemsSource="{Binding ExternalToolEditor.SavedTools}"
+                                  DisplayMemberBinding="{Binding Name}"
+                                  SelectedItem="{Binding ExternalToolEditor.SelectedSavedTool, Mode=TwoWay}"
+                                  PlaceholderText="Saved personal tool" />
+                        <Button Grid.Column="1" Classes="app" Content="Load"
+                                Command="{Binding ExternalToolEditor.LoadToolCommand}" />
+                        <Button Grid.Column="2" Classes="app" Content="New"
+                                Command="{Binding ExternalToolEditor.NewToolCommand}" />
+                        <Button Grid.Column="3" Classes="app" Content="Save"
+                                Command="{Binding ExternalToolEditor.SaveToolCommand}" />
+                        <Button Grid.Column="4" Classes="app" Content="Delete"
+                                Command="{Binding ExternalToolEditor.DeleteToolCommand}" />
+                      </Grid>
+                      <Grid ColumnDefinitions="*,170" ColumnSpacing="7">
+                        <TextBox Classes="app"
+                                 Text="{Binding ExternalToolEditor.Name, Mode=TwoWay}"
+                                 PlaceholderText="Tool name" />
+                        <ComboBox Grid.Column="1" Classes="app"
+                                  ItemsSource="{Binding ExternalToolEditor.InvocationModes}"
+                                  SelectedItem="{Binding ExternalToolEditor.InvocationMode, Mode=TwoWay}" />
+                      </Grid>
+                      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="7">
+                        <TextBox Classes="app"
+                                 Text="{Binding ExternalToolEditor.Executable, Mode=TwoWay}"
+                                 PlaceholderText="Executable path or command name" />
+                        <Button Grid.Column="1" Classes="app"
+                                Content="Browse executable"
+                                Command="{Binding BrowseLibraryExternalToolExecutableCommand}" />
+                      </Grid>
+                      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="7">
+                        <TextBox Classes="app"
+                                 Text="{Binding ExternalToolEditor.WorkingDirectory, Mode=TwoWay}"
+                                 PlaceholderText="Optional working directory or {Directory}" />
+                        <Button Grid.Column="1" Classes="app"
+                                Content="Browse folder"
+                                Command="{Binding BrowseLibraryExternalToolWorkingDirectoryCommand}" />
+                      </Grid>
+                      <TextBox Classes="app" MinHeight="90"
+                               AcceptsReturn="True" TextWrapping="NoWrap"
+                               Text="{Binding ExternalToolEditor.ArgumentsText, Mode=TwoWay}"
+                               PlaceholderText="{}{Files}" />
+                      <TextBlock Classes="muted" TextWrapping="Wrap"
+                                 Text="One argument per line. Supported placeholders: {Files}, {File}, {Directory}, {FileName}, {FileNameWithoutExtension}, {Extension}, {Index}, and {Count}." />
+                      <Border Classes="status-banner warning">
+                        <TextBlock TextWrapping="Wrap"
+                                   Text="External tools run without a shell but remain outside application recovery. Running always requires confirmation." />
+                      </Border>
+                    </StackPanel>
+                  </ScrollViewer>
+                  <Grid Grid.Column="2" RowDefinitions="*,Auto"
+                        RowSpacing="7">
+                    <controls:AppDataGrid
+                        x:Name="LibraryExternalToolInvocationGrid"
+                        ItemsSource="{Binding ExternalToolInvocations}" />
+                    <WrapPanel Grid.Row="1"
+                               HorizontalAlignment="Right">
+                      <Button x:Name="PreviewLibraryExternalToolButton"
+                              Classes="app" Content="Preview tool"
+                              Command="{Binding PreviewLibraryExternalToolCommand}" />
+                      <Button Classes="app primary"
+                              Content="Run reviewed tool"
+                              Command="{Binding RunLibraryExternalToolCommand}" />
+                    </WrapPanel>
+                  </Grid>
+                </Grid>
+              </TabItem>
             </TabControl>
 
             <Grid Grid.Row="6" ColumnDefinitions="*,190,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="7">

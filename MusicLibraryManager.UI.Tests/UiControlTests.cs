@@ -690,6 +690,12 @@ public sealed class UiControlTests
                 "Preview playlist",
                 workbench.FindControl<Button>(
                     "PreviewPlaylistButton")!.Content);
+            Assert.NotNull(workbench.FindControl<AppDataGrid>(
+                "ExternalToolInvocationGrid"));
+            Assert.Equal(
+                "Preview tool",
+                workbench.FindControl<Button>(
+                    "PreviewExternalToolButton")!.Content);
 
             navigation.Navigate(ShellDestination.Library);
             Dispatcher.UIThread.RunJobs();
@@ -701,6 +707,12 @@ public sealed class UiControlTests
                 "Preview playlist",
                 library.FindControl<Button>(
                     "PreviewLibraryPlaylistButton")!.Content);
+            Assert.NotNull(library.FindControl<AppDataGrid>(
+                "LibraryExternalToolInvocationGrid"));
+            Assert.Equal(
+                "Preview tool",
+                library.FindControl<Button>(
+                    "PreviewLibraryExternalToolButton")!.Content);
         }
         finally
         {

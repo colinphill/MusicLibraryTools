@@ -121,7 +121,7 @@ appropriate build or test.
     MusicBrainz recording candidates.
   - [x] `IReportExportService`.
   - [x] `IPlaylistWorkspaceService`.
-  - [ ] `IExternalToolService`.
+  - [x] `IExternalToolService`.
 - [x] Preserve the existing `{Field}` convention where composition is useful;
   do not implement mp3tag's format-string language.
 
@@ -321,10 +321,10 @@ and then resolved to a user-confirmed release.
 - [x] Add, remove, and reorder tracks.
 - [x] Save M3U/M3U8/WPL through existing playlist writers.
 - [x] Generate grouped playlists with naming templates.
-- [ ] External tool executable, argument list, working directory, and
+- [x] External tool executable, argument list, working directory, and
   invocation-mode configuration.
-- [ ] Expand only documented placeholders.
-- [ ] Use `ProcessStartInfo.ArgumentList`; never invoke a shell implicitly.
+- [x] Expand only documented placeholders.
+- [x] Use `ProcessStartInfo.ArgumentList`; never invoke a shell implicitly.
 - [ ] Add configurable shortcuts for Workbench commands and recipes.
 
 **Acceptance:** Custom views, advanced filtering, reports, manual playlists,
@@ -632,3 +632,15 @@ per-operation capability flags.
   named playlists while preserving track order within each group. Output bytes
   and destination snapshots are reviewed before apply, existing files use
   recovery, and preview/apply expose progress and cancellation.
+- Added personal, structured external-tool definitions shared by Workbench and
+  Library. Each tool stores an executable, one argument per list entry, an
+  optional working directory, and either once-for-selection or once-per-file
+  invocation. Only the documented file, path-component, index, count, and
+  multi-file placeholders expand; `{Files}` becomes separate argument-list
+  entries and cannot be embedded in a shell-like command string. Preview shows
+  every process invocation and snapshots the selected files, while run rejects
+  stale selections, requires explicit confirmation, reports per-process
+  progress, and kills the active process tree on cancellation. The native
+  runner always sets `UseShellExecute` to false and populates
+  `ProcessStartInfo.ArgumentList`; bounded output capture prevents an external
+  process from growing diagnostics memory without limit.
