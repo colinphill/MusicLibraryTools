@@ -1088,6 +1088,38 @@ public sealed class MetadataOperationService(
                 beforeDescription.SequenceEqual(afterDescription)
                     ? null
                     : new(beforeDescription, afterDescription);
+            if (difference is not null)
+            {
+                try
+                {
+                    IMediaFile nativeFile = MediaFile.GetFile(
+                        document.Path,
+                        readOnly: false,
+                        readArtwork: true,
+                        formatRegistry: formats);
+                    IArtworkWriter? nativeArtwork =
+                        nativeFile as IArtworkWriter ??
+                        nativeFile.Tags.OfType<IArtworkWriter>()
+                            .FirstOrDefault();
+                    if (nativeArtwork is null)
+                        throw new InvalidOperationException(
+                            "The native tag layer cannot write artwork.");
+                    nativeArtwork.SetImages(
+                        after.Select(image => new ArtworkImage(
+                            image.Type,
+                            image.MimeType,
+                            image.Description ?? "",
+                            image.Data)).ToArray());
+                }
+                catch (Exception error)
+                {
+                    issues.Add(new(
+                        "artwork.native-unsupported",
+                        OperationIssueSeverity.Blocker,
+                        error.Message,
+                        document.Path));
+                }
+            }
             plans.Add(new(
                 document.Path,
                 document.Snapshot,
@@ -1447,7 +1479,171 @@ public sealed class MetadataOperationService(
             .Select(difference => new MetadataValueEdit(
                 difference.Field, difference.After))
             .ToImmutableArray();
+        ValidateNativeEdits(document, edits, issues);
         return new(document.Path, document.Snapshot, differences, edits, [.. issues]);
+    }
+
+    private void ValidateNativeEdits(
+        MediaDocument document,
+        ImmutableArray<MetadataValueEdit> edits,
+        List<OperationIssue> issues)
+    {
+        if (edits.IsDefaultOrEmpty || !document.IsWritable)
+            return;
+        IMediaFile file;
+        try
+        {
+            file = MediaFile.GetFile(
+                document.Path,
+                readOnly: false,
+                readArtwork: false,
+                formatRegistry: formats);
+        }
+        catch (Exception error)
+        {
+            issues.Add(new(
+                "metadata.native-open",
+                OperationIssueSeverity.Blocker,
+                error.Message,
+                document.Path));
+            return;
+        }
+
+        foreach (MetadataValueEdit edit in edits)
+        {
+            try
+            {
+                ApplyNativeEdit(
+                    file, document.Path, edit, fieldMappings);
+                bool isMapped = edit.Field.KnownField is { } known &&
+                    fieldMappings?.TryGet(
+                        document.Path, known, out _) == true;
+                if (!isMapped)
+                    ValidateNativeProjection(
+                        file, document.Path, edit, issues);
+            }
+            catch (Exception error)
+            {
+                issues.Add(new(
+                    "metadata.native-unsupported",
+                    OperationIssueSeverity.Blocker,
+                    $"'{edit.Field.DisplayName}' cannot be written by the " +
+                    $"native tag handler: {error.Message}",
+                    document.Path));
+            }
+        }
+    }
+
+    private static void ApplyNativeEdit(
+        IMediaFile file,
+        string path,
+        MetadataValueEdit edit,
+        IMetadataFieldMappingService? fieldMappings)
+    {
+        IMetadataWriter? writer = file as IMetadataWriter ??
+            file.Tags.OfType<IMetadataWriter>().FirstOrDefault();
+        VorbisComments? vorbis = file as VorbisComments ??
+            file.Tags.OfType<VorbisComments>().FirstOrDefault();
+        IUserStringMetadata? custom = file as IUserStringMetadata ??
+            file.Tags.OfType<IUserStringMetadata>().FirstOrDefault();
+        if (!edit.Field.IsKnown)
+        {
+            string key = edit.Field.CustomName!;
+            if (custom is null)
+                throw new InvalidOperationException(
+                    $"Custom field '{key}' is not supported.");
+            if (edit.Values.Length == 0)
+                custom.RemoveUserString(key);
+            else if (edit.Values.Length == 1)
+                custom.SetUserString(key, edit.Values[0]);
+            else if (custom is IMultiValueUserStringMetadata multiCustom)
+                multiCustom.SetUserStringValues(key, edit.Values);
+            else
+                throw new InvalidOperationException(
+                    $"Multiple values for custom field '{key}' are not supported.");
+            return;
+        }
+
+        TagFields field = edit.Field.KnownField!.Value;
+        if (fieldMappings?.TryGet(
+                path, field, out string nativeFieldName) == true)
+        {
+            if (custom is null)
+                throw new InvalidOperationException(
+                    $"Mapped native field '{nativeFieldName}' is not supported.");
+            try
+            {
+                if (writer is not null) writer.RemoveField(field);
+                else vorbis?.RemoveField(field);
+            }
+            catch (ArgumentException) { }
+            if (edit.Values.Length == 0)
+                custom.RemoveUserString(nativeFieldName);
+            else if (edit.Values.Length == 1)
+                custom.SetUserString(nativeFieldName, edit.Values[0]);
+            else if (custom is IMultiValueUserStringMetadata mappedMulti)
+                mappedMulti.SetUserStringValues(nativeFieldName, edit.Values);
+            else
+                throw new InvalidOperationException(
+                    $"Mapped field '{nativeFieldName}' cannot store multiple values.");
+            return;
+        }
+        if (writer is null && vorbis is null)
+            throw new InvalidOperationException(
+                "The file has no writable metadata layer.");
+        if (edit.Values.Length == 0)
+        {
+            if (writer is not null) writer.RemoveField(field);
+            else vorbis!.RemoveField(field);
+        }
+        else if (edit.Values.Length == 1)
+        {
+            if (writer is not null) writer.SetField(field, edit.Values[0]);
+            else vorbis!.SetField(field, edit.Values[0]);
+        }
+        else if (writer is IMultiValueMetadataWriter multiWriter)
+            multiWriter.SetFieldValues(field, edit.Values);
+        else if (vorbis is IMultiValueMetadataWriter multiVorbis)
+            multiVorbis.SetFieldValues(field, edit.Values);
+        else
+            throw new InvalidOperationException(
+                $"Multiple values for '{field}' are not supported.");
+    }
+
+    private static void ValidateNativeProjection(
+        IMediaFile file,
+        string path,
+        MetadataValueEdit edit,
+        List<OperationIssue> issues)
+    {
+        IMetadataProvider? provider = file.Tags.FirstOrDefault();
+        if (provider is null)
+            return;
+        ImmutableArray<string> projected;
+        if (edit.Field.IsKnown)
+            projected = provider.GetKnownMetadata()
+                .Where(value =>
+                    value.Key == edit.Field.KnownField!.Value)
+                .Select(value => value.Value)
+                .ToImmutableArray();
+        else if (provider is IUserStringMetadata custom)
+            projected = custom.GetUserStrings()
+                .Where(value => string.Equals(
+                    value.Key,
+                    edit.Field.CustomName,
+                    StringComparison.OrdinalIgnoreCase))
+                .Select(value => value.Value)
+                .ToImmutableArray();
+        else
+            return;
+        if (!projected.SequenceEqual(edit.Values))
+            issues.Add(new(
+                "metadata.native-normalization",
+                OperationIssueSeverity.Warning,
+                $"'{edit.Field.DisplayName}' will be normalized from " +
+                $"'{string.Join("; ", edit.Values)}' to " +
+                $"'{string.Join("; ", projected)}'.",
+                path));
     }
 
     private void ValidatePolicy(string path, List<OperationIssue> issues)
@@ -1757,12 +1953,6 @@ public sealed class MetadataOperationService(
         {
             IMediaFile file = MediaFile.GetFile(plan.Path, readOnly: false,
                 readArtwork: true, formatRegistry: formats);
-            IMetadataWriter? writer = file as IMetadataWriter ??
-                file.Tags.OfType<IMetadataWriter>().FirstOrDefault();
-            VorbisComments? vorbis = file as VorbisComments ??
-                file.Tags.OfType<VorbisComments>().FirstOrDefault();
-            IUserStringMetadata? custom = file as IUserStringMetadata ??
-                file.Tags.OfType<IUserStringMetadata>().FirstOrDefault();
             if (!plan.TagLayerEdits.IsDefaultOrEmpty)
             {
                 if (file is not ITagLayerEditor layerEditor)
@@ -1808,78 +1998,9 @@ public sealed class MetadataOperationService(
                 if (versionEdit.TextEncodingPolicy is { } encoding)
                     id3.SetTextEncodingPolicy(encoding);
             }
-            if (writer is null && vorbis is null && custom is null &&
-                plan.Edits.Length > 0)
-                throw new InvalidOperationException("The file has no writable metadata layer.");
-
             foreach (MetadataValueEdit edit in plan.Edits)
-            {
-                if (!edit.Field.IsKnown)
-                {
-                    string key = edit.Field.CustomName!;
-                    if (custom is null)
-                        throw new InvalidOperationException(
-                            $"The tag format does not support custom field '{key}'.");
-                    if (edit.Values.Length == 0)
-                        custom.RemoveUserString(key);
-                    else if (edit.Values.Length == 1)
-                        custom.SetUserString(key, edit.Values[0]);
-                    else if (custom is IMultiValueUserStringMetadata multiCustom)
-                        multiCustom.SetUserStringValues(key, edit.Values);
-                    else
-                        throw new InvalidOperationException(
-                            $"The tag format cannot store multiple values for custom field '{key}'.");
-                    continue;
-                }
-                TagFields field = edit.Field.KnownField!.Value;
-                if (fieldMappings?.TryGet(
-                        plan.Path, field, out string nativeFieldName) == true)
-                {
-                    if (custom is null)
-                        throw new InvalidOperationException(
-                            $"The tag format cannot map '{field}' to native field " +
-                            $"'{nativeFieldName}'.");
-                    // Remove the built-in representation so the configured native field
-                    // becomes the unambiguous canonical value on the next read.
-                    try
-                    {
-                        if (writer is not null) writer.RemoveField(field);
-                        else vorbis?.RemoveField(field);
-                    }
-                    catch (ArgumentException)
-                    {
-                        // The format has no built-in representation for this canonical field.
-                    }
-                    if (edit.Values.Length == 0)
-                        custom.RemoveUserString(nativeFieldName);
-                    else if (edit.Values.Length == 1)
-                        custom.SetUserString(nativeFieldName, edit.Values[0]);
-                    else if (custom is IMultiValueUserStringMetadata multiCustom)
-                        multiCustom.SetUserStringValues(nativeFieldName, edit.Values);
-                    else
-                        throw new InvalidOperationException(
-                            $"The tag format cannot store multiple values for mapped field " +
-                            $"'{nativeFieldName}'.");
-                    continue;
-                }
-                if (edit.Values.Length == 0)
-                {
-                    if (writer is not null) writer.RemoveField(field);
-                    else vorbis!.RemoveField(field);
-                }
-                else if (edit.Values.Length == 1)
-                {
-                    if (writer is not null) writer.SetField(field, edit.Values[0]);
-                    else vorbis!.SetField(field, edit.Values[0]);
-                }
-                else if (writer is IMultiValueMetadataWriter multiWriter)
-                    multiWriter.SetFieldValues(field, edit.Values);
-                else if (vorbis is IMultiValueMetadataWriter multiVorbis)
-                    multiVorbis.SetFieldValues(field, edit.Values);
-                else
-                    throw new InvalidOperationException(
-                        $"The tag format cannot store multiple values for field '{field}'.");
-            }
+                ApplyNativeEdit(
+                    file, plan.Path, edit, fieldMappings);
             if (plan.ArtworkEdit is not null)
             {
                 IArtworkWriter? artworkWriter = file as IArtworkWriter ??

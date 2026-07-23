@@ -459,11 +459,15 @@ application concepts.
   - Workbench previews fixed-width truncation, omitted fields, and
     unrepresentable ID3v1 text, then stages conversion or removal through
     stale checks, recovery journals, and undo.
-- [~] Preview truncation, unsupported fields, and lossy conversions.
-  ID3 version conversion and ID3v1 compatibility previews report dropped
-  frames, coalesced values, omitted fields, fixed-width truncation, and
-  characters outside Latin-1; equivalent coverage is still required for
-  later format-specific lossy operations.
+- [x] Preview truncation, unsupported fields, and lossy conversions.
+  - ID3 version conversion and ID3v1 compatibility previews report dropped
+    frames, coalesced values, omitted fields, fixed-width truncation, and
+    characters outside Latin-1.
+  - Value previews dry-run the selected native writer in memory, block
+    unsupported known/custom/multi-value fields, and warn when the native
+    representation normalizes a requested value.
+  - Artwork previews likewise dry-run the native artwork writer before any
+    staged or source file is changed.
 - [x] Preserve native-parser ownership; do not add a general tagging library.
 
 **Acceptance:** Target format families have native coverage with accurate

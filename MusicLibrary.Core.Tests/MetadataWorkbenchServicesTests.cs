@@ -1044,6 +1044,91 @@ public sealed class MetadataWorkbenchServicesTests
     }
 
     [Fact]
+    public async Task ValuePreview_DryRunsNativeWritersWithoutChangingFiles()
+    {
+        using var mp4 = MediaFixtures.Copy("sample_aac.m4a");
+        using var flac = MediaFixtures.Copy("sample.flac");
+        byte[] originalMp4 = await File.ReadAllBytesAsync(mp4.Path);
+        byte[] originalFlac = await File.ReadAllBytesAsync(flac.Path);
+        string statePath = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-native-preview-" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings);
+            TagFields unsupportedMp4 = Enum.GetValues<TagFields>()
+                .First(field =>
+                    field != TagFields.NullField &&
+                    field is not TagFields.TrackNumber and
+                        not TagFields.TotalTracks and
+                        not TagFields.DiscNumber and
+                        not TagFields.TotalDiscs &&
+                    !MP4Util.ReverseTagMapping.ContainsKey(field));
+
+            MetadataOperationPlan unsupported =
+                await service.PreviewValueEditsAsync(
+                    new Dictionary<string, IReadOnlyList<MetadataValueEdit>>
+                    {
+                        [mp4.Path] =
+                        [
+                            new(
+                                MetadataFieldKey.Known(unsupportedMp4),
+                                ["value"]),
+                        ],
+                        [flac.Path] =
+                        [
+                            new(
+                                MetadataFieldKey.Custom("BAD=KEY"),
+                                ["value"]),
+                        ],
+                    },
+                    "Validate native fields");
+
+            Assert.All(unsupported.Files, file =>
+                Assert.Contains(file.Issues, issue =>
+                    issue.Code == "metadata.native-unsupported" &&
+                    issue.Severity == OperationIssueSeverity.Blocker));
+            Assert.False(unsupported.CanApply);
+
+            MetadataOperationPlan normalized =
+                await service.PreviewValueEditsAsync(
+                    new Dictionary<string, IReadOnlyList<MetadataValueEdit>>
+                    {
+                        [mp4.Path] =
+                        [
+                            new(
+                                MetadataFieldKey.Known(
+                                    TagFields.TrackNumber),
+                                ["003"]),
+                        ],
+                    },
+                    "Preview numeric normalization");
+
+            Assert.Contains(
+                Assert.Single(normalized.Files).Issues,
+                issue => issue.Code ==
+                    "metadata.native-normalization" &&
+                    issue.Severity == OperationIssueSeverity.Warning);
+            Assert.True(normalized.CanApply);
+            Assert.Equal(
+                originalMp4,
+                await File.ReadAllBytesAsync(mp4.Path));
+            Assert.Equal(
+                originalFlac,
+                await File.ReadAllBytesAsync(flac.Path));
+        }
+        finally
+        {
+            try { File.Delete(statePath); } catch { }
+        }
+    }
+
+    [Fact]
     public async Task Apply_RoundTripsOrderedVorbisValuesWithoutJoiningThem()
     {
         string session = Path.Combine(
