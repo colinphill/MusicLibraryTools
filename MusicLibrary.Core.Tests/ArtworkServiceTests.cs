@@ -291,6 +291,7 @@ public class ArtworkServiceTests
     [InlineData("sample_alac.m4a")]
     [InlineData("sample.wv")]
     [InlineData("sample.dsf")]
+    [InlineData("sample.ape")]
     public void SupportsWrite_TrueForEveryTaggableFormat(string fixture)
     {
         Assert.True(_art.SupportsWrite(MediaFixtures.Path_(fixture)));
@@ -299,7 +300,10 @@ public class ArtworkServiceTests
     [Fact]
     public async Task Mp4_And_WavPack_RoundTripAndRemove()
     {
-        foreach (var fixture in new[] { "sample_alac.m4a", "sample.wv" })
+        foreach (var fixture in new[]
+                 {
+                     "sample_alac.m4a", "sample.wv", "sample.ape",
+                 })
         {
             using var media = MediaFixtures.Copy(fixture);
             var png = MakePng(400, 400);

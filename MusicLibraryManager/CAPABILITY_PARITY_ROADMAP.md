@@ -372,7 +372,13 @@ application concepts.
 
 ### Reuse APEv2
 
-- [ ] Monkey's Audio.
+- [x] Monkey's Audio.
+  - [x] Parse legacy 3.80-3.97 and descriptor-based 3.98+ stream headers,
+    including technical properties, sample counts, duration, and bitrate.
+  - [x] Reuse a writable APEv2 metadata/artwork layer with atomic in-place and
+    staged saves that preserve the complete codec payload byte-for-byte.
+  - [x] Keep payload identities stable across APEv2-only edits and release
+    `.ape` for indexing and transcode-source workflows.
 - [ ] Musepack.
 - [ ] TTA.
 - [ ] TAK.
@@ -743,3 +749,13 @@ per-operation capability flags.
   payload identities ignore either outer tag so cached Chromaprints survive
   metadata-only changes. `.aac` now passes synthetic layer-matrix and real
   ffmpeg fixture gates and is enabled for automatic indexing.
+- Added native Monkey's Audio handling backed by a reusable APEv2-tagged file
+  persistence layer for the remaining tail-tag formats. The bounded parser
+  supports both legacy 3.80-3.97 headers and descriptor-based 3.98+ streams,
+  deriving bit depth, channels, sample rate, duration, average bitrate,
+  compression level, and file version. A compact structural 3.99 fixture is
+  accepted by FFmpeg's reference demuxer and covers metadata, arbitrary text,
+  artwork, repeated atomic saves, staged output, leading ID3 preservation, and
+  malformed bounds. Payload identities exclude the trailing APEv2 layer but
+  track compressed-frame changes, and `.ape` is enabled for indexing and
+  transcode-source workflows.

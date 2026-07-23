@@ -8,7 +8,8 @@
   The audio formats come from ffmpeg (mostly 0.3s 44.1kHz/16-bit/stereo tone clips tagged with
   a fixed baseline). The .dsf file is hand-crafted here because no DSD encoder is bundled;
   it is a minimal-but-valid DSF container (DSD64, stereo, 1-bit) with no metadata chunk, so
-  the DSF tag-write path is exercised by the tests writing tags into it.
+  the DSF tag-write path is exercised by the tests writing tags into it. The Monkey's Audio
+  fixture is a structural 3.99 stream because ffmpeg provides a decoder but no APE encoder.
 #>
 param(
     [Parameter(Mandatory = $true)][string]$OutDir
@@ -102,6 +103,94 @@ if ($needSpecial) {
         & $ffmpeg -y -hide_banner -loglevel error @($j.Input) @($j.Args) $out
         if ($LASTEXITCODE -ne 0) { throw "ffmpeg failed for $($j.File)" }
     }
+}
+
+# --- hand-crafted Monkey's Audio fixture ----------------------------------------------------
+function New-ApeV2Tag {
+    $entries = [ordered]@{
+        Title  = 'TestTitle'
+        Artist = 'TestArtist'
+        Album  = 'TestAlbum'
+        Genre  = 'Rock'
+        Track  = '3'
+    }
+    $ascii = [System.Text.Encoding]::ASCII
+    $utf8 = [System.Text.UTF8Encoding]::new($false)
+    $itemsStream = [System.IO.MemoryStream]::new()
+    $itemsWriter = [System.IO.BinaryWriter]::new($itemsStream)
+    foreach ($entry in $entries.GetEnumerator()) {
+        [byte[]]$keyBytes = $ascii.GetBytes([string]$entry.Key)
+        [byte[]]$valueBytes = $utf8.GetBytes([string]$entry.Value)
+        $itemsWriter.Write([uint32]$valueBytes.Length)
+        $itemsWriter.Write([uint32]0)
+        $itemsWriter.Write($keyBytes)
+        $itemsWriter.Write([byte]0)
+        $itemsWriter.Write($valueBytes)
+    }
+    $itemsWriter.Flush()
+    [byte[]]$items = $itemsStream.ToArray()
+    $itemsWriter.Dispose()
+    $itemsStream.Dispose()
+
+    $tagStream = [System.IO.MemoryStream]::new()
+    $tagWriter = [System.IO.BinaryWriter]::new($tagStream)
+    [uint32]$tagSize = $items.Length + 32
+    foreach ($flags in @([uint32]2684354560, [uint32]2147483648)) {
+        $tagWriter.Write($ascii.GetBytes('APETAGEX'))
+        $tagWriter.Write([uint32]2000)
+        $tagWriter.Write($tagSize)
+        $tagWriter.Write([uint32]$entries.Count)
+        $tagWriter.Write($flags)
+        $tagWriter.Write([uint64]0)
+        if ($flags -eq [uint32]2684354560) {
+            $tagWriter.Write($items)
+        }
+    }
+    $tagWriter.Flush()
+    [byte[]]$result = $tagStream.ToArray()
+    $tagWriter.Dispose()
+    $tagStream.Dispose()
+    return ,$result
+}
+
+$apePath = Join-Path $OutDir 'sample.ape'
+if (-not (Test-Path $apePath)) {
+    $ms = [System.IO.MemoryStream]::new()
+    $bw = [System.IO.BinaryWriter]::new($ms)
+    $ascii = [System.Text.Encoding]::ASCII
+
+    # Descriptor-based Monkey's Audio 3.99 header.
+    $bw.Write($ascii.GetBytes('MAC '))
+    $bw.Write([uint16]3990)
+    $bw.Write([uint16]0)
+    $bw.Write([uint32]52)       # descriptor length
+    $bw.Write([uint32]24)       # header length
+    $bw.Write([uint32]4)        # one seek-table entry
+    $bw.Write([uint32]0)        # stored WAVE header length
+    $bw.Write([uint32]64)       # compressed audio length
+    $bw.Write([uint32]0)        # compressed audio length high
+    $bw.Write([uint32]0)        # WAVE tail length
+    $bw.Write([byte[]]::new(16))
+
+    $bw.Write([uint16]2000)     # normal compression
+    $bw.Write([uint16]0)        # format flags
+    $bw.Write([uint32]73728)    # blocks per frame
+    $bw.Write([uint32]13230)    # final frame blocks (0.3 seconds)
+    $bw.Write([uint32]1)        # total frames
+    $bw.Write([uint16]16)
+    $bw.Write([uint16]2)
+    $bw.Write([uint32]44100)
+    $bw.Write([uint32]80)       # first frame offset
+    $bw.Write([byte[]](0..63 | ForEach-Object {
+        [byte](($_ * 37 + 11) % 251)
+    }))
+    [byte[]]$tag = New-ApeV2Tag
+    $bw.Write($tag)
+
+    $bw.Flush()
+    [System.IO.File]::WriteAllBytes($apePath, $ms.ToArray())
+    $bw.Dispose()
+    $ms.Dispose()
 }
 
 # --- hand-crafted DSF fixture ---------------------------------------------------------------

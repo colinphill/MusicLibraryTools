@@ -25,6 +25,7 @@ namespace MusicFileUtilities.Tests
         [InlineData("sample_alac.m4a")]
         [InlineData("sample_aac.m4a")]
         [InlineData("sample.wv")]
+        [InlineData("sample.ape")]
         public void BaselineTagsAreReadFromEveryFormat(string file)
         {
             var tags = Read(file);
@@ -53,6 +54,7 @@ namespace MusicFileUtilities.Tests
             Assert.StartsWith("ID3v2", MediaFile.GetFile(MediaFixtures.Path_("sample.mp3")).Tags.First().TagType);
             Assert.Equal("MP4", MediaFile.GetFile(MediaFixtures.Path_("sample_alac.m4a")).Tags.First().TagType);
             Assert.Equal("APE", MediaFile.GetFile(MediaFixtures.Path_("sample.wv")).Tags.First().TagType);
+            Assert.Equal("APE", MediaFile.GetFile(MediaFixtures.Path_("sample.ape")).Tags.First().TagType);
         }
 
         [Fact]

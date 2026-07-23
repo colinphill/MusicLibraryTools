@@ -14,6 +14,7 @@ public sealed class MediaFormatConsumerTests
     [InlineData("sample.wv")]
     [InlineData("sample_aac.m4a")]
     [InlineData("sample_alac.m4a")]
+    [InlineData("sample.ape")]
     public async Task MediaModelWritabilityComesFromRegistry(string fixture)
     {
         IMediaFormatRegistry registry = MediaFormatRegistry.Default;

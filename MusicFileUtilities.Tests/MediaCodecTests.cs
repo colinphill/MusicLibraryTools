@@ -17,6 +17,7 @@ namespace MusicFileUtilities.Tests
         [InlineData("sample_alac.m4a", "ALAC", CodecType.Lossless)]
         [InlineData("sample_aac.m4a", "AAC", CodecType.Lossy)]
         [InlineData("sample.wv", "WavPack", CodecType.Lossless)]
+        [InlineData("sample.ape", "Monkey's Audio", CodecType.Lossless)]
         public void CodecIdentityAndFormatProperties(string file, string codecName, CodecType type)
         {
             var mf = MediaFile.GetFile(MediaFixtures.Path_(file));
@@ -38,6 +39,7 @@ namespace MusicFileUtilities.Tests
         [InlineData("sample.wav")]
         [InlineData("sample.aiff")]
         [InlineData("sample.aac")]
+        [InlineData("sample.ape")]
         public void DurationAndBitrateAreComputed(string file)
         {
             var c = MediaFile.GetFile(MediaFixtures.Path_(file)).Codecs.First();
@@ -63,6 +65,7 @@ namespace MusicFileUtilities.Tests
         [InlineData("sample.dsf")]
         [InlineData("sample_alac.m4a")]
         [InlineData("sample.wv")]
+        [InlineData("sample.ape")]
         [InlineData("sample.wav")]
         [InlineData("sample.aiff")]
         [InlineData("sample.aac")]

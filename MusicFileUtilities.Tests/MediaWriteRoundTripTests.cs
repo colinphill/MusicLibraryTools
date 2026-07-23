@@ -21,6 +21,7 @@ namespace MusicFileUtilities.Tests
             new object[] { "sample_alac.m4a" },
             new object[] { "sample_aac.m4a" },
             new object[] { "sample.wv" },
+            new object[] { "sample.ape" },
         };
 
         private static Action<TagFields, string> Setter(IMediaFile mf) =>

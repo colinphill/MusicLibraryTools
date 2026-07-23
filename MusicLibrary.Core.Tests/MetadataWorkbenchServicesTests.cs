@@ -158,6 +158,22 @@ public sealed class MetadataWorkbenchServicesTests
     }
 
     [Fact]
+    public async Task Document_ExposesWritableMonkeyAudioApeLayer()
+    {
+        using var media = MediaFixtures.Copy("sample.ape");
+
+        MediaDocument document = await _documents.LoadAsync(media.Path);
+
+        TagLayerDocument layer = Assert.Single(document.TagLayers);
+        Assert.Equal("APE", layer.TagType);
+        Assert.True(layer.SupportsCustomFields);
+        Assert.True(layer.IsWritable);
+        Assert.Equal("TestTitle", document.FirstValue(TagFields.Title));
+        Assert.Equal("Monkey's Audio", document.Codec?.CodecName);
+        Assert.True(document.IsWritable);
+    }
+
+    [Fact]
     public async Task Workbench_LoadsFoldersAndPlaylistOrderWithoutDuplicates()
     {
         using var first = MediaFixtures.Copy("sample.flac");

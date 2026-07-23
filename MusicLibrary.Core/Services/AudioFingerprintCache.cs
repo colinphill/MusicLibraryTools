@@ -96,6 +96,8 @@ public sealed class AudioPayloadIdentityService(
                     stream, hash, littleEndian: false, progress, ct),
                 MediaFormatFamily.Aac => HashTaggedFrames(
                     stream, hash, progress, ct),
+                MediaFormatFamily.MonkeysAudio => HashTaggedFrames(
+                    stream, hash, progress, ct),
                 _ => HashWholeFile(stream, hash, progress, ct),
             }
             : HashWholeFile(stream, hash, progress, ct);

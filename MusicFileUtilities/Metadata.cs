@@ -350,6 +350,10 @@ namespace MusicFileUtilities
                     file = new AACFile(path, readArtwork, knownLength);
                     break;
 
+                case MediaFormatFamily.MonkeysAudio:
+                    file = new MonkeysAudioFile(path, readArtwork, knownLength);
+                    break;
+
                 default:
                     throw new ArgumentException("Invalid File Type", "path");
             }

@@ -20,6 +20,7 @@ legacy MusicFileUtilities iTunes-XML parser has been removed.
 | `.ogg` `.opus` `.spx` | Ogg (Vorbis / Opus / Speex) | Vorbis comments | ✔ | ✔ |
 | `.m4a` `.mp4` `.m4p` `.m4r` `.m4b` `.m4v` | MP4 (AAC / ALAC) | iTunes-style atoms | ✔ | ✔ |
 | `.wv` | WavPack | APEv2 | ✔ | ✔ |
+| `.ape` | Monkey's Audio | APEv2 | ✔ | ✔ |
 | `.wav` `.rf64` | RIFF/RF64 WAVE | ID3v2 chunk | ✔ | ✔ |
 | `.aif` `.aiff` `.aifc` | AIFF / AIFF-C | ID3v2 chunk | ✔ | ✔ |
 | `.aac` | Raw AAC / ADTS | Leading ID3v2 and trailing APEv2 | ✔ | ✔ |
@@ -33,7 +34,8 @@ Embedded artwork is parsed, hashed, measured, and preserved byte-for-byte across
 ### Shared libraries
 
 - **MusicFileUtilities** — the core library. Per-format binary parsers (`ID3.cs`, `FLAC.cs`,
-  `MP4File.cs`, `Vorbis.cs`, `APE.cs`, `WavPack.cs`, `ChunkedAudio.cs`, `AAC.cs`) behind common interfaces:
+  `MP4File.cs`, `Vorbis.cs`, `APE.cs`, `WavPack.cs`, `ChunkedAudio.cs`, `AAC.cs`,
+  `MonkeysAudio.cs`) behind common interfaces:
   `MediaFile.GetFile(path)` dispatches by extension to an `IMediaFile`, which exposes codec
   properties (`ICodecProvider`), tag reading (`IMetadataProvider`), and tag writing
   (`IMetadataWriter`: `SetField` / `RemoveField` / `Save`). Also home to the iTunes library

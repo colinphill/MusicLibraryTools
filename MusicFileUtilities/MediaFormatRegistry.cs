@@ -39,6 +39,7 @@ namespace MusicFileUtilities
         Wave = 6,
         Aiff = 7,
         Aac = 8,
+        MonkeysAudio = 9,
     }
 
     /// <summary>Describes one extension and the operations supported for it.</summary>
@@ -226,6 +227,8 @@ namespace MusicFileUtilities
                 indexed | MediaFormatCapabilities.TranscodeDestination | remux);
             yield return new(".aac", "AAC (ADTS)", MediaFormatFamily.Aac,
                 indexed | remux);
+            yield return new(".ape", "Monkey's Audio", MediaFormatFamily.MonkeysAudio,
+                indexed);
 
             // These variants have long been supported by direct metadata/artwork editing and by
             // iTunes reconciliation, but not by automatic library indexing. Preserve that boundary.

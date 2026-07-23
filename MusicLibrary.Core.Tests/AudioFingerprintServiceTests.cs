@@ -73,6 +73,7 @@ public sealed class AudioFingerprintServiceTests
     [InlineData("sample.wv")]
     [InlineData("sample.dsf")]
     [InlineData("sample.aac")]
+    [InlineData("sample.ape")]
     public async Task PayloadIdentity_IgnoresNativeMetadataChanges(
         string fixture)
     {
@@ -196,6 +197,22 @@ public sealed class AudioFingerprintServiceTests
         Assert.Equal(
             "APE",
             MediaFile.GetFile(media.Path).Tags.First().TagType);
+    }
+
+    [Fact]
+    public async Task PayloadIdentity_TracksMonkeyAudioFrameChanges()
+    {
+        using var media = MediaFixtures.Copy("sample.ape");
+        var identities = new AudioPayloadIdentityService(
+            MediaFormatRegistry.Default);
+        string before = await identities.ComputeAsync(media.Path);
+        byte[] bytes = await File.ReadAllBytesAsync(media.Path);
+
+        bytes[80] ^= 0x5a;
+        await File.WriteAllBytesAsync(media.Path, bytes);
+
+        string after = await identities.ComputeAsync(media.Path);
+        Assert.NotEqual(before, after);
     }
 
     [Fact]
