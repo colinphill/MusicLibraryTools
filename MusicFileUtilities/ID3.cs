@@ -21,6 +21,14 @@ namespace MusicFileUtilities
         V24 = 4,
     }
 
+    public enum ID3TextEncodingPolicy
+    {
+        Automatic,
+        Latin1,
+        Utf16,
+        Utf8,
+    }
+
     public sealed record ID3VersionConversionOptions
     {
         /// <summary>
@@ -764,20 +772,10 @@ namespace MusicFileUtilities
                 return;
             }
 
-            ID3v2Util.ID3Encoding enc;
-            byte[] encoded;
-            try
-            {
-                enc = ID3v2Util.ID3Encoding.ISO8859;
-                encoded = CodeString(enc, string.Join("\0", values_));
-            }
-            catch
-            {
-                enc = (ID3v2Util.UseUTF8 && tag_.Version >= 4)
-                    ? ID3v2Util.ID3Encoding.UTF8
-                    : ID3v2Util.ID3Encoding.MarkedUnicode;
-                encoded = CodeString(enc, string.Join("\0", values_));
-            }
+            ID3v2Util.ID3Encoding enc =
+                tag_.SelectTextEncoding(values_);
+            byte[] encoded =
+                CodeString(enc, string.Join("\0", values_));
 
             Data = new byte[1 + encoded.Length];
             Data[0] = (byte)enc;
@@ -956,29 +954,11 @@ namespace MusicFileUtilities
         public override void Encode()
         {
             // TBD: WXXX ISO8859-1 URL Encoding
-            byte [] k, v;
-            byte enc;
-            try
-            {
-                k = CodeString(ID3v2Util.ID3Encoding.ISO8859, _key);
-                v = CodeString(ID3v2Util.ID3Encoding.ISO8859, _value);
-                enc = (byte)ID3v2Util.ID3Encoding.ISO8859;
-            }
-            catch
-            {
-                if ((ID3v2Util.UseUTF8) && (tag_.Version >= 4))
-                {
-                    k = CodeString(ID3v2Util.ID3Encoding.UTF8, _key);
-                    v = CodeString(ID3v2Util.ID3Encoding.UTF8, _value);
-                    enc = (byte)ID3v2Util.ID3Encoding.UTF8;
-                }
-                else
-                {
-                    k = CodeString(ID3v2Util.ID3Encoding.MarkedUnicode, _key);
-                    v = CodeString(ID3v2Util.ID3Encoding.MarkedUnicode, _value);
-                    enc = (byte)ID3v2Util.ID3Encoding.MarkedUnicode;
-                }
-            }
+            ID3v2Util.ID3Encoding selected =
+                tag_.SelectTextEncoding(_key, _value);
+            byte[] k = CodeString(selected, _key);
+            byte[] v = CodeString(selected, _value);
+            byte enc = (byte)selected;
 
             // Layout: [encoding byte][key][null separator][value].
             // 16-bit encodings use a 2-byte null; ISO8859/UTF8 use a 1-byte null.
@@ -1041,23 +1021,10 @@ namespace MusicFileUtilities
             string language = string.IsNullOrWhiteSpace(_lang) ? "eng" : _lang;
             language = language.PadRight(3).Substring(0, 3);
 
-            ID3v2Util.ID3Encoding encoding;
-            byte[] key;
-            byte[] value;
-            try
-            {
-                encoding = ID3v2Util.ID3Encoding.ISO8859;
-                key = CodeString(encoding, _key ?? "");
-                value = CodeString(encoding, _value ?? "");
-            }
-            catch
-            {
-                encoding = ID3v2Util.UseUTF8 && tag_.Version >= 4
-                    ? ID3v2Util.ID3Encoding.UTF8
-                    : ID3v2Util.ID3Encoding.MarkedUnicode;
-                key = CodeString(encoding, _key ?? "");
-                value = CodeString(encoding, _value ?? "");
-            }
+            ID3v2Util.ID3Encoding encoding =
+                tag_.SelectTextEncoding(_key ?? "", _value ?? "");
+            byte[] key = CodeString(encoding, _key ?? "");
+            byte[] value = CodeString(encoding, _value ?? "");
 
             int separatorLength = encoding is ID3v2Util.ID3Encoding.MarkedUnicode
                 or ID3v2Util.ID3Encoding.BEUnicode ? 2 : 1;
@@ -1228,20 +1195,9 @@ namespace MusicFileUtilities
             // Materialize the payload before Data is rebuilt underneath it.
             byte[] picdata = PicData;
             if (picdata == null) return;
-            ID3v2Util.ID3Encoding encoding;
-            byte[] desc;
-            try
-            {
-                encoding = ID3v2Util.ID3Encoding.ISO8859;
-                desc = CodeString(encoding, _description ?? "");
-            }
-            catch
-            {
-                encoding = ID3v2Util.UseUTF8 && tag_.Version >= 4
-                    ? ID3v2Util.ID3Encoding.UTF8
-                    : ID3v2Util.ID3Encoding.MarkedUnicode;
-                desc = CodeString(encoding, _description ?? "");
-            }
+            ID3v2Util.ID3Encoding encoding =
+                tag_.SelectTextEncoding(_description ?? "");
+            byte[] desc = CodeString(encoding, _description ?? "");
             int descriptionTerminator = encoding is ID3v2Util.ID3Encoding.MarkedUnicode
                 or ID3v2Util.ID3Encoding.BEUnicode ? 2 : 1;
             if (tag_.Version == 2)
@@ -1347,6 +1303,57 @@ namespace MusicFileUtilities
 
         public int Version => _headerversion;
         public int Flags => _flags;
+        public ID3TextEncodingPolicy TextEncodingPolicy { get; private set; } =
+            ID3TextEncodingPolicy.Automatic;
+
+        public void SetTextEncodingPolicy(
+            ID3TextEncodingPolicy policy,
+            bool reencodeExistingFrames = true)
+        {
+            if (policy == ID3TextEncodingPolicy.Utf8 &&
+                _headerversion < 4)
+                throw new InvalidOperationException(
+                    "UTF-8 text encoding requires ID3v2.4.");
+            TextEncodingPolicy = policy;
+            if (!reencodeExistingFrames)
+                return;
+            foreach (ID3v2Frame frame in _frames)
+                if (frame is TextFrame or UserStringFrame or
+                    CommentFrame or PictureFrame)
+                    frame.Encode();
+        }
+
+        internal ID3v2Util.ID3Encoding SelectTextEncoding(
+            params string[] values)
+        {
+            if (TextEncodingPolicy == ID3TextEncodingPolicy.Utf16)
+                return ID3v2Util.ID3Encoding.MarkedUnicode;
+            if (TextEncodingPolicy == ID3TextEncodingPolicy.Utf8)
+            {
+                if (_headerversion < 4)
+                    throw new InvalidOperationException(
+                        "UTF-8 text encoding requires ID3v2.4.");
+                return ID3v2Util.ID3Encoding.UTF8;
+            }
+            if (TextEncodingPolicy == ID3TextEncodingPolicy.Latin1)
+            {
+                foreach (string value in values)
+                    ID3v2Util.ISO8859Encoding.GetBytes(value ?? "");
+                return ID3v2Util.ID3Encoding.ISO8859;
+            }
+            try
+            {
+                foreach (string value in values)
+                    ID3v2Util.ISO8859Encoding.GetBytes(value ?? "");
+                return ID3v2Util.ID3Encoding.ISO8859;
+            }
+            catch (EncoderFallbackException)
+            {
+                return ID3v2Util.UseUTF8 && _headerversion >= 4
+                    ? ID3v2Util.ID3Encoding.UTF8
+                    : ID3v2Util.ID3Encoding.MarkedUnicode;
+            }
+        }
 
         private enum ConvertibleFrameKind
         {
@@ -2873,7 +2880,12 @@ namespace MusicFileUtilities
 
     }
 
-    public class MP3File : ID3v2Tag, ICodecProvider, IMediaFile, IMetadataWriter
+    public class MP3File :
+        ID3v2Tag,
+        ICodecProvider,
+        IMediaFile,
+        IMetadataWriter,
+        ITagLayerEditor
     {
         private static readonly uint[,,] _bitrates = {
             { { 0, 32000, 64000, 96000, 128000, 160000, 192000, 224000, 256000, 288000, 320000, 352000, 384000, 416000, 448000, 0 },
@@ -2890,6 +2902,8 @@ namespace MusicFileUtilities
         private static readonly int[,] _samplesperframe = { { 384, 1152, 1152 }, { 384, 1152, 576 }, { 384, 1152, 576 } };
         private static readonly uint[] _channels = { 2, 2, 2, 1 };
         private static readonly int[] _sideinfolen = { 32, 32, 32, 17 };
+        private readonly ID3v1Tag _id3v1;
+        private bool _hasId3v1;
 
         public IEnumerable<ICodecProvider> Codecs
         {
@@ -2904,8 +2918,21 @@ namespace MusicFileUtilities
             get
             {
                 yield return this;
+                if (_hasId3v1)
+                    yield return _id3v1;
             }
         }
+
+        public IReadOnlyList<TagLayerDescriptor> EditableTagLayers =>
+        [
+            new(
+                TagLayerKind.Id3v1,
+                "ID3v1",
+                _hasId3v1,
+                !_hasId3v1,
+                _hasId3v1,
+                false),
+        ];
 
 
         public MP3File(string filename, bool readArtwork = true)
@@ -2915,23 +2942,26 @@ namespace MusicFileUtilities
 
         internal MP3File(string filename, bool readArtwork, long? knownLength)
         {
+            _id3v1 = new ID3v1Tag(Save);
             using (FileStream s = Tools.OpenReadSequential(filename))
             {
                 long length = knownLength ?? s.Length;
+                _hasId3v1 = _id3v1.Read(s, length);
+                long mediaEnd = _hasId3v1 ? length - 128 : length;
                 ReadTag(s, readArtwork, length);
                 // FileStream.Length is a syscall; don't pay it once per scanned byte while
                 // hunting for the first frame sync.
                 for (; ; )
                 {
                     int b0 = -1, b1 = -1, b5 = -1;
-                    while (s.Position < length)
+                    while (s.Position < mediaEnd)
                     {
                         b1 = b5 = s.ReadByte();
                         if ((b0 == 0xff) && ((b1 & 0xe0) == 0xe0))
                             break;
                         b0 = b1;
                     }
-                    if (s.Position >= length)
+                    if (s.Position >= mediaEnd)
                         return;
                     int ver = (b1 & 0x8) == 0x8 ? 0 : 1;
                     if ((b1 & 0x10) == 0x00)
@@ -2958,7 +2988,7 @@ namespace MusicFileUtilities
                         b0 = b1 = -1;
                         continue;
                     }
-                    long datalength = length - s.Position + 2;
+                    long datalength = mediaEnd - s.Position + 2;
                     int b2 = s.ReadByte();
                     int b3 = s.ReadByte();
                     uint bitrate = _bitrates[ver, layer, b2 >> 4];
@@ -3094,7 +3124,97 @@ namespace MusicFileUtilities
             protected set;
         }
 
+        public void AddTagLayer(
+            TagLayerKind kind,
+            TagLayerCopyMode copyMode = TagLayerCopyMode.CopyPrimary)
+        {
+            if (kind != TagLayerKind.Id3v1)
+                throw new NotSupportedException(
+                    $"MP3 cannot add a {kind} layer through this operation.");
+            if (_hasId3v1)
+                throw new InvalidOperationException(
+                    "The ID3v1 tag layer is already present.");
+            _hasId3v1 = true;
+            if (copyMode == TagLayerCopyMode.CopyPrimary)
+                _id3v1.CopyFrom(this);
+        }
+
+        public void RemoveTagLayer(TagLayerKind kind)
+        {
+            if (kind != TagLayerKind.Id3v1)
+                throw new NotSupportedException(
+                    $"MP3 cannot remove its {kind} layer.");
+            if (!_hasId3v1)
+                throw new InvalidOperationException(
+                    "The ID3v1 tag layer is not present.");
+            _hasId3v1 = false;
+        }
+
+        public void CopyTagLayer(TagLayerKind source, TagLayerKind target)
+        {
+            if (source == TagLayerKind.Id3v2 &&
+                target == TagLayerKind.Id3v1)
+            {
+                if (!_hasId3v1)
+                    _hasId3v1 = true;
+                _id3v1.CopyFrom(this);
+                return;
+            }
+            if (source == TagLayerKind.Id3v1 &&
+                target == TagLayerKind.Id3v2)
+            {
+                if (!_hasId3v1)
+                    throw new InvalidOperationException(
+                        "The ID3v1 source layer is not present.");
+                foreach (KeyValuePair<TagFields, string> value in
+                         _id3v1.GetKnownMetadata())
+                {
+                    try { SetField(value.Key, value.Value); }
+                    catch (ArgumentException) { }
+                }
+                return;
+            }
+            throw new NotSupportedException(
+                $"MP3 cannot convert {source} to {target}.");
+        }
+
+        public new void Save(string outputPath = null)
+        {
+            string target = outputPath ?? _filename
+                ?? throw new InvalidOperationException(
+                    "No filename associated with this file.");
+            base.Save(outputPath);
+            RewriteId3v1(target);
+        }
+
+        void IMetadataWriter.Save(string outputPath) => Save(outputPath);
+
         public void SaveTags(string outputPath = null) => Save(outputPath);
+
+        private void RewriteId3v1(string target)
+        {
+            using var stream = new FileStream(
+                target, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            bool existing = false;
+            if (stream.Length >= 128)
+            {
+                stream.Position = stream.Length - 128;
+                Span<byte> marker = stackalloc byte[3];
+                stream.ReadExactly(marker);
+                existing = marker.SequenceEqual("TAG"u8);
+            }
+            if (!_hasId3v1)
+            {
+                if (existing)
+                    stream.SetLength(stream.Length - 128);
+                return;
+            }
+            stream.Position = existing
+                ? stream.Length - 128
+                : stream.Length;
+            stream.Write(_id3v1.Serialize());
+            stream.Flush(flushToDisk: true);
+        }
 
     }
 

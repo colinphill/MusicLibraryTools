@@ -334,17 +334,28 @@ public sealed record TagLayerDifference(
     bool WasPresent,
     bool WillBePresent);
 
+public sealed record TagLayerConversionEdit(
+    TagLayerKind Source,
+    TagLayerKind Target);
+
+public sealed record TagLayerConversionDifference(
+    TagLayerKind Source,
+    TagLayerKind Target,
+    ImmutableArray<string> CompatibilityIssues);
+
 public sealed record Id3VersionEdit(
     ID3v2Version TargetVersion,
     bool DropUnsupportedFrames = false,
     bool CoalesceTextValues = false,
-    string MultiValueSeparator = "/");
+    string MultiValueSeparator = "/",
+    ID3TextEncodingPolicy? TextEncodingPolicy = null);
 
 public sealed record Id3VersionDifference(
     ID3v2Version SourceVersion,
     ID3v2Version TargetVersion,
     int ConvertedFrameCount,
-    ImmutableArray<ID3VersionConversionIssue> Issues);
+    ImmutableArray<ID3VersionConversionIssue> Issues,
+    ID3TextEncodingPolicy? TextEncodingPolicy = null);
 
 public enum ArtworkValueEditMode
 {
@@ -383,13 +394,16 @@ public sealed record MetadataFilePlan(
     ImmutableArray<TagLayerEdit> TagLayerEdits = default,
     ImmutableArray<TagLayerDifference> TagLayerDifferences = default,
     Id3VersionEdit? Id3VersionEdit = null,
-    Id3VersionDifference? Id3VersionDifference = null)
+    Id3VersionDifference? Id3VersionDifference = null,
+    ImmutableArray<TagLayerConversionEdit> TagLayerConversions = default,
+    ImmutableArray<TagLayerConversionDifference> TagLayerConversionDifferences = default)
 {
     public bool HasChanges =>
         Differences.Length > 0 ||
         ArtworkDifference is not null ||
         !TagLayerDifferences.IsDefaultOrEmpty ||
-        Id3VersionDifference is not null;
+        Id3VersionDifference is not null ||
+        !TagLayerConversionDifferences.IsDefaultOrEmpty;
     public bool CanApply => HasChanges &&
         Issues.All(issue => issue.Severity != OperationIssueSeverity.Blocker);
 }
@@ -408,7 +422,11 @@ public sealed record MetadataOperationPlan(
         (file.TagLayerDifferences.IsDefault
             ? 0
             : file.TagLayerDifferences.Length) +
-        (file.Id3VersionDifference is null ? 0 : 1));
+        (file.Id3VersionDifference is null ? 0 : 1) +
+        (file.TagLayerConversionDifferences.IsDefault
+            ? 0
+            : file.TagLayerConversionDifferences.Length));
+
     public bool CanApply => ChangedFileCount > 0 && Files
         .SelectMany(file => file.Issues)
         .All(issue => issue.Severity != OperationIssueSeverity.Blocker);

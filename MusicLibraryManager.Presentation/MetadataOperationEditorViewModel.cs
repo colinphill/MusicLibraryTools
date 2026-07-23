@@ -60,11 +60,34 @@ public static class MetadataPreviewRowBuilder
                 string issueSummary = version.Issues.Length == 0
                     ? ""
                     : $" ({version.Issues.Length:N0} compatibility issue(s))";
+                string encoding = version.TextEncodingPolicy is null
+                    ? ""
+                    : $", {version.TextEncodingPolicy}";
                 destination.Add(new(
                     Path.GetFileName(file.Path),
-                    "ID3 version",
+                    version.SourceVersion == version.TargetVersion
+                        ? "ID3 text encoding"
+                        : "ID3 version",
                     $"ID3v2.{(int)version.SourceVersion}",
-                    $"ID3v2.{(int)version.TargetVersion}{issueSummary}"));
+                    $"ID3v2.{(int)version.TargetVersion}{encoding}{issueSummary}"));
+            }
+
+            if (!file.TagLayerConversionDifferences.IsDefaultOrEmpty)
+            {
+                foreach (TagLayerConversionDifference conversion in
+                         file.TagLayerConversionDifferences)
+                {
+                    string issueSummary =
+                        conversion.CompatibilityIssues.Length == 0
+                            ? ""
+                            : $" ({conversion.CompatibilityIssues.Length:N0} " +
+                              "compatibility issue(s))";
+                    destination.Add(new(
+                        Path.GetFileName(file.Path),
+                        "Tag-layer conversion",
+                        DescribeTagLayer(conversion.Source),
+                        $"{DescribeTagLayer(conversion.Target)}{issueSummary}"));
+                }
             }
         }
     }

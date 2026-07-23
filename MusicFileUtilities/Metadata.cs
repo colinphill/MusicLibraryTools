@@ -170,6 +170,7 @@ namespace MusicFileUtilities
     /// <summary>Identifies a physical metadata envelope supported by a media format.</summary>
     public enum TagLayerKind
     {
+        Id3v1,
         Id3v2,
         ApeV2,
     }
@@ -201,6 +202,9 @@ namespace MusicFileUtilities
             TagLayerKind kind,
             TagLayerCopyMode copyMode = TagLayerCopyMode.CopyPrimary);
         void RemoveTagLayer(TagLayerKind kind);
+        void CopyTagLayer(TagLayerKind source, TagLayerKind target) =>
+            throw new NotSupportedException(
+                $"Conversion from {source} to {target} is not supported.");
     }
 
     /// <summary>

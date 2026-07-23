@@ -92,7 +92,12 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(PreviewRemoveId3LayerCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewAddApeLayerCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewRemoveApeLayerCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewAddId3v1LayerCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewRemoveId3v1LayerCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewId3VersionCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewId3v2ToId3v1Command))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewId3v1ToId3v2Command))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewId3EncodingCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -118,7 +123,12 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(PreviewRemoveId3LayerCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewAddApeLayerCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewRemoveApeLayerCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewAddId3v1LayerCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewRemoveId3v1LayerCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewId3VersionCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewId3v2ToId3v1Command))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewId3v1ToId3v2Command))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewId3EncodingCommand))]
     private WorkbenchTrackViewModel? _selectedFile;
 
     [ObservableProperty]
@@ -168,6 +178,11 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
 
     [ObservableProperty]
     private bool _coalesceId3TextValues;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PreviewId3EncodingCommand))]
+    private ID3TextEncodingPolicy _selectedId3EncodingPolicy =
+        ID3TextEncodingPolicy.Automatic;
 
     [ObservableProperty]
     private bool _recursive = true;
@@ -278,6 +293,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         Enum.GetValues<WorkbenchFieldEditMode>();
     public IReadOnlyList<ID3v2Version> Id3Versions { get; } =
         Enum.GetValues<ID3v2Version>();
+    public IReadOnlyList<ID3TextEncodingPolicy> Id3EncodingPolicies { get; } =
+        Enum.GetValues<ID3TextEncodingPolicy>();
     public bool HasFiles => Files.Count > 0;
     public bool HasPreview => PreviewChanges.Count > 0;
     public bool HasUnsavedChanges =>
@@ -665,6 +682,14 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private Task PreviewRemoveApeLayerAsync() =>
         PreviewTagLayerAsync(TagLayerKind.ApeV2, TagLayerEditMode.Remove);
 
+    [RelayCommand(CanExecute = nameof(CanPreviewAddId3v1Layer))]
+    private Task PreviewAddId3v1LayerAsync() =>
+        PreviewTagLayerAsync(TagLayerKind.Id3v1, TagLayerEditMode.Add);
+
+    [RelayCommand(CanExecute = nameof(CanPreviewRemoveId3v1Layer))]
+    private Task PreviewRemoveId3v1LayerAsync() =>
+        PreviewTagLayerAsync(TagLayerKind.Id3v1, TagLayerEditMode.Remove);
+
     private async Task PreviewTagLayerAsync(
         TagLayerKind kind,
         TagLayerEditMode mode)
@@ -708,6 +733,12 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private bool CanPreviewRemoveApeLayer() =>
         CanEditTagLayer(TagLayerKind.ApeV2, add: false);
 
+    private bool CanPreviewAddId3v1Layer() =>
+        CanEditTagLayer(TagLayerKind.Id3v1, add: true);
+
+    private bool CanPreviewRemoveId3v1Layer() =>
+        CanEditTagLayer(TagLayerKind.Id3v1, add: false);
+
     private bool CanEditTagLayer(TagLayerKind kind, bool add)
     {
         TagLayerDescriptor? layer =
@@ -742,6 +773,73 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         !IsBusy &&
         SelectedFile?.Document.Id3Version is { } source &&
         source != TargetId3Version;
+
+    [RelayCommand(CanExecute = nameof(CanPreviewId3v2ToId3v1))]
+    private Task PreviewId3v2ToId3v1Async() =>
+        PreviewTagLayerConversionAsync(
+            TagLayerKind.Id3v2, TagLayerKind.Id3v1);
+
+    [RelayCommand(CanExecute = nameof(CanPreviewId3v1ToId3v2))]
+    private Task PreviewId3v1ToId3v2Async() =>
+        PreviewTagLayerConversionAsync(
+            TagLayerKind.Id3v1, TagLayerKind.Id3v2);
+
+    private async Task PreviewTagLayerConversionAsync(
+        TagLayerKind source,
+        TagLayerKind target)
+    {
+        if (SelectedFile is null)
+            return;
+        var edits = new Dictionary<string, TagLayerConversionEdit>(
+            PathComparer)
+        {
+            [SelectedFile.Path] = new(source, target),
+        };
+        await PreviewAsync((progress, ct) =>
+            _operations.PreviewTagLayerConversionsAsync(
+                edits,
+                $"Convert {source} to {target}",
+                progress,
+                ct));
+    }
+
+    private bool CanPreviewId3v2ToId3v1() =>
+        !IsBusy &&
+        SelectedFile?.HasId3Tag == true &&
+        SelectedFile.Document.EditableTagLayers.Any(layer =>
+            layer.Kind == TagLayerKind.Id3v1);
+
+    private bool CanPreviewId3v1ToId3v2() =>
+        !IsBusy &&
+        SelectedFile?.Document.EditableTagLayers.Any(layer =>
+            layer.Kind == TagLayerKind.Id3v1 &&
+            layer.IsPresent) == true;
+
+    [RelayCommand(CanExecute = nameof(CanPreviewId3Encoding))]
+    private async Task PreviewId3EncodingAsync()
+    {
+        if (SelectedFile?.Document.Id3Version is not { } version)
+            return;
+        var edits = new Dictionary<string, Id3VersionEdit>(
+            PathComparer)
+        {
+            [SelectedFile.Path] = new(
+                version,
+                TextEncodingPolicy: SelectedId3EncodingPolicy),
+        };
+        await PreviewAsync((progress, ct) =>
+            _operations.PreviewId3VersionEditsAsync(
+                edits,
+                $"Re-encode ID3 text as {SelectedId3EncodingPolicy}",
+                progress,
+                ct));
+    }
+
+    private bool CanPreviewId3Encoding() =>
+        !IsBusy &&
+        SelectedFile?.Document.Id3Version is { } version &&
+        (SelectedId3EncodingPolicy != ID3TextEncodingPolicy.Utf8 ||
+         version == ID3v2Version.V24);
 
     private async Task PreviewAsync(
         Func<IProgress<OperationProgress>, CancellationToken,

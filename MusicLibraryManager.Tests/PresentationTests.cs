@@ -2383,6 +2383,9 @@ internal sealed class FakeMetadataOperationService : IMetadataOperationService
     public IReadOnlyDictionary<string, Id3VersionEdit>
         PreviewedId3VersionEdits { get; private set; } =
             new Dictionary<string, Id3VersionEdit>();
+    public IReadOnlyDictionary<string, TagLayerConversionEdit>
+        PreviewedTagLayerConversions { get; private set; } =
+            new Dictionary<string, TagLayerConversionEdit>();
     public bool WaitForCancellation { get; init; }
     public bool CancellationObserved { get; private set; }
     public TaskCompletionSource<bool> PreviewStarted { get; } =
@@ -2577,6 +2580,27 @@ internal sealed class FakeMetadataOperationService : IMetadataOperationService
             [],
             Id3VersionEdit: edit,
             Id3VersionDifference: difference);
+        return Task.FromResult(new MetadataOperationPlan(
+            Guid.NewGuid(), name, [file], DateTimeOffset.UtcNow));
+    }
+
+    public Task<MetadataOperationPlan> PreviewTagLayerConversionsAsync(
+        IReadOnlyDictionary<string, TagLayerConversionEdit> editsByPath,
+        string name,
+        CancellationToken ct = default)
+    {
+        PreviewedTagLayerConversions = editsByPath;
+        (string path, TagLayerConversionEdit edit) = editsByPath.First();
+        var difference = new TagLayerConversionDifference(
+            edit.Source, edit.Target, []);
+        var file = new MetadataFilePlan(
+            path,
+            new(path, 1, DateTime.UtcNow, "hash"),
+            [],
+            [],
+            [],
+            TagLayerConversions: [edit],
+            TagLayerConversionDifferences: [difference]);
         return Task.FromResult(new MetadataOperationPlan(
             Guid.NewGuid(), name, [file], DateTimeOffset.UtcNow));
     }

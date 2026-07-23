@@ -925,6 +925,125 @@ public sealed class MetadataWorkbenchServicesTests
     }
 
     [Fact]
+    public async Task Id3v1Workbench_ConvertsEditsRemovesAndUndoes()
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(), "mlm-id3v1-" + Guid.NewGuid().ToString("N"));
+        string recovery = session + ".MusicLibraryManager-recovery";
+        Directory.CreateDirectory(session);
+        string mediaPath = Path.Combine(session, "track.mp3");
+        File.Copy(MediaFixtures.Path_("sample.mp3"), mediaPath);
+        string statePath = Path.Combine(session, "settings.json");
+        try
+        {
+            var seed = Assert.IsType<MP3File>(
+                MediaFile.GetFile(mediaPath, readOnly: false));
+            seed.SetField(TagFields.Title, new string('T', 35));
+            seed.Save();
+            var settings = new AppSettings(statePath);
+            var history = new EditHistoryService(
+                settings, new OperationJournalService());
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings,
+                history: history);
+
+            MetadataOperationPlan toV1 =
+                await service.PreviewTagLayerConversionsAsync(
+                    new Dictionary<string, TagLayerConversionEdit>
+                    {
+                        [mediaPath] = new(
+                            TagLayerKind.Id3v2,
+                            TagLayerKind.Id3v1),
+                    },
+                    "Create compatible ID3v1");
+
+            Assert.True(toV1.CanApply);
+            Assert.Contains(
+                Assert.Single(toV1.Files).Issues,
+                issue => issue.Severity == OperationIssueSeverity.Warning &&
+                    issue.Message.Contains("Title"));
+            await service.ApplyAsync(toV1);
+
+            var withV1 = Assert.IsType<MP3File>(
+                MediaFile.GetFile(mediaPath));
+            Assert.Equal(2, withV1.Tags.Count());
+            Assert.Equal(new string('T', 30), withV1.Tags.Last().Title);
+            IMetadataWriter legacy = Assert.IsAssignableFrom<IMetadataWriter>(
+                withV1.Tags.Last());
+            legacy.SetField(TagFields.Title, "Legacy edited title");
+            legacy.Save();
+
+            MetadataOperationPlan toV2 =
+                await service.PreviewTagLayerConversionsAsync(
+                    new Dictionary<string, TagLayerConversionEdit>
+                    {
+                        [mediaPath] = new(
+                            TagLayerKind.Id3v1,
+                            TagLayerKind.Id3v2),
+                    },
+                    "Import ID3v1");
+            await service.ApplyAsync(toV2);
+            Assert.Equal(
+                "Legacy edited title",
+                MediaFile.GetFile(mediaPath).Tags.First().Title);
+
+            MetadataOperationPlan encoding =
+                await service.PreviewId3VersionEditsAsync(
+                    new Dictionary<string, Id3VersionEdit>
+                    {
+                        [mediaPath] = new(
+                            ID3v2Version.V23,
+                            TextEncodingPolicy:
+                                ID3TextEncodingPolicy.Utf16),
+                    },
+                    "Use UTF-16");
+            Assert.True(encoding.CanApply);
+            await service.ApplyAsync(encoding);
+            var encoded = Assert.IsType<MP3File>(
+                MediaFile.GetFile(mediaPath));
+            TextFrame title = Assert.IsType<TextFrame>(
+                encoded.Frames.Single(frame =>
+                    frame.FrameID == "TIT2"));
+            Assert.Equal(
+                (byte)ID3v2Util.ID3Encoding.MarkedUnicode,
+                title.Data[0]);
+
+            byte[] beforeRemoval =
+                await File.ReadAllBytesAsync(mediaPath);
+            MetadataOperationPlan removal =
+                await service.PreviewTagLayerEditsAsync(
+                    new Dictionary<string, IReadOnlyList<TagLayerEdit>>
+                    {
+                        [mediaPath] =
+                        [
+                            new(
+                                TagLayerKind.Id3v1,
+                                TagLayerEditMode.Remove),
+                        ],
+                    },
+                    "Remove ID3v1");
+            await service.ApplyAsync(removal);
+            Assert.Single(MediaFile.GetFile(mediaPath).Tags);
+
+            Assert.Equal(1, await history.UndoLatestAsync());
+            Assert.Equal(
+                beforeRemoval,
+                await File.ReadAllBytesAsync(mediaPath));
+            Assert.Equal(
+                "Legacy edited title",
+                MediaFile.GetFile(mediaPath).Tags.Last().Title);
+        }
+        finally
+        {
+            try { Directory.Delete(session, recursive: true); } catch { }
+            try { Directory.Delete(recovery, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public async Task Apply_RoundTripsOrderedVorbisValuesWithoutJoiningThem()
     {
         string session = Path.Combine(

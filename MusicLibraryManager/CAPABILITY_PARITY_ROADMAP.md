@@ -432,7 +432,9 @@ application concepts.
 - [~] Keep new formats out of automatic indexing until preservation tests pass.
   M4B and M4V remain Workbench/direct-edit formats after passing MP4
   preservation tests; each later family must pass its own release gate.
-- [~] Inspect all layers present in a file.
+- [x] Inspect all layers present in a file.
+  - Raw AAC projects independent leading ID3v2 and trailing APEv2 layers;
+    MP3 now projects both leading ID3v2 and trailing ID3v1/ID3v1.1 layers.
 - [x] Add or remove specific tag types.
   - Raw AAC exposes honest ID3v2/APEv2 layer descriptors and can add either
     layer empty or by copying the primary layer's known fields, custom text,
@@ -449,8 +451,19 @@ application concepts.
     explicit drop-unsupported and join-multi-value options with warnings.
   - Conversion uses staged writes, stale-plan validation, recovery journals,
     and undo across MP3, DSF, chunked WAVE/AIFF, and raw AAC ID3 layers.
-- [ ] Configure ID3 encoding and ID3v1 compatibility.
-- [ ] Preview truncation, unsupported fields, and lossy conversions.
+- [x] Configure ID3 encoding and ID3v1 compatibility.
+  - ID3v2 writes can explicitly re-encode text as Latin-1, UTF-16, or
+    ID3v2.4 UTF-8 without changing process-wide parser settings.
+  - MP3 exposes a physical ID3v1/ID3v1.1 layer for reading, field edits,
+    addition, removal, and bidirectional copying with ID3v2.
+  - Workbench previews fixed-width truncation, omitted fields, and
+    unrepresentable ID3v1 text, then stages conversion or removal through
+    stale checks, recovery journals, and undo.
+- [~] Preview truncation, unsupported fields, and lossy conversions.
+  ID3 version conversion and ID3v1 compatibility previews report dropped
+  frames, coalesced values, omitted fields, fixed-width truncation, and
+  characters outside Latin-1; equivalent coverage is still required for
+  later format-specific lossy operations.
 - [x] Preserve native-parser ownership; do not add a general tagging library.
 
 **Acceptance:** Target format families have native coverage with accurate

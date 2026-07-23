@@ -95,7 +95,7 @@
                     BorderBrush="{DynamicResource AppBorderBrush}"
                     BorderThickness="1"
                     IsVisible="{Binding SelectedFile.HasEditableTagLayers}">
-              <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*"
+              <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,*"
                     ColumnSpacing="8">
                 <TextBlock VerticalAlignment="Center"
                            FontWeight="SemiBold"
@@ -112,7 +112,13 @@
                 <Button Grid.Column="4" Classes="app"
                         Content="Remove APEv2"
                         Command="{Binding PreviewRemoveApeLayerCommand}" />
-                <CheckBox Grid.Column="5" HorizontalAlignment="Right"
+                <Button Grid.Column="5" Classes="app"
+                        Content="Add ID3v1"
+                        Command="{Binding PreviewAddId3v1LayerCommand}" />
+                <Button Grid.Column="6" Classes="app"
+                        Content="Remove ID3v1"
+                        Command="{Binding PreviewRemoveId3v1LayerCommand}" />
+                <CheckBox Grid.Column="7" HorizontalAlignment="Right"
                           VerticalAlignment="Center"
                           Content="Copy primary metadata into a new layer"
                           IsChecked="{Binding CopyPrimaryMetadataToNewLayer, Mode=TwoWay}" />
@@ -123,7 +129,7 @@
                     BorderBrush="{DynamicResource AppBorderBrush}"
                     BorderThickness="1"
                     IsVisible="{Binding SelectedFile.HasId3Tag}">
-              <Grid ColumnDefinitions="Auto,150,Auto,Auto,Auto,*"
+              <Grid ColumnDefinitions="Auto,120,Auto,Auto,Auto,Auto,Auto,120,Auto,*"
                     ColumnSpacing="8">
                 <TextBlock VerticalAlignment="Center"
                            FontWeight="SemiBold"
@@ -140,7 +146,19 @@
                 <Button Grid.Column="4" Classes="app primary"
                         Content="Preview conversion"
                         Command="{Binding PreviewId3VersionCommand}" />
-                <TextBlock Grid.Column="5" Classes="muted"
+                <Button Grid.Column="5" Classes="app"
+                        Content="Copy v2 → v1"
+                        Command="{Binding PreviewId3v2ToId3v1Command}" />
+                <Button Grid.Column="6" Classes="app"
+                        Content="Copy v1 → v2"
+                        Command="{Binding PreviewId3v1ToId3v2Command}" />
+                <ComboBox Grid.Column="7" Classes="app"
+                          ItemsSource="{Binding Id3EncodingPolicies}"
+                          SelectedItem="{Binding SelectedId3EncodingPolicy, Mode=TwoWay}" />
+                <Button Grid.Column="8" Classes="app"
+                        Content="Preview encoding"
+                        Command="{Binding PreviewId3EncodingCommand}" />
+                <TextBlock Grid.Column="9" Classes="muted"
                            VerticalAlignment="Center"
                            Text="{Binding SelectedFile.Document.Id3Version, StringFormat='Current: {0}'}" />
               </Grid>

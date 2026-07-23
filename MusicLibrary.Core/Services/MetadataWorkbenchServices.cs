@@ -90,6 +90,18 @@ public interface IMetadataOperationService
         CancellationToken ct = default) =>
         PreviewTagLayerEditsAsync(editsByPath, name, ct);
 
+    Task<MetadataOperationPlan> PreviewTagLayerConversionsAsync(
+        IReadOnlyDictionary<string, TagLayerConversionEdit> editsByPath,
+        string name,
+        CancellationToken ct = default);
+
+    Task<MetadataOperationPlan> PreviewTagLayerConversionsAsync(
+        IReadOnlyDictionary<string, TagLayerConversionEdit> editsByPath,
+        string name,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct = default) =>
+        PreviewTagLayerConversionsAsync(editsByPath, name, ct);
+
     Task<MetadataOperationPlan> PreviewId3VersionEditsAsync(
         IReadOnlyDictionary<string, Id3VersionEdit> editsByPath,
         string name,
@@ -786,6 +798,42 @@ public sealed class MetadataOperationService(
                 effective.Add(edit);
             }
 
+            TagLayerEdit? copiedId3v1 = effective.FirstOrDefault(edit =>
+                edit.Kind == TagLayerKind.Id3v1 &&
+                edit.Mode == TagLayerEditMode.Add &&
+                edit.CopyMode == TagLayerCopyMode.CopyPrimary);
+            if (copiedId3v1 is not null)
+            {
+                try
+                {
+                    IMediaFile media = MediaFile.GetFile(
+                        document.Path,
+                        readOnly: false,
+                        readArtwork: true,
+                        formatRegistry: formats);
+                    ((ITagLayerEditor)media).AddTagLayer(
+                        TagLayerKind.Id3v1,
+                        TagLayerCopyMode.CopyPrimary);
+                    ID3v1Tag id3v1 = media.Tags.OfType<ID3v1Tag>().Single();
+                    foreach (ID3v1CompatibilityIssue issue in
+                             id3v1.GetCompatibilityIssues())
+                        issues.Add(new(
+                            "id3v1.truncation",
+                            OperationIssueSeverity.Warning,
+                            issue.Message,
+                            document.Path));
+                }
+                catch (Exception error) when (
+                    error is not OperationCanceledException)
+                {
+                    issues.Add(new(
+                        "id3v1.preview",
+                        OperationIssueSeverity.Blocker,
+                        error.Message,
+                        document.Path));
+                }
+            }
+
             ImmutableArray<TagLayerDifference> differences =
                 [.. supported.Values
                     .Where(layer =>
@@ -810,6 +858,120 @@ public sealed class MetadataOperationService(
             editsByPath.Count,
             editsByPath.Count,
             Message: $"Previewed tag layers for {editsByPath.Count:N0} file(s)"));
+        return new(
+            Guid.NewGuid(), name, [.. plans], DateTimeOffset.UtcNow);
+    }
+
+    public async Task<MetadataOperationPlan> PreviewTagLayerConversionsAsync(
+        IReadOnlyDictionary<string, TagLayerConversionEdit> editsByPath,
+        string name,
+        CancellationToken ct = default) =>
+        await PreviewTagLayerConversionsAsync(
+            editsByPath, name, progress: null, ct);
+
+    public async Task<MetadataOperationPlan> PreviewTagLayerConversionsAsync(
+        IReadOnlyDictionary<string, TagLayerConversionEdit> editsByPath,
+        string name,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(editsByPath);
+        var plans = new List<MetadataFilePlan>(editsByPath.Count);
+        int index = 0;
+        foreach ((string path, TagLayerConversionEdit edit) in editsByPath)
+        {
+            ct.ThrowIfCancellationRequested();
+            progress?.Report(new(
+                OperationPhase.Planning,
+                index++,
+                editsByPath.Count,
+                path,
+                "Previewing tag-layer conversion"));
+            MediaDocument document;
+            try
+            {
+                document = await documents.LoadAsync(path, true, ct);
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                plans.Add(Unavailable(path, error));
+                continue;
+            }
+            var issues = new List<OperationIssue>();
+            if (!document.IsWritable)
+                issues.Add(new(
+                    "metadata.read-only",
+                    OperationIssueSeverity.Blocker,
+                    "This media format is not writable.",
+                    document.Path));
+            ValidatePolicy(document.Path, issues);
+            var compatibility = new List<string>();
+            bool converted = false;
+            try
+            {
+                IMediaFile media = MediaFile.GetFile(
+                    document.Path,
+                    readOnly: false,
+                    readArtwork: true,
+                    formatRegistry: formats);
+                if (media is not ITagLayerEditor editor)
+                    throw new NotSupportedException(
+                        "The native format handler cannot convert tag layers.");
+                IMetadataProvider source = FindTagLayer(media, edit.Source)
+                    ?? throw new InvalidOperationException(
+                        $"The {edit.Source} source layer is not present.");
+                KeyValuePair<TagFields, string>[] sourceValues =
+                    source.GetKnownMetadata().ToArray();
+                editor.CopyTagLayer(edit.Source, edit.Target);
+                IMetadataProvider target = FindTagLayer(media, edit.Target)
+                    ?? throw new InvalidOperationException(
+                        $"The {edit.Target} target layer was not created.");
+                HashSet<TagFields> targetFields = target.GetKnownMetadata()
+                    .Select(value => value.Key)
+                    .ToHashSet();
+                foreach (TagFields field in sourceValues
+                             .Select(value => value.Key)
+                             .Distinct()
+                             .Where(field => !targetFields.Contains(field)))
+                    compatibility.Add(
+                        $"{field} has no representation in {edit.Target}.");
+                if (target is ID3v1Tag id3v1)
+                    compatibility.AddRange(id3v1.GetCompatibilityIssues()
+                        .Select(issue => issue.Message));
+                foreach (string issue in compatibility.Distinct())
+                    issues.Add(new(
+                        "tag-layer.conversion-loss",
+                        OperationIssueSeverity.Warning,
+                        issue,
+                        document.Path));
+                converted = true;
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                issues.Add(new(
+                    "tag-layer.conversion",
+                    OperationIssueSeverity.Blocker,
+                    error.Message,
+                    document.Path));
+            }
+            plans.Add(new(
+                document.Path,
+                document.Snapshot,
+                [],
+                [],
+                [.. issues],
+                TagLayerConversions: converted ? [edit] : [],
+                TagLayerConversionDifferences:
+                [
+                    new(edit.Source, edit.Target, [.. compatibility]),
+                ]));
+        }
+        AddRecoverySpaceIssues(plans);
+        progress?.Report(new(
+            OperationPhase.Completed,
+            editsByPath.Count,
+            editsByPath.Count,
+            Message: $"Previewed {editsByPath.Count:N0} tag conversion(s)"));
         return new(
             Guid.NewGuid(), name, [.. plans], DateTimeOffset.UtcNow);
     }
@@ -1005,7 +1167,8 @@ public sealed class MetadataOperationService(
                     [.. issues]));
                 continue;
             }
-            if (sourceVersion == edit.TargetVersion)
+            if (sourceVersion == edit.TargetVersion &&
+                edit.TextEncodingPolicy is null)
             {
                 issues.Add(new(
                     "id3-version.already-target",
@@ -1036,17 +1199,25 @@ public sealed class MetadataOperationService(
                 if (tag is null)
                     throw new InvalidOperationException(
                         "The native ID3v2 tag is not writable.");
-                conversion = tag.ChangeVersion(
-                    edit.TargetVersion,
-                    new ID3VersionConversionOptions
-                    {
-                        DropUnsupportedFrames =
-                            edit.DropUnsupportedFrames,
-                        CoalesceTextValues =
-                            edit.CoalesceTextValues,
-                        MultiValueSeparator =
-                            edit.MultiValueSeparator,
-                    });
+                conversion = sourceVersion == edit.TargetVersion
+                    ? new(
+                        sourceVersion,
+                        edit.TargetVersion,
+                        0,
+                        [])
+                    : tag.ChangeVersion(
+                        edit.TargetVersion,
+                        new ID3VersionConversionOptions
+                        {
+                            DropUnsupportedFrames =
+                                edit.DropUnsupportedFrames,
+                            CoalesceTextValues =
+                                edit.CoalesceTextValues,
+                            MultiValueSeparator =
+                                edit.MultiValueSeparator,
+                        });
+                if (edit.TextEncodingPolicy is { } encoding)
+                    tag.SetTextEncodingPolicy(encoding);
                 conversionIssues = [.. conversion.Issues];
                 converted = true;
             }
@@ -1088,7 +1259,8 @@ public sealed class MetadataOperationService(
                     sourceVersion,
                     edit.TargetVersion,
                     conversion?.ConvertedFrameCount ?? 0,
-                    conversionIssues)));
+                    conversionIssues,
+                    edit.TextEncodingPolicy)));
         }
         AddRecoverySpaceIssues(plans);
         progress?.Report(new(
@@ -1134,6 +1306,7 @@ public sealed class MetadataOperationService(
                 filePlan.Path,
                 filePlan.ArtworkEdit is not null ||
                 !filePlan.TagLayerEdits.IsDefaultOrEmpty ||
+                !filePlan.TagLayerConversions.IsDefaultOrEmpty ||
                 filePlan.Id3VersionEdit is not null,
                 ct);
             if (current.Snapshot.Length != filePlan.Snapshot.Length ||
@@ -1603,6 +1776,16 @@ public sealed class MetadataOperationService(
                         layerEditor.RemoveTagLayer(edit.Kind);
                 }
             }
+            if (!plan.TagLayerConversions.IsDefaultOrEmpty)
+            {
+                if (file is not ITagLayerEditor layerEditor)
+                    throw new InvalidOperationException(
+                        "The file cannot convert tag layers.");
+                foreach (TagLayerConversionEdit conversion in
+                         plan.TagLayerConversions)
+                    layerEditor.CopyTagLayer(
+                        conversion.Source, conversion.Target);
+            }
             if (plan.Id3VersionEdit is { } versionEdit)
             {
                 ID3v2Tag? id3 = file as ID3v2Tag ??
@@ -1610,17 +1793,20 @@ public sealed class MetadataOperationService(
                 if (id3 is null)
                     throw new InvalidOperationException(
                         "The file has no writable ID3v2 tag.");
-                id3.ChangeVersion(
-                    versionEdit.TargetVersion,
-                    new ID3VersionConversionOptions
-                    {
-                        DropUnsupportedFrames =
-                            versionEdit.DropUnsupportedFrames,
-                        CoalesceTextValues =
-                            versionEdit.CoalesceTextValues,
-                        MultiValueSeparator =
-                            versionEdit.MultiValueSeparator,
-                    });
+                if (id3.Version != (int)versionEdit.TargetVersion)
+                    id3.ChangeVersion(
+                        versionEdit.TargetVersion,
+                        new ID3VersionConversionOptions
+                        {
+                            DropUnsupportedFrames =
+                                versionEdit.DropUnsupportedFrames,
+                            CoalesceTextValues =
+                                versionEdit.CoalesceTextValues,
+                            MultiValueSeparator =
+                                versionEdit.MultiValueSeparator,
+                        });
+                if (versionEdit.TextEncodingPolicy is { } encoding)
+                    id3.SetTextEncodingPolicy(encoding);
             }
             if (writer is null && vorbis is null && custom is null &&
                 plan.Edits.Length > 0)
@@ -1722,6 +1908,19 @@ public sealed class MetadataOperationService(
         new(true, false, info.Length, info.LastWriteTimeUtc)
         {
             Path = info.FullName,
+        };
+
+    private static IMetadataProvider? FindTagLayer(
+        IMediaFile media,
+        TagLayerKind kind) => kind switch
+        {
+            TagLayerKind.Id3v1 =>
+                media.Tags.OfType<ID3v1Tag>().FirstOrDefault(),
+            TagLayerKind.Id3v2 =>
+                media.Tags.OfType<ID3v2Tag>().FirstOrDefault(),
+            TagLayerKind.ApeV2 =>
+                media.Tags.OfType<APETag>().FirstOrDefault(),
+            _ => null,
         };
 
     private static string CommonDirectory(IEnumerable<string> paths)
