@@ -109,7 +109,7 @@
                 Background="{DynamicResource AppPanelBrush}" BorderBrush="{DynamicResource AppBorderStrongBrush}"
                 BorderThickness="1" CornerRadius="9" Padding="12" BoxShadow="0 14 40 0 #77000000">
           <Grid RowDefinitions="Auto,*" RowSpacing="8">
-            <Grid ColumnDefinitions="*,Auto">
+            <Grid ColumnDefinitions="*,300,Auto" ColumnSpacing="8">
               <TextBlock VerticalAlignment="Center" Text="Columns" FontSize="14" FontWeight="SemiBold" />
               <Button x:Name="CloseColumnsButton" Grid.Column="1" Classes="app" Width="28" Height="28"
                       Padding="0" Content="&#x2715;" ToolTip.Tip="Close column selector" Click="OnColumnsClose" />
@@ -185,7 +185,16 @@
                 <TextBlock Classes="muted"
                            Text="The same typed operations used by Workbench, applied to an explicit Library scope." />
               </StackPanel>
-              <Button Grid.Column="1" Classes="app" Width="30" Height="30"
+              <Grid Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                <ComboBox Classes="app"
+                          ItemsSource="{Binding OperationEditor.SavedRecipes}"
+                          SelectedItem="{Binding OperationEditor.SelectedSavedRecipe, Mode=TwoWay}"
+                          DisplayMemberBinding="{Binding Name}"
+                          PlaceholderText="Personal recipe" />
+                <Button Grid.Column="1" Classes="app" Content="Load"
+                        Command="{Binding OperationEditor.LoadRecipeCommand}" />
+              </Grid>
+              <Button Grid.Column="2" Classes="app" Width="30" Height="30"
                       Padding="0" Content="&#x2715;"
                       Command="{Binding CloseOperationsCommand}" />
             </Grid>
@@ -242,7 +251,7 @@
               </StackPanel>
             </Grid>
 
-            <Grid Grid.Row="3" ColumnDefinitions="Auto,Auto,Auto,Auto,*" ColumnSpacing="10">
+            <Grid Grid.Row="3" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,150,130,150,*" ColumnSpacing="10">
               <CheckBox VerticalAlignment="Center" Content="Regular expression"
                         IsChecked="{Binding OperationEditor.UseRegularExpression, Mode=TwoWay}" />
               <TextBlock Grid.Column="1" Classes="muted" VerticalAlignment="Center"
@@ -252,7 +261,19 @@
               <NumericUpDown Grid.Column="3" Classes="app" Width="85" Minimum="0" Maximum="12"
                              Value="{Binding OperationEditor.SequencePadding, Mode=TwoWay}"
                              ToolTip.Tip="Sequence padding" />
-              <Button Grid.Column="4" HorizontalAlignment="Right" Classes="app primary"
+              <CheckBox Grid.Column="4" VerticalAlignment="Center" Content="Condition"
+                        IsChecked="{Binding OperationEditor.ConditionEnabled, Mode=TwoWay}" />
+              <ComboBox Grid.Column="5" Classes="app"
+                        ItemsSource="{Binding OperationEditor.Fields}"
+                        DisplayMemberBinding="{Binding Label}"
+                        SelectedItem="{Binding OperationEditor.SelectedConditionField, Mode=TwoWay}" />
+              <ComboBox Grid.Column="6" Classes="app"
+                        ItemsSource="{Binding OperationEditor.ConditionOperators}"
+                        SelectedItem="{Binding OperationEditor.SelectedConditionOperator, Mode=TwoWay}" />
+              <TextBox Grid.Column="7" Classes="app"
+                       Text="{Binding OperationEditor.ConditionValue, Mode=TwoWay}"
+                       PlaceholderText="Condition value" />
+              <Button Grid.Column="8" HorizontalAlignment="Right" Classes="app primary"
                       Content="Preview" Command="{Binding PreviewLibraryOperationCommand}" />
             </Grid>
 

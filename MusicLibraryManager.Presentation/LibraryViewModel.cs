@@ -118,6 +118,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         WorkbenchViewModel? workbench = null,
         IMetadataOperationService? metadataOperations = null,
         IMetadataOperationCatalog? operationCatalog = null,
+        IOperationRecipeStore? recipeStore = null,
         IDialogCoordinator? dialogs = null)
     {
         _library = library;
@@ -131,7 +132,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         _dialogs = dialogs;
         OperationEditor = new(
             operationCatalog ?? new MetadataOperationCatalog(),
-            MetadataOperationSurface.Library);
+            MetadataOperationSurface.Library,
+            recipeStore);
         OperationEditor.PropertyChanged += (_, _) => InvalidateLibraryOperationPreview();
         Indexing = indexing;
         foreach (DetailsColumn column in DetailsColumns.All)

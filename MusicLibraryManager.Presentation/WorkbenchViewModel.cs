@@ -90,6 +90,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         IWorkbenchService workbench,
         IMetadataOperationService operations,
         IMetadataOperationCatalog operationCatalog,
+        IOperationRecipeStore recipeStore,
         IEditHistoryService history,
         IFilePickerService files,
         IDialogCoordinator dialogs,
@@ -102,7 +103,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         _dialogs = dialogs;
         _settings = settings;
         OperationEditor = new(
-            operationCatalog, MetadataOperationSurface.Workbench);
+            operationCatalog, MetadataOperationSurface.Workbench, recipeStore);
         KnownFieldChoices = Enum.GetValues<TagFields>()
             .Where(field => field != TagFields.NullField)
             .Select(field => new MetadataFieldChoice(field, field.ToString()))
@@ -124,6 +125,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     public bool HasUnsavedChanges =>
         _plan is not null || Files.Any(file => file.HasChanges);
     public bool CanUndoLatest => _history.CanUndo && !IsBusy;
+    public bool CanRedoLatest => _history.CanRedo && !IsBusy;
+    public bool CanRepeatLatest =>
+        _history.Entries.FirstOrDefault()?.Recipe is not null &&
+        Files.Count > 0 && !IsBusy;
 
     partial void OnSelectedFileChanged(WorkbenchTrackViewModel? value)
     {
@@ -443,6 +448,29 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanRedo))]
+    private async Task RedoAsync()
+    {
+        EditHistoryEntry? candidate = _history.RedoEntries
+            .FirstOrDefault(entry => entry.Recipe is not null);
+        if (candidate?.Recipe is null)
+            return;
+        await PreviewAsync(() => _operations.PreviewAsync(
+            candidate.Paths, candidate.Recipe));
+        StatusText = "Redo was regenerated against the current files. Review the preview before applying.";
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRepeat))]
+    private async Task RepeatAsync()
+    {
+        OperationRecipe? recipe = _history.Entries.FirstOrDefault()?.Recipe;
+        if (recipe is null)
+            return;
+        await PreviewAsync(() => _operations.PreviewAsync(
+            Files.Select(file => file.Path).ToArray(), recipe));
+        StatusText = "The latest recipe was regenerated for the current Workbench files. Review before applying.";
+    }
+
     [RelayCommand]
     private void Cancel() => _cancellation?.Cancel();
 
@@ -528,10 +556,14 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         OnPropertyChanged(nameof(HasPreview));
         OnPropertyChanged(nameof(HasUnsavedChanges));
         OnPropertyChanged(nameof(CanUndoLatest));
+        OnPropertyChanged(nameof(CanRedoLatest));
+        OnPropertyChanged(nameof(CanRepeatLatest));
         PreviewEditsCommand.NotifyCanExecuteChanged();
         PreviewOperationCommand.NotifyCanExecuteChanged();
         ApplyCommand.NotifyCanExecuteChanged();
         UndoCommand.NotifyCanExecuteChanged();
+        RedoCommand.NotifyCanExecuteChanged();
+        RepeatCommand.NotifyCanExecuteChanged();
         RemoveCurrentCommand.NotifyCanExecuteChanged();
         MoveUpCommand.NotifyCanExecuteChanged();
         MoveDownCommand.NotifyCanExecuteChanged();
@@ -590,6 +622,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
          SelectedNewKnownField is not null);
     private bool CanApply() => !IsBusy && HasApplicablePreview && _plan is not null;
     private bool CanUndo() => !IsBusy && _history.CanUndo;
+    private bool CanRedo() => !IsBusy && _history.CanRedo;
+    private bool CanRepeat() =>
+        !IsBusy && Files.Count > 0 &&
+        _history.Entries.FirstOrDefault()?.Recipe is not null;
 
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase

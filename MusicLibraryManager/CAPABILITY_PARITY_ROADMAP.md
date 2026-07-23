@@ -61,7 +61,7 @@ the same editor, preview, policy checks, recovery behavior, and history.
   - [~] Core services compiled and covered by tests.
   - [x] Initial Workbench page and navigation implemented.
   - [~] End-to-end preview, apply, restart-safe undo, and redo verified.
-- [ ] Phase 2: Typed bulk operations and recipes
+- [~] Phase 2: Typed bulk operations and recipes
 - [ ] Phase 3: Online metadata and artwork
 - [ ] Phase 4: Flexible views, reporting, playlists, and tools
 - [ ] Phase 5: Native format and tag-layer expansion
@@ -175,19 +175,19 @@ and restored without creating or indexing a library.
 
 ### Recipes and editing commands
 
-- [ ] Ordered visual operation list.
-- [ ] Typed conditions per operation.
-- [ ] Enable/disable, duplicate, rename, and reorder operations.
+- [x] Ordered visual operation list.
+- [x] Typed conditions per operation.
+- [x] Enable/disable, duplicate, rename, and reorder operations.
 - [ ] Representative-file preview while editing.
 - [~] Apply every applicable operation to Workbench or explicit Library scope
   through the same operation catalog and editor.
-- [ ] Persist personal recipes through `IAppSettings`.
+- [x] Persist personal recipes through `IAppSettings`.
 - [x] Reserve configuration XML for shared library policies.
 - [x] Do not import or emulate mp3tag action groups or presets.
 - [ ] Tag-aware copy/paste.
-- [ ] Undo/redo commands.
-- [ ] Repeat-current-recipe command.
-- [ ] Keep preview enabled by default and reject stale streamlined applies.
+- [x] Undo/redo commands; redo regenerates a new preview from current files.
+- [x] Repeat-current-recipe command.
+- [x] Keep preview enabled by default and reject stale streamlined applies.
 
 **Acceptance:** Every converter and common batch-cleanup outcome in the
 capability comparison is possible through typed operations without scripting.
@@ -428,3 +428,8 @@ per-operation capability flags.
   custom field with its tag layers and ordered values, and supports replace,
   append, remove-value, and remove-field previews without flattening values into
   a delimiter-separated string.
+- Added ordered, named recipe steps with enable/disable, rename, duplicate,
+  remove, and reorder controls. Personal recipes are versioned in
+  `IAppSettings`, shared by Workbench and Library, and retain typed conditions.
+- Added persistent redo candidates and repeat-recipe commands. Both regenerate
+  a fresh plan against current files and require review before apply.

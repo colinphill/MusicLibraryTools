@@ -41,6 +41,8 @@ public sealed class ServiceCollectionExtensionsTests
             provider.GetRequiredService<IWorkbenchService>());
         Assert.IsType<MetadataOperationCatalog>(
             provider.GetRequiredService<IMetadataOperationCatalog>());
+        Assert.IsType<OperationRecipeStore>(
+            provider.GetRequiredService<IOperationRecipeStore>());
         Assert.IsType<MetadataOperationService>(
             provider.GetRequiredService<IMetadataOperationService>());
         Assert.IsType<EditHistoryService>(

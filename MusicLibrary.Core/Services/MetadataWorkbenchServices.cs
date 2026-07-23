@@ -51,7 +51,9 @@ public interface IMetadataOperationService
 public interface IEditHistoryService
 {
     IReadOnlyList<EditHistoryEntry> Entries { get; }
+    IReadOnlyList<EditHistoryEntry> RedoEntries { get; }
     bool CanUndo { get; }
+    bool CanRedo { get; }
     void Record(EditHistoryEntry entry);
     Task<int> UndoLatestAsync(
         IProgress<int>? progress = null,
@@ -378,7 +380,7 @@ public sealed class MetadataOperationService(
             Dictionary<MetadataFieldKey, ImmutableArray<string>> before = Flatten(document);
             var after = new Dictionary<MetadataFieldKey, ImmutableArray<string>>(before);
             var operationIssues = new List<OperationIssue>();
-            foreach (MetadataOperation operation in recipe.Operations)
+            foreach (MetadataOperation operation in recipe.EnabledOperations)
             {
                 try
                 {
@@ -900,16 +902,19 @@ public sealed class EditHistoryService(
     IOperationJournalService journals) : IEditHistoryService
 {
     private const string Preference = "manager.workbench.history.v1";
-    private readonly List<EditHistoryEntry> _entries = Load(settings);
+    private readonly HistoryState _state = Load(settings);
 
-    public IReadOnlyList<EditHistoryEntry> Entries => _entries;
-    public bool CanUndo => _entries.Count > 0;
+    public IReadOnlyList<EditHistoryEntry> Entries => _state.Undo;
+    public IReadOnlyList<EditHistoryEntry> RedoEntries => _state.Redo;
+    public bool CanUndo => _state.Undo.Count > 0;
+    public bool CanRedo => _state.Redo.Any(entry => entry.Recipe is not null);
 
     public void Record(EditHistoryEntry entry)
     {
-        _entries.Insert(0, entry);
-        if (_entries.Count > 100)
-            _entries.RemoveRange(100, _entries.Count - 100);
+        _state.Undo.Insert(0, entry);
+        if (_state.Undo.Count > 100)
+            _state.Undo.RemoveRange(100, _state.Undo.Count - 100);
+        _state.Redo.Clear();
         Persist();
     }
 
@@ -917,9 +922,9 @@ public sealed class EditHistoryService(
         IProgress<int>? progress = null,
         CancellationToken ct = default)
     {
-        if (_entries.Count == 0)
+        if (_state.Undo.Count == 0)
             return 0;
-        EditHistoryEntry entry = _entries[0];
+        EditHistoryEntry entry = _state.Undo[0];
         int restored = 0;
         foreach (string journalPath in entry.JournalPaths.Reverse())
         {
@@ -944,26 +949,48 @@ public sealed class EditHistoryService(
                 plan, progress, ct);
             restored += result.RestoredCount;
         }
-        _entries.RemoveAt(0);
+        _state.Undo.RemoveAt(0);
+        _state.Redo.Insert(0, entry);
+        if (_state.Redo.Count > 100)
+            _state.Redo.RemoveRange(100, _state.Redo.Count - 100);
         Persist();
         return restored;
     }
 
-    private static List<EditHistoryEntry> Load(IAppSettings settings)
+    private static HistoryState Load(IAppSettings settings)
     {
         try
         {
             string? json = settings.GetPreference(Preference);
-            return string.IsNullOrWhiteSpace(json)
-                ? []
-                : JsonSerializer.Deserialize<List<EditHistoryEntry>>(json) ?? [];
+            if (string.IsNullOrWhiteSpace(json))
+                return new([], []);
+            HistoryState? state = JsonSerializer.Deserialize<HistoryState>(json);
+            if (state is not null)
+                return state;
+            List<EditHistoryEntry>? legacy =
+                JsonSerializer.Deserialize<List<EditHistoryEntry>>(json);
+            return new(legacy ?? [], []);
         }
-        catch { return []; }
+        catch
+        {
+            try
+            {
+                string? json = settings.GetPreference(Preference);
+                List<EditHistoryEntry>? legacy =
+                    JsonSerializer.Deserialize<List<EditHistoryEntry>>(json ?? "");
+                return new(legacy ?? [], []);
+            }
+            catch { return new([], []); }
+        }
     }
 
     private void Persist()
     {
-        try { settings.SetPreference(Preference, JsonSerializer.Serialize(_entries)); }
+        try { settings.SetPreference(Preference, JsonSerializer.Serialize(_state)); }
         catch { /* History persistence is best effort; recovery remains discoverable. */ }
     }
+
+    private sealed record HistoryState(
+        List<EditHistoryEntry> Undo,
+        List<EditHistoryEntry> Redo);
 }

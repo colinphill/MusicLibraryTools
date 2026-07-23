@@ -198,14 +198,44 @@ public sealed record SequenceNumberOperation(
     MetadataFieldKey? TotalField = null,
     MetadataCondition? When = null) : MetadataOperation(When);
 
+public sealed record OperationRecipeStep(
+    Guid Id,
+    string Name,
+    MetadataOperation Operation,
+    bool Enabled = true);
+
 public sealed record OperationRecipe(
     Guid Id,
     string Name,
     ImmutableArray<MetadataOperation> Operations,
     bool Enabled = true)
 {
+    public ImmutableArray<OperationRecipeStep> Steps { get; init; } =
+        [.. Operations.Select((operation, index) => new OperationRecipeStep(
+            Guid.NewGuid(), $"Step {index + 1}", operation))];
+
+    [JsonIgnore]
+    public IEnumerable<MetadataOperation> EnabledOperations =>
+        Steps.IsDefaultOrEmpty
+            ? Operations
+            : Steps.Where(step => step.Enabled).Select(step => step.Operation);
+
     public static OperationRecipe Create(string name, params MetadataOperation[] operations) =>
         new(Guid.NewGuid(), name, [.. operations]);
+
+    public static OperationRecipe FromSteps(
+        Guid id,
+        string name,
+        IEnumerable<OperationRecipeStep> steps,
+        bool enabled = true)
+    {
+        ImmutableArray<OperationRecipeStep> materialized = [.. steps];
+        return new(id, name,
+            [.. materialized.Select(step => step.Operation)], enabled)
+        {
+            Steps = materialized,
+        };
+    }
 }
 
 public sealed record MetadataFieldDifference(

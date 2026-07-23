@@ -12,6 +12,10 @@
         <StackPanel Orientation="Horizontal" Spacing="8">
           <Button Classes="app" Content="Undo last apply"
                   Command="{Binding UndoCommand}" />
+          <Button Classes="app" Content="Redo"
+                  Command="{Binding RedoCommand}" />
+          <Button Classes="app" Content="Repeat recipe"
+                  Command="{Binding RepeatCommand}" />
           <Button Classes="app primary" Content="Apply preview"
                   Command="{Binding ApplyCommand}" />
         </StackPanel>
@@ -89,7 +93,7 @@
         </TabItem>
 
         <TabItem Header="Bulk operation">
-          <Grid Margin="0,12,0,0" RowDefinitions="Auto,Auto,Auto,*" RowSpacing="12">
+          <Grid Margin="0,12,0,0" RowDefinitions="Auto,Auto,Auto,190,*" RowSpacing="12">
             <Grid ColumnDefinitions="220,220,220,220,*" ColumnSpacing="10">
               <StackPanel Spacing="5">
                 <TextBlock Classes="muted" Text="Operation" FontSize="12" FontWeight="SemiBold" />
@@ -149,9 +153,75 @@
               <NumericUpDown Classes="app" Margin="8,0,0,0" Width="90"
                              Minimum="0" Maximum="12"
                              Value="{Binding OperationEditor.SequencePadding, Mode=TwoWay}" />
+              <Button Classes="app" Margin="18,0,0,0"
+                      Content="Add operation to recipe"
+                      Command="{Binding OperationEditor.AddCurrentOperationCommand}" />
+              <CheckBox Margin="18,0,8,0" VerticalAlignment="Center"
+                        Content="Condition"
+                        IsChecked="{Binding OperationEditor.ConditionEnabled, Mode=TwoWay}" />
+              <ComboBox Classes="app" Width="150" Margin="0,0,8,0"
+                        ItemsSource="{Binding OperationEditor.Fields}"
+                        DisplayMemberBinding="{Binding Label}"
+                        SelectedItem="{Binding OperationEditor.SelectedConditionField, Mode=TwoWay}" />
+              <ComboBox Classes="app" Width="130" Margin="0,0,8,0"
+                        ItemsSource="{Binding OperationEditor.ConditionOperators}"
+                        SelectedItem="{Binding OperationEditor.SelectedConditionOperator, Mode=TwoWay}" />
+              <TextBox Classes="app" Width="150"
+                       Text="{Binding OperationEditor.ConditionValue, Mode=TwoWay}"
+                       PlaceholderText="Condition value" />
             </WrapPanel>
 
-            <Grid Grid.Row="3" RowDefinitions="Auto,*" RowSpacing="8">
+            <Grid Grid.Row="3" ColumnDefinitions="1.2*,12,0.8*">
+              <Grid RowDefinitions="Auto,*,Auto" RowSpacing="6">
+                <TextBlock Classes="section-title" Text="Ordered recipe" />
+                <ListBox Grid.Row="1" ItemsSource="{Binding OperationEditor.Steps}"
+                         SelectedItem="{Binding OperationEditor.SelectedStep, Mode=TwoWay}">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                        <CheckBox IsChecked="{Binding Enabled, Mode=TwoWay}" />
+                        <TextBox Grid.Column="1" Classes="app" BorderThickness="0"
+                                 Background="Transparent"
+                                 Text="{Binding Name, Mode=TwoWay}" />
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+                <WrapPanel Grid.Row="2">
+                  <Button Classes="app" Margin="0,0,6,0" Content="Up"
+                          Command="{Binding OperationEditor.MoveStepUpCommand}" />
+                  <Button Classes="app" Margin="0,0,6,0" Content="Down"
+                          Command="{Binding OperationEditor.MoveStepDownCommand}" />
+                  <Button Classes="app" Margin="0,0,6,0" Content="Duplicate"
+                          Command="{Binding OperationEditor.DuplicateStepCommand}" />
+                  <Button Classes="app danger" Content="Remove"
+                          Command="{Binding OperationEditor.RemoveStepCommand}" />
+                </WrapPanel>
+              </Grid>
+              <StackPanel Grid.Column="2" Spacing="7">
+                <TextBlock Classes="section-title" Text="Personal recipes" />
+                <ComboBox Classes="app"
+                          ItemsSource="{Binding OperationEditor.SavedRecipes}"
+                          SelectedItem="{Binding OperationEditor.SelectedSavedRecipe, Mode=TwoWay}"
+                          DisplayMemberBinding="{Binding Name}"
+                          PlaceholderText="Choose a saved recipe" />
+                <TextBox Classes="app"
+                         Text="{Binding OperationEditor.RecipeName, Mode=TwoWay}"
+                         PlaceholderText="Recipe name" />
+                <WrapPanel>
+                  <Button Classes="app" Margin="0,0,6,0" Content="Load"
+                          Command="{Binding OperationEditor.LoadRecipeCommand}" />
+                  <Button Classes="app primary" Margin="0,0,6,0" Content="Save"
+                          Command="{Binding OperationEditor.SaveRecipeCommand}" />
+                  <Button Classes="app" Margin="0,0,6,0" Content="New"
+                          Command="{Binding OperationEditor.NewRecipeCommand}" />
+                  <Button Classes="app danger" Content="Delete"
+                          Command="{Binding OperationEditor.DeleteRecipeCommand}" />
+                </WrapPanel>
+              </StackPanel>
+            </Grid>
+
+            <Grid Grid.Row="4" RowDefinitions="Auto,*" RowSpacing="8">
               <TextBlock Classes="section-title" Text="Reviewed changes" />
               <controls:AppDataGrid x:Name="PreviewGrid" Grid.Row="1"
                   ItemsSource="{Binding PreviewChanges}" />

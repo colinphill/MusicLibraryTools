@@ -1,4 +1,6 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
@@ -13,6 +15,24 @@ public sealed record MetadataPreviewRow(
     string Before,
     string After);
 
+public partial class MetadataRecipeStepViewModel(
+    Guid id,
+    string name,
+    MetadataOperation operation,
+    bool enabled = true) : ObservableObject
+{
+    public Guid Id { get; } = id;
+    public MetadataOperation Operation { get; } = operation;
+
+    [ObservableProperty]
+    private string _name = name;
+
+    [ObservableProperty]
+    private bool _enabled = enabled;
+
+    public OperationRecipeStep ToModel() => new(Id, Name, Operation, Enabled);
+}
+
 /// <summary>
 /// Shared typed-operation editor state. Workbench and Library own separate instances so personal
 /// in-progress input does not leak between pages, while both are driven by one Core catalog.
@@ -20,12 +40,16 @@ public sealed record MetadataPreviewRow(
 public partial class MetadataOperationEditorViewModel : ObservableObject
 {
     private readonly IMetadataOperationCatalog _catalog;
+    private readonly IOperationRecipeStore? _recipes;
+    private Guid? _editingRecipeId;
 
     public MetadataOperationEditorViewModel(
         IMetadataOperationCatalog catalog,
-        MetadataOperationSurface surface)
+        MetadataOperationSurface surface,
+        IOperationRecipeStore? recipes = null)
     {
         _catalog = catalog;
+        _recipes = recipes;
         OperationDescriptors = catalog.Operations
             .Where(operation => operation.Supports(surface))
             .ToArray();
@@ -47,12 +71,22 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
         SelectedOperation = OperationDescriptors.FirstOrDefault();
         SelectedField = Fields[0];
         DestinationField = Fields[1];
+        SelectedConditionField = Fields[0];
+        ReloadRecipes();
+        if (_recipes is not null)
+            _recipes.Changed += (_, _) => ReloadRecipes();
     }
 
+    public ObservableCollection<MetadataRecipeStepViewModel> Steps { get; } = [];
+    public ObservableCollection<OperationRecipe> SavedRecipes { get; } = [];
     public IReadOnlyList<MetadataOperationDescriptor> OperationDescriptors { get; }
     public IReadOnlyList<MetadataFieldChoice> Fields { get; }
     public IReadOnlyList<MetadataCaseMode> CaseModes { get; } =
         Enum.GetValues<MetadataCaseMode>();
+    public IReadOnlyList<MetadataConditionOperator> ConditionOperators { get; } =
+        Enum.GetValues<MetadataConditionOperator>()
+            .Where(value => value != MetadataConditionOperator.Always)
+            .ToArray();
 
     [ObservableProperty]
     private MetadataOperationDescriptor? _selectedOperation;
@@ -84,13 +118,154 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
     [ObservableProperty]
     private int _sequencePadding = 2;
 
+    [ObservableProperty]
+    private bool _conditionEnabled;
+
+    [ObservableProperty]
+    private MetadataFieldChoice? _selectedConditionField;
+
+    [ObservableProperty]
+    private MetadataConditionOperator _selectedConditionOperator =
+        MetadataConditionOperator.Present;
+
+    [ObservableProperty]
+    private string? _conditionValue;
+
+    [ObservableProperty]
+    private bool _negateCondition;
+
+    [ObservableProperty]
+    private string _recipeName = "New recipe";
+
+    [ObservableProperty]
+    private OperationRecipe? _selectedSavedRecipe;
+
+    [ObservableProperty]
+    private MetadataRecipeStepViewModel? _selectedStep;
+
     public bool CanCreate => SelectedOperation is not null && SelectedField is not null;
 
     public OperationRecipe CreateRecipe(string? name = null)
     {
+        if (Steps.Count == 0)
+            return OperationRecipe.Create(
+                name ?? $"{SelectedOperation?.DisplayName}: {SelectedField?.Label}",
+                CreateCurrentOperation());
+        return OperationRecipe.FromSteps(
+            _editingRecipeId ?? Guid.NewGuid(),
+            name ?? RecipeName.Trim(),
+            Steps.Select(step => step.ToModel()));
+    }
+
+    [RelayCommand]
+    private void AddCurrentOperation()
+    {
+        MetadataOperation operation = CreateCurrentOperation();
+        string name = $"{SelectedOperation!.DisplayName}: {SelectedField!.Label}";
+        Steps.Add(new(Guid.NewGuid(), name, operation));
+    }
+
+    [RelayCommand]
+    private void DuplicateStep(MetadataRecipeStepViewModel? step)
+    {
+        step ??= SelectedStep;
+        if (step is null)
+            return;
+        int index = Steps.IndexOf(step);
+        Steps.Insert(index + 1, new(
+            Guid.NewGuid(), step.Name + " copy", step.Operation, step.Enabled));
+    }
+
+    [RelayCommand]
+    private void RemoveStep(MetadataRecipeStepViewModel? step)
+    {
+        step ??= SelectedStep;
+        if (step is not null)
+            Steps.Remove(step);
+    }
+
+    [RelayCommand]
+    private void MoveStepUp(MetadataRecipeStepViewModel? step)
+    {
+        step ??= SelectedStep;
+        int index = step is null ? -1 : Steps.IndexOf(step);
+        if (index > 0)
+            Steps.Move(index, index - 1);
+    }
+
+    [RelayCommand]
+    private void MoveStepDown(MetadataRecipeStepViewModel? step)
+    {
+        step ??= SelectedStep;
+        int index = step is null ? -1 : Steps.IndexOf(step);
+        if (index >= 0 && index < Steps.Count - 1)
+            Steps.Move(index, index + 1);
+    }
+
+    [RelayCommand]
+    private void NewRecipe()
+    {
+        _editingRecipeId = null;
+        RecipeName = "New recipe";
+        Steps.Clear();
+        SelectedSavedRecipe = null;
+    }
+
+    [RelayCommand]
+    private void LoadRecipe()
+    {
+        if (SelectedSavedRecipe is null)
+            return;
+        _editingRecipeId = SelectedSavedRecipe.Id;
+        RecipeName = SelectedSavedRecipe.Name;
+        Steps.Clear();
+        IEnumerable<OperationRecipeStep> steps =
+            SelectedSavedRecipe.Steps.IsDefaultOrEmpty
+                ? SelectedSavedRecipe.Operations.Select((operation, index) =>
+                    new OperationRecipeStep(
+                        Guid.NewGuid(), $"Step {index + 1}", operation))
+                : SelectedSavedRecipe.Steps;
+        foreach (OperationRecipeStep step in steps)
+            Steps.Add(new(step.Id, step.Name, step.Operation, step.Enabled));
+    }
+
+    [RelayCommand]
+    private void SaveRecipe()
+    {
+        if (_recipes is null)
+            return;
+        string name = RecipeName.Trim();
+        if (name.Length == 0 || Steps.Count == 0)
+            return;
+        OperationRecipe recipe = CreateRecipe(name);
+        _recipes.Save(recipe);
+        _editingRecipeId = recipe.Id;
+        SelectedSavedRecipe = SavedRecipes.FirstOrDefault(item => item.Id == recipe.Id);
+    }
+
+    [RelayCommand]
+    private void DeleteRecipe()
+    {
+        if (_recipes is null || SelectedSavedRecipe is null)
+            return;
+        _recipes.Delete(SelectedSavedRecipe.Id);
+        NewRecipe();
+    }
+
+    private MetadataOperation CreateCurrentOperation()
+    {
         if (SelectedOperation is null || SelectedField is null)
             throw new InvalidOperationException("Choose an operation and field.");
-        MetadataOperation operation = _catalog.Create(new(
+        MetadataCondition? condition = !ConditionEnabled
+            ? null
+            : new(
+                SelectedConditionField is null
+                    ? null
+                    : MetadataFieldKey.Known(SelectedConditionField.Field),
+                SelectedConditionOperator,
+                ConditionValue,
+                NegateCondition);
+        return _catalog.Create(new(
             SelectedOperation.Kind,
             MetadataFieldKey.Known(SelectedField.Field),
             DestinationField is null
@@ -102,9 +277,19 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
             UseRegularExpression,
             SelectedCaseMode,
             SequenceStart,
-            SequencePadding));
-        return OperationRecipe.Create(
-            name ?? $"{SelectedOperation.DisplayName}: {SelectedField.Label}",
-            operation);
+            SequencePadding,
+            condition));
+    }
+
+    private void ReloadRecipes()
+    {
+        Guid? selected = SelectedSavedRecipe?.Id;
+        SavedRecipes.Clear();
+        if (_recipes is not null)
+            foreach (OperationRecipe recipe in _recipes.Recipes.OrderBy(item => item.Name))
+                SavedRecipes.Add(recipe);
+        SelectedSavedRecipe = selected is null
+            ? null
+            : SavedRecipes.FirstOrDefault(recipe => recipe.Id == selected);
     }
 }

@@ -22,6 +22,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMetadataDocumentService, MetadataDocumentService>();
         services.AddSingleton<IWorkbenchService, WorkbenchService>();
         services.AddSingleton<IMetadataOperationCatalog, MetadataOperationCatalog>();
+        services.AddSingleton<IOperationRecipeStore, OperationRecipeStore>();
         services.AddSingleton<IEditHistoryService, EditHistoryService>();
         services.AddSingleton<IMetadataOperationService, MetadataOperationService>();
         services.AddSingleton<IExportTransport, LocalFileSystemExportTransport>();

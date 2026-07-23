@@ -25,6 +25,56 @@ public sealed class MetadataWorkbenchServicesTests
     }
 
     [Fact]
+    public void RecipeStore_PersistsOrderedNamedAndDisabledSteps()
+    {
+        string statePath = Path.Combine(
+            Path.GetTempPath(), "mlm-recipes-" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var store = new OperationRecipeStore(settings);
+            OperationRecipe recipe = OperationRecipe.FromSteps(
+                Guid.NewGuid(),
+                "Cleanup",
+                [
+                    new(
+                        Guid.NewGuid(),
+                        "Trim title",
+                        new TrimFieldOperation(
+                            MetadataFieldKey.Known(TagFields.Title),
+                            When: new MetadataCondition(
+                                MetadataFieldKey.Known(TagFields.Title),
+                                MetadataConditionOperator.Present))),
+                    new(
+                        Guid.NewGuid(),
+                        "Remove comment",
+                        new RemoveFieldOperation(
+                            MetadataFieldKey.Known(TagFields.Comment)),
+                        Enabled: false),
+                ]);
+
+            store.Save(recipe);
+            var restarted = new OperationRecipeStore(new AppSettings(statePath));
+
+            OperationRecipe loaded = Assert.Single(restarted.Recipes);
+            Assert.Equal("Cleanup", loaded.Name);
+            Assert.Equal(["Trim title", "Remove comment"],
+                loaded.Steps.Select(step => step.Name));
+            Assert.False(loaded.Steps[1].Enabled);
+            Assert.Single(loaded.EnabledOperations);
+            Assert.Equal(MetadataConditionOperator.Present,
+                loaded.Steps[0].Operation.Condition?.Operator);
+            Assert.True(restarted.Delete(loaded.Id));
+            Assert.Empty(new OperationRecipeStore(
+                new AppSettings(statePath)).Recipes);
+        }
+        finally
+        {
+            try { File.Delete(statePath); } catch { }
+        }
+    }
+
+    [Fact]
     public async Task Preview_ReportsUnavailableLibraryCandidateWithoutAbortingScope()
     {
         using var media = MediaFixtures.Copy("sample.flac");
@@ -229,6 +279,12 @@ public sealed class MetadataWorkbenchServicesTests
             Assert.Equal("TestTitle",
                 MediaFile.GetFile(mediaPath, readOnly: true).Tags.First().Title);
             Assert.False(restartedHistory.CanUndo);
+            Assert.True(restartedHistory.CanRedo);
+            var afterRestart = new EditHistoryService(
+                new AppSettings(statePath), journals);
+            Assert.True(afterRestart.CanRedo);
+            Assert.Equal(recipe.Id,
+                Assert.Single(afterRestart.RedoEntries).Recipe?.Id);
         }
         finally
         {
