@@ -38,6 +38,13 @@ public partial class LibraryView : UserControl
         BuildColumns();
         ApplySnapshot(_gridState.Load());
         ConfigureGrid();
+        LibraryOperationPreviewGrid.ConfigureColumns(
+        [
+            new("File", "File", "File", 200, 130),
+            new("Field", "Field", "Field", 140, 90),
+            new("Before", "Before", "Before", 280, 160),
+            new("After", "After", "After", 280, 160),
+        ]);
         LibraryGrid.ApplySort(_sort);
         BuildColumnOptions();
         LibraryGrid.LayoutChanged += (_, _) => PersistLayout();

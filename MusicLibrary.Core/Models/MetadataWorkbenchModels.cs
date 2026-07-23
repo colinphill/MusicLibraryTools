@@ -138,6 +138,48 @@ public sealed record ReplaceTextOperation(
 
 public enum MetadataCaseMode { Upper, Lower, Title, Sentence }
 
+[Flags]
+public enum MetadataOperationSurface
+{
+    None = 0,
+    Workbench = 1,
+    Library = 2,
+}
+
+public enum MetadataOperationKind
+{
+    Assign,
+    Remove,
+    Copy,
+    ReplaceText,
+    ChangeCase,
+    TrimWhitespace,
+    Sequence,
+}
+
+public sealed record MetadataOperationDescriptor(
+    MetadataOperationKind Kind,
+    string DisplayName,
+    string Description,
+    MetadataOperationSurface Surfaces)
+{
+    public bool Supports(MetadataOperationSurface surface) =>
+        (Surfaces & surface) == surface;
+}
+
+public sealed record MetadataOperationDraft(
+    MetadataOperationKind Kind,
+    MetadataFieldKey Field,
+    MetadataFieldKey? DestinationField = null,
+    string? Value = null,
+    string? Search = null,
+    string? Replacement = null,
+    bool UseRegularExpression = false,
+    MetadataCaseMode CaseMode = MetadataCaseMode.Title,
+    int SequenceStart = 1,
+    int SequencePadding = 0,
+    MetadataCondition? Condition = null);
+
 public sealed record ChangeCaseOperation(
     MetadataFieldKey Field,
     MetadataCaseMode Mode,

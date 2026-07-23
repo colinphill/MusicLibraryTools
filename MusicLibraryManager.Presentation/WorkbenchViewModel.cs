@@ -10,24 +10,23 @@ using MusicLibrary.Core.Services;
 
 namespace MusicLibraryManager.Presentation;
 
-public enum WorkbenchOperationKind
+public enum WorkbenchFieldEditMode
 {
-    Assign,
-    Remove,
-    Copy,
-    ReplaceText,
-    ChangeCase,
-    TrimWhitespace,
-    Sequence,
+    Replace,
+    Append,
+    RemoveValues,
+    RemoveField,
 }
 
-public sealed record MetadataFieldChoice(TagFields Field, string Label);
-
-public sealed record MetadataPreviewRow(
-    string File,
-    string Field,
-    string Before,
-    string After);
+public sealed record WorkbenchMetadataFieldRow(
+    MetadataFieldKey Field,
+    string Layers,
+    ImmutableArray<string> Values)
+{
+    public string Name => Field.DisplayName;
+    public string Kind => Field.IsKnown ? "Known" : "Custom";
+    public string DisplayValue => string.Join("; ", Values);
+}
 
 public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
 {
@@ -58,6 +57,25 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private WorkbenchTrackViewModel? _selectedFile;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PreviewFieldValuesCommand))]
+    private WorkbenchMetadataFieldRow? _selectedMetadataField;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PreviewFieldValuesCommand))]
+    private MetadataFieldChoice? _selectedNewKnownField;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PreviewFieldValuesCommand))]
+    private string? _customFieldName;
+
+    [ObservableProperty]
+    private string? _fieldValuesText;
+
+    [ObservableProperty]
+    private WorkbenchFieldEditMode _selectedFieldEditMode =
+        WorkbenchFieldEditMode.Replace;
+
+    [ObservableProperty]
     private bool _recursive = true;
 
     [ObservableProperty]
@@ -68,39 +86,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
     private bool _hasApplicablePreview;
 
-    [ObservableProperty]
-    private WorkbenchOperationKind _selectedOperationKind = WorkbenchOperationKind.Assign;
-
-    [ObservableProperty]
-    private MetadataFieldChoice? _selectedField;
-
-    [ObservableProperty]
-    private MetadataFieldChoice? _destinationField;
-
-    [ObservableProperty]
-    private string? _operationValue;
-
-    [ObservableProperty]
-    private string? _searchText;
-
-    [ObservableProperty]
-    private string? _replacementText;
-
-    [ObservableProperty]
-    private bool _useRegularExpression;
-
-    [ObservableProperty]
-    private MetadataCaseMode _selectedCaseMode = MetadataCaseMode.Title;
-
-    [ObservableProperty]
-    private int _sequenceStart = 1;
-
-    [ObservableProperty]
-    private int _sequencePadding = 2;
-
     public WorkbenchViewModel(
         IWorkbenchService workbench,
         IMetadataOperationService operations,
+        IMetadataOperationCatalog operationCatalog,
         IEditHistoryService history,
         IFilePickerService files,
         IDialogCoordinator dialogs,
@@ -112,34 +101,24 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         _files = files;
         _dialogs = dialogs;
         _settings = settings;
-        Fields =
-        [
-            new(TagFields.Title, "Title"),
-            new(TagFields.Artist, "Artist"),
-            new(TagFields.AlbumArtist, "Album artist"),
-            new(TagFields.Album, "Album"),
-            new(TagFields.Genre, "Genre"),
-            new(TagFields.Composer, "Composer"),
-            new(TagFields.Date, "Date"),
-            new(TagFields.TrackNumber, "Track"),
-            new(TagFields.TotalTracks, "Track total"),
-            new(TagFields.DiscNumber, "Disc"),
-            new(TagFields.TotalDiscs, "Disc total"),
-            new(TagFields.Comment, "Comment"),
-        ];
-        SelectedField = Fields[0];
-        DestinationField = Fields[1];
+        OperationEditor = new(
+            operationCatalog, MetadataOperationSurface.Workbench);
+        KnownFieldChoices = Enum.GetValues<TagFields>()
+            .Where(field => field != TagFields.NullField)
+            .Select(field => new MetadataFieldChoice(field, field.ToString()))
+            .ToArray();
+        SelectedNewKnownField = KnownFieldChoices[0];
         LoadRecentLocations();
     }
 
     public ObservableCollection<WorkbenchTrackViewModel> Files { get; } = [];
     public ObservableCollection<MetadataPreviewRow> PreviewChanges { get; } = [];
+    public ObservableCollection<WorkbenchMetadataFieldRow> MetadataFields { get; } = [];
     public ObservableCollection<string> RecentLocations { get; } = [];
-    public IReadOnlyList<MetadataFieldChoice> Fields { get; }
-    public IReadOnlyList<WorkbenchOperationKind> OperationKinds { get; } =
-        Enum.GetValues<WorkbenchOperationKind>();
-    public IReadOnlyList<MetadataCaseMode> CaseModes { get; } =
-        Enum.GetValues<MetadataCaseMode>();
+    public MetadataOperationEditorViewModel OperationEditor { get; }
+    public IReadOnlyList<MetadataFieldChoice> KnownFieldChoices { get; }
+    public IReadOnlyList<WorkbenchFieldEditMode> FieldEditModes { get; } =
+        Enum.GetValues<WorkbenchFieldEditMode>();
     public bool HasFiles => Files.Count > 0;
     public bool HasPreview => PreviewChanges.Count > 0;
     public bool HasUnsavedChanges =>
@@ -148,8 +127,30 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
 
     partial void OnSelectedFileChanged(WorkbenchTrackViewModel? value)
     {
+        RebuildMetadataFields();
         MoveUpCommand.NotifyCanExecuteChanged();
         MoveDownCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnSelectedMetadataFieldChanged(WorkbenchMetadataFieldRow? value)
+    {
+        if (value is not null)
+            FieldValuesText = string.Join(Environment.NewLine, value.Values);
+    }
+
+    [RelayCommand]
+    private void BeginNewKnownField()
+    {
+        SelectedMetadataField = null;
+        CustomFieldName = null;
+        FieldValuesText = "";
+    }
+
+    [RelayCommand]
+    private void BeginNewCustomField()
+    {
+        SelectedMetadataField = null;
+        FieldValuesText = "";
     }
 
     [RelayCommand(CanExecute = nameof(CanBrowse))]
@@ -301,11 +302,55 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [RelayCommand(CanExecute = nameof(CanPreviewOperation))]
     private async Task PreviewOperationAsync()
     {
-        MetadataOperation operation = CreateOperation();
-        OperationRecipe recipe = OperationRecipe.Create(
-            $"{SelectedOperationKind}: {SelectedField!.Label}", operation);
+        OperationRecipe recipe = OperationEditor.CreateRecipe();
         await PreviewAsync(() => _operations.PreviewAsync(
             Files.Select(file => file.Path).ToArray(), recipe));
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPreviewFieldValues))]
+    private async Task PreviewFieldValuesAsync()
+    {
+        if (SelectedFile is null)
+            return;
+        MetadataFieldKey field;
+        ImmutableArray<string> current;
+        if (SelectedMetadataField is { } selected)
+        {
+            field = selected.Field;
+            current = selected.Values;
+        }
+        else if (!string.IsNullOrWhiteSpace(CustomFieldName))
+        {
+            field = MetadataFieldKey.Custom(CustomFieldName);
+            current = SelectedFile.Document.Values(field);
+        }
+        else
+        {
+            field = MetadataFieldKey.Known(SelectedNewKnownField!.Field);
+            current = SelectedFile.Document.Values(field);
+        }
+
+        ImmutableArray<string> entered = (FieldValuesText ?? "")
+            .Split(["\r\n", "\n"], StringSplitOptions.None)
+            .Where(value => value.Length > 0)
+            .ToImmutableArray();
+        ImmutableArray<string> result = SelectedFieldEditMode switch
+        {
+            WorkbenchFieldEditMode.Replace => entered,
+            WorkbenchFieldEditMode.Append => current.AddRange(entered),
+            WorkbenchFieldEditMode.RemoveValues => current
+                .Where(value => !entered.Contains(value, StringComparer.Ordinal))
+                .ToImmutableArray(),
+            WorkbenchFieldEditMode.RemoveField => [],
+            _ => entered,
+        };
+        var edits = new Dictionary<string, IReadOnlyList<MetadataValueEdit>>(
+            PathComparer)
+        {
+            [SelectedFile.Path] = [new(field, result)],
+        };
+        await PreviewAsync(() => _operations.PreviewValueEditsAsync(
+            edits, $"Edit {field.DisplayName} values"));
     }
 
     private async Task PreviewAsync(Func<Task<MetadataOperationPlan>> action)
@@ -411,40 +456,6 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             "Leave");
     }
 
-    private MetadataOperation CreateOperation()
-    {
-        MetadataFieldKey field = MetadataFieldKey.Known(SelectedField!.Field);
-        return SelectedOperationKind switch
-        {
-            WorkbenchOperationKind.Assign =>
-                new AssignFieldOperation(field, OperationValue ?? ""),
-            WorkbenchOperationKind.Remove =>
-                new RemoveFieldOperation(field),
-            WorkbenchOperationKind.Copy =>
-                new CopyFieldOperation(
-                    field,
-                    MetadataFieldKey.Known(
-                        DestinationField?.Field ?? TagFields.Title)),
-            WorkbenchOperationKind.ReplaceText =>
-                new ReplaceTextOperation(
-                    field,
-                    SearchText ?? "",
-                    ReplacementText ?? "",
-                    UseRegularExpression),
-            WorkbenchOperationKind.ChangeCase =>
-                new ChangeCaseOperation(field, SelectedCaseMode),
-            WorkbenchOperationKind.TrimWhitespace =>
-                new TrimFieldOperation(field, NormalizeInternalWhitespace: true),
-            WorkbenchOperationKind.Sequence =>
-                new SequenceNumberOperation(
-                    field,
-                    Math.Max(0, SequenceStart),
-                    PadWidth: Math.Max(0, SequencePadding)),
-            _ => throw new NotSupportedException(
-                $"Unsupported Workbench operation '{SelectedOperationKind}'."),
-        };
-    }
-
     private async Task ReloadAsync(IReadOnlyList<string> paths)
     {
         if (paths.Count == 0)
@@ -471,6 +482,28 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         track.PropertyChanged += OnTrackChanged;
         Files.Add(track);
         SelectedFile ??= track;
+    }
+
+    private void RebuildMetadataFields()
+    {
+        MetadataFields.Clear();
+        if (SelectedFile is null)
+        {
+            SelectedMetadataField = null;
+            return;
+        }
+        foreach (var group in SelectedFile.Document.TagLayers
+                     .SelectMany(layer => layer.Fields.Select(field => (layer, field)))
+                     .GroupBy(item => item.field.Field)
+                     .OrderBy(group => group.Key.DisplayName,
+                         StringComparer.OrdinalIgnoreCase))
+        {
+            MetadataFields.Add(new(
+                group.Key,
+                string.Join(", ", group.Select(item => item.layer.TagType).Distinct()),
+                group.SelectMany(item => item.field.Values).ToImmutableArray()));
+        }
+        SelectedMetadataField = MetadataFields.FirstOrDefault();
     }
 
     private void OnTrackChanged(object? sender, PropertyChangedEventArgs e)
@@ -549,7 +582,12 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private bool CanPreviewEdits() =>
         !IsBusy && Files.Any(file => file.HasChanges);
     private bool CanPreviewOperation() =>
-        !IsBusy && Files.Count > 0 && SelectedField is not null;
+        !IsBusy && Files.Count > 0 && OperationEditor.CanCreate;
+    private bool CanPreviewFieldValues() =>
+        !IsBusy && SelectedFile is not null &&
+        (SelectedMetadataField is not null ||
+         !string.IsNullOrWhiteSpace(CustomFieldName) ||
+         SelectedNewKnownField is not null);
     private bool CanApply() => !IsBusy && HasApplicablePreview && _plan is not null;
     private bool CanUndo() => !IsBusy && _history.CanUndo;
 

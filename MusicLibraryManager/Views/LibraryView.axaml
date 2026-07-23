@@ -53,6 +53,8 @@
         </Border>
         <Button x:Name="ColumnsButton" Classes="app" Margin="0,0,8,6" Content="Columns" Click="OnColumnsClick" />
         <Button x:Name="ViewsButton" Classes="app" Margin="0,0,8,6" Content="Saved views" Click="OnViewsClick" />
+        <Button x:Name="LibraryOperationsButton" Classes="app primary" Margin="0,0,8,6"
+                Content="Operations" Command="{Binding OpenOperationsCommand}" />
       </WrapPanel>
     </StackPanel>
 
@@ -163,6 +165,111 @@
             <TextBlock FontFamily="Consolas" Text="Artist:Miles AND NOT Codec:MP3" />
             <TextBlock FontFamily="Consolas" Text="Album:&quot;Kind of Blue&quot;" />
           </StackPanel>
+        </Border>
+      </Popup>
+
+      <Popup x:Name="LibraryOperationsPopover"
+             PlacementTarget="{Binding #LibraryOperationsButton}"
+             Placement="BottomEdgeAlignedLeft" VerticalOffset="8"
+             IsLightDismissEnabled="True"
+             IsOpen="{Binding IsOperationsOpen, Mode=TwoWay}">
+        <Border Width="980" MaxHeight="690"
+                Background="{DynamicResource AppPanelBrush}"
+                BorderBrush="{DynamicResource AppBorderStrongBrush}"
+                BorderThickness="1" CornerRadius="9" Padding="14"
+                BoxShadow="0 14 40 0 #77000000">
+          <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto" RowSpacing="10">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Spacing="2">
+                <TextBlock Text="Library operation" FontSize="16" FontWeight="SemiBold" />
+                <TextBlock Classes="muted"
+                           Text="The same typed operations used by Workbench, applied to an explicit Library scope." />
+              </StackPanel>
+              <Button Grid.Column="1" Classes="app" Width="30" Height="30"
+                      Padding="0" Content="&#x2715;"
+                      Command="{Binding CloseOperationsCommand}" />
+            </Grid>
+
+            <Grid Grid.Row="1" ColumnDefinitions="220,210,210,210" ColumnSpacing="10">
+              <StackPanel Spacing="4">
+                <TextBlock Classes="muted" Text="Scope" FontSize="12" FontWeight="SemiBold" />
+                <ComboBox Classes="app" ItemsSource="{Binding OperationScopes}"
+                          SelectedItem="{Binding SelectedOperationScope, Mode=TwoWay}" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="4">
+                <TextBlock Classes="muted" Text="Operation" FontSize="12" FontWeight="SemiBold" />
+                <ComboBox Classes="app"
+                          ItemsSource="{Binding OperationEditor.OperationDescriptors}"
+                          DisplayMemberBinding="{Binding DisplayName}"
+                          SelectedItem="{Binding OperationEditor.SelectedOperation, Mode=TwoWay}" />
+              </StackPanel>
+              <StackPanel Grid.Column="2" Spacing="4">
+                <TextBlock Classes="muted" Text="Field" FontSize="12" FontWeight="SemiBold" />
+                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.Fields}"
+                          DisplayMemberBinding="{Binding Label}"
+                          SelectedItem="{Binding OperationEditor.SelectedField, Mode=TwoWay}" />
+              </StackPanel>
+              <StackPanel Grid.Column="3" Spacing="4">
+                <TextBlock Classes="muted" Text="Destination field" FontSize="12" FontWeight="SemiBold" />
+                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.Fields}"
+                          DisplayMemberBinding="{Binding Label}"
+                          SelectedItem="{Binding OperationEditor.DestinationField, Mode=TwoWay}" />
+              </StackPanel>
+            </Grid>
+
+            <Grid Grid.Row="2" ColumnDefinitions="*,*,*,180" ColumnSpacing="10">
+              <StackPanel Spacing="4">
+                <TextBlock Classes="muted" Text="Value" FontSize="12" FontWeight="SemiBold" />
+                <TextBox Classes="app"
+                         Text="{Binding OperationEditor.OperationValue, Mode=TwoWay}"
+                         PlaceholderText="Assignment value" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="4">
+                <TextBlock Classes="muted" Text="Find" FontSize="12" FontWeight="SemiBold" />
+                <TextBox Classes="app"
+                         Text="{Binding OperationEditor.SearchText, Mode=TwoWay}"
+                         PlaceholderText="Text or regular expression" />
+              </StackPanel>
+              <StackPanel Grid.Column="2" Spacing="4">
+                <TextBlock Classes="muted" Text="Replace with" FontSize="12" FontWeight="SemiBold" />
+                <TextBox Classes="app"
+                         Text="{Binding OperationEditor.ReplacementText, Mode=TwoWay}" />
+              </StackPanel>
+              <StackPanel Grid.Column="3" Spacing="4">
+                <TextBlock Classes="muted" Text="Case" FontSize="12" FontWeight="SemiBold" />
+                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.CaseModes}"
+                          SelectedItem="{Binding OperationEditor.SelectedCaseMode, Mode=TwoWay}" />
+              </StackPanel>
+            </Grid>
+
+            <Grid Grid.Row="3" ColumnDefinitions="Auto,Auto,Auto,Auto,*" ColumnSpacing="10">
+              <CheckBox VerticalAlignment="Center" Content="Regular expression"
+                        IsChecked="{Binding OperationEditor.UseRegularExpression, Mode=TwoWay}" />
+              <TextBlock Grid.Column="1" Classes="muted" VerticalAlignment="Center"
+                         Text="Sequence start" />
+              <NumericUpDown Grid.Column="2" Classes="app" Width="85" Minimum="0"
+                             Value="{Binding OperationEditor.SequenceStart, Mode=TwoWay}" />
+              <NumericUpDown Grid.Column="3" Classes="app" Width="85" Minimum="0" Maximum="12"
+                             Value="{Binding OperationEditor.SequencePadding, Mode=TwoWay}"
+                             ToolTip.Tip="Sequence padding" />
+              <Button Grid.Column="4" HorizontalAlignment="Right" Classes="app primary"
+                      Content="Preview" Command="{Binding PreviewLibraryOperationCommand}" />
+            </Grid>
+
+            <Grid Grid.Row="4" RowDefinitions="Auto,*" RowSpacing="6" MinHeight="230">
+              <TextBlock Classes="section-title" Text="Reviewed changes" />
+              <controls:AppDataGrid x:Name="LibraryOperationPreviewGrid" Grid.Row="1"
+                  ItemsSource="{Binding OperationPreviewChanges}" />
+            </Grid>
+
+            <Grid Grid.Row="5" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+              <TextBlock Classes="muted" VerticalAlignment="Center"
+                         Text="{Binding OperationStatus}" TextWrapping="Wrap"
+                         AutomationProperties.LiveSetting="Polite" />
+              <Button Grid.Column="1" Classes="app primary" Content="Apply preview"
+                      Command="{Binding ApplyLibraryOperationCommand}" />
+            </Grid>
+          </Grid>
         </Border>
       </Popup>
     </Grid>

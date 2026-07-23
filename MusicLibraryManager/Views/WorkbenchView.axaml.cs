@@ -40,6 +40,13 @@ public partial class WorkbenchView : UserControl
             new("Before", "Before", "Before", 320, 180),
             new("After", "After", "After", 320, 180),
         ]);
+        MetadataFieldsGrid.ConfigureColumns(
+        [
+            new("Name", "Field", "Name", 210, 120),
+            new("Kind", "Kind", "Kind", 90, 70),
+            new("Layers", "Tag layers", "Layers", 150, 100),
+            new("Value", "Values", "DisplayValue", 340, 180),
+        ]);
     }
 
     private void OnDragOver(object? sender, DragEventArgs e)

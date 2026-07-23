@@ -37,6 +37,11 @@ public interface IMetadataOperationService
         string name,
         CancellationToken ct = default);
 
+    Task<MetadataOperationPlan> PreviewValueEditsAsync(
+        IReadOnlyDictionary<string, IReadOnlyList<MetadataValueEdit>> editsByPath,
+        string name,
+        CancellationToken ct = default);
+
     Task<MetadataApplyResult> ApplyAsync(
         MetadataOperationPlan plan,
         IProgress<OperationProgress>? progress = null,
@@ -360,7 +365,16 @@ public sealed class MetadataOperationService(
         for (int index = 0; index < paths.Count; index++)
         {
             ct.ThrowIfCancellationRequested();
-            MediaDocument document = await documents.LoadAsync(paths[index], false, ct);
+            MediaDocument document;
+            try
+            {
+                document = await documents.LoadAsync(paths[index], false, ct);
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                plans.Add(Unavailable(paths[index], error));
+                continue;
+            }
             Dictionary<MetadataFieldKey, ImmutableArray<string>> before = Flatten(document);
             var after = new Dictionary<MetadataFieldKey, ImmutableArray<string>>(before);
             var operationIssues = new List<OperationIssue>();
@@ -397,7 +411,16 @@ public sealed class MetadataOperationService(
         foreach ((string path, IReadOnlyList<TagEdit> edits) in editsByPath)
         {
             ct.ThrowIfCancellationRequested();
-            MediaDocument document = await documents.LoadAsync(path, false, ct);
+            MediaDocument document;
+            try
+            {
+                document = await documents.LoadAsync(path, false, ct);
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                plans.Add(Unavailable(path, error));
+                continue;
+            }
             Dictionary<MetadataFieldKey, ImmutableArray<string>> before = Flatten(document);
             var after = new Dictionary<MetadataFieldKey, ImmutableArray<string>>(before);
             foreach (TagEdit edit in edits)
@@ -414,6 +437,58 @@ public sealed class MetadataOperationService(
         }
         AddRecoverySpaceIssues(plans);
         return new(Guid.NewGuid(), name, [.. plans], DateTimeOffset.UtcNow);
+    }
+
+    public async Task<MetadataOperationPlan> PreviewValueEditsAsync(
+        IReadOnlyDictionary<string, IReadOnlyList<MetadataValueEdit>> editsByPath,
+        string name,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(editsByPath);
+        var plans = new List<MetadataFilePlan>(editsByPath.Count);
+        foreach ((string path, IReadOnlyList<MetadataValueEdit> edits) in editsByPath)
+        {
+            ct.ThrowIfCancellationRequested();
+            MediaDocument document;
+            try
+            {
+                document = await documents.LoadAsync(path, false, ct);
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                plans.Add(Unavailable(path, error));
+                continue;
+            }
+            Dictionary<MetadataFieldKey, ImmutableArray<string>> before = Flatten(document);
+            var after = new Dictionary<MetadataFieldKey, ImmutableArray<string>>(before);
+            foreach (MetadataValueEdit edit in edits)
+            {
+                if (edit.Values.Length == 0)
+                    after.Remove(edit.Field);
+                else
+                    after[edit.Field] = edit.Values;
+            }
+            plans.Add(BuildPlan(document, before, after));
+        }
+        AddRecoverySpaceIssues(plans);
+        return new(Guid.NewGuid(), name, [.. plans], DateTimeOffset.UtcNow);
+    }
+
+    private static MetadataFilePlan Unavailable(string path, Exception error)
+    {
+        string fullPath;
+        try { fullPath = Path.GetFullPath(path); }
+        catch { fullPath = path; }
+        return new(
+            fullPath,
+            new(fullPath, 0, DateTime.MinValue, ""),
+            [],
+            [],
+            [new(
+                "metadata.unavailable",
+                OperationIssueSeverity.Blocker,
+                error.Message,
+                fullPath)]);
     }
 
     public async Task<MetadataApplyResult> ApplyAsync(

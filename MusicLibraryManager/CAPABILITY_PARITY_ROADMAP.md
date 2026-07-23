@@ -27,20 +27,21 @@ the same editor, preview, policy checks, recovery behavior, and history.
 
 ## Cross-surface operation parity invariant
 
-- [ ] Define operation applicability in the shared operation catalog rather
+- [x] Define operation applicability in the shared operation catalog rather
   than in either view.
-- [ ] Expose every applicable metadata, artwork, file, online-enrichment,
-  report, and playlist operation from both Workbench and Library.
-- [ ] Share recipe editing, typed conditions, preview rendering, apply,
+- [~] Expose every applicable metadata, artwork, file, online-enrichment,
+  report, and playlist operation from both Workbench and Library. The initial
+  typed metadata catalog is exposed in both surfaces.
+- [~] Share recipe editing, typed conditions, preview rendering, apply,
   cancellation, history, undo, redo, and repeat between the two surfaces.
-- [ ] Let Library operations target an explicit scope: selected tracks,
+- [x] Let Library operations target an explicit scope: selected tracks,
   selected albums, visible filtered results, or the complete active view.
-- [ ] Resolve Library scopes to stable path snapshots before preview and show
+- [x] Resolve Library scopes to stable path snapshots before preview and show
   files that disappeared, moved, or became unavailable as plan issues.
-- [ ] Read authoritative metadata directly from disk while building a Library
+- [x] Read authoritative metadata directly from disk while building a Library
   operation preview; the cache is for browsing and candidate selection only.
-- [ ] Reindex successfully changed Library files immediately after apply.
-- [ ] Display a concrete reason when an operation is unavailable for a
+- [x] Reindex successfully changed Library files immediately after apply.
+- [x] Display a concrete reason when an operation is unavailable for a
   selection because of format capability, offline state, or library policy.
 - [x] Keep session-only Workbench actions—adding/removing sources and manual
   session ordering—out of Library because they do not operate on library files.
@@ -125,8 +126,9 @@ appropriate build or test.
 - [x] Inline editing of the first set of actual metadata fields.
 - [ ] Multi-selection and mixed-value handling.
 - [~] Multiple values with keep, replace, append, remove-value, and remove-field
-  semantics.
-- [~] Known and native custom fields.
+  semantics. These are available for a focused Workbench file; multi-selection
+  mixed-value editing remains.
+- [x] Inspect and edit arbitrary known and native custom fields.
 - [~] Multiple artwork items, types, descriptions, and previews.
 - [x] Read-only technical properties.
 - [ ] Refactor Library inspector and fields dialog onto shared document/write
@@ -177,7 +179,7 @@ and restored without creating or indexing a library.
 - [ ] Typed conditions per operation.
 - [ ] Enable/disable, duplicate, rename, and reorder operations.
 - [ ] Representative-file preview while editing.
-- [ ] Apply every applicable operation to Workbench or explicit Library scope
+- [~] Apply every applicable operation to Workbench or explicit Library scope
   through the same operation catalog and editor.
 - [ ] Persist personal recipes through `IAppSettings`.
 - [x] Reserve configuration XML for shared library policies.
@@ -416,3 +418,13 @@ per-operation capability flags.
   Workbench operation meaningful for indexed files must also be available from
   Library through the same catalog, editor, preview, apply, recovery, and
   history services.
+- Created the shared typed-operation catalog and shared editor state. The first
+  seven typed operations are now exposed in both Workbench and Library.
+- Added Library operation scopes for selected tracks, selected albums, visible
+  filtered results, and the complete library. Library preview reads directly
+  from disk, reports unavailable cached candidates as blockers, uses the normal
+  staged/recoverable apply path, and refreshes the cache afterward.
+- Added the Workbench All Fields editor. It displays every known and native
+  custom field with its tag layers and ordered values, and supports replace,
+  append, remove-value, and remove-field previews without flattening values into
+  a delimiter-separated string.

@@ -11,6 +11,57 @@ public sealed class MetadataWorkbenchServicesTests
         new(MediaFormatRegistry.Default);
 
     [Fact]
+    public void OperationCatalog_ExposesEveryBuiltInOperationToWorkbenchAndLibrary()
+    {
+        var catalog = new MetadataOperationCatalog();
+
+        Assert.Equal(Enum.GetValues<MetadataOperationKind>().Length,
+            catalog.Operations.Count);
+        Assert.All(catalog.Operations, operation =>
+        {
+            Assert.True(operation.Supports(MetadataOperationSurface.Workbench));
+            Assert.True(operation.Supports(MetadataOperationSurface.Library));
+        });
+    }
+
+    [Fact]
+    public async Task Preview_ReportsUnavailableLibraryCandidateWithoutAbortingScope()
+    {
+        using var media = MediaFixtures.Copy("sample.flac");
+        string missing = Path.Combine(
+            Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".flac");
+        string statePath = Path.Combine(
+            Path.GetTempPath(), "mlm-settings-" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings);
+            OperationRecipe recipe = OperationRecipe.Create(
+                "Library scope",
+                new AssignFieldOperation(
+                    MetadataFieldKey.Known(TagFields.Title), "Updated"));
+
+            MetadataOperationPlan plan =
+                await service.PreviewAsync([media.Path, missing], recipe);
+
+            Assert.Equal(2, plan.Files.Length);
+            Assert.True(plan.Files[0].HasChanges);
+            Assert.Contains(plan.Files[1].Issues, issue =>
+                issue.Code == "metadata.unavailable" &&
+                issue.Severity == OperationIssueSeverity.Blocker);
+            Assert.False(plan.CanApply);
+        }
+        finally
+        {
+            try { File.Delete(statePath); } catch { }
+        }
+    }
+
+    [Fact]
     public async Task Document_PreservesKnownFieldsAndTechnicalProperties()
     {
         using var media = MediaFixtures.Copy("sample.flac");
@@ -228,6 +279,48 @@ public sealed class MetadataWorkbenchServicesTests
             MediaDocument reloaded = await _documents.LoadAsync(mediaPath);
             Assert.Equal(["First artist", "Second artist"],
                 reloaded.Values(MetadataFieldKey.Known(TagFields.Composer)));
+        }
+        finally
+        {
+            try { Directory.Delete(session, recursive: true); } catch { }
+            try { Directory.Delete(recovery, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task ValueEditor_RoundTripsOrderedCustomValues()
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(), "mlm-custom-values-" + Guid.NewGuid().ToString("N"));
+        string recovery = session + ".MusicLibraryManager-recovery";
+        Directory.CreateDirectory(session);
+        string mediaPath = Path.Combine(session, "track.flac");
+        File.Copy(MediaFixtures.Path_("sample.flac"), mediaPath);
+        string statePath = Path.Combine(session, "settings.json");
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings);
+            MetadataFieldKey custom = MetadataFieldKey.Custom("DJ_SET");
+            var edits = new Dictionary<string, IReadOnlyList<MetadataValueEdit>>
+            {
+                [mediaPath] =
+                [
+                    new(custom, ["Warmup", "Peak"]),
+                ],
+            };
+
+            MetadataOperationPlan plan = await service.PreviewValueEditsAsync(
+                edits, "Custom values");
+            Assert.True(plan.CanApply);
+            await service.ApplyAsync(plan);
+
+            MediaDocument reloaded = await _documents.LoadAsync(mediaPath);
+            Assert.Equal(["Warmup", "Peak"], reloaded.Values(custom));
         }
         finally
         {

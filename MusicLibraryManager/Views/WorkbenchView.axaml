@@ -93,25 +93,27 @@
             <Grid ColumnDefinitions="220,220,220,220,*" ColumnSpacing="10">
               <StackPanel Spacing="5">
                 <TextBlock Classes="muted" Text="Operation" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox Classes="app" ItemsSource="{Binding OperationKinds}"
-                          SelectedItem="{Binding SelectedOperationKind, Mode=TwoWay}" />
+                <ComboBox Classes="app"
+                          ItemsSource="{Binding OperationEditor.OperationDescriptors}"
+                          DisplayMemberBinding="{Binding DisplayName}"
+                          SelectedItem="{Binding OperationEditor.SelectedOperation, Mode=TwoWay}" />
               </StackPanel>
               <StackPanel Grid.Column="1" Spacing="5">
                 <TextBlock Classes="muted" Text="Field" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox Classes="app" ItemsSource="{Binding Fields}"
+                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.Fields}"
                           DisplayMemberBinding="{Binding Label}"
-                          SelectedItem="{Binding SelectedField, Mode=TwoWay}" />
+                          SelectedItem="{Binding OperationEditor.SelectedField, Mode=TwoWay}" />
               </StackPanel>
               <StackPanel Grid.Column="2" Spacing="5">
                 <TextBlock Classes="muted" Text="Destination field" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox Classes="app" ItemsSource="{Binding Fields}"
+                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.Fields}"
                           DisplayMemberBinding="{Binding Label}"
-                          SelectedItem="{Binding DestinationField, Mode=TwoWay}" />
+                          SelectedItem="{Binding OperationEditor.DestinationField, Mode=TwoWay}" />
               </StackPanel>
               <StackPanel Grid.Column="3" Spacing="5">
                 <TextBlock Classes="muted" Text="Case" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox Classes="app" ItemsSource="{Binding CaseModes}"
-                          SelectedItem="{Binding SelectedCaseMode, Mode=TwoWay}" />
+                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.CaseModes}"
+                          SelectedItem="{Binding OperationEditor.SelectedCaseMode, Mode=TwoWay}" />
               </StackPanel>
               <Button Grid.Column="4" VerticalAlignment="Bottom" HorizontalAlignment="Left"
                       Classes="app primary" Content="Preview operation"
@@ -121,32 +123,32 @@
             <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="10">
               <StackPanel Spacing="5">
                 <TextBlock Classes="muted" Text="Value" FontSize="12" FontWeight="SemiBold" />
-                <TextBox Classes="app" Text="{Binding OperationValue, Mode=TwoWay}"
+                <TextBox Classes="app" Text="{Binding OperationEditor.OperationValue, Mode=TwoWay}"
                          PlaceholderText="Assignment value" />
               </StackPanel>
               <StackPanel Grid.Column="1" Spacing="5">
                 <TextBlock Classes="muted" Text="Find" FontSize="12" FontWeight="SemiBold" />
-                <TextBox Classes="app" Text="{Binding SearchText, Mode=TwoWay}"
+                <TextBox Classes="app" Text="{Binding OperationEditor.SearchText, Mode=TwoWay}"
                          PlaceholderText="Text or regular expression" />
               </StackPanel>
               <StackPanel Grid.Column="2" Spacing="5">
                 <TextBlock Classes="muted" Text="Replace with" FontSize="12" FontWeight="SemiBold" />
-                <TextBox Classes="app" Text="{Binding ReplacementText, Mode=TwoWay}" />
+                <TextBox Classes="app" Text="{Binding OperationEditor.ReplacementText, Mode=TwoWay}" />
               </StackPanel>
             </Grid>
 
             <WrapPanel Grid.Row="2">
               <CheckBox Margin="0,0,18,0" Content="Use regular expression"
-                        IsChecked="{Binding UseRegularExpression, Mode=TwoWay}" />
+                        IsChecked="{Binding OperationEditor.UseRegularExpression, Mode=TwoWay}" />
               <TextBlock Classes="muted" VerticalAlignment="Center"
                          Text="Sequence start" />
               <NumericUpDown Classes="app" Margin="8,0,18,0" Width="90"
-                             Minimum="0" Value="{Binding SequenceStart, Mode=TwoWay}" />
+                             Minimum="0" Value="{Binding OperationEditor.SequenceStart, Mode=TwoWay}" />
               <TextBlock Classes="muted" VerticalAlignment="Center"
                          Text="Padding" />
               <NumericUpDown Classes="app" Margin="8,0,0,0" Width="90"
                              Minimum="0" Maximum="12"
-                             Value="{Binding SequencePadding, Mode=TwoWay}" />
+                             Value="{Binding OperationEditor.SequencePadding, Mode=TwoWay}" />
             </WrapPanel>
 
             <Grid Grid.Row="3" RowDefinitions="Auto,*" RowSpacing="8">
@@ -154,6 +156,58 @@
               <controls:AppDataGrid x:Name="PreviewGrid" Grid.Row="1"
                   ItemsSource="{Binding PreviewChanges}" />
             </Grid>
+          </Grid>
+        </TabItem>
+
+        <TabItem Header="All fields">
+          <Grid Margin="0,12,0,0" ColumnDefinitions="1.15*,14,0.85*">
+            <Grid RowDefinitions="Auto,*" RowSpacing="8">
+              <TextBlock Classes="section-title"
+                         Text="Known and native custom fields" />
+              <controls:AppDataGrid x:Name="MetadataFieldsGrid" Grid.Row="1"
+                  ItemsSource="{Binding MetadataFields}"
+                  SelectedItem="{Binding SelectedMetadataField, Mode=TwoWay}" />
+            </Grid>
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+              <StackPanel Spacing="10">
+                <TextBlock Classes="section-title" Text="Ordered values" />
+                <TextBlock Classes="muted" TextWrapping="Wrap"
+                           Text="Enter one value per line. The preview preserves value order and blocks formats that cannot represent multiple values without loss." />
+                <StackPanel Spacing="4">
+                  <TextBlock Classes="muted" Text="Existing field" FontSize="12" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding SelectedMetadataField.Name}"
+                             FontWeight="SemiBold" />
+                </StackPanel>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                  <ComboBox Classes="app" ItemsSource="{Binding KnownFieldChoices}"
+                            DisplayMemberBinding="{Binding Label}"
+                            SelectedItem="{Binding SelectedNewKnownField, Mode=TwoWay}" />
+                  <Button Grid.Column="1" Classes="app" Content="New known field"
+                          Command="{Binding BeginNewKnownFieldCommand}" />
+                </Grid>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                  <TextBox Classes="app" Text="{Binding CustomFieldName, Mode=TwoWay}"
+                           PlaceholderText="Native custom field name" />
+                  <Button Grid.Column="1" Classes="app" Content="New custom field"
+                          Command="{Binding BeginNewCustomFieldCommand}" />
+                </Grid>
+                <StackPanel Spacing="4">
+                  <TextBlock Classes="muted" Text="Value action" FontSize="12" FontWeight="SemiBold" />
+                  <ComboBox Classes="app" ItemsSource="{Binding FieldEditModes}"
+                            SelectedItem="{Binding SelectedFieldEditMode, Mode=TwoWay}" />
+                </StackPanel>
+                <TextBox Classes="app" MinHeight="180" AcceptsReturn="True"
+                         TextWrapping="NoWrap"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         Text="{Binding FieldValuesText, Mode=TwoWay}" />
+                <Button Classes="app primary" HorizontalAlignment="Left"
+                        Content="Preview field values"
+                        Command="{Binding PreviewFieldValuesCommand}" />
+                <Border Classes="status-banner info">
+                  <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
+                </Border>
+              </StackPanel>
+            </ScrollViewer>
           </Grid>
         </TabItem>
       </TabControl>

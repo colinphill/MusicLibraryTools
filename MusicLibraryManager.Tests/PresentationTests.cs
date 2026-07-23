@@ -1307,6 +1307,51 @@ public sealed class PresentationTests
             new NavigationService(), indexing, new FakeThumbnails());
     }
 
+    [Fact]
+    public async Task Library_operations_resolve_selected_album_and_use_shared_catalog()
+    {
+        TrackRecord[] records =
+        [
+            Track("Artist", "First", "One", "FLAC", @"C:\music\one.flac"),
+            Track("Artist", "First", "Two", "FLAC", @"C:\music\two.flac"),
+            Track("Artist", "Second", "Three", "FLAC", @"C:\music\three.flac"),
+        ];
+        var library = new FakeLibrary(records);
+        var settings = new FakeSettings();
+        var activity = new AppActivityService();
+        var inspector = new SelectionInspectorViewModel(
+            new FakeMediaService(), library, new FakeTagWriter(),
+            new FakeArtworkService(), new FakeFilePicker(), new FakeDialogs(),
+            new FakeFieldsEditor(), new FakeThumbnails(), activity);
+        var indexing = new IndexingViewModel(library, settings, activity);
+        var operations = new FakeMetadataOperationService();
+        var viewModel = new LibraryViewModel(
+            library,
+            new FakeReindex(),
+            settings,
+            inspector,
+            new NavigationService(),
+            indexing,
+            new FakeThumbnails(),
+            metadataOperations: operations,
+            operationCatalog: new MetadataOperationCatalog());
+        await viewModel.ReloadAsync();
+        await viewModel.SelectAsync(
+            [viewModel.Rows.Single(row => row.Title == "One")]);
+        viewModel.SelectedOperationScope = LibraryOperationScope.SelectedAlbums;
+        viewModel.OperationEditor.OperationValue = "Reviewed";
+
+        await viewModel.PreviewLibraryOperationCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            [@"C:\music\one.flac", @"C:\music\two.flac"],
+            operations.PreviewedPaths);
+        Assert.True(viewModel.HasApplicableOperationPreview);
+        Assert.Single(viewModel.OperationPreviewChanges);
+        Assert.All(viewModel.OperationEditor.OperationDescriptors, descriptor =>
+            Assert.True(descriptor.Supports(MetadataOperationSurface.Library)));
+    }
+
     private static TrackRecord Track(string artist, string album, string title, string codec, string path) => new()
     {
         Path = path,
@@ -1397,6 +1442,51 @@ internal sealed class FakeLibrary(IReadOnlyList<TrackRecord> records) : ILibrary
 internal sealed class FakeReindex : IReindexService
 {
     public Task ReindexFileAsync(string path, CancellationToken ct = default) => Task.CompletedTask;
+}
+
+internal sealed class FakeMetadataOperationService : IMetadataOperationService
+{
+    public IReadOnlyList<string> PreviewedPaths { get; private set; } = [];
+
+    public Task<MetadataOperationPlan> PreviewAsync(
+        IReadOnlyList<string> paths,
+        OperationRecipe recipe,
+        CancellationToken ct = default)
+    {
+        PreviewedPaths = paths.ToArray();
+        string path = paths[0];
+        var change = new MetadataFieldDifference(
+            MetadataFieldKey.Known(TagFields.Title),
+            ["Before"],
+            ["Reviewed"]);
+        var file = new MetadataFilePlan(
+            path,
+            new(path, 1, DateTime.UtcNow, "hash"),
+            [change],
+            [new(change.Field, change.After)],
+            []);
+        return Task.FromResult(new MetadataOperationPlan(
+            Guid.NewGuid(), recipe.Name, [file], DateTimeOffset.UtcNow, recipe));
+    }
+
+    public Task<MetadataOperationPlan> PreviewEditsAsync(
+        IReadOnlyDictionary<string, IReadOnlyList<TagEdit>> editsByPath,
+        string name,
+        CancellationToken ct = default) =>
+        throw new NotSupportedException();
+
+    public Task<MetadataOperationPlan> PreviewValueEditsAsync(
+        IReadOnlyDictionary<string, IReadOnlyList<MetadataValueEdit>> editsByPath,
+        string name,
+        CancellationToken ct = default) =>
+        throw new NotSupportedException();
+
+    public Task<MetadataApplyResult> ApplyAsync(
+        MetadataOperationPlan plan,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default) =>
+        Task.FromResult(new MetadataApplyResult(
+            plan.ChangedFileCount, [], []));
 }
 
 internal sealed class FakeMediaService(params MediaFileModel[] models) : IMediaFileService
