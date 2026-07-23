@@ -197,6 +197,27 @@ public partial class MusicBrainzReleaseSearchViewModel : ObservableObject
     }
 }
 
+public partial class CoverArtCandidateRow(
+    CoverArtArchiveCandidate candidate) : ObservableObject
+{
+    public CoverArtArchiveCandidate Candidate { get; } = candidate;
+    public string Id => Candidate.Id;
+    public string Roles => Candidate.Types.Length == 0
+        ? "Other"
+        : string.Join(", ", Candidate.Types);
+    public string Front => Candidate.IsFront ? "Yes" : "";
+    public string Back => Candidate.IsBack ? "Yes" : "";
+    public string Approved => Candidate.Approved ? "Yes" : "No";
+    public string Comment => Candidate.Comment ?? "";
+    public string ImageUrl => Candidate.ImageUri.AbsoluteUri;
+
+    [ObservableProperty]
+    private object? _thumbnailSource;
+
+    [ObservableProperty]
+    private string? _thumbnailStatus;
+}
+
 public sealed record MusicBrainzTrackChoice(
     MusicBrainzTrackCandidate Track,
     int Score,

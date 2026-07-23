@@ -40,6 +40,10 @@ public sealed class ServiceCollectionExtensionsTests
             provider.GetRequiredService<IMusicBrainzMetadataProvider>());
         Assert.IsType<MusicBrainzReleaseMappingService>(
             provider.GetRequiredService<IMusicBrainzReleaseMappingService>());
+        Assert.IsType<CoverArtArchiveProvider>(
+            provider.GetRequiredService<ICoverArtArchiveProvider>());
+        Assert.IsType<ArtworkDownloadCache>(
+            provider.GetRequiredService<IArtworkDownloadCache>());
         Assert.IsType<LibraryOperationContextFactory>(
             provider.GetRequiredService<ILibraryOperationContextFactory>());
         Assert.IsType<ItlMetadataRepairService>(

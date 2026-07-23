@@ -68,6 +68,7 @@ public partial class LibraryView : UserControl
             new("ReleaseID", "MusicBrainz release ID", "ReleaseId", 260, 170),
         ]);
         ConfigureReleaseTrackMappingGrid(LibraryReleaseTrackMappingGrid);
+        ConfigureReleaseArtworkGrid(LibraryReleaseArtworkGrid);
         LibraryGrid.ApplySort(_sort);
         BuildColumnOptions();
         LibraryGrid.LayoutChanged += (_, _) => PersistLayout();
@@ -118,6 +119,35 @@ public partial class LibraryView : UserControl
                 CellTemplate: trackTemplate, Sortable: false),
             new("Confidence", "Confidence", "Confidence", 100, 76),
             new("Status", "Reason", "Status", 260, 150),
+        ]);
+    }
+
+    private static void ConfigureReleaseArtworkGrid(AppDataGrid grid)
+    {
+        var thumbnailTemplate = new FuncDataTemplate<CoverArtCandidateRow>(
+            (_, _) =>
+            {
+                var image = new Image
+                {
+                    Width = 64,
+                    Height = 64,
+                    Stretch = Stretch.Uniform,
+                };
+                image.Bind(Image.SourceProperty,
+                    new Binding(nameof(CoverArtCandidateRow.ThumbnailSource)));
+                return image;
+            });
+        grid.RowHeight = 74;
+        grid.ConfigureColumns(
+        [
+            new("Thumbnail", "Preview", null, 82, 72,
+                CellTemplate: thumbnailTemplate, Sortable: false),
+            new("Roles", "Types", "Roles", 140, 90),
+            new("Front", "Front", "Front", 65, 52),
+            new("Back", "Back", "Back", 65, 52),
+            new("Approved", "Approved", "Approved", 80, 62),
+            new("Comment", "Comment", "Comment", 200, 120),
+            new("Status", "Thumbnail", "ThumbnailStatus", 130, 82),
         ]);
     }
 

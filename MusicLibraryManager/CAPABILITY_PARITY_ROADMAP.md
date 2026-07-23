@@ -257,7 +257,8 @@ capability comparison is possible through typed operations without scripting.
   - [~] Route changes through normal preview and recovery. Selective metadata
     imports use the shared staged operation plan; artwork remains.
 - [ ] Cache release data in an application-local database.
-- [ ] Cache artwork thumbnails in a bounded application-data cache.
+- [x] Cache downloaded artwork and thumbnails in a bounded application-data
+  cache with least-recently-used pruning.
 - [~] Add provider rate limiting, identifiable user agent, cancellation,
   retry/backoff, and offline behavior. MusicBrainz request behavior is
   implemented; caching and explicit offline behavior remain.
@@ -519,3 +520,12 @@ per-operation capability flags.
   remain lightweight; building a mapping loads the chosen edition's complete
   media and track details through the same throttled, retryable, cancellable
   provider.
+- Added the code-backed Cover Art Archive provider with recorded JSON tests,
+  retry/backoff for transient failures, bounded concurrency, an identifiable
+  user agent, cancellation, and explicit no-artwork handling for HTTP 404.
+- Added a 128 MiB application-local artwork cache keyed by immutable source
+  URLs with least-recently-used pruning. Workbench and Library now browse every
+  image attached to the selected release, including roles, approval state,
+  comments, front/back classification, and cached thumbnails.
+- Artwork discovery is read-only in this increment. Import still requires the
+  planned artwork-aware staged operation model before it can be enabled.

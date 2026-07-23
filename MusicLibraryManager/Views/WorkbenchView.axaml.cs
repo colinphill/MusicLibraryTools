@@ -3,6 +3,7 @@ using global::Avalonia.Controls.Templates;
 using global::Avalonia.Data;
 using global::Avalonia.Input;
 using global::Avalonia.Markup.Xaml;
+using global::Avalonia.Media;
 using global::Avalonia.Platform.Storage;
 using MusicLibraryManager.Controls;
 using MusicLibraryManager.Presentation;
@@ -74,6 +75,37 @@ public partial class WorkbenchView : UserControl
             new("ReleaseID", "MusicBrainz release ID", "ReleaseId", 280, 180),
         ]);
         ConfigureReleaseTrackMappingGrid(ReleaseTrackMappingGrid);
+        ConfigureReleaseArtworkGrid(ReleaseArtworkGrid);
+    }
+
+    private static void ConfigureReleaseArtworkGrid(AppDataGrid grid)
+    {
+        var thumbnailTemplate = new FuncDataTemplate<CoverArtCandidateRow>(
+            (_, _) =>
+            {
+                var image = new Image
+                {
+                    Width = 72,
+                    Height = 72,
+                    Stretch = Stretch.Uniform,
+                };
+                image.Bind(Image.SourceProperty,
+                    new Binding(nameof(CoverArtCandidateRow.ThumbnailSource)));
+                return image;
+            });
+        grid.RowHeight = 82;
+        grid.ConfigureColumns(
+        [
+            new("Thumbnail", "Preview", null, 90, 80,
+                CellTemplate: thumbnailTemplate, Sortable: false),
+            new("Roles", "Types", "Roles", 170, 100),
+            new("Front", "Front", "Front", 70, 55),
+            new("Back", "Back", "Back", 70, 55),
+            new("Approved", "Approved", "Approved", 85, 65),
+            new("Comment", "Comment", "Comment", 240, 130),
+            new("Status", "Thumbnail", "ThumbnailStatus", 150, 90),
+            new("Id", "Archive ID", "Id", 150, 100),
+        ]);
     }
 
     private static void ConfigureReleaseTrackMappingGrid(AppDataGrid grid)

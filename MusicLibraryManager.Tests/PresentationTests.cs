@@ -1443,6 +1443,7 @@ public sealed class PresentationTests
         var discovery = new FakeAcoustIdDiscoveryService();
         var metadataOperations = new FakeMetadataOperationService();
         var musicBrainz = new FakeMusicBrainzMetadataProvider();
+        var coverArt = new FakeCoverArtArchiveProvider();
         var viewModel = new LibraryViewModel(
             library,
             new FakeReindex(),
@@ -1454,7 +1455,8 @@ public sealed class PresentationTests
             metadataOperations: metadataOperations,
             audioDiscovery: discovery,
             musicBrainz: musicBrainz,
-            releaseMapping: new MusicBrainzReleaseMappingService());
+            releaseMapping: new MusicBrainzReleaseMappingService(),
+            coverArt: coverArt);
         await viewModel.ReloadAsync();
         await viewModel.SelectAsync(
             [viewModel.Rows.Single(row => row.Title == "One")]);
@@ -1532,6 +1534,14 @@ public sealed class PresentationTests
         Assert.Equal(searchResult.ReleaseId, musicBrainz.RequestedReleaseId);
         Assert.Contains(viewModel.ReleaseTrackMappings,
             row => row.Path == @"C:\music\one.flac" && row.IsIncluded);
+
+        await viewModel.FindLibraryReleaseArtworkCommand.ExecuteAsync(null);
+
+        CoverArtCandidateRow artwork =
+            Assert.Single(viewModel.ArtworkMatches);
+        Assert.True(artwork.Candidate.IsFront);
+        Assert.Equal("4 bytes", artwork.ThumbnailStatus);
+        Assert.Equal(searchResult.ReleaseId, coverArt.ReleaseId);
     }
 
     private static TrackRecord Track(string artist, string album, string title, string codec, string path) => new()
@@ -1837,6 +1847,39 @@ internal sealed class FakeMusicBrainzMetadataProvider : IMusicBrainzMetadataProv
             ["Digital Media"],
             [track]);
     }
+}
+
+internal sealed class FakeCoverArtArchiveProvider : ICoverArtArchiveProvider
+{
+    public Guid? ReleaseId { get; private set; }
+
+    public Task<CoverArtArchiveResult> GetReleaseArtworkAsync(
+        Guid releaseId,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        ReleaseId = releaseId;
+        var candidate = new CoverArtArchiveCandidate(
+            releaseId,
+            "cover-1",
+            new("https://coverartarchive.org/original.jpg"),
+            new("https://coverartarchive.org/250.jpg"),
+            ["Front"],
+            true,
+            false,
+            true,
+            null);
+        return Task.FromResult(new CoverArtArchiveResult(
+            releaseId, [candidate], DateTimeOffset.UtcNow));
+    }
+
+    public Task<CoverArtDownload> DownloadAsync(
+        CoverArtArchiveCandidate candidate,
+        bool thumbnail = false,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default) =>
+        Task.FromResult(new CoverArtDownload(
+            [1, 2, 3, 4], "image/jpeg", false));
 }
 
 internal sealed class FakeMediaService(params MediaFileModel[] models) : IMediaFileService

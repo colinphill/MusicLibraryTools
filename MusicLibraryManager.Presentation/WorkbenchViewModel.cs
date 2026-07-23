@@ -37,6 +37,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private readonly IAcoustIdDiscoveryService _audioDiscovery;
     private readonly IMusicBrainzMetadataProvider _musicBrainz;
     private readonly IMusicBrainzReleaseMappingService _releaseMapping;
+    private readonly ICoverArtArchiveProvider _coverArt;
+    private readonly IThumbnailService _thumbnails;
     private readonly IEditHistoryService _history;
     private readonly IFilePickerService _files;
     private readonly IDialogCoordinator _dialogs;
@@ -58,6 +60,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(BuildReleaseMappingCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewReleaseMetadataCommand))]
     [NotifyCanExecuteChangedFor(nameof(SearchMusicBrainzReleasesCommand))]
+    [NotifyCanExecuteChangedFor(nameof(FindReleaseArtworkCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -88,6 +91,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(BuildReleaseMappingCommand))]
+    [NotifyCanExecuteChangedFor(nameof(FindReleaseArtworkCommand))]
     private MusicBrainzReleaseRow? _selectedRelease;
 
     [ObservableProperty]
@@ -124,6 +128,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         IAcoustIdDiscoveryService audioDiscovery,
         IMusicBrainzMetadataProvider musicBrainz,
         IMusicBrainzReleaseMappingService releaseMapping,
+        ICoverArtArchiveProvider coverArt,
+        IThumbnailService thumbnails,
         IEditHistoryService history,
         IFilePickerService files,
         IDialogCoordinator dialogs,
@@ -134,6 +140,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         _audioDiscovery = audioDiscovery;
         _musicBrainz = musicBrainz;
         _releaseMapping = releaseMapping;
+        _coverArt = coverArt;
+        _thumbnails = thumbnails;
         _history = history;
         _files = files;
         _dialogs = dialogs;
@@ -157,6 +165,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     public ObservableCollection<AudioDiscoveryRow> AudioMatches { get; } = [];
     public ObservableCollection<MusicBrainzReleaseRow> ReleaseMatches { get; } = [];
     public ObservableCollection<MusicBrainzTrackMappingRow> ReleaseTrackMappings { get; } = [];
+    public ObservableCollection<CoverArtCandidateRow> ArtworkMatches { get; } = [];
     public ObservableCollection<string> RecentLocations { get; } = [];
     public MusicBrainzImportSelectionViewModel ReleaseImport { get; } = new();
     public MusicBrainzReleaseSearchViewModel ReleaseSearch { get; } = new();
@@ -197,8 +206,13 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     partial void OnSelectedReleaseChanged(MusicBrainzReleaseRow? value)
     {
         ClearReleaseTrackMappings();
+        ArtworkMatches.Clear();
+        SelectedArtworkMatch = null;
         BuildReleaseMappingCommand.NotifyCanExecuteChanged();
     }
+
+    [ObservableProperty]
+    private CoverArtCandidateRow? _selectedArtworkMatch;
 
     [RelayCommand]
     private void BeginNewKnownField()
@@ -675,6 +689,75 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanFindReleaseArtwork))]
+    private async Task FindReleaseArtworkAsync()
+    {
+        if (SelectedRelease is null)
+            return;
+        BeginOperation("Finding Cover Art Archive images");
+        try
+        {
+            IProgress<OperationProgress> progress = CreateProgress();
+            CoverArtArchiveResult result =
+                await _coverArt.GetReleaseArtworkAsync(
+                    SelectedRelease.ReleaseId,
+                    progress,
+                    _cancellation!.Token);
+            ArtworkMatches.Clear();
+            foreach (CoverArtArchiveCandidate candidate in result.Images)
+                ArtworkMatches.Add(new(candidate));
+            for (int index = 0; index < ArtworkMatches.Count; index++)
+            {
+                _cancellation.Token.ThrowIfCancellationRequested();
+                CoverArtCandidateRow row = ArtworkMatches[index];
+                progress.Report(new(
+                    OperationPhase.Planning,
+                    index,
+                    ArtworkMatches.Count,
+                    Message: $"Loading artwork thumbnail {index + 1:N0} " +
+                        $"of {ArtworkMatches.Count:N0}"));
+                try
+                {
+                    CoverArtDownload download =
+                        await _coverArt.DownloadAsync(
+                            row.Candidate,
+                            thumbnail: true,
+                            ct: _cancellation.Token);
+                    row.ThumbnailSource =
+                        await _thumbnails.CreateImageSourceAsync(
+                            download.Data, 180, _cancellation.Token);
+                    row.ThumbnailStatus = download.FromCache
+                        ? "Cached"
+                        : $"{download.Data.Length:N0} bytes";
+                }
+                catch (Exception error) when (
+                    error is not OperationCanceledException)
+                {
+                    row.ThumbnailStatus = error.Message;
+                }
+            }
+            SelectedArtworkMatch = ArtworkMatches.FirstOrDefault(row =>
+                row.Candidate.IsFront) ?? ArtworkMatches.FirstOrDefault();
+            StatusText = ArtworkMatches.Count == 0
+                ? "This release has no Cover Art Archive images."
+                : $"Loaded {ArtworkMatches.Count:N0} artwork candidate(s). " +
+                  "No files were changed.";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Cover Art Archive lookup cancelled.";
+        }
+        catch (Exception error)
+        {
+            StatusText = $"Cover Art Archive lookup failed: {error.Message}";
+        }
+        finally
+        {
+            EndOperation();
+            NotifySessionChanged();
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanBuildReleaseMapping))]
     private async Task BuildReleaseMappingAsync()
     {
@@ -1005,6 +1088,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         SelectedAudioMatch?.MusicBrainzRecordingIdValues.Length == 1;
     private bool CanSearchMusicBrainzReleases() =>
         !IsBusy && ReleaseSearch.HasCriteria;
+    private bool CanFindReleaseArtwork() =>
+        !IsBusy && SelectedRelease is not null;
     private bool CanBuildReleaseMapping() =>
         !IsBusy && SelectedRelease is not null && Files.Count > 0;
     private bool CanPreviewReleaseMetadata() =>
