@@ -40,6 +40,7 @@ public sealed class MusicBrainzMetadataProviderTests
                   "format": "CD",
                   "tracks": [
                     {
+                      "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
                       "position": 1,
                       "number": "1",
                       "title": "Example Song",
@@ -92,6 +93,9 @@ public sealed class MusicBrainzMetadataProviderTests
         Assert.Equal("CAT-001", first.CatalogNumber);
         Assert.Equal(["CD"], first.Formats);
         MusicBrainzTrackCandidate track = Assert.Single(first.Tracks);
+        Assert.Equal(
+            Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"),
+            track.TrackId);
         Assert.Equal(1, track.MediumPosition);
         Assert.Equal(1, track.TrackPosition);
         Assert.Equal(241000, track.LengthMilliseconds);

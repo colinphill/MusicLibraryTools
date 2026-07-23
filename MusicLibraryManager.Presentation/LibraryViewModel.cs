@@ -1,4 +1,6 @@
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -29,6 +31,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private readonly IMetadataOperationService? _metadataOperations;
     private readonly IAcoustIdDiscoveryService? _audioDiscovery;
     private readonly IMusicBrainzMetadataProvider? _musicBrainz;
+    private readonly IMusicBrainzReleaseMappingService? _releaseMapping;
     private readonly IDialogCoordinator? _dialogs;
     private MetadataOperationPlan? _libraryOperationPlan;
     private readonly SemaphoreSlim _thumbnailGate = new(4, 4);
@@ -54,6 +57,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(DiscoverLibraryAudioCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryAudioIdentifiersCommand))]
     [NotifyCanExecuteChangedFor(nameof(ResolveLibraryRecordingCommand))]
+    [NotifyCanExecuteChangedFor(nameof(BuildLibraryReleaseMappingCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewLibraryReleaseMetadataCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -98,6 +103,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(DiscoverLibraryAudioCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryAudioIdentifiersCommand))]
     [NotifyCanExecuteChangedFor(nameof(ResolveLibraryRecordingCommand))]
+    [NotifyCanExecuteChangedFor(nameof(BuildLibraryReleaseMappingCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewLibraryReleaseMetadataCommand))]
     private bool _isOperationBusy;
 
     [ObservableProperty]
@@ -134,6 +141,10 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(ResolveLibraryRecordingCommand))]
     private AudioDiscoveryRow? _selectedAudioMatch;
 
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(BuildLibraryReleaseMappingCommand))]
+    private MusicBrainzReleaseRow? _selectedRelease;
+
     public LibraryViewModel(
         ILibraryService library,
         IReindexService reindex,
@@ -148,7 +159,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         IOperationRecipeStore? recipeStore = null,
         IDialogCoordinator? dialogs = null,
         IAcoustIdDiscoveryService? audioDiscovery = null,
-        IMusicBrainzMetadataProvider? musicBrainz = null)
+        IMusicBrainzMetadataProvider? musicBrainz = null,
+        IMusicBrainzReleaseMappingService? releaseMapping = null)
     {
         _library = library;
         _reindex = reindex;
@@ -160,12 +172,14 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         _metadataOperations = metadataOperations;
         _audioDiscovery = audioDiscovery;
         _musicBrainz = musicBrainz;
+        _releaseMapping = releaseMapping;
         _dialogs = dialogs;
         OperationEditor = new(
             operationCatalog ?? new MetadataOperationCatalog(),
             MetadataOperationSurface.Library,
             recipeStore);
         OperationEditor.PropertyChanged += (_, _) => InvalidateLibraryOperationPreview();
+        ReleaseImport.PropertyChanged += OnReleaseImportChanged;
         Indexing = indexing;
         foreach (DetailsColumn column in DetailsColumns.All)
             Columns.Add(new LibraryColumnChoice(column.Key, column.Header, DetailsColumns.DefaultVisible.Contains(column.Key)));
@@ -185,7 +199,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     public ObservableCollection<LibraryColumnChoice> Columns { get; } = [];
     public ObservableCollection<AudioDiscoveryRow> AudioMatches { get; } = [];
     public ObservableCollection<MusicBrainzReleaseRow> ReleaseMatches { get; } = [];
+    public ObservableCollection<MusicBrainzTrackMappingRow> ReleaseTrackMappings { get; } = [];
     public ObservableCollection<MetadataPreviewRow> OperationPreviewChanges { get; } = [];
+    public MusicBrainzImportSelectionViewModel ReleaseImport { get; } = new();
     public IReadOnlyList<FilterMode> FilterModes { get; } = Enum.GetValues<FilterMode>();
     public IReadOnlyList<LibraryOperationScope> OperationScopes { get; } =
         Enum.GetValues<LibraryOperationScope>();
@@ -208,6 +224,12 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     public bool HasUnsavedChanges =>
         HasUnsavedSelectionChanges || _libraryOperationPlan is not null;
     public event Action? HealthFilterClearRequested;
+
+    partial void OnSelectedReleaseChanged(MusicBrainzReleaseRow? value)
+    {
+        ClearReleaseTrackMappings();
+        BuildLibraryReleaseMappingCommand.NotifyCanExecuteChanged();
+    }
     public string EmptyStateTitle => PageState switch
     {
         LibraryPageState.NoConfiguration => "Choose a library configuration",
@@ -437,6 +459,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         _selectedPaths = distinct;
         OnPropertyChanged(nameof(SelectedPaths));
         InvalidateLibraryOperationPreview();
+        ClearReleaseTrackMappings();
         OpenInWorkbenchCommand.NotifyCanExecuteChanged();
         PreviewLibraryOperationCommand.NotifyCanExecuteChanged();
         DiscoverLibraryAudioCommand.NotifyCanExecuteChanged();
@@ -576,6 +599,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                 paths, CreateOperationProgress(), _operationCancellation!.Token);
             AudioMatches.Clear();
             ReleaseMatches.Clear();
+            SelectedRelease = null;
+            ClearReleaseTrackMappings();
             foreach (AudioDiscoveryRow row in AudioDiscoveryRows.Create(result))
                 AudioMatches.Add(row);
             SelectedAudioMatch = AudioMatches.FirstOrDefault();
@@ -659,6 +684,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             foreach (MusicBrainzReleaseRow row in MusicBrainzReleaseRows.Create(
                          SelectedAudioMatch.Path, result))
                 ReleaseMatches.Add(row);
+            SelectedRelease = ReleaseMatches.FirstOrDefault();
             OperationStatus =
                 $"MusicBrainz returned {ReleaseMatches.Count:N0} release edition(s). " +
                 "No metadata was selected or changed.";
@@ -670,6 +696,127 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         catch (Exception error)
         {
             OperationStatus = $"MusicBrainz release lookup failed: {error.Message}";
+        }
+        finally
+        {
+            EndLibraryOperation();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanBuildLibraryReleaseMapping))]
+    private async Task BuildLibraryReleaseMappingAsync()
+    {
+        if (_releaseMapping is null || SelectedRelease is null)
+            return;
+        string[] paths = ResolveOperationPaths();
+        if (paths.Length == 0)
+            return;
+        BeginLibraryOperation("Matching Library files to release tracks");
+        try
+        {
+            var rows = _allRows.ToDictionary(row => row.Path, PathComparer);
+            MusicBrainzSourceFile[] sources = paths.Select(path =>
+            {
+                rows.TryGetValue(path, out LibraryRow? row);
+                double? discoveredDuration = AudioMatches
+                    .Where(match => PathComparer.Equals(match.Path, path))
+                    .Select(match => match.DurationSeconds)
+                    .FirstOrDefault(value => value is not null);
+                return new MusicBrainzSourceFile(
+                    path,
+                    ConfirmedRecordingIds(path),
+                    row?.Record.Title,
+                    row?.Record.Artist,
+                    row?.Record.DiscNumber,
+                    row?.Record.TrackNumber,
+                    discoveredDuration is not null
+                        ? TimeSpan.FromSeconds(discoveredDuration.Value)
+                        : row?.Record.DurationInSeconds is > 0
+                            ? TimeSpan.FromSeconds(row.Record.DurationInSeconds)
+                            : null);
+            }).ToArray();
+            MusicBrainzReleaseMapping mapping =
+                await _releaseMapping.MapAsync(
+                    SelectedRelease.Candidate,
+                    sources,
+                    CreateOperationProgress(),
+                    _operationCancellation!.Token);
+            ClearReleaseTrackMappings();
+            foreach (MusicBrainzTrackMatch match in mapping.Files)
+            {
+                var mappingRow = new MusicBrainzTrackMappingRow(match);
+                mappingRow.PropertyChanged += OnReleaseMappingChanged;
+                ReleaseTrackMappings.Add(mappingRow);
+            }
+            OperationStatus =
+                $"Suggested {mapping.SuggestedCount:N0} of {mapping.Files.Length:N0} " +
+                $"file-to-track mappings; {mapping.AmbiguousCount:N0} need review.";
+        }
+        catch (OperationCanceledException)
+        {
+            OperationStatus = "Release track mapping cancelled.";
+        }
+        catch (Exception error)
+        {
+            OperationStatus = $"Release track mapping failed: {error.Message}";
+        }
+        finally
+        {
+            EndLibraryOperation();
+            PreviewLibraryReleaseMetadataCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPreviewLibraryReleaseMetadata))]
+    private async Task PreviewLibraryReleaseMetadataAsync()
+    {
+        if (_metadataOperations is null ||
+            _releaseMapping is null ||
+            SelectedRelease is null)
+            return;
+        MusicBrainzConfirmedTrack[] confirmed = ReleaseTrackMappings
+            .Where(row => row.IsIncluded && row.SelectedTrack is not null)
+            .Select(row => new MusicBrainzConfirmedTrack(
+                row.Path, row.SelectedTrack!.Track))
+            .ToArray();
+        IReadOnlyDictionary<string, IReadOnlyList<MetadataValueEdit>> edits =
+            _releaseMapping.CreateEdits(
+                SelectedRelease.Candidate,
+                confirmed,
+                ReleaseImport.CreateOptions());
+        BeginLibraryOperation("Building MusicBrainz metadata preview");
+        try
+        {
+            MetadataOperationPlan plan =
+                await _metadataOperations.PreviewValueEditsAsync(
+                    edits,
+                    $"MusicBrainz: {SelectedRelease.Title}",
+                    CreateOperationProgress(),
+                    _operationCancellation!.Token);
+            _libraryOperationPlan = plan;
+            OperationPreviewChanges.Clear();
+            foreach (MetadataFilePlan file in plan.Files)
+            foreach (MetadataFieldDifference difference in file.Differences)
+                OperationPreviewChanges.Add(new(
+                    Path.GetFileName(file.Path),
+                    difference.Field.DisplayName,
+                    string.Join("; ", difference.Before),
+                    string.Join("; ", difference.After)));
+            HasApplicableOperationPreview = plan.CanApply;
+            OperationStatus =
+                "Mapped MusicBrainz fields were added to the normal metadata preview. " +
+                "Review every change before applying.";
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+        catch (OperationCanceledException)
+        {
+            InvalidateLibraryOperationPreview();
+            OperationStatus = "MusicBrainz metadata preview cancelled.";
+        }
+        catch (Exception error)
+        {
+            InvalidateLibraryOperationPreview();
+            OperationStatus = $"MusicBrainz metadata preview failed: {error.Message}";
         }
         finally
         {
@@ -765,11 +912,15 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         OnPropertyChanged(nameof(HasUnsavedChanges));
     }
 
-    partial void OnSelectedOperationScopeChanged(LibraryOperationScope value) =>
+    partial void OnSelectedOperationScopeChanged(LibraryOperationScope value)
+    {
         InvalidateLibraryOperationPreview();
+        ClearReleaseTrackMappings();
+    }
 
     partial void OnRowsChanged(IReadOnlyList<LibraryRow> value)
     {
+        ClearReleaseTrackMappings();
         PreviewLibraryOperationCommand.NotifyCanExecuteChanged();
         OpenOperationsCommand.NotifyCanExecuteChanged();
         DiscoverLibraryAudioCommand.NotifyCanExecuteChanged();
@@ -795,6 +946,53 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private bool CanResolveLibraryRecording() =>
         !IsBusy && !IsOperationBusy && _musicBrainz is not null &&
         SelectedAudioMatch?.MusicBrainzRecordingIdValues.Length == 1;
+    private bool CanBuildLibraryReleaseMapping() =>
+        !IsBusy && !IsOperationBusy && _releaseMapping is not null &&
+        SelectedRelease is not null && ResolveOperationPaths().Length > 0;
+    private bool CanPreviewLibraryReleaseMetadata() =>
+        !IsBusy && !IsOperationBusy && _metadataOperations is not null &&
+        _releaseMapping is not null && SelectedRelease is not null &&
+        ReleaseImport.HasSelection &&
+        ReleaseTrackMappings.Any(row =>
+            row.IsIncluded && row.SelectedTrack is not null);
+
+    private ImmutableArray<Guid> ConfirmedRecordingIds(string path)
+    {
+        if (SelectedAudioMatch is not null &&
+            PathComparer.Equals(SelectedAudioMatch.Path, path) &&
+            SelectedAudioMatch.MusicBrainzRecordingIdValues.Length == 1)
+            return SelectedAudioMatch.MusicBrainzRecordingIdValues;
+        Guid[] ids = AudioMatches
+            .Where(row => PathComparer.Equals(row.Path, path))
+            .SelectMany(row => row.MusicBrainzRecordingIdValues)
+            .Distinct()
+            .ToArray();
+        return [.. ids];
+    }
+
+    private void ClearReleaseTrackMappings()
+    {
+        foreach (MusicBrainzTrackMappingRow row in ReleaseTrackMappings)
+            row.PropertyChanged -= OnReleaseMappingChanged;
+        ReleaseTrackMappings.Clear();
+        PreviewLibraryReleaseMetadataCommand.NotifyCanExecuteChanged();
+    }
+
+    private void OnReleaseMappingChanged(
+        object? sender,
+        PropertyChangedEventArgs e)
+    {
+        InvalidateLibraryOperationPreview();
+        PreviewLibraryReleaseMetadataCommand.NotifyCanExecuteChanged();
+    }
+
+    private void OnReleaseImportChanged(
+        object? sender,
+        PropertyChangedEventArgs e)
+    {
+        InvalidateLibraryOperationPreview();
+        PreviewLibraryReleaseMetadataCommand.NotifyCanExecuteChanged();
+    }
 
     public Task ApplyFilterNowAsync(CancellationToken cancellationToken = default)
         => ApplyFilterAsync(immediate: true, cancellationToken);

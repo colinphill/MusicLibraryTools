@@ -67,6 +67,7 @@ public partial class LibraryView : UserControl
             new("Position", "Matched position", "MatchedTrackPositions", 130, 90),
             new("ReleaseID", "MusicBrainz release ID", "ReleaseId", 260, 170),
         ]);
+        ConfigureReleaseTrackMappingGrid(LibraryReleaseTrackMappingGrid);
         LibraryGrid.ApplySort(_sort);
         BuildColumnOptions();
         LibraryGrid.LayoutChanged += (_, _) => PersistLayout();
@@ -76,6 +77,48 @@ public partial class LibraryView : UserControl
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         if (_viewModel.Rows.Count == 0)
             _ = _viewModel.ReloadAsync();
+    }
+
+    private static void ConfigureReleaseTrackMappingGrid(AppDataGrid grid)
+    {
+        var includeTemplate = new FuncDataTemplate<MusicBrainzTrackMappingRow>(
+            (_, _) =>
+            {
+                var check = new CheckBox();
+                check.Bind(CheckBox.IsCheckedProperty,
+                    new Binding(nameof(MusicBrainzTrackMappingRow.IsIncluded))
+                    {
+                        Mode = BindingMode.TwoWay,
+                    });
+                return check;
+            });
+        var trackTemplate = new FuncDataTemplate<MusicBrainzTrackMappingRow>(
+            (_, _) =>
+            {
+                var combo = new ComboBox
+                {
+                    DisplayMemberBinding =
+                        new Binding(nameof(MusicBrainzTrackChoice.Display)),
+                };
+                combo.Bind(ItemsControl.ItemsSourceProperty,
+                    new Binding(nameof(MusicBrainzTrackMappingRow.TrackChoices)));
+                combo.Bind(ComboBox.SelectedItemProperty,
+                    new Binding(nameof(MusicBrainzTrackMappingRow.SelectedTrack))
+                    {
+                        Mode = BindingMode.TwoWay,
+                    });
+                return combo;
+            });
+        grid.ConfigureColumns(
+        [
+            new("Include", "Use", null, 58, 48,
+                CellTemplate: includeTemplate, Sortable: false),
+            new("File", "File", "File", 180, 110),
+            new("Track", "Release track", null, 330, 190,
+                CellTemplate: trackTemplate, Sortable: false),
+            new("Confidence", "Confidence", "Confidence", 100, 76),
+            new("Status", "Reason", "Status", 260, 150),
+        ]);
     }
 
     private void BuildColumns()

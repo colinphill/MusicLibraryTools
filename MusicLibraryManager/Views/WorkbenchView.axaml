@@ -358,7 +358,39 @@
               </TabItem>
               <TabItem Header="Release editions">
                 <controls:AppDataGrid x:Name="ReleaseDiscoveryGrid"
-                    ItemsSource="{Binding ReleaseMatches}" />
+                    ItemsSource="{Binding ReleaseMatches}"
+                    SelectedItem="{Binding SelectedRelease, Mode=TwoWay}" />
+              </TabItem>
+              <TabItem Header="Track mapping">
+                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8">
+                  <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                    <TextBlock Classes="muted" VerticalAlignment="Center"
+                               Text="Choose a release, review every suggested file-to-track mapping, then select which field groups to preview."
+                               TextWrapping="Wrap" />
+                    <Button Grid.Column="1" Classes="app"
+                            Content="Build mapping"
+                            Command="{Binding BuildReleaseMappingCommand}" />
+                    <Button Grid.Column="2" Classes="app primary"
+                            Content="Preview mapped metadata"
+                            Command="{Binding PreviewReleaseMetadataCommand}" />
+                  </Grid>
+                  <controls:AppDataGrid x:Name="ReleaseTrackMappingGrid" Grid.Row="1"
+                      ItemsSource="{Binding ReleaseTrackMappings}" />
+                  <WrapPanel Grid.Row="2">
+                    <CheckBox Margin="0,0,14,0" Content="Titles"
+                              IsChecked="{Binding ReleaseImport.TrackTitles, Mode=TwoWay}" />
+                    <CheckBox Margin="0,0,14,0" Content="Track artists"
+                              IsChecked="{Binding ReleaseImport.TrackArtists, Mode=TwoWay}" />
+                    <CheckBox Margin="0,0,14,0" Content="Album, album artist, date"
+                              IsChecked="{Binding ReleaseImport.ReleaseIdentity, Mode=TwoWay}" />
+                    <CheckBox Margin="0,0,14,0" Content="Track/disc numbers"
+                              IsChecked="{Binding ReleaseImport.Numbering, Mode=TwoWay}" />
+                    <CheckBox Margin="0,0,14,0" Content="Release details"
+                              IsChecked="{Binding ReleaseImport.ReleaseDetails, Mode=TwoWay}" />
+                    <CheckBox Content="MusicBrainz IDs"
+                              IsChecked="{Binding ReleaseImport.MusicBrainzIdentifiers, Mode=TwoWay}" />
+                  </WrapPanel>
+                </Grid>
               </TabItem>
             </TabControl>
           </Grid>

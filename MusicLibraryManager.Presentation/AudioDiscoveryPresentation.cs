@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using CommunityToolkit.Mvvm.ComponentModel;
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
@@ -93,7 +94,8 @@ public sealed record MusicBrainzReleaseRow(
     string? CatalogNumber,
     string Formats,
     string MatchedTrackPositions,
-    int TrackCount)
+    int TrackCount,
+    MusicBrainzReleaseCandidate Candidate)
 {
     public string File => System.IO.Path.GetFileName(SourcePath);
 }
@@ -123,7 +125,101 @@ public static class MusicBrainzReleaseRows
                 string.Join(", ", release.Formats),
                 string.Join(", ", matches.Select(track =>
                     $"{track.MediumPosition}-{track.Number}")),
-                release.Tracks.Length);
+                release.Tracks.Length,
+                release);
         }
     }
+}
+
+public sealed record MusicBrainzTrackChoice(
+    MusicBrainzTrackCandidate Track,
+    int Score,
+    string Reason)
+{
+    public string Position => $"{Track.MediumPosition}-{Track.Number}";
+    public string Display =>
+        $"{Position}  {Track.Title} — {Track.ArtistCredit}" +
+        (Score > 0 ? $"  [{Score}]" : "");
+}
+
+public partial class MusicBrainzTrackMappingRow : ObservableObject
+{
+    public MusicBrainzTrackMappingRow(MusicBrainzTrackMatch match)
+    {
+        Path = match.Source.Path;
+        Confidence = match.Confidence.ToString();
+        Status = match.Status;
+        TrackChoices = match.Candidates
+            .Select(candidate => new MusicBrainzTrackChoice(
+                candidate.Track, candidate.Score, candidate.Reason))
+            .ToArray();
+        _selectedTrack = match.SuggestedTrack is null
+            ? null
+            : TrackChoices.FirstOrDefault(choice =>
+                choice.Track.TrackId == match.SuggestedTrack.TrackId);
+        _isIncluded = _selectedTrack is not null;
+    }
+
+    public string Path { get; }
+    public string File => System.IO.Path.GetFileName(Path);
+    public string Confidence { get; }
+    public string Status { get; }
+    public IReadOnlyList<MusicBrainzTrackChoice> TrackChoices { get; }
+    public string Position => SelectedTrack?.Position ?? "";
+    public string TrackTitle => SelectedTrack?.Track.Title ?? "";
+    public string TrackArtist => SelectedTrack?.Track.ArtistCredit ?? "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Position))]
+    [NotifyPropertyChangedFor(nameof(TrackTitle))]
+    [NotifyPropertyChangedFor(nameof(TrackArtist))]
+    private MusicBrainzTrackChoice? _selectedTrack;
+
+    [ObservableProperty]
+    private bool _isIncluded;
+
+    partial void OnSelectedTrackChanged(MusicBrainzTrackChoice? value)
+    {
+        if (value is not null)
+            IsIncluded = true;
+    }
+}
+
+public partial class MusicBrainzImportSelectionViewModel : ObservableObject
+{
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelection))]
+    private bool _trackTitles = true;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelection))]
+    private bool _trackArtists = true;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelection))]
+    private bool _releaseIdentity = true;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelection))]
+    private bool _numbering = true;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelection))]
+    private bool _releaseDetails = true;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelection))]
+    private bool _musicBrainzIdentifiers = true;
+
+    public bool HasSelection =>
+        TrackTitles || TrackArtists || ReleaseIdentity || Numbering ||
+        ReleaseDetails || MusicBrainzIdentifiers;
+
+    public MusicBrainzImportOptions CreateOptions() => new(
+        TrackTitles,
+        TrackArtists,
+        ReleaseIdentity,
+        Numbering,
+        ReleaseDetails,
+        MusicBrainzIdentifiers);
 }

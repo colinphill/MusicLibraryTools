@@ -7,6 +7,7 @@ using MusicLibrary.Core.Models;
 namespace MusicLibrary.Core.Services;
 
 public sealed record MusicBrainzTrackCandidate(
+    Guid TrackId,
     int MediumPosition,
     int TrackPosition,
     string Number,
@@ -263,10 +264,15 @@ public sealed class MusicBrainzMetadataProvider(
                     if (!track.TryGetProperty(
                             "recording", out JsonElement recording))
                         continue;
+                    Guid? trackId = TryReadGuid(track, "id");
                     Guid? recordingId = TryReadGuid(recording, "id");
-                    if (recordingId is null)
+                    if (trackId is null || recordingId is null)
                         continue;
+                    string artistCredit = ReadArtistCredit(track);
+                    if (string.IsNullOrWhiteSpace(artistCredit))
+                        artistCredit = ReadArtistCredit(recording);
                     tracks.Add(new(
+                        trackId.Value,
                         mediumPosition,
                         ReadInt(track, "position") ?? 0,
                         ReadString(track, "number") ?? "",
@@ -274,7 +280,7 @@ public sealed class MusicBrainzMetadataProvider(
                         ReadInt(track, "length"),
                         recordingId.Value,
                         ReadString(recording, "title") ?? "",
-                        ReadArtistCredit(track)));
+                        artistCredit));
                 }
             }
         }

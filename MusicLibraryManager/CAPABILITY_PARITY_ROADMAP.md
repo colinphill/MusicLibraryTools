@@ -227,12 +227,15 @@ capability comparison is possible through typed operations without scripting.
     MusicBrainz recording IDs.
   - [x] Preserve all returned candidates, AcoustID confidence scores, and
     recording IDs; never silently accept the first match.
-  - [ ] Combine fingerprint confidence, duration, existing artist/title,
+  - [~] Combine fingerprint confidence, duration, existing artist/title,
     track/disc position, and album context when ranking MusicBrainz candidates.
+    Release-track mapping now ranks recording ID, duration, artist/title, and
+    track/disc position; AcoustID confidence and broader album context remain.
   - [x] Use matched MusicBrainz recording IDs to locate releases and editions
     through the normal MusicBrainz provider.
   - [~] Require confirmation of recording matches, release, file-to-track
-    mapping, imported fields, and artwork before mutation.
+    mapping, imported fields, and artwork before mutation. Release, mapping,
+    and metadata field-group confirmation are implemented; artwork remains.
   - [~] Offer `ACOUSTID_FINGERPRINT`, `ACOUSTID_ID`, and MusicBrainz recording
     ID tag updates as ordinary optional previewed metadata changes.
   - [ ] Support local fingerprint generation offline; make lookup status and
@@ -246,10 +249,12 @@ capability comparison is possible through typed operations without scripting.
   - [ ] Search by artist/album, barcode, catalog number, or release ID.
   - [x] Compare recording-linked editions, dates, countries, status, labels,
     catalog numbers, media formats, track positions, and tracklists.
-  - [ ] Suggest mappings using disc/track number, normalized title, and
-    duration.
-  - [ ] Confirm release, mapping, imported fields, and artwork.
-  - [ ] Route changes through normal preview and recovery.
+  - [x] Suggest mappings using recording ID, disc/track number, normalized
+    artist/title, and duration while leaving ties unselected.
+  - [~] Confirm release, mapping, imported fields, and artwork. Metadata
+    confirmation is implemented; artwork remains.
+  - [~] Route changes through normal preview and recovery. Selective metadata
+    imports use the shared staged operation plan; artwork remains.
 - [ ] Cache release data in an application-local database.
 - [ ] Cache artwork thumbnails in a bounded application-data cache.
 - [~] Add provider rate limiting, identifiable user agent, cancellation,
@@ -498,3 +503,13 @@ per-operation capability flags.
   without selecting a release or mutating metadata.
 - Added recorded MusicBrainz response tests plus shared presentation coverage,
   so normal test runs do not depend on the live service.
+- Added cancellable MusicBrainz release-track mapping. Exact recording IDs
+  outrank disc/track, normalized artist/title, and duration hints; tied or
+  duplicate suggestions remain unselected for manual review.
+- Added editable mapping tables to Workbench and Library. Users choose the
+  release, replace or exclude each file-to-track suggestion, and select title,
+  artist, release identity, numbering, release-detail, and MusicBrainz-ID field
+  groups.
+- Mapped metadata enters the same authoritative per-file preview, stale-plan
+  validation, staged apply, recovery, and history path as every other metadata
+  operation. Mapping and preview both report progress and support cancellation.

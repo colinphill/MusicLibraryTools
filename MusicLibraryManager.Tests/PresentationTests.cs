@@ -1453,7 +1453,8 @@ public sealed class PresentationTests
             new FakeThumbnails(),
             metadataOperations: metadataOperations,
             audioDiscovery: discovery,
-            musicBrainz: musicBrainz);
+            musicBrainz: musicBrainz,
+            releaseMapping: new MusicBrainzReleaseMappingService());
         await viewModel.ReloadAsync();
         await viewModel.SelectAsync(
             [viewModel.Rows.Single(row => row.Title == "One")]);
@@ -1491,6 +1492,31 @@ public sealed class PresentationTests
         MusicBrainzReleaseRow release = Assert.Single(viewModel.ReleaseMatches);
         Assert.Equal("Matched Album", release.Title);
         Assert.Equal("1-1", release.MatchedTrackPositions);
+
+        await viewModel.BuildLibraryReleaseMappingCommand.ExecuteAsync(null);
+
+        MusicBrainzTrackMappingRow mapping = viewModel.ReleaseTrackMappings
+            .Single(row => row.Path == @"C:\music\one.flac");
+        Assert.True(mapping.IsIncluded);
+        Assert.Equal("1-1", mapping.Position);
+
+        await viewModel.PreviewLibraryReleaseMetadataCommand.ExecuteAsync(null);
+
+        IReadOnlyList<MetadataValueEdit> imported =
+            metadataOperations.PreviewedValueEdits[
+                Path.GetFullPath(@"C:\music\one.flac")];
+        Assert.Contains(imported, edit =>
+            edit.Field.KnownField == TagFields.Album &&
+            edit.Values.SequenceEqual(["Matched Album"]));
+        Assert.Contains(imported, edit =>
+            edit.Field.KnownField == TagFields.MusicBrainz_AlbumID);
+        Assert.True(viewModel.HasApplicableOperationPreview);
+
+        viewModel.SelectedOperationScope =
+            LibraryOperationScope.VisibleFilteredResults;
+
+        Assert.Empty(viewModel.ReleaseTrackMappings);
+        Assert.False(viewModel.HasApplicableOperationPreview);
     }
 
     private static TrackRecord Track(string artist, string album, string title, string codec, string path) => new()
@@ -1589,6 +1615,9 @@ internal sealed class FakeMetadataOperationService : IMetadataOperationService
 {
     public IReadOnlyList<string> PreviewedPaths { get; private set; } = [];
     public OperationRecipe? PreviewedRecipe { get; private set; }
+    public IReadOnlyDictionary<string, IReadOnlyList<MetadataValueEdit>>
+        PreviewedValueEdits { get; private set; } =
+            new Dictionary<string, IReadOnlyList<MetadataValueEdit>>();
     public bool WaitForCancellation { get; init; }
     public bool CancellationObserved { get; private set; }
     public TaskCompletionSource<bool> PreviewStarted { get; } =
@@ -1655,7 +1684,36 @@ internal sealed class FakeMetadataOperationService : IMetadataOperationService
         IReadOnlyDictionary<string, IReadOnlyList<MetadataValueEdit>> editsByPath,
         string name,
         CancellationToken ct = default) =>
-        throw new NotSupportedException();
+        PreviewValueEditsAsync(editsByPath, name, progress: null, ct);
+
+    public Task<MetadataOperationPlan> PreviewValueEditsAsync(
+        IReadOnlyDictionary<string, IReadOnlyList<MetadataValueEdit>> editsByPath,
+        string name,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct = default)
+    {
+        PreviewedValueEdits = editsByPath;
+        progress?.Report(new(
+            OperationPhase.Planning,
+            0,
+            editsByPath.Count,
+            Message: "Reading mapped metadata"));
+        (string path, IReadOnlyList<MetadataValueEdit> edits) =
+            editsByPath.First();
+        MetadataValueEdit edit = edits.First();
+        var difference = new MetadataFieldDifference(
+            edit.Field,
+            ["Before"],
+            edit.Values);
+        var file = new MetadataFilePlan(
+            path,
+            new(path, 1, DateTime.UtcNow, "hash"),
+            [difference],
+            [edit],
+            []);
+        return Task.FromResult(new MetadataOperationPlan(
+            Guid.NewGuid(), name, [file], DateTimeOffset.UtcNow));
+    }
 
     public Task<MetadataApplyResult> ApplyAsync(
         MetadataOperationPlan plan,
@@ -1703,6 +1761,7 @@ internal sealed class FakeMusicBrainzMetadataProvider : IMusicBrainzMetadataProv
     {
         RecordingId = recordingId;
         var track = new MusicBrainzTrackCandidate(
+            Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"),
             1,
             1,
             "1",
