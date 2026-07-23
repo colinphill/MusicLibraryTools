@@ -47,6 +47,7 @@ public class TagWriteServiceTests
     [InlineData("sample.mp3")]
     [InlineData("sample_alac.m4a")]
     [InlineData("sample.wv")]
+    [InlineData("sample.aac")]
     public async Task RoundTrips_TitleAndAlbumArtist(string fixture)
     {
         using var media = MediaFixtures.Copy(fixture);
@@ -74,6 +75,7 @@ public class TagWriteServiceTests
     [InlineData("sample.ogg")]
     [InlineData("sample_alac.m4a")]
     [InlineData("sample.wv")]
+    [InlineData("sample.aac")]
     public async Task RoundTrips_ArbitraryUserString(string fixture)
     {
         using var media = MediaFixtures.Copy(fixture);

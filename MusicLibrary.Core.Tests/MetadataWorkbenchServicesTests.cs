@@ -132,6 +132,32 @@ public sealed class MetadataWorkbenchServicesTests
     }
 
     [Fact]
+    public async Task Document_ExposesDistinctRawAacId3AndApeLayers()
+    {
+        using var media = MediaFixtures.Copy("sample.aac");
+        var aac = Assert.IsType<AACFile>(
+            MediaFile.GetFile(media.Path, readOnly: false));
+        aac.SetField(TagFields.Title, "ID3 layer");
+        aac.SaveTags();
+        var ape = new APETag();
+        ape.SetField(TagFields.Title, "APE layer");
+        await using (var stream = new FileStream(
+                         media.Path, FileMode.Append, FileAccess.Write))
+            await stream.WriteAsync(ape.ToByteArray());
+
+        MediaDocument document = await _documents.LoadAsync(media.Path);
+
+        Assert.Equal(["ID3v23", "APE"],
+            document.TagLayers.Select(layer => layer.TagType));
+        Assert.Equal("ID3 layer", document.FirstValue(TagFields.Title));
+        Assert.All(document.TagLayers, layer => Assert.True(layer.IsWritable));
+        Assert.Contains(
+            document.TagLayers[1].Fields,
+            field => field.Field.KnownField == TagFields.Title &&
+                     field.Values.SequenceEqual(["APE layer"]));
+    }
+
+    [Fact]
     public async Task Workbench_LoadsFoldersAndPlaylistOrderWithoutDuplicates()
     {
         using var first = MediaFixtures.Copy("sample.flac");

@@ -346,6 +346,10 @@ namespace MusicFileUtilities
                     file = new AiffFile(path, readArtwork, knownLength);
                     break;
 
+                case MediaFormatFamily.Aac:
+                    file = new AACFile(path, readArtwork, knownLength);
+                    break;
+
                 default:
                     throw new ArgumentException("Invalid File Type", "path");
             }

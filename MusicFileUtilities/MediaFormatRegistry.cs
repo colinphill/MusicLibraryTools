@@ -38,6 +38,7 @@ namespace MusicFileUtilities
         WavPack = 5,
         Wave = 6,
         Aiff = 7,
+        Aac = 8,
     }
 
     /// <summary>Describes one extension and the operations supported for it.</summary>
@@ -223,6 +224,8 @@ namespace MusicFileUtilities
                 indexed | MediaFormatCapabilities.TranscodeDestination | remux);
             yield return new(".aifc", "AIFF-C", MediaFormatFamily.Aiff,
                 indexed | MediaFormatCapabilities.TranscodeDestination | remux);
+            yield return new(".aac", "AAC (ADTS)", MediaFormatFamily.Aac,
+                indexed | remux);
 
             // These variants have long been supported by direct metadata/artwork editing and by
             // iTunes reconciliation, but not by automatic library indexing. Preserve that boundary.

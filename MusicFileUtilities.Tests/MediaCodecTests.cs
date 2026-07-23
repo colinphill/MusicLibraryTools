@@ -13,6 +13,7 @@ namespace MusicFileUtilities.Tests
         [InlineData("sample.ogg", "Vorbis", CodecType.Lossy)]
         [InlineData("sample.wav", "PCM", CodecType.Lossless)]
         [InlineData("sample.aiff", "PCM", CodecType.Lossless)]
+        [InlineData("sample.aac", "AAC", CodecType.Lossy)]
         [InlineData("sample_alac.m4a", "ALAC", CodecType.Lossless)]
         [InlineData("sample_aac.m4a", "AAC", CodecType.Lossy)]
         [InlineData("sample.wv", "WavPack", CodecType.Lossless)]
@@ -36,6 +37,7 @@ namespace MusicFileUtilities.Tests
         [InlineData("sample.wv")]
         [InlineData("sample.wav")]
         [InlineData("sample.aiff")]
+        [InlineData("sample.aac")]
         public void DurationAndBitrateAreComputed(string file)
         {
             var c = MediaFile.GetFile(MediaFixtures.Path_(file)).Codecs.First();
@@ -63,6 +65,7 @@ namespace MusicFileUtilities.Tests
         [InlineData("sample.wv")]
         [InlineData("sample.wav")]
         [InlineData("sample.aiff")]
+        [InlineData("sample.aac")]
         public void KnownFileLengthPreservesCodecAndMetadataProjections(string file)
         {
             string path = MediaFixtures.Path_(file);

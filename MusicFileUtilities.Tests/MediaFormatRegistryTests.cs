@@ -13,7 +13,7 @@ public sealed class MediaFormatRegistryTests
         string[] expected =
             [
                 ".dsf", ".m4a", ".mp3", ".flac", ".ogg", ".opus", ".spx",
-                ".wv", ".wav", ".rf64", ".aif", ".aiff", ".aifc",
+                ".wv", ".wav", ".rf64", ".aif", ".aiff", ".aifc", ".aac",
             ];
         IMediaFormatRegistry registry = MediaFormatRegistry.Default;
 

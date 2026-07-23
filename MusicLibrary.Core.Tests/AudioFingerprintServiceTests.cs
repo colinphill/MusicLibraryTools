@@ -72,6 +72,7 @@ public sealed class AudioFingerprintServiceTests
     [InlineData("sample_alac.m4a")]
     [InlineData("sample.wv")]
     [InlineData("sample.dsf")]
+    [InlineData("sample.aac")]
     public async Task PayloadIdentity_IgnoresNativeMetadataChanges(
         string fixture)
     {
@@ -170,6 +171,31 @@ public sealed class AudioFingerprintServiceTests
         {
             try { File.Delete(path); } catch { }
         }
+    }
+
+    [Fact]
+    public async Task PayloadIdentity_IgnoresRawAacApeLayerChanges()
+    {
+        using var media = MediaFixtures.Copy("sample.aac");
+        var ape = new APETag();
+        ape.SetField(TagFields.Title, "Initial APE title");
+        await using (var stream = new FileStream(
+                         media.Path, FileMode.Append, FileAccess.Write))
+            await stream.WriteAsync(ape.ToByteArray());
+        var identities = new AudioPayloadIdentityService(
+            MediaFormatRegistry.Default);
+        string before = await identities.ComputeAsync(media.Path);
+
+        AACFile file = Assert.IsType<AACFile>(
+            MediaFile.GetFile(media.Path, readOnly: false));
+        file.SetField(TagFields.Title, "Updated APE title");
+        file.SaveTags();
+
+        string after = await identities.ComputeAsync(media.Path);
+        Assert.Equal(before, after);
+        Assert.Equal(
+            "APE",
+            MediaFile.GetFile(media.Path).Tags.First().TagType);
     }
 
     [Fact]

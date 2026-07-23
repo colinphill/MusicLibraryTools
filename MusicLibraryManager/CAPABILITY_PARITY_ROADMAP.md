@@ -362,7 +362,13 @@ application concepts.
     while preserving audio and unknown chunks.
   - [x] Keep PCM payload identities stable across ID3-only changes and release
     `.wav`, `.rf64`, `.aif`, `.aiff`, and `.aifc` for indexing.
-- [ ] Raw AAC with ID3 and APE tag-layer support.
+- [x] Raw AAC with ID3 and APE tag-layer support.
+  - [x] Parse ADTS technical properties, CRC header variants, frame lengths,
+    sample counts, channel configuration, and bitrate.
+  - [x] Inspect and preserve distinct leading ID3v2 and trailing APEv2 layers;
+    create ID3v2 for previously untagged streams.
+  - [x] Keep ADTS payload identities stable across either tag-layer edit and
+    release `.aac` for indexing.
 
 ### Reuse APEv2
 
@@ -727,3 +733,13 @@ per-operation capability flags.
   output path. The five extensions now pass metadata, artwork, real-encoder,
   unknown-chunk, output-staging, and PCM payload-identity release gates and are
   enabled for automatic indexing.
+- Added native raw AAC/ADTS handling with distinct leading ID3v2 and trailing
+  APEv2 metadata layers. The parser validates every ADTS frame and derives
+  sample rate, channel count, duration, average bitrate, and peak frame bitrate
+  across CRC and multi-raw-block variants. Untagged files create ID3v2 on first
+  edit; APE-only files keep APE as their edit target; dual-layer files expose
+  and preserve both layers while defaulting file-level edits to ID3. Atomic
+  in-place and staged saves copy the complete ADTS range byte-for-byte, and
+  payload identities ignore either outer tag so cached Chromaprints survive
+  metadata-only changes. `.aac` now passes synthetic layer-matrix and real
+  ffmpeg fixture gates and is enabled for automatic indexing.

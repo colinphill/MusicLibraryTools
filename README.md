@@ -22,6 +22,7 @@ legacy MusicFileUtilities iTunes-XML parser has been removed.
 | `.wv` | WavPack | APEv2 | ✔ | ✔ |
 | `.wav` `.rf64` | RIFF/RF64 WAVE | ID3v2 chunk | ✔ | ✔ |
 | `.aif` `.aiff` `.aifc` | AIFF / AIFF-C | ID3v2 chunk | ✔ | ✔ |
+| `.aac` | Raw AAC / ADTS | Leading ID3v2 and trailing APEv2 | ✔ | ✔ |
 
 Tag coverage is a superset (`TagFields`) that includes MusicBrainz identifiers, ReplayGain,
 AcoustID, production credits (producer/engineer/mixer), and classical work/movement fields.
@@ -32,7 +33,7 @@ Embedded artwork is parsed, hashed, measured, and preserved byte-for-byte across
 ### Shared libraries
 
 - **MusicFileUtilities** — the core library. Per-format binary parsers (`ID3.cs`, `FLAC.cs`,
-  `MP4File.cs`, `Vorbis.cs`, `APE.cs`, `WavPack.cs`, `ChunkedAudio.cs`) behind common interfaces:
+  `MP4File.cs`, `Vorbis.cs`, `APE.cs`, `WavPack.cs`, `ChunkedAudio.cs`, `AAC.cs`) behind common interfaces:
   `MediaFile.GetFile(path)` dispatches by extension to an `IMediaFile`, which exposes codec
   properties (`ICodecProvider`), tag reading (`IMetadataProvider`), and tag writing
   (`IMetadataWriter`: `SetField` / `RemoveField` / `Save`). Also home to the iTunes library
