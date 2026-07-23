@@ -799,6 +799,28 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public void Settings_online_metadata_tools_are_personal_and_persist_immediately()
+    {
+        var settings = new FakeSettings();
+        settings.Preferences[AudioFingerprintService.ExecutablePreferenceKey] =
+            "stored-fpcalc";
+        var viewModel = new SettingsViewModel(
+            settings, new FakeFilePicker(), new FakeDialogs(), new FakeTheme());
+
+        Assert.Equal("stored-fpcalc", viewModel.FpcalcPath);
+        viewModel.FpcalcPath = "new-fpcalc";
+        viewModel.AcoustIdClientKey = "client-key";
+
+        Assert.Equal(
+            "new-fpcalc",
+            settings.Preferences[AudioFingerprintService.ExecutablePreferenceKey]);
+        Assert.Equal(
+            "client-key",
+            settings.Preferences[AcoustIdLookupService.ClientKeyPreference]);
+        Assert.False(viewModel.HasUnsavedChanges);
+    }
+
+    [Fact]
     public async Task Settings_new_library_and_roots_start_catalog_only()
     {
         var viewModel = new SettingsViewModel(
@@ -1352,6 +1374,55 @@ public sealed class PresentationTests
             Assert.True(descriptor.Supports(MetadataOperationSurface.Library)));
     }
 
+    [Fact]
+    public async Task Library_operation_preview_reports_progress_and_can_be_cancelled()
+    {
+        TrackRecord[] records =
+        [
+            Track("Artist", "First", "One", "FLAC", @"C:\music\one.flac"),
+        ];
+        var library = new FakeLibrary(records);
+        var settings = new FakeSettings();
+        var activity = new AppActivityService();
+        var inspector = new SelectionInspectorViewModel(
+            new FakeMediaService(), library, new FakeTagWriter(),
+            new FakeArtworkService(), new FakeFilePicker(), new FakeDialogs(),
+            new FakeFieldsEditor(), new FakeThumbnails(), activity);
+        var indexing = new IndexingViewModel(library, settings, activity);
+        var operations = new FakeMetadataOperationService
+        {
+            WaitForCancellation = true,
+        };
+        var viewModel = new LibraryViewModel(
+            library,
+            new FakeReindex(),
+            settings,
+            inspector,
+            new NavigationService(),
+            indexing,
+            new FakeThumbnails(),
+            metadataOperations: operations,
+            operationCatalog: new MetadataOperationCatalog());
+        await viewModel.ReloadAsync();
+        await viewModel.SelectAsync([viewModel.Rows.Single()]);
+        viewModel.OperationEditor.OperationValue = "Reviewed";
+
+        Task preview = viewModel.PreviewLibraryOperationCommand.ExecuteAsync(null);
+        await operations.PreviewStarted.Task.WaitAsync(
+            TimeSpan.FromSeconds(2), TestContext.Current.CancellationToken);
+        await Task.Delay(20, TestContext.Current.CancellationToken);
+
+        Assert.True(viewModel.IsOperationBusy);
+        Assert.Equal("Reading metadata", viewModel.OperationProgressText);
+        viewModel.CancelLibraryOperationCommand.Execute(null);
+        await preview;
+
+        Assert.True(operations.CancellationObserved);
+        Assert.False(viewModel.IsOperationBusy);
+        Assert.Contains("cancelled", viewModel.OperationStatus,
+            StringComparison.OrdinalIgnoreCase);
+    }
+
     private static TrackRecord Track(string artist, string album, string title, string codec, string path) => new()
     {
         Path = path,
@@ -1447,13 +1518,46 @@ internal sealed class FakeReindex : IReindexService
 internal sealed class FakeMetadataOperationService : IMetadataOperationService
 {
     public IReadOnlyList<string> PreviewedPaths { get; private set; } = [];
+    public bool WaitForCancellation { get; init; }
+    public bool CancellationObserved { get; private set; }
+    public TaskCompletionSource<bool> PreviewStarted { get; } =
+        new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     public Task<MetadataOperationPlan> PreviewAsync(
         IReadOnlyList<string> paths,
         OperationRecipe recipe,
-        CancellationToken ct = default)
+        CancellationToken ct = default) =>
+        PreviewCoreAsync(paths, recipe, progress: null, ct);
+
+    public Task<MetadataOperationPlan> PreviewAsync(
+        IReadOnlyList<string> paths,
+        OperationRecipe recipe,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct = default) =>
+        PreviewCoreAsync(paths, recipe, progress, ct);
+
+    private async Task<MetadataOperationPlan> PreviewCoreAsync(
+        IReadOnlyList<string> paths,
+        OperationRecipe recipe,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct)
     {
         PreviewedPaths = paths.ToArray();
+        progress?.Report(new(
+            OperationPhase.Planning, 0, paths.Count, Message: "Reading metadata"));
+        PreviewStarted.TrySetResult(true);
+        if (WaitForCancellation)
+        {
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, ct);
+            }
+            catch (OperationCanceledException)
+            {
+                CancellationObserved = true;
+                throw;
+            }
+        }
         string path = paths[0];
         var change = new MetadataFieldDifference(
             MetadataFieldKey.Known(TagFields.Title),
@@ -1465,8 +1569,8 @@ internal sealed class FakeMetadataOperationService : IMetadataOperationService
             [change],
             [new(change.Field, change.After)],
             []);
-        return Task.FromResult(new MetadataOperationPlan(
-            Guid.NewGuid(), recipe.Name, [file], DateTimeOffset.UtcNow, recipe));
+        return new MetadataOperationPlan(
+            Guid.NewGuid(), recipe.Name, [file], DateTimeOffset.UtcNow, recipe);
     }
 
     public Task<MetadataOperationPlan> PreviewEditsAsync(

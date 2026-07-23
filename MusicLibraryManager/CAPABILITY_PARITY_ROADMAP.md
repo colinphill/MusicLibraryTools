@@ -15,6 +15,7 @@ Equivalent outcomes will be implemented in the project's existing style:
 - Typed operations rather than a scripting language.
 - Recoverable mutations and centralized Operations history.
 - Shared Core services used by both GUI and command-line workflows.
+- Progress reporting and user cancellation for every long-running operation.
 - One shared operation catalog for Workbench and Library selections.
 - Library policy in configuration XML; personal UI state in `IAppSettings`.
 - Native metadata parsers with explicit capability flags.
@@ -24,6 +25,20 @@ editing. The existing Library page remains optimized for indexed browsing.
 Workbench is not an exclusive home for operations: every operation that is
 meaningful for indexed files must also be invokable from the Library view with
 the same editor, preview, policy checks, recovery behavior, and history.
+
+## Long-running operation invariant
+
+- [~] Every operation that scans, reads, fingerprints, queries, previews,
+  applies, restores, exports, or indexes multiple files reports progress and
+  accepts cancellation through its Core contract.
+- [x] Workbench source loading, preview, apply, reload, and undo expose live
+  progress and one cancellation command.
+- [x] Library cache loading and shared metadata preview/apply expose progress
+  indicators and cancellation.
+- [x] Chromaprint generation and AcoustID lookup accept cancellation and report
+  progress.
+- [ ] Audit pre-existing ingest, health, artwork, playlist, export, and external
+  tool workflows for the same invariant before parity hardening is complete.
 
 ## Cross-surface operation parity invariant
 
@@ -99,7 +114,7 @@ appropriate build or test.
   - [ ] `IMetadataSourceProvider`.
   - [~] `IAudioFingerprintService` decodes audio and generates a Chromaprint
     fingerprint plus whole-file duration.
-  - [ ] `IAcoustIdLookupService` resolves fingerprints to scored AcoustID and
+  - [x] `IAcoustIdLookupService` resolves fingerprints to scored AcoustID and
     MusicBrainz recording candidates.
   - [ ] `IReportExportService`.
   - [ ] `IPlaylistWorkspaceService`.
@@ -205,9 +220,9 @@ capability comparison is possible through typed operations without scripting.
   - [ ] Cache the fingerprint with an audio-payload identity guard so metadata-
     only changes do not require recalculation, while audio changes invalidate
     it.
-  - [ ] Query AcoustID using the fingerprint and whole-file duration and request
+  - [x] Query AcoustID using the fingerprint and whole-file duration and request
     MusicBrainz recording IDs.
-  - [ ] Preserve all returned candidates, AcoustID confidence scores, and
+  - [x] Preserve all returned candidates, AcoustID confidence scores, and
     recording IDs; never silently accept the first match.
   - [ ] Combine fingerprint confidence, duration, existing artist/title,
     track/disc position, and album context when ranking MusicBrainz candidates.
@@ -219,9 +234,9 @@ capability comparison is possible through typed operations without scripting.
     ID tag updates as ordinary optional previewed metadata changes.
   - [ ] Support local fingerprint generation offline; make lookup status and
     cached/offline results explicit.
-  - [ ] Enforce AcoustID's provider-specific rate limit and application API-key
+  - [x] Enforce AcoustID's provider-specific rate limit and application API-key
     requirements, plus cancellation, retry/backoff, and bounded concurrency.
-  - [ ] Do not submit fingerprints to AcoustID as part of lookup. Any future
+  - [x] Do not submit fingerprints to AcoustID as part of lookup. Any future
     submission feature is separately opt-in, uses `ISecretStore` for the user's
     key, previews submitted data, and clearly identifies the external write.
 - [ ] Ship MusicBrainz and Cover Art Archive providers:
@@ -352,7 +367,7 @@ per-operation capability flags.
 - [ ] Golden Chromaprint/fpcalc fixtures for supported codecs, Unicode paths,
   cancellation, malformed output, missing tools, and deterministic
   fingerprints.
-- [ ] Recorded AcoustID responses for no match, one match, ambiguous matches,
+- [~] Recorded AcoustID responses for no match, one match, ambiguous matches,
   low confidence, multiple MusicBrainz recording IDs, throttling, retry, and
   offline cache behavior.
 - [ ] Audio-payload identity tests proving tag-only writes retain cached
@@ -446,3 +461,12 @@ per-operation capability flags.
   full decoded stream, parses compressed Chromaprint JSON plus whole-file
   duration, supports cancellation, and keeps the local fingerprint distinct
   from a server-assigned AcoustID.
+- Made progress and cancellation an architectural invariant. Workbench loading,
+  preview, apply, reload, and undo now share a live progress surface and Cancel
+  command; Library cache loading and metadata preview/apply have equivalent
+  controls. The Core contracts carry progress and cancellation end to end.
+- Added lookup-only `IAcoustIdLookupService` support with a personal application
+  client-key setting, identifiable HTTP user agent, three-request-per-second
+  throttling, retry/backoff, cancellation, and recorded response tests. All
+  scored AcoustID and MusicBrainz recording candidates are preserved for later
+  user-confirmed matching.

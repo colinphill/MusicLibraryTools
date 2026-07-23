@@ -16,6 +16,8 @@
                   Command="{Binding OpenInWorkbenchCommand}" />
           <Button Classes="app" Margin="0,0,8,6" Content="Cancel" Command="{Binding Indexing.CancelCommand}"
                   IsVisible="{Binding Indexing.IsIndexing}" />
+          <Button Classes="app" Margin="0,0,8,6" Content="Cancel load"
+                  Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />
           <Button x:Name="InspectorToggle" Classes="app" Margin="0,0,0,6" Content="Inspector"
                   Click="OnInspectorToggle" IsVisible="False" ToolTip.Tip="Show or hide the metadata inspector" />
         </WrapPanel>
@@ -323,11 +325,25 @@
                   ItemsSource="{Binding OperationPreviewChanges}" />
             </Grid>
 
-            <Grid Grid.Row="6" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <Grid Grid.Row="6" ColumnDefinitions="*,240,Auto,Auto" ColumnSpacing="10">
               <TextBlock Classes="muted" VerticalAlignment="Center"
                          Text="{Binding OperationStatus}" TextWrapping="Wrap"
                          AutomationProperties.LiveSetting="Polite" />
-              <Button Grid.Column="1" Classes="app primary" Content="Apply preview"
+              <StackPanel Grid.Column="1" Spacing="3"
+                          IsVisible="{Binding IsOperationBusy}">
+                <TextBlock Classes="muted" FontSize="11"
+                           Text="{Binding OperationProgressText}"
+                           TextTrimming="CharacterEllipsis"
+                           AutomationProperties.LiveSetting="Polite" />
+                <ProgressBar Height="4"
+                             IsIndeterminate="{Binding IsOperationProgressIndeterminate}"
+                             Maximum="{Binding OperationProgressMaximum}"
+                             Value="{Binding OperationProgressValue}" />
+              </StackPanel>
+              <Button Grid.Column="2" Classes="app" Content="Cancel"
+                      IsVisible="{Binding IsOperationBusy}"
+                      Command="{Binding CancelLibraryOperationCommand}" />
+              <Button Grid.Column="3" Classes="app primary" Content="Apply preview"
                       Command="{Binding ApplyLibraryOperationCommand}" />
             </Grid>
           </Grid>

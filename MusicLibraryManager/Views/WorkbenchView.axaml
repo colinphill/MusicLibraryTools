@@ -22,7 +22,7 @@
       </controls:PageHeader.Actions>
     </controls:PageHeader>
 
-    <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto" ColumnSpacing="8">
+    <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto,Auto,*,280,Auto" ColumnSpacing="8">
       <Button Classes="app primary" Content="Add files" Command="{Binding BrowseFilesCommand}" />
       <Button Grid.Column="1" Classes="app" Content="Add folder"
               Command="{Binding BrowseFolderCommand}" />
@@ -35,7 +35,16 @@
       <Button Grid.Column="4" HorizontalAlignment="Left" Classes="app"
               Content="Add recent" Command="{Binding AddRecentCommand}"
               CommandParameter="{Binding SelectedItem, ElementName=RecentLocationsBox}" />
-      <Button Grid.Column="5" Classes="app" Content="Cancel"
+      <StackPanel Grid.Column="5" Spacing="3" IsVisible="{Binding IsBusy}">
+        <TextBlock Classes="muted" FontSize="11" Text="{Binding ProgressText}"
+                   TextTrimming="CharacterEllipsis"
+                   AutomationProperties.LiveSetting="Polite" />
+        <ProgressBar Height="4"
+                     IsIndeterminate="{Binding IsProgressIndeterminate}"
+                     Maximum="{Binding ProgressMaximum}"
+                     Value="{Binding ProgressValue}" />
+      </StackPanel>
+      <Button Grid.Column="6" Classes="app" Content="Cancel"
               Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />
     </Grid>
 

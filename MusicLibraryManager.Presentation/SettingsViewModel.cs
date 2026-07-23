@@ -31,6 +31,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     [ObservableProperty] private string? _itunesLibraryPath;
     [ObservableProperty] private string _ffmpegPath = "ffmpeg";
     [ObservableProperty] private string _wavpackPath = "wavpack";
+    [ObservableProperty] private string _fpcalcPath = "fpcalc";
+    [ObservableProperty] private string? _acoustIdClientKey;
     [ObservableProperty] private int _oversizedArtworkByteThreshold =
         LibraryArtworkHealthSettings.DefaultOversizedByteThreshold;
     [ObservableProperty] private int _oversizedArtworkDimensionThreshold =
@@ -73,6 +75,11 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         _files = files;
         _dialogs = dialogs;
         _theme = theme;
+        _fpcalcPath =
+            settings.GetPreference(AudioFingerprintService.ExecutablePreferenceKey) ??
+            "fpcalc";
+        _acoustIdClientKey =
+            settings.GetPreference(AcoustIdLookupService.ClientKeyPreference);
         string? storedTheme = settings.GetPreference(ThemePreference);
         ThemeChoice? storedChoice = ThemeChoices.FirstOrDefault(choice => choice.Name == storedTheme);
         _selectedThemeChoice = storedChoice ?? ThemeChoices[0];
@@ -366,6 +373,16 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         if (value is not null && SelectedTheme != value.Name)
             SelectedTheme = value.Name;
     }
+
+    partial void OnFpcalcPathChanged(string value) =>
+        _settings.SetPreference(
+            AudioFingerprintService.ExecutablePreferenceKey,
+            string.IsNullOrWhiteSpace(value) ? null : value.Trim());
+
+    partial void OnAcoustIdClientKeyChanged(string? value) =>
+        _settings.SetPreference(
+            AcoustIdLookupService.ClientKeyPreference,
+            string.IsNullOrWhiteSpace(value) ? null : value.Trim());
 
     private static readonly HashSet<string> EditorProperties =
     [
@@ -1176,6 +1193,14 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         string? path = await _files.PickFileAsync("Choose WavPack executable");
         if (path is not null)
             WavpackPath = path;
+    }
+
+    [RelayCommand]
+    private async Task BrowseFpcalcAsync()
+    {
+        string? path = await _files.PickFileAsync("Choose fpcalc executable");
+        if (path is not null)
+            FpcalcPath = path;
     }
 
     private bool CanSaveConfiguration() => HasUnsavedChanges && IsEditorValid;

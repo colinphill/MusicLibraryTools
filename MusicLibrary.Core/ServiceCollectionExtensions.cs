@@ -61,6 +61,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IFfmpegRunner, FfmpegRunner>();
         services.AddSingleton<IFpcalcRunner, FpcalcRunner>();
         services.AddSingleton<IAudioFingerprintService, AudioFingerprintService>();
+        services.AddSingleton<IAcoustIdHttpTransport, AcoustIdHttpTransport>();
+        services.AddSingleton<IAcoustIdLookupService, AcoustIdLookupService>();
         services.AddSingleton<IWavpackRunner, WavpackRunner>();
         services.AddSingleton<IDecodedAudioVerificationService, DecodedAudioVerificationService>();
         services.AddSingleton<IRepresentationRepairService, RepresentationRepairService>();

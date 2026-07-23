@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using MusicLibrary.Core.Models;
 
 namespace MusicLibrary.Core.Services;
 
@@ -15,6 +16,12 @@ public interface IAudioFingerprintService
     Task<AudioFingerprint> GenerateAsync(
         string path,
         CancellationToken ct = default);
+
+    Task<AudioFingerprint> GenerateAsync(
+        string path,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct = default) =>
+        GenerateAsync(path, ct);
 }
 
 public interface IFpcalcRunner
@@ -35,8 +42,14 @@ public sealed class AudioFingerprintService(
 {
     public const string ExecutablePreferenceKey = "tools.fpcalcPath";
 
-    public Task<AudioFingerprint> GenerateAsync(
+    public async Task<AudioFingerprint> GenerateAsync(
         string path,
+        CancellationToken ct = default) =>
+        await GenerateAsync(path, progress: null, ct);
+
+    public async Task<AudioFingerprint> GenerateAsync(
+        string path,
+        IProgress<OperationProgress>? progress,
         CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
@@ -49,7 +62,21 @@ public sealed class AudioFingerprintService(
         string executable = string.IsNullOrWhiteSpace(configuredExecutable)
             ? "fpcalc"
             : configuredExecutable;
-        return fpcalc.GenerateAsync(executable, fullPath, ct);
+        progress?.Report(new(
+            OperationPhase.IndexingSources,
+            0,
+            1,
+            fullPath,
+            $"Generating Chromaprint for {Path.GetFileName(fullPath)}"));
+        AudioFingerprint result =
+            await fpcalc.GenerateAsync(executable, fullPath, ct);
+        progress?.Report(new(
+            OperationPhase.Completed,
+            1,
+            1,
+            fullPath,
+            $"Generated Chromaprint for {Path.GetFileName(fullPath)}"));
+        return result;
     }
 }
 

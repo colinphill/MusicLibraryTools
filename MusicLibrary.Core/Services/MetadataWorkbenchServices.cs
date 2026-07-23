@@ -23,6 +23,12 @@ public interface IWorkbenchService
     Task<WorkbenchLoadResult> LoadAsync(
         WorkbenchLoadRequest request,
         CancellationToken ct = default);
+
+    Task<WorkbenchLoadResult> LoadAsync(
+        WorkbenchLoadRequest request,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct = default) =>
+        LoadAsync(request, ct);
 }
 
 public interface IMetadataOperationService
@@ -32,15 +38,36 @@ public interface IMetadataOperationService
         OperationRecipe recipe,
         CancellationToken ct = default);
 
+    Task<MetadataOperationPlan> PreviewAsync(
+        IReadOnlyList<string> paths,
+        OperationRecipe recipe,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct = default) =>
+        PreviewAsync(paths, recipe, ct);
+
     Task<MetadataOperationPlan> PreviewEditsAsync(
         IReadOnlyDictionary<string, IReadOnlyList<TagEdit>> editsByPath,
+        string name,
+        CancellationToken ct = default);
+
+    Task<MetadataOperationPlan> PreviewEditsAsync(
+        IReadOnlyDictionary<string, IReadOnlyList<TagEdit>> editsByPath,
+        string name,
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct = default) =>
+        PreviewEditsAsync(editsByPath, name, ct);
+
+    Task<MetadataOperationPlan> PreviewValueEditsAsync(
+        IReadOnlyDictionary<string, IReadOnlyList<MetadataValueEdit>> editsByPath,
         string name,
         CancellationToken ct = default);
 
     Task<MetadataOperationPlan> PreviewValueEditsAsync(
         IReadOnlyDictionary<string, IReadOnlyList<MetadataValueEdit>> editsByPath,
         string name,
-        CancellationToken ct = default);
+        IProgress<OperationProgress>? progress,
+        CancellationToken ct = default) =>
+        PreviewValueEditsAsync(editsByPath, name, ct);
 
     Task<MetadataApplyResult> ApplyAsync(
         MetadataOperationPlan plan,
@@ -181,16 +208,32 @@ public sealed class WorkbenchService(
 {
     public async Task<WorkbenchLoadResult> LoadAsync(
         WorkbenchLoadRequest request,
+        CancellationToken ct = default) =>
+        await LoadAsync(request, progress: null, ct);
+
+    public async Task<WorkbenchLoadResult> LoadAsync(
+        WorkbenchLoadRequest request,
+        IProgress<OperationProgress>? progress,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(request);
+        progress?.Report(new(
+            OperationPhase.Planning,
+            Message: "Scanning Workbench sources"));
         var issues = new List<OperationIssue>();
         IReadOnlyList<string> paths = await Task.Run(
             () => Expand(request, formats, issues, ct), ct);
         var loaded = new List<MediaDocument>(paths.Count);
-        foreach (string path in paths)
+        for (int index = 0; index < paths.Count; index++)
         {
             ct.ThrowIfCancellationRequested();
+            string path = paths[index];
+            progress?.Report(new(
+                OperationPhase.IndexingSources,
+                index,
+                paths.Count,
+                path,
+                $"Reading metadata {index + 1:N0} of {paths.Count:N0}"));
             try
             {
                 loaded.Add(await documents.LoadAsync(path, includeArtwork: false, ct));
@@ -201,6 +244,11 @@ public sealed class WorkbenchService(
                     error.Message, path));
             }
         }
+        progress?.Report(new(
+            OperationPhase.Completed,
+            paths.Count,
+            paths.Count,
+            Message: $"Loaded {loaded.Count:N0} Workbench file(s)"));
         return new([.. loaded], [.. issues]);
     }
 
@@ -359,6 +407,13 @@ public sealed class MetadataOperationService(
     public async Task<MetadataOperationPlan> PreviewAsync(
         IReadOnlyList<string> paths,
         OperationRecipe recipe,
+        CancellationToken ct = default) =>
+        await PreviewAsync(paths, recipe, progress: null, ct);
+
+    public async Task<MetadataOperationPlan> PreviewAsync(
+        IReadOnlyList<string> paths,
+        OperationRecipe recipe,
+        IProgress<OperationProgress>? progress,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(paths);
@@ -367,6 +422,12 @@ public sealed class MetadataOperationService(
         for (int index = 0; index < paths.Count; index++)
         {
             ct.ThrowIfCancellationRequested();
+            progress?.Report(new(
+                OperationPhase.Planning,
+                index,
+                paths.Count,
+                paths[index],
+                $"Previewing metadata {index + 1:N0} of {paths.Count:N0}"));
             MediaDocument document;
             try
             {
@@ -400,19 +461,39 @@ public sealed class MetadataOperationService(
             plans.Add(BuildPlan(document, before, after, operationIssues));
         }
         AddRecoverySpaceIssues(plans);
+        progress?.Report(new(
+            OperationPhase.Completed,
+            paths.Count,
+            paths.Count,
+            Message: $"Previewed {paths.Count:N0} file(s)"));
         return new(Guid.NewGuid(), recipe.Name, [.. plans], DateTimeOffset.UtcNow, recipe);
     }
 
     public async Task<MetadataOperationPlan> PreviewEditsAsync(
         IReadOnlyDictionary<string, IReadOnlyList<TagEdit>> editsByPath,
         string name,
+        CancellationToken ct = default) =>
+        await PreviewEditsAsync(editsByPath, name, progress: null, ct);
+
+    public async Task<MetadataOperationPlan> PreviewEditsAsync(
+        IReadOnlyDictionary<string, IReadOnlyList<TagEdit>> editsByPath,
+        string name,
+        IProgress<OperationProgress>? progress,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(editsByPath);
         var plans = new List<MetadataFilePlan>(editsByPath.Count);
+        int index = 0;
         foreach ((string path, IReadOnlyList<TagEdit> edits) in editsByPath)
         {
             ct.ThrowIfCancellationRequested();
+            progress?.Report(new(
+                OperationPhase.Planning,
+                index,
+                editsByPath.Count,
+                path,
+                $"Previewing metadata {index + 1:N0} of {editsByPath.Count:N0}"));
+            index++;
             MediaDocument document;
             try
             {
@@ -438,19 +519,39 @@ public sealed class MetadataOperationService(
             plans.Add(BuildPlan(document, before, after));
         }
         AddRecoverySpaceIssues(plans);
+        progress?.Report(new(
+            OperationPhase.Completed,
+            editsByPath.Count,
+            editsByPath.Count,
+            Message: $"Previewed {editsByPath.Count:N0} file(s)"));
         return new(Guid.NewGuid(), name, [.. plans], DateTimeOffset.UtcNow);
     }
 
     public async Task<MetadataOperationPlan> PreviewValueEditsAsync(
         IReadOnlyDictionary<string, IReadOnlyList<MetadataValueEdit>> editsByPath,
         string name,
+        CancellationToken ct = default) =>
+        await PreviewValueEditsAsync(editsByPath, name, progress: null, ct);
+
+    public async Task<MetadataOperationPlan> PreviewValueEditsAsync(
+        IReadOnlyDictionary<string, IReadOnlyList<MetadataValueEdit>> editsByPath,
+        string name,
+        IProgress<OperationProgress>? progress,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(editsByPath);
         var plans = new List<MetadataFilePlan>(editsByPath.Count);
+        int index = 0;
         foreach ((string path, IReadOnlyList<MetadataValueEdit> edits) in editsByPath)
         {
             ct.ThrowIfCancellationRequested();
+            progress?.Report(new(
+                OperationPhase.Planning,
+                index,
+                editsByPath.Count,
+                path,
+                $"Previewing metadata {index + 1:N0} of {editsByPath.Count:N0}"));
+            index++;
             MediaDocument document;
             try
             {
@@ -473,6 +574,11 @@ public sealed class MetadataOperationService(
             plans.Add(BuildPlan(document, before, after));
         }
         AddRecoverySpaceIssues(plans);
+        progress?.Report(new(
+            OperationPhase.Completed,
+            editsByPath.Count,
+            editsByPath.Count,
+            Message: $"Previewed {editsByPath.Count:N0} file(s)"));
         return new(Guid.NewGuid(), name, [.. plans], DateTimeOffset.UtcNow);
     }
 

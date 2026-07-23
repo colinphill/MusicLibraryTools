@@ -42,6 +42,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private IReadOnlyList<string> _selectedPaths = [];
     private CancellationTokenSource? _loadCancellation;
     private CancellationTokenSource? _filterCancellation;
+    private CancellationTokenSource? _operationCancellation;
     private bool _loadingWorkspace;
 
     [ObservableProperty]
@@ -106,6 +107,18 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [ObservableProperty]
     private string _operationStatus =
         "Choose an operation and scope, then preview authoritative metadata from disk.";
+
+    [ObservableProperty]
+    private bool _isOperationProgressIndeterminate = true;
+
+    [ObservableProperty]
+    private double _operationProgressValue;
+
+    [ObservableProperty]
+    private double _operationProgressMaximum = 1;
+
+    [ObservableProperty]
+    private string _operationProgressText = "";
 
     public LibraryViewModel(
         ILibraryService library,
@@ -442,12 +455,16 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             return;
         }
 
-        IsOperationBusy = true;
+        BeginLibraryOperation("Building metadata preview");
         try
         {
             OperationRecipe recipe = OperationEditor.CreateRecipe();
             MetadataOperationPlan plan =
-                await _metadataOperations.PreviewAsync(paths, recipe);
+                await _metadataOperations.PreviewAsync(
+                    paths,
+                    recipe,
+                    CreateOperationProgress(),
+                    _operationCancellation!.Token);
             _libraryOperationPlan = plan;
             OperationPreviewChanges.Clear();
             foreach (MetadataFilePlan file in plan.Files)
@@ -467,6 +484,11 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                   $"{plan.ChangedFileCount:N0} of {paths.Length:N0} file(s).";
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
+        catch (OperationCanceledException)
+        {
+            InvalidateLibraryOperationPreview();
+            OperationStatus = "Preview cancelled. No files were changed.";
+        }
         catch (Exception error)
         {
             InvalidateLibraryOperationPreview();
@@ -474,7 +496,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         }
         finally
         {
-            IsOperationBusy = false;
+            EndLibraryOperation();
         }
     }
 
@@ -483,11 +505,14 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     {
         if (_metadataOperations is null || _libraryOperationPlan is null)
             return;
-        IsOperationBusy = true;
+        BeginLibraryOperation("Applying reviewed metadata changes");
         try
         {
             MetadataApplyResult result =
-                await _metadataOperations.ApplyAsync(_libraryOperationPlan);
+                await _metadataOperations.ApplyAsync(
+                    _libraryOperationPlan,
+                    CreateOperationProgress(),
+                    _operationCancellation!.Token);
             _libraryOperationPlan = null;
             OperationPreviewChanges.Clear();
             HasApplicableOperationPreview = false;
@@ -495,16 +520,68 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                 "available through Operations recovery.";
             await ReloadAsync();
         }
+        catch (OperationCanceledException)
+        {
+            OperationStatus =
+                "Apply cancelled. Completed mutations remain available through Operations recovery.";
+        }
         catch (Exception error)
         {
             OperationStatus = $"Apply stopped safely: {error.Message}";
         }
         finally
         {
-            IsOperationBusy = false;
+            EndLibraryOperation();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
     }
+
+    [RelayCommand]
+    private void CancelLibraryOperation()
+    {
+        _operationCancellation?.Cancel();
+        _loadCancellation?.Cancel();
+    }
+
+    private void BeginLibraryOperation(string message)
+    {
+        _operationCancellation?.Dispose();
+        _operationCancellation = new();
+        OperationProgressText = message;
+        OperationProgressValue = 0;
+        OperationProgressMaximum = 1;
+        IsOperationProgressIndeterminate = true;
+        IsOperationBusy = true;
+    }
+
+    private void EndLibraryOperation()
+    {
+        IsOperationBusy = false;
+        _operationCancellation?.Dispose();
+        _operationCancellation = null;
+        IsOperationProgressIndeterminate = true;
+        OperationProgressValue = 0;
+        OperationProgressMaximum = 1;
+        OperationProgressText = "";
+    }
+
+    private IProgress<OperationProgress> CreateOperationProgress() =>
+        new Progress<OperationProgress>(progress =>
+        {
+            if (progress.Total is > 0)
+            {
+                IsOperationProgressIndeterminate = false;
+                OperationProgressMaximum = progress.Total.Value;
+                OperationProgressValue = Math.Clamp(
+                    progress.Completed, 0, progress.Total.Value);
+            }
+            else
+            {
+                IsOperationProgressIndeterminate = true;
+            }
+            if (!string.IsNullOrWhiteSpace(progress.Message))
+                OperationProgressText = progress.Message;
+        });
 
     private string[] ResolveOperationPaths()
     {

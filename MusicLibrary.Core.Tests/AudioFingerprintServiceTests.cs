@@ -1,3 +1,4 @@
+using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
 using Xunit;
 
@@ -46,12 +47,15 @@ public sealed class AudioFingerprintServiceTests
                 "custom-fpcalc");
             var runner = new RecordingFpcalcRunner();
             var service = new AudioFingerprintService(runner, settings);
+            var progress = new RecordingProgress();
 
-            AudioFingerprint result = await service.GenerateAsync(media.Path);
+            AudioFingerprint result =
+                await service.GenerateAsync(media.Path, progress);
 
             Assert.Equal("custom-fpcalc", runner.Executable);
             Assert.Equal(Path.GetFullPath(media.Path), runner.Path);
             Assert.Equal("fingerprint", result.Fingerprint);
+            Assert.Equal([0, 1], progress.Items.Select(item => item.Completed));
         }
         finally
         {
@@ -74,5 +78,11 @@ public sealed class AudioFingerprintServiceTests
             return Task.FromResult(new AudioFingerprint(
                 path, "fingerprint", TimeSpan.FromSeconds(1), 1));
         }
+    }
+
+    private sealed class RecordingProgress : IProgress<OperationProgress>
+    {
+        public List<OperationProgress> Items { get; } = [];
+        public void Report(OperationProgress value) => Items.Add(value);
     }
 }

@@ -181,8 +181,10 @@ public sealed class MetadataWorkbenchServicesTests
                     MetadataFieldKey.Known(TagFields.Title), NormalizeInternalWhitespace: true),
                 new ChangeCaseOperation(
                     MetadataFieldKey.Known(TagFields.Title), MetadataCaseMode.Title));
+            var progress = new RecordingProgress();
 
-            MetadataOperationPlan plan = await service.PreviewAsync([media.Path], recipe);
+            MetadataOperationPlan plan =
+                await service.PreviewAsync([media.Path], recipe, progress);
 
             MetadataFilePlan file = Assert.Single(plan.Files);
             MetadataFieldDifference difference = Assert.Single(file.Differences);
@@ -190,6 +192,7 @@ public sealed class MetadataWorkbenchServicesTests
             Assert.Equal(["TestTitle"], difference.Before);
             Assert.Equal(["A New Title"], difference.After);
             Assert.True(plan.CanApply);
+            Assert.Equal([0, 1], progress.Items.Select(item => item.Completed));
             Assert.Equal("TestTitle",
                 MediaFile.GetFile(media.Path, readOnly: true).Tags.First().Title);
         }
@@ -530,5 +533,11 @@ public sealed class MetadataWorkbenchServicesTests
             try { Directory.Delete(session, recursive: true); } catch { }
             try { Directory.Delete(recovery, recursive: true); } catch { }
         }
+    }
+
+    private sealed class RecordingProgress : IProgress<OperationProgress>
+    {
+        public List<OperationProgress> Items { get; } = [];
+        public void Report(OperationProgress value) => Items.Add(value);
     }
 }

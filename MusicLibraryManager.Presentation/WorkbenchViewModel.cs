@@ -51,6 +51,18 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private bool _isBusy;
 
     [ObservableProperty]
+    private bool _isProgressIndeterminate = true;
+
+    [ObservableProperty]
+    private double _progressValue;
+
+    [ObservableProperty]
+    private double _progressMaximum = 1;
+
+    [ObservableProperty]
+    private string _progressText = "";
+
+    [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RemoveCurrentCommand))]
     [NotifyCanExecuteChangedFor(nameof(MoveUpCommand))]
     [NotifyCanExecuteChangedFor(nameof(MoveDownCommand))]
@@ -190,12 +202,13 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         if (sources.Count == 0 || IsBusy)
             return;
         CancelPlan();
-        IsBusy = true;
-        _cancellation = new();
+        BeginOperation("Scanning Workbench sources");
         try
         {
             WorkbenchLoadResult loaded = await _workbench.LoadAsync(
-                new(sources, Recursive), _cancellation.Token);
+                new(sources, Recursive),
+                CreateProgress(),
+                _cancellation!.Token);
             var existing = Files.Select(file => file.Path)
                 .ToHashSet(PathComparer);
             int added = 0;
@@ -223,9 +236,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         }
         finally
         {
-            _cancellation.Dispose();
-            _cancellation = null;
-            IsBusy = false;
+            EndOperation();
             NotifySessionChanged();
         }
     }
@@ -300,16 +311,16 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                 PathComparer);
         if (edits.Count == 0)
             return;
-        await PreviewAsync(() => _operations.PreviewEditsAsync(
-            edits, "Workbench field edits"));
+        await PreviewAsync((progress, ct) => _operations.PreviewEditsAsync(
+            edits, "Workbench field edits", progress, ct));
     }
 
     [RelayCommand(CanExecute = nameof(CanPreviewOperation))]
     private async Task PreviewOperationAsync()
     {
         OperationRecipe recipe = OperationEditor.CreateRecipe();
-        await PreviewAsync(() => _operations.PreviewAsync(
-            Files.Select(file => file.Path).ToArray(), recipe));
+        await PreviewAsync((progress, ct) => _operations.PreviewAsync(
+            Files.Select(file => file.Path).ToArray(), recipe, progress, ct));
     }
 
     [RelayCommand(CanExecute = nameof(CanPreviewFieldValues))]
@@ -354,16 +365,19 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         {
             [SelectedFile.Path] = [new(field, result)],
         };
-        await PreviewAsync(() => _operations.PreviewValueEditsAsync(
-            edits, $"Edit {field.DisplayName} values"));
+        await PreviewAsync((progress, ct) => _operations.PreviewValueEditsAsync(
+            edits, $"Edit {field.DisplayName} values", progress, ct));
     }
 
-    private async Task PreviewAsync(Func<Task<MetadataOperationPlan>> action)
+    private async Task PreviewAsync(
+        Func<IProgress<OperationProgress>, CancellationToken,
+            Task<MetadataOperationPlan>> action)
     {
-        IsBusy = true;
+        BeginOperation("Building metadata preview");
         try
         {
-            MetadataOperationPlan plan = await action();
+            MetadataOperationPlan plan = await action(
+                CreateProgress(), _cancellation!.Token);
             _plan = plan;
             PreviewChanges.Clear();
             foreach (MetadataFilePlan file in plan.Files)
@@ -381,6 +395,11 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                 : $"Preview: {plan.ChangeCount:N0} field change(s) in " +
                   $"{plan.ChangedFileCount:N0} file(s). No files have been changed.";
         }
+        catch (OperationCanceledException)
+        {
+            CancelPlan();
+            StatusText = "Preview cancelled. No files were changed.";
+        }
         catch (Exception error)
         {
             CancelPlan();
@@ -388,7 +407,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         }
         finally
         {
-            IsBusy = false;
+            EndOperation();
             NotifySessionChanged();
         }
     }
@@ -398,18 +417,24 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     {
         if (_plan is null)
             return;
-        IsBusy = true;
+        BeginOperation("Applying reviewed metadata changes");
         try
         {
-            MetadataApplyResult result = await _operations.ApplyAsync(_plan);
+            IProgress<OperationProgress> progress = CreateProgress();
+            MetadataApplyResult result = await _operations.ApplyAsync(
+                _plan, progress, _cancellation!.Token);
             string[] paths = _plan.Files.Where(file => file.HasChanges)
                 .Select(file => file.Path).ToArray();
-            await ReloadAsync(paths);
+            await ReloadAsync(paths, progress, _cancellation.Token);
             _plan = null;
             PreviewChanges.Clear();
             HasApplicablePreview = false;
             StatusText = $"Applied {result.ChangedFiles:N0} file(s). Originals are retained " +
                 "in Workbench recovery and can be restored from Operations.";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Apply cancelled. Completed mutations remain recoverable.";
         }
         catch (Exception error)
         {
@@ -417,7 +442,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         }
         finally
         {
-            IsBusy = false;
+            EndOperation();
             NotifySessionChanged();
         }
     }
@@ -430,12 +455,26 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                 "Current files will be replaced by the retained originals. A collision backup is created when required.",
                 "Restore"))
             return;
-        IsBusy = true;
+        BeginOperation("Restoring the latest Workbench operation");
         try
         {
-            int restored = await _history.UndoLatestAsync();
-            await ReloadAsync(Files.Select(file => file.Path).ToArray());
+            var restoreProgress = new Progress<int>(completed =>
+                ReportProgress(new(
+                    OperationPhase.Applying,
+                    completed,
+                    Math.Max(1, Files.Count),
+                    Message: $"Restored {completed:N0} file(s)")));
+            int restored = await _history.UndoLatestAsync(
+                restoreProgress, _cancellation!.Token);
+            await ReloadAsync(
+                Files.Select(file => file.Path).ToArray(),
+                CreateProgress(),
+                _cancellation.Token);
             StatusText = $"Restored {restored:N0} file(s) from the latest Workbench operation.";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Restore cancelled. Any completed restores remain recoverable.";
         }
         catch (Exception error)
         {
@@ -443,7 +482,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         }
         finally
         {
-            IsBusy = false;
+            EndOperation();
             NotifySessionChanged();
         }
     }
@@ -455,8 +494,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             .FirstOrDefault(entry => entry.Recipe is not null);
         if (candidate?.Recipe is null)
             return;
-        await PreviewAsync(() => _operations.PreviewAsync(
-            candidate.Paths, candidate.Recipe));
+        await PreviewAsync((progress, ct) => _operations.PreviewAsync(
+            candidate.Paths, candidate.Recipe, progress, ct));
         StatusText = "Redo was regenerated against the current files. Review the preview before applying.";
     }
 
@@ -466,8 +505,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         OperationRecipe? recipe = _history.Entries.FirstOrDefault()?.Recipe;
         if (recipe is null)
             return;
-        await PreviewAsync(() => _operations.PreviewAsync(
-            Files.Select(file => file.Path).ToArray(), recipe));
+        await PreviewAsync((progress, ct) => _operations.PreviewAsync(
+            Files.Select(file => file.Path).ToArray(), recipe, progress, ct));
         StatusText = "The latest recipe was regenerated for the current Workbench files. Review before applying.";
     }
 
@@ -484,12 +523,15 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             "Leave");
     }
 
-    private async Task ReloadAsync(IReadOnlyList<string> paths)
+    private async Task ReloadAsync(
+        IReadOnlyList<string> paths,
+        IProgress<OperationProgress> progress,
+        CancellationToken ct)
     {
         if (paths.Count == 0)
             return;
         WorkbenchLoadResult loaded = await _workbench.LoadAsync(
-            new(paths, Recursive: false));
+            new(paths, Recursive: false), progress, ct);
         var documents = loaded.Documents.ToDictionary(document => document.Path, PathComparer);
         for (int index = 0; index < Files.Count; index++)
         {
@@ -602,6 +644,48 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                 JsonSerializer.Serialize(RecentLocations.ToArray()));
         }
         catch { }
+    }
+
+    private void BeginOperation(string message)
+    {
+        _cancellation?.Dispose();
+        _cancellation = new();
+        ProgressText = message;
+        ProgressValue = 0;
+        ProgressMaximum = 1;
+        IsProgressIndeterminate = true;
+        IsBusy = true;
+    }
+
+    private void EndOperation()
+    {
+        IsBusy = false;
+        _cancellation?.Dispose();
+        _cancellation = null;
+        IsProgressIndeterminate = true;
+        ProgressValue = 0;
+        ProgressMaximum = 1;
+        ProgressText = "";
+    }
+
+    private IProgress<OperationProgress> CreateProgress() =>
+        new Progress<OperationProgress>(ReportProgress);
+
+    private void ReportProgress(OperationProgress progress)
+    {
+        if (progress.Total is > 0)
+        {
+            IsProgressIndeterminate = false;
+            ProgressMaximum = progress.Total.Value;
+            ProgressValue = Math.Clamp(
+                progress.Completed, 0, progress.Total.Value);
+        }
+        else
+        {
+            IsProgressIndeterminate = true;
+        }
+        if (!string.IsNullOrWhiteSpace(progress.Message))
+            ProgressText = progress.Message;
     }
 
     private bool CanBrowse() => !IsBusy;
