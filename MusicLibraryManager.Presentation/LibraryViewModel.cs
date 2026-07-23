@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MusicFileUtilities;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
 
@@ -41,6 +42,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private readonly IDelimitedMetadataImportService? _delimitedImports;
     private readonly IFilePickerService? _files;
     private readonly IDialogCoordinator? _dialogs;
+    private readonly IPlatformService? _platform;
     private MetadataOperationPlan? _libraryOperationPlan;
     private ReportExportPlan? _reportPlan;
     private PlaylistWorkspacePlan? _playlistPlan;
@@ -92,6 +94,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(PreviewLocalLibraryArtworkCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewRemoveLibraryFrontCoverCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewRemoveAllLibraryArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopyLibraryMetadataFieldCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PasteLibraryMetadataFieldCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -161,6 +165,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(PreviewLocalLibraryArtworkCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewRemoveLibraryFrontCoverCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewRemoveAllLibraryArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopyLibraryMetadataFieldCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PasteLibraryMetadataFieldCommand))]
     private bool _isOperationBusy;
 
     [ObservableProperty]
@@ -175,6 +181,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(PreviewRemoveAllLibraryArtworkCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryPlaylistCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryExternalToolCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopyLibraryMetadataFieldCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PasteLibraryMetadataFieldCommand))]
     private LibraryOperationScope _selectedOperationScope =
         LibraryOperationScope.SelectedTracks;
 
@@ -258,7 +266,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         IExternalToolService? externalTools = null,
         IExternalToolStore? externalToolStore = null,
         IMetadataGridColumnStore? metadataColumns = null,
-        IDelimitedMetadataImportService? delimitedImports = null)
+        IDelimitedMetadataImportService? delimitedImports = null,
+        IPlatformService? platform = null)
     {
         _library = library;
         _reindex = reindex;
@@ -280,6 +289,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         _delimitedImports = delimitedImports;
         _files = files;
         _dialogs = dialogs;
+        _platform = platform;
         OperationEditor = new(
             operationCatalog ?? new MetadataOperationCatalog(),
             MetadataOperationSurface.Library,
@@ -288,7 +298,12 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             metadataColumns,
             MetadataGridSurface.Library);
         VisualFilterEditor = new();
-        OperationEditor.PropertyChanged += (_, _) => InvalidateLibraryOperationPreview();
+        OperationEditor.PropertyChanged += (_, _) =>
+        {
+            InvalidateLibraryOperationPreview();
+            CopyLibraryMetadataFieldCommand.NotifyCanExecuteChanged();
+            PasteLibraryMetadataFieldCommand.NotifyCanExecuteChanged();
+        };
         ReleaseImport.PropertyChanged += OnReleaseImportChanged;
         ReleaseSearch.PropertyChanged += (_, _) =>
             SearchLibraryMusicBrainzReleasesCommand.NotifyCanExecuteChanged();
@@ -657,6 +672,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         OpenInWorkbenchCommand.NotifyCanExecuteChanged();
         PreviewLibraryOperationCommand.NotifyCanExecuteChanged();
         ImportLibraryDelimitedMetadataCommand.NotifyCanExecuteChanged();
+        CopyLibraryMetadataFieldCommand.NotifyCanExecuteChanged();
+        PasteLibraryMetadataFieldCommand.NotifyCanExecuteChanged();
         DiscoverLibraryAudioCommand.NotifyCanExecuteChanged();
         PreviewLocalLibraryArtworkCommand.NotifyCanExecuteChanged();
         PreviewRemoveLibraryFrontCoverCommand.NotifyCanExecuteChanged();
@@ -729,6 +746,109 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         {
             InvalidateLibraryOperationPreview();
             OperationStatus = $"Preview failed: {error.Message}";
+        }
+        finally
+        {
+            EndLibraryOperation();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanCopyLibraryMetadataField))]
+    private async Task CopyLibraryMetadataFieldAsync()
+    {
+        if (_platform is null ||
+            OperationEditor.SelectedField is not { } selected)
+            return;
+        string? path = ResolveOperationPaths().FirstOrDefault();
+        LibraryRow? row = _allRows.FirstOrDefault(
+            candidate => PathComparer.Equals(candidate.Path, path));
+        if (row is null)
+        {
+            OperationStatus =
+                "The selected Library scope contains no cached metadata to copy.";
+            return;
+        }
+
+        MetadataFieldKey field =
+            MetadataFieldKey.Known(selected.Field);
+        string[] values = CachedMetadataValues(
+            row.Record,
+            selected.Field);
+        await _platform.CopyTextAsync(
+            MetadataClipboardCodec.Encode(
+                new(field, values.ToImmutableArray())));
+        OperationStatus =
+            $"Copied {values.Length:N0} ordered {selected.Label} " +
+            $"value(s) from {Path.GetFileName(row.Path)} with tag identity.";
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPasteLibraryMetadataField))]
+    private async Task PasteLibraryMetadataFieldAsync()
+    {
+        if (_platform is null ||
+            _metadataOperations is null ||
+            OperationEditor.SelectedField is not { } selected)
+            return;
+        string[] paths = ResolveOperationPaths();
+        string? text = await _platform.ReadTextAsync();
+        if (string.IsNullOrEmpty(text))
+        {
+            OperationStatus =
+                "The clipboard does not contain text metadata.";
+            return;
+        }
+
+        BeginLibraryOperation("Building clipboard metadata preview");
+        try
+        {
+            MetadataClipboardPayload payload =
+                MetadataClipboardCodec.DecodeOrPlainText(
+                    text,
+                    MetadataFieldKey.Known(selected.Field));
+            IReadOnlyDictionary<
+                string,
+                IReadOnlyList<MetadataValueEdit>> edits =
+                    paths.ToDictionary(
+                        path => path,
+                        _ => (IReadOnlyList<MetadataValueEdit>)
+                        [
+                            new(payload.Field, payload.Values),
+                        ],
+                        PathComparer);
+            MetadataOperationPlan plan =
+                await _metadataOperations.PreviewValueEditsAsync(
+                    edits,
+                    $"Paste {payload.Field.DisplayName} values for " +
+                    $"{paths.Length:N0} file(s)",
+                    CreateOperationProgress(),
+                    _operationCancellation!.Token);
+            _libraryOperationPlan = plan;
+            MetadataPreviewRowBuilder.Populate(
+                OperationPreviewChanges,
+                plan);
+            HasApplicableOperationPreview = plan.CanApply;
+            int blockers = plan.Files
+                .SelectMany(file => file.Issues)
+                .Count(issue => issue.Severity ==
+                    OperationIssueSeverity.Blocker);
+            OperationStatus = blockers > 0
+                ? $"Clipboard preview has {blockers:N0} blocker(s). " +
+                  "No files were changed."
+                : $"Previewed {plan.ChangeCount:N0} pasted " +
+                  $"change(s) in {plan.ChangedFileCount:N0} file(s).";
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+        catch (OperationCanceledException)
+        {
+            InvalidateLibraryOperationPreview();
+            OperationStatus =
+                "Clipboard preview cancelled. No files were changed.";
+        }
+        catch (Exception error)
+        {
+            InvalidateLibraryOperationPreview();
+            OperationStatus =
+                $"Clipboard preview failed: {error.Message}";
         }
         finally
         {
@@ -2031,6 +2151,43 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             .Select(row => row.Path);
     }
 
+    private static string[] CachedMetadataValues(
+        TrackRecord record,
+        TagFields field)
+    {
+        string[]? values = record.Metadata
+            .FirstOrDefault(pair =>
+                pair.Key.Equals(
+                    field.ToString(),
+                    StringComparison.OrdinalIgnoreCase))
+            .Value;
+        if (values is not null)
+            return values;
+        string? fallback = field switch
+        {
+            TagFields.Title => record.Title,
+            TagFields.Artist => record.Artist,
+            TagFields.AlbumArtist => record.AlbumArtist,
+            TagFields.Album => record.Album,
+            TagFields.Genre => record.Genre,
+            TagFields.Composer => record.Composer,
+            TagFields.Grouping => record.Grouping,
+            TagFields.Date => record.ReleaseDate,
+            TagFields.TrackNumber =>
+                record.TrackNumber?.ToString(),
+            TagFields.TotalTracks =>
+                record.TrackTotal?.ToString(),
+            TagFields.DiscNumber =>
+                record.DiscNumber?.ToString(),
+            TagFields.TotalDiscs =>
+                record.DiscTotal?.ToString(),
+            _ => null,
+        };
+        return string.IsNullOrEmpty(fallback)
+            ? []
+            : [fallback];
+    }
+
     private void InvalidateLibraryOperationPreview()
     {
         if (_libraryOperationPlan is null && OperationPreviewChanges.Count == 0)
@@ -2078,6 +2235,19 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         _metadataOperations is not null &&
         _delimitedImports is not null &&
         _files is not null &&
+        ResolveOperationPaths().Length > 0;
+
+    private bool CanCopyLibraryMetadataField() =>
+        !IsBusy && !IsOperationBusy &&
+        _platform is not null &&
+        OperationEditor.SelectedField is not null &&
+        ResolveOperationPaths().Length > 0;
+
+    private bool CanPasteLibraryMetadataField() =>
+        !IsBusy && !IsOperationBusy &&
+        _platform is not null &&
+        _metadataOperations is not null &&
+        OperationEditor.SelectedField is not null &&
         ResolveOperationPaths().Length > 0;
 
     private bool CanApplyLibraryOperation() =>

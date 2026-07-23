@@ -763,6 +763,14 @@ public sealed class UiControlTests
                 "Import CSV/TSV",
                 workbench.FindControl<Button>(
                     "ImportDelimitedMetadataButton")!.Content);
+            Assert.Equal(
+                "Copy field",
+                workbench.FindControl<Button>(
+                    "CopyWorkbenchMetadataFieldButton")!.Content);
+            Assert.Equal(
+                "Paste + preview",
+                workbench.FindControl<Button>(
+                    "PasteWorkbenchMetadataFieldButton")!.Content);
             Assert.NotNull(workbench.FindControl<AppDataGrid>(
                 "ExternalToolInvocationGrid"));
             Assert.Equal(
@@ -807,6 +815,14 @@ public sealed class UiControlTests
                 "Import CSV/TSV",
                 library.FindControl<Button>(
                     "ImportLibraryDelimitedMetadataButton")!.Content);
+            Assert.Equal(
+                "Copy field",
+                library.FindControl<Button>(
+                    "CopyLibraryMetadataFieldButton")!.Content);
+            Assert.Equal(
+                "Paste + preview",
+                library.FindControl<Button>(
+                    "PasteLibraryMetadataFieldButton")!.Content);
             Assert.NotNull(library.FindControl<AppDataGrid>(
                 "LibraryExternalToolInvocationGrid"));
             Assert.Equal(
@@ -901,6 +917,66 @@ public sealed class UiControlTests
                         DateTime.UtcNow,
                         "hash"),
                     true));
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Workbench_copy_command_emits_tag_aware_custom_values()
+    {
+        var clipboard = new RecordingClipboardService();
+        using ServiceProvider services = BuildIsolatedServices(
+            configureServices: collection =>
+                collection.AddSingleton<IPlatformService>(
+                    clipboard));
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Show();
+            services.GetRequiredService<INavigationService>()
+                .Navigate(ShellDestination.Workbench);
+            Dispatcher.UIThread.RunJobs();
+            WorkbenchViewModel model =
+                services.GetRequiredService<WorkbenchViewModel>();
+            MetadataFieldKey field =
+                MetadataFieldKey.Custom("DJ_SET");
+            var track = new WorkbenchTrackViewModel(
+                new MediaDocument(
+                    "set.flac",
+                    [new(
+                        "VorbisComment",
+                        [new(field, ["Warmup", "Peak"])],
+                        true,
+                        true,
+                        true,
+                        true)],
+                    [],
+                    null,
+                    new(
+                        "set.flac",
+                        10,
+                        DateTime.UtcNow,
+                        "hash"),
+                    true));
+            model.Files.Add(track);
+            model.SelectedFile = track;
+            model.SelectedMetadataField =
+                model.MetadataFields.Single(row =>
+                    row.Field == field);
+
+            await model.CopyMetadataFieldCommand
+                .ExecuteAsync(null);
+
+            Assert.True(MetadataClipboardCodec.TryDecode(
+                clipboard.Text,
+                out MetadataClipboardPayload? payload));
+            Assert.Equal("DJ_SET", payload!.Field.CustomName);
+            Assert.Equal(["Warmup", "Peak"], payload.Values);
         }
         finally
         {
@@ -2045,6 +2121,25 @@ public sealed class UiControlTests
                 _preferences.Remove(key);
             else
                 _preferences[key] = value;
+        }
+    }
+
+    private sealed class RecordingClipboardService :
+        IPlatformService
+    {
+        public string? Text { get; private set; }
+
+        public Task CopyTextAsync(string text)
+        {
+            Text = text;
+            return Task.CompletedTask;
+        }
+
+        public Task<string?> ReadTextAsync() =>
+            Task.FromResult(Text);
+
+        public void RevealFile(string path)
+        {
         }
     }
 

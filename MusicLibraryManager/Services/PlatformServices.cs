@@ -147,6 +147,14 @@ public sealed class PlatformService(WindowContext context) : IPlatformService
             await clipboard.SetValueAsync(DataFormat.Text, text);
     }
 
+    public async Task<string?> ReadTextAsync()
+    {
+        var clipboard = TopLevel.GetTopLevel(context.Window)?.Clipboard;
+        return clipboard is null
+            ? null
+            : await clipboard.TryGetValueAsync(DataFormat.Text);
+    }
+
     public void RevealFile(string path)
     {
         var start = new ProcessStartInfo { UseShellExecute = false };

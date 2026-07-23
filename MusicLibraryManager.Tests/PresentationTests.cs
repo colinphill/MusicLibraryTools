@@ -1456,6 +1456,99 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public async Task Library_clipboard_preserves_field_identity_and_previews_scope()
+    {
+        TrackRecord[] records =
+        [
+            Track(
+                "Artist",
+                "First",
+                "One",
+                "FLAC",
+                @"C:\music\one.flac") with
+            {
+                Metadata = new Dictionary<string, string[]>(
+                    StringComparer.OrdinalIgnoreCase)
+                {
+                    [nameof(TagFields.Artist)] =
+                        ["Artist", "Guest"],
+                },
+            },
+            Track(
+                "Artist",
+                "First",
+                "Two",
+                "FLAC",
+                @"C:\music\two.flac"),
+        ];
+        var library = new FakeLibrary(records);
+        var settings = new FakeSettings();
+        var activity = new AppActivityService();
+        var inspector = new SelectionInspectorViewModel(
+            new FakeMediaService(),
+            library,
+            new FakeTagWriter(),
+            new FakeArtworkService(),
+            new FakeFilePicker(),
+            new FakeDialogs(),
+            new FakeFieldsEditor(),
+            new FakeThumbnails(),
+            activity);
+        var operations = new FakeMetadataOperationService();
+        var clipboard = new FakePlatformService();
+        var viewModel = new LibraryViewModel(
+            library,
+            new FakeReindex(),
+            settings,
+            inspector,
+            new NavigationService(),
+            new IndexingViewModel(
+                library,
+                settings,
+                activity),
+            new FakeThumbnails(),
+            metadataOperations: operations,
+            operationCatalog: new MetadataOperationCatalog(),
+            platform: clipboard);
+        await viewModel.ReloadAsync();
+        await viewModel.SelectAsync(
+            [viewModel.Rows.Single(row => row.Title == "One")]);
+        viewModel.SelectedOperationScope =
+            LibraryOperationScope.SelectedAlbums;
+        viewModel.OperationEditor.SelectedField =
+            viewModel.OperationEditor.Fields.Single(field =>
+                field.Field == TagFields.Artist);
+
+        await viewModel.CopyLibraryMetadataFieldCommand
+            .ExecuteAsync(null);
+
+        Assert.True(MetadataClipboardCodec.TryDecode(
+            clipboard.Text,
+            out MetadataClipboardPayload? copied));
+        Assert.Equal(TagFields.Artist, copied!.Field.KnownField);
+        Assert.Equal(["Artist", "Guest"], copied.Values);
+
+        clipboard.Text = MetadataClipboardCodec.Encode(
+            new(
+                MetadataFieldKey.Custom("DJ_SET"),
+                ["Warmup", "Peak"]));
+        await viewModel.PasteLibraryMetadataFieldCommand
+            .ExecuteAsync(null);
+
+        Assert.Equal(2, operations.PreviewedValueEdits.Count);
+        Assert.All(
+            operations.PreviewedValueEdits.Values,
+            edits =>
+            {
+                MetadataValueEdit edit = Assert.Single(edits);
+                Assert.Equal("DJ_SET", edit.Field.CustomName);
+                Assert.Equal(["Warmup", "Peak"], edit.Values);
+            });
+        Assert.True(viewModel.HasApplicableOperationPreview);
+        Assert.Contains("Previewed", viewModel.OperationStatus);
+    }
+
+    [Fact]
     public async Task Library_operation_preview_reports_progress_and_can_be_cancelled()
     {
         TrackRecord[] records =
@@ -3292,6 +3385,24 @@ internal sealed class FakeDialogs : IDialogCoordinator
 {
     public Task<bool> ConfirmAsync(string title, string message, string primaryText) => Task.FromResult(true);
     public Task ShowMessageAsync(string title, string message) => Task.CompletedTask;
+}
+
+internal sealed class FakePlatformService : IPlatformService
+{
+    public string? Text { get; set; }
+    public string? RevealedPath { get; private set; }
+
+    public Task CopyTextAsync(string text)
+    {
+        Text = text;
+        return Task.CompletedTask;
+    }
+
+    public Task<string?> ReadTextAsync() =>
+        Task.FromResult(Text);
+
+    public void RevealFile(string path) =>
+        RevealedPath = path;
 }
 
 internal sealed class RejectingDialogs : IDialogCoordinator

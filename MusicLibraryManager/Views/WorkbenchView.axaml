@@ -496,9 +496,21 @@
                          TextWrapping="NoWrap"
                          ScrollViewer.VerticalScrollBarVisibility="Auto"
                          Text="{Binding FieldValuesText, Mode=TwoWay}" />
-                <Button Classes="app primary" HorizontalAlignment="Left"
-                        Content="Preview field values"
-                        Command="{Binding PreviewFieldValuesCommand}" />
+                <WrapPanel>
+                  <Button x:Name="CopyWorkbenchMetadataFieldButton"
+                          Classes="app" Margin="0,0,8,6"
+                          Content="Copy field"
+                          ToolTip.Tip="Copy the field identity and its ordered values"
+                          Command="{Binding CopyMetadataFieldCommand}" />
+                  <Button x:Name="PasteWorkbenchMetadataFieldButton"
+                          Classes="app" Margin="0,0,8,6"
+                          Content="Paste + preview"
+                          ToolTip.Tip="Paste tag-aware or line-delimited text and build a preview"
+                          Command="{Binding PasteMetadataFieldCommand}" />
+                  <Button Classes="app primary" Margin="0,0,8,6"
+                          Content="Preview field values"
+                          Command="{Binding PreviewFieldValuesCommand}" />
+                </WrapPanel>
                 <Border Classes="status-banner info">
                   <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
                 </Border>

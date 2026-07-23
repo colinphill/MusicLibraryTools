@@ -66,6 +66,7 @@ public interface IThumbnailService
 public interface IPlatformService
 {
     Task CopyTextAsync(string text);
+    Task<string?> ReadTextAsync() => Task.FromResult<string?>(null);
     void RevealFile(string path);
 }
 

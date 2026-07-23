@@ -57,6 +57,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private readonly IFilePickerService _files;
     private readonly IDialogCoordinator _dialogs;
     private readonly IAppSettings _settings;
+    private readonly IPlatformService? _platform;
     private MetadataOperationPlan? _plan;
     private ReportExportPlan? _reportPlan;
     private PlaylistWorkspacePlan? _playlistPlan;
@@ -109,6 +110,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(PreviewId3v2ToId3v1Command))]
     [NotifyCanExecuteChangedFor(nameof(PreviewId3v1ToId3v2Command))]
     [NotifyCanExecuteChangedFor(nameof(PreviewId3EncodingCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopyMetadataFieldCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PasteMetadataFieldCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -140,10 +143,12 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(PreviewId3v2ToId3v1Command))]
     [NotifyCanExecuteChangedFor(nameof(PreviewId3v1ToId3v2Command))]
     [NotifyCanExecuteChangedFor(nameof(PreviewId3EncodingCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PasteMetadataFieldCommand))]
     private WorkbenchTrackViewModel? _selectedFile;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PreviewFieldValuesCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CopyMetadataFieldCommand))]
     private WorkbenchMetadataFieldRow? _selectedMetadataField;
 
     [ObservableProperty]
@@ -232,7 +237,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         IExternalToolStore? externalToolStore = null,
         IWorkbenchShortcutStore? shortcutStore = null,
         IMetadataGridColumnStore? metadataColumns = null,
-        IDelimitedMetadataImportService? delimitedImports = null)
+        IDelimitedMetadataImportService? delimitedImports = null,
+        IPlatformService? platform = null)
     {
         _workbench = workbench;
         _operations = operations;
@@ -251,6 +257,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         _files = files;
         _dialogs = dialogs;
         _settings = settings;
+        _platform = platform;
         OperationEditor = new(
             operationCatalog, MetadataOperationSurface.Workbench, recipeStore);
         ShortcutEditor = new(shortcutStore, recipeStore);
@@ -445,6 +452,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         OnPropertyChanged(nameof(FieldSelectionSummary));
         RebuildMetadataFields();
         PreviewFieldValuesCommand.NotifyCanExecuteChanged();
+        PasteMetadataFieldCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedAudioMatchChanged(AudioDiscoveryRow? value)
@@ -731,19 +739,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             EditTargets;
         if (targets.Count == 0)
             return;
-        MetadataFieldKey field;
-        if (SelectedMetadataField is { } selected)
-        {
-            field = selected.Field;
-        }
-        else if (!string.IsNullOrWhiteSpace(CustomFieldName))
-        {
-            field = MetadataFieldKey.Custom(CustomFieldName);
-        }
-        else
-        {
-            field = MetadataFieldKey.Known(SelectedNewKnownField!.Field);
-        }
+        MetadataFieldKey field = ResolveEditedField()!;
 
         ImmutableArray<string> entered = (FieldValuesText ?? "")
             .Split(["\r\n", "\n"], StringSplitOptions.None)
@@ -763,6 +759,78 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             $"{targets.Count:N0} file(s)",
             progress,
             ct));
+    }
+
+    [RelayCommand(CanExecute = nameof(CanCopyMetadataField))]
+    private async Task CopyMetadataFieldAsync()
+    {
+        if (_platform is null ||
+            SelectedMetadataField is not { } selected)
+            return;
+        ImmutableArray<string> values =
+            SelectedFile?.Document.Values(selected.Field) ??
+            selected.Values;
+        string text = MetadataClipboardCodec.Encode(
+            new(selected.Field, values));
+        await _platform.CopyTextAsync(text);
+        StatusText =
+            $"Copied {values.Length:N0} ordered {selected.Name} " +
+            $"value(s) with tag identity.";
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPasteMetadataField))]
+    private async Task PasteMetadataFieldAsync()
+    {
+        if (_platform is null)
+            return;
+        IReadOnlyList<WorkbenchTrackViewModel> targets =
+            EditTargets;
+        string? text = await _platform.ReadTextAsync();
+        if (string.IsNullOrEmpty(text))
+        {
+            StatusText =
+                "The clipboard does not contain text metadata.";
+            return;
+        }
+
+        try
+        {
+            MetadataFieldKey? fallback = ResolveEditedField();
+            if (!MetadataClipboardCodec.TryDecode(
+                    text,
+                    out MetadataClipboardPayload? payload) &&
+                fallback is null)
+            {
+                StatusText =
+                    "Select or name a destination field before pasting plain text.";
+                return;
+            }
+            payload ??= MetadataClipboardCodec.DecodeOrPlainText(
+                text,
+                fallback!);
+            FieldValuesText = string.Join(
+                Environment.NewLine,
+                payload.Values);
+            IReadOnlyDictionary<
+                string,
+                IReadOnlyList<MetadataValueEdit>> edits =
+                    BuildValueEdits(
+                        targets,
+                        payload.Field,
+                        WorkbenchFieldEditMode.Replace,
+                        payload.Values);
+            await PreviewAsync((progress, ct) =>
+                _operations.PreviewValueEditsAsync(
+                    edits,
+                    $"Paste {payload.Field.DisplayName} values for " +
+                    $"{targets.Count:N0} file(s)",
+                    progress,
+                    ct));
+        }
+        catch (InvalidDataException error)
+        {
+            StatusText = $"Paste failed: {error.Message}";
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanPreviewAddId3Layer))]
@@ -2150,6 +2218,17 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                 ? []
                 : [SelectedFile];
 
+    private MetadataFieldKey? ResolveEditedField()
+    {
+        if (SelectedMetadataField is { } selected)
+            return selected.Field;
+        if (!string.IsNullOrWhiteSpace(CustomFieldName))
+            return MetadataFieldKey.Custom(CustomFieldName);
+        return SelectedNewKnownField is { } known
+            ? MetadataFieldKey.Known(known.Field)
+            : null;
+    }
+
     private void OnTrackChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(WorkbenchTrackViewModel.HasChanges))
@@ -2288,6 +2367,12 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         (SelectedMetadataField is not null ||
          !string.IsNullOrWhiteSpace(CustomFieldName) ||
          SelectedNewKnownField is not null);
+    private bool CanCopyMetadataField() =>
+        !IsBusy && _platform is not null &&
+        SelectedMetadataField is not null;
+    private bool CanPasteMetadataField() =>
+        !IsBusy && _platform is not null &&
+        EditTargets.Count > 0;
     private bool CanApply() => !IsBusy && HasApplicablePreview && _plan is not null;
     private bool CanUndo() => !IsBusy && _history.CanUndo;
     private bool CanRedo() => !IsBusy && _history.CanRedo;

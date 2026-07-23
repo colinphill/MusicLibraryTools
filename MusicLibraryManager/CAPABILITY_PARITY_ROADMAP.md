@@ -256,7 +256,15 @@ and restored without creating or indexing a library.
 - [x] Persist personal recipes through `IAppSettings`.
 - [x] Reserve configuration XML for shared library policies.
 - [x] Do not import or emulate mp3tag action groups or presets.
-- [ ] Tag-aware copy/paste.
+- [x] Tag-aware copy/paste.
+  - A versioned portable payload preserves known or native custom field
+    identity, ordered values, and embedded newlines. Ordinary line-delimited
+    clipboard text falls back to the field selected in the destination.
+  - Workbench copies any selected field and pastes across its focused or
+    multi-file selection. Library copies the selected operation field from the
+    first file in its explicit scope and pastes across the whole scope.
+  - Both paste paths build the ordinary native-validated metadata preview;
+    clipboard actions never write files directly.
 - [x] Undo/redo commands; redo regenerates a new preview from current files.
 - [x] Repeat-current-recipe command.
 - [x] Keep preview enabled by default and reject stale streamlined applies.
@@ -576,8 +584,11 @@ per-operation capability flags.
 - Remaining Phase 1 work: complete staged multi-artwork controls and migration
   of the legacy Library inspector/fields dialog onto the shared document and
   mutation services.
+- Revisited and completed in this audit: versioned tag-aware copy/paste across
+  Workbench and explicit Library scopes, including known/custom identity,
+  ordered values, plain-text fallback, and preview-first application.
 - Remaining Phase 2 work: ad-hoc shared file mutations, live representative
-  draft preview, tag-aware copy/paste, and fully symmetric artwork controls.
+  draft preview, and fully symmetric artwork controls.
 - Remaining Phase 3 work: bundled-or-validated fpcalc coverage for every
   readable codec and candidate ranking that incorporates AcoustID confidence
   and broader album context.

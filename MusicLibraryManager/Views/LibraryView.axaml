@@ -472,6 +472,14 @@
                 <Button x:Name="ImportLibraryDelimitedMetadataButton"
                         Classes="app" Content="Import CSV/TSV"
                         Command="{Binding ImportLibraryDelimitedMetadataCommand}" />
+                <Button x:Name="CopyLibraryMetadataFieldButton"
+                        Classes="app" Content="Copy field"
+                        ToolTip.Tip="Copy the selected field identity and ordered values from the first file in scope"
+                        Command="{Binding CopyLibraryMetadataFieldCommand}" />
+                <Button x:Name="PasteLibraryMetadataFieldButton"
+                        Classes="app" Content="Paste + preview"
+                        ToolTip.Tip="Paste tag-aware or line-delimited text into the selected scope"
+                        Command="{Binding PasteLibraryMetadataFieldCommand}" />
                 <Button Classes="app primary"
                         Content="Preview"
                         Command="{Binding PreviewLibraryOperationCommand}" />
