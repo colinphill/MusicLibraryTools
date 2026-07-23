@@ -344,7 +344,11 @@ application concepts.
 
 ### Reuse existing implementations
 
-- [ ] M4B and M4V through the MP4 handler.
+- [x] M4B and M4V through the MP4 handler.
+  - [x] Advertise explicit metadata, artwork, remux, and transcode-source
+    capabilities while keeping both extensions out of automatic indexing.
+  - [x] Verify metadata and artwork round trips preserve the `mdat` payload
+    byte-for-byte for both extension aliases.
 - [ ] Opus and Speex through generalized Ogg handling.
 - [ ] WAV/RF64 and AIFF/AIFC through chunk handlers using existing ID3.
 - [ ] Raw AAC with ID3 and APE tag-layer support.
@@ -364,7 +368,9 @@ application concepts.
 
 ### Tag-layer controls and release gates
 
-- [ ] Keep new formats out of automatic indexing until preservation tests pass.
+- [~] Keep new formats out of automatic indexing until preservation tests pass.
+  M4B and M4V remain Workbench/direct-edit formats after passing MP4
+  preservation tests; each later family must pass its own release gate.
 - [~] Inspect all layers present in a file.
 - [ ] Add or remove specific tag types.
 - [ ] Convert ID3v2.2/2.3/2.4.

@@ -23,13 +23,56 @@ public sealed class MediaFormatRegistryTests
     {
         IMediaFormatRegistry registry = MediaFormatRegistry.Default;
 
-        foreach (string extension in new[] { ".mp4", ".m4p", ".m4r" })
+        foreach (string extension in new[]
+                 {
+                     ".mp4", ".m4p", ".m4r", ".m4b", ".m4v",
+                 })
         {
             Assert.True(registry.SupportsExtension(extension, MediaFormatCapabilities.ReadMetadata));
             Assert.True(registry.SupportsExtension(extension, MediaFormatCapabilities.WriteMetadata));
             Assert.True(registry.SupportsExtension(extension, MediaFormatCapabilities.ReadArtwork));
             Assert.True(registry.SupportsExtension(extension, MediaFormatCapabilities.WriteArtwork));
             Assert.False(registry.SupportsExtension(extension, MediaFormatCapabilities.LibraryIndex));
+        }
+    }
+
+    [Theory]
+    [InlineData(".m4b")]
+    [InlineData(".m4v")]
+    public void ReusedMp4VariantsRoundTripMetadataArtworkAndPayload(
+        string extension)
+    {
+        string path = Path.Combine(
+            Path.GetTempPath(),
+            $"format_{Guid.NewGuid():N}{extension}");
+        File.Copy(MediaFixtures.Path_("sample_aac.m4a"), path);
+        byte[] payloadBefore = ReadMdat(path);
+        byte[] cover = Convert.FromBase64String(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwC" +
+            "AAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
+        try
+        {
+            var media = Assert.IsType<MP4File>(
+                MediaFile.GetFile(path, readOnly: false));
+            media.SetField(TagFields.Title, "Alias title");
+            Assert.IsAssignableFrom<IArtworkWriter>(media)
+                .SetFrontCover(cover, "image/png");
+            media.SaveTags();
+
+            IMediaFile reloaded = MediaFile.GetFile(
+                path,
+                readOnly: true,
+                readArtwork: true);
+            Assert.Equal("Alias title", reloaded.Tags.First().Title);
+            Assert.Equal(
+                cover,
+                Assert.Single(
+                    reloaded.Tags.First().GetImageMetadata()).Data);
+            Assert.Equal(payloadBefore, ReadMdat(path));
+        }
+        finally
+        {
+            try { File.Delete(path); } catch { }
         }
     }
 
@@ -155,5 +198,45 @@ public sealed class MediaFormatRegistryTests
         {
             Directory.Delete(directory, recursive: true);
         }
+    }
+
+    private static byte[] ReadMdat(string path)
+    {
+        using FileStream stream = File.OpenRead(path);
+        byte[] header = new byte[8];
+        for (long position = 0; position + header.Length <= stream.Length;)
+        {
+            stream.Position = position;
+            stream.ReadExactly(header);
+            ulong size = ((ulong)header[0] << 24) |
+                         ((ulong)header[1] << 16) |
+                         ((ulong)header[2] << 8) |
+                         header[3];
+            string type = System.Text.Encoding.ASCII.GetString(
+                header, 4, 4);
+            int headerSize = 8;
+            if (size == 1)
+            {
+                byte[] extended = new byte[8];
+                stream.ReadExactly(extended);
+                size = 0;
+                foreach (byte value in extended)
+                    size = (size << 8) | value;
+                headerSize = 16;
+            }
+            else if (size == 0)
+                size = checked((ulong)(stream.Length - position));
+            if (size < (ulong)headerSize)
+                throw new InvalidDataException("Invalid MP4 atom size.");
+            if (type == "mdat")
+            {
+                byte[] payload = new byte[checked((int)size - headerSize)];
+                stream.Position = position + headerSize;
+                stream.ReadExactly(payload);
+                return payload;
+            }
+            position += checked((long)size);
+        }
+        throw new InvalidDataException("The MP4 container has no mdat atom.");
     }
 }

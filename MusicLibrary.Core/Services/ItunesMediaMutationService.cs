@@ -695,6 +695,8 @@ public sealed class ItunesMediaMutationService : IItunesMediaMutationService
             ".mp4" => "MPEG-4 audio file",
             ".m4p" => "Protected AAC audio file",
             ".m4r" => "AAC audio file",
+            ".m4b" => "Audiobook",
+            ".m4v" => "MPEG-4 video file",
             ".mp3" => "MPEG audio file",
             _ => codec.CodecName,
         };

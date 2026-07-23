@@ -213,6 +213,10 @@ namespace MusicFileUtilities
             yield return new(".m4p", "Protected MPEG-4 audio", MediaFormatFamily.Mp4, readableAndWritable);
             yield return new(".m4r", "MPEG-4 ringtone", MediaFormatFamily.Mp4,
                 readableAndWritable | MediaFormatCapabilities.TranscodeSource | remux);
+            yield return new(".m4b", "MPEG-4 audiobook", MediaFormatFamily.Mp4,
+                readableAndWritable | MediaFormatCapabilities.TranscodeSource | remux);
+            yield return new(".m4v", "MPEG-4 video", MediaFormatFamily.Mp4,
+                readableAndWritable | MediaFormatCapabilities.TranscodeSource | remux);
         }
     }
 }
