@@ -12,6 +12,33 @@ using ConsoleTools;
 
 namespace MetadataCaching
 {
+    public static class CachedMetadataKeys
+    {
+        public const string CustomPrefix = "__CUSTOM__:";
+        public const string CacheFeature =
+            "native-custom-metadata-v1";
+
+        public static string Custom(string key)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(key);
+            return CustomPrefix + key.Trim();
+        }
+
+        public static bool TryGetCustomName(
+            string key,
+            out string customName)
+        {
+            if (key.StartsWith(
+                    CustomPrefix,
+                    StringComparison.Ordinal))
+            {
+                customName = key[CustomPrefix.Length..];
+                return customName.Length > 0;
+            }
+            customName = null;
+            return false;
+        }
+    }
 
     [Serializable]
     public partial class MetadataCacheEntry
@@ -45,6 +72,8 @@ namespace MetadataCaching
         private string _genre = null;
         private string _composer = null;
         private string _grouping = null;
+        private Dictionary<string, string[]> _metadata =
+            new(StringComparer.OrdinalIgnoreCase);
         private int? _discnumber = null;
         private int? _disctotal = null;
         [NonSerialized]
@@ -62,7 +91,21 @@ namespace MetadataCaching
             _hasalbumartist = mp.HasAlbumArtist &&
                 !string.IsNullOrWhiteSpace(mp.AlbumArtist);
             _albumartist = _hasalbumartist ? mp.AlbumArtist : string.Empty;
-            SetIndexedMetadata(mp.GetKnownMetadata());
+            KeyValuePair<TagFields, string>[] known =
+                mp.GetKnownMetadata().ToArray();
+            SetIndexedMetadata(known);
+            IEnumerable<KeyValuePair<string, string>> cached =
+                known.Select(field =>
+                    KeyValuePair.Create(
+                        field.Key.ToString(),
+                        field.Value));
+            if (mp is IUserStringMetadata custom)
+                cached = cached.Concat(
+                    custom.GetUserStrings().Select(field =>
+                        KeyValuePair.Create(
+                            CachedMetadataKeys.Custom(field.Key),
+                            field.Value)));
+            SetCachedMetadata(cached);
             _tracknumber = mp.TrackNumber;
             _tracktotal = mp.TrackTotal;
             _discnumber = mp.DiscNumber;
@@ -111,6 +154,8 @@ namespace MetadataCaching
         public DateTime LastWriteTime => _lastwritetime;
         public long Length => _length;
         public int DurationInSeconds => _durationinseconds;
+        public IReadOnlyDictionary<string, string[]> Metadata =>
+            _metadata;
 
         private static bool IsTrue(string value) =>
             value is not null &&
@@ -149,6 +194,23 @@ namespace MetadataCaching
                         break;
                 }
             }
+        }
+
+        internal void SetCachedMetadata(
+            IEnumerable<KeyValuePair<string, string>> metadata)
+        {
+            _metadata = metadata
+                .Where(field =>
+                    !string.IsNullOrWhiteSpace(field.Key))
+                .GroupBy(
+                    field => field.Key,
+                    StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(
+                    group => group.Key,
+                    group => group
+                        .Select(field => field.Value ?? "")
+                        .ToArray(),
+                    StringComparer.OrdinalIgnoreCase);
         }
 
         private static string AppendDistinct(string existing, string value)

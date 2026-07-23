@@ -81,6 +81,95 @@ public class DatabaseReadTests
     }
 
     [Fact]
+    public async Task IndexAndReindexExposeNativeCustomMetadataToLibraryRows()
+    {
+        var (work, _, config, song) = Setup("sample.flac");
+        try
+        {
+            IMediaFile media = MediaFile.GetFile(song);
+            var custom = Assert.IsAssignableFrom<
+                IUserStringMetadata>(media.Tags.First());
+            custom.SetUserString("DJ_SET", "Sunrise");
+            media.SaveTags();
+
+            var settings = new AppSettings(
+                Path.Combine(work, "settings.json"));
+            settings.LoadConfig(config);
+            using var library = new LibraryService(settings);
+            await library.IndexAsync();
+
+            TrackRecord record = Assert.Single(
+                await library.GetAllRecordsAsync());
+            Assert.Equal(
+                ["Sunrise"],
+                record.Metadata[
+                    CachedMetadataKeys.Custom("DJ_SET")]);
+            FileDetails details = Assert.IsType<FileDetails>(
+                await library.GetFileDetailsAsync(
+                    song,
+                    includeArtwork: false));
+            Assert.Contains(details.TextFields, field =>
+                field.Key.Equals(
+                    "DJ_SET",
+                    StringComparison.OrdinalIgnoreCase) &&
+                field.Value == "Sunrise");
+            Assert.DoesNotContain(details.KnownFields, field =>
+                field.Key.StartsWith(
+                    CachedMetadataKeys.CustomPrefix,
+                    StringComparison.Ordinal));
+
+            string database = Path.Combine(work, "cache.db");
+            using (var connection =
+                   new SqliteConnection($"Data Source={database}"))
+            {
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText =
+                    "DELETE FROM Metadata WHERE KeyID IN (" +
+                    "SELECT ID FROM MetadataKeys WHERE \"Key\" LIKE '__CUSTOM__:%'); " +
+                    "DELETE FROM CacheFeatures WHERE Name = $feature";
+                command.Parameters.AddWithValue(
+                    "$feature",
+                    CachedMetadataKeys.CacheFeature);
+                command.ExecuteNonQuery();
+            }
+
+            var refresh = await library.IndexAsync();
+            Assert.Equal(1, refresh.Modified);
+            record = Assert.Single(
+                await library.GetAllRecordsAsync());
+            Assert.Equal(
+                ["Sunrise"],
+                record.Metadata[
+                    CachedMetadataKeys.Custom("DJ_SET")]);
+
+            media = MediaFile.GetFile(song);
+            custom = Assert.IsAssignableFrom<
+                IUserStringMetadata>(media.Tags.First());
+            custom.SetUserString("DJ_SET", "Sunset");
+            media.SaveTags();
+            await library.ReindexFileAsync(song);
+
+            record = Assert.Single(
+                await library.GetAllRecordsAsync());
+            Assert.Equal(
+                ["Sunset"],
+                record.Metadata[
+                    CachedMetadataKeys.Custom("DJ_SET")]);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(work, recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
     public async Task EditingTags_ReindexesImmediately()
     {
         var (work, _, config, song) = Setup("sample.flac");

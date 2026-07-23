@@ -74,10 +74,23 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
             if (int.TryParse(_settings.GetPreference(IndexBenchmarkService.ReaderParallelismPreference),
                     out int parallelism))
                 db.ScanParallelism = Math.Clamp(parallelism, 1, 64);
-            var result = await Task.Run(() => db.IndexFiles(roots, deletemissingsets: false, progress, ct), ct);
+            bool refreshCustomMetadata =
+                !db.HasCacheFeature(
+                    CachedMetadataKeys.CacheFeature);
+            var result = await Task.Run(() => db.IndexFiles(
+                roots,
+                deletemissingsets: false,
+                progress,
+                ct,
+                forceMetadataRefresh:
+                    refreshCustomMetadata), ct);
             // MetadataDatabase deliberately commits and returns partial work on cancellation. Surface
             // the cancellation to callers after that safe partial commit instead of calling it success.
             ct.ThrowIfCancellationRequested();
+            if (refreshCustomMetadata &&
+                db.LastIndexCompletedSuccessfully)
+                db.MarkCacheFeature(
+                    CachedMetadataKeys.CacheFeature);
             if (_itunes is not null && context.Configuration.ItunesLibraryPath is not null)
             {
                 progress?.Report(new IndexProgress
@@ -170,6 +183,7 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                         DurationInSeconds = e.DurationInSeconds,
                         Length = e.Length,
                         LastWriteTime = e.LastWriteTime,
+                        Metadata = e.Metadata,
                     });
                 }
                 return (IReadOnlyList<TrackRecord>)records;

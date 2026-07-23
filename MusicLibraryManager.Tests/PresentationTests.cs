@@ -1696,6 +1696,141 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public void Metadata_column_editor_persists_typed_custom_and_editable_columns()
+    {
+        var store = new FakeMetadataGridColumnStore();
+        var editor = new MetadataGridColumnEditorViewModel(
+            store,
+            MetadataGridSurface.Workbench)
+        {
+            Label = "DJ set",
+            FieldKind = MetadataGridFieldKind.Custom,
+            CustomFieldName = "DJ_SET",
+            Width = 210,
+        };
+
+        editor.SaveColumnCommand.Execute(null);
+
+        UserMetadataColumnDescriptor custom =
+            Assert.Single(store.Workbench);
+        Assert.Equal("DJ_SET", custom.Field.CustomName);
+        Assert.Equal(210, custom.Width);
+        Assert.Null(custom.EditTarget);
+
+        editor.NewColumnCommand.Execute(null);
+        editor.Label = "Editable title";
+        editor.FieldKind = MetadataGridFieldKind.Known;
+        editor.SelectedKnownField = editor.KnownFields.Single(choice =>
+            choice.Field == TagFields.Title);
+        editor.InlineEditable = true;
+        editor.SaveColumnCommand.Execute(null);
+
+        Assert.Equal(2, store.Workbench.Count);
+        UserMetadataColumnDescriptor title =
+            store.Workbench.Single(column =>
+                column.Field.KnownField == TagFields.Title);
+        Assert.Equal(
+            TagFields.Title,
+            title.EditTarget!.KnownField);
+
+        var libraryEditor =
+            new MetadataGridColumnEditorViewModel(
+                store,
+                MetadataGridSurface.Library)
+            {
+                Label = "Catalog",
+                FieldKind = MetadataGridFieldKind.Known,
+            };
+        libraryEditor.SelectedKnownField =
+            libraryEditor.KnownFields.Single(choice =>
+                choice.Field == TagFields.CatalogNumber);
+        libraryEditor.InlineEditable = true;
+        libraryEditor.SaveColumnCommand.Execute(null);
+
+        Assert.Null(Assert.Single(store.Library).EditTarget);
+    }
+
+    [Fact]
+    public void Dynamic_metadata_values_project_for_library_and_workbench_rows()
+    {
+        MetadataFieldKey custom =
+            MetadataFieldKey.Custom("DJ_SET");
+        var library = new LibraryRow(new TrackRecord
+        {
+            Path = "song.flac",
+            Metadata = new Dictionary<string, string[]>
+            {
+                [nameof(TagFields.CatalogNumber)] = ["ABC-123"],
+                [CachedMetadataKeys.Custom("DJ_SET")] =
+                    ["Morning", "Evening"],
+            },
+        });
+        var document = new MediaDocument(
+            "song.flac",
+            [new(
+                "VorbisComment",
+                [new(custom, ["Morning", "Evening"])],
+                true,
+                true,
+                true,
+                true)],
+            [],
+            null,
+            new(
+                "song.flac",
+                10,
+                DateTime.UtcNow,
+                "hash"),
+            true);
+        var workbench = new WorkbenchTrackViewModel(document);
+
+        Assert.Equal(
+            "ABC-123",
+            library.MetadataValues[
+                MetadataGridValueKey.For(
+                    MetadataFieldKey.Known(
+                        TagFields.CatalogNumber))]);
+        Assert.Equal(
+            "Morning; Evening",
+            library.MetadataValues[
+                MetadataGridValueKey.For(custom)]);
+        Assert.Equal(
+            "Morning; Evening",
+            workbench.MetadataValues[
+                MetadataGridValueKey.For(custom)]);
+    }
+
+    [Fact]
+    public void Dynamic_metadata_columns_use_configured_numeric_and_date_sorting()
+    {
+        MetadataFieldKey field =
+            MetadataFieldKey.Custom("SEQUENCE");
+        string key = MetadataGridValueKey.For(field);
+        LibraryRow Row(string value) =>
+            new(new TrackRecord
+            {
+                Path = value + ".flac",
+                Metadata = new Dictionary<string, string[]>
+                {
+                    [CachedMetadataKeys.Custom("SEQUENCE")] =
+                        [value],
+                },
+            });
+
+        var numeric = new MetadataGridRowComparer(
+            key,
+            MetadataGridColumnSortType.Numeric);
+        Assert.True(numeric.Compare(Row("10"), Row("2")) > 0);
+
+        var date = new MetadataGridRowComparer(
+            key,
+            MetadataGridColumnSortType.Date);
+        Assert.True(date.Compare(
+            Row("2025-01-01"),
+            Row("2024-12-31")) > 0);
+    }
+
+    [Fact]
     public async Task Library_audio_discovery_uses_explicit_scope_and_preserves_candidates()
     {
         TrackRecord[] records =
@@ -2420,6 +2555,33 @@ internal sealed class FakeWorkbenchShortcutStore :
         Bindings.Clear();
         Bindings.AddRange(bindings);
     }
+}
+
+internal sealed class FakeMetadataGridColumnStore :
+    IMetadataGridColumnStore
+{
+    public List<UserMetadataColumnDescriptor> Workbench { get; } = [];
+    public List<UserMetadataColumnDescriptor> Library { get; } = [];
+
+    public IReadOnlyList<UserMetadataColumnDescriptor> Load(
+        MetadataGridSurface surface) =>
+        List(surface).ToArray();
+
+    public void Save(
+        MetadataGridSurface surface,
+        IReadOnlyList<UserMetadataColumnDescriptor> columns)
+    {
+        List<UserMetadataColumnDescriptor> destination =
+            List(surface);
+        destination.Clear();
+        destination.AddRange(columns);
+    }
+
+    private List<UserMetadataColumnDescriptor> List(
+        MetadataGridSurface surface) =>
+        surface == MetadataGridSurface.Workbench
+            ? Workbench
+            : Library;
 }
 
 internal sealed class FakeAcoustIdDiscoveryService : IAcoustIdDiscoveryService

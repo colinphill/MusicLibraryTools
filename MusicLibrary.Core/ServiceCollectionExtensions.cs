@@ -51,6 +51,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IExternalToolStore, ExternalToolStore>();
         services.AddSingleton<IWorkbenchShortcutStore,
             WorkbenchShortcutStore>();
+        services.AddSingleton<IMetadataGridColumnStore,
+            MetadataGridColumnStore>();
         services.AddSingleton<IItunesValidationService, ItunesValidationService>();
         services.AddSingleton<IRedundancyAnalysisService, RedundancyAnalysisService>();
         services.AddSingleton<IMediaFileService, MediaFileService>();

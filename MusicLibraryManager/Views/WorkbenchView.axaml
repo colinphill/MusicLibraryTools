@@ -109,13 +109,15 @@
                    VerticalOffset="8"
                    IsLightDismissEnabled="True"
                    IsOpen="False">
-              <Border Width="250" MaxHeight="520"
+              <Border Width="650" MaxHeight="610"
                       Background="{DynamicResource AppPanelBrush}"
                       BorderBrush="{DynamicResource AppBorderStrongBrush}"
                       BorderThickness="1" CornerRadius="9"
                       Padding="12" BoxShadow="0 14 40 0 #77000000">
-                <Grid RowDefinitions="Auto,*" RowSpacing="8">
-                  <Grid ColumnDefinitions="*,Auto">
+                <Grid RowDefinitions="Auto,*" ColumnDefinitions="220,*"
+                      RowSpacing="8" ColumnSpacing="14">
+                  <Grid Grid.ColumnSpan="2"
+                        ColumnDefinitions="*,Auto">
                     <TextBlock VerticalAlignment="Center"
                                Text="Workbench columns"
                                FontSize="14" FontWeight="SemiBold" />
@@ -130,6 +132,64 @@
                     <StackPanel x:Name="WorkbenchColumnOptions"
                                 Spacing="8" />
                   </ScrollViewer>
+                  <StackPanel Grid.Row="1" Grid.Column="1" Spacing="7">
+                    <TextBlock Classes="section-title"
+                               Text="Metadata columns" />
+                    <ListBox x:Name="WorkbenchMetadataColumnList"
+                             MaxHeight="105"
+                             ItemsSource="{Binding ColumnEditor.Columns}"
+                             SelectedItem="{Binding ColumnEditor.SelectedColumn, Mode=TwoWay}">
+                      <ListBox.ItemTemplate>
+                        <DataTemplate>
+                          <Grid ColumnDefinitions="*,Auto"
+                                ColumnSpacing="8">
+                            <TextBlock Text="{Binding Label}" />
+                            <TextBlock Grid.Column="1" Classes="muted"
+                                       Text="{Binding Field}" />
+                          </Grid>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                    </ListBox>
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="7">
+                      <TextBox Classes="app"
+                               Text="{Binding ColumnEditor.Label, Mode=TwoWay}"
+                               PlaceholderText="Column label" />
+                      <ComboBox Grid.Column="1" Classes="app"
+                                ItemsSource="{Binding ColumnEditor.FieldKinds}"
+                                SelectedItem="{Binding ColumnEditor.FieldKind, Mode=TwoWay}" />
+                    </Grid>
+                    <ComboBox Classes="app"
+                              ItemsSource="{Binding ColumnEditor.KnownFields}"
+                              DisplayMemberBinding="{Binding Label}"
+                              SelectedItem="{Binding ColumnEditor.SelectedKnownField, Mode=TwoWay}"
+                              PlaceholderText="Known metadata field" />
+                    <TextBox Classes="app"
+                             Text="{Binding ColumnEditor.CustomFieldName, Mode=TwoWay}"
+                             PlaceholderText="Native custom field name" />
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="7">
+                      <ComboBox Classes="app"
+                                ItemsSource="{Binding ColumnEditor.SortTypes}"
+                                SelectedItem="{Binding ColumnEditor.SortType, Mode=TwoWay}" />
+                      <NumericUpDown Grid.Column="1" Classes="app"
+                                     Minimum="50" Maximum="2000"
+                                     Value="{Binding ColumnEditor.Width, Mode=TwoWay}"
+                                     FormatString="0" />
+                    </Grid>
+                    <CheckBox Content="Allow inline editing when supported"
+                              IsEnabled="{Binding ColumnEditor.CanInlineEdit}"
+                              IsChecked="{Binding ColumnEditor.InlineEditable, Mode=TwoWay}" />
+                    <WrapPanel>
+                      <Button Classes="app" Content="New"
+                              Command="{Binding ColumnEditor.NewColumnCommand}" />
+                      <Button x:Name="SaveWorkbenchMetadataColumnButton"
+                              Classes="app primary" Content="Save column"
+                              Command="{Binding ColumnEditor.SaveColumnCommand}" />
+                      <Button Classes="app danger" Content="Remove"
+                              Command="{Binding ColumnEditor.DeleteColumnCommand}" />
+                    </WrapPanel>
+                    <TextBlock Classes="muted" TextWrapping="Wrap"
+                               Text="{Binding ColumnEditor.Status}" />
+                  </StackPanel>
                 </Grid>
               </Border>
             </Popup>

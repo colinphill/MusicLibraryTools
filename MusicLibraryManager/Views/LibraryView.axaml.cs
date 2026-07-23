@@ -9,6 +9,7 @@ using global::Avalonia.Markup.Xaml;
 using global::Avalonia.Media;
 using global::Avalonia.Threading;
 using System.ComponentModel;
+using MusicLibrary.Core.Services;
 using MusicLibraryManager.Presentation;
 using MusicLibraryManager.Controls;
 using MusicLibraryManager.Services;
@@ -289,6 +290,64 @@ public partial class LibraryView : UserControl
             new("Modified", "Modified", "Modified", 150, 110, false),
             new("Path", "Path", "Path", 420, 180),
         ]);
+        AddMetadataColumns();
+    }
+
+    private void AddMetadataColumns()
+    {
+        foreach (UserMetadataColumnRow row in
+                 _viewModel.ColumnEditor.Columns.OrderBy(column =>
+                     column.Descriptor.Order))
+        {
+            UserMetadataColumnDescriptor descriptor =
+                row.Descriptor;
+            _columns.Insert(
+                Math.Clamp(
+                    descriptor.Order,
+                    0,
+                    _columns.Count),
+                new(
+                    descriptor.ColumnKey,
+                    descriptor.Label,
+                    $"MetadataValues[{descriptor.ValueKey}]",
+                    descriptor.Width,
+                    70,
+                    descriptor.Visible,
+                    CustomSortComparer:
+                        new MetadataGridRowComparer(
+                            descriptor.ValueKey,
+                            descriptor.SortType)));
+        }
+    }
+
+    private void RebuildMetadataColumns()
+    {
+        List<LibraryColumnState> columns =
+            CaptureColumns()
+                .Where(column =>
+                    !column.Key.StartsWith(
+                        "Metadata.",
+                        StringComparison.Ordinal))
+                .ToList();
+        columns.AddRange(
+            _viewModel.ColumnEditor.Columns.Select(row =>
+                new LibraryColumnState(
+                    row.Descriptor.ColumnKey,
+                    row.Descriptor.Width,
+                    row.Descriptor.Order,
+                    row.Descriptor.Visible)));
+        GridSnapshot snapshot = new(
+            columns,
+            _sort);
+        _columns.RemoveAll(column =>
+            column.Key.StartsWith(
+                "Metadata.",
+                StringComparison.Ordinal));
+        AddMetadataColumns();
+        ApplySnapshot(snapshot);
+        ConfigureGrid();
+        BuildColumnOptions();
+        PersistLayout();
     }
 
     private void ApplySnapshot(GridSnapshot? snapshot)
@@ -358,7 +417,13 @@ public partial class LibraryView : UserControl
         return result;
     }
 
-    private void PersistLayout() => _gridState.Save(new GridSnapshot(CaptureColumns(), _sort));
+    private void PersistLayout()
+    {
+        IReadOnlyList<LibraryColumnState> columns =
+            CaptureColumns();
+        _gridState.Save(new GridSnapshot(columns, _sort));
+        _viewModel.ColumnEditor.PersistLayout(columns);
+    }
 
     private void CaptureSortAndPersist()
     {
@@ -497,6 +562,8 @@ public partial class LibraryView : UserControl
     private void OnAttachedToVisualTree(object? sender, VisualTreeAttachmentEventArgs e)
     {
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        _viewModel.ColumnEditor.Changed +=
+            RebuildMetadataColumns;
         Dispatcher.UIThread.Post(() =>
         {
             RestoreVisibleSelection();
@@ -505,7 +572,14 @@ public partial class LibraryView : UserControl
     }
 
     private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e) =>
+        DetachViewModelEvents();
+
+    private void DetachViewModelEvents()
+    {
         _viewModel.PropertyChanged -= OnViewModelPropertyChanged;
+        _viewModel.ColumnEditor.Changed -=
+            RebuildMetadataColumns;
+    }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {

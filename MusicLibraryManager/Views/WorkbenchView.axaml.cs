@@ -7,6 +7,7 @@ using global::Avalonia.Markup.Xaml;
 using global::Avalonia.Media;
 using global::Avalonia.Platform.Storage;
 using global::Avalonia.Threading;
+using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
 using MusicLibraryManager.Controls;
 using MusicLibraryManager.Presentation;
@@ -39,6 +40,12 @@ public partial class WorkbenchView : UserControl
         WorkbenchGrid.SortChanged += (_, _) =>
             Dispatcher.UIThread.Post(
                 CaptureWorkbenchSortAndPersist);
+        AttachedToVisualTree += (_, _) =>
+            _viewModel.ColumnEditor.Changed +=
+                RebuildWorkbenchMetadataColumns;
+        DetachedFromVisualTree += (_, _) =>
+            _viewModel.ColumnEditor.Changed -=
+                RebuildWorkbenchMetadataColumns;
         PreviewGrid.ConfigureColumns(
         [
             new("File", "File", "File", 220, 140),
@@ -151,6 +158,88 @@ public partial class WorkbenchView : UserControl
                 155, 110, false),
             new("Path", "Path", "Path", 420, 180, false),
         ]);
+        AddWorkbenchMetadataColumns();
+    }
+
+    private void AddWorkbenchMetadataColumns()
+    {
+        foreach (UserMetadataColumnRow row in
+                 _viewModel.ColumnEditor.Columns.OrderBy(column =>
+                     column.Descriptor.Order))
+        {
+            UserMetadataColumnDescriptor descriptor =
+                row.Descriptor;
+            string? editPath = descriptor.EditTarget is null
+                ? null
+                : WorkbenchEditPath(descriptor.EditTarget);
+            var definition = new AppGridColumnDefinition(
+                descriptor.ColumnKey,
+                descriptor.Label,
+                editPath ??
+                    $"MetadataValues[{descriptor.ValueKey}]",
+                descriptor.Width,
+                70,
+                descriptor.Visible,
+                Editable: editPath is not null,
+                CustomSortComparer: editPath is null
+                    ? new MetadataGridRowComparer(
+                        descriptor.ValueKey,
+                        descriptor.SortType)
+                    : null);
+            _workbenchColumns.Insert(
+                Math.Clamp(
+                    descriptor.Order,
+                    0,
+                    _workbenchColumns.Count),
+                definition);
+        }
+    }
+
+    private static string? WorkbenchEditPath(
+        MetadataFieldKey field) =>
+        field.KnownField switch
+        {
+            MusicFileUtilities.TagFields.Title => "Title",
+            MusicFileUtilities.TagFields.Artist => "Artist",
+            MusicFileUtilities.TagFields.AlbumArtist =>
+                "AlbumArtist",
+            MusicFileUtilities.TagFields.Album => "Album",
+            MusicFileUtilities.TagFields.Genre => "Genre",
+            MusicFileUtilities.TagFields.Composer => "Composer",
+            MusicFileUtilities.TagFields.Date => "Date",
+            MusicFileUtilities.TagFields.TrackNumber => "Track",
+            MusicFileUtilities.TagFields.DiscNumber => "Disc",
+            _ => null,
+        };
+
+    private void RebuildWorkbenchMetadataColumns()
+    {
+        List<LibraryColumnState> columns =
+            CaptureWorkbenchColumns()
+                .Where(column =>
+                    !column.Key.StartsWith(
+                        "Metadata.",
+                        StringComparison.Ordinal))
+                .ToList();
+        columns.AddRange(
+            _viewModel.ColumnEditor.Columns.Select(row =>
+                new LibraryColumnState(
+                    row.Descriptor.ColumnKey,
+                    row.Descriptor.Width,
+                    row.Descriptor.Order,
+                    row.Descriptor.Visible)));
+        GridSnapshot snapshot = new(
+            columns,
+            _workbenchSort);
+        _workbenchColumns.RemoveAll(column =>
+            column.Key.StartsWith(
+                "Metadata.",
+                StringComparison.Ordinal));
+        AddWorkbenchMetadataColumns();
+        ApplyWorkbenchSnapshot(snapshot);
+        ConfigureWorkbenchGrid();
+        BuildWorkbenchColumnOptions();
+        PersistWorkbenchLayout();
     }
 
     private void ApplyWorkbenchSnapshot(GridSnapshot? snapshot)
@@ -255,11 +344,16 @@ public partial class WorkbenchView : UserControl
     }
 
     private void PersistWorkbenchLayout() =>
+        SaveWorkbenchLayout(CaptureWorkbenchColumns());
+
+    private void SaveWorkbenchLayout(
+        IReadOnlyList<LibraryColumnState> columns)
+    {
         _gridState.Save(
             "workbench.session",
-            new(
-                CaptureWorkbenchColumns(),
-                _workbenchSort));
+            new(columns, _workbenchSort));
+        _viewModel.ColumnEditor.PersistLayout(columns);
+    }
 
     private void CaptureWorkbenchSortAndPersist()
     {

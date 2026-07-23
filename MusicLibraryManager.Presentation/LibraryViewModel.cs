@@ -244,7 +244,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         IReportExportService? reports = null,
         IPlaylistWorkspaceService? playlists = null,
         IExternalToolService? externalTools = null,
-        IExternalToolStore? externalToolStore = null)
+        IExternalToolStore? externalToolStore = null,
+        IMetadataGridColumnStore? metadataColumns = null)
     {
         _library = library;
         _reindex = reindex;
@@ -269,6 +270,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             operationCatalog ?? new MetadataOperationCatalog(),
             MetadataOperationSurface.Library,
             recipeStore);
+        ColumnEditor = new(
+            metadataColumns,
+            MetadataGridSurface.Library);
         OperationEditor.PropertyChanged += (_, _) => InvalidateLibraryOperationPreview();
         ReleaseImport.PropertyChanged += OnReleaseImportChanged;
         ReleaseSearch.PropertyChanged += (_, _) =>
@@ -322,6 +326,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     public ReportEditorViewModel ReportEditor { get; } = new();
     public PlaylistEditorViewModel PlaylistEditor { get; } = new();
     public ExternalToolEditorViewModel ExternalToolEditor { get; }
+    public MetadataGridColumnEditorViewModel ColumnEditor { get; }
     public IReadOnlyList<FilterMode> FilterModes { get; } = Enum.GetValues<FilterMode>();
     public IReadOnlyList<LibraryOperationScope> OperationScopes { get; } =
         Enum.GetValues<LibraryOperationScope>();

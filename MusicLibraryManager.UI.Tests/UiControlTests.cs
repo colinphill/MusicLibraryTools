@@ -428,6 +428,54 @@ public sealed class UiControlTests
     }
 
     [AvaloniaFact]
+    public void Data_grid_binds_dynamic_metadata_dictionary_values()
+    {
+        string valueKey = MetadataGridValueKey.For(
+            MetadataFieldKey.Custom("DJ_SET"));
+        var row = new LibraryRow(new TrackRecord
+        {
+            Path = "song.flac",
+            Metadata = new Dictionary<string, string[]>
+            {
+                [CachedMetadataKeys.Custom("DJ_SET")] =
+                    ["Morning", "Evening"],
+            },
+        });
+        var grid = new AppDataGrid
+        {
+            ItemsSource = new[] { row },
+        };
+        grid.ConfigureColumns(
+        [
+            new(
+                "Metadata.test",
+                "DJ set",
+                $"MetadataValues[{valueKey}]",
+                220),
+        ]);
+        var window = new Window
+        {
+            Width = 420,
+            Height = 220,
+            Content = grid,
+        };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+
+            Assert.Contains(
+                grid.GetVisualDescendants().OfType<TextBlock>(),
+                text => text.Text == "Morning; Evening");
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
     public void Persisted_grid_layout_restores_widths_and_keeps_keys_isolated()
     {
         var settings = new FakeSettings();
@@ -719,6 +767,12 @@ public sealed class UiControlTests
             Assert.True(columnPopover.IsOpen);
             Assert.True(columnOptions.Children.Count >= 20);
             Assert.NotNull(workbench.FindControl<ListBox>(
+                "WorkbenchMetadataColumnList"));
+            Assert.Equal(
+                "Save column",
+                workbench.FindControl<Button>(
+                    "SaveWorkbenchMetadataColumnButton")!.Content);
+            Assert.NotNull(workbench.FindControl<ListBox>(
                 "ShortcutBindingList"));
             Assert.Equal(
                 "Save shortcut",
@@ -741,6 +795,12 @@ public sealed class UiControlTests
                 "Preview tool",
                 library.FindControl<Button>(
                     "PreviewLibraryExternalToolButton")!.Content);
+            Assert.NotNull(library.FindControl<ListBox>(
+                "LibraryMetadataColumnList"));
+            Assert.Equal(
+                "Save column",
+                library.FindControl<Button>(
+                    "SaveLibraryMetadataColumnButton")!.Content);
         }
         finally
         {

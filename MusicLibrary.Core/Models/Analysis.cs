@@ -32,6 +32,9 @@ public sealed record TrackRecord
     public int DurationInSeconds { get; init; }
     public long Length { get; init; }
     public DateTime LastWriteTime { get; init; }
+    public IReadOnlyDictionary<string, string[]> Metadata { get; init; } =
+        new Dictionary<string, string[]>(
+            StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Best available "album artist" for grouping (AlbumArtist, else Artist).</summary>
     public string EffectiveAlbumArtist =>

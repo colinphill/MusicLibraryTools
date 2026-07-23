@@ -2,6 +2,7 @@ using global::Avalonia;
 using global::Avalonia.Controls;
 using global::Avalonia.Controls.Templates;
 using global::Avalonia.Data;
+using System.Collections;
 using System.ComponentModel;
 using MusicLibraryManager.Presentation;
 
@@ -16,7 +17,8 @@ public sealed record AppGridColumnDefinition(
     bool Visible = true,
     IDataTemplate? CellTemplate = null,
     bool Sortable = true,
-    bool Editable = false);
+    bool Editable = false,
+    IComparer? CustomSortComparer = null);
 
 public sealed class AppDataGrid : DataGrid
 {
@@ -80,6 +82,8 @@ public sealed class AppDataGrid : DataGrid
                 column.Width = new DataGridLength(definition.Width);
                 column.MinWidth = definition.MinWidth;
                 column.CanUserSort = definition.Sortable;
+                column.CustomSortComparer =
+                    definition.CustomSortComparer;
                 if (definition.Sortable)
                     column.SortMemberPath = definition.BindingPath ?? definition.Key;
                 Columns.Add(column);

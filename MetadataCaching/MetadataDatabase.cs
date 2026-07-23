@@ -231,6 +231,7 @@ namespace MetadataCaching
         /// property directly before calling <see cref="IndexFilesAsync"/>.
         /// </summary>
         public int ScanParallelism { get; set; } = IndexScanParallelism;
+        public bool LastIndexCompletedSuccessfully { get; private set; }
 
         private static int GetDefaultIndexScanParallelism()
         {
@@ -377,6 +378,7 @@ namespace MetadataCaching
             "CREATE TABLE ScanSets (ID INTEGER PRIMARY KEY, Path TEXT UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE ScanSetMemberships (ScanSetID INTEGER NOT NULL REFERENCES ScanSets (ID) ON DELETE CASCADE, SetName TEXT COLLATE NOCASE NOT NULL, PRIMARY KEY (ScanSetID, SetName));\r\n" +
             "CREATE TABLE ScanHealth (ScanSetID INTEGER PRIMARY KEY REFERENCES ScanSets (ID) ON DELETE CASCADE, LastAttemptUtc DATETIME NOT NULL, LastSuccessUtc DATETIME, State TEXT NOT NULL, Error TEXT, Enumerated BIGINT NOT NULL, MetadataRead BIGINT NOT NULL);\r\n" +
+            "CREATE TABLE CacheFeatures (Name TEXT PRIMARY KEY NOT NULL);\r\n" +
             "CREATE TABLE Artists (ID INTEGER PRIMARY KEY, Name TEXT UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE AlbumArtists (ID INTEGER PRIMARY KEY, Name TEXT UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE Albums (ID INTEGER PRIMARY KEY, ScanSetID BIGINT REFERENCES ScanSets (ID) NOT NULL, AlbumArtistID BIGINT NOT NULL REFERENCES AlbumArtists (ID), Name TEXT NOT NULL, Path TEXT NOT NULL);\r\n" +
@@ -411,6 +413,7 @@ namespace MetadataCaching
             "CREATE TABLE ScanSets (ID BIGINT IDENTITY PRIMARY KEY, Path NVARCHAR(512) UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE ScanSetMemberships (ScanSetID BIGINT NOT NULL REFERENCES ScanSets (ID) ON DELETE CASCADE, SetName NVARCHAR(128) COLLATE Latin1_General_100_CI_AS NOT NULL, PRIMARY KEY (ScanSetID, SetName));\r\n" +
             "CREATE TABLE ScanHealth (ScanSetID BIGINT PRIMARY KEY REFERENCES ScanSets (ID) ON DELETE CASCADE, LastAttemptUtc DATETIME2 NOT NULL, LastSuccessUtc DATETIME2, State NVARCHAR(32) NOT NULL, Error NVARCHAR(MAX), Enumerated BIGINT NOT NULL, MetadataRead BIGINT NOT NULL);\r\n" +
+            "CREATE TABLE CacheFeatures (Name NVARCHAR(128) PRIMARY KEY NOT NULL);\r\n" +
             "CREATE TABLE Artists (ID BIGINT IDENTITY PRIMARY KEY, Name NVARCHAR(512) UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE AlbumArtists (ID BIGINT IDENTITY PRIMARY KEY, Name NVARCHAR(512) UNIQUE NOT NULL);\r\n" +
             "CREATE TABLE Albums (ID BIGINT IDENTITY PRIMARY KEY, ScanSetID BIGINT REFERENCES ScanSets (ID) NOT NULL, AlbumArtistID BIGINT NOT NULL REFERENCES AlbumArtists (ID), Name NVARCHAR(MAX) NOT NULL, Path NVARCHAR(MAX) NOT NULL);\r\n" +
@@ -535,6 +538,10 @@ namespace MetadataCaching
             // indexes used by per-file refresh/detail queries for both new and existing databases.
             // SQLite can reuse freed pages without forcing an expensive VACUUM during startup.
             using var mcomm = res.conn_.CreateCommand();
+            mcomm.CommandText =
+                "CREATE TABLE IF NOT EXISTS CacheFeatures " +
+                "(Name TEXT PRIMARY KEY NOT NULL)";
+            mcomm.ExecuteNonQuery();
             mcomm.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Files') WHERE name = 'ArtworkScanned'";
             if (Convert.ToInt64(mcomm.ExecuteScalar()) == 0)
             {
@@ -662,7 +669,9 @@ namespace MetadataCaching
                     "IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'ScanHealth') " +
                     "CREATE TABLE ScanHealth (ScanSetID BIGINT PRIMARY KEY REFERENCES ScanSets (ID) ON DELETE CASCADE, " +
                     "LastAttemptUtc DATETIME2 NOT NULL, LastSuccessUtc DATETIME2, State NVARCHAR(32) NOT NULL, " +
-                    "Error NVARCHAR(MAX), Enumerated BIGINT NOT NULL, MetadataRead BIGINT NOT NULL)";
+                    "Error NVARCHAR(MAX), Enumerated BIGINT NOT NULL, MetadataRead BIGINT NOT NULL); " +
+                    "IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'CacheFeatures') " +
+                    "CREATE TABLE CacheFeatures (Name NVARCHAR(128) PRIMARY KEY NOT NULL)";
                 migration.ExecuteNonQuery();
                 migration.CommandText =
                     "IF COL_LENGTH('ScanSetMemberships', 'SetNumber') IS NOT NULL BEGIN " +
@@ -702,8 +711,7 @@ namespace MetadataCaching
                 // KeyID indexes make this one pass work for old databases without a rescan.
                 browseCommand.CommandText =
                     "SELECT m.FileID, k.\"Key\", m.Value FROM Metadata m " +
-                    "JOIN MetadataKeys k ON m.KeyID = k.ID WHERE k.\"Key\" IN " +
-                    "('Compilation','Genre','Composer','Grouping') ORDER BY m.ID";
+                    "JOIN MetadataKeys k ON m.KeyID = k.ID ORDER BY m.ID";
                 using var browseReader = browseCommand.ExecuteReader();
                 while (browseReader.Read())
                 {
@@ -740,9 +748,14 @@ namespace MetadataCaching
                 int oAlbumPath = reader.GetOrdinal("AlbumPath"), oPath = reader.GetOrdinal("Path");
                 while (reader.Read())
                 {
-                    browseMetadata.TryGetValue(reader.GetInt64("ID"), out BrowseMetadata fields);
+                    long fileId = reader.GetInt64("ID");
+                    browseMetadata.TryGetValue(
+                        fileId,
+                        out BrowseMetadata fields);
                     var ce = new MetadataCacheEntry(reader, fields?.Compilation ?? false);
                     ce.SetIndexedMetadata(fields?.Genre, fields?.Composer, fields?.Grouping);
+                    ce.SetCachedMetadata(fields?.All ?? []);
+                    browseMetadata.Remove(fileId);
                     ce.Strip(sharedStrings);
                     var fullpath = Path.Combine(set.Path, reader.GetString(oAlbumPath), reader.GetString(oPath));
                     if (extensions is null || extensions.Count == 0)
@@ -760,9 +773,11 @@ namespace MetadataCaching
             public string Genre { get; private set; }
             public string Composer { get; private set; }
             public string Grouping { get; private set; }
+            public List<KeyValuePair<string, string>> All { get; } = [];
 
             public void Add(string key, string value)
             {
+                All.Add(KeyValuePair.Create(key, value));
                 switch (key)
                 {
                     case "Compilation":
@@ -909,9 +924,15 @@ namespace MetadataCaching
             IEnumerable<ScanRootDefinition> roots,
             bool deletemissingsets = false,
             IProgress<IndexProgress> progress = null,
-            CancellationToken ct = default)
+            CancellationToken ct = default,
+            bool forceMetadataRefresh = false)
         {
-            return IndexFilesAsync(roots, deletemissingsets, progress, ct).GetAwaiter().GetResult();
+            return IndexFilesAsync(
+                roots,
+                deletemissingsets,
+                progress,
+                ct,
+                forceMetadataRefresh).GetAwaiter().GetResult();
         }
 
         private static ScanRootDefinition MergeDuplicateRootDefinitions(
@@ -990,8 +1011,10 @@ namespace MetadataCaching
             IEnumerable<ScanRootDefinition> roots,
             bool deletemissingsets = false,
             IProgress<IndexProgress> progress = null,
-            CancellationToken ct = default)
+            CancellationToken ct = default,
+            bool forceMetadataRefresh = false)
         {
+            LastIndexCompletedSuccessfully = false;
             int added = 0, modified = 0, removed = 0, unchanged = 0, scanned = 0;
             int enumerated = 0, databaseProcessed = 0;
             var indexClock = Stopwatch.StartNew();
@@ -1272,7 +1295,9 @@ namespace MetadataCaching
                    if (filesdict.TryGetValue(key, out var existing))
                    {
                        Interlocked.Exchange(ref existing.Hit, 1);
-                       if ((Math.Abs((file.Modified - existing.LastWriteTime).TotalMilliseconds) > 500.0) || (file.Size != existing.Length))
+                       if (forceMetadataRefresh ||
+                           (Math.Abs((file.Modified - existing.LastWriteTime).TotalMilliseconds) > 500.0) ||
+                           file.Size != existing.Length)
                        {
                            id = existing.ID;
                            isModified = true;
@@ -1638,13 +1663,23 @@ namespace MetadataCaching
                         trackidparam.Value = imagefileidparam.Value = fileid = (long)filecomm.ExecuteScalar();
                         trackcomm.ExecuteNonQuery();
 
-                        // Every parser's text metadata is the TagFields name/value projection of
-                        // GetKnownMetadata(). Materialize it once: several tag implementations do
-                        // non-trivial mapping work on every enumeration.
+                        // Materialize known and native user-defined strings once: several tag
+                        // implementations do non-trivial mapping work on every enumeration.
                         var knownMetadata = mp.GetKnownMetadata().ToArray();
-                        foreach (var kv in knownMetadata)
+                        IEnumerable<KeyValuePair<string, string>>
+                            cachedMetadata = knownMetadata.Select(kv =>
+                                KeyValuePair.Create(
+                                    kv.Key.ToString(),
+                                    kv.Value));
+                        if (mp is IUserStringMetadata customMetadata)
+                            cachedMetadata = cachedMetadata.Concat(
+                                customMetadata.GetUserStrings().Select(kv =>
+                                    KeyValuePair.Create(
+                                        CachedMetadataKeys.Custom(kv.Key),
+                                        kv.Value)));
+                        foreach (var kv in cachedMetadata)
                         {
-                            string key = kv.Key.ToString();
+                            string key = kv.Key;
                             if (!metadatakeysdict.TryGetValue(key, out var keyid))
                             {
                                 keyparam.Value = key;
@@ -1798,7 +1833,36 @@ namespace MetadataCaching
                     "Index complete");
             }
 
+            LastIndexCompletedSuccessfully =
+                !ct.IsCancellationRequested &&
+                rootErrors.IsEmpty;
             return (added, modified, removed, unchanged);
+        }
+
+        public bool HasCacheFeature(string name)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+            using var command = conn_.CreateCommand();
+            command.CommandText =
+                "SELECT COUNT(*) FROM CacheFeatures WHERE Name = @name";
+            command.Parameters.Add("@name", DbType.String).Value = name;
+            return Convert.ToInt64(command.ExecuteScalar()) != 0;
+        }
+
+        public void MarkCacheFeature(string name)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(name);
+            using var command = conn_.CreateCommand();
+#if SQLITE
+            command.CommandText =
+                "INSERT OR IGNORE INTO CacheFeatures (Name) VALUES (@name)";
+#else
+            command.CommandText =
+                "IF NOT EXISTS (SELECT 1 FROM CacheFeatures WHERE Name = @name) " +
+                "INSERT INTO CacheFeatures (Name) VALUES (@name)";
+#endif
+            command.Parameters.Add("@name", DbType.String).Value = name;
+            command.ExecuteNonQuery();
         }
 
         // ---- Single-file read/write API (used by the GUI to read tags/artwork from the cache instead
@@ -1907,16 +1971,24 @@ namespace MetadataCaching
                 while (reader.Read())
                 {
                     var field = new KeyValuePair<string, string>(reader.GetString(0), reader.GetString(1));
-                    details.KnownFields.Add(field);
                     browseFields.Add(field.Key, field.Value);
-                    // GetTextMetadata() is currently the TagFields.ToString() projection of
-                    // GetKnownMetadata() for every parser. Preserve the public raw/text collection
-                    // without querying the duplicate Metadata rows a second time.
-                    details.TextFields.Add(field);
+                    if (CachedMetadataKeys.TryGetCustomName(
+                            field.Key,
+                            out string customName))
+                        details.TextFields.Add(
+                            KeyValuePair.Create(
+                                customName!,
+                                field.Value));
+                    else
+                    {
+                        details.KnownFields.Add(field);
+                        details.TextFields.Add(field);
+                    }
                 }
             }
             details.Entry.SetIndexedMetadata(
                 browseFields.Genre, browseFields.Composer, browseFields.Grouping);
+            details.Entry.SetCachedMetadata(browseFields.All);
 
             if (includeImages)
             {
@@ -2359,6 +2431,17 @@ namespace MetadataCaching
             var cp = file.Codecs.First();
             var fi = new FileInfo(fullPath);
             var knownMetadata = mp.GetKnownMetadata().ToArray();
+            IEnumerable<KeyValuePair<string, string>>
+                cachedMetadata = knownMetadata.Select(kv =>
+                    KeyValuePair.Create(
+                        kv.Key.ToString(),
+                        kv.Value));
+            if (mp is IUserStringMetadata customMetadata)
+                cachedMetadata = cachedMetadata.Concat(
+                    customMetadata.GetUserStrings().Select(kv =>
+                        KeyValuePair.Create(
+                            CachedMetadataKeys.Custom(kv.Key),
+                            kv.Value)));
 
             string KnownValue(TagFields field) =>
                 knownMetadata.FirstOrDefault(kv => kv.Key == field).Value;
@@ -2443,13 +2526,13 @@ namespace MetadataCaching
                     var keyParam = mc.Parameters.Add("@k", DbType.Int64);
                     var valueParam = mc.Parameters.Add("@v", DbType.String);
                     fileParam.Value = fileId;
-                    foreach (var kv in knownMetadata)
+                    foreach (var kv in cachedMetadata)
                     {
                         keyParam.Value = GetOrInsert(
                             trans,
                             "MetadataKeys",
                             "\"Key\"",
-                            kv.Key.ToString(),
+                            kv.Key,
                             lookups?.MetadataKeys);
                         valueParam.Value = kv.Value ?? "";
                         mc.ExecuteNonQuery();

@@ -123,6 +123,7 @@ appropriate build or test.
   - [x] `IPlaylistWorkspaceService`.
   - [x] `IExternalToolService`.
   - [x] `IWorkbenchShortcutStore`.
+  - [x] `IMetadataGridColumnStore`.
 - [x] Preserve the existing `{Field}` convention where composition is useful;
   do not implement mp3tag's format-string language.
 
@@ -298,13 +299,10 @@ and then resolved to a user-confirmed release.
 
 ### Views and filters
 
-- [~] Persist column descriptors containing label, field, visibility, order,
-  width, sort type, and optional edit target. Library and Workbench now persist
-  visibility, order, width, and sorting; user-defined labels, fields, and edit
-  targets remain.
-- [~] Allow technical and custom fields without code changes. The complete
-  cached file/codec property set is selectable on both surfaces; dynamic custom
-  metadata columns remain.
+- [x] Persist column descriptors containing label, field, visibility, order,
+  width, sort type, and optional edit target.
+- [x] Allow technical, known metadata, and native custom metadata fields
+  without code changes.
 - [x] Keep saved views in the existing app-settings mechanism.
 - [ ] Filter arbitrary known, custom, and technical fields.
 - [ ] Add present/missing checks, equality, numeric comparisons, Boolean
@@ -666,3 +664,13 @@ per-operation capability flags.
   ordinary metadata. Existing Library saved views continue to own their
   filter/column/sort snapshots, and hidden-column restoration is shared by all
   persisted grid layouts.
+- Added typed user-defined metadata column descriptors shared by Workbench and
+  Library. Users can choose any known field or enter a native custom field,
+  assign a label, width, text/numeric/date sorting, and an optional supported
+  Workbench inline-edit target. Descriptor and grid layout state are versioned
+  in personal app settings, and saved Library views preserve dynamic column
+  IDs like built-in columns. Workbench projects values from its lossless media
+  documents; Library remains cache-first by bulk-projecting all normalized and
+  native custom values from the metadata table. A database feature marker
+  causes one progress-reporting, cancellable metadata refresh for existing
+  caches, and is recorded only after a healthy completed scan.

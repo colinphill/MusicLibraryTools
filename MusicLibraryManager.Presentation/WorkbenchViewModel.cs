@@ -177,7 +177,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         IPlaylistWorkspaceService? playlists = null,
         IExternalToolService? externalTools = null,
         IExternalToolStore? externalToolStore = null,
-        IWorkbenchShortcutStore? shortcutStore = null)
+        IWorkbenchShortcutStore? shortcutStore = null,
+        IMetadataGridColumnStore? metadataColumns = null)
     {
         _workbench = workbench;
         _operations = operations;
@@ -198,6 +199,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         OperationEditor = new(
             operationCatalog, MetadataOperationSurface.Workbench, recipeStore);
         ShortcutEditor = new(shortcutStore, recipeStore);
+        ColumnEditor = new(
+            metadataColumns,
+            MetadataGridSurface.Workbench);
         ReleaseImport.PropertyChanged += OnReleaseImportChanged;
         ReleaseSearch.PropertyChanged += (_, _) =>
             SearchMusicBrainzReleasesCommand.NotifyCanExecuteChanged();
@@ -244,6 +248,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     public PlaylistEditorViewModel PlaylistEditor { get; } = new();
     public ExternalToolEditorViewModel ExternalToolEditor { get; }
     public WorkbenchShortcutEditorViewModel ShortcutEditor { get; }
+    public MetadataGridColumnEditorViewModel ColumnEditor { get; }
     public MetadataOperationEditorViewModel OperationEditor { get; }
     public IReadOnlyList<MetadataFieldChoice> KnownFieldChoices { get; }
     public IReadOnlyList<WorkbenchFieldEditMode> FieldEditModes { get; } =
@@ -2120,6 +2125,17 @@ public partial class WorkbenchTrackViewModel : ObservableObject
     public WorkbenchTrackViewModel(MediaDocument document)
     {
         Document = document;
+        MetadataValues = document.TagLayers
+            .SelectMany(layer => layer.Fields)
+            .GroupBy(value =>
+                MetadataGridValueKey.For(value.Field),
+                StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => string.Join(
+                    "; ",
+                    group.SelectMany(value => value.Values)),
+                StringComparer.OrdinalIgnoreCase);
         _title = document.FirstValue(TagFields.Title);
         _artist = document.FirstValue(TagFields.Artist);
         _albumArtist = document.FirstValue(TagFields.AlbumArtist);
@@ -2133,6 +2149,7 @@ public partial class WorkbenchTrackViewModel : ObservableObject
     }
 
     public MediaDocument Document { get; }
+    public IReadOnlyDictionary<string, string> MetadataValues { get; }
     public string Path => Document.Path;
     public string FileName => System.IO.Path.GetFileName(Path);
     public string? Format => System.IO.Path.GetExtension(Path).TrimStart('.').ToUpperInvariant();

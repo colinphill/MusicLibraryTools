@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using MetadataCaching;
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
@@ -81,11 +82,13 @@ public partial class LibraryRow : ObservableObject
         Record = flacWithTagNameAsCodec
             ? record with { CodecName = "FLAC" }
             : record;
+        MetadataValues = BuildMetadataValues(Record.Metadata);
         Details = new DetailsRow(Record);
         Details.RebuildSearchText(DetailsColumns.All.Select(column => column.Key).ToArray());
     }
 
     public TrackRecord Record { get; }
+    public IReadOnlyDictionary<string, string> MetadataValues { get; }
     public DetailsRow Details { get; }
     public string Path => Record.Path;
     public string Title => Record.Title ?? System.IO.Path.GetFileNameWithoutExtension(Record.Path);
@@ -117,6 +120,32 @@ public partial class LibraryRow : ObservableObject
 
     [ObservableProperty]
     private bool _thumbnailLoaded;
+
+    private static IReadOnlyDictionary<string, string>
+        BuildMetadataValues(
+            IReadOnlyDictionary<string, string[]> metadata)
+    {
+        var values = new Dictionary<string, string>(
+            StringComparer.OrdinalIgnoreCase);
+        foreach ((string key, string[] fieldValues) in metadata)
+        {
+            MetadataFieldKey? field = null;
+            if (CachedMetadataKeys.TryGetCustomName(
+                    key,
+                    out string customName))
+                field = MetadataFieldKey.Custom(customName);
+            else if (Enum.TryParse(
+                         key,
+                         ignoreCase: true,
+                         out TagFields known) &&
+                     known != TagFields.NullField)
+                field = MetadataFieldKey.Known(known);
+            if (field is not null)
+                values[MetadataGridValueKey.For(field)] =
+                    string.Join("; ", fieldValues);
+        }
+        return values;
+    }
 }
 
 public partial class EditableTagField(TagFields field, string label) : ObservableObject
