@@ -17,10 +17,35 @@ public sealed record AcoustIdLookupResult(
     ImmutableArray<AcoustIdCandidate> Candidates,
     DateTimeOffset RetrievedAtUtc);
 
+public sealed record AcoustIdFileDiscovery(
+    string Path,
+    AudioFingerprint? Fingerprint,
+    AcoustIdLookupResult? Lookup,
+    ImmutableArray<OperationIssue> Issues);
+
+public sealed record AcoustIdDiscoveryResult(
+    ImmutableArray<AcoustIdFileDiscovery> Files)
+{
+    public int FingerprintedFileCount =>
+        Files.Count(file => file.Fingerprint is not null);
+    public int MatchedFileCount =>
+        Files.Count(file => file.Lookup?.Candidates.Length > 0);
+    public int CandidateCount =>
+        Files.Sum(file => file.Lookup?.Candidates.Length ?? 0);
+}
+
 public interface IAcoustIdLookupService
 {
     Task<AcoustIdLookupResult> LookupAsync(
         AudioFingerprint fingerprint,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default);
+}
+
+public interface IAcoustIdDiscoveryService
+{
+    Task<AcoustIdDiscoveryResult> DiscoverAsync(
+        IReadOnlyList<string> paths,
         IProgress<OperationProgress>? progress = null,
         CancellationToken ct = default);
 }
@@ -242,4 +267,93 @@ public sealed class AcoustIdLookupService(
             ? message.GetString()
             : null;
     }
+}
+
+/// <summary>
+/// Runs fingerprint generation and lookup as one batch while isolating ordinary
+/// per-file failures. Cancellation remains batch-wide and immediate.
+/// </summary>
+public sealed class AcoustIdDiscoveryService(
+    IAudioFingerprintService fingerprints,
+    IAcoustIdLookupService lookup) : IAcoustIdDiscoveryService
+{
+    public async Task<AcoustIdDiscoveryResult> DiscoverAsync(
+        IReadOnlyList<string> paths,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(paths);
+        string[] distinct = paths
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(Path.GetFullPath)
+            .Distinct(PathComparer)
+            .ToArray();
+        int total = checked(distinct.Length * 2);
+        int completed = 0;
+        var files = ImmutableArray.CreateBuilder<AcoustIdFileDiscovery>(
+            distinct.Length);
+        foreach (string path in distinct)
+        {
+            ct.ThrowIfCancellationRequested();
+            progress?.Report(new(
+                OperationPhase.IndexingSources,
+                completed,
+                total,
+                path,
+                $"Fingerprinting {Path.GetFileName(path)}"));
+            AudioFingerprint? fingerprint = null;
+            var issues = ImmutableArray.CreateBuilder<OperationIssue>();
+            try
+            {
+                fingerprint = await fingerprints.GenerateAsync(path, ct)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                issues.Add(new(
+                    "acoustid.fingerprint",
+                    OperationIssueSeverity.Warning,
+                    error.Message,
+                    path));
+            }
+            completed++;
+
+            AcoustIdLookupResult? result = null;
+            if (fingerprint is not null)
+            {
+                progress?.Report(new(
+                    OperationPhase.LoadingConfiguration,
+                    completed,
+                    total,
+                    path,
+                    $"Looking up {Path.GetFileName(path)}"));
+                try
+                {
+                    result = await lookup.LookupAsync(
+                            fingerprint, progress: null, ct)
+                        .ConfigureAwait(false);
+                }
+                catch (Exception error) when (error is not OperationCanceledException)
+                {
+                    issues.Add(new(
+                        "acoustid.lookup",
+                        OperationIssueSeverity.Warning,
+                        error.Message,
+                        path));
+                }
+            }
+            completed++;
+            files.Add(new(path, fingerprint, result, issues.ToImmutable()));
+        }
+        progress?.Report(new(
+            OperationPhase.Completed,
+            total,
+            total,
+            Message: $"Fingerprint discovery completed for {distinct.Length:N0} file(s)"));
+        return new(files.ToImmutable());
+    }
+
+    private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
+        ? StringComparer.OrdinalIgnoreCase
+        : StringComparer.Ordinal;
 }

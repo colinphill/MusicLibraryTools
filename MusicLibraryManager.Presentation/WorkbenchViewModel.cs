@@ -34,6 +34,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private const int RecentLocationLimit = 12;
     private readonly IWorkbenchService _workbench;
     private readonly IMetadataOperationService _operations;
+    private readonly IAcoustIdDiscoveryService _audioDiscovery;
     private readonly IEditHistoryService _history;
     private readonly IFilePickerService _files;
     private readonly IDialogCoordinator _dialogs;
@@ -48,6 +49,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(PreviewOperationCommand))]
     [NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
     [NotifyCanExecuteChangedFor(nameof(UndoCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DiscoverSelectedAudioCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DiscoverAllAudioCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewAudioIdentifiersCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -71,6 +75,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PreviewFieldValuesCommand))]
     private WorkbenchMetadataFieldRow? _selectedMetadataField;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PreviewAudioIdentifiersCommand))]
+    private AudioDiscoveryRow? _selectedAudioMatch;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PreviewFieldValuesCommand))]
@@ -103,6 +111,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         IMetadataOperationService operations,
         IMetadataOperationCatalog operationCatalog,
         IOperationRecipeStore recipeStore,
+        IAcoustIdDiscoveryService audioDiscovery,
         IEditHistoryService history,
         IFilePickerService files,
         IDialogCoordinator dialogs,
@@ -110,6 +119,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     {
         _workbench = workbench;
         _operations = operations;
+        _audioDiscovery = audioDiscovery;
         _history = history;
         _files = files;
         _dialogs = dialogs;
@@ -127,6 +137,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     public ObservableCollection<WorkbenchTrackViewModel> Files { get; } = [];
     public ObservableCollection<MetadataPreviewRow> PreviewChanges { get; } = [];
     public ObservableCollection<WorkbenchMetadataFieldRow> MetadataFields { get; } = [];
+    public ObservableCollection<AudioDiscoveryRow> AudioMatches { get; } = [];
     public ObservableCollection<string> RecentLocations { get; } = [];
     public MetadataOperationEditorViewModel OperationEditor { get; }
     public IReadOnlyList<MetadataFieldChoice> KnownFieldChoices { get; }
@@ -145,6 +156,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     partial void OnSelectedFileChanged(WorkbenchTrackViewModel? value)
     {
         RebuildMetadataFields();
+        DiscoverSelectedAudioCommand.NotifyCanExecuteChanged();
         MoveUpCommand.NotifyCanExecuteChanged();
         MoveDownCommand.NotifyCanExecuteChanged();
     }
@@ -249,6 +261,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         int index = Files.IndexOf(current);
         current.PropertyChanged -= OnTrackChanged;
         Files.Remove(current);
+        foreach (AudioDiscoveryRow row in AudioMatches
+                     .Where(row => PathComparer.Equals(row.Path, current.Path))
+                     .ToArray())
+            AudioMatches.Remove(row);
         SelectedFile = Files.Count == 0
             ? null
             : Files[Math.Min(index, Files.Count - 1)];
@@ -270,6 +286,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         foreach (WorkbenchTrackViewModel file in Files)
             file.PropertyChanged -= OnTrackChanged;
         Files.Clear();
+        AudioMatches.Clear();
         PreviewChanges.Clear();
         _plan = null;
         SelectedFile = null;
@@ -513,6 +530,61 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [RelayCommand]
     private void Cancel() => _cancellation?.Cancel();
 
+    [RelayCommand(CanExecute = nameof(CanDiscoverSelectedAudio))]
+    private async Task DiscoverSelectedAudioAsync()
+    {
+        if (SelectedFile is not null)
+            await DiscoverAudioAsync([SelectedFile.Path]);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanDiscoverAllAudio))]
+    private async Task DiscoverAllAudioAsync() =>
+        await DiscoverAudioAsync(Files.Select(file => file.Path).ToArray());
+
+    [RelayCommand(CanExecute = nameof(CanPreviewAudioIdentifiers))]
+    private async Task PreviewAudioIdentifiersAsync()
+    {
+        if (SelectedAudioMatch is null)
+            return;
+        OperationRecipe recipe =
+            AudioDiscoveryRows.CreateTagRecipe(SelectedAudioMatch);
+        await PreviewAsync((progress, ct) => _operations.PreviewAsync(
+            [SelectedAudioMatch.Path], recipe, progress, ct));
+        StatusText =
+            "Audio identifiers were added to the normal metadata preview. Review before applying.";
+    }
+
+    private async Task DiscoverAudioAsync(IReadOnlyList<string> paths)
+    {
+        BeginOperation("Preparing audio fingerprint discovery");
+        try
+        {
+            AcoustIdDiscoveryResult result = await _audioDiscovery.DiscoverAsync(
+                paths, CreateProgress(), _cancellation!.Token);
+            AudioMatches.Clear();
+            foreach (AudioDiscoveryRow row in AudioDiscoveryRows.Create(result))
+                AudioMatches.Add(row);
+            SelectedAudioMatch = AudioMatches.FirstOrDefault();
+            int issues = result.Files.Sum(file => file.Issues.Length);
+            StatusText =
+                $"Fingerprint discovery: {result.FingerprintedFileCount:N0} file(s), " +
+                $"{result.CandidateCount:N0} candidate(s), {issues:N0} warning(s).";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Audio fingerprint discovery cancelled.";
+        }
+        catch (Exception error)
+        {
+            StatusText = $"Audio fingerprint discovery failed: {error.Message}";
+        }
+        finally
+        {
+            EndOperation();
+            NotifySessionChanged();
+        }
+    }
+
     public Task<bool> ConfirmNavigationAsync()
     {
         if (!HasUnsavedChanges)
@@ -606,6 +678,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         UndoCommand.NotifyCanExecuteChanged();
         RedoCommand.NotifyCanExecuteChanged();
         RepeatCommand.NotifyCanExecuteChanged();
+        DiscoverSelectedAudioCommand.NotifyCanExecuteChanged();
+        DiscoverAllAudioCommand.NotifyCanExecuteChanged();
+        PreviewAudioIdentifiersCommand.NotifyCanExecuteChanged();
         RemoveCurrentCommand.NotifyCanExecuteChanged();
         MoveUpCommand.NotifyCanExecuteChanged();
         MoveDownCommand.NotifyCanExecuteChanged();
@@ -710,6 +785,11 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private bool CanRepeat() =>
         !IsBusy && Files.Count > 0 &&
         _history.Entries.FirstOrDefault()?.Recipe is not null;
+    private bool CanDiscoverSelectedAudio() => !IsBusy && SelectedFile is not null;
+    private bool CanDiscoverAllAudio() => !IsBusy && Files.Count > 0;
+    private bool CanPreviewAudioIdentifiers() =>
+        !IsBusy && SelectedAudioMatch?.AcoustId is not null &&
+        !string.IsNullOrWhiteSpace(SelectedAudioMatch.Fingerprint);
 
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase

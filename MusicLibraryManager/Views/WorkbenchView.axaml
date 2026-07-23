@@ -328,6 +328,30 @@
             </ScrollViewer>
           </Grid>
         </TabItem>
+
+        <TabItem Header="Online metadata">
+          <Grid Margin="0,12,0,0" RowDefinitions="Auto,*" RowSpacing="10">
+            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+              <StackPanel Spacing="3">
+                <TextBlock Classes="section-title" Text="Find metadata by audio" />
+                <TextBlock Classes="muted" TextWrapping="Wrap"
+                           Text="Generate a local Chromaprint and look up every AcoustID and MusicBrainz recording candidate. Nothing is submitted." />
+              </StackPanel>
+              <Button Grid.Column="1" Classes="app" VerticalAlignment="Center"
+                      Content="Selected file"
+                      Command="{Binding DiscoverSelectedAudioCommand}" />
+              <Button Grid.Column="2" Classes="app primary" VerticalAlignment="Center"
+                      Content="All Workbench files"
+                      Command="{Binding DiscoverAllAudioCommand}" />
+              <Button Grid.Column="3" Classes="app" VerticalAlignment="Center"
+                      Content="Preview selected IDs"
+                      Command="{Binding PreviewAudioIdentifiersCommand}" />
+            </Grid>
+            <controls:AppDataGrid x:Name="AudioDiscoveryGrid" Grid.Row="1"
+                ItemsSource="{Binding AudioMatches}"
+                SelectedItem="{Binding SelectedAudioMatch, Mode=TwoWay}" />
+          </Grid>
+        </TabItem>
       </TabControl>
     </Border>
   </Grid>

@@ -27,6 +27,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private readonly IThumbnailService _thumbnails;
     private readonly WorkbenchViewModel? _workbench;
     private readonly IMetadataOperationService? _metadataOperations;
+    private readonly IAcoustIdDiscoveryService? _audioDiscovery;
     private readonly IDialogCoordinator? _dialogs;
     private MetadataOperationPlan? _libraryOperationPlan;
     private readonly SemaphoreSlim _thumbnailGate = new(4, 4);
@@ -49,6 +50,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(ReloadCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenInWorkbenchCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryOperationCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DiscoverLibraryAudioCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewLibraryAudioIdentifiersCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -90,6 +93,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryOperationCommand))]
     [NotifyCanExecuteChangedFor(nameof(ApplyLibraryOperationCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DiscoverLibraryAudioCommand))]
+    [NotifyCanExecuteChangedFor(nameof(PreviewLibraryAudioIdentifiersCommand))]
     private bool _isOperationBusy;
 
     [ObservableProperty]
@@ -97,6 +102,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryOperationCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DiscoverLibraryAudioCommand))]
     private LibraryOperationScope _selectedOperationScope =
         LibraryOperationScope.SelectedTracks;
 
@@ -120,6 +126,10 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [ObservableProperty]
     private string _operationProgressText = "";
 
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PreviewLibraryAudioIdentifiersCommand))]
+    private AudioDiscoveryRow? _selectedAudioMatch;
+
     public LibraryViewModel(
         ILibraryService library,
         IReindexService reindex,
@@ -132,7 +142,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         IMetadataOperationService? metadataOperations = null,
         IMetadataOperationCatalog? operationCatalog = null,
         IOperationRecipeStore? recipeStore = null,
-        IDialogCoordinator? dialogs = null)
+        IDialogCoordinator? dialogs = null,
+        IAcoustIdDiscoveryService? audioDiscovery = null)
     {
         _library = library;
         _reindex = reindex;
@@ -142,6 +153,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         _thumbnails = thumbnails;
         _workbench = workbench;
         _metadataOperations = metadataOperations;
+        _audioDiscovery = audioDiscovery;
         _dialogs = dialogs;
         OperationEditor = new(
             operationCatalog ?? new MetadataOperationCatalog(),
@@ -165,6 +177,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
 
     public ObservableCollection<LibraryViewDefinition> SavedViews { get; } = [];
     public ObservableCollection<LibraryColumnChoice> Columns { get; } = [];
+    public ObservableCollection<AudioDiscoveryRow> AudioMatches { get; } = [];
     public ObservableCollection<MetadataPreviewRow> OperationPreviewChanges { get; } = [];
     public IReadOnlyList<FilterMode> FilterModes { get; } = Enum.GetValues<FilterMode>();
     public IReadOnlyList<LibraryOperationScope> OperationScopes { get; } =
@@ -419,6 +432,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         InvalidateLibraryOperationPreview();
         OpenInWorkbenchCommand.NotifyCanExecuteChanged();
         PreviewLibraryOperationCommand.NotifyCanExecuteChanged();
+        DiscoverLibraryAudioCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand(CanExecute = nameof(CanOpenInWorkbench))]
@@ -536,6 +550,89 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanDiscoverLibraryAudio))]
+    private async Task DiscoverLibraryAudioAsync()
+    {
+        if (_audioDiscovery is null)
+            return;
+        string[] paths = ResolveOperationPaths();
+        if (paths.Length == 0)
+        {
+            OperationStatus = "The selected Library scope contains no files.";
+            return;
+        }
+
+        BeginLibraryOperation("Preparing audio fingerprint discovery");
+        try
+        {
+            AcoustIdDiscoveryResult result = await _audioDiscovery.DiscoverAsync(
+                paths, CreateOperationProgress(), _operationCancellation!.Token);
+            AudioMatches.Clear();
+            foreach (AudioDiscoveryRow row in AudioDiscoveryRows.Create(result))
+                AudioMatches.Add(row);
+            SelectedAudioMatch = AudioMatches.FirstOrDefault();
+            int issues = result.Files.Sum(file => file.Issues.Length);
+            OperationStatus =
+                $"Fingerprint discovery: {result.FingerprintedFileCount:N0} file(s), " +
+                $"{result.CandidateCount:N0} candidate(s), {issues:N0} warning(s).";
+        }
+        catch (OperationCanceledException)
+        {
+            OperationStatus = "Audio fingerprint discovery cancelled.";
+        }
+        catch (Exception error)
+        {
+            OperationStatus = $"Audio fingerprint discovery failed: {error.Message}";
+        }
+        finally
+        {
+            EndLibraryOperation();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPreviewLibraryAudioIdentifiers))]
+    private async Task PreviewLibraryAudioIdentifiersAsync()
+    {
+        if (_metadataOperations is null || SelectedAudioMatch is null)
+            return;
+        BeginLibraryOperation("Building audio identifier preview");
+        try
+        {
+            OperationRecipe recipe =
+                AudioDiscoveryRows.CreateTagRecipe(SelectedAudioMatch);
+            MetadataOperationPlan plan = await _metadataOperations.PreviewAsync(
+                [SelectedAudioMatch.Path],
+                recipe,
+                CreateOperationProgress(),
+                _operationCancellation!.Token);
+            _libraryOperationPlan = plan;
+            OperationPreviewChanges.Clear();
+            foreach (MetadataFilePlan file in plan.Files)
+            foreach (MetadataFieldDifference difference in file.Differences)
+                OperationPreviewChanges.Add(new(
+                    Path.GetFileName(file.Path),
+                    difference.Field.DisplayName,
+                    string.Join("; ", difference.Before),
+                    string.Join("; ", difference.After)));
+            HasApplicableOperationPreview = plan.CanApply;
+            OperationStatus =
+                "Audio identifiers were added to the normal metadata preview. Review before applying.";
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+        catch (OperationCanceledException)
+        {
+            OperationStatus = "Audio identifier preview cancelled.";
+        }
+        catch (Exception error)
+        {
+            OperationStatus = $"Audio identifier preview failed: {error.Message}";
+        }
+        finally
+        {
+            EndLibraryOperation();
+        }
+    }
+
     [RelayCommand]
     private void CancelLibraryOperation()
     {
@@ -631,6 +728,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     {
         PreviewLibraryOperationCommand.NotifyCanExecuteChanged();
         OpenOperationsCommand.NotifyCanExecuteChanged();
+        DiscoverLibraryAudioCommand.NotifyCanExecuteChanged();
     }
 
     private bool CanPreviewLibraryOperation() =>
@@ -640,6 +738,15 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private bool CanApplyLibraryOperation() =>
         !IsOperationBusy && _libraryOperationPlan is not null &&
         HasApplicableOperationPreview;
+
+    private bool CanDiscoverLibraryAudio() =>
+        !IsBusy && !IsOperationBusy && _audioDiscovery is not null &&
+        ResolveOperationPaths().Length > 0;
+
+    private bool CanPreviewLibraryAudioIdentifiers() =>
+        !IsBusy && !IsOperationBusy && _metadataOperations is not null &&
+        SelectedAudioMatch?.AcoustId is not null &&
+        !string.IsNullOrWhiteSpace(SelectedAudioMatch.Fingerprint);
 
     public Task ApplyFilterNowAsync(CancellationToken cancellationToken = default)
         => ApplyFilterAsync(immediate: true, cancellationToken);

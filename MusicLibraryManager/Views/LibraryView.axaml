@@ -319,13 +319,21 @@
                       Content="Preview" Command="{Binding PreviewLibraryOperationCommand}" />
             </Grid>
 
-            <Grid Grid.Row="5" RowDefinitions="Auto,*" RowSpacing="6" MinHeight="190">
-              <TextBlock Classes="section-title" Text="Reviewed changes" />
-              <controls:AppDataGrid x:Name="LibraryOperationPreviewGrid" Grid.Row="1"
-                  ItemsSource="{Binding OperationPreviewChanges}" />
-            </Grid>
+            <TabControl Grid.Row="5" MinHeight="190">
+              <TabItem Header="Metadata preview">
+                <controls:AppDataGrid x:Name="LibraryOperationPreviewGrid"
+                    Margin="0,6,0,0"
+                    ItemsSource="{Binding OperationPreviewChanges}" />
+              </TabItem>
+              <TabItem Header="Audio matches">
+                <controls:AppDataGrid x:Name="LibraryAudioDiscoveryGrid"
+                    Margin="0,6,0,0"
+                    ItemsSource="{Binding AudioMatches}"
+                    SelectedItem="{Binding SelectedAudioMatch, Mode=TwoWay}" />
+              </TabItem>
+            </TabControl>
 
-            <Grid Grid.Row="6" ColumnDefinitions="*,240,Auto,Auto" ColumnSpacing="10">
+            <Grid Grid.Row="6" ColumnDefinitions="*,220,Auto,Auto,Auto,Auto" ColumnSpacing="8">
               <TextBlock Classes="muted" VerticalAlignment="Center"
                          Text="{Binding OperationStatus}" TextWrapping="Wrap"
                          AutomationProperties.LiveSetting="Polite" />
@@ -343,7 +351,11 @@
               <Button Grid.Column="2" Classes="app" Content="Cancel"
                       IsVisible="{Binding IsOperationBusy}"
                       Command="{Binding CancelLibraryOperationCommand}" />
-              <Button Grid.Column="3" Classes="app primary" Content="Apply preview"
+              <Button Grid.Column="3" Classes="app" Content="Find by audio"
+                      Command="{Binding DiscoverLibraryAudioCommand}" />
+              <Button Grid.Column="4" Classes="app" Content="Preview selected IDs"
+                      Command="{Binding PreviewLibraryAudioIdentifiersCommand}" />
+              <Button Grid.Column="5" Classes="app primary" Content="Apply preview"
                       Command="{Binding ApplyLibraryOperationCommand}" />
             </Grid>
           </Grid>

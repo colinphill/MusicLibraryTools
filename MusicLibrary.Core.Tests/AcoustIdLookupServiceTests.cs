@@ -189,6 +189,32 @@ public sealed class AcoustIdLookupServiceTests
             AcoustIdLookupService.ParseResponse(response));
     }
 
+    [Fact]
+    public async Task Discovery_ContinuesAfterPerFileFailureAndReportsBatchProgress()
+    {
+        string first = Path.GetFullPath("first.flac");
+        string second = Path.GetFullPath("second.flac");
+        var fingerprints = new FakeFingerprintService(second);
+        var lookup = new FakeLookupService();
+        var service = new AcoustIdDiscoveryService(fingerprints, lookup);
+        var progress = new RecordingProgress();
+
+        AcoustIdDiscoveryResult result =
+            await service.DiscoverAsync([first, second], progress);
+
+        Assert.Equal(2, result.Files.Length);
+        Assert.NotNull(result.Files[0].Fingerprint);
+        Assert.Single(result.Files[0].Lookup!.Candidates);
+        Assert.Null(result.Files[1].Fingerprint);
+        Assert.Contains(result.Files[1].Issues,
+            issue => issue.Code == "acoustid.fingerprint");
+        Assert.Equal(1, result.FingerprintedFileCount);
+        Assert.Equal(1, result.MatchedFileCount);
+        Assert.Equal(1, result.CandidateCount);
+        Assert.Equal(4, progress.Items[^1].Completed);
+        Assert.Equal(4, progress.Items[^1].Total);
+    }
+
     private sealed class RecordingTransport(AcoustIdHttpResult result)
         : IAcoustIdHttpTransport
     {
@@ -237,5 +263,34 @@ public sealed class AcoustIdLookupServiceTests
     {
         public List<OperationProgress> Items { get; } = [];
         public void Report(OperationProgress value) => Items.Add(value);
+    }
+
+    private sealed class FakeFingerprintService(string failingPath)
+        : IAudioFingerprintService
+    {
+        public Task<AudioFingerprint> GenerateAsync(
+            string path,
+            CancellationToken ct = default)
+        {
+            if (path.Equals(failingPath, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Unsupported test codec.");
+            return Task.FromResult(new AudioFingerprint(
+                path, "AQAD", TimeSpan.FromSeconds(42), 42));
+        }
+    }
+
+    private sealed class FakeLookupService : IAcoustIdLookupService
+    {
+        public Task<AcoustIdLookupResult> LookupAsync(
+            AudioFingerprint fingerprint,
+            IProgress<OperationProgress>? progress = null,
+            CancellationToken ct = default) =>
+            Task.FromResult(new AcoustIdLookupResult(
+                fingerprint,
+                [new(
+                    Guid.Parse("9ff43b6a-4f16-427c-93c2-92307ca505e0"),
+                    0.91,
+                    [Guid.Parse("cd2e7c47-16f5-46c6-a37c-a1eb7bf599ff")])],
+                DateTimeOffset.UtcNow));
     }
 }

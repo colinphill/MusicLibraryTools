@@ -45,6 +45,16 @@ public partial class LibraryView : UserControl
             new("Before", "Before", "Before", 280, 160),
             new("After", "After", "After", 280, 160),
         ]);
+        LibraryAudioDiscoveryGrid.ConfigureColumns(
+        [
+            new("File", "File", "File", 190, 120),
+            new("Duration", "Duration", "Duration", 90, 70),
+            new("Confidence", "Confidence", "Confidence", 105, 85),
+            new("AcoustID", "AcoustID", "AcoustId", 270, 170),
+            new("MusicBrainz", "MusicBrainz recording IDs",
+                "MusicBrainzRecordingIds", 360, 210),
+            new("Status", "Status", "Status", 240, 140),
+        ]);
         LibraryGrid.ApplySort(_sort);
         BuildColumnOptions();
         LibraryGrid.LayoutChanged += (_, _) => PersistLayout();

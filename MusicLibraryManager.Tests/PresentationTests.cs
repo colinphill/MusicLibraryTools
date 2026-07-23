@@ -1423,6 +1423,65 @@ public sealed class PresentationTests
             StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task Library_audio_discovery_uses_explicit_scope_and_preserves_candidates()
+    {
+        TrackRecord[] records =
+        [
+            Track("Artist", "First", "One", "FLAC", @"C:\music\one.flac"),
+            Track("Artist", "First", "Two", "FLAC", @"C:\music\two.flac"),
+            Track("Artist", "Second", "Three", "FLAC", @"C:\music\three.flac"),
+        ];
+        var library = new FakeLibrary(records);
+        var settings = new FakeSettings();
+        var activity = new AppActivityService();
+        var inspector = new SelectionInspectorViewModel(
+            new FakeMediaService(), library, new FakeTagWriter(),
+            new FakeArtworkService(), new FakeFilePicker(), new FakeDialogs(),
+            new FakeFieldsEditor(), new FakeThumbnails(), activity);
+        var indexing = new IndexingViewModel(library, settings, activity);
+        var discovery = new FakeAcoustIdDiscoveryService();
+        var metadataOperations = new FakeMetadataOperationService();
+        var viewModel = new LibraryViewModel(
+            library,
+            new FakeReindex(),
+            settings,
+            inspector,
+            new NavigationService(),
+            indexing,
+            new FakeThumbnails(),
+            metadataOperations: metadataOperations,
+            audioDiscovery: discovery);
+        await viewModel.ReloadAsync();
+        await viewModel.SelectAsync(
+            [viewModel.Rows.Single(row => row.Title == "One")]);
+        viewModel.SelectedOperationScope = LibraryOperationScope.SelectedAlbums;
+
+        await viewModel.DiscoverLibraryAudioCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            [@"C:\music\one.flac", @"C:\music\two.flac"],
+            discovery.Paths);
+        AudioDiscoveryRow row = Assert.Single(viewModel.AudioMatches);
+        Assert.Equal(0.92, row.Score);
+        Assert.Contains("candidate", viewModel.OperationStatus,
+            StringComparison.OrdinalIgnoreCase);
+
+        await viewModel.PreviewLibraryAudioIdentifiersCommand.ExecuteAsync(null);
+
+        Assert.Equal([@"C:\music\one.flac"], metadataOperations.PreviewedPaths);
+        Assert.Contains(metadataOperations.PreviewedRecipe!.EnabledOperations,
+            operation => operation is AssignFieldOperation assign &&
+                assign.Field.KnownField == TagFields.AcoustID_Fingerprint);
+        Assert.Contains(metadataOperations.PreviewedRecipe.EnabledOperations,
+            operation => operation is AssignFieldOperation assign &&
+                assign.Field.KnownField == TagFields.AcoustID_ID);
+        Assert.Contains(metadataOperations.PreviewedRecipe.EnabledOperations,
+            operation => operation is AssignFieldOperation assign &&
+                assign.Field.KnownField == TagFields.MusicBrainz_RecordingID);
+        Assert.True(viewModel.HasApplicableOperationPreview);
+    }
+
     private static TrackRecord Track(string artist, string album, string title, string codec, string path) => new()
     {
         Path = path,
@@ -1518,6 +1577,7 @@ internal sealed class FakeReindex : IReindexService
 internal sealed class FakeMetadataOperationService : IMetadataOperationService
 {
     public IReadOnlyList<string> PreviewedPaths { get; private set; } = [];
+    public OperationRecipe? PreviewedRecipe { get; private set; }
     public bool WaitForCancellation { get; init; }
     public bool CancellationObserved { get; private set; }
     public TaskCompletionSource<bool> PreviewStarted { get; } =
@@ -1543,6 +1603,7 @@ internal sealed class FakeMetadataOperationService : IMetadataOperationService
         CancellationToken ct)
     {
         PreviewedPaths = paths.ToArray();
+        PreviewedRecipe = recipe;
         progress?.Report(new(
             OperationPhase.Planning, 0, paths.Count, Message: "Reading metadata"));
         PreviewStarted.TrySetResult(true);
@@ -1591,6 +1652,33 @@ internal sealed class FakeMetadataOperationService : IMetadataOperationService
         CancellationToken ct = default) =>
         Task.FromResult(new MetadataApplyResult(
             plan.ChangedFileCount, [], []));
+}
+
+internal sealed class FakeAcoustIdDiscoveryService : IAcoustIdDiscoveryService
+{
+    public IReadOnlyList<string> Paths { get; private set; } = [];
+
+    public Task<AcoustIdDiscoveryResult> DiscoverAsync(
+        IReadOnlyList<string> paths,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        Paths = paths.ToArray();
+        string path = paths[0];
+        var fingerprint = new AudioFingerprint(
+            path, "AQAD", TimeSpan.FromSeconds(42), 42);
+        var lookup = new AcoustIdLookupResult(
+            fingerprint,
+            [new(
+                Guid.Parse("9ff43b6a-4f16-427c-93c2-92307ca505e0"),
+                0.92,
+                [Guid.Parse("cd2e7c47-16f5-46c6-a37c-a1eb7bf599ff")])],
+            DateTimeOffset.UtcNow);
+        progress?.Report(new(
+            OperationPhase.Completed, 2, 2, path, "Discovery complete"));
+        return Task.FromResult(new AcoustIdDiscoveryResult(
+            [new(path, fingerprint, lookup, [])]));
+    }
 }
 
 internal sealed class FakeMediaService(params MediaFileModel[] models) : IMediaFileService

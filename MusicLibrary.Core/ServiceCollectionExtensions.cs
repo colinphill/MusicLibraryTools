@@ -63,6 +63,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IAudioFingerprintService, AudioFingerprintService>();
         services.AddSingleton<IAcoustIdHttpTransport, AcoustIdHttpTransport>();
         services.AddSingleton<IAcoustIdLookupService, AcoustIdLookupService>();
+        services.AddSingleton<IAcoustIdDiscoveryService, AcoustIdDiscoveryService>();
         services.AddSingleton<IWavpackRunner, WavpackRunner>();
         services.AddSingleton<IDecodedAudioVerificationService, DecodedAudioVerificationService>();
         services.AddSingleton<IRepresentationRepairService, RepresentationRepairService>();

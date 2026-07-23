@@ -46,7 +46,8 @@ the same editor, preview, policy checks, recovery behavior, and history.
   than in either view.
 - [~] Expose every applicable metadata, artwork, file, online-enrichment,
   report, and playlist operation from both Workbench and Library. The initial
-  typed metadata catalog is exposed in both surfaces.
+  typed metadata catalog and audio-fingerprint discovery are exposed in both
+  surfaces.
 - [~] Share recipe editing, typed conditions, preview rendering, apply,
   cancellation, history, undo, redo, and repeat between the two surfaces.
 - [x] Let Library operations target an explicit scope: selected tracks,
@@ -228,9 +229,9 @@ capability comparison is possible through typed operations without scripting.
     track/disc position, and album context when ranking MusicBrainz candidates.
   - [ ] Use matched MusicBrainz recording IDs to locate releases and editions
     through the normal MusicBrainz provider.
-  - [ ] Require confirmation of recording matches, release, file-to-track
+  - [~] Require confirmation of recording matches, release, file-to-track
     mapping, imported fields, and artwork before mutation.
-  - [ ] Offer `ACOUSTID_FINGERPRINT`, `ACOUSTID_ID`, and MusicBrainz recording
+  - [~] Offer `ACOUSTID_FINGERPRINT`, `ACOUSTID_ID`, and MusicBrainz recording
     ID tag updates as ordinary optional previewed metadata changes.
   - [ ] Support local fingerprint generation offline; make lookup status and
     cached/offline results explicit.
@@ -470,3 +471,14 @@ per-operation capability flags.
   throttling, retry/backoff, cancellation, and recorded response tests. All
   scored AcoustID and MusicBrainz recording candidates are preserved for later
   user-confirmed matching.
+- Added a shared batch audio-discovery service that fingerprints and looks up
+  each distinct file, continues after ordinary per-file failures, and reports
+  two cancellable progress steps per file. Workbench now has an Online Metadata
+  tab for selected or all session files; Library exposes the same candidate
+  table for its selected-track, selected-album, filtered, and complete scopes.
+  Candidates are displayed without silently selecting or applying any match.
+- Added explicit candidate confirmation before tag changes. A selected candidate
+  can generate a normal metadata preview for `ACOUSTID_FINGERPRINT`,
+  `ACOUSTID_ID`, and an unambiguous MusicBrainz recording ID in either
+  Workbench or Library; the existing staged apply and recovery path remains the
+  only way to commit those fields.

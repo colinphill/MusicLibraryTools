@@ -32,6 +32,8 @@ public sealed class ServiceCollectionExtensionsTests
             provider.GetRequiredService<IAcoustIdHttpTransport>());
         Assert.IsType<AcoustIdLookupService>(
             provider.GetRequiredService<IAcoustIdLookupService>());
+        Assert.IsType<AcoustIdDiscoveryService>(
+            provider.GetRequiredService<IAcoustIdDiscoveryService>());
         Assert.IsType<LibraryOperationContextFactory>(
             provider.GetRequiredService<ILibraryOperationContextFactory>());
         Assert.IsType<ItlMetadataRepairService>(

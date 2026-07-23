@@ -47,6 +47,16 @@ public partial class WorkbenchView : UserControl
             new("Layers", "Tag layers", "Layers", 150, 100),
             new("Value", "Values", "DisplayValue", 340, 180),
         ]);
+        AudioDiscoveryGrid.ConfigureColumns(
+        [
+            new("File", "File", "File", 220, 130),
+            new("Duration", "Duration", "Duration", 90, 70),
+            new("Confidence", "Confidence", "Confidence", 105, 85),
+            new("AcoustID", "AcoustID", "AcoustId", 285, 180),
+            new("MusicBrainz", "MusicBrainz recording IDs",
+                "MusicBrainzRecordingIds", 390, 220),
+            new("Status", "Status", "Status", 280, 160),
+        ]);
     }
 
     private void OnDragOver(object? sender, DragEventArgs e)
