@@ -278,12 +278,18 @@ capability comparison is possible through typed operations without scripting.
   with typed capability interfaces and a shared provider catalog.
 - [~] Add audio fingerprinting and AcoustID-assisted discovery before the
   MusicBrainz release-selection workflow:
-  - [~] Generate Chromaprint fingerprints locally from decoded audio for any
+  - [x] Generate Chromaprint fingerprints locally from decoded audio for any
     readable codec, independently of existing tags. Native payload identities
-    now cover every currently registered audio family.
-  - [~] Use bundled or explicitly configured `fpcalc`/Chromaprint through a
-    cross-platform `IAudioFingerprintService`; report tool availability and
-    unsupported codecs without failing unrelated files.
+    cover every registered audio family. Official fpcalc builds decode the
+    ordinary registered families directly; OptimFROG Lossless, DualStream, and
+    Float use their explicitly configured official decoders to create an
+    isolated temporary PCM stream before fingerprinting.
+  - [x] Use bundled, explicitly configured, or system-path
+    `fpcalc`/Chromaprint through a cross-platform
+    `IAudioFingerprintService`; validate explicit executable paths and report
+    missing fpcalc or proprietary OptimFROG decoders per file without failing
+    unrelated files. Temporary decoded inputs are cancellation-aware and
+    always cleaned up.
   - [x] Cache the fingerprint with an audio-payload identity guard so metadata-
     only changes do not require recalculation, while audio changes invalidate
     it.
@@ -592,9 +598,10 @@ per-operation capability flags.
   ordered values, plain-text fallback, and preview-first application.
 - Remaining Phase 2 work: ad-hoc shared file mutations, live representative
   draft preview, and fully symmetric artwork controls.
-- Remaining Phase 3 work: bundled-or-validated fpcalc coverage for every
-  readable codec and candidate ranking that incorporates AcoustID confidence
-  and broader album context.
+- Revisited and completed in this audit: application-local/configured/system
+  fpcalc resolution, explicit-path validation, OptimFROG decode bridging for
+  all three registered variants, and real official-tool verification that
+  `.ofr`, `.ofs`, and `.off` yield the same Chromaprint as their PCM source.
 - Cross-cutting work still applies: finish the progress/cancellation audit and
   close the remaining Workbench/Library operation-parity gaps.
 

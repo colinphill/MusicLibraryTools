@@ -65,6 +65,135 @@ public sealed class AudioFingerprintServiceTests
         }
     }
 
+    [Fact]
+    public void Resolver_PrefersValidatedConfiguredPath()
+    {
+        string directory = Path.Combine(
+            Path.GetTempPath(),
+            $"fpcalc-resolver-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        string executable = Path.Combine(
+            directory,
+            OperatingSystem.IsWindows()
+                ? "personal-fpcalc.exe"
+                : "personal-fpcalc");
+        File.WriteAllText(executable, "");
+        try
+        {
+            var resolver =
+                new FpcalcExecutableResolver(directory);
+
+            FpcalcExecutableResolution result =
+                resolver.Resolve(executable);
+
+            Assert.Equal(
+                Path.GetFullPath(executable),
+                result.Executable);
+            Assert.Equal(
+                FpcalcExecutableSource.Configured,
+                result.Source);
+        }
+        finally
+        {
+            try { Directory.Delete(directory, recursive: true); }
+            catch { }
+        }
+    }
+
+    [Fact]
+    public void Resolver_RejectsMissingExplicitPath()
+    {
+        string directory = Path.Combine(
+            Path.GetTempPath(),
+            $"fpcalc-resolver-{Guid.NewGuid():N}");
+        var resolver =
+            new FpcalcExecutableResolver(directory);
+        string missing = Path.Combine(
+            directory,
+            "missing",
+            OperatingSystem.IsWindows()
+                ? "fpcalc.exe"
+                : "fpcalc");
+
+        FileNotFoundException error =
+            Assert.Throws<FileNotFoundException>(
+                () => resolver.Resolve(missing));
+
+        Assert.Equal(
+            Path.GetFullPath(missing),
+            error.FileName);
+    }
+
+    [Fact]
+    public void Resolver_PrefersApplicationLocalBundleForDefaultSetting()
+    {
+        string directory = Path.Combine(
+            Path.GetTempPath(),
+            $"fpcalc-resolver-{Guid.NewGuid():N}");
+        string tools = Path.Combine(
+            directory,
+            "tools",
+            "chromaprint");
+        Directory.CreateDirectory(tools);
+        string executable = Path.Combine(
+            tools,
+            OperatingSystem.IsWindows()
+                ? "fpcalc.exe"
+                : "fpcalc");
+        File.WriteAllText(executable, "");
+        try
+        {
+            var resolver =
+                new FpcalcExecutableResolver(directory);
+
+            FpcalcExecutableResolution result =
+                resolver.Resolve("fpcalc");
+
+            Assert.Equal(
+                Path.GetFullPath(executable),
+                result.Executable);
+            Assert.Equal(
+                FpcalcExecutableSource.ApplicationBundle,
+                result.Source);
+        }
+        finally
+        {
+            try { Directory.Delete(directory, recursive: true); }
+            catch { }
+        }
+    }
+
+    [Fact]
+    public void Resolver_FallsBackToPlatformSearchPath()
+    {
+        string directory = Path.Combine(
+            Path.GetTempPath(),
+            $"fpcalc-resolver-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var resolver =
+                new FpcalcExecutableResolver(directory);
+
+            FpcalcExecutableResolution result =
+                resolver.Resolve(null);
+
+            Assert.Equal(
+                OperatingSystem.IsWindows()
+                    ? "fpcalc.exe"
+                    : "fpcalc",
+                result.Executable);
+            Assert.Equal(
+                FpcalcExecutableSource.SystemPath,
+                result.Source);
+        }
+        finally
+        {
+            try { Directory.Delete(directory, recursive: true); }
+            catch { }
+        }
+    }
+
     [Theory]
     [InlineData("sample.flac")]
     [InlineData("sample.mp3")]

@@ -34,6 +34,12 @@ public sealed class ServiceCollectionExtensionsTests
             provider.GetRequiredService<IAudioPayloadIdentityService>());
         Assert.IsType<AudioFingerprintCache>(
             provider.GetRequiredService<IAudioFingerprintCache>());
+        Assert.IsType<FpcalcExecutableResolver>(
+            provider.GetRequiredService<
+                IFpcalcExecutableResolver>());
+        Assert.IsType<OptimFrogFingerprintInputService>(
+            provider.GetRequiredService<
+                IAudioFingerprintInputService>());
         Assert.IsType<AcoustIdHttpTransport>(
             provider.GetRequiredService<IAcoustIdHttpTransport>());
         Assert.IsType<AcoustIdLookupService>(

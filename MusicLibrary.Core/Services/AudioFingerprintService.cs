@@ -32,6 +32,133 @@ public interface IFpcalcRunner
         CancellationToken ct = default);
 }
 
+public enum FpcalcExecutableSource
+{
+    Configured,
+    ApplicationBundle,
+    SystemPath,
+}
+
+public sealed record FpcalcExecutableResolution(
+    string Executable,
+    FpcalcExecutableSource Source);
+
+public interface IFpcalcExecutableResolver
+{
+    FpcalcExecutableResolution Resolve(
+        string? configuredExecutable);
+}
+
+/// <summary>
+/// Resolves a personally configured executable first, then an application-local
+/// bundle, and finally the platform search path. Explicit file paths are
+/// validated before a long-running discovery operation begins.
+/// </summary>
+public sealed class FpcalcExecutableResolver :
+    IFpcalcExecutableResolver
+{
+    private readonly string _baseDirectory;
+
+    public FpcalcExecutableResolver()
+        : this(AppContext.BaseDirectory)
+    {
+    }
+
+    public FpcalcExecutableResolver(string baseDirectory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(
+            baseDirectory);
+        _baseDirectory = Path.GetFullPath(baseDirectory);
+    }
+
+    public FpcalcExecutableResolution Resolve(
+        string? configuredExecutable)
+    {
+        string? configured = configuredExecutable?.Trim();
+        bool useDefault =
+            string.IsNullOrWhiteSpace(configured) ||
+            configured.Equals(
+                "fpcalc",
+                StringComparison.OrdinalIgnoreCase) ||
+            configured.Equals(
+                "fpcalc.exe",
+                StringComparison.OrdinalIgnoreCase);
+        if (!useDefault)
+        {
+            if (!LooksLikePath(configured!))
+                return new(
+                    configured!,
+                    FpcalcExecutableSource.Configured);
+            string explicitPath =
+                Path.GetFullPath(configured!);
+            if (!File.Exists(explicitPath))
+                throw new FileNotFoundException(
+                    "The configured fpcalc executable does not exist.",
+                    explicitPath);
+            return new(
+                explicitPath,
+                FpcalcExecutableSource.Configured);
+        }
+
+        foreach (string candidate in BundleCandidates())
+            if (File.Exists(candidate))
+                return new(
+                    candidate,
+                    FpcalcExecutableSource.ApplicationBundle);
+
+        return new(
+            OperatingSystem.IsWindows()
+                ? "fpcalc.exe"
+                : "fpcalc",
+            FpcalcExecutableSource.SystemPath);
+    }
+
+    private IEnumerable<string> BundleCandidates()
+    {
+        string fileName = OperatingSystem.IsWindows()
+            ? "fpcalc.exe"
+            : "fpcalc";
+        yield return Path.Combine(
+            _baseDirectory,
+            fileName);
+        yield return Path.Combine(
+            _baseDirectory,
+            "tools",
+            fileName);
+        yield return Path.Combine(
+            _baseDirectory,
+            "tools",
+            "chromaprint",
+            fileName);
+        yield return Path.Combine(
+            _baseDirectory,
+            "runtimes",
+            RuntimeIdentifier(),
+            "native",
+            fileName);
+    }
+
+    private static bool LooksLikePath(string value) =>
+        Path.IsPathRooted(value) ||
+        value.Contains(Path.DirectorySeparatorChar) ||
+        value.Contains(Path.AltDirectorySeparatorChar);
+
+    private static string RuntimeIdentifier()
+    {
+        string os = OperatingSystem.IsWindows()
+            ? "win"
+            : OperatingSystem.IsMacOS()
+                ? "osx"
+                : "linux";
+        string architecture =
+            System.Runtime.InteropServices.RuntimeInformation
+                .ProcessArchitecture
+                .ToString()
+                .ToLowerInvariant();
+        return $"{os}-{architecture}";
+    }
+}
+
 /// <summary>
 /// Generates the local Chromaprint value and whole-file duration used for an
 /// AcoustID lookup. AcoustID itself is assigned by the remote service.
@@ -40,7 +167,10 @@ public sealed class AudioFingerprintService(
     IFpcalcRunner fpcalc,
     IAppSettings settings,
     IAudioPayloadIdentityService? payloadIdentities = null,
-    IAudioFingerprintCache? cache = null) : IAudioFingerprintService
+    IAudioFingerprintCache? cache = null,
+    IFpcalcExecutableResolver? executableResolver = null,
+    IAudioFingerprintInputService? inputService = null)
+    : IAudioFingerprintService
 {
     public const string ExecutablePreferenceKey = "tools.fpcalcPath";
 
@@ -61,9 +191,11 @@ public sealed class AudioFingerprintService(
                 "The audio file to fingerprint does not exist.", fullPath);
         string? configuredExecutable =
             settings.GetPreference(ExecutablePreferenceKey);
-        string executable = string.IsNullOrWhiteSpace(configuredExecutable)
-            ? "fpcalc"
-            : configuredExecutable;
+        FpcalcExecutableResolution resolution =
+            (executableResolver ??
+             new FpcalcExecutableResolver())
+            .Resolve(configuredExecutable);
+        string executable = resolution.Executable;
         progress?.Report(new(
             OperationPhase.IndexingSources,
             0,
@@ -99,8 +231,24 @@ public sealed class AudioFingerprintService(
                 payloadIdentity = null;
             }
         }
+        await using PreparedFingerprintInput input =
+            inputService is null
+                ? new(fullPath, fullPath)
+                : await inputService.PrepareAsync(
+                        fullPath,
+                        progress,
+                        ct)
+                    .ConfigureAwait(false);
         AudioFingerprint result =
-            await fpcalc.GenerateAsync(executable, fullPath, ct);
+            await fpcalc.GenerateAsync(
+                    executable,
+                    input.DecoderPath,
+                    ct)
+                .ConfigureAwait(false);
+        if (!PathComparer.Equals(
+                result.Path,
+                fullPath))
+            result = result with { Path = fullPath };
         if (payloadIdentity is not null && cache is not null)
         {
             try
@@ -122,6 +270,11 @@ public sealed class AudioFingerprintService(
             $"Generated Chromaprint for {Path.GetFileName(fullPath)}"));
         return result;
     }
+
+    private static readonly StringComparer PathComparer =
+        OperatingSystem.IsWindows()
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
 }
 
 public sealed class FpcalcRunner : IFpcalcRunner

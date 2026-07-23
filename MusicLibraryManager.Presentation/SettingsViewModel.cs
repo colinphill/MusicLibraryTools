@@ -34,6 +34,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     [ObservableProperty] private string _ffmpegPath = "ffmpeg";
     [ObservableProperty] private string _wavpackPath = "wavpack";
     [ObservableProperty] private string _fpcalcPath = "fpcalc";
+    [ObservableProperty] private string? _optimFrogToolsDirectory;
     [ObservableProperty] private string? _acoustIdClientKey;
     [ObservableProperty] private bool _offlineMode;
     [ObservableProperty]
@@ -95,6 +96,10 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         _fpcalcPath =
             settings.GetPreference(AudioFingerprintService.ExecutablePreferenceKey) ??
             "fpcalc";
+        _optimFrogToolsDirectory =
+            settings.GetPreference(
+                OptimFrogFingerprintInputService
+                    .ToolsDirectoryPreferenceKey);
         _acoustIdClientKey =
             settings.GetPreference(AcoustIdLookupService.ClientKeyPreference);
         _offlineMode = bool.TryParse(
@@ -409,6 +414,15 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         _settings.SetPreference(
             AudioFingerprintService.ExecutablePreferenceKey,
             string.IsNullOrWhiteSpace(value) ? null : value.Trim());
+
+    partial void OnOptimFrogToolsDirectoryChanged(
+        string? value) =>
+        _settings.SetPreference(
+            OptimFrogFingerprintInputService
+                .ToolsDirectoryPreferenceKey,
+            string.IsNullOrWhiteSpace(value)
+                ? null
+                : value.Trim());
 
     partial void OnAcoustIdClientKeyChanged(string? value) =>
         _settings.SetPreference(
@@ -1331,6 +1345,15 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         string? path = await _files.PickFileAsync("Choose fpcalc executable");
         if (path is not null)
             FpcalcPath = path;
+    }
+
+    [RelayCommand]
+    private async Task BrowseOptimFrogToolsAsync()
+    {
+        string? path = await _files.PickFolderAsync(
+            "Choose OptimFROG tools directory");
+        if (path is not null)
+            OptimFrogToolsDirectory = path;
     }
 
     private bool CanSaveConfiguration() => HasUnsavedChanges && IsEditorValid;

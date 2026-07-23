@@ -811,17 +811,31 @@ public sealed class PresentationTests
         var settings = new FakeSettings();
         settings.Preferences[AudioFingerprintService.ExecutablePreferenceKey] =
             "stored-fpcalc";
+        settings.Preferences[
+            OptimFrogFingerprintInputService
+                .ToolsDirectoryPreferenceKey] =
+            "stored-optimfrog";
         var viewModel = new SettingsViewModel(
             settings, new FakeFilePicker(), new FakeDialogs(), new FakeTheme());
 
         Assert.Equal("stored-fpcalc", viewModel.FpcalcPath);
+        Assert.Equal(
+            "stored-optimfrog",
+            viewModel.OptimFrogToolsDirectory);
         viewModel.FpcalcPath = "new-fpcalc";
+        viewModel.OptimFrogToolsDirectory =
+            "new-optimfrog";
         viewModel.AcoustIdClientKey = "client-key";
         viewModel.OfflineMode = true;
 
         Assert.Equal(
             "new-fpcalc",
             settings.Preferences[AudioFingerprintService.ExecutablePreferenceKey]);
+        Assert.Equal(
+            "new-optimfrog",
+            settings.Preferences[
+                OptimFrogFingerprintInputService
+                    .ToolsDirectoryPreferenceKey]);
         Assert.Equal(
             "client-key",
             settings.Preferences[AcoustIdLookupService.ClientKeyPreference]);
