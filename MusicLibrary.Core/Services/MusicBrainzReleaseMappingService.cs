@@ -12,7 +12,10 @@ public sealed record MusicBrainzSourceFile(
     string? Artist = null,
     int? DiscNumber = null,
     int? TrackNumber = null,
-    TimeSpan? Duration = null);
+    TimeSpan? Duration = null,
+    ImmutableDictionary<Guid, double>? RecordingIdScores = null,
+    string? Album = null,
+    string? AlbumArtist = null);
 
 public sealed record MusicBrainzRankedTrack(
     MusicBrainzTrackCandidate Track,
@@ -187,7 +190,7 @@ public sealed class MusicBrainzReleaseMappingService
                 files.Count,
                 source.Path,
                 $"Matching file {index + 1:N0} of {files.Count:N0}"));
-            matches.Add(Match(source, release.Tracks));
+            matches.Add(Match(source, release));
         }
         ResolveDuplicateSuggestions(matches);
         progress?.Report(new(
@@ -201,10 +204,10 @@ public sealed class MusicBrainzReleaseMappingService
 
     private static MusicBrainzTrackMatch Match(
         MusicBrainzSourceFile source,
-        ImmutableArray<MusicBrainzTrackCandidate> tracks)
+        MusicBrainzReleaseCandidate release)
     {
-        MusicBrainzRankedTrack[] ranked = tracks
-            .Select(track => Score(source, track))
+        MusicBrainzRankedTrack[] ranked = release.Tracks
+            .Select(track => Score(source, release, track))
             .OrderByDescending(candidate => candidate.Score)
             .ThenBy(candidate => candidate.Track.MediumPosition)
             .ThenBy(candidate => candidate.Track.TrackPosition)
@@ -235,14 +238,30 @@ public sealed class MusicBrainzReleaseMappingService
 
     private static MusicBrainzRankedTrack Score(
         MusicBrainzSourceFile source,
+        MusicBrainzReleaseCandidate release,
         MusicBrainzTrackCandidate track)
     {
         int score = 0;
         var reasons = new List<string>();
         if (source.RecordingIds.Contains(track.RecordingId))
         {
-            score += 1000;
-            reasons.Add("recording ID");
+            if (source.RecordingIdScores?.TryGetValue(
+                    track.RecordingId,
+                    out double confidence) == true)
+            {
+                double bounded = Math.Clamp(confidence, 0, 1);
+                score += 900 +
+                    (int)Math.Round(
+                        bounded * 100,
+                        MidpointRounding.AwayFromZero);
+                reasons.Add(
+                    $"recording ID ({bounded:P1} AcoustID)");
+            }
+            else
+            {
+                score += 1000;
+                reasons.Add("recording ID");
+            }
         }
         if (source.DiscNumber is > 0 &&
             source.DiscNumber == track.MediumPosition)
@@ -266,6 +285,18 @@ public sealed class MusicBrainzReleaseMappingService
         {
             score += 30;
             reasons.Add("artist");
+        }
+        if (SameNormalized(source.Album, release.Title))
+        {
+            score += 40;
+            reasons.Add("album");
+        }
+        if (SameNormalized(
+                source.AlbumArtist,
+                release.ArtistCredit))
+        {
+            score += 25;
+            reasons.Add("album artist");
         }
         if (source.Duration is not null && track.LengthMilliseconds is > 0)
         {

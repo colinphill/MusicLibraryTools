@@ -87,6 +87,92 @@ public sealed class MusicBrainzReleaseMappingServiceTests
     }
 
     [Fact]
+    public async Task AcoustIdConfidence_RanksMultipleRecordingCandidates()
+    {
+        MusicBrainzReleaseCandidate release = Release(
+            Track(1, 1, FirstRecordingId, "Song", 181000),
+            Track(1, 1, SecondRecordingId, "Song", 181000));
+        var source = new MusicBrainzSourceFile(
+            "song.flac",
+            [FirstRecordingId, SecondRecordingId],
+            Title: "Song",
+            Artist: "Example Artist",
+            Duration: TimeSpan.FromSeconds(181),
+            RecordingIdScores:
+                ImmutableDictionary<Guid, double>.Empty
+                    .Add(FirstRecordingId, 0.61)
+                    .Add(SecondRecordingId, 0.97));
+
+        MusicBrainzReleaseMapping result =
+            await new MusicBrainzReleaseMappingService().MapAsync(
+                release,
+                [source]);
+
+        MusicBrainzTrackMatch match = Assert.Single(result.Files);
+        Assert.Equal(
+            SecondRecordingId,
+            match.SuggestedTrack!.RecordingId);
+        Assert.Equal(
+            MusicBrainzMappingConfidence.RecordingId,
+            match.Confidence);
+        Assert.Contains("97.0% AcoustID", match.Status);
+        Assert.True(
+            match.Candidates[0].Score >
+            match.Candidates[1].Score);
+    }
+
+    [Fact]
+    public async Task AlbumContext_StrengthensPlausibleMetadataSuggestion()
+    {
+        MusicBrainzReleaseCandidate release = Release(
+            Track(1, 1, FirstRecordingId, "First", 181000));
+        var source = new MusicBrainzSourceFile(
+            "first.flac",
+            [],
+            Title: "First",
+            Album: "Example Album",
+            AlbumArtist: "Example Artist");
+
+        MusicBrainzReleaseMapping result =
+            await new MusicBrainzReleaseMappingService().MapAsync(
+                release,
+                [source]);
+
+        MusicBrainzTrackMatch match = Assert.Single(result.Files);
+        Assert.Equal(
+            FirstRecordingId,
+            match.SuggestedTrack!.RecordingId);
+        Assert.Equal(
+            MusicBrainzMappingConfidence.Metadata,
+            match.Confidence);
+        Assert.Contains("album", match.Status);
+        Assert.Contains("album artist", match.Status);
+    }
+
+    [Fact]
+    public async Task AlbumContextAlone_DoesNotCreateTrackSuggestion()
+    {
+        MusicBrainzReleaseCandidate release = Release(
+            Track(1, 1, FirstRecordingId, "First", 181000));
+        var source = new MusicBrainzSourceFile(
+            "unknown.flac",
+            [],
+            Album: "Example Album",
+            AlbumArtist: "Example Artist");
+
+        MusicBrainzReleaseMapping result =
+            await new MusicBrainzReleaseMappingService().MapAsync(
+                release,
+                [source]);
+
+        MusicBrainzTrackMatch match = Assert.Single(result.Files);
+        Assert.Null(match.SuggestedTrack);
+        Assert.Equal(
+            MusicBrainzMappingConfidence.Unmatched,
+            match.Confidence);
+    }
+
+    [Fact]
     public void ConfirmedMappings_CreateSelectiveMultiFieldEdits()
     {
         MusicBrainzTrackCandidate track =

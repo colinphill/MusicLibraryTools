@@ -2351,6 +2351,7 @@ public sealed class PresentationTests
             .Single(row => row.Path == @"C:\music\one.flac");
         Assert.True(mapping.IsIncluded);
         Assert.Equal("1-1", mapping.Position);
+        Assert.Contains("92.0% AcoustID", mapping.Status);
 
         await viewModel.PreviewLibraryReleaseMetadataCommand.ExecuteAsync(null);
 

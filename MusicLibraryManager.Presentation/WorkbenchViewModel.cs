@@ -1943,7 +1943,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                     file.Document.Codec is null
                         ? null
                         : TimeSpan.FromSeconds(
-                            file.Document.Codec.DurationInSeconds)))
+                            file.Document.Codec.DurationInSeconds),
+                    ConfirmedRecordingScores(file.Path),
+                    file.Album,
+                    file.AlbumArtist))
                 .ToArray();
             MusicBrainzReleaseMapping mapping =
                 await _releaseMapping.MapAsync(
@@ -2465,6 +2468,25 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             .Distinct()
             .ToArray();
         return [.. ids];
+    }
+
+    private ImmutableDictionary<Guid, double>
+        ConfirmedRecordingScores(string path)
+    {
+        HashSet<Guid> confirmed =
+            ConfirmedRecordingIds(path).ToHashSet();
+        return AudioMatches
+            .Where(row =>
+                PathComparer.Equals(row.Path, path) &&
+                row.Score is not null)
+            .SelectMany(row =>
+                row.MusicBrainzRecordingIdValues.Select(id =>
+                    (Id: id, Score: row.Score!.Value)))
+            .Where(item => confirmed.Contains(item.Id))
+            .GroupBy(item => item.Id)
+            .ToImmutableDictionary(
+                group => group.Key,
+                group => group.Max(item => item.Score));
     }
 
     private void ClearReleaseTrackMappings()

@@ -291,10 +291,13 @@ capability comparison is possible through typed operations without scripting.
     MusicBrainz recording IDs.
   - [x] Preserve all returned candidates, AcoustID confidence scores, and
     recording IDs; never silently accept the first match.
-  - [~] Combine fingerprint confidence, duration, existing artist/title,
+  - [x] Combine fingerprint confidence, duration, existing artist/title,
     track/disc position, and album context when ranking MusicBrainz candidates.
-    Release-track mapping now ranks recording ID, duration, artist/title, and
-    track/disc position; AcoustID confidence and broader album context remain.
+    Release-track mapping preserves each recording ID's best AcoustID score,
+    uses it to order otherwise equal recording candidates, and incorporates
+    release album/album-artist agreement into deterministic scoring. Album
+    context alone remains below the suggestion threshold, and ambiguous
+    candidates still require explicit user confirmation.
   - [x] Use matched MusicBrainz recording IDs to locate releases and editions
     through the normal MusicBrainz provider.
   - [x] Require confirmation of recording matches, release, file-to-track
