@@ -93,7 +93,7 @@
         </TabItem>
 
         <TabItem Header="Bulk operation">
-          <Grid Margin="0,12,0,0" RowDefinitions="Auto,Auto,Auto,190,*" RowSpacing="12">
+          <Grid Margin="0,12,0,0" RowDefinitions="Auto,Auto,Auto,Auto,190,*" RowSpacing="12">
             <Grid ColumnDefinitions="190,190,190,190,170,*" ColumnSpacing="10">
               <StackPanel Spacing="5">
                 <TextBlock Classes="muted" Text="Operation" FontSize="12" FontWeight="SemiBold" />
@@ -186,7 +186,31 @@
                        PlaceholderText="Condition value" />
             </WrapPanel>
 
-            <Grid Grid.Row="3" ColumnDefinitions="1.2*,12,0.8*">
+            <Grid Grid.Row="3" ColumnDefinitions="220,100,*,160" ColumnSpacing="10">
+              <StackPanel Spacing="5">
+                <TextBlock Classes="muted" Text="Path component" FontSize="12" FontWeight="SemiBold" />
+                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.PathComponents}"
+                          SelectedItem="{Binding OperationEditor.SelectedPathComponent, Mode=TwoWay}" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="5">
+                <TextBlock Classes="muted" Text="Parent level" FontSize="12" FontWeight="SemiBold" />
+                <NumericUpDown Classes="app" Minimum="1"
+                               Value="{Binding OperationEditor.ParentLevel, Mode=TwoWay}" />
+              </StackPanel>
+              <StackPanel Grid.Column="2" Spacing="5">
+                <TextBlock Classes="muted" Text="Optional extraction pattern" FontSize="12" FontWeight="SemiBold" />
+                <TextBox Classes="app"
+                         Text="{Binding OperationEditor.ExtractionPattern, Mode=TwoWay}"
+                         PlaceholderText="Regular expression with a named capture" />
+              </StackPanel>
+              <StackPanel Grid.Column="3" Spacing="5">
+                <TextBlock Classes="muted" Text="Capture group" FontSize="12" FontWeight="SemiBold" />
+                <TextBox Classes="app"
+                         Text="{Binding OperationEditor.ExtractionGroup, Mode=TwoWay}" />
+              </StackPanel>
+            </Grid>
+
+            <Grid Grid.Row="4" ColumnDefinitions="1.2*,12,0.8*">
               <Grid RowDefinitions="Auto,*,Auto" RowSpacing="6">
                 <TextBlock Classes="section-title" Text="Ordered recipe" />
                 <ListBox Grid.Row="1" ItemsSource="{Binding OperationEditor.Steps}"
@@ -236,7 +260,7 @@
               </StackPanel>
             </Grid>
 
-            <Grid Grid.Row="4" RowDefinitions="Auto,*" RowSpacing="8">
+            <Grid Grid.Row="5" RowDefinitions="Auto,*" RowSpacing="8">
               <TextBlock Classes="section-title" Text="Reviewed changes" />
               <controls:AppDataGrid x:Name="PreviewGrid" Grid.Row="1"
                   ItemsSource="{Binding PreviewChanges}" />

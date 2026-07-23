@@ -263,6 +263,89 @@ public sealed class MetadataWorkbenchServicesTests
     }
 
     [Fact]
+    public async Task Preview_ExtractsMetadataFromFileAndFolderComponents()
+    {
+        using var media = MediaFixtures.Copy("sample.flac");
+        string root = Path.Combine(
+            Path.GetTempPath(), "mlm-path-extract-" + Guid.NewGuid().ToString("N"));
+        string albumDirectory = Path.Combine(root, "Extracted Album");
+        string path = Path.Combine(albumDirectory, "01 - Extracted Title.flac");
+        string statePath = Path.Combine(root, "settings.json");
+        try
+        {
+            Directory.CreateDirectory(albumDirectory);
+            File.Copy(media.Path, path);
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings);
+            OperationRecipe recipe = OperationRecipe.Create(
+                "Extract path",
+                new ExtractPathComponentOperation(
+                    MetadataFieldKey.Known(TagFields.Title),
+                    Pattern: "^\\d+ - (?<title>.+)$",
+                    CaptureGroup: "title"),
+                new ExtractPathComponentOperation(
+                    MetadataFieldKey.Known(TagFields.Album),
+                    MetadataPathComponent.ParentFolder));
+
+            MetadataOperationPlan plan = await service.PreviewAsync([path], recipe);
+
+            MetadataFilePlan file = Assert.Single(plan.Files);
+            Assert.Equal(
+                ["Extracted Title"],
+                Assert.Single(file.Differences.Where(difference =>
+                    difference.Field.KnownField == TagFields.Title)).After);
+            Assert.Equal(
+                ["Extracted Album"],
+                Assert.Single(file.Differences.Where(difference =>
+                    difference.Field.KnownField == TagFields.Album)).After);
+            Assert.True(plan.CanApply);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task Preview_RejectsUnknownExtractionCaptureGroup()
+    {
+        using var media = MediaFixtures.Copy("sample.flac");
+        string statePath = Path.Combine(
+            Path.GetTempPath(), "mlm-settings-" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings);
+            OperationRecipe recipe = OperationRecipe.Create(
+                "Invalid extraction",
+                new ExtractPathComponentOperation(
+                    MetadataFieldKey.Known(TagFields.Title),
+                    Pattern: "(.+)",
+                    CaptureGroup: "missing"));
+
+            MetadataOperationPlan plan = await service.PreviewAsync([media.Path], recipe);
+
+            MetadataFilePlan file = Assert.Single(plan.Files);
+            Assert.Contains(file.Issues, issue =>
+                issue.Code == "metadata.operation" &&
+                issue.Severity == OperationIssueSeverity.Blocker);
+            Assert.False(plan.CanApply);
+        }
+        finally
+        {
+            try { File.Delete(statePath); } catch { }
+        }
+    }
+
+    [Fact]
     public async Task Preview_RejectsInvalidRegularExpressionAsAFileIssue()
     {
         using var media = MediaFixtures.Copy("sample.flac");

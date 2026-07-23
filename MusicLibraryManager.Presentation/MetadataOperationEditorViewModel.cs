@@ -86,6 +86,8 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
         Enum.GetValues<MetadataCaseMode>();
     public IReadOnlyList<MetadataValueOrder> ValueOrders { get; } =
         Enum.GetValues<MetadataValueOrder>();
+    public IReadOnlyList<MetadataPathComponent> PathComponents { get; } =
+        Enum.GetValues<MetadataPathComponent>();
     public IReadOnlyList<MetadataConditionOperator> ConditionOperators { get; } =
         Enum.GetValues<MetadataConditionOperator>()
             .Where(value => value != MetadataConditionOperator.Always)
@@ -123,6 +125,19 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
 
     [ObservableProperty]
     private MetadataValueOrder _selectedValueOrder = MetadataValueOrder.Ascending;
+
+    [ObservableProperty]
+    private MetadataPathComponent _selectedPathComponent =
+        MetadataPathComponent.FileNameWithoutExtension;
+
+    [ObservableProperty]
+    private int _parentLevel = 1;
+
+    [ObservableProperty]
+    private string? _extractionPattern;
+
+    [ObservableProperty]
+    private string _extractionGroup = "value";
 
     [ObservableProperty]
     private int _sequenceStart = 1;
@@ -293,6 +308,10 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
             UseRegularExpression: UseRegularExpression,
             CaseMode: SelectedCaseMode,
             ValueOrder: SelectedValueOrder,
+            PathComponent: SelectedPathComponent,
+            ParentLevel: ParentLevel,
+            ExtractionPattern: ExtractionPattern,
+            ExtractionGroup: ExtractionGroup,
             SequenceStart: SequenceStart,
             SequencePadding: SequencePadding,
             Condition: condition));

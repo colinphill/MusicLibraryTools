@@ -178,7 +178,7 @@
                 BorderBrush="{DynamicResource AppBorderStrongBrush}"
                 BorderThickness="1" CornerRadius="9" Padding="14"
                 BoxShadow="0 14 40 0 #77000000">
-          <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto" RowSpacing="10">
+          <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto" RowSpacing="10">
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Spacing="2">
                 <TextBlock Text="Library operation" FontSize="16" FontWeight="SemiBold" />
@@ -267,7 +267,31 @@
               </StackPanel>
             </Grid>
 
-            <Grid Grid.Row="3" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,150,130,150,*" ColumnSpacing="10">
+            <Grid Grid.Row="3" ColumnDefinitions="190,90,*,140" ColumnSpacing="10">
+              <StackPanel Spacing="4">
+                <TextBlock Classes="muted" Text="Path component" FontSize="12" FontWeight="SemiBold" />
+                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.PathComponents}"
+                          SelectedItem="{Binding OperationEditor.SelectedPathComponent, Mode=TwoWay}" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="4">
+                <TextBlock Classes="muted" Text="Parent level" FontSize="12" FontWeight="SemiBold" />
+                <NumericUpDown Classes="app" Minimum="1"
+                               Value="{Binding OperationEditor.ParentLevel, Mode=TwoWay}" />
+              </StackPanel>
+              <StackPanel Grid.Column="2" Spacing="4">
+                <TextBlock Classes="muted" Text="Optional extraction pattern" FontSize="12" FontWeight="SemiBold" />
+                <TextBox Classes="app"
+                         Text="{Binding OperationEditor.ExtractionPattern, Mode=TwoWay}"
+                         PlaceholderText="Regular expression with a named capture" />
+              </StackPanel>
+              <StackPanel Grid.Column="3" Spacing="4">
+                <TextBlock Classes="muted" Text="Capture group" FontSize="12" FontWeight="SemiBold" />
+                <TextBox Classes="app"
+                         Text="{Binding OperationEditor.ExtractionGroup, Mode=TwoWay}" />
+              </StackPanel>
+            </Grid>
+
+            <Grid Grid.Row="4" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,150,130,150,*" ColumnSpacing="10">
               <CheckBox VerticalAlignment="Center" Content="Regular expression"
                         IsChecked="{Binding OperationEditor.UseRegularExpression, Mode=TwoWay}" />
               <TextBlock Grid.Column="1" Classes="muted" VerticalAlignment="Center"
@@ -293,13 +317,13 @@
                       Content="Preview" Command="{Binding PreviewLibraryOperationCommand}" />
             </Grid>
 
-            <Grid Grid.Row="4" RowDefinitions="Auto,*" RowSpacing="6" MinHeight="230">
+            <Grid Grid.Row="5" RowDefinitions="Auto,*" RowSpacing="6" MinHeight="190">
               <TextBlock Classes="section-title" Text="Reviewed changes" />
               <controls:AppDataGrid x:Name="LibraryOperationPreviewGrid" Grid.Row="1"
                   ItemsSource="{Binding OperationPreviewChanges}" />
             </Grid>
 
-            <Grid Grid.Row="5" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+            <Grid Grid.Row="6" ColumnDefinitions="*,Auto" ColumnSpacing="10">
               <TextBlock Classes="muted" VerticalAlignment="Center"
                          Text="{Binding OperationStatus}" TextWrapping="Wrap"
                          AutomationProperties.LiveSetting="Polite" />

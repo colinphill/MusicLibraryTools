@@ -41,6 +41,8 @@ public sealed class MetadataOperationCatalog : IMetadataOperationCatalog
             "Remove duplicate values while preserving their first occurrence."),
         Both(MetadataOperationKind.Reorder, "Reorder values",
             "Sort or reverse the ordered values in a field."),
+        Both(MetadataOperationKind.ExtractPathComponent, "Extract from path",
+            "Assign a file name, folder name, or regular-expression capture to a field."),
     ];
 
     public MetadataOperation Create(MetadataOperationDraft draft)
@@ -109,6 +111,18 @@ public sealed class MetadataOperationCatalog : IMetadataOperationCatalog
                     draft.Field,
                     draft.ValueOrder,
                     When: draft.Condition),
+            MetadataOperationKind.ExtractPathComponent =>
+                new ExtractPathComponentOperation(
+                    draft.Field,
+                    draft.PathComponent,
+                    Math.Max(1, draft.ParentLevel),
+                    string.IsNullOrWhiteSpace(draft.ExtractionPattern)
+                        ? null
+                        : draft.ExtractionPattern,
+                    string.IsNullOrWhiteSpace(draft.ExtractionGroup)
+                        ? "value"
+                        : draft.ExtractionGroup,
+                    draft.Condition),
             _ => throw new NotSupportedException(
                 $"Unsupported metadata operation '{draft.Kind}'."),
         };

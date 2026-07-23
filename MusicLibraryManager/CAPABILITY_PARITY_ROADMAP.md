@@ -164,7 +164,7 @@ and restored without creating or indexing a library.
 - [x] Trim and normalize whitespace.
 - [x] Split a field into multiple values.
 - [x] Join, deduplicate, or reorder multiple values.
-- [ ] Extract metadata from file and folder components.
+- [x] Extract metadata from file and folder components.
 - [ ] Generate filenames and directories using existing templates.
 - [ ] Rearrange filename components.
 - [ ] Import metadata from delimited text or CSV.
@@ -437,3 +437,7 @@ per-operation capability flags.
   shared catalog and editor. Their ordered multi-value behavior is covered by
   Core preview tests, and each operation is available in both Workbench and
   Library.
+- Added typed extraction from file names, parent folders at a selected depth,
+  and full paths. Optional named regular-expression captures support focused
+  parsing without introducing a general action language; invalid capture groups
+  are reported as preview blockers.

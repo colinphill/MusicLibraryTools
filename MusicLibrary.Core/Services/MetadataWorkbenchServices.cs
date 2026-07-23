@@ -807,7 +807,52 @@ public sealed class MetadataOperationService(
                     };
                 }
                 break;
+            case ExtractPathComponentOperation extract:
+                string? pathValue = ExtractPathComponent(document.Path, extract);
+                if (pathValue is not null)
+                    fields[extract.Field] = [pathValue];
+                break;
         }
+    }
+
+    private static string? ExtractPathComponent(
+        string path,
+        ExtractPathComponentOperation operation)
+    {
+        string component = operation.Component switch
+        {
+            MetadataPathComponent.FileNameWithoutExtension =>
+                Path.GetFileNameWithoutExtension(path),
+            MetadataPathComponent.FileName => Path.GetFileName(path),
+            MetadataPathComponent.ParentFolder =>
+                GetParentFolderName(path, operation.ParentLevel),
+            MetadataPathComponent.FullPath => path,
+            _ => "",
+        };
+        if (operation.Pattern is null)
+            return component;
+
+        var expression = new Regex(
+            operation.Pattern,
+            RegexOptions.CultureInvariant,
+            RegexTimeout);
+        if (!expression.GetGroupNames().Contains(
+                operation.CaptureGroup, StringComparer.Ordinal))
+            throw new InvalidOperationException(
+                $"The extraction pattern has no '{operation.CaptureGroup}' capture group.");
+        Match match = expression.Match(component);
+        return match.Success ? match.Groups[operation.CaptureGroup].Value : null;
+    }
+
+    private static string GetParentFolderName(string path, int level)
+    {
+        string? directory = Path.GetDirectoryName(path);
+        for (int current = 1; current < level && directory is not null; current++)
+            directory = Path.GetDirectoryName(directory);
+        return directory is null
+            ? ""
+            : Path.GetFileName(directory.TrimEnd(
+                Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
     }
 
     private static string ChangeCase(string value, MetadataCaseMode mode) => mode switch

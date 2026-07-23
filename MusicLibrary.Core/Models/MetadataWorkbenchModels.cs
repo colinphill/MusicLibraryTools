@@ -116,6 +116,7 @@ public sealed record MetadataCondition(
 [JsonDerivedType(typeof(JoinFieldValuesOperation), "join")]
 [JsonDerivedType(typeof(DeduplicateFieldValuesOperation), "deduplicate")]
 [JsonDerivedType(typeof(ReorderFieldValuesOperation), "reorder")]
+[JsonDerivedType(typeof(ExtractPathComponentOperation), "extractPath")]
 public abstract record MetadataOperation(MetadataCondition? Condition = null);
 
 public sealed record AssignFieldOperation(
@@ -165,6 +166,7 @@ public enum MetadataOperationKind
     Join,
     Deduplicate,
     Reorder,
+    ExtractPathComponent,
 }
 
 public sealed record MetadataOperationDescriptor(
@@ -189,6 +191,10 @@ public sealed record MetadataOperationDraft(
     bool UseRegularExpression = false,
     MetadataCaseMode CaseMode = MetadataCaseMode.Title,
     MetadataValueOrder ValueOrder = MetadataValueOrder.Ascending,
+    MetadataPathComponent PathComponent = MetadataPathComponent.FileNameWithoutExtension,
+    int ParentLevel = 1,
+    string? ExtractionPattern = null,
+    string ExtractionGroup = "value",
     int SequenceStart = 1,
     int SequencePadding = 0,
     MetadataCondition? Condition = null);
@@ -223,6 +229,22 @@ public sealed record ReorderFieldValuesOperation(
     MetadataFieldKey Field,
     MetadataValueOrder Order = MetadataValueOrder.Ascending,
     bool IgnoreCase = true,
+    MetadataCondition? When = null) : MetadataOperation(When);
+
+public enum MetadataPathComponent
+{
+    FileNameWithoutExtension,
+    FileName,
+    ParentFolder,
+    FullPath,
+}
+
+public sealed record ExtractPathComponentOperation(
+    MetadataFieldKey Field,
+    MetadataPathComponent Component = MetadataPathComponent.FileNameWithoutExtension,
+    int ParentLevel = 1,
+    string? Pattern = null,
+    string CaptureGroup = "value",
     MetadataCondition? When = null) : MetadataOperation(When);
 
 public sealed record ChangeCaseOperation(
