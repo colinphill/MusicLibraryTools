@@ -102,8 +102,9 @@ appropriate build or test.
     `IMediaFormatHandler` adapter hierarchy was intentionally not introduced.
   - [~] `IMultiValueMetadataWriter` replaces the current first-value-only write
     path where the native representation is ordered and repeatable. Vorbis,
-    FLAC, Matroska, and every APEv2-backed format are implemented; ID3, MP4,
-    and ASF still require a per-field multi-value audit.
+    FLAC, Matroska, every APEv2-backed format, and compatible ID3v2.4 standard
+    text frames are implemented; MP4, ASF, ID3 custom text, and legacy ID3
+    versions still require a per-field multi-value audit.
   - [x] `ITagLayerEditor` adds, removes, and copies individual tag types.
   - [x] Existing format classes implement the focused native capability
     interfaces directly; separate adapters were deliberately unnecessary.
@@ -391,6 +392,17 @@ application concepts.
   - [x] Keep ADTS payload identities stable across either tag-layer edit and
     release `.aac` for indexing.
 
+### Reuse ID3v2.4 ordered text values
+
+- [x] Ordered values for compatible standard text-information frames.
+  - Expose the multi-value writer contract only for ID3v2.4 fields with an
+    unambiguous standard text-frame representation.
+  - Preserve value order across MP3, DSF, WAVE, AIFF, and raw AAC while
+    rejecting legacy versions, compound number fields, empty values, and
+    custom text whose native semantics require a separate audit.
+  - Keep ID3 downgrade previews loss-aware: multi-value frames remain blocked
+    unless the user explicitly chooses the existing coalescing policy.
+
 ### Reuse APEv2
 
 - [x] Ordered known and custom multi-value text.
@@ -515,7 +527,8 @@ per-operation capability flags.
   side effects.
 - Revisited and completed in this audit: Health-to-Workbench navigation,
   staged sequential track/disc numbering with totals, and ordered known/custom
-  multi-value APEv2 writes across every APEv2-backed codec.
+  multi-value APEv2 writes across every APEv2-backed codec, plus ordered
+  ID3v2.4 standard text values across every ID3-backed container.
 - Remaining Phase 1 work: Workbench multi-selection/mixed-value editing,
   complete staged multi-artwork controls, and migration of the legacy Library
   inspector/fields dialog onto the shared document and mutation services.

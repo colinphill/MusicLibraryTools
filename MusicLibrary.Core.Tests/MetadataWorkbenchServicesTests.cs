@@ -1425,6 +1425,112 @@ public sealed class MetadataWorkbenchServicesTests
     }
 
     [Fact]
+    public async Task Apply_RoundTripsId3v24ValuesAndBlocksLegacyVersions()
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-id3-values-" + Guid.NewGuid().ToString("N"));
+        string recovery =
+            session + ".MusicLibraryManager-recovery";
+        Directory.CreateDirectory(session);
+        string v24Path = Path.Combine(session, "v24.mp3");
+        string v23Path = Path.Combine(session, "v23.mp3");
+        File.Copy(MediaFixtures.Path_("sample.mp3"), v24Path);
+        File.Copy(MediaFixtures.Path_("sample.mp3"), v23Path);
+        var v24 = Assert.IsType<MP3File>(
+            MediaFile.GetFile(v24Path, readOnly: false));
+        v24.ChangeVersion(ID3v2Version.V24);
+        v24.SaveTags();
+        string statePath =
+            Path.Combine(session, "settings.json");
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(
+                    settings: settings),
+                settings);
+            IReadOnlyList<MetadataValueEdit> edits =
+            [
+                new(
+                    MetadataFieldKey.Known(TagFields.Artist),
+                    ["First artist", "Second artist"]),
+                new(
+                    MetadataFieldKey.Known(TagFields.Genre),
+                    ["Rock", "Electronic"]),
+            ];
+
+            MetadataOperationPlan supported =
+                await service.PreviewValueEditsAsync(
+                    new Dictionary<
+                        string,
+                        IReadOnlyList<MetadataValueEdit>>
+                    {
+                        [v24Path] = edits,
+                    },
+                    "Ordered ID3v2.4 values");
+
+            Assert.True(supported.CanApply);
+            Assert.DoesNotContain(
+                Assert.Single(supported.Files).Issues,
+                issue => issue.Severity ==
+                    OperationIssueSeverity.Blocker);
+            await service.ApplyAsync(supported);
+
+            MediaDocument reloaded =
+                await _documents.LoadAsync(v24Path);
+            Assert.Equal(
+                ["First artist", "Second artist"],
+                reloaded.Values(
+                    MetadataFieldKey.Known(
+                        TagFields.Artist)));
+            Assert.Equal(
+                ["Rock", "Electronic"],
+                reloaded.Values(
+                    MetadataFieldKey.Known(
+                        TagFields.Genre)));
+
+            MetadataOperationPlan legacy =
+                await service.PreviewValueEditsAsync(
+                    new Dictionary<
+                        string,
+                        IReadOnlyList<MetadataValueEdit>>
+                    {
+                        [v23Path] = edits,
+                    },
+                    "Unsupported legacy ID3 values");
+
+            Assert.False(legacy.CanApply);
+            Assert.Contains(
+                Assert.Single(legacy.Files).Issues,
+                issue =>
+                    issue.Code ==
+                        "metadata.native-unsupported" &&
+                    issue.Severity ==
+                        OperationIssueSeverity.Blocker);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(session, recursive: true);
+            }
+            catch
+            {
+            }
+            try
+            {
+                Directory.Delete(recovery, recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    [Fact]
     public async Task ValueEditor_RoundTripsOrderedCustomValues()
     {
         string session = Path.Combine(

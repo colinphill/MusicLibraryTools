@@ -116,6 +116,8 @@ namespace MusicFileUtilities
             TagFields field,
             IReadOnlyList<string> values)
         {
+            if (values.Count > 0)
+                EnsureWritablePrimaryLayer();
             if (PrimaryWriter is not IMultiValueMetadataWriter multi)
                 throw new InvalidOperationException(
                     "The primary AAC tag layer does not support multiple values.");

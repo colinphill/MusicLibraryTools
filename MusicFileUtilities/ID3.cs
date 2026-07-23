@@ -135,54 +135,57 @@ namespace MusicFileUtilities
                     return Array.Empty<object>();
 
                 var res = new List<object>();
-
-                string refinement = "", reference = "";
-                int state = 0;
-                foreach (char c in frame.Text)
+                foreach (string value in frame.Values)
                 {
-                    switch (state)
+                    string refinement = "", reference = "";
+                    int state = 0;
+                    foreach (char c in value)
                     {
-                        case 0:
-                            if (c == '(')
-                                state = 1;
-                            else
-                                refinement += c;
-                            break;
+                        switch (state)
+                        {
+                            case 0:
+                                if (c == '(')
+                                    state = 1;
+                                else
+                                    refinement += c;
+                                break;
 
-                        case 1:
-                            if (c == '(')
-                            {
-                                refinement += "(";
-                                state = 2;
-                            }
-                            else if (c == ')')
-                            {
-                                int genre;
-                                if (int.TryParse(reference, out genre))
+                            case 1:
+                                if (c == '(')
                                 {
-                                    res.Add(ID3v2Util.ID3v1Genres[genre]);
+                                    refinement += "(";
+                                    state = 2;
+                                }
+                                else if (c == ')')
+                                {
+                                    if (int.TryParse(
+                                            reference, out int genre) &&
+                                        genre >= 0 &&
+                                        genre < ID3v2Util.ID3v1Genres.Count)
+                                        res.Add(
+                                            ID3v2Util.ID3v1Genres[genre]);
+                                    else
+                                    {
+                                        if (reference == "RX")
+                                            res.Add("Remix");
+                                        if (reference == "CR")
+                                            res.Add("Cover");
+                                    }
                                 }
                                 else
-                                {
-                                    if (reference == "RX")
-                                        res.Add("Remix");
-                                    if (reference == "CR")
-                                        res.Add("Cover");
-                                }
-                            }
-                            else
-                                reference += c;
-                            break;
+                                    reference += c;
+                                break;
 
-                        default:
-                            refinement += c;
-                            if (c == ')')
-                                state = 0;
-                            break;
+                            default:
+                                refinement += c;
+                                if (c == ')')
+                                    state = 0;
+                                break;
+                        }
                     }
+                    if (refinement != "")
+                        res.Add(refinement);
                 }
-                if (refinement != "")
-                    res.Add(refinement);
                 return res.ToArray();
             }
             throw new InvalidOperationException();
@@ -1276,7 +1279,11 @@ namespace MusicFileUtilities
 
     }
 
-    public class ID3v2Tag : TagBase, IArtworkWriter, IUserStringMetadata
+    public class ID3v2Tag :
+        TagBase,
+        IArtworkWriter,
+        IUserStringMetadata,
+        IMultiValueMetadataWriter
     {
 
         protected int _headerversion = 3;
@@ -1502,6 +1509,45 @@ namespace MusicFileUtilities
                 [TagFields.TitleSort] = "TST",
                 [TagFields.Website] = "WAR",
             };
+
+        private static readonly IReadOnlyDictionary<TagFields, string>
+            MultiValueFieldIdsV24 =
+                new Dictionary<TagFields, string>
+                {
+                    [TagFields.Album] = "TALB",
+                    [TagFields.AlbumArtist] = "TPE2",
+                    [TagFields.AlbumArtistSort] = "TSO2",
+                    [TagFields.AlbumSort] = "TSOA",
+                    [TagFields.Artist] = "TPE1",
+                    [TagFields.ArtistSort] = "TSOP",
+                    [TagFields.BPM] = "TBPM",
+                    [TagFields.Compilation] = "TCMP",
+                    [TagFields.Composer] = "TCOM",
+                    [TagFields.ComposerSort] = "TSOC",
+                    [TagFields.Conductor] = "TPE3",
+                    [TagFields.Copyright] = "TCOP",
+                    [TagFields.Date] = "TDRC",
+                    [TagFields.DiscSubtitle] = "TSST",
+                    [TagFields.EncodedBy] = "TENC",
+                    [TagFields.EncoderSettings] = "TSSE",
+                    [TagFields.Genre] = "TCON",
+                    [TagFields.Grouping] = "TIT1",
+                    [TagFields.ISRC] = "TSRC",
+                    [TagFields.Key] = "TKEY",
+                    [TagFields.Label] = "TPUB",
+                    [TagFields.Language] = "TLAN",
+                    [TagFields.Media] = "TMED",
+                    [TagFields.Mood] = "TMOO",
+                    [TagFields.Movement] = "MVNM",
+                    [TagFields.OriginalAlbum] = "TOAL",
+                    [TagFields.OriginalArtist] = "TOPE",
+                    [TagFields.OriginalDate] = "TDOR",
+                    [TagFields.OriginalFileName] = "TOFN",
+                    [TagFields.Remixer] = "TPE4",
+                    [TagFields.Subtitle] = "TIT3",
+                    [TagFields.Title] = "TIT2",
+                    [TagFields.TitleSort] = "TSOT",
+                };
 
         private static readonly IReadOnlyDictionary<TagFields, string> UserStringFieldKeys =
             new Dictionary<TagFields, string>
@@ -2567,6 +2613,50 @@ namespace MusicFileUtilities
         }
 
         public void RemoveField(TagFields field) => SetField(field, null);
+
+        public bool SupportsMultipleValues(TagFields field) =>
+            _headerversion >= 4 &&
+            MultiValueFieldIdsV24.ContainsKey(field);
+
+        public void SetFieldValues(
+            TagFields field,
+            IReadOnlyList<string> values)
+        {
+            ArgumentNullException.ThrowIfNull(values);
+            if (values.Count <= 1)
+            {
+                SetField(field, values.Count == 0 ? null : values[0]);
+                return;
+            }
+            if (_headerversion < 4)
+                throw new InvalidOperationException(
+                    "Ordered ID3 text values require ID3v2.4.");
+            if (!MultiValueFieldIdsV24.TryGetValue(
+                    field, out string frameId))
+                throw new ArgumentException(
+                    $"ID3v2.4 does not support multiple values for {field}.",
+                    nameof(field));
+            if (values.Any(string.IsNullOrEmpty))
+                throw new ArgumentException(
+                    "Ordered ID3 text values cannot be empty.",
+                    nameof(values));
+
+            if (field == TagFields.Date)
+                _frames.RemoveAll(frame =>
+                    RecordingDateFrameIds.Contains(frame.FrameID));
+            else if (field == TagFields.OriginalDate)
+                _frames.RemoveAll(frame =>
+                    OriginalDateFrameIds.Contains(frame.FrameID));
+            else
+                _frames.RemoveAll(frame =>
+                    frame.FrameID == frameId);
+            var frame = new TextFrame(this)
+            {
+                FrameID = frameId,
+                Values = values,
+            };
+            _frames.Add(frame);
+        }
 
         public void Save(string outputPath = null)
         {
