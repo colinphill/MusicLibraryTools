@@ -622,15 +622,33 @@ namespace MusicFileUtilities
     }
 
     [Serializable]
+    /// <summary>
+    /// Native Ogg metadata handler for Vorbis, Opus, and Speex streams.
+    /// The historical type name is retained for source compatibility.
+    /// </summary>
     public class OggVorbisFile : VorbisComments, ICodecProvider, IMediaFile
     {
+        private enum OggCodec
+        {
+            Unknown,
+            Vorbis,
+            Opus,
+            Speex,
+        }
+
         public string Filename
         {
             get;
             set;
         }
 
-        public string CodecName => "Vorbis";
+        public string CodecName => _codec switch
+        {
+            OggCodec.Vorbis => "Vorbis",
+            OggCodec.Opus => "Opus",
+            OggCodec.Speex => "Speex",
+            _ => "Ogg",
+        };
 
         public CodecType CodecType => CodecType.Lossy;
 
@@ -679,53 +697,82 @@ namespace MusicFileUtilities
             }
         }
 
-        private bool ReadPageHeader(Stream s, out int datalen, out bool continuation, out bool firstpage)
-        {
-            byte[] b = new byte[27];
-            s.ReadExactly(b);
-            if (!b.AsSpan(0, 4).SequenceEqual("OggS"u8))
-                throw new InvalidDataException();
-            byte[] segs = new byte[b[26]];
-            s.ReadExactly(segs);
-            int sum = 0;
-            foreach (byte seg in segs)
-                sum += seg;
-            datalen = sum;
-            continuation = ((b[5] & 1) == 1);
-            firstpage = ((b[5] & 2) == 2);
-            return ((b[5] & 4) == 4);
-        }
-
         private bool _gotinfo;
         private bool _gotcomments;
         private readonly bool _readArtwork;
+        private OggCodec _codec;
+        private int? _streamSerial;
+        private int? _commentPageSequence;
+        private bool _commentStartsAtPageStart;
         internal bool LastSaveWasInPlace { get; private set; }
 
-        private void ParsePage(byte[] page)
+        private bool ParseIdentificationPacket(byte[] packet)
         {
-            if (page.Length < 7)
-                return;
-            if (!page.AsSpan(1, 6).SequenceEqual("vorbis"u8))
-                return;
-            if (page[0] == 3) // Comment Block
+            if (packet.Length >= 30 &&
+                packet[0] == 1 &&
+                packet.AsSpan(1, 6).SequenceEqual("vorbis"u8))
             {
-                byte[] stripped = new byte[page.Length - 7];
-                Array.Copy(page, 7, stripped, 0, page.Length - 7);
-                FromByteArray(stripped, _readArtwork);
-                _gotcomments = true;
-            }
-            if (page[0] == 1) // Information Header
-            {
-                byte[] stripped = new byte[page.Length - 7];
-                Array.Copy(page, 7, stripped, 0, page.Length - 7);
-                Channels = stripped[4];
-                Samplerate = Tools.UInt32AtLE(stripped, 5);
-                MaxBitrate = Tools.UInt32AtLE(stripped, 9);
-                AverageBitrate = Tools.UInt32AtLE(stripped, 13);
+                _codec = OggCodec.Vorbis;
+                Channels = packet[11];
+                Samplerate = Tools.UInt32AtLE(packet, 12);
+                MaxBitrate = Tools.UInt32AtLE(packet, 16);
+                AverageBitrate = Tools.UInt32AtLE(packet, 20);
                 if (MaxBitrate == 0)
                     MaxBitrate = AverageBitrate;
                 _gotinfo = true;
+                return true;
             }
+
+            if (packet.Length >= 19 && packet.AsSpan(0, 8).SequenceEqual("OpusHead"u8))
+            {
+                _codec = OggCodec.Opus;
+                Channels = packet[9];
+                // Ogg Opus granule positions and decoded output are always measured at 48 kHz.
+                Samplerate = 48000;
+                _gotinfo = true;
+                return true;
+            }
+
+            if (packet.Length >= 80 && packet.AsSpan(0, 8).SequenceEqual("Speex   "u8))
+            {
+                _codec = OggCodec.Speex;
+                Samplerate = Tools.UInt32AtLE(packet, 36);
+                Channels = Tools.UInt32AtLE(packet, 48);
+                int bitrate = OggReadInt32LE(packet, 52);
+                AverageBitrate = bitrate > 0 ? (uint)bitrate : 0;
+                MaxBitrate = AverageBitrate;
+                _gotinfo = true;
+                return true;
+            }
+
+            return false;
+        }
+
+        private void ParseCommentPacket(byte[] packet)
+        {
+            ReadOnlySpan<byte> payload;
+            switch (_codec)
+            {
+                case OggCodec.Vorbis when
+                    packet.Length >= 8 &&
+                    packet[0] == 3 &&
+                    packet.AsSpan(1, 6).SequenceEqual("vorbis"u8):
+                    payload = packet.AsSpan(7, packet.Length - 8);
+                    break;
+                case OggCodec.Opus when
+                    packet.Length >= 8 &&
+                    packet.AsSpan(0, 8).SequenceEqual("OpusTags"u8):
+                    payload = packet.AsSpan(8);
+                    break;
+                case OggCodec.Speex:
+                    payload = packet;
+                    break;
+                default:
+                    return;
+            }
+
+            FromByteArray(payload.ToArray(), _readArtwork);
+            _gotcomments = true;
         }
 
         public OggVorbisFile(string filename, bool readArtwork = true)
@@ -733,40 +780,80 @@ namespace MusicFileUtilities
             Filename = filename;
             _readArtwork = readArtwork;
 
-            bool lastpage;
-            // Accumulate a packet's pages here. This previously used Array.Resize per
-            // continuation page, recopying the whole buffer each time (O(n^2) for a packet
-            // spanning many pages); a List grows amortized O(1).
-            var pagedata = new List<byte>();
-
+            var packetData = new Dictionary<int, List<byte>>();
+            var packetIndexes = new Dictionary<int, int>();
+            var packetStartSequences = new Dictionary<int, int>();
+            var packetStartsAtPage = new Dictionary<int, bool>();
             using FileStream s = Tools.OpenReadSequential(filename);
-            do
+            while (s.Position < s.Length && !_gotcomments)
             {
-                int datalen;
-                bool continuation, firstpage;
+                byte[] header = new byte[27];
+                s.ReadExactly(header);
+                if (!header.AsSpan(0, 4).SequenceEqual("OggS"u8))
+                    throw new InvalidDataException("Invalid Ogg page.");
+                byte[] segments = new byte[header[26]];
+                s.ReadExactly(segments);
+                int dataLength = 0;
+                foreach (byte segment in segments)
+                    dataLength += segment;
+                byte[] data = new byte[dataLength];
+                s.ReadExactly(data);
 
-                lastpage = ReadPageHeader(s, out datalen, out continuation, out firstpage);
-
-                if (!continuation)
+                int serial = OggReadInt32LE(header, 14);
+                int sequence = OggReadInt32LE(header, 18);
+                bool continuation = (header[5] & 1) != 0;
+                if (!packetData.TryGetValue(serial, out List<byte> current))
                 {
-                    if (!firstpage)
-                        ParsePage(pagedata.ToArray());
-                    pagedata.Clear();
-                    // The identification and comment headers always precede the audio pages;
-                    // once both have been parsed there is nothing left to learn from the rest
-                    // of the stream (duration is not derived from it), so don't read it.
-                    if (_gotinfo && _gotcomments)
+                    current = new List<byte>();
+                    packetData.Add(serial, current);
+                    packetIndexes.Add(serial, 0);
+                    packetStartSequences.Add(serial, sequence);
+                    packetStartsAtPage.Add(serial, !continuation);
+                }
+                if (!continuation && current.Count != 0)
+                    throw new InvalidDataException("Invalid Ogg packet continuation.");
+
+                int dataOffset = 0;
+                for (int segmentIndex = 0; segmentIndex < segments.Length; segmentIndex++)
+                {
+                    if (current.Count == 0)
+                    {
+                        packetStartSequences[serial] = sequence;
+                        packetStartsAtPage[serial] =
+                            segmentIndex == 0 && !continuation;
+                    }
+                    int count = segments[segmentIndex];
+                    if (count != 0)
+                        current.AddRange(data.AsSpan(dataOffset, count).ToArray());
+                    dataOffset += count;
+                    if (segments[segmentIndex] == 255)
+                        continue;
+
+                    int packetIndex = packetIndexes[serial];
+                    byte[] packet = current.ToArray();
+                    bool selected = _streamSerial == serial;
+                    if (_streamSerial is null && ParseIdentificationPacket(packet))
+                    {
+                        _streamSerial = serial;
+                        selected = true;
+                    }
+                    else if (selected && packetIndex == 1)
+                    {
+                        _commentPageSequence = packetStartSequences[serial];
+                        _commentStartsAtPageStart = packetStartsAtPage[serial];
+                        ParseCommentPacket(packet);
+                    }
+                    current.Clear();
+                    packetIndexes[serial] = packetIndex + 1;
+                    if (_gotcomments)
                         break;
                 }
-
-                byte[] buf = new byte[datalen];
-                s.ReadExactly(buf);
-                pagedata.AddRange(buf);
             }
-            while (!lastpage);
 
-            ParsePage(pagedata.ToArray());
-
+            if (!_gotinfo)
+                throw new InvalidDataException("Unsupported Ogg codec.");
+            if (!_gotcomments)
+                throw new InvalidDataException($"{CodecName} comment packet is missing.");
         }
 
         public void SaveTags(string outputPath = null)
@@ -775,14 +862,13 @@ namespace MusicFileUtilities
             string target = outputPath ?? Filename
                 ?? throw new InvalidOperationException("No filename associated with this file.");
 
-            // Build Vorbis comment packet: [0x03 "vorbis"] + VorbisComments data + framing bit
             byte[] commentData = ToByteArray(true);
-            byte[] newPacket = new byte[7 + commentData.Length + 1];
-            newPacket[0] = 0x03;
-            newPacket[1] = (byte)'v'; newPacket[2] = (byte)'o'; newPacket[3] = (byte)'r';
-            newPacket[4] = (byte)'b'; newPacket[5] = (byte)'i'; newPacket[6] = (byte)'s';
-            Array.Copy(commentData, 0, newPacket, 7, commentData.Length);
-            newPacket[7 + commentData.Length] = 0x01; // framing bit
+            byte[] newPacket = BuildCommentPacket(commentData);
+
+            if (!_commentStartsAtPageStart || _streamSerial is null ||
+                _commentPageSequence is null)
+                throw new InvalidDataException(
+                    "The Ogg comment packet does not start on its own page.");
 
             if (outputPath == null && TrySaveCommentInPlace(newPacket))
             {
@@ -823,9 +909,9 @@ namespace MusicFileUtilities
 
                         if (state == 0) // Looking for comment packet
                         {
-                            if (!isCont && data.Length >= 7 &&
-                                data[0] == 0x03 && data[1] == (byte)'v' && data[2] == (byte)'o' &&
-                                data[3] == (byte)'r' && data[4] == (byte)'b' && data[5] == (byte)'i' && data[6] == (byte)'s')
+                            if (!isCont &&
+                                pageSerial == _streamSerial &&
+                                OggReadInt32LE(hdr, 18) == _commentPageSequence)
                             {
                                 editedSerial = pageSerial;
                                 int newSeq = OggReadInt32LE(hdr, 18);
@@ -916,6 +1002,33 @@ namespace MusicFileUtilities
         private sealed record InPlaceCommentPage(
             long Offset, byte[] Header, byte[] Segments, byte[] Data, int CommentBytes);
 
+        private byte[] BuildCommentPacket(byte[] commentData)
+        {
+            switch (_codec)
+            {
+                case OggCodec.Vorbis:
+                {
+                    byte[] packet = new byte[7 + commentData.Length + 1];
+                    packet[0] = 3;
+                    "vorbis"u8.CopyTo(packet.AsSpan(1));
+                    commentData.CopyTo(packet, 7);
+                    packet[^1] = 1;
+                    return packet;
+                }
+                case OggCodec.Opus:
+                {
+                    byte[] packet = new byte[8 + commentData.Length];
+                    "OpusTags"u8.CopyTo(packet);
+                    commentData.CopyTo(packet, 8);
+                    return packet;
+                }
+                case OggCodec.Speex:
+                    return commentData;
+                default:
+                    throw new InvalidOperationException("Unsupported Ogg codec.");
+            }
+        }
+
         // Same-length packets retain exactly the same Ogg lacing and page sequence. Patch only the
         // comment bytes and page CRCs; setup/audio packets sharing those pages remain untouched.
         private bool TrySaveCommentInPlace(byte[] newPacket)
@@ -950,11 +1063,12 @@ namespace MusicFileUtilities
 
                 bool continuation = (header[5] & 1) != 0;
                 int serial = OggReadInt32LE(header, 14);
+                int sequence = OggReadInt32LE(header, 18);
                 if (editedSerial is null)
                 {
-                    if (continuation || data.Length < 7 || data[0] != 0x03 ||
-                        data[1] != (byte)'v' || data[2] != (byte)'o' || data[3] != (byte)'r' ||
-                        data[4] != (byte)'b' || data[5] != (byte)'i' || data[6] != (byte)'s')
+                    if (continuation ||
+                        serial != _streamSerial ||
+                        sequence != _commentPageSequence)
                         continue;
                     editedSerial = serial;
                 }

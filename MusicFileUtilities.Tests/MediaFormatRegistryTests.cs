@@ -8,9 +8,10 @@ namespace MusicFileUtilities.Tests;
 public sealed class MediaFormatRegistryTests
 {
     [Fact]
-    public void DefaultRegistryPreservesLegacyLibraryIndexFormats()
+    public void DefaultRegistryReportsReleasedLibraryIndexFormats()
     {
-        string[] expected = [".dsf", ".m4a", ".mp3", ".flac", ".ogg", ".wv"];
+        string[] expected =
+            [".dsf", ".m4a", ".mp3", ".flac", ".ogg", ".opus", ".spx", ".wv"];
         IMediaFormatRegistry registry = MediaFormatRegistry.Default;
 
         Assert.Equal(expected, registry.GetExtensions(MediaFormatCapabilities.LibraryIndex));

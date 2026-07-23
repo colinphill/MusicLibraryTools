@@ -28,12 +28,14 @@ namespace MusicFileUtilities
     /// <summary>The parser family used for an extension.</summary>
     public enum MediaFormatFamily
     {
-        Dsf,
-        Flac,
-        Mp3,
-        Mp4,
-        OggVorbis,
-        WavPack,
+        Dsf = 0,
+        Flac = 1,
+        Mp3 = 2,
+        Mp4 = 3,
+        Ogg = 4,
+        // Compatibility alias for callers compiled against the original registry.
+        OggVorbis = Ogg,
+        WavPack = 5,
     }
 
     /// <summary>Describes one extension and the operations supported for it.</summary>
@@ -201,7 +203,11 @@ namespace MusicFileUtilities
             yield return new(".mp3", "MP3", MediaFormatFamily.Mp3, indexed | remux);
             yield return new(".flac", "FLAC", MediaFormatFamily.Flac,
                 indexed | MediaFormatCapabilities.TranscodeDestination | remux);
-            yield return new(".ogg", "Ogg Vorbis", MediaFormatFamily.OggVorbis,
+            yield return new(".ogg", "Ogg Vorbis", MediaFormatFamily.Ogg,
+                indexed | remux);
+            yield return new(".opus", "Ogg Opus", MediaFormatFamily.Ogg,
+                indexed | remux);
+            yield return new(".spx", "Ogg Speex", MediaFormatFamily.Ogg,
                 indexed | remux);
             yield return new(".wv", "WavPack", MediaFormatFamily.WavPack,
                 indexed | MediaFormatCapabilities.TranscodeDestination | remux);

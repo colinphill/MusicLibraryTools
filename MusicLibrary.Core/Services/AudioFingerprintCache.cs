@@ -88,7 +88,7 @@ public sealed class AudioPayloadIdentityService(
                     stream, hash, progress, ct),
                 MediaFormatFamily.Dsf => HashDsf(
                     stream, hash, progress, ct),
-                MediaFormatFamily.OggVorbis => HashOgg(
+                MediaFormatFamily.Ogg => HashOgg(
                     stream, hash, progress, ct),
                 _ => HashWholeFile(stream, hash, progress, ct),
             }
@@ -320,7 +320,8 @@ public sealed class AudioPayloadIdentityService(
                         .AsSpan(0, checked((int)packet.Length));
                     knownCommentLayout =
                         first.StartsWith("\x01vorbis"u8) ||
-                        first.StartsWith("OpusHead"u8);
+                        first.StartsWith("OpusHead"u8) ||
+                        first.StartsWith("Speex   "u8);
                 }
                 if (!(knownCommentLayout && packetIndex == 1))
                 {

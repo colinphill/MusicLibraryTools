@@ -349,7 +349,12 @@ application concepts.
     capabilities while keeping both extensions out of automatic indexing.
   - [x] Verify metadata and artwork round trips preserve the `mdat` payload
     byte-for-byte for both extension aliases.
-- [ ] Opus and Speex through generalized Ogg handling.
+- [x] Opus and Speex through generalized Ogg handling.
+  - [x] Parse codec-specific identification headers while sharing ordered
+    Vorbis-comment metadata and artwork handling.
+  - [x] Preserve every non-comment packet across metadata and artwork writes.
+  - [x] Release `.opus` and `.spx` for indexing after native round-trip and
+    compressed-audio identity coverage.
 - [ ] WAV/RF64 and AIFF/AIFC through chunk handlers using existing ID3.
 - [ ] Raw AAC with ID3 and APE tag-layer support.
 
@@ -699,3 +704,11 @@ per-operation capability flags.
   explicit drain point before completion state is published. This removes a
   parallel-test race and keeps every output row for a multi-output source in
   sync.
+- Generalized the native Ogg handler from Vorbis to Vorbis, Opus, and Speex.
+  Codec identification now reads `OpusHead` and the native Speex header while
+  each format retains its required comment-packet framing. Metadata and
+  embedded artwork round trips preserve every non-comment packet, including
+  multi-page comments and chained logical streams. `.opus` and `.spx` now
+  advertise indexed metadata, artwork, remux, and transcode-source
+  capabilities, and compressed-audio identities exclude their comment packets
+  so tag-only changes retain cached Chromaprints.

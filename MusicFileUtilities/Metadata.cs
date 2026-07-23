@@ -330,7 +330,7 @@ namespace MusicFileUtilities
                     file = new MP4File(path, readOnly, readArtwork, knownLength);
                     break;
 
-                case MediaFormatFamily.OggVorbis:
+                case MediaFormatFamily.Ogg:
                     file = new OggVorbisFile(path, readArtwork);
                     break;
 

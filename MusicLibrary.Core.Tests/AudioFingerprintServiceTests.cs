@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
@@ -112,6 +113,33 @@ public sealed class AudioFingerprintServiceTests
     }
 
     [Fact]
+    public async Task PayloadIdentity_IgnoresSpeexCommentPacketChanges()
+    {
+        string path = Path.Combine(
+            Path.GetTempPath(),
+            $"payload_{Guid.NewGuid():N}.spx");
+        WriteSpeexFixture(path);
+        try
+        {
+            var identities = new AudioPayloadIdentityService(
+                MediaFormatRegistry.Default);
+            string before = await identities.ComputeAsync(path);
+
+            var file = Assert.IsType<OggVorbisFile>(
+                MediaFile.GetFile(path, readOnly: false));
+            file.SetField(TagFields.Title, "A longer Speex title");
+            file.SaveTags();
+
+            string after = await identities.ComputeAsync(path);
+            Assert.Equal(before, after);
+        }
+        finally
+        {
+            try { File.Delete(path); } catch { }
+        }
+    }
+
+    [Fact]
     public async Task Service_ReusesFingerprintAfterMetadataOnlyEdit()
     {
         using var media = MediaFixtures.Copy("sample.flac");
@@ -188,5 +216,47 @@ public sealed class AudioFingerprintServiceTests
     {
         public List<OperationProgress> Items { get; } = [];
         public void Report(OperationProgress value) => Items.Add(value);
+    }
+
+    private static void WriteSpeexFixture(string path)
+    {
+        byte[] header = new byte[80];
+        "Speex   "u8.CopyTo(header);
+        BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(28), 1);
+        BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(32), header.Length);
+        BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(36), 16000);
+        BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(40), 1);
+        BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(44), 4);
+        BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(48), 1);
+        BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(52), 28000);
+        BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(56), 320);
+        BinaryPrimitives.WriteInt32LittleEndian(header.AsSpan(64), 1);
+        var comments = new VorbisComments { Vendor = "test" };
+        comments.SetField(TagFields.Title, "Old");
+
+        using FileStream stream = File.Create(path);
+        WriteOggPage(stream, header, 2, 0);
+        WriteOggPage(stream, comments.ToByteArray(false), 0, 1);
+        WriteOggPage(stream, [0x11, 0x22, 0x33, 0x44], 4, 2);
+    }
+
+    private static void WriteOggPage(
+        Stream stream,
+        byte[] packet,
+        byte headerType,
+        int sequence)
+    {
+        Assert.True(packet.Length < 255);
+        byte[] page = new byte[28 + packet.Length];
+        "OggS"u8.CopyTo(page);
+        page[5] = headerType;
+        BinaryPrimitives.WriteInt32LittleEndian(
+            page.AsSpan(14), 0x24681357);
+        BinaryPrimitives.WriteInt32LittleEndian(
+            page.AsSpan(18), sequence);
+        page[26] = 1;
+        page[27] = (byte)packet.Length;
+        packet.CopyTo(page, 28);
+        stream.Write(page);
     }
 }
