@@ -503,7 +503,23 @@ public partial class LibraryView : UserControl
             FilterHelpPopover.IsOpen = false;
             e.Handled = true;
         }
+        else if (VisualFilterPopover.IsOpen)
+        {
+            VisualFilterPopover.IsOpen = false;
+            e.Handled = true;
+        }
     }
+
+    private void OnVisualFilterClick(
+        object? sender,
+        RoutedEventArgs e) =>
+        VisualFilterPopover.IsOpen =
+            !VisualFilterPopover.IsOpen;
+
+    private void OnVisualFilterClose(
+        object? sender,
+        RoutedEventArgs e) =>
+        VisualFilterPopover.IsOpen = false;
 
     private void OnInspectorToggle(object? sender, RoutedEventArgs e)
     {

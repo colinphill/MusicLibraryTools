@@ -801,6 +801,20 @@ public sealed class UiControlTests
                 "Save column",
                 library.FindControl<Button>(
                     "SaveLibraryMetadataColumnButton")!.Content);
+            Button visualFilter = library.FindControl<Button>(
+                "VisualFilterButton")!;
+            Popup visualFilterPopover =
+                library.FindControl<Popup>(
+                    "VisualFilterPopover")!;
+            visualFilter.RaiseEvent(
+                new RoutedEventArgs(Button.ClickEvent));
+            Assert.True(visualFilterPopover.IsOpen);
+            Assert.NotNull(library.FindControl<ListBox>(
+                "VisualFilterConditionList"));
+            Assert.Equal(
+                "Apply visual filter",
+                library.FindControl<Button>(
+                    "ApplyVisualFilterButton")!.Content);
         }
         finally
         {

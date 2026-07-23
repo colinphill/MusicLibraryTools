@@ -104,6 +104,10 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private string? _filterError;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasVisualFilter))]
+    private LibraryVisualFilterNode? _visualFilterExpression;
+
+    [ObservableProperty]
     private string _statusText = "Load a configuration to browse your library.";
 
     [ObservableProperty]
@@ -273,6 +277,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         ColumnEditor = new(
             metadataColumns,
             MetadataGridSurface.Library);
+        VisualFilterEditor = new();
         OperationEditor.PropertyChanged += (_, _) => InvalidateLibraryOperationPreview();
         ReleaseImport.PropertyChanged += OnReleaseImportChanged;
         ReleaseSearch.PropertyChanged += (_, _) =>
@@ -327,6 +332,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     public PlaylistEditorViewModel PlaylistEditor { get; } = new();
     public ExternalToolEditorViewModel ExternalToolEditor { get; }
     public MetadataGridColumnEditorViewModel ColumnEditor { get; }
+    public VisualFilterEditorViewModel VisualFilterEditor { get; }
     public IReadOnlyList<FilterMode> FilterModes { get; } = Enum.GetValues<FilterMode>();
     public IReadOnlyList<LibraryOperationScope> OperationScopes { get; } =
         Enum.GetValues<LibraryOperationScope>();
@@ -338,6 +344,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     public bool HasHealthFilter => _healthFilterPaths.Count > 0;
     public string HealthFilterSummary => $"Health results: {HealthFilterCount:N0} track(s)";
     public bool HasTextFilter => !string.IsNullOrWhiteSpace(FilterText);
+    public bool HasVisualFilter => VisualFilterExpression is not null;
     public bool HasRows => Rows.Count > 0;
     public bool HasEmptyState => Rows.Count == 0 && PageState != LibraryPageState.Loading;
     public bool HasFilterError => !string.IsNullOrWhiteSpace(FilterError);
@@ -426,6 +433,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         if (value is null)
             return;
         FilterMode = value.FilterMode;
+        VisualFilterExpression = value.VisualFilter;
+        VisualFilterEditor.Load(value.VisualFilter);
         FilterText = value.Filter;
     }
 
@@ -451,6 +460,42 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
 
     [RelayCommand]
     private void ClearFilter() => FilterText = null;
+
+    [RelayCommand]
+    private async Task ApplyVisualFilterAsync()
+    {
+        LibraryVisualFilterNode? expression =
+            VisualFilterEditor.Build(out string? error);
+        if (error is not null)
+        {
+            VisualFilterEditor.Status = error;
+            return;
+        }
+        var compiled = new LibraryVisualFilter(expression);
+        if (!compiled.IsValid)
+        {
+            VisualFilterEditor.Status =
+                compiled.Error ?? "Invalid visual filter.";
+            return;
+        }
+        VisualFilterExpression = expression;
+        VisualFilterEditor.Status =
+            expression is null
+                ? "No visual filter is active."
+                : "Visual filter applied.";
+        SaveWorkspace();
+        await ApplyFilterAsync(immediate: true);
+    }
+
+    [RelayCommand]
+    private async Task ClearVisualFilterAsync()
+    {
+        VisualFilterExpression = null;
+        VisualFilterEditor.Load(null);
+        VisualFilterEditor.Status = "Visual filter cleared.";
+        SaveWorkspace();
+        await ApplyFilterAsync(immediate: true);
+    }
 
     [RelayCommand]
     private void ClearHealthFilter()
@@ -2362,7 +2407,13 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         name = name.Trim();
         if (name.Length == 0)
             return;
-        var view = new LibraryViewDefinition(name, FilterText, FilterMode, columns, sort);
+        var view = new LibraryViewDefinition(
+            name,
+            FilterText,
+            FilterMode,
+            columns,
+            sort,
+            VisualFilterExpression);
         LibraryViewDefinition? existing = SavedViews.FirstOrDefault(item =>
             item.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         if (existing is not null)
@@ -2412,10 +2463,12 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private async Task ApplyFilterAsync(bool immediate, CancellationToken cancellationToken = default)
     {
         LibraryFilterQuery query = LibraryFilterQuery.Create(FilterText, FilterMode);
-        FilterError = query.Error;
-        if (!query.IsValid)
+        var visual = new LibraryVisualFilter(
+            VisualFilterExpression);
+        FilterError = query.Error ?? visual.Error;
+        if (!query.IsValid || !visual.IsValid)
         {
-            StatusText = query.Error ?? "Invalid filter.";
+            StatusText = FilterError ?? "Invalid filter.";
             return;
         }
         List<LibraryRow> source = _allRows;
@@ -2424,7 +2477,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             : new HashSet<string>(_healthFilterPaths, StringComparer.OrdinalIgnoreCase);
         List<LibraryRow> filtered = await Task.Run(() => source
             .Where(row => (healthPaths is null || healthPaths.Contains(row.Path)) &&
-                query.IsMatch(row.Details, row.SearchText))
+                query.IsMatch(row.Details, row.SearchText) &&
+                visual.IsMatch(row.Record))
             .ToList(), cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
 
@@ -2469,7 +2523,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             ? LibraryPageState.NotIndexed
             : filtered.Count > 0
                 ? LibraryPageState.Ready
-                : HasTextFilter
+                : HasTextFilter || HasVisualFilter
                     ? LibraryPageState.FilteredToZero
                     : healthPaths is not null
                         ? LibraryPageState.NoResults
@@ -2505,6 +2559,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         {
             FilterText = null;
             FilterMode = FilterMode.Substring;
+            VisualFilterExpression = null;
+            VisualFilterEditor.Load(null);
             IsInspectorOpen = true;
             string? json = _settings.GetLibraryPreference(WorkspacePreference);
             if (string.IsNullOrWhiteSpace(json))
@@ -2514,6 +2570,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             {
                 FilterText = state.Filter;
                 FilterMode = state.Mode;
+                VisualFilterExpression = state.VisualFilter;
+                VisualFilterEditor.Load(state.VisualFilter);
                 IsInspectorOpen = state.InspectorOpen ?? true;
             }
         }
@@ -2528,9 +2586,17 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
 
     private void SaveWorkspace()
         => _settings.SetLibraryPreference(WorkspacePreference,
-            JsonSerializer.Serialize(new LibraryWorkspaceSnapshot(FilterText, FilterMode, IsInspectorOpen)));
+            JsonSerializer.Serialize(new LibraryWorkspaceSnapshot(
+                FilterText,
+                FilterMode,
+                IsInspectorOpen,
+                VisualFilterExpression)));
 
-    private sealed record LibraryWorkspaceSnapshot(string? Filter, FilterMode Mode, bool? InspectorOpen = null);
+    private sealed record LibraryWorkspaceSnapshot(
+        string? Filter,
+        FilterMode Mode,
+        bool? InspectorOpen = null,
+        LibraryVisualFilterNode? VisualFilter = null);
     private sealed record ThumbnailCacheItem(object? Image, LinkedListNode<string> Node);
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase

@@ -254,6 +254,10 @@ public sealed class PresentationTests
             new("codec", 92, 0, true),
             new("title", 340, 1, false),
         ];
+        viewModel.VisualFilterExpression =
+            new LibraryFilterCondition(
+                LibraryFilterField.Custom("DJ_SET"),
+                LibraryFilterComparison.Present);
 
         viewModel.SaveNamedView("Mastering", columns, new LibrarySortState("codec", true));
 
@@ -263,6 +267,8 @@ public sealed class PresentationTests
         Assert.False(saved.Columns[1].Visible);
         Assert.Equal("codec", saved.Sort!.Key);
         Assert.True(saved.Sort.Descending);
+        Assert.IsType<LibraryFilterCondition>(
+            saved.VisualFilter);
         Assert.Contains("manager.library.views.v1", settings.Preferences.Keys);
     }
 
@@ -1828,6 +1834,87 @@ public sealed class PresentationTests
         Assert.True(date.Compare(
             Row("2025-01-01"),
             Row("2024-12-31")) > 0);
+    }
+
+    [Fact]
+    public void Visual_filter_editor_builds_and_restores_grouped_conditions()
+    {
+        var editor = new VisualFilterEditorViewModel
+        {
+            RootMode = LibraryFilterGroupMode.Any,
+        };
+        VisualFilterConditionViewModel first =
+            Assert.Single(editor.Conditions);
+        first.Group = 1;
+        first.FieldKind =
+            LibraryFilterFieldKind.KnownMetadata;
+        first.SelectedKnownField = editor.KnownFields.Single(choice =>
+            choice.Field == TagFields.Artist);
+        first.Comparison = LibraryFilterComparison.Contains;
+        first.Value = "Miles";
+
+        editor.AddConditionCommand.Execute(null);
+        VisualFilterConditionViewModel second =
+            editor.SelectedCondition!;
+        second.Group = 2;
+        second.FieldKind =
+            LibraryFilterFieldKind.CustomMetadata;
+        second.CustomFieldName = "DJ_SET";
+        second.Comparison = LibraryFilterComparison.Present;
+
+        LibraryVisualFilterNode expression =
+            Assert.IsType<LibraryFilterGroup>(
+                editor.Build(out string? error));
+
+        Assert.Null(error);
+        var group = Assert.IsType<LibraryFilterGroup>(expression);
+        Assert.Equal(LibraryFilterGroupMode.Any, group.Mode);
+        Assert.Equal(2, group.Children.Length);
+
+        var restored = new VisualFilterEditorViewModel();
+        restored.Load(expression);
+        Assert.Equal(2, restored.Conditions.Count);
+        Assert.Equal(
+            LibraryFilterFieldKind.CustomMetadata,
+            restored.Conditions[1].FieldKind);
+    }
+
+    [Fact]
+    public async Task Library_visual_filter_combines_with_cached_rows()
+    {
+        TrackRecord[] records =
+        [
+            Track("Miles", "Kind of Blue", "So What", "FLAC",
+                @"C:\music\one.flac"),
+            Track("Massive Attack", "Mezzanine", "Teardrop", "MP3",
+                @"C:\music\two.mp3"),
+        ];
+        LibraryViewModel viewModel = BuildLibrary(
+            new FakeSettings(),
+            records);
+        await viewModel.ReloadAsync();
+        VisualFilterConditionViewModel condition =
+            Assert.Single(viewModel.VisualFilterEditor.Conditions);
+        condition.FieldKind =
+            LibraryFilterFieldKind.Technical;
+        condition.SelectedTechnicalField =
+            viewModel.VisualFilterEditor.TechnicalFields.Single(field =>
+                field.Name == "Codec");
+        condition.Comparison =
+            LibraryFilterComparison.Equals;
+        condition.Value = "FLAC";
+
+        await viewModel.ApplyVisualFilterCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            "So What",
+            Assert.Single(viewModel.Rows).Title);
+        Assert.True(viewModel.HasVisualFilter);
+
+        await viewModel.ClearVisualFilterCommand.ExecuteAsync(null);
+
+        Assert.Equal(2, viewModel.Rows.Count);
+        Assert.False(viewModel.HasVisualFilter);
     }
 
     [Fact]

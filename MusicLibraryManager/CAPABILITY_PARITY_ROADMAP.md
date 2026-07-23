@@ -304,10 +304,10 @@ and then resolved to a user-confirmed release.
 - [x] Allow technical, known metadata, and native custom metadata fields
   without code changes.
 - [x] Keep saved views in the existing app-settings mechanism.
-- [ ] Filter arbitrary known, custom, and technical fields.
-- [ ] Add present/missing checks, equality, numeric comparisons, Boolean
+- [x] Filter arbitrary known, custom, and technical fields.
+- [x] Add present/missing checks, equality, numeric comparisons, Boolean
   grouping, and regular expressions.
-- [ ] Add a visual filter builder alongside the existing text filter.
+- [x] Add a visual filter builder alongside the existing text filter.
 - [ ] Add format-specific canonical-to-native field mapping settings.
 
 ### Reports
@@ -674,3 +674,17 @@ per-operation capability flags.
   native custom values from the metadata table. A database feature marker
   causes one progress-reporting, cancellable metadata refresh for existing
   caches, and is recorded only after a healthy completed scan.
+- Added a typed visual Library filter alongside the existing text-query
+  parser. Conditions target any cached known or native custom field plus every
+  technical/file property, with present, missing, contains, equality, bounded
+  regular-expression, and numeric comparison operators. Numbered condition
+  groups express `(A AND B) OR (C AND D)`-style logic, root all/any mode and
+  per-condition negation. Visual and text filters combine, run on the existing
+  cancellable background filter path, persist in the workspace and saved
+  views, and tolerate older settings that contain no visual expression.
+- Hardened ingest progress delivery so operation completion cannot overtake
+  already-reported row updates. Progress is synchronous in headless hosts and
+  dispatched to the captured UI synchronization context in the app, with an
+  explicit drain point before completion state is published. This removes a
+  parallel-test race and keeps every output row for a multi-output source in
+  sync.

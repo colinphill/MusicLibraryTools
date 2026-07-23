@@ -55,6 +55,11 @@
         </Border>
         <Button x:Name="ColumnsButton" Classes="app" Margin="0,0,8,6" Content="Columns" Click="OnColumnsClick" />
         <Button x:Name="ViewsButton" Classes="app" Margin="0,0,8,6" Content="Saved views" Click="OnViewsClick" />
+        <Button x:Name="VisualFilterButton" Classes="app" Margin="0,0,8,6"
+                Content="Visual filter" Click="OnVisualFilterClick" />
+        <Button Classes="app" Margin="0,0,8,6" Content="Clear visual filter"
+                Command="{Binding ClearVisualFilterCommand}"
+                IsVisible="{Binding HasVisualFilter}" />
         <Button x:Name="LibraryOperationsButton" Classes="app primary" Margin="0,0,8,6"
                 Content="Operations" Command="{Binding OpenOperationsCommand}" />
       </WrapPanel>
@@ -207,6 +212,92 @@
               <Button Classes="app" Content="Delete selected" Command="{Binding DeleteViewCommand}" />
             </WrapPanel>
           </StackPanel>
+        </Border>
+      </Popup>
+
+      <Popup x:Name="VisualFilterPopover"
+             PlacementTarget="{Binding #VisualFilterButton}"
+             Placement="BottomEdgeAlignedLeft" VerticalOffset="8"
+             IsLightDismissEnabled="True" IsOpen="False">
+        <Border Width="720" MaxHeight="620"
+                Background="{DynamicResource AppPanelBrush}"
+                BorderBrush="{DynamicResource AppBorderStrongBrush}"
+                BorderThickness="1" CornerRadius="9" Padding="14"
+                BoxShadow="0 14 40 0 #77000000">
+          <Grid RowDefinitions="Auto,*" ColumnDefinitions="270,*"
+                RowSpacing="10" ColumnSpacing="14">
+            <Grid Grid.ColumnSpan="2" ColumnDefinitions="*,Auto">
+              <TextBlock Text="Visual filter" FontSize="14"
+                         FontWeight="SemiBold" />
+              <Button Grid.Column="1" Classes="app" Width="28"
+                      Height="28" Padding="0" Content="&#x2715;"
+                      Click="OnVisualFilterClose" />
+            </Grid>
+            <StackPanel Grid.Row="1" Spacing="8">
+              <ComboBox Classes="app"
+                        ItemsSource="{Binding VisualFilterEditor.RootModes}"
+                        SelectedItem="{Binding VisualFilterEditor.RootMode, Mode=TwoWay}" />
+              <TextBlock Classes="muted" TextWrapping="Wrap"
+                         Text="Conditions with the same group number are combined with AND. Root mode combines the numbered groups." />
+              <ListBox x:Name="VisualFilterConditionList" MaxHeight="360"
+                       ItemsSource="{Binding VisualFilterEditor.Conditions}"
+                       SelectedItem="{Binding VisualFilterEditor.SelectedCondition, Mode=TwoWay}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding Summary}"
+                               TextWrapping="Wrap" />
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <WrapPanel>
+                <Button Classes="app" Content="Add condition"
+                        Command="{Binding VisualFilterEditor.AddConditionCommand}" />
+                <Button Classes="app danger" Content="Remove"
+                        Command="{Binding VisualFilterEditor.RemoveConditionCommand}" />
+              </WrapPanel>
+            </StackPanel>
+            <StackPanel Grid.Row="1" Grid.Column="1" Spacing="8"
+                        DataContext="{Binding VisualFilterEditor.SelectedCondition}">
+              <Grid ColumnDefinitions="110,*" ColumnSpacing="8">
+                <NumericUpDown Classes="app" Minimum="1"
+                               Value="{Binding Group, Mode=TwoWay}"
+                               FormatString="0" />
+                <ComboBox Grid.Column="1" Classes="app"
+                          ItemsSource="{Binding DataContext.VisualFilterEditor.FieldKinds, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                          SelectedItem="{Binding FieldKind, Mode=TwoWay}" />
+              </Grid>
+              <ComboBox Classes="app"
+                        ItemsSource="{Binding DataContext.VisualFilterEditor.TechnicalFields, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        DisplayMemberBinding="{Binding Label}"
+                        SelectedItem="{Binding SelectedTechnicalField, Mode=TwoWay}"
+                        PlaceholderText="Technical or file field" />
+              <ComboBox Classes="app"
+                        ItemsSource="{Binding DataContext.VisualFilterEditor.KnownFields, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        DisplayMemberBinding="{Binding Label}"
+                        SelectedItem="{Binding SelectedKnownField, Mode=TwoWay}"
+                        PlaceholderText="Known metadata field" />
+              <TextBox Classes="app"
+                       Text="{Binding CustomFieldName, Mode=TwoWay}"
+                       PlaceholderText="Native custom field name" />
+              <ComboBox Classes="app"
+                        ItemsSource="{Binding DataContext.VisualFilterEditor.Comparisons, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                        SelectedItem="{Binding Comparison, Mode=TwoWay}" />
+              <TextBox Classes="app" Text="{Binding Value, Mode=TwoWay}"
+                       PlaceholderText="Comparison value (not needed for present/missing)" />
+              <CheckBox Content="Negate this condition"
+                        IsChecked="{Binding Negate, Mode=TwoWay}" />
+              <WrapPanel DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                <Button x:Name="ApplyVisualFilterButton"
+                        Classes="app primary" Content="Apply visual filter"
+                        Command="{Binding ApplyVisualFilterCommand}" />
+                <Button Classes="app" Content="Clear"
+                        Command="{Binding ClearVisualFilterCommand}" />
+              </WrapPanel>
+              <TextBlock Classes="muted" TextWrapping="Wrap"
+                         DataContext="{Binding DataContext, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                         Text="{Binding VisualFilterEditor.Status}" />
+            </StackPanel>
+          </Grid>
         </Border>
       </Popup>
 

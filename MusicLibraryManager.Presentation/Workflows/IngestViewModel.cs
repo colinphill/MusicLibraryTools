@@ -364,7 +364,7 @@ public partial class IngestViewModel : ViewModelBase
             }
             activity = _activities?.Start(
                 "Ingest music", "Starting ingest", ShellDestination.Ingest, Cancel);
-            var progress = new Progress<IngestProgress>(p =>
+            var progress = new DispatchingProgress<IngestProgress>(p =>
             {
                 ApplyProgressMaximum = Math.Max(1, p.TotalItems);
                 ApplyProgress = p.CompletedItems;
@@ -384,6 +384,7 @@ public partial class IngestViewModel : ViewModelBase
             });
             var result = await Task.Run(() =>
                 _service.ApplyAsync(plan, decisions, progress, _cts.Token), _cts.Token);
+            await progress.DrainAsync();
             if (!result.Cancelled && result.Albums.Any(a => a.Success) && _library.IsReady)
             {
                 // Once ingestion commits files, finish the cache refresh even if the user presses

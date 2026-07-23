@@ -43,7 +43,8 @@ public sealed record LibraryViewDefinition(
     string? Filter,
     FilterMode FilterMode,
     IReadOnlyList<LibraryColumnState> Columns,
-    LibrarySortState? Sort);
+    LibrarySortState? Sort,
+    LibraryVisualFilterNode? VisualFilter = null);
 
 public partial class LibraryColumnChoice(string key, string header, bool isVisible) : ObservableObject
 {
