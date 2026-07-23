@@ -40,6 +40,10 @@ namespace MusicFileUtilities
         Aiff = 7,
         Aac = 8,
         MonkeysAudio = 9,
+        Musepack = 10,
+        TrueAudio = 11,
+        Tak = 12,
+        OptimFrog = 13,
     }
 
     /// <summary>Describes one extension and the operations supported for it.</summary>
@@ -200,6 +204,8 @@ namespace MusicFileUtilities
                 MediaFormatCapabilities.LibraryIndex | readableAndWritable |
                 MediaFormatCapabilities.TranscodeSource;
             const MediaFormatCapabilities remux = MediaFormatCapabilities.Remux;
+            const MediaFormatCapabilities indexedWithoutTranscode =
+                MediaFormatCapabilities.LibraryIndex | readableAndWritable;
 
             yield return new(".dsf", "DSF", MediaFormatFamily.Dsf, indexed | remux);
             yield return new(".m4a", "MPEG-4 audio", MediaFormatFamily.Mp4,
@@ -229,6 +235,18 @@ namespace MusicFileUtilities
                 indexed | remux);
             yield return new(".ape", "Monkey's Audio", MediaFormatFamily.MonkeysAudio,
                 indexed);
+            yield return new(".mpc", "Musepack", MediaFormatFamily.Musepack,
+                indexed);
+            yield return new(".tta", "TTA", MediaFormatFamily.TrueAudio,
+                indexed | MediaFormatCapabilities.TranscodeDestination | remux);
+            yield return new(".tak", "TAK", MediaFormatFamily.Tak,
+                indexed);
+            yield return new(".ofr", "OptimFROG", MediaFormatFamily.OptimFrog,
+                indexedWithoutTranscode);
+            yield return new(".ofs", "OptimFROG DualStream", MediaFormatFamily.OptimFrog,
+                indexedWithoutTranscode);
+            yield return new(".off", "OptimFROG Float", MediaFormatFamily.OptimFrog,
+                indexedWithoutTranscode);
 
             // These variants have long been supported by direct metadata/artwork editing and by
             // iTunes reconciliation, but not by automatic library indexing. Preserve that boundary.

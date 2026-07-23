@@ -173,6 +173,30 @@ public sealed class MetadataWorkbenchServicesTests
         Assert.True(document.IsWritable);
     }
 
+    [Theory]
+    [InlineData("sample.mpc", "Musepack")]
+    [InlineData("sample.tta", "TTA")]
+    [InlineData("sample.tak", "TAK")]
+    [InlineData("sample.ofr", "OptimFROG")]
+    [InlineData("sample.ofs", "OptimFROG DualStream")]
+    [InlineData("sample.off", "OptimFROG Float")]
+    public async Task Document_ExposesWritableAdditionalApeV2Layers(
+        string fixture,
+        string codecName)
+    {
+        using var media = MediaFixtures.Copy(fixture);
+
+        MediaDocument document = await _documents.LoadAsync(media.Path);
+
+        TagLayerDocument layer = Assert.Single(document.TagLayers);
+        Assert.Equal("APE", layer.TagType);
+        Assert.True(layer.SupportsCustomFields);
+        Assert.True(layer.IsWritable);
+        Assert.Equal("TestTitle", document.FirstValue(TagFields.Title));
+        Assert.Equal(codecName, document.Codec?.CodecName);
+        Assert.True(document.IsWritable);
+    }
+
     [Fact]
     public async Task Workbench_LoadsFoldersAndPlaylistOrderWithoutDuplicates()
     {

@@ -74,6 +74,12 @@ public sealed class AudioFingerprintServiceTests
     [InlineData("sample.dsf")]
     [InlineData("sample.aac")]
     [InlineData("sample.ape")]
+    [InlineData("sample.mpc")]
+    [InlineData("sample.tta")]
+    [InlineData("sample.tak")]
+    [InlineData("sample.ofr")]
+    [InlineData("sample.ofs")]
+    [InlineData("sample.off")]
     public async Task PayloadIdentity_IgnoresNativeMetadataChanges(
         string fixture)
     {
@@ -209,6 +215,37 @@ public sealed class AudioFingerprintServiceTests
         byte[] bytes = await File.ReadAllBytesAsync(media.Path);
 
         bytes[80] ^= 0x5a;
+        await File.WriteAllBytesAsync(media.Path, bytes);
+
+        string after = await identities.ComputeAsync(media.Path);
+        Assert.NotEqual(before, after);
+    }
+
+    [Theory]
+    [InlineData("sample.mpc")]
+    [InlineData("sample.tta")]
+    [InlineData("sample.tak")]
+    [InlineData("sample.ofr")]
+    [InlineData("sample.ofs")]
+    [InlineData("sample.off")]
+    public async Task PayloadIdentity_TracksAdditionalApeV2CodecChanges(
+        string fixture)
+    {
+        using var media = MediaFixtures.Copy(fixture);
+        var identities = new AudioPayloadIdentityService(
+            MediaFormatRegistry.Default);
+        string before = await identities.ComputeAsync(media.Path);
+        byte[] bytes = await File.ReadAllBytesAsync(media.Path);
+        using (var stream = File.OpenRead(media.Path))
+        {
+            var tag = new APETag();
+            Assert.True(tag.ReadTag(
+                stream,
+                onlyAtEnd: true,
+                readArtwork: false,
+                knownLength: stream.Length));
+            bytes[checked((int)tag.AudioEndOffset - 1)] ^= 0x5a;
+        }
         await File.WriteAllBytesAsync(media.Path, bytes);
 
         string after = await identities.ComputeAsync(media.Path);

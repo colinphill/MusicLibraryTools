@@ -18,6 +18,11 @@ namespace MusicFileUtilities.Tests
         [InlineData("sample_aac.m4a", "AAC", CodecType.Lossy)]
         [InlineData("sample.wv", "WavPack", CodecType.Lossless)]
         [InlineData("sample.ape", "Monkey's Audio", CodecType.Lossless)]
+        [InlineData("sample.mpc", "Musepack", CodecType.Lossy)]
+        [InlineData("sample.tta", "TTA", CodecType.Lossless)]
+        [InlineData("sample.tak", "TAK", CodecType.Lossless)]
+        [InlineData("sample.ofr", "OptimFROG", CodecType.Lossless)]
+        [InlineData("sample.ofs", "OptimFROG DualStream", CodecType.Lossy)]
         public void CodecIdentityAndFormatProperties(string file, string codecName, CodecType type)
         {
             var mf = MediaFile.GetFile(MediaFixtures.Path_(file));
@@ -40,6 +45,12 @@ namespace MusicFileUtilities.Tests
         [InlineData("sample.aiff")]
         [InlineData("sample.aac")]
         [InlineData("sample.ape")]
+        [InlineData("sample.mpc")]
+        [InlineData("sample.tta")]
+        [InlineData("sample.tak")]
+        [InlineData("sample.ofr")]
+        [InlineData("sample.ofs")]
+        [InlineData("sample.off")]
         public void DurationAndBitrateAreComputed(string file)
         {
             var c = MediaFile.GetFile(MediaFixtures.Path_(file)).Codecs.First();
@@ -66,6 +77,12 @@ namespace MusicFileUtilities.Tests
         [InlineData("sample_alac.m4a")]
         [InlineData("sample.wv")]
         [InlineData("sample.ape")]
+        [InlineData("sample.mpc")]
+        [InlineData("sample.tta")]
+        [InlineData("sample.tak")]
+        [InlineData("sample.ofr")]
+        [InlineData("sample.ofs")]
+        [InlineData("sample.off")]
         [InlineData("sample.wav")]
         [InlineData("sample.aiff")]
         [InlineData("sample.aac")]

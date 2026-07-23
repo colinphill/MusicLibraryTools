@@ -379,10 +379,26 @@ application concepts.
     staged saves that preserve the complete codec payload byte-for-byte.
   - [x] Keep payload identities stable across APEv2-only edits and release
     `.ape` for indexing and transcode-source workflows.
-- [ ] Musepack.
-- [ ] TTA.
-- [ ] TAK.
-- [ ] OptimFROG/OFS.
+- [x] Musepack.
+  - [x] Parse both SV7 frame headers and SV8 chunked stream headers, including
+    exact sample counts, sample rate, channels, duration, and bitrate.
+  - [x] Preserve the complete Musepack payload across writable APEv2 metadata,
+    custom-field, artwork, repeated-save, and staged-output workflows.
+- [x] TTA.
+  - [x] Parse TTA1/TTA2 headers and seek tables with bounded frame-size
+    validation and technical-property projection.
+  - [x] Pass real FFmpeg encoder/demuxer, APEv2 persistence, payload identity,
+    indexing, remux, and transcode source/destination gates.
+- [x] TAK.
+  - [x] Parse the native metadata-block chain and little-endian packed
+    stream-info fields for sample count, rate, bit depth, and channels.
+  - [x] Pass FFmpeg demuxer, APEv2 persistence, payload identity, indexing,
+    and transcode-source gates.
+- [x] OptimFROG/OFS.
+  - [x] Parse modern `OFR `/`OFRX` headers for OptimFROG Lossless, Float, and
+    DualStream technical properties and codec classification.
+  - [x] Release `.ofr`, `.off`, and `.ofs` for metadata/artwork indexing while
+    withholding transform capabilities unavailable in the bundled toolchain.
 
 ### Complex native handlers
 
@@ -759,3 +775,14 @@ per-operation capability flags.
   malformed bounds. Payload identities exclude the trailing APEv2 layer but
   track compressed-frame changes, and `.ape` is enabled for indexing and
   transcode-source workflows.
+- Completed the APEv2 reuse family with native Musepack SV7/SV8, TTA1/TTA2,
+  TAK, and OptimFROG Lossless/Float/DualStream readers. All formats share the
+  atomic APEv2 metadata, arbitrary-text, and typed-artwork persistence layer,
+  preserve codec payloads byte-for-byte across repeated and staged saves, and
+  expose writable Workbench tag layers. Musepack and TAK structural fixtures
+  pass FFmpeg's reference demuxers, TTA uses a real FFmpeg-encoded fixture, and
+  OptimFROG follows the published modern chunk-header layout. Payload hashes
+  ignore only the outer tag and detect compressed-data mutations. `.mpc`,
+  `.tta`, `.tak`, `.ofr`, `.off`, and `.ofs` are released for indexing; only
+  transform operations actually supported by the bundled codec toolchain are
+  advertised.

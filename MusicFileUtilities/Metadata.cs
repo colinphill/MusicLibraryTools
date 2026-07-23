@@ -354,6 +354,22 @@ namespace MusicFileUtilities
                     file = new MonkeysAudioFile(path, readArtwork, knownLength);
                     break;
 
+                case MediaFormatFamily.Musepack:
+                    file = new MusepackFile(path, readArtwork, knownLength);
+                    break;
+
+                case MediaFormatFamily.TrueAudio:
+                    file = new TrueAudioFile(path, readArtwork, knownLength);
+                    break;
+
+                case MediaFormatFamily.Tak:
+                    file = new TakFile(path, readArtwork, knownLength);
+                    break;
+
+                case MediaFormatFamily.OptimFrog:
+                    file = new OptimFrogFile(path, readArtwork, knownLength);
+                    break;
+
                 default:
                     throw new ArgumentException("Invalid File Type", "path");
             }

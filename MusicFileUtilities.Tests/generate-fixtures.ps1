@@ -10,6 +10,8 @@
   it is a minimal-but-valid DSF container (DSD64, stereo, 1-bit) with no metadata chunk, so
   the DSF tag-write path is exercised by the tests writing tags into it. The Monkey's Audio
   fixture is a structural 3.99 stream because ffmpeg provides a decoder but no APE encoder.
+  Musepack and TAK likewise use compact reference-demuxable structural streams; OptimFROG uses
+  its published modern chunk header because the bundled ffmpeg has no OptimFROG codec.
 #>
 param(
     [Parameter(Mandatory = $true)][string]$OutDir
@@ -65,7 +67,8 @@ $jobs = @(
     @{ File = 'sample.wv';        Args = @('-c:a', 'wavpack') + $meta },
     @{ File = 'sample.wav';       Args = @('-c:a', 'pcm_s16le') + $meta },
     @{ File = 'sample.aiff';      Args = @('-c:a', 'pcm_s16be') + $meta },
-    @{ File = 'sample.aac';       Args = @('-c:a', 'aac', '-b:a', '128k', '-f', 'adts') }
+    @{ File = 'sample.aac';       Args = @('-c:a', 'aac', '-b:a', '128k', '-f', 'adts') },
+    @{ File = 'sample.tta';       Args = @('-c:a', 'tta') + $meta }
 )
 
 $needFfmpeg = $jobs | Where-Object { -not (Test-Path (Join-Path $OutDir $_.File)) }
@@ -191,6 +194,115 @@ if (-not (Test-Path $apePath)) {
     [System.IO.File]::WriteAllBytes($apePath, $ms.ToArray())
     $bw.Dispose()
     $ms.Dispose()
+}
+
+# --- hand-crafted Musepack, TAK, and OptimFROG fixtures ------------------------------------
+$mpcPath = Join-Path $OutDir 'sample.mpc'
+if (-not (Test-Path $mpcPath)) {
+    $ms = [System.IO.MemoryStream]::new()
+    $bw = [System.IO.BinaryWriter]::new($ms)
+    $bw.Write([System.Text.Encoding]::ASCII.GetBytes('MP+'))
+    $bw.Write([byte]7)
+    $bw.Write([uint32]12)        # twelve 1152-sample SV7 frames
+    [byte[]]$extra = [byte[]]::new(16)
+    $extra[2] = 0                # 44.1 kHz sample-rate index
+    $bw.Write($extra)
+    $bw.Write([byte[]](0..95 | ForEach-Object {
+        [byte](($_ * 13 + 7) % 251)
+    }))
+    [byte[]]$tag = New-ApeV2Tag
+    $bw.Write($tag)
+    $bw.Flush()
+    [System.IO.File]::WriteAllBytes($mpcPath, $ms.ToArray())
+    $bw.Dispose()
+    $ms.Dispose()
+}
+
+function New-TakStreamInfo {
+    $fields = @(
+        @([uint64]2, 6),          # mono/stereo codec
+        @([uint64]0, 4),          # profile
+        @([uint64]4, 4),          # 4096-sample frame type
+        @([uint64]13230, 35),     # sample count
+        @([uint64]0, 3),          # integer sample data
+        @([uint64](44100 - 6000), 18),
+        @([uint64](16 - 8), 5),
+        @([uint64](2 - 1), 4),
+        @([uint64]0, 1)           # no extended channel layout
+    )
+    [int]$totalBits = ($fields | ForEach-Object { $_[1] } |
+        Measure-Object -Sum).Sum
+    [byte[]]$result = [byte[]]::new([int][Math]::Ceiling($totalBits / 8.0))
+    $bitOffset = 0
+    foreach ($field in $fields) {
+        [uint64]$value = $field[0]
+        [int]$count = $field[1]
+        for ($bit = 0; $bit -lt $count; $bit++) {
+            if (($value -band ([uint64]1 -shl $bit)) -ne 0) {
+                $byteIndex = [int][Math]::Floor(($bitOffset + $bit) / 8.0)
+                $bitIndex = ($bitOffset + $bit) % 8
+                $result[$byteIndex] = $result[$byteIndex] -bor (1 -shl $bitIndex)
+            }
+        }
+        $bitOffset += $count
+    }
+    return ,$result
+}
+
+$takPath = Join-Path $OutDir 'sample.tak'
+if (-not (Test-Path $takPath)) {
+    $ms = [System.IO.MemoryStream]::new()
+    $bw = [System.IO.BinaryWriter]::new($ms)
+    $bw.Write([System.Text.Encoding]::ASCII.GetBytes('tBaK'))
+    [byte[]]$info = New-TakStreamInfo
+    [int]$blockSize = $info.Length + 3
+    $bw.Write([byte]1)            # TAK_METADATA_STREAMINFO
+    $bw.Write([byte]($blockSize -band 0xff))
+    $bw.Write([byte](($blockSize -shr 8) -band 0xff))
+    $bw.Write([byte](($blockSize -shr 16) -band 0xff))
+    $bw.Write($info)
+    $bw.Write([byte[]]::new(3))   # CRC24; parser validates bounds, not checksum
+    $bw.Write([byte]0)            # TAK_METADATA_END
+    $bw.Write([byte[]]::new(3))
+    $bw.Write([byte[]](0..95 | ForEach-Object {
+        [byte](($_ * 29 + 3) % 251)
+    }))
+    [byte[]]$tag = New-ApeV2Tag
+    $bw.Write($tag)
+    $bw.Flush()
+    [System.IO.File]::WriteAllBytes($takPath, $ms.ToArray())
+    $bw.Dispose()
+    $ms.Dispose()
+}
+
+foreach ($name in @('sample.ofr', 'sample.ofs', 'sample.off')) {
+    $optimFrogPath = Join-Path $OutDir $name
+    if (-not (Test-Path $optimFrogPath)) {
+        $ms = [System.IO.MemoryStream]::new()
+        $bw = [System.IO.BinaryWriter]::new($ms)
+        $bw.Write([System.Text.Encoding]::ASCII.GetBytes('OFR '))
+        $bw.Write([uint32]17)
+        [uint64]$sampleValues = 13230 * 2
+        for ($index = 0; $index -lt 6; $index++) {
+            $bw.Write([byte](($sampleValues -shr ($index * 8)) -band 0xff))
+        }
+        $formatId = if ($name -eq 'sample.off') { 8 } else { 3 }
+        $bw.Write([byte]$formatId) # signed 16-bit or float32 samples
+        $bw.Write([byte]1)        # stereo
+        $bw.Write([uint32]44100)
+        $bw.Write([uint16]14400)  # (version 5100 - 4200) * 16
+        $bw.Write([byte]0)        # method/speed
+        $bw.Write([uint16]0)      # new-header reserved bytes
+        $bw.Write([byte[]](0..95 | ForEach-Object {
+            [byte](($_ * 31 + 5) % 251)
+        }))
+        [byte[]]$tag = New-ApeV2Tag
+        $bw.Write($tag)
+        $bw.Flush()
+        [System.IO.File]::WriteAllBytes($optimFrogPath, $ms.ToArray())
+        $bw.Dispose()
+        $ms.Dispose()
+    }
 }
 
 # --- hand-crafted DSF fixture ---------------------------------------------------------------

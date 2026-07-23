@@ -98,6 +98,14 @@ public sealed class AudioPayloadIdentityService(
                     stream, hash, progress, ct),
                 MediaFormatFamily.MonkeysAudio => HashTaggedFrames(
                     stream, hash, progress, ct),
+                MediaFormatFamily.Musepack => HashTaggedFrames(
+                    stream, hash, progress, ct),
+                MediaFormatFamily.TrueAudio => HashTaggedFrames(
+                    stream, hash, progress, ct),
+                MediaFormatFamily.Tak => HashTaggedFrames(
+                    stream, hash, progress, ct),
+                MediaFormatFamily.OptimFrog => HashTaggedFrames(
+                    stream, hash, progress, ct),
                 _ => HashWholeFile(stream, hash, progress, ct),
             }
             : HashWholeFile(stream, hash, progress, ct);
