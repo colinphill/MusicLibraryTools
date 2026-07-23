@@ -332,6 +332,54 @@ public sealed class MusicBrainzMetadataProviderTests
         }
     }
 
+    [Fact]
+    public async Task ExplicitOfflineMode_UsesCacheWithoutNetwork()
+    {
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-musicbrainz-offline-" + Guid.NewGuid().ToString("N"));
+        string statePath = Path.Combine(root, "settings.json");
+        string databasePath = Path.Combine(root, "metadata.db");
+        Guid releaseId =
+            Guid.Parse("11111111-1111-1111-1111-111111111111");
+        try
+        {
+            Directory.CreateDirectory(root);
+            var settings = new AppSettings(statePath);
+            var onlineTransport = new RecordingTransport(new(
+                HttpStatusCode.OK, RecordedReleaseDocument));
+            var online = new MusicBrainzMetadataProvider(
+                onlineTransport,
+                new MusicBrainzReleaseCache(databasePath),
+                new ProviderNetworkPolicy(settings));
+            await online.GetReleaseAsync(releaseId);
+            settings.SetPreference(
+                ProviderNetworkPolicy.OfflinePreferenceKey,
+                bool.TrueString);
+            var offlineTransport = new RecordingTransport(new(
+                HttpStatusCode.ServiceUnavailable, ""));
+            var progress = new RecordingProgress();
+            var offline = new MusicBrainzMetadataProvider(
+                offlineTransport,
+                new MusicBrainzReleaseCache(databasePath),
+                new ProviderNetworkPolicy(settings));
+
+            MusicBrainzReleaseCandidate cached =
+                await offline.GetReleaseAsync(releaseId, progress);
+
+            Assert.Equal(releaseId, cached.ReleaseId);
+            Assert.Equal(0, offlineTransport.RequestCount);
+            Assert.Contains(
+                "Offline mode",
+                progress.Items[^1].Message!,
+                StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
     [Theory]
     [InlineData("not-json")]
     [InlineData(

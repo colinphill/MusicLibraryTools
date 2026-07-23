@@ -2,6 +2,8 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using MusicLibrary.Core.Models;
 
@@ -15,7 +17,9 @@ public sealed record AcoustIdCandidate(
 public sealed record AcoustIdLookupResult(
     AudioFingerprint Source,
     ImmutableArray<AcoustIdCandidate> Candidates,
-    DateTimeOffset RetrievedAtUtc);
+    DateTimeOffset RetrievedAtUtc,
+    bool FromCache = false,
+    bool OfflineFallback = false);
 
 public sealed record AcoustIdFileDiscovery(
     string Path,
@@ -101,13 +105,18 @@ public sealed class AcoustIdHttpTransport : IAcoustIdHttpTransport, IDisposable
 /// </summary>
 public sealed class AcoustIdLookupService(
     IAcoustIdHttpTransport transport,
-    IAppSettings settings) : IAcoustIdLookupService
+    IAppSettings settings,
+    IMetadataSourceDataCache? cache = null,
+    IProviderNetworkPolicy? networkPolicy = null) :
+    IAcoustIdLookupService
 {
     public const string ClientKeyPreference = "providers.acoustid.clientKey";
     private static readonly TimeSpan MinimumRequestInterval =
         TimeSpan.FromMilliseconds(334);
     private readonly SemaphoreSlim _requestGate = new(1, 1);
     private DateTimeOffset _lastRequestUtc = DateTimeOffset.MinValue;
+    private static readonly TimeSpan CacheMaximumAge =
+        TimeSpan.FromDays(30);
 
     public async Task<AcoustIdLookupResult> LookupAsync(
         AudioFingerprint fingerprint,
@@ -115,6 +124,45 @@ public sealed class AcoustIdLookupService(
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(fingerprint);
+        string cacheKey = CacheKey(fingerprint);
+        MusicBrainzCacheEntry<AcoustIdLookupResult>? cached =
+            await ReadCacheAsync(cacheKey, ct).ConfigureAwait(false);
+        if (cached?.IsFresh == true &&
+            networkPolicy?.IsOffline != true)
+        {
+            progress?.Report(new(
+                OperationPhase.Completed,
+                1,
+                1,
+                fingerprint.Path,
+                $"Loaded {cached.Value.Candidates.Length:N0} cached AcoustID candidate(s)"));
+            return cached.Value with
+            {
+                Source = fingerprint,
+                FromCache = true,
+            };
+        }
+        if (networkPolicy?.IsOffline == true)
+        {
+            if (cached is not null)
+            {
+                progress?.Report(new(
+                    OperationPhase.Completed,
+                    1,
+                    1,
+                    fingerprint.Path,
+                    $"Offline mode; loaded {cached.Value.Candidates.Length:N0} " +
+                    "cached AcoustID candidate(s)"));
+                return cached.Value with
+                {
+                    Source = fingerprint,
+                    FromCache = true,
+                    OfflineFallback = true,
+                };
+            }
+            throw new InvalidOperationException(
+                "Offline mode is enabled and no cached AcoustID lookup is available.");
+        }
         string? configuredKey = settings.GetPreference(ClientKeyPreference);
         if (string.IsNullOrWhiteSpace(configuredKey))
             throw new InvalidOperationException(
@@ -128,19 +176,97 @@ public sealed class AcoustIdLookupService(
             $"Looking up AcoustID candidates for {Path.GetFileName(fingerprint.Path)}"));
 
         Uri requestUri = BuildLookupUri(configuredKey.Trim(), fingerprint);
-        AcoustIdHttpResult response = await SendWithRetryAsync(requestUri, ct)
-            .ConfigureAwait(false);
-        if (response.StatusCode != HttpStatusCode.OK)
-            throw new InvalidOperationException(
-                $"AcoustID lookup failed with HTTP {(int)response.StatusCode}.");
-        ImmutableArray<AcoustIdCandidate> candidates = ParseResponse(response.Content);
-        progress?.Report(new(
-            OperationPhase.Completed,
-            1,
-            1,
-            fingerprint.Path,
-            $"Found {candidates.Length:N0} AcoustID candidate(s)"));
-        return new(fingerprint, candidates, DateTimeOffset.UtcNow);
+        try
+        {
+            AcoustIdHttpResult response =
+                await SendWithRetryAsync(requestUri, ct)
+                    .ConfigureAwait(false);
+            if (response.StatusCode != HttpStatusCode.OK)
+                throw new InvalidOperationException(
+                    $"AcoustID lookup failed with HTTP {(int)response.StatusCode}.");
+            ImmutableArray<AcoustIdCandidate> candidates =
+                ParseResponse(response.Content);
+            var result = new AcoustIdLookupResult(
+                fingerprint, candidates, DateTimeOffset.UtcNow);
+            await WriteCacheAsync(
+                    cacheKey, result, result.RetrievedAtUtc, ct)
+                .ConfigureAwait(false);
+            progress?.Report(new(
+                OperationPhase.Completed,
+                1,
+                1,
+                fingerprint.Path,
+                $"Found {candidates.Length:N0} AcoustID candidate(s)"));
+            return result;
+        }
+        catch (Exception error) when (
+            error is not OperationCanceledException && cached is not null)
+        {
+            progress?.Report(new(
+                OperationPhase.Completed,
+                1,
+                1,
+                fingerprint.Path,
+                $"AcoustID is unavailable; loaded " +
+                $"{cached.Value.Candidates.Length:N0} cached candidate(s)"));
+            return cached.Value with
+            {
+                Source = fingerprint,
+                FromCache = true,
+                OfflineFallback = true,
+            };
+        }
+    }
+
+    private async Task<MusicBrainzCacheEntry<AcoustIdLookupResult>?>
+        ReadCacheAsync(
+        string key,
+        CancellationToken ct)
+    {
+        if (cache is null)
+            return null;
+        try
+        {
+            return await cache.ReadAsync<AcoustIdLookupResult>(
+                    key, CacheMaximumAge, ct)
+                .ConfigureAwait(false);
+        }
+        catch (Exception error) when (
+            error is not OperationCanceledException)
+        {
+            return null;
+        }
+    }
+
+    private async Task WriteCacheAsync(
+        string key,
+        AcoustIdLookupResult value,
+        DateTimeOffset retrievedAtUtc,
+        CancellationToken ct)
+    {
+        if (cache is null)
+            return;
+        try
+        {
+            await cache.WriteAsync(key, value, retrievedAtUtc, ct)
+                .ConfigureAwait(false);
+        }
+        catch (Exception error) when (
+            error is not OperationCanceledException)
+        {
+            // Cache failures do not invalidate a provider response.
+        }
+    }
+
+    internal static string CacheKey(AudioFingerprint fingerprint)
+    {
+        string source =
+            $"{fingerprint.Algorithm}\n" +
+            $"{fingerprint.LookupDurationSeconds}\n" +
+            fingerprint.Fingerprint;
+        return "acoustid:" + Convert.ToHexString(
+            SHA256.HashData(Encoding.UTF8.GetBytes(source)))
+            .ToLowerInvariant();
     }
 
     private async Task<AcoustIdHttpResult> SendWithRetryAsync(

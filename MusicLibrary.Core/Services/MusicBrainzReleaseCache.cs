@@ -8,7 +8,7 @@ public sealed record MusicBrainzCacheEntry<T>(
     DateTimeOffset RetrievedAtUtc,
     bool IsFresh);
 
-public interface IMusicBrainzReleaseCache
+public interface IMetadataSourceDataCache
 {
     Task<MusicBrainzCacheEntry<T>?> ReadAsync<T>(
         string key,
@@ -22,11 +22,17 @@ public interface IMusicBrainzReleaseCache
         CancellationToken ct = default);
 }
 
+public interface IMusicBrainzReleaseCache : IMetadataSourceDataCache
+{
+}
+
 /// <summary>
 /// Small application-local SQLite cache for code-backed metadata providers.
 /// Values are provider model snapshots, not portable library configuration.
 /// </summary>
-public sealed class MusicBrainzReleaseCache : IMusicBrainzReleaseCache
+public sealed class MusicBrainzReleaseCache :
+    IMusicBrainzReleaseCache,
+    IMetadataSourceDataCache
 {
     private const int MaximumEntries = 2_000;
     private readonly string _databasePath;

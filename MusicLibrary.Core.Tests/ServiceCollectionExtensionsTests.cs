@@ -36,6 +36,8 @@ public sealed class ServiceCollectionExtensionsTests
             provider.GetRequiredService<IAcoustIdHttpTransport>());
         Assert.IsType<AcoustIdLookupService>(
             provider.GetRequiredService<IAcoustIdLookupService>());
+        Assert.IsType<ProviderNetworkPolicy>(
+            provider.GetRequiredService<IProviderNetworkPolicy>());
         Assert.IsType<AcoustIdDiscoveryService>(
             provider.GetRequiredService<IAcoustIdDiscoveryService>());
         Assert.IsType<MusicBrainzHttpTransport>(
@@ -44,6 +46,9 @@ public sealed class ServiceCollectionExtensionsTests
             provider.GetRequiredService<IMusicBrainzMetadataProvider>());
         Assert.IsType<MusicBrainzReleaseCache>(
             provider.GetRequiredService<IMusicBrainzReleaseCache>());
+        Assert.Same(
+            provider.GetRequiredService<IMusicBrainzReleaseCache>(),
+            provider.GetRequiredService<IMetadataSourceDataCache>());
         Assert.IsType<MusicBrainzReleaseMappingService>(
             provider.GetRequiredService<IMusicBrainzReleaseMappingService>());
         Assert.IsType<CoverArtArchiveProvider>(

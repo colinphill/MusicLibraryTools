@@ -244,7 +244,7 @@ capability comparison is possible through typed operations without scripting.
     mapping, imported fields, and artwork before mutation.
   - [~] Offer `ACOUSTID_FINGERPRINT`, `ACOUSTID_ID`, and MusicBrainz recording
     ID tag updates as ordinary optional previewed metadata changes.
-  - [ ] Support local fingerprint generation offline; make lookup status and
+  - [x] Support local fingerprint generation offline; make lookup status and
     cached/offline results explicit.
   - [x] Enforce AcoustID's provider-specific rate limit and application API-key
     requirements, plus cancellation, retry/backoff, and bounded concurrency.
@@ -267,10 +267,10 @@ capability comparison is possible through typed operations without scripting.
   when MusicBrainz is unavailable.
 - [x] Cache downloaded artwork and thumbnails in a bounded application-data
   cache with least-recently-used pruning.
-- [~] Add provider rate limiting, identifiable user agent, cancellation,
-  retry/backoff, and offline behavior. MusicBrainz request behavior, persistent
-  caching, and cached offline fallback are implemented; a user-selected global
-  offline mode remains.
+- [x] Add provider rate limiting, identifiable user agent, cancellation,
+  retry/backoff, and offline behavior. A personal global offline mode now
+  restricts AcoustID, MusicBrainz, and Cover Art Archive to persistent cached
+  data and reports cache misses explicitly.
 - [ ] Introduce `ISecretStore`.
 - [ ] Implement Windows Credential Manager, macOS Keychain, and Linux Secret
   Service support, with session-only fallback.
@@ -573,3 +573,9 @@ per-operation capability flags.
   reuses fingerprints after metadata-only edits, and invalidates when
   compressed audio changes. Cache failures never block local `fpcalc`
   generation.
+- Added a personal global offline-mode setting shared by every built-in online
+  provider. AcoustID lookup results and Cover Art Archive release manifests now
+  join MusicBrainz data in the bounded persistent provider cache. Fresh cache
+  hits avoid network access, expired entries provide an explicit fallback when
+  a provider fails, and offline mode never attempts a request. Audio discovery
+  rows distinguish live, cached, and offline-cached candidates.

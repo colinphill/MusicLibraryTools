@@ -179,6 +179,68 @@ public sealed class AcoustIdLookupServiceTests
         }
     }
 
+    [Fact]
+    public async Task Lookup_CacheSupportsExplicitOfflineModeWithoutClientKey()
+    {
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-acoustid-cache-" + Guid.NewGuid().ToString("N"));
+        string statePath = Path.Combine(root, "settings.json");
+        string databasePath = Path.Combine(root, "providers.db");
+        try
+        {
+            Directory.CreateDirectory(root);
+            var settings = new AppSettings(statePath);
+            settings.SetPreference(
+                AcoustIdLookupService.ClientKeyPreference,
+                "test-client");
+            var onlineTransport = new RecordingTransport(
+                new(HttpStatusCode.OK, RecordedResponse));
+            var online = new AcoustIdLookupService(
+                onlineTransport,
+                settings,
+                new MusicBrainzReleaseCache(databasePath),
+                new ProviderNetworkPolicy(settings));
+            var fingerprint = new AudioFingerprint(
+                "track.flac", "AQAD-cache", TimeSpan.FromSeconds(42), 42);
+
+            AcoustIdLookupResult downloaded =
+                await online.LookupAsync(fingerprint);
+
+            Assert.False(downloaded.FromCache);
+            Assert.Equal(1, onlineTransport.RequestCount);
+            settings.SetPreference(
+                AcoustIdLookupService.ClientKeyPreference, null);
+            settings.SetPreference(
+                ProviderNetworkPolicy.OfflinePreferenceKey,
+                bool.TrueString);
+            var offlineTransport = new RecordingTransport(
+                new(HttpStatusCode.ServiceUnavailable, ""));
+            var offline = new AcoustIdLookupService(
+                offlineTransport,
+                settings,
+                new MusicBrainzReleaseCache(databasePath),
+                new ProviderNetworkPolicy(settings));
+            var progress = new RecordingProgress();
+
+            AcoustIdLookupResult cached =
+                await offline.LookupAsync(fingerprint, progress);
+
+            Assert.True(cached.FromCache);
+            Assert.True(cached.OfflineFallback);
+            Assert.Equal(2, cached.Candidates.Length);
+            Assert.Equal(0, offlineTransport.RequestCount);
+            Assert.Contains(
+                "cached",
+                progress.Items[^1].Message!,
+                StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
     [Theory]
     [InlineData("""{"status":"error","error":{"message":"bad fingerprint"}}""")]
     [InlineData("""{"status":"ok","results":[{"id":"not-a-guid","score":1.0}]}""")]
@@ -219,12 +281,14 @@ public sealed class AcoustIdLookupServiceTests
         : IAcoustIdHttpTransport
     {
         public Uri? Uri { get; private set; }
+        public int RequestCount { get; private set; }
 
         public Task<AcoustIdHttpResult> GetAsync(
             Uri uri,
             CancellationToken ct = default)
         {
             Uri = uri;
+            RequestCount++;
             return Task.FromResult(result);
         }
     }

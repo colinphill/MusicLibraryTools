@@ -175,6 +175,9 @@
               <TextBlock Classes="muted" Text="WavPack" FontSize="12" FontWeight="SemiBold" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding WavpackPath, Mode=TwoWay}" AutomationProperties.Name="WavPack executable" /><Button Grid.Column="1" Classes="app" Content="Browse" Command="{Binding BrowseWavpackCommand}" /></Grid>
               <TextBlock Classes="muted" Text="Chromaprint fpcalc (personal machine setting)" FontSize="12" FontWeight="SemiBold" /><Grid ColumnDefinitions="*,Auto" ColumnSpacing="8"><TextBox Classes="app" Text="{Binding FpcalcPath, Mode=TwoWay}" AutomationProperties.Name="Chromaprint fpcalc executable" /><Button Grid.Column="1" Classes="app" Content="Browse" Command="{Binding BrowseFpcalcCommand}" /></Grid>
               <TextBlock Classes="section-title" Margin="0,12,0,0" Text="Online metadata" />
+              <CheckBox Content="Offline mode — use cached provider data only"
+                        IsChecked="{Binding OfflineMode, Mode=TwoWay}"
+                        AutomationProperties.Name="Use cached metadata providers offline" />
               <TextBlock Classes="muted" TextWrapping="Wrap" Text="AcoustID requires an application client key for lookup. This personal setting remains outside portable library XML. Lookups do not submit fingerprints." />
               <TextBlock Classes="muted" Text="AcoustID application client key" FontSize="12" FontWeight="SemiBold" />
               <TextBox Classes="app" Text="{Binding AcoustIdClientKey, Mode=TwoWay}"

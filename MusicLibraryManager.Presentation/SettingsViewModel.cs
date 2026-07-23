@@ -33,6 +33,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     [ObservableProperty] private string _wavpackPath = "wavpack";
     [ObservableProperty] private string _fpcalcPath = "fpcalc";
     [ObservableProperty] private string? _acoustIdClientKey;
+    [ObservableProperty] private bool _offlineMode;
     [ObservableProperty] private int _oversizedArtworkByteThreshold =
         LibraryArtworkHealthSettings.DefaultOversizedByteThreshold;
     [ObservableProperty] private int _oversizedArtworkDimensionThreshold =
@@ -80,6 +81,10 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             "fpcalc";
         _acoustIdClientKey =
             settings.GetPreference(AcoustIdLookupService.ClientKeyPreference);
+        _offlineMode = bool.TryParse(
+            settings.GetPreference(
+                ProviderNetworkPolicy.OfflinePreferenceKey),
+            out bool offline) && offline;
         string? storedTheme = settings.GetPreference(ThemePreference);
         ThemeChoice? storedChoice = ThemeChoices.FirstOrDefault(choice => choice.Name == storedTheme);
         _selectedThemeChoice = storedChoice ?? ThemeChoices[0];
@@ -383,6 +388,11 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         _settings.SetPreference(
             AcoustIdLookupService.ClientKeyPreference,
             string.IsNullOrWhiteSpace(value) ? null : value.Trim());
+
+    partial void OnOfflineModeChanged(bool value) =>
+        _settings.SetPreference(
+            ProviderNetworkPolicy.OfflinePreferenceKey,
+            value ? bool.TrueString : null);
 
     private static readonly HashSet<string> EditorProperties =
     [

@@ -108,6 +108,62 @@ public sealed class CoverArtArchiveProviderTests
                 ReleaseId, ct: cancellation.Token));
     }
 
+    [Fact]
+    public async Task ManifestCache_SupportsExplicitOfflineMode()
+    {
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-caa-manifest-" + Guid.NewGuid().ToString("N"));
+        string statePath = Path.Combine(root, "settings.json");
+        string databasePath = Path.Combine(root, "providers.db");
+        try
+        {
+            Directory.CreateDirectory(root);
+            var settings = new AppSettings(statePath);
+            var onlineTransport = new RecordingTransport(new(
+                HttpStatusCode.OK,
+                Encoding.UTF8.GetBytes(RecordedResponse),
+                "application/json"));
+            var online = new CoverArtArchiveProvider(
+                onlineTransport,
+                new MemoryCache(),
+                new MusicBrainzReleaseCache(databasePath),
+                new ProviderNetworkPolicy(settings));
+
+            CoverArtArchiveResult downloaded =
+                await online.GetReleaseArtworkAsync(ReleaseId);
+
+            Assert.Single(downloaded.Images);
+            Assert.Equal(1, onlineTransport.RequestCount);
+            settings.SetPreference(
+                ProviderNetworkPolicy.OfflinePreferenceKey,
+                bool.TrueString);
+            var offlineTransport = new RecordingTransport(new(
+                HttpStatusCode.ServiceUnavailable, []));
+            var progress = new RecordingProgress();
+            var offline = new CoverArtArchiveProvider(
+                offlineTransport,
+                new MemoryCache(),
+                new MusicBrainzReleaseCache(databasePath),
+                new ProviderNetworkPolicy(settings));
+
+            CoverArtArchiveResult cached =
+                await offline.GetReleaseArtworkAsync(
+                    ReleaseId, progress);
+
+            Assert.Single(cached.Images);
+            Assert.Equal(0, offlineTransport.RequestCount);
+            Assert.Contains(
+                "Offline mode",
+                progress.Items[^1].Message!,
+                StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
     private static CoverArtArchiveCandidate Candidate() => new(
         ReleaseId,
         "829521842",

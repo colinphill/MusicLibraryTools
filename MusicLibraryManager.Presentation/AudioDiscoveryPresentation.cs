@@ -55,7 +55,11 @@ public static class AudioDiscoveryRows
                     candidate.MusicBrainzRecordingIds,
                     candidate.MusicBrainzRecordingIds.Length == 0
                         ? "Candidate has no MusicBrainz recording ID"
-                        : "Candidate");
+                        : file.Lookup?.OfflineFallback == true
+                            ? "Offline cached candidate"
+                            : file.Lookup?.FromCache == true
+                                ? "Cached candidate"
+                                : "Candidate");
         }
     }
 

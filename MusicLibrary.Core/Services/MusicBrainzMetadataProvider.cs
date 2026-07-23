@@ -128,7 +128,9 @@ public sealed class MusicBrainzHttpTransport :
 
 public sealed class MusicBrainzMetadataProvider(
     IMusicBrainzHttpTransport transport,
-    IMusicBrainzReleaseCache? cache = null) : IMusicBrainzMetadataProvider
+    IMusicBrainzReleaseCache? cache = null,
+    IProviderNetworkPolicy? networkPolicy = null) :
+    IMusicBrainzMetadataProvider
 {
     public MetadataSourceDescriptor Descriptor { get; } = new(
         "musicbrainz",
@@ -158,13 +160,27 @@ public sealed class MusicBrainzMetadataProvider(
         MusicBrainzCacheEntry<MusicBrainzReleaseResult>? cached =
             await ReadCacheAsync<MusicBrainzReleaseResult>(cacheKey, ct)
                 .ConfigureAwait(false);
-        if (cached?.IsFresh == true)
+        if (cached?.IsFresh == true &&
+            networkPolicy?.IsOffline != true)
         {
             ReportCached(
                 progress,
                 cached.Value.Releases.Length,
                 "MusicBrainz release editions");
             return cached.Value;
+        }
+        if (networkPolicy?.IsOffline == true)
+        {
+            if (cached is not null)
+            {
+                ReportStaleCache(
+                    progress,
+                    cached.Value.Releases.Length,
+                    "Offline mode; using cached MusicBrainz release editions");
+                return cached.Value;
+            }
+            throw new InvalidOperationException(
+                "Offline mode is enabled and no cached MusicBrainz release editions are available.");
         }
         try
         {
@@ -240,13 +256,27 @@ public sealed class MusicBrainzMetadataProvider(
         MusicBrainzCacheEntry<MusicBrainzReleaseSearchResult>? cached =
             await ReadCacheAsync<MusicBrainzReleaseSearchResult>(cacheKey, ct)
                 .ConfigureAwait(false);
-        if (cached?.IsFresh == true)
+        if (cached?.IsFresh == true &&
+            networkPolicy?.IsOffline != true)
         {
             ReportCached(
                 progress,
                 cached.Value.Releases.Length,
                 "MusicBrainz search results");
             return cached.Value;
+        }
+        if (networkPolicy?.IsOffline == true)
+        {
+            if (cached is not null)
+            {
+                ReportStaleCache(
+                    progress,
+                    cached.Value.Releases.Length,
+                    "Offline mode; using cached MusicBrainz search results");
+                return cached.Value;
+            }
+            throw new InvalidOperationException(
+                "Offline mode is enabled and no cached MusicBrainz search results are available.");
         }
         try
         {
@@ -320,13 +350,27 @@ public sealed class MusicBrainzMetadataProvider(
         MusicBrainzCacheEntry<MusicBrainzReleaseCandidate>? cached =
             await ReadCacheAsync<MusicBrainzReleaseCandidate>(cacheKey, ct)
                 .ConfigureAwait(false);
-        if (cached?.IsFresh == true)
+        if (cached?.IsFresh == true &&
+            networkPolicy?.IsOffline != true)
         {
             ReportCached(
                 progress,
                 cached.Value.Tracks.Length,
                 "MusicBrainz release tracks");
             return cached.Value;
+        }
+        if (networkPolicy?.IsOffline == true)
+        {
+            if (cached is not null)
+            {
+                ReportStaleCache(
+                    progress,
+                    cached.Value.Tracks.Length,
+                    "Offline mode; using cached MusicBrainz release details");
+                return cached.Value;
+            }
+            throw new InvalidOperationException(
+                "Offline mode is enabled and no cached MusicBrainz release details are available.");
         }
         try
         {

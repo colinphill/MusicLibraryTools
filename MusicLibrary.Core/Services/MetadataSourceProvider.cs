@@ -27,6 +27,22 @@ public interface IMetadataSourceProvider
     MetadataSourceDescriptor Descriptor { get; }
 }
 
+public interface IProviderNetworkPolicy
+{
+    bool IsOffline { get; }
+}
+
+public sealed class ProviderNetworkPolicy(
+    IAppSettings settings) : IProviderNetworkPolicy
+{
+    public const string OfflinePreferenceKey =
+        "providers.offlineMode";
+
+    public bool IsOffline => bool.TryParse(
+        settings.GetPreference(OfflinePreferenceKey),
+        out bool offline) && offline;
+}
+
 public interface IMetadataSourceCatalog
 {
     IReadOnlyList<IMetadataSourceProvider> Providers { get; }

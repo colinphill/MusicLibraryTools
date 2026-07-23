@@ -66,10 +66,13 @@ public static class ServiceCollectionExtensions
             AudioFingerprintCache>();
         services.AddSingleton<IAudioFingerprintService, AudioFingerprintService>();
         services.AddSingleton<IAcoustIdHttpTransport, AcoustIdHttpTransport>();
+        services.AddSingleton<IProviderNetworkPolicy, ProviderNetworkPolicy>();
         services.AddSingleton<IAcoustIdLookupService, AcoustIdLookupService>();
         services.AddSingleton<IAcoustIdDiscoveryService, AcoustIdDiscoveryService>();
         services.AddSingleton<IMusicBrainzHttpTransport, MusicBrainzHttpTransport>();
         services.AddSingleton<IMusicBrainzReleaseCache, MusicBrainzReleaseCache>();
+        services.AddSingleton<IMetadataSourceDataCache>(sp =>
+            sp.GetRequiredService<IMusicBrainzReleaseCache>());
         services.AddSingleton<MusicBrainzMetadataProvider>();
         services.AddSingleton<IMusicBrainzMetadataProvider>(sp =>
             sp.GetRequiredService<MusicBrainzMetadataProvider>());

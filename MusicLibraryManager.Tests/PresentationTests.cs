@@ -811,6 +811,7 @@ public sealed class PresentationTests
         Assert.Equal("stored-fpcalc", viewModel.FpcalcPath);
         viewModel.FpcalcPath = "new-fpcalc";
         viewModel.AcoustIdClientKey = "client-key";
+        viewModel.OfflineMode = true;
 
         Assert.Equal(
             "new-fpcalc",
@@ -818,7 +819,43 @@ public sealed class PresentationTests
         Assert.Equal(
             "client-key",
             settings.Preferences[AcoustIdLookupService.ClientKeyPreference]);
+        Assert.Equal(
+            bool.TrueString,
+            settings.Preferences[ProviderNetworkPolicy.OfflinePreferenceKey]);
         Assert.False(viewModel.HasUnsavedChanges);
+    }
+
+    [Fact]
+    public void Audio_discovery_labels_offline_cached_candidates()
+    {
+        var fingerprint = new AudioFingerprint(
+            @"C:\music\track.flac",
+            "AQAD",
+            TimeSpan.FromSeconds(42),
+            42);
+        var lookup = new AcoustIdLookupResult(
+            fingerprint,
+            [new(
+                Guid.Parse("9ff43b6a-4f16-427c-93c2-92307ca505e0"),
+                0.91,
+                [Guid.Parse(
+                    "cd2e7c47-16f5-46c6-a37c-a1eb7bf599ff")])],
+            DateTimeOffset.UtcNow,
+            FromCache: true,
+            OfflineFallback: true);
+        var result = new AcoustIdDiscoveryResult(
+        [
+            new(
+                fingerprint.Path,
+                fingerprint,
+                lookup,
+                []),
+        ]);
+
+        AudioDiscoveryRow row = Assert.Single(
+            AudioDiscoveryRows.Create(result));
+
+        Assert.Equal("Offline cached candidate", row.Status);
     }
 
     [Fact]

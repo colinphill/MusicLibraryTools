@@ -239,7 +239,10 @@ public sealed class ArtworkDownloadCache : IArtworkDownloadCache
 
 public sealed class CoverArtArchiveProvider(
     ICoverArtArchiveHttpTransport transport,
-    IArtworkDownloadCache cache) : ICoverArtArchiveProvider
+    IArtworkDownloadCache cache,
+    IMetadataSourceDataCache? metadataCache = null,
+    IProviderNetworkPolicy? networkPolicy = null) :
+    ICoverArtArchiveProvider
 {
     public MetadataSourceDescriptor Descriptor { get; } = new(
         "cover-art-archive",
@@ -247,6 +250,8 @@ public sealed class CoverArtArchiveProvider(
         MetadataSourceCapabilities.ReleaseArtwork);
 
     private readonly SemaphoreSlim _requestGate = new(2, 2);
+    private static readonly TimeSpan ManifestMaximumAge =
+        TimeSpan.FromDays(30);
 
     public async Task<CoverArtArchiveResult> GetReleaseArtworkAsync(
         Guid releaseId,
@@ -256,32 +261,84 @@ public sealed class CoverArtArchiveProvider(
         if (releaseId == Guid.Empty)
             throw new ArgumentException(
                 "A MusicBrainz release ID is required.", nameof(releaseId));
+        string cacheKey = $"cover-art-release:{releaseId:D}";
+        MusicBrainzCacheEntry<CoverArtArchiveResult>? cached =
+            await ReadMetadataCacheAsync<CoverArtArchiveResult>(
+                    cacheKey, ct)
+                .ConfigureAwait(false);
+        if (cached?.IsFresh == true &&
+            networkPolicy?.IsOffline != true)
+        {
+            progress?.Report(new(
+                OperationPhase.Completed,
+                cached.Value.Images.Length,
+                cached.Value.Images.Length,
+                Message: "Loaded cached Cover Art Archive image list"));
+            return cached.Value;
+        }
+        if (networkPolicy?.IsOffline == true)
+        {
+            if (cached is not null)
+            {
+                progress?.Report(new(
+                    OperationPhase.Completed,
+                    cached.Value.Images.Length,
+                    cached.Value.Images.Length,
+                    Message: "Offline mode; using cached Cover Art Archive image list"));
+                return cached.Value;
+            }
+            throw new InvalidOperationException(
+                "Offline mode is enabled and no cached Cover Art Archive image list is available.");
+        }
         progress?.Report(new(
             OperationPhase.LoadingConfiguration,
             0,
             1,
             Message: "Loading Cover Art Archive image list"));
-        CoverArtArchiveHttpResult response = await SendWithRetryAsync(
-            BuildReleaseUri(releaseId), "application/json", ct)
-            .ConfigureAwait(false);
-        if (response.StatusCode == HttpStatusCode.NotFound)
+        try
+        {
+            CoverArtArchiveHttpResult response = await SendWithRetryAsync(
+                BuildReleaseUri(releaseId), "application/json", ct)
+                .ConfigureAwait(false);
+            if (response.StatusCode == HttpStatusCode.NotFound)
+            {
+                var empty = new CoverArtArchiveResult(
+                    releaseId, [], DateTimeOffset.UtcNow);
+                await WriteMetadataCacheAsync(
+                        cacheKey, empty, empty.RetrievedAtUtc, ct)
+                    .ConfigureAwait(false);
+                progress?.Report(new(
+                    OperationPhase.Completed,
+                    0,
+                    0,
+                    Message: "This release has no Cover Art Archive images"));
+                return empty;
+            }
+            EnsureSuccess(response, "artwork lookup");
+            ImmutableArray<CoverArtArchiveCandidate> images =
+                ParseRelease(releaseId, response.Content);
+            var result = new CoverArtArchiveResult(
+                releaseId, images, DateTimeOffset.UtcNow);
+            await WriteMetadataCacheAsync(
+                    cacheKey, result, result.RetrievedAtUtc, ct)
+                .ConfigureAwait(false);
+            progress?.Report(new(
+                OperationPhase.Completed,
+                images.Length,
+                images.Length,
+                Message: $"Found {images.Length:N0} Cover Art Archive image(s)"));
+            return result;
+        }
+        catch (Exception error) when (
+            error is not OperationCanceledException && cached is not null)
         {
             progress?.Report(new(
                 OperationPhase.Completed,
-                0,
-                0,
-                Message: "This release has no Cover Art Archive images"));
-            return new(releaseId, [], DateTimeOffset.UtcNow);
+                cached.Value.Images.Length,
+                cached.Value.Images.Length,
+                Message: "Cover Art Archive is unavailable; using cached image list"));
+            return cached.Value;
         }
-        EnsureSuccess(response, "artwork lookup");
-        ImmutableArray<CoverArtArchiveCandidate> images =
-            ParseRelease(releaseId, response.Content);
-        progress?.Report(new(
-            OperationPhase.Completed,
-            images.Length,
-            images.Length,
-            Message: $"Found {images.Length:N0} Cover Art Archive image(s)"));
-        return new(releaseId, images, DateTimeOffset.UtcNow);
     }
 
     public async Task<CoverArtDownload> DownloadAsync(
@@ -303,6 +360,9 @@ public sealed class CoverArtArchiveProvider(
                 Message: "Loaded artwork from the local cache"));
             return cached;
         }
+        if (networkPolicy?.IsOffline == true)
+            throw new InvalidOperationException(
+                "Offline mode is enabled and this artwork image is not cached.");
         progress?.Report(new(
             OperationPhase.Applying,
             0,
@@ -327,6 +387,47 @@ public sealed class CoverArtArchiveProvider(
             OperationPhase.Completed, 1, 1,
             Message: $"Downloaded {response.Content.Length:N0} artwork bytes"));
         return downloaded;
+    }
+
+    private async Task<MusicBrainzCacheEntry<T>?>
+        ReadMetadataCacheAsync<T>(
+        string key,
+        CancellationToken ct)
+    {
+        if (metadataCache is null)
+            return null;
+        try
+        {
+            return await metadataCache.ReadAsync<T>(
+                    key, ManifestMaximumAge, ct)
+                .ConfigureAwait(false);
+        }
+        catch (Exception error) when (
+            error is not OperationCanceledException)
+        {
+            return null;
+        }
+    }
+
+    private async Task WriteMetadataCacheAsync<T>(
+        string key,
+        T value,
+        DateTimeOffset retrievedAtUtc,
+        CancellationToken ct)
+    {
+        if (metadataCache is null)
+            return;
+        try
+        {
+            await metadataCache.WriteAsync(
+                    key, value, retrievedAtUtc, ct)
+                .ConfigureAwait(false);
+        }
+        catch (Exception error) when (
+            error is not OperationCanceledException)
+        {
+            // Cache failures do not invalidate a provider response.
+        }
     }
 
     public static Uri BuildReleaseUri(Guid releaseId) =>
