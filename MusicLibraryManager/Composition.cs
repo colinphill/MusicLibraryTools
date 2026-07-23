@@ -35,6 +35,7 @@ public static class Composition
         services.AddSingleton<HomeViewModel>();
         services.AddSingleton<SelectionInspectorViewModel>();
         services.AddSingleton<LibraryViewModel>();
+        services.AddSingleton<WorkbenchViewModel>();
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<AnalyzerViewModel>();
         services.AddSingleton<IngestViewModel>();

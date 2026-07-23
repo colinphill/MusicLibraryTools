@@ -19,6 +19,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IMediaCatalogIntegration, ItunesMediaCatalogIntegration>();
         services.AddSingleton<IFileInventoryService, FileInventoryService>();
         services.AddSingleton<IFileMutationPlanExecutor, FileMutationPlanExecutor>();
+        services.AddSingleton<IMetadataDocumentService, MetadataDocumentService>();
+        services.AddSingleton<IWorkbenchService, WorkbenchService>();
+        services.AddSingleton<IEditHistoryService, EditHistoryService>();
+        services.AddSingleton<IMetadataOperationService, MetadataOperationService>();
         services.AddSingleton<IExportTransport, LocalFileSystemExportTransport>();
         services.AddSingleton<IConfiguredExportService, ConfiguredExportService>();
         services.AddSingleton<ILibraryOperationContextFactory, LibraryOperationContextFactory>();

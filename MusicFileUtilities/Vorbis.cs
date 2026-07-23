@@ -268,7 +268,8 @@ namespace MusicFileUtilities
     }
 
     [Serializable]
-    public class VorbisComments : TagBase, IArtworkWriter, IUserStringMetadata
+    public class VorbisComments : TagBase, IArtworkWriter, IUserStringMetadata,
+        IMultiValueMetadataWriter, IMultiValueUserStringMetadata
     {
         // IArtworkWriter: replace the front cover in the PICTURE list, probing dimensions the same
         // way the reader does. FLAC/Ogg serialize Artworks on save (see FLAC.SaveTags / ToByteArray).
@@ -570,6 +571,25 @@ namespace MusicFileUtilities
 
         public void RemoveField(TagFields field) => SetField(field, null);
 
+        public bool SupportsMultipleValues(TagFields field) =>
+            field is not TagFields.TrackNumber and not TagFields.TotalTracks
+                and not TagFields.DiscNumber and not TagFields.TotalDiscs;
+
+        public void SetFieldValues(TagFields field, IReadOnlyList<string> values)
+        {
+            ArgumentNullException.ThrowIfNull(values);
+            if (!SupportsMultipleValues(field) && values.Count > 1)
+                throw new ArgumentException(
+                    $"Vorbis field '{field}' permits only one value.", nameof(values));
+            if (!VorbisUtil.ReverseTagMappings.TryGetValue(field, out string key))
+                throw new ArgumentException($"Unsupported tag field for Vorbis: {field}");
+            Comments.RemoveAll(comment =>
+                VorbisUtil.TagMappings.TryGetValue(comment.Key, out TagFields mapped) &&
+                mapped == field);
+            foreach (string value in values)
+                Comments.Add(KeyValuePair.Create(key, value));
+        }
+
         public void SetUserString(string key, string value)
         {
             if (string.IsNullOrWhiteSpace(key))
@@ -584,6 +604,20 @@ namespace MusicFileUtilities
         }
 
         public void RemoveUserString(string key) => SetUserString(key, null);
+
+        public void SetUserStringValues(string key, IReadOnlyList<string> values)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(key);
+            ArgumentNullException.ThrowIfNull(values);
+            key = key.Trim().ToUpperInvariant();
+            if (key.Contains('='))
+                throw new ArgumentException(
+                    "A Vorbis comment key cannot contain '='.", nameof(key));
+            Comments.RemoveAll(comment => string.Equals(
+                comment.Key, key, StringComparison.OrdinalIgnoreCase));
+            foreach (string value in values)
+                Comments.Add(KeyValuePair.Create(key, value));
+        }
 
     }
 

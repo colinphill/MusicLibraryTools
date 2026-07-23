@@ -168,6 +168,17 @@ namespace MusicFileUtilities
     }
 
     /// <summary>
+    /// Writes ordered values without collapsing them into a display string. Implementations
+    /// advertise support per field because some native formats only permit one value for number,
+    /// date, or identifier fields.
+    /// </summary>
+    public interface IMultiValueMetadataWriter
+    {
+        bool SupportsMultipleValues(TagFields field);
+        void SetFieldValues(TagFields field, IReadOnlyList<string> values);
+    }
+
+    /// <summary>
     /// Reads and writes format-native user-defined text fields. Implementations map these to ID3
     /// TXXX frames, Vorbis comments, APE text items, or MP4 freeform atoms as appropriate.
     /// Known <see cref="TagFields"/> values are intentionally excluded from
@@ -178,6 +189,12 @@ namespace MusicFileUtilities
         IEnumerable<KeyValuePair<string, string>> GetUserStrings();
         void SetUserString(string key, string value);
         void RemoveUserString(string key);
+    }
+
+    /// <summary>Writes ordered values for a format-native user-defined text key.</summary>
+    public interface IMultiValueUserStringMetadata
+    {
+        void SetUserStringValues(string key, IReadOnlyList<string> values);
     }
 
     /// <summary>

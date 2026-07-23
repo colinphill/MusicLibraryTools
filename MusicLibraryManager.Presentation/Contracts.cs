@@ -6,6 +6,7 @@ public enum ShellDestination
 {
     Home,
     Library,
+    Workbench,
     Health,
     Ingest,
     Organize,
@@ -32,6 +33,13 @@ public interface INavigationGuard
 public interface IFilePickerService
 {
     Task<string?> PickFileAsync(string title, IReadOnlyList<FilePickerType>? types = null);
+    async Task<IReadOnlyList<string>> PickFilesAsync(
+        string title,
+        IReadOnlyList<FilePickerType>? types = null)
+    {
+        string? path = await PickFileAsync(title, types);
+        return path is null ? [] : [path];
+    }
     Task<string?> PickFolderAsync(string title);
     Task<string?> SaveFileAsync(string title, string suggestedName, string extension);
 }

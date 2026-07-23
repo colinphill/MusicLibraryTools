@@ -12,6 +12,8 @@
           <Button Classes="app" Margin="0,0,8,6" Content="Reload" Command="{Binding ReloadCommand}"
                   AutomationProperties.Name="Reload cached library" />
           <Button Classes="app primary" Margin="0,0,8,6" Content="Index library" Command="{Binding Indexing.IndexCommand}" />
+          <Button Classes="app" Margin="0,0,8,6" Content="Open in Workbench"
+                  Command="{Binding OpenInWorkbenchCommand}" />
           <Button Classes="app" Margin="0,0,8,6" Content="Cancel" Command="{Binding Indexing.CancelCommand}"
                   IsVisible="{Binding Indexing.IsIndexing}" />
           <Button x:Name="InspectorToggle" Classes="app" Margin="0,0,0,6" Content="Inspector"

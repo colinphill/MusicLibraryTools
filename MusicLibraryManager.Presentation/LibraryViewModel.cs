@@ -16,6 +16,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private readonly SelectionInspectorViewModel _inspector;
     private readonly INavigationService _navigation;
     private readonly IThumbnailService _thumbnails;
+    private readonly WorkbenchViewModel? _workbench;
     private readonly SemaphoreSlim _thumbnailGate = new(4, 4);
     private readonly object _thumbnailSync = new();
     private readonly Dictionary<LibraryRow, CancellationTokenSource> _thumbnailLoads = [];
@@ -33,6 +34,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ReloadCommand))]
+    [NotifyCanExecuteChangedFor(nameof(OpenInWorkbenchCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -78,7 +80,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         SelectionInspectorViewModel inspector,
         INavigationService navigation,
         IndexingViewModel indexing,
-        IThumbnailService thumbnails)
+        IThumbnailService thumbnails,
+        WorkbenchViewModel? workbench = null)
     {
         _library = library;
         _reindex = reindex;
@@ -86,6 +89,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         _inspector = inspector;
         _navigation = navigation;
         _thumbnails = thumbnails;
+        _workbench = workbench;
         Indexing = indexing;
         foreach (DetailsColumn column in DetailsColumns.All)
             Columns.Add(new LibraryColumnChoice(column.Key, column.Header, DetailsColumns.DefaultVisible.Contains(column.Key)));
@@ -339,7 +343,20 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             return;
         _selectedPaths = distinct;
         OnPropertyChanged(nameof(SelectedPaths));
+        OpenInWorkbenchCommand.NotifyCanExecuteChanged();
     }
+
+    [RelayCommand(CanExecute = nameof(CanOpenInWorkbench))]
+    private async Task OpenInWorkbenchAsync()
+    {
+        if (_workbench is null || _selectedPaths.Count == 0)
+            return;
+        await _workbench.AddSourcesAsync(_selectedPaths);
+        _navigation.Navigate(ShellDestination.Workbench);
+    }
+
+    private bool CanOpenInWorkbench() =>
+        !IsBusy && _workbench is not null && _selectedPaths.Count > 0;
 
     public Task ApplyFilterNowAsync(CancellationToken cancellationToken = default)
         => ApplyFilterAsync(immediate: true, cancellationToken);

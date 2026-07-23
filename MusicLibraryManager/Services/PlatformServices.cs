@@ -47,6 +47,29 @@ public sealed class FilePickerService(WindowContext context) : IFilePickerServic
         return result.FirstOrDefault()?.TryGetLocalPath();
     }
 
+    public async Task<IReadOnlyList<string>> PickFilesAsync(
+        string title,
+        IReadOnlyList<FilePickerType>? types = null)
+    {
+        var provider = context.Window?.StorageProvider;
+        if (provider is null)
+            return [];
+        var result = await provider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = title,
+            AllowMultiple = true,
+            FileTypeFilter = types?.Select(type => new FilePickerFileType(type.Description)
+            {
+                Patterns = type.Extensions.Select(extension =>
+                    $"*{NormalizeExtension(extension)}").ToArray(),
+            }).ToArray(),
+        });
+        return result.Select(file => file.TryGetLocalPath())
+            .Where(path => path is not null)
+            .Cast<string>()
+            .ToArray();
+    }
+
     public async Task<string?> PickFolderAsync(string title)
     {
         var provider = context.Window?.StorageProvider;

@@ -43,7 +43,7 @@ public interface IOperationJournalService
 public sealed class OperationJournalService : IOperationJournalService
 {
     private static readonly Regex ContainerName = new(
-        @"^(?<base>.+)\.(?<tool>IngestMusic|SortDownloads|OrganizeFiles|CrossSyncMusic|AndroidSync|UpdateCarCard|UpdateSmartStorage)(?<suffix>-quarantine|-recovery)$",
+        @"^(?<base>.+)\.(?<tool>IngestMusic|SortDownloads|OrganizeFiles|CrossSyncMusic|AndroidSync|UpdateCarCard|UpdateSmartStorage|MusicLibraryManager)(?<suffix>-quarantine|-recovery)$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private readonly IFileMutationCoordinator _mutations;
     private readonly IItunesMediaMutationService? _itunes;

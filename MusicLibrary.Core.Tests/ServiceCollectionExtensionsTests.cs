@@ -35,6 +35,14 @@ public sealed class ServiceCollectionExtensionsTests
             provider.GetRequiredService<IMediaCatalogIntegration>());
         Assert.IsType<LocalFileSystemExportTransport>(
             provider.GetRequiredService<IExportTransport>());
+        Assert.IsType<MetadataDocumentService>(
+            provider.GetRequiredService<IMetadataDocumentService>());
+        Assert.IsType<WorkbenchService>(
+            provider.GetRequiredService<IWorkbenchService>());
+        Assert.IsType<MetadataOperationService>(
+            provider.GetRequiredService<IMetadataOperationService>());
+        Assert.IsType<EditHistoryService>(
+            provider.GetRequiredService<IEditHistoryService>());
         Assert.Equal(BuiltInLibraryOperationProviders.All.Count,
             provider.GetServices<ILibraryOperationProvider>().Count());
         Assert.Equal(["itunes-validation"],

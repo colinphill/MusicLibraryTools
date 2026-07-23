@@ -43,6 +43,7 @@ public partial class MainWindow : Window
         {
             [ShellDestination.Home] = this.FindControl<Button>("HomeNav")!,
             [ShellDestination.Library] = this.FindControl<Button>("LibraryNav")!,
+            [ShellDestination.Workbench] = this.FindControl<Button>("WorkbenchNav")!,
             [ShellDestination.Health] = this.FindControl<Button>("HealthNav")!,
             [ShellDestination.Ingest] = this.FindControl<Button>("IngestNav")!,
             [ShellDestination.Organize] = this.FindControl<Button>("OrganizeNav")!,
@@ -195,6 +196,7 @@ public partial class MainWindow : Window
             {
                 ShellDestination.Home => new HomeView(),
                 ShellDestination.Library => new LibraryView(),
+                ShellDestination.Workbench => new WorkbenchView(),
                 ShellDestination.Health => new HealthView(),
                 ShellDestination.Ingest => new IngestView(),
                 ShellDestination.Organize => new OrganizeView(),

@@ -15,7 +15,8 @@ public sealed record AppGridColumnDefinition(
     double MinWidth = 60,
     bool Visible = true,
     IDataTemplate? CellTemplate = null,
-    bool Sortable = true);
+    bool Sortable = true,
+    bool Editable = false);
 
 public sealed class AppDataGrid : DataGrid
 {
@@ -67,9 +68,15 @@ public sealed class AppDataGrid : DataGrid
                     ? new DataGridTemplateColumn { CellTemplate = definition.CellTemplate }
                     : new DataGridTextColumn
                     {
-                        Binding = new Binding(definition.BindingPath ?? definition.Key),
+                        Binding = new Binding(definition.BindingPath ?? definition.Key)
+                        {
+                            Mode = definition.Editable
+                                ? BindingMode.TwoWay
+                                : BindingMode.OneWay,
+                        },
                     };
                 column.Header = definition.Header;
+                column.IsReadOnly = !definition.Editable;
                 column.Width = new DataGridLength(definition.Width);
                 column.MinWidth = definition.MinWidth;
                 column.CanUserSort = definition.Sortable;
