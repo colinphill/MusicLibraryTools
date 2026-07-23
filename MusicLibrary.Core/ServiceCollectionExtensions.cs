@@ -60,6 +60,10 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IIndexBenchmarkService, IndexBenchmarkService>();
         services.AddSingleton<IFfmpegRunner, FfmpegRunner>();
         services.AddSingleton<IFpcalcRunner, FpcalcRunner>();
+        services.AddSingleton<IAudioPayloadIdentityService,
+            AudioPayloadIdentityService>();
+        services.AddSingleton<IAudioFingerprintCache,
+            AudioFingerprintCache>();
         services.AddSingleton<IAudioFingerprintService, AudioFingerprintService>();
         services.AddSingleton<IAcoustIdHttpTransport, AcoustIdHttpTransport>();
         services.AddSingleton<IAcoustIdLookupService, AcoustIdLookupService>();

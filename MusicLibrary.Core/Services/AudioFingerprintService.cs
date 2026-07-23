@@ -38,7 +38,9 @@ public interface IFpcalcRunner
 /// </summary>
 public sealed class AudioFingerprintService(
     IFpcalcRunner fpcalc,
-    IAppSettings settings) : IAudioFingerprintService
+    IAppSettings settings,
+    IAudioPayloadIdentityService? payloadIdentities = null,
+    IAudioFingerprintCache? cache = null) : IAudioFingerprintService
 {
     public const string ExecutablePreferenceKey = "tools.fpcalcPath";
 
@@ -68,8 +70,50 @@ public sealed class AudioFingerprintService(
             1,
             fullPath,
             $"Generating Chromaprint for {Path.GetFileName(fullPath)}"));
+        string? payloadIdentity = null;
+        if (payloadIdentities is not null && cache is not null)
+        {
+            try
+            {
+                payloadIdentity = await payloadIdentities.ComputeAsync(
+                        fullPath, progress, ct)
+                    .ConfigureAwait(false);
+                AudioFingerprint? cached = await cache.ReadAsync(
+                        payloadIdentity, fullPath, ct)
+                    .ConfigureAwait(false);
+                if (cached is not null)
+                {
+                    progress?.Report(new(
+                        OperationPhase.Completed,
+                        1,
+                        1,
+                        fullPath,
+                        $"Loaded cached Chromaprint for " +
+                        Path.GetFileName(fullPath)));
+                    return cached;
+                }
+            }
+            catch (Exception error) when (
+                error is not OperationCanceledException)
+            {
+                payloadIdentity = null;
+            }
+        }
         AudioFingerprint result =
             await fpcalc.GenerateAsync(executable, fullPath, ct);
+        if (payloadIdentity is not null && cache is not null)
+        {
+            try
+            {
+                await cache.WriteAsync(payloadIdentity, result, ct)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception error) when (
+                error is not OperationCanceledException)
+            {
+                // A cache failure never invalidates a generated fingerprint.
+            }
+        }
         progress?.Report(new(
             OperationPhase.Completed,
             1,

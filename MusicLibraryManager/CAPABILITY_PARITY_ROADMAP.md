@@ -222,11 +222,12 @@ capability comparison is possible through typed operations without scripting.
 - [~] Add audio fingerprinting and AcoustID-assisted discovery before the
   MusicBrainz release-selection workflow:
   - [~] Generate Chromaprint fingerprints locally from decoded audio for any
-    readable codec, independently of existing tags.
+    readable codec, independently of existing tags. Native payload identities
+    now cover every currently registered audio family.
   - [~] Use bundled or explicitly configured `fpcalc`/Chromaprint through a
     cross-platform `IAudioFingerprintService`; report tool availability and
     unsupported codecs without failing unrelated files.
-  - [ ] Cache the fingerprint with an audio-payload identity guard so metadata-
+  - [x] Cache the fingerprint with an audio-payload identity guard so metadata-
     only changes do not require recalculation, while audio changes invalidate
     it.
   - [x] Query AcoustID using the fingerprint and whole-file duration and request
@@ -562,3 +563,13 @@ per-operation capability flags.
   planning report progress, accept cancellation, enforce native capabilities
   and policy, preserve non-front roles when requested, and apply through the
   shared recovery and undo path.
+- Added native compressed-audio payload identities for FLAC frames, MP3 and
+  WavPack data outside ID3/APEv2 tags, MP4 `mdat` atoms, DSF data before its
+  metadata pointer, and Ogg packets excluding Vorbis/Opus comments. Identity
+  calculation is streaming, progress-aware, and cancellable; unknown formats
+  safely use a whole-file identity.
+- Added a bounded application-local SQLite Chromaprint cache keyed by that
+  payload identity. It survives restarts, follows files renamed to a new path,
+  reuses fingerprints after metadata-only edits, and invalidates when
+  compressed audio changes. Cache failures never block local `fpcalc`
+  generation.
