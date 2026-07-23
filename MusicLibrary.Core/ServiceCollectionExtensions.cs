@@ -27,6 +27,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IOperationRecipeStore, OperationRecipeStore>();
         services.AddSingleton<IEditHistoryService, EditHistoryService>();
         services.AddSingleton<IMetadataOperationService, MetadataOperationService>();
+        services.AddSingleton<IDelimitedMetadataImportService,
+            DelimitedMetadataImportService>();
         services.AddSingleton<IExportTransport, LocalFileSystemExportTransport>();
         services.AddSingleton<IConfiguredExportService, ConfiguredExportService>();
         services.AddSingleton<IReportRenderer, TextReportRenderer>();

@@ -759,6 +759,10 @@ public sealed class UiControlTests
                 "Preview playlist",
                 workbench.FindControl<Button>(
                     "PreviewPlaylistButton")!.Content);
+            Assert.Equal(
+                "Import CSV/TSV",
+                workbench.FindControl<Button>(
+                    "ImportDelimitedMetadataButton")!.Content);
             Assert.NotNull(workbench.FindControl<AppDataGrid>(
                 "ExternalToolInvocationGrid"));
             Assert.Equal(
@@ -799,6 +803,10 @@ public sealed class UiControlTests
                 "Preview playlist",
                 library.FindControl<Button>(
                     "PreviewLibraryPlaylistButton")!.Content);
+            Assert.Equal(
+                "Import CSV/TSV",
+                library.FindControl<Button>(
+                    "ImportLibraryDelimitedMetadataButton")!.Content);
             Assert.NotNull(library.FindControl<AppDataGrid>(
                 "LibraryExternalToolInvocationGrid"));
             Assert.Equal(

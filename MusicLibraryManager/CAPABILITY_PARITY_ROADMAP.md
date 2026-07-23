@@ -215,7 +215,19 @@ and restored without creating or indexing a library.
   recipe operation.
 - [x] Rearrange filename components through the same configurable directory
   and filename templates.
-- [ ] Import metadata from delimited text or CSV.
+- [x] Import metadata from delimited text or CSV.
+  - A shared Core service auto-detects CSV, TSV, and semicolon-delimited
+    sources; parses quoted delimiters, escaped quotes, and multiline values;
+    and maps headers to known fields or explicit `Custom:<name>` keys.
+  - Repeated field columns preserve ordered multiple values. Configurable
+    empty-cell handling can ignore blanks, remove fields, or retain explicit
+    empty values.
+  - Relative, absolute, and unique-filename matches are constrained to the
+    current Workbench session or explicit Library scope. Ambiguous,
+    duplicate, unmatched, unknown, and malformed input is reported before the
+    ordinary authoritative metadata preview.
+  - Both Workbench and Library expose the same import command, progress,
+    cancellation, native validation, staged apply, recovery, and undo path.
 - [x] Sequential track and disc numbering, including configurable start, step,
   padding, totals, ordered preview, staged apply, and native round-trip.
 - [~] Artwork add, replace, export, resize, classify, and remove. Local and
@@ -564,9 +576,8 @@ per-operation capability flags.
 - Remaining Phase 1 work: complete staged multi-artwork controls and migration
   of the legacy Library inspector/fields dialog onto the shared document and
   mutation services.
-- Remaining Phase 2 work: delimited/CSV metadata import, ad-hoc shared file
-  mutations, live representative draft preview, tag-aware copy/paste, and
-  fully symmetric artwork controls.
+- Remaining Phase 2 work: ad-hoc shared file mutations, live representative
+  draft preview, tag-aware copy/paste, and fully symmetric artwork controls.
 - Remaining Phase 3 work: bundled-or-validated fpcalc coverage for every
   readable codec and candidate ranking that incorporates AcoustID confidence
   and broader album context.

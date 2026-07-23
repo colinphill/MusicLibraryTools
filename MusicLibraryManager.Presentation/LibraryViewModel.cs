@@ -38,6 +38,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private readonly IReportExportService? _reports;
     private readonly IPlaylistWorkspaceService? _playlists;
     private readonly IExternalToolService? _externalTools;
+    private readonly IDelimitedMetadataImportService? _delimitedImports;
     private readonly IFilePickerService? _files;
     private readonly IDialogCoordinator? _dialogs;
     private MetadataOperationPlan? _libraryOperationPlan;
@@ -64,6 +65,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(ReloadCommand))]
     [NotifyCanExecuteChangedFor(nameof(OpenInWorkbenchCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryOperationCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ImportLibraryDelimitedMetadataCommand))]
     [NotifyCanExecuteChangedFor(nameof(DiscoverLibraryAudioCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryAudioIdentifiersCommand))]
     [NotifyCanExecuteChangedFor(nameof(ResolveLibraryRecordingCommand))]
@@ -134,6 +136,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryOperationCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ImportLibraryDelimitedMetadataCommand))]
     [NotifyCanExecuteChangedFor(nameof(ApplyLibraryOperationCommand))]
     [NotifyCanExecuteChangedFor(nameof(DiscoverLibraryAudioCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryAudioIdentifiersCommand))]
@@ -165,6 +168,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PreviewLibraryOperationCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ImportLibraryDelimitedMetadataCommand))]
     [NotifyCanExecuteChangedFor(nameof(DiscoverLibraryAudioCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewLocalLibraryArtworkCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewRemoveLibraryFrontCoverCommand))]
@@ -181,6 +185,10 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [ObservableProperty]
     private string _operationStatus =
         "Choose an operation and scope, then preview authoritative metadata from disk.";
+
+    [ObservableProperty]
+    private DelimitedMetadataEmptyCellMode _importEmptyCellMode =
+        DelimitedMetadataEmptyCellMode.Ignore;
 
     [ObservableProperty]
     private bool _isOperationProgressIndeterminate = true;
@@ -249,7 +257,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         IPlaylistWorkspaceService? playlists = null,
         IExternalToolService? externalTools = null,
         IExternalToolStore? externalToolStore = null,
-        IMetadataGridColumnStore? metadataColumns = null)
+        IMetadataGridColumnStore? metadataColumns = null,
+        IDelimitedMetadataImportService? delimitedImports = null)
     {
         _library = library;
         _reindex = reindex;
@@ -268,6 +277,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         _reports = reports;
         _playlists = playlists;
         _externalTools = externalTools;
+        _delimitedImports = delimitedImports;
         _files = files;
         _dialogs = dialogs;
         OperationEditor = new(
@@ -323,6 +333,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         PlaylistOutputs { get; } = [];
     public ObservableCollection<ExternalToolInvocationRow>
         ExternalToolInvocations { get; } = [];
+    public IReadOnlyList<DelimitedMetadataEmptyCellMode>
+        ImportEmptyCellModes { get; } =
+            Enum.GetValues<DelimitedMetadataEmptyCellMode>();
     public ObservableCollection<MetadataPreviewRow> OperationPreviewChanges { get; } = [];
     public MusicBrainzImportSelectionViewModel ReleaseImport { get; } = new();
     public MusicBrainzReleaseSearchViewModel ReleaseSearch { get; } = new();
@@ -643,6 +656,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         InvalidateExternalToolPlan();
         OpenInWorkbenchCommand.NotifyCanExecuteChanged();
         PreviewLibraryOperationCommand.NotifyCanExecuteChanged();
+        ImportLibraryDelimitedMetadataCommand.NotifyCanExecuteChanged();
         DiscoverLibraryAudioCommand.NotifyCanExecuteChanged();
         PreviewLocalLibraryArtworkCommand.NotifyCanExecuteChanged();
         PreviewRemoveLibraryFrontCoverCommand.NotifyCanExecuteChanged();
@@ -666,6 +680,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     {
         IsOperationsOpen = true;
         PreviewLibraryOperationCommand.NotifyCanExecuteChanged();
+        ImportLibraryDelimitedMetadataCommand.NotifyCanExecuteChanged();
     }
 
     [RelayCommand]
@@ -714,6 +729,99 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         {
             InvalidateLibraryOperationPreview();
             OperationStatus = $"Preview failed: {error.Message}";
+        }
+        finally
+        {
+            EndLibraryOperation();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanImportLibraryDelimitedMetadata))]
+    private async Task ImportLibraryDelimitedMetadataAsync()
+    {
+        if (_metadataOperations is null ||
+            _delimitedImports is null ||
+            _files is null)
+            return;
+        string[] paths = ResolveOperationPaths();
+        if (paths.Length == 0)
+        {
+            OperationStatus =
+                "The selected Library scope contains no files.";
+            return;
+        }
+        string? source = await _files.PickFileAsync(
+            "Import metadata from CSV or delimited text",
+            [new(
+                "Delimited metadata",
+                [".csv", ".tsv", ".txt"])]);
+        if (source is null)
+            return;
+
+        BeginLibraryOperation("Mapping metadata import");
+        try
+        {
+            IProgress<OperationProgress> progress =
+                CreateOperationProgress();
+            DelimitedMetadataImportResult imported =
+                await _delimitedImports.ImportAsync(
+                    source,
+                    paths,
+                    new(EmptyCellMode: ImportEmptyCellMode),
+                    progress: progress,
+                    ct: _operationCancellation!.Token);
+            if (!imported.CanPreview)
+            {
+                string reason = imported.Issues
+                    .FirstOrDefault(issue =>
+                        issue.Severity ==
+                            DelimitedMetadataImportIssueSeverity.Blocker)
+                    ?.Message ??
+                    "No import rows matched the selected Library scope.";
+                throw new InvalidDataException(reason);
+            }
+            MetadataOperationPlan plan =
+                await _metadataOperations.PreviewValueEditsAsync(
+                    imported.EditsByPath,
+                    $"Import metadata from " +
+                    $"{Path.GetFileName(source)}",
+                    progress,
+                    _operationCancellation.Token);
+            _libraryOperationPlan = plan;
+            MetadataPreviewRowBuilder.Populate(
+                OperationPreviewChanges,
+                plan);
+            HasApplicableOperationPreview = plan.CanApply;
+            int blockers = plan.Files
+                .SelectMany(file => file.Issues)
+                .Count(issue => issue.Severity ==
+                    OperationIssueSeverity.Blocker);
+            int warnings = imported.Issues.Count(issue =>
+                issue.Severity ==
+                    DelimitedMetadataImportIssueSeverity.Warning);
+            OperationStatus = blockers > 0
+                ? $"Import preview has {blockers:N0} blocker(s). " +
+                  "No files were changed."
+                : $"Previewed {plan.ChangeCount:N0} imported " +
+                  $"change(s) in {plan.ChangedFileCount:N0} file(s). " +
+                  $"Mapped {imported.MatchedRows:N0} of " +
+                  $"{imported.DataRows:N0} row(s)" +
+                  (warnings == 0
+                      ? "."
+                      : $" with {warnings:N0} warning(s).");
+            OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+        catch (OperationCanceledException)
+        {
+            InvalidateLibraryOperationPreview();
+            OperationStatus =
+                "Import preview cancelled. No files were changed.";
+        }
+        catch (Exception error)
+        {
+            InvalidateLibraryOperationPreview();
+            OperationStatus =
+                $"Import preview failed: {error.Message}";
         }
         finally
         {
@@ -1953,6 +2061,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         InvalidatePlaylistPlan();
         InvalidateExternalToolPlan();
         PreviewLibraryOperationCommand.NotifyCanExecuteChanged();
+        ImportLibraryDelimitedMetadataCommand.NotifyCanExecuteChanged();
         OpenOperationsCommand.NotifyCanExecuteChanged();
         DiscoverLibraryAudioCommand.NotifyCanExecuteChanged();
         PreviewLocalLibraryArtworkCommand.NotifyCanExecuteChanged();
@@ -1963,6 +2072,13 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private bool CanPreviewLibraryOperation() =>
         !IsBusy && !IsOperationBusy && _metadataOperations is not null &&
         OperationEditor.CanCreate && ResolveOperationPaths().Length > 0;
+
+    private bool CanImportLibraryDelimitedMetadata() =>
+        !IsBusy && !IsOperationBusy &&
+        _metadataOperations is not null &&
+        _delimitedImports is not null &&
+        _files is not null &&
+        ResolveOperationPaths().Length > 0;
 
     private bool CanApplyLibraryOperation() =>
         !IsOperationBusy && _libraryOperationPlan is not null &&

@@ -2122,6 +2122,7 @@ public sealed class PresentationTests
         var reports = new FakeReportExportService();
         var playlists = new FakePlaylistWorkspaceService();
         var externalTools = new FakeExternalToolService();
+        var delimited = new FakeDelimitedMetadataImportService();
         var viewModel = new LibraryViewModel(
             library,
             new FakeReindex(),
@@ -2142,11 +2143,32 @@ public sealed class PresentationTests
             discogsMapping: new DiscogsReleaseMappingService(),
             reports: reports,
             playlists: playlists,
-            externalTools: externalTools);
+            externalTools: externalTools,
+            delimitedImports: delimited);
         await viewModel.ReloadAsync();
         await viewModel.SelectAsync(
             [viewModel.Rows.Single(row => row.Title == "One")]);
         viewModel.SelectedOperationScope = LibraryOperationScope.SelectedAlbums;
+
+        await viewModel.ImportLibraryDelimitedMetadataCommand
+            .ExecuteAsync(null);
+
+        Assert.Equal(
+            [@"C:\music\one.flac", @"C:\music\two.flac"],
+            delimited.CandidatePaths);
+        Assert.Equal(
+            DelimitedMetadataEmptyCellMode.Ignore,
+            delimited.Options!.EmptyCellMode);
+        Assert.Equal(
+            delimited.CandidatePaths.Select(Path.GetFullPath),
+            metadataOperations.PreviewedValueEdits.Keys);
+        Assert.Contains(
+            "Mapped 2 of 2 row(s)",
+            viewModel.OperationStatus);
+        viewModel.SelectedOperationScope =
+            LibraryOperationScope.SelectedTracks;
+        viewModel.SelectedOperationScope =
+            LibraryOperationScope.SelectedAlbums;
 
         await viewModel.DiscoverLibraryAudioCommand.ExecuteAsync(null);
 
@@ -2712,6 +2734,47 @@ internal sealed class FakeMetadataOperationService : IMetadataOperationService
         CancellationToken ct = default) =>
         Task.FromResult(new MetadataApplyResult(
             plan.ChangedFileCount, [], []));
+}
+
+internal sealed class FakeDelimitedMetadataImportService :
+    IDelimitedMetadataImportService
+{
+    public IReadOnlyList<string> CandidatePaths { get; private set; } =
+        [];
+    public DelimitedMetadataImportOptions? Options { get; private set; }
+
+    public Task<DelimitedMetadataImportResult> ImportAsync(
+        string sourcePath,
+        IReadOnlyList<string> candidateMediaPaths,
+        DelimitedMetadataImportOptions? options = null,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        CandidatePaths = candidateMediaPaths.ToArray();
+        Options = options;
+        var edits = candidateMediaPaths.ToDictionary(
+            path => path,
+            path => (IReadOnlyList<MetadataValueEdit>)
+            [
+                new(
+                    MetadataFieldKey.Known(TagFields.Title),
+                    ["Imported title"]),
+            ],
+            OperatingSystem.IsWindows()
+                ? StringComparer.OrdinalIgnoreCase
+                : StringComparer.Ordinal);
+        progress?.Report(new(
+            OperationPhase.Planning,
+            candidateMediaPaths.Count,
+            candidateMediaPaths.Count,
+            Message: "Delimited import mapped"));
+        return Task.FromResult(new DelimitedMetadataImportResult(
+            edits,
+            [],
+            candidateMediaPaths.Count,
+            candidateMediaPaths.Count));
+    }
 }
 
 internal sealed class FakeReportExportService : IReportExportService

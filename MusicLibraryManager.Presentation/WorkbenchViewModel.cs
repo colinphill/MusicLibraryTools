@@ -51,6 +51,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private readonly IReportExportService? _reports;
     private readonly IPlaylistWorkspaceService? _playlists;
     private readonly IExternalToolService? _externalTools;
+    private readonly IDelimitedMetadataImportService? _delimitedImports;
     private readonly IThumbnailService _thumbnails;
     private readonly IEditHistoryService _history;
     private readonly IFilePickerService _files;
@@ -67,6 +68,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(BrowseFilesCommand))]
     [NotifyCanExecuteChangedFor(nameof(BrowseFolderCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewEditsCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ImportDelimitedMetadataCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewOperationCommand))]
     [NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
     [NotifyCanExecuteChangedFor(nameof(UndoCommand))]
@@ -176,6 +178,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         WorkbenchFieldEditMode.Replace;
 
     [ObservableProperty]
+    private DelimitedMetadataEmptyCellMode _importEmptyCellMode =
+        DelimitedMetadataEmptyCellMode.Ignore;
+
+    [ObservableProperty]
     private bool _copyPrimaryMetadataToNewLayer = true;
 
     [ObservableProperty]
@@ -225,7 +231,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         IExternalToolService? externalTools = null,
         IExternalToolStore? externalToolStore = null,
         IWorkbenchShortcutStore? shortcutStore = null,
-        IMetadataGridColumnStore? metadataColumns = null)
+        IMetadataGridColumnStore? metadataColumns = null,
+        IDelimitedMetadataImportService? delimitedImports = null)
     {
         _workbench = workbench;
         _operations = operations;
@@ -238,6 +245,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         _reports = reports;
         _playlists = playlists;
         _externalTools = externalTools;
+        _delimitedImports = delimitedImports;
         _thumbnails = thumbnails;
         _history = history;
         _files = files;
@@ -300,6 +308,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     public IReadOnlyList<MetadataFieldChoice> KnownFieldChoices { get; }
     public IReadOnlyList<WorkbenchFieldEditMode> FieldEditModes { get; } =
         Enum.GetValues<WorkbenchFieldEditMode>();
+    public IReadOnlyList<DelimitedMetadataEmptyCellMode>
+        ImportEmptyCellModes { get; } =
+            Enum.GetValues<DelimitedMetadataEmptyCellMode>();
     public IReadOnlyList<ID3v2Version> Id3Versions { get; } =
         Enum.GetValues<ID3v2Version>();
     public IReadOnlyList<ID3TextEncodingPolicy> Id3EncodingPolicies { get; } =
@@ -652,6 +663,57 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             return;
         await PreviewAsync((progress, ct) => _operations.PreviewEditsAsync(
             edits, "Workbench field edits", progress, ct));
+    }
+
+    [RelayCommand(CanExecute = nameof(CanImportDelimitedMetadata))]
+    private async Task ImportDelimitedMetadataAsync()
+    {
+        if (_delimitedImports is null)
+            return;
+        string? path = await _files.PickFileAsync(
+            "Import metadata from CSV or delimited text",
+            [new(
+                "Delimited metadata",
+                [".csv", ".tsv", ".txt"])]);
+        if (path is null)
+            return;
+        DelimitedMetadataImportResult? imported = null;
+        await PreviewAsync(async (progress, ct) =>
+        {
+            imported = await _delimitedImports.ImportAsync(
+                path,
+                Files.Select(file => file.Path).ToArray(),
+                new(EmptyCellMode: ImportEmptyCellMode),
+                progress: progress,
+                ct: ct);
+            if (!imported.CanPreview)
+            {
+                string reason = imported.Issues
+                    .FirstOrDefault(issue =>
+                        issue.Severity ==
+                            DelimitedMetadataImportIssueSeverity.Blocker)
+                    ?.Message ??
+                    "No import rows matched this Workbench session.";
+                throw new InvalidDataException(reason);
+            }
+            return await _operations.PreviewValueEditsAsync(
+                imported.EditsByPath,
+                $"Import metadata from {Path.GetFileName(path)}",
+                progress,
+                ct);
+        });
+        if (_plan is not null && imported is not null)
+        {
+            int warnings = imported.Issues.Count(issue =>
+                issue.Severity ==
+                    DelimitedMetadataImportIssueSeverity.Warning);
+            StatusText +=
+                $" Mapped {imported.MatchedRows:N0} of " +
+                $"{imported.DataRows:N0} row(s)" +
+                (warnings == 0
+                    ? "."
+                    : $" with {warnings:N0} warning(s).");
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanPreviewOperation))]
@@ -2216,6 +2278,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         Files.IndexOf(SelectedFile) is var index && index >= 0 && index < Files.Count - 1;
     private bool CanPreviewEdits() =>
         !IsBusy && Files.Any(file => file.HasChanges);
+    private bool CanImportDelimitedMetadata() =>
+        !IsBusy && Files.Count > 0 &&
+        _delimitedImports is not null;
     private bool CanPreviewOperation() =>
         !IsBusy && Files.Count > 0 && OperationEditor.CanCreate;
     private bool CanPreviewFieldValues() =>

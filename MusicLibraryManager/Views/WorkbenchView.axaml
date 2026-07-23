@@ -68,6 +68,15 @@
               <Button Classes="app primary" Margin="0,0,8,6"
                       Content="Preview inline edits"
                       Command="{Binding PreviewEditsCommand}" />
+              <Button x:Name="ImportDelimitedMetadataButton"
+                      Classes="app" Margin="0,0,8,6"
+                      Content="Import CSV/TSV"
+                      Command="{Binding ImportDelimitedMetadataCommand}" />
+              <ComboBox x:Name="ImportEmptyCellMode"
+                        Classes="app" Width="145" Margin="0,0,8,6"
+                        ItemsSource="{Binding ImportEmptyCellModes}"
+                        SelectedItem="{Binding ImportEmptyCellMode, Mode=TwoWay}"
+                        ToolTip.Tip="How empty import cells are handled" />
             </WrapPanel>
 
             <Grid Grid.Row="1">

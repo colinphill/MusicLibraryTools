@@ -462,8 +462,20 @@
               <TextBox Grid.Column="7" Classes="app"
                        Text="{Binding OperationEditor.ConditionValue, Mode=TwoWay}"
                        PlaceholderText="Condition value" />
-              <Button Grid.Column="8" HorizontalAlignment="Right" Classes="app primary"
-                      Content="Preview" Command="{Binding PreviewLibraryOperationCommand}" />
+              <StackPanel Grid.Column="8" HorizontalAlignment="Right"
+                          Orientation="Horizontal" Spacing="6">
+                <ComboBox x:Name="LibraryImportEmptyCellMode"
+                          Classes="app" Width="135"
+                          ItemsSource="{Binding ImportEmptyCellModes}"
+                          SelectedItem="{Binding ImportEmptyCellMode, Mode=TwoWay}"
+                          ToolTip.Tip="How empty import cells are handled" />
+                <Button x:Name="ImportLibraryDelimitedMetadataButton"
+                        Classes="app" Content="Import CSV/TSV"
+                        Command="{Binding ImportLibraryDelimitedMetadataCommand}" />
+                <Button Classes="app primary"
+                        Content="Preview"
+                        Command="{Binding PreviewLibraryOperationCommand}" />
+              </StackPanel>
             </Grid>
 
             <TabControl Grid.Row="5" MinHeight="190">
