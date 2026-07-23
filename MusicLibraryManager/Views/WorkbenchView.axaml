@@ -622,6 +622,88 @@
             </Grid>
           </Grid>
         </TabItem>
+
+        <TabItem Header="Playlists">
+          <Grid Margin="0,12,0,0" ColumnDefinitions="0.85*,14,1.15*">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+              <StackPanel Spacing="9">
+                <TextBlock Classes="section-title"
+                           Text="Playlist output" />
+                <TextBlock Classes="muted" TextWrapping="Wrap"
+                           Text="The current Workbench order becomes playlist order. Add, remove, and reorder files before previewing." />
+                <Grid ColumnDefinitions="*,130" ColumnSpacing="8">
+                  <TextBox Classes="app"
+                           Text="{Binding PlaylistEditor.Name, Mode=TwoWay}"
+                           PlaceholderText="Playlist name" />
+                  <ComboBox Grid.Column="1" Classes="app"
+                            ItemsSource="{Binding PlaylistEditor.Formats}"
+                            SelectedItem="{Binding PlaylistEditor.Format, Mode=TwoWay}" />
+                </Grid>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                  <TextBox Classes="app"
+                           Text="{Binding PlaylistEditor.OutputPath, Mode=TwoWay}"
+                           PlaceholderText="Output file or folder" />
+                  <Button Grid.Column="1" Classes="app" Content="Browse"
+                          Command="{Binding BrowsePlaylistOutputCommand}" />
+                </Grid>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                  <StackPanel Spacing="4">
+                    <TextBlock Classes="muted" Text="Path style" />
+                    <ComboBox Classes="app"
+                              ItemsSource="{Binding PlaylistEditor.PathStyles}"
+                              SelectedItem="{Binding PlaylistEditor.PathStyle, Mode=TwoWay}" />
+                  </StackPanel>
+                  <StackPanel Grid.Column="1" Spacing="4">
+                    <TextBlock Classes="muted" Text="Encoding" />
+                    <ComboBox Classes="app"
+                              ItemsSource="{Binding PlaylistEditor.Encodings}"
+                              SelectedItem="{Binding PlaylistEditor.Encoding, Mode=TwoWay}" />
+                  </StackPanel>
+                </Grid>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                  <ComboBox Classes="app"
+                            ItemsSource="{Binding PlaylistEditor.LineEndings}"
+                            SelectedItem="{Binding PlaylistEditor.LineEnding, Mode=TwoWay}" />
+                  <CheckBox Grid.Column="1" VerticalAlignment="Center"
+                            Content="Extended track info"
+                            IsChecked="{Binding PlaylistEditor.IncludeExtendedInfo, Mode=TwoWay}" />
+                </Grid>
+                <CheckBox Content="Generate one playlist per metadata group"
+                          IsChecked="{Binding PlaylistEditor.OnePlaylistPerGroup, Mode=TwoWay}" />
+                <ComboBox Classes="app"
+                          ItemsSource="{Binding PlaylistEditor.GroupFields}"
+                          DisplayMemberBinding="{Binding Label}"
+                          SelectedItem="{Binding PlaylistEditor.SelectedGroupField, Mode=TwoWay}" />
+                <TextBox Classes="app"
+                         Text="{Binding PlaylistEditor.GroupFileNameTemplate, Mode=TwoWay}"
+                         PlaceholderText="{}{Name} - {Group}" />
+                <Border Classes="status-banner info">
+                  <TextBlock TextWrapping="Wrap"
+                             Text="Preview reads metadata from disk, resolves relative paths against each destination, and records exact output bytes. Existing playlists are retained for recovery." />
+                </Border>
+              </StackPanel>
+            </ScrollViewer>
+
+            <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto,Auto"
+                  RowSpacing="9">
+              <TextBlock Classes="section-title"
+                         Text="Reviewed playlists" />
+              <controls:AppDataGrid x:Name="PlaylistOutputGrid" Grid.Row="1"
+                  ItemsSource="{Binding PlaylistOutputs}" />
+              <Border Grid.Row="2" Classes="status-banner info">
+                <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
+              </Border>
+              <WrapPanel Grid.Row="3" HorizontalAlignment="Right">
+                <Button x:Name="PreviewPlaylistButton"
+                        Classes="app" Content="Preview playlist"
+                        Command="{Binding PreviewPlaylistCommand}" />
+                <Button Classes="app primary"
+                        Content="Write reviewed playlist"
+                        Command="{Binding ApplyPlaylistCommand}" />
+              </WrapPanel>
+            </Grid>
+          </Grid>
+        </TabItem>
       </TabControl>
     </Border>
   </Grid>

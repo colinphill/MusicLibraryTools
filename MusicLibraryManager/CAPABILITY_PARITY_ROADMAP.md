@@ -46,8 +46,8 @@ the same editor, preview, policy checks, recovery behavior, and history.
   than in either view.
 - [~] Expose every applicable metadata, artwork, file, online-enrichment,
   report, and playlist operation from both Workbench and Library. The initial
-  typed metadata catalog and audio-fingerprint discovery are exposed in both
-  surfaces.
+  typed metadata catalog, audio-fingerprint discovery, structured reports, and
+  playlist output are exposed in both surfaces.
 - [~] Share recipe editing, typed conditions, preview rendering, apply,
   cancellation, history, undo, redo, and repeat between the two surfaces.
 - [x] Let Library operations target an explicit scope: selected tracks,
@@ -120,7 +120,7 @@ appropriate build or test.
   - [x] `IAcoustIdLookupService` resolves fingerprints to scored AcoustID and
     MusicBrainz recording candidates.
   - [x] `IReportExportService`.
-  - [ ] `IPlaylistWorkspaceService`.
+  - [x] `IPlaylistWorkspaceService`.
   - [ ] `IExternalToolService`.
 - [x] Preserve the existing `{Field}` convention where composition is useful;
   do not implement mp3tag's format-string language.
@@ -317,10 +317,10 @@ and then resolved to a user-confirmed release.
 
 ### Playlists and external tools
 
-- [ ] Interactive M3U/M3U8 and cuesheet loading.
-- [ ] Add, remove, and reorder tracks.
-- [ ] Save M3U/M3U8/WPL through existing playlist writers.
-- [ ] Generate grouped playlists with naming templates.
+- [x] Interactive M3U/M3U8 and cuesheet loading.
+- [x] Add, remove, and reorder tracks.
+- [x] Save M3U/M3U8/WPL through existing playlist writers.
+- [x] Generate grouped playlists with naming templates.
 - [ ] External tool executable, argument list, working directory, and
   invocation-mode configuration.
 - [ ] Expand only documented placeholders.
@@ -622,3 +622,13 @@ per-operation capability flags.
   files use the mutation coordinator and recovery journal, while preview and
   apply use each surface's existing progress indicator and cancellation
   command.
+- Added the shared playlist workspace service and matching editors to
+  Workbench and Library. Workbench preserves its explicit session order and
+  already supports playlist/cuesheet loading plus add, remove, and reorder;
+  Library resolves the same explicit selected-track, selected-album, filtered,
+  or complete scope used by other operations. Both surfaces can preview and
+  write M3U, M3U8, or WPL with path style, encoding, line-ending, and extended
+  information controls. Optional metadata grouping generates multiple safely
+  named playlists while preserving track order within each group. Output bytes
+  and destination snapshots are reviewed before apply, existing files use
+  recovery, and preview/apply expose progress and cancellation.

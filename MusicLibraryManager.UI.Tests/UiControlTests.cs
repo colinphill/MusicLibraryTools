@@ -669,6 +669,46 @@ public sealed class UiControlTests
     }
 
     [AvaloniaFact]
+    public void Playlist_output_is_available_from_workbench_and_library()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        MainWindow window = services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Show();
+            INavigationService navigation =
+                services.GetRequiredService<INavigationService>();
+
+            navigation.Navigate(ShellDestination.Workbench);
+            Dispatcher.UIThread.RunJobs();
+            WorkbenchView workbench = Assert.IsType<WorkbenchView>(
+                window.FindControl<ContentControl>("ContentHost")!.Content);
+            Assert.NotNull(workbench.FindControl<AppDataGrid>(
+                "PlaylistOutputGrid"));
+            Assert.Equal(
+                "Preview playlist",
+                workbench.FindControl<Button>(
+                    "PreviewPlaylistButton")!.Content);
+
+            navigation.Navigate(ShellDestination.Library);
+            Dispatcher.UIThread.RunJobs();
+            LibraryView library = Assert.IsType<LibraryView>(
+                window.FindControl<ContentControl>("ContentHost")!.Content);
+            Assert.NotNull(library.FindControl<AppDataGrid>(
+                "LibraryPlaylistOutputGrid"));
+            Assert.Equal(
+                "Preview playlist",
+                library.FindControl<Button>(
+                    "PreviewLibraryPlaylistButton")!.Content);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
     public void Native_shell_constructs_and_routes_every_destination()
     {
         using ServiceProvider services = BuildIsolatedServices();

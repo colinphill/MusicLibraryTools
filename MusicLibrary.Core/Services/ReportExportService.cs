@@ -187,9 +187,30 @@ public sealed class ReportExportService(
                 issue.Severity == OperationIssueSeverity.Blocker))
             return EmptyPlan(request, issues);
 
-        string[] paths = request.Paths
-            .Where(path => !string.IsNullOrWhiteSpace(path))
-            .Select(Path.GetFullPath)
+        var normalizedPaths = new List<string>(request.Paths.Count);
+        foreach (string path in request.Paths.Where(path =>
+                     !string.IsNullOrWhiteSpace(path)))
+        {
+            try
+            {
+                normalizedPaths.Add(Path.GetFullPath(path));
+            }
+            catch (Exception error) when (
+                error is ArgumentException or
+                NotSupportedException or
+                PathTooLongException)
+            {
+                issues.Add(new(
+                    "report-source-invalid",
+                    OperationIssueSeverity.Blocker,
+                    error.Message,
+                    path));
+            }
+        }
+        if (issues.Any(issue =>
+                issue.Severity == OperationIssueSeverity.Blocker))
+            return EmptyPlan(request, issues);
+        string[] paths = normalizedPaths
             .Distinct(PathComparer)
             .ToArray();
         var rows = new List<IndexedReportRow>(paths.Length);
@@ -340,7 +361,8 @@ public sealed class ReportExportService(
     {
         ReportConfiguration configuration = request.Configuration;
         var issues = new List<OperationIssue>();
-        if (request.Paths.Count == 0)
+        if (!request.Paths.Any(path =>
+                !string.IsNullOrWhiteSpace(path)))
             issues.Add(new(
                 "report-sources-empty",
                 OperationIssueSeverity.Blocker,

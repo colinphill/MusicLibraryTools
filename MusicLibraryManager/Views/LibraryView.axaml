@@ -183,9 +183,9 @@
           <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto" RowSpacing="10">
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Spacing="2">
-                <TextBlock Text="Library operation and report" FontSize="16" FontWeight="SemiBold" />
+                <TextBlock Text="Library operations and output" FontSize="16" FontWeight="SemiBold" />
                 <TextBlock Classes="muted"
-                           Text="Apply the same typed operations and structured reports to an explicit Library scope." />
+                           Text="Apply typed operations, reports, and playlists to an explicit Library scope." />
               </StackPanel>
               <Grid Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="6">
                 <ComboBox Classes="app"
@@ -573,6 +573,74 @@
                       <Button Classes="app primary"
                               Content="Write reviewed report"
                               Command="{Binding ApplyLibraryReportCommand}" />
+                    </WrapPanel>
+                  </Grid>
+                </Grid>
+              </TabItem>
+              <TabItem Header="Playlists">
+                <Grid Margin="0,6,0,0"
+                      ColumnDefinitions="0.9*,12,1.1*">
+                  <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="7">
+                      <Grid ColumnDefinitions="*,120" ColumnSpacing="7">
+                        <TextBox Classes="app"
+                                 Text="{Binding PlaylistEditor.Name, Mode=TwoWay}"
+                                 PlaceholderText="Playlist name" />
+                        <ComboBox Grid.Column="1" Classes="app"
+                                  ItemsSource="{Binding PlaylistEditor.Formats}"
+                                  SelectedItem="{Binding PlaylistEditor.Format, Mode=TwoWay}" />
+                      </Grid>
+                      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="7">
+                        <TextBox Classes="app"
+                                 Text="{Binding PlaylistEditor.OutputPath, Mode=TwoWay}"
+                                 PlaceholderText="Output file or folder" />
+                        <Button Grid.Column="1" Classes="app" Content="Browse"
+                                Command="{Binding BrowseLibraryPlaylistOutputCommand}" />
+                      </Grid>
+                      <Grid ColumnDefinitions="*,*,*" ColumnSpacing="7">
+                        <ComboBox Classes="app"
+                                  ItemsSource="{Binding PlaylistEditor.PathStyles}"
+                                  SelectedItem="{Binding PlaylistEditor.PathStyle, Mode=TwoWay}" />
+                        <ComboBox Grid.Column="1" Classes="app"
+                                  ItemsSource="{Binding PlaylistEditor.Encodings}"
+                                  SelectedItem="{Binding PlaylistEditor.Encoding, Mode=TwoWay}" />
+                        <ComboBox Grid.Column="2" Classes="app"
+                                  ItemsSource="{Binding PlaylistEditor.LineEndings}"
+                                  SelectedItem="{Binding PlaylistEditor.LineEnding, Mode=TwoWay}" />
+                      </Grid>
+                      <CheckBox Content="Include extended track information"
+                                IsChecked="{Binding PlaylistEditor.IncludeExtendedInfo, Mode=TwoWay}" />
+                      <CheckBox Content="One playlist per metadata group"
+                                IsChecked="{Binding PlaylistEditor.OnePlaylistPerGroup, Mode=TwoWay}" />
+                      <Grid ColumnDefinitions="*,*" ColumnSpacing="7">
+                        <ComboBox Classes="app"
+                                  ItemsSource="{Binding PlaylistEditor.GroupFields}"
+                                  DisplayMemberBinding="{Binding Label}"
+                                  SelectedItem="{Binding PlaylistEditor.SelectedGroupField, Mode=TwoWay}" />
+                        <TextBox Grid.Column="1" Classes="app"
+                                 Text="{Binding PlaylistEditor.GroupFileNameTemplate, Mode=TwoWay}"
+                                 PlaceholderText="{}{Name} - {Group}" />
+                      </Grid>
+                      <Border Classes="status-banner info">
+                        <TextBlock TextWrapping="Wrap"
+                                   Text="Playlist order follows the selected Library scope. Preview reads current metadata from disk and records recoverable output." />
+                      </Border>
+                    </StackPanel>
+                  </ScrollViewer>
+                  <Grid Grid.Column="2" RowDefinitions="*,Auto"
+                        RowSpacing="7">
+                    <controls:AppDataGrid
+                        x:Name="LibraryPlaylistOutputGrid"
+                        ItemsSource="{Binding PlaylistOutputs}" />
+                    <WrapPanel Grid.Row="1"
+                               HorizontalAlignment="Right">
+                      <Button x:Name="PreviewLibraryPlaylistButton"
+                              Classes="app"
+                              Content="Preview playlist"
+                              Command="{Binding PreviewLibraryPlaylistCommand}" />
+                      <Button Classes="app primary"
+                              Content="Write reviewed playlist"
+                              Command="{Binding ApplyLibraryPlaylistCommand}" />
                     </WrapPanel>
                   </Grid>
                 </Grid>

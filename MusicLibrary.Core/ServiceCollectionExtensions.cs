@@ -41,6 +41,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ICrossLibrarySyncService, CrossLibrarySyncService>();
         services.AddSingleton<IPlaylistWriter, M3uPlaylistWriter>();
         services.AddSingleton<IPlaylistWriter, WplPlaylistWriter>();
+        services.AddSingleton<IPlaylistWorkspaceService,
+            PlaylistWorkspaceService>();
         services.AddSingleton<IPlaylistExportService, PlaylistExportService>();
         services.AddSingleton<IPlaylistSource, M3uPlaylistSource>();
         services.AddSingleton<IItunesValidationService, ItunesValidationService>();

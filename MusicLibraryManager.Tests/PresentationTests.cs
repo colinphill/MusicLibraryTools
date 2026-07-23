@@ -1549,6 +1549,43 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public void Playlist_editor_builds_grouped_typed_configuration()
+    {
+        var editor = new PlaylistEditorViewModel
+        {
+            Name = "Album playlists",
+            Format = "wpl",
+            OutputPath = @"C:\playlists",
+            PathStyle = PlaylistPathStyle.Absolute,
+            Encoding = PlaylistWorkspaceEncoding.Utf16LittleEndian,
+            LineEnding = PlaylistLineEnding.CrLf,
+            IncludeExtendedInfo = false,
+            OnePlaylistPerGroup = true,
+            GroupFileNameTemplate = "{Name}-{Group}",
+        };
+        editor.SelectedGroupField = editor.GroupFields.Single(choice =>
+            choice.Field.KnownField == TagFields.AlbumArtist);
+
+        PlaylistWorkspaceConfiguration configuration =
+            editor.CreateConfiguration();
+
+        Assert.Equal("Album playlists", configuration.Name);
+        Assert.Equal("wpl", configuration.Format);
+        Assert.Equal(PlaylistPathStyle.Absolute,
+            configuration.PathStyle);
+        Assert.Equal(PlaylistWorkspaceEncoding.Utf16LittleEndian,
+            configuration.Encoding);
+        Assert.Equal(PlaylistLineEnding.CrLf,
+            configuration.LineEnding);
+        Assert.False(configuration.IncludeExtendedInfo);
+        Assert.True(configuration.OnePlaylistPerGroup);
+        Assert.Equal(TagFields.AlbumArtist,
+            configuration.GroupByField!.KnownField);
+        Assert.Equal("{Name}-{Group}",
+            configuration.GroupFileNameTemplate);
+    }
+
+    [Fact]
     public async Task Library_audio_discovery_uses_explicit_scope_and_preserves_candidates()
     {
         TrackRecord[] records =
@@ -1571,6 +1608,7 @@ public sealed class PresentationTests
         var discogs = new FakeDiscogsMetadataProvider();
         var coverArt = new FakeCoverArtArchiveProvider();
         var reports = new FakeReportExportService();
+        var playlists = new FakePlaylistWorkspaceService();
         var viewModel = new LibraryViewModel(
             library,
             new FakeReindex(),
@@ -1588,7 +1626,8 @@ public sealed class PresentationTests
                 typeof(PresentationTests).Assembly.Location),
             discogs: discogs,
             discogsMapping: new DiscogsReleaseMappingService(),
-            reports: reports);
+            reports: reports,
+            playlists: playlists);
         await viewModel.ReloadAsync();
         await viewModel.SelectAsync(
             [viewModel.Rows.Single(row => row.Title == "One")]);
@@ -1619,6 +1658,23 @@ public sealed class PresentationTests
         Assert.True(reports.Applied);
         Assert.False(viewModel.HasUnsavedChanges);
         Assert.Contains("2 row(s)", viewModel.OperationStatus);
+
+        viewModel.PlaylistEditor.OutputPath =
+            @"C:\playlists\selected-album.m3u8";
+        await viewModel.PreviewLibraryPlaylistCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            [@"C:\music\one.flac", @"C:\music\two.flac"],
+            playlists.PreviewedPaths);
+        Assert.Single(viewModel.PlaylistOutputs);
+        Assert.True(viewModel.HasUnsavedChanges);
+
+        await viewModel.ApplyLibraryPlaylistCommand.ExecuteAsync(null);
+
+        Assert.True(playlists.Applied);
+        Assert.False(viewModel.HasUnsavedChanges);
+        Assert.Contains("2 track reference(s)",
+            viewModel.OperationStatus);
 
         await viewModel.PreviewLibraryAudioIdentifiersCommand.ExecuteAsync(null);
 
@@ -2097,6 +2153,60 @@ internal sealed class FakeReportExportService : IReportExportService
         return Task.FromResult(new ReportExportResult(
             plan.Files.Count,
             plan.Files.Sum(file => file.RowCount),
+            new(0, 0, 0, 0, null, []),
+            []));
+    }
+}
+
+internal sealed class FakePlaylistWorkspaceService :
+    IPlaylistWorkspaceService
+{
+    public IReadOnlyList<string> PreviewedPaths { get; private set; } = [];
+    public bool Applied { get; private set; }
+
+    public Task<PlaylistWorkspacePlan> PreviewAsync(
+        PlaylistWorkspaceRequest request,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        PreviewedPaths = request.Paths.ToArray();
+        progress?.Report(new(
+            OperationPhase.Planning,
+            request.Paths.Count,
+            request.Paths.Count,
+            Message: "Playlist preview complete"));
+        string output = Path.GetFullPath(
+            request.Configuration.OutputPath);
+        var mutation = new FileMutationPlan(
+            "PlaylistWorkspace",
+            Path.GetDirectoryName(output)!,
+            "",
+            [],
+            [],
+            DateTimeOffset.UtcNow);
+        return Task.FromResult(new PlaylistWorkspacePlan(
+            request,
+            [new("", output, request.Paths.Count, 128)],
+            mutation,
+            []));
+    }
+
+    public Task<PlaylistWorkspaceResult> ApplyAsync(
+        PlaylistWorkspacePlan plan,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        Applied = true;
+        progress?.Report(new(
+            OperationPhase.Completed,
+            plan.Files.Count,
+            plan.Files.Count,
+            Message: "Playlist written"));
+        return Task.FromResult(new PlaylistWorkspaceResult(
+            plan.Files.Count,
+            plan.Files.Sum(file => file.TrackCount),
             new(0, 0, 0, 0, null, []),
             []));
     }

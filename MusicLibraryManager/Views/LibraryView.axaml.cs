@@ -79,6 +79,13 @@ public partial class LibraryView : UserControl
             new("Rows", "Rows", "Rows", 75, 58),
             new("Bytes", "Bytes", "Bytes", 95, 68),
         ]);
+        LibraryPlaylistOutputGrid.ConfigureColumns(
+        [
+            new("Group", "Group", "Group", 140, 85),
+            new("File", "Destination", "File", 380, 210),
+            new("Tracks", "Tracks", "Tracks", 75, 58),
+            new("Bytes", "Bytes", "Bytes", 95, 68),
+        ]);
         LibraryGrid.ApplySort(_sort);
         BuildColumnOptions();
         LibraryGrid.LayoutChanged += (_, _) => PersistLayout();

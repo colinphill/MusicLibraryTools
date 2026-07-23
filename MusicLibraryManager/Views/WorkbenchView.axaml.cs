@@ -85,6 +85,13 @@ public partial class WorkbenchView : UserControl
             new("Rows", "Rows", "Rows", 80, 60),
             new("Bytes", "Bytes", "Bytes", 100, 70),
         ]);
+        PlaylistOutputGrid.ConfigureColumns(
+        [
+            new("Group", "Group", "Group", 150, 90),
+            new("File", "Destination", "File", 420, 220),
+            new("Tracks", "Tracks", "Tracks", 80, 60),
+            new("Bytes", "Bytes", "Bytes", 100, 70),
+        ]);
     }
 
     private static void ConfigureDiscogsGrid(AppDataGrid grid) =>
