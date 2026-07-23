@@ -31,6 +31,18 @@ namespace MusicFileUtilities.Tests
             new object[] { "sample.wma" },
         };
 
+        public static IEnumerable<object[]> ApeV2WritableFiles => new[]
+        {
+            new object[] { "sample.wv" },
+            new object[] { "sample.ape" },
+            new object[] { "sample.mpc" },
+            new object[] { "sample.tta" },
+            new object[] { "sample.tak" },
+            new object[] { "sample.ofr" },
+            new object[] { "sample.ofs" },
+            new object[] { "sample.off" },
+        };
+
         private static Action<TagFields, string> Setter(IMediaFile mf) =>
             mf switch
             {
@@ -114,6 +126,87 @@ namespace MusicFileUtilities.Tests
             mf.SaveTags();
 
             Assert.False(Read(tmp.Path).ContainsKey(TagFields.Genre));
+        }
+
+        [Theory]
+        [MemberData(nameof(ApeV2WritableFiles))]
+        public void ApeV2OrderedKnownAndCustomValuesPersistAcrossSave(
+            string file)
+        {
+            using var tmp = MediaFixtures.Copy(file);
+            IMediaFile media = MediaFile.GetFile(
+                tmp.Path, readOnly: false);
+            var known = Assert.IsAssignableFrom<
+                IMultiValueMetadataWriter>(media);
+            Assert.True(known.SupportsMultipleValues(TagFields.Artist));
+            known.SetFieldValues(
+                TagFields.Artist,
+                ["First artist", "", "Third artist"]);
+            IUserStringMetadata custom =
+                media as IUserStringMetadata ??
+                Assert.IsAssignableFrom<IUserStringMetadata>(
+                    media.Tags.First());
+            Assert.IsAssignableFrom<IMultiValueUserStringMetadata>(custom)
+                .SetUserStringValues(
+                    "CUSTOM_ORDER",
+                    ["first", "", "third"]);
+
+            media.SaveTags();
+
+            IMetadataProvider tag =
+                MediaFile.GetFile(tmp.Path).Tags.First();
+            Assert.Equal(
+                ["First artist", "", "Third artist"],
+                tag.GetKnownMetadata()
+                    .Where(value => value.Key == TagFields.Artist)
+                    .Select(value => value.Value));
+            Assert.Equal(
+                ["first", "", "third"],
+                Assert.IsAssignableFrom<IUserStringMetadata>(tag)
+                    .GetUserStrings()
+                    .Where(value => value.Key == "CUSTOM_ORDER")
+                    .Select(value => value.Value));
+        }
+
+        [Fact]
+        public void RawAacPrimaryApeV2PersistsOrderedValues()
+        {
+            using var tmp = MediaFixtures.Copy("sample.aac");
+            var media = Assert.IsType<AACFile>(
+                MediaFile.GetFile(tmp.Path, readOnly: false));
+            if (media.EditableTagLayers.Single(layer =>
+                    layer.Kind == TagLayerKind.Id3v2).IsPresent)
+                media.RemoveTagLayer(TagLayerKind.Id3v2);
+            if (!media.EditableTagLayers.Single(layer =>
+                    layer.Kind == TagLayerKind.ApeV2).IsPresent)
+                media.AddTagLayer(
+                    TagLayerKind.ApeV2,
+                    TagLayerCopyMode.Empty);
+
+            Assert.True(media.SupportsMultipleValues(TagFields.Artist));
+            media.SetFieldValues(
+                TagFields.Artist,
+                ["First artist", "Second artist"]);
+            media.SetUserStringValues(
+                "CUSTOM_ORDER",
+                ["first", "second"]);
+            media.SaveTags();
+
+            var reloaded = Assert.IsType<AACFile>(
+                MediaFile.GetFile(tmp.Path));
+            IMetadataProvider tag = Assert.Single(reloaded.Tags);
+            Assert.Equal("APE", tag.TagType);
+            Assert.Equal(
+                ["First artist", "Second artist"],
+                tag.GetKnownMetadata()
+                    .Where(value => value.Key == TagFields.Artist)
+                    .Select(value => value.Value));
+            Assert.Equal(
+                ["first", "second"],
+                Assert.IsAssignableFrom<IUserStringMetadata>(tag)
+                    .GetUserStrings()
+                    .Where(value => value.Key == "CUSTOM_ORDER")
+                    .Select(value => value.Value));
         }
 
         // Reassembles the logical packet stream of an ogg file from its page lacing values.

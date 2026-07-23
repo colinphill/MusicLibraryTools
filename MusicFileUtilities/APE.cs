@@ -270,7 +270,12 @@ namespace MusicFileUtilities
 
     }
 
-    public class APETag : TagBase, IArtworkWriter, IUserStringMetadata
+    public class APETag :
+        TagBase,
+        IArtworkWriter,
+        IUserStringMetadata,
+        IMultiValueMetadataWriter,
+        IMultiValueUserStringMetadata
     {
         public override string TagType => "APE";
 
@@ -398,6 +403,42 @@ namespace MusicFileUtilities
 
         public void RemoveField(TagFields field) => SetField(field, null);
 
+        public bool SupportsMultipleValues(TagFields field) =>
+            field is not (
+                TagFields.NullField or
+                TagFields.TrackNumber or
+                TagFields.TotalTracks or
+                TagFields.DiscNumber or
+                TagFields.TotalDiscs or
+                TagFields.MovementNumber or
+                TagFields.MovementTotal) &&
+            APEUtil.ReverseTagMappings.ContainsKey(field);
+
+        public void SetFieldValues(
+            TagFields field,
+            IReadOnlyList<string> values)
+        {
+            ArgumentNullException.ThrowIfNull(values);
+            if (values.Count <= 1)
+            {
+                SetField(field, values.Count == 0 ? null : values[0]);
+                return;
+            }
+            if (!SupportsMultipleValues(field))
+                throw new ArgumentException(
+                    $"APE does not support multiple values for {field}.",
+                    nameof(field));
+            string key = APEUtil.ReverseTagMappings[field];
+            TextItems.RemoveAll(item => string.Equals(
+                item.Key, key, StringComparison.OrdinalIgnoreCase));
+            TextItems.AddRange(values.Select(value =>
+                KeyValuePair.Create(
+                    key,
+                    value ?? throw new ArgumentException(
+                        "APE text values cannot be null.",
+                        nameof(values)))));
+        }
+
         public void SetUserString(string key, string value)
         {
             if (string.IsNullOrWhiteSpace(key))
@@ -410,6 +451,21 @@ namespace MusicFileUtilities
         }
 
         public void RemoveUserString(string key) => SetUserString(key, null);
+
+        public void SetUserStringValues(
+            string key,
+            IReadOnlyList<string> values)
+        {
+            ArgumentNullException.ThrowIfNull(values);
+            SetUserString(key, null);
+            string normalizedKey = key.Trim();
+            TextItems.AddRange(values.Select(value =>
+                KeyValuePair.Create(
+                    normalizedKey,
+                    value ?? throw new ArgumentException(
+                        "APE text values cannot be null.",
+                        nameof(values)))));
+        }
 
         // IArtworkWriter: APEv2 stores a picture as a binary item whose value is "filename\0picdata";
         // the reader derives the MIME type from the filename extension (see APEArtwork ctor), so the
@@ -491,8 +547,16 @@ namespace MusicFileUtilities
             // embedded cover art and other binary fields. See [[ape-artwork-save-dataloss]].
             var items = new List<byte[]>();
 
-            foreach (var kv in TextItems)
-                items.Add(BuildItem(kv.Key, Encoding.UTF8.GetBytes(kv.Value), 0));
+            foreach (IGrouping<string, KeyValuePair<string, string>> group in
+                     TextItems.GroupBy(
+                         item => item.Key,
+                         StringComparer.OrdinalIgnoreCase))
+            {
+                string key = group.First().Key;
+                byte[] values = Encoding.UTF8.GetBytes(
+                    string.Join("\0", group.Select(item => item.Value)));
+                items.Add(BuildItem(key, values, 0));
+            }
 
             foreach (var kv in BinaryItems)
                 items.Add(BuildItem(kv.Key, kv.Value, 2));
@@ -619,7 +683,10 @@ namespace MusicFileUtilities
                 if ((itemflags & 6) == 0)
                 {
                     string itemvalue = Encoding.UTF8.GetString(tag, offset, itemlen);
-                    TextItems.AddRange(itemvalue.Split(new char[] { '\0' }, StringSplitOptions.RemoveEmptyEntries).Select(s => new KeyValuePair<string, string>(itemkey, s)));
+                    TextItems.AddRange(itemvalue
+                        .Split('\0', StringSplitOptions.None)
+                        .Select(value => KeyValuePair.Create(
+                            itemkey, value)));
                 }
                 else if ((itemflags & 6) == 2)
                 {
@@ -670,7 +737,7 @@ namespace MusicFileUtilities
                     byte[] value = new byte[itemLength];
                     stream.ReadExactly(value);
                     TextItems.AddRange(Encoding.UTF8.GetString(value)
-                        .Split(new char[] { '\0' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Split('\0', StringSplitOptions.None)
                         .Select(text => new KeyValuePair<string, string>(key.ToString(), text)));
                 }
                 else

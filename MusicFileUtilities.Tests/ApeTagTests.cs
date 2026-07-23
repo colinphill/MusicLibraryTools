@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -54,6 +55,40 @@ namespace MusicFileUtilities.Tests
             roundTrip.RemoveUserString("custom_note");
             Assert.Empty(roundTrip.GetUserStrings());
             Assert.Equal("Known", Known(roundTrip)[TagFields.Title]);
+        }
+
+        [Fact]
+        public void OrderedValuesSerializeAsOneNullSeparatedItemPerKey()
+        {
+            var tag = new APETag();
+            tag.SetFieldValues(
+                TagFields.Artist,
+                ["first", "", "third"]);
+            tag.SetUserStringValues(
+                "CUSTOM_ORDER",
+                ["one", "two"]);
+
+            byte[] bytes = tag.ToByteArray();
+
+            Assert.Equal(
+                2,
+                BinaryPrimitives.ReadInt32LittleEndian(
+                    bytes.AsSpan(16, 4)));
+            Assert.True(bytes.AsSpan().IndexOf(
+                Encoding.UTF8.GetBytes("first\0\0third")) >= 0);
+            Assert.True(bytes.AsSpan().IndexOf(
+                Encoding.UTF8.GetBytes("one\0two")) >= 0);
+            APETag roundTrip = RoundTrip(tag);
+            Assert.Equal(
+                ["first", "", "third"],
+                roundTrip.GetKnownMetadata()
+                    .Where(value => value.Key == TagFields.Artist)
+                    .Select(value => value.Value));
+            Assert.Equal(
+                ["one", "two"],
+                roundTrip.GetUserStrings()
+                    .Where(value => value.Key == "CUSTOM_ORDER")
+                    .Select(value => value.Value));
         }
 
         [Fact]

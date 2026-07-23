@@ -79,8 +79,8 @@ the same editor, preview, policy checks, recovery behavior, and history.
   - [x] End-to-end preview, apply, restart-safe undo, and redo verified.
 - [~] Phase 2: Typed bulk operations and recipes
 - [~] Phase 3: Online metadata and artwork
-- [~] Phase 4: Flexible views, reporting, playlists, and tools
-- [ ] Phase 5: Native format and tag-layer expansion
+- [x] Phase 4: Flexible views, reporting, playlists, and tools
+- [x] Phase 5: Native format and tag-layer expansion
 - [ ] Phase 6: Integration and parity hardening
 
 The detailed checklists below are updated as implementation proceeds. An item is
@@ -89,33 +89,38 @@ appropriate build or test.
 
 ## Core model and interfaces
 
-- [~] Introduce a lossless metadata model:
+- [x] Introduce a lossless metadata model:
   - [x] `MetadataFieldKey` represents a known field or native custom field.
   - [x] `MetadataValueSet` preserves ordered multiple values.
   - [x] `TagLayerDocument` describes individual tag layers.
   - [x] `MediaDocument` combines tag layers, artwork, codec properties, and the
     file snapshot.
-- [ ] Add scalable native-format contracts:
-  - [ ] `IMediaFormatHandler` handles detection, reading, staged writing,
-    artwork, and tag-layer operations.
+- [~] Add scalable native-format contracts:
+  - [x] The existing `IMediaFormatRegistry` plus `IMediaFile` and focused
+    native capability interfaces handle detection, capability views, reading,
+    staged writing, artwork, and tag-layer operations. A second
+    `IMediaFormatHandler` adapter hierarchy was intentionally not introduced.
   - [~] `IMultiValueMetadataWriter` replaces the current first-value-only write
-    path; native Vorbis/FLAC values are implemented and tested first.
-  - [ ] `ITagLayerEditor` adds, removes, and converts individual tag types.
-  - [ ] Existing format classes receive adapters before new formats are added.
-- [~] Add typed metadata-operation contracts:
+    path where the native representation is ordered and repeatable. Vorbis,
+    FLAC, Matroska, and every APEv2-backed format are implemented; ID3, MP4,
+    and ASF still require a per-field multi-value audit.
+  - [x] `ITagLayerEditor` adds, removes, and copies individual tag types.
+  - [x] Existing format classes implement the focused native capability
+    interfaces directly; separate adapters were deliberately unnecessary.
+- [x] Add typed metadata-operation contracts:
   - [x] `MetadataOperation` is a closed hierarchy of supported operations.
   - [x] `MetadataCondition` models field, file, and codec predicates.
   - [x] `OperationRecipe` is an ordered collection of typed operations.
   - [x] `MetadataOperationPlan` holds before/after changes and validation data.
-  - [~] `IMetadataOperationService` owns preview and apply.
-- [~] Add workflow services:
-  - [~] `IWorkbenchService` manages ad-hoc source loading and ordering.
-  - [~] `IEditHistoryService` provides persistent operation history and undo.
+  - [x] `IMetadataOperationService` owns preview and apply.
+- [x] Add workflow services:
+  - [x] `IWorkbenchService` loads ad-hoc sources while the Workbench view model
+    owns explicit session ordering.
+  - [x] `IEditHistoryService` provides persistent operation history and undo.
   - [x] Persistent redo and repeat.
-  - [~] Code-backed metadata provider extension points; the first
-    `IMusicBrainzMetadataProvider` is implemented, while the broader provider
-    abstraction and additional sources remain.
-  - [~] `IAudioFingerprintService` decodes audio and generates a Chromaprint
+  - [x] Code-backed metadata provider extension points and a shared provider
+    catalog cover MusicBrainz, Cover Art Archive, and Discogs.
+  - [x] `IAudioFingerprintService` invokes Chromaprint/fpcalc and generates a
     fingerprint plus whole-file duration.
   - [x] `IAcoustIdLookupService` resolves fingerprints to scored AcoustID and
     MusicBrainz recording candidates.
@@ -136,7 +141,7 @@ appropriate build or test.
 - [x] Optional recursive folder scanning.
 - [x] Drag-and-drop.
 - [x] Recent locations.
-- [~] Library and Health "Open in Workbench" commands; Library is implemented.
+- [x] Library and Health "Open in Workbench" commands.
 - [x] M3U/M3U8 and cuesheet loading.
 - [x] Explicit file ordering and removal from the session.
 
@@ -145,7 +150,9 @@ appropriate build or test.
 - [x] Configurable Workbench grid with persisted visibility, order, widths,
   sorting, and technical-property columns.
 - [x] Inline editing of the first set of actual metadata fields.
-- [ ] Multi-selection and mixed-value handling.
+- [~] Multi-selection and mixed-value handling. The Library inspector verifies
+  common and mixed values across complete selections; the Workbench field
+  inspector still targets one focused file.
 - [~] Multiple values with keep, replace, append, remove-value, and remove-field
   semantics. These are available for a focused Workbench file; multi-selection
   mixed-value editing remains.
@@ -188,23 +195,36 @@ and restored without creating or indexing a library.
 - [x] Split a field into multiple values.
 - [x] Join, deduplicate, or reorder multiple values.
 - [x] Extract metadata from file and folder components.
-- [ ] Generate filenames and directories using existing templates.
-- [ ] Rearrange filename components.
+- [x] Generate filenames and directories using existing templates. This is
+  covered by the profile-controlled `LibraryPathLayoutResolver` used by
+  Organize, ingest, repair, and export rather than duplicated as a metadata
+  recipe operation.
+- [x] Rearrange filename components through the same configurable directory
+  and filename templates.
 - [ ] Import metadata from delimited text or CSV.
-- [~] Sequential track and disc numbering.
+- [x] Sequential track and disc numbering, including configurable start, step,
+  padding, totals, ordered preview, staged apply, and native round-trip.
 - [~] Artwork add, replace, export, resize, classify, and remove. Local and
-  Cover Art Archive front-cover replacement plus front/all removal are
-  implemented; policy normalization is applied during preview. Export,
-  explicit resize, and role classification remain.
-- [ ] Copy, move, rename, and quarantine files.
-- [ ] Generate reports or playlists as a recipe final step.
+  Cover Art Archive replacement plus front/all removal are available through
+  the shared staged plan. The Library inspector and Core artwork service also
+  support multiple items, export, resize, and role classification; equivalent
+  staged controls are still required in Workbench.
+- [~] Copy, move, rename, and quarantine files. Recoverable Organize, ingest,
+  repair, export, and sync workflows cover policy-driven mutations; an ad-hoc
+  shared Workbench/Library file-operation editor remains.
+- [x] Generate reports or playlists as dedicated final workflows rather than
+  recipe steps. Both surfaces share preview/apply services and explicit
+  selection scopes; nesting file outputs inside metadata recipes was
+  intentionally avoided.
 
 ### Recipes and editing commands
 
 - [x] Ordered visual operation list.
 - [x] Typed conditions per operation.
 - [x] Enable/disable, duplicate, rename, and reorder operations.
-- [ ] Representative-file preview while editing.
+- [~] Representative-file preview while editing. Both surfaces render a full
+  authoritative preview before apply, but the operation editor does not yet
+  update a live representative row while a draft is being changed.
 - [x] Apply every applicable operation to Workbench or explicit Library scope
   through the same operation catalog and editor.
 - [x] Persist personal recipes through `IAppSettings`.
@@ -245,8 +265,9 @@ capability comparison is possible through typed operations without scripting.
     through the normal MusicBrainz provider.
   - [x] Require confirmation of recording matches, release, file-to-track
     mapping, imported fields, and artwork before mutation.
-  - [~] Offer `ACOUSTID_FINGERPRINT`, `ACOUSTID_ID`, and MusicBrainz recording
-    ID tag updates as ordinary optional previewed metadata changes.
+  - [x] Offer `ACOUSTID_FINGERPRINT`, `ACOUSTID_ID`, and MusicBrainz recording
+    ID tag updates as ordinary optional previewed metadata changes in both
+    Workbench and Library.
   - [x] Support local fingerprint generation offline; make lookup status and
     cached/offline results explicit.
   - [x] Enforce AcoustID's provider-specific rate limit and application API-key
@@ -254,7 +275,7 @@ capability comparison is possible through typed operations without scripting.
   - [x] Do not submit fingerprints to AcoustID as part of lookup. Any future
     submission feature is separately opt-in, uses `ISecretStore` for the user's
     key, previews submitted data, and clearly identifies the external write.
-- [~] Ship MusicBrainz and Cover Art Archive providers:
+- [x] Ship MusicBrainz and Cover Art Archive providers:
   - [x] Search MusicBrainz by artist/album, barcode, catalog number, or release
     ID, then load complete details only for the selected edition.
   - [x] Compare recording-linked editions, dates, countries, status, labels,
@@ -372,6 +393,13 @@ application concepts.
 
 ### Reuse APEv2
 
+- [x] Ordered known and custom multi-value text.
+  - Serialize each APEv2 key once with spec-defined null-separated UTF-8
+    values and preserve empty intermediate values and order when reading.
+  - Expose the shared multi-value contracts through WavPack, Monkey's Audio,
+    Musepack, TTA, TAK, OptimFROG/OFS, and raw AAC with a primary APEv2 layer.
+  - Pass native and Workbench staged round trips across every APEv2 codec
+    family without flattening values into a display delimiter.
 - [x] Monkey's Audio.
   - [x] Parse legacy 3.80-3.97 and descriptor-based 3.98+ stream headers,
     including technical properties, sample counts, duration, and bitrate.
@@ -429,9 +457,11 @@ application concepts.
 
 ### Tag-layer controls and release gates
 
-- [~] Keep new formats out of automatic indexing until preservation tests pass.
-  M4B and M4V remain Workbench/direct-edit formats after passing MP4
-  preservation tests; each later family must pass its own release gate.
+- [x] Keep new formats out of automatic indexing until preservation tests pass.
+  Every released audio family passed its native preservation and payload
+  identity gate. M4B and M4V intentionally remain Workbench/direct-edit
+  aliases because automatic library indexing is not appropriate for those
+  audiobook/video extensions.
 - [x] Inspect all layers present in a file.
   - Raw AAC projects independent leading ID3v2 and trailing APEv2 layers;
     MP3 now projects both leading ID3v2 and trailing ID3v1/ID3v1.1 layers.
@@ -472,6 +502,31 @@ application concepts.
 
 **Acceptance:** Target format families have native coverage with accurate
 per-operation capability flags.
+
+### Earlier-phase audit findings (2026-07-23)
+
+- Roadmap drift corrected: the focused native capability interfaces,
+  Workbench/history service contracts, provider catalog, Phase 4, and Phase 5
+  were already complete; the proposed monolithic format-handler/adapter layer
+  was intentionally superseded rather than left unfinished.
+- Equivalent broader workflows confirmed: profile templates own canonical
+  filename/directory generation and rearrangement, while reports and playlists
+  remain dedicated shared preview/apply workflows instead of metadata-recipe
+  side effects.
+- Revisited and completed in this audit: Health-to-Workbench navigation,
+  staged sequential track/disc numbering with totals, and ordered known/custom
+  multi-value APEv2 writes across every APEv2-backed codec.
+- Remaining Phase 1 work: Workbench multi-selection/mixed-value editing,
+  complete staged multi-artwork controls, and migration of the legacy Library
+  inspector/fields dialog onto the shared document and mutation services.
+- Remaining Phase 2 work: delimited/CSV metadata import, ad-hoc shared file
+  mutations, live representative draft preview, tag-aware copy/paste, and
+  fully symmetric artwork controls.
+- Remaining Phase 3 work: bundled-or-validated fpcalc coverage for every
+  readable codec and candidate ranking that incorporates AcoustID confidence
+  and broader album context.
+- Cross-cutting work still applies: finish the progress/cancellation audit and
+  close the remaining Workbench/Library operation-parity gaps.
 
 ## Phase 6: Integration and parity hardening
 

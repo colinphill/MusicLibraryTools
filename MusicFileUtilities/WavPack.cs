@@ -7,7 +7,11 @@ using System.IO;
 
 namespace MusicFileUtilities
 {
-    public class WavPackFile : IMediaFile, ICodecProvider, IMetadataWriter
+    public class WavPackFile :
+        IMediaFile,
+        ICodecProvider,
+        IMetadataWriter,
+        IMultiValueMetadataWriter
     {
         public IEnumerable<ICodecProvider> Codecs
         {
@@ -132,6 +136,14 @@ namespace MusicFileUtilities
         public void SetField(TagFields field, string value) => tag_.SetField(field, value);
 
         public void RemoveField(TagFields field) => tag_.RemoveField(field);
+
+        public bool SupportsMultipleValues(TagFields field) =>
+            tag_.SupportsMultipleValues(field);
+
+        public void SetFieldValues(
+            TagFields field,
+            IReadOnlyList<string> values) =>
+            tag_.SetFieldValues(field, values);
 
         public void Save(string outputPath = null)
         {

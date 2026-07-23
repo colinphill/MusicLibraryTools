@@ -597,6 +597,101 @@ public sealed class MetadataWorkbenchServicesTests
     }
 
     [Fact]
+    public async Task SequenceNumbering_PreviewsAndPersistsTrackDiscAndTotals()
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(), "mlm-sequence-" + Guid.NewGuid().ToString("N"));
+        string recovery = session + ".MusicLibraryManager-recovery";
+        Directory.CreateDirectory(session);
+        string firstPath = Path.Combine(session, "first.flac");
+        string secondPath = Path.Combine(session, "second.flac");
+        File.Copy(MediaFixtures.Path_("sample.flac"), firstPath);
+        File.Copy(MediaFixtures.Path_("sample.flac"), secondPath);
+        string statePath = Path.Combine(session, "settings.json");
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings);
+            OperationRecipe recipe = OperationRecipe.Create(
+                "Number tracks and discs",
+                new SequenceNumberOperation(
+                    MetadataFieldKey.Known(TagFields.TrackNumber),
+                    Start: 3,
+                    Step: 2,
+                    PadWidth: 2,
+                    TotalField:
+                        MetadataFieldKey.Known(TagFields.TotalTracks)),
+                new SequenceNumberOperation(
+                    MetadataFieldKey.Known(TagFields.DiscNumber),
+                    TotalField:
+                        MetadataFieldKey.Known(TagFields.TotalDiscs)));
+
+            MetadataOperationPlan plan =
+                await service.PreviewAsync(
+                    [firstPath, secondPath],
+                    recipe);
+
+            Assert.True(plan.CanApply);
+            Assert.Equal(
+                ["03", "05"],
+                plan.Files.Select(file => Assert.Single(
+                    file.Differences,
+                    difference => difference.Field.KnownField ==
+                        TagFields.TrackNumber).After.Single()));
+            Assert.Equal(
+                ["1", "2"],
+                plan.Files.Select(file => Assert.Single(
+                    file.Differences,
+                    difference => difference.Field.KnownField ==
+                        TagFields.DiscNumber).After.Single()));
+            Assert.All(plan.Files, file =>
+            {
+                Assert.Equal(
+                    ["2"],
+                    Assert.Single(
+                        file.Differences,
+                        difference => difference.Field.KnownField ==
+                            TagFields.TotalTracks).After);
+                Assert.Equal(
+                    ["2"],
+                    Assert.Single(
+                        file.Differences,
+                        difference => difference.Field.KnownField ==
+                            TagFields.TotalDiscs).After);
+            });
+
+            MetadataApplyResult result = await service.ApplyAsync(plan);
+
+            Assert.Equal(2, result.ChangedFiles);
+            Assert.Equal(
+                ["03", "05"],
+                new[] { firstPath, secondPath }.Select(path =>
+                    MediaFile.GetFile(path).Tags.First()
+                        .GetKnownMetadata()
+                        .First(value =>
+                            value.Key == TagFields.TrackNumber)
+                        .Value));
+            Assert.Equal(
+                ["1", "2"],
+                new[] { firstPath, secondPath }.Select(path =>
+                    MediaFile.GetFile(path).Tags.First()
+                        .GetKnownMetadata()
+                        .First(value =>
+                            value.Key == TagFields.DiscNumber)
+                        .Value));
+        }
+        finally
+        {
+            try { Directory.Delete(session, recursive: true); } catch { }
+            try { Directory.Delete(recovery, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public async Task Apply_StagesReplacementAndPersistentUndoRestoresOriginal()
     {
         string session = Path.Combine(
@@ -1257,6 +1352,70 @@ public sealed class MetadataWorkbenchServicesTests
             MediaDocument reloaded = await _documents.LoadAsync(mediaPath);
             Assert.Equal(["First artist", "Second artist"],
                 reloaded.Values(MetadataFieldKey.Known(TagFields.Composer)));
+        }
+        finally
+        {
+            try { Directory.Delete(session, recursive: true); } catch { }
+            try { Directory.Delete(recovery, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task Apply_RoundTripsOrderedApeV2KnownAndCustomValues()
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-ape-values-" + Guid.NewGuid().ToString("N"));
+        string recovery = session + ".MusicLibraryManager-recovery";
+        Directory.CreateDirectory(session);
+        string mediaPath = Path.Combine(session, "track.ofr");
+        File.Copy(MediaFixtures.Path_("sample.ofr"), mediaPath);
+        string statePath = Path.Combine(session, "settings.json");
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings);
+            MetadataFieldKey custom =
+                MetadataFieldKey.Custom("DJ_SET");
+
+            MetadataOperationPlan plan =
+                await service.PreviewValueEditsAsync(
+                    new Dictionary<
+                        string,
+                        IReadOnlyList<MetadataValueEdit>>
+                    {
+                        [mediaPath] =
+                        [
+                            new(
+                                MetadataFieldKey.Known(
+                                    TagFields.Artist),
+                                ["First artist", "Second artist"]),
+                            new(custom, ["Warmup", "Peak"]),
+                        ],
+                    },
+                    "Ordered APEv2 values");
+
+            Assert.True(plan.CanApply);
+            Assert.DoesNotContain(
+                Assert.Single(plan.Files).Issues,
+                issue => issue.Severity ==
+                    OperationIssueSeverity.Blocker);
+
+            await service.ApplyAsync(plan);
+
+            MediaDocument reloaded =
+                await _documents.LoadAsync(mediaPath);
+            Assert.Equal(
+                ["First artist", "Second artist"],
+                reloaded.Values(
+                    MetadataFieldKey.Known(TagFields.Artist)));
+            Assert.Equal(
+                ["Warmup", "Peak"],
+                reloaded.Values(custom));
         }
         finally
         {

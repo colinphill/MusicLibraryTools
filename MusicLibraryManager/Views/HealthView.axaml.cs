@@ -17,6 +17,8 @@ public partial class HealthView : UserControl
 {
     private readonly AnalyzerViewModel _viewModel;
     private readonly IPlatformService _platform;
+    private readonly WorkbenchViewModel _workbench;
+    private readonly INavigationService _navigation;
     private bool _updatingRootDisposition;
 
     public HealthView()
@@ -24,6 +26,8 @@ public partial class HealthView : UserControl
         InitializeComponent();
         _viewModel = App.GetService<AnalyzerViewModel>();
         _platform = App.GetService<IPlatformService>();
+        _workbench = App.GetService<WorkbenchViewModel>();
+        _navigation = App.GetService<INavigationService>();
         GridStateService gridState = App.GetService<GridStateService>();
         DataContext = _viewModel;
         FindingRootDisposition.ItemsSource = Enum.GetValues<AnalysisFindingDisposition>();
@@ -271,13 +275,22 @@ public partial class HealthView : UserControl
 
     private void OnHealthResultContextRequested(object? sender, ContextRequestedEventArgs e)
     {
-        ContextMenu? menu = HealthResultContextMenuFactory.CreateForSource(e.Source, _platform);
+        ContextMenu? menu = HealthResultContextMenuFactory.CreateForSource(
+            e.Source,
+            _platform,
+            OpenInWorkbenchAsync);
         if (menu is null)
             return;
 
         Control target = e.Source as Control ?? (Control)sender!;
         menu.Open(target);
         e.Handled = true;
+    }
+
+    private async Task OpenInWorkbenchAsync(string path)
+    {
+        await _workbench.AddSourcesAsync([path]);
+        _navigation.Navigate(ShellDestination.Workbench);
     }
 
     private static AnalysisRepairDisposition Aggregate(IEnumerable<AnalysisRepairDisposition> values)
@@ -338,15 +351,21 @@ public partial class HealthView : UserControl
 
 public static class HealthResultContextMenuFactory
 {
-    public static ContextMenu? CreateForSource(object? source, IPlatformService platform)
+    public static ContextMenu? CreateForSource(
+        object? source,
+        IPlatformService platform,
+        Func<string, Task>? openInWorkbench = null)
     {
         object? result = (source as global::Avalonia.StyledElement)?.DataContext;
         return HealthResultPathResolver.TryGetPath(result, out string path)
-            ? Create(path, platform)
+            ? Create(path, platform, openInWorkbench)
             : null;
     }
 
-    public static ContextMenu Create(string path, IPlatformService platform)
+    public static ContextMenu Create(
+        string path,
+        IPlatformService platform,
+        Func<string, Task>? openInWorkbench = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         ArgumentNullException.ThrowIfNull(platform);
@@ -354,9 +373,18 @@ public static class HealthResultContextMenuFactory
         var copy = new MenuItem { Header = "Copy path" };
         copy.Click += async (_, _) => await platform.CopyTextAsync(path);
 
+        var items = new List<MenuItem> { copy };
+        if (openInWorkbench is not null)
+        {
+            var workbench = new MenuItem { Header = "Open in Workbench" };
+            workbench.Click += async (_, _) => await openInWorkbench(path);
+            items.Add(workbench);
+        }
+
         var reveal = new MenuItem { Header = "Reveal in File Explorer" };
         reveal.Click += (_, _) => platform.RevealFile(path);
+        items.Add(reveal);
 
-        return new ContextMenu { ItemsSource = new[] { copy, reveal } };
+        return new ContextMenu { ItemsSource = items };
     }
 }

@@ -12,7 +12,9 @@ namespace MusicFileUtilities
     public abstract class ApeTaggedAudioFile :
         IMediaFile,
         IMetadataWriter,
+        IMultiValueMetadataWriter,
         IUserStringMetadata,
+        IMultiValueUserStringMetadata,
         IArtworkWriter
     {
         private readonly OwnedApeTag _tag;
@@ -58,6 +60,14 @@ namespace MusicFileUtilities
         public void RemoveField(TagFields field) =>
             _tag.RemoveField(field);
 
+        public bool SupportsMultipleValues(TagFields field) =>
+            _tag.SupportsMultipleValues(field);
+
+        public void SetFieldValues(
+            TagFields field,
+            IReadOnlyList<string> values) =>
+            _tag.SetFieldValues(field, values);
+
         public IEnumerable<KeyValuePair<string, string>> GetUserStrings() =>
             _tag.GetUserStrings();
 
@@ -66,6 +76,11 @@ namespace MusicFileUtilities
 
         public void RemoveUserString(string key) =>
             _tag.RemoveUserString(key);
+
+        public void SetUserStringValues(
+            string key,
+            IReadOnlyList<string> values) =>
+            _tag.SetUserStringValues(key, values);
 
         public void SetFrontCover(byte[] imageData, string mimeType) =>
             _tag.SetFrontCover(imageData, mimeType);

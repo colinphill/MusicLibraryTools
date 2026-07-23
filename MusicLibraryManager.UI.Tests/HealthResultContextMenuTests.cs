@@ -29,6 +29,30 @@ public sealed class HealthResultContextMenuTests
     }
 
     [AvaloniaFact]
+    public void Context_menu_opens_the_resolved_path_in_workbench()
+    {
+        const string path = @"C:\Music\Artist\Album\Track.flac";
+        string? openedPath = null;
+        ContextMenu menu = HealthResultContextMenuFactory.Create(
+            path,
+            new RecordingPlatformService(),
+            value =>
+            {
+                openedPath = value;
+                return Task.CompletedTask;
+            });
+        MenuItem[] items = menu.Items.Cast<MenuItem>().ToArray();
+
+        Assert.Equal(
+            ["Copy path", "Open in Workbench", "Reveal in File Explorer"],
+            items.Select(item => item.Header?.ToString()));
+
+        items[1].RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+
+        Assert.Equal(path, openedPath);
+    }
+
+    [AvaloniaFact]
     public void Context_menu_uses_the_right_clicked_controls_item_not_a_previous_selection()
     {
         const string selectedPath = @"C:\Music\Previously-selected.flac";

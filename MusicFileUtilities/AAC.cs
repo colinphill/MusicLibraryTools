@@ -13,7 +13,9 @@ namespace MusicFileUtilities
         IMediaFile,
         ICodecProvider,
         IMetadataWriter,
+        IMultiValueMetadataWriter,
         IUserStringMetadata,
+        IMultiValueUserStringMetadata,
         IArtworkWriter,
         ITagLayerEditor
     {
@@ -106,6 +108,20 @@ namespace MusicFileUtilities
         public void RemoveField(TagFields field) =>
             PrimaryWriter.RemoveField(field);
 
+        public bool SupportsMultipleValues(TagFields field) =>
+            PrimaryWriter is IMultiValueMetadataWriter multi &&
+            multi.SupportsMultipleValues(field);
+
+        public void SetFieldValues(
+            TagFields field,
+            IReadOnlyList<string> values)
+        {
+            if (PrimaryWriter is not IMultiValueMetadataWriter multi)
+                throw new InvalidOperationException(
+                    "The primary AAC tag layer does not support multiple values.");
+            multi.SetFieldValues(field, values);
+        }
+
         public IEnumerable<KeyValuePair<string, string>> GetUserStrings() =>
             PrimaryUserStrings.GetUserStrings();
 
@@ -117,6 +133,17 @@ namespace MusicFileUtilities
 
         public void RemoveUserString(string key) =>
             PrimaryUserStrings.RemoveUserString(key);
+
+        public void SetUserStringValues(
+            string key,
+            IReadOnlyList<string> values)
+        {
+            if (PrimaryUserStrings is not
+                IMultiValueUserStringMetadata multi)
+                throw new InvalidOperationException(
+                    "The primary AAC tag layer does not support multiple values.");
+            multi.SetUserStringValues(key, values);
+        }
 
         public void SetFrontCover(byte[] imageData, string mimeType)
         {
@@ -257,7 +284,14 @@ namespace MusicFileUtilities
             {
                 try
                 {
-                    writer.SetField(field.Key, field.Last().Value);
+                    string[] values =
+                        field.Select(value => value.Value).ToArray();
+                    if (values.Length > 1 &&
+                        writer is IMultiValueMetadataWriter multi &&
+                        multi.SupportsMultipleValues(field.Key))
+                        multi.SetFieldValues(field.Key, values);
+                    else
+                        writer.SetField(field.Key, values[^1]);
                 }
                 catch (ArgumentException)
                 {
@@ -266,9 +300,23 @@ namespace MusicFileUtilities
             }
             if (source is IUserStringMetadata sourceCustom)
             {
-                foreach (KeyValuePair<string, string> value in
-                         sourceCustom.GetUserStrings())
-                    custom.SetUserString(value.Key, value.Value);
+                foreach (IGrouping<
+                             string,
+                             KeyValuePair<string, string>> field in
+                         sourceCustom.GetUserStrings().GroupBy(
+                             value => value.Key,
+                             StringComparer.OrdinalIgnoreCase))
+                {
+                    string[] values =
+                        field.Select(value => value.Value).ToArray();
+                    if (values.Length > 1 &&
+                        custom is IMultiValueUserStringMetadata multi)
+                        multi.SetUserStringValues(
+                            field.First().Key, values);
+                    else
+                        custom.SetUserString(
+                            field.First().Key, values[^1]);
+                }
             }
             ArtworkImage[] images = source.GetImageMetadata()
                 .Select(image => new ArtworkImage(
