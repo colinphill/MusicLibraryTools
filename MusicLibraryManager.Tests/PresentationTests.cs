@@ -425,6 +425,96 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public async Task Selection_inspector_prefers_lossless_shared_documents_for_fields_and_artwork()
+    {
+        const string path = @"C:\one.flac";
+        var library = new FakeLibrary([]);
+        library.ImageSignatures[path] =
+            "authoritative-artwork";
+        var documents =
+            new FakeMetadataDocumentService(
+                new MediaDocument(
+                    path,
+                    [new(
+                        "VorbisComment",
+                        [
+                            new(
+                                MetadataFieldKey.Known(
+                                    TagFields.Title),
+                                ["Authoritative title"]),
+                            new(
+                                MetadataFieldKey.Known(
+                                    TagFields.Genre),
+                                ["Rock", "Alternative"]),
+                        ],
+                        true,
+                        true,
+                        true,
+                        true)],
+                    [
+                        new ArtworkModel
+                        {
+                            Category = "BackCover",
+                            Description =
+                                "Lossless rear scan",
+                            ImageType = "image/png",
+                            Width = 900,
+                            Height = 880,
+                            Size = 3,
+                            Data = [4, 5, 6],
+                        },
+                    ],
+                    new()
+                    {
+                        CodecName = "FLAC",
+                    },
+                    new(
+                        path,
+                        10,
+                        DateTime.UtcNow,
+                        "document-hash"),
+                    true));
+        var inspector = new SelectionInspectorViewModel(
+            new FakeMediaService(
+                Model(
+                    path,
+                    "Legacy title",
+                    "Legacy artist")),
+            library,
+            new FakeTagWriter(),
+            new FakeArtworkService(),
+            new FakeFilePicker(),
+            new FakeDialogs(),
+            new FakeFieldsEditor(),
+            new FakeThumbnails(),
+            new AppActivityService(),
+            metadataDocuments: documents);
+
+        await inspector.LoadAsync(
+            new SelectionContext([path]));
+
+        Assert.Equal(
+            "Authoritative title",
+            inspector.Fields.Single(field =>
+                field.Field ==
+                TagFields.Title).Value);
+        EditableTagField genre =
+            inspector.Fields.Single(field =>
+                field.Field ==
+                TagFields.Genre);
+        Assert.True(genre.IsMixed);
+        Assert.Null(genre.Value);
+        ArtworkPreviewItem artwork =
+            Assert.Single(inspector.ArtworkItems);
+        Assert.Equal(
+            ID3v2Util.APICType.BackCover,
+            artwork.Type);
+        Assert.Equal(
+            "Lossless rear scan",
+            artwork.Description);
+    }
+
+    [Fact]
     public async Task Selection_inspector_summarizes_all_selected_file_and_tag_formats()
     {
         TrackRecord[] records =
@@ -484,7 +574,9 @@ public sealed class PresentationTests
         var inspector = new SelectionInspectorViewModel(
             new FakeMediaService(), new FakeLibrary(records), writer, new FakeArtworkService(),
             new FakeFilePicker(), new FakeDialogs(), new FakeFieldsEditor(),
-            new FakeThumbnails(), new AppActivityService());
+            new FakeThumbnails(), new AppActivityService(),
+            metadataDocuments:
+                new FakeMetadataDocumentService());
 
         await inspector.LoadAsync(new SelectionContext(
             records.Select(record => record.Path).ToArray(), records));

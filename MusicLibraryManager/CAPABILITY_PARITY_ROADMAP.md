@@ -70,7 +70,7 @@ the same editor, preview, policy checks, recovery behavior, and history.
 
 ## Current implementation status
 
-- [~] Phase 1: Metadata Workbench and safe editing foundation
+- [x] Phase 1: Metadata Workbench and safe editing foundation
   - [x] Initial lossless metadata, operation, plan, and history model types added.
   - [x] Core document, workbench, operation, and edit-history services added and
     registered.
@@ -178,17 +178,19 @@ appropriate build or test.
     resizing all produce the ordinary native-validated, recoverable preview;
     the same staged set can target a multi-file selection.
 - [x] Read-only technical properties.
-- [~] Refactor Library inspector and fields dialog onto shared document/write
+- [x] Refactor Library inspector and fields dialog onto shared document/write
   services.
   - The arbitrary-fields dialog now reads lossless `MediaDocument` values,
     preserves ordered multi-values as one editor line per value, and builds
     the shared authoritative preview before confirmation.
   - Apply uses native dry-run results, stale checks, recovery journals,
     cancellation, history, and undo.
-  - The curated inspector's tag saves, complete artwork-set saves,
+  - The curated inspector reads authoritative fields and artwork through the
+    same lossless document service while retaining cache-only aggregation for
+    selections above the bounded direct-read threshold. Its tag saves,
+    complete artwork-set saves,
     front-cover replacement, artwork optimization, and artwork removal now use
-    the same cancellable reviewed plans. Its cache-oriented read projection
-    still needs migration to the shared lossless document service.
+    the same cancellable reviewed plans.
 
 ### Safe application and history
 
@@ -602,8 +604,9 @@ per-operation capability flags.
   staged sequential track/disc numbering with totals, and ordered known/custom
   multi-value APEv2 writes across every APEv2-backed codec, plus ordered
   ID3v2.4 standard text values across every ID3-backed container.
-- Remaining Phase 1 work: migrate the legacy Library inspector/fields dialog
-  onto the shared document and mutation services.
+- Revisited and completed in this audit: the Library inspector and arbitrary-
+  fields dialog now use lossless shared document reads and reviewed shared
+  mutations with recovery and undo.
 - Revisited and completed in this audit: versioned tag-aware copy/paste across
   Workbench and explicit Library scopes, including known/custom identity,
   ordered values, plain-text fallback, and preview-first application.
@@ -614,8 +617,8 @@ per-operation capability flags.
 - Revisited in this audit: the Library arbitrary-fields dialog now uses
   lossless shared document reads and shared preview/apply mutations, retains
   ordered multi-values, and no longer writes directly without recovery. The
-  curated inspector's write commands now share that preview/apply path as
-  well; its legacy read projection remains the Phase 1 migration tail.
+  curated inspector's read and write commands now share those document and
+  preview/apply paths as well, completing the Phase 1 migration tail.
 - Remaining Phase 2 work: ad-hoc shared file mutations and live representative
   draft preview.
 - Revisited and completed in this audit: application-local/configured/system

@@ -22,6 +22,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
     private readonly IThumbnailService _thumbnails;
     private readonly IActivityService _activities;
     private readonly IMetadataOperationService? _metadataOperations;
+    private readonly IMetadataDocumentService? _metadataDocuments;
     private int _generation;
     private CancellationTokenSource? _cancellation;
     private CancellationTokenSource? _editCancellation;
@@ -60,7 +61,8 @@ public partial class SelectionInspectorViewModel : ObservableObject
         IFieldsEditorService fieldsEditor,
         IThumbnailService thumbnails,
         IActivityService activities,
-        IMetadataOperationService? metadataOperations = null)
+        IMetadataOperationService? metadataOperations = null,
+        IMetadataDocumentService? metadataDocuments = null)
     {
         _media = media;
         _library = library;
@@ -72,6 +74,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
         _thumbnails = thumbnails;
         _activities = activities;
         _metadataOperations = metadataOperations;
+        _metadataDocuments = metadataDocuments;
         foreach (var (field, label) in FieldDefinitions)
         {
             var item = new EditableTagField(field, label);
@@ -202,19 +205,59 @@ public partial class SelectionInspectorViewModel : ObservableObject
                 ? []
                 : selection.Paths;
             var models = new List<MediaFileModel>();
+            var documents = new List<MediaDocument>();
             foreach (string path in sample)
             {
                 cancellation.Token.ThrowIfCancellationRequested();
-                OperationResult<MediaFileModel> result = await _media.LoadAsync(path, includeArtwork: false, cancellation.Token);
-                if (result.Success && result.Value is not null)
-                    models.Add(result.Value);
+                if (_metadataDocuments is not null)
+                {
+                    try
+                    {
+                        documents.Add(
+                            await _metadataDocuments.LoadAsync(
+                                path,
+                                includeArtwork: false,
+                                cancellation.Token));
+                    }
+                    catch (Exception error) when (
+                        error is not OperationCanceledException)
+                    {
+                        StatusTone = MessageTone.Warning;
+                        StatusMessage =
+                            $"Could not read '{path}': " +
+                            error.Message;
+                    }
+                }
+                else
+                {
+                    OperationResult<MediaFileModel> result =
+                        await _media.LoadAsync(
+                            path,
+                            includeArtwork: false,
+                            cancellation.Token);
+                    if (result.Success &&
+                        result.Value is not null)
+                        models.Add(result.Value);
+                }
             }
             cancellation.Token.ThrowIfCancellationRequested();
             if (generation != _generation)
                 return;
 
-            LoadFields(models, selection);
-            Overview = DescribeOverview(selection, models);
+            if (_metadataDocuments is not null)
+            {
+                LoadFields(documents, selection);
+                Overview = DescribeOverview(
+                    selection,
+                    documents);
+            }
+            else
+            {
+                LoadFields(models, selection);
+                Overview = DescribeOverview(
+                    selection,
+                    models);
+            }
             if (selection.Paths.Count > MaxCommonValueSample)
                 Overview += Environment.NewLine + Environment.NewLine +
                     "Common values in cache-backed fields were checked across the full selection. " +
@@ -233,11 +276,30 @@ public partial class SelectionInspectorViewModel : ObservableObject
             if (distinctArtwork.Length == 0 || string.IsNullOrEmpty(distinctArtwork[0]))
                 return;
 
-            OperationResult<MediaFileModel> artwork = await _media.LoadAsync(
-                selection.Paths[0], includeArtwork: true, cancellation.Token);
+            ArtworkModel[] embeddedArtwork;
+            if (_metadataDocuments is not null)
+            {
+                MediaDocument artwork =
+                    await _metadataDocuments.LoadAsync(
+                        selection.Paths[0],
+                        includeArtwork: true,
+                        cancellation.Token);
+                embeddedArtwork =
+                    artwork.Artwork.ToArray();
+            }
+            else
+            {
+                OperationResult<MediaFileModel> artwork =
+                    await _media.LoadAsync(
+                        selection.Paths[0],
+                        includeArtwork: true,
+                        cancellation.Token);
+                embeddedArtwork =
+                    artwork.Value?.Artwork.ToArray() ??
+                    [];
+            }
             if (generation != _generation)
                 return;
-            ArtworkModel[] embeddedArtwork = artwork.Value?.Artwork.ToArray() ?? [];
             if (embeddedArtwork.Length == 0)
                 return;
             for (int index = 0; index < embeddedArtwork.Length; index++)
@@ -319,6 +381,73 @@ public partial class SelectionInspectorViewModel : ObservableObject
                 .Select(map => map.GetValueOrDefault(field.Field) ?? [])
                 .ToArray();
             SetFieldValues(field, valuesByFile, FieldValueVerification.Exact);
+        }
+        NotifyUnsavedChangesChanged();
+    }
+
+    private void LoadFields(
+        IReadOnlyList<MediaDocument> documents,
+        SelectionContext selection)
+    {
+        bool completeDocumentRead =
+            documents.Count == selection.Paths.Count &&
+            documents.Select(document => document.Path)
+                .ToHashSet(PathComparer)
+                .SetEquals(selection.Paths);
+        Dictionary<string, TrackRecord>? cachedRecords =
+            BuildCompleteRecordMap(selection);
+        Dictionary<TagFields, string[]>[] maps =
+            documents.Select(document =>
+                    document.TagLayers
+                        .SelectMany(layer => layer.Fields)
+                        .Where(value =>
+                            value.Field.KnownField is not null)
+                        .GroupBy(value =>
+                            value.Field.KnownField!.Value)
+                        .ToDictionary(
+                            group => group.Key,
+                            group => group
+                                .SelectMany(value =>
+                                    value.Values)
+                                .Where(value =>
+                                    !string.IsNullOrEmpty(value))
+                                .Distinct(
+                                    StringComparer.Ordinal)
+                                .ToArray()))
+                .ToArray();
+        foreach (EditableTagField field in Fields)
+        {
+            if (!completeDocumentRead)
+            {
+                if (TryGetCompleteCachedValues(
+                        selection,
+                        cachedRecords,
+                        field.Field,
+                        out string[][] cachedValues))
+                {
+                    SetFieldValues(
+                        field,
+                        cachedValues,
+                        FieldValueVerification.Exact);
+                    continue;
+                }
+                field.SetLoaded(
+                    [],
+                    true,
+                    FieldValueVerification.Unverified);
+                continue;
+            }
+
+            string[][] valuesByFile = maps
+                .Select(map =>
+                    map.GetValueOrDefault(
+                        field.Field) ??
+                    [])
+                .ToArray();
+            SetFieldValues(
+                field,
+                valuesByFile,
+                FieldValueVerification.Exact);
         }
         NotifyUnsavedChangesChanged();
     }
@@ -724,22 +853,35 @@ public partial class SelectionInspectorViewModel : ObservableObject
                 PathComparer);
             foreach (string path in Selection.Paths)
             {
-                OperationResult<MediaFileModel> loaded =
-                    await _media.LoadAsync(
-                        path,
-                        includeArtwork: true);
-                if (!loaded.Success ||
-                    loaded.Value is null)
+                IReadOnlyList<ArtworkModel> artwork;
+                if (_metadataDocuments is not null)
                 {
-                    StatusTone = MessageTone.Error;
-                    StatusMessage =
-                        loaded.Error ??
-                        $"Could not read artwork from '{path}'.";
-                    return;
+                    MediaDocument loaded =
+                        await _metadataDocuments.LoadAsync(
+                            path,
+                            includeArtwork: true);
+                    artwork = loaded.Artwork;
+                }
+                else
+                {
+                    OperationResult<MediaFileModel> loaded =
+                        await _media.LoadAsync(
+                            path,
+                            includeArtwork: true);
+                    if (!loaded.Success ||
+                        loaded.Value is null)
+                    {
+                        StatusTone = MessageTone.Error;
+                        StatusMessage =
+                            loaded.Error ??
+                            $"Could not read artwork from '{path}'.";
+                        return;
+                    }
+                    artwork = loaded.Value.Artwork;
                 }
                 requests[path] = new(
                     [
-                        .. loaded.Value.Artwork.Select(
+                        .. artwork.Select(
                             (image, index) =>
                                 new ArtworkInput(
                                     ArtworkType(
@@ -1087,6 +1229,63 @@ public partial class SelectionInspectorViewModel : ObservableObject
         return $"{scope}{Environment.NewLine}{Environment.NewLine}" +
                $"File formats{Environment.NewLine}{FormatDistribution(fileFormats, count)}" +
                $"{Environment.NewLine}{Environment.NewLine}Tag formats{Environment.NewLine}" +
+               FormatDistribution(tagFormats, count);
+    }
+
+    private static string DescribeOverview(
+        SelectionContext selection,
+        IReadOnlyList<MediaDocument> documents)
+    {
+        int count = selection.Paths.Count;
+        Dictionary<string, string?> codecsByPath =
+            (selection.Records is { Count: > 0 }
+                ? selection.Records.Select(record =>
+                    (record.Path, record.CodecName))
+                : documents.Select(document =>
+                    (
+                        document.Path,
+                        document.Codec?.CodecName)))
+            .GroupBy(
+                value => value.Path,
+                PathComparer)
+            .ToDictionary(
+                group => group.Key,
+                group => group.First().Item2,
+                PathComparer);
+        IEnumerable<string> fileFormats =
+            selection.Paths.Select(path =>
+                FormatFileFormat(
+                    path,
+                    codecsByPath.GetValueOrDefault(path)));
+        string[] knownTagFormats =
+            (selection.Records is { Count: > 0 }
+                ? selection.Records.Select(record =>
+                    NormalizeTagFormat(
+                        record.TagType))
+                : documents.Select(document =>
+                    NormalizeTagFormat(
+                        document.TagLayers
+                            .FirstOrDefault()?.TagType)))
+            .Take(count)
+            .ToArray();
+        IEnumerable<string> tagFormats =
+            knownTagFormats.Concat(
+                Enumerable.Repeat(
+                    "Unknown",
+                    Math.Max(
+                        0,
+                        count -
+                        knownTagFormats.Length)));
+        string scope = count == 1
+            ? "1 track selected"
+            : $"{count:N0} tracks selected";
+
+        return $"{scope}{Environment.NewLine}" +
+               $"{Environment.NewLine}File formats" +
+               $"{Environment.NewLine}" +
+               $"{FormatDistribution(fileFormats, count)}" +
+               $"{Environment.NewLine}{Environment.NewLine}" +
+               $"Tag formats{Environment.NewLine}" +
                FormatDistribution(tagFormats, count);
     }
 
