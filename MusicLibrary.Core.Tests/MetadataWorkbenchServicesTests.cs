@@ -229,6 +229,9 @@ public sealed class MetadataWorkbenchServicesTests
 
             MetadataApplyResult result =
                 await service.ApplyAsync(plan);
+            await reindex.Completed.Task.WaitAsync(
+                TimeSpan.FromSeconds(5),
+                TestContext.Current.CancellationToken);
 
             Assert.Equal(1, result.ChangedFiles);
             Assert.Equal([mediaPath], reindex.Paths);
@@ -252,6 +255,79 @@ public sealed class MetadataWorkbenchServicesTests
                     recursive: true);
             }
             catch { }
+        }
+    }
+
+    [Fact]
+    public async Task SuccessfulMetadataApply_DoesNotWaitForAnActiveLibraryIndex()
+    {
+        string root = Path.Combine(
+            AppContext.BaseDirectory,
+            "TestRuns",
+            $"metadata-background-reindex-{Guid.NewGuid():N}");
+        string mediaPath = Path.Combine(root, "sample.flac");
+        string statePath = Path.Combine(root, "settings.json");
+        string recoveryRoot =
+            root + ".MusicLibraryManager-recovery";
+        var reindex = new BlockingReindexService();
+        try
+        {
+            Directory.CreateDirectory(root);
+            File.Copy(
+                MediaFixtures.Path_("sample.flac"),
+                mediaPath);
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings,
+                reindex);
+            OperationRecipe recipe = OperationRecipe.Create(
+                "Save while indexing",
+                new AssignFieldOperation(
+                    MetadataFieldKey.Known(TagFields.Title),
+                    "Saved without waiting"));
+            MetadataOperationPlan plan =
+                await service.PreviewAsync(
+                    [mediaPath],
+                    recipe);
+
+            Task<MetadataApplyResult> apply =
+                service.ApplyAsync(plan);
+            await reindex.Started.Task.WaitAsync(
+                TimeSpan.FromSeconds(5),
+                TestContext.Current.CancellationToken);
+            MetadataApplyResult result =
+                await apply.WaitAsync(
+                    TimeSpan.FromSeconds(5),
+                    TestContext.Current.CancellationToken);
+
+            Assert.Equal(1, result.ChangedFiles);
+            Assert.False(reindex.Completed.Task.IsCompleted);
+        }
+        finally
+        {
+            reindex.Release.TrySetResult(true);
+            try
+            {
+                await reindex.Completed.Task.WaitAsync(
+                    TimeSpan.FromSeconds(5));
+            }
+            catch
+            {
+            }
+            try { Directory.Delete(root, recursive: true); } catch { }
+            try
+            {
+                Directory.Delete(
+                    recoveryRoot,
+                    recursive: true);
+            }
+            catch
+            {
+            }
+            try { File.Delete(statePath); } catch { }
         }
     }
 
@@ -2799,12 +2875,15 @@ public sealed class MetadataWorkbenchServicesTests
     {
         public List<string> Paths { get; } = [];
         public IMediaFile? SavedFile { get; private set; }
+        public TaskCompletionSource<bool> Completed { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public Task ReindexFileAsync(
             string path,
             CancellationToken ct = default)
         {
             Paths.Add(path);
+            Completed.TrySetResult(true);
             return Task.CompletedTask;
         }
 
@@ -2815,7 +2894,38 @@ public sealed class MetadataWorkbenchServicesTests
         {
             Paths.Add(path);
             SavedFile = savedFile;
+            Completed.TrySetResult(true);
             return Task.CompletedTask;
+        }
+    }
+
+    private sealed class BlockingReindexService :
+        IReindexService
+    {
+        public TaskCompletionSource<bool> Started { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<bool> Release { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public TaskCompletionSource<bool> Completed { get; } =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task ReindexFileAsync(
+            string path,
+            CancellationToken ct = default) =>
+            ReindexAsync(ct);
+
+        public Task ReindexFileAsync(
+            string path,
+            IMediaFile savedFile,
+            CancellationToken ct = default) =>
+            ReindexAsync(ct);
+
+        private async Task ReindexAsync(
+            CancellationToken ct)
+        {
+            Started.TrySetResult(true);
+            await Release.Task.WaitAsync(ct);
+            Completed.TrySetResult(true);
         }
     }
 

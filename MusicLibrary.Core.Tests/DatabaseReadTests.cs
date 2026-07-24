@@ -81,6 +81,44 @@ public class DatabaseReadTests
     }
 
     [Fact]
+    public async Task CustomMetadataBackfillIgnoresUnnamedFieldsWithoutFailingIndex()
+    {
+        var (work, _, config, song) = Setup("sample.mp3");
+        try
+        {
+            IMediaFile media = MediaFile.GetFile(song);
+            ID3v2Tag tag = Assert.Single(media.Tags.OfType<ID3v2Tag>());
+            tag.Frames.Add(new UserStringFrame(tag)
+            {
+                Key = "",
+                Value = "unnamed value",
+            });
+            media.SaveTags();
+
+            var settings = new AppSettings(Path.Combine(work, "settings.json"));
+            settings.LoadConfig(config);
+            using var library = new LibraryService(settings);
+
+            await library.IndexAsync();
+
+            FileDetails details = Assert.IsType<FileDetails>(
+                await library.GetFileDetailsAsync(
+                    song, includeArtwork: false));
+            Assert.DoesNotContain(details.TextFields,
+                field => string.IsNullOrWhiteSpace(field.Key));
+            using var database = MetadataDatabase.OpenDatabase(
+                Path.Combine(work, "cache.db"));
+            Assert.True(database.HasCacheFeature(
+                CachedMetadataKeys.CacheFeature));
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            try { Directory.Delete(work, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public async Task IndexAndReindexExposeNativeCustomMetadataToLibraryRows()
     {
         var (work, _, config, song) = Setup("sample.flac");
@@ -661,6 +699,91 @@ public class DatabaseReadTests
             Assert.Equal(1L, ReadArtworkScanned(Path.Combine(work, "cache.db")));
             Assert.Equal(1, await library.GetMaterializedArtworkFileCountAsync());
             Assert.Single((await library.GetFileDetailsAsync(song, includeArtwork: true))!.Images);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            try { Directory.Delete(work, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task Index_EagerArtworkPolicyMaterializesArtworkImmediately()
+    {
+        var (work, _, config, song) = Setup("sample.flac");
+        try
+        {
+            byte[] cover = CreatePngBytes(96, 96, Color.Orange);
+            var media = MediaFile.GetFile(song);
+            ((IArtworkWriter)media.Tags.First()).SetFrontCover(cover, "image/png");
+            media.SaveTags();
+
+            EditableLibraryConfig editable = EditableLibraryConfig.Load(config);
+            int profileIndex = editable.Profiles.FindIndex(profile =>
+                profile.Id.Equals(editable.ActiveProfileId,
+                    StringComparison.OrdinalIgnoreCase));
+            editable.Profiles[profileIndex] = editable.Profiles[profileIndex] with
+            {
+                Artwork = editable.Profiles[profileIndex].Artwork with
+                {
+                    ReadAtIndexTime = true,
+                },
+            };
+            editable.Save(config);
+
+            var settings = new AppSettings(Path.Combine(work, "settings.json"));
+            settings.LoadConfig(config);
+            using var library = new LibraryService(settings);
+            await library.IndexAsync();
+
+            Assert.Equal(1L, ReadArtworkScanned(Path.Combine(work, "cache.db")));
+            Assert.Equal(1, await library.GetMaterializedArtworkFileCountAsync());
+            Assert.Equal(cover, await library.GetFirstImageAsync(song));
+            Assert.Single((await library.GetFileDetailsAsync(
+                song, includeArtwork: true))!.Images);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            try { Directory.Delete(work, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task EnablingEagerArtworkHydratesPreviouslyDeferredUnchangedFiles()
+    {
+        var (work, _, config, song) = Setup("sample.flac");
+        try
+        {
+            byte[] cover = CreatePngBytes(72, 72, Color.Gold);
+            var media = MediaFile.GetFile(song);
+            ((IArtworkWriter)media.Tags.First()).SetFrontCover(cover, "image/png");
+            media.SaveTags();
+
+            var settings = new AppSettings(Path.Combine(work, "settings.json"));
+            settings.LoadConfig(config);
+            using var library = new LibraryService(settings);
+            await library.IndexAsync();
+            Assert.Equal(0L, ReadArtworkScanned(Path.Combine(work, "cache.db")));
+
+            EditableLibraryConfig editable = EditableLibraryConfig.Load(config);
+            int profileIndex = editable.Profiles.FindIndex(profile =>
+                profile.Id.Equals(editable.ActiveProfileId,
+                    StringComparison.OrdinalIgnoreCase));
+            editable.Profiles[profileIndex] = editable.Profiles[profileIndex] with
+            {
+                Artwork = editable.Profiles[profileIndex].Artwork with
+                {
+                    ReadAtIndexTime = true,
+                },
+            };
+            editable.Save(config);
+            settings.LoadConfig(config);
+
+            await library.IndexAsync();
+
+            Assert.Equal(1L, ReadArtworkScanned(Path.Combine(work, "cache.db")));
+            Assert.Equal(cover, await library.GetFirstImageAsync(song));
         }
         finally
         {

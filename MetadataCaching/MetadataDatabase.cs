@@ -80,6 +80,11 @@ namespace MetadataCaching
 
         /// <summary>Relative-path or file-name globs that take precedence over includes.</summary>
         public IReadOnlyList<string> ExcludePatterns { get; init; } = [];
+
+        /// <summary>
+        /// Read and cache embedded artwork while indexing instead of hydrating it on demand.
+        /// </summary>
+        public bool ReadArtworkAtIndexTime { get; init; }
     }
 
     public sealed record IndexedFileSnapshot(
@@ -253,11 +258,16 @@ namespace MetadataCaching
                 HashCode.Combine(value.ScanSetID, PathComparer.GetHashCode(value.Path));
         }
 
-        private sealed class ExistingIndexedFile(long id, long length, DateTime lastWriteTime)
+        private sealed class ExistingIndexedFile(
+            long id,
+            long length,
+            DateTime lastWriteTime,
+            bool artworkScanned)
         {
             public long ID { get; } = id;
             public long Length { get; } = length;
             public DateTime LastWriteTime { get; } = lastWriteTime;
+            public bool ArtworkScanned { get; } = artworkScanned;
             public int Hit;
         }
 
@@ -977,6 +987,7 @@ namespace MetadataCaching
                 Formats = first.Formats,
                 IncludePatterns = first.IncludePatterns,
                 ExcludePatterns = first.ExcludePatterns,
+                ReadArtworkAtIndexTime = first.ReadArtworkAtIndexTime,
             };
         }
 
@@ -988,7 +999,8 @@ namespace MetadataCaching
             new HashSet<string>(left.IncludePatterns, StringComparer.OrdinalIgnoreCase)
                 .SetEquals(right.IncludePatterns) &&
             new HashSet<string>(left.ExcludePatterns, StringComparer.OrdinalIgnoreCase)
-                .SetEquals(right.ExcludePatterns);
+                .SetEquals(right.ExcludePatterns) &&
+            left.ReadArtworkAtIndexTime == right.ReadArtworkAtIndexTime;
 
         private static bool IsIncludedByRootPolicy(
             ScanRootDefinition root,
@@ -1096,6 +1108,7 @@ namespace MetadataCaching
                             root.IncludePatterns ?? []),
                         ExcludePatterns = LibraryConfiguration.NormalizeIndexPatterns(
                             root.ExcludePatterns ?? []),
+                        ReadArtworkAtIndexTime = root.ReadArtworkAtIndexTime,
                     })
                     .GroupBy(root => root.Path, FilePathComparer)
                     .Select(MergeDuplicateRootDefinitions)
@@ -1172,7 +1185,7 @@ namespace MetadataCaching
                 scanSetsCache_ = null;
             }
 
-            using var filequeue = new BlockingCollection<(long ID, long Set, string FileName, long Length, DateTime LastWriteTime, IMediaFile File)>(IndexFileQueueBound);
+            using var filequeue = new BlockingCollection<(long ID, long Set, string FileName, long Length, DateTime LastWriteTime, bool ArtworkScanned, IMediaFile File)>(IndexFileQueueBound);
             using var pipelineCts = new CancellationTokenSource();
             var rootStats = new ConcurrentDictionary<long, RootScanStats>();
             var rootErrors = new ConcurrentDictionary<long, (ScanRootState State, string Error)>();
@@ -1196,20 +1209,23 @@ namespace MetadataCaching
 
             using (var querycomm = conn_.CreateCommand())
             {
-                querycomm.CommandText = "SELECT f.ID, a.ScanSetID, f.Path, f.FileSize, f.LastWriteTime, a.Path AS AlbumPath" +
+                querycomm.CommandText = "SELECT f.ID, a.ScanSetID, f.Path, f.FileSize, f.LastWriteTime, f.ArtworkScanned, a.Path AS AlbumPath" +
                     " FROM Files f JOIN Tracks t ON f.ID = t.ID JOIN Albums a ON t.AlbumID = a.ID";
                 using var reader = querycomm.ExecuteReader();
                 // Resolve ordinals once instead of a name->ordinal lookup per column per row;
                 // this loop walks the entire library.
                 int oId = reader.GetOrdinal("ID"), oSet = reader.GetOrdinal("ScanSetID"),
                     oPath = reader.GetOrdinal("Path"), oSize = reader.GetOrdinal("FileSize"),
-                    oLwt = reader.GetOrdinal("LastWriteTime"), oAlbumPath = reader.GetOrdinal("AlbumPath");
+                    oLwt = reader.GetOrdinal("LastWriteTime"),
+                    oArtworkScanned = reader.GetOrdinal("ArtworkScanned"),
+                    oAlbumPath = reader.GetOrdinal("AlbumPath");
                 while (reader.Read())
                 {
                     var key = (reader.GetInt64(oSet), Path.Combine(reader.GetString(oAlbumPath), reader.GetString(oPath)));
                     filesdict[key] = new ExistingIndexedFile(
                         reader.GetInt64(oId), reader.GetInt64(oSize),
-                        DateTime.SpecifyKind(reader.GetDateTime(oLwt), DateTimeKind.Utc));
+                        DateTime.SpecifyKind(reader.GetDateTime(oLwt), DateTimeKind.Utc),
+                        reader.GetInt64(oArtworkScanned) != 0);
                 }
             }
 
@@ -1233,9 +1249,13 @@ namespace MetadataCaching
                 using (var reader = querycomm.ExecuteReader())
                     while (reader.Read())
                         albumsdict[(reader.GetInt64("ScanSetID"), reader.GetInt64("AlbumArtistID"), reader.GetString("Path"), reader.GetString("Name"))] = reader.GetInt64("ID");
-                // Artwork is intentionally unresolved during this pass, so do not load the global
-                // image-hash table. On-demand hydration uses its indexed hash lookup only for the
-                // requested files.
+                if (rootDefinitions.Values.Any(root => root.ReadArtworkAtIndexTime))
+                {
+                    querycomm.CommandText = "SELECT ID, Hash FROM Images WHERE Hash IS NOT NULL";
+                    using var reader = querycomm.ExecuteReader();
+                    while (reader.Read())
+                        imagesdict[reader.GetString("Hash")] = reader.GetInt64("ID");
+                }
             }
             ReportPhase(IndexPhase.Preparing, preparingClock, filesdict.Count,
                 $"Loaded {filesdict.Count:N0} cached file row(s)");
@@ -1322,6 +1342,8 @@ namespace MetadataCaching
                    {
                        Interlocked.Exchange(ref existing.Hit, 1);
                        if (forceMetadataRefresh ||
+                           (rootDefinitions[setID].ReadArtworkAtIndexTime &&
+                            !existing.ArtworkScanned) ||
                            (Math.Abs((file.Modified - existing.LastWriteTime).TotalMilliseconds) > 500.0) ||
                            file.Size != existing.Length)
                        {
@@ -1346,10 +1368,18 @@ namespace MetadataCaching
                            var parsed = MediaFile.GetFile(
                                file.Name,
                                readOnly: true,
-                               readArtwork: false,
+                               readArtwork: rootDefinitions[setID].ReadArtworkAtIndexTime,
                                knownLength: file.Size);
+                           if (rootDefinitions[setID].ReadArtworkAtIndexTime)
+                           {
+                               using var sha = SHA256.Create();
+                               foreach (var image in parsed.Tags.SelectMany(
+                                            tag => tag.GetImageMetadata()))
+                                   image.HashImage(sha);
+                           }
                            filequeue.Add((id, setID, relativename, file.Size, file.Modified,
-                               parsed), pipelineCts.Token);
+                               rootDefinitions[setID].ReadArtworkAtIndexTime, parsed),
+                               pipelineCts.Token);
                            if (isAdded)
                                Interlocked.Increment(ref added);
                            else if (isModified)
@@ -1425,7 +1455,8 @@ namespace MetadataCaching
                                  scannedsets.Contains(kv.Key.ScanSetID) &&
                                  !removalUnsafeSets.ContainsKey(kv.Key.ScanSetID)))
                     {
-                        filequeue.Add((file.Value.ID, file.Key.ScanSetID, null, 0, DateTime.MinValue, null), pipelineCts.Token);
+                        filequeue.Add((file.Value.ID, file.Key.ScanSetID, null, 0,
+                            DateTime.MinValue, false, null), pipelineCts.Token);
                         removed++;
                     }
                 }
@@ -1517,8 +1548,9 @@ namespace MetadataCaching
                     var durationinframesparam = filecomm.Parameters.Add("@DurationInFrames", DbType.Int64);
                     var tagtypeparam = filecomm.Parameters.Add("@TagType", DbType.String);
                     var hasalbumartistparam = filecomm.Parameters.Add("@HasAlbumArtist", DbType.Int64);
+                    var artworkscannedparam = filecomm.Parameters.Add("@ArtworkScanned", DbType.Int64);
                     filecomm.CommandText = "INSERT INTO Files (Path, FileSize, LastWriteTime, CodecName, CodecType, AverageBitrate, MaxBitrate, BitsPerSample, SampleRate, Channels, DurationInFrames, TagType, ArtworkScanned, HasAlbumArtist)" +
-                        " VALUES (@Path, @FileSize, @LastWriteTime, @CodecName, @CodecType, @AverageBitrate, @MaxBitrate, @BitsPerSample, @SampleRate, @Channels, @DurationInFrames, @TagType, 0, @HasAlbumArtist);\r\n" +
+                        " VALUES (@Path, @FileSize, @LastWriteTime, @CodecName, @CodecType, @AverageBitrate, @MaxBitrate, @BitsPerSample, @SampleRate, @Channels, @DurationInFrames, @TagType, @ArtworkScanned, @HasAlbumArtist);\r\n" +
                         lastidsql_;
 
                     // SQLite metadata rows are written via buffered multi-row INSERTs (see
@@ -1685,6 +1717,7 @@ namespace MetadataCaching
                         durationinframesparam.Value = cp.DurationInFrames;
                         tagtypeparam.Value = mp.TagType;
                         hasalbumartistparam.Value = mp.HasAlbumArtist ? 1 : 0;
+                        artworkscannedparam.Value = file.ArtworkScanned ? 1 : 0;
 
                         trackidparam.Value = imagefileidparam.Value = fileid = (long)filecomm.ExecuteScalar();
                         trackcomm.ExecuteNonQuery();
@@ -1699,7 +1732,7 @@ namespace MetadataCaching
                                     kv.Value));
                         if (mp is IUserStringMetadata customMetadata)
                             cachedMetadata = cachedMetadata.Concat(
-                                customMetadata.GetUserStrings().Select(kv =>
+                                customMetadata.GetAddressableUserStrings().Select(kv =>
                                     KeyValuePair.Create(
                                         CachedMetadataKeys.Custom(kv.Key),
                                         kv.Value)));
@@ -1852,9 +1885,15 @@ namespace MetadataCaching
             if (!ct.IsCancellationRequested)
             {
                 var artworkClock = Stopwatch.StartNew();
+                bool artworkDeferred = rootDefinitions.Values.Any(
+                    root => !root.ReadArtworkAtIndexTime);
                 ReportPhase(IndexPhase.Artwork, artworkClock, 0,
-                    "Artwork is deferred and hydrates only when viewed or audited",
-                    artworkDeferred: true);
+                    artworkDeferred
+                        ? rootDefinitions.Values.Any(root => root.ReadArtworkAtIndexTime)
+                            ? "Artwork was read for eager roots; other roots hydrate artwork when viewed or audited"
+                            : "Artwork is deferred and hydrates only when viewed or audited"
+                        : "Artwork was read and cached during indexing",
+                    artworkDeferred: artworkDeferred);
                 ReportPhase(IndexPhase.Completed, indexClock, enumerated,
                     "Index complete");
             }
@@ -2464,7 +2503,7 @@ namespace MetadataCaching
                         kv.Value));
             if (mp is IUserStringMetadata customMetadata)
                 cachedMetadata = cachedMetadata.Concat(
-                    customMetadata.GetUserStrings().Select(kv =>
+                    customMetadata.GetAddressableUserStrings().Select(kv =>
                         KeyValuePair.Create(
                             CachedMetadataKeys.Custom(kv.Key),
                             kv.Value)));

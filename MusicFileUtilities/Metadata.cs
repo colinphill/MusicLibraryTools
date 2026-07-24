@@ -231,6 +231,23 @@ namespace MusicFileUtilities
         void RemoveUserString(string key);
     }
 
+    /// <summary>
+    /// Filters format-native text entries down to fields that can be addressed by name. Some
+    /// formats can preserve malformed or unnamed entries (for example an ID3 TXXX frame with an
+    /// empty description); those entries must remain in the file but cannot be exposed as editable
+    /// custom fields or persisted under a metadata-cache key.
+    /// </summary>
+    public static class UserStringMetadataExtensions
+    {
+        public static IEnumerable<KeyValuePair<string, string>>
+            GetAddressableUserStrings(this IUserStringMetadata metadata)
+        {
+            ArgumentNullException.ThrowIfNull(metadata);
+            return metadata.GetUserStrings().Where(field =>
+                !string.IsNullOrWhiteSpace(field.Key));
+        }
+    }
+
     /// <summary>Writes ordered values for a format-native user-defined text key.</summary>
     public interface IMultiValueUserStringMetadata
     {

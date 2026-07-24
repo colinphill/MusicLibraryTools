@@ -74,6 +74,23 @@ namespace MusicFileUtilities.Tests
         }
 
         [Fact]
+        public void UnnamedUserStringIsPreservedButNotExposedAsAddressableMetadata()
+        {
+            var tag = new ID3v2Tag();
+            tag.Frames.Add(new UserStringFrame(tag)
+            {
+                Key = "",
+                Value = "orphaned value",
+            });
+
+            KeyValuePair<string, string> raw = Assert.Single(
+                tag.GetUserStrings());
+            Assert.Equal("", raw.Key);
+            Assert.Equal("orphaned value", raw.Value);
+            Assert.Empty(tag.GetAddressableUserStrings());
+        }
+
+        [Fact]
         public void KnownTxxxMappingsAreNotReportedAsArbitraryUserStrings()
         {
             var tag = new ID3v2Tag();

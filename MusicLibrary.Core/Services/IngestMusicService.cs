@@ -82,7 +82,26 @@ public sealed class IngestMusicService : IIngestMusicService
             .Cast<string>()
             .Distinct(PathComparer)
             .ToArray();
-        if (destinations.Any(d => PathsOverlap(sourceRoot, d)))
+        string[] explicitSources = request.SourceFiles?
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Select(Path.GetFullPath)
+            .Distinct(PathComparer)
+            .ToArray() ?? [];
+        if (explicitSources.Length > 0 &&
+            explicitSources.Any(path =>
+                !IsWithin(path, sourceRoot)))
+            throw new InvalidDataException(
+                "Every selected ingest file must be inside the source directory.");
+        IEnumerable<string> isolationRoots =
+            explicitSources.Length == 0
+                ? [sourceRoot]
+                : explicitSources
+                    .Select(path =>
+                        Path.GetDirectoryName(path)!)
+                    .Distinct(PathComparer);
+        if (destinations.Any(destination =>
+                isolationRoots.Any(source =>
+                    PathsOverlap(source, destination))))
             throw new InvalidDataException("The source directory must not overlap an ingestion destination.");
         if (destinations.SelectMany((a, i) => destinations.Skip(i + 1).Select(b => (a, b))).Any(p => PathsOverlap(p.a, p.b)))
             throw new InvalidDataException("Ingestion destination directories must not overlap each other.");
@@ -92,17 +111,17 @@ public sealed class IngestMusicService : IIngestMusicService
         // One buffered traversal supplies paths, size/timestamp snapshots, and the directory list.
         // The previous implementation walked the whole tree once for files, once for directories,
         // then issued a FileInfo metadata request for every file -- particularly costly over SMB.
-        foreach (var entry in new MusicFileEnumerator(sourceRoot, skipItlpPackages: false))
+        void AddFile(
+            string path,
+            long size,
+            DateTime modified)
         {
             ct.ThrowIfCancellationRequested();
-            if (entry.FileType == MFEType.Directory)
-            {
-                sourceDirectories.Add(entry.Name);
-                continue;
-            }
-
-            string extension = Path.GetExtension(entry.Name);
-            var snapshot = new IngestFileSnapshot(entry.Name, entry.Size, entry.Modified);
+            string extension = Path.GetExtension(path);
+            var snapshot = new IngestFileSnapshot(
+                path,
+                size,
+                modified);
             discoveredFiles++;
             if (discoveredFiles == 1 || (discoveredFiles & 31) == 0)
                 progress?.Report(new(
@@ -110,16 +129,49 @@ public sealed class IngestMusicService : IIngestMusicService
                     "Discovering source files",
                     discoveredFiles,
                     0,
-                    entry.Name,
+                    path,
                     IngestFileProgressState.InProgress));
             if (!enabledRecipes.Any(recipe => recipe.InputExtensions.Contains(
                     extension, StringComparer.OrdinalIgnoreCase)))
             {
                 scanFiles.Add(new PreviewFile(snapshot, Supported: false));
-                continue;
+                return;
             }
 
             scanFiles.Add(new PreviewFile(snapshot, Supported: true));
+        }
+        if (explicitSources.Length > 0)
+        {
+            foreach (string path in explicitSources)
+            {
+                if (!File.Exists(path))
+                    throw new FileNotFoundException(
+                        "A selected ingest file is unavailable.",
+                        path);
+                var info = new FileInfo(path);
+                AddFile(
+                    info.FullName,
+                    info.Length,
+                    info.LastWriteTimeUtc);
+            }
+        }
+        else
+        {
+            foreach (var entry in new MusicFileEnumerator(
+                         sourceRoot,
+                         skipItlpPackages: false))
+            {
+                ct.ThrowIfCancellationRequested();
+                if (entry.FileType == MFEType.Directory)
+                {
+                    sourceDirectories.Add(entry.Name);
+                    continue;
+                }
+                AddFile(
+                    entry.Name,
+                    entry.Size,
+                    entry.Modified);
+            }
         }
 
         var scanResults = new PreviewFileResult[scanFiles.Count];
@@ -289,6 +341,10 @@ public sealed class IngestMusicService : IIngestMusicService
             {
                 SourceDirectory = sourceRoot,
                 ConfigurationPath = resolved.ConfigurationPath,
+                SourceFiles =
+                    explicitSources.Length == 0
+                        ? null
+                        : explicitSources,
             },
             Configuration = config,
             Albums = albums,
@@ -1850,7 +1906,8 @@ public sealed class IngestMusicService : IIngestMusicService
                 media.Tags.OfType<IUserStringMetadata>().FirstOrDefault();
             if (metadataPolicy.PreserveCustomFields && sourceStrings is not null &&
                 destinationStrings is not null)
-                foreach (KeyValuePair<string, string> field in sourceStrings.GetUserStrings())
+                foreach (KeyValuePair<string, string> field in
+                         sourceStrings.GetAddressableUserStrings())
                     destinationStrings.SetUserString(field.Key, field.Value);
         }
 

@@ -2,7 +2,14 @@ using MusicLibraryTools;
 
 namespace MusicLibrary.Core.Models;
 
-public sealed record IngestRequest(string SourceDirectory, string? ConfigurationPath = null);
+public sealed record IngestRequest(
+    string SourceDirectory,
+    string? ConfigurationPath = null,
+    IReadOnlyList<string>? SourceFiles = null)
+{
+    public bool HasExplicitSourceFiles =>
+        SourceFiles is { Count: > 0 };
+}
 
 public enum IngestPreflightSeverity { Pass, Warning, Error }
 

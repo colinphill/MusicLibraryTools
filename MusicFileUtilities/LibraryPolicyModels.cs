@@ -310,7 +310,8 @@ namespace MusicLibraryTools
         int MaximumDimension,
         int MaximumEncodedBytes,
         int JpegQuality,
-        string SidecarFileNameTemplate);
+        string SidecarFileNameTemplate,
+        bool ReadAtIndexTime = false);
 
     /// <summary>Disposition for a file selected by a sidecar rule during source cleanup.</summary>
     public enum LibrarySidecarDisposition
@@ -870,6 +871,8 @@ namespace MusicLibraryTools
                 SidecarFileNameTemplate =
                     Optional(artworkElement, "SidecarFileNameTemplate") ??
                     fallback.Artwork.SidecarFileNameTemplate,
+                ReadAtIndexTime = ParseBoolean(
+                    artworkElement, "ReadAtIndexTime", fallback.Artwork.ReadAtIndexTime),
             };
 
             XElement? sidecarsElement = element.Element("Sidecars");
@@ -978,7 +981,8 @@ namespace MusicLibraryTools
                     new XAttribute("MaximumEncodedBytes", profile.Artwork.MaximumEncodedBytes),
                     new XAttribute("JpegQuality", profile.Artwork.JpegQuality),
                     new XAttribute("SidecarFileNameTemplate",
-                        profile.Artwork.SidecarFileNameTemplate)),
+                        profile.Artwork.SidecarFileNameTemplate),
+                    new XAttribute("ReadAtIndexTime", profile.Artwork.ReadAtIndexTime)),
                 new XElement("Sidecars",
                     new XAttribute("UnknownFileDisposition",
                         profile.Sidecars.UnknownFileDisposition),
@@ -1935,6 +1939,7 @@ namespace MusicLibraryTools
                     .Append(profile.Artwork.MaximumEncodedBytes).Append('|')
                     .Append(profile.Artwork.JpegQuality).Append('|')
                     .Append(profile.Artwork.SidecarFileNameTemplate).Append('|')
+                    .Append(profile.Artwork.ReadAtIndexTime).Append('|')
                     .Append(profile.Sidecars.UnknownFileDisposition).AppendLine();
                 foreach (LibraryHealthRulePolicy rule in profile.Health.Rules.OrderBy(
                              item => item.Id, StringComparer.OrdinalIgnoreCase))

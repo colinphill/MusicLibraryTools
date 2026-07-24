@@ -53,6 +53,58 @@ public class IngestMusicTests
     }
 
     [Fact]
+    public async Task Preview_ExplicitFilesExcludeUnselectedSiblingsAndFolders()
+    {
+        using var tree = new TempTree();
+        string selected = tree.FileFromFixture(
+            "incoming",
+            "selected.flac",
+            "sample.flac");
+        string sibling = tree.FileFromFixture(
+            "incoming",
+            "not-selected.flac",
+            "sample.flac");
+        File.WriteAllText(
+            tree.Path(
+                "incoming",
+                "notes.txt"),
+            "not selected");
+        tree.Dir(
+            "incoming",
+            "empty-folder");
+
+        IngestPlan plan =
+            await new IngestMusicService(
+                    new FakeFfmpeg())
+                .PreviewAsync(new(
+                    tree.Path("incoming"),
+                    tree.Config(),
+                    [selected]));
+
+        Assert.True(
+            plan.Request.HasExplicitSourceFiles);
+        Assert.Equal(
+            [selected],
+            plan.Request.SourceFiles);
+        Assert.Contains(
+            plan.Files,
+            file => string.Equals(
+                file.Source,
+                selected,
+                StringComparison.OrdinalIgnoreCase));
+        Assert.DoesNotContain(
+            plan.Files,
+            file => string.Equals(
+                file.Source,
+                sibling,
+                StringComparison.OrdinalIgnoreCase));
+        Assert.Empty(
+            plan.IgnoredFiles);
+        Assert.Empty(
+            plan.SourceDirectories);
+    }
+
+    [Fact]
     public async Task Preview_NormalizesMultiDiscAlbumAndTrackOffsets()
     {
         using var tree = new TempTree();

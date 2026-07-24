@@ -121,20 +121,6 @@ public sealed class MetadataGridRowComparer(
 public partial class MetadataGridColumnEditorViewModel :
     ObservableObject
 {
-    private static readonly HashSet<TagFields>
-        InlineEditableFields =
-        [
-            TagFields.Title,
-            TagFields.Artist,
-            TagFields.AlbumArtist,
-            TagFields.Album,
-            TagFields.Genre,
-            TagFields.Composer,
-            TagFields.Date,
-            TagFields.TrackNumber,
-            TagFields.DiscNumber,
-        ];
-
     private readonly IMetadataGridColumnStore? _store;
     private readonly MetadataGridSurface _surface;
     private bool _loading;
@@ -194,7 +180,24 @@ public partial class MetadataGridColumnEditorViewModel :
         SupportsInlineEditing &&
         FieldKind == MetadataGridFieldKind.Known &&
         SelectedKnownField is not null &&
-        InlineEditableFields.Contains(SelectedKnownField.Field);
+        InlineEditPath(SelectedKnownField.Field) is not null;
+
+    public static string? InlineEditPath(TagFields field) => field switch
+    {
+        TagFields.Title => nameof(WorkbenchTrackViewModel.Title),
+        TagFields.Artist => nameof(WorkbenchTrackViewModel.Artist),
+        TagFields.AlbumArtist => nameof(WorkbenchTrackViewModel.AlbumArtist),
+        TagFields.Album => nameof(WorkbenchTrackViewModel.Album),
+        TagFields.Genre => nameof(WorkbenchTrackViewModel.Genre),
+        TagFields.Composer => nameof(WorkbenchTrackViewModel.Composer),
+        TagFields.Date => nameof(WorkbenchTrackViewModel.Date),
+        TagFields.TrackNumber => nameof(WorkbenchTrackViewModel.Track),
+        TagFields.TotalTracks => nameof(WorkbenchTrackViewModel.TrackTotal),
+        TagFields.DiscNumber => nameof(WorkbenchTrackViewModel.Disc),
+        TagFields.TotalDiscs => nameof(WorkbenchTrackViewModel.DiscTotal),
+        TagFields.Comment => nameof(WorkbenchTrackViewModel.Comment),
+        _ => null,
+    };
 
     [RelayCommand]
     private void NewColumn()

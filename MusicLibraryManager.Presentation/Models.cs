@@ -57,7 +57,8 @@ public partial class LibraryColumnChoice(string key, string header, bool isVisib
 
 public sealed record SelectionContext(
     IReadOnlyList<string> Paths,
-    IReadOnlyList<TrackRecord>? Records = null)
+    IReadOnlyList<TrackRecord>? Records = null,
+    bool ReadArtworkDirectly = false)
 {
     public static SelectionContext Empty { get; } = new([]);
     public bool HasSelection => Paths.Count > 0;
@@ -151,8 +152,15 @@ public partial class LibraryRow : ObservableObject
 
 public partial class EditableTagField(TagFields field, string label) : ObservableObject
 {
+    private string? _loadedValue;
+    private bool _loadedMixed;
+
     public TagFields Field { get; } = field;
     public string Label { get; } = label;
+    public string OriginalDisplayValue =>
+        _loadedMixed
+            ? "(mixed values)"
+            : _loadedValue ?? "";
 
     [ObservableProperty]
     private string? _value;
@@ -196,6 +204,8 @@ public partial class EditableTagField(TagFields field, string label) : Observabl
             ? distinctValues[0]
             : null;
         IsMixed = mixed || verification == FieldValueVerification.Unverified;
+        _loadedValue = Value;
+        _loadedMixed = IsMixed;
         IsModified = false;
         OnPropertyChanged(nameof(PlaceholderText));
     }
@@ -977,6 +987,7 @@ public partial class LibraryProfileEditorRow : ObservableObject
     [ObservableProperty] private int _artworkMaximumEncodedBytes;
     [ObservableProperty] private int _artworkJpegQuality;
     [ObservableProperty] private string _artworkSidecarTemplate = "";
+    [ObservableProperty] private bool _readArtworkAtIndexTime;
     [ObservableProperty] private LibrarySidecarDisposition _unknownSidecarDisposition;
 
     public ObservableCollection<HealthRuleEditorRow> HealthRules { get; } = [];
@@ -1028,6 +1039,7 @@ public partial class LibraryProfileEditorRow : ObservableObject
             ArtworkMaximumEncodedBytes = profile.Artwork.MaximumEncodedBytes,
             ArtworkJpegQuality = profile.Artwork.JpegQuality,
             ArtworkSidecarTemplate = profile.Artwork.SidecarFileNameTemplate,
+            ReadArtworkAtIndexTime = profile.Artwork.ReadAtIndexTime,
             UnknownSidecarDisposition = profile.Sidecars.UnknownFileDisposition,
         };
         foreach (LibraryHealthRulePolicy rule in profile.Health.Rules)
@@ -1101,6 +1113,7 @@ public partial class LibraryProfileEditorRow : ObservableObject
             MaximumEncodedBytes = ArtworkMaximumEncodedBytes,
             JpegQuality = ArtworkJpegQuality,
             SidecarFileNameTemplate = ArtworkSidecarTemplate,
+            ReadAtIndexTime = ReadArtworkAtIndexTime,
         },
         Sidecars = Source.Sidecars with
         {

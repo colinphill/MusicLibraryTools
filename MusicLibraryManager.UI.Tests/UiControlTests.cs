@@ -30,6 +30,75 @@ namespace MusicLibraryManager.UI.Tests;
 public sealed class UiControlTests
 {
     [AvaloniaFact]
+    public void Library_and_workbench_expose_pending_change_flyouts()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Show();
+            INavigationService navigation =
+                services.GetRequiredService<INavigationService>();
+
+            navigation.Navigate(ShellDestination.Library);
+            Dispatcher.UIThread.RunJobs();
+            LibraryView library = Assert.IsType<LibraryView>(
+                window.FindControl<ContentControl>(
+                    "ContentHost")!.Content);
+            library.FindControl<Button>(
+                    "LibraryPendingChangesButton")!
+                .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Assert.True(library.FindControl<Popup>(
+                "LibraryPendingChangesPopover")!.IsOpen);
+            Assert.NotNull(library.FindControl<AppDataGrid>(
+                "LibraryPendingChangesGrid"));
+            Assert.Equal(
+                "Revert",
+                library.FindControl<Button>(
+                    "LibraryRevertPendingChangesButton")!.Content);
+            Assert.Equal(
+                "Apply",
+                library.FindControl<Button>(
+                    "LibraryApplyPendingChangesButton")!.Content);
+
+            navigation.Navigate(ShellDestination.Workbench);
+            Dispatcher.UIThread.RunJobs();
+            WorkbenchView workbench = Assert.IsType<WorkbenchView>(
+                window.FindControl<ContentControl>(
+                    "ContentHost")!.Content);
+            workbench.FindControl<Button>(
+                    "WorkbenchPendingChangesButton")!
+                .RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            Assert.True(workbench.FindControl<Popup>(
+                "WorkbenchPendingChangesPopover")!.IsOpen);
+            Assert.NotNull(workbench.FindControl<AppDataGrid>(
+                "WorkbenchPendingChangesGrid"));
+            Assert.Equal(
+                "Revert",
+                workbench.FindControl<Button>(
+                    "WorkbenchRevertPendingChangesButton")!.Content);
+            Assert.Equal(
+                "Apply",
+                workbench.FindControl<Button>(
+                    "WorkbenchApplyPendingChangesButton")!.Content);
+
+            WorkbenchViewModel workbenchModel =
+                services.GetRequiredService<WorkbenchViewModel>();
+            workbenchModel.PreviewChanges.Add(
+                new("song.flac", "Title", "Before", "After"));
+            workbenchModel.RevertPendingChangesCommand.Execute(null);
+            Assert.Empty(workbenchModel.PreviewChanges);
+            Assert.Contains("reverted", workbenchModel.StatusText);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
     public void Reviewed_file_operation_editor_exposes_preview_and_apply_actions()
     {
         var view =
@@ -1093,6 +1162,83 @@ public sealed class UiControlTests
     }
 
     [AvaloniaFact]
+    public void Workbench_column_order_round_trips_through_grid_state()
+    {
+        var settings = new FakeSettings();
+        using ServiceProvider services = BuildIsolatedServices(
+            configureServices: collection =>
+                collection.AddSingleton<IAppSettings>(
+                    settings));
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Show();
+            services.GetRequiredService<INavigationService>()
+                .Navigate(ShellDestination.Workbench);
+            Dispatcher.UIThread.RunJobs();
+            WorkbenchView view = Assert.IsType<WorkbenchView>(
+                window.FindControl<ContentControl>(
+                    "ContentHost")!.Content);
+            AppDataGrid grid =
+                view.FindControl<AppDataGrid>(
+                    "WorkbenchGrid")!;
+            DataGridColumn album = grid.Columns.Single(column =>
+                grid.KeyFor(column) == "Album");
+
+            album.DisplayIndex = 0;
+            Dispatcher.UIThread.RunJobs();
+
+            view.FindControl<Button>(
+                    "WorkbenchColumnsButton")!
+                .RaiseEvent(new RoutedEventArgs(
+                    Button.ClickEvent));
+            CheckBox formatVisibility =
+                view.FindControl<StackPanel>(
+                        "WorkbenchColumnOptions")!
+                    .Children
+                    .OfType<CheckBox>()
+                    .Single(check =>
+                        Equals(check.Content, "Format"));
+            formatVisibility.IsChecked = false;
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(
+                "Album",
+                grid.KeyFor(grid.Columns
+                    .OrderBy(column =>
+                        column.DisplayIndex)
+                    .First()));
+
+            GridSnapshot snapshot = Assert.IsType<GridSnapshot>(
+                services.GetRequiredService<GridStateService>()
+                    .Load("workbench.session"));
+            Assert.Equal(
+                "Album",
+                snapshot.Columns
+                    .OrderBy(column => column.DisplayIndex)
+                    .First().Key);
+
+            var restored = new WorkbenchView();
+            AppDataGrid restoredGrid =
+                restored.FindControl<AppDataGrid>(
+                    "WorkbenchGrid")!;
+            Assert.Equal(
+                "Album",
+                restoredGrid.KeyFor(
+                    restoredGrid.Columns
+                        .OrderBy(column =>
+                            column.DisplayIndex)
+                        .First()));
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task Workbench_controls_load_recent_and_dropped_sources()
     {
         var loader = new RecordingWorkbenchService();
@@ -1133,6 +1279,28 @@ public sealed class UiControlTests
             Assert.Equal([recentPath], recentRequest.Sources);
             Assert.False(recentRequest.Recursive);
             Assert.Equal(recentPath, model.Files[0].Path);
+
+            model.Files[0].Title = "Intermediate title";
+            model.Files[0].Title = "Pending title";
+
+            MetadataPreviewRow pending =
+                Assert.Single(model.PendingChanges);
+            Assert.Equal(
+                Path.GetFileName(recentPath),
+                pending.File);
+            Assert.Equal("Title", pending.Field);
+            Assert.Equal(
+                "recent-source",
+                pending.Before);
+            Assert.Equal("Pending title", pending.After);
+
+            await model.RevertPendingChangesCommand
+                .ExecuteAsync(null);
+
+            Assert.Empty(model.PendingChanges);
+            Assert.Equal(
+                "recent-source",
+                model.Files[0].Title);
 
             string droppedPath =
                 Path.GetFullPath("dropped-source.flac");

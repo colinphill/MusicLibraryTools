@@ -9,7 +9,9 @@ namespace MusicLibraryManager.Presentation;
 
 public enum IngestPreviewFilter { All, Albums, Outputs, Conflicts, Cleanup }
 
-public partial class IngestViewModel : ViewModelBase
+public partial class IngestViewModel :
+    ViewModelBase,
+    IIngestSourceHandoff
 {
 #if MUSIC_LIBRARY_MANAGER
     private const string SourcePreference = "manager.ingest.source.v1";
@@ -30,13 +32,16 @@ public partial class IngestViewModel : ViewModelBase
     private CancellationTokenSource? _cts;
     private IngestPlan? _plan;
     private readonly List<IngestFileItemViewModel> _allFiles = [];
+    private IReadOnlyList<string> _sourceFiles = [];
+    private bool _settingExplicitSourceFiles;
 
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(PreviewCommand)),
      NotifyCanExecuteChangedFor(nameof(PreflightCommand))]
     private string? _sourceDirectory;
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(PreviewCommand)),
      NotifyCanExecuteChangedFor(nameof(PreflightCommand)), NotifyCanExecuteChangedFor(nameof(ApplyCommand)),
-     NotifyCanExecuteChangedFor(nameof(CancelCommand)), NotifyCanExecuteChangedFor(nameof(OpenHistoryCommand))]
+     NotifyCanExecuteChangedFor(nameof(CancelCommand)), NotifyCanExecuteChangedFor(nameof(OpenHistoryCommand)),
+     NotifyCanExecuteChangedFor(nameof(ClearExplicitSourcesCommand))]
     private bool _isBusy;
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
     private bool _hasApplicablePreview;
@@ -88,6 +93,14 @@ public partial class IngestViewModel : ViewModelBase
     public bool IsPreviewEmpty => Files.Count == 0;
     public bool HasHistory => History.Count > 0;
     public bool IsHistoryEmpty => History.Count == 0;
+    public bool HasExplicitSourceFiles =>
+        _sourceFiles.Count > 0;
+    public int ExplicitSourceFileCount =>
+        _sourceFiles.Count;
+    public string ExplicitSourceSummary =>
+        $"{_sourceFiles.Count:N0} Workbench-selected " +
+        $"{(_sourceFiles.Count == 1 ? "file" : "files")} will be ingested. " +
+        "Other files in the incoming folder are excluded.";
     public int InterruptedHistoryCount => History.Count(item => item.IsInterrupted);
     public bool IsConfigurationReady => GetConfigurationIssues().Count == 0;
     public string ConfigurationReadinessIcon => IsConfigurationReady ? "i" : "⚠";
@@ -128,6 +141,9 @@ public partial class IngestViewModel : ViewModelBase
 
     partial void OnSourceDirectoryChanged(string? value)
     {
+        if (!_settingExplicitSourceFiles &&
+            _sourceFiles.Count > 0)
+            SetExplicitSourceFiles([]);
         _settings.SetLibraryPreference(SourcePreference, string.IsNullOrWhiteSpace(value) ? null : value);
         InvalidatePreview();
     }
@@ -176,6 +192,80 @@ public partial class IngestViewModel : ViewModelBase
         StatusText = "Source folder selected from drop. Run Preflight or Preview.";
     }
 
+    public IngestSourceHandoffResult SetSourceFiles(
+        IReadOnlyList<string> paths)
+    {
+        if (IsBusy)
+            return new(
+                false,
+                "Ingest is busy. Cancel or finish the current operation before replacing its inputs.");
+        string[] selected;
+        try
+        {
+            selected = paths
+                .Where(path =>
+                    !string.IsNullOrWhiteSpace(path))
+                .Select(Path.GetFullPath)
+                .Distinct(PathComparer)
+                .ToArray();
+        }
+        catch (Exception error)
+        {
+            return new(
+                false,
+                $"The selected paths are invalid: {error.Message}");
+        }
+        if (selected.Length == 0)
+            return new(
+                false,
+                "Select one or more Workbench files first.");
+        string? unavailable =
+            selected.FirstOrDefault(path =>
+                !File.Exists(path));
+        if (unavailable is not null)
+            return new(
+                false,
+                $"The selected file is unavailable: {unavailable}");
+        string? commonRoot =
+            CommonSourceRoot(selected);
+        if (commonRoot is null)
+            return new(
+                false,
+                "Selected files must share a source tree on one volume. " +
+                "Choose files beneath a common incoming folder.");
+
+        _settingExplicitSourceFiles = true;
+        try
+        {
+            SetExplicitSourceFiles(selected);
+            SourceDirectory = commonRoot;
+        }
+        finally
+        {
+            _settingExplicitSourceFiles = false;
+        }
+        StatusText =
+            $"{selected.Length:N0} Workbench-selected " +
+            $"{(selected.Length == 1 ? "file is" : "files are")} " +
+            "ready. Run Preflight or Preview.";
+        NotifyCommands();
+        return new(true);
+    }
+
+    [RelayCommand(CanExecute = nameof(CanClearExplicitSources))]
+    private void ClearExplicitSources()
+    {
+        SetExplicitSourceFiles([]);
+        SourceDirectory = null;
+        StatusText =
+            "Workbench file selection cleared. Choose an incoming folder.";
+        NotifyCommands();
+    }
+
+    private bool CanClearExplicitSources() =>
+        !IsBusy &&
+        HasExplicitSourceFiles;
+
     private bool CanPreflight() => _preflight is not null && CanPreview();
 
     [RelayCommand(CanExecute = nameof(CanPreflight))]
@@ -193,7 +283,7 @@ public partial class IngestViewModel : ViewModelBase
         {
             StatusText = "Checking ingest configuration and external tools…";
             var result = await _preflight.CheckAsync(
-                new IngestRequest(SourceDirectory!), _cts.Token);
+                CreateRequest(), _cts.Token);
             foreach (var check in result.Checks)
                 PreflightChecks.Add(check);
             OnPropertyChanged(nameof(HasPreflightChecks));
@@ -302,7 +392,7 @@ public partial class IngestViewModel : ViewModelBase
                             : (double)p.CompletedItems / p.TotalItems);
             });
             var plan = await _service.PreviewAsync(
-                new IngestRequest(SourceDirectory!),
+                CreateRequest(),
                 progress,
                 _cts.Token);
             await progress.DrainAsync();
@@ -351,6 +441,65 @@ public partial class IngestViewModel : ViewModelBase
             FinishActivity(activity, StatusText, AppActivityState.Failed);
         }
         finally { FinishBusy(); }
+    }
+
+    private IngestRequest CreateRequest() =>
+        new(
+            SourceDirectory!,
+            SourceFiles:
+                HasExplicitSourceFiles
+                    ? _sourceFiles
+                    : null);
+
+    private void SetExplicitSourceFiles(
+        IReadOnlyList<string> paths)
+    {
+        _sourceFiles = paths;
+        OnPropertyChanged(
+            nameof(HasExplicitSourceFiles));
+        OnPropertyChanged(
+            nameof(ExplicitSourceFileCount));
+        OnPropertyChanged(
+            nameof(ExplicitSourceSummary));
+        ClearExplicitSourcesCommand
+            .NotifyCanExecuteChanged();
+        InvalidatePreview();
+    }
+
+    private static string? CommonSourceRoot(
+        IReadOnlyList<string> paths)
+    {
+        string? root =
+            Path.GetDirectoryName(paths[0]);
+        while (root is not null &&
+               paths.Any(path =>
+                   !IsWithin(path, root)))
+            root = Directory.GetParent(root)
+                ?.FullName;
+        if (root is null)
+            return null;
+        string volumeRoot =
+            Path.GetPathRoot(root) ?? "";
+        return PathComparer.Equals(
+            Path.TrimEndingDirectorySeparator(root),
+            Path.TrimEndingDirectorySeparator(
+                volumeRoot))
+            ? null
+            : root;
+    }
+
+    private static bool IsWithin(
+        string path,
+        string root)
+    {
+        string parent =
+            Path.TrimEndingDirectorySeparator(
+                Path.GetFullPath(root)) +
+            Path.DirectorySeparatorChar;
+        return Path.GetFullPath(path)
+            .StartsWith(
+                parent,
+                PathComparison);
     }
 
     private bool CanApply() => !IsBusy && HasApplicablePreview && _plan is not null;
@@ -526,7 +675,20 @@ public partial class IngestViewModel : ViewModelBase
     {
         PreviewCommand.NotifyCanExecuteChanged();
         PreflightCommand.NotifyCanExecuteChanged();
+        ClearExplicitSourcesCommand
+            .NotifyCanExecuteChanged();
     }
+
+    private static readonly StringComparer
+        PathComparer =
+            OperatingSystem.IsWindows()
+                ? StringComparer.OrdinalIgnoreCase
+                : StringComparer.Ordinal;
+    private static readonly StringComparison
+        PathComparison =
+            OperatingSystem.IsWindows()
+                ? StringComparison.OrdinalIgnoreCase
+                : StringComparison.Ordinal;
 }
 
 public sealed class IngestHistoryItemViewModel(OperationJournalSummary summary)

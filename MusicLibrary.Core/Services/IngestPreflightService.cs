@@ -28,9 +28,35 @@ public sealed class IngestPreflightService(
         try
         {
             source = Path.GetFullPath(request.SourceDirectory);
-            checks.Add(Directory.Exists(source)
-                ? Pass("Source", source)
-                : Error("Source", $"Source directory is unavailable: {source}"));
+            if (!Directory.Exists(source))
+                checks.Add(Error(
+                    "Source",
+                    $"Source directory is unavailable: {source}"));
+            else if (request.HasExplicitSourceFiles)
+            {
+                string[] selected = request.SourceFiles!
+                    .Where(path =>
+                        !string.IsNullOrWhiteSpace(path))
+                    .Select(Path.GetFullPath)
+                    .Distinct(PathComparer)
+                    .ToArray();
+                int unavailableSelected = selected.Count(path =>
+                    !File.Exists(path));
+                int outside = selected.Count(path =>
+                    !IsPathWithinRoot(path, source));
+                checks.Add(
+                    unavailableSelected == 0 &&
+                    outside == 0
+                        ? Pass(
+                            "Selected files",
+                            $"{selected.Length:N0} selected file(s) are available.")
+                        : Error(
+                            "Selected files",
+                            $"{unavailableSelected:N0} file(s) are unavailable and " +
+                            $"{outside:N0} are outside the source directory."));
+            }
+            else
+                checks.Add(Pass("Source", source));
         }
         catch (Exception ex)
         {
@@ -64,7 +90,21 @@ public sealed class IngestPreflightService(
         destinations = destinations.Where(destination =>
                 !string.IsNullOrWhiteSpace(destination))
             .Distinct(PathComparer).ToArray();
-        if (destinations.Any(destination => PathsOverlap(source, destination)))
+        IEnumerable<string> isolationRoots =
+            request.HasExplicitSourceFiles
+                ? request.SourceFiles!
+                    .Where(path =>
+                        !string.IsNullOrWhiteSpace(path))
+                    .Select(Path.GetFullPath)
+                    .Select(path =>
+                        Path.GetDirectoryName(path)!)
+                    .Distinct(PathComparer)
+                : [source];
+        if (destinations.Any(destination =>
+                isolationRoots.Any(selectedRoot =>
+                    PathsOverlap(
+                        selectedRoot,
+                        destination))))
             checks.Add(Error("Path isolation", "The source directory overlaps an ingestion destination."));
         else if (destinations.SelectMany((left, index) => destinations.Skip(index + 1)
                      .Select(right => (left, right))).Any(pair => PathsOverlap(pair.left, pair.right)))
@@ -192,6 +232,21 @@ public sealed class IngestPreflightService(
         return PathComparer.Equals(left, right) ||
             left.StartsWith(right + Path.DirectorySeparatorChar, PathComparison) ||
             right.StartsWith(left + Path.DirectorySeparatorChar, PathComparison);
+    }
+
+    private static bool IsPathWithinRoot(
+        string path,
+        string root)
+    {
+        string candidate =
+            Path.GetFullPath(path);
+        string parent =
+            Path.TrimEndingDirectorySeparator(
+                Path.GetFullPath(root)) +
+            Path.DirectorySeparatorChar;
+        return candidate.StartsWith(
+            parent,
+            PathComparison);
     }
 
     private static IngestPreflightCheck Pass(string name, string message) =>

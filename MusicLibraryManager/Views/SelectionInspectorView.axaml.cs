@@ -8,38 +8,40 @@ namespace MusicLibraryManager.Views;
 
 public partial class SelectionInspectorView : UserControl
 {
-    private readonly SelectionInspectorViewModel _viewModel;
     private ArtworkPreviewWindow? _artworkPreview;
     private ArtworkPreviewItem? _previewedArtwork;
 
     public SelectionInspectorView()
     {
         InitializeComponent();
-        _viewModel = App.GetService<SelectionInspectorViewModel>();
-        DataContext = _viewModel;
+        DataContext = App.GetService<SelectionInspectorViewModel>();
         DetachedFromVisualTree += (_, _) => _artworkPreview?.Close();
     }
 
     public event EventHandler? CloseRequested;
+
+    private SelectionInspectorViewModel ViewModel =>
+        DataContext as SelectionInspectorViewModel ??
+        App.GetService<SelectionInspectorViewModel>();
 
     private void OnClose(object? sender, RoutedEventArgs e) => CloseRequested?.Invoke(this, EventArgs.Empty);
 
     private async void OnReplaceArtwork(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: ArtworkPreviewItem item })
-            await _viewModel.ReplaceArtworkItemAsync(item);
+            await ViewModel.ReplaceArtworkItemAsync(item);
     }
 
     private async void OnSaveArtwork(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: ArtworkPreviewItem item })
-            await _viewModel.SaveArtworkItemToFileAsync(item);
+            await ViewModel.SaveArtworkItemToFileAsync(item);
     }
 
     private void OnRemoveArtwork(object? sender, RoutedEventArgs e)
     {
         if (sender is Button { Tag: ArtworkPreviewItem item })
-            _viewModel.RemoveArtworkItem(item);
+            ViewModel.RemoveArtworkItem(item);
     }
 
     private void OnArtworkDoubleTapped(object? sender, TappedEventArgs e)
@@ -77,7 +79,7 @@ public partial class SelectionInspectorView : UserControl
 
         if (!ArtworkPreviewWindow.TryCreate(item, owner, out ArtworkPreviewWindow? preview) || preview is null)
         {
-            _viewModel.ReportArtworkPreviewUnavailable();
+            ViewModel.ReportArtworkPreviewUnavailable();
             return;
         }
 

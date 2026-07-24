@@ -17,6 +17,163 @@ public sealed record MetadataPreviewRow(
     string Before,
     string After);
 
+public sealed record PendingMetadataOperationRow(
+    int Number,
+    string Operation,
+    string Target,
+    string AppliesTo);
+
+public static class PendingMetadataOperationRowBuilder
+{
+    private static readonly StringComparer PathComparer =
+        OperatingSystem.IsWindows()
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
+
+    public static void Populate(
+        ObservableCollection<PendingMetadataOperationRow> destination,
+        MetadataOperationPlan plan)
+    {
+        destination.Clear();
+        if (plan.Recipe is { } recipe)
+        {
+            IEnumerable<OperationRecipeStep> steps = recipe.Steps.Length > 0
+                ? recipe.Steps
+                : recipe.Operations.Select((operation, index) =>
+                    new OperationRecipeStep(
+                        Guid.Empty, $"Step {index + 1}", operation));
+            foreach (OperationRecipeStep step in steps.Where(step => step.Enabled))
+                destination.Add(new(
+                    destination.Count + 1,
+                    step.Name,
+                    Describe(step.Operation),
+                    $"{plan.ChangedFileCount:N0} changed file(s)"));
+            return;
+        }
+
+        AddValueEdits(destination, plan);
+
+        int artworkFiles = plan.Files.Count(file =>
+            file.ArtworkDifference is not null);
+        Add(destination, artworkFiles, "Update embedded artwork", "Artwork");
+
+        foreach (var group in plan.Files
+                     .SelectMany(file => file.TagLayerDifferences.IsDefaultOrEmpty
+                         ? []
+                         : file.TagLayerDifferences.Select(
+                             difference => (file, difference)))
+                     .GroupBy(item => (
+                         item.difference.Kind,
+                         item.difference.WillBePresent)))
+            Add(destination, group.Select(item => item.file.Path).Distinct(
+                    PathComparer).Count(),
+                group.Key.WillBePresent ? "Add tag layer" : "Remove tag layer",
+                DescribeLayer(group.Key.Kind));
+
+        foreach (var group in plan.Files
+                     .Where(file => file.Id3VersionDifference is not null)
+                     .GroupBy(file => (
+                         file.Id3VersionDifference!.TargetVersion,
+                         file.Id3VersionDifference.TextEncodingPolicy)))
+            Add(destination, group.Count(),
+                group.Key.TextEncodingPolicy is null
+                    ? "Change ID3 version"
+                    : "Change ID3 version or text encoding",
+                $"ID3v2.{(int)group.Key.TargetVersion}" +
+                (group.Key.TextEncodingPolicy is null
+                    ? ""
+                    : $" · {group.Key.TextEncodingPolicy}"));
+
+        foreach (var group in plan.Files
+                     .SelectMany(file =>
+                         file.TagLayerConversionDifferences.IsDefaultOrEmpty
+                             ? []
+                             : file.TagLayerConversionDifferences.Select(
+                                 difference => (file, difference)))
+                     .GroupBy(item => (
+                         item.difference.Source,
+                         item.difference.Target)))
+            Add(destination, group.Select(item => item.file.Path).Distinct(
+                    PathComparer).Count(),
+                "Convert tag layer",
+                $"{DescribeLayer(group.Key.Source)} → " +
+                DescribeLayer(group.Key.Target));
+    }
+
+    private static void AddValueEdits(
+        ObservableCollection<PendingMetadataOperationRow> destination,
+        MetadataOperationPlan plan)
+    {
+        foreach (var group in plan.Files
+                     .SelectMany(file => file.Edits.Select(edit => (file, edit)))
+                     .GroupBy(item => (
+                         item.edit.Field,
+                         Remove: item.edit.Values.Length == 0)))
+            Add(destination, group.Select(item => item.file.Path).Distinct(
+                    PathComparer).Count(),
+                group.Key.Remove ? "Remove metadata field" : "Set metadata field",
+                group.Key.Field.DisplayName);
+    }
+
+    private static void Add(
+        ObservableCollection<PendingMetadataOperationRow> destination,
+        int files,
+        string operation,
+        string target)
+    {
+        if (files == 0)
+            return;
+        destination.Add(new(
+            destination.Count + 1,
+            operation,
+            target,
+            files == 1 ? "1 file" : $"{files:N0} files"));
+    }
+
+    private static string Describe(MetadataOperation operation) => operation switch
+    {
+        AssignFieldOperation value =>
+            $"Set {value.Field.DisplayName} to “{Short(value.Value)}”",
+        RemoveFieldOperation value =>
+            $"Remove {value.Field.DisplayName}",
+        CopyFieldOperation value =>
+            $"Copy {value.Source.DisplayName} to {value.Destination.DisplayName}",
+        ReplaceTextOperation value =>
+            $"Replace “{Short(value.Search)}” in {value.Field.DisplayName}",
+        ChangeCaseOperation value =>
+            $"Change {value.Field.DisplayName} to {value.Mode} case",
+        TrimFieldOperation value =>
+            $"Trim whitespace in {value.Field.DisplayName}",
+        SequenceNumberOperation value =>
+            $"Number {value.Field.DisplayName} from {value.Start}",
+        CombineFieldsOperation value =>
+            $"Combine {value.First.DisplayName} and {value.Second.DisplayName} " +
+            $"into {value.Destination.DisplayName}",
+        SplitFieldOperation value =>
+            $"Split {value.Field.DisplayName} on “{Short(value.Separator)}”",
+        JoinFieldValuesOperation value =>
+            $"Join {value.Field.DisplayName} with “{Short(value.Separator)}”",
+        DeduplicateFieldValuesOperation value =>
+            $"Remove duplicate {value.Field.DisplayName} values",
+        ReorderFieldValuesOperation value =>
+            $"Reorder {value.Field.DisplayName} values {value.Order}",
+        ExtractPathComponentOperation value =>
+            $"Set {value.Field.DisplayName} from {value.Component}",
+        _ => operation.GetType().Name,
+    };
+
+    private static string Short(string value) =>
+        value.Length <= 32 ? value : value[..29] + "…";
+
+    private static string DescribeLayer(TagLayerKind kind) => kind switch
+    {
+        TagLayerKind.Id3v2 => "ID3v2",
+        TagLayerKind.Id3v1 => "ID3v1",
+        TagLayerKind.ApeV2 => "APEv2",
+        _ => kind.ToString(),
+    };
+}
+
 public static class MetadataPreviewRowBuilder
 {
     public static void Populate(
@@ -54,8 +211,8 @@ public static class MetadataPreviewRowBuilder
                         $"{DescribeTagLayer(difference.Kind)} tag layer",
                         difference.WasPresent ? "Present" : "Absent",
                         difference.WillBePresent ? "Present" : "Absent"));
-                }
-            }
+    }
+}
 
             if (file.Id3VersionDifference is { } version)
             {
@@ -110,6 +267,79 @@ public static class MetadataPreviewRowBuilder
         TagLayerKind.ApeV2 => "APEv2",
         _ => kind.ToString(),
     };
+}
+
+public static class MetadataOperationPlanComposer
+{
+    private static readonly StringComparer PathComparer =
+        OperatingSystem.IsWindows()
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
+
+    public static MetadataOperationPlan Combine(
+        string name,
+        params MetadataOperationPlan?[] plans)
+    {
+        MetadataOperationPlan[] available = plans
+            .Where(plan => plan is not null)
+            .Cast<MetadataOperationPlan>()
+            .ToArray();
+        if (available.Length == 0)
+            throw new ArgumentException(
+                "At least one metadata plan is required.",
+                nameof(plans));
+        if (available.Length == 1)
+            return available[0];
+
+        MetadataFilePlan[] files = available
+            .SelectMany(plan => plan.Files)
+            .GroupBy(file => file.Path, PathComparer)
+            .Select(group =>
+            {
+                MetadataFilePlan[] parts = group.ToArray();
+                MetadataFilePlan first = parts[0];
+                return new MetadataFilePlan(
+                    first.Path,
+                    first.Snapshot,
+                    [.. parts.SelectMany(part =>
+                        part.Differences)],
+                    [.. parts.SelectMany(part =>
+                        part.Edits)],
+                    [.. parts.SelectMany(part =>
+                            part.Issues)
+                        .Distinct()],
+                    parts.Select(part => part.ArtworkEdit)
+                        .LastOrDefault(value => value is not null),
+                    parts.Select(part => part.ArtworkDifference)
+                        .LastOrDefault(value => value is not null),
+                    [.. parts.SelectMany(part =>
+                        part.TagLayerEdits.IsDefault
+                            ? []
+                            : part.TagLayerEdits)],
+                    [.. parts.SelectMany(part =>
+                        part.TagLayerDifferences.IsDefault
+                            ? []
+                            : part.TagLayerDifferences)],
+                    parts.Select(part => part.Id3VersionEdit)
+                        .LastOrDefault(value => value is not null),
+                    parts.Select(part => part.Id3VersionDifference)
+                        .LastOrDefault(value => value is not null),
+                    [.. parts.SelectMany(part =>
+                        part.TagLayerConversions.IsDefault
+                            ? []
+                            : part.TagLayerConversions)],
+                    [.. parts.SelectMany(part =>
+                        part.TagLayerConversionDifferences.IsDefault
+                            ? []
+                            : part.TagLayerConversionDifferences)]);
+            })
+            .ToArray();
+        return new(
+            Guid.NewGuid(),
+            name,
+            [.. files],
+            DateTimeOffset.UtcNow);
+    }
 }
 
 public partial class MetadataRecipeStepViewModel(

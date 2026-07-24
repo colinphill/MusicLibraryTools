@@ -279,7 +279,7 @@ public sealed class MetadataDocumentService(
         if (layer is IUserStringMetadata custom)
         {
             KeyValuePair<string, string>[] customValues =
-                custom.GetUserStrings().ToArray();
+                custom.GetAddressableUserStrings().ToArray();
             fields.AddRange(customValues
                 .GroupBy(pair => MetadataFieldKey.Custom(pair.Key))
                 .Select(group => new MetadataValueSet(
@@ -1731,25 +1731,7 @@ public sealed class MetadataOperationService(
         }
 
         if (reindex is not null)
-        {
-            foreach (MetadataFilePlan changedFile in changed)
-            {
-                try
-                {
-                    IMediaFile saved = MediaFile.GetFile(
-                        changedFile.Path,
-                        readOnly: true,
-                        readArtwork: false,
-                        formatRegistry: formats);
-                    await reindex.ReindexFileAsync(
-                        changedFile.Path,
-                        fieldMappings?.ProjectForCache(
-                            changedFile.Path, saved) ?? saved,
-                        CancellationToken.None);
-                }
-                catch { /* The files are authoritative; the next index pass repairs the cache. */ }
-            }
-        }
+            QueueCacheRefresh(changed, reindex, formats, fieldMappings);
 
         if (history is not null)
             history.Record(new(
@@ -1759,8 +1741,51 @@ public sealed class MetadataOperationService(
                 [.. journals],
                 [.. changed.Select(file => file.Path)],
                 plan.Recipe));
+        progress?.Report(new(
+            OperationPhase.Completed,
+            changed.Length,
+            changed.Length,
+            Message: $"Saved metadata to {changed.Length:N0} file(s)"));
         return new(changed.Length, [.. journals],
             [.. changed.SelectMany(file => file.Issues)]);
+    }
+
+    private static void QueueCacheRefresh(
+        IReadOnlyList<MetadataFilePlan> changed,
+        IReindexService reindex,
+        IMediaFormatRegistry formats,
+        IMetadataFieldMappingService? fieldMappings)
+    {
+        // A full index owns the library database gate for its duration. The files are already
+        // committed at this point, so waiting for that gate would leave the foreground save
+        // activity running—sometimes for hours. Queue the best-effort refresh instead; it will
+        // acquire the gate after the index and repair the affected cache rows in commit order.
+        _ = Task.Run(
+            async () =>
+            {
+                foreach (MetadataFilePlan changedFile in changed)
+                {
+                    try
+                    {
+                        IMediaFile saved = MediaFile.GetFile(
+                            changedFile.Path,
+                            readOnly: true,
+                            readArtwork: false,
+                            formatRegistry: formats);
+                        await reindex.ReindexFileAsync(
+                                changedFile.Path,
+                                fieldMappings?.ProjectForCache(
+                                    changedFile.Path, saved) ?? saved,
+                                CancellationToken.None)
+                            .ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // The files are authoritative; the next index pass repairs the cache.
+                    }
+                }
+            },
+            CancellationToken.None);
     }
 
     private MetadataFilePlan BuildPlan(

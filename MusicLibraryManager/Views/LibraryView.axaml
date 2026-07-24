@@ -18,6 +18,10 @@
                   IsVisible="{Binding Indexing.IsIndexing}" />
           <Button Classes="app" Margin="0,0,8,6" Content="Cancel load"
                   Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />
+          <Button x:Name="LibraryPendingChangesButton"
+                  Classes="app" Margin="0,0,8,6"
+                  Content="{Binding PendingChanges.Count, StringFormat=Pending changes ({0})}"
+                  Click="OnLibraryPendingChangesClick" />
           <Button x:Name="InspectorToggle" Classes="app" Margin="0,0,0,6" Content="Inspector"
                   Click="OnInspectorToggle" IsVisible="False" ToolTip.Tip="Show or hide the metadata inspector" />
         </WrapPanel>
@@ -962,6 +966,70 @@
               <Button Grid.Column="5" Classes="app" Content="Find releases"
                       Command="{Binding ResolveLibraryRecordingCommand}" />
               <Button Grid.Column="6" Classes="app primary" Content="Apply preview"
+                      Command="{Binding ApplyLibraryOperationCommand}" />
+            </Grid>
+          </Grid>
+        </Border>
+      </Popup>
+
+      <Popup x:Name="LibraryPendingChangesPopover"
+             PlacementTarget="{Binding #LibraryPendingChangesButton}"
+             Placement="BottomEdgeAlignedRight" VerticalOffset="8"
+             IsLightDismissEnabled="True" IsOpen="False">
+        <Border Width="900" MaxHeight="620"
+                Background="{DynamicResource AppPanelBrush}"
+                BorderBrush="{DynamicResource AppBorderStrongBrush}"
+                BorderThickness="1" CornerRadius="9" Padding="14"
+                BoxShadow="0 14 40 0 #77000000">
+          <Grid RowDefinitions="Auto,Auto,420,Auto"
+                RowSpacing="10">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Spacing="2">
+                <TextBlock Text="Pending changes"
+                           FontSize="16" FontWeight="SemiBold" />
+                <TextBlock Classes="muted"
+                           Text="Every staged or reviewed metadata edit that Apply will validate before writing." />
+              </StackPanel>
+              <Button Grid.Column="1" Classes="app"
+                      Width="28" Height="28" Padding="0"
+                      Content="&#x2715;"
+                      ToolTip.Tip="Close pending changes"
+                      Click="OnLibraryPendingChangesClose" />
+            </Grid>
+
+            <TextBlock Grid.Row="1" Classes="summary-label"
+                       Text="{Binding PendingChanges.Count, StringFormat={}{0} pending edit(s)}" />
+
+            <Grid Grid.Row="2">
+              <controls:AppDataGrid
+                  x:Name="LibraryPendingChangesGrid"
+                  ItemsSource="{Binding PendingChanges}"
+                  AutomationProperties.Name="Library pending changes" />
+              <Border Background="{DynamicResource AppInsetBrush}"
+                      IsVisible="{Binding !PendingChanges.Count}">
+                <StackPanel HorizontalAlignment="Center"
+                            VerticalAlignment="Center" Spacing="6">
+                  <TextBlock FontWeight="SemiBold"
+                             Text="No pending changes" />
+                  <TextBlock Classes="muted"
+                             Text="Preview a Library metadata operation to review its edits here." />
+                </StackPanel>
+              </Border>
+            </Grid>
+
+            <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto"
+                  ColumnSpacing="8">
+              <TextBlock Classes="muted" VerticalAlignment="Center"
+                         Text="{Binding OperationStatus}"
+                         TextTrimming="CharacterEllipsis" />
+              <Button x:Name="LibraryRevertPendingChangesButton"
+                      Grid.Column="1" Classes="app"
+                      Content="Revert"
+                      ToolTip.Tip="Discard this pending preview without changing files"
+                      Command="{Binding RevertPendingChangesCommand}" />
+              <Button x:Name="LibraryApplyPendingChangesButton"
+                      Grid.Column="2" Classes="app primary"
+                      Content="Apply"
                       Command="{Binding ApplyLibraryOperationCommand}" />
             </Grid>
           </Grid>

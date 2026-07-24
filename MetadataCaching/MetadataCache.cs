@@ -101,7 +101,7 @@ namespace MetadataCaching
                         field.Value));
             if (mp is IUserStringMetadata custom)
                 cached = cached.Concat(
-                    custom.GetUserStrings().Select(field =>
+                    custom.GetAddressableUserStrings().Select(field =>
                         KeyValuePair.Create(
                             CachedMetadataKeys.Custom(field.Key),
                             field.Value)));

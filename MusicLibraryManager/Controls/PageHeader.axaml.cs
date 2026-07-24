@@ -25,7 +25,13 @@ public partial class PageHeader : UserControl
 
     private void ApplyResponsiveLayout()
     {
-        bool compact = Bounds.Width < 760;
+        const double minimumTitleWidth = 320;
+        double actionWidth =
+            ActionsPresenter.DesiredSize.Width;
+        bool compact =
+            Bounds.Width < 760 ||
+            actionWidth > 0 &&
+            Bounds.Width - actionWidth < minimumTitleWidth;
         Grid.SetRow(ActionsPresenter, compact ? 1 : 0);
         Grid.SetColumn(ActionsPresenter, compact ? 0 : 1);
         Grid.SetColumnSpan(ActionsPresenter, compact ? 2 : 1);

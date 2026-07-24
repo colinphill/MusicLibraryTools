@@ -117,7 +117,6 @@
                        AutomationProperties.Name="Maximum artwork dimension" />
         <WrapPanel>
           <Button Classes="app" Margin="0,0,8,6" Content="Add artwork..." Command="{Binding AddArtworkCommand}" />
-          <Button Classes="app primary" Margin="0,0,8,6" Content="Save artwork changes" Command="{Binding SaveArtworkSetCommand}" />
           <Button Classes="app" Margin="0,0,8,6" Content="Optimize" Command="{Binding ScrubArtworkCommand}" />
           <Button Classes="app danger" Margin="0,0,8,6" Content="Remove all" Command="{Binding RemoveArtworkCommand}" />
         </WrapPanel>

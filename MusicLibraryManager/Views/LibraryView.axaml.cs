@@ -46,6 +46,13 @@ public partial class LibraryView : UserControl
             new("Before", "Before", "Before", 280, 160),
             new("After", "After", "After", 280, 160),
         ]);
+        LibraryPendingChangesGrid.ConfigureColumns(
+        [
+            new("File", "File", "File", 220, 140),
+            new("Field", "Field", "Field", 150, 100),
+            new("Before", "Before", "Before", 320, 180),
+            new("After", "After", "After", 320, 180),
+        ]);
         LibraryAudioDiscoveryGrid.ConfigureColumns(
         [
             new("File", "File", "File", 190, 120),
@@ -493,6 +500,11 @@ public partial class LibraryView : UserControl
             ColumnPopover.IsOpen = false;
             e.Handled = true;
         }
+        else if (LibraryPendingChangesPopover.IsOpen)
+        {
+            LibraryPendingChangesPopover.IsOpen = false;
+            e.Handled = true;
+        }
         else if (ViewsPopover.IsOpen)
         {
             ViewsPopover.IsOpen = false;
@@ -509,6 +521,17 @@ public partial class LibraryView : UserControl
             e.Handled = true;
         }
     }
+
+    private void OnLibraryPendingChangesClick(
+        object? sender,
+        RoutedEventArgs e) =>
+        LibraryPendingChangesPopover.IsOpen =
+            !LibraryPendingChangesPopover.IsOpen;
+
+    private void OnLibraryPendingChangesClose(
+        object? sender,
+        RoutedEventArgs e) =>
+        LibraryPendingChangesPopover.IsOpen = false;
 
     private void OnVisualFilterClick(
         object? sender,

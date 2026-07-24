@@ -58,6 +58,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private readonly IDialogCoordinator _dialogs;
     private readonly IAppSettings _settings;
     private readonly IPlatformService? _platform;
+    private readonly WorkbenchSelectionInspectorViewModel? _inspector;
+    private readonly IIngestSourceHandoff? _ingestHandoff;
+    private readonly INavigationService? _navigation;
     private MetadataOperationPlan? _plan;
     private ReportExportPlan? _reportPlan;
     private PlaylistWorkspacePlan? _playlistPlan;
@@ -127,6 +130,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(PreviewStagedArtworkCommand))]
     [NotifyCanExecuteChangedFor(nameof(MoveStagedArtworkUpCommand))]
     [NotifyCanExecuteChangedFor(nameof(MoveStagedArtworkDownCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SendSelectedToIngestCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RevertPendingChangesCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -268,7 +273,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         IMetadataGridColumnStore? metadataColumns = null,
         IDelimitedMetadataImportService? delimitedImports = null,
         IPlatformService? platform = null,
-        IReviewedFileOperationService? fileOperations = null)
+        IReviewedFileOperationService? fileOperations = null,
+        WorkbenchSelectionInspectorViewModel? inspector = null,
+        IIngestSourceHandoff? ingestHandoff = null,
+        INavigationService? navigation = null)
     {
         _workbench = workbench;
         _operations = operations;
@@ -288,6 +296,29 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         _dialogs = dialogs;
         _settings = settings;
         _platform = platform;
+        _inspector = inspector;
+        _ingestHandoff = ingestHandoff;
+        _navigation = navigation;
+        if (_inspector is not null)
+        {
+            _inspector.FilesChanged += OnInspectorFilesChanged;
+            _inspector.PropertyChanged += (_, args) =>
+            {
+                if (args.PropertyName is
+                    nameof(SelectionInspectorViewModel.HasUnsavedChanges) or
+                    nameof(SelectionInspectorViewModel.PendingChangesVersion))
+                {
+                    if (_inspector.HasUnsavedChanges &&
+                        _plan is not null)
+                        CancelPlan();
+                    RebuildPendingChanges();
+                    OnPropertyChanged(nameof(HasUnsavedChanges));
+                    ApplyCommand.NotifyCanExecuteChanged();
+                }
+            };
+        }
+        PreviewChanges.CollectionChanged +=
+            (_, _) => RebuildPendingChanges();
         OperationEditor = new(
             operationCatalog, MetadataOperationSurface.Workbench, recipeStore);
         RepresentativePreview =
@@ -344,6 +375,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
 
     public ObservableCollection<WorkbenchTrackViewModel> Files { get; } = [];
     public ObservableCollection<MetadataPreviewRow> PreviewChanges { get; } = [];
+    public ObservableCollection<MetadataPreviewRow> PendingChanges { get; } = [];
+    public ObservableCollection<PendingMetadataOperationRow>
+        PendingOperations { get; } = [];
     public ObservableCollection<WorkbenchMetadataFieldRow> MetadataFields { get; } = [];
     public ObservableCollection<AudioDiscoveryRow> AudioMatches { get; } = [];
     public ObservableCollection<MusicBrainzReleaseRow> ReleaseMatches { get; } = [];
@@ -374,6 +408,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         RepresentativePreview { get; }
     public ReviewedFileOperationEditorViewModel?
         FileOperations { get; }
+    public SelectionInspectorViewModel? Inspector => _inspector;
     public IReadOnlyList<MetadataFieldChoice> KnownFieldChoices { get; }
     public IReadOnlyList<WorkbenchFieldEditMode> FieldEditModes { get; } =
         Enum.GetValues<WorkbenchFieldEditMode>();
@@ -404,6 +439,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         _externalToolPlan is not null ||
         _stagedArtworkDirty ||
         _artworkDrafts.Count > 0 ||
+        _inspector?.HasUnsavedChanges == true ||
         FileOperations?.HasUnsavedChanges == true ||
         Files.Any(file => file.HasChanges);
     public bool CanUndoLatest => _history.CanUndo && !IsBusy;
@@ -485,10 +521,6 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
 
     partial void OnSelectedFileChanged(WorkbenchTrackViewModel? value)
     {
-        if (value is null)
-            SetSelectedFiles([]);
-        else if (!_selectedFiles.Contains(value))
-            SetSelectedFiles([value]);
         RebuildMetadataFields();
         _ = RebuildStagedArtworkAsync(value);
         ScheduleRepresentativePreview();
@@ -515,15 +547,48 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             .ToArray();
         if (_selectedFiles.SequenceEqual(selected))
             return;
+        ApplySelectedFiles(selected);
+        if (_inspector is not null)
+            _ = _inspector.TryLoadAsync(CreateInspectorSelection(selected));
+    }
+
+    public async Task<bool> TrySetSelectedFilesAsync(
+        IEnumerable<WorkbenchTrackViewModel> files)
+    {
+        WorkbenchTrackViewModel[] selected = files
+            .Where(Files.Contains)
+            .Distinct()
+            .OrderBy(Files.IndexOf)
+            .ToArray();
+        if (_selectedFiles.SequenceEqual(selected))
+            return true;
+        if (_inspector is not null &&
+            !await _inspector.TryLoadAsync(CreateInspectorSelection(selected)))
+            return false;
+        ApplySelectedFiles(selected);
+        return true;
+    }
+
+    private void ApplySelectedFiles(
+        WorkbenchTrackViewModel[] selected)
+    {
         _selectedFiles = selected;
         OnPropertyChanged(nameof(SelectedFiles));
         OnPropertyChanged(nameof(SelectedFileCount));
         OnPropertyChanged(nameof(FieldSelectionSummary));
+        SendSelectedToIngestCommand
+            .NotifyCanExecuteChanged();
         FileOperations?.InvalidateTargets();
         RebuildMetadataFields();
         PreviewFieldValuesCommand.NotifyCanExecuteChanged();
         PasteMetadataFieldCommand.NotifyCanExecuteChanged();
     }
+
+    private static SelectionContext CreateInspectorSelection(
+        IEnumerable<WorkbenchTrackViewModel> selected) =>
+        new(
+            selected.Select(file => file.Path).ToArray(),
+            ReadArtworkDirectly: true);
 
     partial void OnSelectedAudioMatchChanged(AudioDiscoveryRow? value)
     {
@@ -673,6 +738,39 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         NotifySessionChanged();
     }
 
+    private bool CanSendSelectedToIngest() =>
+        !IsBusy &&
+        _ingestHandoff is not null &&
+        _navigation is not null &&
+        SelectedFiles.Count > 0;
+
+    [RelayCommand(
+        CanExecute =
+            nameof(CanSendSelectedToIngest))]
+    private void SendSelectedToIngest()
+    {
+        if (_ingestHandoff is null ||
+            _navigation is null)
+            return;
+        string[] paths = SelectedFiles
+            .Select(file => file.Path)
+            .ToArray();
+        IngestSourceHandoffResult result =
+            _ingestHandoff.SetSourceFiles(paths);
+        if (!result.Accepted)
+        {
+            StatusText =
+                result.Error ??
+                "The selected files could not be sent to Ingest.";
+            return;
+        }
+        StatusText =
+            $"Sent {paths.Length:N0} selected " +
+            $"{(paths.Length == 1 ? "file" : "files")} to Ingest.";
+        _navigation.Navigate(
+            ShellDestination.Ingest);
+    }
+
     [RelayCommand]
     private async Task ClearAsync()
     {
@@ -692,11 +790,16 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         SelectedRelease = null;
         ClearReleaseTrackMappings();
         PreviewChanges.Clear();
+        PendingChanges.Clear();
+        PendingOperations.Clear();
         _plan = null;
         InvalidateReportPlan();
         InvalidatePlaylistPlan();
         InvalidateExternalToolPlan();
         SelectedFile = null;
+        ApplySelectedFiles([]);
+        if (_inspector is not null)
+            await _inspector.LoadAsync(SelectionContext.Empty);
         StatusText = "Workbench cleared. Files on disk were not changed.";
         NotifySessionChanged();
     }
@@ -1093,6 +1196,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                 CreateProgress(), _cancellation!.Token);
             _plan = plan;
             MetadataPreviewRowBuilder.Populate(PreviewChanges, plan);
+            PendingMetadataOperationRowBuilder.Populate(
+                PendingOperations, plan);
             HasApplicablePreview = plan.CanApply;
             int blockers = plan.Files.SelectMany(file => file.Issues)
                 .Count(issue => issue.Severity == OperationIssueSeverity.Blocker);
@@ -1121,12 +1226,40 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [RelayCommand(CanExecute = nameof(CanApply))]
     private async Task ApplyAsync()
     {
-        if (_plan is null)
+        if (_plan is null &&
+            !HasDirectPendingChanges)
             return;
         BeginOperation("Applying reviewed metadata changes");
         try
         {
             IProgress<OperationProgress> progress = CreateProgress();
+            _plan ??= await PreviewDirectPendingChangesAsync(
+                progress,
+                _cancellation!.Token);
+            if (_plan is null)
+            {
+                StatusText = "There are no pending metadata changes to apply.";
+                return;
+            }
+            MetadataPreviewRowBuilder.Populate(
+                PreviewChanges,
+                _plan);
+            PendingMetadataOperationRowBuilder.Populate(
+                PendingOperations,
+                _plan);
+            HasApplicablePreview = _plan.CanApply;
+            if (!_plan.CanApply)
+            {
+                OperationIssue? blocker = _plan.Files
+                    .SelectMany(file => file.Issues)
+                    .FirstOrDefault(issue =>
+                        issue.Severity ==
+                        OperationIssueSeverity.Blocker);
+                StatusText = blocker is null
+                    ? "The pending edits produce no applicable file changes."
+                    : $"Pending changes cannot be applied: {blocker.Message}";
+                return;
+            }
             MetadataApplyResult result = await _operations.ApplyAsync(
                 _plan, progress, _cancellation!.Token);
             string[] paths = _plan.Files.Where(file => file.HasChanges)
@@ -1135,8 +1268,13 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                          file => file.ArtworkEdit is not null))
                 _artworkDrafts.Remove(file.Path);
             await ReloadAsync(paths, progress, _cancellation.Token);
+            if (_inspector?.HasUnsavedChanges == true)
+                await _inspector.LoadAsync(
+                    _inspector.Selection);
             _plan = null;
             PreviewChanges.Clear();
+            PendingOperations.Clear();
+            RebuildPendingChanges();
             HasApplicablePreview = false;
             StatusText = $"Applied {result.ChangedFiles:N0} file(s). Originals are retained " +
                 "in Workbench recovery and can be restored from Operations.";
@@ -1155,6 +1293,26 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             NotifySessionChanged();
         }
     }
+
+    [RelayCommand(CanExecute = nameof(CanRevertPendingChanges))]
+    private async Task RevertPendingChangesAsync()
+    {
+        if (_plan is null &&
+            PendingChanges.Count == 0)
+            return;
+
+        foreach (WorkbenchTrackViewModel file in
+                 Files.Where(file => file.HasChanges).ToArray())
+            file.RevertPendingChanges();
+        if (_inspector?.HasUnsavedChanges == true)
+            await _inspector.DiscardPendingChangesAsync();
+        CancelPlan();
+        StatusText =
+            "Pending preview reverted. No files were changed.";
+        NotifySessionChanged();
+    }
+
+    private bool CanRevertPendingChanges() => !IsBusy;
 
     [RelayCommand(CanExecute = nameof(CanUndo))]
     private async Task UndoAsync()
@@ -2296,6 +2454,39 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         InvalidateExternalToolPlan();
     }
 
+    private void OnInspectorFilesChanged()
+    {
+        if (_inspector is null || _inspector.Selection.Paths.Count == 0 ||
+            IsBusy)
+            return;
+        _ = ReloadAfterInspectorSaveAsync(
+            _inspector.Selection.Paths.ToArray());
+    }
+
+    private async Task ReloadAfterInspectorSaveAsync(
+        IReadOnlyList<string> paths)
+    {
+        BeginOperation("Reloading inspector changes");
+        try
+        {
+            await ReloadAsync(paths, CreateProgress(), _cancellation!.Token);
+            StatusText = $"Reloaded {paths.Count:N0} file(s) after inspector changes.";
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText = "Reload after inspector changes was cancelled.";
+        }
+        catch (Exception error)
+        {
+            StatusText = $"Could not reload inspector changes: {error.Message}";
+        }
+        finally
+        {
+            EndOperation();
+            NotifySessionChanged();
+        }
+    }
+
     private void AddTrack(WorkbenchTrackViewModel track)
     {
         track.PropertyChanged += OnTrackChanged;
@@ -2703,7 +2894,128 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     {
         _plan = null;
         PreviewChanges.Clear();
+        PendingOperations.Clear();
         HasApplicablePreview = false;
+        RebuildPendingChanges();
+    }
+
+    private bool HasDirectPendingChanges =>
+        Files.Any(file => file.HasChanges) ||
+        _inspector?.HasUnsavedChanges == true;
+
+    private void RebuildPendingChanges()
+    {
+        PendingChanges.Clear();
+        if (PreviewChanges.Count > 0)
+        {
+            foreach (MetadataPreviewRow row in PreviewChanges)
+                PendingChanges.Add(row);
+            return;
+        }
+
+        foreach (MetadataPreviewRow row in Files
+                     .Where(file => file.HasChanges)
+                     .SelectMany(file =>
+                         file.CreatePendingChangeRows()))
+            PendingChanges.Add(row);
+        if (_inspector is not null)
+        {
+            foreach (MetadataPreviewRow row in
+                     _inspector.CreatePendingChangeRows())
+                PendingChanges.Add(row);
+        }
+    }
+
+    private async Task<MetadataOperationPlan?>
+        PreviewDirectPendingChangesAsync(
+            IProgress<OperationProgress> progress,
+            CancellationToken cancellationToken)
+    {
+        var editsByPath = new Dictionary<
+            string,
+            Dictionary<string, MetadataValueEdit>>(
+            PathComparer);
+        foreach (WorkbenchTrackViewModel file in
+                 Files.Where(file => file.HasChanges))
+        {
+            Dictionary<string, MetadataValueEdit> fileEdits =
+                GetOrCreate(file.Path);
+            foreach (TagEdit edit in file.CreateEdits())
+            {
+                var valueEdit = new MetadataValueEdit(
+                    MetadataFieldKey.Known(edit.Field),
+                    edit.Value is null ? [] : [edit.Value]);
+                fileEdits[
+                    MetadataGridValueKey.For(
+                        valueEdit.Field)] = valueEdit;
+            }
+        }
+
+        IReadOnlyDictionary<
+            string,
+            ArtworkSetPreviewRequest>? artworkEdits = null;
+        if (_inspector?.HasUnsavedChanges == true)
+        {
+            var inspectorInputs =
+                _inspector.CreatePendingOperationInputs();
+            if (inspectorInputs.ValueEdits is not null)
+            {
+                foreach ((string path,
+                             IReadOnlyList<MetadataValueEdit> edits)
+                         in inspectorInputs.ValueEdits)
+                {
+                    Dictionary<string, MetadataValueEdit> fileEdits =
+                        GetOrCreate(path);
+                    foreach (MetadataValueEdit edit in edits)
+                        fileEdits[
+                            MetadataGridValueKey.For(
+                                edit.Field)] = edit;
+                }
+            }
+            artworkEdits = inspectorInputs.ArtworkEdits;
+        }
+
+        MetadataOperationPlan? valuesPlan = editsByPath.Count == 0
+            ? null
+            : await _operations.PreviewValueEditsAsync(
+                editsByPath.ToDictionary(
+                    pair => pair.Key,
+                    pair => (IReadOnlyList<
+                        MetadataValueEdit>)pair.Value.Values
+                        .ToArray(),
+                    PathComparer),
+                "Workbench grid and inspector edits",
+                progress,
+                cancellationToken);
+        MetadataOperationPlan? artworkPlan = artworkEdits is null
+            ? null
+            : await _operations.PreviewArtworkSetsAsync(
+                artworkEdits,
+                "Workbench inspector artwork",
+                progress,
+                cancellationToken);
+        if (valuesPlan is null && artworkPlan is null)
+            return null;
+        return MetadataOperationPlanComposer.Combine(
+            "Workbench pending changes",
+            valuesPlan,
+            artworkPlan);
+
+        Dictionary<string, MetadataValueEdit> GetOrCreate(
+            string path)
+        {
+            if (!editsByPath.TryGetValue(
+                    path,
+                    out Dictionary<
+                        string,
+                        MetadataValueEdit>? edits))
+            {
+                edits = new(
+                    StringComparer.OrdinalIgnoreCase);
+                editsByPath[path] = edits;
+            }
+            return edits;
+        }
     }
 
     private void NotifySessionChanged()
@@ -2946,7 +3258,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private bool CanPasteMetadataField() =>
         !IsBusy && _platform is not null &&
         EditTargets.Count > 0;
-    private bool CanApply() => !IsBusy && HasApplicablePreview && _plan is not null;
+    private bool CanApply() =>
+        !IsBusy &&
+        (HasApplicablePreview && _plan is not null ||
+         HasDirectPendingChanges);
     private bool CanUndo() => !IsBusy && _history.CanUndo;
     private bool CanRedo() => !IsBusy && _history.CanRedo;
     private bool CanRepeat() =>
@@ -3272,7 +3587,10 @@ public partial class WorkbenchTrackViewModel : ObservableObject
         _composer = document.FirstValue(TagFields.Composer);
         _date = document.FirstValue(TagFields.Date);
         _track = document.FirstValue(TagFields.TrackNumber);
+        _trackTotal = document.FirstValue(TagFields.TotalTracks);
         _disc = document.FirstValue(TagFields.DiscNumber);
+        _discTotal = document.FirstValue(TagFields.TotalDiscs);
+        _comment = document.FirstValue(TagFields.Comment);
         _original = CurrentValues();
     }
 
@@ -3329,7 +3647,13 @@ public partial class WorkbenchTrackViewModel : ObservableObject
     [ObservableProperty, NotifyPropertyChangedFor(nameof(HasChanges))]
     private string? _track;
     [ObservableProperty, NotifyPropertyChangedFor(nameof(HasChanges))]
+    private string? _trackTotal;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(HasChanges))]
     private string? _disc;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(HasChanges))]
+    private string? _discTotal;
+    [ObservableProperty, NotifyPropertyChangedFor(nameof(HasChanges))]
+    private string? _comment;
 
     public bool HasChanges => _original.Any(pair =>
         !StringComparer.Ordinal.Equals(pair.Value, Value(pair.Key)));
@@ -3339,6 +3663,33 @@ public partial class WorkbenchTrackViewModel : ObservableObject
         .Select(pair => new TagEdit(pair.Key,
             string.IsNullOrWhiteSpace(Value(pair.Key)) ? null : Value(pair.Key)))
         .ToImmutableArray();
+
+    public IEnumerable<MetadataPreviewRow> CreatePendingChangeRows() =>
+        _original
+            .Where(pair => !StringComparer.Ordinal.Equals(
+                pair.Value,
+                Value(pair.Key)))
+            .Select(pair => new MetadataPreviewRow(
+                FileName,
+                MetadataFieldKey.Known(pair.Key).DisplayName,
+                pair.Value ?? "",
+                Value(pair.Key) ?? ""));
+
+    public void RevertPendingChanges()
+    {
+        Title = _original[TagFields.Title];
+        Artist = _original[TagFields.Artist];
+        AlbumArtist = _original[TagFields.AlbumArtist];
+        Album = _original[TagFields.Album];
+        Genre = _original[TagFields.Genre];
+        Composer = _original[TagFields.Composer];
+        Date = _original[TagFields.Date];
+        Track = _original[TagFields.TrackNumber];
+        TrackTotal = _original[TagFields.TotalTracks];
+        Disc = _original[TagFields.DiscNumber];
+        DiscTotal = _original[TagFields.TotalDiscs];
+        Comment = _original[TagFields.Comment];
+    }
 
     private Dictionary<TagFields, string?> CurrentValues() => new()
     {
@@ -3350,7 +3701,10 @@ public partial class WorkbenchTrackViewModel : ObservableObject
         [TagFields.Composer] = Composer,
         [TagFields.Date] = Date,
         [TagFields.TrackNumber] = Track,
+        [TagFields.TotalTracks] = TrackTotal,
         [TagFields.DiscNumber] = Disc,
+        [TagFields.TotalDiscs] = DiscTotal,
+        [TagFields.Comment] = Comment,
     };
 
     private string? Value(TagFields field) => field switch
@@ -3363,7 +3717,10 @@ public partial class WorkbenchTrackViewModel : ObservableObject
         TagFields.Composer => Composer,
         TagFields.Date => Date,
         TagFields.TrackNumber => Track,
+        TagFields.TotalTracks => TrackTotal,
         TagFields.DiscNumber => Disc,
+        TagFields.TotalDiscs => DiscTotal,
+        TagFields.Comment => Comment,
         _ => null,
     };
 

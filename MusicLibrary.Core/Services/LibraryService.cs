@@ -1180,6 +1180,8 @@ public sealed class LibraryService : ILibraryService, ILibraryOrganizer, IReinde
                 Formats = location.IndexFormats,
                 IncludePatterns = location.IndexIncludePatterns,
                 ExcludePatterns = location.IndexExcludePatterns,
+                ReadArtworkAtIndexTime =
+                    config.GetEffectiveProfile(location).Artwork.ReadAtIndexTime,
             })
             .ToList();
 

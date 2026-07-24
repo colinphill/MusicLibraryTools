@@ -23,6 +23,18 @@
           <Button Grid.Column="1" Classes="app" VerticalAlignment="Bottom" Content="Browse" Command="{Binding BrowseSourceCommand}" />
           <ComboBox x:Name="RecentFoldersCombo" Grid.Column="2" Classes="app" VerticalAlignment="Bottom" ItemsSource="{Binding RecentSources}" SelectedItem="{Binding SelectedRecentSource, Mode=TwoWay}" PlaceholderText="Recent folders" AutomationProperties.Name="Recent ingest folders" />
         </Grid>
+        <Border Classes="status-banner info"
+                IsVisible="{Binding HasExplicitSourceFiles}">
+          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+            <TextBlock Classes="status-icon" Text="i" />
+            <TextBlock Grid.Column="1"
+                       Text="{Binding ExplicitSourceSummary}"
+                       TextWrapping="Wrap" />
+            <Button Grid.Column="2" Classes="app"
+                    Content="Clear selected files"
+                    Command="{Binding ClearExplicitSourcesCommand}" />
+          </Grid>
+        </Border>
         <Border Classes="status-banner" Classes.info="{Binding IsConfigurationReady}"
                 Classes.warning="{Binding !IsConfigurationReady}"
                 AutomationProperties.LiveSetting="Polite">

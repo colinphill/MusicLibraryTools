@@ -30,6 +30,16 @@ public interface INavigationGuard
     Task<bool> ConfirmNavigationAsync();
 }
 
+public sealed record IngestSourceHandoffResult(
+    bool Accepted,
+    string? Error = null);
+
+public interface IIngestSourceHandoff
+{
+    IngestSourceHandoffResult SetSourceFiles(
+        IReadOnlyList<string> paths);
+}
+
 public interface IFilePickerService
 {
     Task<string?> PickFileAsync(string title, IReadOnlyList<FilePickerType>? types = null);

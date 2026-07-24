@@ -98,7 +98,15 @@ public sealed class LibraryOperationContextFactory : ILibraryOperationContextFac
                     ? null
                     : new IndexOperationProgressAdapter(progress);
                 var indexResult = await database.IndexFilesAsync(
-                    locations.Select(location => new ScanRootDefinition(location.Target, location.Sets)),
+                    locations.Select(location => new ScanRootDefinition(
+                        location.Target, location.Sets)
+                    {
+                        Formats = location.IndexFormats,
+                        IncludePatterns = location.IndexIncludePatterns,
+                        ExcludePatterns = location.IndexExcludePatterns,
+                        ReadArtworkAtIndexTime = configuration
+                            .GetEffectiveProfile(location).Artwork.ReadAtIndexTime,
+                    }),
                     progress: indexProgress, ct: ct).ConfigureAwait(false);
                 ct.ThrowIfCancellationRequested();
                 indexProgress?.ReportCompleted(

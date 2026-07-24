@@ -171,6 +171,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(UndoLibraryOperationCommand))]
     [NotifyCanExecuteChangedFor(nameof(RedoLibraryOperationCommand))]
     [NotifyCanExecuteChangedFor(nameof(RepeatLibraryRecipeCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RevertPendingChangesCommand))]
     private bool _isOperationBusy;
 
     [ObservableProperty]
@@ -363,9 +364,26 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         inspector.FilesChanged += () => _ = ReloadAsync();
         inspector.PropertyChanged += (_, args) =>
         {
-            if (args.PropertyName == nameof(SelectionInspectorViewModel.HasUnsavedChanges))
+            if (args.PropertyName is
+                nameof(SelectionInspectorViewModel.HasUnsavedChanges) or
+                nameof(SelectionInspectorViewModel.PendingChangesVersion))
+            {
+                if (inspector.HasUnsavedChanges &&
+                    _libraryOperationPlan is not null)
+                {
+                    _libraryOperationPlan = null;
+                    OperationPreviewChanges.Clear();
+                    HasApplicableOperationPreview = false;
+                }
+                RebuildPendingChanges();
                 OnPropertyChanged(nameof(HasUnsavedSelectionChanges));
+                OnPropertyChanged(nameof(HasUnsavedChanges));
+                ApplyLibraryOperationCommand
+                    .NotifyCanExecuteChanged();
+            }
         };
+        OperationPreviewChanges.CollectionChanged +=
+            (_, _) => RebuildPendingChanges();
     }
 
     public ObservableCollection<LibraryViewDefinition> SavedViews { get; } = [];
@@ -386,6 +404,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         ImportEmptyCellModes { get; } =
             Enum.GetValues<DelimitedMetadataEmptyCellMode>();
     public ObservableCollection<MetadataPreviewRow> OperationPreviewChanges { get; } = [];
+    public ObservableCollection<MetadataPreviewRow> PendingChanges { get; } = [];
     public MusicBrainzImportSelectionViewModel ReleaseImport { get; } = new();
     public MusicBrainzReleaseSearchViewModel ReleaseSearch { get; } = new();
     public DiscogsReleaseSearchViewModel DiscogsSearch { get; } = new();
@@ -1010,11 +1029,41 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [RelayCommand(CanExecute = nameof(CanApplyLibraryOperation))]
     private async Task ApplyLibraryOperationAsync()
     {
-        if (_metadataOperations is null || _libraryOperationPlan is null)
+        if (_metadataOperations is null ||
+            _libraryOperationPlan is null &&
+            !_inspector.HasUnsavedChanges)
             return;
         BeginLibraryOperation("Applying reviewed metadata changes");
         try
         {
+            _libraryOperationPlan ??=
+                await _inspector.PreviewPendingChangesAsync(
+                    CreateOperationProgress(),
+                    _operationCancellation!.Token);
+            if (_libraryOperationPlan is null)
+            {
+                OperationStatus =
+                    "There are no pending metadata changes to apply.";
+                return;
+            }
+            MetadataPreviewRowBuilder.Populate(
+                OperationPreviewChanges,
+                _libraryOperationPlan);
+            HasApplicableOperationPreview =
+                _libraryOperationPlan.CanApply;
+            if (!_libraryOperationPlan.CanApply)
+            {
+                OperationIssue? blocker = _libraryOperationPlan
+                    .Files
+                    .SelectMany(file => file.Issues)
+                    .FirstOrDefault(issue =>
+                        issue.Severity ==
+                        OperationIssueSeverity.Blocker);
+                OperationStatus = blocker is null
+                    ? "The pending edits produce no applicable file changes."
+                    : $"Pending changes cannot be applied: {blocker.Message}";
+                return;
+            }
             MetadataApplyResult result =
                 await _metadataOperations.ApplyAsync(
                     _libraryOperationPlan,
@@ -1022,6 +1071,10 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                     _operationCancellation!.Token);
             _libraryOperationPlan = null;
             OperationPreviewChanges.Clear();
+            if (_inspector.HasUnsavedChanges)
+                await _inspector.LoadAsync(
+                    _inspector.Selection);
+            RebuildPendingChanges();
             HasApplicableOperationPreview = false;
             OperationStatus = $"Applied {result.ChangedFiles:N0} file(s). Originals are " +
                 "available through Operations recovery.";
@@ -1043,6 +1096,27 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
     }
+
+    [RelayCommand(CanExecute = nameof(CanRevertPendingChanges))]
+    private async Task RevertPendingChangesAsync()
+    {
+        if (_libraryOperationPlan is null &&
+            PendingChanges.Count == 0)
+            return;
+
+        _libraryOperationPlan = null;
+        OperationPreviewChanges.Clear();
+        if (_inspector.HasUnsavedChanges)
+            await _inspector.DiscardPendingChangesAsync();
+        RebuildPendingChanges();
+        HasApplicableOperationPreview = false;
+        OperationStatus =
+            "Pending preview reverted. No files were changed.";
+        OnPropertyChanged(nameof(HasUnsavedChanges));
+    }
+
+    private bool CanRevertPendingChanges() =>
+        !IsOperationBusy;
 
     [RelayCommand(CanExecute = nameof(CanUndoLibraryOperation))]
     private async Task UndoLibraryOperationAsync()
@@ -2394,6 +2468,22 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         OnPropertyChanged(nameof(HasUnsavedChanges));
     }
 
+    private void RebuildPendingChanges()
+    {
+        PendingChanges.Clear();
+        if (OperationPreviewChanges.Count > 0)
+        {
+            foreach (MetadataPreviewRow row in
+                     OperationPreviewChanges)
+                PendingChanges.Add(row);
+            return;
+        }
+
+        foreach (MetadataPreviewRow row in
+                 _inspector.CreatePendingChangeRows())
+            PendingChanges.Add(row);
+    }
+
     private void ScheduleRepresentativePreview()
     {
         if (RepresentativePreview is null)
@@ -2487,8 +2577,10 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         ResolveOperationPaths().Length > 0;
 
     private bool CanApplyLibraryOperation() =>
-        !IsOperationBusy && _libraryOperationPlan is not null &&
-        HasApplicableOperationPreview;
+        !IsOperationBusy &&
+        (_libraryOperationPlan is not null &&
+             HasApplicableOperationPreview ||
+         _inspector.HasUnsavedChanges);
 
     private bool CanUndoLibraryOperation() =>
         _history?.CanUndo == true &&

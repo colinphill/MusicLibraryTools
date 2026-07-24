@@ -173,7 +173,7 @@ public sealed class MediaFileService : IMediaFileService
                     ? []
                     : tag.GetKnownMetadata().Select(kv => new TagFieldValue(kv.Key, kv.Value)).ToList(),
                 TextFields = tag is IUserStringMetadata userStrings
-                    ? userStrings.GetUserStrings()
+                    ? userStrings.GetAddressableUserStrings()
                         .Select(kv => new TextField(kv.Key, kv.Value))
                         .ToList()
                     : [],

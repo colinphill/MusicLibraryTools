@@ -1,4 +1,5 @@
 using global::Avalonia.Controls;
+using global::Avalonia.Controls.Presenters;
 using global::Avalonia.Controls.Templates;
 using global::Avalonia.Data;
 using global::Avalonia.Input;
@@ -22,6 +23,11 @@ public partial class WorkbenchView : UserControl
     private readonly List<AppGridColumnDefinition>
         _workbenchColumns = [];
     private LibrarySortState? _workbenchSort;
+    private bool _responsiveCompact;
+    private bool _inspectorOpen = true;
+    private bool _inspectorDrawerOpen;
+    private bool _restoringWorkbenchSelection;
+    private bool _workbenchSelectionChangePending;
 
     public WorkbenchView()
     {
@@ -47,6 +53,20 @@ public partial class WorkbenchView : UserControl
             _viewModel.ColumnEditor.Changed -=
                 RebuildWorkbenchMetadataColumns;
         PreviewGrid.ConfigureColumns(
+        [
+            new("File", "File", "File", 220, 140),
+            new("Field", "Field", "Field", 150, 100),
+            new("Before", "Before", "Before", 320, 180),
+            new("After", "After", "After", 320, 180),
+        ]);
+        PendingOperationsGrid.ConfigureColumns(
+        [
+            new("Number", "#", "Number", 55, 45),
+            new("Operation", "Operation", "Operation", 220, 130),
+            new("Target", "Target / details", "Target", 360, 180),
+            new("AppliesTo", "Applies to", "AppliesTo", 120, 90),
+        ]);
+        WorkbenchPendingChangesGrid.ConfigureColumns(
         [
             new("File", "File", "File", 220, 140),
             new("Field", "Field", "Field", 150, 100),
@@ -112,6 +132,7 @@ public partial class WorkbenchView : UserControl
                 "WorkingDirectory", 220, 130),
             new("Files", "Files", "Files", 65, 52),
         ]);
+        WorkbenchInspectorView.CloseRequested += OnInspectorCloseRequested;
     }
 
     private void BuildWorkbenchColumns()
@@ -198,20 +219,9 @@ public partial class WorkbenchView : UserControl
 
     private static string? WorkbenchEditPath(
         MetadataFieldKey field) =>
-        field.KnownField switch
-        {
-            MusicFileUtilities.TagFields.Title => "Title",
-            MusicFileUtilities.TagFields.Artist => "Artist",
-            MusicFileUtilities.TagFields.AlbumArtist =>
-                "AlbumArtist",
-            MusicFileUtilities.TagFields.Album => "Album",
-            MusicFileUtilities.TagFields.Genre => "Genre",
-            MusicFileUtilities.TagFields.Composer => "Composer",
-            MusicFileUtilities.TagFields.Date => "Date",
-            MusicFileUtilities.TagFields.TrackNumber => "Track",
-            MusicFileUtilities.TagFields.DiscNumber => "Disc",
-            _ => null,
-        };
+        field.KnownField is { } known
+            ? MetadataGridColumnEditorViewModel.InlineEditPath(known)
+            : null;
 
     private void RebuildWorkbenchMetadataColumns()
     {
@@ -262,12 +272,98 @@ public partial class WorkbenchView : UserControl
         WorkbenchGrid.ApplySort(_workbenchSort);
     }
 
-    private void OnWorkbenchSelectionChanged(
+    private async void OnWorkbenchSelectionChanged(
         object? sender,
-        SelectionChangedEventArgs e) =>
-        _viewModel.SetSelectedFiles(
+        SelectionChangedEventArgs e)
+    {
+        if (_restoringWorkbenchSelection ||
+            _workbenchSelectionChangePending)
+            return;
+        if (_viewModel.Inspector?.HasUnsavedChanges != true)
+        {
+            _viewModel.SetSelectedFiles(
+                WorkbenchGrid.SelectedItems
+                    .OfType<WorkbenchTrackViewModel>());
+            return;
+        }
+        WorkbenchTrackViewModel[] previous =
+            _viewModel.SelectedFiles.ToArray();
+        WorkbenchTrackViewModel[] selected =
             WorkbenchGrid.SelectedItems
-                .OfType<WorkbenchTrackViewModel>());
+                .OfType<WorkbenchTrackViewModel>()
+                .ToArray();
+        _workbenchSelectionChangePending = true;
+        bool accepted;
+        try
+        {
+            accepted = await _viewModel.TrySetSelectedFilesAsync(selected);
+        }
+        finally
+        {
+            _workbenchSelectionChangePending = false;
+        }
+        if (accepted)
+            return;
+        _restoringWorkbenchSelection = true;
+        try
+        {
+            WorkbenchGrid.SelectedItems.Clear();
+            foreach (WorkbenchTrackViewModel file in previous)
+                WorkbenchGrid.SelectedItems.Add(file);
+            _viewModel.SelectedFile = previous.FirstOrDefault();
+        }
+        finally
+        {
+            _restoringWorkbenchSelection = false;
+        }
+    }
+
+    private void OnInspectorToggle(object? sender, RoutedEventArgs e)
+    {
+        if (_responsiveCompact)
+        {
+            _inspectorOpen = true;
+            _inspectorDrawerOpen = !_inspectorDrawerOpen;
+        }
+        else
+        {
+            _inspectorOpen = !_inspectorOpen;
+        }
+        ApplyInspectorVisibility();
+    }
+
+    public void ApplyResponsiveLayout(bool compact)
+    {
+        _responsiveCompact = compact;
+        if (!compact)
+            _inspectorDrawerOpen = false;
+        ApplyInspectorVisibility();
+    }
+
+    private void ApplyInspectorVisibility()
+    {
+        WorkbenchSplit.SetCompact(_responsiveCompact || !_inspectorOpen);
+        ContentPresenter? presenter =
+            WorkbenchSplit.FindControl<ContentPresenter>("RightPresenter");
+        if (presenter is not null)
+        {
+            presenter.Width = _responsiveCompact ? 320 : double.NaN;
+            presenter.IsVisible = _inspectorOpen &&
+                (!_responsiveCompact || _inspectorDrawerOpen);
+        }
+        bool visible = _inspectorOpen &&
+            (!_responsiveCompact || _inspectorDrawerOpen);
+        WorkbenchInspectorToggle.Content = visible
+            ? "Hide inspector"
+            : "Inspector";
+    }
+
+    private void OnInspectorCloseRequested(object? sender, EventArgs e)
+    {
+        _inspectorOpen = false;
+        _inspectorDrawerOpen = false;
+        ApplyInspectorVisibility();
+    }
 
     private void BuildWorkbenchColumnOptions()
     {
@@ -357,6 +453,15 @@ public partial class WorkbenchView : UserControl
     private void SaveWorkbenchLayout(
         IReadOnlyList<LibraryColumnState> columns)
     {
+        IReadOnlyList<AppGridColumnDefinition> synchronized =
+            PersistedGridLayout.ApplySnapshot(
+                _workbenchColumns,
+                new GridSnapshot(
+                    columns,
+                    _workbenchSort));
+        _workbenchColumns.Clear();
+        _workbenchColumns.AddRange(
+            synchronized);
         _gridState.Save(
             "workbench.session",
             new(columns, _workbenchSort));
@@ -384,6 +489,17 @@ public partial class WorkbenchView : UserControl
         object? sender,
         RoutedEventArgs e) =>
         WorkbenchColumnPopover.IsOpen = false;
+
+    private void OnWorkbenchPendingChangesClick(
+        object? sender,
+        RoutedEventArgs e) =>
+        WorkbenchPendingChangesPopover.IsOpen =
+            !WorkbenchPendingChangesPopover.IsOpen;
+
+    private void OnWorkbenchPendingChangesClose(
+        object? sender,
+        RoutedEventArgs e) =>
+        WorkbenchPendingChangesPopover.IsOpen = false;
 
     private static void ConfigureDiscogsGrid(AppDataGrid grid) =>
         grid.ConfigureColumns(
@@ -561,6 +677,14 @@ public partial class WorkbenchView : UserControl
         object? sender,
         KeyEventArgs e)
     {
+        if (e.Key == Key.Escape &&
+            WorkbenchPendingChangesPopover.IsOpen)
+        {
+            WorkbenchPendingChangesPopover.IsOpen = false;
+            e.Handled = true;
+            return;
+        }
+
         object? focused = TopLevel.GetTopLevel(this)?
             .FocusManager?
             .GetFocusedElement();

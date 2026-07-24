@@ -246,13 +246,28 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             string formats = string.Join(", ", MediaFormatRegistry.Default
                 .GetExtensions(MediaFormatCapabilities.LibraryIndex));
             string roots = IndexTargets.Count == 0
-                ? "  No roots configured."
+                ? "No music folders are configured yet."
                 : string.Join(Environment.NewLine, IndexTargets.Select(root =>
-                    $"  {(string.IsNullOrWhiteSpace(root.Path) ? "(path not set)" : root.Path)} - {FormatPermissions(root.Permissions)}" +
-                    (Directory.Exists(root.Path) ? "" : " (offline warning)") +
-                    $"; formats: {(string.IsNullOrWhiteSpace(root.IndexFormats) ? "all recognized" : root.IndexFormats)}" +
-                    $"; include: {(string.IsNullOrWhiteSpace(root.IndexIncludePatterns) ? "all" : root.IndexIncludePatterns)}" +
-                    $"; exclude: {(string.IsNullOrWhiteSpace(root.IndexExcludePatterns) ? "none" : root.IndexExcludePatterns)}"));
+                {
+                    string path = string.IsNullOrWhiteSpace(root.Path)
+                        ? "a folder whose path has not been set"
+                        : root.Path;
+                    string availability = Directory.Exists(root.Path)
+                        ? ""
+                        : " It is currently offline or cannot be reached.";
+                    string included = string.IsNullOrWhiteSpace(root.IndexIncludePatterns)
+                        ? "Every matching music file is included."
+                        : $"Only files matching {root.IndexIncludePatterns} are included.";
+                    string excluded = string.IsNullOrWhiteSpace(root.IndexExcludePatterns)
+                        ? ""
+                        : $" Files matching {root.IndexExcludePatterns} are excluded.";
+                    string rootFormats = string.IsNullOrWhiteSpace(root.IndexFormats)
+                        ? "all recognized music formats"
+                        : root.IndexFormats;
+                    return $"• In {path}, the app indexes {rootFormats}. " +
+                           DescribeRootPermissions(root.Permissions) + " " +
+                           included + excluded + availability;
+                }));
             string example;
             try
             {
@@ -302,24 +317,46 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                 : string.Join(", ", ExportProfiles.Select(item =>
                     $"{item.Name} ({(item.Enabled ? "enabled" : "disabled")})"));
 
-            return $"Profile ID: {profile.Id}; preset: {FormatWords(profile.Preset.ToString())}{Environment.NewLine}" +
-                   $"Machine bindings: {(string.IsNullOrWhiteSpace(MachineBindingsFile) ? "inline paths" : MachineBindingsFile)}{Environment.NewLine}" +
-                   $"Tools: FFmpeg {FfmpegPath}; WavPack {WavpackPath}{Environment.NewLine}" +
-                   $"Recognized index formats: {formats}{Environment.NewLine}" +
-                   $"Example destination: {example}{Environment.NewLine}" +
-                   $"Collision behavior: {profile.Naming.CollisionPolicy}; Unicode preserved: {profile.Naming.PreserveUnicode}{Environment.NewLine}" +
-                   $"Naming limits: components {profile.Naming.ComponentLengthLimit?.ToString() ?? "application default"}; disc albums {profile.Naming.DiscAlbumLengthLimit?.ToString() ?? "component limit"}; complete path {profile.Naming.CompletePathLengthLimit?.ToString() ?? "platform default"}{Environment.NewLine}" +
-                   $"Disc identity: {FormatWords(profile.Disc.Strategy.ToString())}; disc tags: {(profile.Disc.Strategy == LibraryDiscStrategy.PreserveTags ? "preserved" : "removed")}{Environment.NewLine}" +
-                   $"Metadata fidelity: ReplayGain {OnOff(profile.Metadata.PreserveReplayGain)}, MusicBrainz IDs {OnOff(profile.Metadata.PreserveMusicBrainzIdentifiers)}, custom fields {OnOff(profile.Metadata.PreserveCustomFields)}, compilation {OnOff(profile.Metadata.PreserveCompilationSemantics)}{Environment.NewLine}" +
-                   $"Quality band: high resolution at {profile.Quality.HighResolutionMinimumSampleRateHz:N0} Hz or {profile.Quality.HighResolutionMinimumBitsPerSample}-bit{Environment.NewLine}" +
-                   $"Enabled health rules: {rules}{Environment.NewLine}" +
-                   $"Artwork: {profile.Artwork.Storage}, {FormatWords(profile.Artwork.Roles.ToString())}, {profile.Artwork.Encoding}{Environment.NewLine}" +
-                   $"Unknown sidecars: {profile.Sidecars.UnknownFileDisposition}{Environment.NewLine}" +
-                   $"Ingest profile: {ingestProfile?.Name ?? "none"}; recipes: {ingest}; " +
-                   $"source disposition: {ingestProfile?.Ingest.SourceDisposition.ToString() ?? "Preserve"}{Environment.NewLine}" +
-                   $"Integrations: {integrations}{Environment.NewLine}" +
-                   $"Export profiles: {exports}{Environment.NewLine}" +
-                   $"Root permissions:{Environment.NewLine}{roots}";
+            string naming = profile.Preset == LibraryProfilePreset.CatalogOnly
+                ? "The app leaves file and folder names where they are."
+                : $"When files are organized, they are named like “{example}”. " +
+                  $"If that name already exists, the app uses the " +
+                  $"{FormatWords(profile.Naming.CollisionPolicy.ToString())} rule.";
+            string artworkReading = profile.Artwork.ReadAtIndexTime
+                ? "Artwork is read and cached during indexing, so browsing and artwork audits are immediately complete. Indexing will take longer and the cache will use more space."
+                : "Artwork is not read during indexing. It is loaded and cached later when you view it or run an artwork audit, which keeps indexing faster and the initial cache smaller.";
+            string discHandling = profile.Disc.Strategy ==
+                LibraryDiscStrategy.PreserveTags
+                ? "Disc numbers remain in the tags."
+                : $"Disc numbers are represented using " +
+                  $"{FormatWords(profile.Disc.Strategy.ToString())}, and the disc tags are removed.";
+            string ingestBehavior = ingestProfile?.Ingest.Enabled == true
+                ? $"Ingest is enabled through “{ingestProfile.Name}”. The active recipes are {ingest}, and source files are {FormatWords(ingestProfile.Ingest.SourceDisposition.ToString())} after a successful ingest."
+                : "Automatic ingest is disabled, so source files are preserved.";
+
+            return $"This policy is “{profile.Name}” ({FormatWords(profile.Preset.ToString())}). " +
+                   $"The indexer recognizes: {formats}.{Environment.NewLine}{Environment.NewLine}" +
+                   $"{naming} Unicode characters are " +
+                   $"{(profile.Naming.PreserveUnicode ? "kept" : "normalized or replaced")}. " +
+                   $"Path-length limits use the application and platform defaults unless you entered an override.{Environment.NewLine}{Environment.NewLine}" +
+                   $"{discHandling} A recording is considered high resolution at " +
+                   $"{profile.Quality.HighResolutionMinimumSampleRateHz:N0} Hz or " +
+                   $"{profile.Quality.HighResolutionMinimumBitsPerSample}-bit.{Environment.NewLine}{Environment.NewLine}" +
+                   $"When metadata is copied, ReplayGain is {OnOff(profile.Metadata.PreserveReplayGain)}, " +
+                   $"MusicBrainz identifiers are {OnOff(profile.Metadata.PreserveMusicBrainzIdentifiers)}, " +
+                   $"custom fields are {OnOff(profile.Metadata.PreserveCustomFields)}, and compilation information is " +
+                   $"{OnOff(profile.Metadata.PreserveCompilationSemantics)}.{Environment.NewLine}{Environment.NewLine}" +
+                   $"{artworkReading} Written artwork uses {FormatWords(profile.Artwork.Storage.ToString())} storage, " +
+                   $"{FormatWords(profile.Artwork.Roles.ToString())}, and {FormatWords(profile.Artwork.Encoding.ToString())} encoding.{Environment.NewLine}{Environment.NewLine}" +
+                   $"Health checks currently enabled: {rules}. Files that do not match a sidecar rule are " +
+                   $"{FormatWords(profile.Sidecars.UnknownFileDisposition.ToString())}.{Environment.NewLine}{Environment.NewLine}" +
+                   $"{ingestBehavior}{Environment.NewLine}{Environment.NewLine}" +
+                   $"Playlist and catalog connections: {integrations}. Export profiles: {exports}.{Environment.NewLine}{Environment.NewLine}" +
+                   $"Configured music folders:{Environment.NewLine}{roots}{Environment.NewLine}{Environment.NewLine}" +
+                   $"External tools use FFmpeg at “{FfmpegPath}” and WavPack at “{WavpackPath}”. " +
+                   (string.IsNullOrWhiteSpace(MachineBindingsFile)
+                       ? "Folder paths are stored directly in this configuration."
+                       : $"Machine-specific folder paths come from “{MachineBindingsFile}”.");
         }
     }
     public decimal OversizedArtworkSizeThresholdMib
@@ -1820,6 +1857,25 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         if (permissions.HasFlag(LibraryRootPermissions.IngestOutput)) labels.Add("ingest output");
         if (permissions.HasFlag(LibraryRootPermissions.SynchronizeOutput)) labels.Add("sync output");
         return string.Join(", ", labels);
+    }
+
+    private static string DescribeRootPermissions(
+        LibraryRootPermissions permissions)
+    {
+        if (permissions == LibraryRootPermissions.None)
+            return "The app only catalogs this folder and will not change its files.";
+        var actions = new List<string>();
+        if (permissions.HasFlag(LibraryRootPermissions.WriteMetadata))
+            actions.Add("edit metadata");
+        if (permissions.HasFlag(LibraryRootPermissions.WriteArtwork))
+            actions.Add("edit artwork");
+        if (permissions.HasFlag(LibraryRootPermissions.OrganizeFiles))
+            actions.Add("rename and move files");
+        if (permissions.HasFlag(LibraryRootPermissions.IngestOutput))
+            actions.Add("write ingest results");
+        if (permissions.HasFlag(LibraryRootPermissions.SynchronizeOutput))
+            actions.Add("write synchronized copies");
+        return $"The app may {string.Join(", ", actions)} in this folder.";
     }
 
     private static string FormatWords(string value) => string.Concat(value.Select(

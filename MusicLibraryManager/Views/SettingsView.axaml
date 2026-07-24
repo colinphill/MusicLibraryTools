@@ -348,6 +348,11 @@
                 <StackPanel Grid.Column="2" Spacing="5"><TextBlock Classes="muted" Text="JPEG quality" /><NumericUpDown Classes="app" Minimum="1" Maximum="100" Value="{Binding ArtworkJpegQuality, Mode=TwoWay}" /></StackPanel>
                 <StackPanel Grid.Column="3" Spacing="5"><TextBlock Classes="muted" Text="Sidecar template" /><TextBox Classes="app" Text="{Binding ArtworkSidecarTemplate, Mode=TwoWay}" /></StackPanel>
               </Grid>
+              <CheckBox Content="Read embedded artwork during indexing"
+                        IsChecked="{Binding ReadArtworkAtIndexTime, Mode=TwoWay}" />
+              <TextBlock Classes="muted"
+                         Text="When enabled, indexing takes longer and the cache uses more space, but artwork is immediately available for browsing and audits. When disabled, artwork is read only when it is viewed or audited."
+                         TextWrapping="Wrap" />
 
               <TextBlock FontSize="16" FontWeight="SemiBold" Text="Health rules" />
               <ItemsControl ItemsSource="{Binding HealthRules}"><ItemsControl.ItemTemplate><DataTemplate><Border Classes="card" Margin="0,0,0,6" Padding="9"><Grid ColumnDefinitions="Auto,220,160,Auto,Auto" ColumnSpacing="10"><CheckBox IsChecked="{Binding Enabled, Mode=TwoWay}" /><TextBlock Grid.Column="1" Text="{Binding Id}" FontWeight="SemiBold" /><ComboBox Grid.Column="2" Classes="app" ItemsSource="{x:Static vm:SettingsChoiceLists.HealthSeverities}" SelectedItem="{Binding Severity, Mode=TwoWay}" /><CheckBox Grid.Column="3" Content="Propose" IsChecked="{Binding ProposeRepair, Mode=TwoWay}" /><CheckBox Grid.Column="4" Content="Apply" IsChecked="{Binding ApplyRepair, Mode=TwoWay}" /></Grid></Border></DataTemplate></ItemsControl.ItemTemplate></ItemsControl>

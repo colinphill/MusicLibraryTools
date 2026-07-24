@@ -305,7 +305,7 @@ namespace MusicFileUtilities
                 foreach (IGrouping<
                              string,
                              KeyValuePair<string, string>> field in
-                         sourceCustom.GetUserStrings().GroupBy(
+                         sourceCustom.GetAddressableUserStrings().GroupBy(
                              value => value.Key,
                              StringComparer.OrdinalIgnoreCase))
                 {

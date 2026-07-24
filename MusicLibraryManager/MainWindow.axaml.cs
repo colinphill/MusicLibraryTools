@@ -270,6 +270,8 @@ public partial class MainWindow : Window
         ActivityBanner.Margin = new Thickness(18, compactHeight ? 4 : 8, 18, 0);
         if (_contentHost.Content is LibraryView library)
             library.ApplyResponsiveLayout(Bounds.Width <= 1100);
+        else if (_contentHost.Content is WorkbenchView workbench)
+            workbench.ApplyResponsiveLayout(Bounds.Width <= 1100);
     }
 
 }

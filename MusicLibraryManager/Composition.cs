@@ -34,11 +34,14 @@ public static class Composition
         services.AddSingleton<IndexingViewModel>();
         services.AddSingleton<HomeViewModel>();
         services.AddSingleton<SelectionInspectorViewModel>();
+        services.AddSingleton<WorkbenchSelectionInspectorViewModel>();
         services.AddSingleton<LibraryViewModel>();
         services.AddSingleton<WorkbenchViewModel>();
         services.AddSingleton<SettingsViewModel>();
         services.AddSingleton<AnalyzerViewModel>();
         services.AddSingleton<IngestViewModel>();
+        services.AddSingleton<IIngestSourceHandoff>(
+            sp => sp.GetRequiredService<IngestViewModel>());
         services.AddSingleton<OrganizeViewModel>();
         services.AddSingleton<DevicesViewModel>();
         services.AddSingleton<OperationsViewModel>();

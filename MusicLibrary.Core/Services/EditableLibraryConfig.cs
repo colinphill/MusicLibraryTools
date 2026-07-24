@@ -1335,7 +1335,7 @@ public sealed class EditableLibraryConfig
             ("Ingest", _) => ["Enabled", "SourceDisposition", "PreserveSidecars"],
             ("Artwork", "LibraryProfile") => ["Storage", "Roles", "Encoding",
                 "MaximumDimension", "MaximumEncodedBytes", "JpegQuality",
-                "SidecarFileNameTemplate"],
+                "SidecarFileNameTemplate", "ReadAtIndexTime"],
             ("Artwork", "ExportProfile") => ["Mode", "FrontCoverOnly", "PreserveEncoding",
                 "MaximumDimension", "MaximumBytes"],
             ("Playlists", _) => ["Enabled", "Format", "RelativePaths", "IncludeExtendedInfo",

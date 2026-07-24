@@ -459,9 +459,10 @@ public sealed class PresentationTests
         var writer = new FakeTagWriter();
         var operations =
             new FakeMetadataOperationService();
+        var activities = new AppActivityService();
         var inspector = new SelectionInspectorViewModel(media, new FakeLibrary([]), writer, new FakeArtworkService(),
             new FakeFilePicker(), new FakeDialogs(), new FakeFieldsEditor(),
-            new FakeThumbnails(), new AppActivityService(),
+            new FakeThumbnails(), activities,
             operations);
 
         await inspector.LoadAsync(new SelectionContext([@"C:\one.flac", @"C:\two.flac"]));
@@ -482,6 +483,9 @@ public sealed class PresentationTests
         Assert.Equal(
             ["Canonical Artist"],
             edit.Values);
+        AppActivity activity = Assert.Single(activities.Activities);
+        Assert.Equal(AppActivityState.Completed, activity.State);
+        Assert.False(activity.CanCancel);
     }
 
     [Fact]
@@ -604,6 +608,48 @@ public sealed class PresentationTests
         Assert.Equal(
             "Lossless rear scan",
             artwork.Description);
+    }
+
+    [Fact]
+    public async Task Selection_inspector_reads_workbench_artwork_without_library_cache()
+    {
+        const string path = @"C:\ad-hoc.flac";
+        var documents = new FakeMetadataDocumentService(
+            new MediaDocument(
+                path,
+                [],
+                [
+                    new ArtworkModel
+                    {
+                        Category = "FrontCover",
+                        Description = "Ad-hoc cover",
+                        ImageType = "image/png",
+                        Width = 64,
+                        Height = 64,
+                        Size = 3,
+                        Data = [1, 2, 3],
+                    },
+                ],
+                null,
+                new(path, 10, DateTime.UtcNow, "hash"),
+                true));
+        var inspector = new SelectionInspectorViewModel(
+            new FakeMediaService(),
+            new FakeLibrary([]),
+            new FakeTagWriter(),
+            new FakeArtworkService(),
+            new FakeFilePicker(),
+            new FakeDialogs(),
+            new FakeFieldsEditor(),
+            new FakeThumbnails(),
+            new AppActivityService(),
+            metadataDocuments: documents);
+
+        await inspector.LoadAsync(new SelectionContext(
+            [path], ReadArtworkDirectly: true));
+
+        ArtworkPreviewItem artwork = Assert.Single(inspector.ArtworkItems);
+        Assert.Equal("Ad-hoc cover", artwork.Description);
     }
 
     [Fact]
@@ -752,6 +798,86 @@ public sealed class PresentationTests
         Assert.True(guard.HasUnsavedChanges);
         Assert.True(await guard.ConfirmNavigationAsync());
         Assert.False(guard.HasUnsavedChanges);
+    }
+
+    [Fact]
+    public async Task Library_inspector_edits_appear_in_pending_changes_and_revert()
+    {
+        const string path = @"C:\Music\Pending.flac";
+        TrackRecord record = Track(
+            "Artist",
+            "Album",
+            "Original title",
+            "FLAC",
+            path);
+        var library = new FakeLibrary([record]);
+        var settings = new FakeSettings();
+        var operations =
+            new FakeMetadataOperationService();
+        var inspector = new SelectionInspectorViewModel(
+            new FakeMediaService(
+                Model(path, "Original title", "Artist")),
+            library,
+            new FakeTagWriter(),
+            new FakeArtworkService(),
+            new FakeFilePicker(),
+            new FakeDialogs(),
+            new FakeFieldsEditor(),
+            new FakeThumbnails(),
+            new AppActivityService(),
+            operations);
+        var indexing = new IndexingViewModel(
+            library,
+            settings,
+            new AppActivityService());
+        var viewModel = new LibraryViewModel(
+            library,
+            new FakeReindex(),
+            settings,
+            inspector,
+            new NavigationService(),
+            indexing,
+            new FakeThumbnails(),
+            metadataOperations: operations);
+        await viewModel.ReloadAsync();
+        await viewModel.SelectAsync([viewModel.Rows.Single()]);
+
+        EditableTagField title =
+            viewModel.Inspector.Fields.Single(field =>
+                field.Field == TagFields.Title);
+        title.Value = "Intermediate title";
+        title.Value = "Pending title";
+
+        MetadataPreviewRow pending =
+            Assert.Single(viewModel.PendingChanges);
+        Assert.Equal("Pending.flac", pending.File);
+        Assert.Equal("Title", pending.Field);
+        Assert.Equal("Original title", pending.Before);
+        Assert.Equal("Pending title", pending.After);
+
+        await viewModel.RevertPendingChangesCommand
+            .ExecuteAsync(null);
+
+        Assert.Empty(viewModel.PendingChanges);
+        Assert.False(viewModel.Inspector.HasUnsavedChanges);
+        Assert.Equal(
+            "Original title",
+            viewModel.Inspector.Fields.Single(field =>
+                field.Field == TagFields.Title).Value);
+
+        viewModel.Inspector.Fields.Single(field =>
+            field.Field == TagFields.Title).Value =
+            "Applied title";
+        await viewModel.ApplyLibraryOperationCommand
+            .ExecuteAsync(null);
+
+        Assert.NotNull(operations.AppliedPlan);
+        MetadataFieldDifference applied =
+            Assert.Single(Assert.Single(
+                operations.AppliedPlan!.Files).Differences);
+        Assert.Equal(TagFields.Title, applied.Field.KnownField);
+        Assert.Equal(["Applied title"], applied.After);
+        Assert.Empty(viewModel.PendingChanges);
     }
 
     [Fact]
@@ -964,8 +1090,8 @@ public sealed class PresentationTests
         ArtworkPreviewItem front = inspector.ArtworkItems[0];
         front.Description = "Restored front scan";
         inspector.RemoveArtworkItem(inspector.ArtworkItems[1]);
-        Assert.True(inspector.SaveArtworkSetCommand.CanExecute(null));
-        await inspector.SaveArtworkSetCommand.ExecuteAsync(null);
+        Assert.True(inspector.SaveTagsCommand.CanExecute(null));
+        await inspector.SaveTagsCommand.ExecuteAsync(null);
 
         Assert.Null(artworkService.SavedImages);
         ArtworkInput saved = Assert.Single(
@@ -974,6 +1100,135 @@ public sealed class PresentationTests
         Assert.Equal(ID3v2Util.APICType.FrontCover, saved.Type);
         Assert.Equal("Restored front scan", saved.Description);
         Assert.Equal([1, 2, 3], saved.Data);
+    }
+
+    [Fact]
+    public async Task Selection_inspector_saves_tags_and_artwork_as_one_reviewed_plan()
+    {
+        const string path = @"C:\one.flac";
+        var library = new FakeLibrary([]);
+        library.ImageSignatures[path] = "artwork";
+        MediaFileModel model = Model(
+            path,
+            "Original title",
+            "Artist") with
+        {
+            Artwork =
+            [
+                new ArtworkModel
+                {
+                    Category = "FrontCover",
+                    Description = "Original cover",
+                    ImageType = "image/jpeg",
+                    Width = 800,
+                    Height = 800,
+                    Size = 3,
+                    Data = [1, 2, 3],
+                },
+            ],
+        };
+        var operations =
+            new FakeMetadataOperationService();
+        var inspector = new SelectionInspectorViewModel(
+            new FakeMediaService(model),
+            library,
+            new FakeTagWriter(),
+            new FakeArtworkService(),
+            new FakeFilePicker(),
+            new FakeDialogs(),
+            new FakeFieldsEditor(),
+            new FakeThumbnails(),
+            new AppActivityService(),
+            operations);
+        await inspector.LoadAsync(
+            new SelectionContext([path]));
+
+        inspector.Fields.Single(field =>
+            field.Field == TagFields.Title).Value =
+            "Reviewed title";
+        Assert.Single(inspector.ArtworkItems)
+            .Description = "Reviewed cover";
+
+        Assert.True(
+            inspector.SaveTagsCommand.CanExecute(null));
+        await inspector.SaveTagsCommand.ExecuteAsync(null);
+
+        Assert.Equal(
+            ["Reviewed title"],
+            Assert.Single(
+                operations.PreviewedValueEdits[path])
+                .Values);
+        Assert.Equal(
+            "Reviewed cover",
+            Assert.Single(
+                operations.PreviewedArtworkSets[path]
+                    .Images).Description);
+        MetadataFilePlan applied =
+            Assert.Single(
+                operations.AppliedPlan!.Files);
+        Assert.Single(applied.Edits);
+        Assert.NotNull(applied.ArtworkEdit);
+        Assert.NotNull(applied.ArtworkDifference);
+    }
+
+    [Fact]
+    public void Ingest_accepts_an_explicit_workbench_file_selection()
+    {
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            $"ingest-handoff-{Guid.NewGuid():N}");
+        try
+        {
+            string album = Path.Combine(
+                root,
+                "Album");
+            Directory.CreateDirectory(album);
+            string first = Path.Combine(
+                album,
+                "01.flac");
+            string second = Path.Combine(
+                album,
+                "02.flac");
+            File.WriteAllBytes(first, [1]);
+            File.WriteAllBytes(second, [2]);
+            var viewModel = new IngestViewModel(
+                null!,
+                null!,
+                null!,
+                new FakeSettings(),
+                new FakeLibrary([]));
+
+            IngestSourceHandoffResult result =
+                viewModel.SetSourceFiles(
+                    [first, second]);
+
+            Assert.True(
+                result.Accepted,
+                result.Error);
+            Assert.True(
+                viewModel.HasExplicitSourceFiles);
+            Assert.Equal(
+                2,
+                viewModel.ExplicitSourceFileCount);
+            Assert.Equal(
+                album,
+                viewModel.SourceDirectory);
+            Assert.True(
+                viewModel.ClearExplicitSourcesCommand
+                    .CanExecute(null));
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(
+                    root,
+                    recursive: true);
+            }
+            catch
+            {
+            }
+        }
     }
 
     [Fact]
@@ -1405,6 +1660,26 @@ public sealed class PresentationTests
         Assert.Equal(7, viewModel.SelectedTabIndex);
         Assert.Contains("catalog only", viewModel.EffectivePolicySummary,
             StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task Settings_effective_policy_explains_artwork_indexing_in_plain_language()
+    {
+        var viewModel = new SettingsViewModel(
+            new FakeSettings(), new FakeFilePicker(), new FakeDialogs(), new FakeTheme());
+        await viewModel.NewConfigurationCommand.ExecuteAsync(null);
+        LibraryProfileEditorRow editor = Assert.IsType<LibraryProfileEditorRow>(
+            viewModel.AdvancedProfile);
+
+        editor.ReadArtworkAtIndexTime = false;
+        Assert.Contains("Artwork is not read during indexing",
+            viewModel.EffectivePolicyDetails, StringComparison.OrdinalIgnoreCase);
+
+        editor.ReadArtworkAtIndexTime = true;
+        Assert.Contains("Artwork is read and cached during indexing",
+            viewModel.EffectivePolicyDetails, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("will not change its files",
+            viewModel.EffectivePolicyDetails, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -1854,6 +2129,13 @@ public sealed class PresentationTests
         Assert.Single(viewModel.OperationPreviewChanges);
         Assert.All(viewModel.OperationEditor.OperationDescriptors, descriptor =>
             Assert.True(descriptor.Supports(MetadataOperationSurface.Library)));
+
+        viewModel.RevertPendingChangesCommand.Execute(null);
+
+        Assert.False(viewModel.HasApplicableOperationPreview);
+        Assert.Empty(viewModel.OperationPreviewChanges);
+        Assert.False(viewModel.HasUnsavedChanges);
+        Assert.Contains("reverted", viewModel.OperationStatus);
     }
 
     [Fact]
@@ -2388,6 +2670,21 @@ public sealed class PresentationTests
             TagFields.Title,
             title.EditTarget!.KnownField);
 
+        editor.NewColumnCommand.Execute(null);
+        editor.Label = "Editable track total";
+        editor.FieldKind = MetadataGridFieldKind.Known;
+        editor.SelectedKnownField = editor.KnownFields.Single(choice =>
+            choice.Field == TagFields.TotalTracks);
+        editor.InlineEditable = true;
+        editor.SaveColumnCommand.Execute(null);
+
+        UserMetadataColumnDescriptor trackTotal =
+            store.Workbench.Single(column =>
+                column.Field.KnownField == TagFields.TotalTracks);
+        Assert.Equal(
+            TagFields.TotalTracks,
+            trackTotal.EditTarget!.KnownField);
+
         var libraryEditor =
             new MetadataGridColumnEditorViewModel(
                 store,
@@ -2403,6 +2700,106 @@ public sealed class PresentationTests
         libraryEditor.SaveColumnCommand.Execute(null);
 
         Assert.Null(Assert.Single(store.Library).EditTarget);
+    }
+
+    [Fact]
+    public void Metadata_column_editor_exposes_every_supported_inline_field()
+    {
+        TagFields[] expected =
+        [
+            TagFields.Title,
+            TagFields.Artist,
+            TagFields.AlbumArtist,
+            TagFields.Album,
+            TagFields.Genre,
+            TagFields.Composer,
+            TagFields.Date,
+            TagFields.TrackNumber,
+            TagFields.TotalTracks,
+            TagFields.DiscNumber,
+            TagFields.TotalDiscs,
+            TagFields.Comment,
+        ];
+        var editor = new MetadataGridColumnEditorViewModel(
+            new FakeMetadataGridColumnStore(),
+            MetadataGridSurface.Workbench)
+        {
+            FieldKind = MetadataGridFieldKind.Known,
+        };
+
+        foreach (TagFields field in expected)
+        {
+            editor.SelectedKnownField = editor.KnownFields.Single(choice =>
+                choice.Field == field);
+            Assert.True(editor.CanInlineEdit);
+            Assert.False(string.IsNullOrWhiteSpace(
+                MetadataGridColumnEditorViewModel.InlineEditPath(field)));
+        }
+
+        Assert.Equal(
+            expected.Length,
+            Enum.GetValues<TagFields>().Count(field =>
+                MetadataGridColumnEditorViewModel.InlineEditPath(field) is not null));
+    }
+
+    [Fact]
+    public void Workbench_inline_editable_totals_and_comment_build_tag_edits()
+    {
+        var document = new MediaDocument(
+            "song.flac",
+            [new(
+                "VorbisComment",
+                [
+                    new(
+                        MetadataFieldKey.Known(TagFields.TotalTracks),
+                        ["10"]),
+                    new(
+                        MetadataFieldKey.Known(TagFields.TotalDiscs),
+                        ["1"]),
+                    new(
+                        MetadataFieldKey.Known(TagFields.Comment),
+                        ["Original"]),
+                ],
+                true,
+                true,
+                true,
+                true)],
+            [],
+            null,
+            new(
+                "song.flac",
+                10,
+                DateTime.UtcNow,
+                "hash"),
+            true);
+        var track = new WorkbenchTrackViewModel(document);
+
+        Assert.Equal("10", track.TrackTotal);
+        Assert.Equal("1", track.DiscTotal);
+        Assert.Equal("Original", track.Comment);
+
+        track.TrackTotal = "12";
+        track.DiscTotal = "2";
+        track.Comment = "Updated";
+
+        ImmutableArray<TagEdit> edits = track.CreateEdits();
+        Assert.Collection(
+            edits.OrderBy(edit => edit.Field),
+            edit =>
+            {
+                Assert.Equal(TagFields.Comment, edit.Field);
+                Assert.Equal("Updated", edit.Value);
+            },
+            edit =>
+            {
+                Assert.Equal(TagFields.TotalDiscs, edit.Field);
+                Assert.Equal("2", edit.Value);
+            },
+            edit =>
+            {
+                Assert.Equal(TagFields.TotalTracks, edit.Field);
+                Assert.Equal("12", edit.Value);
+            });
     }
 
     [Fact]
@@ -2660,6 +3057,64 @@ public sealed class PresentationTests
         Assert.Equal("APEv2 tag layer", row.Field);
         Assert.Equal("Absent", row.Before);
         Assert.Equal("Present", row.After);
+    }
+
+    [Fact]
+    public void Pending_operation_preview_summarizes_ad_hoc_edits()
+    {
+        var rows = new System.Collections.ObjectModel.ObservableCollection<
+            PendingMetadataOperationRow>();
+        string path = Path.Combine(Path.GetTempPath(), "track.flac");
+        MetadataFieldKey field = MetadataFieldKey.Known(TagFields.Title);
+        var file = new MetadataFilePlan(
+            path,
+            new(path, 1, DateTime.UtcNow, "hash"),
+            [new(field, ["Before"], ["After"])],
+            [new(field, ["After"])],
+            []);
+        var plan = new MetadataOperationPlan(
+            Guid.NewGuid(), "Inline edit", [file], DateTimeOffset.UtcNow);
+
+        PendingMetadataOperationRowBuilder.Populate(rows, plan);
+
+        PendingMetadataOperationRow row = Assert.Single(rows);
+        Assert.Equal("Set metadata field", row.Operation);
+        Assert.Equal("Title", row.Target);
+        Assert.Equal("1 file", row.AppliesTo);
+    }
+
+    [Fact]
+    public void Pending_operation_preview_keeps_recipe_order_and_plain_details()
+    {
+        var rows = new System.Collections.ObjectModel.ObservableCollection<
+            PendingMetadataOperationRow>();
+        string path = Path.Combine(Path.GetTempPath(), "track.flac");
+        MetadataFieldKey field = MetadataFieldKey.Known(TagFields.Title);
+        var file = new MetadataFilePlan(
+            path,
+            new(path, 1, DateTime.UtcNow, "hash"),
+            [new(field, ["before"], ["Reviewed"])],
+            [new(field, ["Reviewed"])],
+            []);
+        var operation = new AssignFieldOperation(field, "Reviewed");
+        var recipe = new OperationRecipe(
+            Guid.NewGuid(), "Review titles", [operation])
+        {
+            Steps =
+            [
+                new(Guid.NewGuid(), "Set reviewed title", operation),
+            ],
+        };
+        var plan = new MetadataOperationPlan(
+            Guid.NewGuid(), recipe.Name, [file], DateTimeOffset.UtcNow, recipe);
+
+        PendingMetadataOperationRowBuilder.Populate(rows, plan);
+
+        PendingMetadataOperationRow row = Assert.Single(rows);
+        Assert.Equal(1, row.Number);
+        Assert.Equal("Set reviewed title", row.Operation);
+        Assert.Contains("Set Title", row.Target);
+        Assert.Equal("1 changed file(s)", row.AppliesTo);
     }
 
     [Fact]
@@ -3257,7 +3712,8 @@ internal class FakeMetadataOperationService : IMetadataOperationService
             new Dictionary<string, Id3VersionEdit>();
     public IReadOnlyDictionary<string, TagLayerConversionEdit>
         PreviewedTagLayerConversions { get; private set; } =
-            new Dictionary<string, TagLayerConversionEdit>();
+        new Dictionary<string, TagLayerConversionEdit>();
+    public MetadataOperationPlan? AppliedPlan { get; private set; }
     public bool WaitForCancellation { get; init; }
     public bool CancellationObserved { get; private set; }
     public TaskCompletionSource<bool> PreviewStarted { get; } =
@@ -3534,9 +3990,12 @@ internal class FakeMetadataOperationService : IMetadataOperationService
     public virtual Task<MetadataApplyResult> ApplyAsync(
         MetadataOperationPlan plan,
         IProgress<OperationProgress>? progress = null,
-        CancellationToken ct = default) =>
-        Task.FromResult(new MetadataApplyResult(
+        CancellationToken ct = default)
+    {
+        AppliedPlan = plan;
+        return Task.FromResult(new MetadataApplyResult(
             plan.ChangedFileCount, [], []));
+    }
 }
 
 internal sealed class FakeDelimitedMetadataImportService :
