@@ -1283,11 +1283,144 @@ public sealed class MetadataWorkbenchServicesTests
             var afterRestart = new EditHistoryService(
                 new AppSettings(statePath), journals);
             Assert.True(afterRestart.CanRedo);
-            Assert.Equal(recipe.Id,
-                Assert.Single(afterRestart.RedoEntries).Recipe?.Id);
+            EditHistoryEntry redo =
+                Assert.Single(afterRestart.RedoEntries);
+            Assert.Equal(recipe.Id, redo.Recipe?.Id);
+
+            var redoService = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings:
+                    new AppSettings(statePath)),
+                new AppSettings(statePath),
+                history: afterRestart);
+            MetadataOperationPlan regenerated =
+                await redoService.PreviewAsync(
+                    redo.Paths,
+                    redo.Recipe!);
+            Assert.NotEqual(plan.Id, regenerated.Id);
+            Assert.Equal(
+                ["TestTitle"],
+                Assert.Single(
+                    Assert.Single(regenerated.Files)
+                        .Differences).Before);
+
+            await redoService.ApplyAsync(regenerated);
+
+            Assert.Equal(
+                "Workbench title",
+                MediaFile.GetFile(
+                    mediaPath,
+                    readOnly: true).Tags.First().Title);
+            Assert.True(afterRestart.CanUndo);
+            Assert.False(afterRestart.CanRedo);
         }
         finally
         {
+            try { Directory.Delete(session, recursive: true); } catch { }
+            try { Directory.Delete(recovery, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task ConcurrentReviewedEditsSerializeAndRejectTheLosingPlan()
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-concurrent-" + Guid.NewGuid().ToString("N"));
+        string recovery = session + ".MusicLibraryManager-recovery";
+        Directory.CreateDirectory(session);
+        string mediaPath = Path.Combine(session, "track.flac");
+        File.Copy(MediaFixtures.Path_("sample.flac"), mediaPath);
+        string statePath = Path.Combine(session, "settings.json");
+        IDisposable? heldLease = null;
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var coordinator = new FileMutationCoordinator();
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(
+                    coordinator,
+                    settings: settings),
+                settings);
+            MetadataFieldKey title =
+                MetadataFieldKey.Known(TagFields.Title);
+            MetadataOperationPlan firstPlan =
+                await service.PreviewAsync(
+                    [mediaPath],
+                    OperationRecipe.Create(
+                        "First concurrent edit",
+                        new AssignFieldOperation(
+                            title,
+                            "First winner")));
+            MetadataOperationPlan secondPlan =
+                await service.PreviewAsync(
+                    [mediaPath],
+                    OperationRecipe.Create(
+                        "Second concurrent edit",
+                        new AssignFieldOperation(
+                            title,
+                            "Second winner")));
+            var firstStaged =
+                new TaskCompletionSource<bool>(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+            var secondStaged =
+                new TaskCompletionSource<bool>(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+            heldLease = await coordinator.AcquireAsync(mediaPath);
+
+            Task<MetadataApplyResult> first =
+                service.ApplyAsync(
+                    firstPlan,
+                    new SynchronousProgress<OperationProgress>(
+                        update =>
+                        {
+                            if (update.Message ==
+                                "Staging metadata changes")
+                                firstStaged.TrySetResult(true);
+                        }));
+            Task<MetadataApplyResult> second =
+                service.ApplyAsync(
+                    secondPlan,
+                    new SynchronousProgress<OperationProgress>(
+                        update =>
+                        {
+                            if (update.Message ==
+                                "Staging metadata changes")
+                                secondStaged.TrySetResult(true);
+                        }));
+            await Task.WhenAll(
+                firstStaged.Task,
+                secondStaged.Task).WaitAsync(
+                    TimeSpan.FromSeconds(5),
+                    TestContext.Current.CancellationToken);
+            heldLease.Dispose();
+            heldLease = null;
+
+            await Assert.ThrowsAnyAsync<InvalidOperationException>(
+                async () => await Task.WhenAll(first, second));
+
+            Assert.Equal(
+                1,
+                new[] { first, second }
+                    .Count(task => task.IsCompletedSuccessfully));
+            Task<MetadataApplyResult> rejected =
+                first.IsFaulted ? first : second;
+            InvalidOperationException error =
+                Assert.IsType<InvalidOperationException>(
+                    rejected.Exception!.InnerException);
+            Assert.Contains("Stale plan", error.Message);
+            Assert.Contains(
+                MediaFile.GetFile(
+                    mediaPath,
+                    readOnly: true).Tags.First().Title,
+                new[] { "First winner", "Second winner" });
+        }
+        finally
+        {
+            heldLease?.Dispose();
             try { Directory.Delete(session, recursive: true); } catch { }
             try { Directory.Delete(recovery, recursive: true); } catch { }
         }

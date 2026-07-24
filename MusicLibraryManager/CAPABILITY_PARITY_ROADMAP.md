@@ -815,7 +815,20 @@ per-operation capability flags.
     layouts after restart. Browse reconstructs original paths, restore handles
     destination collisions and stale manifests atomically, and purge protects
     interrupted runs while removing only the reviewed completed recovery tree.
-- [ ] Undo, redo, and concurrent-edit tests.
+- [x] Undo, redo, and concurrent-edit tests.
+  - Persistent history survives restart and restores exact original bytes for
+    ordinary metadata, artwork, tag-layer, ID3 version/encoding, and ID3v1
+    operations. Restore collisions are backed up, history moves atomically
+    from undo to redo, and a new committed edit clears the redo branch.
+  - Redo never replays a stale mutation: the retained recipe and paths produce
+    a new plan ID and snapshots against the restored file, require review, and
+    only then can be applied. Workbench and Library expose the same repeat,
+    redo-preview, and undo history semantics.
+  - Overlapping mutations acquire a shared normalized-path lease. A
+    deterministic two-plan race proves exactly one reviewed metadata edit
+    commits; the waiting edit revalidates after acquiring the lease and is
+    rejected as stale instead of overwriting the winner. Multi-path leases use
+    globally sorted stripes to avoid deadlock.
 - [ ] Headless UI tests for Workbench loading, drag-and-drop, editing,
   selection, recipe construction, and navigation guards.
 - [ ] Recorded fixtures for online providers; CI must not use live services.
