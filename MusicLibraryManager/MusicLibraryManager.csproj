@@ -5,6 +5,7 @@
     <RootNamespace>MusicLibraryManager</RootNamespace>
     <AssemblyName>MusicLibraryManager</AssemblyName>
     <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+    <Copyright>Copyright (c) 2010-2026 Colin Hill</Copyright>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
@@ -14,8 +15,16 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\AppIcon.ico" />
+    <AvaloniaResource Include="Assets\Licenses\AvaloniaUI-12.1.0-MIT.txt" />
+    <AvaloniaResource Include="Assets\Licenses\SixLabors.ImageSharp-3.1.12-LICENSE.txt" />
     <None Update="SETTINGS_REFERENCE.md"
           CopyToPublishDirectory="PreserveNewest" />
+    <None Update="Assets\Licenses\AvaloniaUI-12.1.0-MIT.txt"
+          CopyToPublishDirectory="PreserveNewest"
+          TargetPath="ThirdPartyLicenses\AvaloniaUI-12.1.0-MIT.txt" />
+    <None Update="Assets\Licenses\SixLabors.ImageSharp-3.1.12-LICENSE.txt"
+          CopyToPublishDirectory="PreserveNewest"
+          TargetPath="ThirdPartyLicenses\SixLabors.ImageSharp-3.1.12-LICENSE.txt" />
   </ItemGroup>
 
   <ItemGroup>

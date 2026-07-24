@@ -21,6 +21,7 @@ public sealed partial class LocalizationSourceCompletenessTests
         "Views/OperationsView.axaml",
         "Views/DevicesView.axaml",
         "Views/OrganizeView.axaml",
+        "Views/AboutView.axaml",
         "Views/ArtworkPreviewWindow.axaml",
         "Views/ReviewedFileOperationEditorView.axaml",
         "Views/FieldsEditorView.axaml",

@@ -6091,4 +6091,32 @@
   <data name="Dialog.DefaultExportFileName" xml:space="preserve"><value>匯出</value></data>
   <data name="Dialog.FileType.Format" xml:space="preserve"><value>{0} 檔案</value></data>
   <data name="Settings.ExportProfile.NewName" xml:space="preserve"><value>新增 匯出</value></data>
+  <data name="Navigation.About" xml:space="preserve"><value>關於</value></data>
+  <data name="About.Title" xml:space="preserve"><value>關於</value></data>
+  <data name="About.Subtitle" xml:space="preserve"><value>產品詳細資訊、致謝與授權協議。</value></data>
+  <data name="About.Tagline" xml:space="preserve"><value>為您珍愛的音樂打造的貼心工作區。</value></data>
+  <data name="About.BrandAutomation" xml:space="preserve"><value>Music Library Manager 標誌</value></data>
+  <data name="About.VersionFormat" xml:space="preserve"><value>版本 {0}</value></data>
+  <data name="About.Mission.Title" xml:space="preserve"><value>專為長久的音樂資料庫打造</value></data>
+  <data name="About.Mission.Description" xml:space="preserve"><value>透過透明、可檢閱的變更來檢查、豐富並保存您的收藏。</value></data>
+  <data name="About.OpenSource.Title" xml:space="preserve"><value>開放原始碼基礎</value></data>
+  <data name="About.OpenSource.Description" xml:space="preserve"><value>Music Library Manager 的實現部分得益於這些參照套件。</value></data>
+  <data name="About.Package.VersionFormat" xml:space="preserve"><value>版本 {0}</value></data>
+  <data name="About.Package.Avalonia.Name" xml:space="preserve"><value>Avalonia UI</value></data>
+  <data name="About.Package.Avalonia.Identity" xml:space="preserve"><value>套件系列：Avalonia</value></data>
+  <data name="About.Package.Avalonia.Description" xml:space="preserve"><value>用於回應式原生桌面體驗的跨平台使用者介面框架。</value></data>
+  <data name="About.Package.Avalonia.LicenseName" xml:space="preserve"><value>MIT License</value></data>
+  <data name="About.Package.Avalonia.LicenseAutomation" xml:space="preserve"><value>Avalonia UI 授權協議</value></data>
+  <data name="About.Package.Avalonia.CopyAutomation" xml:space="preserve"><value>複製 Avalonia UI 授權協議</value></data>
+  <data name="About.Package.Avalonia.LicenseTextAutomation" xml:space="preserve"><value>完整的 Avalonia UI 授權文字</value></data>
+  <data name="About.Package.ImageSharp.Name" xml:space="preserve"><value>ImageSharp</value></data>
+  <data name="About.Package.ImageSharp.Identity" xml:space="preserve"><value>套件：SixLabors.ImageSharp</value></data>
+  <data name="About.Package.ImageSharp.Description" xml:space="preserve"><value>用於檢查和最佳化圖稿的跨平台影像處理程式庫。</value></data>
+  <data name="About.Package.ImageSharp.LicenseName" xml:space="preserve"><value>Six Labors Split License, Version 1.0</value></data>
+  <data name="About.Package.ImageSharp.LicenseAutomation" xml:space="preserve"><value>ImageSharp 授權協議</value></data>
+  <data name="About.Package.ImageSharp.CopyAutomation" xml:space="preserve"><value>複製 ImageSharp 授權協議</value></data>
+  <data name="About.Package.ImageSharp.LicenseTextAutomation" xml:space="preserve"><value>完整的 ImageSharp 授權文字</value></data>
+  <data name="About.License.Agreement" xml:space="preserve"><value>授權協議</value></data>
+  <data name="About.License.Copy" xml:space="preserve"><value>複製授權</value></data>
+  <data name="About.Trademarks" xml:space="preserve"><value>第三方產品名稱與商標均屬其各自所有者。</value></data>
 </root>

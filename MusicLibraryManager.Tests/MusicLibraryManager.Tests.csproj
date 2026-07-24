@@ -10,6 +10,8 @@
   <ItemGroup>
     <Compile Include="..\BuildTools\SyncerResourceVerifier\SyncerResourceVerifier.cs"
              Link="BuildTools\SyncerResourceVerifier.cs" />
+    <Compile Include="..\BuildTools\LocalizationCatalogGenerator\CatalogGeneratorCommandLine.cs"
+             Link="BuildTools\CatalogGeneratorCommandLine.cs" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>

@@ -32,6 +32,20 @@ function Assert-SatelliteResources([string]$PublishRoot) {
     Write-Host "Verified all $($cultures.Count) presentation satellite assemblies."
 }
 
+function Assert-ThirdPartyLicenses([string]$PublishRoot) {
+    $licenses = @(
+        "AvaloniaUI-12.1.0-MIT.txt",
+        "SixLabors.ImageSharp-3.1.12-LICENSE.txt"
+    )
+    foreach ($license in $licenses) {
+        $licensePath = Join-Path $PublishRoot "ThirdPartyLicenses/$license"
+        if (-not (Test-Path -LiteralPath $licensePath -PathType Leaf)) {
+            throw "The publish output is missing the third-party license agreement: $licensePath"
+        }
+    }
+    Write-Host "Verified all $($licenses.Count) third-party license agreements."
+}
+
 function Resolve-InnoCompiler {
     $command = Get-Command ISCC.exe -ErrorAction SilentlyContinue
     if ($command) { return $command.Source }
@@ -249,6 +263,7 @@ foreach ($rid in $Rids) {
     & dotnet $syncerVerifier $syncerAssembly $syncerServers
     if ($LASTEXITCODE -ne 0) { throw "The published Syncer.Client Android resources failed validation." }
     Assert-SatelliteResources $publishRoot
+    Assert-ThirdPartyLicenses $publishRoot
 
     $productName = "MusicLibraryManager-$Version-$rid"
     $artifacts = [Collections.Generic.List[string]]::new()

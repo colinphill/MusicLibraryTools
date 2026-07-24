@@ -1,0 +1,69 @@
+<UserControl x:Class="MusicLibraryManager.Controls.BrandMark"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             IsHitTestVisible="False">
+  <Viewbox Stretch="Uniform">
+    <Canvas Width="256" Height="256">
+      <Rectangle Canvas.Left="32"
+                 Canvas.Top="50"
+                 Width="142"
+                 Height="154"
+                 RadiusX="28"
+                 RadiusY="28"
+                 Fill="#9E0D4F59" />
+      <Rectangle Canvas.Left="55"
+                 Canvas.Top="32"
+                 Width="150"
+                 Height="164"
+                 RadiusX="30"
+                 RadiusY="30">
+        <Rectangle.Fill>
+          <LinearGradientBrush StartPoint="0,0"
+                               EndPoint="1,1">
+            <GradientStop Color="#7DD3FC"
+                          Offset="0" />
+            <GradientStop Color="#2787C8"
+                          Offset="1" />
+          </LinearGradientBrush>
+        </Rectangle.Fill>
+      </Rectangle>
+      <Rectangle Canvas.Left="78"
+                 Canvas.Top="54"
+                 Width="150"
+                 Height="164"
+                 RadiusX="30"
+                 RadiusY="30">
+        <Rectangle.Fill>
+          <LinearGradientBrush StartPoint="0,0"
+                               EndPoint="1,1">
+            <GradientStop Color="#39C6C8"
+                          Offset="0" />
+            <GradientStop Color="#087F8C"
+                          Offset="1" />
+          </LinearGradientBrush>
+        </Rectangle.Fill>
+      </Rectangle>
+      <Ellipse Canvas.Left="101"
+               Canvas.Top="84"
+               Width="104"
+               Height="104"
+               Fill="#F7FBFC" />
+      <Ellipse Canvas.Left="118"
+               Canvas.Top="101"
+               Width="70"
+               Height="70"
+               Stroke="#9BDCDF"
+               StrokeThickness="7" />
+      <Ellipse Canvas.Left="142"
+               Canvas.Top="125"
+               Width="22"
+               Height="22"
+               Fill="#087F8C" />
+      <Line StartPoint="94,82"
+            EndPoint="148,82"
+            Stroke="#F7FBFC"
+            StrokeThickness="10"
+            StrokeLineCap="Round" />
+    </Canvas>
+  </Viewbox>
+</UserControl>

@@ -6091,4 +6091,32 @@
   <data name="Dialog.DefaultExportFileName" xml:space="preserve"><value>exportar</value></data>
   <data name="Dialog.FileType.Format" xml:space="preserve"><value>{0} archivo</value></data>
   <data name="Settings.ExportProfile.NewName" xml:space="preserve"><value>nuevo exportar</value></data>
+  <data name="Navigation.About" xml:space="preserve"><value>Acerca de</value></data>
+  <data name="About.Title" xml:space="preserve"><value>Acerca de</value></data>
+  <data name="About.Subtitle" xml:space="preserve"><value>Detalles del producto, agradecimientos y acuerdos de licencia.</value></data>
+  <data name="About.Tagline" xml:space="preserve"><value>Un espacio de trabajo pensado para la música que te importa.</value></data>
+  <data name="About.BrandAutomation" xml:space="preserve"><value>Logotipo de Music Library Manager</value></data>
+  <data name="About.VersionFormat" xml:space="preserve"><value>Versión {0}</value></data>
+  <data name="About.Mission.Title" xml:space="preserve"><value>Diseñado para bibliotecas musicales duraderas</value></data>
+  <data name="About.Mission.Description" xml:space="preserve"><value>Inspecciona, enriquece y conserva tu colección con cambios transparentes y revisables.</value></data>
+  <data name="About.OpenSource.Title" xml:space="preserve"><value>Fundamentos de código abierto</value></data>
+  <data name="About.OpenSource.Description" xml:space="preserve"><value>Music Library Manager es posible en parte gracias a estos paquetes utilizados.</value></data>
+  <data name="About.Package.VersionFormat" xml:space="preserve"><value>Versión {0}</value></data>
+  <data name="About.Package.Avalonia.Name" xml:space="preserve"><value>Avalonia UI</value></data>
+  <data name="About.Package.Avalonia.Identity" xml:space="preserve"><value>Familia de paquetes: Avalonia</value></data>
+  <data name="About.Package.Avalonia.Description" xml:space="preserve"><value>Marco de interfaz de usuario multiplataforma para una experiencia de escritorio nativa y adaptable.</value></data>
+  <data name="About.Package.Avalonia.LicenseName" xml:space="preserve"><value>MIT License</value></data>
+  <data name="About.Package.Avalonia.LicenseAutomation" xml:space="preserve"><value>Acuerdo de licencia de Avalonia UI</value></data>
+  <data name="About.Package.Avalonia.CopyAutomation" xml:space="preserve"><value>Copiar el acuerdo de licencia de Avalonia UI</value></data>
+  <data name="About.Package.Avalonia.LicenseTextAutomation" xml:space="preserve"><value>Texto completo de la licencia de Avalonia UI</value></data>
+  <data name="About.Package.ImageSharp.Name" xml:space="preserve"><value>ImageSharp</value></data>
+  <data name="About.Package.ImageSharp.Identity" xml:space="preserve"><value>Paquete: SixLabors.ImageSharp</value></data>
+  <data name="About.Package.ImageSharp.Description" xml:space="preserve"><value>Biblioteca multiplataforma de procesamiento de imágenes para inspeccionar y optimizar las ilustraciones.</value></data>
+  <data name="About.Package.ImageSharp.LicenseName" xml:space="preserve"><value>Six Labors Split License, Version 1.0</value></data>
+  <data name="About.Package.ImageSharp.LicenseAutomation" xml:space="preserve"><value>Acuerdo de licencia de ImageSharp</value></data>
+  <data name="About.Package.ImageSharp.CopyAutomation" xml:space="preserve"><value>Copiar el acuerdo de licencia de ImageSharp</value></data>
+  <data name="About.Package.ImageSharp.LicenseTextAutomation" xml:space="preserve"><value>Texto completo de la licencia de ImageSharp</value></data>
+  <data name="About.License.Agreement" xml:space="preserve"><value>Acuerdo de licencia</value></data>
+  <data name="About.License.Copy" xml:space="preserve"><value>Copiar licencia</value></data>
+  <data name="About.Trademarks" xml:space="preserve"><value>Los nombres de productos y las marcas de terceros pertenecen a sus respectivos propietarios.</value></data>
 </root>

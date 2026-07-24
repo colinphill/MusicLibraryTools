@@ -52,6 +52,7 @@ public partial class MainWindow : Window
             [ShellDestination.Devices] = this.FindControl<Button>("DevicesNav")!,
             [ShellDestination.Operations] = this.FindControl<Button>("OperationsNav")!,
             [ShellDestination.Settings] = this.FindControl<Button>("SettingsNav")!,
+            [ShellDestination.About] = this.FindControl<Button>("AboutNav")!,
         };
         _navigation.NavigationRequested += Navigate;
         _localization.CultureChanged += OnCultureChanged;
@@ -211,6 +212,7 @@ public partial class MainWindow : Window
                 ShellDestination.Devices => new DevicesView(),
                 ShellDestination.Operations => new OperationsView(),
                 ShellDestination.Settings => new SettingsView(),
+                ShellDestination.About => new AboutView(),
                 _ => throw new ArgumentOutOfRangeException(
                     nameof(destination),
                     destination,

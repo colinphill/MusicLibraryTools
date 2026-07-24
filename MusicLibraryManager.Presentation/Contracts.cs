@@ -13,6 +13,7 @@ public enum ShellDestination
     Devices,
     Operations,
     Settings,
+    About,
 }
 
 public sealed record FilePickerType(string Description, IReadOnlyList<string> Extensions);

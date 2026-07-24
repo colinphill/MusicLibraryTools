@@ -17,3 +17,5 @@
 *.jpg binary
 *.jpeg binary
 *.png binary
+
+MusicLibraryManager/Assets/Licenses/*.txt -text

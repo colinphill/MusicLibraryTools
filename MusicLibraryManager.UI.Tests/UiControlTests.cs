@@ -1,3 +1,4 @@
+using System.Globalization;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
@@ -3042,6 +3043,7 @@ public sealed class UiControlTests
             (ShellDestination.Devices, typeof(DevicesView)),
             (ShellDestination.Operations, typeof(OperationsView)),
             (ShellDestination.Settings, typeof(SettingsView)),
+            (ShellDestination.About, typeof(AboutView)),
         };
 
         try
@@ -3200,6 +3202,287 @@ public sealed class UiControlTests
         finally
         {
             window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task About_destination_renders_branding_licenses_and_copies_complete_agreements()
+    {
+        var clipboard = new RecordingClipboardService();
+        using ServiceProvider services = BuildIsolatedServices(
+            configureServices: collection =>
+                collection.AddSingleton<IPlatformService>(
+                    clipboard));
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Width = 1440;
+            window.Height = 900;
+            window.Show();
+            services.GetRequiredService<INavigationService>()
+                .Navigate(ShellDestination.About);
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+
+            AboutView about = Assert.IsType<AboutView>(
+                window.FindControl<ContentControl>(
+                    "ContentHost")!.Content);
+            Assert.True(
+                about.FindControl<BrandMark>(
+                    "AboutBrandMark")!.IsVisible);
+            Assert.Equal(
+                "Music Library Manager",
+                about.FindControl<TextBlock>(
+                    "AboutProductName")!.Text);
+            Assert.Equal(
+                "Copyright (c) 2010-2026 Colin Hill",
+                about.FindControl<TextBlock>(
+                    "CopyrightText")!.Text);
+            Assert.Equal(
+                "Avalonia UI",
+                about.FindControl<TextBlock>(
+                    "AvaloniaPackageName")!.Text);
+            Assert.Equal(
+                "ImageSharp",
+                about.FindControl<TextBlock>(
+                    "ImageSharpPackageName")!.Text);
+            Assert.Equal("12.1.0", about.AvaloniaVersion);
+            Assert.Equal("3.1.12", about.ImageSharpVersion);
+
+            about.FindControl<Expander>(
+                    "AvaloniaLicenseExpander")!
+                .IsExpanded = true;
+            about.FindControl<Expander>(
+                    "ImageSharpLicenseExpander")!
+                .IsExpanded = true;
+            Dispatcher.UIThread.RunJobs();
+            SelectableTextBlock avaloniaLicense =
+                about.FindControl<SelectableTextBlock>(
+                    "AvaloniaLicenseBody")!;
+            SelectableTextBlock imageSharpLicense =
+                about.FindControl<SelectableTextBlock>(
+                    "ImageSharpLicenseBody")!;
+            Assert.True(avaloniaLicense.IsVisible);
+            Assert.True(imageSharpLicense.IsVisible);
+            Assert.Equal(
+                about.AvaloniaLicenseText,
+                avaloniaLicense.Text);
+            Assert.Equal(
+                about.ImageSharpLicenseText,
+                imageSharpLicense.Text);
+            Assert.Contains(
+                "Permission is hereby granted, free of charge",
+                avaloniaLicense.Text,
+                StringComparison.Ordinal);
+            Assert.Contains(
+                "THE SOFTWARE IS PROVIDED \"AS IS\"",
+                avaloniaLicense.Text,
+                StringComparison.Ordinal);
+            Assert.Contains(
+                "Six Labors Split License",
+                imageSharpLicense.Text,
+                StringComparison.Ordinal);
+            Assert.Contains(
+                "Works in Source or Object form are split licensed",
+                imageSharpLicense.Text,
+                StringComparison.Ordinal);
+            Assert.Contains(
+                "Six Labors Commercial License",
+                imageSharpLicense.Text,
+                StringComparison.Ordinal);
+
+            about.FindControl<Button>(
+                    "CopyAvaloniaLicenseButton")!
+                .RaiseEvent(
+                    new RoutedEventArgs(
+                        Button.ClickEvent));
+            await WaitForUiAsync(
+                () => clipboard.Text is not null);
+            Assert.Equal(
+                about.AvaloniaLicenseText,
+                clipboard.Text);
+
+            about.FindControl<Button>(
+                    "CopyImageSharpLicenseButton")!
+                .RaiseEvent(
+                    new RoutedEventArgs(
+                        Button.ClickEvent));
+            await WaitForUiAsync(
+                () => string.Equals(
+                    clipboard.Text,
+                    about.ImageSharpLicenseText,
+                    StringComparison.Ordinal));
+            Assert.Equal(
+                about.ImageSharpLicenseText,
+                clipboard.Text);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public void About_destination_reflows_package_cards_with_content_width()
+    {
+        using ServiceProvider services =
+            BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Width = 1440;
+            window.Height = 900;
+            window.Show();
+            services.GetRequiredService<INavigationService>()
+                .Navigate(ShellDestination.About);
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+
+            AboutView about = Assert.IsType<AboutView>(
+                window.FindControl<ContentControl>(
+                    "ContentHost")!.Content);
+            Grid packages =
+                about.FindControl<Grid>("PackageGrid")!;
+            Border avalonia =
+                about.FindControl<Border>(
+                    "AvaloniaPackageCard")!;
+            Border imageSharp =
+                about.FindControl<Border>(
+                    "ImageSharpPackageCard")!;
+            Assert.Equal(3, packages.ColumnDefinitions.Count);
+            Assert.Equal(0, Grid.GetRow(avalonia));
+            Assert.Equal(0, Grid.GetRow(imageSharp));
+            Assert.Equal(2, Grid.GetColumn(imageSharp));
+
+            window.Width = 900;
+            window.Height = 600;
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+
+            Assert.Single(packages.ColumnDefinitions);
+            Assert.Equal(3, packages.RowDefinitions.Count);
+            Assert.Equal(0, Grid.GetColumn(imageSharp));
+            Assert.Equal(2, Grid.GetRow(imageSharp));
+            Assert.True(
+                about.FindControl<ScrollViewer>(
+                    "AboutScroll")!.Bounds.Height > 0);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public void About_destination_localizes_live_without_replacing_legal_content()
+    {
+        CultureInfo previousUICulture =
+            CultureInfo.CurrentUICulture;
+        var settings = new FakeSettings();
+        settings.SetPreference(
+            LocalizationPreferences.DisplayLanguage,
+            "en-US");
+        var localization =
+            new ResourceLocalizationService(settings);
+        using ServiceProvider services =
+            BuildIsolatedServices(
+                configureServices: collection =>
+                {
+                    collection.AddSingleton<IAppSettings>(
+                        settings);
+                    collection.AddSingleton<
+                        ILocalizationService>(
+                        localization);
+                });
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Show();
+            services.GetRequiredService<INavigationService>()
+                .Navigate(ShellDestination.About);
+            Dispatcher.UIThread.RunJobs();
+
+            AboutView about = Assert.IsType<AboutView>(
+                window.FindControl<ContentControl>(
+                    "ContentHost")!.Content);
+            PageHeader header =
+                about.FindControl<PageHeader>(
+                    "AboutHeader")!;
+            Expander avaloniaExpander =
+                about.FindControl<Expander>(
+                    "AvaloniaLicenseExpander")!;
+            Expander imageSharpExpander =
+                about.FindControl<Expander>(
+                    "ImageSharpLicenseExpander")!;
+            avaloniaExpander.IsExpanded = true;
+            imageSharpExpander.IsExpanded = true;
+            string englishTitle = header.Title;
+            string avaloniaLicense =
+                about.AvaloniaLicenseText;
+            string imageSharpLicense =
+                about.ImageSharpLicenseText;
+
+            localization.SetCulture("de-DE");
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(
+                localization.Get("About.Title"),
+                header.Title);
+            Assert.NotEqual(
+                englishTitle,
+                header.Title);
+            Assert.Equal(
+                "Copyright (c) 2010-2026 Colin Hill",
+                about.ProductCopyright);
+            Assert.Equal(
+                avaloniaLicense,
+                about.AvaloniaLicenseText);
+            Assert.Equal(
+                imageSharpLicense,
+                about.ImageSharpLicenseText);
+            Assert.True(avaloniaExpander.IsExpanded);
+            Assert.True(imageSharpExpander.IsExpanded);
+            Assert.Equal(
+                ShellDestination.About,
+                services.GetRequiredService<
+                    INavigationService>().Current);
+
+            string germanTitle = header.Title;
+            localization.SetCulture("ja-JP");
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(
+                localization.Get("About.Title"),
+                header.Title);
+            Assert.NotEqual(
+                germanTitle,
+                header.Title);
+            Assert.Same(
+                about,
+                window.FindControl<ContentControl>(
+                    "ContentHost")!.Content);
+            Assert.Equal(
+                avaloniaLicense,
+                about.FindControl<SelectableTextBlock>(
+                    "AvaloniaLicenseBody")!.Text);
+            Assert.Equal(
+                imageSharpLicense,
+                about.FindControl<SelectableTextBlock>(
+                    "ImageSharpLicenseBody")!.Text);
+            Assert.True(avaloniaExpander.IsExpanded);
+            Assert.True(imageSharpExpander.IsExpanded);
+        }
+        finally
+        {
+            window.Hide();
+            CultureInfo.CurrentUICulture =
+                previousUICulture;
         }
     }
 
@@ -3756,7 +4039,7 @@ public sealed class UiControlTests
     }
 
     [AvaloniaFact]
-    public void Every_destination_renders_at_the_900_by_600_minimum_in_light_and_dark()
+    public async Task Every_destination_renders_at_the_900_by_600_minimum_in_light_and_dark()
     {
         string? captureDirectory = Environment.GetEnvironmentVariable("MUSIC_LIBRARY_MANAGER_CAPTURE_DIR");
         ThemeVariant? previousTheme = Application.Current!.RequestedThemeVariant;
@@ -3792,6 +4075,7 @@ public sealed class UiControlTests
                         Dispatcher.UIThread.RunJobs();
                         AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
 
+                        Assert.Equal(destination, navigation.Current);
                         Control activeView = Assert.IsAssignableFrom<Control>(
                             window.FindControl<ContentControl>("ContentHost")!.Content);
                         Assert.True(activeView.Bounds.Width >= 800,
@@ -3823,6 +4107,8 @@ public sealed class UiControlTests
                         {
                             SettingsView settings = Assert.IsType<SettingsView>(activeView);
                             SettingsViewModel viewModel = Assert.IsType<SettingsViewModel>(settings.DataContext);
+                            string originalDatabaseFile =
+                                viewModel.DatabaseFile;
                             viewModel.DatabaseFile += ".changed";
                             settings.FindControl<TabControl>("SettingsTabs")!.SelectedIndex = 4;
                             Dispatcher.UIThread.RunJobs();
@@ -3861,6 +4147,61 @@ public sealed class UiControlTests
                                 Assert.InRange(corner.Value.X, 0, header.Bounds.Width + 1);
                                 Assert.InRange(corner.Value.Y, 0, header.Bounds.Height + 1);
                             }
+
+                            Task discardTask =
+                                viewModel.DiscardChangesCommand
+                                    .ExecuteAsync(null);
+                            Dispatcher.UIThread.RunJobs();
+                            DialogService dialogs =
+                                services.GetRequiredService<
+                                    DialogService>();
+                            Assert.NotNull(dialogs.Current);
+                            dialogs.Complete(true);
+                            await discardTask;
+                            Dispatcher.UIThread.RunJobs();
+                            Assert.False(
+                                viewModel.HasUnsavedChanges);
+                            Assert.Equal(
+                                originalDatabaseFile,
+                                viewModel.DatabaseFile);
+                            Assert.False(
+                                discard.IsVisible);
+                        }
+                        else if (destination ==
+                                 ShellDestination.About)
+                        {
+                            AboutView about =
+                                Assert.IsType<AboutView>(
+                                    activeView);
+                            Grid packages =
+                                about.FindControl<Grid>(
+                                    "PackageGrid")!;
+                            Border imageSharp =
+                                about.FindControl<Border>(
+                                    "ImageSharpPackageCard")!;
+                            ScrollViewer scroll =
+                                about.FindControl<ScrollViewer>(
+                                    "AboutScroll")!;
+                            Assert.Single(
+                                packages.ColumnDefinitions);
+                            Assert.Equal(
+                                3,
+                                packages.RowDefinitions.Count);
+                            Assert.Equal(
+                                0,
+                                Grid.GetColumn(imageSharp));
+                            Assert.Equal(
+                                2,
+                                Grid.GetRow(imageSharp));
+                            Assert.True(
+                                about.FindControl<BrandMark>(
+                                    "AboutBrandMark")!
+                                    .IsEffectivelyVisible);
+                            Assert.True(
+                                scroll.Bounds.Width <=
+                                about.Bounds.Width);
+                            Assert.True(
+                                scroll.Bounds.Height > 0);
                         }
 
                         using var frame = window.GetLastRenderedFrame();

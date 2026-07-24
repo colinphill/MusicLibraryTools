@@ -97,6 +97,15 @@ public sealed partial class LocalizationCatalogTests
         "Ctrl+Y",
         "Ctrl+Shift+Z",
         "Shift+F10",
+        "Avalonia UI",
+        "AvaloniaUI",
+        "Avalonia",
+        "SixLabors.ImageSharp",
+        "ImageSharp",
+        "Six Labors Split License, Version 1.0",
+        "Six Labors Split License",
+        "Six Labors",
+        "MIT License",
     ];
 
     public static IEnumerable<object[]> ShippingCultureData =>
@@ -380,9 +389,9 @@ public sealed partial class LocalizationCatalogTests
         string token,
         bool ignoreCase = false) =>
         new(
-            $@"(?<![\p{{L}}\p{{N}}])" +
+            $@"(?<![A-Za-z0-9])" +
             Regex.Escape(token) +
-            @"(?![\p{L}\p{N}])",
+            @"(?![A-Za-z0-9])",
             RegexOptions.CultureInvariant |
             (ignoreCase
                 ? RegexOptions.IgnoreCase

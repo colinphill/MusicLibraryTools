@@ -1,0 +1,344 @@
+<UserControl x:Class="MusicLibraryManager.Views.AboutView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:MusicLibraryManager.Controls">
+  <UserControl.Styles>
+    <Style Selector="Border.about-package">
+      <Setter Property="MinWidth"
+              Value="0" />
+    </Style>
+    <Style Selector="Border.about-package:pointerover">
+      <Setter Property="BorderBrush"
+              Value="{DynamicResource AppAccentBrush}" />
+    </Style>
+    <Style Selector="Border.about-package-icon">
+      <Setter Property="Width"
+              Value="44" />
+      <Setter Property="Height"
+              Value="44" />
+      <Setter Property="CornerRadius"
+              Value="12" />
+      <Setter Property="Background"
+              Value="{DynamicResource AppAccentSoftBrush}" />
+      <Setter Property="BorderBrush"
+              Value="{DynamicResource AppAccentBrush}" />
+      <Setter Property="BorderThickness"
+              Value="1" />
+    </Style>
+    <Style Selector="Border.about-pill">
+      <Setter Property="Padding"
+              Value="10,5" />
+      <Setter Property="CornerRadius"
+              Value="99" />
+      <Setter Property="BorderBrush"
+              Value="#55FFFFFF" />
+      <Setter Property="BorderThickness"
+              Value="1" />
+      <Setter Property="Background"
+              Value="#22FFFFFF" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid Margin="26,22,26,26"
+        RowDefinitions="Auto,14,*">
+    <controls:PageHeader x:Name="AboutHeader"
+                         Title="{DynamicResource Loc.About.Title}"
+                         Subtitle="{DynamicResource Loc.About.Subtitle}" />
+
+    <ScrollViewer x:Name="AboutScroll"
+                  Grid.Row="2"
+                  HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalContentAlignment="Stretch">
+      <StackPanel HorizontalAlignment="Stretch"
+                  MaxWidth="1120"
+                  Spacing="18">
+        <Border x:Name="AboutHero"
+                CornerRadius="18"
+                Padding="30"
+                ClipToBounds="True">
+          <Border.Background>
+            <LinearGradientBrush StartPoint="0,0"
+                                 EndPoint="1,1">
+              <GradientStop Color="#087F8C"
+                            Offset="0" />
+              <GradientStop Color="#0B6875"
+                            Offset="0.52" />
+              <GradientStop Color="#173C57"
+                            Offset="1" />
+            </LinearGradientBrush>
+          </Border.Background>
+          <Grid>
+            <Canvas IsHitTestVisible="False"
+                    Opacity="0.5">
+              <Ellipse Canvas.Left="720"
+                       Canvas.Top="-150"
+                       Width="360"
+                       Height="360"
+                       Fill="#13FFFFFF" />
+              <Ellipse Canvas.Left="860"
+                       Canvas.Top="75"
+                       Width="180"
+                       Height="180"
+                       Fill="#10FFFFFF" />
+            </Canvas>
+            <Grid x:Name="HeroLayout"
+                  ColumnDefinitions="116,26,*">
+              <controls:BrandMark x:Name="AboutBrandMark"
+                                  Width="116"
+                                  Height="116"
+                                  VerticalAlignment="Center"
+                                  AutomationProperties.Name="{DynamicResource Loc.About.BrandAutomation}" />
+              <StackPanel Grid.Column="2"
+                          VerticalAlignment="Center"
+                          Spacing="9">
+                <TextBlock Text="{DynamicResource Loc.App.Brand}"
+                           Foreground="#D8F8F5"
+                           FontSize="12"
+                           FontWeight="Bold"
+                           LetterSpacing="1.2" />
+                <TextBlock x:Name="AboutProductName"
+                           Text="{DynamicResource Loc.App.Title}"
+                           Foreground="#FFFFFF"
+                           FontFamily="{DynamicResource AppDisplayFont}"
+                           FontSize="34"
+                           FontWeight="SemiBold"
+                           TextWrapping="Wrap" />
+                <TextBlock Text="{DynamicResource Loc.About.Tagline}"
+                           Foreground="#E4F6F4"
+                           FontSize="16"
+                           TextWrapping="Wrap"
+                           MaxWidth="720"
+                           HorizontalAlignment="Left" />
+                <WrapPanel Margin="0,5,0,0"
+                           Orientation="Horizontal">
+                  <Border Classes="about-pill"
+                          Margin="0,0,8,8">
+                    <controls:LocalizedFormatTextBlock x:Name="ProductVersionText"
+                                                       ResourceKey="About.VersionFormat"
+                                                       Value="{Binding ProductVersion}"
+                                                       Foreground="#FFFFFF"
+                                                       FontWeight="SemiBold" />
+                  </Border>
+                  <Border Classes="about-pill"
+                          Margin="0,0,8,8">
+                    <TextBlock x:Name="CopyrightText"
+                               Text="{Binding ProductCopyright}"
+                               Foreground="#FFFFFF"
+                               FontWeight="SemiBold" />
+                  </Border>
+                </WrapPanel>
+              </StackPanel>
+            </Grid>
+          </Grid>
+        </Border>
+
+        <Border Classes="card">
+          <Grid ColumnDefinitions="48,*"
+                ColumnSpacing="14">
+            <Border Width="44"
+                    Height="44"
+                    CornerRadius="22"
+                    Background="{DynamicResource AppAccentSoftBrush}"
+                    BorderBrush="{DynamicResource AppAccentBrush}"
+                    BorderThickness="1">
+              <Viewbox Width="22"
+                       Height="22"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center">
+                <Path Data="M4,18 L4,7 L9,7 L11,4 L13,4 L15,7 L20,7 L20,18 Z M8,13 L11,16 L14,11 L18,16"
+                      Fill="Transparent"
+                      Stroke="{DynamicResource AppAccentBrush}"
+                      StrokeThickness="1.8"
+                      StrokeJoin="Round" />
+              </Viewbox>
+            </Border>
+            <StackPanel Grid.Column="1"
+                        Spacing="5">
+              <TextBlock Classes="section-title"
+                         Text="{DynamicResource Loc.About.Mission.Title}" />
+              <TextBlock Classes="muted"
+                         Text="{DynamicResource Loc.About.Mission.Description}"
+                         TextWrapping="Wrap" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <StackPanel Spacing="5"
+                    Margin="2,4,2,0">
+          <TextBlock Classes="section-title"
+                     Text="{DynamicResource Loc.About.OpenSource.Title}" />
+          <TextBlock Classes="muted"
+                     Text="{DynamicResource Loc.About.OpenSource.Description}"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+
+        <Grid x:Name="PackageGrid"
+              ColumnDefinitions="*,16,*"
+              RowDefinitions="Auto">
+          <Border x:Name="AvaloniaPackageCard"
+                  Grid.Column="0"
+                  Classes="card about-package"
+                  VerticalAlignment="Top">
+            <StackPanel Spacing="14">
+              <Grid ColumnDefinitions="Auto,*,Auto"
+                    ColumnSpacing="12">
+                <Border Classes="about-package-icon">
+                  <Viewbox Width="24"
+                           Height="24"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center">
+                    <Path Data="M3,5 L21,5 L21,19 L3,19 Z M3,9 L21,9 M7,7 L7.1,7 M10,7 L10.1,7"
+                          Fill="Transparent"
+                          Stroke="{DynamicResource AppAccentBrush}"
+                          StrokeThickness="1.8"
+                          StrokeJoin="Round" />
+                  </Viewbox>
+                </Border>
+                <StackPanel Grid.Column="1"
+                            Spacing="2"
+                            VerticalAlignment="Center">
+                  <TextBlock x:Name="AvaloniaPackageName"
+                             Classes="section-title"
+                             Text="{DynamicResource Loc.About.Package.Avalonia.Name}"
+                             TextWrapping="Wrap" />
+                  <TextBlock Classes="faint"
+                             Text="{DynamicResource Loc.About.Package.Avalonia.Identity}"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+                <Border Grid.Column="2"
+                        Padding="8,4"
+                        CornerRadius="99"
+                        Background="{DynamicResource AppAccentSoftBrush}"
+                        VerticalAlignment="Top">
+                  <controls:LocalizedFormatTextBlock ResourceKey="About.Package.VersionFormat"
+                                                       Value="{Binding AvaloniaVersion}"
+                                                       Classes="muted"
+                                                       FontSize="12"
+                                                       FontWeight="SemiBold" />
+                </Border>
+              </Grid>
+              <TextBlock Classes="muted"
+                         Text="{DynamicResource Loc.About.Package.Avalonia.Description}"
+                         TextWrapping="Wrap" />
+              <TextBlock Classes="faint"
+                         Text="{DynamicResource Loc.About.Package.Avalonia.LicenseName}"
+                         FontWeight="SemiBold"
+                         TextWrapping="Wrap" />
+              <Expander x:Name="AvaloniaLicenseExpander"
+                        Header="{DynamicResource Loc.About.License.Agreement}"
+                        AutomationProperties.Name="{DynamicResource Loc.About.Package.Avalonia.LicenseAutomation}">
+                <Border Margin="0,10,0,0"
+                        Padding="14"
+                        CornerRadius="10"
+                        Background="{DynamicResource AppInsetBrush}"
+                        BorderBrush="{DynamicResource AppBorderBrush}"
+                        BorderThickness="1">
+                  <StackPanel Spacing="10">
+                    <Button x:Name="CopyAvaloniaLicenseButton"
+                            Classes="app quiet"
+                            HorizontalAlignment="Right"
+                            Content="{DynamicResource Loc.About.License.Copy}"
+                            ToolTip.Tip="{DynamicResource Loc.About.Package.Avalonia.CopyAutomation}"
+                            AutomationProperties.Name="{DynamicResource Loc.About.Package.Avalonia.CopyAutomation}"
+                            Click="OnCopyAvaloniaLicense" />
+                    <SelectableTextBlock x:Name="AvaloniaLicenseBody"
+                                         Text="{Binding AvaloniaLicenseText}"
+                                         TextWrapping="Wrap"
+                                         FontFamily="Cascadia Mono, Consolas, monospace"
+                                         FontSize="12.5"
+                                         AutomationProperties.Name="{DynamicResource Loc.About.Package.Avalonia.LicenseTextAutomation}" />
+                  </StackPanel>
+                </Border>
+              </Expander>
+            </StackPanel>
+          </Border>
+
+          <Border x:Name="ImageSharpPackageCard"
+                  Grid.Column="2"
+                  Classes="card about-package"
+                  VerticalAlignment="Top">
+            <StackPanel Spacing="14">
+              <Grid ColumnDefinitions="Auto,*,Auto"
+                    ColumnSpacing="12">
+                <Border Classes="about-package-icon">
+                  <Viewbox Width="24"
+                           Height="24"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center">
+                    <Path Data="M3,4 L21,4 L21,20 L3,20 Z M6,17 L10,12 L13,15 L16,10 L20,17 M8,8 A1.5,1.5 0 1 1 8,8.1"
+                          Fill="Transparent"
+                          Stroke="{DynamicResource AppAccentBrush}"
+                          StrokeThickness="1.8"
+                          StrokeJoin="Round" />
+                  </Viewbox>
+                </Border>
+                <StackPanel Grid.Column="1"
+                            Spacing="2"
+                            VerticalAlignment="Center">
+                  <TextBlock x:Name="ImageSharpPackageName"
+                             Classes="section-title"
+                             Text="{DynamicResource Loc.About.Package.ImageSharp.Name}"
+                             TextWrapping="Wrap" />
+                  <TextBlock Classes="faint"
+                             Text="{DynamicResource Loc.About.Package.ImageSharp.Identity}"
+                             TextWrapping="Wrap" />
+                </StackPanel>
+                <Border Grid.Column="2"
+                        Padding="8,4"
+                        CornerRadius="99"
+                        Background="{DynamicResource AppAccentSoftBrush}"
+                        VerticalAlignment="Top">
+                  <controls:LocalizedFormatTextBlock ResourceKey="About.Package.VersionFormat"
+                                                       Value="{Binding ImageSharpVersion}"
+                                                       Classes="muted"
+                                                       FontSize="12"
+                                                       FontWeight="SemiBold" />
+                </Border>
+              </Grid>
+              <TextBlock Classes="muted"
+                         Text="{DynamicResource Loc.About.Package.ImageSharp.Description}"
+                         TextWrapping="Wrap" />
+              <TextBlock Classes="faint"
+                         Text="{DynamicResource Loc.About.Package.ImageSharp.LicenseName}"
+                         FontWeight="SemiBold"
+                         TextWrapping="Wrap" />
+              <Expander x:Name="ImageSharpLicenseExpander"
+                        Header="{DynamicResource Loc.About.License.Agreement}"
+                        AutomationProperties.Name="{DynamicResource Loc.About.Package.ImageSharp.LicenseAutomation}">
+                <Border Margin="0,10,0,0"
+                        Padding="14"
+                        CornerRadius="10"
+                        Background="{DynamicResource AppInsetBrush}"
+                        BorderBrush="{DynamicResource AppBorderBrush}"
+                        BorderThickness="1">
+                  <StackPanel Spacing="10">
+                    <Button x:Name="CopyImageSharpLicenseButton"
+                            Classes="app quiet"
+                            HorizontalAlignment="Right"
+                            Content="{DynamicResource Loc.About.License.Copy}"
+                            ToolTip.Tip="{DynamicResource Loc.About.Package.ImageSharp.CopyAutomation}"
+                            AutomationProperties.Name="{DynamicResource Loc.About.Package.ImageSharp.CopyAutomation}"
+                            Click="OnCopyImageSharpLicense" />
+                    <SelectableTextBlock x:Name="ImageSharpLicenseBody"
+                                         Text="{Binding ImageSharpLicenseText}"
+                                         TextWrapping="Wrap"
+                                         FontFamily="Cascadia Mono, Consolas, monospace"
+                                         FontSize="12.5"
+                                         AutomationProperties.Name="{DynamicResource Loc.About.Package.ImageSharp.LicenseTextAutomation}" />
+                  </StackPanel>
+                </Border>
+              </Expander>
+            </StackPanel>
+          </Border>
+        </Grid>
+
+        <TextBlock Classes="faint"
+                   Margin="2,0,2,4"
+                   Text="{DynamicResource Loc.About.Trademarks}"
+                   TextWrapping="Wrap"
+                   TextAlignment="Center" />
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

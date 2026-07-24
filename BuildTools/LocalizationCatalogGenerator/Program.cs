@@ -3,7 +3,10 @@ using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 
-return CatalogGenerator.Run(args);
+return CatalogGeneratorCommandLine.Run(
+    args,
+    CatalogGenerator.Run,
+    Console.Error);
 
 internal static partial class CatalogGenerator
 {
@@ -98,7 +101,15 @@ internal static partial class CatalogGenerator
         "Windows",
         "Unix",
         "Sonos",
+        "Avalonia UI",
+        "AvaloniaUI",
         "Avalonia",
+        "SixLabors.ImageSharp",
+        "ImageSharp",
+        "Six Labors Split License, Version 1.0",
+        "Six Labors Split License",
+        "Six Labors",
+        "MIT License",
         "ITL",
         "NBSP",
         "GUID",
@@ -315,6 +326,11 @@ internal static partial class CatalogGenerator
                 "zh-TW" => "測試版",
                 _ => "Beta",
             };
+        if (ExactResourceTranslations.TryGetValue(
+                key,
+                out IReadOnlyDictionary<string, string>?
+                    exactTranslations))
+            return exactTranslations[locale.Name];
 
         ProtectedText protectedText = Protect(source);
         string result = protectedText.Text;
@@ -366,7 +382,7 @@ internal static partial class CatalogGenerator
         {
             protectedValue = Regex.Replace(
                 protectedValue,
-                $@"(?<![\p{{L}}\p{{N}}]){Regex.Escape(literal)}(?![\p{{L}}\p{{N}}])",
+                $@"(?<![A-Za-z0-9]){Regex.Escape(literal)}(?![A-Za-z0-9])",
                 match => AddProtectedToken(match.Value, tokens),
                 RegexOptions.IgnoreCase |
                 RegexOptions.CultureInvariant);
@@ -528,6 +544,47 @@ internal static partial class CatalogGenerator
             .ToArray();
     }
 
+    private static IReadOnlyDictionary<
+        string,
+        IReadOnlyDictionary<string, string>>
+        ParseExactResourceTranslations()
+    {
+        string[] localeNames = Locales
+            .Select(locale => locale.Name)
+            .ToArray();
+        var resources = new Dictionary<
+            string,
+            IReadOnlyDictionary<string, string>>(
+            StringComparer.Ordinal);
+        foreach (string rawLine in
+                 ExactResourceTranslationRows.Split('\n'))
+        {
+            string line = rawLine.Trim();
+            if (line.Length == 0 ||
+                line.StartsWith('#'))
+                continue;
+            string[] columns = line.Split('|');
+            if (columns.Length != localeNames.Length + 1)
+                throw new InvalidDataException(
+                    $"Exact resource translation row has {columns.Length} columns instead of " +
+                    $"{localeNames.Length + 1}: {line}");
+            var translations =
+                new Dictionary<string, string>(
+                    StringComparer.Ordinal);
+            for (int index = 0;
+                 index < localeNames.Length;
+                 index++)
+            {
+                translations[localeNames[index]] =
+                    columns[index + 1].Trim();
+            }
+            resources.Add(
+                columns[0].Trim(),
+                translations);
+        }
+        return resources;
+    }
+
     private static bool HaveMatchingPlaceholders(
         string source,
         string translated) =>
@@ -653,9 +710,52 @@ internal static partial class CatalogGenerator
         RegexOptions.CultureInvariant)]
     private static partial Regex EnglishWordPattern();
 
+    private static readonly string ExactResourceTranslationRows =
+        """
+        # Resource key|de-DE|es-ES|fr-FR|it-IT|pt-BR|ja-JP|ko-KR|zh-CN|zh-TW
+        Navigation.About|Über|Acerca de|À propos|Informazioni|Sobre|このアプリについて|정보|关于|關於
+        About.Title|Über|Acerca de|À propos|Informazioni|Sobre|このアプリについて|정보|关于|關於
+        About.Subtitle|Produktdetails, Danksagungen und Lizenzvereinbarungen.|Detalles del producto, agradecimientos y acuerdos de licencia.|Détails du produit, remerciements et contrats de licence.|Dettagli del prodotto, riconoscimenti e accordi di licenza.|Detalhes do produto, agradecimentos e contratos de licença.|製品の詳細、謝辞、ライセンス契約。|제품 세부 정보, 감사의 말 및 사용권 계약입니다.|产品详细信息、致谢和许可协议。|產品詳細資訊、致謝與授權協議。
+        About.Tagline|Ein durchdachter Arbeitsbereich für die Musik, die Ihnen wichtig ist.|Un espacio de trabajo pensado para la música que te importa.|Un espace de travail soigné pour la musique qui vous tient à cœur.|Uno spazio di lavoro curato per la musica a cui tieni.|Um espaço de trabalho cuidadoso para a música que importa para você.|大切な音楽のための、思いやりのあるワークスペース。|소중한 음악을 위한 세심한 작업 공간입니다.|为您珍爱的音乐打造的贴心工作区。|為您珍愛的音樂打造的貼心工作區。
+        About.BrandAutomation|Music Library Manager-Logo|Logotipo de Music Library Manager|Logo Music Library Manager|Logo di Music Library Manager|Logotipo do Music Library Manager|Music Library Manager のロゴ|Music Library Manager 로고|Music Library Manager 徽标|Music Library Manager 標誌
+        About.VersionFormat|Version {0}|Versión {0}|Version {0}|Versione {0}|Versão {0}|バージョン {0}|버전 {0}|版本 {0}|版本 {0}
+        About.Mission.Title|Für langlebige Musikbibliotheken entwickelt|Diseñado para bibliotecas musicales duraderas|Conçu pour des bibliothèques musicales durables|Progettato per librerie musicali durature|Feito para bibliotecas de música duradouras|長く使える音楽ライブラリのために|오래 지속되는 음악 라이브러리를 위해 제작|专为持久的音乐库而打造|專為長久的音樂資料庫打造
+        About.Mission.Description|Prüfen, ergänzen und bewahren Sie Ihre Sammlung mit transparenten, überprüfbaren Änderungen.|Inspecciona, enriquece y conserva tu colección con cambios transparentes y revisables.|Inspectez, enrichissez et préservez votre collection grâce à des modifications transparentes et vérifiables.|Esamina, arricchisci e conserva la tua raccolta con modifiche trasparenti e verificabili.|Inspecione, enriqueça e preserve sua coleção com alterações transparentes e revisáveis.|透明で確認可能な変更により、コレクションを調査、強化、保護します。|투명하고 검토 가능한 변경으로 컬렉션을 검사하고 보강하며 보존합니다.|通过透明、可审查的更改来检查、丰富和保护您的收藏。|透過透明、可檢閱的變更來檢查、豐富並保存您的收藏。
+        About.OpenSource.Title|Open-Source-Grundlagen|Fundamentos de código abierto|Fondations open source|Fondamenti open source|Fundamentos de código aberto|オープンソースの基盤|오픈 소스 기반|开源基础|開放原始碼基礎
+        About.OpenSource.Description|Music Library Manager wird teilweise durch diese verwendeten Pakete ermöglicht.|Music Library Manager es posible en parte gracias a estos paquetes utilizados.|Music Library Manager est rendu possible en partie par ces paquets utilisés.|Music Library Manager è reso possibile in parte da questi pacchetti utilizzati.|O Music Library Manager é possível em parte graças a estes pacotes utilizados.|Music Library Manager は、これらの参照パッケージによって支えられています。|Music Library Manager는 이러한 참조 패키지의 도움으로 만들어졌습니다.|Music Library Manager 的实现部分得益于这些引用的软件包。|Music Library Manager 的實現部分得益於這些參照套件。
+        About.Package.VersionFormat|Version {0}|Versión {0}|Version {0}|Versione {0}|Versão {0}|バージョン {0}|버전 {0}|版本 {0}|版本 {0}
+        About.Package.Avalonia.Name|Avalonia UI|Avalonia UI|Avalonia UI|Avalonia UI|Avalonia UI|Avalonia UI|Avalonia UI|Avalonia UI|Avalonia UI
+        About.Package.Avalonia.Identity|Paketfamilie: Avalonia|Familia de paquetes: Avalonia|Famille de paquets : Avalonia|Famiglia di pacchetti: Avalonia|Família de pacotes: Avalonia|パッケージファミリー: Avalonia|패키지 제품군: Avalonia|软件包系列：Avalonia|套件系列：Avalonia
+        About.Package.Avalonia.Description|Plattformübergreifendes Benutzeroberflächen-Framework für eine reaktionsschnelle, native Desktop-Erfahrung.|Marco de interfaz de usuario multiplataforma para una experiencia de escritorio nativa y adaptable.|Cadre d’interface utilisateur multiplateforme pour une expérience de bureau native et adaptative.|Framework di interfaccia utente multipiattaforma per un'esperienza desktop nativa e reattiva.|Framework de interface do usuário multiplataforma para uma experiência de desktop nativa e responsiva.|応答性の高いネイティブデスクトップ体験を実現するクロスプラットフォームのユーザーインターフェイスフレームワーク。|반응형 네이티브 데스크톱 환경을 위한 크로스 플랫폼 사용자 인터페이스 프레임워크입니다.|用于响应式原生桌面体验的跨平台用户界面框架。|用於回應式原生桌面體驗的跨平台使用者介面框架。
+        About.Package.Avalonia.LicenseName|MIT License|MIT License|MIT License|MIT License|MIT License|MIT License|MIT License|MIT License|MIT License
+        About.Package.Avalonia.LicenseAutomation|Avalonia UI-Lizenzvereinbarung|Acuerdo de licencia de Avalonia UI|Contrat de licence Avalonia UI|Accordo di licenza di Avalonia UI|Contrato de licença do Avalonia UI|Avalonia UI のライセンス契約|Avalonia UI 사용권 계약|Avalonia UI 许可协议|Avalonia UI 授權協議
+        About.Package.Avalonia.CopyAutomation|Avalonia UI-Lizenzvereinbarung kopieren|Copiar el acuerdo de licencia de Avalonia UI|Copier le contrat de licence Avalonia UI|Copia l'accordo di licenza di Avalonia UI|Copiar o contrato de licença do Avalonia UI|Avalonia UI のライセンス契約をコピー|Avalonia UI 사용권 계약 복사|复制 Avalonia UI 许可协议|複製 Avalonia UI 授權協議
+        About.Package.Avalonia.LicenseTextAutomation|Vollständiger Avalonia UI-Lizenztext|Texto completo de la licencia de Avalonia UI|Texte complet de la licence Avalonia UI|Testo completo della licenza di Avalonia UI|Texto completo da licença do Avalonia UI|Avalonia UI の完全なライセンス本文|전체 Avalonia UI 사용권 텍스트|完整的 Avalonia UI 许可文本|完整的 Avalonia UI 授權文字
+        About.Package.ImageSharp.Name|ImageSharp|ImageSharp|ImageSharp|ImageSharp|ImageSharp|ImageSharp|ImageSharp|ImageSharp|ImageSharp
+        About.Package.ImageSharp.Identity|Paket: SixLabors.ImageSharp|Paquete: SixLabors.ImageSharp|Paquet : SixLabors.ImageSharp|Pacchetto: SixLabors.ImageSharp|Pacote: SixLabors.ImageSharp|パッケージ: SixLabors.ImageSharp|패키지: SixLabors.ImageSharp|软件包：SixLabors.ImageSharp|套件：SixLabors.ImageSharp
+        About.Package.ImageSharp.Description|Plattformübergreifende Bildverarbeitungsbibliothek zur Prüfung und Optimierung von Grafiken.|Biblioteca multiplataforma de procesamiento de imágenes para inspeccionar y optimizar las ilustraciones.|Bibliothèque multiplateforme de traitement d’images pour inspecter et optimiser les illustrations.|Libreria multipiattaforma di elaborazione delle immagini per ispezionare e ottimizzare la grafica.|Biblioteca multiplataforma de processamento de imagens para inspecionar e otimizar ilustrações.|アートワークの検査と最適化に使用するクロスプラットフォーム画像処理ライブラリ。|아트워크 검사 및 최적화를 위한 크로스 플랫폼 이미지 처리 라이브러리입니다.|用于检查和优化插图的跨平台图像处理库。|用於檢查和最佳化圖稿的跨平台影像處理程式庫。
+        About.Package.ImageSharp.LicenseName|Six Labors Split License, Version 1.0|Six Labors Split License, Version 1.0|Six Labors Split License, Version 1.0|Six Labors Split License, Version 1.0|Six Labors Split License, Version 1.0|Six Labors Split License, Version 1.0|Six Labors Split License, Version 1.0|Six Labors Split License, Version 1.0|Six Labors Split License, Version 1.0
+        About.Package.ImageSharp.LicenseAutomation|ImageSharp-Lizenzvereinbarung|Acuerdo de licencia de ImageSharp|Contrat de licence ImageSharp|Accordo di licenza di ImageSharp|Contrato de licença do ImageSharp|ImageSharp のライセンス契約|ImageSharp 사용권 계약|ImageSharp 许可协议|ImageSharp 授權協議
+        About.Package.ImageSharp.CopyAutomation|ImageSharp-Lizenzvereinbarung kopieren|Copiar el acuerdo de licencia de ImageSharp|Copier le contrat de licence ImageSharp|Copia l'accordo di licenza di ImageSharp|Copiar o contrato de licença do ImageSharp|ImageSharp のライセンス契約をコピー|ImageSharp 사용권 계약 복사|复制 ImageSharp 许可协议|複製 ImageSharp 授權協議
+        About.Package.ImageSharp.LicenseTextAutomation|Vollständiger ImageSharp-Lizenztext|Texto completo de la licencia de ImageSharp|Texte complet de la licence ImageSharp|Testo completo della licenza di ImageSharp|Texto completo da licença do ImageSharp|ImageSharp の完全なライセンス本文|전체 ImageSharp 사용권 텍스트|完整的 ImageSharp 许可文本|完整的 ImageSharp 授權文字
+        About.License.Agreement|Lizenzvereinbarung|Acuerdo de licencia|Contrat de licence|Accordo di licenza|Contrato de licença|ライセンス契約|사용권 계약|许可协议|授權協議
+        About.License.Copy|Lizenz kopieren|Copiar licencia|Copier la licence|Copia licenza|Copiar licença|ライセンスをコピー|사용권 복사|复制许可|複製授權
+        About.Trademarks|Produktnamen und Marken Dritter sind Eigentum ihrer jeweiligen Inhaber.|Los nombres de productos y las marcas de terceros pertenecen a sus respectivos propietarios.|Les noms de produits et marques de tiers appartiennent à leurs propriétaires respectifs.|I nomi dei prodotti e i marchi di terze parti appartengono ai rispettivi proprietari.|Nomes de produtos e marcas de terceiros pertencem aos seus respectivos proprietários.|サードパーティの製品名および商標は、それぞれの所有者に帰属します。|타사 제품 이름 및 상표는 해당 소유자의 자산입니다.|第三方产品名称和商标归其各自所有者所有。|第三方產品名稱與商標均屬其各自所有者。
+        """.Replace(
+            "\r",
+            "",
+            StringComparison.Ordinal);
+
+    private static readonly IReadOnlyDictionary<
+        string,
+        IReadOnlyDictionary<string, string>>
+        ExactResourceTranslations =
+            ParseExactResourceTranslations();
+
     private static readonly string TranslationRows =
         """
         # English|de-DE|es-ES|fr-FR|it-IT|pt-BR|ja-JP|ko-KR|zh-CN|zh-TW
+        about|Über|Acerca de|À propos|Informazioni|Sobre|このアプリについて|정보|关于|關於
         pending changes|ausstehende Änderungen|cambios pendientes|modifications en attente|modifiche in sospeso|alterações pendentes|保留中の変更|보류 중인 변경 사항|待处理更改|待處理變更
         online metadata|Online-Metadaten|metadatos en línea|métadonnées en ligne|metadati online|metadados online|オンラインメタデータ|온라인 메타데이터|在线元数据|線上中繼資料
         album artist|Albumkünstler|artista del álbum|artiste de l’album|artista album|artista do álbum|アルバムアーティスト|앨범 아티스트|专辑艺术家|專輯演出者

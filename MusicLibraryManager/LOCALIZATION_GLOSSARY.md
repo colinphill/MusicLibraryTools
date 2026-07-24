@@ -20,6 +20,11 @@ Do not translate or transliterate these names:
 - Matroska
 - WebM
 - iTunes
+- Avalonia UI / AvaloniaUI
+- ImageSharp / SixLabors.ImageSharp
+- Six Labors / Six Labors Split License
+- MIT License
+- Colin Hill
 
 ## Tag, codec, and container terminology
 

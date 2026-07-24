@@ -1,6 +1,7 @@
 <Window x:Class="MusicLibraryManager.MainWindow"
         xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:MusicLibraryManager.Controls"
         xmlns:views="using:MusicLibraryManager.Views"
         Title="{DynamicResource Loc.App.Title}"
         Icon="/Assets/AppIcon.ico"
@@ -25,21 +26,9 @@
         <Grid Margin="10,16,10,12" RowDefinitions="52,10,*,Auto">
           <Border Grid.Row="0" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="0,0,0,1">
             <Grid x:Name="BrandBlock" Margin="8,0,0,14" ColumnDefinitions="34,*" ColumnSpacing="11">
-              <Viewbox Width="34" Height="34">
-                <Canvas Width="256" Height="256">
-                  <Rectangle Canvas.Left="32" Canvas.Top="50" Width="142" Height="154" RadiusX="28" RadiusY="28" Fill="#9E0D4F59" />
-                  <Rectangle Canvas.Left="55" Canvas.Top="32" Width="150" Height="164" RadiusX="30" RadiusY="30">
-                    <Rectangle.Fill><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#7DD3FC" Offset="0" /><GradientStop Color="#2787C8" Offset="1" /></LinearGradientBrush></Rectangle.Fill>
-                  </Rectangle>
-                  <Rectangle Canvas.Left="78" Canvas.Top="54" Width="150" Height="164" RadiusX="30" RadiusY="30">
-                    <Rectangle.Fill><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#39C6C8" Offset="0" /><GradientStop Color="#087F8C" Offset="1" /></LinearGradientBrush></Rectangle.Fill>
-                  </Rectangle>
-                  <Ellipse Canvas.Left="101" Canvas.Top="84" Width="104" Height="104" Fill="#F7FBFC" />
-                  <Ellipse Canvas.Left="118" Canvas.Top="101" Width="70" Height="70" Stroke="#9BDCDF" StrokeThickness="7" />
-                  <Ellipse Canvas.Left="142" Canvas.Top="125" Width="22" Height="22" Fill="#087F8C" />
-                  <Line StartPoint="94,82" EndPoint="148,82" Stroke="#F7FBFC" StrokeThickness="10" StrokeLineCap="Round" />
-                </Canvas>
-              </Viewbox>
+              <controls:BrandMark Width="34"
+                                  Height="34"
+                                  AutomationProperties.Name="{DynamicResource Loc.About.BrandAutomation}" />
               <StackPanel x:Name="BrandCopy" Grid.Column="1" VerticalAlignment="Center">
                 <TextBlock Text="{DynamicResource Loc.App.Brand}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="14" FontWeight="Bold" />
               </StackPanel>
@@ -73,9 +62,15 @@
             </Button>
           </StackPanel>
 
-          <Button x:Name="SettingsNav" Grid.Row="3" Classes="nav" Tag="Settings" Click="OnNavigationClick" ToolTip.Tip="{DynamicResource Loc.Navigation.Settings}" AutomationProperties.Name="{DynamicResource Loc.Navigation.Settings}">
-            <Grid Classes="nav-content" ColumnDefinitions="24,*" ColumnSpacing="12"><Border Classes="nav-marker" Width="3" Height="22" Margin="-12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" IsHitTestVisible="False" /><Viewbox Classes="nav-icon"><Path Classes="nav-icon-path" Data="M12,8 C9.8,8 8,9.8 8,12 C8,14.2 9.8,16 12,16 C14.2,16 16,14.2 16,12 C16,9.8 14.2,8 12,8 Z M12,2 L12,5 M12,19 L12,22 M2,12 L5,12 M19,12 L22,12 M4.9,4.9 L7,7 M17,17 L19.1,19.1 M19.1,4.9 L17,7 M7,17 L4.9,19.1" /></Viewbox><TextBlock Grid.Column="1" Classes="nav-label" Text="{DynamicResource Loc.Navigation.Settings}" FontWeight="SemiBold" /></Grid>
-          </Button>
+          <StackPanel Grid.Row="3"
+                      Spacing="3">
+            <Button x:Name="SettingsNav" Classes="nav" Tag="Settings" Click="OnNavigationClick" ToolTip.Tip="{DynamicResource Loc.Navigation.Settings}" AutomationProperties.Name="{DynamicResource Loc.Navigation.Settings}">
+              <Grid Classes="nav-content" ColumnDefinitions="24,*" ColumnSpacing="12"><Border Classes="nav-marker" Width="3" Height="22" Margin="-12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" IsHitTestVisible="False" /><Viewbox Classes="nav-icon"><Path Classes="nav-icon-path" Data="M12,8 C9.8,8 8,9.8 8,12 C8,14.2 9.8,16 12,16 C14.2,16 16,14.2 16,12 C16,9.8 14.2,8 12,8 Z M12,2 L12,5 M12,19 L12,22 M2,12 L5,12 M19,12 L22,12 M4.9,4.9 L7,7 M17,17 L19.1,19.1 M19.1,4.9 L17,7 M7,17 L4.9,19.1" /></Viewbox><TextBlock Grid.Column="1" Classes="nav-label" Text="{DynamicResource Loc.Navigation.Settings}" FontWeight="SemiBold" /></Grid>
+            </Button>
+            <Button x:Name="AboutNav" Classes="nav" Tag="About" Click="OnNavigationClick" ToolTip.Tip="{DynamicResource Loc.Navigation.About}" AutomationProperties.Name="{DynamicResource Loc.Navigation.About}">
+              <Grid Classes="nav-content" ColumnDefinitions="24,*" ColumnSpacing="12"><Border Classes="nav-marker" Width="3" Height="22" Margin="-12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" IsHitTestVisible="False" /><Viewbox Classes="nav-icon"><Path Classes="nav-icon-path" Data="M12,2 A10,10 0 1 1 12,22 A10,10 0 1 1 12,2 M12,10 L12,18 M12,6 L12.1,6" /></Viewbox><TextBlock Grid.Column="1" Classes="nav-label" Text="{DynamicResource Loc.Navigation.About}" FontWeight="SemiBold" /></Grid>
+            </Button>
+          </StackPanel>
         </Grid>
       </Border>
 
