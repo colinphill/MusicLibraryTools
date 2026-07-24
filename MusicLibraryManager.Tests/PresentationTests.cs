@@ -1857,6 +1857,94 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public async Task Library_operations_resolve_track_filtered_and_complete_scopes()
+    {
+        TrackRecord[] records =
+        [
+            Track(
+                "Artist",
+                "First",
+                "One",
+                "FLAC",
+                @"C:\music\one.flac"),
+            Track(
+                "Artist",
+                "First",
+                "Two",
+                "FLAC",
+                @"C:\music\two.flac"),
+            Track(
+                "Artist",
+                "Second",
+                "Three",
+                "FLAC",
+                @"C:\music\three.flac"),
+        ];
+        var library = new FakeLibrary(records);
+        var settings = new FakeSettings();
+        var activity = new AppActivityService();
+        var inspector = new SelectionInspectorViewModel(
+            new FakeMediaService(),
+            library,
+            new FakeTagWriter(),
+            new FakeArtworkService(),
+            new FakeFilePicker(),
+            new FakeDialogs(),
+            new FakeFieldsEditor(),
+            new FakeThumbnails(),
+            activity);
+        var operations = new FakeMetadataOperationService();
+        var viewModel = new LibraryViewModel(
+            library,
+            new FakeReindex(),
+            settings,
+            inspector,
+            new NavigationService(),
+            new IndexingViewModel(
+                library,
+                settings,
+                activity),
+            new FakeThumbnails(),
+            metadataOperations: operations,
+            operationCatalog:
+                new MetadataOperationCatalog());
+        await viewModel.ReloadAsync();
+        await viewModel.SelectAsync(
+            [viewModel.Rows.Single(row => row.Title == "One")]);
+        viewModel.OperationEditor.OperationValue = "Reviewed";
+
+        viewModel.SelectedOperationScope =
+            LibraryOperationScope.SelectedTracks;
+        await viewModel.PreviewLibraryOperationCommand
+            .ExecuteAsync(null);
+
+        Assert.Equal(
+            [@"C:\music\one.flac"],
+            operations.PreviewedPaths);
+
+        viewModel.FilterText = "Album:Second";
+        await viewModel.ApplyFilterNowAsync(
+            TestContext.Current.CancellationToken);
+        viewModel.SelectedOperationScope =
+            LibraryOperationScope.VisibleFilteredResults;
+        await viewModel.PreviewLibraryOperationCommand
+            .ExecuteAsync(null);
+
+        Assert.Equal(
+            [@"C:\music\three.flac"],
+            operations.PreviewedPaths);
+
+        viewModel.SelectedOperationScope =
+            LibraryOperationScope.CompleteLibrary;
+        await viewModel.PreviewLibraryOperationCommand
+            .ExecuteAsync(null);
+
+        Assert.Equal(
+            records.Select(record => record.Path),
+            operations.PreviewedPaths);
+    }
+
+    [Fact]
     public async Task Library_clipboard_preserves_field_identity_and_previews_scope()
     {
         TrackRecord[] records =
@@ -3116,7 +3204,15 @@ internal sealed class FakeLibrary(IReadOnlyList<TrackRecord> records) : ILibrary
 
 internal sealed class FakeReindex : IReindexService
 {
-    public Task ReindexFileAsync(string path, CancellationToken ct = default) => Task.CompletedTask;
+    public List<string> Paths { get; } = [];
+
+    public Task ReindexFileAsync(
+        string path,
+        CancellationToken ct = default)
+    {
+        Paths.Add(path);
+        return Task.CompletedTask;
+    }
 }
 
 internal sealed class FakeMetadataDocumentService(

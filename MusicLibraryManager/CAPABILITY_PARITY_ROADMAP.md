@@ -871,9 +871,18 @@ per-operation capability flags.
     mutation invokes it again.
 - [x] Operation-catalog contract tests proving each operation marked applicable
   to indexed files is exposed in both Workbench and Library.
-- [ ] Library-scope tests for selection, album, filtered results, full view,
+- [x] Library-scope tests for selection, album, filtered results, full view,
   offline files, stale cache rows, policy denial, preview/apply equivalence,
   reindex, and undo.
+  - Presentation tests resolve selected tracks, selected albums, the current
+    filtered rows, and the complete cached view to stable path arrays before
+    invoking the shared service.
+  - Authoritative preview retains missing/offline or moved stale-cache paths as
+    explicit blockers without dropping the rest of the scope, while catalog
+    policy denial blocks metadata writes and leaves the file unchanged.
+  - Real-file preview/apply equality, stale-plan rejection, immediate cache
+    refresh from the saved media object, and Library undo reindexing are all
+    asserted independently.
 - [ ] Golden report and playlist output tests across encodings and path styles.
 - [ ] Parser corpus tests for valid, unusual, truncated, and corrupt files.
 - [x] Full existing solution tests at every milestone. Every completed slice is

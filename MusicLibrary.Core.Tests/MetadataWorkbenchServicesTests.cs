@@ -140,6 +140,122 @@ public sealed class MetadataWorkbenchServicesTests
     }
 
     [Fact]
+    public async Task LibraryPolicy_BlocksMetadataPreviewWithoutWritePermission()
+    {
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            $"metadata-policy-{Guid.NewGuid():N}");
+        string path = Path.Combine(root, "sample.flac");
+        string configPath = Path.Combine(root, "library.xml");
+        string statePath = Path.Combine(root, "settings.json");
+        try
+        {
+            Directory.CreateDirectory(root);
+            File.Copy(MediaFixtures.Path_("sample.flac"), path);
+            var editable = EditableLibraryConfig.CreateNew();
+            editable.DatabaseFile =
+                Path.Combine(root, "metadata.db");
+            editable.IndexTargets.Add(
+                editable.CreateIndexTarget(root));
+            editable.Save(configPath);
+            var settings = new AppSettings(statePath);
+            settings.LoadConfig(configPath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings);
+            OperationRecipe recipe = OperationRecipe.Create(
+                "Policy denial",
+                new AssignFieldOperation(
+                    MetadataFieldKey.Known(TagFields.Title),
+                    "Denied"));
+
+            MetadataOperationPlan plan =
+                await service.PreviewAsync([path], recipe);
+
+            Assert.False(plan.CanApply);
+            Assert.Contains(
+                Assert.Single(plan.Files).Issues,
+                issue =>
+                    issue.Code == "metadata.permission" &&
+                    issue.Severity ==
+                        OperationIssueSeverity.Blocker);
+            Assert.Equal(
+                "TestTitle",
+                (await _documents.LoadAsync(path))
+                    .FirstValue(TagFields.Title));
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task SuccessfulMetadataApply_ReindexesChangedLibraryFile()
+    {
+        string root = Path.Combine(
+            AppContext.BaseDirectory,
+            "TestRuns",
+            $"metadata-reindex-{Guid.NewGuid():N}");
+        string mediaPath = Path.Combine(root, "sample.flac");
+        string statePath = Path.Combine(root, "settings.json");
+        string recoveryRoot =
+            root + ".MusicLibraryManager-recovery";
+        try
+        {
+            Directory.CreateDirectory(root);
+            File.Copy(
+                MediaFixtures.Path_("sample.flac"),
+                mediaPath);
+            var settings = new AppSettings(statePath);
+            var reindex = new RecordingReindexService();
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings,
+                reindex);
+            OperationRecipe recipe = OperationRecipe.Create(
+                "Reindex changed file",
+                new AssignFieldOperation(
+                    MetadataFieldKey.Known(TagFields.Title),
+                    "Reindexed title"));
+            MetadataOperationPlan plan =
+                await service.PreviewAsync(
+                    [mediaPath],
+                    recipe);
+
+            MetadataApplyResult result =
+                await service.ApplyAsync(plan);
+
+            Assert.Equal(1, result.ChangedFiles);
+            Assert.Equal([mediaPath], reindex.Paths);
+            Assert.NotNull(reindex.SavedFile);
+            Assert.Equal(
+                "Reindexed title",
+                reindex.SavedFile.Tags
+                    .SelectMany(tag =>
+                        tag.GetKnownMetadata())
+                    .First(value =>
+                        value.Key == TagFields.Title)
+                    .Value);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+            try
+            {
+                Directory.Delete(
+                    recoveryRoot,
+                    recursive: true);
+            }
+            catch { }
+        }
+    }
+
+    [Fact]
     public async Task Document_PreservesKnownFieldsAndTechnicalProperties()
     {
         using var media = MediaFixtures.Copy("sample.flac");
@@ -2676,6 +2792,31 @@ public sealed class MetadataWorkbenchServicesTests
         using var stream = new MemoryStream();
         image.Save(stream, new PngEncoder());
         return stream.ToArray();
+    }
+
+    private sealed class RecordingReindexService :
+        IReindexService
+    {
+        public List<string> Paths { get; } = [];
+        public IMediaFile? SavedFile { get; private set; }
+
+        public Task ReindexFileAsync(
+            string path,
+            CancellationToken ct = default)
+        {
+            Paths.Add(path);
+            return Task.CompletedTask;
+        }
+
+        public Task ReindexFileAsync(
+            string path,
+            IMediaFile savedFile,
+            CancellationToken ct = default)
+        {
+            Paths.Add(path);
+            SavedFile = savedFile;
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class RecordingProgress : IProgress<OperationProgress>

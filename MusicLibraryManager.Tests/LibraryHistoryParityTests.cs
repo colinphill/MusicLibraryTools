@@ -73,10 +73,11 @@ public sealed class LibraryHistoryParityTests
                     [],
                     [redoPath],
                     recipe));
+        var reindex = new FakeReindex();
         var viewModel =
             new LibraryViewModel(
                 library,
-                new FakeReindex(),
+                reindex,
                 settings,
                 inspector,
                 new NavigationService(),
@@ -120,6 +121,9 @@ public sealed class LibraryHistoryParityTests
         Assert.Equal(
             1,
             history.UndoCalls);
+        Assert.Equal(
+            [selectedPath],
+            reindex.Paths);
         Assert.Contains(
             "Restored 1 file",
             viewModel.OperationStatus);
