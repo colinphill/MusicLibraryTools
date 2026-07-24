@@ -787,7 +787,19 @@ per-operation capability flags.
     object identity at the executor boundary, reviewed source/destination
     paths for copy/move/quarantine/replace actions, and byte-for-byte equality
     between generated preview content and installed output.
-- [ ] Stale-plan rejection.
+- [x] Stale-plan rejection.
+  - The shared mutation executor validates every reviewed source and
+    destination snapshot twice—before any filesystem change and again after
+    acquiring the cross-operation path lease. Tests prove one stale item
+    rejects the complete batch before copy, move, replace, generated output,
+    quarantine, delete, recovery-tree creation, or catalog mutation begins.
+  - Custom mutation paths have equivalent guards: Workbench metadata includes
+    content hashes, artwork includes file/artwork hashes, ingest and analysis
+    repair retain source snapshots, organization and representation repair
+    validate both endpoints, external tools revalidate inputs, Android sync
+    validates the persisted plan digest, and ITL repair pins the complete
+    library hash. Policy fingerprints are revalidated independently of file
+    state.
 - [ ] Collision, cancellation, insufficient-space, rollback, and recovery tests.
 - [ ] Undo, redo, and concurrent-edit tests.
 - [ ] Headless UI tests for Workbench loading, drag-and-drop, editing,
