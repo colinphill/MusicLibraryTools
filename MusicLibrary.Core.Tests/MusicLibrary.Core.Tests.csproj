@@ -26,12 +26,30 @@
   <ItemGroup>
     <ProjectReference Include="..\MusicLibrary.Core\MusicLibrary.Core.csproj" />
     <ProjectReference Include="..\MusicLibraryManager.Presentation\MusicLibraryManager.Presentation.csproj" />
+    <ProjectReference
+      Include="..\MusicLibrary.Core.Tests.FpcalcFixture\MusicLibrary.Core.Tests.FpcalcFixture.csproj"
+      ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <!-- Reuse the shared fixture generator from MusicFileUtilities.Tests: tiny ffmpeg tone clips
        carrying baseline tags, written into this test binary's TestFiles folder. -->
   <Target Name="GenerateTestFixtures" AfterTargets="Build">
     <Exec Command="$(PowerShellExecutable) -NoProfile -File &quot;$(MSBuildProjectDirectory)/../MusicFileUtilities.Tests/generate-fixtures.ps1&quot; -OutDir &quot;$(TargetDir)TestFiles&quot;" />
+  </Target>
+
+  <Target Name="CopyFpcalcFixture" AfterTargets="Build">
+    <PropertyGroup>
+      <FpcalcFixtureConfiguration
+        Condition="Exists('$(MSBuildProjectDirectory)/../MusicLibrary.Core.Tests.FpcalcFixture/bin/$(Configuration)/$(TargetFramework)/FpcalcFixture.dll')">$(Configuration)</FpcalcFixtureConfiguration>
+      <FpcalcFixtureConfiguration
+        Condition="'$(FpcalcFixtureConfiguration)' == ''">Debug</FpcalcFixtureConfiguration>
+    </PropertyGroup>
+    <ItemGroup>
+      <FpcalcFixtureOutput
+        Include="$(MSBuildProjectDirectory)/../MusicLibrary.Core.Tests.FpcalcFixture/bin/$(FpcalcFixtureConfiguration)/$(TargetFramework)/FpcalcFixture*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(FpcalcFixtureOutput)"
+          DestinationFolder="$(TargetDir)FpcalcFixture" />
   </Target>
 
 </Project>

@@ -35,6 +35,142 @@ public sealed class AudioFingerprintServiceTests
             FpcalcRunner.ParseOutput("track.flac", output));
     }
 
+    [Theory]
+    [InlineData("sample.flac", "AQAD-golden-flac")]
+    [InlineData("sample.mp3", "AQAD-golden-mp3")]
+    [InlineData("sample.ogg", "AQAD-golden-ogg")]
+    [InlineData("sample_alac.m4a", "AQAD-golden-alac")]
+    [InlineData("sample.wv", "AQAD-golden-wv")]
+    [InlineData("sample.wav", "AQAD-golden-wav")]
+    [InlineData("sample.aiff", "AQAD-golden-aiff")]
+    [InlineData("sample.dsf", "AQAD-golden-dsf")]
+    [InlineData("sample.aac", "AQAD-golden-aac")]
+    [InlineData("sample_aac.m4a", "AQAD-golden-aac")]
+    [InlineData("sample.ape", "AQAD-golden-ape")]
+    [InlineData("sample.mpc", "AQAD-golden-mpc")]
+    [InlineData("sample.tta", "AQAD-golden-tta")]
+    [InlineData("sample.tak", "AQAD-golden-tak")]
+    [InlineData("sample.ofr", "AQAD-golden-ofr")]
+    [InlineData("sample.ofs", "AQAD-golden-ofs")]
+    [InlineData("sample.off", "AQAD-golden-off")]
+    [InlineData("sample.wma", "AQAD-golden-wma")]
+    [InlineData("sample.mka", "AQAD-golden-mka")]
+    [InlineData("sample.webm", "AQAD-golden-webm")]
+    public async Task RecordedFpcalcCli_ReturnsGoldenCodecResult(
+        string fixture,
+        string expectedFingerprint)
+    {
+        var runner = new FpcalcRunner();
+
+        AudioFingerprint result = await runner.GenerateAsync(
+            FpcalcFixtureExecutable,
+            MediaFixtures.Path_(fixture));
+
+        Assert.Equal(expectedFingerprint, result.Fingerprint);
+        Assert.Equal(TimeSpan.FromSeconds(42.25), result.Duration);
+        Assert.Equal(42, result.LookupDurationSeconds);
+    }
+
+    [Fact]
+    public async Task RecordedFpcalcCli_QuotesUnicodePathAndIsDeterministic()
+    {
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            $"fpcalc-\u97f3\u697d-\u0394-{Guid.NewGuid():N}");
+        string path = Path.Combine(root, "sample.flac");
+        try
+        {
+            Directory.CreateDirectory(root);
+            File.Copy(
+                MediaFixtures.Path_("sample.flac"),
+                path);
+            var runner = new FpcalcRunner();
+
+            AudioFingerprint first = await runner.GenerateAsync(
+                FpcalcFixtureExecutable,
+                path);
+            AudioFingerprint second = await runner.GenerateAsync(
+                FpcalcFixtureExecutable,
+                path);
+
+            Assert.Equal(
+                Path.GetFullPath(path),
+                first.Path);
+            Assert.Equal(
+                "AQAD-golden-flac",
+                first.Fingerprint);
+            Assert.Equal(first, second);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task RecordedFpcalcCli_RejectsMalformedOutputAndExitFailure()
+    {
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            $"fpcalc-errors-{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(root);
+            string malformed = Path.Combine(root, "malformed.flac");
+            string failure = Path.Combine(root, "failure.flac");
+            File.WriteAllBytes(malformed, [1]);
+            File.WriteAllBytes(failure, [1]);
+            var runner = new FpcalcRunner();
+
+            await Assert.ThrowsAsync<InvalidDataException>(
+                () => runner.GenerateAsync(
+                    FpcalcFixtureExecutable,
+                    malformed));
+            InvalidOperationException error =
+                await Assert.ThrowsAsync<InvalidOperationException>(
+                    () => runner.GenerateAsync(
+                        FpcalcFixtureExecutable,
+                        failure));
+
+            Assert.Contains("code 7", error.Message);
+            Assert.Contains(
+                "recorded decoder failure",
+                error.Message);
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task RecordedFpcalcCli_CancellationKillsProcess()
+    {
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            $"fpcalc-cancel-{Guid.NewGuid():N}");
+        string path = Path.Combine(root, "slow.flac");
+        try
+        {
+            Directory.CreateDirectory(root);
+            File.WriteAllBytes(path, [1]);
+            var runner = new FpcalcRunner();
+            using var cancellation =
+                new CancellationTokenSource(
+                    TimeSpan.FromMilliseconds(200));
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(
+                () => runner.GenerateAsync(
+                    FpcalcFixtureExecutable,
+                    path,
+                    cancellation.Token));
+        }
+        finally
+        {
+            try { Directory.Delete(root, recursive: true); } catch { }
+        }
+    }
+
     [Fact]
     public async Task Service_UsesPersonalExecutablePreferenceAndFullPath()
     {
@@ -506,6 +642,14 @@ public sealed class AudioFingerprintServiceTests
                 1));
         }
     }
+
+    private static string FpcalcFixtureExecutable =>
+        Path.Combine(
+            AppContext.BaseDirectory,
+            "FpcalcFixture",
+            OperatingSystem.IsWindows()
+                ? "FpcalcFixture.exe"
+                : "FpcalcFixture");
 
     private sealed class RecordingProgress : IProgress<OperationProgress>
     {

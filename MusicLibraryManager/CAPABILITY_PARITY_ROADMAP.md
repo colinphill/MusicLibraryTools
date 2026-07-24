@@ -845,17 +845,30 @@ per-operation capability flags.
     HTTP transport.
   - Provider fixtures cover cache restarts, explicit offline mode, stale
     fallback, authentication, cancellation, malformed payloads, and progress.
-- [ ] Golden Chromaprint/fpcalc fixtures for supported codecs, Unicode paths,
+- [x] Golden Chromaprint/fpcalc fixtures for supported codecs, Unicode paths,
   cancellation, malformed output, missing tools, and deterministic
   fingerprints.
+  - A recorded cross-platform fpcalc CLI fixture verifies the exact
+    `-json -length 0` process contract for every registered audio family and
+    the AAC/ALAC MPEG-4 variants, with fixed fingerprint and duration results.
+  - Process-level tests cover quoted Unicode paths, repeat determinism,
+    malformed JSON, decoder exit diagnostics, and cancellation with process
+    termination; resolver tests cover configured, bundled, system, and missing
+    executables.
 - [x] Recorded AcoustID responses for no match, one match, ambiguous matches,
   low confidence, multiple MusicBrainz recording IDs, throttling, retry, and
   offline cache behavior.
   - Consecutive lookups verify the provider interval, rate-limit fixtures
     verify retry, and explicit offline mode proves cached lookup without a
     client key or transport call.
-- [ ] Audio-payload identity tests proving tag-only writes retain cached
+- [x] Audio-payload identity tests proving tag-only writes retain cached
   fingerprints and audio changes invalidate them.
+  - Native tag writes retain identities across FLAC, MP3, Ogg, MPEG-4, WavPack,
+    DSF, AAC, Monkey's Audio, Musepack, TTA, TAK, all OptimFROG variants, ASF,
+    and Matroska, with chunked PCM and Speex-specific coverage.
+  - The persistent cache is exercised across a service restart: a metadata-only
+    edit reuses the cached result without invoking fpcalc, while an audio
+    mutation invokes it again.
 - [x] Operation-catalog contract tests proving each operation marked applicable
   to indexed files is exposed in both Workbench and Library.
 - [ ] Library-scope tests for selection, album, filtered results, full view,
