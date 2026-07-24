@@ -1867,6 +1867,10 @@ namespace MusicFileUtilities
                 long pos = s.Position;
 
                 Atom a = new Atom(s, this);
+                long atomSize = a.Size;
+                if (atomSize < 8 || atomSize > length - pos)
+                    throw new InvalidDataException(
+                        $"Invalid top-level MP4 atom size {atomSize} at offset {pos}.");
                 Atom parsedAtom = a;
                 if (MP4Util.AtomTypes.TryGetValue(a.Type, out Type Atom_type))
                 {
@@ -1878,7 +1882,7 @@ namespace MusicFileUtilities
                     parsedAtom = new DiscardedAtom(a);
                 Children.Add(parsedAtom);
 
-                long atomEnd = checked(pos + a.Size);
+                long atomEnd = checked(pos + atomSize);
                 // Avoid no-op seeks after fully read atoms, and don't seek across a final deferred
                 // atom when no subsequent bytes need parsing.
                 if (atomEnd >= length)

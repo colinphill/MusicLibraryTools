@@ -73,6 +73,9 @@ namespace MusicFileUtilities
             long fileLength = knownLength ?? s.Length;
             byte[] header = new byte[32];
             s.ReadExactly(header);
+            if (!header.AsSpan(0, 4).SequenceEqual("wvpk"u8))
+                throw new InvalidDataException(
+                    "Invalid WavPack block signature.");
             while (header.AsSpan(0, 4).SequenceEqual("wvpk"u8))
             {
                 int blocksize = Tools.Int32AtLE(header, 4) - 24;

@@ -890,7 +890,17 @@ per-operation capability flags.
   - M3U, M3U8, and WPL output is compared byte-for-byte across every path
     style and persisted encoding. A separate complete format/line-ending
     matrix covers platform, CRLF, and LF serialization.
-- [ ] Parser corpus tests for valid, unusual, truncated, and corrupt files.
+- [x] Parser corpus tests for valid, unusual, truncated, and corrupt files.
+  - A registry-wide contract opens real valid fixtures for every parser family
+    and unusual high-resolution, multichannel, codec-variant, DualStream,
+    floating-point, and WebM cases.
+  - Every parser family is also exercised with deterministic seven-byte
+    truncations and signatureless corrupt data. Rejection is limited to
+    `InvalidDataException` or `EndOfStreamException`, preventing incidental
+    bounds and overflow exceptions from becoming part of the public behavior.
+  - The corpus audit added explicit signature validation for DSF and WavPack,
+    retained complete ID3-only MP3 documents while rejecting unrelated bytes,
+    and validates top-level MP4 atom bounds before allocation or dispatch.
 - [x] Full existing solution tests at every milestone. Every completed slice is
   gated by the Release build, all portable solution tests, and `git diff
   --check` before commit.

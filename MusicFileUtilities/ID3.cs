@@ -3038,7 +3038,9 @@ namespace MusicFileUtilities
                 long length = knownLength ?? s.Length;
                 _hasId3v1 = _id3v1.Read(s, length);
                 long mediaEnd = _hasId3v1 ? length - 128 : length;
+                bool hasId3v2 = HasCompleteId3v2Header(s, mediaEnd);
                 ReadTag(s, readArtwork, length);
+                bool hasMpegAudio = false;
                 // FileStream.Length is a syscall; don't pay it once per scanned byte while
                 // hunting for the first frame sync.
                 for (; ; )
@@ -3052,7 +3054,10 @@ namespace MusicFileUtilities
                         b0 = b1;
                     }
                     if (s.Position >= mediaEnd)
+                    {
+                        RejectUnrecognizedMedia(hasId3v2, hasMpegAudio);
                         return;
+                    }
                     int ver = (b1 & 0x8) == 0x8 ? 0 : 1;
                     if ((b1 & 0x10) == 0x00)
                     {
@@ -3081,6 +3086,11 @@ namespace MusicFileUtilities
                     long datalength = mediaEnd - s.Position + 2;
                     int b2 = s.ReadByte();
                     int b3 = s.ReadByte();
+                    if (b2 < 0 || b3 < 0)
+                    {
+                        RejectUnrecognizedMedia(hasId3v2, hasMpegAudio);
+                        return;
+                    }
                     uint bitrate = _bitrates[ver, layer, b2 >> 4];
                     AverageBitrate = bitrate;
                     Samplerate = _samplerates[ver, (b2 >> 2) & 3];
@@ -3109,6 +3119,7 @@ namespace MusicFileUtilities
 
                     byte[] frame = new byte[framesize - 4];
                     s.ReadExactly(frame);
+                    hasMpegAudio = true;
 
                     try
                     {
@@ -3166,7 +3177,10 @@ namespace MusicFileUtilities
                     b0 = s.ReadByte();
                     b1 = s.ReadByte();
                     if ((b0 == -1) || (b1 == -1))
+                    {
+                        RejectUnrecognizedMedia(hasId3v2, hasMpegAudio);
                         return;
+                    }
 
                     if ((b0 != 0xff)||((b1 & 0xe0) != 0xe0))
                     {
@@ -3178,6 +3192,43 @@ namespace MusicFileUtilities
                 }
             }
 
+        }
+
+        private bool HasCompleteId3v2Header(
+            Stream stream,
+            long mediaEnd)
+        {
+            if (mediaEnd < 10)
+            {
+                stream.Position = 0;
+                return false;
+            }
+            Span<byte> header = stackalloc byte[10];
+            stream.Position = 0;
+            stream.ReadExactly(header);
+            stream.Position = 0;
+            if (!header[..3].SequenceEqual("ID3"u8) ||
+                header[3] is < 2 or > 4 ||
+                header[6] > 0x7f ||
+                header[7] > 0x7f ||
+                header[8] > 0x7f ||
+                header[9] > 0x7f)
+                return false;
+            int size =
+                (header[6] << 21) |
+                (header[7] << 14) |
+                (header[8] << 7) |
+                header[9];
+            return 10L + size <= mediaEnd;
+        }
+
+        private void RejectUnrecognizedMedia(
+            bool hasId3v2,
+            bool hasMpegAudio)
+        {
+            if (!hasId3v2 && !_hasId3v1 && !hasMpegAudio)
+                throw new InvalidDataException(
+                    "The file contains neither MPEG audio nor a recognized ID3 tag.");
         }
 
         public string CodecName => "MP3";
@@ -3352,7 +3403,8 @@ namespace MusicFileUtilities
             byte[] header = new byte[4];
             s.ReadExactly(header);
             if (!header.AsSpan().SequenceEqual("DSD "u8))
-                return;
+                throw new InvalidDataException(
+                    "Invalid DSF container signature.");
             Array.Resize(ref header, 28);
             s.ReadExactly(header, 4, 24);
             _tagoffset = BitConverter.ToInt64(header, 20);
@@ -3362,7 +3414,8 @@ namespace MusicFileUtilities
             byte[] fmtId = new byte[4];
             s.ReadExactly(fmtId);
             if (!fmtId.AsSpan().SequenceEqual("fmt "u8))
-                return;
+                throw new InvalidDataException(
+                    "The DSF format chunk is missing.");
             using (BinaryReader r = new BinaryReader(s, Encoding.ASCII, true))
             {
                 ulong chunksize = r.ReadUInt64();
