@@ -2129,6 +2129,16 @@ public partial class OperationEntryNodeViewModel : ViewModelBase
     public OperationEntryKind? Kind { get; private set; }
     public bool Exists { get; private set; }
     public bool IsDirectory { get; private set; }
+    public RecoveryPayloadKind PayloadKind { get; private set; }
+    public long RetainedBytes { get; private set; }
+    public long OriginalBytes { get; private set; }
+    public long PostEditBytes { get; private set; }
+    public string? OriginalSha256 { get; private set; }
+    public string? PostEditSha256 { get; private set; }
+    public string? DeltaPath { get; private set; }
+    public DateTime? OriginalLastWriteTimeUtc { get; private set; }
+    public FileAttributes? OriginalAttributes { get; private set; }
+    public string? PayloadSha256 { get; private set; }
     public List<OperationEntryNodeViewModel> Children { get; } = [];
     public bool HasEntry => Kind is not null;
     public bool CanRestore => HasEntry && Exists && CurrentPath is not null &&
@@ -2160,6 +2170,18 @@ public partial class OperationEntryNodeViewModel : ViewModelBase
             "Operations.Entry.State.Unknown"),
         _ => "",
     };
+    public bool HasRecoveryStorage =>
+        Kind == OperationEntryKind.Quarantined && RetainedBytes > 0;
+    public string RecoveryStorageText => !HasRecoveryStorage
+        ? ""
+        : PayloadKind == RecoveryPayloadKind.ReverseDelta
+            ? Format(
+                "Operations.Entry.Recovery.Compact",
+                RetainedBytes,
+                Math.Max(0, OriginalBytes - RetainedBytes))
+            : Format(
+                "Operations.Entry.Recovery.Full",
+                RetainedBytes);
 
     private OperationEntryNodeViewModel(
         string name,
@@ -2186,7 +2208,22 @@ public partial class OperationEntryNodeViewModel : ViewModelBase
     {
         if (IsSelected && CanRestore)
             yield return new OperationFileEntry(
-                OriginalPath, CurrentPath, Name, Kind!.Value, Exists, IsDirectory);
+                OriginalPath,
+                CurrentPath,
+                Name,
+                Kind!.Value,
+                Exists,
+                IsDirectory,
+                PayloadKind,
+                RetainedBytes,
+                OriginalBytes,
+                PostEditBytes,
+                OriginalSha256,
+                PostEditSha256,
+                DeltaPath,
+                OriginalLastWriteTimeUtc,
+                OriginalAttributes,
+                PayloadSha256);
         foreach (var child in Children)
             foreach (var entry in child.SelectedEntries())
                 yield return entry;
@@ -2248,6 +2285,16 @@ public partial class OperationEntryNodeViewModel : ViewModelBase
         parent.Kind = entry.Kind;
         parent.Exists = entry.Exists;
         parent.IsDirectory = entry.IsDirectory;
+        parent.PayloadKind = entry.PayloadKind;
+        parent.RetainedBytes = entry.RetainedBytes;
+        parent.OriginalBytes = entry.OriginalBytes;
+        parent.PostEditBytes = entry.PostEditBytes;
+        parent.OriginalSha256 = entry.OriginalSha256;
+        parent.PostEditSha256 = entry.PostEditSha256;
+        parent.DeltaPath = entry.DeltaPath;
+        parent.OriginalLastWriteTimeUtc = entry.OriginalLastWriteTimeUtc;
+        parent.OriginalAttributes = entry.OriginalAttributes;
+        parent.PayloadSha256 = entry.PayloadSha256;
     }
 
     private void SortChildren()
@@ -2265,6 +2312,7 @@ public partial class OperationEntryNodeViewModel : ViewModelBase
     public void RefreshLocalizedText()
     {
         OnPropertyChanged(nameof(StateText));
+        OnPropertyChanged(nameof(RecoveryStorageText));
         foreach (OperationEntryNodeViewModel child in Children)
             child.RefreshLocalizedText();
     }
@@ -2272,4 +2320,8 @@ public partial class OperationEntryNodeViewModel : ViewModelBase
     private string Get(string key) =>
         _localization?.Get(key) ??
         LocalizedText.Get(key);
+
+    private string Format(string key, params object?[] arguments) =>
+        _localization?.Format(key, arguments) ??
+        LocalizedText.Format(key, arguments);
 }

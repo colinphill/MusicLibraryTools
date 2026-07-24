@@ -467,7 +467,7 @@ public partial class WorkbenchView : UserControl
         WorkbenchBody.ColumnDefinitions[0].Width =
             _compactSectionPicker
                 ? new GridLength(0)
-                : new GridLength(156);
+                : new GridLength(212);
         WorkbenchBody.ColumnDefinitions[1].Width =
             _compactSectionPicker
                 ? new GridLength(0)

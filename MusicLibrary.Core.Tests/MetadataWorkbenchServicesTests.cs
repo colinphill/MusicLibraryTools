@@ -532,6 +532,85 @@ public sealed class MetadataWorkbenchServicesTests
         }
     }
 
+    [Theory]
+    [MemberData(nameof(UnicodeWritableFixtures))]
+    public async Task ReviewedMetadataApplyRestartUndoAndRecipeRedoCoverEveryWritableFormat(
+        string fixture)
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-format-undo-" + Guid.NewGuid().ToString("N"));
+        string recovery = session + ".MusicLibraryManager-recovery";
+        Directory.CreateDirectory(session);
+        string mediaPath = Path.Combine(session, "track" + Path.GetExtension(fixture));
+        File.Copy(MediaFixtures.Path_(fixture), mediaPath);
+        string statePath = Path.Combine(session, "settings.json");
+        byte[] original = await File.ReadAllBytesAsync(mediaPath);
+        DateTime originalLastWrite = File.GetLastWriteTimeUtc(mediaPath);
+        FileAttributes originalAttributes = File.GetAttributes(mediaPath);
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var journals = new OperationJournalService();
+            var history = new EditHistoryService(settings, journals);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings,
+                history: history);
+            string title = "Compact undo " + fixture;
+            OperationRecipe recipe = OperationRecipe.Create(
+                "Format compact undo",
+                new AssignFieldOperation(
+                    MetadataFieldKey.Known(TagFields.Title),
+                    title));
+
+            MetadataOperationPlan plan = await service.PreviewAsync([mediaPath], recipe);
+            MetadataApplyResult applied = await service.ApplyAsync(plan);
+
+            Assert.Equal(1, applied.ChangedFiles);
+            Assert.NotNull(applied.RecoveryStorage);
+            Assert.Equal(
+                title,
+                (await _documents.LoadAsync(mediaPath)).FirstValue(TagFields.Title));
+
+            var restartedHistory = new EditHistoryService(
+                new AppSettings(statePath),
+                new OperationJournalService());
+            Assert.Equal(1, await restartedHistory.UndoLatestAsync());
+            Assert.Equal(original, await File.ReadAllBytesAsync(mediaPath));
+            Assert.Equal(originalLastWrite, File.GetLastWriteTimeUtc(mediaPath));
+            Assert.Equal(
+                originalAttributes,
+                File.GetAttributes(mediaPath));
+
+            EditHistoryEntry redo = Assert.Single(restartedHistory.RedoEntries);
+            Assert.NotNull(redo.Recipe);
+            var redoSettings = new AppSettings(statePath);
+            var redoService = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: redoSettings),
+                redoSettings,
+                history: restartedHistory);
+            MetadataOperationPlan redoPlan = await redoService.PreviewAsync(
+                redo.Paths,
+                redo.Recipe!);
+            MetadataApplyResult redone = await redoService.ApplyAsync(redoPlan);
+
+            Assert.Equal(1, redone.ChangedFiles);
+            Assert.Equal(
+                title,
+                (await _documents.LoadAsync(mediaPath)).FirstValue(TagFields.Title));
+        }
+        finally
+        {
+            try { Directory.Delete(session, recursive: true); } catch { }
+            try { Directory.Delete(recovery, recursive: true); } catch { }
+        }
+    }
+
     [Fact]
     public async Task Workbench_LoadsFoldersAndPlaylistOrderWithoutDuplicates()
     {
@@ -1100,7 +1179,7 @@ public sealed class MetadataWorkbenchServicesTests
     }
 
     [Fact]
-    public async Task PreviewBlocksApplyWhenRecoverySpaceCannotHoldStageAndBackup()
+    public async Task PreviewBlocksApplyWhenRecoverySpaceCannotHoldRequiredStage()
     {
         using var media = MediaFixtures.Copy("sample.flac");
         string statePath = Path.Combine(
@@ -1132,7 +1211,7 @@ public sealed class MetadataWorkbenchServicesTests
                 OperationIssueSeverity.Blocker,
                 issue.Severity);
             Assert.Contains(
-                (new FileInfo(media.Path).Length * 2)
+                new FileInfo(media.Path).Length
                     .ToString("N0"),
                 issue.Message);
             Assert.False(plan.CanApply);

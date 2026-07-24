@@ -30,6 +30,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     private object?[] _discogsStatusArguments = [];
     private string? _fieldMappingStatusKey;
     private object?[] _fieldMappingStatusArguments = [];
+    private long? _fieldMappingStatusCount;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(EditCurrentConfigurationCommand))]
@@ -608,21 +609,21 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         _refreshingDisplayLanguage = true;
         try
         {
-            foreach (var culture in
-                     _localization.SupportedCultures)
+            foreach (var locale in
+                     _localization.SupportedLocales)
             {
                 LocalizedChoice<string>? choice =
                     DisplayLanguageChoices.FirstOrDefault(
                         item => string.Equals(
                             item.Value,
-                            culture.Name,
+                            locale.Name,
                             StringComparison.OrdinalIgnoreCase));
-                string label = _localization.Get(
-                    LocalizationKeys.CultureName(
-                        culture.Name));
+                string label =
+                    locale.GetDisplayName(
+                        _localization);
                 if (choice is null)
                     DisplayLanguageChoices.Add(
-                        new(culture.Name, label));
+                        new(locale.Name, label));
                 else
                     choice.Label = label;
             }
@@ -775,7 +776,22 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     {
         _fieldMappingStatusKey = key;
         _fieldMappingStatusArguments = arguments;
+        _fieldMappingStatusCount = null;
         FieldMappingStatus = _localization.Format(key, arguments);
+    }
+
+    private void SetFieldMappingCountStatus(
+        string key,
+        long count,
+        params object?[] arguments)
+    {
+        _fieldMappingStatusKey = key;
+        _fieldMappingStatusArguments = arguments;
+        _fieldMappingStatusCount = count;
+        FieldMappingStatus = _localization.FormatCount(
+            key,
+            count,
+            arguments);
     }
 
     private void RefreshLocalizedRuntimeText()
@@ -787,8 +803,15 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             DiscogsCredentialStatus = _localization.Format(
                 _discogsStatusKey, _discogsStatusArguments);
         if (_fieldMappingStatusKey is not null)
-            FieldMappingStatus = _localization.Format(
-                _fieldMappingStatusKey, _fieldMappingStatusArguments);
+            FieldMappingStatus =
+                _fieldMappingStatusCount is { } count
+                    ? _localization.FormatCount(
+                        _fieldMappingStatusKey,
+                        count,
+                        _fieldMappingStatusArguments)
+                    : _localization.Format(
+                        _fieldMappingStatusKey,
+                        _fieldMappingStatusArguments);
         foreach (IndexTargetEditorRow root in IndexTargets)
             root.RefreshPermissionSummary();
         if (AdvancedIngestProfile is not null)
@@ -1657,11 +1680,9 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         {
             _fieldMappings.Save(
                 FieldMappings.Select(row => row.Build()).ToArray());
-            SetFieldMappingStatus(
-                FieldMappings.Count == 1
-                    ? "Settings.FieldMappings.Status.Saved.One"
-                    : "Settings.FieldMappings.Status.Saved.Other",
-                FieldMappings.Count);
+            SetFieldMappingCountStatus(
+                "Settings.FieldMappings.Status.Saved",
+                (long)FieldMappings.Count);
         }
         catch (Exception error)
         {

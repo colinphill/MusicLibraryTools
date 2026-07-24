@@ -13,6 +13,7 @@ using MusicLibraryManager.Presentation;
 using MusicLibraryManager.Views;
 using MusicLibraryTools;
 using Xunit;
+using System.Globalization;
 
 namespace MusicLibraryManager.UI.Tests;
 
@@ -175,6 +176,89 @@ public sealed class WorkbenchResponsiveMatrixTests
         }
     }
 
+    [AvaloniaFact]
+    public void GermanAndCjkLocalesFitEveryWorkbenchDestinationAtMinimumSize()
+    {
+        var settings = new MatrixSettings();
+        var localization = new ResourceLocalizationService(settings);
+        using ServiceProvider services =
+            Composition.BuildServices(collection =>
+            {
+                collection.AddSingleton<IAppSettings>(settings);
+                collection.AddSingleton<ILocalizationService>(localization);
+            });
+        App.UseServicesForTests(services);
+
+        ThemeVariant? previousTheme =
+            Application.Current!.RequestedThemeVariant;
+        CultureInfo previousUICulture = CultureInfo.CurrentUICulture;
+        MainWindow window = services.GetRequiredService<MainWindow>();
+        string? captureDirectory =
+            Environment.GetEnvironmentVariable(
+                "MUSIC_LIBRARY_MANAGER_CAPTURE_DIR");
+        string[] cultures =
+            ["de-DE", "ja-JP", "ko-KR", "zh-CN", "zh-TW"];
+        try
+        {
+            window.Show();
+            window.WindowState = WindowState.Normal;
+            window.Width = 900;
+            window.Height = 600;
+            window.FontSize = 18;
+            services.GetRequiredService<INavigationService>()
+                .Navigate(ShellDestination.Workbench);
+
+            foreach (string culture in cultures)
+            {
+                localization.SetCulture(culture);
+                foreach ((string themeName, ThemeVariant theme) in Themes)
+                {
+                    Application.Current.RequestedThemeVariant = theme;
+                    Render();
+                    WorkbenchView view = Assert.IsType<WorkbenchView>(
+                        window.FindControl<ContentControl>("ContentHost")!.Content);
+                    WorkbenchViewModel model =
+                        services.GetRequiredService<WorkbenchViewModel>();
+                    Carousel sections =
+                        view.FindControl<Carousel>("WorkbenchTabs")!;
+                    AssertNavigationMode(view, 900);
+
+                    foreach (WorkbenchSection section in
+                             Enum.GetValues<WorkbenchSection>())
+                    {
+                        model.SelectedSection = section;
+                        Render();
+                        Assert.Equal((int)section, sections.SelectedIndex);
+                        AssertSectionFits(view, sections, section, 900, 600);
+                        AssertAtMostOnePrimaryPerToolbar(view, section);
+                        Assert.DoesNotContain(
+                            view.GetVisualDescendants()
+                                .OfType<TextBlock>()
+                                .Where(text => text.IsEffectivelyVisible)
+                                .Select(text => text.Text ?? ""),
+                            text => text.Contains('\u27E6'));
+                        if (section == WorkbenchSection.Session)
+                            Assert.True(
+                                view.FindControl<AppDataGrid>("WorkbenchGrid")!
+                                    .Bounds.Height >= 220);
+                        CaptureLocalizedFrame(
+                            window,
+                            captureDirectory,
+                            culture,
+                            themeName,
+                            section);
+                    }
+                }
+            }
+        }
+        finally
+        {
+            window.Hide();
+            Application.Current.RequestedThemeVariant = previousTheme;
+            CultureInfo.CurrentUICulture = previousUICulture;
+        }
+    }
+
     private static void AssertNavigationMode(
         WorkbenchView view,
         int windowWidth)
@@ -319,6 +403,27 @@ public sealed class WorkbenchResponsiveMatrixTests
             Path.Combine(
                 captureDirectory,
                 $"workbench-pseudo-18-dark-{width}x{height}-{section}.png"),
+            PngBitmapEncoderOptions.Default);
+    }
+
+    private static void CaptureLocalizedFrame(
+        MainWindow window,
+        string? captureDirectory,
+        string culture,
+        string themeName,
+        WorkbenchSection section)
+    {
+        using var frame = window.GetLastRenderedFrame();
+        Assert.NotNull(frame);
+        Assert.Equal(900, frame.PixelSize.Width);
+        Assert.Equal(600, frame.PixelSize.Height);
+        if (string.IsNullOrWhiteSpace(captureDirectory))
+            return;
+        Directory.CreateDirectory(captureDirectory);
+        frame.Save(
+            Path.Combine(
+                captureDirectory,
+                $"workbench-{culture}-18-{themeName}-900x600-{section}.png"),
             PngBitmapEncoderOptions.Default);
     }
 

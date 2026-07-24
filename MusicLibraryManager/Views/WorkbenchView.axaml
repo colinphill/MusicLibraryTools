@@ -149,7 +149,7 @@
                     AutomationProperties.Name="{DynamicResource Loc.Workbench.Navigation.SectionAutomation}" />
           <Grid x:Name="WorkbenchBody"
                 Grid.Row="1"
-                ColumnDefinitions="156,10,*">
+                ColumnDefinitions="212,10,*">
             <Border x:Name="WorkbenchSectionRail"
                     Classes="card"
                     Padding="8"

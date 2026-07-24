@@ -11,6 +11,10 @@ using MusicLibraryManager.Services;
 
 namespace MusicLibraryManager.Controls;
 
+public readonly record struct LocalizedGridHeader(
+    string Text,
+    string ResourceKey);
+
 public sealed record AppGridColumnDefinition(
     string Key,
     string Header,
@@ -22,7 +26,34 @@ public sealed record AppGridColumnDefinition(
     bool Sortable = true,
     bool Editable = false,
     IComparer? CustomSortComparer = null,
-    string? HeaderResourceKey = null);
+    string? HeaderResourceKey = null)
+{
+    public AppGridColumnDefinition(
+        string Key,
+        LocalizedGridHeader Header,
+        string? BindingPath,
+        double Width,
+        double MinWidth = 60,
+        bool Visible = true,
+        IDataTemplate? CellTemplate = null,
+        bool Sortable = true,
+        bool Editable = false,
+        IComparer? CustomSortComparer = null)
+        : this(
+            Key,
+            Header.Text,
+            BindingPath,
+            Width,
+            MinWidth,
+            Visible,
+            CellTemplate,
+            Sortable,
+            Editable,
+            CustomSortComparer,
+            Header.ResourceKey)
+    {
+    }
+}
 
 public sealed class AppDataGrid : DataGrid
 {

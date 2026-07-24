@@ -103,6 +103,8 @@ public sealed class ServiceCollectionExtensionsTests
             provider.GetRequiredService<IOperationRecipeStore>());
         Assert.IsType<MetadataOperationService>(
             provider.GetRequiredService<IMetadataOperationService>());
+        Assert.IsType<ReverseDeltaService>(
+            provider.GetRequiredService<IReverseDeltaService>());
         Assert.IsType<EditHistoryService>(
             provider.GetRequiredService<IEditHistoryService>());
         Assert.Equal(BuiltInLibraryOperationProviders.All.Count,

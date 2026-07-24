@@ -20,6 +20,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IItunesMediaMutationService, ItunesMediaMutationService>();
         services.AddSingleton<IMediaCatalogIntegration, ItunesMediaCatalogIntegration>();
         services.AddSingleton<IFileInventoryService, FileInventoryService>();
+        services.AddSingleton<IReverseDeltaService, ReverseDeltaService>();
         services.AddSingleton<IFileMutationPlanExecutor, FileMutationPlanExecutor>();
         services.AddSingleton<IReviewedFileOperationService,
             ReviewedFileOperationService>();

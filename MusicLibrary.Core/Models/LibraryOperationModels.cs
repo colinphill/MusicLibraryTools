@@ -71,7 +71,8 @@ public sealed record FileMutationPlan(
     DateTimeOffset CreatedAtUtc,
     bool RetainRecovery = true,
     string? PolicyFingerprint = null,
-    Guid? LibraryId = null)
+    Guid? LibraryId = null,
+    RecoveryPayloadPolicy RecoveryPayloadPolicy = RecoveryPayloadPolicy.FullOriginal)
 {
     public bool CanApply => Issues.All(issue => issue.Severity != OperationIssueSeverity.Blocker);
 }
@@ -85,6 +86,7 @@ public sealed record FileMutationSummary(
     IReadOnlyList<OperationIssue> Issues)
 {
     public int Moved { get; init; }
+    public RecoveryStorageSummary? RecoveryStorage { get; init; }
 }
 
 public sealed record FileInventory(

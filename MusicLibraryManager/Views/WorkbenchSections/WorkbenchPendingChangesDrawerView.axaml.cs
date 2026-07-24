@@ -39,10 +39,11 @@ public partial class WorkbenchPendingChangesDrawerView :
             new("After", L("Workbench.Grid.Header.After"), "After", 240, 140),
         ]);
 
-    private string L(string key) => _localization.Get(key);
+    private LocalizedGridHeader L(string key) =>
+        new(_localization.Get(key), key);
 
     private void OnCultureChanged(object? sender, EventArgs e) =>
-        ConfigureColumns();
+        WorkbenchPendingChangesGrid.RefreshLocalizedHeaders();
 
     public event EventHandler? CloseRequested;
 

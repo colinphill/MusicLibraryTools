@@ -103,6 +103,9 @@
   <data name="Common.Apply" xml:space="preserve">
     <value>Apply</value>
   </data>
+  <data name="Common.Beta" xml:space="preserve">
+    <value>Beta</value>
+  </data>
   <data name="Common.Browse" xml:space="preserve">
     <value>Browse</value>
   </data>
@@ -1794,6 +1797,12 @@
   </data>
   <data name="Operations.Recovery.SearchRootAutomation" xml:space="preserve">
     <value>Recovery search root</value>
+  </data>
+  <data name="Operations.Entry.Recovery.Compact" xml:space="preserve">
+    <value>Compact recovery · {0:N0} bytes retained · {1:N0} bytes saved</value>
+  </data>
+  <data name="Operations.Entry.Recovery.Full" xml:space="preserve">
+    <value>Full-file recovery · {0:N0} bytes retained</value>
   </data>
   <data name="Operations.Subtitle" xml:space="preserve">
     <value>Run unified jobs, inspect history, and recover journaled changes.</value>
@@ -5199,7 +5208,7 @@
   <data name="Workbench.Grid.Header.Genres" xml:space="preserve"><value>Genres</value></data>
   <data name="Workbench.Grid.Header.Group" xml:space="preserve"><value>Group</value></data>
   <data name="Workbench.Grid.Header.Kind" xml:space="preserve"><value>Kind</value></data>
-  <data name="Workbench.Grid.Header.Label" xml:space="preserve"><value>Workbench.Grid.Header.Label</value></data>
+  <data name="Workbench.Grid.Header.Label" xml:space="preserve"><value>Label</value></data>
   <data name="Workbench.Grid.Header.Labels" xml:space="preserve"><value>Labels</value></data>
   <data name="Workbench.Grid.Header.MatchedPosition" xml:space="preserve"><value>Matched Position</value></data>
   <data name="Workbench.Grid.Header.MusicBrainzRecordingIds" xml:space="preserve"><value>MusicBrainz Recording Ids</value></data>
@@ -5252,7 +5261,7 @@
   <data name="Workbench.Metadata.Kind.Known" xml:space="preserve"><value>Known</value></data>
   <data name="Workbench.Metadata.Mixed.One" xml:space="preserve"><value>Mixed across {0:N0} selected file</value></data>
   <data name="Workbench.Metadata.Mixed.Other" xml:space="preserve"><value>Mixed across {0:N0} selected files</value></data>
-  <data name="Workbench.Navigation.Automation" xml:space="preserve"><value>Workbench.Navigation.Automation</value></data>
+  <data name="Workbench.Navigation.Automation" xml:space="preserve"><value>Workbench navigation</value></data>
   <data name="Workbench.Navigation.Group.Automate" xml:space="preserve"><value>Automate</value></data>
   <data name="Workbench.Navigation.Group.Edit" xml:space="preserve"><value>Edit</value></data>
   <data name="Workbench.Navigation.Group.Enrich" xml:space="preserve"><value>Enrich</value></data>

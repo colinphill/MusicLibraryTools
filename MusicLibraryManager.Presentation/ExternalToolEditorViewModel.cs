@@ -15,9 +15,13 @@ public sealed record ExternalToolInvocationRow(
 
 public partial class ExternalToolEditorViewModel : ObservableObject
 {
+    private const string DefaultNameResourceKey =
+        "Workbench.Tools.DefaultName";
     private readonly IExternalToolStore? _store;
     private readonly ILocalizationService? _localization;
     private bool _loading;
+    private bool _nameUsesLocalizedDefault;
+    private bool _settingLocalizedDefaultName;
     private string? _storeStatusKey;
     private object?[] _storeStatusArguments = [];
 
@@ -39,7 +43,7 @@ public partial class ExternalToolEditorViewModel : ObservableObject
     {
         _store = store;
         _localization = localization;
-        Name = L("Workbench.Tools.DefaultName");
+        SetLocalizedDefaultName();
         RefreshLocalizedChoices();
         if (_localization is not null)
             _localization.CultureChanged +=
@@ -59,7 +63,12 @@ public partial class ExternalToolEditorViewModel : ObservableObject
     public event Action? Changed;
 
     partial void OnIdChanged(Guid value) => RaiseChanged();
-    partial void OnNameChanged(string value) => RaiseChanged();
+    partial void OnNameChanged(string value)
+    {
+        if (!_settingLocalizedDefaultName)
+            _nameUsesLocalizedDefault = false;
+        RaiseChanged();
+    }
     partial void OnExecutableChanged(string? value) => RaiseChanged();
     partial void OnArgumentsTextChanged(string value) => RaiseChanged();
     partial void OnWorkingDirectoryChanged(string? value) =>
@@ -86,7 +95,7 @@ public partial class ExternalToolEditorViewModel : ObservableObject
         {
             SelectedSavedTool = null;
             Id = Guid.NewGuid();
-            Name = L("Workbench.Tools.DefaultName");
+            SetLocalizedDefaultName();
             Executable = null;
             ArgumentsText = "{Files}";
             WorkingDirectory = null;
@@ -121,6 +130,7 @@ public partial class ExternalToolEditorViewModel : ObservableObject
             return;
         ExternalToolDefinition definition = CreateDefinition();
         _store.Save(definition);
+        _nameUsesLocalizedDefault = false;
         Id = definition.Id;
         ReloadSavedTools();
         SelectedSavedTool = SavedTools.FirstOrDefault(tool =>
@@ -167,6 +177,7 @@ public partial class ExternalToolEditorViewModel : ObservableObject
         {
             Id = definition.Id;
             Name = definition.Name;
+            _nameUsesLocalizedDefault = false;
             Executable = definition.Executable;
             ArgumentsText = string.Join(
                 Environment.NewLine,
@@ -224,6 +235,20 @@ public partial class ExternalToolEditorViewModel : ObservableObject
         _localization?.Format(key, arguments) ??
         LocalizedText.Format(key, arguments);
 
+    private void SetLocalizedDefaultName()
+    {
+        _settingLocalizedDefaultName = true;
+        try
+        {
+            Name = L(DefaultNameResourceKey);
+        }
+        finally
+        {
+            _settingLocalizedDefaultName = false;
+        }
+        _nameUsesLocalizedDefault = true;
+    }
+
     private void SetStatus(
         string key,
         params object?[] arguments)
@@ -254,6 +279,8 @@ public partial class ExternalToolEditorViewModel : ObservableObject
         object? sender,
         EventArgs e)
     {
+        if (_nameUsesLocalizedDefault)
+            SetLocalizedDefaultName();
         RefreshLocalizedChoices();
         if (_storeStatusKey is not null)
             StoreStatus = LF(

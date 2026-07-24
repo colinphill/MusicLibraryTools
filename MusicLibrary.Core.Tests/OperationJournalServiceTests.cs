@@ -214,7 +214,7 @@ public sealed class OperationJournalServiceTests
         Assert.False(File.Exists(source));
         var action = Assert.Single(plan.Actions);
         Assert.Equal("new collision", File.ReadAllText(action.CollisionBackupPath));
-        Assert.Equal("COMMIT\tRESTORE", File.ReadLines(plan.RestoreJournalPath).Last());
+        Assert.Equal("CONSUMED\tRESTORE", File.ReadLines(plan.RestoreJournalPath).Last());
     }
 
     [Fact]

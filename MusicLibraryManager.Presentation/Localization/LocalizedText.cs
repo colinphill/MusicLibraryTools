@@ -40,7 +40,10 @@ public static class LocalizedText
         params object?[] arguments)
     {
         string variant =
-            count == 1 ? $"{key}.One" : $"{key}.Other";
+            CardinalPluralResolver.ResourceKey(
+                key,
+                count,
+                CultureInfo.CurrentUICulture);
         object?[] formatArguments =
             [count, .. arguments];
         return Format(variant, formatArguments);

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using MusicLibrary.Core.Models;
 
@@ -24,6 +25,34 @@ public interface IOperationJournalService
         IProgress<int>? progress = null,
         CancellationToken ct = default);
 
+    Task<OperationRestoreBatchPlan> PreviewRestoreBatchAsync(
+        IReadOnlyList<OperationRestorePlan> plans,
+        CancellationToken ct = default) =>
+        Task.FromResult(new OperationRestoreBatchPlan(plans));
+
+    async Task<OperationRestoreBatchResult> ApplyRestoreBatchAsync(
+        OperationRestoreBatchPlan plan,
+        IProgress<int>? progress = null,
+        CancellationToken ct = default)
+    {
+        int restored = 0, collisions = 0;
+        var journals = new List<string>();
+        foreach (OperationRestorePlan item in plan.Plans)
+        {
+            OperationRestoreResult result = await ApplyRestoreAsync(item, progress, ct)
+                .ConfigureAwait(false);
+            restored += result.RestoredCount;
+            collisions += result.CollisionBackupCount;
+            journals.Add(item.RestoreJournalPath);
+        }
+        return new(restored, collisions, journals);
+    }
+
+    Task<OperationRestoreTransitionState> ReconcileRestoreBatchAsync(
+        IReadOnlyList<string> restoreJournalPaths,
+        CancellationToken ct = default) =>
+        Task.FromResult(OperationRestoreTransitionState.Unapplied);
+
     Task<OperationPurgePlan> PreviewPurgeAsync(
         IReadOnlyList<OperationJournalSummary> runs,
         int retentionDays,
@@ -47,13 +76,16 @@ public sealed class OperationJournalService : IOperationJournalService
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
     private readonly IFileMutationCoordinator _mutations;
     private readonly IItunesMediaMutationService? _itunes;
+    private readonly IReverseDeltaService _reverseDelta;
 
     public OperationJournalService(
         IFileMutationCoordinator? mutations = null,
-        IItunesMediaMutationService? itunes = null)
+        IItunesMediaMutationService? itunes = null,
+        IReverseDeltaService? reverseDelta = null)
     {
         _mutations = mutations ?? FileMutationCoordinator.Shared;
         _itunes = itunes;
+        _reverseDelta = reverseDelta ?? new ReverseDeltaService();
     }
 
     public Task<OperationJournalDiscoveryResult> DiscoverAsync(
@@ -91,16 +123,63 @@ public sealed class OperationJournalService : IOperationJournalService
         return Task.Run(() => ApplyRestoreCoreAsync(plan, progress, ct), ct);
     }
 
+    public Task<OperationRestoreBatchPlan> PreviewRestoreBatchAsync(
+        IReadOnlyList<OperationRestorePlan> plans,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(plans);
+        ct.ThrowIfCancellationRequested();
+        return Task.FromResult(new OperationRestoreBatchPlan(plans));
+    }
+
+    public Task<OperationRestoreBatchResult> ApplyRestoreBatchAsync(
+        OperationRestoreBatchPlan plan,
+        IProgress<int>? progress = null,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        return Task.Run(
+            () => ApplyRestoreBatchCoreAsync(
+                plan, progress, isBatchTransaction: true, ct),
+            ct);
+    }
+
+    public Task<OperationRestoreTransitionState> ReconcileRestoreBatchAsync(
+        IReadOnlyList<string> restoreJournalPaths,
+        CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(restoreJournalPaths);
+        return Task.Run(
+            () => ReconcileRestoreBatchCoreAsync(restoreJournalPaths, ct),
+            ct);
+    }
+
     private async Task<OperationRestoreResult> ApplyRestoreCoreAsync(
         OperationRestorePlan plan,
         IProgress<int>? progress,
         CancellationToken ct)
     {
-        if (!plan.CanApply)
-            return new(0, 0);
+        OperationRestoreBatchResult result = await ApplyRestoreBatchCoreAsync(
+            new([plan]), progress, isBatchTransaction: false, ct).ConfigureAwait(false);
+        return new(result.RestoredCount, result.CollisionBackupCount);
+    }
 
-        ItunesMediaMutation[] itunesMutations = ExpandRestoreMutations(plan.Actions).ToArray();
-        var paths = plan.Actions.SelectMany(action => new[]
+    private async Task<OperationRestoreBatchResult> ApplyRestoreBatchCoreAsync(
+        OperationRestoreBatchPlan plan,
+        IProgress<int>? progress,
+        bool isBatchTransaction,
+        CancellationToken ct)
+    {
+        if (!plan.CanApply)
+            return new(0, 0, []);
+
+        OperationRestoreAction[] actions = [.. plan.Actions];
+        if (actions.GroupBy(action => action.DestinationPath, PathComparer)
+            .Any(group => group.Count() > 1))
+            throw new InvalidOperationException(
+                "A restore batch cannot target the same destination more than once.");
+        ItunesMediaMutation[] itunesMutations = ExpandRestoreMutations(actions).ToArray();
+        var paths = actions.SelectMany(action => new[]
         {
             action.SourcePath, action.DestinationPath, action.CollisionBackupPath,
         }).Concat(itunesMutations.SelectMany(mutation =>
@@ -108,74 +187,580 @@ public sealed class OperationJournalService : IOperationJournalService
             .Where(path => path is not null)
             .Select(path => path!)
             .ToList();
-        using var lease = await _mutations.AcquireAsync(paths, ct);
-        foreach (var action in plan.Actions)
+        using var lease = await _mutations.AcquireAsync(paths, ct).ConfigureAwait(false);
+
+        // This is deliberately a batch-wide gate: one stale source or destination prevents all
+        // volumes from changing and leaves every recovery payload intact.
+        foreach (OperationRestoreAction action in actions)
         {
             ct.ThrowIfCancellationRequested();
             ValidateSnapshot(action.SourcePath, action.SourceSnapshot, "restore source");
-            ValidateSnapshot(action.DestinationPath, action.DestinationSnapshot, "restore destination");
-            if (File.Exists(action.CollisionBackupPath) || Directory.Exists(action.CollisionBackupPath))
-                throw new InvalidOperationException($"Restore collision backup already exists: {action.CollisionBackupPath}");
+            ValidateSnapshot(action.DestinationPath, action.DestinationSnapshot,
+                "restore destination");
+            if (action.PayloadKind == RecoveryPayloadKind.ReverseDelta)
+                await ValidateCompactBaseAsync(action, ct).ConfigureAwait(false);
+            if (Exists(action.CollisionBackupPath))
+                throw new InvalidOperationException(
+                    $"Restore collision backup already exists: {action.CollisionBackupPath}");
         }
-        await using IItunesMediaMutationSession? itunesSession = _itunes is null
-            ? null
-            : await _itunes.BeginAsync(paths, backupFiles: false, ct);
 
-        WriteRestoreJournal(plan.RestoreJournalPath,
-            ["BEGIN\tRESTORE", .. plan.Actions.Select(action =>
-                $"PLAN_RESTORE\t{action.SourcePath}\t{action.DestinationPath}\t{action.CollisionBackupPath}")]);
-        var completed = new List<OperationRestoreAction>();
+        var preparedCompact = actions
+            .Where(item => item.PayloadKind == RecoveryPayloadKind.ReverseDelta)
+            .ToDictionary(
+                action => action,
+                action => SiblingRestorePath(action.DestinationPath));
         try
         {
-            foreach (var action in plan.Actions)
+            foreach (OperationRestorePlan restorePlan in plan.Plans)
+            {
+                WriteRestoreJournal(
+                    restorePlan.RestoreJournalPath,
+                    [
+                        isBatchTransaction
+                            ? "BEGIN\tRESTORE_BATCH"
+                            : "BEGIN\tRESTORE",
+                        .. restorePlan.Actions.Select(action =>
+                            action.PayloadKind == RecoveryPayloadKind.ReverseDelta
+                                ? $"PLAN_RESTORE_COMPACT\t{action.SourcePath}\t" +
+                                  $"{action.DestinationPath}\t" +
+                                  $"{action.CollisionBackupPath}\t" +
+                                  $"{preparedCompact[action]}"
+                                : $"PLAN_RESTORE\t{action.SourcePath}\t" +
+                                  $"{action.DestinationPath}\t" +
+                                  $"{action.CollisionBackupPath}"),
+                    ]);
+            }
+
+            // Reconstruct and verify every compact original before the first live rename. A
+            // corrupt payload, malicious command, cancellation, or capacity failure therefore
+            // cannot leave a multi-volume batch partially restored.
+            foreach (OperationRestoreAction action in actions.Where(item =>
+                         item.PayloadKind == RecoveryPayloadKind.ReverseDelta))
             {
                 ct.ThrowIfCancellationRequested();
-                bool collisionMoved = false;
-                try
-                {
-                    if (action.DestinationSnapshot.Exists)
-                    {
-                        MovePath(action.DestinationPath, action.CollisionBackupPath);
-                        collisionMoved = true;
-                    }
-                    MovePath(action.SourcePath, action.DestinationPath);
-                }
-                catch
-                {
-                    if (collisionMoved && !Exists(action.DestinationPath) && Exists(action.CollisionBackupPath))
-                        MovePath(action.CollisionBackupPath, action.DestinationPath);
-                    throw;
-                }
-                completed.Add(action);
-                WriteRestoreJournal(plan.RestoreJournalPath,
-                    [$"RESTORE\t{action.SourcePath}\t{action.DestinationPath}\t{action.CollisionBackupPath}"]);
-                progress?.Report(completed.Count);
+                string temporary = preparedCompact[action];
+                await _reverseDelta.RestoreFileAsync(
+                    action.SourcePath, action.DestinationPath, temporary, ct)
+                    .ConfigureAwait(false);
             }
-            if (itunesSession is not null)
-                await itunesSession.CommitAsync(itunesMutations, CancellationToken.None);
-            WriteRestoreJournal(plan.RestoreJournalPath, ["COMMIT\tRESTORE"]);
-            if (itunesSession is not null)
-                await itunesSession.CompleteAsync(CancellationToken.None);
-            return new(completed.Count, completed.Count(action => action.DestinationSnapshot.Exists));
         }
         catch
         {
+            bool rollbackComplete =
+                TryDeleteFilesStrict(preparedCompact.Values);
+            foreach (OperationRestorePlan restorePlan in plan.Plans)
+                TryWriteRestoreJournal(
+                    restorePlan.RestoreJournalPath,
+                    rollbackComplete
+                        ? isBatchTransaction
+                            ? "ROLLBACK\tRESTORE_BATCH"
+                            : "ROLLBACK\tRESTORE"
+                        : isBatchTransaction
+                            ? "ROLLBACK_FAILED\tRESTORE_BATCH"
+                            : "ROLLBACK_FAILED\tRESTORE");
+            throw;
+        }
+
+        IItunesMediaMutationSession? startedSession;
+        try
+        {
+            startedSession = _itunes is null
+                ? null
+                : await _itunes.BeginAsync(paths, backupFiles: false, ct)
+                    .ConfigureAwait(false);
+        }
+        catch
+        {
+            bool rollbackComplete =
+                TryDeleteFilesStrict(preparedCompact.Values);
+            foreach (OperationRestorePlan restorePlan in plan.Plans)
+                TryWriteRestoreJournal(
+                    restorePlan.RestoreJournalPath,
+                    rollbackComplete
+                        ? isBatchTransaction
+                            ? "ROLLBACK\tRESTORE_BATCH"
+                            : "ROLLBACK\tRESTORE"
+                        : isBatchTransaction
+                            ? "ROLLBACK_FAILED\tRESTORE_BATCH"
+                            : "ROLLBACK_FAILED\tRESTORE");
+            throw;
+        }
+        await using IItunesMediaMutationSession? itunesSession = startedSession;
+
+        var completed = new List<(OperationRestorePlan Plan, OperationRestoreAction Action)>();
+        bool reachedCommitPoint = false;
+        try
+        {
+            foreach (OperationRestorePlan restorePlan in plan.Plans)
+            {
+                foreach (OperationRestoreAction action in restorePlan.Actions)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    bool collisionMoved = false;
+                    try
+                    {
+                        if (action.DestinationSnapshot.Exists)
+                        {
+                            MovePath(action.DestinationPath, action.CollisionBackupPath);
+                            collisionMoved = true;
+                        }
+                        if (action.PayloadKind == RecoveryPayloadKind.ReverseDelta)
+                            File.Move(preparedCompact[action], action.DestinationPath, false);
+                        else
+                            MovePath(action.SourcePath, action.DestinationPath);
+                    }
+                    catch
+                    {
+                        if (collisionMoved && !Exists(action.DestinationPath) &&
+                            Exists(action.CollisionBackupPath))
+                            MovePath(action.CollisionBackupPath, action.DestinationPath);
+                        throw;
+                    }
+                    completed.Add((restorePlan, action));
+                    WriteRestoreJournal(restorePlan.RestoreJournalPath,
+                        [action.PayloadKind == RecoveryPayloadKind.ReverseDelta
+                            ? $"RESTORE_COMPACT\t{action.SourcePath}\t{action.DestinationPath}\t{action.CollisionBackupPath}"
+                            : $"RESTORE\t{action.SourcePath}\t{action.DestinationPath}\t{action.CollisionBackupPath}"]);
+                    progress?.Report(completed.Count);
+                }
+            }
+            if (plan.Plans.Count > 0)
+                WriteRestoreJournal(plan.Plans[0].RestoreJournalPath,
+                    [isBatchTransaction
+                        ? "APPLIED\tRESTORE_BATCH"
+                        : "APPLIED\tRESTORE"]);
+            if (itunesSession is not null)
+                await itunesSession.CommitAsync(itunesMutations, CancellationToken.None)
+                    .ConfigureAwait(false);
+            foreach (OperationRestorePlan restorePlan in plan.Plans)
+                WriteRestoreJournal(
+                    restorePlan.RestoreJournalPath,
+                    [isBatchTransaction
+                        ? "COMMIT\tRESTORE_BATCH"
+                        : "COMMIT\tRESTORE"]);
+            reachedCommitPoint = true;
+            if (itunesSession is not null)
+                await itunesSession.CompleteAsync(CancellationToken.None).ConfigureAwait(false);
+            foreach (OperationRestoreAction action in actions.Where(item =>
+                         item.PayloadKind == RecoveryPayloadKind.ReverseDelta))
+            {
+                // The durable restore commit is the payload-consumption point. Recipe redo does
+                // not need either the reverse delta or the transient post-edit collision.
+                DeleteFileStrict(action.CollisionBackupPath);
+                DeleteFileStrict(action.SourcePath);
+            }
+            foreach (OperationRestorePlan restorePlan in plan.Plans)
+                WriteRestoreJournal(
+                    restorePlan.RestoreJournalPath,
+                    [isBatchTransaction
+                        ? "CONSUMED\tRESTORE_BATCH"
+                        : "CONSUMED\tRESTORE"]);
+            return new(
+                completed.Count,
+                completed.Count(item => item.Action.DestinationSnapshot.Exists),
+                plan.Plans.Select(item => item.RestoreJournalPath).ToArray());
+        }
+        catch
+        {
+            if (reachedCommitPoint)
+                throw;
             bool rollbackComplete = true;
-            foreach (var action in completed.AsEnumerable().Reverse())
+            foreach ((_, OperationRestoreAction action) in completed.AsEnumerable().Reverse())
             {
                 try
                 {
-                    if (Exists(action.DestinationPath) && !Exists(action.SourcePath))
+                    if (action.PayloadKind == RecoveryPayloadKind.ReverseDelta)
+                    {
+                        if (File.Exists(action.DestinationPath))
+                            DeleteFileStrict(action.DestinationPath);
+                    }
+                    else if (Exists(action.DestinationPath) && !Exists(action.SourcePath))
+                    {
                         MovePath(action.DestinationPath, action.SourcePath);
+                    }
                     if (Exists(action.CollisionBackupPath) && !Exists(action.DestinationPath))
                         MovePath(action.CollisionBackupPath, action.DestinationPath);
                 }
-                catch { rollbackComplete = false; }
+                catch
+                {
+                    rollbackComplete = false;
+                }
             }
-            TryWriteRestoreJournal(plan.RestoreJournalPath,
-                rollbackComplete ? "ROLLBACK\tRESTORE" : "ROLLBACK_FAILED\tRESTORE");
+            rollbackComplete &=
+                TryDeleteFilesStrict(preparedCompact.Values);
+            foreach (OperationRestorePlan restorePlan in plan.Plans)
+                TryWriteRestoreJournal(restorePlan.RestoreJournalPath,
+                    rollbackComplete
+                        ? isBatchTransaction
+                            ? "ROLLBACK\tRESTORE_BATCH"
+                            : "ROLLBACK\tRESTORE"
+                        : isBatchTransaction
+                            ? "ROLLBACK_FAILED\tRESTORE_BATCH"
+                            : "ROLLBACK_FAILED\tRESTORE");
             throw;
         }
+    }
+
+    private async Task<OperationRestoreTransitionState> ReconcileRestoreBatchCoreAsync(
+        IReadOnlyList<string> restoreJournalPaths,
+        CancellationToken ct)
+    {
+        RestoreJournalTransaction[] transactions = restoreJournalPaths
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(PathComparer)
+            .Where(File.Exists)
+            .Select(ReadRestoreTransaction)
+            .ToArray();
+        if (transactions.Length == 0)
+            return OperationRestoreTransitionState.Unapplied;
+
+        if (transactions.Any(transaction =>
+                transaction.Terminal == RestoreJournalTerminal.RolledBack))
+            return OperationRestoreTransitionState.Unapplied;
+        if (transactions.All(transaction =>
+                transaction.Terminal == RestoreJournalTerminal.Consumed))
+            return OperationRestoreTransitionState.Consumed;
+
+        RestoreJournalAction[] actions = transactions
+            .SelectMany(transaction => transaction.Actions)
+            .ToArray();
+        foreach (RestoreJournalAction action in actions)
+            ValidateRestoreJournalAction(action);
+
+        var paths = actions
+            .SelectMany(action => new[]
+            {
+                action.SourcePath,
+                action.DestinationPath,
+                action.CollisionBackupPath,
+                action.PreparedPath,
+            })
+            .Where(path => path is not null)
+            .Select(path => path!)
+            .Concat(transactions.Select(transaction => transaction.Path))
+            .ToArray();
+        using var lease = await _mutations.AcquireAsync(paths, ct).ConfigureAwait(false);
+
+        bool reachedCommitPoint = transactions.Any(transaction =>
+            transaction.Terminal is
+                RestoreJournalTerminal.Committed or
+                RestoreJournalTerminal.Consumed);
+        if (!reachedCommitPoint)
+        {
+            try
+            {
+                foreach (RestoreJournalAction action in actions.Reverse())
+                {
+                    ct.ThrowIfCancellationRequested();
+                    if (action.PayloadKind == RecoveryPayloadKind.ReverseDelta)
+                        await RollBackInterruptedCompactRestoreAsync(action, ct)
+                            .ConfigureAwait(false);
+                    else
+                        RollBackInterruptedFullRestore(action);
+                }
+                foreach (RestoreJournalTransaction transaction in transactions)
+                    WriteRestoreJournal(
+                        transaction.Path,
+                        [transaction.IsBatch
+                            ? "ROLLBACK\tRESTORE_BATCH"
+                            : "ROLLBACK\tRESTORE"]);
+                return OperationRestoreTransitionState.Unapplied;
+            }
+            catch
+            {
+                foreach (RestoreJournalTransaction transaction in transactions)
+                    TryWriteRestoreJournal(
+                        transaction.Path,
+                        transaction.IsBatch
+                            ? "ROLLBACK_FAILED\tRESTORE_BATCH"
+                            : "ROLLBACK_FAILED\tRESTORE");
+                throw;
+            }
+        }
+
+        // Once APPLIED is durable, every live file has crossed the batch commit point. Complete
+        // the journal transition and idempotently consume only compact transient payloads.
+        foreach (RestoreJournalTransaction transaction in transactions.Where(
+                     transaction => transaction.Terminal is
+                         RestoreJournalTerminal.None or
+                         RestoreJournalTerminal.Applied))
+        {
+            WriteRestoreJournal(
+                transaction.Path,
+                [transaction.IsBatch
+                    ? "COMMIT\tRESTORE_BATCH"
+                    : "COMMIT\tRESTORE"]);
+        }
+        foreach (RestoreJournalAction action in actions.Where(action =>
+                     action.PayloadKind == RecoveryPayloadKind.ReverseDelta))
+        {
+            ct.ThrowIfCancellationRequested();
+            await ValidateCommittedCompactRestoreAsync(action, ct)
+                .ConfigureAwait(false);
+            DeleteFileStrict(action.PreparedPath);
+            DeleteFileStrict(action.CollisionBackupPath);
+            DeleteFileStrict(action.SourcePath);
+        }
+        foreach (RestoreJournalTransaction transaction in transactions)
+        {
+            if (transaction.Terminal != RestoreJournalTerminal.Consumed)
+                WriteRestoreJournal(
+                    transaction.Path,
+                    [transaction.IsBatch
+                        ? "CONSUMED\tRESTORE_BATCH"
+                        : "CONSUMED\tRESTORE"]);
+        }
+        return OperationRestoreTransitionState.Consumed;
+    }
+
+    private async Task RollBackInterruptedCompactRestoreAsync(
+        RestoreJournalAction action,
+        CancellationToken ct)
+    {
+        if (!File.Exists(action.SourcePath))
+            throw new InvalidOperationException(
+                $"The compact recovery payload is missing: {action.SourcePath}");
+
+        if (File.Exists(action.CollisionBackupPath))
+        {
+            await _reverseDelta.ValidateBaseFileAsync(
+                action.SourcePath,
+                action.CollisionBackupPath,
+                ct).ConfigureAwait(false);
+            if (File.Exists(action.DestinationPath))
+            {
+                ReverseDeltaDescriptor descriptor = await _reverseDelta.InspectFileAsync(
+                    action.SourcePath,
+                    ct).ConfigureAwait(false);
+                string destinationHash = await HashFileAsync(
+                    action.DestinationPath,
+                    ct).ConfigureAwait(false);
+                if (!StringComparer.OrdinalIgnoreCase.Equals(
+                        destinationHash,
+                        descriptor.OriginalSha256))
+                {
+                    throw new InvalidOperationException(
+                        $"The interrupted compact restore destination changed: " +
+                        $"{action.DestinationPath}");
+                }
+                DeleteFileStrict(action.DestinationPath);
+            }
+            File.Move(action.CollisionBackupPath, action.DestinationPath, false);
+        }
+        else if (File.Exists(action.DestinationPath))
+        {
+            // No collision means the live rename had not begun. The destination must still be
+            // the exact post-edit base before the prepared original can be discarded.
+            await _reverseDelta.ValidateBaseFileAsync(
+                action.SourcePath,
+                action.DestinationPath,
+                ct).ConfigureAwait(false);
+        }
+        else
+        {
+            throw new InvalidOperationException(
+                $"The interrupted compact restore lost its live base: " +
+                $"{action.DestinationPath}");
+        }
+
+        DeleteFileStrict(action.PreparedPath);
+    }
+
+    private static void RollBackInterruptedFullRestore(
+        RestoreJournalAction action)
+    {
+        bool sourceExists = Exists(action.SourcePath);
+        bool destinationExists = Exists(action.DestinationPath);
+        bool collisionExists = Exists(action.CollisionBackupPath);
+        if (collisionExists)
+        {
+            if (!sourceExists)
+            {
+                if (!destinationExists)
+                    throw new InvalidOperationException(
+                        $"The interrupted restore lost both copies of " +
+                        $"'{action.DestinationPath}'.");
+                MovePath(action.DestinationPath, action.SourcePath);
+                destinationExists = false;
+            }
+            else if (destinationExists)
+            {
+                throw new InvalidOperationException(
+                    $"The interrupted restore destination changed: " +
+                    $"{action.DestinationPath}");
+            }
+
+            MovePath(action.CollisionBackupPath, action.DestinationPath);
+            return;
+        }
+
+        if (!sourceExists)
+        {
+            if (!destinationExists)
+                throw new InvalidOperationException(
+                    $"The interrupted restore lost '{action.SourcePath}'.");
+            MovePath(action.DestinationPath, action.SourcePath);
+        }
+    }
+
+    private async Task ValidateCommittedCompactRestoreAsync(
+        RestoreJournalAction action,
+        CancellationToken ct)
+    {
+        if (!File.Exists(action.SourcePath))
+            return; // Cleanup already consumed the durable payload before the process stopped.
+        ReverseDeltaDescriptor descriptor = await _reverseDelta.InspectFileAsync(
+            action.SourcePath,
+            ct).ConfigureAwait(false);
+        if (!File.Exists(action.DestinationPath))
+            throw new InvalidOperationException(
+                $"The committed compact restore destination is missing: " +
+                $"{action.DestinationPath}");
+        string destinationHash = await HashFileAsync(
+            action.DestinationPath,
+            ct).ConfigureAwait(false);
+        if (!StringComparer.OrdinalIgnoreCase.Equals(
+                destinationHash,
+                descriptor.OriginalSha256))
+        {
+            throw new InvalidOperationException(
+                $"The committed compact restore destination changed: " +
+                $"{action.DestinationPath}");
+        }
+        if (File.Exists(action.CollisionBackupPath))
+        {
+            await _reverseDelta.ValidateBaseFileAsync(
+                action.SourcePath,
+                action.CollisionBackupPath,
+                ct).ConfigureAwait(false);
+        }
+    }
+
+    private static RestoreJournalTransaction ReadRestoreTransaction(string path)
+    {
+        string fullPath = Path.GetFullPath(path);
+        string[] lines = File.ReadAllLines(fullPath);
+        bool isBatch = lines.Any(line =>
+            line.EndsWith("\tRESTORE_BATCH", StringComparison.Ordinal));
+        var actions = new List<RestoreJournalAction>();
+        RestoreJournalTerminal terminal = RestoreJournalTerminal.None;
+        foreach (string line in lines)
+        {
+            string[] fields = line.Split('\t');
+            if (fields.Length == 0)
+                continue;
+            switch (fields[0])
+            {
+                case "PLAN_RESTORE_COMPACT" when fields.Length > 4:
+                    actions.Add(new(
+                        RecoveryPayloadKind.ReverseDelta,
+                        fields[1],
+                        fields[2],
+                        fields[3],
+                        fields[4],
+                        fullPath));
+                    break;
+                case "PLAN_RESTORE" when fields.Length > 3:
+                    actions.Add(new(
+                        RecoveryPayloadKind.FullOriginal,
+                        fields[1],
+                        fields[2],
+                        fields[3],
+                        null,
+                        fullPath));
+                    break;
+                case "APPLIED":
+                    terminal = RestoreJournalTerminal.Applied;
+                    break;
+                case "COMMIT":
+                    terminal = RestoreJournalTerminal.Committed;
+                    break;
+                case "CONSUMED":
+                    terminal = RestoreJournalTerminal.Consumed;
+                    break;
+                case "ROLLBACK":
+                    terminal = RestoreJournalTerminal.RolledBack;
+                    break;
+                case "ROLLBACK_FAILED":
+                    terminal = RestoreJournalTerminal.RollbackFailed;
+                    break;
+            }
+        }
+        return new(fullPath, isBatch, actions, terminal);
+    }
+
+    private static void ValidateRestoreJournalAction(
+        RestoreJournalAction action)
+    {
+        string restoreRoot = Path.GetDirectoryName(action.JournalPath)!;
+        if (!IsDescendant(action.CollisionBackupPath, restoreRoot))
+            throw new InvalidDataException(
+                "A restore collision path escaped its restore transaction root.");
+        if (action.PayloadKind != RecoveryPayloadKind.ReverseDelta)
+            return;
+        if (action.PreparedPath is null ||
+            !PathComparer.Equals(
+                Path.GetDirectoryName(Path.GetFullPath(action.PreparedPath)),
+                Path.GetDirectoryName(Path.GetFullPath(action.DestinationPath))))
+        {
+            throw new InvalidDataException(
+                "A compact prepared path is not beside its destination.");
+        }
+        string preparedName = Path.GetFileName(action.PreparedPath);
+        string expectedPrefix = "." + Path.GetFileName(action.DestinationPath) + ".";
+        if (!preparedName.StartsWith(expectedPrefix, PathComparison) ||
+            !preparedName.EndsWith(".undo-restore", PathComparison))
+        {
+            throw new InvalidDataException(
+                "A compact prepared path has an invalid transaction name.");
+        }
+    }
+
+    private static async Task<string> HashFileAsync(
+        string path,
+        CancellationToken ct)
+    {
+        await using var stream = new FileStream(
+            path,
+            FileMode.Open,
+            FileAccess.Read,
+            FileShare.Read,
+            1024 * 1024,
+            FileOptions.Asynchronous | FileOptions.SequentialScan);
+        using var hasher = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        byte[] buffer = new byte[1024 * 1024];
+        while (true)
+        {
+            int read = await stream.ReadAsync(buffer, ct).ConfigureAwait(false);
+            if (read == 0)
+                break;
+            hasher.AppendData(buffer, 0, read);
+        }
+        return Convert.ToHexString(hasher.GetHashAndReset());
+    }
+
+    private static void DeleteFileStrict(string? path)
+    {
+        if (path is null)
+            return;
+        if (Directory.Exists(path))
+            throw new IOException(
+                $"A recovery file path unexpectedly became a directory: {path}");
+        if (!File.Exists(path))
+            return;
+        File.SetAttributes(path, FileAttributes.Normal);
+        File.Delete(path);
+    }
+
+    private static bool TryDeleteFilesStrict(IEnumerable<string> paths)
+    {
+        bool deleted = true;
+        foreach (string path in paths)
+        {
+            try { DeleteFileStrict(path); }
+            catch { deleted = false; }
+        }
+        return deleted;
     }
 
     private static IEnumerable<ItunesMediaMutation> ExpandRestoreMutations(
@@ -183,6 +768,11 @@ public sealed class OperationJournalService : IOperationJournalService
     {
         foreach (OperationRestoreAction action in actions)
         {
+            if (action.PayloadKind == RecoveryPayloadKind.ReverseDelta)
+            {
+                yield return ItunesMediaMutation.Refresh(action.DestinationPath);
+                continue;
+            }
             if (action.SourceSnapshot.IsDirectory)
             {
                 foreach (string source in Directory.EnumerateFiles(
@@ -458,7 +1048,15 @@ public sealed class OperationJournalService : IOperationJournalService
                 Guid.NewGuid().ToString("N") + "-" + Path.GetFileName(entry.OriginalPath));
             actions.Add(new(
                 entry.CurrentPath!, entry.OriginalPath, backup,
-                Snapshot(entry.CurrentPath!), Snapshot(entry.OriginalPath), entry.Kind));
+                Snapshot(entry.CurrentPath!), Snapshot(entry.OriginalPath), entry.Kind,
+                entry.PayloadKind,
+                entry.OriginalSha256,
+                entry.PostEditSha256,
+                entry.OriginalBytes,
+                entry.PostEditBytes,
+                entry.OriginalLastWriteTimeUtc,
+                entry.OriginalAttributes,
+                entry.PayloadSha256));
         }
         return new(run, Path.Combine(restoreRoot, "restore.tsv"), actions,
             entries.Count - actions.Count);
@@ -487,6 +1085,76 @@ public sealed class OperationJournalService : IOperationJournalService
             (!current.Exists || Math.Abs((current.LastWriteTimeUtc - expected.LastWriteTimeUtc).TotalMilliseconds) <= 500);
         if (!matches)
             throw new InvalidOperationException($"{label} changed since preview: {path}. Preview again before restoring.");
+    }
+
+    private async Task ValidateCompactBaseAsync(
+        OperationRestoreAction action,
+        CancellationToken ct)
+    {
+        if (!File.Exists(action.DestinationPath) ||
+            action.PostEditLength < 0 ||
+            new FileInfo(action.DestinationPath).Length != action.PostEditLength ||
+            string.IsNullOrWhiteSpace(action.PostEditSha256) ||
+            string.IsNullOrWhiteSpace(action.OriginalSha256))
+        {
+            throw new InvalidOperationException(
+                $"Compact recovery base changed after the edit: {action.DestinationPath}. " +
+                "Undo was refused and its history was retained.");
+        }
+        try
+        {
+            ReverseDeltaDescriptor descriptor = await _reverseDelta.ValidateBaseFileAsync(
+                action.SourcePath, action.DestinationPath, ct).ConfigureAwait(false);
+            bool journalMatches =
+                descriptor.OriginalLength == action.OriginalLength &&
+                descriptor.PostEditLength == action.PostEditLength &&
+                StringComparer.OrdinalIgnoreCase.Equals(
+                    descriptor.OriginalSha256, action.OriginalSha256) &&
+                StringComparer.OrdinalIgnoreCase.Equals(
+                    descriptor.PostEditSha256, action.PostEditSha256) &&
+                (action.OriginalLastWriteTimeUtc is null ||
+                 descriptor.OriginalLastWriteTimeUtc ==
+                 action.OriginalLastWriteTimeUtc.Value) &&
+                (action.OriginalAttributes is null ||
+                 descriptor.OriginalAttributes == action.OriginalAttributes.Value) &&
+                (action.PayloadSha256 is null ||
+                 StringComparer.OrdinalIgnoreCase.Equals(
+                     descriptor.PayloadSha256, action.PayloadSha256));
+            if (!journalMatches)
+                throw new InvalidDataException(
+                    "The compact journal metadata does not match its reverse-delta payload.");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception error)
+        {
+            throw new InvalidOperationException(
+                $"Compact recovery base or payload changed after the edit: " +
+                $"{action.DestinationPath}. Undo was refused and its history was retained.",
+                error);
+        }
+    }
+
+    private static string SiblingRestorePath(string destination) =>
+        Path.Combine(
+            Path.GetDirectoryName(destination)!,
+            $".{Path.GetFileName(destination)}.{Guid.NewGuid():N}.undo-restore");
+
+    private static void TryDeleteFile(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+            {
+                File.SetAttributes(path, FileAttributes.Normal);
+                File.Delete(path);
+            }
+        }
+        catch
+        {
+        }
     }
 
     private static bool Exists(string path) => File.Exists(path) || Directory.Exists(path);
@@ -566,6 +1234,12 @@ public sealed class OperationJournalService : IOperationJournalService
         Dictionary<string, OperationFileEntry> entries,
         CancellationToken ct)
     {
+        var completedCompactDestinations = lines
+            .Select(line => line.Split('\t'))
+            .Where(fields => fields.Length > 2 &&
+                fields[0] == "COMPACT_REPLACE")
+            .Select(fields => fields[2])
+            .ToHashSet(PathComparer);
         foreach (string line in lines)
         {
             ct.ThrowIfCancellationRequested();
@@ -589,6 +1263,13 @@ public sealed class OperationJournalService : IOperationJournalService
                         prior.Kind == OperationEntryKind.Quarantined)
                         break; // A replacement's recoverable backup is more useful than its install.
                     Put(entries, originalRoot, fields[2], fields[2], OperationEntryKind.Created);
+                    break;
+                case "DELTA_READY" when fields.Length > 10:
+                    if (!completedCompactDestinations.Contains(fields[2]))
+                        PutCompact(entries, originalRoot, fields, installed: false);
+                    break;
+                case "COMPACT_REPLACE" when fields.Length > 10:
+                    PutCompact(entries, originalRoot, fields, installed: true);
                     break;
                 case "PLAN_QUARANTINE" when fields.Length > 3:
                     PutPlanIfAbsent(entries, originalRoot, fields[2], fields[3], OperationEntryKind.Quarantined);
@@ -679,8 +1360,89 @@ public sealed class OperationJournalService : IOperationJournalService
     {
         bool exists = current is not null && (File.Exists(current) || Directory.Exists(current));
         bool directory = current is not null && Directory.Exists(current);
+        long retainedBytes = current is not null && File.Exists(current)
+            ? new FileInfo(current).Length
+            : 0;
         entries[original] = new OperationFileEntry(
-            original, current, Relative(originalRoot, original), kind, exists, directory);
+            original,
+            current,
+            Relative(originalRoot, original),
+            kind,
+            exists,
+            directory,
+            RecoveryPayloadKind.FullOriginal,
+            retainedBytes,
+            retainedBytes);
+    }
+
+    private static void PutCompact(
+        Dictionary<string, OperationFileEntry> entries,
+        string originalRoot,
+        string[] fields,
+        bool installed)
+    {
+        string original = fields[2];
+        string delta = fields[3];
+        bool versionParsed = int.TryParse(
+            fields[1], CultureInfo.InvariantCulture, out int formatVersion);
+        bool originalLengthParsed = long.TryParse(
+            fields[4], CultureInfo.InvariantCulture, out long originalBytes);
+        bool postLengthParsed = long.TryParse(
+            fields[5], CultureInfo.InvariantCulture, out long postEditBytes);
+        bool retainedLengthParsed = long.TryParse(
+            fields[8], CultureInfo.InvariantCulture, out long retainedBytes);
+        bool timestampParsed = long.TryParse(
+            fields[9], CultureInfo.InvariantCulture, out long lastWriteTicks);
+        bool attributesParsed = int.TryParse(
+            fields[10], CultureInfo.InvariantCulture, out int attributes);
+        bool parsed = versionParsed &&
+            formatVersion == ReverseDeltaService.CurrentFormatVersion &&
+            originalLengthParsed && postLengthParsed &&
+            retainedLengthParsed && timestampParsed && attributesParsed;
+        if (!parsed)
+            return;
+        bool deltaExists = File.Exists(delta);
+        bool baseExists = File.Exists(original);
+        if (!installed && deltaExists && baseExists)
+        {
+            string? currentHash = TryHashFile(original);
+            if (StringComparer.OrdinalIgnoreCase.Equals(currentHash, fields[6]))
+                return; // Delta became durable, but the live replacement never occurred.
+            installed = StringComparer.OrdinalIgnoreCase.Equals(currentHash, fields[7]);
+        }
+        bool exists = deltaExists && baseExists;
+        entries[original] = new OperationFileEntry(
+            original,
+            delta,
+            Relative(originalRoot, original),
+            installed ? OperationEntryKind.Quarantined : OperationEntryKind.Planned,
+            exists,
+            false,
+            RecoveryPayloadKind.ReverseDelta,
+            retainedBytes,
+            originalBytes,
+            postEditBytes,
+            fields[6],
+            fields[7],
+            delta,
+            new DateTime(lastWriteTicks, DateTimeKind.Utc),
+            (FileAttributes)attributes,
+            fields.Length > 11 ? fields[11] : null);
+    }
+
+    private static string? TryHashFile(string path)
+    {
+        try
+        {
+            using var stream = new FileStream(
+                path, FileMode.Open, FileAccess.Read, FileShare.Read,
+                1024 * 1024, FileOptions.SequentialScan);
+            return Convert.ToHexString(SHA256.HashData(stream));
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private static void PutPlanIfAbsent(
@@ -810,6 +1572,14 @@ public sealed class OperationJournalService : IOperationJournalService
             var (state, count) = tool == "UpdateCarCard"
                 ? ParseDeviceJournal(lines)
                 : ParseMutationJournal(lines);
+            if (state == OperationJournalState.Interrupted &&
+                CompactPreparationIsSafelyUnapplied(lines))
+            {
+                // A crash after DELTA_READY but before the atomic install left the original
+                // untouched. Classifying this run as rolled back keeps it eligible for the
+                // existing retention purge instead of protecting an unnecessary delta forever.
+                state = OperationJournalState.RolledBack;
+            }
             return new(tool, Kind(tool), state, runPath, journal, created, count);
         }
         catch
@@ -822,7 +1592,7 @@ public sealed class OperationJournalService : IOperationJournalService
     {
         var active = new HashSet<string>(StringComparer.Ordinal);
         var affected = new HashSet<string>(PathComparer);
-        bool committed = false, rolledBack = false;
+        OperationJournalState terminal = OperationJournalState.Unknown;
         foreach (string line in lines)
         {
             string[] fields = line.Split('\t');
@@ -832,22 +1602,65 @@ public sealed class OperationJournalService : IOperationJournalService
             string key = fields.Length > 1 ? fields[1] : "";
             switch (operation)
             {
-                case "BEGIN": active.Add(key); break;
-                case "COMMIT": active.Remove(key); committed = true; break;
-                case "ROLLBACK": active.Remove(key); rolledBack = true; break;
+                case "BEGIN":
+                    active.Add(key);
+                    break;
+                case "COMMIT":
+                    active.Remove(key);
+                    terminal = OperationJournalState.Completed;
+                    break;
+                case "ROLLBACK":
+                    active.Remove(key);
+                    terminal = OperationJournalState.RolledBack;
+                    break;
+                case "ROLLBACK_FAILED":
+                    active.Remove(key);
+                    terminal = OperationJournalState.Interrupted;
+                    break;
                 case "QUARANTINE":
                 case "STAGE_DELETE":
                 case "MOVE":
+                case "DELTA_READY":
+                case "COMPACT_REPLACE":
                     if (fields.Length > 2) affected.Add(fields[2]);
                     break;
             }
         }
-        var state = active.Count > 0 ? OperationJournalState.Interrupted
-            : committed ? OperationJournalState.Completed
-            : rolledBack ? OperationJournalState.RolledBack
-            : lines.Length > 0 ? OperationJournalState.Interrupted
-            : OperationJournalState.Unknown;
+        var state = active.Count > 0
+            ? OperationJournalState.Interrupted
+            : terminal != OperationJournalState.Unknown
+                ? terminal
+                : lines.Length > 0
+                    ? OperationJournalState.Interrupted
+                    : OperationJournalState.Unknown;
         return (state, affected.Count);
+    }
+
+    private static bool CompactPreparationIsSafelyUnapplied(string[] lines)
+    {
+        string[][] records = lines
+            .Select(line => line.Split('\t'))
+            .ToArray();
+        string[][] ready = records
+            .Where(fields => fields.Length > 10 &&
+                fields[0] == "DELTA_READY")
+            .ToArray();
+        if (ready.Length == 0 ||
+            records.Any(fields => fields.Length > 0 &&
+                fields[0] is
+                    "QUARANTINE" or
+                    "STAGE_DELETE" or
+                    "MOVE" or
+                    "INSTALL" or
+                    "COMPACT_REPLACE"))
+        {
+            return false;
+        }
+        return ready.All(fields =>
+            File.Exists(fields[2]) &&
+            StringComparer.OrdinalIgnoreCase.Equals(
+                TryHashFile(fields[2]),
+                fields[6]));
     }
 
     private static (OperationJournalState State, int Count) ParseDeviceJournal(string[] lines)
@@ -908,4 +1721,28 @@ public sealed class OperationJournalService : IOperationJournalService
         OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
     private static readonly StringComparison PathComparison =
         OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+    private enum RestoreJournalTerminal
+    {
+        None,
+        Applied,
+        Committed,
+        Consumed,
+        RolledBack,
+        RollbackFailed,
+    }
+
+    private sealed record RestoreJournalAction(
+        RecoveryPayloadKind PayloadKind,
+        string SourcePath,
+        string DestinationPath,
+        string CollisionBackupPath,
+        string? PreparedPath,
+        string JournalPath);
+
+    private sealed record RestoreJournalTransaction(
+        string Path,
+        bool IsBatch,
+        IReadOnlyList<RestoreJournalAction> Actions,
+        RestoreJournalTerminal Terminal);
 }

@@ -70,6 +70,14 @@ public sealed partial class SettingsLocalizationTests
         LibraryPathCollisionPolicy collision = profile.CollisionPolicy;
         ThemeChoice dark = viewModel.ThemeChoices.Single(choice =>
             choice.Value == "Dark");
+        LocalizedChoice<string> french =
+            viewModel.DisplayLanguageChoices.Single(
+                choice =>
+                    choice.Value == "fr-FR");
+        Assert.StartsWith(
+            "fran\u00E7ais (France)",
+            french.Label,
+            StringComparison.Ordinal);
         viewModel.SelectedThemeChoice = dark;
         LibraryPathCollisionPolicy[] collisionValues =
             viewModel.CollisionPolicyChoices.Select(choice => choice.Value).ToArray();
@@ -92,6 +100,63 @@ public sealed partial class SettingsLocalizationTests
             viewModel.CollisionPolicyChoices[0].Label);
         Assert.NotEqual(themeLabel, dark.Name);
         Assert.StartsWith("fr-FR:", dark.Name, StringComparison.Ordinal);
+        Assert.Same(
+            french,
+            viewModel.DisplayLanguageChoices.Single(
+                choice =>
+                    choice.Value == "fr-FR"));
+        Assert.Contains(
+            "fr-FR:Common.Beta",
+            french.Label,
+            StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Field_mapping_saved_count_uses_shipping_plural_rules_and_relocalizes()
+    {
+        CultureInfo previousUICulture =
+            CultureInfo.CurrentUICulture;
+        try
+        {
+            var settings = new FakeSettings();
+            settings.SetPreference(
+                LocalizationPreferences.DisplayLanguage,
+                "en-US");
+            var localization =
+                new ResourceLocalizationService(settings);
+            var viewModel = new SettingsViewModel(
+                settings,
+                new FakeFilePicker(),
+                new FakeDialogs(),
+                new FakeTheme(),
+                localization: localization);
+
+            Assert.Empty(viewModel.FieldMappings);
+            viewModel.SaveFieldMappingsCommand.Execute(null);
+            Assert.Equal(
+                localization.FormatCount(
+                    "Settings.FieldMappings.Status.Saved",
+                    0),
+                viewModel.FieldMappingStatus);
+
+            localization.SetCulture("pt-BR");
+
+            Assert.Equal(
+                localization.Format(
+                    "Settings.FieldMappings.Status.Saved.One",
+                    0),
+                viewModel.FieldMappingStatus);
+            Assert.Equal(
+                localization.FormatCount(
+                    "Settings.FieldMappings.Status.Saved",
+                    0),
+                viewModel.FieldMappingStatus);
+        }
+        finally
+        {
+            CultureInfo.CurrentUICulture =
+                previousUICulture;
+        }
     }
 
     private static string FindRepositoryFile(string relativePath)

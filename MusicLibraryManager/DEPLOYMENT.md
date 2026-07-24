@@ -41,12 +41,19 @@ its parent directory. Packaged builds extract the matching embedded daemon throu
 - macOS x64 and arm64: a self-contained `MusicLibraryManager.app` in a `tar.gz` and an optional
   drag-to-Applications DMG.
 
+Localized CJK text uses platform font fallback. Windows and macOS normally include suitable fonts.
+Linux installations must provide a CJK-capable font through fontconfig; a Noto CJK family package
+appropriate to the distribution and desired languages is recommended. The application package
+does not bundle or require one particular CJK font.
+
 Android device synchronization additionally requires Android platform-tools (`adb`) on the target
 computer. The Devices page can select an explicit `adb` executable when auto-detection is not
 appropriate.
 
 CI/CD Authenticode-signs the Windows application executable, first-party managed assemblies, the
-Inno Setup uninstaller, and the installer with Azure Artifact Signing. The Windows job uses Inno's
+localized first-party presentation satellite assemblies recursively, the Inno Setup uninstaller,
+and the installer with Azure Artifact Signing. Every publish is rejected if any shipping locale's
+satellite assembly is absent. The Windows job uses Inno's
 two-pass signed-uninstaller cache: it generates the unsigned uninstaller image, signs and verifies
 that image, then rebuilds the installer with the signed image embedded. The signed application
 payload is verified before the ZIP and installer are rebuilt, the installer signature is verified

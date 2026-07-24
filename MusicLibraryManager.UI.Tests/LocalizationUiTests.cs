@@ -95,7 +95,7 @@ public sealed class LocalizationUiTests
                 "Display language A",
                 label.Text);
             Assert.Equal(
-                "English A",
+                "English (United States)",
                 choice.Label);
             Assert.Equal("en-US", choice.Value);
 
@@ -106,7 +106,7 @@ public sealed class LocalizationUiTests
                 "Display language B",
                 label.Text);
             Assert.Equal(
-                "English B",
+                "English (United States)",
                 choice.Label);
             Assert.Equal("en-US", choice.Value);
         }
@@ -136,11 +136,11 @@ public sealed class LocalizationUiTests
         [
             new(
                 "Title",
-                "Title fallback",
-                "Title",
-                180,
-                HeaderResourceKey:
+                new LocalizedGridHeader(
+                    "Title fallback",
                     "Grid.Header.Title"),
+                "Title",
+                180),
             new(
                 "Artist",
                 "Artist",
@@ -181,6 +181,205 @@ public sealed class LocalizationUiTests
         finally
         {
             window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public void Workbench_tools_headers_use_preselected_culture_and_refresh_without_rebuilding_layout()
+    {
+        CultureInfo previousUICulture =
+            CultureInfo.CurrentUICulture;
+        var settings = new TestSettings();
+        settings.SetPreference(
+            LocalizationPreferences.DisplayLanguage,
+            "en-US");
+        var localization =
+            new ResourceLocalizationService(settings);
+        using ServiceProvider services =
+            Composition.BuildServices(collection =>
+            {
+                collection.AddSingleton<IAppSettings>(
+                    settings);
+                collection.AddSingleton<
+                    ILocalizationService>(
+                    localization);
+            });
+        App.UseServicesForTests(services);
+        localization.SetCulture("de-DE");
+        Dispatcher.UIThread.RunJobs();
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Show();
+            services.GetRequiredService<
+                    INavigationService>()
+                .Navigate(
+                    ShellDestination.Workbench);
+            Dispatcher.UIThread.RunJobs();
+
+            WorkbenchView view =
+                Assert.IsType<WorkbenchView>(
+                    window.FindControl<
+                            ContentControl>(
+                            "ContentHost")!
+                        .Content);
+            WorkbenchViewModel model =
+                services.GetRequiredService<
+                    WorkbenchViewModel>();
+            LibraryViewModel library =
+                services.GetRequiredService<
+                    LibraryViewModel>();
+            model.SelectedSection =
+                WorkbenchSection.Tools;
+            Dispatcher.UIThread.RunJobs();
+            AppDataGrid grid =
+                view.FindControl<AppDataGrid>(
+                    "ExternalToolInvocationGrid")!;
+            DataGridColumn number =
+                grid.Columns.Single(column =>
+                    grid.KeyFor(column) == "Number");
+            DataGridColumn executable =
+                grid.Columns.Single(column =>
+                    grid.KeyFor(column) ==
+                    "Executable");
+            DataGridColumn arguments =
+                grid.Columns.Single(column =>
+                    grid.KeyFor(column) ==
+                    "Arguments");
+
+            Assert.Equal(
+                "#",
+                number.Header);
+            Assert.Equal(
+                "Programmdatei",
+                executable.Header);
+            Assert.Equal(
+                localization.Get(
+                    "Workbench.Grid.Header.Arguments"),
+                arguments.Header);
+            Assert.Equal(
+                localization.Get(
+                    "Workbench.Reports.DefaultName"),
+                library.ReportEditor.Name);
+            Assert.Equal(
+                localization.Get(
+                    "Workbench.Playlists.DefaultName"),
+                library.PlaylistEditor.Name);
+            Assert.Equal(
+                localization.Get(
+                    "Workbench.Tools.DefaultName"),
+                library.ExternalToolEditor.Name);
+
+            arguments.DisplayIndex = 0;
+            arguments.Width =
+                new DataGridLength(333);
+            int argumentsDisplayIndex =
+                arguments.DisplayIndex;
+            Assert.True(
+                grid.ApplySort(
+                    new LibrarySortState(
+                        "Executable",
+                        true)));
+            Dispatcher.UIThread.RunJobs();
+
+            localization.SetCulture("fr-FR");
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Same(
+                number,
+                grid.Columns.Single(column =>
+                    grid.KeyFor(column) == "Number"));
+            Assert.Same(
+                executable,
+                grid.Columns.Single(column =>
+                    grid.KeyFor(column) ==
+                    "Executable"));
+            Assert.Same(
+                arguments,
+                grid.Columns.Single(column =>
+                    grid.KeyFor(column) ==
+                    "Arguments"));
+            Assert.Equal(
+                "#",
+                number.Header);
+            Assert.Equal(
+                localization.Get(
+                    "Workbench.Grid.Header.Executable"),
+                executable.Header);
+            Assert.Equal(
+                localization.Get(
+                    "Workbench.Grid.Header.Arguments"),
+                arguments.Header);
+            Assert.Equal(
+                argumentsDisplayIndex,
+                arguments.DisplayIndex);
+            Assert.Equal(
+                333,
+                arguments.Width.Value);
+            Assert.Equal(
+                "Executable",
+                grid.CurrentSortKey);
+            Assert.True(
+                grid.CurrentSortDescending);
+
+            Assert.Equal(
+                localization.Get(
+                    "Workbench.Reports.DefaultName"),
+                library.ReportEditor.Name);
+            Assert.Equal(
+                localization.Get(
+                    "Workbench.Playlists.DefaultName"),
+                library.PlaylistEditor.Name);
+            Assert.Equal(
+                localization.Get(
+                    "Workbench.Tools.DefaultName"),
+                library.ExternalToolEditor.Name);
+            library.ReportEditor.Name =
+                "Library report";
+            library.PlaylistEditor.Name =
+                "Library playlist";
+            library.ExternalToolEditor.Name =
+                "Library tool";
+
+            localization.SetCulture("ja-JP");
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(
+                "Library report",
+                library.ReportEditor.Name);
+            Assert.Equal(
+                "Library playlist",
+                library.PlaylistEditor.Name);
+            Assert.Equal(
+                "Library tool",
+                library.ExternalToolEditor.Name);
+            Assert.Same(
+                executable,
+                grid.Columns.Single(column =>
+                    grid.KeyFor(column) ==
+                    "Executable"));
+            Assert.Equal(
+                localization.Get(
+                    "Workbench.Grid.Header.Executable"),
+                executable.Header);
+            Assert.Equal(
+                argumentsDisplayIndex,
+                arguments.DisplayIndex);
+            Assert.Equal(
+                333,
+                arguments.Width.Value);
+            Assert.Equal(
+                "Executable",
+                grid.CurrentSortKey);
+            Assert.True(
+                grid.CurrentSortDescending);
+        }
+        finally
+        {
+            window.Hide();
+            CultureInfo.CurrentUICulture =
+                previousUICulture;
         }
     }
 
@@ -407,6 +606,214 @@ public sealed class LocalizationUiTests
         }
     }
 
+    [AvaloniaFact]
+    public void Every_shipping_locale_preserves_workbench_navigation_selection_recipe_theme_and_grid_layout()
+    {
+        CultureInfo previousUICulture =
+            CultureInfo.CurrentUICulture;
+        CultureInfo previousCulture =
+            CultureInfo.CurrentCulture;
+        var settings = new TestSettings();
+        settings.SetPreference(
+            LocalizationPreferences.DisplayLanguage,
+            "en-US");
+        var localization =
+            new ResourceLocalizationService(settings);
+        using ServiceProvider services =
+            Composition.BuildServices(collection =>
+            {
+                collection.AddSingleton<IAppSettings>(
+                    settings);
+                collection.AddSingleton<
+                    ILocalizationService>(
+                    localization);
+            });
+        App.UseServicesForTests(services);
+        ThemeVariant? previousTheme =
+            Application.Current!.RequestedThemeVariant;
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            Application.Current.RequestedThemeVariant =
+                ThemeVariant.Dark;
+            window.Show();
+            window.Width = 1200;
+            window.Height = 700;
+            INavigationService navigation =
+                services.GetRequiredService<
+                    INavigationService>();
+            navigation.Navigate(
+                ShellDestination.Workbench);
+            Dispatcher.UIThread.RunJobs();
+
+            WorkbenchView view =
+                Assert.IsType<WorkbenchView>(
+                    window.FindControl<ContentControl>(
+                        "ContentHost")!.Content);
+            WorkbenchViewModel model =
+                services.GetRequiredService<
+                    WorkbenchViewModel>();
+            model.SelectedSection =
+                WorkbenchSection.BulkOperation;
+            model.IsInspectorOpen = false;
+
+            var track = new WorkbenchTrackViewModel(
+                new MediaDocument(
+                    "all-locale-state.flac",
+                    [new(
+                        "VorbisComment",
+                        [new(
+                            MetadataFieldKey.Known(
+                                TagFields.Title),
+                            ["A title"])],
+                        true,
+                        true,
+                        true,
+                        true)],
+                    [],
+                    null,
+                    new(
+                        "all-locale-state.flac",
+                        10,
+                        DateTime.UtcNow,
+                        "hash"),
+                    true));
+            model.Files.Add(track);
+            model.SetSelectedFiles([track]);
+
+            model.OperationEditor.SelectedOperation =
+                model.OperationEditor
+                    .OperationDescriptors
+                    .Single(descriptor =>
+                        descriptor.Kind ==
+                        MetadataOperationKind
+                            .ReplaceText);
+            model.OperationEditor.SearchText = "title";
+            model.OperationEditor.ReplacementText =
+                "name";
+            model.OperationEditor
+                .AddCurrentOperationCommand
+                .Execute(null);
+            MetadataRecipeStepViewModel recipeStep =
+                Assert.Single(
+                    model.OperationEditor.Steps);
+            Guid recipeStepId = recipeStep.Id;
+
+            AppDataGrid grid =
+                view.FindControl<AppDataGrid>(
+                    "WorkbenchGrid")!;
+            DataGridColumn album =
+                grid.Columns.Single(column =>
+                    grid.KeyFor(column) == "Album");
+            album.DisplayIndex = 0;
+            album.Width = new DataGridLength(287);
+            Assert.True(
+                grid.ApplySort(
+                    new LibrarySortState(
+                        "Album",
+                        true)));
+            Dispatcher.UIThread.RunJobs();
+
+            foreach (
+                LocalizationCultureDescriptor locale in
+                LocalizationCultureRegistry
+                    .ShippingLocales)
+            {
+                localization.SetCulture(locale.Name);
+                Dispatcher.UIThread.RunJobs();
+
+                Assert.Equal(
+                    locale.Name,
+                    localization
+                        .CurrentUICulture.Name);
+                Assert.Equal(
+                    locale.Name,
+                    CultureInfo
+                        .CurrentUICulture.Name);
+                Assert.Equal(
+                    previousCulture,
+                    CultureInfo.CurrentCulture);
+                Assert.Equal(
+                    ShellDestination.Workbench,
+                    navigation.Current);
+                Assert.Same(
+                    view,
+                    window.FindControl<
+                            ContentControl>(
+                            "ContentHost")!
+                        .Content);
+                Assert.Equal(
+                    WorkbenchSection.BulkOperation,
+                    model.SelectedSection);
+                Assert.False(model.IsInspectorOpen);
+                Assert.Equal(
+                    ThemeVariant.Dark,
+                    Application.Current
+                        .RequestedThemeVariant);
+                Assert.Same(
+                    track,
+                    Assert.Single(
+                        model.SelectedFiles));
+
+                MetadataRecipeStepViewModel
+                    localizedStep =
+                        Assert.Single(
+                            model.OperationEditor
+                                .Steps);
+                Assert.Equal(
+                    recipeStepId,
+                    localizedStep.Id);
+                ReplaceTextOperation operation =
+                    Assert.IsType<
+                        ReplaceTextOperation>(
+                        localizedStep.Operation);
+                Assert.Equal(
+                    "title",
+                    operation.Search);
+                Assert.Equal(
+                    "name",
+                    operation.Replacement);
+                Assert.Equal(
+                    localization.Get(
+                        "Workbench.Navigation.Section.Reports"),
+                    model.SectionOptions.Single(
+                        option =>
+                            option.Section ==
+                            WorkbenchSection
+                                .Reports)
+                        .Label);
+
+                DataGridColumn localizedAlbum =
+                    grid.Columns.Single(column =>
+                        grid.KeyFor(column) ==
+                        "Album");
+                Assert.Same(
+                    album,
+                    localizedAlbum);
+                Assert.Equal(
+                    0,
+                    localizedAlbum.DisplayIndex);
+                Assert.Equal(
+                    287,
+                    localizedAlbum.Width.Value);
+                Assert.Equal(
+                    "Album",
+                    grid.CurrentSortKey);
+                Assert.True(
+                    grid.CurrentSortDescending);
+            }
+        }
+        finally
+        {
+            window.Hide();
+            Application.Current.RequestedThemeVariant =
+                previousTheme;
+            CultureInfo.CurrentUICulture =
+                previousUICulture;
+        }
+    }
+
     private sealed class MutableLocalizationService :
         ILocalizationService
     {
@@ -466,9 +873,10 @@ public sealed class LocalizationUiTests
             object?[] formatArguments =
                 [count, .. arguments];
             return Format(
-                count == 1
-                    ? $"{key}.One"
-                    : $"{key}.Other",
+                CardinalPluralResolver.ResourceKey(
+                    key,
+                    count,
+                    CurrentUICulture),
                 formatArguments);
         }
 

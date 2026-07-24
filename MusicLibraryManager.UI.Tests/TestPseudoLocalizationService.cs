@@ -28,6 +28,11 @@ internal sealed class TestPseudoLocalizationService :
         SupportedCultures =>
             _inner.SupportedCultures;
 
+    public IReadOnlyList<
+        LocalizationCultureDescriptor>
+        SupportedLocales =>
+            _inner.SupportedLocales;
+
     public event EventHandler? CultureChanged;
 
     public string Get(string key) =>
@@ -51,9 +56,10 @@ internal sealed class TestPseudoLocalizationService :
         object?[] formatArguments =
             [count, .. arguments];
         return Format(
-            count == 1
-                ? $"{key}.One"
-                : $"{key}.Other",
+            CardinalPluralResolver.ResourceKey(
+                key,
+                count,
+                CurrentUICulture),
             formatArguments);
     }
 

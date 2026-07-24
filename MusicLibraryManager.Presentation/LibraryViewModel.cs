@@ -387,9 +387,13 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             PreviewLibraryDiscogsReleaseMetadataCommand
                 .NotifyCanExecuteChanged();
         };
+        ReportEditor = new(localization);
+        PlaylistEditor = new(localization);
+        ExternalToolEditor = new(
+            externalToolStore,
+            localization);
         ReportEditor.Changed += InvalidateReportPlan;
         PlaylistEditor.Changed += InvalidatePlaylistPlan;
-        ExternalToolEditor = new(externalToolStore);
         ExternalToolEditor.Changed += InvalidateExternalToolPlan;
         Indexing = indexing;
         foreach (DetailsColumn column in DetailsColumns.All)
@@ -461,8 +465,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     public MusicBrainzReleaseSearchViewModel ReleaseSearch { get; }
     public DiscogsReleaseSearchViewModel DiscogsSearch { get; }
     public DiscogsImportSelectionViewModel DiscogsImport { get; } = new();
-    public ReportEditorViewModel ReportEditor { get; } = new();
-    public PlaylistEditorViewModel PlaylistEditor { get; } = new();
+    public ReportEditorViewModel ReportEditor { get; }
+    public PlaylistEditorViewModel PlaylistEditor { get; }
     public ExternalToolEditorViewModel ExternalToolEditor { get; }
     public MetadataGridColumnEditorViewModel ColumnEditor { get; }
     public VisualFilterEditorViewModel VisualFilterEditor { get; }

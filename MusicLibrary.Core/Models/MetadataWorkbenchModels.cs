@@ -439,7 +439,8 @@ public sealed record MetadataOperationPlan(
 public sealed record MetadataApplyResult(
     int ChangedFiles,
     ImmutableArray<string> JournalPaths,
-    ImmutableArray<OperationIssue> Issues);
+    ImmutableArray<OperationIssue> Issues,
+    RecoveryStorageSummary? RecoveryStorage = null);
 
 public sealed record WorkbenchLoadRequest(
     IReadOnlyList<string> Sources,

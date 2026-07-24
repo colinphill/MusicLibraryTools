@@ -12,10 +12,14 @@ public sealed class ResourceLocalizationService : ILocalizationService
     private const string MissingPrefix = "\u27E6";
     private const string MissingSuffix = "\u27E7";
     private static readonly string[] DefaultCultureNames =
-        ["en-US"];
+        LocalizationCultureRegistry.ShippingLocales
+            .Select(locale => locale.Name)
+            .ToArray();
     private readonly IAppSettings _settings;
     private readonly ResourceManager _resources;
     private readonly CultureInfo[] _supportedCultures;
+    private readonly LocalizationCultureDescriptor[]
+        _supportedLocales;
     private CultureInfo _currentUICulture;
 
     public ResourceLocalizationService(
@@ -47,14 +51,19 @@ public sealed class ResourceLocalizationService : ILocalizationService
                 culture => culture.Name,
                 StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        _currentUICulture = ResolveCulture(
-            settings.GetPreference(
-                LocalizationPreferences.DisplayLanguage));
-
         string? storedCulture = settings.GetPreference(
             LocalizationPreferences.DisplayLanguage);
-        if (storedCulture is not null &&
-            !string.Equals(
+        _supportedLocales = _supportedCultures
+            .Select(LocalizationCultureRegistry.Describe)
+            .ToArray();
+        _currentUICulture =
+            string.IsNullOrWhiteSpace(storedCulture)
+                ? LocalizationCultureRegistry.Resolve(
+                    CultureInfo.CurrentUICulture,
+                    _supportedCultures)
+                : ResolveCulture(storedCulture);
+
+        if (!string.Equals(
                 storedCulture,
                 _currentUICulture.Name,
                 StringComparison.Ordinal))
@@ -70,6 +79,10 @@ public sealed class ResourceLocalizationService : ILocalizationService
 
     public IReadOnlyList<CultureInfo>
         SupportedCultures => _supportedCultures;
+
+    public IReadOnlyList<
+        LocalizationCultureDescriptor>
+        SupportedLocales => _supportedLocales;
 
     public event EventHandler? CultureChanged;
 
@@ -96,7 +109,10 @@ public sealed class ResourceLocalizationService : ILocalizationService
         params object?[] arguments)
     {
         string variant =
-            count == 1 ? $"{key}.One" : $"{key}.Other";
+            CardinalPluralResolver.ResourceKey(
+                key,
+                count,
+                _currentUICulture);
         object?[] formatArguments =
             [count, .. arguments];
         return Format(variant, formatArguments);
@@ -149,10 +165,7 @@ public sealed class ResourceLocalizationService : ILocalizationService
 
     private CultureInfo ResolveCulture(
         string? cultureName) =>
-        _supportedCultures.FirstOrDefault(
-            culture => string.Equals(
-                culture.Name,
-                cultureName,
-                StringComparison.OrdinalIgnoreCase)) ??
-        _supportedCultures[0];
+        LocalizationCultureRegistry.Resolve(
+            cultureName,
+            _supportedCultures);
 }

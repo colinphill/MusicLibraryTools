@@ -24,6 +24,59 @@ $firstPartyPayload = @(
     "ITLTools.dll",
     "Syncer.Client.dll"
 )
+$satelliteCultures = @(
+    "de-DE", "es-ES", "fr-FR", "it-IT", "pt-BR",
+    "ja-JP", "ko-KR", "zh-CN", "zh-TW"
+)
+
+function Get-RelativeFirstPartyPayload {
+    $relativePayload = [Collections.Generic.List[string]]::new()
+    foreach ($fileName in $firstPartyPayload) {
+        [void]$relativePayload.Add($fileName)
+    }
+    foreach ($culture in $satelliteCultures) {
+        [void]$relativePayload.Add(
+            (Join-Path $culture "MusicLibraryManager.Presentation.resources.dll"))
+    }
+    return $relativePayload.ToArray()
+}
+
+function Assert-CatalogCoverage([string[]]$Entries) {
+    $expectedEntries = @(
+        Get-RelativeFirstPartyPayload |
+            ForEach-Object { Join-Path "publish" $_ }
+    )
+    $expectedSet = [Collections.Generic.HashSet[string]]::new(
+        [StringComparer]::OrdinalIgnoreCase)
+    foreach ($entry in $expectedEntries) {
+        [void]$expectedSet.Add($entry)
+    }
+
+    $actualSet = [Collections.Generic.HashSet[string]]::new(
+        [StringComparer]::OrdinalIgnoreCase)
+    $duplicates = [Collections.Generic.List[string]]::new()
+    foreach ($entry in $Entries) {
+        if (-not $actualSet.Add($entry)) {
+            [void]$duplicates.Add($entry)
+        }
+    }
+
+    $missing = @($expectedEntries | Where-Object { -not $actualSet.Contains($_) })
+    $unexpected = @($Entries | Where-Object { -not $expectedSet.Contains($_) })
+    if ($duplicates.Count -gt 0 -or $missing.Count -gt 0 -or $unexpected.Count -gt 0) {
+        $details = [Collections.Generic.List[string]]::new()
+        if ($missing.Count -gt 0) {
+            [void]$details.Add("missing: $($missing -join ', ')")
+        }
+        if ($unexpected.Count -gt 0) {
+            [void]$details.Add("unexpected: $($unexpected -join ', ')")
+        }
+        if ($duplicates.Count -gt 0) {
+            [void]$details.Add("duplicate: $($duplicates -join ', ')")
+        }
+        throw "The Authenticode catalog does not exactly cover the current first-party payload ($($details -join '; ')). Recreate it before signing."
+    }
+}
 
 function Resolve-InnoCompiler {
     $command = Get-Command ISCC.exe -ErrorAction SilentlyContinue
@@ -126,7 +179,7 @@ function Invoke-InnoCompiler([switch]$UseSignedUninstaller) {
 
 switch ($Operation) {
     "CreateCatalog" {
-        $entries = foreach ($fileName in $firstPartyPayload) {
+        $entries = foreach ($fileName in (Get-RelativeFirstPartyPayload)) {
             $path = Join-Path $publishRoot $fileName
             if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
                 throw "The Windows publish output is missing a first-party binary: $path"
@@ -201,9 +254,14 @@ switch ($Operation) {
             throw "The Authenticode catalog does not exist: $catalog"
         }
         $catalogRoot = Split-Path -Parent $catalog
-        $paths = @(
+        $catalogEntries = @(
             Get-Content -LiteralPath $catalog |
                 Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+                ForEach-Object { $_.Trim() }
+        )
+        Assert-CatalogCoverage $catalogEntries
+        $paths = @(
+            $catalogEntries |
                 ForEach-Object { [IO.Path]::GetFullPath((Join-Path $catalogRoot $_)) }
         )
         if ($IncludeUninstaller) { $paths += Get-SignedUninstaller }

@@ -1672,6 +1672,7 @@ public sealed class MetadataOperationService(
         }
 
         var journals = new List<string>();
+        RecoveryStorageSummary recoveryStorage = RecoveryStorageSummary.Empty;
         int completed = 0;
         foreach (IGrouping<string, MetadataFilePlan> volume in changed.GroupBy(
                      file => Path.GetPathRoot(file.Path) ?? "", PathComparer))
@@ -1718,10 +1719,13 @@ public sealed class MetadataOperationService(
                     DateTimeOffset.UtcNow,
                     RetainRecovery: true,
                     PolicyFingerprint: configuration?.PolicySnapshot.Fingerprint,
-                    LibraryId: configuration?.LibraryId);
+                    LibraryId: configuration?.LibraryId,
+                    RecoveryPayloadPolicy: RecoveryPayloadPolicy.AdaptiveReverseDelta);
                 FileMutationSummary result = await mutations.ApplyAsync(mutationPlan, progress, ct);
                 if (result.JournalPath is not null)
                     journals.Add(result.JournalPath);
+                if (result.RecoveryStorage is not null)
+                    recoveryStorage = recoveryStorage.Add(result.RecoveryStorage);
             }
             finally
             {
@@ -1747,7 +1751,10 @@ public sealed class MetadataOperationService(
             changed.Length,
             Message: $"Saved metadata to {changed.Length:N0} file(s)"));
         return new(changed.Length, [.. journals],
-            [.. changed.SelectMany(file => file.Issues)]);
+            [.. changed.SelectMany(file => file.Issues)],
+            recoveryStorage.FullOriginalCount + recoveryStorage.ReverseDeltaCount > 0
+                ? recoveryStorage
+                : null);
     }
 
     private static void QueueCacheRefresh(
@@ -2425,8 +2432,11 @@ public sealed class MetadataOperationService(
                 continue;
             try
             {
-                long required = checked(
-                    volume.Sum(plan => plan.Snapshot.Length) * 2);
+                // The output stage is always required. Recovery is selected adaptively at apply:
+                // a small reverse delta is retained when possible and the existing full-original
+                // path remains the safe fallback. Apply performs the final capacity check while
+                // holding the mutation lease and before changing any live file.
+                long required = checked(volume.Sum(plan => plan.Snapshot.Length));
                 long? available =
                     (recoverySpace ?? SystemRecoverySpaceProbe.Instance)
                     .GetAvailableFreeSpace(root);
@@ -2437,7 +2447,7 @@ public sealed class MetadataOperationService(
                         var issue = new OperationIssue(
                             "metadata.recovery-space",
                             OperationIssueSeverity.Blocker,
-                            $"At least {required:N0} free bytes are required to stage and retain recovery copies.",
+                            $"At least {required:N0} free bytes are estimated for metadata staging.",
                             plan.Path);
                         int index = plans.IndexOf(plan);
                         plans[index] = plan with { Issues = plan.Issues.Add(issue) };
@@ -2460,12 +2470,22 @@ public sealed class MetadataOperationService(
         : StringComparison.Ordinal;
 }
 
-public sealed class EditHistoryService(
-    IAppSettings settings,
-    IOperationJournalService journals) : IEditHistoryService
+public sealed class EditHistoryService : IEditHistoryService
 {
     private const string Preference = "manager.workbench.history.v1";
-    private readonly HistoryState _state = Load(settings);
+    private readonly IAppSettings _settings;
+    private readonly IOperationJournalService _journals;
+    private readonly HistoryState _state;
+
+    public EditHistoryService(
+        IAppSettings settings,
+        IOperationJournalService journals)
+    {
+        _settings = settings;
+        _journals = journals;
+        _state = Load(settings);
+        ReconcilePendingTransition();
+    }
 
     public IReadOnlyList<EditHistoryEntry> Entries => _state.Undo;
     public IReadOnlyList<EditHistoryEntry> RedoEntries => _state.Redo;
@@ -2485,10 +2505,18 @@ public sealed class EditHistoryService(
         IProgress<int>? progress = null,
         CancellationToken ct = default)
     {
+        if (_state.PendingTransition is not null)
+        {
+            ReconcilePendingTransition();
+            if (_state.PendingTransition is not null)
+                throw new InvalidOperationException(
+                    "The previous undo could not be reconciled. " +
+                    "Recovery data and edit history were retained.");
+        }
         if (_state.Undo.Count == 0)
             return 0;
         EditHistoryEntry entry = _state.Undo[0];
-        int restored = 0;
+        var restorePlans = new List<OperationRestorePlan>();
         foreach (string journalPath in entry.JournalPaths.Reverse())
         {
             ct.ThrowIfCancellationRequested();
@@ -2501,23 +2529,130 @@ public sealed class EditHistoryService(
                 journalPath,
                 entry.AppliedAtUtc,
                 entry.Paths.Length);
-            OperationBrowseResult browse = await journals.BrowseAsync(summary, ct);
+            OperationBrowseResult browse = await _journals.BrowseAsync(summary, ct);
             OperationFileEntry[] candidates = browse.Entries
                 .Where(item => item.Kind == OperationEntryKind.Quarantined &&
                     item.Exists && item.CurrentPath is not null)
                 .ToArray();
-            OperationRestorePlan plan = await journals.PreviewRestoreAsync(
+            OperationRestorePlan plan = await _journals.PreviewRestoreAsync(
                 summary, candidates, ct);
-            OperationRestoreResult result = await journals.ApplyRestoreAsync(
-                plan, progress, ct);
-            restored += result.RestoredCount;
+            if (plan.CanApply)
+                restorePlans.Add(plan);
         }
-        _state.Undo.RemoveAt(0);
-        _state.Redo.Insert(0, entry);
+        if (restorePlans.Count == 0)
+            throw new InvalidOperationException(
+                "No retained recovery payload is available for the latest edit.");
+
+        OperationRestoreBatchPlan batch = await _journals.PreviewRestoreBatchAsync(
+            restorePlans, ct);
+        _state.PendingTransition = new(
+            entry.Id,
+            HistoryTransitionStage.Prepared,
+            [.. restorePlans.Select(item => item.RestoreJournalPath)]);
+        try
+        {
+            PersistRequired();
+        }
+        catch
+        {
+            _state.PendingTransition = null;
+            throw;
+        }
+        OperationRestoreBatchResult result;
+        try
+        {
+            result = await _journals.ApplyRestoreBatchAsync(batch, progress, ct);
+        }
+        catch
+        {
+            try
+            {
+                // Apply can fail after the filesystem commit point while compact-payload cleanup
+                // is still pending. Reconcile the durable journals before deciding whether this
+                // remains an undo entry. If cleanup is still blocked, retain both the pending
+                // transition and history so the next startup/undo can retry it.
+                OperationRestoreTransitionState restoreState =
+                    await _journals.ReconcileRestoreBatchAsync(
+                        _state.PendingTransition!.RestoreJournalPaths,
+                        CancellationToken.None);
+                if (restoreState is
+                    OperationRestoreTransitionState.Committed or
+                    OperationRestoreTransitionState.Consumed)
+                {
+                    _state.PendingTransition = _state.PendingTransition with
+                    {
+                        Stage = HistoryTransitionStage.Committed,
+                    };
+                    Persist();
+                    CompletePendingTransition(entry);
+                    return batch.Actions.Count;
+                }
+                _state.PendingTransition = null;
+                Persist();
+            }
+            catch
+            {
+                // Do not consume or clear a transition whose cleanup state is unknown.
+                Persist();
+            }
+            throw;
+        }
+        _state.PendingTransition = _state.PendingTransition with
+        {
+            Stage = HistoryTransitionStage.Committed,
+        };
+        Persist();
+        CompletePendingTransition(entry);
+        return result.RestoredCount;
+    }
+
+    private void CompletePendingTransition(EditHistoryEntry entry)
+    {
+        int index = _state.Undo.FindIndex(item => item.Id == entry.Id);
+        if (index >= 0)
+            _state.Undo.RemoveAt(index);
+        if (_state.Redo.All(item => item.Id != entry.Id))
+            _state.Redo.Insert(0, entry);
         if (_state.Redo.Count > 100)
             _state.Redo.RemoveRange(100, _state.Redo.Count - 100);
+        _state.PendingTransition = null;
         Persist();
-        return restored;
+    }
+
+    private void ReconcilePendingTransition()
+    {
+        HistoryTransition? transition = _state.PendingTransition;
+        if (transition is null)
+            return;
+        EditHistoryEntry? entry = _state.Undo.FirstOrDefault(item =>
+            item.Id == transition.EntryId);
+        OperationRestoreTransitionState restoreState;
+        try
+        {
+            restoreState = transition.Stage == HistoryTransitionStage.Committed
+                ? OperationRestoreTransitionState.Committed
+                : _journals.ReconcileRestoreBatchAsync(
+                        transition.RestoreJournalPaths,
+                        CancellationToken.None)
+                    .GetAwaiter()
+                    .GetResult();
+        }
+        catch
+        {
+            // Keep the transition and its history entry intact so startup or the next explicit
+            // undo can retry reconciliation after a transient lock or storage failure.
+            return;
+        }
+        if (entry is not null &&
+            restoreState is
+                OperationRestoreTransitionState.Committed or
+                OperationRestoreTransitionState.Consumed)
+        {
+            CompletePendingTransition(entry);
+            return;
+        }
+        _state.PendingTransition = null;
+        Persist();
     }
 
     private static HistoryState Load(IAppSettings settings)
@@ -2549,11 +2684,32 @@ public sealed class EditHistoryService(
 
     private void Persist()
     {
-        try { settings.SetPreference(Preference, JsonSerializer.Serialize(_state)); }
+        try { _settings.SetPreference(Preference, JsonSerializer.Serialize(_state)); }
         catch { /* History persistence is best effort; recovery remains discoverable. */ }
     }
 
-    private sealed record HistoryState(
-        List<EditHistoryEntry> Undo,
-        List<EditHistoryEntry> Redo);
+    private void PersistRequired() =>
+        _settings.SetPreference(
+            Preference,
+            JsonSerializer.Serialize(_state));
+
+    private enum HistoryTransitionStage
+    {
+        Prepared,
+        Committed,
+    }
+
+    private sealed record HistoryTransition(
+        Guid EntryId,
+        HistoryTransitionStage Stage,
+        ImmutableArray<string> RestoreJournalPaths);
+
+    private sealed class HistoryState(
+        List<EditHistoryEntry> undo,
+        List<EditHistoryEntry> redo)
+    {
+        public List<EditHistoryEntry> Undo { get; set; } = undo;
+        public List<EditHistoryEntry> Redo { get; set; } = redo;
+        public HistoryTransition? PendingTransition { get; set; }
+    }
 }

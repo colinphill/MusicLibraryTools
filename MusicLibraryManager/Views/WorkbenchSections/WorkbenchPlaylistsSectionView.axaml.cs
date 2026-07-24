@@ -30,10 +30,11 @@ public partial class WorkbenchPlaylistsSectionView : UserControl
             new("Bytes", L("Workbench.Grid.Header.Bytes"), "Bytes", 100, 70),
         ]);
 
-    private string L(string key) => _localization.Get(key);
+    private LocalizedGridHeader L(string key) =>
+        new(_localization.Get(key), key);
 
     private void OnCultureChanged(object? sender, EventArgs e) =>
-        ConfigureColumns();
+        PlaylistOutputGrid.RefreshLocalizedHeaders();
 
     private void ApplyResponsiveLayout()
     {

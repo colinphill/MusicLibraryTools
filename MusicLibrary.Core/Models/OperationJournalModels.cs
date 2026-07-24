@@ -48,7 +48,17 @@ public sealed record OperationFileEntry(
     string RelativePath,
     OperationEntryKind Kind,
     bool Exists,
-    bool IsDirectory);
+    bool IsDirectory,
+    RecoveryPayloadKind PayloadKind = RecoveryPayloadKind.FullOriginal,
+    long RetainedBytes = 0,
+    long OriginalBytes = 0,
+    long PostEditBytes = 0,
+    string? OriginalSha256 = null,
+    string? PostEditSha256 = null,
+    string? DeltaPath = null,
+    DateTime? OriginalLastWriteTimeUtc = null,
+    FileAttributes? OriginalAttributes = null,
+    string? PayloadSha256 = null);
 
 public sealed record OperationBrowseResult(
     string OriginalRoot,
@@ -77,7 +87,15 @@ public sealed record OperationRestoreAction(
     string CollisionBackupPath,
     OperationPathSnapshot SourceSnapshot,
     OperationPathSnapshot DestinationSnapshot,
-    OperationEntryKind OriginalKind);
+    OperationEntryKind OriginalKind,
+    RecoveryPayloadKind PayloadKind = RecoveryPayloadKind.FullOriginal,
+    string? OriginalSha256 = null,
+    string? PostEditSha256 = null,
+    long OriginalLength = 0,
+    long PostEditLength = 0,
+    DateTime? OriginalLastWriteTimeUtc = null,
+    FileAttributes? OriginalAttributes = null,
+    string? PayloadSha256 = null);
 
 public sealed record OperationRestorePlan(
     OperationJournalSummary Run,
@@ -90,6 +108,36 @@ public sealed record OperationRestorePlan(
 }
 
 public sealed record OperationRestoreResult(int RestoredCount, int CollisionBackupCount);
+
+/// <summary>
+/// A restore transaction spanning one or more recovery runs. All sources and destinations are
+/// prevalidated under one mutation lease before the first live file is changed.
+/// </summary>
+public sealed record OperationRestoreBatchPlan(
+    IReadOnlyList<OperationRestorePlan> Plans)
+{
+    public IReadOnlyList<OperationRestoreAction> Actions =>
+        Plans.SelectMany(plan => plan.Actions).ToArray();
+
+    public bool CanApply => Actions.Count > 0;
+}
+
+public sealed record OperationRestoreBatchResult(
+    int RestoredCount,
+    int CollisionBackupCount,
+    IReadOnlyList<string> RestoreJournalPaths);
+
+/// <summary>
+/// Durable state of an interrupted restore transaction. Unapplied means that any work observed
+/// before the commit point has been rolled back; Committed means the restored files reached the
+/// durable commit point but payload cleanup was interrupted; Consumed means cleanup completed.
+/// </summary>
+public enum OperationRestoreTransitionState
+{
+    Unapplied = 0,
+    Committed = 1,
+    Consumed = 2,
+}
 
 /// <summary>One filesystem item captured by an explicit operation-retention preview.</summary>
 public sealed record OperationPurgeManifestEntry(

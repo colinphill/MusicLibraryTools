@@ -18,7 +18,11 @@ public sealed record PlaylistOutputRow(
 
 public partial class PlaylistEditorViewModel : ObservableObject
 {
+    private const string DefaultNameResourceKey =
+        "Workbench.Playlists.DefaultName";
     private readonly ILocalizationService? _localization;
+    private bool _nameUsesLocalizedDefault;
+    private bool _settingLocalizedDefaultName;
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private string _format = "m3u8";
     [ObservableProperty] private string? _outputPath;
@@ -39,7 +43,7 @@ public partial class PlaylistEditorViewModel : ObservableObject
         ILocalizationService? localization = null)
     {
         _localization = localization;
-        Name = L("Workbench.Playlists.DefaultName");
+        SetLocalizedDefaultName();
         RefreshLocalizedChoices();
         SelectedGroupField = GroupFields.First(choice =>
             choice.Field.KnownField == TagFields.Album);
@@ -74,7 +78,12 @@ public partial class PlaylistEditorViewModel : ObservableObject
 
     public event Action? Changed;
 
-    partial void OnNameChanged(string value) => Changed?.Invoke();
+    partial void OnNameChanged(string value)
+    {
+        if (!_settingLocalizedDefaultName)
+            _nameUsesLocalizedDefault = false;
+        Changed?.Invoke();
+    }
     partial void OnFormatChanged(string value)
     {
         OnPropertyChanged(nameof(SuggestedExtension));
@@ -114,6 +123,20 @@ public partial class PlaylistEditorViewModel : ObservableObject
     private string L(string key) =>
         _localization?.Get(key) ??
         LocalizedText.Get(key);
+
+    private void SetLocalizedDefaultName()
+    {
+        _settingLocalizedDefaultName = true;
+        try
+        {
+            Name = L(DefaultNameResourceKey);
+        }
+        finally
+        {
+            _settingLocalizedDefaultName = false;
+        }
+        _nameUsesLocalizedDefault = true;
+    }
 
     private void RefreshLocalizedChoices()
     {
@@ -166,6 +189,10 @@ public partial class PlaylistEditorViewModel : ObservableObject
 
     private void OnLocalizationCultureChanged(
         object? sender,
-        EventArgs e) =>
+        EventArgs e)
+    {
+        if (_nameUsesLocalizedDefault)
+            SetLocalizedDefaultName();
         RefreshLocalizedChoices();
+    }
 }

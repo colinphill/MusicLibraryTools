@@ -166,6 +166,62 @@ public sealed class WorkflowLocalizationTests
         Assert.NotEqual(optionState, option.State);
     }
 
+    [Fact]
+    public void Workbench_editor_default_names_follow_culture_until_user_edits()
+    {
+        var localization =
+            new SwitchingLocalizationService();
+        var report =
+            new ReportEditorViewModel(localization);
+        var playlist =
+            new PlaylistEditorViewModel(localization);
+        var tool =
+            new ExternalToolEditorViewModel(
+                localization: localization);
+
+        Assert.Equal(
+            "en-US:Workbench.Reports.DefaultName",
+            report.Name);
+        Assert.Equal(
+            "en-US:Workbench.Playlists.DefaultName",
+            playlist.Name);
+        Assert.Equal(
+            "en-US:Workbench.Tools.DefaultName",
+            tool.Name);
+
+        localization.SetCulture("fr-FR");
+
+        Assert.Equal(
+            "fr-FR:Workbench.Reports.DefaultName",
+            report.Name);
+        Assert.Equal(
+            "fr-FR:Workbench.Playlists.DefaultName",
+            playlist.Name);
+        Assert.Equal(
+            "fr-FR:Workbench.Tools.DefaultName",
+            tool.Name);
+
+        report.Name = "Quarterly archive";
+        playlist.Name = "Road trip";
+        tool.Name = "Waveform renderer";
+        localization.SetCulture("de-DE");
+
+        Assert.Equal("Quarterly archive", report.Name);
+        Assert.Equal("Road trip", playlist.Name);
+        Assert.Equal("Waveform renderer", tool.Name);
+
+        tool.NewToolCommand.Execute(null);
+        Assert.Equal(
+            "de-DE:Workbench.Tools.DefaultName",
+            tool.Name);
+        localization.SetCulture("ja-JP");
+        Assert.Equal(
+            "ja-JP:Workbench.Tools.DefaultName",
+            tool.Name);
+        Assert.Equal("Quarterly archive", report.Name);
+        Assert.Equal("Road trip", playlist.Name);
+    }
+
     private static OperationJournalSummary Journal(
         int affectedItems) =>
         new(

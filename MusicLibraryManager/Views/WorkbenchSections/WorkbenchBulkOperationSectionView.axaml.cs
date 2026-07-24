@@ -49,10 +49,16 @@ public partial class WorkbenchBulkOperationSectionView : UserControl
         ]);
     }
 
-    private string L(string key) => _localization.Get(key);
+    private LocalizedGridHeader L(string key) =>
+        new(_localization.Get(key), key);
 
-    private void OnCultureChanged(object? sender, EventArgs e) =>
-        ConfigureColumns();
+    private void OnCultureChanged(
+        object? sender,
+        EventArgs e)
+    {
+        PreviewGrid.RefreshLocalizedHeaders();
+        PendingOperationsGrid.RefreshLocalizedHeaders();
+    }
 
     private void ApplyResponsiveLayout()
     {

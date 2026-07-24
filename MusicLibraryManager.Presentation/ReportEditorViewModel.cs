@@ -49,7 +49,11 @@ public sealed record ReportOutputRow(
 
 public partial class ReportEditorViewModel : ObservableObject
 {
+    private const string DefaultNameResourceKey =
+        "Workbench.Reports.DefaultName";
     private readonly ILocalizationService? _localization;
+    private bool _nameUsesLocalizedDefault;
+    private bool _settingLocalizedDefaultName;
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(AddSelectedFieldCommand))]
     private ReportFieldChoice? _selectedAvailableField;
@@ -78,7 +82,7 @@ public partial class ReportEditorViewModel : ObservableObject
         ILocalizationService? localization = null)
     {
         _localization = localization;
-        Name = L("Workbench.Reports.DefaultName");
+        SetLocalizedDefaultName();
         RefreshLocalizedChoices();
         Fields.CollectionChanged += OnFieldsChanged;
         AddDefault(TagFields.Artist);
@@ -123,7 +127,12 @@ public partial class ReportEditorViewModel : ObservableObject
 
     public event Action? Changed;
 
-    partial void OnNameChanged(string value) => Changed?.Invoke();
+    partial void OnNameChanged(string value)
+    {
+        if (!_settingLocalizedDefaultName)
+            _nameUsesLocalizedDefault = false;
+        Changed?.Invoke();
+    }
     partial void OnFormatChanged(ReportFormat value)
     {
         OnPropertyChanged(nameof(SuggestedExtension));
@@ -355,6 +364,20 @@ public partial class ReportEditorViewModel : ObservableObject
         _localization?.Format(key, arguments) ??
         LocalizedText.Format(key, arguments);
 
+    private void SetLocalizedDefaultName()
+    {
+        _settingLocalizedDefaultName = true;
+        try
+        {
+            Name = L(DefaultNameResourceKey);
+        }
+        finally
+        {
+            _settingLocalizedDefaultName = false;
+        }
+        _nameUsesLocalizedDefault = true;
+    }
+
     private void RefreshLocalizedChoices()
     {
         string? selectedId =
@@ -406,6 +429,8 @@ public partial class ReportEditorViewModel : ObservableObject
         object? sender,
         EventArgs e)
     {
+        if (_nameUsesLocalizedDefault)
+            SetLocalizedDefaultName();
         RefreshLocalizedChoices();
         OnPropertyChanged(nameof(Fields));
     }

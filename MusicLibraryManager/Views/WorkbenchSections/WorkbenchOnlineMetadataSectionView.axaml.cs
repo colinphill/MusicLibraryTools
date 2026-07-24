@@ -395,8 +395,8 @@ public partial class WorkbenchOnlineMetadataSectionView :
         ]);
     }
 
-    private string L(string key) =>
-        _localization.Get(key);
+    private LocalizedGridHeader L(string key) =>
+        new(_localization.Get(key), key);
 
     private static IDataTemplate DiagnosticTextTemplate<T>(
         string textProperty,
@@ -422,6 +422,13 @@ public partial class WorkbenchOnlineMetadataSectionView :
 
     private void OnCultureChanged(
         object? sender,
-        EventArgs e) =>
-        ConfigureColumns();
+        EventArgs e)
+    {
+        AudioDiscoveryGrid.RefreshLocalizedHeaders();
+        ReleaseDiscoveryGrid.RefreshLocalizedHeaders();
+        DiscogsDiscoveryGrid.RefreshLocalizedHeaders();
+        DiscogsTrackMappingGrid.RefreshLocalizedHeaders();
+        ReleaseTrackMappingGrid.RefreshLocalizedHeaders();
+        ReleaseArtworkGrid.RefreshLocalizedHeaders();
+    }
 }

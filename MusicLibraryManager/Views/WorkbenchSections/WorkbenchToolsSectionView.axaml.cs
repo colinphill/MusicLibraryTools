@@ -36,10 +36,11 @@ public partial class WorkbenchToolsSectionView : UserControl
             new("Files", L("Workbench.Grid.Header.Files"), "Files", 65, 52),
         ]);
 
-    private string L(string key) => _localization.Get(key);
+    private LocalizedGridHeader L(string key) =>
+        new(_localization.Get(key), key);
 
     private void OnCultureChanged(object? sender, EventArgs e) =>
-        ConfigureColumns();
+        ExternalToolInvocationGrid.RefreshLocalizedHeaders();
 
     private void ApplyResponsiveLayout()
     {

@@ -18,6 +18,20 @@ function Write-ArtifactChecksum([string]$Artifact) {
     Set-Content -LiteralPath $checksum -Value "$hash  $([IO.Path]::GetFileName($Artifact))" -Encoding ascii
 }
 
+function Assert-SatelliteResources([string]$PublishRoot) {
+    $cultures = @(
+        "de-DE", "es-ES", "fr-FR", "it-IT", "pt-BR",
+        "ja-JP", "ko-KR", "zh-CN", "zh-TW"
+    )
+    foreach ($culture in $cultures) {
+        $satellite = Join-Path $PublishRoot "$culture/MusicLibraryManager.Presentation.resources.dll"
+        if (-not (Test-Path -LiteralPath $satellite -PathType Leaf)) {
+            throw "The publish output is missing the $culture presentation satellite assembly: $satellite"
+        }
+    }
+    Write-Host "Verified all $($cultures.Count) presentation satellite assemblies."
+}
+
 function Resolve-InnoCompiler {
     $command = Get-Command ISCC.exe -ErrorAction SilentlyContinue
     if ($command) { return $command.Source }
@@ -161,6 +175,12 @@ function New-MacDiskImage(
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $project = Join-Path $PSScriptRoot "MusicLibraryManager.csproj"
 $syncerVerifierProject = Join-Path $projectRoot "BuildTools/SyncerResourceVerifier/SyncerResourceVerifier.csproj"
+$localizationCatalogProject = Join-Path $projectRoot "BuildTools/LocalizationCatalogGenerator/LocalizationCatalogGenerator.csproj"
+& dotnet build $localizationCatalogProject --configuration $Configuration
+if ($LASTEXITCODE -ne 0) { throw "Localization catalog validator build failed with exit code $LASTEXITCODE." }
+$localizationCatalogValidator = Join-Path $projectRoot "BuildTools/LocalizationCatalogGenerator/bin/$Configuration/net10.0/LocalizationCatalogGenerator.dll"
+& dotnet $localizationCatalogValidator --check
+if ($LASTEXITCODE -ne 0) { throw "Shipping localization catalogs failed deterministic validation." }
 & dotnet build $syncerVerifierProject --configuration $Configuration
 if ($LASTEXITCODE -ne 0) { throw "Syncer resource verifier build failed with exit code $LASTEXITCODE." }
 $syncerVerifier = Join-Path $projectRoot "BuildTools/SyncerResourceVerifier/bin/$Configuration/net10.0/SyncerResourceVerifier.dll"
@@ -228,6 +248,7 @@ foreach ($rid in $Rids) {
     }
     & dotnet $syncerVerifier $syncerAssembly $syncerServers
     if ($LASTEXITCODE -ne 0) { throw "The published Syncer.Client Android resources failed validation." }
+    Assert-SatelliteResources $publishRoot
 
     $productName = "MusicLibraryManager-$Version-$rid"
     $artifacts = [Collections.Generic.List[string]]::new()

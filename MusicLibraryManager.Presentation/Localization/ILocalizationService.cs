@@ -6,6 +6,11 @@ public interface ILocalizationService
 {
     CultureInfo CurrentUICulture { get; }
     IReadOnlyList<CultureInfo> SupportedCultures { get; }
+    IReadOnlyList<LocalizationCultureDescriptor>
+        SupportedLocales =>
+        SupportedCultures
+            .Select(LocalizationCultureRegistry.Describe)
+            .ToArray();
     event EventHandler? CultureChanged;
     string Get(string key);
     string Format(string key, params object?[] arguments);
@@ -25,6 +30,7 @@ public static class LocalizationPreferences
 
 public static class LocalizationKeys
 {
+    public const string Beta = "Common.Beta";
     public const string DisplayLanguage =
         "Settings.Appearance.DisplayLanguage";
     public const string DisplayLanguageDescription =

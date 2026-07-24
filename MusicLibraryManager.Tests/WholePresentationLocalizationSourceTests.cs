@@ -69,6 +69,7 @@ public sealed partial class WholePresentationLocalizationSourceTests
         "SetCountRestorePreview",
         "SetCountStatus",
         "SetCountStatusText",
+        "SetFieldMappingCountStatus",
         "SetHistoryCountStatus",
         "SetThumbnailCountStatus",
     ];
@@ -1134,7 +1135,7 @@ public sealed partial class WholePresentationLocalizationSourceTests
         DisplayChoiceLiteralPattern();
 
     [GeneratedRegex(
-        "(?s)(?:(?:LocalizedText|_localization)\\??\\.(?<method>Get|Format|FormatCount)|(?<![A-Za-z0-9_.])(?<method>Get|Format|FormatCount|L|LF|LC|LFC|Text|SetStatus|SetStatusText|SetCountStatus|SetCountStatusText|SetOperationStatus|SetCountOperationStatus|SetOperationFailure|SetFailure|SetStatusFailure|SetDiscogsStatus|SetFieldMappingStatus|SetHistoryStatus|SetHistoryCountStatus|SetHistoryFailure|SetJobStatus|SetCountJobStatus|SetJobStatusFailure|SetRestorePreview|SetCountRestorePreview|SetPurgePreview|SetThumbnailStatus|SetThumbnailCountStatus|SetVisualFilterStatus|SetProviderProgressStatus))\\s*\\(\\s*(?:(?:MessageTone\\.[A-Za-z]+|[A-Za-z_][A-Za-z0-9_?.]*)\\s*,\\s*)?\"(?<key>[A-Za-z][A-Za-z0-9.]+)\"",
+        "(?s)(?:(?:LocalizedText|_localization)\\??\\.(?<method>Get|Format|FormatCount)|(?<![A-Za-z0-9_.])(?<method>Get|Format|FormatCount|L|LF|LC|LFC|Text|SetStatus|SetStatusText|SetCountStatus|SetCountStatusText|SetOperationStatus|SetCountOperationStatus|SetOperationFailure|SetFailure|SetStatusFailure|SetDiscogsStatus|SetFieldMappingStatus|SetFieldMappingCountStatus|SetHistoryStatus|SetHistoryCountStatus|SetHistoryFailure|SetJobStatus|SetCountJobStatus|SetJobStatusFailure|SetRestorePreview|SetCountRestorePreview|SetPurgePreview|SetThumbnailStatus|SetThumbnailCountStatus|SetVisualFilterStatus|SetProviderProgressStatus))\\s*\\(\\s*(?:(?:MessageTone\\.[A-Za-z]+|[A-Za-z_][A-Za-z0-9_?.]*)\\s*,\\s*)?\"(?<key>[A-Za-z][A-Za-z0-9.]+)\"",
         RegexOptions.CultureInvariant)]
     private static partial Regex
         LocalizationLookupPattern();
