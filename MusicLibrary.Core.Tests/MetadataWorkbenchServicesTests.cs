@@ -765,6 +765,149 @@ public sealed class MetadataWorkbenchServicesTests
     }
 
     [Fact]
+    public async Task EveryTypedOperationAppliesExactlyItsReviewedAfterValues()
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-preview-apply-" + Guid.NewGuid().ToString("N"));
+        string recovery = session + ".MusicLibraryManager-recovery";
+        Directory.CreateDirectory(session);
+        string statePath = Path.Combine(session, "settings.json");
+        MetadataFieldKey title =
+            MetadataFieldKey.Known(TagFields.Title);
+        MetadataFieldKey artist =
+            MetadataFieldKey.Known(TagFields.Artist);
+        MetadataFieldKey album =
+            MetadataFieldKey.Known(TagFields.Album);
+        MetadataFieldKey genre =
+            MetadataFieldKey.Known(TagFields.Genre);
+        MetadataFieldKey comment =
+            MetadataFieldKey.Known(TagFields.Comment);
+        MetadataFieldKey track =
+            MetadataFieldKey.Known(TagFields.TrackNumber);
+        MetadataFieldKey trackTotal =
+            MetadataFieldKey.Known(TagFields.TotalTracks);
+        var cases =
+            new (string Name, Action<IMediaFile>? Seed,
+                MetadataOperation Operation)[]
+            {
+                ("assign", null,
+                    new AssignFieldOperation(comment, "Assigned")),
+                ("remove", null,
+                    new RemoveFieldOperation(album)),
+                ("copy", null,
+                    new CopyFieldOperation(title, comment)),
+                ("replace", null,
+                    new ReplaceTextOperation(
+                        title, "Test", "Reviewed")),
+                ("case", null,
+                    new ChangeCaseOperation(
+                        title, MetadataCaseMode.Upper)),
+                ("trim", media =>
+                    Assert.IsAssignableFrom<IMetadataWriter>(media)
+                        .SetField(
+                            TagFields.Title,
+                            "  padded   title  "),
+                    new TrimFieldOperation(
+                        title, NormalizeInternalWhitespace: true)),
+                ("sequence", null,
+                    new SequenceNumberOperation(
+                        track, Start: 7, TotalField: trackTotal)),
+                ("combine", null,
+                    new CombineFieldsOperation(
+                        title, artist, comment, " / ")),
+                ("split", media =>
+                    Assert.IsAssignableFrom<IMetadataWriter>(media)
+                        .SetField(
+                            TagFields.Title,
+                            "First / Second"),
+                    new SplitFieldOperation(title, " / ")),
+                ("join", media =>
+                    Assert.IsAssignableFrom<
+                            IMultiValueMetadataWriter>(media)
+                        .SetFieldValues(
+                            TagFields.Title,
+                            ["Zulu", "Alpha"]),
+                    new JoinFieldValuesOperation(title, " / ")),
+                ("deduplicate", media =>
+                    Assert.IsAssignableFrom<
+                            IMultiValueMetadataWriter>(media)
+                        .SetFieldValues(
+                            TagFields.Genre,
+                            ["Rock", "rock", "Jazz"]),
+                    new DeduplicateFieldValuesOperation(genre)),
+                ("reorder", media =>
+                    Assert.IsAssignableFrom<
+                            IMultiValueMetadataWriter>(media)
+                        .SetFieldValues(
+                            TagFields.Artist,
+                            ["Zulu", "Alpha"]),
+                    new ReorderFieldValuesOperation(artist)),
+                ("extract-path", null,
+                    new ExtractPathComponentOperation(
+                        comment,
+                        MetadataPathComponent.FileNameWithoutExtension)),
+            };
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings);
+
+            for (int index = 0; index < cases.Length; index++)
+            {
+                (string name, Action<IMediaFile>? seed,
+                    MetadataOperation operation) = cases[index];
+                string path = Path.Combine(
+                    session, $"{index:D2}-{name}.flac");
+                File.Copy(MediaFixtures.Path_("sample.flac"), path);
+                if (seed is not null)
+                {
+                    IMediaFile media = MediaFile.GetFile(
+                        path, readOnly: false);
+                    seed(media);
+                    media.SaveTags();
+                }
+
+                MetadataOperationPlan plan = await service.PreviewAsync(
+                    [path],
+                    OperationRecipe.Create(name, operation));
+                MetadataFilePlan reviewed = Assert.Single(plan.Files);
+                Assert.True(
+                    reviewed.CanApply,
+                    $"{name}: " + string.Join(
+                        "; ",
+                        reviewed.Issues.Select(issue => issue.Message)));
+                Assert.NotEmpty(reviewed.Differences);
+
+                MetadataApplyResult applied =
+                    await service.ApplyAsync(plan);
+
+                Assert.Equal(1, applied.ChangedFiles);
+                MediaDocument reloaded = await _documents.LoadAsync(
+                    path,
+                    includeArtwork: false,
+                    TestContext.Current.CancellationToken);
+                foreach (MetadataFieldDifference difference in
+                         reviewed.Differences)
+                {
+                    Assert.Equal(
+                        difference.After,
+                        reloaded.Values(difference.Field));
+                }
+            }
+        }
+        finally
+        {
+            try { Directory.Delete(session, recursive: true); } catch { }
+            try { Directory.Delete(recovery, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public async Task Preview_ShapesAndCombinesOrderedValuesWithoutWriting()
     {
         using var media = MediaFixtures.Copy("sample.flac");

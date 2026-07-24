@@ -776,7 +776,17 @@ per-operation capability flags.
   - Negated `Always` is explicitly covered and now evaluates to false; the
     audit corrected the earlier short-circuit that ignored negation for that
     operator.
-- [ ] Preview/apply equivalence.
+- [x] Preview/apply equivalence.
+  - A real-file contract previews and applies each of the 13 typed metadata
+    operations independently, reloads the written file, and compares every
+    ordered field value with the reviewed `After` values. Existing integration
+    gates do the same for artwork sets, tag-layer changes, ID3 version and
+    encoding changes, and ID3v1 conversions.
+  - File, export, playlist, report, sync, storage, and repair workflows execute
+    the immutable mutation plan captured by preview. Contract tests assert
+    object identity at the executor boundary, reviewed source/destination
+    paths for copy/move/quarantine/replace actions, and byte-for-byte equality
+    between generated preview content and installed output.
 - [ ] Stale-plan rejection.
 - [ ] Collision, cancellation, insufficient-space, rollback, and recovery tests.
 - [ ] Undo, redo, and concurrent-edit tests.
