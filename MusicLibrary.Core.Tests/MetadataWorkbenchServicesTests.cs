@@ -908,6 +908,56 @@ public sealed class MetadataWorkbenchServicesTests
     }
 
     [Fact]
+    public async Task PreviewBlocksApplyWhenRecoverySpaceCannotHoldStageAndBackup()
+    {
+        using var media = MediaFixtures.Copy("sample.flac");
+        string statePath = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-space-" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                _documents,
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings,
+                recoverySpace: new FixedRecoverySpaceProbe(0));
+            MetadataOperationPlan plan = await service.PreviewAsync(
+                [media.Path],
+                OperationRecipe.Create(
+                    "No space",
+                    new AssignFieldOperation(
+                        MetadataFieldKey.Known(TagFields.Title),
+                        "Would require staging")));
+
+            MetadataFilePlan file = Assert.Single(plan.Files);
+            OperationIssue issue = Assert.Single(
+                file.Issues,
+                candidate =>
+                    candidate.Code == "metadata.recovery-space");
+            Assert.Equal(
+                OperationIssueSeverity.Blocker,
+                issue.Severity);
+            Assert.Contains(
+                (new FileInfo(media.Path).Length * 2)
+                    .ToString("N0"),
+                issue.Message);
+            Assert.False(plan.CanApply);
+
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => service.ApplyAsync(plan));
+            Assert.Equal(
+                "TestTitle",
+                MediaFile.GetFile(media.Path).Tags.First().Title);
+        }
+        finally
+        {
+            try { File.Delete(statePath); } catch { }
+        }
+    }
+
+    [Fact]
     public async Task Preview_ShapesAndCombinesOrderedValuesWithoutWriting()
     {
         using var media = MediaFixtures.Copy("sample.flac");
@@ -2506,6 +2556,12 @@ public sealed class MetadataWorkbenchServicesTests
         IProgress<OperationProgress>
     {
         public void Report(OperationProgress value) => callback(value);
+    }
+
+    private sealed class FixedRecoverySpaceProbe(long available)
+        : IRecoverySpaceProbe
+    {
+        public long? GetAvailableFreeSpace(string root) => available;
     }
 
     private sealed class SyntheticDocuments : IMetadataDocumentService

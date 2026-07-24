@@ -800,7 +800,21 @@ per-operation capability flags.
     validates the persisted plan digest, and ITL repair pins the complete
     library hash. Policy fingerprints are revalidated independently of file
     state.
-- [ ] Collision, cancellation, insufficient-space, rollback, and recovery tests.
+- [x] Collision, cancellation, insufficient-space, rollback, and recovery tests.
+  - Destination and intra-plan collisions cover stop, suffix, hash, occupied
+    endpoint, and restore-collision policies. A deterministic capacity probe
+    now proves Workbench preview blocks before staging when the volume cannot
+    hold both the staged output and retained recovery copy; unknown capacity
+    on remote or virtual filesystems remains non-blocking.
+  - Cancellation after the first shared mutation rolls the complete plan back
+    and records the rollback terminal state. A forced catalog-commit failure
+    proves the same reverse rollback after all filesystem actions but before
+    cross-system commit; custom organization and restore paths have matching
+    later-action failure tests.
+  - Journal discovery classifies completed, interrupted, and legacy recovery
+    layouts after restart. Browse reconstructs original paths, restore handles
+    destination collisions and stale manifests atomically, and purge protects
+    interrupted runs while removing only the reviewed completed recovery tree.
 - [ ] Undo, redo, and concurrent-edit tests.
 - [ ] Headless UI tests for Workbench loading, drag-and-drop, editing,
   selection, recipe construction, and navigation guards.

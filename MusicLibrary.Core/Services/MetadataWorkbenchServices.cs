@@ -19,6 +19,36 @@ public interface IMetadataDocumentService
         CancellationToken ct = default);
 }
 
+public interface IRecoverySpaceProbe
+{
+    long? GetAvailableFreeSpace(string root);
+}
+
+public sealed class SystemRecoverySpaceProbe : IRecoverySpaceProbe
+{
+    public static SystemRecoverySpaceProbe Instance { get; } = new();
+
+    private SystemRecoverySpaceProbe()
+    {
+    }
+
+    public long? GetAvailableFreeSpace(string root)
+    {
+        try
+        {
+            var drive = new DriveInfo(root);
+            return drive.IsReady
+                ? drive.AvailableFreeSpace
+                : null;
+        }
+        catch
+        {
+            // Remote and virtual filesystems may not expose capacity.
+            return null;
+        }
+    }
+}
+
 public interface IWorkbenchService
 {
     Task<WorkbenchLoadResult> LoadAsync(
@@ -630,7 +660,8 @@ public sealed class MetadataOperationService(
     IAppSettings settings,
     IReindexService? reindex = null,
     IEditHistoryService? history = null,
-    IMetadataFieldMappingService? fieldMappings = null) : IMetadataOperationService
+    IMetadataFieldMappingService? fieldMappings = null,
+    IRecoverySpaceProbe? recoverySpace = null) : IMetadataOperationService
 {
     private static readonly TimeSpan RegexTimeout = TimeSpan.FromMilliseconds(250);
 
@@ -2358,20 +2389,23 @@ public sealed class MetadataOperationService(
             path.StartsWith(prefix, PathComparison);
     }
 
-    private static void AddRecoverySpaceIssues(List<MetadataFilePlan> plans)
+    private void AddRecoverySpaceIssues(List<MetadataFilePlan> plans)
     {
         foreach (IGrouping<string, MetadataFilePlan> volume in plans
                      .Where(plan => plan.HasChanges)
                      .GroupBy(plan => Path.GetPathRoot(plan.Path) ?? "", PathComparer))
         {
+            string root = volume.Key;
+            if (string.IsNullOrWhiteSpace(root))
+                continue;
             try
             {
-                string root = volume.Key;
-                if (string.IsNullOrWhiteSpace(root))
-                    continue;
-                long required = checked(volume.Sum(plan => plan.Snapshot.Length) * 2);
-                var drive = new DriveInfo(root);
-                if (drive.IsReady && drive.AvailableFreeSpace < required)
+                long required = checked(
+                    volume.Sum(plan => plan.Snapshot.Length) * 2);
+                long? available =
+                    (recoverySpace ?? SystemRecoverySpaceProbe.Instance)
+                    .GetAvailableFreeSpace(root);
+                if (available is not null && available < required)
                 {
                     foreach (MetadataFilePlan plan in volume)
                     {
@@ -2387,8 +2421,8 @@ public sealed class MetadataOperationService(
             }
             catch
             {
-                // Remote and virtual filesystems often cannot report free space. Apply still
-                // surfaces the concrete I/O error without treating an unknown estimate as denial.
+                // An unknown estimate must not deny remote or virtual filesystems. Apply still
+                // surfaces a concrete I/O failure if storage cannot accept the data.
             }
         }
     }
