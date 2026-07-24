@@ -48,6 +48,73 @@ public sealed class UiControlTests
         Assert.NotNull(
             view.FindControl<AppDataGrid>(
                 "ReviewedFileOperationPreviewGrid"));
+        Assert.Equal(
+            "File operation",
+            AutomationProperties.GetName(
+                view.FindControl<ComboBox>(
+                    "ReviewedFileOperationKind")!));
+        Assert.Equal(
+            "File operation destination",
+            AutomationProperties.GetName(
+                view.FindControl<TextBox>(
+                    "ReviewedFileOperationDestination")!));
+        Assert.Equal(
+            "File name template",
+            AutomationProperties.GetName(
+                view.FindControl<TextBox>(
+                    "ReviewedFileNameTemplate")!));
+        Assert.Equal(
+            "Reviewed file operation preview",
+            AutomationProperties.GetName(
+                view.FindControl<AppDataGrid>(
+                    "ReviewedFileOperationPreviewGrid")!));
+    }
+
+    [AvaloniaFact]
+    public void Shell_keyboard_search_and_navigation_restore_predictable_focus()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        MainWindow window = services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Show();
+            window.Activate();
+            Dispatcher.UIThread.RunJobs();
+
+            window.RaiseEvent(new KeyEventArgs
+            {
+                RoutedEvent = InputElement.KeyDownEvent,
+                Key = Key.K,
+                KeyModifiers = KeyModifiers.Control,
+            });
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Same(
+                window.FindControl<TextBox>("SearchBox"),
+                window.FocusManager?.GetFocusedElement());
+
+            services.GetRequiredService<INavigationService>()
+                .Navigate(ShellDestination.Workbench);
+            Dispatcher.UIThread.RunJobs();
+            Dispatcher.UIThread.RunJobs();
+
+            WorkbenchView view = Assert.IsType<WorkbenchView>(
+                window.FindControl<ContentControl>("ContentHost")!.Content);
+            PageHeader heading = view.GetVisualDescendants()
+                .OfType<PageHeader>()
+                .Single();
+            Assert.Same(
+                heading,
+                window.FocusManager?.GetFocusedElement());
+            Assert.Equal(
+                "Metadata Workbench",
+                AutomationProperties.GetName(heading));
+        }
+        finally
+        {
+            window.Hide();
+        }
     }
 
     [AvaloniaFact]
@@ -635,6 +702,59 @@ public sealed class UiControlTests
     }
 
     [AvaloniaFact]
+    public void Splitter_keyboard_commands_resize_to_steps_and_bounds()
+    {
+        var split = new PersistedSplitView(new SplitStateService(new FakeSettings()))
+        {
+            PersistenceKey = "keyboard",
+            Label = "Resize test panes",
+            InitialLeftWidth = 360,
+            MinLeftWidth = 200,
+            MaxLeftWidth = 700,
+            MinRightWidth = 160,
+            Left = new Border(),
+            Right = new Border(),
+        };
+        var window = new Window
+        {
+            Width = 1_000,
+            Height = 600,
+            Content = split,
+        };
+        try
+        {
+            window.Show();
+            Dispatcher.UIThread.RunJobs();
+            GridSplitter splitter =
+                split.FindControl<GridSplitter>("Splitter")!;
+            Assert.Equal(
+                "Resize test panes",
+                AutomationProperties.GetName(splitter));
+
+            RaiseKey(splitter, Key.Right);
+            Assert.Equal(384, split.CurrentLeftWidth);
+            RaiseKey(splitter, Key.Home);
+            Assert.Equal(200, split.CurrentLeftWidth);
+            RaiseKey(splitter, Key.End);
+            Assert.Equal(700, split.CurrentLeftWidth);
+        }
+        finally
+        {
+            window.Hide();
+        }
+
+        static void RaiseKey(Control control, Key key)
+        {
+            control.RaiseEvent(new KeyEventArgs
+            {
+                RoutedEvent = InputElement.KeyDownEvent,
+                Key = key,
+            });
+            Dispatcher.UIThread.RunJobs();
+        }
+    }
+
+    [AvaloniaFact]
     public void Light_and_dark_palette_tokens_match_the_app_contract()
     {
         Assert.True(Application.Current!.TryGetResource("AppAccentBrush", ThemeVariant.Dark, out object? darkAccent));
@@ -1218,6 +1338,13 @@ public sealed class UiControlTests
                 Assert.True(columnPopover.IsLightDismissEnabled);
                 columnsButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 Assert.True(columnPopover.IsOpen);
+                library.RaiseEvent(new KeyEventArgs
+                {
+                    RoutedEvent = InputElement.KeyDownEvent,
+                    Key = Key.Escape,
+                });
+                Assert.False(columnPopover.IsOpen);
+                columnsButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 closeColumnsButton.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 Assert.False(columnPopover.IsOpen);
             }

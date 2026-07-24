@@ -10,7 +10,8 @@
       <ComboBox x:Name="ReviewedFileOperationKind"
                 Classes="app"
                 ItemsSource="{Binding OperationKinds}"
-                SelectedItem="{Binding SelectedKind, Mode=TwoWay}" />
+                SelectedItem="{Binding SelectedKind, Mode=TwoWay}"
+                AutomationProperties.Name="File operation" />
       <Grid Grid.Column="1"
             ColumnDefinitions="*,Auto"
             ColumnSpacing="7"
@@ -18,7 +19,8 @@
         <TextBox x:Name="ReviewedFileOperationDestination"
                  Classes="app"
                  Text="{Binding DestinationDirectory, Mode=TwoWay}"
-                 PlaceholderText="Destination or quarantine folder" />
+                 PlaceholderText="Destination or quarantine folder"
+                 AutomationProperties.Name="File operation destination" />
         <Button Grid.Column="1"
                 Classes="app"
                 Content="Browse"
@@ -36,11 +38,13 @@
       <TextBox x:Name="ReviewedFileNameTemplate"
                Classes="app"
                Text="{Binding FileNameTemplate, Mode=TwoWay}"
-               PlaceholderText="{}{Name}{Extension}" />
+               PlaceholderText="{}{Name}{Extension}"
+               AutomationProperties.Name="File name template" />
       <ComboBox Grid.Column="1"
                 Classes="app"
                 ItemsSource="{Binding CollisionPolicies}"
-                SelectedItem="{Binding SelectedCollisionPolicy, Mode=TwoWay}" />
+                SelectedItem="{Binding SelectedCollisionPolicy, Mode=TwoWay}"
+                AutomationProperties.Name="File collision policy" />
       <CheckBox Grid.Column="2"
                 VerticalAlignment="Center"
                 Content="Preserve relative folders"
@@ -61,7 +65,8 @@
     <controls:AppDataGrid x:Name="ReviewedFileOperationPreviewGrid"
                           Grid.Row="2"
                           MinHeight="180"
-                          ItemsSource="{Binding PreviewItems}" />
+                          ItemsSource="{Binding PreviewItems}"
+                          AutomationProperties.Name="Reviewed file operation preview" />
 
     <Grid Grid.Row="3"
           ColumnDefinitions="*,180,Auto"
@@ -69,6 +74,7 @@
       <TextBlock Classes="muted"
                  VerticalAlignment="Center"
                  TextWrapping="Wrap"
+                 AutomationProperties.Name="File operation status"
                  AutomationProperties.LiveSetting="Polite"
                  Text="{Binding Status}" />
       <ProgressBar Grid.Column="1"
@@ -76,7 +82,8 @@
                    IsVisible="{Binding IsBusy}"
                    IsIndeterminate="{Binding IsProgressIndeterminate}"
                    Maximum="{Binding ProgressMaximum}"
-                   Value="{Binding ProgressValue}" />
+                   Value="{Binding ProgressValue}"
+                   AutomationProperties.Name="File operation progress" />
       <Button Grid.Column="2"
               Classes="app"
               IsVisible="{Binding IsBusy}"

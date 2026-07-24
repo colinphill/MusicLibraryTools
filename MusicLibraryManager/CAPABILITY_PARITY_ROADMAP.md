@@ -693,7 +693,18 @@ per-operation capability flags.
   - Generated Opus and Speex preservation fixtures cover the remaining Ogg
     codecs with Unicode filenames and metadata while retaining artwork and
     audio packets.
-- [ ] Audit keyboard and accessibility behavior.
+- [x] Audit keyboard and accessibility behavior.
+  - Shell navigation exposes stable automation names and selected state, Ctrl+K
+    focuses and selects the global search, and each navigation transition moves
+    focus to a named page heading. Workbench retains configurable operation
+    shortcuts without intercepting text-entry controls.
+  - Popovers and full-size artwork close with Escape. Confirmation dialogs trap
+    focus, default to the safe Cancel action, and restore the prior focus when
+    dismissed; native close cancels a dismissible dialog before its owner.
+  - Persisted splitters expose an automation label and support arrow, Home, and
+    End resizing. Shared file-operation inputs, previews, progress, and status
+    regions have explicit accessible names, and changing status regions across
+    both surfaces use polite or assertive live announcements.
 - [x] Audit high-DPI and malformed artwork.
   - Headless shell coverage increases text size across every destination,
     verifies visible header commands remain in bounds, and checks logical-to-
