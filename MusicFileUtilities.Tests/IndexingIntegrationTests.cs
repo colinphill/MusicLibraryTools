@@ -449,6 +449,85 @@ namespace MusicFileUtilities.Tests
         }
 
         [Fact]
+        public void FailedSchemaMigrationRollsBackEveryEarlierChange()
+        {
+            string directory = Path.Combine(
+                Path.GetTempPath(),
+                "mlt_idx_" +
+                Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            string dbPath =
+                Path.Combine(directory, "cache.db");
+            try
+            {
+                using (MetadataDatabase.OpenDatabase(
+                           "sqlite:" + dbPath))
+                {
+                }
+                using (var connection =
+                       new SqliteConnection(
+                           new SqliteConnectionStringBuilder
+                           {
+                               DataSource = dbPath,
+                           }.ConnectionString))
+                {
+                    connection.Open();
+                    using var command =
+                        connection.CreateCommand();
+                    command.CommandText =
+                        "DROP INDEX ImagesHashIndex;" +
+                        "ALTER TABLE Files DROP COLUMN ArtworkScanned;" +
+                        "ALTER TABLE Files DROP COLUMN HasAlbumArtist;" +
+                        "ALTER TABLE Images DROP COLUMN Hash;";
+                    command.ExecuteNonQuery();
+                }
+
+                Assert.ThrowsAny<Exception>(() =>
+                {
+                    using MetadataDatabase ignored =
+                        MetadataDatabase.OpenDatabase(
+                            "sqlite:" + dbPath);
+                });
+
+                using var inspected =
+                    new SqliteConnection(
+                        new SqliteConnectionStringBuilder
+                        {
+                            DataSource = dbPath,
+                        }.ConnectionString);
+                inspected.Open();
+                Assert.Equal(
+                    0L,
+                    ScalarLong(
+                        inspected,
+                        "SELECT COUNT(*) FROM pragma_table_info('Files') WHERE name='ArtworkScanned'"));
+                Assert.Equal(
+                    0L,
+                    ScalarLong(
+                        inspected,
+                        "SELECT COUNT(*) FROM pragma_table_info('Files') WHERE name='HasAlbumArtist'"));
+                Assert.Equal(
+                    0L,
+                    ScalarLong(
+                        inspected,
+                        "SELECT COUNT(*) FROM pragma_table_info('Images') WHERE name='Hash'"));
+            }
+            finally
+            {
+                SqliteConnection.ClearAllPools();
+                try
+                {
+                    Directory.Delete(
+                        directory,
+                        true);
+                }
+                catch
+                {
+                }
+            }
+        }
+
+        [Fact]
         public void ExplicitAlbumArtistEqualToArtistRemainsExplicit()
         {
             string directory = Path.Combine(Path.GetTempPath(), "mlt_idx_" + Guid.NewGuid().ToString("N"));

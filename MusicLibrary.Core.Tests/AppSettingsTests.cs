@@ -1,4 +1,5 @@
 using MusicLibrary.Core.Services;
+using System.Text.Json;
 using Xunit;
 
 namespace MusicLibrary.Core.Tests;
@@ -217,6 +218,107 @@ public sealed class AppSettingsTests
         Assert.Equal("first", settings.GetLibraryPreference("workspace"));
         settings.LoadConfig(secondPath);
         Assert.Equal("second", settings.GetLibraryPreference("workspace"));
+    }
+
+    [Fact]
+    public void LegacyStateMigratesWithVersionAndExactRollbackCopy()
+    {
+        using var temp = new TempDirectory();
+        string state =
+            Path.Combine(
+                temp.Path,
+                "settings.json");
+        const string legacy =
+            "{\"ConfigPath\":null,\"Preferences\":{\"legacy.key\":\"value\"},\"RecentConfigs\":[]}";
+        File.WriteAllText(
+            state,
+            legacy);
+
+        var settings =
+            new AppSettings(state);
+
+        Assert.Equal(
+            "value",
+            settings.GetPreference(
+                "legacy.key"));
+        Assert.Equal(
+            legacy,
+            File.ReadAllText(
+                state + ".v1.bak"));
+        using JsonDocument migrated =
+            JsonDocument.Parse(
+                File.ReadAllText(state));
+        Assert.Equal(
+            2,
+            migrated.RootElement
+                .GetProperty("SchemaVersion")
+                .GetInt32());
+    }
+
+    [Fact]
+    public void CorruptCurrentStateFallsBackToLastKnownGoodState()
+    {
+        using var temp = new TempDirectory();
+        string state =
+            Path.Combine(
+                temp.Path,
+                "settings.json");
+        var settings =
+            new AppSettings(state);
+        settings.SetPreference(
+            "key",
+            "first");
+        settings.SetPreference(
+            "key",
+            "second");
+        Assert.True(
+            File.Exists(
+                state + ".rollback.bak"));
+        File.WriteAllText(
+            state,
+            "{broken");
+
+        var recovered =
+            new AppSettings(state);
+
+        Assert.Equal(
+            "first",
+            recovered.GetPreference("key"));
+        recovered.SetPreference(
+            "key",
+            "recovered");
+        Assert.Equal(
+            "recovered",
+            new AppSettings(state)
+                .GetPreference("key"));
+    }
+
+    [Fact]
+    public void FutureStateSchemaIsNeverOverwrittenByOlderApplication()
+    {
+        using var temp = new TempDirectory();
+        string state =
+            Path.Combine(
+                temp.Path,
+                "settings.json");
+        const string future =
+            "{\"SchemaVersion\":999,\"ConfigPath\":null,\"Preferences\":{\"future\":\"data\"},\"RecentConfigs\":[]}";
+        File.WriteAllText(
+            state,
+            future);
+        var settings =
+            new AppSettings(state);
+
+        settings.SetPreference(
+            "older",
+            "must-not-write");
+
+        Assert.Equal(
+            future,
+            File.ReadAllText(state));
+        Assert.False(
+            File.Exists(
+                state + ".rollback.bak"));
     }
 
     private sealed class TempDirectory : IDisposable

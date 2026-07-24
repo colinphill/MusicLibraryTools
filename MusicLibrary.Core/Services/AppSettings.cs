@@ -8,8 +8,32 @@ namespace MusicLibrary.Core.Services;
 public sealed class AppSettings : IAppSettings
 {
     private const int MaxRecentConfigs = 12;
+    private const int CurrentStateSchemaVersion = 2;
 
-    private sealed record PersistedState(string? ConfigPath, Dictionary<string, string>? Preferences, List<string>? RecentConfigs);
+    private sealed record PersistedState(
+        int SchemaVersion,
+        string? ConfigPath,
+        Dictionary<string, string>? Preferences,
+        List<string>? RecentConfigs);
+
+    private sealed record LegacyPersistedState(
+        string? ConfigPath,
+        Dictionary<string, string>? Preferences,
+        List<string>? RecentConfigs);
+
+    private enum StateReadKind
+    {
+        Missing,
+        Invalid,
+        Legacy,
+        Current,
+        Future,
+    }
+
+    private sealed record StateReadResult(
+        StateReadKind Kind,
+        PersistedState? State = null,
+        byte[]? SourceBytes = null);
 
     private static readonly string DefaultStateFile = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -19,6 +43,7 @@ public sealed class AppSettings : IAppSettings
     private readonly string _stateFile;
     private readonly Dictionary<string, string> _preferences;
     private readonly List<string> _recentConfigs;
+    private readonly bool _persistenceReadOnly;
     private string? _rememberedConfigPath;
     private string? _configPath;
     private LibraryConfiguration? _configuration;
@@ -36,10 +61,18 @@ public sealed class AppSettings : IAppSettings
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(stateFile);
         _stateFile = Path.GetFullPath(stateFile);
-        var state = TryLoad();
+        StateReadResult loaded = TryLoad();
+        PersistedState? state = loaded.State;
+        _persistenceReadOnly =
+            loaded.Kind == StateReadKind.Future;
         _rememberedConfigPath = state?.ConfigPath;
         _preferences = state?.Preferences ?? new();
         _recentConfigs = state?.RecentConfigs ?? new();
+        if (loaded.Kind == StateReadKind.Legacy &&
+            loaded.SourceBytes is not null)
+            TryPersistMigration(
+                state!,
+                loaded.SourceBytes);
     }
 
     public string? ConfigPath { get { lock (_sync) return _configPath; } }
@@ -192,31 +225,166 @@ public sealed class AppSettings : IAppSettings
         }
     }
 
-    private PersistedState? TryLoad()
+    private StateReadResult TryLoad()
     {
+        StateReadResult primary =
+            ReadStateFile(_stateFile);
+        if (primary.Kind is StateReadKind.Legacy or
+            StateReadKind.Current or
+            StateReadKind.Future)
+            return primary;
+
+        StateReadResult rollback =
+            ReadStateFile(RollbackPath);
+        if (rollback.Kind is StateReadKind.Legacy or
+            StateReadKind.Current)
+            return rollback;
+        return primary;
+    }
+
+    private static StateReadResult ReadStateFile(
+        string path)
+    {
+        if (!File.Exists(path))
+            return new(StateReadKind.Missing);
         try
         {
-            if (File.Exists(_stateFile))
-                return JsonSerializer.Deserialize<PersistedState>(File.ReadAllText(_stateFile));
+            byte[] bytes = File.ReadAllBytes(path);
+            using JsonDocument json =
+                JsonDocument.Parse(bytes);
+            JsonElement root = json.RootElement;
+            if (root.ValueKind !=
+                JsonValueKind.Object)
+                return new(
+                    StateReadKind.Invalid);
+            if (!root.TryGetProperty(
+                    nameof(
+                        PersistedState.SchemaVersion),
+                    out JsonElement schema))
+            {
+                LegacyPersistedState? legacy =
+                    JsonSerializer.Deserialize<
+                        LegacyPersistedState>(bytes);
+                return legacy is null
+                    ? new(StateReadKind.Invalid)
+                    : new(
+                        StateReadKind.Legacy,
+                        new(
+                            CurrentStateSchemaVersion,
+                            legacy.ConfigPath,
+                            legacy.Preferences,
+                            legacy.RecentConfigs),
+                        bytes);
+            }
+
+            if (!schema.TryGetInt32(
+                    out int version) ||
+                version < 1)
+                return new(StateReadKind.Invalid);
+            if (version >
+                CurrentStateSchemaVersion)
+                return new(
+                    StateReadKind.Future);
+            PersistedState? state =
+                JsonSerializer.Deserialize<
+                    PersistedState>(bytes);
+            return state is null
+                ? new(StateReadKind.Invalid)
+                : new(
+                    version ==
+                    CurrentStateSchemaVersion
+                        ? StateReadKind.Current
+                        : StateReadKind.Legacy,
+                    state with
+                    {
+                        SchemaVersion =
+                            CurrentStateSchemaVersion,
+                    },
+                    bytes);
         }
         catch
         {
-            // A corrupt state file shouldn't stop the app from starting.
+            return new(StateReadKind.Invalid);
         }
-        return null;
     }
 
     private void Persist()
     {
+        if (_persistenceReadOnly)
+            return;
         try
         {
             var bytes = JsonSerializer.SerializeToUtf8Bytes(
-                new PersistedState(_rememberedConfigPath, new(_preferences), new(_recentConfigs)));
-            AtomicFile.Write(_stateFile, stream => stream.Write(bytes));
+                CurrentState());
+            var writes =
+                new List<(
+                    string Path,
+                    Action<Stream> Write)>
+                {
+                    (_stateFile,
+                        stream =>
+                            stream.Write(bytes)),
+                };
+            StateReadResult existing =
+                ReadStateFile(_stateFile);
+            if (existing.Kind is
+                    StateReadKind.Legacy or
+                    StateReadKind.Current &&
+                existing.SourceBytes is
+                    { } previous)
+                writes.Add(
+                    (RollbackPath,
+                        stream =>
+                            stream.Write(previous)));
+            AtomicFile.WriteMany(writes);
         }
         catch
         {
             // Persistence is best-effort; a failure here shouldn't break loading a config.
         }
     }
+
+    private void TryPersistMigration(
+        PersistedState state,
+        byte[] legacyBytes)
+    {
+        try
+        {
+            byte[] current =
+                JsonSerializer.SerializeToUtf8Bytes(
+                    state);
+            var writes =
+                new List<(
+                    string Path,
+                    Action<Stream> Write)>
+                {
+                    (_stateFile,
+                        stream =>
+                            stream.Write(current)),
+                };
+            string legacyBackup =
+                _stateFile + ".v1.bak";
+            if (!File.Exists(legacyBackup))
+                writes.Add(
+                    (legacyBackup,
+                        stream =>
+                            stream.Write(
+                                legacyBytes)));
+            AtomicFile.WriteMany(writes);
+        }
+        catch
+        {
+            // Keep the legacy source intact if migration cannot be committed.
+        }
+    }
+
+    private PersistedState CurrentState() =>
+        new(
+            CurrentStateSchemaVersion,
+            _rememberedConfigPath,
+            new(_preferences),
+            new(_recentConfigs));
+
+    private string RollbackPath =>
+        _stateFile + ".rollback.bak";
 }

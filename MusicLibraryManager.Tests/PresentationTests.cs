@@ -273,6 +273,63 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public void SavedViewFromBeforeVisualFiltersStillLoadsWithoutDataLoss()
+    {
+        var settings =
+            new FakeSettings();
+        settings.Preferences[
+                "manager.library.views.v1"] =
+            System.Text.Json.JsonSerializer.Serialize(
+                new[]
+                {
+                    new
+                    {
+                        Name = "Legacy view",
+                        Filter = "Artist:Miles",
+                        FilterMode =
+                            FilterMode.Substring,
+                        Columns =
+                            new[]
+                            {
+                                new
+                                {
+                                    Key = "title",
+                                    Width = (double?)320,
+                                    DisplayIndex = 0,
+                                    Visible = true,
+                                },
+                            },
+                        Sort = new
+                        {
+                            Key = "title",
+                            Descending = false,
+                        },
+                    },
+                });
+
+        LibraryViewModel viewModel =
+            BuildLibrary(settings, []);
+
+        LibraryViewDefinition view =
+            Assert.Single(
+                viewModel.SavedViews);
+        Assert.Equal(
+            "Legacy view",
+            view.Name);
+        Assert.Equal(
+            "Artist:Miles",
+            view.Filter);
+        Assert.Equal(
+            320,
+            Assert.Single(view.Columns).Width);
+        Assert.Equal(
+            "title",
+            view.Sort!.Key);
+        Assert.Null(
+            view.VisualFilter);
+    }
+
+    [Fact]
     public async Task Library_view_handles_one_hundred_thousand_cached_tracks_without_artwork_reads()
     {
         var settings = new FakeSettings();

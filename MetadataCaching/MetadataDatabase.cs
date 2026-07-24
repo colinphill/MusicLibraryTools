@@ -537,57 +537,83 @@ namespace MetadataCaching
             // builds duplicated every row into KnownMetadata; discard that redundant table. Add
             // indexes used by per-file refresh/detail queries for both new and existing databases.
             // SQLite can reuse freed pages without forcing an expensive VACUUM during startup.
-            using var mcomm = res.conn_.CreateCommand();
-            mcomm.CommandText =
-                "CREATE TABLE IF NOT EXISTS CacheFeatures " +
-                "(Name TEXT PRIMARY KEY NOT NULL)";
-            mcomm.ExecuteNonQuery();
-            mcomm.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Files') WHERE name = 'ArtworkScanned'";
-            if (Convert.ToInt64(mcomm.ExecuteScalar()) == 0)
+            using var schemaMigration =
+                res.conn_.BeginTransaction();
+            try
             {
-                // Existing caches already contain eagerly indexed artwork, so migrate their rows
-                // as resolved. New/modified files explicitly insert ArtworkScanned = 0 below.
-                mcomm.CommandText = "ALTER TABLE Files ADD COLUMN ArtworkScanned BIGINT NOT NULL DEFAULT 1";
-                mcomm.ExecuteNonQuery();
-            }
-            mcomm.CommandText = "SELECT COUNT(*) FROM pragma_table_info('Files') WHERE name = 'HasAlbumArtist'";
-            if (Convert.ToInt64(mcomm.ExecuteScalar()) == 0)
-            {
-                mcomm.CommandText = "ALTER TABLE Files ADD COLUMN HasAlbumArtist BIGINT NOT NULL DEFAULT 0";
+                using var mcomm =
+                    schemaMigration.CreateCommand();
+                mcomm.CommandText =
+                    "CREATE TABLE IF NOT EXISTS CacheFeatures " +
+                    "(Name TEXT PRIMARY KEY NOT NULL)";
                 mcomm.ExecuteNonQuery();
                 mcomm.CommandText =
-                    "UPDATE Files SET HasAlbumArtist = 1 WHERE EXISTS (" +
-                    "SELECT 1 FROM Metadata m JOIN MetadataKeys k ON m.KeyID = k.ID " +
-                    "WHERE m.FileID = Files.ID AND k.\"Key\" = 'AlbumArtist' AND m.Value <> '')";
+                    "SELECT COUNT(*) FROM pragma_table_info('Files') WHERE name = 'ArtworkScanned'";
+                if (Convert.ToInt64(
+                        mcomm.ExecuteScalar()) == 0)
+                {
+                    // Existing caches already contain eagerly indexed artwork, so migrate their
+                    // rows as resolved. New/modified files explicitly insert ArtworkScanned = 0.
+                    mcomm.CommandText =
+                        "ALTER TABLE Files ADD COLUMN ArtworkScanned BIGINT NOT NULL DEFAULT 1";
+                    mcomm.ExecuteNonQuery();
+                }
+                mcomm.CommandText =
+                    "SELECT COUNT(*) FROM pragma_table_info('Files') WHERE name = 'HasAlbumArtist'";
+                if (Convert.ToInt64(
+                        mcomm.ExecuteScalar()) == 0)
+                {
+                    mcomm.CommandText =
+                        "ALTER TABLE Files ADD COLUMN HasAlbumArtist BIGINT NOT NULL DEFAULT 0";
+                    mcomm.ExecuteNonQuery();
+                    mcomm.CommandText =
+                        "UPDATE Files SET HasAlbumArtist = 1 WHERE EXISTS (" +
+                        "SELECT 1 FROM Metadata m JOIN MetadataKeys k ON m.KeyID = k.ID " +
+                        "WHERE m.FileID = Files.ID AND k.\"Key\" = 'AlbumArtist' AND m.Value <> '')";
+                    mcomm.ExecuteNonQuery();
+                }
+                mcomm.CommandText =
+                    "SELECT COUNT(*) FROM pragma_table_info('ScanSetMemberships') WHERE name = 'SetNumber'";
+                if (Convert.ToInt64(
+                        mcomm.ExecuteScalar()) != 0)
+                {
+                    // Preserve legacy numeric memberships as textual identifiers without
+                    // rescanning. DDL and copied rows share the outer schema transaction.
+                    mcomm.CommandText =
+                        "CREATE TABLE ScanSetMemberships_New (ScanSetID INTEGER NOT NULL REFERENCES ScanSets (ID) ON DELETE CASCADE, " +
+                        "SetName TEXT COLLATE NOCASE NOT NULL, PRIMARY KEY (ScanSetID, SetName));" +
+                        "INSERT INTO ScanSetMemberships_New (ScanSetID, SetName) " +
+                        "SELECT ScanSetID, CAST(SetNumber AS TEXT) FROM ScanSetMemberships;" +
+                        "DROP TABLE ScanSetMemberships;" +
+                        "ALTER TABLE ScanSetMemberships_New RENAME TO ScanSetMemberships;";
+                    mcomm.ExecuteNonQuery();
+                }
+                mcomm.CommandText =
+                    "DROP TABLE IF EXISTS KnownMetadata;\r\n" +
+                    "CREATE TABLE IF NOT EXISTS ScanSetMemberships (ScanSetID INTEGER NOT NULL REFERENCES ScanSets (ID) ON DELETE CASCADE, SetName TEXT COLLATE NOCASE NOT NULL, PRIMARY KEY (ScanSetID, SetName));\r\n" +
+                    "CREATE TABLE IF NOT EXISTS ScanHealth (ScanSetID INTEGER PRIMARY KEY REFERENCES ScanSets (ID) ON DELETE CASCADE, LastAttemptUtc DATETIME NOT NULL, LastSuccessUtc DATETIME, State TEXT NOT NULL, Error TEXT, Enumerated BIGINT NOT NULL, MetadataRead BIGINT NOT NULL);\r\n" +
+                    "DROP INDEX IF EXISTS ScanSetMembershipsSetNumberIndex;\r\n" +
+                    "CREATE INDEX IF NOT EXISTS ScanSetMembershipsSetNameIndex ON ScanSetMemberships (SetName);\r\n" +
+                    "CREATE INDEX IF NOT EXISTS AlbumsLookupIndex ON Albums (ScanSetID, Path, AlbumArtistID, Name);\r\n" +
+                    "CREATE INDEX IF NOT EXISTS FilesPathIndex ON Files (Path);\r\n" +
+                    "CREATE INDEX IF NOT EXISTS ImagesHashIndex ON Images (Hash);";
                 mcomm.ExecuteNonQuery();
+                schemaMigration.Commit();
             }
-            mcomm.CommandText =
-                "SELECT COUNT(*) FROM pragma_table_info('ScanSetMemberships') WHERE name = 'SetNumber'";
-            if (Convert.ToInt64(mcomm.ExecuteScalar()) != 0)
+            catch
             {
-                // Preserve legacy numeric memberships as textual identifiers without rescanning.
-                using var membershipMigration = res.conn_.BeginTransaction();
-                using var migrate = membershipMigration.CreateCommand();
-                migrate.CommandText =
-                    "CREATE TABLE ScanSetMemberships_New (ScanSetID INTEGER NOT NULL REFERENCES ScanSets (ID) ON DELETE CASCADE, " +
-                    "SetName TEXT COLLATE NOCASE NOT NULL, PRIMARY KEY (ScanSetID, SetName));" +
-                    "INSERT INTO ScanSetMemberships_New (ScanSetID, SetName) " +
-                    "SELECT ScanSetID, CAST(SetNumber AS TEXT) FROM ScanSetMemberships;" +
-                    "DROP TABLE ScanSetMemberships;" +
-                    "ALTER TABLE ScanSetMemberships_New RENAME TO ScanSetMemberships;";
-                migrate.ExecuteNonQuery();
-                membershipMigration.Commit();
+                try
+                {
+                    schemaMigration.Rollback();
+                }
+                catch
+                {
+                    // Preserve the migration failure; SQLite will roll back the open transaction
+                    // when the connection is disposed even if an explicit rollback also fails.
+                }
+                res.Dispose();
+                throw;
             }
-            mcomm.CommandText =
-                "DROP TABLE IF EXISTS KnownMetadata;\r\n" +
-                "CREATE TABLE IF NOT EXISTS ScanSetMemberships (ScanSetID INTEGER NOT NULL REFERENCES ScanSets (ID) ON DELETE CASCADE, SetName TEXT COLLATE NOCASE NOT NULL, PRIMARY KEY (ScanSetID, SetName));\r\n" +
-                "CREATE TABLE IF NOT EXISTS ScanHealth (ScanSetID INTEGER PRIMARY KEY REFERENCES ScanSets (ID) ON DELETE CASCADE, LastAttemptUtc DATETIME NOT NULL, LastSuccessUtc DATETIME, State TEXT NOT NULL, Error TEXT, Enumerated BIGINT NOT NULL, MetadataRead BIGINT NOT NULL);\r\n" +
-                "DROP INDEX IF EXISTS ScanSetMembershipsSetNumberIndex;\r\n" +
-                "CREATE INDEX IF NOT EXISTS ScanSetMembershipsSetNameIndex ON ScanSetMemberships (SetName);\r\n" +
-                "CREATE INDEX IF NOT EXISTS AlbumsLookupIndex ON Albums (ScanSetID, Path, AlbumArtistID, Name);\r\n" +
-                "CREATE INDEX IF NOT EXISTS FilesPathIndex ON Files (Path);\r\n" +
-                "CREATE INDEX IF NOT EXISTS ImagesHashIndex ON Images (Hash);";
-            mcomm.ExecuteNonQuery();
 
             return res;
         }

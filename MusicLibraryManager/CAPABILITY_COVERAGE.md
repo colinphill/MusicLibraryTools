@@ -119,9 +119,6 @@ editing outcomes.
 
 The following are Phase 6 validation gaps, not missing capability outcomes:
 
-- settings/cache migration and rollback coverage;
-- compatibility coverage for existing XML, saved views, databases, and CLI
-  workflows;
 - large selections, network shares, and offline roots;
 - keyboard, accessibility, high-DPI, malformed artwork, and three-platform
   behavior;

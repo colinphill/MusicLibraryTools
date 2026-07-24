@@ -650,9 +650,25 @@ per-operation capability flags.
   intentionally different, or not implemented. The current audit has no
   accepted earlier-phase outcome in the not-implemented class; remaining work
   is explicitly listed as release hardening.
-- [ ] Add migration and rollback for new app settings and cache data.
-- [ ] Preserve existing XML configurations, saved views, databases, and CLI
+- [x] Add migration and rollback for new app settings and cache data.
+  - Application settings now use an explicit schema-version envelope. Legacy
+    unversioned state is migrated atomically with an exact `.v1.bak`, each
+    subsequent write retains a last-known-good rollback state, corrupt current
+    state falls back to that copy, and future schemas are never overwritten by
+    an older application.
+  - The active SQLite cache backend applies all startup DDL and data
+    transformations in one transaction. A forced late migration failure proves
+    earlier column changes roll back together.
+- [x] Preserve existing XML configurations, saved views, databases, and CLI
   workflows.
+  - Legacy configuration/profile goldens preserve organization, ingest,
+    playlist, repair, and mutation-policy behavior; v1-to-v2 saves retain the
+    original XML backup.
+  - Pre-visual-filter saved views deserialize with their filters, columns, and
+    sort state intact. Existing SQLite feature, column, index, and numeric-set
+    migrations retain cached data without a rescan.
+  - The portable solution gate builds every retained CLI adapter, while their
+    shared typed Core services retain characterization and compatibility tests.
 - [ ] Audit large selections and network shares.
 - [ ] Audit offline roots.
 - [x] Audit Unicode paths and metadata.
@@ -699,7 +715,9 @@ per-operation capability flags.
   reindex, and undo.
 - [ ] Golden report and playlist output tests across encodings and path styles.
 - [ ] Parser corpus tests for valid, unusual, truncated, and corrupt files.
-- [ ] Full existing solution tests at every milestone.
+- [x] Full existing solution tests at every milestone. Every completed slice is
+  gated by the Release build, all portable solution tests, and `git diff
+  --check` before commit.
 
 ## Architectural defaults
 
