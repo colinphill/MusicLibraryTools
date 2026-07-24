@@ -43,6 +43,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private readonly IFilePickerService? _files;
     private readonly IDialogCoordinator? _dialogs;
     private readonly IPlatformService? _platform;
+    private readonly IEditHistoryService? _history;
     private MetadataOperationPlan? _libraryOperationPlan;
     private ReportExportPlan? _reportPlan;
     private PlaylistWorkspacePlan? _playlistPlan;
@@ -167,6 +168,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(PreviewRemoveAllLibraryArtworkCommand))]
     [NotifyCanExecuteChangedFor(nameof(CopyLibraryMetadataFieldCommand))]
     [NotifyCanExecuteChangedFor(nameof(PasteLibraryMetadataFieldCommand))]
+    [NotifyCanExecuteChangedFor(nameof(UndoLibraryOperationCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RedoLibraryOperationCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RepeatLibraryRecipeCommand))]
     private bool _isOperationBusy;
 
     [ObservableProperty]
@@ -268,7 +272,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         IMetadataGridColumnStore? metadataColumns = null,
         IDelimitedMetadataImportService? delimitedImports = null,
         IPlatformService? platform = null,
-        IReviewedFileOperationService? fileOperations = null)
+        IReviewedFileOperationService? fileOperations = null,
+        IEditHistoryService? history = null)
     {
         _library = library;
         _reindex = reindex;
@@ -291,6 +296,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         _files = files;
         _dialogs = dialogs;
         _platform = platform;
+        _history = history;
         OperationEditor = new(
             operationCatalog ?? new MetadataOperationCatalog(),
             MetadataOperationSurface.Library,
@@ -421,6 +427,19 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         _externalToolPlan is not null ||
         FileOperations?.HasUnsavedChanges == true;
     public event Action? HealthFilterClearRequested;
+
+    public bool CanUndoLatestOperation =>
+        _history?.CanUndo == true &&
+        !IsOperationBusy;
+
+    public bool CanRedoLatestOperation =>
+        _history?.CanRedo == true &&
+        !IsOperationBusy;
+
+    public bool CanRepeatLatestRecipe =>
+        _history?.Entries.FirstOrDefault()?.Recipe is not null &&
+        ResolveOperationPaths().Length > 0 &&
+        !IsOperationBusy;
 
     partial void OnSelectedReleaseChanged(MusicBrainzReleaseRow? value)
     {
@@ -712,6 +731,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         ImportLibraryDelimitedMetadataCommand.NotifyCanExecuteChanged();
         CopyLibraryMetadataFieldCommand.NotifyCanExecuteChanged();
         PasteLibraryMetadataFieldCommand.NotifyCanExecuteChanged();
+        NotifyHistoryCommands();
         DiscoverLibraryAudioCommand.NotifyCanExecuteChanged();
         PreviewLocalLibraryArtworkCommand.NotifyCanExecuteChanged();
         PreviewRemoveLibraryFrontCoverCommand.NotifyCanExecuteChanged();
@@ -1019,7 +1039,139 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         finally
         {
             EndLibraryOperation();
+            NotifyHistoryCommands();
             OnPropertyChanged(nameof(HasUnsavedChanges));
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanUndoLibraryOperation))]
+    private async Task UndoLibraryOperationAsync()
+    {
+        if (_history is null ||
+            _dialogs is null ||
+            _history.Entries.FirstOrDefault() is not { } candidate)
+            return;
+        if (!await _dialogs.ConfirmAsync(
+                "Restore the latest metadata operation?",
+                "Current files will be replaced by the retained originals. Collision backups are created when required.",
+                "Restore"))
+            return;
+
+        BeginLibraryOperation("Restoring the latest metadata operation");
+        try
+        {
+            var progress = new Progress<int>(completed =>
+            {
+                IsOperationProgressIndeterminate = false;
+                OperationProgressMaximum =
+                    Math.Max(1, candidate.Paths.Length);
+                OperationProgressValue =
+                    Math.Clamp(
+                        completed,
+                        0,
+                        OperationProgressMaximum);
+                OperationProgressText =
+                    $"Restored {completed:N0} file(s)";
+            });
+            int restored =
+                await _history.UndoLatestAsync(
+                    progress,
+                    _operationCancellation!.Token);
+            foreach (string path in candidate.Paths)
+                await _reindex.ReindexFileAsync(
+                    path,
+                    _operationCancellation.Token);
+            await ReloadAsync();
+            OperationStatus =
+                $"Restored {restored:N0} file(s) from the latest metadata operation.";
+        }
+        catch (OperationCanceledException)
+        {
+            OperationStatus =
+                "Restore cancelled. Any completed restores remain recoverable.";
+        }
+        catch (Exception error)
+        {
+            OperationStatus =
+                $"Restore failed: {error.Message}";
+        }
+        finally
+        {
+            EndLibraryOperation();
+            NotifyHistoryCommands();
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRedoLibraryOperation))]
+    private async Task RedoLibraryOperationAsync()
+    {
+        EditHistoryEntry? candidate =
+            _history?.RedoEntries.FirstOrDefault(
+                entry => entry.Recipe is not null);
+        if (candidate?.Recipe is null)
+            return;
+        await PreviewHistoryRecipeAsync(
+            candidate.Paths,
+            candidate.Recipe,
+            "Redo was regenerated against the current files. Review before applying.");
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRepeatLibraryRecipe))]
+    private async Task RepeatLibraryRecipeAsync()
+    {
+        OperationRecipe? recipe =
+            _history?.Entries.FirstOrDefault()?.Recipe;
+        if (recipe is null)
+            return;
+        await PreviewHistoryRecipeAsync(
+            ResolveOperationPaths(),
+            recipe,
+            "The latest recipe was regenerated for the current Library scope. Review before applying.");
+    }
+
+    private async Task PreviewHistoryRecipeAsync(
+        IReadOnlyList<string> paths,
+        OperationRecipe recipe,
+        string successMessage)
+    {
+        if (_metadataOperations is null ||
+            paths.Count == 0)
+            return;
+        BeginLibraryOperation("Regenerating metadata preview");
+        try
+        {
+            MetadataOperationPlan plan =
+                await _metadataOperations.PreviewAsync(
+                    paths,
+                    recipe,
+                    CreateOperationProgress(),
+                    _operationCancellation!.Token);
+            _libraryOperationPlan = plan;
+            MetadataPreviewRowBuilder.Populate(
+                OperationPreviewChanges,
+                plan);
+            HasApplicableOperationPreview =
+                plan.CanApply;
+            OperationStatus = successMessage;
+            OnPropertyChanged(
+                nameof(HasUnsavedChanges));
+        }
+        catch (OperationCanceledException)
+        {
+            InvalidateLibraryOperationPreview();
+            OperationStatus =
+                "History preview cancelled. No files were changed.";
+        }
+        catch (Exception error)
+        {
+            InvalidateLibraryOperationPreview();
+            OperationStatus =
+                $"History preview failed: {error.Message}";
+        }
+        finally
+        {
+            EndLibraryOperation();
+            NotifyHistoryCommands();
         }
     }
 
@@ -2288,6 +2440,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         InvalidateReportPlan();
         InvalidatePlaylistPlan();
         InvalidateExternalToolPlan();
+        NotifyHistoryCommands();
     }
 
     partial void OnRowsChanged(IReadOnlyList<LibraryRow> value)
@@ -2306,6 +2459,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         PreviewLocalLibraryArtworkCommand.NotifyCanExecuteChanged();
         PreviewRemoveLibraryFrontCoverCommand.NotifyCanExecuteChanged();
         PreviewRemoveAllLibraryArtworkCommand.NotifyCanExecuteChanged();
+        NotifyHistoryCommands();
     }
 
     private bool CanPreviewLibraryOperation() =>
@@ -2335,6 +2489,38 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private bool CanApplyLibraryOperation() =>
         !IsOperationBusy && _libraryOperationPlan is not null &&
         HasApplicableOperationPreview;
+
+    private bool CanUndoLibraryOperation() =>
+        _history?.CanUndo == true &&
+        _dialogs is not null &&
+        !IsOperationBusy;
+
+    private bool CanRedoLibraryOperation() =>
+        _history?.CanRedo == true &&
+        _metadataOperations is not null &&
+        !IsOperationBusy;
+
+    private bool CanRepeatLibraryRecipe() =>
+        _history?.Entries.FirstOrDefault()?.Recipe is not null &&
+        _metadataOperations is not null &&
+        ResolveOperationPaths().Length > 0 &&
+        !IsOperationBusy;
+
+    private void NotifyHistoryCommands()
+    {
+        OnPropertyChanged(
+            nameof(CanUndoLatestOperation));
+        OnPropertyChanged(
+            nameof(CanRedoLatestOperation));
+        OnPropertyChanged(
+            nameof(CanRepeatLatestRecipe));
+        UndoLibraryOperationCommand
+            .NotifyCanExecuteChanged();
+        RedoLibraryOperationCommand
+            .NotifyCanExecuteChanged();
+        RepeatLibraryRecipeCommand
+            .NotifyCanExecuteChanged();
+    }
 
     private bool CanDiscoverLibraryAudio() =>
         !IsBusy && !IsOperationBusy && _audioDiscovery is not null &&

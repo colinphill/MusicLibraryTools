@@ -44,12 +44,13 @@ the same editor, preview, policy checks, recovery behavior, and history.
 
 - [x] Define operation applicability in the shared operation catalog rather
   than in either view.
-- [~] Expose every applicable metadata, artwork, file, online-enrichment,
-  report, and playlist operation from both Workbench and Library. The initial
-  typed metadata catalog, audio-fingerprint discovery, structured reports, and
-  playlist output are exposed in both surfaces.
-- [~] Share recipe editing, typed conditions, preview rendering, apply,
+- [x] Expose every applicable metadata, artwork, file, online-enrichment,
+  report, playlist, and external-tool operation from both Workbench and
+  Library through shared Core services.
+- [x] Share recipe editing, typed conditions, preview rendering, apply,
   cancellation, history, undo, redo, and repeat between the two surfaces.
+  Library history commands use its explicit scope for repeat, regenerate redo
+  from the original paths, and reindex restored files after undo.
 - [x] Let Library operations target an explicit scope: selected tracks,
   selected albums, visible filtered results, or the complete active view.
 - [x] Resolve Library scopes to stable path snapshots before preview and show

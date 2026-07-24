@@ -868,6 +868,21 @@ public sealed class UiControlTests
                 library.FindControl<
                     ReviewedFileOperationEditorView>(
                     "LibraryFileOperationEditor"));
+            Assert.Equal(
+                "Undo metadata",
+                library.FindControl<Button>(
+                    "UndoLibraryOperationButton")!
+                    .Content);
+            Assert.Equal(
+                "Redo preview",
+                library.FindControl<Button>(
+                    "RedoLibraryOperationButton")!
+                    .Content);
+            Assert.Equal(
+                "Repeat recipe",
+                library.FindControl<Button>(
+                    "RepeatLibraryRecipeButton")!
+                    .Content);
             Button visualFilter = library.FindControl<Button>(
                 "VisualFilterButton")!;
             Popup visualFilterPopover =

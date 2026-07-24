@@ -333,6 +333,20 @@
                 <TextBlock Text="Library operations and output" FontSize="16" FontWeight="SemiBold" />
                 <TextBlock Classes="muted"
                            Text="Apply typed operations, reports, and playlists to an explicit Library scope." />
+                <WrapPanel Margin="0,5,0,0">
+                  <Button x:Name="UndoLibraryOperationButton"
+                          Classes="app" Margin="0,0,6,0"
+                          Content="Undo metadata"
+                          Command="{Binding UndoLibraryOperationCommand}" />
+                  <Button x:Name="RedoLibraryOperationButton"
+                          Classes="app" Margin="0,0,6,0"
+                          Content="Redo preview"
+                          Command="{Binding RedoLibraryOperationCommand}" />
+                  <Button x:Name="RepeatLibraryRecipeButton"
+                          Classes="app"
+                          Content="Repeat recipe"
+                          Command="{Binding RepeatLibraryRecipeCommand}" />
+                </WrapPanel>
               </StackPanel>
               <Grid Grid.Column="1" ColumnDefinitions="*,Auto" ColumnSpacing="6">
                 <ComboBox Classes="app"
