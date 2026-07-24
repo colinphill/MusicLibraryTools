@@ -644,9 +644,12 @@ per-operation capability flags.
 
 ## Phase 6: Integration and parity hardening
 
-- [ ] Maintain a MusicLibraryManager-language capability checklist.
-- [ ] Classify capabilities as covered natively, covered by a broader workflow,
-  intentionally different, or not implemented.
+- [x] Maintain a MusicLibraryManager-language capability checklist in
+  `CAPABILITY_COVERAGE.md`.
+- [x] Classify capabilities as covered natively, covered by a broader workflow,
+  intentionally different, or not implemented. The current audit has no
+  accepted earlier-phase outcome in the not-implemented class; remaining work
+  is explicitly listed as release hardening.
 - [ ] Add migration and rollback for new app settings and cache data.
 - [ ] Preserve existing XML configurations, saved views, databases, and CLI
   workflows.
