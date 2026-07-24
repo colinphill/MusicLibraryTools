@@ -829,8 +829,15 @@ per-operation capability flags.
     commits; the waiting edit revalidates after acquiring the lease and is
     rejected as stale instead of overwriting the winner. Multi-path leases use
     globally sorted stripes to avoid deadlock.
-- [ ] Headless UI tests for Workbench loading, drag-and-drop, editing,
+- [x] Headless UI tests for Workbench loading, drag-and-drop, editing,
   selection, recipe construction, and navigation guards.
+  - Bound-control tests load recent and dropped sources through the Workbench
+    adapters, including recursive-mode propagation and dropped-path filtering.
+  - The real editable DataGrid cell updates its track model, extended grid
+    selection projects mixed metadata, and bound recipe controls construct the
+    expected typed operation.
+  - Dirty inline edits exercise both rejection and acceptance paths through the
+    shell's asynchronous navigation guard.
 - [ ] Recorded fixtures for online providers; CI must not use live services.
 - [ ] Golden Chromaprint/fpcalc fixtures for supported codecs, Unicode paths,
   cancellation, malformed output, missing tools, and deterministic

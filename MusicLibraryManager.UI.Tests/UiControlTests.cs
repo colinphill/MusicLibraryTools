@@ -1093,6 +1093,226 @@ public sealed class UiControlTests
     }
 
     [AvaloniaFact]
+    public async Task Workbench_controls_load_recent_and_dropped_sources()
+    {
+        var loader = new RecordingWorkbenchService();
+        using ServiceProvider services = BuildIsolatedServices(
+            configureServices: collection =>
+                collection.AddSingleton<IWorkbenchService>(loader));
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Show();
+            window.Width = 1440;
+            window.Height = 900;
+            services.GetRequiredService<INavigationService>()
+                .Navigate(ShellDestination.Workbench);
+            Dispatcher.UIThread.RunJobs();
+            WorkbenchView view = Assert.IsType<WorkbenchView>(
+                window.FindControl<ContentControl>(
+                    "ContentHost")!.Content);
+            WorkbenchViewModel model =
+                services.GetRequiredService<WorkbenchViewModel>();
+            string recentPath = Path.GetFullPath("recent-source.flac");
+            model.Recursive = false;
+            model.RecentLocations.Add(recentPath);
+            view.FindControl<ComboBox>("RecentLocationsBox")!
+                .SelectedItem = recentPath;
+            Dispatcher.UIThread.RunJobs();
+
+            Button addRecent = view.FindControl<Button>(
+                "AddRecentWorkbenchSourceButton")!;
+            Assert.NotNull(addRecent.Command);
+            addRecent.Command.Execute(addRecent.CommandParameter);
+            await WaitForUiAsync(() => model.Files.Count == 1);
+
+            WorkbenchLoadRequest recentRequest =
+                Assert.Single(loader.Requests);
+            Assert.Equal([recentPath], recentRequest.Sources);
+            Assert.False(recentRequest.Recursive);
+            Assert.Equal(recentPath, model.Files[0].Path);
+
+            string droppedPath =
+                Path.GetFullPath("dropped-source.flac");
+            await view.AddDroppedSourcesAsync(
+                [null, "", " ", droppedPath]);
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(2, loader.Requests.Count);
+            Assert.Equal(
+                [droppedPath],
+                loader.Requests[1].Sources);
+            Assert.Equal(
+                [recentPath, droppedPath],
+                model.Files.Select(file => file.Path));
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task Workbench_controls_edit_fields_build_recipes_and_guard_navigation()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Show();
+            window.Width = 1440;
+            window.Height = 900;
+            var navigation = Assert.IsType<NavigationService>(
+                services.GetRequiredService<INavigationService>());
+            navigation.Navigate(ShellDestination.Workbench);
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+            WorkbenchView view = Assert.IsType<WorkbenchView>(
+                window.FindControl<ContentControl>(
+                    "ContentHost")!.Content);
+            WorkbenchViewModel model =
+                services.GetRequiredService<WorkbenchViewModel>();
+            var track = new WorkbenchTrackViewModel(
+                new MediaDocument(
+                    "editable.flac",
+                    [new(
+                        "VorbisComment",
+                        [new(
+                            MetadataFieldKey.Known(TagFields.Title),
+                            ["Original title"])],
+                        true,
+                        true,
+                        true,
+                        true)],
+                    [],
+                    null,
+                    new(
+                        "editable.flac",
+                        10,
+                        DateTime.UtcNow,
+                        "hash"),
+                    true));
+            model.Files.Add(track);
+            model.SelectedFile = track;
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+
+            AppDataGrid grid =
+                view.FindControl<AppDataGrid>("WorkbenchGrid")!;
+            DataGridColumn titleColumn = grid.Columns.Single(
+                column => Equals(column.Header, "Title"));
+            grid.SelectedItem = track;
+            grid.CurrentColumn = titleColumn;
+            grid.ScrollIntoView(track, titleColumn);
+            Control? editingElement = null;
+            grid.PreparingCellForEdit += (_, eventArgs) =>
+                editingElement = eventArgs.EditingElement;
+            Assert.True(grid.BeginEdit());
+            Dispatcher.UIThread.RunJobs();
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
+            Dispatcher.UIThread.RunJobs();
+            TextBox titleEditor =
+                Assert.IsType<TextBox>(editingElement);
+
+            titleEditor.Text = "Edited title";
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal("Edited title", track.Title);
+            Assert.True(track.HasChanges);
+            Assert.True(model.HasUnsavedChanges);
+
+            TabControl tabs =
+                view.FindControl<TabControl>("WorkbenchTabs")!;
+            tabs.SelectedIndex = 1;
+            Dispatcher.UIThread.RunJobs();
+            ComboBox operationPicker =
+                view.FindControl<ComboBox>(
+                    "WorkbenchOperationPicker")!;
+            operationPicker.SelectedItem =
+                model.OperationEditor.OperationDescriptors.Single(
+                    descriptor => descriptor.DisplayName == "Assign");
+            view.FindControl<ComboBox>(
+                    "WorkbenchOperationFieldPicker")!
+                .SelectedItem =
+                model.OperationEditor.Fields.Single(
+                    field => field.Field == TagFields.Title);
+            TextBox valueEditor =
+                view.FindControl<TextBox>(
+                    "WorkbenchOperationValueEditor")!;
+            valueEditor.Text = "Reviewed value";
+            Button addRecipeStep = view.FindControl<Button>(
+                "AddWorkbenchRecipeStepButton")!;
+            addRecipeStep.Focus();
+            Dispatcher.UIThread.RunJobs();
+            Assert.NotNull(addRecipeStep.Command);
+            addRecipeStep.Command.Execute(
+                addRecipeStep.CommandParameter);
+            Dispatcher.UIThread.RunJobs();
+
+            MetadataRecipeStepViewModel step =
+                Assert.Single(model.OperationEditor.Steps);
+            var assignment =
+                Assert.IsType<AssignFieldOperation>(
+                    step.Operation);
+            Assert.Equal(
+                TagFields.Title,
+                assignment.Field.KnownField);
+            Assert.Equal("Reviewed value", assignment.Value);
+            Assert.Single(
+                view.FindControl<ListBox>(
+                    "WorkbenchRecipeSteps")!.Items);
+
+            Task rejectedNavigation =
+                navigation.NavigateAsync(
+                    ShellDestination.Library);
+            await WaitForUiAsync(() =>
+                services.GetRequiredService<DialogService>()
+                    .Current is ConfirmRequest);
+            ConfirmRequest request = Assert.IsType<ConfirmRequest>(
+                services.GetRequiredService<DialogService>()
+                    .Current);
+            Assert.Equal("Leave the Workbench?", request.Title);
+            services.GetRequiredService<DialogService>()
+                .Complete(false);
+            await rejectedNavigation;
+
+            Assert.Equal(
+                ShellDestination.Workbench,
+                navigation.Current);
+            Assert.Same(
+                view,
+                window.FindControl<ContentControl>(
+                    "ContentHost")!.Content);
+
+            Task acceptedNavigation =
+                navigation.NavigateAsync(
+                    ShellDestination.Library);
+            await WaitForUiAsync(() =>
+                services.GetRequiredService<DialogService>()
+                    .Current is ConfirmRequest);
+            services.GetRequiredService<DialogService>()
+                .Complete(true);
+            await acceptedNavigation;
+            Dispatcher.UIThread.RunJobs();
+
+            Assert.Equal(
+                ShellDestination.Library,
+                navigation.Current);
+            Assert.IsType<LibraryView>(
+                window.FindControl<ContentControl>(
+                    "ContentHost")!.Content);
+        }
+        finally
+        {
+            window.Hide();
+        }
+    }
+
+    [AvaloniaFact]
     public void Workbench_stages_and_reorders_complete_embedded_artwork_set()
     {
         using ServiceProvider services = BuildIsolatedServices();
@@ -2413,6 +2633,19 @@ public sealed class UiControlTests
             configureServices?.Invoke(services);
         });
 
+    private static async Task WaitForUiAsync(
+        Func<bool> condition)
+    {
+        for (int attempt = 0;
+             attempt < 80 && !condition();
+             attempt++)
+        {
+            Dispatcher.UIThread.RunJobs();
+            await Task.Delay(5);
+        }
+        Assert.True(condition());
+    }
+
     private static double ContrastRatio(Color first, Color second)
     {
         double firstLuminance = RelativeLuminance(first);
@@ -2468,6 +2701,48 @@ public sealed class UiControlTests
 
         public void RevealFile(string path)
         {
+        }
+    }
+
+    private sealed class RecordingWorkbenchService :
+        IWorkbenchService
+    {
+        public List<WorkbenchLoadRequest> Requests { get; } = [];
+
+        public Task<WorkbenchLoadResult> LoadAsync(
+            WorkbenchLoadRequest request,
+            CancellationToken ct = default)
+        {
+            ct.ThrowIfCancellationRequested();
+            Requests.Add(request);
+            return Task.FromResult(new WorkbenchLoadResult(
+                [.. request.Sources.Select(CreateDocument)],
+                []));
+        }
+
+        private static MediaDocument CreateDocument(
+            string source)
+        {
+            string path = Path.GetFullPath(source);
+            return new(
+                path,
+                [new(
+                    "VorbisComment",
+                    [new(
+                        MetadataFieldKey.Known(TagFields.Title),
+                        [Path.GetFileNameWithoutExtension(path)])],
+                    true,
+                    true,
+                    true,
+                    true)],
+                [],
+                null,
+                new(
+                    path,
+                    10,
+                    DateTime.UtcNow,
+                    $"snapshot:{path}"),
+                true);
         }
     }
 

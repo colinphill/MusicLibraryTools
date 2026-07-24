@@ -35,7 +35,8 @@
                 ItemsSource="{Binding RecentLocations}"
                 PlaceholderText="Recent locations"
                 AutomationProperties.Name="Recent Workbench locations" />
-      <Button Grid.Column="4" HorizontalAlignment="Left" Classes="app"
+      <Button x:Name="AddRecentWorkbenchSourceButton"
+              Grid.Column="4" HorizontalAlignment="Left" Classes="app"
               Content="Add recent" Command="{Binding AddRecentCommand}"
               CommandParameter="{Binding SelectedItem, ElementName=RecentLocationsBox}" />
       <StackPanel Grid.Column="5" Spacing="3" IsVisible="{Binding IsBusy}">
@@ -52,7 +53,7 @@
     </Grid>
 
     <Border Grid.Row="2" Classes="card" Padding="12" ClipToBounds="True">
-      <TabControl>
+      <TabControl x:Name="WorkbenchTabs">
         <TabItem Header="Session">
           <Grid Margin="0,12,0,0" RowDefinitions="Auto,*,Auto,Auto,Auto,Auto" RowSpacing="10">
             <WrapPanel>
@@ -288,14 +289,15 @@
             <Grid ColumnDefinitions="190,190,190,190,170,*" ColumnSpacing="10">
               <StackPanel Spacing="5">
                 <TextBlock Classes="muted" Text="Operation" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox Classes="app"
+                <ComboBox x:Name="WorkbenchOperationPicker" Classes="app"
                           ItemsSource="{Binding OperationEditor.OperationDescriptors}"
                           DisplayMemberBinding="{Binding DisplayName}"
                           SelectedItem="{Binding OperationEditor.SelectedOperation, Mode=TwoWay}" />
               </StackPanel>
               <StackPanel Grid.Column="1" Spacing="5">
                 <TextBlock Classes="muted" Text="Field" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.Fields}"
+                <ComboBox x:Name="WorkbenchOperationFieldPicker"
+                          Classes="app" ItemsSource="{Binding OperationEditor.Fields}"
                           DisplayMemberBinding="{Binding Label}"
                           SelectedItem="{Binding OperationEditor.SelectedField, Mode=TwoWay}" />
               </StackPanel>
@@ -324,7 +326,8 @@
             <Grid Grid.Row="1" ColumnDefinitions="*,*,*,160,160" ColumnSpacing="10">
               <StackPanel Spacing="5">
                 <TextBlock Classes="muted" Text="Value" FontSize="12" FontWeight="SemiBold" />
-                <TextBox Classes="app" Text="{Binding OperationEditor.OperationValue, Mode=TwoWay}"
+                <TextBox x:Name="WorkbenchOperationValueEditor"
+                         Classes="app" Text="{Binding OperationEditor.OperationValue, Mode=TwoWay}"
                          PlaceholderText="Assignment value" />
               </StackPanel>
               <StackPanel Grid.Column="1" Spacing="5">
@@ -359,7 +362,8 @@
               <NumericUpDown Classes="app" Margin="8,0,0,0" Width="90"
                              Minimum="0" Maximum="12"
                              Value="{Binding OperationEditor.SequencePadding, Mode=TwoWay}" />
-              <Button Classes="app" Margin="18,0,0,0"
+              <Button x:Name="AddWorkbenchRecipeStepButton"
+                      Classes="app" Margin="18,0,0,0"
                       Content="Add operation to recipe"
                       Command="{Binding OperationEditor.AddCurrentOperationCommand}" />
               <CheckBox Margin="18,0,8,0" VerticalAlignment="Center"
@@ -404,7 +408,8 @@
             <Grid Grid.Row="4" ColumnDefinitions="1.2*,12,0.8*">
               <Grid RowDefinitions="Auto,*,Auto" RowSpacing="6">
                 <TextBlock Classes="section-title" Text="Ordered recipe" />
-                <ListBox Grid.Row="1" ItemsSource="{Binding OperationEditor.Steps}"
+                <ListBox x:Name="WorkbenchRecipeSteps"
+                         Grid.Row="1" ItemsSource="{Binding OperationEditor.Steps}"
                          SelectedItem="{Binding OperationEditor.SelectedStep, Mode=TwoWay}">
                   <ListBox.ItemTemplate>
                     <DataTemplate>
@@ -523,7 +528,8 @@
                   <ComboBox Classes="app" ItemsSource="{Binding FieldEditModes}"
                             SelectedItem="{Binding SelectedFieldEditMode, Mode=TwoWay}" />
                 </StackPanel>
-                <TextBox Classes="app" MinHeight="180" AcceptsReturn="True"
+                <TextBox x:Name="WorkbenchFieldValuesEditor"
+                         Classes="app" MinHeight="180" AcceptsReturn="True"
                          TextWrapping="NoWrap"
                          ScrollViewer.VerticalScrollBarVisibility="Auto"
                          Text="{Binding FieldValuesText, Mode=TwoWay}" />

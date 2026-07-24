@@ -541,9 +541,20 @@ public partial class WorkbenchView : UserControl
             .Where(path => path is not null)
             .Cast<string>()
             .ToArray() ?? [];
-        if (paths.Length > 0)
-            await _viewModel.AddSourcesAsync(paths);
+        await AddDroppedSourcesAsync(paths);
         e.Handled = true;
+    }
+
+    internal Task AddDroppedSourcesAsync(
+        IEnumerable<string?> paths)
+    {
+        string[] usablePaths = paths
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Cast<string>()
+            .ToArray();
+        return usablePaths.Length == 0
+            ? Task.CompletedTask
+            : _viewModel.AddSourcesAsync(usablePaths);
     }
 
     private async void OnWorkbenchKeyDown(
