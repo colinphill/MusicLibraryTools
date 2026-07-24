@@ -21,8 +21,10 @@ public partial class SelectionInspectorViewModel : ObservableObject
     private readonly IFieldsEditorService _fieldsEditor;
     private readonly IThumbnailService _thumbnails;
     private readonly IActivityService _activities;
+    private readonly IMetadataOperationService? _metadataOperations;
     private int _generation;
     private CancellationTokenSource? _cancellation;
+    private CancellationTokenSource? _editCancellation;
     private bool _artworkSetModified;
 
     [ObservableProperty] private SelectionContext _selection = SelectionContext.Empty;
@@ -57,7 +59,8 @@ public partial class SelectionInspectorViewModel : ObservableObject
         IDialogCoordinator dialogs,
         IFieldsEditorService fieldsEditor,
         IThumbnailService thumbnails,
-        IActivityService activities)
+        IActivityService activities,
+        IMetadataOperationService? metadataOperations = null)
     {
         _media = media;
         _library = library;
@@ -68,6 +71,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
         _fieldsEditor = fieldsEditor;
         _thumbnails = thumbnails;
         _activities = activities;
+        _metadataOperations = metadataOperations;
         foreach (var (field, label) in FieldDefinitions)
         {
             var item = new EditableTagField(field, label);
@@ -411,6 +415,38 @@ public partial class SelectionInspectorViewModel : ObservableObject
             StatusMessage = "No tag changes to save.";
             return;
         }
+        if (_metadataOperations is not null)
+        {
+            MetadataValueEdit[] valueEdits =
+                edits.Select(edit =>
+                    new MetadataValueEdit(
+                        MetadataFieldKey.Known(
+                            edit.Field),
+                        edit.Value is null
+                            ? []
+                            : [edit.Value]))
+                    .ToArray();
+            IReadOnlyDictionary<
+                string,
+                IReadOnlyList<MetadataValueEdit>>
+                editsByPath = Selection.Paths.ToDictionary(
+                    path => path,
+                    _ => (IReadOnlyList<
+                        MetadataValueEdit>)valueEdits,
+                    PathComparer);
+            await ApplyReviewedPlanAsync(
+                "Save tags",
+                (progress, ct) =>
+                    _metadataOperations
+                        .PreviewValueEditsAsync(
+                            editsByPath,
+                            "Edit Library inspector fields",
+                            progress,
+                            ct),
+                $"Apply {edits.Length:N0} tag change(s) to " +
+                $"{Selection.Paths.Count:N0} selected track(s)?");
+            return;
+        }
         if (Selection.Paths.Count > 1 &&
             !await _dialogs.ConfirmAsync(
                 "Save tag changes",
@@ -468,6 +504,42 @@ public partial class SelectionInspectorViewModel : ObservableObject
             [new FilePickerType("Images", [".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"])]);
         if (path is null)
             return;
+        if (_metadataOperations is not null)
+        {
+            PreparedImage? prepared =
+                await _artwork.PrepareFromFileAsync(
+                    path,
+                    ArtworkMaxDimension);
+            if (prepared is null)
+            {
+                StatusTone = MessageTone.Error;
+                StatusMessage =
+                    "The selected image could not be prepared " +
+                    "for embedding.";
+                return;
+            }
+            var edits = Selection.Paths.ToDictionary(
+                musicPath => musicPath,
+                _ => new ArtworkValueEdit(
+                    ArtworkValueEditMode.ReplaceFrontCover,
+                    new(
+                        ID3v2Util.APICType.FrontCover,
+                        prepared.MimeType,
+                        prepared.Data)),
+                PathComparer);
+            await ApplyReviewedPlanAsync(
+                "Replace artwork",
+                (progress, ct) =>
+                    _metadataOperations
+                        .PreviewArtworkEditsAsync(
+                            edits,
+                            "Replace Library front cover",
+                            progress,
+                            ct),
+                $"Replace the front cover on " +
+                $"{Selection.Paths.Count:N0} selected track(s)?");
+            return;
+        }
         if (!await _dialogs.ConfirmAsync("Replace artwork",
                 $"Replace the front cover on {Selection.Paths.Count:N0} selected track(s)? " +
                 "This writes the files directly; no recovery journal is created.",
@@ -604,6 +676,32 @@ public partial class SelectionInspectorViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanSaveArtworkSet))]
     private async Task SaveArtworkSetAsync()
     {
+        ArtworkInput[] images = ArtworkItems.Select(item => new ArtworkInput(
+            item.Type,
+            item.MimeType,
+            item.Data,
+            string.IsNullOrWhiteSpace(item.Description) ? null : item.Description.Trim())).ToArray();
+        if (_metadataOperations is not null)
+        {
+            var requests = Selection.Paths.ToDictionary(
+                path => path,
+                _ => new ArtworkSetPreviewRequest(
+                    [.. images]),
+                PathComparer);
+            await ApplyReviewedPlanAsync(
+                "Save artwork changes",
+                (progress, ct) =>
+                    _metadataOperations
+                        .PreviewArtworkSetsAsync(
+                            requests,
+                            "Edit Library artwork set",
+                            progress,
+                            ct),
+                $"Replace the embedded artwork set on " +
+                $"{Selection.Paths.Count:N0} selected track(s) " +
+                $"with these {images.Length:N0} image(s)?");
+            return;
+        }
         if (!await _dialogs.ConfirmAsync(
                 "Save artwork changes",
                 $"Replace the embedded artwork set on {Selection.Paths.Count:N0} selected tracks with these {ArtworkItems.Count:N0} image(s)? " +
@@ -611,11 +709,6 @@ public partial class SelectionInspectorViewModel : ObservableObject
                 "Save"))
             return;
 
-        ArtworkInput[] images = ArtworkItems.Select(item => new ArtworkInput(
-            item.Type,
-            item.MimeType,
-            item.Data,
-            string.IsNullOrWhiteSpace(item.Description) ? null : item.Description.Trim())).ToArray();
         await ApplyArtworkAsync("Save artwork changes", musicPath =>
             _artwork.SaveImagesAsync(musicPath, images));
     }
@@ -623,6 +716,55 @@ public partial class SelectionInspectorViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanEdit))]
     private async Task ScrubArtworkAsync()
     {
+        if (_metadataOperations is not null)
+        {
+            var requests = new Dictionary<
+                string,
+                ArtworkSetPreviewRequest>(
+                PathComparer);
+            foreach (string path in Selection.Paths)
+            {
+                OperationResult<MediaFileModel> loaded =
+                    await _media.LoadAsync(
+                        path,
+                        includeArtwork: true);
+                if (!loaded.Success ||
+                    loaded.Value is null)
+                {
+                    StatusTone = MessageTone.Error;
+                    StatusMessage =
+                        loaded.Error ??
+                        $"Could not read artwork from '{path}'.";
+                    return;
+                }
+                requests[path] = new(
+                    [
+                        .. loaded.Value.Artwork.Select(
+                            (image, index) =>
+                                new ArtworkInput(
+                                    ArtworkType(
+                                        image,
+                                        index),
+                                    ArtworkMimeType(image),
+                                    image.Data,
+                                    image.Description)),
+                    ],
+                    ArtworkMaxDimension);
+            }
+            await ApplyReviewedPlanAsync(
+                "Optimize artwork",
+                (progress, ct) =>
+                    _metadataOperations
+                        .PreviewArtworkSetsAsync(
+                            requests,
+                            "Optimize Library artwork",
+                            progress,
+                            ct),
+                $"Re-encode and limit artwork to " +
+                $"{ArtworkMaxDimension:N0}px on " +
+                $"{Selection.Paths.Count:N0} track(s)?");
+            return;
+        }
         if (!await _dialogs.ConfirmAsync("Optimize artwork",
                 $"Re-encode and limit artwork to {ArtworkMaxDimension:N0}px on {Selection.Paths.Count:N0} track(s)? " +
                 "This writes the files directly; no recovery journal is created.",
@@ -635,6 +777,26 @@ public partial class SelectionInspectorViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanEdit))]
     private async Task RemoveArtworkAsync()
     {
+        if (_metadataOperations is not null)
+        {
+            var edits = Selection.Paths.ToDictionary(
+                path => path,
+                _ => new ArtworkValueEdit(
+                    ArtworkValueEditMode.RemoveAll),
+                PathComparer);
+            await ApplyReviewedPlanAsync(
+                "Remove artwork",
+                (progress, ct) =>
+                    _metadataOperations
+                        .PreviewArtworkEditsAsync(
+                            edits,
+                            "Remove Library artwork",
+                            progress,
+                            ct),
+                $"Remove all embedded artwork from " +
+                $"{Selection.Paths.Count:N0} selected track(s)?");
+            return;
+        }
         if (!await _dialogs.ConfirmAsync("Remove artwork",
                 $"Remove all embedded artwork from {Selection.Paths.Count:N0} selected track(s)? " +
                 "This writes the files directly; no recovery journal is created.",
@@ -653,6 +815,142 @@ public partial class SelectionInspectorViewModel : ObservableObject
                 "Revert changes"))
             return;
         await LoadAsync(Selection);
+    }
+
+    private async Task ApplyReviewedPlanAsync(
+        string title,
+        Func<
+            IProgress<OperationProgress>,
+            CancellationToken,
+            Task<MetadataOperationPlan>> preview,
+        string confirmation)
+    {
+        if (_metadataOperations is null)
+            throw new InvalidOperationException(
+                "The shared metadata operation service is unavailable.");
+        IsBusy = true;
+        NotifyCommands();
+        _editCancellation =
+            new CancellationTokenSource();
+        Guid activity = _activities.Start(
+            title,
+            $"Previewing {Selection.Paths.Count:N0} track(s)",
+            ShellDestination.Library,
+            _editCancellation.Cancel);
+        var progress =
+            new Progress<OperationProgress>(update =>
+            {
+                double? fraction =
+                    update.Total is > 0
+                        ? Math.Clamp(
+                            (double)update.Completed /
+                            update.Total.Value,
+                            0,
+                            1)
+                        : null;
+                _activities.Report(
+                    activity,
+                    update.Message ??
+                    update.CurrentPath ??
+                    title,
+                    fraction);
+            });
+        try
+        {
+            MetadataOperationPlan plan =
+                await preview(
+                    progress,
+                    _editCancellation.Token);
+            OperationIssue[] blockers = plan.Files
+                .SelectMany(file => file.Issues)
+                .Where(issue =>
+                    issue.Severity ==
+                    OperationIssueSeverity.Blocker)
+                .ToArray();
+            if (!plan.CanApply)
+            {
+                StatusTone = blockers.Length > 0
+                    ? MessageTone.Error
+                    : MessageTone.Info;
+                StatusMessage = blockers.Length > 0
+                    ? $"Preview found {blockers.Length:N0} " +
+                      $"blocker(s): {blockers[0].Message} " +
+                      "No files were changed."
+                    : "Preview found no applicable changes. " +
+                      "No files were changed.";
+                _activities.Finish(
+                    activity,
+                    StatusMessage,
+                    blockers.Length > 0
+                        ? AppActivityState.Failed
+                        : AppActivityState.Completed);
+                return;
+            }
+            if (!await _dialogs.ConfirmAsync(
+                    $"Apply reviewed {title.ToLowerInvariant()}?",
+                    confirmation + " " +
+                    $"The reviewed plan changes " +
+                    $"{plan.ChangedFileCount:N0} file(s) and " +
+                    "uses stale-file checks, recovery journals, " +
+                    "and undo.",
+                    "Apply"))
+            {
+                StatusTone = MessageTone.Info;
+                StatusMessage =
+                    "Reviewed changes were not applied.";
+                _activities.Finish(
+                    activity,
+                    StatusMessage,
+                    AppActivityState.Cancelled);
+                return;
+            }
+            MetadataApplyResult result =
+                await _metadataOperations.ApplyAsync(
+                    plan,
+                    progress,
+                    _editCancellation.Token);
+            if (result.ChangedFiles > 0)
+                FilesChanged?.Invoke();
+            await LoadAsync(Selection);
+            StatusTone = MessageTone.Success;
+            StatusMessage =
+                $"Updated {result.ChangedFiles:N0} track(s). " +
+                "Originals are retained for undo.";
+            _activities.Finish(
+                activity,
+                StatusMessage,
+                AppActivityState.Completed);
+        }
+        catch (OperationCanceledException) when (
+            _editCancellation.IsCancellationRequested)
+        {
+            StatusTone = MessageTone.Warning;
+            StatusMessage =
+                "Operation cancelled. Proposed changes remain " +
+                "ready to retry.";
+            _activities.Finish(
+                activity,
+                StatusMessage,
+                AppActivityState.Cancelled);
+        }
+        catch (Exception error)
+        {
+            StatusTone = MessageTone.Error;
+            StatusMessage =
+                error.Message +
+                " Proposed changes remain ready to retry.";
+            _activities.Finish(
+                activity,
+                StatusMessage,
+                AppActivityState.Failed);
+        }
+        finally
+        {
+            _editCancellation.Dispose();
+            _editCancellation = null;
+            IsBusy = false;
+            NotifyCommands();
+        }
     }
 
     private async Task ApplyArtworkAsync(string title, Func<string, Task<ArtworkOpResult>> apply)
@@ -872,4 +1170,9 @@ public partial class SelectionInspectorViewModel : ObservableObject
     {
         return $"{image.ImageType ?? "image"} · {image.Width:N0} × {image.Height:N0} · {FormatBytes(image.Size)}";
     }
+
+    private static readonly StringComparer PathComparer =
+        OperatingSystem.IsWindows()
+            ? StringComparer.OrdinalIgnoreCase
+            : StringComparer.Ordinal;
 }

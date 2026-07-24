@@ -184,8 +184,11 @@ appropriate build or test.
     preserves ordered multi-values as one editor line per value, and builds
     the shared authoritative preview before confirmation.
   - Apply uses native dry-run results, stale checks, recovery journals,
-    cancellation, history, and undo. The curated inspector's remaining direct
-    tag and artwork commands still need migration.
+    cancellation, history, and undo.
+  - The curated inspector's tag saves, complete artwork-set saves,
+    front-cover replacement, artwork optimization, and artwork removal now use
+    the same cancellable reviewed plans. Its cache-oriented read projection
+    still needs migration to the shared lossless document service.
 
 ### Safe application and history
 
@@ -611,7 +614,8 @@ per-operation capability flags.
 - Revisited in this audit: the Library arbitrary-fields dialog now uses
   lossless shared document reads and shared preview/apply mutations, retains
   ordered multi-values, and no longer writes directly without recovery. The
-  curated inspector remains the Phase 1 migration tail.
+  curated inspector's write commands now share that preview/apply path as
+  well; its legacy read projection remains the Phase 1 migration tail.
 - Remaining Phase 2 work: ad-hoc shared file mutations and live representative
   draft preview.
 - Revisited and completed in this audit: application-local/configured/system

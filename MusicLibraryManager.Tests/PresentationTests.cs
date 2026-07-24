@@ -365,9 +365,12 @@ public sealed class PresentationTests
             Model(@"C:\one.flac", "One", "Artist A"),
             Model(@"C:\two.flac", "Two", "Artist B"));
         var writer = new FakeTagWriter();
+        var operations =
+            new FakeMetadataOperationService();
         var inspector = new SelectionInspectorViewModel(media, new FakeLibrary([]), writer, new FakeArtworkService(),
             new FakeFilePicker(), new FakeDialogs(), new FakeFieldsEditor(),
-            new FakeThumbnails(), new AppActivityService());
+            new FakeThumbnails(), new AppActivityService(),
+            operations);
 
         await inspector.LoadAsync(new SelectionContext([@"C:\one.flac", @"C:\two.flac"]));
         EditableTagField artist = inspector.Fields.Single(field => field.Field == TagFields.Artist);
@@ -376,9 +379,17 @@ public sealed class PresentationTests
         artist.Value = "Canonical Artist";
         await inspector.SaveTagsCommand.ExecuteAsync(null);
 
-        TagEdit edit = Assert.Single(writer.Edits!);
-        Assert.Equal(TagFields.Artist, edit.Field);
-        Assert.Equal("Canonical Artist", edit.Value);
+        Assert.Null(writer.Edits);
+        Assert.Equal(2, operations.PreviewedValueEdits.Count);
+        MetadataValueEdit edit = Assert.Single(
+            operations.PreviewedValueEdits[
+                @"C:\one.flac"]);
+        Assert.Equal(
+            TagFields.Artist,
+            edit.Field.KnownField);
+        Assert.Equal(
+            ["Canonical Artist"],
+            edit.Values);
     }
 
     [Fact]
@@ -698,10 +709,13 @@ public sealed class PresentationTests
             ],
         };
         var artworkService = new FakeArtworkService();
+        var operations =
+            new FakeMetadataOperationService();
         var inspector = new SelectionInspectorViewModel(
             new FakeMediaService(model), library, new FakeTagWriter(), artworkService,
             new FakeFilePicker(), new FakeDialogs(), new FakeFieldsEditor(),
-            new FakeThumbnails(), new AppActivityService());
+            new FakeThumbnails(), new AppActivityService(),
+            operations);
         await inspector.LoadAsync(new SelectionContext([path]));
 
         ArtworkPreviewItem front = inspector.ArtworkItems[0];
@@ -710,10 +724,87 @@ public sealed class PresentationTests
         Assert.True(inspector.SaveArtworkSetCommand.CanExecute(null));
         await inspector.SaveArtworkSetCommand.ExecuteAsync(null);
 
-        ArtworkInput saved = Assert.Single(artworkService.SavedImages!);
+        Assert.Null(artworkService.SavedImages);
+        ArtworkInput saved = Assert.Single(
+            operations.PreviewedArtworkSets[
+                path].Images);
         Assert.Equal(ID3v2Util.APICType.FrontCover, saved.Type);
         Assert.Equal("Restored front scan", saved.Description);
         Assert.Equal([1, 2, 3], saved.Data);
+    }
+
+    [Fact]
+    public async Task Selection_inspector_routes_artwork_shortcuts_through_reviewed_plans()
+    {
+        const string path = @"C:\one.flac";
+        var library = new FakeLibrary([]);
+        library.ImageSignatures[path] = "artwork";
+        MediaFileModel model = Model(
+            path,
+            "Title",
+            "Artist") with
+        {
+            Artwork =
+            [
+                new ArtworkModel
+                {
+                    Category = "FrontCover",
+                    ImageType = "image/jpeg",
+                    Width = 800,
+                    Height = 800,
+                    Size = 3,
+                    Data = [1, 2, 3],
+                },
+            ],
+        };
+        var operations =
+            new FakeMetadataOperationService();
+        var inspector = new SelectionInspectorViewModel(
+            new FakeMediaService(model),
+            library,
+            new FakeTagWriter(),
+            new FakeArtworkService(
+                new PreparedImage(
+                    [9, 8, 7],
+                    "image/jpeg",
+                    600,
+                    600)),
+            new FakeFilePicker(@"C:\cover.jpg"),
+            new FakeDialogs(),
+            new FakeFieldsEditor(),
+            new FakeThumbnails(),
+            new AppActivityService(),
+            operations);
+        await inspector.LoadAsync(
+            new SelectionContext([path]));
+
+        await inspector.ReplaceArtworkCommand
+            .ExecuteAsync(null);
+
+        Assert.Equal(
+            ArtworkValueEditMode.ReplaceFrontCover,
+            operations.PreviewedArtworkEdits[
+                path].Mode);
+
+        inspector.ArtworkMaxDimension = 512;
+        await inspector.ScrubArtworkCommand
+            .ExecuteAsync(null);
+
+        Assert.Equal(
+            512,
+            operations.PreviewedArtworkSets[
+                path].MaxDimension);
+        Assert.Single(
+            operations.PreviewedArtworkSets[
+                path].Images);
+
+        await inspector.RemoveArtworkCommand
+            .ExecuteAsync(null);
+
+        Assert.Equal(
+            ArtworkValueEditMode.RemoveAll,
+            operations.PreviewedArtworkEdits[
+                path].Mode);
     }
 
     [Fact]
