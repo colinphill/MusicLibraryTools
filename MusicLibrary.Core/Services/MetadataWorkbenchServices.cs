@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Globalization;
+using System.IO.Enumeration;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -347,7 +348,7 @@ public sealed class WorkbenchService(
             Message: "Scanning Workbench sources"));
         var issues = new List<OperationIssue>();
         IReadOnlyList<string> paths = await Task.Run(
-            () => Expand(request, formats, issues, ct), ct);
+            () => Expand(request, formats, issues, progress, ct), ct);
         var loaded = new List<MediaDocument>(paths.Count);
         for (int index = 0; index < paths.Count; index++)
         {
@@ -381,10 +382,23 @@ public sealed class WorkbenchService(
         WorkbenchLoadRequest request,
         IMediaFormatRegistry formats,
         List<OperationIssue> issues,
+        IProgress<OperationProgress>? progress,
         CancellationToken ct)
     {
         var result = new List<string>();
         var seen = new HashSet<string>(PathComparer);
+        int scanned = 0;
+        void ReportScanned(string path)
+        {
+            scanned++;
+            if ((scanned & 255) == 0)
+                progress?.Report(new(
+                    OperationPhase.Planning,
+                    scanned,
+                    CurrentPath: path,
+                    Message: $"Scanned {scanned:N0} Workbench source entries"));
+        }
+
         foreach (string source in request.Sources.Where(source =>
                      !string.IsNullOrWhiteSpace(source)))
         {
@@ -398,22 +412,48 @@ public sealed class WorkbenchService(
                 continue;
             }
 
-            if (Directory.Exists(fullPath))
+            FileAttributes attributes;
+            try
             {
-                foreach (string file in EnumerateDirectory(fullPath, request.Recursive, issues, ct))
+                attributes = File.GetAttributes(fullPath);
+            }
+            catch (Exception error) when (
+                error is FileNotFoundException or DirectoryNotFoundException)
+            {
+                issues.Add(new("workbench.missing", OperationIssueSeverity.Warning,
+                    "The source does not exist.", fullPath));
+                continue;
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                issues.Add(new("workbench.source", OperationIssueSeverity.Warning,
+                    error.Message, fullPath));
+                continue;
+            }
+
+            if (attributes.HasFlag(FileAttributes.Directory))
+            {
+                foreach (string file in EnumerateDirectory(
+                             fullPath,
+                             request.Recursive,
+                             issues,
+                             ReportScanned,
+                             ct))
                     AddMedia(file, formats, result, seen);
             }
-            else if (File.Exists(fullPath) && IsPlaylist(fullPath))
+            else if (IsPlaylist(fullPath))
             {
                 foreach (string file in ReadPlaylist(fullPath, issues, ct))
                     AddMedia(file, formats, result, seen);
             }
-            else if (File.Exists(fullPath))
-                AddMedia(fullPath, formats, result, seen);
             else
-                issues.Add(new("workbench.missing", OperationIssueSeverity.Warning,
-                    "The source does not exist.", fullPath));
+                AddMedia(fullPath, formats, result, seen);
         }
+        progress?.Report(new(
+            OperationPhase.Planning,
+            scanned,
+            scanned,
+            Message: $"Scanned {scanned:N0} Workbench source entries"));
         return result;
     }
 
@@ -421,6 +461,7 @@ public sealed class WorkbenchService(
         string root,
         bool recursive,
         List<OperationIssue> issues,
+        Action<string> reportScanned,
         CancellationToken ct)
     {
         var pending = new Stack<string>();
@@ -429,29 +470,64 @@ public sealed class WorkbenchService(
         {
             ct.ThrowIfCancellationRequested();
             string directory = pending.Pop();
-            string[] entries;
-            try { entries = Directory.GetFileSystemEntries(directory); }
-            catch (Exception error)
+            IReadOnlyList<WorkbenchFileSystemEntry> entries;
+            try
+            {
+                entries = ReadDirectoryEntries(
+                    directory,
+                    reportScanned,
+                    ct);
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
             {
                 issues.Add(new("workbench.enumerate", OperationIssueSeverity.Warning,
                     error.Message, directory));
                 continue;
             }
-            foreach (string entry in entries.OrderBy(path => path, PathComparer))
+            foreach (WorkbenchFileSystemEntry entry in entries.OrderBy(
+                         item => item.Path,
+                         PathComparer))
             {
                 ct.ThrowIfCancellationRequested();
-                FileAttributes attributes;
-                try { attributes = File.GetAttributes(entry); }
-                catch { continue; }
-                if (!attributes.HasFlag(FileAttributes.Directory))
+                if (!entry.IsDirectory)
                 {
-                    yield return entry;
+                    yield return entry.Path;
                     continue;
                 }
-                if (recursive && !attributes.HasFlag(FileAttributes.ReparsePoint))
-                    pending.Push(entry);
+                if (recursive && !entry.IsReparsePoint)
+                    pending.Push(entry.Path);
             }
         }
+    }
+
+    private static IReadOnlyList<WorkbenchFileSystemEntry> ReadDirectoryEntries(
+        string directory,
+        Action<string> reportScanned,
+        CancellationToken ct)
+    {
+        var enumerable = new FileSystemEnumerable<WorkbenchFileSystemEntry>(
+            directory,
+            (ref FileSystemEntry entry) =>
+            {
+                ct.ThrowIfCancellationRequested();
+                string path = entry.ToFullPath();
+                reportScanned(path);
+                return new(
+                    path,
+                    entry.IsDirectory,
+                    entry.Attributes.HasFlag(FileAttributes.ReparsePoint));
+            },
+            new EnumerationOptions
+            {
+                RecurseSubdirectories = false,
+                BufferSize = 64 * 1024,
+                IgnoreInaccessible = false,
+                AttributesToSkip = 0,
+            })
+        {
+            ShouldIncludePredicate = static (ref FileSystemEntry _) => true,
+        };
+        return enumerable.ToList();
     }
 
     private static bool IsPlaylist(string path) =>
@@ -494,7 +570,30 @@ public sealed class WorkbenchService(
             string path;
             try { path = Path.GetFullPath(value, directory); }
             catch { continue; }
-            if (File.Exists(path))
+            bool available = false;
+            try
+            {
+                available =
+                    !File.GetAttributes(path).HasFlag(FileAttributes.Directory);
+            }
+            catch (Exception error) when (
+                error is FileNotFoundException or DirectoryNotFoundException)
+            {
+                issues.Add(new(
+                    "workbench.playlist-missing",
+                    OperationIssueSeverity.Warning,
+                    "The playlist entry does not exist.",
+                    path));
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                issues.Add(new(
+                    "workbench.playlist-unavailable",
+                    OperationIssueSeverity.Warning,
+                    error.Message,
+                    path));
+            }
+            if (available)
                 yield return path;
         }
     }
@@ -514,6 +613,11 @@ public sealed class WorkbenchService(
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase
         : StringComparer.Ordinal;
+
+    private readonly record struct WorkbenchFileSystemEntry(
+        string Path,
+        bool IsDirectory,
+        bool IsReparsePoint);
 }
 
 /// <summary>

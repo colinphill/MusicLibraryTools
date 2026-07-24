@@ -372,6 +372,120 @@ public sealed class MetadataWorkbenchServicesTests
     }
 
     [Fact]
+    public async Task Workbench_ScansLargeDirectoriesWithPeriodicProgress()
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-workbench-large-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(session);
+        const int fileCount = 2_048;
+        try
+        {
+            for (int index = 0; index < fileCount; index++)
+                File.Create(Path.Combine(session, $"{index:D5}.flac")).Dispose();
+            var documents = new SyntheticDocuments();
+            var service = new WorkbenchService(
+                documents,
+                MediaFormatRegistry.Default);
+            var progress = new RecordingProgress();
+
+            WorkbenchLoadResult result = await service.LoadAsync(
+                new([session], Recursive: false),
+                progress);
+
+            Assert.Equal(fileCount, result.Documents.Length);
+            Assert.Equal(fileCount, documents.LoadCount);
+            Assert.Contains(progress.Items, item =>
+                item.Phase == OperationPhase.Planning &&
+                item.Completed == 256 &&
+                item.Total is null);
+            Assert.Contains(progress.Items, item =>
+                item.Phase == OperationPhase.Planning &&
+                item.Completed == fileCount &&
+                item.Total == fileCount);
+            OperationProgress completed = progress.Items[^1];
+            Assert.Equal(OperationPhase.Completed, completed.Phase);
+            Assert.Equal(fileCount, completed.Completed);
+            Assert.Equal(fileCount, completed.Total);
+        }
+        finally
+        {
+            try { Directory.Delete(session, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task Workbench_CancelsDuringLargeDirectoryScan()
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-workbench-cancel-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(session);
+        try
+        {
+            for (int index = 0; index < 1_024; index++)
+                File.Create(Path.Combine(session, $"{index:D5}.flac")).Dispose();
+            using var cancellation = new CancellationTokenSource();
+            var progress = new CallbackProgress(item =>
+            {
+                if (item.Phase == OperationPhase.Planning &&
+                    item.Completed >= 256)
+                    cancellation.Cancel();
+            });
+            var service = new WorkbenchService(
+                new SyntheticDocuments(),
+                MediaFormatRegistry.Default);
+
+            await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+                service.LoadAsync(
+                    new([session], Recursive: false),
+                    progress,
+                    cancellation.Token));
+        }
+        finally
+        {
+            try { Directory.Delete(session, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task Workbench_ReportsOfflinePlaylistEntriesWithoutDroppingHealthyFiles()
+    {
+        string session = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-workbench-offline-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(session);
+        string available = Path.Combine(session, "available.flac");
+        string missing = Path.Combine(session, "offline.flac");
+        string playlist = Path.Combine(session, "selection.m3u8");
+        try
+        {
+            File.Create(available).Dispose();
+            await File.WriteAllLinesAsync(
+                playlist,
+                ["available.flac", "offline.flac"]);
+            var service = new WorkbenchService(
+                new SyntheticDocuments(),
+                MediaFormatRegistry.Default);
+
+            WorkbenchLoadResult result = await service.LoadAsync(
+                new([playlist], Recursive: false));
+
+            Assert.Equal(
+                [available],
+                result.Documents.Select(document => document.Path));
+            OperationIssue issue = Assert.Single(result.Issues);
+            Assert.Equal("workbench.playlist-missing", issue.Code);
+            Assert.Equal(missing, issue.Path);
+            Assert.Equal(OperationIssueSeverity.Warning, issue.Severity);
+        }
+        finally
+        {
+            try { Directory.Delete(session, recursive: true); } catch { }
+        }
+    }
+
+    [Fact]
     public async Task Preview_AppliesTypedOperationsInOrderWithoutWriting()
     {
         using var media = MediaFixtures.Copy("sample.flac");
@@ -2006,5 +2120,39 @@ public sealed class MetadataWorkbenchServicesTests
     {
         public List<OperationProgress> Items { get; } = [];
         public void Report(OperationProgress value) => Items.Add(value);
+    }
+
+    private sealed class CallbackProgress(
+        Action<OperationProgress> callback) :
+        IProgress<OperationProgress>
+    {
+        public void Report(OperationProgress value) => callback(value);
+    }
+
+    private sealed class SyntheticDocuments : IMetadataDocumentService
+    {
+        public int LoadCount { get; private set; }
+
+        public Task<MediaDocument> LoadAsync(
+            string path,
+            bool includeArtwork = true,
+            CancellationToken ct = default)
+        {
+            ct.ThrowIfCancellationRequested();
+            LoadCount++;
+            string fullPath = Path.GetFullPath(path);
+            var info = new FileInfo(fullPath);
+            return Task.FromResult(new MediaDocument(
+                fullPath,
+                [],
+                [],
+                null,
+                new(
+                    fullPath,
+                    info.Length,
+                    info.LastWriteTimeUtc,
+                    ""),
+                true));
+        }
     }
 }

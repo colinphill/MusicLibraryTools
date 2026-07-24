@@ -669,8 +669,23 @@ per-operation capability flags.
     migrations retain cached data without a rescan.
   - The portable solution gate builds every retained CLI adapter, while their
     shared typed Core services retain characterization and compatibility tests.
-- [ ] Audit large selections and network shares.
-- [ ] Audit offline roots.
+- [x] Audit large selections and network shares.
+  - Library projects 100,000 cached tracks in one collection replacement
+    without artwork or source-file reads. Workbench traverses large directories
+    on a background task with periodic progress and cancellation during source
+    enumeration.
+  - Workbench performs one source metadata probe and uses 64 KiB buffered
+    enumeration records for file type and reparse-point decisions, avoiding
+    redundant per-entry metadata round trips on high-latency shares. Shared
+    destination inventories likewise retain size and timestamps from their
+    enumeration records.
+- [x] Audit offline roots.
+  - Indexing an unavailable root does not abort healthy roots, remove its
+    cached tracks, or discard its last-success timestamp; root health records
+    the unavailable state and error.
+  - Cached Library browsing remains storage-independent. Workbench reports
+    missing or unavailable direct sources and playlist entries individually,
+    while continuing to load healthy entries in the same request.
 - [x] Audit Unicode paths and metadata.
   - Workbench preview, staged apply, and reload round-trip multilingual and
     emoji paths and metadata across ID3 containers, Vorbis, MP4, every APEv2
