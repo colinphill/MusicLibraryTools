@@ -8,9 +8,7 @@ using Avalonia.Threading;
 using MusicFileUtilities;
 using MusicLibraryManager.Presentation;
 using MusicLibraryManager.Views;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Formats.Png;
+using SkiaSharp;
 using Xunit;
 
 namespace MusicLibraryManager.UI.Tests;
@@ -94,9 +92,17 @@ public sealed class ArtworkPreviewWindowTests
 
     private static byte[] CreatePng(int width, int height)
     {
-        using var image = new SixLabors.ImageSharp.Image<Rgba32>(width, height);
-        using var stream = new MemoryStream();
-        image.Save(stream, new PngEncoder());
-        return stream.ToArray();
+        using var bitmap = new SKBitmap(
+            width,
+            height,
+            SKColorType.Rgba8888,
+            SKAlphaType.Premul);
+        bitmap.Erase(SKColors.CornflowerBlue);
+        using SKImage image = SKImage.FromBitmap(bitmap);
+        using SKData data =
+            image.Encode(
+                SKEncodedImageFormat.Png,
+                100);
+        return data.ToArray();
     }
 }

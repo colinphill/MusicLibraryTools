@@ -4,11 +4,7 @@ using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
 using MusicFileUtilities;
 using MusicLibraryTools;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
 using Xunit;
 
 namespace MusicLibrary.Core.Tests;
@@ -129,6 +125,94 @@ public sealed class ArtworkNormalizationServiceTests
     }
 
     [Fact]
+    public async Task Preview_encodes_and_apply_writes_the_exact_reviewed_JPEG()
+    {
+        using var fixture = CreateMediaPlan(
+            currentWidth: 96,
+            currentHeight: 48);
+        var service =
+            new ArtworkNormalizationService();
+
+        ArtworkNormalizationPlan plan =
+            await service.PreviewAsync(
+                new(
+                    "####!####",
+                    fixture.Plan.LibraryPath,
+                    MaximumBytes: 1_000_000,
+                    MaximumDimension: 24,
+                    JpegQuality: 82),
+                ct: TestContext.Current.CancellationToken);
+
+        ArtworkNormalizationItem item =
+            Assert.Single(plan.Items);
+        Assert.True(plan.CanApply);
+        Assert.Equal("image/png", item.Current.MimeType);
+        Assert.Equal((96, 48),
+            (item.Current.Width, item.Current.Height));
+        Assert.Equal("image/jpeg", item.Proposed.MimeType);
+        Assert.Equal((24, 12),
+            (item.Proposed.Width, item.Proposed.Height));
+        byte[] reviewed = item.EncodedJpeg.ToArray();
+        Assert.Equal(0xFF, reviewed[0]);
+        Assert.Equal(0xD8, reviewed[1]);
+        Assert.Equal(
+            item.Proposed.Sha256,
+            Hash(reviewed));
+        Assert.Equal(
+            (24, 12),
+            TestImageFactory.Dimensions(
+                reviewed));
+
+        ArtworkNormalizationResult result =
+            await service.ApplyAsync(
+                plan,
+                ct: TestContext.Current.CancellationToken);
+
+        Assert.Equal(1, result.UpdatedFileCount);
+        IMetadataImage stored = Assert.Single(
+            MediaFile.GetFile(
+                    fixture.MediaPath,
+                    readOnly: true)
+                .Tags.SelectMany(
+                    tag =>
+                        tag.GetImageMetadata()));
+        Assert.Equal("image/jpeg", stored.ImageType);
+        Assert.Equal(reviewed, stored.Data);
+    }
+
+    [Fact]
+    public async Task Preview_uses_detected_bytes_when_embedded_MIME_is_wrong()
+    {
+        using var fixture =
+            CreateMediaPlan(
+                currentWidth: 32,
+                currentHeight: 16,
+                currentMimeType:
+                "image/jpeg");
+        var service =
+            new ArtworkNormalizationService();
+
+        ArtworkNormalizationPlan plan =
+            await service.PreviewAsync(
+                new(
+                    "####!####",
+                    fixture.Plan.LibraryPath,
+                    MaximumBytes: 1_000_000,
+                    MaximumDimension: 64,
+                    JpegQuality: 82),
+                ct: TestContext.Current.CancellationToken);
+
+        ArtworkNormalizationItem item =
+            Assert.Single(plan.Items);
+        Assert.Equal(
+            "image/png",
+            item.Current.MimeType);
+        Assert.Equal(
+            "image/jpeg",
+            item.Proposed.MimeType);
+    }
+
+    [Fact]
     public async Task CatalogOnlyPolicyBlocksPreviewAndApplyWithoutMutatingFiles()
     {
         using var fixture = CreateMediaPlan();
@@ -233,7 +317,10 @@ public sealed class ArtworkNormalizationServiceTests
             Path.Combine(Path.GetDirectoryName(library)!, "recovery"), DateTimeOffset.UtcNow);
     }
 
-    private static MediaPlanFixture CreateMediaPlan()
+    private static MediaPlanFixture CreateMediaPlan(
+        int currentWidth = 64,
+        int currentHeight = 64,
+        string currentMimeType = "image/png")
     {
         var workspace = new TempDirectory();
         string mediaFolder = Path.Combine(workspace.Path, "media");
@@ -241,10 +328,14 @@ public sealed class ArtworkNormalizationServiceTests
         string mediaPath = Path.Combine(mediaFolder, "track.mp3");
         File.Copy(MediaFixtures.Path_("sample.mp3"), mediaPath);
 
-        byte[] currentArtwork = CreateImage("png", 64, 64, Color.Blue);
+        byte[] currentArtwork = CreateImage(
+            "png",
+            currentWidth,
+            currentHeight,
+            SKColors.Blue);
         var media = MediaFile.GetFile(mediaPath);
         (media as IArtworkWriter ?? media.Tags.First() as IArtworkWriter)!
-            .SetFrontCover(currentArtwork, "image/png");
+            .SetFrontCover(currentArtwork, currentMimeType);
         media.SaveTags();
 
         string library = Path.Combine(workspace.Path, "iTunes Library.itl");
@@ -252,14 +343,19 @@ public sealed class ArtworkNormalizationServiceTests
         ItlDocument document = ItlDocument.Load(library);
         document.SetTrackString(document.Tracks.Single(), ItlDataType.Location, mediaPath);
         ItlFileEditor.SaveValidated(document, library);
-        byte[] proposedArtwork = CreateImage("jpeg", 48, 48, Color.Red);
+        byte[] proposedArtwork = CreateImage("jpeg", 48, 48, SKColors.Red);
         var mediaInfo = new FileInfo(mediaPath);
         var libraryInfo = new FileInfo(library);
         var item = new ArtworkNormalizationItem(
             [1],
             mediaPath,
             new(true, false, mediaInfo.Length, mediaInfo.LastWriteTimeUtc) { Path = mediaPath },
-            new("image/png", 64, 64, currentArtwork.LongLength, Hash(currentArtwork)),
+            new(
+                currentMimeType,
+                currentWidth,
+                currentHeight,
+                currentArtwork.LongLength,
+                Hash(currentArtwork)),
             new("image/jpeg", 48, 48, proposedArtwork.LongLength, Hash(proposedArtwork)),
             [.. proposedArtwork]);
         var plan = new ArtworkNormalizationPlan(
@@ -277,17 +373,14 @@ public sealed class ArtworkNormalizationServiceTests
         return new(workspace, mediaPath, proposedArtwork, plan);
     }
 
-    private static byte[] CreateImage(string format, int width, int height, Color color)
-    {
-        using var image = new Image<Rgba32>(width, height);
-        image.Mutate(context => context.BackgroundColor(color));
-        using var stream = new MemoryStream();
-        if (format == "png")
-            image.Save(stream, new PngEncoder());
-        else
-            image.Save(stream, new JpegEncoder { Quality = 80 });
-        return stream.ToArray();
-    }
+    private static byte[] CreateImage(
+        string format,
+        int width,
+        int height,
+        SKColor color) =>
+        format == "png"
+            ? TestImageFactory.Png(width, height, color)
+            : TestImageFactory.Jpeg(width, height, color, 80);
 
     private static string Hash(byte[] data) => Convert.ToHexString(SHA256.HashData(data));
 

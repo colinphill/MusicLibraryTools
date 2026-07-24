@@ -1,9 +1,7 @@
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
+using SkiaSharp;
 using Xunit;
 
 namespace MusicLibrary.Core.Tests;
@@ -2867,8 +2865,9 @@ public sealed class MetadataWorkbenchServicesTests
                 file.ArtworkEdit.Images,
                 item =>
                 {
-                    using Image image =
-                        Image.Load(item.Data);
+                    using SKBitmap image =
+                        TestImageFactory.Decode(
+                            item.Data);
                     Assert.True(image.Width <= 48);
                     Assert.True(image.Height <= 48);
                 });
@@ -2940,14 +2939,16 @@ public sealed class MetadataWorkbenchServicesTests
         }
     }
 
-    private static byte[] CreatePngBytes(int width, int height)
-    {
-        using var image = new Image<Rgba32>(
-            width, height, new Rgba32(24, 96, 192));
-        using var stream = new MemoryStream();
-        image.Save(stream, new PngEncoder());
-        return stream.ToArray();
-    }
+    private static byte[] CreatePngBytes(
+        int width,
+        int height) =>
+        TestImageFactory.Png(
+            width,
+            height,
+            new SKColor(
+                24,
+                96,
+                192));
 
     private sealed class RecordingReindexService :
         IReindexService

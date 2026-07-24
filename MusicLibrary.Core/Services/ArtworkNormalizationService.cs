@@ -5,8 +5,7 @@ using iTunes.Binary;
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
 using MusicLibraryTools;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Jpeg;
+using SkiaSharp;
 
 namespace MusicLibrary.Core.Services;
 
@@ -280,12 +279,19 @@ public sealed class ArtworkNormalizationService : IArtworkNormalizationService
 
                 artworkTracks += trackIds.Count;
                 IMetadataImage source = images[0];
-                using Image image = Image.Load(source.Data);
+                using ArtworkImageProcessor.DecodedArtwork decoded =
+                    ArtworkImageProcessor.Decode(source.Data);
+                string detectedMimeType =
+                    ArtworkImageProcessor.FormatDetails(decoded.Format).MimeType;
                 ArtworkCharacteristics current = Describe(
-                    source.ImageType, image.Width, image.Height, source.Data);
-                bool isJpeg = IsJpeg(source.ImageType);
-                bool needsChange = image.Width > request.MaximumDimension ||
-                    image.Height > request.MaximumDimension || !isJpeg ||
+                    detectedMimeType,
+                    decoded.Bitmap.Width,
+                    decoded.Bitmap.Height,
+                    source.Data);
+                bool isJpeg =
+                    decoded.Format == SKEncodedImageFormat.Jpeg;
+                bool needsChange = decoded.Bitmap.Width > request.MaximumDimension ||
+                    decoded.Bitmap.Height > request.MaximumDimension || !isJpeg ||
                     source.Data.LongLength > request.MaximumBytes;
                 if (!needsChange)
                 {
@@ -299,11 +305,16 @@ public sealed class ArtworkNormalizationService : IArtworkNormalizationService
                         "This media format does not support embedded-artwork writes.", path));
                     continue;
                 }
-                if (image.Width > request.MaximumDimension || image.Height > request.MaximumDimension)
-                    ArtworkImageProcessor.ResizeToFit(image, request.MaximumDimension);
-                using var encodedStream = new MemoryStream();
-                image.Save(encodedStream, new JpegEncoder { Quality = request.JpegQuality });
-                byte[] encoded = encodedStream.ToArray();
+                using SKBitmap? oriented = ArtworkImageProcessor.NormalizeOrientation(
+                    decoded.Bitmap, decoded.Origin);
+                SKBitmap orientedImage = oriented ?? decoded.Bitmap;
+                using SKBitmap? resized = ArtworkImageProcessor.ResizeToFit(
+                    orientedImage, request.MaximumDimension);
+                SKBitmap outputImage = resized ?? orientedImage;
+                byte[] encoded = ArtworkImageProcessor.Encode(
+                    outputImage,
+                    SKEncodedImageFormat.Jpeg,
+                    request.JpegQuality);
                 if (encoded.LongLength > request.MaximumBytes)
                 {
                     issues.Add(new("artwork-still-large", OperationIssueSeverity.Warning,
@@ -313,7 +324,11 @@ public sealed class ArtworkNormalizationService : IArtworkNormalizationService
                 }
 
                 items.Add(new(trackIds.ToArray(), path, snapshot, current,
-                    Describe("image/jpeg", image.Width, image.Height, encoded),
+                    Describe(
+                        "image/jpeg",
+                        outputImage.Width,
+                        outputImage.Height,
+                        encoded),
                     encoded.ToImmutableArray()));
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
@@ -578,19 +593,16 @@ public sealed class ArtworkNormalizationService : IArtworkNormalizationService
         if (image.Data.LongLength != item.Proposed.Size ||
             !StringComparer.Ordinal.Equals(HashBytes(image.Data), item.Proposed.Sha256))
             throw new InvalidDataException("Saved artwork bytes differ from the reviewed image.");
-        using Image decoded = Image.Load(image.Data);
-        if (decoded.Width != item.Proposed.Width || decoded.Height != item.Proposed.Height)
+        using ArtworkImageProcessor.DecodedArtwork decoded =
+            ArtworkImageProcessor.Decode(image.Data);
+        if (decoded.Bitmap.Width != item.Proposed.Width ||
+            decoded.Bitmap.Height != item.Proposed.Height)
             throw new InvalidDataException("Saved artwork dimensions differ from the reviewed image.");
     }
 
     private static ArtworkCharacteristics Describe(
         string mimeType, int width, int height, byte[] data) =>
         new(mimeType, width, height, data.LongLength, HashBytes(data));
-
-    private static bool IsJpeg(string value) =>
-        value.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase) ||
-        value.Equals("jpeg", StringComparison.OrdinalIgnoreCase) ||
-        value.Equals("jpg", StringComparison.OrdinalIgnoreCase);
 
     private static IArtworkWriter? ResolveWriter(IMediaFile file) =>
         file as IArtworkWriter ?? file.Tags.FirstOrDefault() as IArtworkWriter;

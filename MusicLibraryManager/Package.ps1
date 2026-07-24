@@ -33,17 +33,74 @@ function Assert-SatelliteResources([string]$PublishRoot) {
 }
 
 function Assert-ThirdPartyLicenses([string]$PublishRoot) {
-    $licenses = @(
-        "AvaloniaUI-12.1.0-MIT.txt",
-        "SixLabors.ImageSharp-3.1.12-LICENSE.txt"
-    )
-    foreach ($license in $licenses) {
+    $licenses = @{
+        "AvaloniaUI-12.1.0-MIT.txt" = "213814D306090074D234D760239FF0F67EB9B8D20EEFB4D5631BB39DBE0B769B"
+        "SkiaSharp-4.150.1-MIT.txt" = "89101E35A8C66FD4D6DFFC1763259161D35CB564C169714EC227A768C89F2938"
+        "SkiaSharp-4.150.1-THIRD-PARTY-NOTICES.txt" = "21504C46C4C58AA64C1055BD2DCBC5F9A136B4B8C412ED3CC6740E22C5B127F5"
+    }
+    foreach ($license in $licenses.Keys) {
         $licensePath = Join-Path $PublishRoot "ThirdPartyLicenses/$license"
         if (-not (Test-Path -LiteralPath $licensePath -PathType Leaf)) {
             throw "The publish output is missing the third-party license agreement: $licensePath"
         }
+        $actualHash = (Get-FileHash -LiteralPath $licensePath -Algorithm SHA256).Hash
+        if (-not $actualHash.Equals($licenses[$license], [StringComparison]::OrdinalIgnoreCase)) {
+            throw "The published third-party license does not match its pinned source: $licensePath"
+        }
+    }
+    $retiredImageSharpLicense = Join-Path $PublishRoot `
+        "ThirdPartyLicenses/SixLabors.ImageSharp-3.1.12-LICENSE.txt"
+    if (Test-Path -LiteralPath $retiredImageSharpLicense) {
+        throw "The publish output contains the retired ImageSharp license: $retiredImageSharpLicense"
+    }
+    $retiredImageSharpAssemblies = @(
+        Get-ChildItem -LiteralPath $PublishRoot -File -Recurse |
+            Where-Object {
+                $_.Name.Equals(
+                    "SixLabors.ImageSharp.dll",
+                    [StringComparison]::OrdinalIgnoreCase)
+            }
+    )
+    if ($retiredImageSharpAssemblies.Count -gt 0) {
+        $retiredPaths = $retiredImageSharpAssemblies.FullName -join ", "
+        throw "The publish output contains the retired ImageSharp dependency: $retiredPaths"
     }
     Write-Host "Verified all $($licenses.Count) third-party license agreements."
+}
+
+function Assert-SkiaRuntime([string]$PublishRoot, [string]$Rid) {
+    $managedAssembly = Join-Path $PublishRoot "SkiaSharp.dll"
+    $dependencyManifest = Join-Path $PublishRoot "MusicLibraryManager.deps.json"
+    if (-not (Test-Path -LiteralPath $managedAssembly -PathType Leaf) -or
+        -not (Test-Path -LiteralPath $dependencyManifest -PathType Leaf)) {
+        throw "The $Rid publish is missing the managed SkiaSharp runtime."
+    }
+    $manifest = Get-Content -LiteralPath $dependencyManifest -Raw
+    if ($manifest.IndexOf('"SkiaSharp/4.150.1"', [StringComparison]::Ordinal) -lt 0 -or
+        $manifest.IndexOf("SixLabors.ImageSharp", [StringComparison]::OrdinalIgnoreCase) -ge 0) {
+        throw "The $Rid dependency manifest does not contain the expected SkiaSharp-only graph."
+    }
+
+    $nativeName = if ($Rid.StartsWith("win-", [StringComparison]::OrdinalIgnoreCase)) {
+        "libSkiaSharp.dll"
+    }
+    elseif ($Rid.StartsWith("linux-", [StringComparison]::OrdinalIgnoreCase)) {
+        "libSkiaSharp.so"
+    }
+    elseif ($Rid.StartsWith("osx-", [StringComparison]::OrdinalIgnoreCase)) {
+        "libSkiaSharp.dylib"
+    }
+    else {
+        throw "SkiaSharp native-runtime verification does not recognize RID '$Rid'."
+    }
+    $nativeMatches = @(
+        Get-ChildItem -LiteralPath $PublishRoot -File -Recurse |
+            Where-Object { $_.Name.Equals($nativeName, [StringComparison]::OrdinalIgnoreCase) }
+    )
+    if ($nativeMatches.Count -eq 0) {
+        throw "The $Rid publish is missing its SkiaSharp native library: $nativeName"
+    }
+    Write-Host "Verified SkiaSharp 4.150.1 managed and native runtime assets for $Rid."
 }
 
 function Resolve-InnoCompiler {
@@ -264,6 +321,7 @@ foreach ($rid in $Rids) {
     if ($LASTEXITCODE -ne 0) { throw "The published Syncer.Client Android resources failed validation." }
     Assert-SatelliteResources $publishRoot
     Assert-ThirdPartyLicenses $publishRoot
+    Assert-SkiaRuntime $publishRoot $rid
 
     $productName = "MusicLibraryManager-$Version-$rid"
     $artifacts = [Collections.Generic.List[string]]::new()

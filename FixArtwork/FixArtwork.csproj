@@ -9,5 +9,6 @@
   <ItemGroup>
     <ProjectReference Include="..\MusicLibrary.Core\MusicLibrary.Core.csproj" />
     <ProjectReference Include="..\MusicFileUtilities\MusicFileUtilities.csproj" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" />
   </ItemGroup>
 </Project>

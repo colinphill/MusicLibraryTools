@@ -1,10 +1,7 @@
 using MusicFileUtilities;
 using MusicLibraryTools;
 using MusicLibrary.Core.Models;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Formats.Png;
+using SkiaSharp;
 
 namespace MusicLibrary.Core.Services;
 
@@ -437,7 +434,8 @@ public sealed class ArtworkService : IArtworkService
         if (!Directory.Exists(directory)) return;
         string[] roles = ["cover", "back", "booklet", "disc",
             .. Enumerable.Range(1, 32).Select(index => $"artwork-{index}")];
-        string[] extensions = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"];
+        string[] extensions =
+            [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tif", ".tiff"];
         foreach (string role in roles)
             foreach (string extension in extensions)
             {
@@ -472,54 +470,114 @@ public sealed class ArtworkService : IArtworkService
         LibraryArtworkPolicy policy,
         int requestedMaximumDimension)
     {
-        IImageFormat sourceFormat = Image.DetectFormat(source) ??
-            throw new InvalidDataException("The artwork image format is not recognized.");
-        using Image image = Image.Load(source);
         int maximumDimension = EffectiveMaximum(
             requestedMaximumDimension, policy.MaximumDimension);
+        if (policy.Encoding == LibraryArtworkEncoding.PreserveSource &&
+            ArtworkTiffIdentifier.TryIdentify(
+                source,
+                out int tiffWidth,
+                out int tiffHeight))
+        {
+            if (maximumDimension > 0 &&
+                (tiffWidth > maximumDimension || tiffHeight > maximumDimension))
+                throw new InvalidDataException(
+                    "TIFF artwork can be preserved unchanged, but SkiaSharp cannot resize it. " +
+                    "Choose JPEG or PNG artwork before applying this size limit.");
+
+            byte[] preserved = source.ToArray();
+            ValidateEncodedSize(preserved, policy.MaximumEncodedBytes);
+            string preservedMime =
+                NormalizeMimeType(declaredMimeType, "image/tiff");
+            return new(
+                preserved,
+                preservedMime,
+                ExtensionForMime(preservedMime, ".tiff"),
+                tiffWidth,
+                tiffHeight);
+        }
+
+        using ArtworkImageProcessor.DecodedArtwork decoded =
+            ArtworkImageProcessor.Decode(source);
+        (string detectedMimeType, string detectedExtension) =
+            ArtworkImageProcessor.FormatDetails(decoded.Format);
         bool resize = maximumDimension > 0 &&
-                      (image.Width > maximumDimension || image.Height > maximumDimension);
+                      (decoded.Bitmap.Width > maximumDimension ||
+                       decoded.Bitmap.Height > maximumDimension);
         byte[] output;
         string mimeType;
         string extension;
         if (policy.Encoding == LibraryArtworkEncoding.PreserveSource && !resize)
         {
             output = source.ToArray();
-            mimeType = NormalizeMimeType(declaredMimeType, sourceFormat.DefaultMimeType);
-            extension = ExtensionForMime(mimeType,
-                sourceFormat.FileExtensions.FirstOrDefault());
+            mimeType = NormalizeMimeType(declaredMimeType, detectedMimeType);
+            extension = ExtensionForMime(mimeType, detectedExtension);
+            ValidateEncodedSize(output, policy.MaximumEncodedBytes);
+            return new(
+                output,
+                mimeType,
+                extension,
+                decoded.Bitmap.Width,
+                decoded.Bitmap.Height);
         }
-        else
+
+        using SKBitmap? oriented = ArtworkImageProcessor.NormalizeOrientation(
+            decoded.Bitmap, decoded.Origin);
+        SKBitmap orientedImage = oriented ?? decoded.Bitmap;
+        if (policy.Encoding == LibraryArtworkEncoding.PreserveSource &&
+            resize &&
+            decoded.FrameCount > 1)
+            throw new InvalidDataException(
+                "Animated artwork cannot be resized without discarding frames. " +
+                "Preserve it unchanged or choose a still JPEG or PNG image.");
+        using SKBitmap? resized = ArtworkImageProcessor.ResizeToFit(
+            orientedImage, maximumDimension);
+        SKBitmap outputImage = resized ?? orientedImage;
+
+        SKEncodedImageFormat outputFormat;
+        int quality;
+        switch (policy.Encoding)
         {
-            ArtworkImageProcessor.ResizeToFit(image, maximumDimension);
-            using var stream = new MemoryStream();
-            switch (policy.Encoding)
-            {
-                case LibraryArtworkEncoding.Jpeg:
-                    image.Save(stream, new JpegEncoder { Quality = policy.JpegQuality });
-                    mimeType = "image/jpeg";
-                    extension = ".jpg";
-                    break;
-                case LibraryArtworkEncoding.Png:
-                    image.Save(stream, new PngEncoder());
-                    mimeType = "image/png";
-                    extension = ".png";
-                    break;
-                default:
-                    image.Save(stream, sourceFormat);
-                    mimeType = sourceFormat.DefaultMimeType;
-                    extension = ExtensionForMime(
-                        mimeType, sourceFormat.FileExtensions.FirstOrDefault());
-                    break;
-            }
-            output = stream.ToArray();
+            case LibraryArtworkEncoding.Jpeg:
+                outputFormat = SKEncodedImageFormat.Jpeg;
+                quality = policy.JpegQuality;
+                break;
+            case LibraryArtworkEncoding.Png:
+                outputFormat = SKEncodedImageFormat.Png;
+                quality = 100;
+                break;
+            default:
+                // Skia can decode GIF and BMP but cannot encode them. Preserve untouched source
+                // bytes exactly above; when a resize is required, use lossless PNG and report the
+                // actual MIME type/extension instead of writing mislabeled or empty data.
+                outputFormat = decoded.Format is SKEncodedImageFormat.Jpeg or
+                    SKEncodedImageFormat.Png or
+                    SKEncodedImageFormat.Webp
+                        ? decoded.Format
+                        : SKEncodedImageFormat.Png;
+                quality = outputFormat == SKEncodedImageFormat.Jpeg
+                    ? policy.JpegQuality
+                    : 100;
+                break;
         }
-        if (policy.MaximumEncodedBytes > 0 &&
-            output.Length > policy.MaximumEncodedBytes)
+
+        output = ArtworkImageProcessor.Encode(outputImage, outputFormat, quality);
+        (mimeType, extension) =
+            ArtworkImageProcessor.FormatDetails(outputFormat);
+        ValidateEncodedSize(output, policy.MaximumEncodedBytes);
+        return new(
+            output,
+            mimeType,
+            extension,
+            outputImage.Width,
+            outputImage.Height);
+    }
+
+    private static void ValidateEncodedSize(byte[] output, int maximumEncodedBytes)
+    {
+        if (maximumEncodedBytes > 0 && output.Length > maximumEncodedBytes)
             throw new InvalidDataException(
                 $"Artwork is {output.Length:N0} bytes, exceeding the active policy limit of " +
-                $"{policy.MaximumEncodedBytes:N0} bytes.");
-        return new(output, mimeType, extension, image.Width, image.Height);
+                $"{maximumEncodedBytes:N0} bytes.");
     }
 
     private static int EffectiveMaximum(int requested, int policyMaximum)
@@ -530,10 +588,12 @@ public sealed class ArtworkService : IArtworkService
     }
 
     private static string NormalizeMimeType(string? declared, string detected) =>
-        !string.IsNullOrWhiteSpace(declared) &&
-        declared.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
-            ? declared.ToLowerInvariant()
-            : detected;
+        detected.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
+            ? detected.ToLowerInvariant()
+            : !string.IsNullOrWhiteSpace(declared) &&
+              declared.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
+                ? declared.ToLowerInvariant()
+                : detected;
 
     private static string MimeFromPath(string path) =>
         Path.GetExtension(path).ToLowerInvariant() switch
@@ -542,6 +602,7 @@ public sealed class ArtworkService : IArtworkService
             ".gif" => "image/gif",
             ".webp" => "image/webp",
             ".bmp" => "image/bmp",
+            ".tif" or ".tiff" => "image/tiff",
             _ => "image/jpeg",
         };
 
@@ -553,6 +614,7 @@ public sealed class ArtworkService : IArtworkService
             "image/gif" => ".gif",
             "image/webp" => ".webp",
             "image/bmp" => ".bmp",
+            "image/tiff" => ".tiff",
             _ when !string.IsNullOrWhiteSpace(detectedExtension) =>
                 "." + detectedExtension.TrimStart('.').ToLowerInvariant(),
             _ => ".img",
@@ -565,11 +627,18 @@ public sealed class ArtworkService : IArtworkService
 
     private static (byte[] Jpeg, int Width, int Height) Encode(byte[] source, int maxDimension, int quality = 90)
     {
-        using var image = Image.Load(source);
-        ArtworkImageProcessor.ResizeToFit(image, maxDimension);
-
-        using var ms = new MemoryStream();
-        image.Save(ms, new JpegEncoder { Quality = quality });
-        return (ms.ToArray(), image.Width, image.Height);
+        using ArtworkImageProcessor.DecodedArtwork decoded =
+            ArtworkImageProcessor.Decode(source);
+        using SKBitmap? oriented = ArtworkImageProcessor.NormalizeOrientation(
+            decoded.Bitmap, decoded.Origin);
+        SKBitmap orientedImage = oriented ?? decoded.Bitmap;
+        using SKBitmap? resized = ArtworkImageProcessor.ResizeToFit(
+            orientedImage, maxDimension);
+        SKBitmap outputImage = resized ?? orientedImage;
+        return (
+            ArtworkImageProcessor.Encode(
+                outputImage, SKEncodedImageFormat.Jpeg, quality),
+            outputImage.Width,
+            outputImage.Height);
     }
 }

@@ -61,9 +61,6 @@
   <data name="Culture.en-US" xml:space="preserve">
     <value>English (United States)</value>
   </data>
-  <data name="App.Brand" xml:space="preserve">
-    <value>音樂資料庫</value>
-  </data>
   <data name="App.Title" xml:space="preserve">
     <value>Music Library Manager</value>
   </data>
@@ -6109,13 +6106,17 @@
   <data name="About.Package.Avalonia.LicenseAutomation" xml:space="preserve"><value>Avalonia UI 授權協議</value></data>
   <data name="About.Package.Avalonia.CopyAutomation" xml:space="preserve"><value>複製 Avalonia UI 授權協議</value></data>
   <data name="About.Package.Avalonia.LicenseTextAutomation" xml:space="preserve"><value>完整的 Avalonia UI 授權文字</value></data>
-  <data name="About.Package.ImageSharp.Name" xml:space="preserve"><value>ImageSharp</value></data>
-  <data name="About.Package.ImageSharp.Identity" xml:space="preserve"><value>套件：SixLabors.ImageSharp</value></data>
-  <data name="About.Package.ImageSharp.Description" xml:space="preserve"><value>用於檢查和最佳化圖稿的跨平台影像處理程式庫。</value></data>
-  <data name="About.Package.ImageSharp.LicenseName" xml:space="preserve"><value>Six Labors Split License, Version 1.0</value></data>
-  <data name="About.Package.ImageSharp.LicenseAutomation" xml:space="preserve"><value>ImageSharp 授權協議</value></data>
-  <data name="About.Package.ImageSharp.CopyAutomation" xml:space="preserve"><value>複製 ImageSharp 授權協議</value></data>
-  <data name="About.Package.ImageSharp.LicenseTextAutomation" xml:space="preserve"><value>完整的 ImageSharp 授權文字</value></data>
+  <data name="About.Package.SkiaSharp.Name" xml:space="preserve"><value>SkiaSharp</value></data>
+  <data name="About.Package.SkiaSharp.Identity" xml:space="preserve"><value>套件：SkiaSharp</value></data>
+  <data name="About.Package.SkiaSharp.Description" xml:space="preserve"><value>用於檢查和最佳化圖稿的跨平台 2D 圖形與影像處理程式庫。</value></data>
+  <data name="About.Package.SkiaSharp.LicenseName" xml:space="preserve"><value>MIT License</value></data>
+  <data name="About.Package.SkiaSharp.LicenseAutomation" xml:space="preserve"><value>SkiaSharp 授權協議</value></data>
+  <data name="About.Package.SkiaSharp.CopyAutomation" xml:space="preserve"><value>複製 SkiaSharp 授權協議</value></data>
+  <data name="About.Package.SkiaSharp.LicenseTextAutomation" xml:space="preserve"><value>完整的 SkiaSharp 授權文字</value></data>
+  <data name="About.Package.SkiaSharp.NoticesName" xml:space="preserve"><value>第三方聲明</value></data>
+  <data name="About.Package.SkiaSharp.NoticesAutomation" xml:space="preserve"><value>SkiaSharp 第三方聲明</value></data>
+  <data name="About.Package.SkiaSharp.CopyNoticesAutomation" xml:space="preserve"><value>複製 SkiaSharp 第三方聲明</value></data>
+  <data name="About.Package.SkiaSharp.NoticesTextAutomation" xml:space="preserve"><value>完整的 SkiaSharp 第三方聲明文字</value></data>
   <data name="About.License.Agreement" xml:space="preserve"><value>授權協議</value></data>
   <data name="About.License.Copy" xml:space="preserve"><value>複製授權</value></data>
   <data name="About.Trademarks" xml:space="preserve"><value>第三方產品名稱與商標均屬其各自所有者。</value></data>

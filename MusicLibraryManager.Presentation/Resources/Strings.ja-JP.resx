@@ -61,9 +61,6 @@
   <data name="Culture.en-US" xml:space="preserve">
     <value>English (United States)</value>
   </data>
-  <data name="App.Brand" xml:space="preserve">
-    <value>音楽ライブラリ</value>
-  </data>
   <data name="App.Title" xml:space="preserve">
     <value>Music Library Manager</value>
   </data>
@@ -6109,13 +6106,17 @@
   <data name="About.Package.Avalonia.LicenseAutomation" xml:space="preserve"><value>Avalonia UI のライセンス契約</value></data>
   <data name="About.Package.Avalonia.CopyAutomation" xml:space="preserve"><value>Avalonia UI のライセンス契約をコピー</value></data>
   <data name="About.Package.Avalonia.LicenseTextAutomation" xml:space="preserve"><value>Avalonia UI の完全なライセンス本文</value></data>
-  <data name="About.Package.ImageSharp.Name" xml:space="preserve"><value>ImageSharp</value></data>
-  <data name="About.Package.ImageSharp.Identity" xml:space="preserve"><value>パッケージ: SixLabors.ImageSharp</value></data>
-  <data name="About.Package.ImageSharp.Description" xml:space="preserve"><value>アートワークの検査と最適化に使用するクロスプラットフォーム画像処理ライブラリ。</value></data>
-  <data name="About.Package.ImageSharp.LicenseName" xml:space="preserve"><value>Six Labors Split License, Version 1.0</value></data>
-  <data name="About.Package.ImageSharp.LicenseAutomation" xml:space="preserve"><value>ImageSharp のライセンス契約</value></data>
-  <data name="About.Package.ImageSharp.CopyAutomation" xml:space="preserve"><value>ImageSharp のライセンス契約をコピー</value></data>
-  <data name="About.Package.ImageSharp.LicenseTextAutomation" xml:space="preserve"><value>ImageSharp の完全なライセンス本文</value></data>
+  <data name="About.Package.SkiaSharp.Name" xml:space="preserve"><value>SkiaSharp</value></data>
+  <data name="About.Package.SkiaSharp.Identity" xml:space="preserve"><value>パッケージ: SkiaSharp</value></data>
+  <data name="About.Package.SkiaSharp.Description" xml:space="preserve"><value>アートワークの検査と最適化に使用するクロスプラットフォームの 2D グラフィックスおよび画像処理ライブラリ。</value></data>
+  <data name="About.Package.SkiaSharp.LicenseName" xml:space="preserve"><value>MIT License</value></data>
+  <data name="About.Package.SkiaSharp.LicenseAutomation" xml:space="preserve"><value>SkiaSharp のライセンス契約</value></data>
+  <data name="About.Package.SkiaSharp.CopyAutomation" xml:space="preserve"><value>SkiaSharp のライセンス契約をコピー</value></data>
+  <data name="About.Package.SkiaSharp.LicenseTextAutomation" xml:space="preserve"><value>SkiaSharp の完全なライセンス本文</value></data>
+  <data name="About.Package.SkiaSharp.NoticesName" xml:space="preserve"><value>サードパーティに関する通知</value></data>
+  <data name="About.Package.SkiaSharp.NoticesAutomation" xml:space="preserve"><value>SkiaSharp のサードパーティに関する通知</value></data>
+  <data name="About.Package.SkiaSharp.CopyNoticesAutomation" xml:space="preserve"><value>SkiaSharp のサードパーティに関する通知をコピー</value></data>
+  <data name="About.Package.SkiaSharp.NoticesTextAutomation" xml:space="preserve"><value>SkiaSharp のサードパーティに関する通知の全文</value></data>
   <data name="About.License.Agreement" xml:space="preserve"><value>ライセンス契約</value></data>
   <data name="About.License.Copy" xml:space="preserve"><value>ライセンスをコピー</value></data>
   <data name="About.Trademarks" xml:space="preserve"><value>サードパーティの製品名および商標は、それぞれの所有者に帰属します。</value></data>

@@ -61,9 +61,6 @@
   <data name="Culture.en-US" xml:space="preserve">
     <value>English (United States)</value>
   </data>
-  <data name="App.Brand" xml:space="preserve">
-    <value>音乐库</value>
-  </data>
   <data name="App.Title" xml:space="preserve">
     <value>Music Library Manager</value>
   </data>
@@ -6109,13 +6106,17 @@
   <data name="About.Package.Avalonia.LicenseAutomation" xml:space="preserve"><value>Avalonia UI 许可协议</value></data>
   <data name="About.Package.Avalonia.CopyAutomation" xml:space="preserve"><value>复制 Avalonia UI 许可协议</value></data>
   <data name="About.Package.Avalonia.LicenseTextAutomation" xml:space="preserve"><value>完整的 Avalonia UI 许可文本</value></data>
-  <data name="About.Package.ImageSharp.Name" xml:space="preserve"><value>ImageSharp</value></data>
-  <data name="About.Package.ImageSharp.Identity" xml:space="preserve"><value>软件包：SixLabors.ImageSharp</value></data>
-  <data name="About.Package.ImageSharp.Description" xml:space="preserve"><value>用于检查和优化插图的跨平台图像处理库。</value></data>
-  <data name="About.Package.ImageSharp.LicenseName" xml:space="preserve"><value>Six Labors Split License, Version 1.0</value></data>
-  <data name="About.Package.ImageSharp.LicenseAutomation" xml:space="preserve"><value>ImageSharp 许可协议</value></data>
-  <data name="About.Package.ImageSharp.CopyAutomation" xml:space="preserve"><value>复制 ImageSharp 许可协议</value></data>
-  <data name="About.Package.ImageSharp.LicenseTextAutomation" xml:space="preserve"><value>完整的 ImageSharp 许可文本</value></data>
+  <data name="About.Package.SkiaSharp.Name" xml:space="preserve"><value>SkiaSharp</value></data>
+  <data name="About.Package.SkiaSharp.Identity" xml:space="preserve"><value>软件包：SkiaSharp</value></data>
+  <data name="About.Package.SkiaSharp.Description" xml:space="preserve"><value>用于检查和优化插图的跨平台 2D 图形与图像处理库。</value></data>
+  <data name="About.Package.SkiaSharp.LicenseName" xml:space="preserve"><value>MIT License</value></data>
+  <data name="About.Package.SkiaSharp.LicenseAutomation" xml:space="preserve"><value>SkiaSharp 许可协议</value></data>
+  <data name="About.Package.SkiaSharp.CopyAutomation" xml:space="preserve"><value>复制 SkiaSharp 许可协议</value></data>
+  <data name="About.Package.SkiaSharp.LicenseTextAutomation" xml:space="preserve"><value>完整的 SkiaSharp 许可文本</value></data>
+  <data name="About.Package.SkiaSharp.NoticesName" xml:space="preserve"><value>第三方声明</value></data>
+  <data name="About.Package.SkiaSharp.NoticesAutomation" xml:space="preserve"><value>SkiaSharp 第三方声明</value></data>
+  <data name="About.Package.SkiaSharp.CopyNoticesAutomation" xml:space="preserve"><value>复制 SkiaSharp 第三方声明</value></data>
+  <data name="About.Package.SkiaSharp.NoticesTextAutomation" xml:space="preserve"><value>完整的 SkiaSharp 第三方声明文本</value></data>
   <data name="About.License.Agreement" xml:space="preserve"><value>许可协议</value></data>
   <data name="About.License.Copy" xml:space="preserve"><value>复制许可</value></data>
   <data name="About.Trademarks" xml:space="preserve"><value>第三方产品名称和商标归其各自所有者所有。</value></data>

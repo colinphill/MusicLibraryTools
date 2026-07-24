@@ -3,10 +3,7 @@ using MusicLibraryTools;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
 using System.Xml.Linq;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
 using Xunit;
 
 namespace MusicLibrary.Core.Tests;
@@ -17,34 +14,19 @@ public class ArtworkServiceTests
     private readonly MediaFileService _reader = new();
 
     private static string MakePng(int w, int h)
-    {
-        var path = Path.Combine(Path.GetTempPath(), "img_" + Guid.NewGuid().ToString("N") + ".png");
-        using var image = new Image<Rgba32>(w, h);
-        image.Mutate(x => x.BackgroundColor(Color.Red));
-        image.Save(path, new PngEncoder());
-        return path;
-    }
+        => TestImageFactory.WriteTemporaryPng(
+            w,
+            h,
+            SKColors.Red);
 
     private static string MakeQuadrantPng(int width, int height)
     {
         var path = Path.Combine(Path.GetTempPath(), "img_" + Guid.NewGuid().ToString("N") + ".png");
-        using var image = new Image<Rgba32>(width, height);
-        image.ProcessPixelRows(accessor =>
-        {
-            for (var y = 0; y < height; y++)
-            {
-                Span<Rgba32> row = accessor.GetRowSpan(y);
-                for (var x = 0; x < width; x++)
-                    row[x] = (x < width / 2, y < height / 2) switch
-                    {
-                        (true, true) => new Rgba32(255, 0, 0),
-                        (false, true) => new Rgba32(0, 255, 0),
-                        (true, false) => new Rgba32(0, 0, 255),
-                        _ => new Rgba32(255, 255, 0),
-                    };
-            }
-        });
-        image.Save(path, new PngEncoder());
+        File.WriteAllBytes(
+            path,
+            TestImageFactory.QuadrantPng(
+                width,
+                height));
         return path;
     }
 
@@ -177,17 +159,26 @@ public class ArtworkServiceTests
 
             MediaFileModel reloaded = (await _reader.LoadAsync(media.Path)).Value!;
             ArtworkModel cover = Assert.Single(reloaded.Artwork);
-            using Image<Rgba32> decoded = Image.Load<Rgba32>(cover.Data);
+            using SKBitmap decoded =
+                TestImageFactory.Decode(cover.Data);
             Assert.Equal(expectedWidth, decoded.Width);
             Assert.Equal(expectedHeight, decoded.Height);
 
             // Sample well inside each quadrant. Retaining all four markers proves the transform
             // fitted the whole source rather than cropping it; the expected non-square dimensions
             // prove it was not stretched to the square bound.
-            AssertMostlyRed(decoded[decoded.Width / 4, decoded.Height / 4]);
-            AssertMostlyGreen(decoded[decoded.Width * 3 / 4, decoded.Height / 4]);
-            AssertMostlyBlue(decoded[decoded.Width / 4, decoded.Height * 3 / 4]);
-            AssertMostlyYellow(decoded[decoded.Width * 3 / 4, decoded.Height * 3 / 4]);
+            AssertMostlyRed(decoded.GetPixel(
+                decoded.Width / 4,
+                decoded.Height / 4));
+            AssertMostlyGreen(decoded.GetPixel(
+                decoded.Width * 3 / 4,
+                decoded.Height / 4));
+            AssertMostlyBlue(decoded.GetPixel(
+                decoded.Width / 4,
+                decoded.Height * 3 / 4));
+            AssertMostlyYellow(decoded.GetPixel(
+                decoded.Width * 3 / 4,
+                decoded.Height * 3 / 4));
         }
         finally
         {
@@ -366,7 +357,9 @@ public class ArtworkServiceTests
             Assert.True(result.Success, result.Error);
             string sidecar = Path.Combine(library.Root, "cover.png");
             Assert.True(File.Exists(sidecar));
-            using Image image = Image.Load(sidecar);
+            using SKBitmap image =
+                TestImageFactory.Decode(
+                    File.ReadAllBytes(sidecar));
             Assert.Equal(180, image.Width);
             Assert.Equal(120, image.Height);
             Assert.Empty((await _reader.LoadAsync(musicPath)).Value!.Artwork);
@@ -410,7 +403,9 @@ public class ArtworkServiceTests
             string cover = Path.Combine(library.Root, "cover.png");
             Assert.True(File.Exists(cover));
             Assert.False(File.Exists(Path.Combine(library.Root, "back.png")));
-            using Image image = Image.Load(cover);
+            using SKBitmap image =
+                TestImageFactory.Decode(
+                    File.ReadAllBytes(cover));
             Assert.Equal(100, image.Width);
             Assert.Equal(50, image.Height);
         }
@@ -578,23 +573,23 @@ public class ArtworkServiceTests
         public void SetPreference(string key, string? value) { }
     }
 
-    private static void AssertMostlyRed(Rgba32 pixel)
+    private static void AssertMostlyRed(SKColor pixel)
     {
-        Assert.True(pixel.R > 160 && pixel.G < 100 && pixel.B < 100, $"Expected red, got {pixel}.");
+        Assert.True(pixel.Red > 160 && pixel.Green < 100 && pixel.Blue < 100, $"Expected red, got {pixel}.");
     }
 
-    private static void AssertMostlyGreen(Rgba32 pixel)
+    private static void AssertMostlyGreen(SKColor pixel)
     {
-        Assert.True(pixel.G > 160 && pixel.R < 100 && pixel.B < 100, $"Expected green, got {pixel}.");
+        Assert.True(pixel.Green > 160 && pixel.Red < 100 && pixel.Blue < 100, $"Expected green, got {pixel}.");
     }
 
-    private static void AssertMostlyBlue(Rgba32 pixel)
+    private static void AssertMostlyBlue(SKColor pixel)
     {
-        Assert.True(pixel.B > 160 && pixel.R < 100 && pixel.G < 100, $"Expected blue, got {pixel}.");
+        Assert.True(pixel.Blue > 160 && pixel.Red < 100 && pixel.Green < 100, $"Expected blue, got {pixel}.");
     }
 
-    private static void AssertMostlyYellow(Rgba32 pixel)
+    private static void AssertMostlyYellow(SKColor pixel)
     {
-        Assert.True(pixel.R > 160 && pixel.G > 160 && pixel.B < 100, $"Expected yellow, got {pixel}.");
+        Assert.True(pixel.Red > 160 && pixel.Green > 160 && pixel.Blue < 100, $"Expected yellow, got {pixel}.");
     }
 }

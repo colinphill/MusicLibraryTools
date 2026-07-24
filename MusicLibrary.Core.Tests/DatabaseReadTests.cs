@@ -2,11 +2,8 @@ using MusicFileUtilities;
 using MetadataCaching;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 using Microsoft.Data.Sqlite;
+using SkiaSharp;
 using Xunit;
 
 namespace MusicLibrary.Core.Tests;
@@ -628,11 +625,12 @@ public class DatabaseReadTests
         var png = Path.Combine(work, "cover.png");
         try
         {
-            using (var image = new Image<Rgba32>(200, 200))
-            {
-                image.Mutate(x => x.BackgroundColor(Color.Blue));
-                image.Save(png, new PngEncoder());
-            }
+            await File.WriteAllBytesAsync(
+                png,
+                TestImageFactory.Png(
+                    200,
+                    200,
+                    SKColors.Blue));
 
             var settings = new AppSettings(Path.Combine(work, "settings.json"));
             settings.LoadConfig(config);
@@ -679,7 +677,7 @@ public class DatabaseReadTests
         var (work, _, config, song) = Setup("sample.flac");
         try
         {
-            byte[] cover = CreatePngBytes(96, 96, Color.Purple);
+            byte[] cover = CreatePngBytes(96, 96, SKColors.Purple);
             var media = MediaFile.GetFile(song);
             ((IArtworkWriter)media.Tags.First()).SetFrontCover(cover, "image/png");
             media.SaveTags();
@@ -713,7 +711,7 @@ public class DatabaseReadTests
         var (work, _, config, song) = Setup("sample.flac");
         try
         {
-            byte[] cover = CreatePngBytes(96, 96, Color.Orange);
+            byte[] cover = CreatePngBytes(96, 96, SKColors.Orange);
             var media = MediaFile.GetFile(song);
             ((IArtworkWriter)media.Tags.First()).SetFrontCover(cover, "image/png");
             media.SaveTags();
@@ -755,7 +753,7 @@ public class DatabaseReadTests
         var (work, _, config, song) = Setup("sample.flac");
         try
         {
-            byte[] cover = CreatePngBytes(72, 72, Color.Gold);
+            byte[] cover = CreatePngBytes(72, 72, SKColors.Gold);
             var media = MediaFile.GetFile(song);
             ((IArtworkWriter)media.Tags.First()).SetFrontCover(cover, "image/png");
             media.SaveTags();
@@ -800,7 +798,7 @@ public class DatabaseReadTests
         {
             var media = MediaFile.GetFile(song);
             ((IArtworkWriter)media.Tags.First()).SetFrontCover(
-                CreatePngBytes(64, 64, Color.Green), "image/png");
+                CreatePngBytes(64, 64, SKColors.Green), "image/png");
             media.SaveTags();
 
             var settings = new AppSettings(Path.Combine(work, "settings.json"));
@@ -821,14 +819,14 @@ public class DatabaseReadTests
         }
     }
 
-    private static byte[] CreatePngBytes(int width, int height, Color color)
-    {
-        using var image = new Image<Rgba32>(width, height);
-        image.Mutate(context => context.BackgroundColor(color));
-        using var stream = new MemoryStream();
-        image.Save(stream, new PngEncoder());
-        return stream.ToArray();
-    }
+    private static byte[] CreatePngBytes(
+        int width,
+        int height,
+        SKColor color) =>
+        TestImageFactory.Png(
+            width,
+            height,
+            color);
 
     private static long ReadArtworkScanned(string databasePath)
     {

@@ -61,9 +61,6 @@
   <data name="Culture.en-US" xml:space="preserve">
     <value>English (United States)</value>
   </data>
-  <data name="App.Brand" xml:space="preserve">
-    <value>Musikbibliothek</value>
-  </data>
   <data name="App.Title" xml:space="preserve">
     <value>Music Library Manager</value>
   </data>
@@ -6109,13 +6106,17 @@
   <data name="About.Package.Avalonia.LicenseAutomation" xml:space="preserve"><value>Avalonia UI-Lizenzvereinbarung</value></data>
   <data name="About.Package.Avalonia.CopyAutomation" xml:space="preserve"><value>Avalonia UI-Lizenzvereinbarung kopieren</value></data>
   <data name="About.Package.Avalonia.LicenseTextAutomation" xml:space="preserve"><value>Vollständiger Avalonia UI-Lizenztext</value></data>
-  <data name="About.Package.ImageSharp.Name" xml:space="preserve"><value>ImageSharp</value></data>
-  <data name="About.Package.ImageSharp.Identity" xml:space="preserve"><value>Paket: SixLabors.ImageSharp</value></data>
-  <data name="About.Package.ImageSharp.Description" xml:space="preserve"><value>Plattformübergreifende Bildverarbeitungsbibliothek zur Prüfung und Optimierung von Grafiken.</value></data>
-  <data name="About.Package.ImageSharp.LicenseName" xml:space="preserve"><value>Six Labors Split License, Version 1.0</value></data>
-  <data name="About.Package.ImageSharp.LicenseAutomation" xml:space="preserve"><value>ImageSharp-Lizenzvereinbarung</value></data>
-  <data name="About.Package.ImageSharp.CopyAutomation" xml:space="preserve"><value>ImageSharp-Lizenzvereinbarung kopieren</value></data>
-  <data name="About.Package.ImageSharp.LicenseTextAutomation" xml:space="preserve"><value>Vollständiger ImageSharp-Lizenztext</value></data>
+  <data name="About.Package.SkiaSharp.Name" xml:space="preserve"><value>SkiaSharp</value></data>
+  <data name="About.Package.SkiaSharp.Identity" xml:space="preserve"><value>Paket: SkiaSharp</value></data>
+  <data name="About.Package.SkiaSharp.Description" xml:space="preserve"><value>Plattformübergreifende 2D-Grafik- und Bildverarbeitungsbibliothek zur Prüfung und Optimierung von Grafiken.</value></data>
+  <data name="About.Package.SkiaSharp.LicenseName" xml:space="preserve"><value>MIT License</value></data>
+  <data name="About.Package.SkiaSharp.LicenseAutomation" xml:space="preserve"><value>SkiaSharp-Lizenzvereinbarung</value></data>
+  <data name="About.Package.SkiaSharp.CopyAutomation" xml:space="preserve"><value>SkiaSharp-Lizenzvereinbarung kopieren</value></data>
+  <data name="About.Package.SkiaSharp.LicenseTextAutomation" xml:space="preserve"><value>Vollständiger SkiaSharp-Lizenztext</value></data>
+  <data name="About.Package.SkiaSharp.NoticesName" xml:space="preserve"><value>Drittherstellerhinweise</value></data>
+  <data name="About.Package.SkiaSharp.NoticesAutomation" xml:space="preserve"><value>SkiaSharp-Drittherstellerhinweise</value></data>
+  <data name="About.Package.SkiaSharp.CopyNoticesAutomation" xml:space="preserve"><value>SkiaSharp-Drittherstellerhinweise kopieren</value></data>
+  <data name="About.Package.SkiaSharp.NoticesTextAutomation" xml:space="preserve"><value>Vollständiger Text der SkiaSharp-Drittherstellerhinweise</value></data>
   <data name="About.License.Agreement" xml:space="preserve"><value>Lizenzvereinbarung</value></data>
   <data name="About.License.Copy" xml:space="preserve"><value>Lizenz kopieren</value></data>
   <data name="About.Trademarks" xml:space="preserve"><value>Produktnamen und Marken Dritter sind Eigentum ihrer jeweiligen Inhaber.</value></data>

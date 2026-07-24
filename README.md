@@ -85,8 +85,14 @@ Artwork:
 
 - **FixArtwork / ScrubArtwork / ArtworkScrubber** — repair, re-encode, and clean embedded
   cover art. `FixArtwork` resolves playlist membership from the binary `.itl`, reads and writes
-  media tags through MusicFileUtilities, and uses ImageSharp for portable JPEG conversion and
-  resizing.
+  media tags through MusicFileUtilities, and uses SkiaSharp for portable JPEG conversion and
+  resizing. Preserve-source writes that need no transform remain byte-for-byte exact, including
+  animation and image metadata. Transcodes normalize encoded orientation into the pixels, use a
+  white matte for JPEG transparency, and intentionally emit a still raster without copying
+  EXIF/IPTC/XMP metadata. Animated preserve-source artwork is refused when a resize would discard
+  frames. The shared manager/service preserve-source path can retain TIFF unchanged, but SkiaSharp
+  does not resize/transcode TIFF and the standalone scrubbers reject it. ImageSharp-only legacy
+  codecs such as TGA, PBM, and QOI are rejected rather than silently converted or mislabeled.
 - **DumpArtworkSizes** — report embedded artwork dimensions/sizes for an `.itl` playlist using
   MusicFileUtilities, without launching iTunes.
 

@@ -61,9 +61,6 @@
   <data name="Culture.en-US" xml:space="preserve">
     <value>English (United States)</value>
   </data>
-  <data name="App.Brand" xml:space="preserve">
-    <value>음악 라이브러리</value>
-  </data>
   <data name="App.Title" xml:space="preserve">
     <value>Music Library Manager</value>
   </data>
@@ -6109,13 +6106,17 @@
   <data name="About.Package.Avalonia.LicenseAutomation" xml:space="preserve"><value>Avalonia UI 사용권 계약</value></data>
   <data name="About.Package.Avalonia.CopyAutomation" xml:space="preserve"><value>Avalonia UI 사용권 계약 복사</value></data>
   <data name="About.Package.Avalonia.LicenseTextAutomation" xml:space="preserve"><value>전체 Avalonia UI 사용권 텍스트</value></data>
-  <data name="About.Package.ImageSharp.Name" xml:space="preserve"><value>ImageSharp</value></data>
-  <data name="About.Package.ImageSharp.Identity" xml:space="preserve"><value>패키지: SixLabors.ImageSharp</value></data>
-  <data name="About.Package.ImageSharp.Description" xml:space="preserve"><value>아트워크 검사 및 최적화를 위한 크로스 플랫폼 이미지 처리 라이브러리입니다.</value></data>
-  <data name="About.Package.ImageSharp.LicenseName" xml:space="preserve"><value>Six Labors Split License, Version 1.0</value></data>
-  <data name="About.Package.ImageSharp.LicenseAutomation" xml:space="preserve"><value>ImageSharp 사용권 계약</value></data>
-  <data name="About.Package.ImageSharp.CopyAutomation" xml:space="preserve"><value>ImageSharp 사용권 계약 복사</value></data>
-  <data name="About.Package.ImageSharp.LicenseTextAutomation" xml:space="preserve"><value>전체 ImageSharp 사용권 텍스트</value></data>
+  <data name="About.Package.SkiaSharp.Name" xml:space="preserve"><value>SkiaSharp</value></data>
+  <data name="About.Package.SkiaSharp.Identity" xml:space="preserve"><value>패키지: SkiaSharp</value></data>
+  <data name="About.Package.SkiaSharp.Description" xml:space="preserve"><value>아트워크 검사 및 최적화를 위한 크로스 플랫폼 2D 그래픽 및 이미지 처리 라이브러리입니다.</value></data>
+  <data name="About.Package.SkiaSharp.LicenseName" xml:space="preserve"><value>MIT License</value></data>
+  <data name="About.Package.SkiaSharp.LicenseAutomation" xml:space="preserve"><value>SkiaSharp 사용권 계약</value></data>
+  <data name="About.Package.SkiaSharp.CopyAutomation" xml:space="preserve"><value>SkiaSharp 사용권 계약 복사</value></data>
+  <data name="About.Package.SkiaSharp.LicenseTextAutomation" xml:space="preserve"><value>전체 SkiaSharp 사용권 텍스트</value></data>
+  <data name="About.Package.SkiaSharp.NoticesName" xml:space="preserve"><value>타사 고지 사항</value></data>
+  <data name="About.Package.SkiaSharp.NoticesAutomation" xml:space="preserve"><value>SkiaSharp 타사 고지 사항</value></data>
+  <data name="About.Package.SkiaSharp.CopyNoticesAutomation" xml:space="preserve"><value>SkiaSharp 타사 고지 사항 복사</value></data>
+  <data name="About.Package.SkiaSharp.NoticesTextAutomation" xml:space="preserve"><value>전체 SkiaSharp 타사 고지 사항 텍스트</value></data>
   <data name="About.License.Agreement" xml:space="preserve"><value>사용권 계약</value></data>
   <data name="About.License.Copy" xml:space="preserve"><value>사용권 복사</value></data>
   <data name="About.Trademarks" xml:space="preserve"><value>타사 제품 이름 및 상표는 해당 소유자의 자산입니다.</value></data>

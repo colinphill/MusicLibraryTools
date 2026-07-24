@@ -13,16 +13,20 @@ public partial class AboutView : UserControl
     private static readonly Uri AvaloniaLicenseUri =
         new(
             "avares://MusicLibraryManager/Assets/Licenses/AvaloniaUI-12.1.0-MIT.txt");
-    private static readonly Uri ImageSharpLicenseUri =
+    private static readonly Uri SkiaSharpLicenseUri =
         new(
-            "avares://MusicLibraryManager/Assets/Licenses/SixLabors.ImageSharp-3.1.12-LICENSE.txt");
+            "avares://MusicLibraryManager/Assets/Licenses/SkiaSharp-4.150.1-MIT.txt");
+    private static readonly Uri SkiaSharpNoticesUri =
+        new(
+            "avares://MusicLibraryManager/Assets/Licenses/SkiaSharp-4.150.1-THIRD-PARTY-NOTICES.txt");
 
     public string ProductVersion { get; }
     public string ProductCopyright { get; }
     public string AvaloniaVersion { get; } = "12.1.0";
-    public string ImageSharpVersion { get; } = "3.1.12";
+    public string SkiaSharpVersion { get; } = "4.150.1";
     public string AvaloniaLicenseText { get; }
-    public string ImageSharpLicenseText { get; }
+    public string SkiaSharpLicenseText { get; }
+    public string SkiaSharpThirdPartyNoticesText { get; }
 
     public AboutView()
     {
@@ -35,8 +39,10 @@ public partial class AboutView : UserControl
             "";
         AvaloniaLicenseText =
             ReadLicense(AvaloniaLicenseUri);
-        ImageSharpLicenseText =
-            ReadLicense(ImageSharpLicenseUri);
+        SkiaSharpLicenseText =
+            ReadLicense(SkiaSharpLicenseUri);
+        SkiaSharpThirdPartyNoticesText =
+            ReadLicense(SkiaSharpNoticesUri);
 
         InitializeComponent();
         DataContext = this;
@@ -74,11 +80,17 @@ public partial class AboutView : UserControl
         await App.GetService<IPlatformService>()
             .CopyTextAsync(AvaloniaLicenseText);
 
-    private async void OnCopyImageSharpLicense(
+    private async void OnCopySkiaSharpLicense(
         object? sender,
         RoutedEventArgs e) =>
         await App.GetService<IPlatformService>()
-            .CopyTextAsync(ImageSharpLicenseText);
+            .CopyTextAsync(SkiaSharpLicenseText);
+
+    private async void OnCopySkiaSharpNotices(
+        object? sender,
+        RoutedEventArgs e) =>
+        await App.GetService<IPlatformService>()
+            .CopyTextAsync(SkiaSharpThirdPartyNoticesText);
 
     private void ApplyResponsiveLayout()
     {
@@ -99,8 +111,8 @@ public partial class AboutView : UserControl
                 new RowDefinition(GridLength.Auto));
             Grid.SetColumn(AvaloniaPackageCard, 0);
             Grid.SetRow(AvaloniaPackageCard, 0);
-            Grid.SetColumn(ImageSharpPackageCard, 0);
-            Grid.SetRow(ImageSharpPackageCard, 2);
+            Grid.SetColumn(SkiaSharpPackageCard, 0);
+            Grid.SetRow(SkiaSharpPackageCard, 2);
         }
         else
         {
@@ -114,8 +126,8 @@ public partial class AboutView : UserControl
                 new RowDefinition(GridLength.Auto));
             Grid.SetColumn(AvaloniaPackageCard, 0);
             Grid.SetRow(AvaloniaPackageCard, 0);
-            Grid.SetColumn(ImageSharpPackageCard, 2);
-            Grid.SetRow(ImageSharpPackageCard, 0);
+            Grid.SetColumn(SkiaSharpPackageCard, 2);
+            Grid.SetRow(SkiaSharpPackageCard, 0);
         }
     }
 }

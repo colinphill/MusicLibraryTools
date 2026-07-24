@@ -30,7 +30,7 @@
                                   Height="34"
                                   AutomationProperties.Name="{DynamicResource Loc.About.BrandAutomation}" />
               <StackPanel x:Name="BrandCopy" Grid.Column="1" VerticalAlignment="Center">
-                <TextBlock Text="{DynamicResource Loc.App.Brand}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="14" FontWeight="Bold" />
+                <TextBlock Text="{DynamicResource Loc.App.Title}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="14" FontWeight="Bold" />
               </StackPanel>
             </Grid>
           </Border>

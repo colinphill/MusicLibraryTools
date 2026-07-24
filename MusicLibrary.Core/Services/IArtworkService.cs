@@ -3,7 +3,7 @@ using MusicLibrary.Core.Models;
 namespace MusicLibrary.Core.Services;
 
 /// <summary>
-/// Cross-platform embedded-artwork operations via ImageSharp: replace the cover from an image file,
+/// Cross-platform embedded-artwork operations via SkiaSharp: replace the cover from an image file,
 /// scrub (re-encode/downscale) the existing cover, or remove it. Writing uses the uniform
 /// IArtworkWriter in MusicFileUtilities (MP3/DSF/FLAC/Ogg/MP4/WavPack).
 /// </summary>

@@ -3,10 +3,7 @@ using MusicFileUtilities;
 using MusicLibraryTools;
 using MusicLibrary.Core.Models;
 using MusicLibrary.Core.Services;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
 using Xunit;
 
 namespace MusicLibrary.Core.Tests;
@@ -804,9 +801,9 @@ public class IngestMusicTests
         WriteArtwork(source,
         [
             new ArtworkImage(ID3v2Util.APICType.FrontCover, "image/png", "front",
-                MakePng(40, 20, Color.Red)),
+                MakePng(40, 20, SKColors.Red)),
             new ArtworkImage(ID3v2Util.APICType.BackCover, "image/png", "back",
-                MakePng(20, 40, Color.Blue)),
+                MakePng(20, 40, SKColors.Blue)),
         ]);
         var policy = new LibraryArtworkPolicy(
             LibraryArtworkStorage.Sidecar,
@@ -840,7 +837,10 @@ public class IngestMusicTests
         Assert.True(File.Exists(artifact.SidecarDestination));
         Assert.Empty(MediaFile.GetFile(output.DestinationPath, readOnly: true).Tags
             .SelectMany(tag => tag.GetImageMetadata()));
-        using Image sidecar = Image.Load(artifact.SidecarDestination!);
+        using SKBitmap sidecar =
+            TestImageFactory.Decode(
+                await File.ReadAllBytesAsync(
+                    artifact.SidecarDestination!));
         Assert.Equal(16, sidecar.Width);
         Assert.Equal(8, sidecar.Height);
     }
@@ -853,7 +853,7 @@ public class IngestMusicTests
         WriteArtwork(source,
         [
             new ArtworkImage(ID3v2Util.APICType.FrontCover, "image/png", "front",
-                MakePng(16, 16, Color.Red)),
+                MakePng(16, 16, SKColors.Red)),
         ]);
         LibraryArtworkPolicy policy = LibraryProfilePresets.Create(
             LibraryProfilePreset.Custom).Artwork;
@@ -880,7 +880,7 @@ public class IngestMusicTests
         WriteArtwork(source,
         [
             new ArtworkImage(ID3v2Util.APICType.FrontCover, "image/png", "front",
-                MakePng(16, 16, Color.Red)),
+                MakePng(16, 16, SKColors.Red)),
         ]);
         LibraryArtworkPolicy policy = LibraryProfilePresets.Create(
             LibraryProfilePreset.ArtistAlbum).Artwork;
@@ -1288,14 +1288,14 @@ public class IngestMusicTests
             PreserveArtwork: false,
             CollisionPolicy: LibraryPathCollisionPolicy.Stop);
 
-    private static byte[] MakePng(int width, int height, Color color)
-    {
-        using var image = new Image<Rgba32>(width, height);
-        image.Mutate(context => context.BackgroundColor(color));
-        using var stream = new MemoryStream();
-        image.Save(stream, new PngEncoder());
-        return stream.ToArray();
-    }
+    private static byte[] MakePng(
+        int width,
+        int height,
+        SKColor color) =>
+        TestImageFactory.Png(
+            width,
+            height,
+            color);
 
     private static void WriteArtwork(
         string path,

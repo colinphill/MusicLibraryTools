@@ -92,11 +92,6 @@
               <StackPanel Grid.Column="2"
                           VerticalAlignment="Center"
                           Spacing="9">
-                <TextBlock Text="{DynamicResource Loc.App.Brand}"
-                           Foreground="#D8F8F5"
-                           FontSize="12"
-                           FontWeight="Bold"
-                           LetterSpacing="1.2" />
                 <TextBlock x:Name="AboutProductName"
                            Text="{DynamicResource Loc.App.Title}"
                            Foreground="#FFFFFF"
@@ -254,7 +249,7 @@
             </StackPanel>
           </Border>
 
-          <Border x:Name="ImageSharpPackageCard"
+          <Border x:Name="SkiaSharpPackageCard"
                   Grid.Column="2"
                   Classes="card about-package"
                   VerticalAlignment="Top">
@@ -276,12 +271,12 @@
                 <StackPanel Grid.Column="1"
                             Spacing="2"
                             VerticalAlignment="Center">
-                  <TextBlock x:Name="ImageSharpPackageName"
+                  <TextBlock x:Name="SkiaSharpPackageName"
                              Classes="section-title"
-                             Text="{DynamicResource Loc.About.Package.ImageSharp.Name}"
+                             Text="{DynamicResource Loc.About.Package.SkiaSharp.Name}"
                              TextWrapping="Wrap" />
                   <TextBlock Classes="faint"
-                             Text="{DynamicResource Loc.About.Package.ImageSharp.Identity}"
+                             Text="{DynamicResource Loc.About.Package.SkiaSharp.Identity}"
                              TextWrapping="Wrap" />
                 </StackPanel>
                 <Border Grid.Column="2"
@@ -290,22 +285,22 @@
                         Background="{DynamicResource AppAccentSoftBrush}"
                         VerticalAlignment="Top">
                   <controls:LocalizedFormatTextBlock ResourceKey="About.Package.VersionFormat"
-                                                       Value="{Binding ImageSharpVersion}"
+                                                       Value="{Binding SkiaSharpVersion}"
                                                        Classes="muted"
                                                        FontSize="12"
                                                        FontWeight="SemiBold" />
                 </Border>
               </Grid>
               <TextBlock Classes="muted"
-                         Text="{DynamicResource Loc.About.Package.ImageSharp.Description}"
+                         Text="{DynamicResource Loc.About.Package.SkiaSharp.Description}"
                          TextWrapping="Wrap" />
               <TextBlock Classes="faint"
-                         Text="{DynamicResource Loc.About.Package.ImageSharp.LicenseName}"
+                         Text="{DynamicResource Loc.About.Package.SkiaSharp.LicenseName}"
                          FontWeight="SemiBold"
                          TextWrapping="Wrap" />
-              <Expander x:Name="ImageSharpLicenseExpander"
+              <Expander x:Name="SkiaSharpLicenseExpander"
                         Header="{DynamicResource Loc.About.License.Agreement}"
-                        AutomationProperties.Name="{DynamicResource Loc.About.Package.ImageSharp.LicenseAutomation}">
+                        AutomationProperties.Name="{DynamicResource Loc.About.Package.SkiaSharp.LicenseAutomation}">
                 <Border Margin="0,10,0,0"
                         Padding="14"
                         CornerRadius="10"
@@ -313,19 +308,45 @@
                         BorderBrush="{DynamicResource AppBorderBrush}"
                         BorderThickness="1">
                   <StackPanel Spacing="10">
-                    <Button x:Name="CopyImageSharpLicenseButton"
+                    <Button x:Name="CopySkiaSharpLicenseButton"
                             Classes="app quiet"
                             HorizontalAlignment="Right"
                             Content="{DynamicResource Loc.About.License.Copy}"
-                            ToolTip.Tip="{DynamicResource Loc.About.Package.ImageSharp.CopyAutomation}"
-                            AutomationProperties.Name="{DynamicResource Loc.About.Package.ImageSharp.CopyAutomation}"
-                            Click="OnCopyImageSharpLicense" />
-                    <SelectableTextBlock x:Name="ImageSharpLicenseBody"
-                                         Text="{Binding ImageSharpLicenseText}"
+                            ToolTip.Tip="{DynamicResource Loc.About.Package.SkiaSharp.CopyAutomation}"
+                            AutomationProperties.Name="{DynamicResource Loc.About.Package.SkiaSharp.CopyAutomation}"
+                            Click="OnCopySkiaSharpLicense" />
+                    <SelectableTextBlock x:Name="SkiaSharpLicenseBody"
+                                         Text="{Binding SkiaSharpLicenseText}"
                                          TextWrapping="Wrap"
                                          FontFamily="Cascadia Mono, Consolas, monospace"
                                          FontSize="12.5"
-                                         AutomationProperties.Name="{DynamicResource Loc.About.Package.ImageSharp.LicenseTextAutomation}" />
+                                         AutomationProperties.Name="{DynamicResource Loc.About.Package.SkiaSharp.LicenseTextAutomation}" />
+                  </StackPanel>
+                </Border>
+              </Expander>
+              <Expander x:Name="SkiaSharpNoticesExpander"
+                        Header="{DynamicResource Loc.About.Package.SkiaSharp.NoticesName}"
+                        AutomationProperties.Name="{DynamicResource Loc.About.Package.SkiaSharp.NoticesAutomation}">
+                <Border Margin="0,10,0,0"
+                        Padding="14"
+                        CornerRadius="10"
+                        Background="{DynamicResource AppInsetBrush}"
+                        BorderBrush="{DynamicResource AppBorderBrush}"
+                        BorderThickness="1">
+                  <StackPanel Spacing="10">
+                    <Button x:Name="CopySkiaSharpNoticesButton"
+                            Classes="app quiet"
+                            HorizontalAlignment="Right"
+                            Content="{DynamicResource Loc.About.License.Copy}"
+                            ToolTip.Tip="{DynamicResource Loc.About.Package.SkiaSharp.CopyNoticesAutomation}"
+                            AutomationProperties.Name="{DynamicResource Loc.About.Package.SkiaSharp.CopyNoticesAutomation}"
+                            Click="OnCopySkiaSharpNotices" />
+                    <SelectableTextBlock x:Name="SkiaSharpNoticesBody"
+                                         Text="{Binding SkiaSharpThirdPartyNoticesText}"
+                                         TextWrapping="Wrap"
+                                         FontFamily="Cascadia Mono, Consolas, monospace"
+                                         FontSize="12.5"
+                                         AutomationProperties.Name="{DynamicResource Loc.About.Package.SkiaSharp.NoticesTextAutomation}" />
                   </StackPanel>
                 </Border>
               </Expander>

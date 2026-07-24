@@ -21,8 +21,7 @@ Do not translate or transliterate these names:
 - WebM
 - iTunes
 - Avalonia UI / AvaloniaUI
-- ImageSharp / SixLabors.ImageSharp
-- Six Labors / Six Labors Split License
+- SkiaSharp
 - MIT License
 - Colin Hill
 

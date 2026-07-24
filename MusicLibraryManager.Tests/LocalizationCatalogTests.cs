@@ -100,11 +100,7 @@ public sealed partial class LocalizationCatalogTests
         "Avalonia UI",
         "AvaloniaUI",
         "Avalonia",
-        "SixLabors.ImageSharp",
-        "ImageSharp",
-        "Six Labors Split License, Version 1.0",
-        "Six Labors Split License",
-        "Six Labors",
+        "SkiaSharp",
         "MIT License",
     ];
 
@@ -153,6 +149,17 @@ public sealed partial class LocalizationCatalogTests
                 .ToArray();
 
         Assert.Empty(exposedIdentifiers);
+    }
+
+    [Fact]
+    public void Catalog_does_not_define_an_invented_application_brand()
+    {
+        Assert.DoesNotContain(
+            LoadCatalog(),
+            entry => string.Equals(
+                entry.Key,
+                "App.Brand",
+                StringComparison.Ordinal));
     }
 
     [Fact]

@@ -3206,7 +3206,7 @@ public sealed class UiControlTests
     }
 
     [AvaloniaFact]
-    public async Task About_destination_renders_branding_licenses_and_copies_complete_agreements()
+    public async Task About_destination_renders_product_identity_licenses_and_copies_complete_agreements()
     {
         var clipboard = new RecordingClipboardService();
         using ServiceProvider services = BuildIsolatedServices(
@@ -3245,33 +3245,43 @@ public sealed class UiControlTests
                 about.FindControl<TextBlock>(
                     "AvaloniaPackageName")!.Text);
             Assert.Equal(
-                "ImageSharp",
+                "SkiaSharp",
                 about.FindControl<TextBlock>(
-                    "ImageSharpPackageName")!.Text);
+                    "SkiaSharpPackageName")!.Text);
             Assert.Equal("12.1.0", about.AvaloniaVersion);
-            Assert.Equal("3.1.12", about.ImageSharpVersion);
+            Assert.Equal("4.150.1", about.SkiaSharpVersion);
 
             about.FindControl<Expander>(
                     "AvaloniaLicenseExpander")!
                 .IsExpanded = true;
             about.FindControl<Expander>(
-                    "ImageSharpLicenseExpander")!
+                    "SkiaSharpLicenseExpander")!
+                .IsExpanded = true;
+            about.FindControl<Expander>(
+                    "SkiaSharpNoticesExpander")!
                 .IsExpanded = true;
             Dispatcher.UIThread.RunJobs();
             SelectableTextBlock avaloniaLicense =
                 about.FindControl<SelectableTextBlock>(
                     "AvaloniaLicenseBody")!;
-            SelectableTextBlock imageSharpLicense =
+            SelectableTextBlock skiaSharpLicense =
                 about.FindControl<SelectableTextBlock>(
-                    "ImageSharpLicenseBody")!;
+                    "SkiaSharpLicenseBody")!;
+            SelectableTextBlock skiaSharpNotices =
+                about.FindControl<SelectableTextBlock>(
+                    "SkiaSharpNoticesBody")!;
             Assert.True(avaloniaLicense.IsVisible);
-            Assert.True(imageSharpLicense.IsVisible);
+            Assert.True(skiaSharpLicense.IsVisible);
+            Assert.True(skiaSharpNotices.IsVisible);
             Assert.Equal(
                 about.AvaloniaLicenseText,
                 avaloniaLicense.Text);
             Assert.Equal(
-                about.ImageSharpLicenseText,
-                imageSharpLicense.Text);
+                about.SkiaSharpLicenseText,
+                skiaSharpLicense.Text);
+            Assert.Equal(
+                about.SkiaSharpThirdPartyNoticesText,
+                skiaSharpNotices.Text);
             Assert.Contains(
                 "Permission is hereby granted, free of charge",
                 avaloniaLicense.Text,
@@ -3281,16 +3291,28 @@ public sealed class UiControlTests
                 avaloniaLicense.Text,
                 StringComparison.Ordinal);
             Assert.Contains(
-                "Six Labors Split License",
-                imageSharpLicense.Text,
+                "Copyright (c) 2015-2016 Xamarin, Inc.",
+                skiaSharpLicense.Text,
                 StringComparison.Ordinal);
             Assert.Contains(
-                "Works in Source or Object form are split licensed",
-                imageSharpLicense.Text,
+                "Permission is hereby granted, free of charge",
+                skiaSharpLicense.Text,
                 StringComparison.Ordinal);
             Assert.Contains(
-                "Six Labors Commercial License",
-                imageSharpLicense.Text,
+                "THE SOFTWARE IS PROVIDED \"AS IS\"",
+                skiaSharpLicense.Text,
+                StringComparison.Ordinal);
+            Assert.Contains(
+                "THIRD-PARTY SOFTWARE NOTICES AND INFORMATION",
+                skiaSharpNotices.Text,
+                StringComparison.Ordinal);
+            Assert.Contains(
+                "Do not translate or localize",
+                skiaSharpNotices.Text,
+                StringComparison.Ordinal);
+            Assert.Contains(
+                "SkiaSharp and HarfBuzzSharp incorporate third party material",
+                skiaSharpNotices.Text,
                 StringComparison.Ordinal);
 
             about.FindControl<Button>(
@@ -3305,17 +3327,31 @@ public sealed class UiControlTests
                 clipboard.Text);
 
             about.FindControl<Button>(
-                    "CopyImageSharpLicenseButton")!
+                    "CopySkiaSharpLicenseButton")!
                 .RaiseEvent(
                     new RoutedEventArgs(
                         Button.ClickEvent));
             await WaitForUiAsync(
                 () => string.Equals(
                     clipboard.Text,
-                    about.ImageSharpLicenseText,
+                    about.SkiaSharpLicenseText,
                     StringComparison.Ordinal));
             Assert.Equal(
-                about.ImageSharpLicenseText,
+                about.SkiaSharpLicenseText,
+                clipboard.Text);
+
+            about.FindControl<Button>(
+                    "CopySkiaSharpNoticesButton")!
+                .RaiseEvent(
+                    new RoutedEventArgs(
+                        Button.ClickEvent));
+            await WaitForUiAsync(
+                () => string.Equals(
+                    clipboard.Text,
+                    about.SkiaSharpThirdPartyNoticesText,
+                    StringComparison.Ordinal));
+            Assert.Equal(
+                about.SkiaSharpThirdPartyNoticesText,
                 clipboard.Text);
         }
         finally
@@ -3350,13 +3386,13 @@ public sealed class UiControlTests
             Border avalonia =
                 about.FindControl<Border>(
                     "AvaloniaPackageCard")!;
-            Border imageSharp =
+            Border skiaSharp =
                 about.FindControl<Border>(
-                    "ImageSharpPackageCard")!;
+                    "SkiaSharpPackageCard")!;
             Assert.Equal(3, packages.ColumnDefinitions.Count);
             Assert.Equal(0, Grid.GetRow(avalonia));
-            Assert.Equal(0, Grid.GetRow(imageSharp));
-            Assert.Equal(2, Grid.GetColumn(imageSharp));
+            Assert.Equal(0, Grid.GetRow(skiaSharp));
+            Assert.Equal(2, Grid.GetColumn(skiaSharp));
 
             window.Width = 900;
             window.Height = 600;
@@ -3365,8 +3401,8 @@ public sealed class UiControlTests
 
             Assert.Single(packages.ColumnDefinitions);
             Assert.Equal(3, packages.RowDefinitions.Count);
-            Assert.Equal(0, Grid.GetColumn(imageSharp));
-            Assert.Equal(2, Grid.GetRow(imageSharp));
+            Assert.Equal(0, Grid.GetColumn(skiaSharp));
+            Assert.Equal(2, Grid.GetRow(skiaSharp));
             Assert.True(
                 about.FindControl<ScrollViewer>(
                     "AboutScroll")!.Bounds.Height > 0);
@@ -3417,16 +3453,22 @@ public sealed class UiControlTests
             Expander avaloniaExpander =
                 about.FindControl<Expander>(
                     "AvaloniaLicenseExpander")!;
-            Expander imageSharpExpander =
+            Expander skiaSharpExpander =
                 about.FindControl<Expander>(
-                    "ImageSharpLicenseExpander")!;
+                    "SkiaSharpLicenseExpander")!;
+            Expander skiaSharpNoticesExpander =
+                about.FindControl<Expander>(
+                    "SkiaSharpNoticesExpander")!;
             avaloniaExpander.IsExpanded = true;
-            imageSharpExpander.IsExpanded = true;
+            skiaSharpExpander.IsExpanded = true;
+            skiaSharpNoticesExpander.IsExpanded = true;
             string englishTitle = header.Title;
             string avaloniaLicense =
                 about.AvaloniaLicenseText;
-            string imageSharpLicense =
-                about.ImageSharpLicenseText;
+            string skiaSharpLicense =
+                about.SkiaSharpLicenseText;
+            string skiaSharpNotices =
+                about.SkiaSharpThirdPartyNoticesText;
 
             localization.SetCulture("de-DE");
             Dispatcher.UIThread.RunJobs();
@@ -3444,10 +3486,14 @@ public sealed class UiControlTests
                 avaloniaLicense,
                 about.AvaloniaLicenseText);
             Assert.Equal(
-                imageSharpLicense,
-                about.ImageSharpLicenseText);
+                skiaSharpLicense,
+                about.SkiaSharpLicenseText);
+            Assert.Equal(
+                skiaSharpNotices,
+                about.SkiaSharpThirdPartyNoticesText);
             Assert.True(avaloniaExpander.IsExpanded);
-            Assert.True(imageSharpExpander.IsExpanded);
+            Assert.True(skiaSharpExpander.IsExpanded);
+            Assert.True(skiaSharpNoticesExpander.IsExpanded);
             Assert.Equal(
                 ShellDestination.About,
                 services.GetRequiredService<
@@ -3472,11 +3518,16 @@ public sealed class UiControlTests
                 about.FindControl<SelectableTextBlock>(
                     "AvaloniaLicenseBody")!.Text);
             Assert.Equal(
-                imageSharpLicense,
+                skiaSharpLicense,
                 about.FindControl<SelectableTextBlock>(
-                    "ImageSharpLicenseBody")!.Text);
+                    "SkiaSharpLicenseBody")!.Text);
+            Assert.Equal(
+                skiaSharpNotices,
+                about.FindControl<SelectableTextBlock>(
+                    "SkiaSharpNoticesBody")!.Text);
             Assert.True(avaloniaExpander.IsExpanded);
-            Assert.True(imageSharpExpander.IsExpanded);
+            Assert.True(skiaSharpExpander.IsExpanded);
+            Assert.True(skiaSharpNoticesExpander.IsExpanded);
         }
         finally
         {
@@ -4176,9 +4227,9 @@ public sealed class UiControlTests
                             Grid packages =
                                 about.FindControl<Grid>(
                                     "PackageGrid")!;
-                            Border imageSharp =
+                            Border skiaSharp =
                                 about.FindControl<Border>(
-                                    "ImageSharpPackageCard")!;
+                                    "SkiaSharpPackageCard")!;
                             ScrollViewer scroll =
                                 about.FindControl<ScrollViewer>(
                                     "AboutScroll")!;
@@ -4189,10 +4240,10 @@ public sealed class UiControlTests
                                 packages.RowDefinitions.Count);
                             Assert.Equal(
                                 0,
-                                Grid.GetColumn(imageSharp));
+                                Grid.GetColumn(skiaSharp));
                             Assert.Equal(
                                 2,
-                                Grid.GetRow(imageSharp));
+                                Grid.GetRow(skiaSharp));
                             Assert.True(
                                 about.FindControl<BrandMark>(
                                     "AboutBrandMark")!
