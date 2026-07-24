@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
@@ -77,11 +78,12 @@ public partial class FieldRow : ObservableObject
 /// </summary>
 public partial class FieldsDialogViewModel : ViewModelBase
 {
-    private readonly IMediaFileService _media;
-    private readonly ITagWriteService _writer;
+    private readonly IMetadataDocumentService _documents;
+    private readonly IMetadataOperationService _operations;
     private readonly IReadOnlyList<string> _paths;
     private readonly IActivityService? _activities;
     private CancellationTokenSource? _saveCancellation;
+    private MetadataOperationPlan? _plan;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
@@ -146,13 +148,13 @@ public partial class FieldsDialogViewModel : ViewModelBase
     public event Action<bool>? CloseRequested;
 
     public FieldsDialogViewModel(
-        IMediaFileService media,
-        ITagWriteService writer,
+        IMetadataDocumentService documents,
+        IMetadataOperationService operations,
         IReadOnlyList<string> paths,
         IActivityService? activities = null)
     {
-        _media = media;
-        _writer = writer;
+        _documents = documents;
+        _operations = operations;
         _paths = paths;
         _activities = activities;
         Rows.CollectionChanged += OnRowsChanged;
@@ -190,6 +192,7 @@ public partial class FieldsDialogViewModel : ViewModelBase
     {
         IsConfirmingSave = false;
         IsConfirmingCancel = false;
+        _plan = null;
     }
 
     private async Task LoadAsync()
@@ -197,49 +200,62 @@ public partial class FieldsDialogViewModel : ViewModelBase
         IsBusy = true;
         try
         {
-            var knownMaps = new List<Dictionary<TagFields, string>>();
-            var userStringMaps = new List<Dictionary<string, string>>();
-            foreach (var path in _paths)
+            var documents = new List<MediaDocument>(
+                _paths.Count);
+            foreach (string path in _paths)
             {
-                var result = await _media.LoadDirectAsync(path, includeArtwork: false);
-                if (result.Success)
+                try
                 {
-                    var knownMap = new Dictionary<TagFields, string>();
-                    foreach (var kv in result.Value!.KnownFields)
-                        knownMap.TryAdd(kv.Field, kv.Value); // first value wins, mirroring the parsers
-                    knownMaps.Add(knownMap);
-
-                    var userStringMap = new Dictionary<string, string>(
-                        StringComparer.OrdinalIgnoreCase);
-                    foreach (TextField field in result.Value.TextFields)
-                        userStringMap.TryAdd(field.Key, field.Value);
-                    userStringMaps.Add(userStringMap);
+                    documents.Add(
+                        await _documents.LoadAsync(
+                            path,
+                            includeArtwork: false));
+                }
+                catch (Exception error)
+                {
+                    StatusTone = MessageTone.Warning;
+                    StatusMessage =
+                        $"Could not read '{path}': " +
+                        error.Message;
                 }
             }
 
-            HashSet<TagFields> originalFields = knownMaps.SelectMany(map => map.Keys).ToHashSet();
-            foreach (var field in originalFields.OrderBy(f => f.ToString(), StringComparer.Ordinal))
+            MetadataFieldKey[] fields = documents
+                .SelectMany(document =>
+                    document.TagLayers.SelectMany(
+                        layer => layer.Fields))
+                .Select(value => value.Field)
+                .Distinct()
+                .OrderBy(
+                    field => field.DisplayName,
+                    StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            foreach (MetadataFieldKey field in fields)
             {
-                var values = knownMaps.Select(map =>
-                    map.TryGetValue(field, out string? value) ? value : "").Distinct().ToList();
-                var mixed = values.Count > 1;
-                Rows.Add(new FieldRow(field, mixed ? "" : values.FirstOrDefault() ?? "", mixed, isNew: false));
-            }
-
-            IEnumerable<string> userStringKeys = userStringMaps
-                .SelectMany(map => map.Keys)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(key => key, StringComparer.OrdinalIgnoreCase);
-            foreach (string key in userStringKeys)
-            {
-                var values = userStringMaps.Select(map =>
-                    map.TryGetValue(key, out string? value) ? value : "").Distinct().ToList();
-                bool mixed = values.Count > 1;
-                Rows.Add(new FieldRow(
-                    key,
-                    mixed ? "" : values.FirstOrDefault() ?? "",
-                    mixed,
-                    isNew: false));
+                ImmutableArray<string>[] values =
+                    documents.Select(document =>
+                            document.Values(field))
+                        .ToArray();
+                bool mixed = values.Skip(1).Any(value =>
+                    !values[0].SequenceEqual(
+                        value,
+                        StringComparer.Ordinal));
+                string editorValue = mixed
+                    ? ""
+                    : string.Join(
+                        Environment.NewLine,
+                        values[0]);
+                Rows.Add(field.IsKnown
+                    ? new FieldRow(
+                        field.KnownField!.Value,
+                        editorValue,
+                        mixed,
+                        isNew: false)
+                    : new FieldRow(
+                        field.CustomName!,
+                        editorValue,
+                        mixed,
+                        isNew: false));
             }
         }
         finally
@@ -301,7 +317,7 @@ public partial class FieldsDialogViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task SaveAsync()
     {
-        List<TagEdit> edits = BuildEdits();
+        List<MetadataValueEdit> edits = BuildEdits();
         if (edits.Count == 0)
         {
             CloseRequested?.Invoke(false);
@@ -311,11 +327,105 @@ public partial class FieldsDialogViewModel : ViewModelBase
         if (!IsConfirmingSave)
         {
             IsConfirmingCancel = false;
-            IsConfirmingSave = true;
+            IsBusy = true;
+            _saveCancellation =
+                new CancellationTokenSource();
+            CancelCommand.NotifyCanExecuteChanged();
+            Guid? previewActivity = _activities?.Start(
+                "Preview metadata fields",
+                $"Validating {edits.Count:N0} field change(s) for " +
+                $"{_paths.Count:N0} file(s)",
+                ShellDestination.Library,
+                _saveCancellation.Cancel);
+            IProgress<OperationProgress> previewProgress =
+                CreateProgress(previewActivity);
+            try
+            {
+                _plan = await _operations
+                    .PreviewValueEditsAsync(
+                        BuildRequests(edits),
+                        "Edit Library metadata fields",
+                        previewProgress,
+                        _saveCancellation.Token);
+                int blockers = _plan.Files
+                    .SelectMany(file => file.Issues)
+                    .Count(issue =>
+                        issue.Severity ==
+                        OperationIssueSeverity.Blocker);
+                if (!_plan.CanApply)
+                {
+                    StatusTone = MessageTone.Error;
+                    StatusMessage = blockers > 0
+                        ? $"Preview found {blockers:N0} blocker(s). " +
+                          "No files were changed."
+                        : "Preview found no applicable changes. " +
+                          "No files were changed.";
+                    if (previewActivity.HasValue)
+                        _activities!.Finish(
+                            previewActivity.Value,
+                            StatusMessage,
+                            blockers > 0
+                                ? AppActivityState.Failed
+                                : AppActivityState.Completed);
+                    _plan = null;
+                    return;
+                }
+                IsConfirmingSave = true;
+                StatusTone = blockers > 0
+                    ? MessageTone.Error
+                    : MessageTone.Warning;
+                StatusMessage =
+                    $"Preview ready for " +
+                    $"{_plan.ChangedFileCount:N0} file(s) and " +
+                    $"{edits.Count:N0} field change(s). " +
+                    "Apply uses stale-file checks, recovery journals, " +
+                    "and undo. Choose Apply changes to continue.";
+                if (previewActivity.HasValue)
+                    _activities!.Finish(
+                        previewActivity.Value,
+                        $"Previewed {_plan.ChangedFileCount:N0} file(s)");
+            }
+            catch (OperationCanceledException) when (
+                _saveCancellation.IsCancellationRequested)
+            {
+                StatusTone = MessageTone.Warning;
+                StatusMessage =
+                    "Preview cancelled. Proposed field changes " +
+                    "remain ready to retry.";
+                if (previewActivity.HasValue)
+                    _activities!.Finish(
+                        previewActivity.Value,
+                        StatusMessage,
+                        AppActivityState.Cancelled);
+            }
+            catch (Exception error)
+            {
+                StatusTone = MessageTone.Error;
+                StatusMessage =
+                    $"Preview failed: {error.Message}. Proposed " +
+                    "field changes remain ready to retry.";
+                if (previewActivity.HasValue)
+                    _activities!.Finish(
+                        previewActivity.Value,
+                        StatusMessage,
+                        AppActivityState.Failed);
+            }
+            finally
+            {
+                _saveCancellation.Dispose();
+                _saveCancellation = null;
+                IsBusy = false;
+                CancelCommand.NotifyCanExecuteChanged();
+            }
+            return;
+        }
+
+        if (_plan is null)
+        {
+            IsConfirmingSave = false;
             StatusTone = MessageTone.Warning;
-            StatusMessage = $"Apply {edits.Count:N0} field change(s) to {_paths.Count:N0} file(s)? " +
-                "This writes the files directly; no recovery journal is created. " +
-                "Choose Apply changes to continue.";
+            StatusMessage =
+                "The preview expired. Preview the field changes again.";
             return;
         }
 
@@ -325,35 +435,30 @@ public partial class FieldsDialogViewModel : ViewModelBase
         CancelCommand.NotifyCanExecuteChanged();
         Guid? activity = _activities?.Start(
             "Save metadata fields",
-            $"Applying {edits.Count:N0} field change(s) to {_paths.Count:N0} file(s)",
+            $"Applying the reviewed field plan to " +
+            $"{_plan.ChangedFileCount:N0} file(s)",
             ShellDestination.Library,
             _saveCancellation.Cancel);
-        var progress = new Progress<int>(completed =>
-        {
-            if (activity.HasValue)
-                _activities!.Report(activity.Value,
-                    $"Updated {Math.Min(completed, _paths.Count):N0} of {_paths.Count:N0} file(s)",
-                    _paths.Count == 0 ? null : Math.Min(1, (double)completed / _paths.Count));
-        });
+        IProgress<OperationProgress> progress =
+            CreateProgress(activity);
         try
         {
-            BatchWriteResult result = await _writer.ApplyAsync(
-                _paths, edits, progress, _saveCancellation.Token);
-            if (result.FailedCount == 0)
-            {
-                StatusTone = MessageTone.Success;
-                StatusMessage = result.Summary;
-                if (activity.HasValue)
-                    _activities!.Finish(activity.Value, result.Summary, AppActivityState.Completed);
-                CloseRequested?.Invoke(true);
-            }
-            else
-            {
-                StatusTone = MessageTone.Error;
-                StatusMessage = $"{result.Summary}. Proposed field changes remain ready to retry.";
-                if (activity.HasValue)
-                    _activities!.Finish(activity.Value, StatusMessage, AppActivityState.Failed);
-            }
+            MetadataApplyResult result =
+                await _operations.ApplyAsync(
+                    _plan,
+                    progress,
+                    _saveCancellation.Token);
+            StatusTone = MessageTone.Success;
+            StatusMessage =
+                $"Updated {result.ChangedFiles:N0} file(s). " +
+                "Originals are retained for undo.";
+            if (activity.HasValue)
+                _activities!.Finish(
+                    activity.Value,
+                    StatusMessage,
+                    AppActivityState.Completed);
+            _plan = null;
+            CloseRequested?.Invoke(true);
         }
         catch (OperationCanceledException) when (_saveCancellation.IsCancellationRequested)
         {
@@ -378,25 +483,69 @@ public partial class FieldsDialogViewModel : ViewModelBase
         }
     }
 
-    private List<TagEdit> BuildEdits()
+    private List<MetadataValueEdit> BuildEdits()
     {
-        var edits = new List<TagEdit>();
+        var edits = new List<MetadataValueEdit>();
         foreach (var row in Rows)
         {
+            MetadataFieldKey field = row.IsUserString
+                ? MetadataFieldKey.Custom(
+                    row.UserStringKey!)
+                : MetadataFieldKey.Known(
+                    row.Field!.Value);
             if (row.MarkedForRemoval)
-                edits.Add(row.IsUserString
-                    ? TagEdit.UserString(row.UserStringKey!, null)
-                    : new TagEdit(row.Field!.Value, null));
+                edits.Add(new(field, []));
             else if (row.IsModified)
             {
-                string? value = string.IsNullOrEmpty(row.Value) ? null : row.Value;
-                edits.Add(row.IsUserString
-                    ? TagEdit.UserString(row.UserStringKey!, value)
-                    : new TagEdit(row.Field!.Value, value));
+                ImmutableArray<string> values = row.Value
+                    .Replace(
+                        "\r\n",
+                        "\n",
+                        StringComparison.Ordinal)
+                    .Replace('\r', '\n')
+                    .Split(
+                        '\n',
+                        StringSplitOptions.None)
+                    .Where(value => value.Length > 0)
+                    .ToImmutableArray();
+                edits.Add(new(field, values));
             }
         }
         return edits;
     }
+
+    private IReadOnlyDictionary<
+        string,
+        IReadOnlyList<MetadataValueEdit>> BuildRequests(
+            IReadOnlyList<MetadataValueEdit> edits) =>
+        _paths.ToDictionary(
+            path => path,
+            _ => edits,
+            OperatingSystem.IsWindows()
+                ? StringComparer.OrdinalIgnoreCase
+                : StringComparer.Ordinal);
+
+    private IProgress<OperationProgress> CreateProgress(
+        Guid? activity) =>
+        new Progress<OperationProgress>(update =>
+        {
+            if (!activity.HasValue)
+                return;
+            double? fraction =
+                update.Total is > 0
+                    ? Math.Clamp(
+                        (double)update.Completed /
+                        update.Total.Value,
+                        0,
+                        1)
+                    : null;
+            _activities!.Report(
+                activity.Value,
+                update.Message ??
+                update.CurrentPath ??
+                "Updating metadata fields",
+                fraction);
+        });
 
     private bool CanCancel() => !IsBusy || _saveCancellation is not null;
 

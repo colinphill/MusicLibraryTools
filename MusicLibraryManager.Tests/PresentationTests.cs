@@ -1343,26 +1343,37 @@ public sealed class PresentationTests
     [Fact]
     public async Task All_fields_editor_handles_mixed_add_remove_and_batch_save()
     {
-        var media = new FakeMediaService(
-            new MediaFileModel
-            {
-                Path = @"C:\one.flac", IsWritable = true,
-                KnownFields =
-                [
-                    new TagFieldValue(TagFields.Grouping, "First"),
-                    new TagFieldValue(TagFields.Copyright, "Copyright owner"),
-                ],
-                TextFields = [new TextField("CUSTOM_NOTE", "First")],
-            },
-            new MediaFileModel
-            {
-                Path = @"C:\two.flac", IsWritable = true,
-                KnownFields = [new TagFieldValue(TagFields.Grouping, "Second")],
-                TextFields = [new TextField("CUSTOM_NOTE", "Second")],
-            });
-        var writer = new FakeTagWriter();
+        var documents = new FakeMetadataDocumentService(
+            Document(
+                @"C:\one.flac",
+                new(
+                    MetadataFieldKey.Known(
+                        TagFields.Grouping),
+                    ["First"]),
+                new(
+                    MetadataFieldKey.Known(
+                        TagFields.Copyright),
+                    ["Copyright owner"]),
+                new(
+                    MetadataFieldKey.Custom(
+                        "CUSTOM_NOTE"),
+                    ["First"])),
+            Document(
+                @"C:\two.flac",
+                new(
+                    MetadataFieldKey.Known(
+                        TagFields.Grouping),
+                    ["Second"]),
+                new(
+                    MetadataFieldKey.Custom(
+                        "CUSTOM_NOTE"),
+                    ["Second"])));
+        var operations =
+            new FakeMetadataOperationService();
         var viewModel = new FieldsDialogViewModel(
-            media, writer, [@"C:\one.flac", @"C:\two.flac"]);
+            documents,
+            operations,
+            [@"C:\one.flac", @"C:\two.flac"]);
         await viewModel.Loading;
 
         FieldRow grouping =
@@ -1381,7 +1392,10 @@ public sealed class PresentationTests
         FieldRow custom =
             viewModel.Rows.Single(row => row.UserStringKey == "CUSTOM_NOTE");
         Assert.True(custom.IsMixed);
-        custom.Value = "Canonical note";
+        custom.Value =
+            "Canonical note" +
+            Environment.NewLine +
+            "Archive note";
 
         viewModel.NewUserStringName = "DJ_SET";
         viewModel.AddUserStringCommand.Execute(null);
@@ -1392,21 +1406,60 @@ public sealed class PresentationTests
         await viewModel.SaveCommand.ExecuteAsync(null);
         Assert.Null(closed);
         Assert.True(viewModel.IsConfirmingSave);
-        Assert.Contains("5 field change(s) to 2 file(s)", viewModel.StatusMessage);
-        Assert.Contains("no recovery journal", viewModel.StatusMessage);
+        Assert.Contains(
+            "2 file(s) and 5 field change(s)",
+            viewModel.StatusMessage);
+        Assert.Contains(
+            "recovery journals",
+            viewModel.StatusMessage);
         await viewModel.SaveCommand.ExecuteAsync(null);
 
         Assert.True(closed);
-        Assert.Contains(writer.Edits!, edit =>
-            edit.Field == TagFields.Grouping && edit.Value == "Canonical grouping");
-        Assert.Contains(writer.Edits!, edit =>
-            edit.Field == TagFields.Copyright && edit.Value is null);
-        Assert.Contains(writer.Edits!, edit =>
-            edit.Field == TagFields.Mood && edit.Value == "Calm");
-        Assert.Contains(writer.Edits!, edit =>
-            edit.UserStringKey == "CUSTOM_NOTE" && edit.Value == "Canonical note");
-        Assert.Contains(writer.Edits!, edit =>
-            edit.UserStringKey == "DJ_SET" && edit.Value == "Warmup");
+        IReadOnlyList<MetadataValueEdit> edits =
+            operations.PreviewedValueEdits[
+                @"C:\one.flac"];
+        Assert.Contains(edits, edit =>
+            edit.Field.KnownField ==
+                TagFields.Grouping &&
+            edit.Values.SequenceEqual(
+                ["Canonical grouping"]));
+        Assert.Contains(edits, edit =>
+            edit.Field.KnownField ==
+                TagFields.Copyright &&
+            edit.Values.Length == 0);
+        Assert.Contains(edits, edit =>
+            edit.Field.KnownField ==
+                TagFields.Mood &&
+            edit.Values.SequenceEqual(["Calm"]));
+        Assert.Contains(edits, edit =>
+            edit.Field.CustomName ==
+                "CUSTOM_NOTE" &&
+            edit.Values.SequenceEqual(
+                ["Canonical note", "Archive note"]));
+        Assert.Contains(edits, edit =>
+            edit.Field.CustomName == "DJ_SET" &&
+            edit.Values.SequenceEqual(["Warmup"]));
+
+        static MediaDocument Document(
+            string path,
+            params MetadataValueSet[] fields) =>
+            new(
+                path,
+                [new(
+                    "VorbisComment",
+                    [.. fields],
+                    true,
+                    true,
+                    true,
+                    true)],
+                [],
+                null,
+                new(
+                    path,
+                    10,
+                    DateTime.UtcNow,
+                    "hash"),
+                true);
     }
 
     private static LibraryViewModel BuildLibrary(
@@ -2665,7 +2718,28 @@ internal sealed class FakeReindex : IReindexService
     public Task ReindexFileAsync(string path, CancellationToken ct = default) => Task.CompletedTask;
 }
 
-internal sealed class FakeMetadataOperationService : IMetadataOperationService
+internal sealed class FakeMetadataDocumentService(
+    params MediaDocument[] documents) :
+    IMetadataDocumentService
+{
+    private readonly Dictionary<string, MediaDocument> _documents =
+        documents.ToDictionary(
+            document => document.Path,
+            OperatingSystem.IsWindows()
+                ? StringComparer.OrdinalIgnoreCase
+                : StringComparer.Ordinal);
+
+    public Task<MediaDocument> LoadAsync(
+        string path,
+        bool includeArtwork = true,
+        CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+        return Task.FromResult(_documents[path]);
+    }
+}
+
+internal class FakeMetadataOperationService : IMetadataOperationService
 {
     public IReadOnlyList<string> PreviewedPaths { get; private set; } = [];
     public OperationRecipe? PreviewedRecipe { get; private set; }
@@ -2767,21 +2841,34 @@ internal sealed class FakeMetadataOperationService : IMetadataOperationService
             0,
             editsByPath.Count,
             Message: "Reading mapped metadata"));
-        (string path, IReadOnlyList<MetadataValueEdit> edits) =
-            editsByPath.First();
-        MetadataValueEdit edit = edits.First();
-        var difference = new MetadataFieldDifference(
-            edit.Field,
-            ["Before"],
-            edit.Values);
-        var file = new MetadataFilePlan(
-            path,
-            new(path, 1, DateTime.UtcNow, "hash"),
-            [difference],
-            [edit],
-            []);
+        MetadataFilePlan[] files = editsByPath.Select(
+            pair =>
+            {
+                ImmutableArray<MetadataFieldDifference>
+                    differences =
+                    [
+                        .. pair.Value.Select(edit =>
+                            new MetadataFieldDifference(
+                                edit.Field,
+                                ["Before"],
+                                edit.Values)),
+                    ];
+                return new MetadataFilePlan(
+                    pair.Key,
+                    new(
+                        pair.Key,
+                        1,
+                        DateTime.UtcNow,
+                        "hash"),
+                    differences,
+                    [.. pair.Value],
+                    []);
+            }).ToArray();
         return Task.FromResult(new MetadataOperationPlan(
-            Guid.NewGuid(), name, [file], DateTimeOffset.UtcNow));
+            Guid.NewGuid(),
+            name,
+            [.. files],
+            DateTimeOffset.UtcNow));
     }
 
     public Task<MetadataOperationPlan> PreviewArtworkEditsAsync(
@@ -2947,7 +3034,7 @@ internal sealed class FakeMetadataOperationService : IMetadataOperationService
             Guid.NewGuid(), name, [file], DateTimeOffset.UtcNow));
     }
 
-    public Task<MetadataApplyResult> ApplyAsync(
+    public virtual Task<MetadataApplyResult> ApplyAsync(
         MetadataOperationPlan plan,
         IProgress<OperationProgress>? progress = null,
         CancellationToken ct = default) =>

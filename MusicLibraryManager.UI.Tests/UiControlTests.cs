@@ -1485,7 +1485,8 @@ public sealed class UiControlTests
     {
         using ServiceProvider services = BuildIsolatedServices(
             configureServices: collection =>
-                collection.AddSingleton<IMediaFileService>(new FieldsDialogMediaService()));
+                collection.AddSingleton<IMetadataDocumentService>(
+                    new FieldsDialogDocumentService()));
         App.UseServicesForTests(services);
         MainWindow window = services.GetRequiredService<MainWindow>();
         DialogService dialogs = services.GetRequiredService<DialogService>();
@@ -2275,22 +2276,33 @@ public sealed class UiControlTests
         }
     }
 
-    private sealed class FieldsDialogMediaService : IMediaFileService
+    private sealed class FieldsDialogDocumentService :
+        IMetadataDocumentService
     {
-        public Task<OperationResult<MediaFileModel>> LoadAsync(
+        public Task<MediaDocument> LoadAsync(
             string path,
-            CancellationToken ct = default) => LoadAsync(path, includeArtwork: true, ct);
-
-        public Task<OperationResult<MediaFileModel>> LoadAsync(
-            string path,
-            bool includeArtwork,
+            bool includeArtwork = true,
             CancellationToken ct = default) =>
-            Task.FromResult(OperationResult<MediaFileModel>.Ok(new MediaFileModel
-            {
-                Path = path,
-                IsWritable = true,
-                KnownFields = [new TagFieldValue(TagFields.Title, "Original title")],
-            }));
+            Task.FromResult(new MediaDocument(
+                path,
+                [new(
+                    "VorbisComment",
+                    [new(
+                        MetadataFieldKey.Known(
+                            TagFields.Title),
+                        ["Original title"])],
+                    true,
+                    true,
+                    true,
+                    true)],
+                [],
+                null,
+                new(
+                    path,
+                    10,
+                    DateTime.UtcNow,
+                    "hash"),
+                true));
     }
 
     private sealed class FixtureLibraryService(IReadOnlyList<TrackRecord> records) : ILibraryService

@@ -178,8 +178,14 @@ appropriate build or test.
     resizing all produce the ordinary native-validated, recoverable preview;
     the same staged set can target a multi-file selection.
 - [x] Read-only technical properties.
-- [ ] Refactor Library inspector and fields dialog onto shared document/write
+- [~] Refactor Library inspector and fields dialog onto shared document/write
   services.
+  - The arbitrary-fields dialog now reads lossless `MediaDocument` values,
+    preserves ordered multi-values as one editor line per value, and builds
+    the shared authoritative preview before confirmation.
+  - Apply uses native dry-run results, stale checks, recovery journals,
+    cancellation, history, and undo. The curated inspector's remaining direct
+    tag and artwork commands still need migration.
 
 ### Safe application and history
 
@@ -602,6 +608,10 @@ per-operation capability flags.
   in Workbench, including add, replace, export, resize, classification,
   descriptions, removal, reordering, thumbnails, multi-file preview, policy
   checks, and native-writer validation.
+- Revisited in this audit: the Library arbitrary-fields dialog now uses
+  lossless shared document reads and shared preview/apply mutations, retains
+  ordered multi-values, and no longer writes directly without recovery. The
+  curated inspector remains the Phase 1 migration tail.
 - Remaining Phase 2 work: ad-hoc shared file mutations and live representative
   draft preview.
 - Revisited and completed in this audit: application-local/configured/system

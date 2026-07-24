@@ -13,7 +13,13 @@
         <DataTemplate>
           <Grid MinHeight="50" Margin="9,6" ColumnDefinitions="180,*,Auto" ColumnSpacing="10">
             <StackPanel VerticalAlignment="Center"><TextBlock Text="{Binding Name}" FontWeight="SemiBold" /><TextBlock Classes="faint" Text="{Binding Kind}" /></StackPanel>
-            <TextBox Grid.Column="1" Classes="app" Text="{Binding Value, Mode=TwoWay}" IsEnabled="{Binding !MarkedForRemoval}" PlaceholderText="Mixed values" AutomationProperties.Name="{Binding Name}" />
+            <TextBox Grid.Column="1" Classes="app"
+                     Text="{Binding Value, Mode=TwoWay}"
+                     IsEnabled="{Binding !MarkedForRemoval}"
+                     AcceptsReturn="True" TextWrapping="Wrap"
+                     MinHeight="38"
+                     PlaceholderText="Mixed values; one value per line"
+                     AutomationProperties.Name="{Binding Name}" />
             <Button Grid.Column="2" Classes="app danger" Content="{Binding RemoveButtonText}" Command="{Binding DataContext.RemoveFieldCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
           </Grid>
         </DataTemplate>

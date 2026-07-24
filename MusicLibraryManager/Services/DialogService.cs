@@ -55,8 +55,8 @@ public sealed record FieldsRequest(FieldsDialogViewModel ViewModel)
     : DialogRequest(ViewModel.Title);
 
 public sealed class DialogService(
-    IMediaFileService media,
-    ITagWriteService writer,
+    IMetadataDocumentService documents,
+    IMetadataOperationService operations,
     IActivityService activities)
     : IDialogCoordinator, IFieldsEditorService
 {
@@ -116,7 +116,11 @@ public sealed class DialogService(
     {
         if (paths.Count == 0)
             return false;
-        var viewModel = new FieldsDialogViewModel(media, writer, paths, activities);
+        var viewModel = new FieldsDialogViewModel(
+            documents,
+            operations,
+            paths,
+            activities);
         Guid loadActivity = activities.Start(
             "Load metadata fields",
             $"Reading metadata from {paths.Count:N0} selected file(s)",

@@ -12,7 +12,7 @@ public class FieldsDialogIntegrationTests
     [InlineData("sample_alac.m4a")]
     public async Task Load_ShowsDiscNumberAndTotalDiscs(string fixture)
     {
-        using var media = MediaFixtures.Copy(fixture);
+        using var media = TestMedia.Copy(fixture);
         var writer = new TagWriteService();
         var setup = await writer.ApplyAsync(
             [media.Path],
@@ -22,8 +22,8 @@ public class FieldsDialogIntegrationTests
             ]);
         Assert.Equal(1, setup.SavedCount);
 
-        var viewModel = new FieldsDialogViewModel(
-            new MediaFileService(), writer, [media.Path]);
+        FieldsDialogViewModel viewModel =
+            CreateEditor(media.Path);
         await viewModel.Loading;
 
         Assert.Equal("1", viewModel.Rows.Single(
@@ -35,13 +35,13 @@ public class FieldsDialogIntegrationTests
     [Fact]
     public async Task Load_ShowsCombinedFlacDiscNumberAndTotalDiscs()
     {
-        using var media = MediaFixtures.Copy("sample.flac");
+        using var media = TestMedia.Copy("sample.flac");
         var source = Assert.IsType<FLACFile>(MediaFile.GetFile(media.Path));
         source["DISCNUMBER"] = "1/2";
         source.Save();
 
-        var viewModel = new FieldsDialogViewModel(
-            new MediaFileService(), new TagWriteService(), [media.Path]);
+        FieldsDialogViewModel viewModel =
+            CreateEditor(media.Path);
         await viewModel.Loading;
 
         Assert.Equal("1", viewModel.Rows.Single(
@@ -53,7 +53,7 @@ public class FieldsDialogIntegrationTests
     [Fact]
     public async Task Load_ShowsAndCanRemoveEmptyMp4DiscAtom()
     {
-        using var media = MediaFixtures.Copy("sample_alac.m4a");
+        using var media = TestMedia.Copy("sample_alac.m4a");
         var writer = new TagWriteService();
         var setup = await writer.ApplyAsync(
             [media.Path],
@@ -64,7 +64,8 @@ public class FieldsDialogIntegrationTests
         Assert.Equal(1, setup.SavedCount);
 
         var reader = new MediaFileService();
-        var viewModel = new FieldsDialogViewModel(reader, writer, [media.Path]);
+        FieldsDialogViewModel viewModel =
+            CreateEditor(media.Path);
         await viewModel.Loading;
 
         FieldRow discNumber = viewModel.Rows.Single(
@@ -86,14 +87,14 @@ public class FieldsDialogIntegrationTests
     [Fact]
     public async Task Save_RemovesFlacTotalStoredInCombinedVorbisComment()
     {
-        using var media = MediaFixtures.Copy("sample.flac");
+        using var media = TestMedia.Copy("sample.flac");
         var source = Assert.IsType<FLACFile>(MediaFile.GetFile(media.Path));
         source["TRACKNUMBER"] = "3/12";
         source.Save();
 
         var reader = new MediaFileService();
-        var viewModel = new FieldsDialogViewModel(
-            reader, new TagWriteService(), [media.Path]);
+        FieldsDialogViewModel viewModel =
+            CreateEditor(media.Path);
         await viewModel.Loading;
 
         FieldRow total = viewModel.Rows.Single(row => row.Field == TagFields.TotalTracks);
@@ -112,5 +113,80 @@ public class FieldsDialogIntegrationTests
             field => field.Field == TagFields.TrackNumber && field.Value == "3");
         Assert.DoesNotContain(reload.Value.KnownFields,
             field => field.Field == TagFields.TotalTracks);
+    }
+
+    private static FieldsDialogViewModel CreateEditor(
+        string path)
+    {
+        var settings = new AppSettings(
+            Path.Combine(
+                Path.GetDirectoryName(path)!,
+                "settings.json"));
+        var documents = new MetadataDocumentService(
+            MediaFormatRegistry.Default);
+        var operations = new MetadataOperationService(
+            documents,
+            MediaFormatRegistry.Default,
+            new FileMutationPlanExecutor(
+                settings: settings),
+            settings);
+        return new(
+            documents,
+            operations,
+            [path]);
+    }
+
+    private sealed class TestMedia : IDisposable
+    {
+        private readonly string _directory;
+        private readonly string _recovery;
+
+        private TestMedia(
+            string directory,
+            string path)
+        {
+            _directory = directory;
+            _recovery =
+                directory +
+                ".MusicLibraryManager-recovery";
+            Path = path;
+        }
+
+        public string Path { get; }
+
+        public static TestMedia Copy(
+            string fixture)
+        {
+            string directory = System.IO.Path.Combine(
+                System.IO.Path.GetTempPath(),
+                "mlm-fields-" +
+                Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            string path = System.IO.Path.Combine(
+                directory,
+                fixture);
+            File.Copy(
+                MediaFixtures.Path_(fixture),
+                path);
+            return new(directory, path);
+        }
+
+        public void Dispose()
+        {
+            try
+            {
+                Directory.Delete(
+                    _directory,
+                    recursive: true);
+            }
+            catch { }
+            try
+            {
+                Directory.Delete(
+                    _recovery,
+                    recursive: true);
+            }
+            catch { }
+        }
     }
 }
