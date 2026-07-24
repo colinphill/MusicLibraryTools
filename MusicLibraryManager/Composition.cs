@@ -16,7 +16,11 @@ public static class Composition
         services.AddMusicLibraryCore();
         services.AddSingleton<WindowContext>();
         services.AddSingleton<INavigationService, NavigationService>();
-        services.AddSingleton<IActivityService, AppActivityService>();
+        services.AddSingleton<IActivityService>(sp =>
+            new AppActivityService(
+                sp.GetRequiredService<
+                    ILocalizationService>(),
+                SynchronizationContext.Current));
         services.AddSingleton<DialogService>();
         services.AddSingleton<IDialogCoordinator>(sp => sp.GetRequiredService<DialogService>());
         services.AddSingleton<IFieldsEditorService>(sp => sp.GetRequiredService<DialogService>());

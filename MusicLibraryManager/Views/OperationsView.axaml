@@ -14,7 +14,7 @@
       <TabControl>
         <TabItem Header="{DynamicResource Loc.Operations.Tab.Jobs}">
           <Grid Margin="0,12,0,0" ColumnDefinitions="330,14,*">
-            <ListBox Grid.Column="0" Classes="primary-list" ItemsSource="{Binding JobCatalog}" SelectedItem="{Binding SelectedJob, Mode=TwoWay}"
+            <ListBox Grid.Column="0" Classes="primary-list" ItemsSource="{Binding JobChoices}" SelectedItem="{Binding SelectedJobChoice, Mode=TwoWay}"
                      Background="Transparent" BorderThickness="0">
               <ListBox.ItemTemplate>
                 <DataTemplate>
@@ -26,8 +26,8 @@
             </ListBox>
             <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
               <StackPanel Margin="6" Spacing="10">
-                <TextBlock Classes="section-title" Text="{Binding SelectedJob.Name}" />
-                <TextBlock Classes="muted" Text="{Binding SelectedJob.Description}" TextWrapping="Wrap" />
+                <TextBlock Classes="section-title" Text="{Binding SelectedJobChoice.Name}" />
+                <TextBlock Classes="muted" Text="{Binding SelectedJobChoice.Description}" TextWrapping="Wrap" />
                 <StackPanel Spacing="5" IsVisible="{Binding ShowPlaylistName}"><TextBlock Classes="muted" Text="{DynamicResource Loc.Operations.PlaylistName}" FontSize="12" FontWeight="SemiBold" /><TextBox Classes="app" Text="{Binding JobPlaylistName, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Operations.PlaylistName}" /></StackPanel>
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" IsVisible="{Binding ShowDestinationPath}"><TextBox Classes="app" Text="{Binding JobDestinationPath, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Operations.Destination}" AutomationProperties.Name="{DynamicResource Loc.Operations.JobDestinationAutomation}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Common.Browse}" Command="{Binding BrowseJobDestinationCommand}" /></Grid>
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" IsVisible="{Binding ShowValidationPath}"><TextBox Classes="app" Text="{Binding JobValidationPath, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Operations.ValidationPath}" AutomationProperties.Name="{DynamicResource Loc.Operations.ValidationPath}" /><Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Common.Browse}" Command="{Binding BrowseJobValidationCommand}" /></Grid>
@@ -38,7 +38,20 @@
                   <CheckBox Margin="0,0,14,6" Content="{DynamicResource Loc.Operations.FixErrors}" IsChecked="{Binding JobFixErrors, Mode=TwoWay}" IsVisible="{Binding ShowFixErrors}" />
                 </WrapPanel>
                 <StackPanel Orientation="Horizontal" Spacing="8"><Button Classes="app" Content="{DynamicResource Loc.Common.Preview}" Command="{Binding PreviewJobCommand}" /><Button Classes="app primary" Content="{DynamicResource Loc.Operations.Action.ApplyJob}" Command="{Binding ApplyJobCommand}" IsVisible="{Binding ShowJobApply}" /></StackPanel>
-                <Border Classes="status-banner info" AutomationProperties.LiveSetting="Polite"><Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"><TextBlock Classes="status-icon" Text="i" /><TextBlock Grid.Column="1" Text="{Binding JobStatus}" TextWrapping="Wrap" /></Grid></Border>
+                <Border Classes="status-banner info" AutomationProperties.LiveSetting="Polite">
+                  <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                    <TextBlock Classes="status-icon" Text="i" />
+                    <StackPanel Grid.Column="1" Spacing="3">
+                      <TextBlock Text="{Binding JobStatus}" TextWrapping="Wrap" />
+                      <controls:LocalizedFormatTextBlock
+                          Classes="muted"
+                          ResourceKey="Common.DiagnosticDetailFormat"
+                          Value="{Binding JobStatusDiagnosticDetail}"
+                          IsVisible="{Binding HasJobStatusDiagnosticDetail}"
+                          TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Grid>
+                </Border>
                 <TextBox Classes="app" Text="{Binding JobOutput}" AcceptsReturn="True" IsReadOnly="True" MinHeight="220" TextWrapping="Wrap" ScrollViewer.VerticalScrollBarVisibility="Auto" AutomationProperties.Name="{DynamicResource Loc.Operations.JobOutputAutomation}" />
               </StackPanel>
             </ScrollViewer>
@@ -75,7 +88,7 @@
                         Command="{Binding ClearRestoreSelectionCommand}" />
               </WrapPanel>
               <ListBox Grid.Row="1" ItemsSource="{Binding RootNodes}" Background="Transparent" BorderThickness="0">
-                <ListBox.ItemTemplate><DataTemplate><Border Classes="card" Padding="11" Margin="0,0,0,6"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10"><CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" IsEnabled="{Binding CanRestore}" /><StackPanel Grid.Column="1" Spacing="3"><TextBlock Text="{Binding Name}" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="{Binding OriginalPath}" TextTrimming="CharacterEllipsis" /></StackPanel><TextBlock Grid.Column="2" Classes="summary-label" HorizontalAlignment="Right" Text="{Binding Kind}" /></Grid></Border></DataTemplate></ListBox.ItemTemplate>
+                <ListBox.ItemTemplate><DataTemplate><Border Classes="card" Padding="11" Margin="0,0,0,6"><Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10"><CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}" IsEnabled="{Binding CanRestore}" /><StackPanel Grid.Column="1" Spacing="3"><TextBlock Text="{Binding Name}" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="{Binding OriginalPath}" TextTrimming="CharacterEllipsis" /></StackPanel><TextBlock Grid.Column="2" Classes="summary-label" HorizontalAlignment="Right" Text="{Binding StateText}" /></Grid></Border></DataTemplate></ListBox.ItemTemplate>
               </ListBox>
               <Border Grid.Row="2" Classes="status-banner warning" IsVisible="{Binding ShowRestorePreview}" AutomationProperties.LiveSetting="Polite"><TextBlock Text="{Binding RestorePreviewText}" TextWrapping="Wrap" /></Border>
               <StackPanel Grid.Row="3" Spacing="8">
@@ -109,7 +122,15 @@
                     </Button.Flyout>
                   </Button>
                 </WrapPanel>
-                <TextBlock Classes="muted" Text="{Binding StatusText}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+                <StackPanel Spacing="3" AutomationProperties.LiveSetting="Polite">
+                  <TextBlock Classes="muted" Text="{Binding StatusText}" TextWrapping="Wrap" />
+                  <controls:LocalizedFormatTextBlock
+                      Classes="faint"
+                      ResourceKey="Common.DiagnosticDetailFormat"
+                      Value="{Binding StatusDiagnosticDetail}"
+                      IsVisible="{Binding HasStatusDiagnosticDetail}"
+                      TextWrapping="Wrap" />
+                </StackPanel>
               </StackPanel>
             </Grid>
           </Grid>

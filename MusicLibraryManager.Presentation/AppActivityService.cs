@@ -4,19 +4,36 @@ namespace MusicLibraryManager.Presentation;
 
 public sealed class AppActivityService : IActivityService
 {
+    private readonly List<AppActivity> _state = [];
     private readonly ObservableCollection<AppActivity> _activities = [];
     private readonly Dictionary<Guid, Action> _cancellations = [];
     private readonly ILocalizationService? _localization;
+    private readonly SynchronizationContext? _notificationContext;
+    private readonly object _gate = new();
+    private readonly object _publishGate = new();
+    private bool _publishScheduled;
 
     public AppActivityService(
-        ILocalizationService? localization = null)
+        ILocalizationService? localization = null,
+        SynchronizationContext? notificationContext = null)
     {
         _localization = localization;
+        _notificationContext = notificationContext;
         Activities = new ReadOnlyObservableCollection<AppActivity>(_activities);
     }
 
     public ReadOnlyObservableCollection<AppActivity> Activities { get; }
-    public AppActivity? Current => _activities.FirstOrDefault(activity => activity.State == AppActivityState.Running);
+    public AppActivity? Current
+    {
+        get
+        {
+            lock (_publishGate)
+                return _activities.FirstOrDefault(
+                    activity =>
+                        activity.State ==
+                        AppActivityState.Running);
+        }
+    }
     public event Action? Changed;
 
     public Guid Start(
@@ -35,20 +52,34 @@ public sealed class AppActivityService : IActivityService
             DateTimeOffset.Now,
             Destination: destination,
             CanCancel: cancel is not null);
-        if (cancel is not null)
-            _cancellations[id] = cancel;
-        _activities.Insert(0, activity);
-        Trim();
-        Changed?.Invoke();
+        lock (_gate)
+        {
+            if (cancel is not null)
+                _cancellations[id] = cancel;
+            _state.Insert(0, activity);
+            TrimLocked();
+        }
+        SchedulePublish();
         return id;
     }
 
     public void Report(Guid id, string message, double? progress = null)
-        => Replace(id, activity => activity with { Message = message, Progress = progress });
+        => Replace(
+            id,
+            activity =>
+                activity.State !=
+                    AppActivityState.Running
+                    ? activity
+                    : activity with
+                    {
+                        Message = message,
+                        Progress = progress,
+                    });
 
     public void Finish(Guid id, string message, AppActivityState state = AppActivityState.Completed)
     {
-        _cancellations.Remove(id);
+        lock (_gate)
+            _cancellations.Remove(id);
         Replace(id, activity => activity with
         {
             Message = message,
@@ -61,9 +92,15 @@ public sealed class AppActivityService : IActivityService
 
     public bool Cancel(Guid id)
     {
-        if (!_cancellations.Remove(id, out Action? cancel))
-            return false;
-        cancel();
+        Action? cancel;
+        lock (_gate)
+        {
+            if (!_cancellations.Remove(
+                    id,
+                    out cancel))
+                return false;
+        }
+        cancel!();
         Replace(id, activity => activity with
         {
             Message = _localization?.Get(
@@ -77,32 +114,54 @@ public sealed class AppActivityService : IActivityService
 
     public void Dismiss(Guid id)
     {
-        int index = _activities.ToList().FindIndex(activity => activity.Id == id);
-        if (index < 0 || _activities[index].State == AppActivityState.Running)
-            return;
-        _cancellations.Remove(id);
-        _activities.RemoveAt(index);
-        Changed?.Invoke();
+        lock (_gate)
+        {
+            int index = _state
+                .FindIndex(
+                    activity =>
+                        activity.Id == id);
+            if (index < 0 ||
+                _state[index].State ==
+                AppActivityState.Running)
+                return;
+            _cancellations.Remove(id);
+            _state.RemoveAt(index);
+        }
+        SchedulePublish();
     }
 
     private void Replace(Guid id, Func<AppActivity, AppActivity> update)
     {
-        int index = _activities.ToList().FindIndex(activity => activity.Id == id);
-        if (index < 0)
-            return;
-        _activities[index] = update(_activities[index]);
-        Trim();
-        Changed?.Invoke();
+        lock (_gate)
+        {
+            int index = _state
+                .FindIndex(
+                    activity =>
+                        activity.Id == id);
+            if (index < 0)
+                return;
+            AppActivity current =
+                _state[index];
+            AppActivity updated =
+                update(current);
+            if (ReferenceEquals(
+                    current,
+                    updated))
+                return;
+            _state[index] = updated;
+            TrimLocked();
+        }
+        SchedulePublish();
     }
 
-    private void Trim()
+    private void TrimLocked()
     {
-        while (_activities.Count > 25)
+        while (_state.Count > 25)
         {
             int index = -1;
-            for (int candidate = _activities.Count - 1; candidate >= 0; candidate--)
+            for (int candidate = _state.Count - 1; candidate >= 0; candidate--)
             {
-                if (_activities[candidate].State != AppActivityState.Running)
+                if (_state[candidate].State != AppActivityState.Running)
                 {
                     index = candidate;
                     break;
@@ -110,10 +169,107 @@ public sealed class AppActivityService : IActivityService
             }
             if (index < 0)
                 break;
-            Guid id = _activities[index].Id;
-            _activities.RemoveAt(index);
+            Guid id = _state[index].Id;
+            _state.RemoveAt(index);
             _cancellations.Remove(id);
         }
+    }
+
+    private void SchedulePublish()
+    {
+        SynchronizationContext? context =
+            _notificationContext;
+        if (context is null ||
+            ReferenceEquals(
+                SynchronizationContext.Current,
+                context))
+        {
+            PublishSnapshot();
+            return;
+        }
+
+        lock (_gate)
+        {
+            if (_publishScheduled)
+                return;
+            _publishScheduled = true;
+        }
+        context.Post(
+            static state =>
+                ((AppActivityService)state!)
+                    .PublishSnapshot(),
+            this);
+    }
+
+    private void PublishSnapshot()
+    {
+        lock (_publishGate)
+        {
+            AppActivity[] snapshot;
+            lock (_gate)
+            {
+                snapshot = [.. _state];
+                _publishScheduled = false;
+            }
+            ApplySnapshot(snapshot);
+        }
+        Changed?.Invoke();
+    }
+
+    private void ApplySnapshot(
+        IReadOnlyList<AppActivity> snapshot)
+    {
+        for (int index = 0;
+             index < snapshot.Count;
+             index++)
+        {
+            AppActivity expected =
+                snapshot[index];
+            if (index < _activities.Count &&
+                _activities[index].Id ==
+                expected.Id)
+            {
+                if (_activities[index] !=
+                    expected)
+                    _activities[index] =
+                        expected;
+                continue;
+            }
+
+            int existingIndex = -1;
+            for (int candidate = index + 1;
+                 candidate < _activities.Count;
+                 candidate++)
+            {
+                if (_activities[candidate].Id ==
+                    expected.Id)
+                {
+                    existingIndex = candidate;
+                    break;
+                }
+            }
+            if (existingIndex >= 0)
+            {
+                _activities.Move(
+                    existingIndex,
+                    index);
+                if (_activities[index] !=
+                    expected)
+                    _activities[index] =
+                        expected;
+            }
+            else
+            {
+                _activities.Insert(
+                    index,
+                    expected);
+            }
+        }
+
+        while (_activities.Count >
+               snapshot.Count)
+            _activities.RemoveAt(
+                _activities.Count - 1);
     }
 }
 

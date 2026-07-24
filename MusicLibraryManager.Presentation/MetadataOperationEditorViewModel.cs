@@ -9,7 +9,15 @@ using MusicLibrary.Core.Services;
 
 namespace MusicLibraryManager.Presentation;
 
-public sealed record MetadataFieldChoice(TagFields Field, string Label);
+public sealed partial class MetadataFieldChoice(
+    TagFields field,
+    string label) : ObservableObject
+{
+    public TagFields Field { get; } = field;
+
+    [ObservableProperty]
+    private string _label = label;
+}
 
 public sealed record MetadataPreviewRow(
     string File,
@@ -32,7 +40,8 @@ public static class PendingMetadataOperationRowBuilder
 
     public static void Populate(
         ObservableCollection<PendingMetadataOperationRow> destination,
-        MetadataOperationPlan plan)
+        MetadataOperationPlan plan,
+        ILocalizationService? localization = null)
     {
         destination.Clear();
         if (plan.Recipe is { } recipe)
@@ -41,21 +50,43 @@ public static class PendingMetadataOperationRowBuilder
                 ? recipe.Steps
                 : recipe.Operations.Select((operation, index) =>
                     new OperationRecipeStep(
-                        Guid.Empty, $"Step {index + 1}", operation));
+                        Guid.Empty,
+                        Format(
+                            localization,
+                            "MetadataEditor.Pending.DefaultStepName",
+                            index + 1),
+                        operation));
             foreach (OperationRecipeStep step in steps.Where(step => step.Enabled))
                 destination.Add(new(
                     destination.Count + 1,
                     step.Name,
-                    Describe(step.Operation),
-                    $"{plan.ChangedFileCount:N0} changed file(s)"));
+                    Describe(
+                        step.Operation,
+                        localization),
+                    FormatCount(
+                        localization,
+                        "MetadataEditor.Pending.ChangedFiles",
+                        plan.ChangedFileCount)));
             return;
         }
 
-        AddValueEdits(destination, plan);
+        AddValueEdits(
+            destination,
+            plan,
+            localization);
 
         int artworkFiles = plan.Files.Count(file =>
             file.ArtworkDifference is not null);
-        Add(destination, artworkFiles, "Update embedded artwork", "Artwork");
+        Add(
+            destination,
+            artworkFiles,
+            Text(
+                localization,
+                "MetadataEditor.Pending.Operation.UpdateArtwork"),
+            Text(
+                localization,
+                "MetadataEditor.Pending.Target.Artwork"),
+            localization);
 
         foreach (var group in plan.Files
                      .SelectMany(file => file.TagLayerDifferences.IsDefaultOrEmpty
@@ -65,24 +96,39 @@ public static class PendingMetadataOperationRowBuilder
                      .GroupBy(item => (
                          item.difference.Kind,
                          item.difference.WillBePresent)))
-            Add(destination, group.Select(item => item.file.Path).Distinct(
-                    PathComparer).Count(),
-                group.Key.WillBePresent ? "Add tag layer" : "Remove tag layer",
-                DescribeLayer(group.Key.Kind));
+            Add(
+                destination,
+                group.Select(item => item.file.Path)
+                    .Distinct(PathComparer)
+                    .Count(),
+                Text(
+                    localization,
+                    group.Key.WillBePresent
+                        ? "MetadataEditor.Pending.Operation.AddTagLayer"
+                        : "MetadataEditor.Pending.Operation.RemoveTagLayer"),
+                DescribeLayer(group.Key.Kind),
+                localization);
 
         foreach (var group in plan.Files
                      .Where(file => file.Id3VersionDifference is not null)
                      .GroupBy(file => (
                          file.Id3VersionDifference!.TargetVersion,
                          file.Id3VersionDifference.TextEncodingPolicy)))
-            Add(destination, group.Count(),
-                group.Key.TextEncodingPolicy is null
-                    ? "Change ID3 version"
-                    : "Change ID3 version or text encoding",
+            Add(
+                destination,
+                group.Count(),
+                Text(
+                    localization,
+                    group.Key.TextEncodingPolicy is null
+                        ? "MetadataEditor.Pending.Operation.ChangeId3Version"
+                        : "MetadataEditor.Pending.Operation.ChangeId3VersionOrEncoding"),
                 $"ID3v2.{(int)group.Key.TargetVersion}" +
                 (group.Key.TextEncodingPolicy is null
                     ? ""
-                    : $" · {group.Key.TextEncodingPolicy}"));
+                    : $" · {Text(
+                        localization,
+                        $"MetadataEditor.Choice.Id3EncodingPolicy.{group.Key.TextEncodingPolicy}")}"),
+                localization);
 
         foreach (var group in plan.Files
                      .SelectMany(file =>
@@ -93,33 +139,51 @@ public static class PendingMetadataOperationRowBuilder
                      .GroupBy(item => (
                          item.difference.Source,
                          item.difference.Target)))
-            Add(destination, group.Select(item => item.file.Path).Distinct(
-                    PathComparer).Count(),
-                "Convert tag layer",
+            Add(
+                destination,
+                group.Select(item => item.file.Path)
+                    .Distinct(PathComparer)
+                    .Count(),
+                Text(
+                    localization,
+                    "MetadataEditor.Pending.Operation.ConvertTagLayer"),
                 $"{DescribeLayer(group.Key.Source)} → " +
-                DescribeLayer(group.Key.Target));
+                DescribeLayer(group.Key.Target),
+                localization);
     }
 
     private static void AddValueEdits(
         ObservableCollection<PendingMetadataOperationRow> destination,
-        MetadataOperationPlan plan)
+        MetadataOperationPlan plan,
+        ILocalizationService? localization)
     {
         foreach (var group in plan.Files
                      .SelectMany(file => file.Edits.Select(edit => (file, edit)))
                      .GroupBy(item => (
                          item.edit.Field,
                          Remove: item.edit.Values.Length == 0)))
-            Add(destination, group.Select(item => item.file.Path).Distinct(
-                    PathComparer).Count(),
-                group.Key.Remove ? "Remove metadata field" : "Set metadata field",
-                group.Key.Field.DisplayName);
+            Add(
+                destination,
+                group.Select(item => item.file.Path)
+                    .Distinct(PathComparer)
+                    .Count(),
+                Text(
+                    localization,
+                    group.Key.Remove
+                        ? "MetadataEditor.Pending.Operation.RemoveField"
+                        : "MetadataEditor.Pending.Operation.SetField"),
+                FieldName(
+                    group.Key.Field,
+                    localization),
+                localization);
     }
 
     private static void Add(
         ObservableCollection<PendingMetadataOperationRow> destination,
         int files,
         string operation,
-        string target)
+        string target,
+        ILocalizationService? localization)
     {
         if (files == 0)
             return;
@@ -127,39 +191,103 @@ public static class PendingMetadataOperationRowBuilder
             destination.Count + 1,
             operation,
             target,
-            files == 1 ? "1 file" : $"{files:N0} files"));
+            FormatCount(
+                localization,
+                "MetadataEditor.Pending.Files",
+                files)));
     }
 
-    private static string Describe(MetadataOperation operation) => operation switch
+    private static string Describe(
+        MetadataOperation operation,
+        ILocalizationService? localization) =>
+        operation switch
     {
         AssignFieldOperation value =>
-            $"Set {value.Field.DisplayName} to “{Short(value.Value)}”",
+            Format(
+                localization,
+                "MetadataEditor.Pending.Description.Set",
+                FieldName(value.Field, localization),
+                Short(value.Value)),
         RemoveFieldOperation value =>
-            $"Remove {value.Field.DisplayName}",
+            Format(
+                localization,
+                "MetadataEditor.Pending.Description.Remove",
+                FieldName(value.Field, localization)),
         CopyFieldOperation value =>
-            $"Copy {value.Source.DisplayName} to {value.Destination.DisplayName}",
+            Format(
+                localization,
+                "MetadataEditor.Pending.Description.Copy",
+                FieldName(value.Source, localization),
+                FieldName(value.Destination, localization)),
         ReplaceTextOperation value =>
-            $"Replace “{Short(value.Search)}” in {value.Field.DisplayName}",
+            Format(
+                localization,
+                "MetadataEditor.Pending.Description.Replace",
+                Short(value.Search),
+                FieldName(value.Field, localization)),
         ChangeCaseOperation value =>
-            $"Change {value.Field.DisplayName} to {value.Mode} case",
+            Format(
+                localization,
+                "MetadataEditor.Pending.Description.ChangeCase",
+                FieldName(value.Field, localization),
+                Text(
+                    localization,
+                    $"MetadataEditor.Choice.CaseMode.{value.Mode}")),
         TrimFieldOperation value =>
-            $"Trim whitespace in {value.Field.DisplayName}",
+            Format(
+                localization,
+                "MetadataEditor.Pending.Description.Trim",
+                FieldName(value.Field, localization)),
         SequenceNumberOperation value =>
-            $"Number {value.Field.DisplayName} from {value.Start}",
+            Format(
+                localization,
+                "MetadataEditor.Pending.Description.Sequence",
+                FieldName(value.Field, localization),
+                value.Start),
         CombineFieldsOperation value =>
-            $"Combine {value.First.DisplayName} and {value.Second.DisplayName} " +
-            $"into {value.Destination.DisplayName}",
+            Format(
+                localization,
+                "MetadataEditor.Pending.Description.Combine",
+                FieldName(value.First, localization),
+                FieldName(value.Second, localization),
+                FieldName(value.Destination, localization)),
         SplitFieldOperation value =>
-            $"Split {value.Field.DisplayName} on “{Short(value.Separator)}”",
+            Format(
+                localization,
+                "MetadataEditor.Pending.Description.Split",
+                FieldName(value.Field, localization),
+                Short(value.Separator)),
         JoinFieldValuesOperation value =>
-            $"Join {value.Field.DisplayName} with “{Short(value.Separator)}”",
+            Format(
+                localization,
+                "MetadataEditor.Pending.Description.Join",
+                FieldName(value.Field, localization),
+                Short(value.Separator)),
         DeduplicateFieldValuesOperation value =>
-            $"Remove duplicate {value.Field.DisplayName} values",
+            Format(
+                localization,
+                "MetadataEditor.Pending.Description.Deduplicate",
+                FieldName(value.Field, localization)),
         ReorderFieldValuesOperation value =>
-            $"Reorder {value.Field.DisplayName} values {value.Order}",
+            Format(
+                localization,
+                "MetadataEditor.Pending.Description.Reorder",
+                FieldName(value.Field, localization),
+                Text(
+                    localization,
+                    $"MetadataEditor.Choice.ValueOrder.{value.Order}")),
         ExtractPathComponentOperation value =>
-            $"Set {value.Field.DisplayName} from {value.Component}",
-        _ => operation.GetType().Name,
+            Format(
+                localization,
+                "MetadataEditor.Pending.Description.Extract",
+                FieldName(value.Field, localization),
+                Text(
+                    localization,
+                    $"MetadataEditor.Choice.PathComponent.{value.Component}")),
+        _ => Format(
+            localization,
+            "MetadataEditor.Pending.Description.Unknown",
+            operation.GetType().Name),
     };
 
     private static string Short(string value) =>
@@ -172,13 +300,54 @@ public static class PendingMetadataOperationRowBuilder
         TagLayerKind.ApeV2 => "APEv2",
         _ => kind.ToString(),
     };
+
+    private static string FieldName(
+        MetadataFieldKey field,
+        ILocalizationService? localization) =>
+        field.KnownField is { } known
+            ? Text(
+                localization,
+                $"Settings.Choice.TagFields.{known}")
+            : field.CustomName ?? "";
+
+    private static string Text(
+        ILocalizationService? localization,
+        string key) =>
+        localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private static string Format(
+        ILocalizationService? localization,
+        string key,
+        params object?[] arguments) =>
+        localization?.Format(
+            key,
+            arguments) ??
+        LocalizedText.Format(
+            key,
+            arguments);
+
+    private static string FormatCount(
+        ILocalizationService? localization,
+        string key,
+        long count,
+        params object?[] arguments) =>
+        localization?.FormatCount(
+            key,
+            count,
+            arguments) ??
+        LocalizedText.FormatCount(
+            key,
+            count,
+            arguments);
 }
 
 public static class MetadataPreviewRowBuilder
 {
     public static void Populate(
         ObservableCollection<MetadataPreviewRow> destination,
-        MetadataOperationPlan plan)
+        MetadataOperationPlan plan,
+        ILocalizationService? localization = null)
     {
         destination.Clear();
         foreach (MetadataFilePlan file in plan.Files)
@@ -187,7 +356,9 @@ public static class MetadataPreviewRowBuilder
             {
                 destination.Add(new(
                     Path.GetFileName(file.Path),
-                    difference.Field.DisplayName,
+                    FieldName(
+                        difference.Field,
+                        localization),
                     string.Join("; ", difference.Before),
                     string.Join("; ", difference.After)));
             }
@@ -196,9 +367,15 @@ public static class MetadataPreviewRowBuilder
             {
                 destination.Add(new(
                     Path.GetFileName(file.Path),
-                    "Artwork",
-                    DescribeArtwork(artwork.Before),
-                    DescribeArtwork(artwork.After)));
+                    Text(
+                        localization,
+                        "MetadataEditor.Pending.Target.Artwork"),
+                    DescribeArtwork(
+                        artwork.Before,
+                        localization),
+                    DescribeArtwork(
+                        artwork.After,
+                        localization)));
             }
 
             if (!file.TagLayerDifferences.IsDefaultOrEmpty)
@@ -208,9 +385,20 @@ public static class MetadataPreviewRowBuilder
                 {
                     destination.Add(new(
                         Path.GetFileName(file.Path),
-                        $"{DescribeTagLayer(difference.Kind)} tag layer",
-                        difference.WasPresent ? "Present" : "Absent",
-                        difference.WillBePresent ? "Present" : "Absent"));
+                        Format(
+                            localization,
+                            "MetadataEditor.Preview.TagLayerField",
+                            DescribeTagLayer(difference.Kind)),
+                        Text(
+                            localization,
+                            difference.WasPresent
+                                ? "MetadataEditor.Preview.Present"
+                                : "MetadataEditor.Preview.Absent"),
+                        Text(
+                            localization,
+                            difference.WillBePresent
+                                ? "MetadataEditor.Preview.Present"
+                                : "MetadataEditor.Preview.Absent")));
     }
 }
 
@@ -218,15 +406,27 @@ public static class MetadataPreviewRowBuilder
             {
                 string issueSummary = version.Issues.Length == 0
                     ? ""
-                    : $" ({version.Issues.Length:N0} compatibility issue(s))";
+                    : FormatCount(
+                        localization,
+                        "MetadataEditor.Preview.CompatibilityIssues",
+                        version.Issues.Length);
                 string encoding = version.TextEncodingPolicy is null
                     ? ""
-                    : $", {version.TextEncodingPolicy}";
+                    : Format(
+                        localization,
+                        "MetadataEditor.Preview.EncodingSuffix",
+                        Text(
+                            localization,
+                            $"MetadataEditor.Choice.Id3EncodingPolicy.{version.TextEncodingPolicy}"));
                 destination.Add(new(
                     Path.GetFileName(file.Path),
                     version.SourceVersion == version.TargetVersion
-                        ? "ID3 text encoding"
-                        : "ID3 version",
+                        ? Text(
+                            localization,
+                            "MetadataEditor.Preview.Id3TextEncoding")
+                        : Text(
+                            localization,
+                            "MetadataEditor.Preview.Id3Version"),
                     $"ID3v2.{(int)version.SourceVersion}",
                     $"ID3v2.{(int)version.TargetVersion}{encoding}{issueSummary}"));
             }
@@ -239,11 +439,15 @@ public static class MetadataPreviewRowBuilder
                     string issueSummary =
                         conversion.CompatibilityIssues.Length == 0
                             ? ""
-                            : $" ({conversion.CompatibilityIssues.Length:N0} " +
-                              "compatibility issue(s))";
+                            : FormatCount(
+                                localization,
+                                "MetadataEditor.Preview.CompatibilityIssues",
+                                conversion.CompatibilityIssues.Length);
                     destination.Add(new(
                         Path.GetFileName(file.Path),
-                        "Tag-layer conversion",
+                        Text(
+                            localization,
+                            "MetadataEditor.Preview.TagLayerConversion"),
                         DescribeTagLayer(conversion.Source),
                         $"{DescribeTagLayer(conversion.Target)}{issueSummary}"));
                 }
@@ -252,11 +456,21 @@ public static class MetadataPreviewRowBuilder
     }
 
     private static string DescribeArtwork(
-        IReadOnlyList<ArtworkDescriptor> images) =>
+        IReadOnlyList<ArtworkDescriptor> images,
+        ILocalizationService? localization) =>
         images.Count == 0
-            ? "(none)"
+            ? Text(
+                localization,
+                "MetadataEditor.Preview.None")
             : string.Join("; ", images.Select(image =>
-                $"{image.Type} {image.MimeType} {image.Size:N0} bytes" +
+                $"{Text(
+                    localization,
+                    $"Inspector.Artwork.Type.{image.Type}.Label")} " +
+                $"{image.MimeType} " +
+                FormatCount(
+                    localization,
+                    "MetadataEditor.Preview.Bytes",
+                    image.Size) +
                 (string.IsNullOrWhiteSpace(image.Description)
                     ? ""
                     : $" ({image.Description})")));
@@ -264,9 +478,50 @@ public static class MetadataPreviewRowBuilder
     private static string DescribeTagLayer(TagLayerKind kind) => kind switch
     {
         TagLayerKind.Id3v2 => "ID3v2",
+        TagLayerKind.Id3v1 => "ID3v1",
         TagLayerKind.ApeV2 => "APEv2",
         _ => kind.ToString(),
     };
+
+    private static string FieldName(
+        MetadataFieldKey field,
+        ILocalizationService? localization) =>
+        field.KnownField is { } known
+            ? Text(
+                localization,
+                $"Settings.Choice.TagFields.{known}")
+            : field.CustomName ?? "";
+
+    private static string Text(
+        ILocalizationService? localization,
+        string key) =>
+        localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private static string Format(
+        ILocalizationService? localization,
+        string key,
+        params object?[] arguments) =>
+        localization?.Format(
+            key,
+            arguments) ??
+        LocalizedText.Format(
+            key,
+            arguments);
+
+    private static string FormatCount(
+        ILocalizationService? localization,
+        string key,
+        long count,
+        params object?[] arguments) =>
+        localization?.FormatCount(
+            key,
+            count,
+            arguments) ??
+        LocalizedText.FormatCount(
+            key,
+            count,
+            arguments);
 }
 
 public static class MetadataOperationPlanComposer
@@ -286,7 +541,8 @@ public static class MetadataOperationPlanComposer
             .ToArray();
         if (available.Length == 0)
             throw new ArgumentException(
-                "At least one metadata plan is required.",
+                LocalizedText.Get(
+                    "MetadataEditor.Validation.PlanRequired"),
                 nameof(plans));
         if (available.Length == 1)
             return available[0];
@@ -368,33 +624,34 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
 {
     private readonly IMetadataOperationCatalog _catalog;
     private readonly IOperationRecipeStore? _recipes;
+    private readonly ILocalizationService? _localization;
     private Guid? _editingRecipeId;
+    private string _defaultRecipeName =
+        LocalizedText.Get(
+            "MetadataEditor.Recipe.NewName");
 
     public MetadataOperationEditorViewModel(
         IMetadataOperationCatalog catalog,
         MetadataOperationSurface surface,
-        IOperationRecipeStore? recipes = null)
+        IOperationRecipeStore? recipes = null,
+        ILocalizationService? localization = null)
     {
         _catalog = catalog;
         _recipes = recipes;
+        _localization = localization;
+        _defaultRecipeName = Text(
+            "MetadataEditor.Recipe.NewName");
+        RecipeName = _defaultRecipeName;
         OperationDescriptors = catalog.Operations
             .Where(operation => operation.Supports(surface))
             .ToArray();
         Fields =
         [
-            new(TagFields.Title, "Title"),
-            new(TagFields.Artist, "Artist"),
-            new(TagFields.AlbumArtist, "Album artist"),
-            new(TagFields.Album, "Album"),
-            new(TagFields.Genre, "Genre"),
-            new(TagFields.Composer, "Composer"),
-            new(TagFields.Date, "Date"),
-            new(TagFields.TrackNumber, "Track"),
-            new(TagFields.TotalTracks, "Track total"),
-            new(TagFields.DiscNumber, "Disc"),
-            new(TagFields.TotalDiscs, "Disc total"),
-            new(TagFields.Comment, "Comment"),
+            .. EditorFields.Select(field => new MetadataFieldChoice(
+                field,
+                FieldLabel(field))),
         ];
+        RefreshLocalizedChoices();
         SelectedOperation = OperationDescriptors.FirstOrDefault();
         SelectedField = Fields[0];
         DestinationField = Fields[1];
@@ -405,12 +662,17 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
             _recipes.Changed += (_, _) => ReloadRecipes();
         PropertyChanged += OnEditorPropertyChanged;
         Steps.CollectionChanged += OnStepsChanged;
+        _localization?.CultureChanged +=
+            OnLocalizationCultureChanged;
     }
 
     public ObservableCollection<MetadataRecipeStepViewModel> Steps { get; } = [];
     public ObservableCollection<OperationRecipe> SavedRecipes { get; } = [];
     public event Action? Changed;
     public IReadOnlyList<MetadataOperationDescriptor> OperationDescriptors { get; }
+    public ObservableCollection<
+        LocalizedChoice<MetadataOperationDescriptor>>
+        OperationChoices { get; } = [];
     public IReadOnlyList<MetadataFieldChoice> Fields { get; }
     public IReadOnlyList<MetadataCaseMode> CaseModes { get; } =
         Enum.GetValues<MetadataCaseMode>();
@@ -422,6 +684,18 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
         Enum.GetValues<MetadataConditionOperator>()
             .Where(value => value != MetadataConditionOperator.Always)
             .ToArray();
+    public ObservableCollection<
+        LocalizedChoice<MetadataCaseMode>>
+        CaseModeChoices { get; } = [];
+    public ObservableCollection<
+        LocalizedChoice<MetadataValueOrder>>
+        ValueOrderChoices { get; } = [];
+    public ObservableCollection<
+        LocalizedChoice<MetadataPathComponent>>
+        PathComponentChoices { get; } = [];
+    public ObservableCollection<
+        LocalizedChoice<MetadataConditionOperator>>
+        ConditionOperatorChoices { get; } = [];
 
     [ObservableProperty]
     private MetadataOperationDescriptor? _selectedOperation;
@@ -527,7 +801,9 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
     private bool _negateCondition;
 
     [ObservableProperty]
-    private string _recipeName = "New recipe";
+    private string _recipeName =
+        LocalizedText.Get(
+            "MetadataEditor.Recipe.NewName");
 
     [ObservableProperty]
     private OperationRecipe? _selectedSavedRecipe;
@@ -556,7 +832,13 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
     {
         if (Steps.Count == 0)
             return OperationRecipe.Create(
-                name ?? $"{SelectedOperation?.DisplayName}: {SelectedField?.Label}",
+                name ?? Format(
+                    "MetadataEditor.Recipe.OperationName",
+                    SelectedOperation is null
+                        ? ""
+                        : OperationLabel(
+                            SelectedOperation),
+                    SelectedField?.Label ?? ""),
                 CreateCurrentOperation());
         return OperationRecipe.FromSteps(
             _editingRecipeId ?? Guid.NewGuid(),
@@ -568,7 +850,11 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
     private void AddCurrentOperation()
     {
         MetadataOperation operation = CreateCurrentOperation();
-        string name = $"{SelectedOperation!.DisplayName}: {SelectedField!.Label}";
+        string name = Format(
+            "MetadataEditor.Recipe.OperationName",
+            OperationLabel(
+                SelectedOperation!),
+            SelectedField!.Label);
         Steps.Add(new(Guid.NewGuid(), name, operation));
     }
 
@@ -580,7 +866,12 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
             return;
         int index = Steps.IndexOf(step);
         Steps.Insert(index + 1, new(
-            Guid.NewGuid(), step.Name + " copy", step.Operation, step.Enabled));
+            Guid.NewGuid(),
+            Format(
+                "MetadataEditor.Recipe.CopyName",
+                step.Name),
+            step.Operation,
+            step.Enabled));
     }
 
     [RelayCommand]
@@ -613,7 +904,8 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
     private void NewRecipe()
     {
         _editingRecipeId = null;
-        RecipeName = "New recipe";
+        RecipeName = Text(
+            "MetadataEditor.Recipe.NewName");
         Steps.Clear();
         SelectedSavedRecipe = null;
     }
@@ -630,7 +922,11 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
             SelectedSavedRecipe.Steps.IsDefaultOrEmpty
                 ? SelectedSavedRecipe.Operations.Select((operation, index) =>
                     new OperationRecipeStep(
-                        Guid.NewGuid(), $"Step {index + 1}", operation))
+                        Guid.NewGuid(),
+                        Format(
+                            "MetadataEditor.Pending.DefaultStepName",
+                            index + 1),
+                        operation))
                 : SelectedSavedRecipe.Steps;
         foreach (OperationRecipeStep step in steps)
             Steps.Add(new(step.Id, step.Name, step.Operation, step.Enabled));
@@ -662,7 +958,9 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
     private MetadataOperation CreateCurrentOperation()
     {
         if (SelectedOperation is null || SelectedField is null)
-            throw new InvalidOperationException("Choose an operation and field.");
+            throw new InvalidOperationException(
+                Text(
+                    "MetadataEditor.Validation.ChooseOperationAndField"));
         MetadataCondition? condition = !ConditionEnabled
             ? null
             : new(
@@ -709,6 +1007,98 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
             : SavedRecipes.FirstOrDefault(recipe => recipe.Id == selected);
     }
 
+    private void RefreshLocalizedChoices()
+    {
+        RefreshChoices(
+            OperationChoices,
+            OperationDescriptors,
+            value => Text(
+                $"MetadataEditor.Choice.Operation.{value.Kind}"));
+        RefreshChoices(
+            CaseModeChoices,
+            CaseModes,
+            value => Text(
+                $"MetadataEditor.Choice.CaseMode.{value}"));
+        RefreshChoices(
+            ValueOrderChoices,
+            ValueOrders,
+            value => Text(
+                $"MetadataEditor.Choice.ValueOrder.{value}"));
+        RefreshChoices(
+            PathComponentChoices,
+            PathComponents,
+            value => Text(
+                $"MetadataEditor.Choice.PathComponent.{value}"));
+        RefreshChoices(
+            ConditionOperatorChoices,
+            ConditionOperators,
+            value => Text(
+                $"MetadataEditor.Choice.ConditionOperator.{value}"));
+        foreach (MetadataFieldChoice field in Fields)
+            field.Label = FieldLabel(field.Field);
+    }
+
+    private static void RefreshChoices<T>(
+        ObservableCollection<LocalizedChoice<T>> target,
+        IEnumerable<T> values,
+        Func<T, string> getLabel)
+    {
+        foreach (T value in values)
+        {
+            LocalizedChoice<T>? choice =
+                target.FirstOrDefault(item =>
+                    EqualityComparer<T>.Default.Equals(
+                        item.Value,
+                        value));
+            string label = getLabel(value);
+            if (choice is null)
+                target.Add(new(value, label));
+            else
+                choice.Label = label;
+        }
+    }
+
+    private string FieldLabel(TagFields field) =>
+        Text(
+            $"Settings.Choice.TagFields.{field}");
+
+    private string OperationLabel(
+        MetadataOperationDescriptor descriptor) =>
+        OperationChoices.FirstOrDefault(choice =>
+            choice.Value.Kind == descriptor.Kind)?.Label ??
+        Text(
+            $"MetadataEditor.Choice.Operation.{descriptor.Kind}");
+
+    private string Text(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string Format(
+        string key,
+        params object?[] arguments) =>
+        _localization?.Format(
+            key,
+            arguments) ??
+        LocalizedText.Format(
+            key,
+            arguments);
+
+    private void OnLocalizationCultureChanged(
+        object? sender,
+        EventArgs e)
+    {
+        bool recipeNameWasDefault =
+            string.Equals(
+                RecipeName,
+                _defaultRecipeName,
+                StringComparison.Ordinal);
+        _defaultRecipeName = Text(
+            "MetadataEditor.Recipe.NewName");
+        if (recipeNameWasDefault)
+            RecipeName = _defaultRecipeName;
+        RefreshLocalizedChoices();
+    }
+
     private void OnEditorPropertyChanged(
         object? sender,
         PropertyChangedEventArgs e)
@@ -736,4 +1126,20 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
         object? sender,
         PropertyChangedEventArgs e) =>
         Changed?.Invoke();
+
+    private static readonly TagFields[] EditorFields =
+    [
+        TagFields.Title,
+        TagFields.Artist,
+        TagFields.AlbumArtist,
+        TagFields.Album,
+        TagFields.Genre,
+        TagFields.Composer,
+        TagFields.Date,
+        TagFields.TrackNumber,
+        TagFields.TotalTracks,
+        TagFields.DiscNumber,
+        TagFields.TotalDiscs,
+        TagFields.Comment,
+    ];
 }

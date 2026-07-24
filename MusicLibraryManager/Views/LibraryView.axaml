@@ -421,9 +421,10 @@
               <StackPanel Grid.Column="1" Spacing="4">
                 <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.Operations.Operation}" FontSize="12" FontWeight="SemiBold" />
                 <ComboBox Classes="app"
-                          ItemsSource="{Binding OperationEditor.OperationDescriptors}"
-                          DisplayMemberBinding="{Binding DisplayName}"
-                          SelectedItem="{Binding OperationEditor.SelectedOperation, Mode=TwoWay}" />
+                          ItemsSource="{Binding OperationEditor.OperationChoices}"
+                          DisplayMemberBinding="{Binding Label}"
+                          SelectedValueBinding="{Binding Value}"
+                          SelectedValue="{Binding OperationEditor.SelectedOperation, Mode=TwoWay}" />
               </StackPanel>
               <StackPanel Grid.Column="2" Spacing="4">
                 <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.Operations.Field}" FontSize="12" FontWeight="SemiBold" />
@@ -465,8 +466,10 @@
               </StackPanel>
               <StackPanel Grid.Column="3" Spacing="4">
                 <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.Operations.Case}" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.CaseModes}"
-                          SelectedItem="{Binding OperationEditor.SelectedCaseMode, Mode=TwoWay}" />
+                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.CaseModeChoices}"
+                          DisplayMemberBinding="{Binding Label}"
+                          SelectedValueBinding="{Binding Value}"
+                          SelectedValue="{Binding OperationEditor.SelectedCaseMode, Mode=TwoWay}" />
               </StackPanel>
               <StackPanel Grid.Column="4" Spacing="4">
                 <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.Operations.Separator}" FontSize="12" FontWeight="SemiBold" />
@@ -475,16 +478,20 @@
               </StackPanel>
               <StackPanel Grid.Column="5" Spacing="4">
                 <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.Operations.ValueOrder}" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.ValueOrders}"
-                          SelectedItem="{Binding OperationEditor.SelectedValueOrder, Mode=TwoWay}" />
+                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.ValueOrderChoices}"
+                          DisplayMemberBinding="{Binding Label}"
+                          SelectedValueBinding="{Binding Value}"
+                          SelectedValue="{Binding OperationEditor.SelectedValueOrder, Mode=TwoWay}" />
               </StackPanel>
             </Grid>
 
             <Grid Grid.Row="3" ColumnDefinitions="190,90,*,140" ColumnSpacing="10">
               <StackPanel Spacing="4">
                 <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.Operations.PathComponent}" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.PathComponents}"
-                          SelectedItem="{Binding OperationEditor.SelectedPathComponent, Mode=TwoWay}" />
+                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.PathComponentChoices}"
+                          DisplayMemberBinding="{Binding Label}"
+                          SelectedValueBinding="{Binding Value}"
+                          SelectedValue="{Binding OperationEditor.SelectedPathComponent, Mode=TwoWay}" />
               </StackPanel>
               <StackPanel Grid.Column="1" Spacing="4">
                 <TextBlock Classes="muted" Text="{DynamicResource Loc.Library.Operations.ParentLevel}" FontSize="12" FontWeight="SemiBold" />
@@ -521,8 +528,10 @@
                         DisplayMemberBinding="{Binding Label}"
                         SelectedItem="{Binding OperationEditor.SelectedConditionField, Mode=TwoWay}" />
               <ComboBox Grid.Column="6" Classes="app"
-                        ItemsSource="{Binding OperationEditor.ConditionOperators}"
-                        SelectedItem="{Binding OperationEditor.SelectedConditionOperator, Mode=TwoWay}" />
+                        ItemsSource="{Binding OperationEditor.ConditionOperatorChoices}"
+                        DisplayMemberBinding="{Binding Label}"
+                        SelectedValueBinding="{Binding Value}"
+                        SelectedValue="{Binding OperationEditor.SelectedConditionOperator, Mode=TwoWay}" />
               <TextBox Grid.Column="7" Classes="app"
                        Text="{Binding OperationEditor.ConditionValue, Mode=TwoWay}"
                        PlaceholderText="{DynamicResource Loc.Library.Operations.ConditionValuePlaceholder}" />

@@ -226,7 +226,7 @@ public sealed class OperationsViewModelTests
         await viewModel.RefreshCommand.ExecuteAsync(null);
 
         Assert.Single(viewModel.Runs);
-        Assert.Contains("1 root(s) could not be scanned", viewModel.StatusText);
+        Assert.Contains("roots not scanned: 1", viewModel.StatusText);
     }
 
     [Fact]

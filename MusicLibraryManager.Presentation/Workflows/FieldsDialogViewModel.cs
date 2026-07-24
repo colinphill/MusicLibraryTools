@@ -13,11 +13,20 @@ namespace MusicLibraryManager.Presentation;
 /// <summary>One arbitrary tag field being edited in the fields dialog.</summary>
 public partial class FieldRow : ObservableObject
 {
+    private readonly ILocalizationService? _localization;
+
     public TagFields? Field { get; }
     public string? UserStringKey { get; }
     public bool IsUserString => UserStringKey is not null;
-    public string Name => UserStringKey ?? Field?.ToString() ?? "";
-    public string Kind => IsUserString ? "User string" : "Known field";
+    public string Name => UserStringKey ??
+        (Field is { } knownField
+            ? L(
+                $"Settings.Choice.TagFields.{knownField}")
+            : "");
+    public string Kind => L(
+        IsUserString
+            ? "Fields.Row.Kind.UserString"
+            : "Fields.Row.Kind.KnownField");
 
     /// <summary>True when the field already exists on disk (vs. freshly added in this dialog).</summary>
     public bool IsOriginal { get; }
@@ -33,15 +42,40 @@ public partial class FieldRow : ObservableObject
     [NotifyPropertyChangedFor(nameof(RemoveButtonText))]
     private bool _markedForRemoval;
 
-    public string RemoveButtonText => MarkedForRemoval ? "Undo" : "Remove";
+    public string RemoveButtonText => L(
+        MarkedForRemoval
+            ? "Fields.Action.UndoRemoval"
+            : "Fields.Action.Remove");
 
-    public FieldRow(TagFields field, string value, bool mixed, bool isNew)
-        : this(field, null, value, mixed, isNew)
+    public FieldRow(
+        TagFields field,
+        string value,
+        bool mixed,
+        bool isNew,
+        ILocalizationService? localization = null)
+        : this(
+            field,
+            null,
+            value,
+            mixed,
+            isNew,
+            localization)
     {
     }
 
-    public FieldRow(string userStringKey, string value, bool mixed, bool isNew)
-        : this(null, userStringKey, value, mixed, isNew)
+    public FieldRow(
+        string userStringKey,
+        string value,
+        bool mixed,
+        bool isNew,
+        ILocalizationService? localization = null)
+        : this(
+            null,
+            userStringKey,
+            value,
+            mixed,
+            isNew,
+            localization)
     {
     }
 
@@ -50,10 +84,12 @@ public partial class FieldRow : ObservableObject
         string? userStringKey,
         string value,
         bool mixed,
-        bool isNew)
+        bool isNew,
+        ILocalizationService? localization)
     {
         Field = field;
         UserStringKey = userStringKey;
+        _localization = localization;
         IsOriginal = !isNew;
         _suppress = true;
         Value = value;
@@ -63,12 +99,24 @@ public partial class FieldRow : ObservableObject
         IsModified = isNew;   // a freshly added field is written even if left blank-to-remove
     }
 
+    public void RefreshLocalization()
+    {
+        OnPropertyChanged(nameof(Name));
+        OnPropertyChanged(nameof(Kind));
+        OnPropertyChanged(
+            nameof(RemoveButtonText));
+    }
+
     partial void OnValueChanged(string value)
     {
         if (_suppress) return;
         IsModified = value != _original || IsModified;
         if (value != _original) IsMixed = false;
     }
+
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
 }
 
 /// <summary>
@@ -76,14 +124,21 @@ public partial class FieldRow : ObservableObject
 /// editor's curated set, every writable field is available. Values differing across the selection
 /// show as "mixed" and are only written when edited.
 /// </summary>
-public partial class FieldsDialogViewModel : ViewModelBase
+public partial class FieldsDialogViewModel :
+    ViewModelBase,
+    IDisposable
 {
     private readonly IMetadataDocumentService _documents;
     private readonly IMetadataOperationService _operations;
     private readonly IReadOnlyList<string> _paths;
     private readonly IActivityService? _activities;
+    private readonly ILocalizationService? _localization;
     private CancellationTokenSource? _saveCancellation;
     private MetadataOperationPlan? _plan;
+    private string? _statusKey;
+    private object?[] _statusArguments = [];
+    private long? _statusCount;
+    private bool _disposed;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
@@ -93,6 +148,9 @@ public partial class FieldsDialogViewModel : ViewModelBase
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasStatusMessage))]
     private string? _statusMessage;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDiagnosticDetail))]
+    private string? _diagnosticDetail;
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsStatusInfo))]
     [NotifyPropertyChangedFor(nameof(IsStatusSuccess))]
@@ -110,14 +168,24 @@ public partial class FieldsDialogViewModel : ViewModelBase
     [ObservableProperty] private string? _newUserStringName;
 
     public ObservableCollection<FieldRow> Rows { get; } = [];
+    public ObservableCollection<LocalizedChoice<TagFields>>
+        AddableFieldChoices { get; } = [];
     public bool HasStatusMessage => !string.IsNullOrWhiteSpace(StatusMessage);
+    public bool HasDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(
+            DiagnosticDetail);
     public bool HasPendingChanges =>
         !string.IsNullOrWhiteSpace(NewUserStringName) ||
         Rows.Any(row => row.IsModified || row.MarkedForRemoval);
-    public string SaveButtonText => IsConfirmingSave ? "Apply changes" : "Save fields";
+    public string SaveButtonText => L(
+        IsConfirmingSave
+            ? "Fields.Action.ApplyChanges"
+            : "Fields.Action.Save");
     public string CancelButtonText => IsBusy
-        ? "Cancel save"
-        : IsConfirmingCancel ? "Discard changes" : "Cancel";
+        ? L("Fields.Action.CancelSave")
+        : IsConfirmingCancel
+            ? L("Fields.Action.DiscardChanges")
+            : L("Common.Cancel");
     public bool IsStatusInfo => StatusTone == MessageTone.Info;
     public bool IsStatusSuccess => StatusTone == MessageTone.Success;
     public bool IsStatusWarning => StatusTone == MessageTone.Warning;
@@ -138,8 +206,13 @@ public partial class FieldsDialogViewModel : ViewModelBase
             .ToList();
 
     public string Title => _paths.Count == 1
-        ? $"Edit fields — {System.IO.Path.GetFileName(_paths[0])}"
-        : $"Edit fields — {_paths.Count} files";
+        ? LF(
+            "Fields.Title.Single",
+            System.IO.Path.GetFileName(
+                _paths[0]))
+        : LFC(
+            "Fields.Title.Files",
+            _paths.Count);
 
     /// <summary>Completes when the initial multi-file field aggregation has loaded.</summary>
     public Task Loading { get; }
@@ -151,12 +224,18 @@ public partial class FieldsDialogViewModel : ViewModelBase
         IMetadataDocumentService documents,
         IMetadataOperationService operations,
         IReadOnlyList<string> paths,
-        IActivityService? activities = null)
+        IActivityService? activities = null,
+        ILocalizationService? localization = null)
     {
         _documents = documents;
         _operations = operations;
         _paths = paths;
         _activities = activities;
+        _localization = localization;
+        RefreshLocalizedChoices();
+        if (_localization is not null)
+            _localization.CultureChanged +=
+                OnLocalizationCultureChanged;
         Rows.CollectionChanged += OnRowsChanged;
         Loading = LoadAsync();
     }
@@ -202,6 +281,8 @@ public partial class FieldsDialogViewModel : ViewModelBase
         {
             var documents = new List<MediaDocument>(
                 _paths.Count);
+            var diagnostics =
+                new List<string>();
             foreach (string path in _paths)
             {
                 try
@@ -213,11 +294,22 @@ public partial class FieldsDialogViewModel : ViewModelBase
                 }
                 catch (Exception error)
                 {
-                    StatusTone = MessageTone.Warning;
-                    StatusMessage =
-                        $"Could not read '{path}': " +
-                        error.Message;
+                    diagnostics.Add(
+                        $"{path}{Environment.NewLine}" +
+                        error.Message);
                 }
+            }
+
+            if (diagnostics.Count > 0)
+            {
+                SetCountStatus(
+                    MessageTone.Warning,
+                    "Fields.Status.LoadFailures",
+                    diagnostics.Count);
+                DiagnosticDetail = string.Join(
+                    Environment.NewLine +
+                    Environment.NewLine,
+                    diagnostics);
             }
 
             MetadataFieldKey[] fields = documents
@@ -250,12 +342,14 @@ public partial class FieldsDialogViewModel : ViewModelBase
                         field.KnownField!.Value,
                         editorValue,
                         mixed,
-                        isNew: false)
+                        isNew: false,
+                        localization: _localization)
                     : new FieldRow(
                         field.CustomName!,
                         editorValue,
                         mixed,
-                        isNew: false));
+                        isNew: false,
+                        localization: _localization));
             }
         }
         finally
@@ -273,7 +367,13 @@ public partial class FieldsDialogViewModel : ViewModelBase
             existing.MarkedForRemoval = false;   // re-adding an un-removes a struck field
             return;
         }
-        Rows.Add(new FieldRow(FieldToAdd, "", mixed: false, isNew: true));
+        Rows.Add(
+            new FieldRow(
+                FieldToAdd,
+                "",
+                mixed: false,
+                isNew: true,
+                localization: _localization));
     }
 
     [RelayCommand]
@@ -282,7 +382,9 @@ public partial class FieldsDialogViewModel : ViewModelBase
         string key = NewUserStringName?.Trim() ?? "";
         if (key.Length == 0)
         {
-            StatusMessage = "Enter a user-string name.";
+            SetStatus(
+                MessageTone.Warning,
+                "Fields.Status.UserStringNameRequired");
             return;
         }
 
@@ -292,13 +394,22 @@ public partial class FieldsDialogViewModel : ViewModelBase
         if (existing is not null)
         {
             existing.MarkedForRemoval = false;
-            StatusMessage = $"User string '{existing.UserStringKey}' is already in the list.";
+            SetStatus(
+                MessageTone.Info,
+                "Fields.Status.UserStringExists",
+                existing.UserStringKey);
             return;
         }
 
-        Rows.Add(new FieldRow(key, "", mixed: false, isNew: true));
+        Rows.Add(
+            new FieldRow(
+                key,
+                "",
+                mixed: false,
+                isNew: true,
+                localization: _localization));
         NewUserStringName = null;
-        StatusMessage = null;
+        ClearStatus();
     }
 
     [RelayCommand]
@@ -331,10 +442,13 @@ public partial class FieldsDialogViewModel : ViewModelBase
             _saveCancellation =
                 new CancellationTokenSource();
             CancelCommand.NotifyCanExecuteChanged();
+            DiagnosticDetail = null;
             Guid? previewActivity = _activities?.Start(
-                "Preview metadata fields",
-                $"Validating {edits.Count:N0} field change(s) for " +
-                $"{_paths.Count:N0} file(s)",
+                L("Fields.Activity.Preview.Title"),
+                LF(
+                    "Fields.Activity.Preview.Starting",
+                    edits.Count,
+                    _paths.Count),
                 ShellDestination.Library,
                 _saveCancellation.Cancel);
             IProgress<OperationProgress> previewProgress =
@@ -344,9 +458,11 @@ public partial class FieldsDialogViewModel : ViewModelBase
                 _plan = await _operations
                     .PreviewValueEditsAsync(
                         BuildRequests(edits),
-                        "Edit Library metadata fields",
+                        L("Fields.Operation.Name"),
                         previewProgress,
                         _saveCancellation.Token);
+                DiagnosticDetail =
+                    PlanDiagnosticDetail(_plan);
                 int blockers = _plan.Files
                     .SelectMany(file => file.Issues)
                     .Count(issue =>
@@ -354,16 +470,19 @@ public partial class FieldsDialogViewModel : ViewModelBase
                         OperationIssueSeverity.Blocker);
                 if (!_plan.CanApply)
                 {
-                    StatusTone = MessageTone.Error;
-                    StatusMessage = blockers > 0
-                        ? $"Preview found {blockers:N0} blocker(s). " +
-                          "No files were changed."
-                        : "Preview found no applicable changes. " +
-                          "No files were changed.";
+                    if (blockers > 0)
+                        SetCountStatus(
+                            MessageTone.Error,
+                            "Fields.Status.PreviewBlockers",
+                            blockers);
+                    else
+                        SetStatus(
+                            MessageTone.Info,
+                            "Fields.Status.PreviewNoChanges");
                     if (previewActivity.HasValue)
                         _activities!.Finish(
                             previewActivity.Value,
-                            StatusMessage,
+                            StatusMessage!,
                             blockers > 0
                                 ? AppActivityState.Failed
                                 : AppActivityState.Completed);
@@ -371,43 +490,39 @@ public partial class FieldsDialogViewModel : ViewModelBase
                     return;
                 }
                 IsConfirmingSave = true;
-                StatusTone = blockers > 0
-                    ? MessageTone.Error
-                    : MessageTone.Warning;
-                StatusMessage =
-                    $"Preview ready for " +
-                    $"{_plan.ChangedFileCount:N0} file(s) and " +
-                    $"{edits.Count:N0} field change(s). " +
-                    "Apply uses stale-file checks, recovery journals, " +
-                    "and undo. Choose Apply changes to continue.";
+                SetStatus(
+                    MessageTone.Warning,
+                    "Fields.Status.PreviewReady",
+                    _plan.ChangedFileCount,
+                    edits.Count);
                 if (previewActivity.HasValue)
                     _activities!.Finish(
                         previewActivity.Value,
-                        $"Previewed {_plan.ChangedFileCount:N0} file(s)");
+                        LFC(
+                            "Fields.Activity.Preview.Completed",
+                            _plan.ChangedFileCount));
             }
             catch (OperationCanceledException) when (
                 _saveCancellation.IsCancellationRequested)
             {
-                StatusTone = MessageTone.Warning;
-                StatusMessage =
-                    "Preview cancelled. Proposed field changes " +
-                    "remain ready to retry.";
+                SetStatus(
+                    MessageTone.Warning,
+                    "Fields.Status.PreviewCancelled");
                 if (previewActivity.HasValue)
                     _activities!.Finish(
                         previewActivity.Value,
-                        StatusMessage,
+                        StatusMessage!,
                         AppActivityState.Cancelled);
             }
             catch (Exception error)
             {
-                StatusTone = MessageTone.Error;
-                StatusMessage =
-                    $"Preview failed: {error.Message}. Proposed " +
-                    "field changes remain ready to retry.";
+                SetFailure(
+                    "Fields.Status.PreviewFailed",
+                    error);
                 if (previewActivity.HasValue)
                     _activities!.Finish(
                         previewActivity.Value,
-                        StatusMessage,
+                        StatusMessage!,
                         AppActivityState.Failed);
             }
             finally
@@ -423,9 +538,9 @@ public partial class FieldsDialogViewModel : ViewModelBase
         if (_plan is null)
         {
             IsConfirmingSave = false;
-            StatusTone = MessageTone.Warning;
-            StatusMessage =
-                "The preview expired. Preview the field changes again.";
+            SetStatus(
+                MessageTone.Warning,
+                "Fields.Status.PreviewExpired");
             return;
         }
 
@@ -433,10 +548,12 @@ public partial class FieldsDialogViewModel : ViewModelBase
         IsBusy = true;
         _saveCancellation = new CancellationTokenSource();
         CancelCommand.NotifyCanExecuteChanged();
+        DiagnosticDetail = null;
         Guid? activity = _activities?.Start(
-            "Save metadata fields",
-            $"Applying the reviewed field plan to " +
-            $"{_plan.ChangedFileCount:N0} file(s)",
+            L("Fields.Activity.Save.Title"),
+            LFC(
+                "Fields.Activity.Save.Starting",
+                _plan.ChangedFileCount),
             ShellDestination.Library,
             _saveCancellation.Cancel);
         IProgress<OperationProgress> progress =
@@ -448,31 +565,33 @@ public partial class FieldsDialogViewModel : ViewModelBase
                     _plan,
                     progress,
                     _saveCancellation.Token);
-            StatusTone = MessageTone.Success;
-            StatusMessage =
-                $"Updated {result.ChangedFiles:N0} file(s). " +
-                "Originals are retained for undo.";
+            SetCountStatus(
+                MessageTone.Success,
+                "Fields.Status.SaveComplete",
+                result.ChangedFiles);
             if (activity.HasValue)
                 _activities!.Finish(
                     activity.Value,
-                    StatusMessage,
+                    StatusMessage!,
                     AppActivityState.Completed);
             _plan = null;
             CloseRequested?.Invoke(true);
         }
         catch (OperationCanceledException) when (_saveCancellation.IsCancellationRequested)
         {
-            StatusTone = MessageTone.Warning;
-            StatusMessage = "Save cancelled. Proposed field changes remain ready to retry.";
+            SetStatus(
+                MessageTone.Warning,
+                "Fields.Status.SaveCancelled");
             if (activity.HasValue)
-                _activities!.Finish(activity.Value, StatusMessage, AppActivityState.Cancelled);
+                _activities!.Finish(activity.Value, StatusMessage!, AppActivityState.Cancelled);
         }
-        catch (Exception ex)
+        catch (Exception error)
         {
-            StatusTone = MessageTone.Error;
-            StatusMessage = $"Save failed: {ex.Message}. Proposed field changes remain ready to retry.";
+            SetFailure(
+                "Fields.Status.SaveFailed",
+                error);
             if (activity.HasValue)
-                _activities!.Finish(activity.Value, StatusMessage, AppActivityState.Failed);
+                _activities!.Finish(activity.Value, StatusMessage!, AppActivityState.Failed);
         }
         finally
         {
@@ -541,11 +660,165 @@ public partial class FieldsDialogViewModel : ViewModelBase
                     : null;
             _activities!.Report(
                 activity.Value,
-                update.Message ??
-                update.CurrentPath ??
-                "Updating metadata fields",
+                update.CurrentPath is { } path
+                    ? LF(
+                        "Fields.Progress.WithPath",
+                        L(
+                            $"Fields.Progress.Phase.{update.Phase}"),
+                        path)
+                    : L(
+                        $"Fields.Progress.Phase.{update.Phase}"),
                 fraction);
         });
+
+    private static string? PlanDiagnosticDetail(
+        MetadataOperationPlan plan)
+    {
+        string[] diagnostics = plan.Files
+            .SelectMany(file =>
+                file.Issues.Select(issue =>
+                    $"{file.Path}{Environment.NewLine}" +
+                    issue.Message))
+            .ToArray();
+        return diagnostics.Length == 0
+            ? null
+            : string.Join(
+                Environment.NewLine +
+                Environment.NewLine,
+                diagnostics);
+    }
+
+    private void RefreshLocalizedChoices()
+    {
+        if (AddableFieldChoices.Count == 0)
+        {
+            foreach (TagFields field in
+                     AddableFields)
+                AddableFieldChoices.Add(
+                    new LocalizedChoice<TagFields>(
+                        field,
+                        L(
+                            $"Settings.Choice.TagFields.{field}")));
+            return;
+        }
+
+        foreach (LocalizedChoice<TagFields> choice in
+                 AddableFieldChoices)
+            choice.Label = L(
+                $"Settings.Choice.TagFields.{choice.Value}");
+    }
+
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string LF(
+        string key,
+        params object?[] arguments) =>
+        _localization?.Format(
+            key,
+            arguments) ??
+        LocalizedText.Format(
+            key,
+            arguments);
+
+    private string LFC(
+        string key,
+        long count,
+        params object?[] arguments) =>
+        _localization?.FormatCount(
+            key,
+            count,
+            arguments) ??
+        LocalizedText.FormatCount(
+            key,
+            count,
+            arguments);
+
+    private void SetStatus(
+        MessageTone tone,
+        string key,
+        params object?[] arguments)
+    {
+        _statusKey = key;
+        _statusArguments = arguments;
+        _statusCount = null;
+        StatusTone = tone;
+        StatusMessage = LF(
+            key,
+            arguments);
+    }
+
+    private void SetCountStatus(
+        MessageTone tone,
+        string key,
+        long count,
+        params object?[] arguments)
+    {
+        _statusKey = key;
+        _statusArguments = arguments;
+        _statusCount = count;
+        StatusTone = tone;
+        StatusMessage = LFC(
+            key,
+            count,
+            arguments);
+    }
+
+    private void SetFailure(
+        string key,
+        Exception error)
+    {
+        SetStatus(
+            MessageTone.Error,
+            key);
+        DiagnosticDetail = error.Message;
+    }
+
+    private void ClearStatus()
+    {
+        _statusKey = null;
+        _statusArguments = [];
+        _statusCount = null;
+        StatusMessage = null;
+        DiagnosticDetail = null;
+    }
+
+    private void OnLocalizationCultureChanged(
+        object? sender,
+        EventArgs e)
+    {
+        if (_statusKey is { } key)
+            StatusMessage = _statusCount is { } count
+                ? LFC(
+                    key,
+                    count,
+                    _statusArguments)
+                : LF(
+                    key,
+                    _statusArguments);
+        RefreshLocalizedChoices();
+        foreach (FieldRow row in Rows)
+            row.RefreshLocalization();
+        OnPropertyChanged(nameof(Title));
+        OnPropertyChanged(nameof(SaveButtonText));
+        OnPropertyChanged(nameof(CancelButtonText));
+    }
+
+    public void Dispose()
+    {
+        if (_disposed)
+            return;
+
+        _disposed = true;
+        if (_localization is not null)
+            _localization.CultureChanged -=
+                OnLocalizationCultureChanged;
+        Rows.CollectionChanged -= OnRowsChanged;
+        foreach (FieldRow row in Rows)
+            row.PropertyChanged -= OnRowChanged;
+        GC.SuppressFinalize(this);
+    }
 
     private bool CanCancel() => !IsBusy || _saveCancellation is not null;
 
@@ -566,8 +839,9 @@ public partial class FieldsDialogViewModel : ViewModelBase
         {
             IsConfirmingSave = false;
             IsConfirmingCancel = true;
-            StatusTone = MessageTone.Warning;
-            StatusMessage = "Discard the unsaved field changes? Choose Discard changes to confirm.";
+            SetStatus(
+                MessageTone.Warning,
+                "Fields.Status.ConfirmDiscard");
             return;
         }
         CloseRequested?.Invoke(false);

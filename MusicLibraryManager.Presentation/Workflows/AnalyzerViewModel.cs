@@ -1529,7 +1529,9 @@ public partial class AnalyzerViewModel : ViewModelBase
                 progress: progress, ct: scope.Token);
             var items = plan.Items.Select(item =>
             {
-                var viewModel = new ItlMetadataRepairItemViewModel(item);
+                var viewModel = new ItlMetadataRepairItemViewModel(
+                    item,
+                    _localization);
                 viewModel.StateChanged += () => ApplyItlMetadataRepairsCommand.NotifyCanExecuteChanged();
                 return viewModel;
             }).ToList();
@@ -2147,7 +2149,9 @@ public partial class AnalyzerViewModel : ViewModelBase
 
     private AnalysisRepairItemViewModel CreateRepairItem(AnalysisTagRepair item)
     {
-        var viewModel = new AnalysisRepairItemViewModel(item);
+        var viewModel = new AnalysisRepairItemViewModel(
+            item,
+            _localization);
         viewModel.StateChanged += () => ApplyRepairsCommand.NotifyCanExecuteChanged();
         return viewModel;
     }
@@ -2424,14 +2428,19 @@ public partial class AnalyzerViewModel : ViewModelBase
 
 public partial class ItlMetadataRepairItemViewModel : ViewModelBase
 {
-    private readonly TextDifferenceResult _difference;
+    private readonly ILocalizationService? _localization;
+    private TextDifferenceResult _difference;
 
     public ItlMetadataRepairItem Item { get; }
     public string Path => Item.Path;
-    public string DisplayPath => Item.Path.Replace("\u00A0", "⟦NBSP⟧", StringComparison.Ordinal);
+    public string DisplayPath => Item.Path.Replace(
+        "\u00A0",
+        Text(
+            "Health.TextDifference.NoBreakSpaceMarker"),
+        StringComparison.Ordinal);
     public string Fields => string.Join(", ", Item.Differences.Select(value => value.Field));
-    public string Before { get; }
-    public string After { get; }
+    public string Before { get; private set; }
+    public string After { get; private set; }
     public IReadOnlyList<TextDifferenceSegment> BeforeDifference => _difference.Before;
     public IReadOnlyList<TextDifferenceSegment> AfterDifference => _difference.After;
     public string? UnicodeDifferenceDetails => _difference.UnicodeDetails;
@@ -2465,26 +2474,67 @@ public partial class ItlMetadataRepairItemViewModel : ViewModelBase
 
     public event Action? StateChanged;
 
-    public ItlMetadataRepairItemViewModel(ItlMetadataRepairItem item)
+    public ItlMetadataRepairItemViewModel(
+        ItlMetadataRepairItem item,
+        ILocalizationService? localization = null)
     {
         Item = item;
-        Before = Format(item.Differences, difference => difference.Before);
-        After = Format(item.Differences, difference => difference.After);
-        _difference = TextDifference.Compare(Before, After);
+        _localization = localization;
+        Before = "";
+        After = "";
+        _difference = TextDifference.Compare(
+            Before,
+            After,
+            localization);
+        RefreshLocalizedText();
     }
 
     partial void OnDispositionChanged(AnalysisRepairDisposition value) => StateChanged?.Invoke();
     partial void OnIsAppliedChanged(bool value) => StateChanged?.Invoke();
 
-    private static string Format(
+    public void RefreshLocalizedText()
+    {
+        Before = Format(
+            Item.Differences,
+            difference => difference.Before);
+        After = Format(
+            Item.Differences,
+            difference => difference.After);
+        _difference = TextDifference.Compare(
+            Before,
+            After,
+            _localization);
+        OnPropertyChanged(nameof(DisplayPath));
+        OnPropertyChanged(nameof(Before));
+        OnPropertyChanged(nameof(After));
+        OnPropertyChanged(nameof(BeforeDifference));
+        OnPropertyChanged(nameof(AfterDifference));
+        OnPropertyChanged(nameof(UnicodeDifferenceDetails));
+    }
+
+    private string Format(
         IEnumerable<ItlMetadataDifference> differences,
         Func<ItlMetadataDifference, string?> select) =>
         string.Join(Environment.NewLine, differences.Select(difference =>
-            LocalizedText.Format(
+            Format(
                 "Health.Itl.DifferenceFormat",
                 difference.Field,
                 select(difference) ??
-                LocalizedText.Get("Health.Common.Missing"))));
+                Text("Health.Common.Missing"))));
+
+    private string Text(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string Format(
+        string key,
+        params object?[] arguments) =>
+        _localization?.Format(
+            key,
+            arguments) ??
+        LocalizedText.Format(
+            key,
+            arguments);
 }
 
 public sealed class ItlMetadataRepairCategoryGroupViewModel : ViewModelBase
@@ -2693,19 +2743,20 @@ public sealed class ItlMetadataRepairAlbumGroupViewModel : ViewModelBase
 
 public partial class AnalysisRepairItemViewModel : ViewModelBase
 {
-    private readonly TextDifferenceResult _difference;
+    private readonly ILocalizationService? _localization;
+    private TextDifferenceResult _difference;
 
     public AnalysisTagRepair Repair { get; }
     public string Path => Repair.Path;
     public string DisplayPath => ShowWhitespace(Repair.Path);
     public string Field => Repair.Kind == AnalysisRepairKind.Path
-        ? LocalizedText.Get("Health.Field.Path")
+        ? Text("Health.Field.Path")
         : Repair.TargetId3Version is not null
-            ? LocalizedText.Get("Health.Field.Id3TagVersion")
-            : LocalizedText.Get(
+            ? Text("Health.Field.Id3TagVersion")
+            : Text(
                 $"Settings.Choice.TagFields.{Repair.Field}");
     public string Before => string.IsNullOrEmpty(Repair.Before)
-        ? LocalizedText.Get("Health.Common.Missing")
+        ? Text("Health.Common.Missing")
         : ShowWhitespace(Repair.Before);
     public string After => ShowWhitespace(Repair.After);
     public IReadOnlyList<TextDifferenceSegment> BeforeDifference => _difference.Before;
@@ -2742,22 +2793,51 @@ public partial class AnalysisRepairItemViewModel : ViewModelBase
 
     public event Action? StateChanged;
 
-    public AnalysisRepairItemViewModel(AnalysisTagRepair repair)
+    public AnalysisRepairItemViewModel(
+        AnalysisTagRepair repair,
+        ILocalizationService? localization = null)
     {
         Repair = repair;
+        _localization = localization;
         Dispositions = Enum.GetValues<AnalysisRepairDisposition>()
             .Where(value => value != AnalysisRepairDisposition.Mixed &&
                 (repair.CanApply || value is not (AnalysisRepairDisposition.Active or
                     AnalysisRepairDisposition.Completed)))
             .ToArray();
-        _difference = TextDifference.Compare(repair.Before, repair.After);
+        _difference = TextDifference.Compare(
+            repair.Before,
+            repair.After,
+            localization);
     }
 
     partial void OnDispositionChanged(AnalysisRepairDisposition value) => StateChanged?.Invoke();
     partial void OnIsAppliedChanged(bool value) => StateChanged?.Invoke();
 
-    private static string ShowWhitespace(string value) =>
-        value.Replace("\u00A0", "⟦NBSP⟧", StringComparison.Ordinal);
+    public void RefreshLocalizedText()
+    {
+        _difference = TextDifference.Compare(
+            Repair.Before,
+            Repair.After,
+            _localization);
+        OnPropertyChanged(nameof(DisplayPath));
+        OnPropertyChanged(nameof(Field));
+        OnPropertyChanged(nameof(Before));
+        OnPropertyChanged(nameof(After));
+        OnPropertyChanged(nameof(BeforeDifference));
+        OnPropertyChanged(nameof(AfterDifference));
+        OnPropertyChanged(nameof(UnicodeDifferenceDetails));
+    }
+
+    private string ShowWhitespace(string value) =>
+        value.Replace(
+            "\u00A0",
+            Text(
+                "Health.TextDifference.NoBreakSpaceMarker"),
+            StringComparison.Ordinal);
+
+    private string Text(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
 }
 
 public partial class AnalysisConflictGroupViewModel : ViewModelBase

@@ -791,6 +791,11 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                 _fieldMappingStatusKey, _fieldMappingStatusArguments);
         foreach (IndexTargetEditorRow root in IndexTargets)
             root.RefreshPermissionSummary();
+        if (AdvancedIngestProfile is not null)
+            foreach (IngestRecipeEditorRow recipe in
+                     AdvancedIngestProfile.Recipes)
+                recipe.RefreshLocalizedText(
+                    _localization);
         OnPropertyChanged(nameof(ActiveConfigurationDisplay));
         OnPropertyChanged(nameof(EffectivePolicySummary));
         OnPropertyChanged(nameof(EffectivePolicyDetails));
@@ -953,6 +958,9 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             ingestProfile.Recipes.CollectionChanged += OnTrackedCollectionChanged;
             TrackRows(ingestProfile.Recipes);
         }
+        else if (row is IngestRecipeEditorRow recipe)
+            recipe.RefreshLocalizedText(
+                _localization);
     }
 
     private void UntrackRow(object row)

@@ -18,9 +18,10 @@
                        FontWeight="SemiBold" />
             <ComboBox x:Name="WorkbenchOperationPicker"
                       Classes="app"
-                      ItemsSource="{Binding OperationEditor.OperationDescriptors}"
-                      DisplayMemberBinding="{Binding DisplayName}"
-                      SelectedItem="{Binding OperationEditor.SelectedOperation, Mode=TwoWay}" />
+                      ItemsSource="{Binding OperationEditor.OperationChoices}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedValueBinding="{Binding Value}"
+                      SelectedValue="{Binding OperationEditor.SelectedOperation, Mode=TwoWay}" />
           </StackPanel>
           <StackPanel Width="210"
                       Margin="0,0,10,8"
@@ -112,8 +113,10 @@
                        FontSize="12"
                        FontWeight="SemiBold" />
             <ComboBox Classes="app"
-                      ItemsSource="{Binding OperationEditor.CaseModes}"
-                      SelectedItem="{Binding OperationEditor.SelectedCaseMode, Mode=TwoWay}" />
+                      ItemsSource="{Binding OperationEditor.CaseModeChoices}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedValueBinding="{Binding Value}"
+                      SelectedValue="{Binding OperationEditor.SelectedCaseMode, Mode=TwoWay}" />
           </StackPanel>
           <StackPanel x:Name="WorkbenchOperationSeparatorPanel"
                       Width="210"
@@ -137,8 +140,10 @@
                        FontSize="12"
                        FontWeight="SemiBold" />
             <ComboBox Classes="app"
-                      ItemsSource="{Binding OperationEditor.ValueOrders}"
-                      SelectedItem="{Binding OperationEditor.SelectedValueOrder, Mode=TwoWay}" />
+                      ItemsSource="{Binding OperationEditor.ValueOrderChoices}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedValueBinding="{Binding Value}"
+                      SelectedValue="{Binding OperationEditor.SelectedValueOrder, Mode=TwoWay}" />
           </StackPanel>
           <StackPanel x:Name="WorkbenchOperationSequencePanel"
                       Width="210"
@@ -172,8 +177,10 @@
                        FontSize="12"
                        FontWeight="SemiBold" />
             <ComboBox Classes="app"
-                      ItemsSource="{Binding OperationEditor.PathComponents}"
-                      SelectedItem="{Binding OperationEditor.SelectedPathComponent, Mode=TwoWay}" />
+                      ItemsSource="{Binding OperationEditor.PathComponentChoices}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedValueBinding="{Binding Value}"
+                      SelectedValue="{Binding OperationEditor.SelectedPathComponent, Mode=TwoWay}" />
           </StackPanel>
           <StackPanel x:Name="WorkbenchOperationParentLevelPanel"
                       Width="110"
@@ -234,8 +241,10 @@
             <ComboBox Classes="app"
                       Width="145"
                       Margin="0,0,8,7"
-                      ItemsSource="{Binding OperationEditor.ConditionOperators}"
-                      SelectedItem="{Binding OperationEditor.SelectedConditionOperator, Mode=TwoWay}" />
+                      ItemsSource="{Binding OperationEditor.ConditionOperatorChoices}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedValueBinding="{Binding Value}"
+                      SelectedValue="{Binding OperationEditor.SelectedConditionOperator, Mode=TwoWay}" />
             <TextBox Classes="app"
                      Width="180"
                      Margin="0,0,8,7"

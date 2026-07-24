@@ -2178,6 +2178,108 @@ public sealed class UiControlTests
     }
 
     [AvaloniaFact]
+    public void Online_metadata_diagnostic_tooltips_follow_async_and_recycled_rows()
+    {
+        using ServiceProvider services =
+            BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        MainWindow window =
+            services.GetRequiredService<MainWindow>();
+        try
+        {
+            window.Show();
+            INavigationService navigation =
+                services.GetRequiredService<
+                    INavigationService>();
+
+            navigation.Navigate(
+                ShellDestination.Library);
+            Dispatcher.UIThread.RunJobs();
+            LibraryView library =
+                Assert.IsType<LibraryView>(
+                    window.FindControl<
+                        ContentControl>(
+                        "ContentHost")!.Content);
+            AssertDiagnosticToolTipBinding(
+                library.FindControl<AppDataGrid>(
+                    "LibraryReleaseArtworkGrid")!);
+
+            navigation.Navigate(
+                ShellDestination.Workbench);
+            Dispatcher.UIThread.RunJobs();
+            WorkbenchView workbench =
+                Assert.IsType<WorkbenchView>(
+                    window.FindControl<
+                        ContentControl>(
+                        "ContentHost")!.Content);
+            services.GetRequiredService<
+                    WorkbenchViewModel>()
+                .SelectedSection =
+                    WorkbenchSection.OnlineMetadata;
+            Dispatcher.UIThread.RunJobs();
+            AssertDiagnosticToolTipBinding(
+                workbench.FindControl<AppDataGrid>(
+                    "ReleaseArtworkGrid")!);
+        }
+        finally
+        {
+            window.Hide();
+        }
+
+        static void AssertDiagnosticToolTipBinding(
+            AppDataGrid grid)
+        {
+            DataGridTemplateColumn statusColumn =
+                Assert.IsType<DataGridTemplateColumn>(
+                    grid.Columns.Single(column =>
+                        grid.KeyFor(column) ==
+                        "Status"));
+            CoverArtCandidateRow first =
+                CreateArtworkRow("cover-1");
+            TextBlock cell =
+                Assert.IsType<TextBlock>(
+                    statusColumn.CellTemplate!
+                        .Build(first));
+            cell.DataContext = first;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Null(
+                ToolTip.GetTip(cell));
+
+            first.ThumbnailDiagnosticDetail =
+                "HTTP 503 for cover-1";
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(
+                first.ThumbnailDiagnosticDetail,
+                ToolTip.GetTip(cell));
+
+            CoverArtCandidateRow second =
+                CreateArtworkRow("cover-2");
+            second.ThumbnailDiagnosticDetail =
+                "HTTP 404 for cover-2";
+            cell.DataContext = second;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(
+                second.ThumbnailDiagnosticDetail,
+                ToolTip.GetTip(cell));
+        }
+
+        static CoverArtCandidateRow CreateArtworkRow(
+            string id) =>
+            new(
+                new CoverArtArchiveCandidate(
+                    Guid.NewGuid(),
+                    id,
+                    new Uri(
+                        $"https://example.test/{id}.jpg"),
+                    null,
+                    [],
+                    IsFront: false,
+                    IsBack: false,
+                    Approved: false,
+                    Comment: null));
+    }
+
+    [AvaloniaFact]
     public void Workbench_sections_are_extracted_and_narrow_forms_stack()
     {
         using ServiceProvider services =
@@ -2649,8 +2751,10 @@ public sealed class UiControlTests
                 view.FindControl<ComboBox>(
                     "WorkbenchOperationPicker")!;
             operationPicker.SelectedItem =
-                model.OperationEditor.OperationDescriptors.Single(
-                    descriptor => descriptor.DisplayName == "Assign");
+                model.OperationEditor.OperationChoices.Single(
+                    choice =>
+                        choice.Value.Kind ==
+                        MetadataOperationKind.Assign);
             view.FindControl<ComboBox>(
                     "WorkbenchOperationFieldPicker")!
                 .SelectedItem =

@@ -94,7 +94,10 @@ public sealed class FilePickerService(WindowContext context) : IFilePickerServic
             Title = title,
             SuggestedFileName = suggestedName,
             DefaultExtension = normalized.TrimStart('.'),
-            FileTypeChoices = [new FilePickerFileType($"{normalized.TrimStart('.').ToUpperInvariant()} file")
+            FileTypeChoices = [new FilePickerFileType(
+                LocalizedText.Format(
+                    "Dialog.FileType.Format",
+                    normalized.TrimStart('.').ToUpperInvariant()))
             {
                 Patterns = [$"*{normalized}"],
             }],
@@ -120,7 +123,10 @@ public sealed class WorkflowFileService(FilePickerService files) : LegacyFiles
 
     public Task<string?> PickSaveFileAsync(string title, string? suggestedName = null,
         string? defaultExtension = null, IReadOnlyList<LegacyFilter>? filters = null) =>
-        files.SaveFileAsync(title, suggestedName ?? "export",
+        files.SaveFileAsync(
+            title,
+            suggestedName ?? LocalizedText.Get(
+                "Dialog.DefaultExportFileName"),
             defaultExtension ?? filters?.FirstOrDefault()?.Patterns.FirstOrDefault() ?? ".dat");
 }
 

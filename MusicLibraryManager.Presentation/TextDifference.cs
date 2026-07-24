@@ -12,7 +12,10 @@ internal sealed record TextDifferenceResult(
 
 internal static class TextDifference
 {
-    public static TextDifferenceResult Compare(string? before, string after)
+    public static TextDifferenceResult Compare(
+        string? before,
+        string after,
+        ILocalizationService? localization = null)
     {
         Rune[] beforeRunes = (before ?? "").EnumerateRunes().ToArray();
         Rune[] afterRunes = after.EnumerateRunes().ToArray();
@@ -43,11 +46,27 @@ internal static class TextDifference
         bool hasDifference = !string.Equals(before, after, StringComparison.Ordinal);
         return new TextDifferenceResult(
             BuildSegments(beforeRunes, beforeChanged,
-                string.IsNullOrEmpty(before) ? "(missing)" : null, hasDifference),
+                string.IsNullOrEmpty(before)
+                    ? Text(
+                        localization,
+                        "Health.TextDifference.Missing")
+                    : null,
+                hasDifference,
+                localization),
             BuildSegments(afterRunes, afterChanged,
-                after.Length == 0 ? "(empty)" : null, hasDifference),
+                after.Length == 0
+                    ? Text(
+                        localization,
+                        "Health.TextDifference.Empty")
+                    : null,
+                hasDifference,
+                localization),
             hasDifference ? BuildUnicodeDetails(
-                beforeRunes, beforeChanged, afterRunes, afterChanged) : null);
+                beforeRunes,
+                beforeChanged,
+                afterRunes,
+                afterChanged,
+                localization) : null);
     }
 
     private static int[,] LongestCommonSubsequence(Rune[] before, Rune[] after)
@@ -65,7 +84,8 @@ internal static class TextDifference
         Rune[] runes,
         bool[] changed,
         string? emptyLabel,
-        bool hasDifference)
+        bool hasDifference,
+        ILocalizationService? localization)
     {
         if (runes.Length == 0)
             return emptyLabel is null
@@ -79,13 +99,21 @@ internal static class TextDifference
         {
             if (changed[index] != segmentChanged)
             {
-                segments.Add(new TextDifferenceSegment(ShowWhitespace(text.ToString()), segmentChanged));
+                segments.Add(new TextDifferenceSegment(
+                    ShowWhitespace(
+                        text.ToString(),
+                        localization),
+                    segmentChanged));
                 text.Clear();
                 segmentChanged = changed[index];
             }
             text.Append(runes[index].ToString());
         }
-        segments.Add(new TextDifferenceSegment(ShowWhitespace(text.ToString()), segmentChanged));
+        segments.Add(new TextDifferenceSegment(
+            ShowWhitespace(
+                text.ToString(),
+                localization),
+            segmentChanged));
         return segments;
     }
 
@@ -93,60 +121,142 @@ internal static class TextDifference
         Rune[] before,
         bool[] beforeChanged,
         Rune[] after,
-        bool[] afterChanged) =>
-        $"Before: {DescribeChanged(before, beforeChanged)}\n" +
-        $"After:  {DescribeChanged(after, afterChanged)}";
+        bool[] afterChanged,
+        ILocalizationService? localization) =>
+        Format(
+            localization,
+            "Health.TextDifference.UnicodeDetails",
+            DescribeChanged(
+                before,
+                beforeChanged,
+                localization),
+            DescribeChanged(
+                after,
+                afterChanged,
+                localization));
 
-    private static string DescribeChanged(Rune[] runes, bool[] changed)
+    private static string DescribeChanged(
+        Rune[] runes,
+        bool[] changed,
+        ILocalizationService? localization)
     {
         Rune[] differences = runes.Where((_, index) => changed[index]).ToArray();
         if (differences.Length == 0)
-            return "∅ (no character)";
+            return Text(
+                localization,
+                "Health.TextDifference.NoCharacter");
 
         const int limit = 12;
-        string description = string.Join(" · ", differences.Take(limit).Select(Describe));
+        string description = string.Join(
+            " · ",
+            differences.Take(limit).Select(
+                rune => Describe(
+                    rune,
+                    localization)));
         return differences.Length <= limit
             ? description
-            : $"{description} · … ({differences.Length - limit} more)";
+            : description +
+              FormatCount(
+                  localization,
+                  "Health.TextDifference.More",
+                  differences.Length - limit);
     }
 
-    private static string Describe(Rune rune)
+    private static string Describe(
+        Rune rune,
+        ILocalizationService? localization)
     {
         string codePoint = $"U+{rune.Value:X4}";
         string? knownName = rune.Value switch
         {
-            0x0009 => "CHARACTER TABULATION",
-            0x000A => "LINE FEED",
-            0x000D => "CARRIAGE RETURN",
-            0x0020 => "SPACE",
-            0x002D => "HYPHEN-MINUS",
-            0x00A0 => "NO-BREAK SPACE",
-            0x2007 => "FIGURE SPACE",
-            0x200B => "ZERO WIDTH SPACE",
-            0x200C => "ZERO WIDTH NON-JOINER",
-            0x200D => "ZERO WIDTH JOINER",
-            0x2010 => "HYPHEN",
-            0x2011 => "NON-BREAKING HYPHEN",
-            0x2018 => "LEFT SINGLE QUOTATION MARK",
-            0x2019 => "RIGHT SINGLE QUOTATION MARK",
-            0x201C => "LEFT DOUBLE QUOTATION MARK",
-            0x201D => "RIGHT DOUBLE QUOTATION MARK",
-            0x202F => "NARROW NO-BREAK SPACE",
-            0x2212 => "MINUS SIGN",
-            0xFEFF => "ZERO WIDTH NO-BREAK SPACE",
+            0x0009 => "CharacterTabulation",
+            0x000A => "LineFeed",
+            0x000D => "CarriageReturn",
+            0x0020 => "Space",
+            0x002D => "HyphenMinus",
+            0x00A0 => "NoBreakSpace",
+            0x2007 => "FigureSpace",
+            0x200B => "ZeroWidthSpace",
+            0x200C => "ZeroWidthNonJoiner",
+            0x200D => "ZeroWidthJoiner",
+            0x2010 => "Hyphen",
+            0x2011 => "NonBreakingHyphen",
+            0x2018 => "LeftSingleQuotationMark",
+            0x2019 => "RightSingleQuotationMark",
+            0x201C => "LeftDoubleQuotationMark",
+            0x201D => "RightDoubleQuotationMark",
+            0x202F => "NarrowNoBreakSpace",
+            0x2212 => "MinusSign",
+            0xFEFF => "ZeroWidthNoBreakSpace",
             _ => null,
         };
         if (knownName is not null)
-            return $"{codePoint} {knownName}";
+            return Format(
+                localization,
+                "Health.TextDifference.KnownCodePoint",
+                codePoint,
+                Text(
+                    localization,
+                    $"Health.TextDifference.UnicodeName.{knownName}"));
 
         UnicodeCategory category = Rune.GetUnicodeCategory(rune);
+        string categoryName = Text(
+            localization,
+            $"Health.TextDifference.UnicodeCategory.{category}");
         return category is UnicodeCategory.Control or UnicodeCategory.Format or
             UnicodeCategory.NonSpacingMark or UnicodeCategory.SpacingCombiningMark or
             UnicodeCategory.EnclosingMark
-            ? $"{codePoint} ({category})"
-            : $"{codePoint} ‘{rune}’ ({category})";
+            ? Format(
+                localization,
+                "Health.TextDifference.CategoryCodePoint",
+                codePoint,
+                categoryName)
+            : Format(
+                localization,
+                "Health.TextDifference.VisibleCodePoint",
+                codePoint,
+                rune,
+                categoryName);
     }
 
-    private static string ShowWhitespace(string value) =>
-        value.Replace("\u00A0", "⟦NBSP⟧", StringComparison.Ordinal);
+    private static string ShowWhitespace(
+        string value,
+        ILocalizationService? localization) =>
+        value.Replace(
+            "\u00A0",
+            Text(
+                localization,
+                "Health.TextDifference.NoBreakSpaceMarker"),
+            StringComparison.Ordinal);
+
+    private static string Text(
+        ILocalizationService? localization,
+        string key) =>
+        localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private static string Format(
+        ILocalizationService? localization,
+        string key,
+        params object?[] arguments) =>
+        localization?.Format(
+            key,
+            arguments) ??
+        LocalizedText.Format(
+            key,
+            arguments);
+
+    private static string FormatCount(
+        ILocalizationService? localization,
+        string key,
+        long count,
+        params object?[] arguments) =>
+        localization?.FormatCount(
+            key,
+            count,
+            arguments) ??
+        LocalizedText.FormatCount(
+            key,
+            count,
+            arguments);
 }

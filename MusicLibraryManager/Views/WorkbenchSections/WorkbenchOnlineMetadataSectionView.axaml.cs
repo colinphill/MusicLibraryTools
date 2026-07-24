@@ -28,6 +28,10 @@ public partial class WorkbenchOnlineMetadataSectionView :
 
     private void ConfigureColumns()
     {
+        IDataTemplate audioStatusTemplate =
+            DiagnosticTextTemplate<AudioDiscoveryRow>(
+                nameof(AudioDiscoveryRow.Status),
+                nameof(AudioDiscoveryRow.DiagnosticDetail));
         AudioDiscoveryGrid.ConfigureColumns(
         [
             new("File", L("Workbench.Grid.Header.File"), "File", 220, 130),
@@ -40,7 +44,13 @@ public partial class WorkbenchOnlineMetadataSectionView :
                 "MusicBrainzRecordingIds",
                 390,
                 220),
-            new("Status", L("Workbench.Grid.Header.Status"), "Status", 280, 160),
+            new(
+                "Status",
+                L("Workbench.Grid.Header.Status"),
+                "Status",
+                280,
+                160,
+                CellTemplate: audioStatusTemplate),
         ]);
         ReleaseDiscoveryGrid.ConfigureColumns(
         [
@@ -157,6 +167,10 @@ public partial class WorkbenchOnlineMetadataSectionView :
 
     private void ConfigureDiscogsTrackMappingGrid()
     {
+        IDataTemplate statusTemplate =
+            DiagnosticTextTemplate<DiscogsTrackMappingRow>(
+                nameof(DiscogsTrackMappingRow.Status),
+                nameof(DiscogsTrackMappingRow.DiagnosticDetail));
         var includeTemplate =
             new FuncDataTemplate<DiscogsTrackMappingRow>(
                 (_, _) =>
@@ -223,17 +237,27 @@ public partial class WorkbenchOnlineMetadataSectionView :
                 Sortable: false),
             new("Position", L("Workbench.Grid.Header.Position"), "Position", 80, 62),
             new(
-                L("Workbench.Grid.Header.Confidence"),
                 "Confidence",
+                L("Workbench.Grid.Header.Confidence"),
                 "Confidence",
                 100,
                 76),
-            new("Status", L("Workbench.Grid.Header.Reason"), "Status", 260, 150),
+            new(
+                "Status",
+                L("Workbench.Grid.Header.Reason"),
+                "Status",
+                260,
+                150,
+                CellTemplate: statusTemplate),
         ]);
     }
 
     private void ConfigureReleaseTrackMappingGrid()
     {
+        IDataTemplate statusTemplate =
+            DiagnosticTextTemplate<MusicBrainzTrackMappingRow>(
+                nameof(MusicBrainzTrackMappingRow.Status),
+                nameof(MusicBrainzTrackMappingRow.DiagnosticDetail));
         var includeTemplate =
             new FuncDataTemplate<
                 MusicBrainzTrackMappingRow>(
@@ -301,17 +325,31 @@ public partial class WorkbenchOnlineMetadataSectionView :
                 CellTemplate: trackTemplate,
                 Sortable: false),
             new(
-                L("Workbench.Grid.Header.Confidence"),
                 "Confidence",
+                L("Workbench.Grid.Header.Confidence"),
                 "Confidence",
                 110,
                 80),
-            new("Status", L("Workbench.Grid.Header.Reason"), "Status", 310, 170),
+            new(
+                "Status",
+                L("Workbench.Grid.Header.Reason"),
+                "Status",
+                310,
+                170,
+                CellTemplate: statusTemplate),
         ]);
     }
 
     private void ConfigureReleaseArtworkGrid()
     {
+        IDataTemplate statusTemplate =
+            DiagnosticTextTemplate<CoverArtCandidateRow>(
+                nameof(
+                    CoverArtCandidateRow
+                        .ThumbnailStatus),
+                nameof(
+                    CoverArtCandidateRow
+                        .ThumbnailDiagnosticDetail));
         var thumbnailTemplate =
             new FuncDataTemplate<CoverArtCandidateRow>(
                 (_, _) =>
@@ -351,13 +389,36 @@ public partial class WorkbenchOnlineMetadataSectionView :
                 L("Workbench.Grid.Header.Thumbnail"),
                 "ThumbnailStatus",
                 150,
-                90),
+                90,
+                CellTemplate: statusTemplate),
             new("Id", L("Workbench.Grid.Header.ArchiveId"), "Id", 150, 100),
         ]);
     }
 
     private string L(string key) =>
         _localization.Get(key);
+
+    private static IDataTemplate DiagnosticTextTemplate<T>(
+        string textProperty,
+        string diagnosticDetailProperty)
+        where T : class =>
+        new FuncDataTemplate<T>(
+            (_, _) =>
+            {
+                var text = new TextBlock
+                {
+                    TextWrapping =
+                        TextWrapping.Wrap,
+                };
+                text.Bind(
+                    TextBlock.TextProperty,
+                    new Binding(textProperty));
+                text.Bind(
+                    ToolTip.TipProperty,
+                    new Binding(
+                        diagnosticDetailProperty));
+                return text;
+            });
 
     private void OnCultureChanged(
         object? sender,

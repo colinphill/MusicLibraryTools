@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using MetadataCaching;
@@ -98,6 +99,129 @@ public sealed class PresentationTests
         Assert.True(service.Cancel(cancellable));
         Assert.True(cancelled);
         Assert.False(service.Current!.CanCancel);
+    }
+
+    [Fact]
+    public async Task Activity_terminal_state_ignores_late_progress_reports()
+    {
+        for (int iteration = 0;
+             iteration < 100;
+             iteration++)
+        {
+            var service =
+                new AppActivityService();
+            Guid id = service.Start(
+                "Save tags",
+                "Preparing");
+
+            await Task.WhenAll(
+                Task.Run(() =>
+                {
+                    for (int update = 0;
+                         update < 25;
+                         update++)
+                        service.Report(
+                            id,
+                            $"Progress {update}",
+                            update / 25d);
+                },
+                TestContext.Current
+                    .CancellationToken),
+                Task.Run(() =>
+                    service.Finish(
+                        id,
+                        "Complete"),
+                    TestContext.Current
+                        .CancellationToken));
+
+            service.Report(
+                id,
+                "Late progress",
+                0.5);
+            AppActivity activity =
+                Assert.Single(
+                    service.Activities);
+            Assert.Equal(
+                AppActivityState.Completed,
+                activity.State);
+            Assert.Equal(
+                "Complete",
+                activity.Message);
+            Assert.False(
+                activity.CanCancel);
+        }
+    }
+
+    [Fact]
+    public async Task Activity_notifications_use_the_configured_context()
+    {
+        var context =
+            new QueuedSynchronizationContext();
+        var service =
+            new AppActivityService(
+                notificationContext: context);
+        int? changedThread = null;
+        service.Changed += () =>
+            changedThread =
+                Environment.CurrentManagedThreadId;
+
+        Guid id = await Task.Run(
+            () => service.Start(
+                "Save tags",
+                "Preparing"),
+            TestContext.Current
+                .CancellationToken);
+
+        Assert.Empty(service.Activities);
+        Assert.Null(service.Current);
+        int firstDispatchThread =
+            Environment.CurrentManagedThreadId;
+        context.RunAll();
+        Assert.Equal(
+            firstDispatchThread,
+            changedThread);
+        Assert.Equal(
+            AppActivityState.Running,
+            Assert.Single(
+                service.Activities).State);
+
+        await Task.Run(
+            () =>
+            {
+                service.Report(
+                    id,
+                    "Writing",
+                    0.5);
+                service.Finish(
+                    id,
+                    "Complete");
+            },
+            TestContext.Current
+                .CancellationToken);
+
+        Assert.Equal(
+            AppActivityState.Running,
+            service.Current?.State);
+        Assert.Equal(
+            AppActivityState.Running,
+            Assert.Single(
+                service.Activities).State);
+        int secondDispatchThread =
+            Environment.CurrentManagedThreadId;
+        context.RunAll();
+        AppActivity activity =
+            Assert.Single(
+                service.Activities);
+        Assert.Equal(
+            AppActivityState.Completed,
+            activity.State);
+        Assert.Equal(
+            "Complete",
+            activity.Message);
+        Assert.Null(service.Current);
+        Assert.Equal(
+            secondDispatchThread,
+            changedThread);
     }
 
     [Fact]
@@ -2016,7 +2140,10 @@ public sealed class PresentationTests
         Assert.Null(closed);
         Assert.True(viewModel.IsConfirmingSave);
         Assert.Contains(
-            "2 file(s) and 5 field change(s)",
+            "Files with changes: 2",
+            viewModel.StatusMessage);
+        Assert.Contains(
+            "field changes: 5",
             viewModel.StatusMessage);
         Assert.Contains(
             "recovery journals",
@@ -3114,7 +3241,7 @@ public sealed class PresentationTests
         Assert.Equal(1, row.Number);
         Assert.Equal("Set reviewed title", row.Operation);
         Assert.Contains("Set Title", row.Target);
-        Assert.Equal("1 changed file(s)", row.AppliesTo);
+        Assert.Equal("1 changed file", row.AppliesTo);
     }
 
     [Fact]
@@ -3153,7 +3280,7 @@ public sealed class PresentationTests
         Assert.Equal("ID3 version", row.Field);
         Assert.Equal("ID3v2.4", row.Before);
         Assert.Equal(
-            "ID3v2.3 (1 compatibility issue(s))",
+            "ID3v2.3 (1 compatibility issue)",
             row.After);
     }
 
@@ -3429,7 +3556,12 @@ public sealed class PresentationTests
             .Single(row => row.Path == @"C:\music\one.flac");
         Assert.True(mapping.IsIncluded);
         Assert.Equal("1-1", mapping.Position);
-        Assert.Contains("92.0% AcoustID", mapping.Status);
+        Assert.Equal(
+            "Exact MusicBrainz recording ID",
+            mapping.Status);
+        Assert.Contains(
+            "92.0% AcoustID",
+            mapping.DiagnosticDetail);
 
         await viewModel.PreviewLibraryReleaseMetadataCommand.ExecuteAsync(null);
 
@@ -3595,6 +3727,39 @@ public sealed class PresentationTests
             new TagFieldValue(TagFields.Artist, artist),
         ],
     };
+}
+
+internal sealed class QueuedSynchronizationContext :
+    SynchronizationContext
+{
+    private readonly ConcurrentQueue<(
+        SendOrPostCallback Callback,
+        object? State)> _callbacks = [];
+
+    public override void Post(
+        SendOrPostCallback callback,
+        object? state) =>
+        _callbacks.Enqueue(
+            (callback, state));
+
+    public void RunAll()
+    {
+        SynchronizationContext? previous =
+            Current;
+        SetSynchronizationContext(this);
+        try
+        {
+            while (_callbacks.TryDequeue(
+                       out var pending))
+                pending.Callback(
+                    pending.State);
+        }
+        finally
+        {
+            SetSynchronizationContext(
+                previous);
+        }
+    }
 }
 
 internal sealed class FakeSettings : IAppSettings

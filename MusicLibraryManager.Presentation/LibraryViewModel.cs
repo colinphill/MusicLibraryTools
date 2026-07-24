@@ -328,6 +328,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         _platform = platform;
         _history = history;
         _localization = localization;
+        ReleaseSearch = new(localization);
+        DiscogsSearch = new(localization);
         SetStatusText(
             "Library.Status.LoadConfiguration");
         SetOperationStatus(
@@ -335,7 +337,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         OperationEditor = new(
             operationCatalog ?? new MetadataOperationCatalog(),
             MetadataOperationSurface.Library,
-            recipeStore);
+            recipeStore,
+            localization);
         RepresentativePreview = metadataOperations is null
             ? null
             : new(metadataOperations);
@@ -455,8 +458,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     public ObservableCollection<MetadataPreviewRow> OperationPreviewChanges { get; } = [];
     public ObservableCollection<MetadataPreviewRow> PendingChanges { get; } = [];
     public MusicBrainzImportSelectionViewModel ReleaseImport { get; } = new();
-    public MusicBrainzReleaseSearchViewModel ReleaseSearch { get; } = new();
-    public DiscogsReleaseSearchViewModel DiscogsSearch { get; } = new();
+    public MusicBrainzReleaseSearchViewModel ReleaseSearch { get; }
+    public DiscogsReleaseSearchViewModel DiscogsSearch { get; }
     public DiscogsImportSelectionViewModel DiscogsImport { get; } = new();
     public ReportEditorViewModel ReportEditor { get; } = new();
     public PlaylistEditorViewModel PlaylistEditor { get; } = new();
@@ -901,7 +904,10 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                     CreateOperationProgress(),
                     _operationCancellation!.Token);
             _libraryOperationPlan = plan;
-            MetadataPreviewRowBuilder.Populate(OperationPreviewChanges, plan);
+            MetadataPreviewRowBuilder.Populate(
+                OperationPreviewChanges,
+                plan,
+                _localization);
             HasApplicableOperationPreview = plan.CanApply;
             int blockers = plan.Files.SelectMany(file => file.Issues)
                 .Count(issue => issue.Severity == OperationIssueSeverity.Blocker);
@@ -1014,7 +1020,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             _libraryOperationPlan = plan;
             MetadataPreviewRowBuilder.Populate(
                 OperationPreviewChanges,
-                plan);
+                plan,
+                _localization);
             HasApplicableOperationPreview = plan.CanApply;
             int blockers = plan.Files
                 .SelectMany(file => file.Issues)
@@ -1107,7 +1114,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             _libraryOperationPlan = plan;
             MetadataPreviewRowBuilder.Populate(
                 OperationPreviewChanges,
-                plan);
+                plan,
+                _localization);
             HasApplicableOperationPreview = plan.CanApply;
             int blockers = plan.Files
                 .SelectMany(file => file.Issues)
@@ -1179,7 +1187,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             }
             MetadataPreviewRowBuilder.Populate(
                 OperationPreviewChanges,
-                _libraryOperationPlan);
+                _libraryOperationPlan,
+                _localization);
             HasApplicableOperationPreview =
                 _libraryOperationPlan.CanApply;
             if (!_libraryOperationPlan.CanApply)
@@ -1366,7 +1375,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             _libraryOperationPlan = plan;
             MetadataPreviewRowBuilder.Populate(
                 OperationPreviewChanges,
-                plan);
+                plan,
+                _localization);
             HasApplicableOperationPreview =
                 plan.CanApply;
             SetOperationStatus(
@@ -1417,7 +1427,10 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             ReleaseMatches.Clear();
             SelectedRelease = null;
             ClearReleaseTrackMappings();
-            foreach (AudioDiscoveryRow row in AudioDiscoveryRows.Create(result))
+            foreach (AudioDiscoveryRow row in
+                     AudioDiscoveryRows.Create(
+                         result,
+                         _localization))
                 AudioMatches.Add(row);
             SelectedAudioMatch = AudioMatches.FirstOrDefault();
             int issues = result.Files.Sum(file => file.Issues.Length);
@@ -1454,14 +1467,19 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         try
         {
             OperationRecipe recipe =
-                AudioDiscoveryRows.CreateTagRecipe(SelectedAudioMatch);
+                AudioDiscoveryRows.CreateTagRecipe(
+                    SelectedAudioMatch,
+                    _localization);
             MetadataOperationPlan plan = await _metadataOperations.PreviewAsync(
                 [SelectedAudioMatch.Path],
                 recipe,
                 CreateOperationProgress(),
                 _operationCancellation!.Token);
             _libraryOperationPlan = plan;
-            MetadataPreviewRowBuilder.Populate(OperationPreviewChanges, plan);
+            MetadataPreviewRowBuilder.Populate(
+                OperationPreviewChanges,
+                plan,
+                _localization);
             HasApplicableOperationPreview = plan.CanApply;
             SetOperationStatus(
                 "Library.Operation.Audio.IdentifiersReady");
@@ -1707,7 +1725,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             ClearDiscogsTrackMappings();
             foreach (DiscogsTrackMatch match in mapping.Files)
             {
-                var row = new DiscogsTrackMappingRow(match);
+                var row = new DiscogsTrackMappingRow(
+                    match,
+                    _localization);
                 row.PropertyChanged += OnDiscogsMappingChanged;
                 DiscogsTrackMappings.Add(row);
             }
@@ -1768,7 +1788,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                     _operationCancellation!.Token);
             _libraryOperationPlan = plan;
             MetadataPreviewRowBuilder.Populate(
-                OperationPreviewChanges, plan);
+                OperationPreviewChanges,
+                plan,
+                _localization);
             HasApplicableOperationPreview = plan.CanApply;
             SetOperationStatus(
                 "Library.Operation.Discogs.MetadataReady");
@@ -1836,7 +1858,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                     _operationCancellation.Token);
             _libraryOperationPlan = plan;
             MetadataPreviewRowBuilder.Populate(
-                OperationPreviewChanges, plan);
+                OperationPreviewChanges,
+                plan,
+                _localization);
             HasApplicableOperationPreview = plan.CanApply;
             SetOperationStatus(
                 "Library.Operation.Discogs.ArtworkReady");
@@ -2220,7 +2244,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                     _operationCancellation!.Token);
             ArtworkMatches.Clear();
             foreach (CoverArtArchiveCandidate candidate in result.Images)
-                ArtworkMatches.Add(new(candidate));
+                ArtworkMatches.Add(new(
+                    candidate,
+                    _localization));
             var thumbnailDiagnostics =
                 new List<string>();
             for (int index = 0; index < ArtworkMatches.Count; index++)
@@ -2245,17 +2271,21 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                     row.ThumbnailSource =
                         await _thumbnails.CreateImageSourceAsync(
                             download.Data, 180, _operationCancellation.Token);
-                    row.ThumbnailStatus = download.FromCache
-                        ? L("Library.Artwork.Cached")
-                        : LC(
+                    if (download.FromCache)
+                        row.SetThumbnailStatus(
+                            "Library.Artwork.Cached");
+                    else
+                        row.SetCountStatus(
                             "Library.Artwork.Bytes",
                             download.Data.Length);
                 }
                 catch (Exception error) when (
                     error is not OperationCanceledException)
                 {
-                    row.ThumbnailStatus = L(
+                    row.SetThumbnailStatus(
                         "Library.Artwork.ThumbnailFailed");
+                    row.ThumbnailDiagnosticDetail =
+                        error.Message;
                     thumbnailDiagnostics.Add(
                         error.Message);
                 }
@@ -2336,7 +2366,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                     _operationCancellation.Token);
             _libraryOperationPlan = plan;
             MetadataPreviewRowBuilder.Populate(
-                OperationPreviewChanges, plan);
+                OperationPreviewChanges,
+                plan,
+                _localization);
             HasApplicableOperationPreview = plan.CanApply;
             SetOperationStatus(
                 "Library.Operation.Artwork.ReleaseReady");
@@ -2440,7 +2472,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                     _operationCancellation.Token);
             _libraryOperationPlan = plan;
             MetadataPreviewRowBuilder.Populate(
-                OperationPreviewChanges, plan);
+                OperationPreviewChanges,
+                plan,
+                _localization);
             HasApplicableOperationPreview = plan.CanApply;
             int blockers = plan.Files.SelectMany(file => file.Issues)
                 .Count(issue =>
@@ -2524,7 +2558,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             ClearReleaseTrackMappings();
             foreach (MusicBrainzTrackMatch match in mapping.Files)
             {
-                var mappingRow = new MusicBrainzTrackMappingRow(match);
+                var mappingRow = new MusicBrainzTrackMappingRow(
+                    match,
+                    _localization);
                 mappingRow.PropertyChanged += OnReleaseMappingChanged;
                 ReleaseTrackMappings.Add(mappingRow);
             }
@@ -2582,7 +2618,10 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                     CreateOperationProgress(),
                     _operationCancellation!.Token);
             _libraryOperationPlan = plan;
-            MetadataPreviewRowBuilder.Populate(OperationPreviewChanges, plan);
+            MetadataPreviewRowBuilder.Populate(
+                OperationPreviewChanges,
+                plan,
+                _localization);
             HasApplicableOperationPreview = plan.CanApply;
             SetOperationStatus(
                 "Library.Operation.MusicBrainz.MetadataReady");
@@ -3747,6 +3786,22 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             nameof(EmptyStateMessage));
         OnPropertyChanged(
             nameof(EmptyStateActionLabel));
+        foreach (AudioDiscoveryRow row in AudioMatches)
+            row.RefreshLocalizedText();
+        foreach (MusicBrainzTrackMappingRow row in
+                 ReleaseTrackMappings)
+            row.RefreshLocalizedText();
+        foreach (DiscogsTrackMappingRow row in
+                 DiscogsTrackMappings)
+            row.RefreshLocalizedText();
+        foreach (CoverArtCandidateRow row in
+                 ArtworkMatches)
+            row.RefreshLocalizedText();
+        if (_libraryOperationPlan is not null)
+            MetadataPreviewRowBuilder.Populate(
+                OperationPreviewChanges,
+                _libraryOperationPlan,
+                _localization);
     }
 
     private static string ColumnResourceKey(

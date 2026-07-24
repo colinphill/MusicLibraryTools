@@ -395,6 +395,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         _ingestHandoff = ingestHandoff;
         _navigation = navigation;
         _localization = localization;
+        ReleaseSearch = new(localization);
+        DiscogsSearch = new(localization);
         if (_inspector is not null)
         {
             _inspector.FilesChanged += OnInspectorFilesChanged;
@@ -416,7 +418,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         PreviewChanges.CollectionChanged +=
             (_, _) => RebuildPendingChanges();
         OperationEditor = new(
-            operationCatalog, MetadataOperationSurface.Workbench, recipeStore);
+            operationCatalog,
+            MetadataOperationSurface.Workbench,
+            recipeStore,
+            localization);
         RepresentativePreview =
             new(_operations, localization);
         FileOperations = fileOperations is null
@@ -542,8 +547,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         }
     }
     public MusicBrainzImportSelectionViewModel ReleaseImport { get; } = new();
-    public MusicBrainzReleaseSearchViewModel ReleaseSearch { get; } = new();
-    public DiscogsReleaseSearchViewModel DiscogsSearch { get; } = new();
+    public MusicBrainzReleaseSearchViewModel ReleaseSearch { get; }
+    public DiscogsReleaseSearchViewModel DiscogsSearch { get; }
     public DiscogsImportSelectionViewModel DiscogsImport { get; } = new();
     public ReportEditorViewModel ReportEditor { get; }
     public PlaylistEditorViewModel PlaylistEditor { get; }
@@ -1420,9 +1425,14 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             MetadataOperationPlan plan = await action(
                 CreateProgress(), _cancellation!.Token);
             _plan = plan;
-            MetadataPreviewRowBuilder.Populate(PreviewChanges, plan);
+            MetadataPreviewRowBuilder.Populate(
+                PreviewChanges,
+                plan,
+                _localization);
             PendingMetadataOperationRowBuilder.Populate(
-                PendingOperations, plan);
+                PendingOperations,
+                plan,
+                _localization);
             HasApplicablePreview = plan.CanApply;
             int blockers = plan.Files.SelectMany(file => file.Issues)
                 .Count(issue => issue.Severity == OperationIssueSeverity.Blocker);
@@ -1477,10 +1487,12 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             }
             MetadataPreviewRowBuilder.Populate(
                 PreviewChanges,
-                _plan);
+                _plan,
+                _localization);
             PendingMetadataOperationRowBuilder.Populate(
                 PendingOperations,
-                _plan);
+                _plan,
+                _localization);
             HasApplicablePreview = _plan.CanApply;
             if (!_plan.CanApply)
             {
@@ -1670,7 +1682,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         if (SelectedAudioMatch is null)
             return;
         OperationRecipe recipe =
-            AudioDiscoveryRows.CreateTagRecipe(SelectedAudioMatch);
+            AudioDiscoveryRows.CreateTagRecipe(
+                SelectedAudioMatch,
+                _localization);
         await PreviewAsync((progress, ct) => _operations.PreviewAsync(
             [SelectedAudioMatch.Path], recipe, progress, ct));
         SetStatus(
@@ -1909,7 +1923,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             ClearDiscogsTrackMappings();
             foreach (DiscogsTrackMatch match in mapping.Files)
             {
-                var row = new DiscogsTrackMappingRow(match);
+                var row = new DiscogsTrackMappingRow(
+                    match,
+                    _localization);
                 row.PropertyChanged += OnDiscogsMappingChanged;
                 DiscogsTrackMappings.Add(row);
             }
@@ -2355,7 +2371,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                     _cancellation!.Token);
             ArtworkMatches.Clear();
             foreach (CoverArtArchiveCandidate candidate in result.Images)
-                ArtworkMatches.Add(new(candidate));
+                ArtworkMatches.Add(new(
+                    candidate,
+                    _localization));
             for (int index = 0; index < ArtworkMatches.Count; index++)
             {
                 _cancellation.Token.ThrowIfCancellationRequested();
@@ -2378,16 +2396,21 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                     row.ThumbnailSource =
                         await _thumbnails.CreateImageSourceAsync(
                             download.Data, 180, _cancellation.Token);
-                    row.ThumbnailStatus = download.FromCache
-                        ? L("Workbench.Online.Thumbnail.Cached")
-                        : LF(
+                    if (download.FromCache)
+                        row.SetThumbnailStatus(
+                            "Workbench.Online.Thumbnail.Cached");
+                    else
+                        row.SetThumbnailStatus(
                             "Workbench.Online.Thumbnail.Bytes",
                             download.Data.Length);
                 }
                 catch (Exception error) when (
                     error is not OperationCanceledException)
                 {
-                    row.ThumbnailStatus = error.Message;
+                    row.SetThumbnailStatus(
+                        "Workbench.Online.Thumbnail.Failed");
+                    row.ThumbnailDiagnosticDetail =
+                        error.Message;
                 }
             }
             SelectedArtworkMatch = ArtworkMatches.FirstOrDefault(row =>
@@ -2718,7 +2741,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             ClearReleaseTrackMappings();
             foreach (MusicBrainzTrackMatch match in mapping.Files)
             {
-                var row = new MusicBrainzTrackMappingRow(match);
+                var row = new MusicBrainzTrackMappingRow(
+                    match,
+                    _localization);
                 row.PropertyChanged += OnReleaseMappingChanged;
                 ReleaseTrackMappings.Add(row);
             }
@@ -2787,7 +2812,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             ReleaseMatches.Clear();
             SelectedRelease = null;
             ClearReleaseTrackMappings();
-            foreach (AudioDiscoveryRow row in AudioDiscoveryRows.Create(result))
+            foreach (AudioDiscoveryRow row in
+                     AudioDiscoveryRows.Create(
+                         result,
+                         _localization))
                 AudioMatches.Add(row);
             SelectedAudioMatch = AudioMatches.FirstOrDefault();
             int issues = result.Files.Sum(file => file.Issues.Length);
@@ -4229,6 +4257,28 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         RebuildMetadataFields();
         foreach (WorkbenchTrackViewModel file in Files)
             file.RefreshLocalizedText();
+        foreach (AudioDiscoveryRow row in AudioMatches)
+            row.RefreshLocalizedText();
+        foreach (MusicBrainzTrackMappingRow row in
+                 ReleaseTrackMappings)
+            row.RefreshLocalizedText();
+        foreach (DiscogsTrackMappingRow row in
+                 DiscogsTrackMappings)
+            row.RefreshLocalizedText();
+        foreach (CoverArtCandidateRow row in
+                 ArtworkMatches)
+            row.RefreshLocalizedText();
+        if (_plan is not null)
+        {
+            MetadataPreviewRowBuilder.Populate(
+                PreviewChanges,
+                _plan,
+                _localization);
+            PendingMetadataOperationRowBuilder.Populate(
+                PendingOperations,
+                _plan,
+                _localization);
+        }
         OnPropertyChanged(nameof(FieldSelectionSummary));
     }
 

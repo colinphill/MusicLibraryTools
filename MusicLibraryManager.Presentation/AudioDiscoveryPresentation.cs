@@ -6,15 +6,47 @@ using MusicLibrary.Core.Services;
 
 namespace MusicLibraryManager.Presentation;
 
-public sealed record AudioDiscoveryRow(
-    string Path,
-    double? DurationSeconds,
-    string? Fingerprint,
-    Guid? AcoustId,
-    double? Score,
-    ImmutableArray<Guid> MusicBrainzRecordingIdValues,
-    string Status)
+public sealed partial class AudioDiscoveryRow : ObservableObject
 {
+    private readonly ILocalizationService? _localization;
+    private readonly string _statusResourceKey;
+
+    internal AudioDiscoveryRow(
+        string path,
+        double? durationSeconds,
+        string? fingerprint,
+        Guid? acoustId,
+        double? score,
+        ImmutableArray<Guid> musicBrainzRecordingIdValues,
+        string statusResourceKey,
+        string? diagnosticDetail,
+        ILocalizationService? localization)
+    {
+        Path = path;
+        DurationSeconds = durationSeconds;
+        Fingerprint = fingerprint;
+        AcoustId = acoustId;
+        Score = score;
+        MusicBrainzRecordingIdValues =
+            musicBrainzRecordingIdValues;
+        _statusResourceKey = statusResourceKey;
+        DiagnosticDetail = diagnosticDetail;
+        _localization = localization;
+    }
+
+    public string Path { get; }
+    public double? DurationSeconds { get; }
+    public string? Fingerprint { get; }
+    public Guid? AcoustId { get; }
+    public double? Score { get; }
+    public ImmutableArray<Guid>
+        MusicBrainzRecordingIdValues { get; }
+    public string Status => Text(
+        _localization,
+        _statusResourceKey);
+    public string? DiagnosticDetail { get; }
+    public bool HasDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(DiagnosticDetail);
     public string File => System.IO.Path.GetFileName(Path);
     public string Duration => DurationSeconds is null
         ? ""
@@ -22,12 +54,22 @@ public sealed record AudioDiscoveryRow(
     public string Confidence => Score is null ? "" : $"{Score:P1}";
     public string MusicBrainzRecordingIds =>
         string.Join(", ", MusicBrainzRecordingIdValues);
+
+    public void RefreshLocalizedText() =>
+        OnPropertyChanged(nameof(Status));
+
+    private static string Text(
+        ILocalizationService? localization,
+        string key) =>
+        localization?.Get(key) ??
+        LocalizedText.Get(key);
 }
 
 public static class AudioDiscoveryRows
 {
     public static IEnumerable<AudioDiscoveryRow> Create(
-        AcoustIdDiscoveryResult result)
+        AcoustIdDiscoveryResult result,
+        ILocalizationService? localization = null)
     {
         foreach (AcoustIdFileDiscovery file in result.Files)
         {
@@ -42,7 +84,9 @@ public static class AudioDiscoveryRows
                     null,
                     null,
                     [],
-                    file.Issues.FirstOrDefault()?.Message ?? "No AcoustID match");
+                    "OnlineMetadata.AudioDiscovery.Status.NoMatch",
+                    file.Issues.FirstOrDefault()?.Message,
+                    localization);
                 continue;
             }
             foreach (AcoustIdCandidate candidate in candidates)
@@ -54,19 +98,26 @@ public static class AudioDiscoveryRows
                     candidate.Score,
                     candidate.MusicBrainzRecordingIds,
                     candidate.MusicBrainzRecordingIds.Length == 0
-                        ? "Candidate has no MusicBrainz recording ID"
+                        ? "OnlineMetadata.AudioDiscovery.Status.CandidateWithoutRecordingId"
                         : file.Lookup?.OfflineFallback == true
-                            ? "Offline cached candidate"
+                            ? "OnlineMetadata.AudioDiscovery.Status.OfflineCachedCandidate"
                             : file.Lookup?.FromCache == true
-                                ? "Cached candidate"
-                                : "Candidate");
+                                ? "OnlineMetadata.AudioDiscovery.Status.CachedCandidate"
+                                : "OnlineMetadata.AudioDiscovery.Status.Candidate",
+                    diagnosticDetail: null,
+                    localization: localization);
         }
     }
 
-    public static OperationRecipe CreateTagRecipe(AudioDiscoveryRow row)
+    public static OperationRecipe CreateTagRecipe(
+        AudioDiscoveryRow row,
+        ILocalizationService? localization = null)
     {
         if (row.AcoustId is null || string.IsNullOrWhiteSpace(row.Fingerprint))
-            throw new InvalidOperationException("Select a matched AcoustID candidate.");
+            throw new InvalidOperationException(
+                Text(
+                    localization,
+                    "OnlineMetadata.AudioDiscovery.Validation.SelectMatchedCandidate"));
         var operations = new List<MetadataOperation>
         {
             new AssignFieldOperation(
@@ -81,8 +132,25 @@ public static class AudioDiscoveryRows
                 MetadataFieldKey.Known(TagFields.MusicBrainz_RecordingID),
                 row.MusicBrainzRecordingIdValues[0].ToString()));
         return OperationRecipe.Create(
-            $"Audio identifiers: {row.File}", [.. operations]);
+            Format(
+                localization,
+                "OnlineMetadata.AudioDiscovery.RecipeName",
+                row.File),
+            [.. operations]);
     }
+
+    private static string Text(
+        ILocalizationService? localization,
+        string key) =>
+        localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private static string Format(
+        ILocalizationService? localization,
+        string key,
+        params object?[] arguments) =>
+        localization?.Format(key, arguments) ??
+        LocalizedText.Format(key, arguments);
 }
 
 public sealed record MusicBrainzReleaseRow(
@@ -155,6 +223,12 @@ public static class MusicBrainzReleaseRows
 
 public partial class MusicBrainzReleaseSearchViewModel : ObservableObject
 {
+    private readonly ILocalizationService? _localization;
+
+    public MusicBrainzReleaseSearchViewModel(
+        ILocalizationService? localization = null) =>
+        _localization = localization;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasCriteria))]
     private string? _artist;
@@ -189,7 +263,10 @@ public partial class MusicBrainzReleaseSearchViewModel : ObservableObject
         {
             if (!Guid.TryParse(ReleaseId.Trim(), out Guid parsed))
                 throw new InvalidOperationException(
-                    "The MusicBrainz release ID is not a valid GUID.");
+                    _localization?.Get(
+                        "OnlineMetadata.MusicBrainz.Validation.InvalidReleaseId") ??
+                    LocalizedText.Get(
+                        "OnlineMetadata.MusicBrainz.Validation.InvalidReleaseId"));
             releaseId = parsed;
         }
         return new(
@@ -237,6 +314,12 @@ public sealed record DiscogsReleaseRow(
 
 public partial class DiscogsReleaseSearchViewModel : ObservableObject
 {
+    private readonly ILocalizationService? _localization;
+
+    public DiscogsReleaseSearchViewModel(
+        ILocalizationService? localization = null) =>
+        _localization = localization;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasCriteria))]
     private string? _artist;
@@ -267,7 +350,10 @@ public partial class DiscogsReleaseSearchViewModel : ObservableObject
         {
             if (!long.TryParse(ReleaseId, out long parsed) || parsed <= 0)
                 throw new InvalidOperationException(
-                    "The Discogs release ID must be a positive number.");
+                    _localization?.Get(
+                        "OnlineMetadata.Discogs.Validation.InvalidReleaseId") ??
+                    LocalizedText.Get(
+                        "OnlineMetadata.Discogs.Validation.InvalidReleaseId"));
             releaseId = parsed;
         }
         return new(
@@ -292,12 +378,18 @@ public sealed record DiscogsTrackChoice(
 
 public partial class DiscogsTrackMappingRow : ObservableObject
 {
-    public DiscogsTrackMappingRow(DiscogsTrackMatch match)
+    private readonly ILocalizationService? _localization;
+    private readonly DiscogsMappingConfidence _confidence;
+
+    public DiscogsTrackMappingRow(
+        DiscogsTrackMatch match,
+        ILocalizationService? localization = null)
     {
+        _localization = localization;
+        _confidence = match.Confidence;
         Path = match.Source.Path;
         File = System.IO.Path.GetFileName(match.Source.Path);
-        Confidence = match.Confidence.ToString();
-        Status = match.Status;
+        DiagnosticDetail = match.Status;
         TrackChoices = match.Candidates
             .Select(candidate => new DiscogsTrackChoice(
                 candidate,
@@ -316,8 +408,13 @@ public partial class DiscogsTrackMappingRow : ObservableObject
 
     public string Path { get; }
     public string File { get; }
-    public string Confidence { get; }
-    public string Status { get; }
+    public string Confidence => Text(
+        $"OnlineMetadata.Mapping.Confidence.{_confidence}");
+    public string Status => Text(
+        $"OnlineMetadata.Discogs.MappingStatus.{_confidence}");
+    public string DiagnosticDetail { get; }
+    public bool HasDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(DiagnosticDetail);
     public IReadOnlyList<DiscogsTrackChoice> TrackChoices { get; }
     public string Position => SelectedTrack?.Position ?? "";
 
@@ -333,6 +430,16 @@ public partial class DiscogsTrackMappingRow : ObservableObject
         if (value is not null)
             IsIncluded = true;
     }
+
+    public void RefreshLocalizedText()
+    {
+        OnPropertyChanged(nameof(Confidence));
+        OnPropertyChanged(nameof(Status));
+    }
+
+    private string Text(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
 }
 
 public partial class DiscogsImportSelectionViewModel : ObservableObject
@@ -378,17 +485,36 @@ public partial class DiscogsImportSelectionViewModel : ObservableObject
         DiscogsIdentifier);
 }
 
-public partial class CoverArtCandidateRow(
-    CoverArtArchiveCandidate candidate) : ObservableObject
+public partial class CoverArtCandidateRow : ObservableObject
 {
-    public CoverArtArchiveCandidate Candidate { get; } = candidate;
+    private readonly ILocalizationService? _localization;
+    private string? _thumbnailStatusResourceKey;
+    private object?[] _thumbnailStatusArguments = [];
+    private long? _thumbnailStatusCount;
+
+    public CoverArtCandidateRow(
+        CoverArtArchiveCandidate candidate,
+        ILocalizationService? localization = null)
+    {
+        Candidate = candidate;
+        _localization = localization;
+    }
+
+    public CoverArtArchiveCandidate Candidate { get; }
     public string Id => Candidate.Id;
     public string Roles => Candidate.Types.Length == 0
-        ? "Other"
+        ? Text(
+            "OnlineMetadata.CoverArt.Role.OtherRole")
         : string.Join(", ", Candidate.Types);
-    public string Front => Candidate.IsFront ? "Yes" : "";
-    public string Back => Candidate.IsBack ? "Yes" : "";
-    public string Approved => Candidate.Approved ? "Yes" : "No";
+    public string Front => Candidate.IsFront
+        ? Text("Common.Yes")
+        : "";
+    public string Back => Candidate.IsBack
+        ? Text("Common.Yes")
+        : "";
+    public string Approved => Candidate.Approved
+        ? Text("Common.Yes")
+        : Text("Common.No");
     public string Comment => Candidate.Comment ?? "";
     public string ImageUrl => Candidate.ImageUri.AbsoluteUri;
 
@@ -397,6 +523,91 @@ public partial class CoverArtCandidateRow(
 
     [ObservableProperty]
     private string? _thumbnailStatus;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasThumbnailDiagnosticDetail))]
+    private string? _thumbnailDiagnosticDetail;
+
+    public bool HasThumbnailDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(
+            ThumbnailDiagnosticDetail);
+
+    public void SetThumbnailStatus(
+        string resourceKey,
+        params object?[] arguments)
+    {
+        _thumbnailStatusResourceKey =
+            resourceKey;
+        _thumbnailStatusArguments =
+            arguments;
+        _thumbnailStatusCount = null;
+        ThumbnailStatus =
+            Format(resourceKey, arguments);
+    }
+
+    public void SetCountStatus(
+        string resourceKey,
+        long count,
+        params object?[] arguments)
+    {
+        _thumbnailStatusResourceKey =
+            resourceKey;
+        _thumbnailStatusArguments =
+            arguments;
+        _thumbnailStatusCount = count;
+        ThumbnailStatus =
+            FormatCount(
+                resourceKey,
+                count,
+                arguments);
+    }
+
+    public void RefreshLocalizedText()
+    {
+        OnPropertyChanged(nameof(Roles));
+        OnPropertyChanged(nameof(Front));
+        OnPropertyChanged(nameof(Back));
+        OnPropertyChanged(nameof(Approved));
+        if (_thumbnailStatusResourceKey is not null)
+            ThumbnailStatus =
+                _thumbnailStatusCount is { } count
+                    ? FormatCount(
+                        _thumbnailStatusResourceKey,
+                        count,
+                        _thumbnailStatusArguments)
+                    : Format(
+                        _thumbnailStatusResourceKey,
+                        _thumbnailStatusArguments);
+    }
+
+    private string Text(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string Format(
+        string key,
+        params object?[] arguments) =>
+        arguments.Length == 0
+            ? Text(key)
+            : _localization?.Format(
+                  key,
+                  arguments) ??
+              LocalizedText.Format(
+                  key,
+                  arguments);
+
+    private string FormatCount(
+        string key,
+        long count,
+        params object?[] arguments) =>
+        _localization?.FormatCount(
+            key,
+            count,
+            arguments) ??
+        LocalizedText.FormatCount(
+            key,
+            count,
+            arguments);
 }
 
 public sealed record MusicBrainzTrackChoice(
@@ -412,11 +623,17 @@ public sealed record MusicBrainzTrackChoice(
 
 public partial class MusicBrainzTrackMappingRow : ObservableObject
 {
-    public MusicBrainzTrackMappingRow(MusicBrainzTrackMatch match)
+    private readonly ILocalizationService? _localization;
+    private readonly MusicBrainzMappingConfidence _confidence;
+
+    public MusicBrainzTrackMappingRow(
+        MusicBrainzTrackMatch match,
+        ILocalizationService? localization = null)
     {
+        _localization = localization;
+        _confidence = match.Confidence;
         Path = match.Source.Path;
-        Confidence = match.Confidence.ToString();
-        Status = match.Status;
+        DiagnosticDetail = match.Status;
         TrackChoices = match.Candidates
             .Select(candidate => new MusicBrainzTrackChoice(
                 candidate.Track, candidate.Score, candidate.Reason))
@@ -430,8 +647,13 @@ public partial class MusicBrainzTrackMappingRow : ObservableObject
 
     public string Path { get; }
     public string File => System.IO.Path.GetFileName(Path);
-    public string Confidence { get; }
-    public string Status { get; }
+    public string Confidence => Text(
+        $"OnlineMetadata.Mapping.Confidence.{_confidence}");
+    public string Status => Text(
+        $"OnlineMetadata.MusicBrainz.MappingStatus.{_confidence}");
+    public string DiagnosticDetail { get; }
+    public bool HasDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(DiagnosticDetail);
     public IReadOnlyList<MusicBrainzTrackChoice> TrackChoices { get; }
     public string Position => SelectedTrack?.Position ?? "";
     public string TrackTitle => SelectedTrack?.Track.Title ?? "";
@@ -451,6 +673,16 @@ public partial class MusicBrainzTrackMappingRow : ObservableObject
         if (value is not null)
             IsIncluded = true;
     }
+
+    public void RefreshLocalizedText()
+    {
+        OnPropertyChanged(nameof(Confidence));
+        OnPropertyChanged(nameof(Status));
+    }
+
+    private string Text(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
 }
 
 public partial class MusicBrainzImportSelectionViewModel : ObservableObject

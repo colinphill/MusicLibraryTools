@@ -393,6 +393,10 @@ public partial class IndexTargetEditorRow : ObservableObject
 {
     private bool _refreshingProfileChoices;
     private Func<LibraryRootPermissions, string>? _permissionSummaryFormatter;
+    private Func<string, string> _getText =
+        LocalizedText.Get;
+    private Func<string, object?[], string> _formatText =
+        LocalizedText.Format;
     [ObservableProperty]
     private Guid _id = Guid.NewGuid();
 
@@ -473,8 +477,11 @@ public partial class IndexTargetEditorRow : ObservableObject
     public string PermissionSummary =>
         _permissionSummaryFormatter?.Invoke(Permissions) ??
         (IsReadOnly
-            ? "Catalog-only: this root is read-only."
-            : "Allowed changes: " + string.Join(", ", PermissionLabels()));
+            ? _getText(
+                "Settings.Permissions.Summary.ReadOnly")
+            : _formatText(
+                "Settings.Permissions.Summary.Allowed",
+                [string.Join(", ", PermissionLabels())]));
 
     public void SetPermissionSummaryFormatter(
         Func<LibraryRootPermissions, string> formatter)
@@ -485,6 +492,16 @@ public partial class IndexTargetEditorRow : ObservableObject
 
     public void RefreshPermissionSummary() =>
         OnPropertyChanged(nameof(PermissionSummary));
+
+    public void RefreshLocalizedText(
+        ILocalizationService localization)
+    {
+        ArgumentNullException.ThrowIfNull(
+            localization);
+        _getText = localization.Get;
+        _formatText = localization.Format;
+        RefreshPermissionSummary();
+    }
 
     [ObservableProperty]
     private bool _isSyncTarget;
@@ -546,11 +563,21 @@ public partial class IndexTargetEditorRow : ObservableObject
 
     private IEnumerable<string> PermissionLabels()
     {
-        if (AllowMetadataWrites) yield return "metadata";
-        if (AllowArtworkWrites) yield return "artwork";
-        if (AllowOrganization) yield return "organization";
-        if (AllowIngestOutput) yield return "ingest output";
-        if (AllowSynchronizationOutput) yield return "sync output";
+        if (AllowMetadataWrites)
+            yield return _getText(
+                "Settings.Permissions.Metadata");
+        if (AllowArtworkWrites)
+            yield return _getText(
+                "Settings.Permissions.Artwork");
+        if (AllowOrganization)
+            yield return _getText(
+                "Settings.Permissions.Organization");
+        if (AllowIngestOutput)
+            yield return _getText(
+                "Settings.Permissions.IngestOutput");
+        if (AllowSynchronizationOutput)
+            yield return _getText(
+                "Settings.Permissions.SyncOutput");
     }
 }
 
@@ -708,7 +735,8 @@ public partial class ExportProfileEditorRow : ObservableObject
 
     public static ExportProfileEditorRow Create() => From(new(
         "export-" + Guid.NewGuid().ToString("N")[..12],
-        "New export",
+        LocalizedText.Get(
+            "Settings.ExportProfile.NewName"),
         false,
         ExportSelectionPolicy.EntireLibrary,
         new(),
@@ -791,11 +819,18 @@ public sealed record SettingsProfileChoice(string Id, string Label)
 
 public partial class IngestRecipeEditorRow : ObservableObject
 {
+    private Func<string, string> _getText =
+        LocalizedText.Get;
+    private Func<string, object?[], string> _formatText =
+        LocalizedText.Format;
+
     public required LibraryIngestRecipe Source { get; init; }
     [ObservableProperty] private string _id = "";
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private bool _enabled;
-    [ObservableProperty] private string _inputExtensions = "";
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Summary))]
+    private string _inputExtensions = "";
     [ObservableProperty] private bool? _requireLossless;
     [ObservableProperty] private int? _minimumSampleRateHz;
     [ObservableProperty] private int? _minimumBitsPerSample;
@@ -805,14 +840,22 @@ public partial class IngestRecipeEditorRow : ObservableObject
     [ObservableProperty] private LibraryIngestAlbumCondition _albumCondition;
     [ObservableProperty] private LibraryIngestSourceSelection _sourceSelection;
     [ObservableProperty] private bool _requireFallbackApproval;
-    [ObservableProperty] private LibraryIngestAction _action;
-    [ObservableProperty] private Guid? _destinationRootId;
-    [ObservableProperty] private SettingsRootChoice? _destinationRootChoice;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Summary))]
+    private LibraryIngestAction _action;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Summary))]
+    private Guid? _destinationRootId;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Summary))]
+    private SettingsRootChoice? _destinationRootChoice;
     [ObservableProperty] private string? _outputExtension;
     [ObservableProperty] private string? _codec;
     [ObservableProperty] private string? _encoder;
     [ObservableProperty] private string? _extraFfmpegOptions;
-    [ObservableProperty] private bool _addToMediaCatalog;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Summary))]
+    private bool _addToMediaCatalog;
     [ObservableProperty] private int? _bitrateKbps;
     [ObservableProperty] private int? _sampleRateHz;
     [ObservableProperty] private int? _bitsPerSample;
@@ -826,10 +869,31 @@ public partial class IngestRecipeEditorRow : ObservableObject
 
     public ObservableCollection<SettingsRootChoice> DestinationRootChoices { get; } = [];
 
-    public string Summary => $"{Action}; {InputExtensions} to " +
-        (DestinationRootId is not null
-            ? DestinationRootChoice?.Label ?? DestinationRootId.Value.ToString("D")
-            : AddToMediaCatalog ? "configured media catalog" : "no destination");
+    public string Summary => _formatText(
+        "Settings.IngestRecipe.Summary",
+        [
+            _getText(
+                $"Settings.Choice.LibraryIngestAction.{Action}"),
+            InputExtensions,
+            DestinationRootId is not null
+                ? DestinationRootChoice?.Label ??
+                  DestinationRootId.Value.ToString("D")
+                : AddToMediaCatalog
+                    ? _getText(
+                        "Settings.IngestRecipe.Destination.ConfiguredMediaCatalog")
+                    : _getText(
+                        "Settings.IngestRecipe.Destination.None"),
+        ]);
+
+    public void RefreshLocalizedText(
+        ILocalizationService localization)
+    {
+        ArgumentNullException.ThrowIfNull(
+            localization);
+        _getText = localization.Get;
+        _formatText = localization.Format;
+        OnPropertyChanged(nameof(Summary));
+    }
 
     public static IngestRecipeEditorRow From(LibraryIngestRecipe recipe) => new()
     {
@@ -935,10 +999,14 @@ public partial class IngestRecipeEditorRow : ObservableObject
 
     public void RefreshDestinationRootChoices(
         IEnumerable<IndexTargetEditorRow> roots,
-        string noDirectRootLabel = "No direct root",
-        string newRootLabel = "New library root",
+        string? noDirectRootLabel = null,
+        string? newRootLabel = null,
         Func<Guid, string>? missingRootLabel = null)
     {
+        noDirectRootLabel ??= LocalizedText.Get(
+            "Settings.DestinationRoot.None");
+        newRootLabel ??= LocalizedText.Get(
+            "Settings.DestinationRoot.NewRoot");
         Guid? selectedId = DestinationRootId;
         _refreshingDestinationRoots = true;
         try

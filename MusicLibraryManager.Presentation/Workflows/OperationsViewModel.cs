@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
@@ -15,11 +16,158 @@ public sealed record UnifiedJobHistoryItem(
     bool Success,
     DateTimeOffset CreatedAt,
     double ElapsedSeconds,
-    string Output)
+    string Output) : INotifyPropertyChanged
 {
-    public string State => Success ? (Applied ? "Applied" : "Preview passed") : (Applied ? "Apply failed" : "Preview failed");
-    public string Created => CreatedAt.ToLocalTime().ToString("g");
-    public string Elapsed => $"{ElapsedSeconds:0.##}s";
+    private ILocalizationService? _localization;
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public string State => Get(Applied
+        ? Success
+            ? "Operations.History.State.Applied"
+            : "Operations.History.State.ApplyFailed"
+        : Success
+            ? "Operations.History.State.PreviewPassed"
+            : "Operations.History.State.PreviewFailed");
+
+    public string Created => CreatedAt.ToLocalTime().ToString(
+        "g",
+        _localization?.CurrentUICulture);
+
+    public string Elapsed => Format(
+        "Operations.History.Elapsed",
+        ElapsedSeconds);
+
+    public void RefreshLocalizedText(
+        ILocalizationService? localization)
+    {
+        _localization = localization;
+        PropertyChanged?.Invoke(
+            this,
+            new(nameof(State)));
+        PropertyChanged?.Invoke(
+            this,
+            new(nameof(Created)));
+        PropertyChanged?.Invoke(
+            this,
+            new(nameof(Elapsed)));
+    }
+
+    private string Get(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string Format(
+        string key,
+        params object?[] arguments) =>
+        _localization?.Format(key, arguments) ??
+        LocalizedText.Format(key, arguments);
+}
+
+/// <summary>
+/// Localized presentation for a job descriptor. The descriptor and its ID remain the stable
+/// semantic identity used by preview/apply logic and configuration persistence.
+/// </summary>
+public sealed class UnifiedJobChoiceViewModel : ViewModelBase
+{
+    private readonly ILocalizationService? _localization;
+    private string _name;
+    private string _description;
+
+    public UnifiedJobDescriptor Value { get; }
+    public string Id => Value.Id;
+
+    public string Name
+    {
+        get => _name;
+        private set => SetProperty(ref _name, value);
+    }
+
+    public string Description
+    {
+        get => _description;
+        private set => SetProperty(ref _description, value);
+    }
+
+    public UnifiedJobChoiceViewModel(
+        UnifiedJobDescriptor value,
+        ILocalizationService? localization)
+    {
+        Value = value;
+        _localization = localization;
+        _name = "";
+        _description = "";
+        RefreshLocalizedText();
+    }
+
+    public void RefreshLocalizedText()
+    {
+        Name = ResolveName();
+        Description = ResolveDescription();
+    }
+
+    private string ResolveName()
+    {
+        if (Value.Id.StartsWith(
+                UnifiedJobService.ConfiguredExportJobPrefix,
+                StringComparison.Ordinal))
+        {
+            string profileName = Value.Name.StartsWith(
+                    "Export: ",
+                    StringComparison.Ordinal)
+                ? Value.Name["Export: ".Length..]
+                : Value.Name;
+            return Format(
+                "Operations.Job.ConfiguredExport.Name",
+                profileName);
+        }
+
+        string? key = Value.Id switch
+        {
+            "playlist-sync" => "Operations.Job.PlaylistSync.Name",
+            "artwork-normalization" => "Operations.Job.ArtworkNormalization.Name",
+            "smart-storage" => "Operations.Job.SmartStorage.Name",
+            "car-card" => "Operations.Job.CarCard.Name",
+            "cross-library-sync" => "Operations.Job.CrossLibrarySync.Name",
+            "redundancies" => "Operations.Job.Redundancies.Name",
+            "itunes-validation" => "Operations.Job.ItunesValidation.Name",
+            _ => null,
+        };
+        return key is null ? Value.Name : Get(key);
+    }
+
+    private string ResolveDescription()
+    {
+        string? key = Value.Id.StartsWith(
+                UnifiedJobService.ConfiguredExportJobPrefix,
+                StringComparison.Ordinal)
+            ? "Operations.Job.ConfiguredExport.Description"
+            : Value.Id switch
+            {
+                "playlist-sync" => "Operations.Job.PlaylistSync.Description",
+                "artwork-normalization" =>
+                    "Operations.Job.ArtworkNormalization.Description",
+                "smart-storage" => "Operations.Job.SmartStorage.Description",
+                "car-card" => "Operations.Job.CarCard.Description",
+                "cross-library-sync" =>
+                    "Operations.Job.CrossLibrarySync.Description",
+                "redundancies" => "Operations.Job.Redundancies.Description",
+                "itunes-validation" =>
+                    "Operations.Job.ItunesValidation.Description",
+                _ => null,
+            };
+        return key is null ? Value.Description : Get(key);
+    }
+
+    private string Get(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string Format(
+        string key,
+        params object?[] arguments) =>
+        _localization?.Format(key, arguments) ??
+        LocalizedText.Format(key, arguments);
 }
 
 /// <summary>Discovers, browses, restores, and retention-purges mutation journals and quarantine runs.</summary>
@@ -48,7 +196,14 @@ public partial class OperationsViewModel : ViewModelBase
     private readonly ICarCardService? _carCard;
     private readonly IActivityService? _activities;
     private readonly IConfiguredExportService? _configuredExport;
+    private readonly ILocalizationService? _localization;
     private CancellationTokenSource? _cts;
+    private Func<string>? _statusTextRefresh;
+    private Func<string>? _jobStatusRefresh;
+    private Func<string>? _restorePreviewTextRefresh;
+    private Func<string>? _purgePreviewTextRefresh;
+    private Func<string>? _jobOutputRefresh;
+    private bool _synchronizingSelectedJob;
 
     public event Action<IReadOnlyList<string>>? ArtworkNormalized;
 
@@ -71,7 +226,11 @@ public partial class OperationsViewModel : ViewModelBase
     private int _retentionDays = 90;
 
     [ObservableProperty]
-    private string _statusText = "Scan configured roots or choose a device/folder to discover recovery operations.";
+    private string _statusText = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasStatusDiagnosticDetail))]
+    private string? _statusDiagnosticDetail;
 
     [ObservableProperty]
     private bool _showBrowser;
@@ -114,7 +273,14 @@ public partial class OperationsViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(UsesActiveLibraryContext))]
     private UnifiedJobDescriptor? _selectedJob;
     [ObservableProperty]
-    private string _jobStatus = "Choose a job, supply any required arguments, then Preview.";
+    private string _jobStatus = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasJobStatusDiagnosticDetail))]
+    private string? _jobStatusDiagnosticDetail;
+
+    [ObservableProperty]
+    private UnifiedJobChoiceViewModel? _selectedJobChoice;
     [ObservableProperty]
     private string _jobOutput = "";
     [ObservableProperty]
@@ -132,7 +298,12 @@ public partial class OperationsViewModel : ViewModelBase
     public ObservableCollection<OperationRunViewModel> Runs { get; } = [];
     public ObservableCollection<OperationEntryNodeViewModel> RootNodes { get; } = [];
     public ObservableCollection<UnifiedJobHistoryItem> JobHistory { get; } = [];
+    public ObservableCollection<UnifiedJobChoiceViewModel> JobChoices { get; } = [];
     public IReadOnlyList<UnifiedJobDescriptor> JobCatalog => _jobs?.Catalog ?? [];
+    public bool HasStatusDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(StatusDiagnosticDetail);
+    public bool HasJobStatusDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(JobStatusDiagnosticDetail);
     public bool HasRuns => Runs.Count > 0;
     public bool IsRunListEmpty => Runs.Count == 0;
     public bool ShowJobApply => HasJobPreview &&
@@ -163,7 +334,8 @@ public partial class OperationsViewModel : ViewModelBase
         ISmartStorageService? smartStorage = null,
         ICarCardService? carCard = null,
         IActivityService? activities = null,
-        IConfiguredExportService? configuredExport = null)
+        IConfiguredExportService? configuredExport = null,
+        ILocalizationService? localization = null)
     {
         _journals = journals;
         _files = files;
@@ -179,16 +351,28 @@ public partial class OperationsViewModel : ViewModelBase
         _carCard = carCard;
         _activities = activities;
         _configuredExport = configuredExport;
+        _localization = localization;
+        SetStatus("Operations.Status.Ready");
+        SetJobStatus("Operations.Job.Status.Ready");
         SearchRoot = settings.GetLibraryPreference(SearchRootPreference);
         if (int.TryParse(settings.GetLibraryPreference(RetentionDaysPreference), out int days))
             RetentionDays = Math.Clamp(days, 1, 3650);
         LoadJobHistory();
+        RebuildJobChoices();
         SelectedJob = JobCatalog.FirstOrDefault();
+        if (_localization is not null)
+            _localization.CultureChanged +=
+                (_, _) => RefreshLocalizedText();
         _settings.ConfigurationChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(JobCatalog));
-            if (SelectedJob is null || JobCatalog.All(job => job.Id != SelectedJob.Id))
-                SelectedJob = JobCatalog.FirstOrDefault();
+            string? selectedJobId = SelectedJob?.Id;
+            RebuildJobChoices();
+            SelectedJob = JobCatalog.FirstOrDefault(job =>
+                              StringComparer.Ordinal.Equals(
+                                  job.Id,
+                                  selectedJobId)) ??
+                          JobCatalog.FirstOrDefault();
             JobHistory.Clear();
             LoadJobHistory();
             SearchRoot = _settings.GetLibraryPreference(SearchRootPreference);
@@ -202,13 +386,215 @@ public partial class OperationsViewModel : ViewModelBase
 
     partial void OnSelectedJobChanged(UnifiedJobDescriptor? value)
     {
+        if (!_synchronizingSelectedJob)
+        {
+            _synchronizingSelectedJob = true;
+            SelectedJobChoice = value is null
+                ? null
+                : JobChoices.FirstOrDefault(choice =>
+                    StringComparer.Ordinal.Equals(
+                        choice.Id,
+                        value.Id));
+            _synchronizingSelectedJob = false;
+        }
         InvalidateJobPreview();
         PopulateDefaultJobInputs();
     }
 
+    partial void OnSelectedJobChoiceChanged(
+        UnifiedJobChoiceViewModel? value)
+    {
+        if (_synchronizingSelectedJob)
+            return;
+        _synchronizingSelectedJob = true;
+        SelectedJob = value?.Value;
+        _synchronizingSelectedJob = false;
+    }
+
+    private void RebuildJobChoices()
+    {
+        string? selectedJobId =
+            SelectedJob?.Id ??
+            SelectedJobChoice?.Id;
+        JobChoices.Clear();
+        foreach (UnifiedJobDescriptor job in JobCatalog)
+            JobChoices.Add(
+                new(job, _localization));
+
+        _synchronizingSelectedJob = true;
+        SelectedJobChoice = selectedJobId is null
+            ? null
+            : JobChoices.FirstOrDefault(choice =>
+                StringComparer.Ordinal.Equals(
+                    choice.Id,
+                    selectedJobId));
+        _synchronizingSelectedJob = false;
+    }
+
+    private void RefreshLocalizedText()
+    {
+        foreach (UnifiedJobChoiceViewModel choice in JobChoices)
+            choice.RefreshLocalizedText();
+        foreach (UnifiedJobHistoryItem item in JobHistory)
+            item.RefreshLocalizedText(_localization);
+        foreach (OperationRunViewModel run in Runs)
+            run.RefreshLocalizedText();
+        foreach (OperationEntryNodeViewModel root in RootNodes)
+            root.RefreshLocalizedText();
+
+        if (_statusTextRefresh is not null)
+            StatusText = _statusTextRefresh();
+        if (_jobStatusRefresh is not null)
+            JobStatus = _jobStatusRefresh();
+        if (_restorePreviewTextRefresh is not null)
+            RestorePreviewText =
+                _restorePreviewTextRefresh();
+        if (_purgePreviewTextRefresh is not null)
+            PurgePreviewText =
+                _purgePreviewTextRefresh();
+        if (_jobOutputRefresh is not null)
+            JobOutput = _jobOutputRefresh();
+    }
+
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string LF(
+        string key,
+        params object?[] arguments) =>
+        _localization?.Format(key, arguments) ??
+        LocalizedText.Format(key, arguments);
+
+    private string LC(
+        string key,
+        long count,
+        params object?[] arguments) =>
+        _localization?.FormatCount(
+            key,
+            count,
+            arguments) ??
+        LocalizedText.FormatCount(
+            key,
+            count,
+            arguments);
+
+    private void SetStatus(
+        string key,
+        params object?[] arguments)
+    {
+        object?[] captured = [.. arguments];
+        _statusTextRefresh =
+            () => LF(key, captured);
+        StatusDiagnosticDetail = null;
+        StatusText = _statusTextRefresh();
+    }
+
+    private void SetCountStatus(
+        string key,
+        long count,
+        params object?[] arguments)
+    {
+        object?[] captured = [.. arguments];
+        _statusTextRefresh =
+            () => LC(key, count, captured);
+        StatusDiagnosticDetail = null;
+        StatusText = _statusTextRefresh();
+    }
+
+    private void SetStatusFailure(
+        string key,
+        string diagnosticDetail)
+    {
+        SetStatus(key);
+        StatusDiagnosticDetail =
+            diagnosticDetail;
+    }
+
+    private void SetJobStatus(
+        string key,
+        params object?[] arguments)
+    {
+        object?[] captured = [.. arguments];
+        _jobStatusRefresh =
+            () => LF(key, captured);
+        JobStatusDiagnosticDetail = null;
+        JobStatus = _jobStatusRefresh();
+    }
+
+    private void SetCountJobStatus(
+        string key,
+        long count,
+        params object?[] arguments)
+    {
+        object?[] captured = [.. arguments];
+        _jobStatusRefresh =
+            () => LC(key, count, captured);
+        JobStatusDiagnosticDetail = null;
+        JobStatus = _jobStatusRefresh();
+    }
+
+    private void SetJobStatusFailure(
+        string key,
+        string diagnosticDetail)
+    {
+        SetJobStatus(key);
+        JobStatusDiagnosticDetail =
+            diagnosticDetail;
+    }
+
+    private void SetRestorePreview(
+        string key,
+        params object?[] arguments)
+    {
+        object?[] captured = [.. arguments];
+        _restorePreviewTextRefresh =
+            () => LF(key, captured);
+        RestorePreviewText =
+            _restorePreviewTextRefresh();
+    }
+
+    private void SetCountRestorePreview(
+        string key,
+        long count,
+        params object?[] arguments)
+    {
+        object?[] captured = [.. arguments];
+        _restorePreviewTextRefresh =
+            () => LC(key, count, captured);
+        RestorePreviewText =
+            _restorePreviewTextRefresh();
+    }
+
+    private void SetPurgePreview(
+        Func<string> refresh)
+    {
+        _purgePreviewTextRefresh = refresh;
+        PurgePreviewText = refresh();
+    }
+
+    private void SetJobOutput(
+        Func<string> refresh)
+    {
+        _jobOutputRefresh = refresh;
+        JobOutput = refresh();
+    }
+
+    private string JobDisplayName(
+        UnifiedJobDescriptor job) =>
+        JobChoices.FirstOrDefault(choice =>
+            StringComparer.Ordinal.Equals(
+                choice.Id,
+                job.Id))?.Name ??
+        new UnifiedJobChoiceViewModel(
+            job,
+            _localization).Name;
+
     private void PopulateDefaultJobInputs()
     {
         InvalidateJobPreview();
+        SetJobStatus(
+            "Operations.Job.Status.Ready");
     }
 
     partial void OnJobPlaylistNameChanged(string value) => InvalidateJobPreview();
@@ -222,15 +608,19 @@ public partial class OperationsViewModel : ViewModelBase
     [RelayCommand]
     private async Task BrowseJobDestinationAsync()
     {
-        string? path = await _files.PickFolderAsync("Select smart-storage destination");
+        string? path = await _files.PickFolderAsync(
+            L("Operations.Dialog.SelectSmartStorageDestination"));
         if (path is not null) JobDestinationPath = path;
     }
 
     [RelayCommand]
     private async Task BrowseJobValidationAsync()
     {
-        string? path = await _files.PickOpenFileAsync("Select iTunes library to validate",
-            [new("iTunes library", ["*.itl"])]);
+        string? path = await _files.PickOpenFileAsync(
+            L("Operations.Dialog.SelectItunesLibrary"),
+            [new(
+                L("Operations.FileType.ItunesLibrary"),
+                ["*.itl"])]);
         if (path is not null) JobValidationPath = path;
     }
     partial void OnSearchRootChanged(string? value) =>
@@ -248,7 +638,8 @@ public partial class OperationsViewModel : ViewModelBase
     [RelayCommand]
     private async Task BrowseRootAsync()
     {
-        string? path = await _files.PickFolderAsync("Select the source, sync, or device root to scan");
+        string? path = await _files.PickFolderAsync(
+            L("Operations.Dialog.SelectRecoveryRoot"));
         if (path is not null)
             SearchRoot = path;
     }
@@ -262,10 +653,20 @@ public partial class OperationsViewModel : ViewModelBase
             return;
         IsBusy = true;
         _cts = new CancellationTokenSource();
+        string jobName =
+            JobDisplayName(SelectedJob);
         Guid? activity = _activities?.Start(
-            $"Preview {SelectedJob.Name}", "Starting preview", ShellDestination.Operations, Cancel);
+            LF(
+                "Operations.Activity.Preview.Title",
+                jobName),
+            L("Operations.Activity.Preview.Starting"),
+            ShellDestination.Operations,
+            Cancel);
+        _jobOutputRefresh = null;
         JobOutput = "";
-        JobStatus = $"Previewing {SelectedJob.Name}…";
+        SetJobStatus(
+            "Operations.Job.Status.Previewing",
+            jobName);
         try
         {
             if (TryGetConfiguredExportProfileId(SelectedJob.Id, out string exportProfileId) &&
@@ -277,8 +678,13 @@ public partial class OperationsViewModel : ViewModelBase
                 _configuredExportPlan = await Task.Run(() => _configuredExport.PreviewAsync(
                     new(exportProfileId), typedProgress, _cts.Token), _cts.Token);
                 int exitCode = _configuredExportPlan.CanApply ? 0 : 4;
+                ConfiguredExportPlan renderedPlan =
+                    _configuredExportPlan;
                 string output = await Task.Run(
-                    () => RenderConfiguredExportPlan(_configuredExportPlan), _cts.Token);
+                    () => RenderConfiguredExportPlan(renderedPlan), _cts.Token);
+                _jobOutputRefresh =
+                    () => RenderConfiguredExportPlan(
+                        renderedPlan);
                 _jobPlan = new(SelectedJob, parsed, exitCode,
                     output, DateTimeOffset.UtcNow);
             }
@@ -293,8 +699,13 @@ public partial class OperationsViewModel : ViewModelBase
                 _crossLibrarySyncPlan = await Task.Run(() => _crossLibrarySync.PreviewAsync(
                     request, typedProgress, _cts.Token), _cts.Token);
                 int exitCode = _crossLibrarySyncPlan.CanApply ? 0 : 4;
+                CrossLibrarySyncPlan renderedPlan =
+                    _crossLibrarySyncPlan;
                 string output = await Task.Run(
-                    () => RenderCrossLibrarySyncPlan(_crossLibrarySyncPlan), _cts.Token);
+                    () => RenderCrossLibrarySyncPlan(renderedPlan), _cts.Token);
+                _jobOutputRefresh =
+                    () => RenderCrossLibrarySyncPlan(
+                        renderedPlan);
                 _jobPlan = new(SelectedJob, parsed, exitCode,
                     output, DateTimeOffset.UtcNow);
             }
@@ -309,8 +720,13 @@ public partial class OperationsViewModel : ViewModelBase
                 _playlistExportPlan = await Task.Run(() => _playlistExport.PreviewAsync(
                     request, typedProgress, _cts.Token), _cts.Token);
                 int exitCode = _playlistExportPlan.CanApply ? 0 : 4;
+                PlaylistExportPlan renderedPlan =
+                    _playlistExportPlan;
                 string output = await Task.Run(
-                    () => RenderPlaylistExportPlan(_playlistExportPlan), _cts.Token);
+                    () => RenderPlaylistExportPlan(renderedPlan), _cts.Token);
+                _jobOutputRefresh =
+                    () => RenderPlaylistExportPlan(
+                        renderedPlan);
                 _jobPlan = new(SelectedJob, parsed, exitCode,
                     output, DateTimeOffset.UtcNow);
             }
@@ -318,14 +734,20 @@ public partial class OperationsViewModel : ViewModelBase
             {
                 IReadOnlyList<string> parsed = [];
                 ArtworkNormalizationRequest request = new(Required(JobPlaylistName,
-                    "An iTunes playlist name is required."), ConfiguredLibraryPath());
+                    "Operations.Validation.PlaylistNameRequired"),
+                    ConfiguredLibraryPath());
                 var typedProgress = new Progress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
                 _artworkNormalizationPlan = await Task.Run(() => _artworkNormalization.PreviewAsync(
                     request, typedProgress, _cts.Token), _cts.Token);
                 int exitCode = _artworkNormalizationPlan.CanApply ? 0 : 4;
+                ArtworkNormalizationPlan renderedPlan =
+                    _artworkNormalizationPlan;
                 string output = await Task.Run(
-                    () => RenderArtworkNormalizationPlan(_artworkNormalizationPlan), _cts.Token);
+                    () => RenderArtworkNormalizationPlan(renderedPlan), _cts.Token);
+                _jobOutputRefresh =
+                    () => RenderArtworkNormalizationPlan(
+                        renderedPlan);
                 _jobPlan = new(SelectedJob, parsed, exitCode,
                     output, DateTimeOffset.UtcNow);
             }
@@ -333,15 +755,22 @@ public partial class OperationsViewModel : ViewModelBase
             {
                 IReadOnlyList<string> parsed = [];
                 SmartStorageRequest request = new(Required(JobDestinationPath,
-                    "A smart-storage destination is required."), JobInitialize, JobMaxRemovals,
+                    "Operations.Validation.SmartStorageDestinationRequired"),
+                    JobInitialize,
+                    JobMaxRemovals,
                     ConfiguredLibraryPath());
                 var typedProgress = new Progress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
                 _smartStoragePlan = await Task.Run(() => _smartStorage.PreviewAsync(
                     request, typedProgress, _cts.Token), _cts.Token);
                 int exitCode = _smartStoragePlan.CanApply ? 0 : 4;
+                SmartStoragePlan renderedPlan =
+                    _smartStoragePlan;
                 string output = await Task.Run(
-                    () => RenderSmartStoragePlan(_smartStoragePlan), _cts.Token);
+                    () => RenderSmartStoragePlan(renderedPlan), _cts.Token);
+                _jobOutputRefresh =
+                    () => RenderSmartStoragePlan(
+                        renderedPlan);
                 _jobPlan = new(SelectedJob, parsed, exitCode,
                     output, DateTimeOffset.UtcNow);
             }
@@ -355,8 +784,13 @@ public partial class OperationsViewModel : ViewModelBase
                 _carCardPlan = await Task.Run(() =>
                     _carCard.PreviewAsync(request, typedProgress, _cts.Token), _cts.Token);
                 int exitCode = _carCardPlan.CanApply ? 0 : 4;
+                CarCardPlan renderedPlan =
+                    _carCardPlan;
                 string output = await Task.Run(
-                    () => RenderCarCardPlan(_carCardPlan), _cts.Token);
+                    () => RenderCarCardPlan(renderedPlan), _cts.Token);
+                _jobOutputRefresh =
+                    () => RenderCarCardPlan(
+                        renderedPlan);
                 _jobPlan = new(SelectedJob, parsed, exitCode,
                     output, DateTimeOffset.UtcNow);
             }
@@ -371,6 +805,9 @@ public partial class OperationsViewModel : ViewModelBase
                         library, typedProgress, _cts.Token), _cts.Token);
                 string output = await Task.Run(
                     () => RenderRedundancyResult(result), _cts.Token);
+                _jobOutputRefresh =
+                    () => RenderRedundancyResult(
+                        result);
                 _jobPlan = new(SelectedJob, parsed, 0, output,
                     DateTimeOffset.UtcNow);
             }
@@ -378,7 +815,7 @@ public partial class OperationsViewModel : ViewModelBase
             {
                 IReadOnlyList<string> parsed = [];
                 string validationPath = Required(JobValidationPath,
-                    "An iTunes Library.itl path is required.");
+                    "Operations.Validation.ItunesLibraryRequired");
                 var typedProgress = new Progress<OperationProgress>(value =>
                     ReportJobProgress(activity, value));
                 ItunesValidationResult result = await Task.Run(() =>
@@ -386,19 +823,29 @@ public partial class OperationsViewModel : ViewModelBase
                         validationPath, typedProgress, _cts.Token), _cts.Token);
                 string output = await Task.Run(
                     () => RenderValidationResult(result), _cts.Token);
+                _jobOutputRefresh =
+                    () => RenderValidationResult(
+                        result);
                 _jobPlan = new(SelectedJob, parsed, result.IsValid ? 0 : 4,
                     output, DateTimeOffset.UtcNow);
             }
             else
             {
                 throw new InvalidOperationException(
-                    $"No typed service is available for '{SelectedJob.Name}'.");
+                    LF(
+                        "Operations.Diagnostic.NoPreviewService",
+                        SelectedJob.Id));
             }
             HasJobPreview = true;
-            JobOutput = _jobPlan.PreviewOutput;
-            JobStatus = _jobPlan.PreviewExitCode == 0
-                ? $"Preview completed. Review output before applying."
-                : $"Preview exited with code {_jobPlan.PreviewExitCode}.";
+            JobOutput = _jobOutputRefresh?.Invoke() ??
+                _jobPlan.PreviewOutput;
+            if (_jobPlan.PreviewExitCode == 0)
+                SetJobStatus(
+                    "Operations.Job.Status.PreviewCompleted");
+            else
+                SetJobStatus(
+                    "Operations.Job.Status.PreviewExitCode",
+                    _jobPlan.PreviewExitCode);
             AddJobHistory(new(SelectedJob.Name, false, _jobPlan.PreviewExitCode == 0,
                 _jobPlan.CreatedAtUtc, 0, TrimOutput(JobOutput)));
             FinishActivity(activity, JobStatus,
@@ -406,12 +853,23 @@ public partial class OperationsViewModel : ViewModelBase
         }
         catch (OperationCanceledException)
         {
-            JobStatus = "Job preview cancelled.";
+            SetJobStatus(
+                "Operations.Job.Status.PreviewCancelled");
             FinishActivity(activity, JobStatus, AppActivityState.Cancelled);
+        }
+        catch (OperationsValidationException ex)
+        {
+            SetJobStatus(ex.ResourceKey);
+            FinishActivity(
+                activity,
+                JobStatus,
+                AppActivityState.Failed);
         }
         catch (Exception ex)
         {
-            JobStatus = $"Job preview failed: {ex.Message}";
+            SetJobStatusFailure(
+                "Operations.Job.Status.PreviewFailed",
+                ex.Message);
             FinishActivity(activity, JobStatus, AppActivityState.Failed);
         }
         finally
@@ -428,16 +886,26 @@ public partial class OperationsViewModel : ViewModelBase
     {
         if (_jobs is null || _jobPlan is not { CanApply: true } plan)
             return;
+        string jobName =
+            JobDisplayName(plan.Job);
         if (!await _dialogs.ConfirmApplyAsync(
-                $"Apply {plan.Job.Name}",
+                LF(
+                    "Operations.Dialog.ApplyJob.Title",
+                    jobName),
                 DescribeJobApplyConfirmation(plan),
-                "Apply"))
+                L("Common.Apply")))
             return;
         IsBusy = true;
         _cts = new CancellationTokenSource();
         JobOutput = "";
+        _jobOutputRefresh = null;
         Guid? activity = _activities?.Start(
-            plan.Job.Name, "Starting apply", ShellDestination.Operations, Cancel);
+            LF(
+                "Operations.Activity.Apply.Title",
+                jobName),
+            L("Operations.Activity.Apply.Starting"),
+            ShellDestination.Operations,
+            Cancel);
         try
         {
             UnifiedJobResult result;
@@ -451,6 +919,9 @@ public partial class OperationsViewModel : ViewModelBase
                     _configuredExport.ApplyAsync(
                         exportPlan, typedProgress, _cts.Token), _cts.Token);
                 clock.Stop();
+                _jobOutputRefresh =
+                    () => RenderConfiguredExportResult(
+                        typedResult);
                 result = new(0, RenderConfiguredExportResult(typedResult), clock.Elapsed);
             }
             else if (plan.Job.Id == "cross-library-sync" && _crossLibrarySync is not null &&
@@ -464,6 +935,9 @@ public partial class OperationsViewModel : ViewModelBase
                         typedPlan, typedProgress, _cts.Token), _cts.Token);
                 clock.Stop();
                 string output = RenderCrossLibrarySyncResult(typedResult);
+                _jobOutputRefresh =
+                    () => RenderCrossLibrarySyncResult(
+                        typedResult);
                 result = new(0, output, clock.Elapsed);
             }
             else if (plan.Job.Id == "playlist-sync" && _playlistExport is not null &&
@@ -476,6 +950,9 @@ public partial class OperationsViewModel : ViewModelBase
                     _playlistExport.ApplyAsync(
                         playlistPlan, typedProgress, _cts.Token), _cts.Token);
                 clock.Stop();
+                _jobOutputRefresh =
+                    () => RenderPlaylistExportResult(
+                        typedResult);
                 result = new(0, RenderPlaylistExportResult(typedResult), clock.Elapsed);
             }
             else if (plan.Job.Id == "artwork-normalization" && _artworkNormalization is not null &&
@@ -490,6 +967,9 @@ public partial class OperationsViewModel : ViewModelBase
                 clock.Stop();
                 if (typedResult.UpdatedPaths.Count > 0)
                     ArtworkNormalized?.Invoke(typedResult.UpdatedPaths);
+                _jobOutputRefresh =
+                    () => RenderArtworkNormalizationResult(
+                        typedResult);
                 result = new(0, RenderArtworkNormalizationResult(typedResult), clock.Elapsed);
             }
             else if (plan.Job.Id == "smart-storage" && _smartStorage is not null &&
@@ -502,6 +982,9 @@ public partial class OperationsViewModel : ViewModelBase
                     _smartStorage.ApplyAsync(
                         smartPlan, typedProgress, _cts.Token), _cts.Token);
                 clock.Stop();
+                _jobOutputRefresh =
+                    () => RenderSmartStorageResult(
+                        typedResult);
                 result = new(0, RenderSmartStorageResult(typedResult), clock.Elapsed);
             }
             else if (plan.Job.Id == "car-card" && _carCard is not null &&
@@ -514,16 +997,27 @@ public partial class OperationsViewModel : ViewModelBase
                     _carCard.ApplyAsync(
                         carCardPlan, typedProgress, _cts.Token), _cts.Token);
                 clock.Stop();
+                _jobOutputRefresh =
+                    () => RenderCarCardResult(
+                        typedResult);
                 result = new(0, RenderCarCardResult(typedResult), clock.Elapsed);
             }
             else
             {
                 throw new InvalidOperationException(
-                    $"No typed apply service is available for '{plan.Job.Name}'.");
+                    LF(
+                        "Operations.Diagnostic.NoApplyService",
+                        plan.Job.Id));
             }
             JobOutput = result.Output;
-            JobStatus = result.Success ? $"{plan.Job.Name} applied successfully."
-                : $"Apply exited with code {result.ExitCode}. Review the output and operation journal.";
+            if (result.Success)
+                SetJobStatus(
+                    "Operations.Job.Status.ApplyCompleted",
+                    jobName);
+            else
+                SetJobStatus(
+                    "Operations.Job.Status.ApplyExitCode",
+                    result.ExitCode);
             AddJobHistory(new(plan.Job.Name, true, result.Success, DateTimeOffset.UtcNow,
                 result.Elapsed.TotalSeconds, TrimOutput(result.Output)));
             InvalidateJobPreview(clearOutput: false);
@@ -532,12 +1026,15 @@ public partial class OperationsViewModel : ViewModelBase
         }
         catch (OperationCanceledException)
         {
-            JobStatus = "Job apply cancelled; inspect Operations for a recovery journal.";
+            SetJobStatus(
+                "Operations.Job.Status.ApplyCancelled");
             FinishActivity(activity, JobStatus, AppActivityState.Cancelled);
         }
         catch (Exception ex)
         {
-            JobStatus = $"Job apply failed: {ex.Message}";
+            SetJobStatusFailure(
+                "Operations.Job.Status.ApplyFailed",
+                ex.Message);
             FinishActivity(activity, JobStatus, AppActivityState.Failed);
         }
         finally { _cts?.Dispose(); _cts = null; IsBusy = false; }
@@ -567,10 +1064,18 @@ public partial class OperationsViewModel : ViewModelBase
             _ => (0, false, null),
         };
         string recoveryText = recovery
-            ? "Recovery is available: changed files will be journaled" +
-              (string.IsNullOrWhiteSpace(recoveryRoot) ? "." : $" under '{recoveryRoot}'.")
-            : "Recovery is not available for this apply.";
-        return $"Apply {plan.Job.Name} with {mutations:N0} planned file mutation(s)?\n\n{recoveryText}";
+            ? string.IsNullOrWhiteSpace(
+                recoveryRoot)
+                ? L("Operations.Dialog.ApplyJob.RecoveryAvailable")
+                : LF(
+                    "Operations.Dialog.ApplyJob.RecoveryAvailableAt",
+                    recoveryRoot)
+            : L("Operations.Dialog.ApplyJob.RecoveryUnavailable");
+        return LC(
+            "Operations.Dialog.ApplyJob.Message",
+            mutations,
+            JobDisplayName(plan.Job),
+            recoveryText);
     }
 
     private void InvalidateJobPreview(bool clearOutput = true)
@@ -583,7 +1088,11 @@ public partial class OperationsViewModel : ViewModelBase
         _carCardPlan = null;
         _configuredExportPlan = null;
         HasJobPreview = false;
-        if (clearOutput) JobOutput = "";
+        if (clearOutput)
+        {
+            _jobOutputRefresh = null;
+            JobOutput = "";
+        }
         ApplyJobCommand.NotifyCanExecuteChanged();
     }
 
@@ -593,71 +1102,156 @@ public partial class OperationsViewModel : ViewModelBase
         {
             foreach (var item in JsonSerializer.Deserialize<List<UnifiedJobHistoryItem>>(
                          _settings.GetLibraryPreference(JobHistoryPreference) ?? "[]") ?? [])
+            {
+                item.RefreshLocalizedText(
+                    _localization);
                 JobHistory.Add(item);
+            }
         }
         catch { }
     }
 
     private void AddJobHistory(UnifiedJobHistoryItem item)
     {
+        item.RefreshLocalizedText(
+            _localization);
         JobHistory.Insert(0, item);
         while (JobHistory.Count > 30) JobHistory.RemoveAt(JobHistory.Count - 1);
         _settings.SetLibraryPreference(JobHistoryPreference, JsonSerializer.Serialize(JobHistory));
     }
 
     private static string TrimOutput(string output) => output.Length <= 20_000 ? output : output[^20_000..];
-    private static string Required(string value, string message) =>
-        string.IsNullOrWhiteSpace(value) ? throw new ArgumentException(message) : value.Trim();
+    private static string Required(
+        string value,
+        string resourceKey) =>
+        string.IsNullOrWhiteSpace(value)
+            ? throw new OperationsValidationException(
+                resourceKey)
+            : value.Trim();
+
     private string ConfiguredLibraryPath() =>
         _settings.Configuration?.ItunesLibraryPath
-        ?? throw new ArgumentException(
-            "Set the iTunes library path in the active library configuration.");
+        ?? throw new OperationsValidationException(
+            "Operations.Validation.ActiveLibraryPathRequired");
 
-    private static string RenderCrossLibrarySyncPlan(CrossLibrarySyncPlan plan)
+    private string RenderIssue(
+        OperationIssue issue) =>
+        LF(
+            "Operations.Output.Issue",
+            L(
+                $"Operations.Choice.OperationIssueSeverity.{issue.Severity}"),
+            issue.Code,
+            issue.Message,
+            issue.Path is null
+                ? ""
+                : LF(
+                    "Operations.Output.PathSuffix",
+                    issue.Path));
+
+    private string MutationKindLabel(
+        FileMutationKind kind) =>
+        L(
+            $"Operations.Choice.FileMutationKind.{kind}");
+
+    private string RenderMutation(
+        FileMutationAction action,
+        bool destinationOnly = false) =>
+        destinationOnly
+            ? LF(
+                "Operations.Output.Mutation.Destination",
+                MutationKindLabel(action.Kind),
+                action.DestinationPath)
+            : action.Kind == FileMutationKind.Delete
+                ? LF(
+                    "Operations.Output.Mutation.Source",
+                    MutationKindLabel(action.Kind),
+                    action.SourcePath)
+                : LF(
+                    "Operations.Output.Mutation.SourceDestination",
+                    MutationKindLabel(action.Kind),
+                    action.SourcePath,
+                    action.DestinationPath);
+
+    private string RecoveryJournalLine(
+        string? journalPath) =>
+        journalPath is null
+            ? ""
+            : Environment.NewLine +
+              LF(
+                  "Operations.Output.RecoveryJournal",
+                  journalPath);
+
+    private string RenderCrossLibrarySyncPlan(CrossLibrarySyncPlan plan)
     {
         var output = new StringBuilder();
         foreach (OperationIssue issue in plan.Issues)
-            output.AppendLine($"{issue.Severity,-11} {issue.Code}: {issue.Message}" +
-                (issue.Path is null ? "" : " [" + issue.Path + "]"));
+            output.AppendLine(
+                RenderIssue(issue));
         foreach (FileMutationAction action in plan.MutationPlan.Actions)
-            output.AppendLine(action.Kind == FileMutationKind.Delete
-                ? $"{action.Kind,-10} {action.SourcePath}"
-                : $"{action.Kind,-10} {action.SourcePath} -> {action.DestinationPath}");
-        output.AppendLine($"Plan: {plan.Files.Count:N0} desired, {plan.UnchangedCount:N0} unchanged, " +
-            $"{plan.StaleCount:N0} stale, {plan.MutationPlan.Actions.Count:N0} mutations.");
+            output.AppendLine(
+                RenderMutation(action));
+        output.AppendLine(
+            LC(
+                "Operations.Output.CrossLibrary.Plan",
+                plan.Files.Count,
+                plan.UnchangedCount,
+                plan.StaleCount,
+                plan.MutationPlan.Actions.Count));
         return output.ToString();
     }
 
-    private static string RenderCrossLibrarySyncResult(CrossLibrarySyncResult result) =>
-        $"Applied: {result.Mutations.Copied:N0} copied, {result.Mutations.Replaced:N0} replaced, " +
-        $"{result.Mutations.Quarantined:N0} quarantined, {result.Mutations.Deleted:N0} deleted, " +
-        $"{result.UnchangedCount:N0} unchanged." +
-        (result.Mutations.JournalPath is null ? "" :
-            Environment.NewLine + "Recovery journal: " + result.Mutations.JournalPath);
+    private string RenderCrossLibrarySyncResult(
+        CrossLibrarySyncResult result) =>
+        LC(
+            "Operations.Output.CrossLibrary.Result",
+            result.Mutations.Copied,
+            result.Mutations.Replaced,
+            result.Mutations.Quarantined,
+            result.Mutations.Deleted,
+            result.UnchangedCount) +
+        RecoveryJournalLine(
+            result.Mutations.JournalPath);
 
-    private static string RenderConfiguredExportPlan(ConfiguredExportPlan plan)
+    private string RenderConfiguredExportPlan(ConfiguredExportPlan plan)
     {
         var output = new StringBuilder();
         foreach (OperationIssue issue in plan.Issues)
-            output.AppendLine($"{issue.Severity,-11} {issue.Code}: {issue.Message}" +
-                (issue.Path is null ? "" : " [" + issue.Path + "]"));
+            output.AppendLine(
+                RenderIssue(issue));
         foreach (ConfiguredExportFile file in plan.Files)
             output.AppendLine(file.Mutation is { } mutation
-                ? $"{mutation,-10} {file.SourcePath} -> {file.DestinationPath}"
-                : $"{"Unchanged",-10} {file.DestinationPath}");
-        output.AppendLine($"Plan: {plan.Files.Count:N0} desired, " +
-            $"{plan.UnchangedCount:N0} unchanged, {plan.ExtraFileCount:N0} extra, " +
-            $"{plan.TransportPlan?.MutationPlan.Actions.Count ?? 0:N0} mutations.");
+                ? LF(
+                    "Operations.Output.Mutation.SourceDestination",
+                    MutationKindLabel(mutation),
+                    file.SourcePath,
+                    file.DestinationPath)
+                : LF(
+                    "Operations.Output.Mutation.Destination",
+                    L("Operations.Output.Unchanged"),
+                    file.DestinationPath));
+        output.AppendLine(
+            LC(
+                "Operations.Output.ConfiguredExport.Plan",
+                plan.Files.Count,
+                plan.UnchangedCount,
+                plan.ExtraFileCount,
+                plan.TransportPlan?.MutationPlan.Actions.Count ??
+                0));
         return output.ToString();
     }
 
-    private static string RenderConfiguredExportResult(ConfiguredExportResult result) =>
-        $"Applied export '{result.ProfileId}': {result.Mutations.Copied:N0} copied, " +
-        $"{result.Mutations.Replaced:N0} replaced, " +
-        $"{result.Mutations.Quarantined:N0} quarantined, " +
-        $"{result.Mutations.Deleted:N0} deleted, {result.UnchangedCount:N0} unchanged." +
-        (result.Mutations.JournalPath is null ? "" :
-            Environment.NewLine + "Recovery journal: " + result.Mutations.JournalPath);
+    private string RenderConfiguredExportResult(
+        ConfiguredExportResult result) =>
+        LC(
+            "Operations.Output.ConfiguredExport.Result",
+            result.Mutations.Copied,
+            result.ProfileId,
+            result.Mutations.Replaced,
+            result.Mutations.Quarantined,
+            result.Mutations.Deleted,
+            result.UnchangedCount) +
+        RecoveryJournalLine(
+            result.Mutations.JournalPath);
 
     private static bool IsConfiguredExportJob(string? jobId) =>
         jobId?.StartsWith(UnifiedJobService.ConfiguredExportJobPrefix,
@@ -677,98 +1271,157 @@ public partial class OperationsViewModel : ViewModelBase
         return false;
     }
 
-    private static string RenderArtworkNormalizationPlan(ArtworkNormalizationPlan plan)
+    private string RenderArtworkNormalizationPlan(ArtworkNormalizationPlan plan)
     {
         var output = new StringBuilder();
         foreach (OperationIssue issue in plan.Issues)
-            output.AppendLine($"{issue.Severity,-11} {issue.Code}: {issue.Message}" +
-                (issue.Path is null ? "" : " [" + issue.Path + "]"));
+            output.AppendLine(
+                RenderIssue(issue));
         foreach (ArtworkNormalizationItem item in plan.Items)
-            output.AppendLine($"REPLACE    {item.Path}: {item.Current.MimeType}, " +
-                $"{item.Current.Width}x{item.Current.Height}, {item.Current.Size:N0} bytes -> " +
-                $"image/jpeg, {item.Proposed.Width}x{item.Proposed.Height}, " +
-                $"{item.Proposed.Size:N0} bytes");
-        output.AppendLine($"Plan: {plan.ScannedTrackCount:N0} tracks inspected, " +
-            $"{plan.UnchangedCount:N0} already valid, {plan.Items.Count:N0} media files to replace.");
+            output.AppendLine(
+                LF(
+                    "Operations.Output.ArtworkNormalization.Item",
+                    MutationKindLabel(
+                        FileMutationKind.Replace),
+                    item.Path,
+                    item.Current.MimeType,
+                    item.Current.Width,
+                    item.Current.Height,
+                    item.Current.Size,
+                    item.Proposed.Width,
+                    item.Proposed.Height,
+                    item.Proposed.Size));
+        output.AppendLine(
+            LC(
+                "Operations.Output.ArtworkNormalization.Plan",
+                plan.ScannedTrackCount,
+                plan.UnchangedCount,
+                plan.Items.Count));
         return output.ToString();
     }
 
-    private static string RenderArtworkNormalizationResult(ArtworkNormalizationResult result) =>
-        $"Applied: {result.UpdatedFileCount:N0} media files and " +
-        $"{result.UpdatedTrackCount:N0} ITL track caches updated." +
-        (result.JournalPath is null ? "" :
-            Environment.NewLine + "Recovery journal: " + result.JournalPath) +
-        (result.CacheError is null ? "" :
-            Environment.NewLine + "Cache warning: " + result.CacheError);
+    private string RenderArtworkNormalizationResult(
+        ArtworkNormalizationResult result) =>
+        LC(
+            "Operations.Output.ArtworkNormalization.Result",
+            result.UpdatedFileCount,
+            result.UpdatedTrackCount) +
+        RecoveryJournalLine(
+            result.JournalPath) +
+        (result.CacheError is null
+            ? ""
+            : Environment.NewLine +
+              LF(
+                  "Operations.Output.CacheWarning",
+                  result.CacheError));
 
-    private static string RenderSmartStoragePlan(SmartStoragePlan plan)
+    private string RenderSmartStoragePlan(SmartStoragePlan plan)
     {
         var output = new StringBuilder();
         foreach (OperationIssue issue in plan.Issues)
-            output.AppendLine($"{issue.Severity,-11} {issue.Code}: {issue.Message}" +
-                (issue.Path is null ? "" : " [" + issue.Path + "]"));
+            output.AppendLine(
+                RenderIssue(issue));
         foreach (FileMutationAction action in plan.MutationPlan.Actions)
-            output.AppendLine($"{action.Kind,-16} {action.DestinationPath}");
-        output.AppendLine($"Plan: {plan.LibraryTrackCount:N0} tracks, " +
-            $"{plan.InstalledTrackCount:N0} installs, {plan.UnchangedTrackCount:N0} unchanged, " +
-            $"{plan.StaleTrackCount:N0} stale, {plan.PlaylistCount:N0} playlists, " +
-            $"{plan.ArtworkCount:N0} artwork items.");
+            output.AppendLine(
+                RenderMutation(
+                    action,
+                    destinationOnly: true));
+        output.AppendLine(
+            LC(
+                "Operations.Output.SmartStorage.Plan",
+                plan.LibraryTrackCount,
+                plan.InstalledTrackCount,
+                plan.UnchangedTrackCount,
+                plan.StaleTrackCount,
+                plan.PlaylistCount,
+                plan.ArtworkCount));
         return output.ToString();
     }
 
-    private static string RenderSmartStorageResult(SmartStorageResult result) =>
-        $"Applied {result.LibraryTrackCount:N0} tracks, {result.PlaylistCount:N0} playlists, " +
-        $"and {result.ArtworkCount:N0} artwork items: {result.Mutations.Copied:N0} created, " +
-        $"{result.Mutations.Replaced:N0} replaced, {result.Mutations.Quarantined:N0} quarantined." +
-        (result.Mutations.JournalPath is null ? "" :
-            Environment.NewLine + "Recovery journal: " + result.Mutations.JournalPath);
+    private string RenderSmartStorageResult(
+        SmartStorageResult result) =>
+        LC(
+            "Operations.Output.SmartStorage.Result",
+            result.LibraryTrackCount,
+            result.PlaylistCount,
+            result.ArtworkCount,
+            result.Mutations.Copied,
+            result.Mutations.Replaced,
+            result.Mutations.Quarantined) +
+        RecoveryJournalLine(
+            result.Mutations.JournalPath);
 
-    private static string RenderCarCardPlan(CarCardPlan plan)
+    private string RenderCarCardPlan(CarCardPlan plan)
     {
         var output = new StringBuilder();
         foreach (OperationIssue issue in plan.Issues)
-            output.AppendLine($"{issue.Severity,-11} {issue.Code}: {issue.Message}" +
-                (issue.Path is null ? "" : " [" + issue.Path + "]"));
+            output.AppendLine(
+                RenderIssue(issue));
         foreach (FileMutationAction action in plan.MutationPlan.Actions)
-            output.AppendLine($"{action.Kind,-16} {action.DestinationPath}");
-        output.AppendLine($"Plan: {plan.LibraryTrackCount:N0} tracks, " +
-            $"{plan.InstalledTrackCount:N0} installs, {plan.UnchangedTrackCount:N0} unchanged, " +
-            $"{plan.RemovedTrackCount:N0} removals, {plan.PlaylistCount:N0} playlists.");
+            output.AppendLine(
+                RenderMutation(
+                    action,
+                    destinationOnly: true));
+        output.AppendLine(
+            LC(
+                "Operations.Output.CarCard.Plan",
+                plan.LibraryTrackCount,
+                plan.InstalledTrackCount,
+                plan.UnchangedTrackCount,
+                plan.RemovedTrackCount,
+                plan.PlaylistCount));
         return output.ToString();
     }
 
-    private static string RenderCarCardResult(CarCardResult result) =>
-        $"Applied {result.LibraryTrackCount:N0} tracks and {result.PlaylistCount:N0} playlists: " +
-        $"{result.Mutations.Copied:N0} created, {result.Mutations.Replaced:N0} replaced, " +
-        $"{result.Mutations.Quarantined:N0} quarantined." +
-        (result.Mutations.JournalPath is null ? "" :
-            Environment.NewLine + "Recovery journal: " + result.Mutations.JournalPath);
+    private string RenderCarCardResult(
+        CarCardResult result) =>
+        LC(
+            "Operations.Output.CarCard.Result",
+            result.LibraryTrackCount,
+            result.PlaylistCount,
+            result.Mutations.Copied,
+            result.Mutations.Replaced,
+            result.Mutations.Quarantined) +
+        RecoveryJournalLine(
+            result.Mutations.JournalPath);
 
-    private static string RenderPlaylistExportPlan(PlaylistExportPlan plan)
+    private string RenderPlaylistExportPlan(PlaylistExportPlan plan)
     {
         var output = new StringBuilder();
         foreach (OperationIssue issue in plan.Issues)
-            output.AppendLine($"{issue.Severity,-11} {issue.Code}: {issue.Message}" +
-                (issue.Path is null ? "" : " [" + issue.Path + "]"));
+            output.AppendLine(
+                RenderIssue(issue));
         foreach (PlaylistExportTargetPlan target in plan.Targets)
-            output.AppendLine($"Target {target.Target}: {target.Files.Count:N0} playlist(s), " +
-                $"{target.MissingTrackCount:N0} missing mapping(s).");
+            output.AppendLine(
+                LC(
+                    "Operations.Output.PlaylistExport.Target",
+                    target.Files.Count,
+                    target.Target,
+                    target.MissingTrackCount));
         foreach (FileMutationAction action in plan.MutationPlan.Actions)
-            output.AppendLine(action.Kind == FileMutationKind.Delete
-                ? $"{action.Kind,-16} {action.SourcePath}"
-                : $"{action.Kind,-16} {action.DestinationPath}");
+            output.AppendLine(
+                action.Kind ==
+                FileMutationKind.Delete
+                    ? RenderMutation(action)
+                    : RenderMutation(
+                        action,
+                        destinationOnly: true));
         return output.ToString();
     }
 
-    private static string RenderPlaylistExportResult(PlaylistExportResult result) =>
-        $"Applied {result.PlaylistCount:N0} playlist(s): {result.Mutations.Copied:N0} created, " +
-        $"{result.Mutations.Replaced:N0} replaced, " +
-        $"{result.Mutations.Quarantined:N0} quarantined, " +
-        $"{result.Mutations.Deleted:N0} deleted." +
-        (result.Mutations.JournalPath is null ? "" :
-            Environment.NewLine + "Recovery journal: " + result.Mutations.JournalPath);
+    private string RenderPlaylistExportResult(
+        PlaylistExportResult result) =>
+        LC(
+            "Operations.Output.PlaylistExport.Result",
+            result.PlaylistCount,
+            result.Mutations.Copied,
+            result.Mutations.Replaced,
+            result.Mutations.Quarantined,
+            result.Mutations.Deleted) +
+        RecoveryJournalLine(
+            result.Mutations.JournalPath);
 
-    private static string RenderRedundancyResult(RedundancyAnalysisResult result)
+    private string RenderRedundancyResult(RedundancyAnalysisResult result)
     {
         var output = new StringBuilder();
         foreach (RedundancyGroup group in result.Groups)
@@ -777,18 +1430,34 @@ public partial class OperationsViewModel : ViewModelBase
                 output.AppendLine($"{track.Artist} - {track.Title} ({track.Album}) [{track.Path}]");
             output.AppendLine();
         }
-        output.AppendLine($"{result.Groups.Count:N0} redundancy group(s) among " +
-            $"{result.ScannedTrackCount:N0} local tracks.");
+        output.AppendLine(
+            LC(
+                "Operations.Output.Redundancy.Summary",
+                result.Groups.Count,
+                result.ScannedTrackCount));
         return output.ToString();
     }
 
-    private static string RenderValidationResult(ItunesValidationResult result)
+    private string RenderValidationResult(ItunesValidationResult result)
     {
         var output = new StringBuilder();
         foreach (var issue in result.Issues)
-            output.AppendLine($"{issue.Severity,-7} {issue.Code,-30} {issue.Message}");
-        output.AppendLine($"validation: {result.ErrorCount} error(s), " +
-            $"{result.WarningCount} warning(s)");
+            output.AppendLine(
+                LF(
+                    "Operations.Output.Validation.Issue",
+                    L(
+                        $"Operations.Choice.ItlValidationSeverity.{issue.Severity}"),
+                    issue.Code,
+                    issue.Message));
+        output.AppendLine(
+            LF(
+                "Operations.Output.Validation.Summary",
+                LC(
+                    "Operations.Count.Errors",
+                    result.ErrorCount),
+                LC(
+                    "Operations.Count.Warnings",
+                    result.WarningCount)));
         return output.ToString();
     }
 
@@ -800,16 +1469,23 @@ public partial class OperationsViewModel : ViewModelBase
         var roots = CollectSearchRoots();
         if (roots.Count == 0)
         {
-            StatusText = "No configuration or search root is available. Choose a folder to scan.";
+            SetStatus(
+                "Operations.Status.NoSearchRoots");
             return;
         }
 
         IsBusy = true;
         _cts = new CancellationTokenSource();
         Guid? activity = _activities?.Start(
-            "Scan recovery operations", $"Scanning {roots.Count:N0} root(s)",
-            ShellDestination.Operations, Cancel);
-        StatusText = $"Scanning {roots.Count:N0} root(s) for operation journals…";
+            L("Operations.Activity.Discovery.Title"),
+            LC(
+                "Operations.Activity.Discovery.Starting",
+                roots.Count),
+            ShellDestination.Operations,
+            Cancel);
+        SetCountStatus(
+            "Operations.Status.ScanningRoots",
+            roots.Count);
         try
         {
             var result = await _journals.DiscoverAsync(roots, _cts.Token);
@@ -820,24 +1496,39 @@ public partial class OperationsViewModel : ViewModelBase
             InvalidateRestorePreview();
             InvalidatePurgePreview();
             foreach (var run in result.Runs)
-                Runs.Add(new OperationRunViewModel(run));
+                Runs.Add(
+                    new(
+                        run,
+                        _localization));
             OnPropertyChanged(nameof(HasRuns));
             OnPropertyChanged(nameof(IsRunListEmpty));
             int interrupted = result.Runs.Count(run => run.State == OperationJournalState.Interrupted);
-            StatusText = $"Found {result.Runs.Count:N0} operation run(s); {interrupted:N0} interrupted"
-                + (result.Warnings.Count == 0 ? "." : $"; {result.Warnings.Count:N0} root(s) could not be scanned.");
+            SetCountStatus(
+                "Operations.Status.DiscoveryCompleted",
+                result.Runs.Count,
+                interrupted,
+                result.Warnings.Count);
+            StatusDiagnosticDetail =
+                result.Warnings.Count == 0
+                    ? null
+                    : string.Join(
+                        Environment.NewLine,
+                        result.Warnings);
             PreviewPurgeCommand.NotifyCanExecuteChanged();
             FinishActivity(activity, StatusText,
                 result.Warnings.Count == 0 ? AppActivityState.Completed : AppActivityState.Failed);
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Operation discovery cancelled.";
+            SetStatus(
+                "Operations.Status.DiscoveryCancelled");
             FinishActivity(activity, StatusText, AppActivityState.Cancelled);
         }
         catch (Exception ex)
         {
-            StatusText = $"Operation discovery failed: {ex.Message}";
+            SetStatusFailure(
+                "Operations.Status.DiscoveryFailed",
+                ex.Message);
             FinishActivity(activity, StatusText, AppActivityState.Failed);
         }
         finally
@@ -855,7 +1546,27 @@ public partial class OperationsViewModel : ViewModelBase
 
     private void ReportJobProgress(Guid? activity, OperationProgress progress)
     {
-        JobStatus = progress.Message ?? progress.Phase.ToString();
+        string phase = L(
+            $"Operations.Progress.Phase.{progress.Phase}");
+        if (progress.Total is > 0)
+            SetJobStatus(
+                "Operations.Progress.Determinate",
+                phase,
+                progress.Completed,
+                progress.Total.Value);
+        else
+            SetJobStatus(
+                "Operations.Progress.Indeterminate",
+                phase);
+        JobStatusDiagnosticDetail = string.Join(
+            Environment.NewLine,
+            new[]
+            {
+                progress.Message,
+                progress.CurrentPath,
+            }.Where(value =>
+                !string.IsNullOrWhiteSpace(
+                    value)));
         if (activity is { } id)
             _activities?.Report(id, JobStatus,
                 progress.Total is > 0 ? (double)progress.Completed / progress.Total.Value : null);
@@ -880,32 +1591,51 @@ public partial class OperationsViewModel : ViewModelBase
         IsBusy = true;
         _cts = new CancellationTokenSource();
         Guid? activity = _activities?.Start(
-            "Open recovery run", $"Opening {run.ToolName} operation",
-            ShellDestination.Operations, Cancel);
-        StatusText = $"Opening {run.ToolName} operation…";
+            L("Operations.Activity.OpenRun.Title"),
+            LF(
+                "Operations.Activity.OpenRun.Starting",
+                run.ToolName),
+            ShellDestination.Operations,
+            Cancel);
+        SetStatus(
+            "Operations.Status.OpeningRun",
+            run.ToolName);
         try
         {
             var browse = await _journals.BrowseAsync(run.Summary, _cts.Token);
             RootNodes.Clear();
-            var root = OperationEntryNodeViewModel.Build(browse);
+            var root = OperationEntryNodeViewModel.Build(
+                browse,
+                _localization);
             root.SelectionChanged += OnRestoreSelectionChanged;
             RootNodes.Add(root);
             SelectedRun = run;
             ShowBrowser = true;
             InvalidateRestorePreview();
-            StatusText = $"{browse.Entries.Count:N0} operation item(s) in their original hierarchy"
-                + (browse.Warnings.Count == 0 ? "." : $"; {browse.Warnings.Count:N0} item(s) could not be read.");
+            SetCountStatus(
+                "Operations.Status.RunOpened",
+                browse.Entries.Count,
+                browse.Warnings.Count);
+            StatusDiagnosticDetail =
+                browse.Warnings.Count == 0
+                    ? null
+                    : string.Join(
+                        Environment.NewLine,
+                        browse.Warnings);
             FinishActivity(activity, StatusText,
                 browse.Warnings.Count == 0 ? AppActivityState.Completed : AppActivityState.Failed);
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Opening operation cancelled.";
+            SetStatus(
+                "Operations.Status.OpenRunCancelled");
             FinishActivity(activity, StatusText, AppActivityState.Cancelled);
         }
         catch (Exception ex)
         {
-            StatusText = $"Could not open operation: {ex.Message}";
+            SetStatusFailure(
+                "Operations.Status.OpenRunFailed",
+                ex.Message);
             FinishActivity(activity, StatusText, AppActivityState.Failed);
         }
         finally
@@ -923,7 +1653,9 @@ public partial class OperationsViewModel : ViewModelBase
             StringComparer.OrdinalIgnoreCase.Equals(item.RunPath, summary.RunPath));
         if (run is null)
         {
-            run = new OperationRunViewModel(summary);
+            run = new OperationRunViewModel(
+                summary,
+                _localization);
             Runs.Insert(0, run);
             OnPropertyChanged(nameof(HasRuns));
             OnPropertyChanged(nameof(IsRunListEmpty));
@@ -938,7 +1670,9 @@ public partial class OperationsViewModel : ViewModelBase
         SelectedRun = null;
         RootNodes.Clear();
         InvalidateRestorePreview();
-        StatusText = $"Showing {Runs.Count:N0} discovered operation run(s).";
+        SetCountStatus(
+            "Operations.Status.ShowingRuns",
+            Runs.Count);
     }
 
     private void OnRestoreSelectionChanged()
@@ -975,29 +1709,43 @@ public partial class OperationsViewModel : ViewModelBase
         IsBusy = true;
         _cts = new CancellationTokenSource();
         Guid? activity = _activities?.Start(
-            "Preview recovery restore", $"Reviewing {entries.Count:N0} selected item(s)",
-            ShellDestination.Operations, Cancel);
+            L("Operations.Activity.RestorePreview.Title"),
+            LC(
+                "Operations.Activity.RestorePreview.Starting",
+                entries.Count),
+            ShellDestination.Operations,
+            Cancel);
         try
         {
             _restorePlan = await _journals.PreviewRestoreAsync(SelectedRun.Summary, entries, _cts.Token);
             ShowRestorePreview = _restorePlan.CanApply;
-            RestorePreviewText = _restorePlan.CanApply
-                ? $"Restore preview: {_restorePlan.Actions.Count:N0} item(s), " +
-                  $"{_restorePlan.CollisionCount:N0} destination collision(s), " +
-                  $"{_restorePlan.SkippedCount:N0} skipped."
-                : "No selected entries are currently recoverable.";
-            StatusText = RestorePreviewText;
+            if (_restorePlan.CanApply)
+                SetCountRestorePreview(
+                    "Operations.RestorePreview.Ready",
+                    _restorePlan.Actions.Count,
+                    _restorePlan.CollisionCount,
+                    _restorePlan.SkippedCount);
+            else
+                SetRestorePreview(
+                    "Operations.RestorePreview.None");
+            _statusTextRefresh =
+                _restorePreviewTextRefresh;
+            StatusDiagnosticDetail = null;
+            StatusText = RestorePreviewText!;
             FinishActivity(activity, StatusText,
                 _restorePlan.CanApply ? AppActivityState.Completed : AppActivityState.Failed);
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Restore preview cancelled.";
+            SetStatus(
+                "Operations.Status.RestorePreviewCancelled");
             FinishActivity(activity, StatusText, AppActivityState.Cancelled);
         }
         catch (Exception ex)
         {
-            StatusText = $"Restore preview failed: {ex.Message}";
+            SetStatusFailure(
+                "Operations.Status.RestorePreviewFailed",
+                ex.Message);
             FinishActivity(activity, StatusText, AppActivityState.Failed);
         }
         finally
@@ -1018,13 +1766,20 @@ public partial class OperationsViewModel : ViewModelBase
         IsBusy = true;
         _cts = new CancellationTokenSource();
         Guid? activity = _activities?.Start(
-            "Restore operation items", $"Restoring {plan.Actions.Count:N0} item(s)",
-            ShellDestination.Operations, Cancel);
+            L("Operations.Activity.Restore.Title"),
+            LC(
+                "Operations.Activity.Restore.Starting",
+                plan.Actions.Count),
+            ShellDestination.Operations,
+            Cancel);
         try
         {
             var progress = new Progress<int>(count =>
             {
-                StatusText = $"Restoring… {count:N0}/{plan.Actions.Count:N0}";
+                SetStatus(
+                    "Operations.Status.Restoring",
+                    count,
+                    plan.Actions.Count);
                 if (activity is { } id)
                     _activities?.Report(id, StatusText,
                         plan.Actions.Count == 0 ? null : (double)count / plan.Actions.Count);
@@ -1032,22 +1787,29 @@ public partial class OperationsViewModel : ViewModelBase
             var result = await _journals.ApplyRestoreAsync(plan, progress, _cts.Token);
             var browse = await _journals.BrowseAsync(SelectedRun.Summary, CancellationToken.None);
             RootNodes.Clear();
-            var root = OperationEntryNodeViewModel.Build(browse);
+            var root = OperationEntryNodeViewModel.Build(
+                browse,
+                _localization);
             root.SelectionChanged += OnRestoreSelectionChanged;
             RootNodes.Add(root);
             InvalidateRestorePreview();
-            StatusText = $"Restored {result.RestoredCount:N0} item(s); " +
-                $"preserved {result.CollisionBackupCount:N0} collision(s).";
+            SetCountStatus(
+                "Operations.Status.RestoreCompleted",
+                result.RestoredCount,
+                result.CollisionBackupCount);
             FinishActivity(activity, StatusText);
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Restore cancelled and completed actions were rolled back.";
+            SetStatus(
+                "Operations.Status.RestoreCancelled");
             FinishActivity(activity, StatusText, AppActivityState.Cancelled);
         }
         catch (Exception ex)
         {
-            StatusText = $"Restore failed and completed actions were rolled back: {ex.Message}";
+            SetStatusFailure(
+                "Operations.Status.RestoreFailed",
+                ex.Message);
             FinishActivity(activity, StatusText, AppActivityState.Failed);
         }
         finally
@@ -1063,6 +1825,7 @@ public partial class OperationsViewModel : ViewModelBase
         _restorePlan = null;
         ShowRestorePreview = false;
         RestorePreviewText = null;
+        _restorePreviewTextRefresh = null;
         ApplyRestoreCommand.NotifyCanExecuteChanged();
     }
 
@@ -1074,27 +1837,43 @@ public partial class OperationsViewModel : ViewModelBase
         IsBusy = true;
         _cts = new CancellationTokenSource();
         Guid? activity = _activities?.Start(
-            "Preview recovery purge", $"Reviewing runs older than {RetentionDays:N0} day(s)",
-            ShellDestination.Operations, Cancel);
-        StatusText = $"Inventorying operation runs older than {RetentionDays:N0} day(s)…";
+            L("Operations.Activity.PurgePreview.Title"),
+            LC(
+                "Operations.Activity.PurgePreview.Starting",
+                RetentionDays),
+            ShellDestination.Operations,
+            Cancel);
+        SetCountStatus(
+            "Operations.Status.InventoryingPurge",
+            RetentionDays);
         try
         {
             _purgePlan = await _journals.PreviewPurgeAsync(
                 Runs.Select(run => run.Summary).ToList(), RetentionDays, null, _cts.Token);
+            OperationPurgePlan renderedPlan =
+                _purgePlan;
             ShowPurgePreview = true;
-            PurgePreviewText = DescribePurgePlan(_purgePlan);
-            StatusText = PurgePreviewText;
+            SetPurgePreview(
+                () => DescribePurgePlan(
+                    renderedPlan));
+            _statusTextRefresh =
+                _purgePreviewTextRefresh;
+            StatusDiagnosticDetail = null;
+            StatusText = PurgePreviewText!;
             FinishActivity(activity, StatusText,
                 _purgePlan.CanApply ? AppActivityState.Completed : AppActivityState.Failed);
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Purge preview cancelled.";
+            SetStatus(
+                "Operations.Status.PurgePreviewCancelled");
             FinishActivity(activity, StatusText, AppActivityState.Cancelled);
         }
         catch (Exception ex)
         {
-            StatusText = $"Purge preview failed: {ex.Message}";
+            SetStatusFailure(
+                "Operations.Status.PurgePreviewFailed",
+                ex.Message);
             FinishActivity(activity, StatusText, AppActivityState.Failed);
         }
         finally
@@ -1115,13 +1894,20 @@ public partial class OperationsViewModel : ViewModelBase
         IsBusy = true;
         _cts = new CancellationTokenSource();
         Guid? activity = _activities?.Start(
-            "Purge operation history", $"Purging {plan.Runs.Count:N0} run(s)",
-            ShellDestination.Operations, Cancel);
+            L("Operations.Activity.Purge.Title"),
+            LC(
+                "Operations.Activity.Purge.Starting",
+                plan.Runs.Count),
+            ShellDestination.Operations,
+            Cancel);
         try
         {
             var progress = new Progress<int>(count =>
             {
-                StatusText = $"Purging… {count:N0}/{plan.Runs.Count:N0} run(s)";
+                SetCountStatus(
+                    "Operations.Status.Purging",
+                    plan.Runs.Count,
+                    count);
                 if (activity is { } id)
                     _activities?.Report(id, StatusText,
                         plan.Runs.Count == 0 ? null : (double)count / plan.Runs.Count);
@@ -1132,20 +1918,27 @@ public partial class OperationsViewModel : ViewModelBase
             foreach (var run in Runs.Where(run => deleted.Contains(run.RunPath)).ToList())
                 Runs.Remove(run);
             InvalidatePurgePreview();
-            StatusText = $"Purged {result.RunsDeleted:N0} run(s), {result.FilesDeleted:N0} file(s), " +
-                $"and {FormatBytes(result.BytesDeleted)}.";
+            SetCountStatus(
+                "Operations.Status.PurgeCompleted",
+                result.RunsDeleted,
+                result.FilesDeleted,
+                FormatBytes(
+                    result.BytesDeleted));
             OnPropertyChanged(nameof(HasRuns));
             OnPropertyChanged(nameof(IsRunListEmpty));
             FinishActivity(activity, StatusText);
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Purge cancelled. Runs not yet irreversibly deleted may remain in purge staging.";
+            SetStatus(
+                "Operations.Status.PurgeCancelled");
             FinishActivity(activity, StatusText, AppActivityState.Cancelled);
         }
         catch (Exception ex)
         {
-            StatusText = $"Purge stopped: {ex.Message}";
+            SetStatusFailure(
+                "Operations.Status.PurgeFailed",
+                ex.Message);
             FinishActivity(activity, StatusText, AppActivityState.Failed);
         }
         finally
@@ -1161,20 +1954,38 @@ public partial class OperationsViewModel : ViewModelBase
         _purgePlan = null;
         ShowPurgePreview = false;
         PurgePreviewText = null;
+        _purgePreviewTextRefresh = null;
         ApplyPurgeCommand.NotifyCanExecuteChanged();
     }
 
-    private static string DescribePurgePlan(OperationPurgePlan plan)
+    private string DescribePurgePlan(OperationPurgePlan plan)
     {
         string eligible = plan.CanApply
-            ? $"Purge preview: {plan.Runs.Count:N0} run(s), {plan.FileCount:N0} file(s), {FormatBytes(plan.TotalBytes)}"
-            : "Purge preview: no runs are old enough to purge";
+            ? LC(
+                "Operations.PurgePreview.Eligible",
+                plan.Runs.Count,
+                plan.FileCount,
+                FormatBytes(
+                    plan.TotalBytes))
+            : L("Operations.PurgePreview.NoneEligible");
         string backups = plan.RestoreBackupFileCount > 0
-            ? $", including {plan.RestoreBackupFileCount:N0} restore-collision backup file(s)"
+            ? LC(
+                "Operations.PurgePreview.Backups",
+                plan.RestoreBackupFileCount)
             : "";
-        return eligible + backups + $". Protected {plan.ProtectedInterruptedCount:N0} interrupted run(s); " +
-            $"{plan.NewerCount:N0} run(s) remain within retention" +
-            (plan.ProtectedUnsafeCount == 0 ? "." : $"; {plan.ProtectedUnsafeCount:N0} unsafe run root(s) were excluded.");
+        string unsafeRoots =
+            plan.ProtectedUnsafeCount == 0
+                ? ""
+                : LC(
+                    "Operations.PurgePreview.UnsafeRoots",
+                    plan.ProtectedUnsafeCount);
+        return LF(
+            "Operations.PurgePreview.Summary",
+            eligible,
+            backups,
+            plan.ProtectedInterruptedCount,
+            plan.NewerCount,
+            unsafeRoots);
     }
 
     private static string FormatBytes(long bytes)
@@ -1216,31 +2027,102 @@ public partial class OperationsViewModel : ViewModelBase
     }
 }
 
-public sealed class OperationRunViewModel
+internal sealed class OperationsValidationException(
+    string resourceKey) : Exception
 {
+    public string ResourceKey { get; } =
+        resourceKey;
+}
+
+public sealed class OperationRunViewModel : ViewModelBase
+{
+    private readonly ILocalizationService? _localization;
+
     public OperationJournalSummary Summary { get; }
     public string ToolName => Summary.ToolName;
-    public string Kind => Summary.Kind.ToString();
+    public string Kind => Get(
+        Summary.Kind switch
+        {
+            OperationJournalKind.Ingest =>
+                "Operations.Choice.OperationJournalKind.Ingest",
+            OperationJournalKind.Organize =>
+                "Operations.Choice.OperationJournalKind.Organize",
+            OperationJournalKind.Sync =>
+                "Operations.Choice.OperationJournalKind.Sync",
+            OperationJournalKind.Device =>
+                "Operations.Choice.OperationJournalKind.Device",
+            _ =>
+                "Operations.Choice.OperationJournalKind.OtherKind",
+        });
     public string State => Summary.State switch
     {
-        OperationJournalState.Completed => "Completed",
-        OperationJournalState.Interrupted => "Interrupted — recovery may be required",
-        OperationJournalState.RolledBack => "Rolled back",
-        _ => "Quarantine present — terminal state not recorded",
+        OperationJournalState.Completed => Get(
+            "Operations.Choice.OperationJournalState.Completed"),
+        OperationJournalState.Interrupted => Get(
+            "Operations.Choice.OperationJournalState.Interrupted"),
+        OperationJournalState.RolledBack => Get(
+            "Operations.Choice.OperationJournalState.RolledBack"),
+        _ => Get(
+            "Operations.Choice.OperationJournalState.Unknown"),
     };
-    public bool IsInterrupted => Summary.State == OperationJournalState.Interrupted;
-    public string Created => Summary.CreatedAtUtc.ToLocalTime().ToString("g");
+    public bool IsInterrupted =>
+        Summary.State ==
+        OperationJournalState.Interrupted;
+    public string Created =>
+        Summary.CreatedAtUtc.ToLocalTime().ToString(
+            "g",
+            _localization?.CurrentUICulture);
     public string RunPath => Summary.RunPath;
-    public string Journal => Summary.JournalPath ?? "No journal (folder-only quarantine)";
-    public string AffectedItems => Summary.AffectedItemCount is int count
-        ? $"{count:N0} recorded item(s)"
-        : "Item count available when the run is opened";
+    public string Journal =>
+        Summary.JournalPath ??
+        Get("Operations.Run.NoJournal");
+    public string AffectedItems =>
+        Summary.AffectedItemCount is int count
+            ? FormatCount(
+                "Operations.Run.AffectedItems",
+                count)
+            : Get(
+                "Operations.Run.AffectedItemsDeferred");
 
-    public OperationRunViewModel(OperationJournalSummary summary) => Summary = summary;
+    public OperationRunViewModel(
+        OperationJournalSummary summary,
+        ILocalizationService? localization = null)
+    {
+        Summary = summary;
+        _localization = localization;
+    }
+
+    public void RefreshLocalizedText()
+    {
+        OnPropertyChanged(nameof(Kind));
+        OnPropertyChanged(nameof(State));
+        OnPropertyChanged(nameof(Created));
+        OnPropertyChanged(nameof(Journal));
+        OnPropertyChanged(nameof(AffectedItems));
+    }
+
+    private string Get(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string FormatCount(
+        string key,
+        long count,
+        params object?[] arguments) =>
+        _localization?.FormatCount(
+            key,
+            count,
+            arguments) ??
+        LocalizedText.FormatCount(
+            key,
+            count,
+            arguments);
 }
 
 public partial class OperationEntryNodeViewModel : ViewModelBase
 {
+    private readonly ILocalizationService? _localization;
+
     public string Name { get; }
     public string OriginalPath { get; }
     public string? CurrentPath { get; private set; }
@@ -1258,22 +2140,39 @@ public partial class OperationEntryNodeViewModel : ViewModelBase
     public event Action? SelectionChanged;
     public string StateText => Kind switch
     {
-        OperationEntryKind.Quarantined => Exists ? "Quarantined" : "Quarantine copy missing",
-        OperationEntryKind.Moved => Exists ? "Moved" : "Move destination missing",
-        OperationEntryKind.Created => Exists ? "Created" : "Created item missing",
-        OperationEntryKind.Deleted => "Deleted",
-        OperationEntryKind.Planned => "Planned; completion not recorded",
-        OperationEntryKind.Unknown => "Unknown operation",
+        OperationEntryKind.Quarantined => Get(
+            Exists
+                ? "Operations.Entry.State.Quarantined"
+                : "Operations.Entry.State.QuarantineMissing"),
+        OperationEntryKind.Moved => Get(
+            Exists
+                ? "Operations.Entry.State.Moved"
+                : "Operations.Entry.State.MoveDestinationMissing"),
+        OperationEntryKind.Created => Get(
+            Exists
+                ? "Operations.Entry.State.Created"
+                : "Operations.Entry.State.CreatedItemMissing"),
+        OperationEntryKind.Deleted => Get(
+            "Operations.Entry.State.Deleted"),
+        OperationEntryKind.Planned => Get(
+            "Operations.Entry.State.Planned"),
+        OperationEntryKind.Unknown => Get(
+            "Operations.Entry.State.Unknown"),
         _ => "",
     };
 
-    private OperationEntryNodeViewModel(string name, string originalPath)
+    private OperationEntryNodeViewModel(
+        string name,
+        string originalPath,
+        ILocalizationService? localization)
     {
         Name = name;
         OriginalPath = originalPath;
+        _localization = localization;
     }
 
-    partial void OnIsSelectedChanged(bool value) => SelectionChanged?.Invoke();
+    partial void OnIsSelectedChanged(bool value) =>
+        SelectionChanged?.Invoke();
 
     public void SetSelection(bool selected)
     {
@@ -1293,9 +2192,14 @@ public partial class OperationEntryNodeViewModel : ViewModelBase
                 yield return entry;
     }
 
-    public static OperationEntryNodeViewModel Build(OperationBrowseResult browse)
+    public static OperationEntryNodeViewModel Build(
+        OperationBrowseResult browse,
+        ILocalizationService? localization = null)
     {
-        var root = new OperationEntryNodeViewModel(browse.OriginalRoot, browse.OriginalRoot)
+        var root = new OperationEntryNodeViewModel(
+            browse.OriginalRoot,
+            browse.OriginalRoot,
+            localization)
         {
             IsDirectory = true,
         };
@@ -1327,8 +2231,15 @@ public partial class OperationEntryNodeViewModel : ViewModelBase
                 StringComparer.OrdinalIgnoreCase.Equals(candidate.Name, part));
             if (child is null)
             {
-                child = new OperationEntryNodeViewModel(part, path) { IsDirectory = true };
-                child.SelectionChanged += () => SelectionChanged?.Invoke();
+                child = new OperationEntryNodeViewModel(
+                    part,
+                    path,
+                    _localization)
+                {
+                    IsDirectory = true,
+                };
+                child.SelectionChanged +=
+                    () => SelectionChanged?.Invoke();
                 parent.Children.Add(child);
             }
             parent = child;
@@ -1350,4 +2261,15 @@ public partial class OperationEntryNodeViewModel : ViewModelBase
         foreach (var child in Children)
             child.SortChildren();
     }
+
+    public void RefreshLocalizedText()
+    {
+        OnPropertyChanged(nameof(StateText));
+        foreach (OperationEntryNodeViewModel child in Children)
+            child.RefreshLocalizedText();
+    }
+
+    private string Get(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
 }

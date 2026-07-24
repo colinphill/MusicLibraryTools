@@ -117,11 +117,12 @@ public sealed class DialogService(
     {
         if (paths.Count == 0)
             return false;
-        var viewModel = new FieldsDialogViewModel(
+        using var viewModel = new FieldsDialogViewModel(
             documents,
             operations,
             paths,
-            activities);
+            activities,
+            localization);
         Guid loadActivity = activities.Start(
             Text("Dialog.Fields.LoadActivity"),
             FormatCount(
@@ -169,6 +170,8 @@ public sealed class DialogService(
         if (completion is null)
             return;
         _completion = null;
+        if (Current is FieldsRequest fields)
+            fields.ViewModel.Dispose();
         Current = null;
         Changed?.Invoke();
         completion.TrySetResult(result);

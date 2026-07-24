@@ -63,6 +63,10 @@ public partial class LibraryView : UserControl
             new("After", "After", "After", 320, 180,
                 HeaderResourceKey: "Column.After"),
         ]);
+        IDataTemplate audioStatusTemplate =
+            DiagnosticTextTemplate<AudioDiscoveryRow>(
+                nameof(AudioDiscoveryRow.Status),
+                nameof(AudioDiscoveryRow.DiagnosticDetail));
         LibraryAudioDiscoveryGrid.ConfigureColumns(
         [
             new("File", "File", "File", 190, 120,
@@ -77,6 +81,7 @@ public partial class LibraryView : UserControl
                 "MusicBrainzRecordingIds", 360, 210,
                 HeaderResourceKey: "Column.MusicBrainzRecordingIds"),
             new("Status", "Status", "Status", 240, 140,
+                CellTemplate: audioStatusTemplate,
                 HeaderResourceKey: "Column.Status"),
         ]);
         LibraryReleaseDiscoveryGrid.ConfigureColumns(
@@ -221,6 +226,10 @@ public partial class LibraryView : UserControl
                         });
                     return combo;
                 });
+        IDataTemplate statusTemplate =
+            DiagnosticTextTemplate<DiscogsTrackMappingRow>(
+                nameof(DiscogsTrackMappingRow.Status),
+                nameof(DiscogsTrackMappingRow.DiagnosticDetail));
         grid.ConfigureColumns(
         [
             new("Include", "Use", null, 58, 48,
@@ -236,6 +245,7 @@ public partial class LibraryView : UserControl
             new("Confidence", "Confidence", "Confidence", 98, 74,
                 HeaderResourceKey: "Column.Confidence"),
             new("Status", "Reason", "Status", 250, 145,
+                CellTemplate: statusTemplate,
                 HeaderResourceKey: "Column.Reason"),
         ]);
     }
@@ -270,6 +280,10 @@ public partial class LibraryView : UserControl
                     });
                 return combo;
             });
+        IDataTemplate statusTemplate =
+            DiagnosticTextTemplate<MusicBrainzTrackMappingRow>(
+                nameof(MusicBrainzTrackMappingRow.Status),
+                nameof(MusicBrainzTrackMappingRow.DiagnosticDetail));
         grid.ConfigureColumns(
         [
             new("Include", "Use", null, 58, 48,
@@ -283,6 +297,7 @@ public partial class LibraryView : UserControl
             new("Confidence", "Confidence", "Confidence", 100, 76,
                 HeaderResourceKey: "Column.Confidence"),
             new("Status", "Reason", "Status", 260, 150,
+                CellTemplate: statusTemplate,
                 HeaderResourceKey: "Column.Reason"),
         ]);
     }
@@ -302,6 +317,14 @@ public partial class LibraryView : UserControl
                     new Binding(nameof(CoverArtCandidateRow.ThumbnailSource)));
                 return image;
             });
+        IDataTemplate statusTemplate =
+            DiagnosticTextTemplate<CoverArtCandidateRow>(
+                nameof(
+                    CoverArtCandidateRow
+                        .ThumbnailStatus),
+                nameof(
+                    CoverArtCandidateRow
+                        .ThumbnailDiagnosticDetail));
         grid.RowHeight = 74;
         grid.ConfigureColumns(
         [
@@ -319,9 +342,32 @@ public partial class LibraryView : UserControl
             new("Comment", "Comment", "Comment", 200, 120,
                 HeaderResourceKey: "Column.Comment"),
             new("Status", "Thumbnail", "ThumbnailStatus", 130, 82,
+                CellTemplate: statusTemplate,
                 HeaderResourceKey: "Column.Thumbnail"),
         ]);
     }
+
+    private static IDataTemplate DiagnosticTextTemplate<T>(
+        string textProperty,
+        string diagnosticDetailProperty)
+        where T : class =>
+        new FuncDataTemplate<T>(
+            (_, _) =>
+            {
+                var text = new TextBlock
+                {
+                    TextWrapping =
+                        TextWrapping.Wrap,
+                };
+                text.Bind(
+                    TextBlock.TextProperty,
+                    new Binding(textProperty));
+                text.Bind(
+                    ToolTip.TipProperty,
+                    new Binding(
+                        diagnosticDetailProperty));
+                return text;
+            });
 
     private void BuildColumns()
     {

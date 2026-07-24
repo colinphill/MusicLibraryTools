@@ -287,6 +287,13 @@ public sealed class AnalysisRunViewModel : ViewModelBase
 
     public void RefreshLocalizedText()
     {
+        foreach (AnalysisRepairItemViewModel item in
+                 RepairItems)
+            item.RefreshLocalizedText();
+        foreach (ItlMetadataRepairItemViewModel item in
+                 ItlRepairItems)
+            item.RefreshLocalizedText();
+
         if (_localizedText is null)
         {
             OnPropertyChanged(nameof(DisplayLabel));
