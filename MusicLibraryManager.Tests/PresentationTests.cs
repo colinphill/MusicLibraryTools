@@ -245,6 +245,41 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public async Task Library_path_identity_matches_the_host_filesystem()
+    {
+        string upperPath = Path.Combine(
+            Path.GetTempPath(),
+            "CaseSensitiveTrack.flac");
+        string lowerPath = Path.Combine(
+            Path.GetTempPath(),
+            "casesensitivetrack.flac");
+        TrackRecord[] records =
+        [
+            Track("Artist", "Album", "Upper", "FLAC", upperPath),
+            Track("Artist", "Album", "Lower", "FLAC", lowerPath),
+        ];
+        LibraryViewModel viewModel =
+            BuildLibrary(new FakeSettings(), records);
+        await viewModel.ReloadAsync();
+
+        await viewModel.SelectAsync(viewModel.Rows);
+        viewModel.SetHealthFilter([upperPath]);
+        await viewModel.ApplyFilterNowAsync(
+            TestContext.Current.CancellationToken);
+
+        int expectedDistinctPaths =
+            OperatingSystem.IsWindows() ? 1 : 2;
+        Assert.Equal(
+            expectedDistinctPaths,
+            viewModel.SelectedPaths.Count);
+        Assert.Equal(
+            OperatingSystem.IsWindows() ? 2 : 1,
+            viewModel.Rows.Count);
+        if (!OperatingSystem.IsWindows())
+            Assert.Equal("Upper", Assert.Single(viewModel.Rows).Title);
+    }
+
+    [Fact]
     public void Named_view_accepts_explicit_column_layout_and_typed_sort_state()
     {
         var settings = new FakeSettings();

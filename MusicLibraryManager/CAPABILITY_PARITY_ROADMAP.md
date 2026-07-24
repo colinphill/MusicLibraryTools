@@ -718,7 +718,19 @@ per-operation capability flags.
   - Health artwork candidates record and display a per-image decode warning,
     and do not repeatedly retry a known-malformed thumbnail as virtualized rows
     are realized.
-- [ ] Audit Windows, macOS, and Linux behavior.
+- [x] Audit Windows, macOS, and Linux behavior.
+  - The portable solution builds and runs its full tests in CI on Windows 2022,
+    Ubuntu 24.04, and macOS 14. Packaging jobs also run the headless UI suite
+    and create win-x64, linux-x64, osx-x64, and osx-arm64 self-contained
+    artifacts plus native installers.
+  - Platform integrations select Explorer, macOS `open`, or `xdg-open`;
+    persistent secrets select Credential Manager, Keychain, or Secret Service
+    with a documented session-only fallback.
+  - Core path-policy and mutation services use host-aware path comparison and
+    separators. Library selection, Health filtering, thumbnail caching, and
+    Selection Inspector record matching now follow the same rule, preserving
+    files that differ only by case on case-sensitive Linux and macOS volumes
+    while retaining Windows case-insensitive identity.
 - [ ] Remove legacy paths only after replacements ship and migrate.
 
 ## Test plan

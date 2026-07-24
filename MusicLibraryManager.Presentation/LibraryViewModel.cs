@@ -52,12 +52,12 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private readonly object _thumbnailSync = new();
     private readonly Dictionary<LibraryRow, CancellationTokenSource> _thumbnailLoads = [];
     private readonly Dictionary<string, ThumbnailCacheItem> _thumbnailCache =
-        new(StringComparer.OrdinalIgnoreCase);
+        new(PathComparer);
     private readonly LinkedList<string> _thumbnailLru = [];
     private CancellationTokenSource _thumbnailLifetime = new();
     private const int ThumbnailCacheLimit = 256;
     private List<LibraryRow> _allRows = [];
-    private HashSet<string> _healthFilterPaths = new(StringComparer.OrdinalIgnoreCase);
+    private HashSet<string> _healthFilterPaths = new(PathComparer);
     private IReadOnlyList<string> _selectedPaths = [];
     private CancellationTokenSource? _loadCancellation;
     private CancellationTokenSource? _filterCancellation;
@@ -528,7 +528,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     {
         ArgumentNullException.ThrowIfNull(paths);
         var next = paths.Where(path => !string.IsNullOrWhiteSpace(path))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            .ToHashSet(PathComparer);
         if (_healthFilterPaths.SetEquals(next))
             return;
         _healthFilterPaths = next;
@@ -639,9 +639,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             cancellation.Token.ThrowIfCancellationRequested();
             if (_inspector.HasUnsavedChanges && _selectedPaths.Count > 0)
             {
-                var loadedPaths = rows.Select(row => row.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var loadedPaths = rows.Select(row => row.Path).ToHashSet(PathComparer);
                 rows.AddRange(_allRows.Where(row =>
-                    _selectedPaths.Contains(row.Path, StringComparer.OrdinalIgnoreCase) &&
+                    _selectedPaths.Contains(row.Path, PathComparer) &&
                     loadedPaths.Add(row.Path)));
             }
             _allRows = rows;
@@ -705,7 +705,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     {
         if (_selectedPaths.Count == 0)
             return [];
-        var selected = _selectedPaths.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var selected = _selectedPaths.ToHashSet(PathComparer);
         return Rows.Where(row => selected.Contains(row.Path)).ToArray();
     }
 
@@ -713,9 +713,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     {
         string[] distinct = paths
             .Where(path => !string.IsNullOrWhiteSpace(path))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(PathComparer)
             .ToArray();
-        if (_selectedPaths.SequenceEqual(distinct, StringComparer.OrdinalIgnoreCase))
+        if (_selectedPaths.SequenceEqual(distinct, PathComparer))
             return;
         _selectedPaths = distinct;
         OnPropertyChanged(nameof(SelectedPaths));
@@ -3047,7 +3047,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         List<LibraryRow> source = _allRows;
         HashSet<string>? healthPaths = _healthFilterPaths.Count == 0
             ? null
-            : new HashSet<string>(_healthFilterPaths, StringComparer.OrdinalIgnoreCase);
+            : new HashSet<string>(_healthFilterPaths, PathComparer);
         List<LibraryRow> filtered = await Task.Run(() => source
             .Where(row => (healthPaths is null || healthPaths.Contains(row.Path)) &&
                 query.IsMatch(row.Details, row.SearchText) &&
@@ -3059,9 +3059,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         if (_inspector.HasUnsavedChanges && _selectedPaths.Count > 0)
         {
             var includedPaths = filtered.Select(row => row.Path)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                .ToHashSet(PathComparer);
             LibraryRow[] preserved = source.Where(row =>
-                _selectedPaths.Contains(row.Path, StringComparer.OrdinalIgnoreCase) &&
+                _selectedPaths.Contains(row.Path, PathComparer) &&
                 includedPaths.Add(row.Path)).ToArray();
             preservedSelectionCount = preserved.Length;
             filtered.AddRange(preserved);
@@ -3070,7 +3070,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         SelectionContext? updatedSelection = null;
         if (!_inspector.HasUnsavedChanges && _selectedPaths.Count > 0)
         {
-            var selectedPaths = _selectedPaths.ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var selectedPaths = _selectedPaths.ToHashSet(PathComparer);
             LibraryRow[] visibleSelection = filtered.Where(row => selectedPaths.Contains(row.Path)).ToArray();
             if (visibleSelection.Length != _selectedPaths.Count)
             {

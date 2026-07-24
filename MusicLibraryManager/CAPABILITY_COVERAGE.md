@@ -117,11 +117,9 @@ editing outcomes.
 
 ## Release-hardening gaps
 
-The following are Phase 6 validation gaps, not missing capability outcomes:
-
-- three-platform behavior;
-- complete operation/condition, provider, fingerprint, library-scope, output,
-  and parser corpora.
+The remaining Phase 6 validation gaps are complete operation/condition,
+provider, fingerprint, library-scope, output, and parser corpora. They are test
+depth gaps rather than missing capability outcomes.
 
 The tracked source of truth for closing those gaps is
 [`CAPABILITY_PARITY_ROADMAP.md`](CAPABILITY_PARITY_ROADMAP.md).

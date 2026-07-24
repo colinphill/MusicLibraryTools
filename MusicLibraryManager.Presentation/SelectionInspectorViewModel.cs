@@ -378,7 +378,7 @@ public partial class SelectionInspectorViewModel : ObservableObject
     private void LoadFields(IReadOnlyList<MediaFileModel> models, SelectionContext selection)
     {
         bool completeMediaRead = models.Count == selection.Paths.Count &&
-            models.Select(model => model.Path).ToHashSet(StringComparer.OrdinalIgnoreCase)
+            models.Select(model => model.Path).ToHashSet(PathComparer)
                 .SetEquals(selection.Paths);
         Dictionary<string, TrackRecord>? cachedRecords = BuildCompleteRecordMap(selection);
         var maps = models.Select(model => model.KnownFields
@@ -523,9 +523,9 @@ public partial class SelectionInspectorViewModel : ObservableObject
         if (selection.Records is not { } records || records.Count != selection.Paths.Count)
             return null;
         var recordsByPath = records
-            .GroupBy(record => record.Path, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
-        return recordsByPath.Count == selection.Paths.Distinct(StringComparer.OrdinalIgnoreCase).Count() &&
+            .GroupBy(record => record.Path, PathComparer)
+            .ToDictionary(group => group.Key, group => group.First(), PathComparer);
+        return recordsByPath.Count == selection.Paths.Distinct(PathComparer).Count() &&
                selection.Paths.All(recordsByPath.ContainsKey)
             ? recordsByPath
             : null;
@@ -1217,10 +1217,10 @@ public partial class SelectionInspectorViewModel : ObservableObject
 
     private static bool SameSelection(SelectionContext left, SelectionContext right) =>
         left.Paths.Count == right.Paths.Count &&
-        left.Paths.OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
+        left.Paths.OrderBy(path => path, PathComparer)
             .SequenceEqual(
-                right.Paths.OrderBy(path => path, StringComparer.OrdinalIgnoreCase),
-                StringComparer.OrdinalIgnoreCase);
+                right.Paths.OrderBy(path => path, PathComparer),
+                PathComparer);
 
     private void UpdateArtworkSummary()
     {
@@ -1242,8 +1242,8 @@ public partial class SelectionInspectorViewModel : ObservableObject
         Dictionary<string, string?> codecsByPath = (selection.Records is { Count: > 0 }
                 ? selection.Records.Select(record => (record.Path, record.CodecName))
                 : loadedModels.Select(model => (model.Path, model.Codec?.CodecName)))
-            .GroupBy(value => value.Path, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.First().Item2, StringComparer.OrdinalIgnoreCase);
+            .GroupBy(value => value.Path, PathComparer)
+            .ToDictionary(group => group.Key, group => group.First().Item2, PathComparer);
         IEnumerable<string> fileFormats = selection.Paths.Select(path =>
             FormatFileFormat(path, codecsByPath.GetValueOrDefault(path)));
         string[] knownTagFormats = (selection.Records is { Count: > 0 }
