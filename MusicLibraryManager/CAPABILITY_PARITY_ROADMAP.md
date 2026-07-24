@@ -838,13 +838,22 @@ per-operation capability flags.
     expected typed operation.
   - Dirty inline edits exercise both rejection and acceptance paths through the
     shell's asynchronous navigation guard.
-- [ ] Recorded fixtures for online providers; CI must not use live services.
+- [x] Recorded fixtures for online providers; CI must not use live services.
+  - MusicBrainz release browse/search/details, Cover Art Archive manifests and
+    images, Discogs search/details/images, and AcoustID lookup use recorded
+    payloads behind injected transports; no provider test constructs a live
+    HTTP transport.
+  - Provider fixtures cover cache restarts, explicit offline mode, stale
+    fallback, authentication, cancellation, malformed payloads, and progress.
 - [ ] Golden Chromaprint/fpcalc fixtures for supported codecs, Unicode paths,
   cancellation, malformed output, missing tools, and deterministic
   fingerprints.
-- [~] Recorded AcoustID responses for no match, one match, ambiguous matches,
+- [x] Recorded AcoustID responses for no match, one match, ambiguous matches,
   low confidence, multiple MusicBrainz recording IDs, throttling, retry, and
   offline cache behavior.
+  - Consecutive lookups verify the provider interval, rate-limit fixtures
+    verify retry, and explicit offline mode proves cached lookup without a
+    client key or transport call.
 - [ ] Audio-payload identity tests proving tag-only writes retain cached
   fingerprints and audio changes invalidate them.
 - [x] Operation-catalog contract tests proving each operation marked applicable

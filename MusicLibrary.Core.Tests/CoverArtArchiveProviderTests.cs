@@ -164,6 +164,15 @@ public sealed class CoverArtArchiveProviderTests
         }
     }
 
+    [Fact]
+    public void MalformedRecordedManifest_IsRejected()
+    {
+        Assert.Throws<InvalidDataException>(() =>
+            CoverArtArchiveProvider.ParseRelease(
+                ReleaseId,
+                Encoding.UTF8.GetBytes("not-json")));
+    }
+
     private static CoverArtArchiveCandidate Candidate() => new(
         ReleaseId,
         "829521842",

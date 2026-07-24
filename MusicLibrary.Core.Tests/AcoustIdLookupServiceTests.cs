@@ -53,6 +53,40 @@ public sealed class AcoustIdLookupServiceTests
     }
 
     [Fact]
+    public void RecordedNoMatchResponse_ReturnsNoCandidates()
+    {
+        AcoustIdCandidate[] candidates =
+            [.. AcoustIdLookupService.ParseResponse(
+                """{"status":"ok","results":[]}""")];
+
+        Assert.Empty(candidates);
+    }
+
+    [Fact]
+    public void RecordedSingleMatchResponse_PreservesOneCandidate()
+    {
+        const string response =
+            """
+            {
+              "status": "ok",
+              "results": [{
+                "id": "9ff43b6a-4f16-427c-93c2-92307ca505e0",
+                "score": 0.88,
+                "recordings": [{
+                  "id": "cd2e7c47-16f5-46c6-a37c-a1eb7bf599ff"
+                }]
+              }]
+            }
+            """;
+
+        AcoustIdCandidate candidate = Assert.Single(
+            AcoustIdLookupService.ParseResponse(response));
+
+        Assert.Equal(0.88, candidate.Score);
+        Assert.Single(candidate.MusicBrainzRecordingIds);
+    }
+
+    [Fact]
     public void Request_UsesLookupOnlyAndEscapesFingerprint()
     {
         var fingerprint = new AudioFingerprint(
@@ -172,6 +206,44 @@ public sealed class AcoustIdLookupServiceTests
 
             Assert.Empty(result.Candidates);
             Assert.Equal(2, transport.CallCount);
+        }
+        finally
+        {
+            try { File.Delete(statePath); } catch { }
+        }
+    }
+
+    [Fact]
+    public async Task ConsecutiveLookups_RespectProviderRateLimit()
+    {
+        string statePath = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-settings-" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            var settings = new AppSettings(statePath);
+            settings.SetPreference(
+                AcoustIdLookupService.ClientKeyPreference,
+                "test-client");
+            var transport = new TimestampTransport();
+            var service =
+                new AcoustIdLookupService(transport, settings);
+            var fingerprint = new AudioFingerprint(
+                "track.flac",
+                "AQAD-rate-limit",
+                TimeSpan.FromSeconds(42),
+                42);
+
+            await service.LookupAsync(fingerprint);
+            await service.LookupAsync(fingerprint);
+
+            Assert.Equal(2, transport.RequestedAtUtc.Count);
+            Assert.True(
+                transport.RequestedAtUtc[1] -
+                    transport.RequestedAtUtc[0] >=
+                TimeSpan.FromMilliseconds(300),
+                $"Request spacing was " +
+                $"{transport.RequestedAtUtc[1] - transport.RequestedAtUtc[0]}.");
         }
         finally
         {
@@ -320,6 +392,23 @@ public sealed class AcoustIdLookupServiceTests
         {
             CallCount++;
             return Task.FromResult(_results.Dequeue());
+        }
+    }
+
+    private sealed class TimestampTransport :
+        IAcoustIdHttpTransport
+    {
+        public List<DateTimeOffset> RequestedAtUtc { get; } = [];
+
+        public Task<AcoustIdHttpResult> GetAsync(
+            Uri uri,
+            CancellationToken ct = default)
+        {
+            ct.ThrowIfCancellationRequested();
+            RequestedAtUtc.Add(DateTimeOffset.UtcNow);
+            return Task.FromResult(new AcoustIdHttpResult(
+                HttpStatusCode.OK,
+                """{"status":"ok","results":[]}"""));
         }
     }
 

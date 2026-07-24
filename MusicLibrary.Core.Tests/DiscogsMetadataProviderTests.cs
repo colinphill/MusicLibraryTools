@@ -262,6 +262,26 @@ public sealed class DiscogsMetadataProviderTests
             MetadataSourceCapabilities.ReleaseDetails));
     }
 
+    [Theory]
+    [InlineData("not-json")]
+    [InlineData("""{"results":[{"id":"not-a-number"}]}""")]
+    public void MalformedRecordedSearch_IsRejected(
+        string response)
+    {
+        Assert.Throws<InvalidDataException>(() =>
+            DiscogsMetadataProvider.ParseSearch(response));
+    }
+
+    [Theory]
+    [InlineData("not-json")]
+    [InlineData("""{"id":"not-a-number"}""")]
+    public void MalformedRecordedRelease_IsRejected(
+        string response)
+    {
+        Assert.Throws<InvalidDataException>(() =>
+            DiscogsMetadataProvider.ParseRelease(response));
+    }
+
     private static string SearchCacheKey(DiscogsReleaseSearchQuery query)
     {
         string canonical = string.Join(

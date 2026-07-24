@@ -571,7 +571,10 @@ public sealed class DiscogsMetadataProvider(
                 .Where(item => item.ReleaseId > 0)
                 .ToImmutableArray();
         }
-        catch (JsonException error)
+        catch (Exception error) when (
+            error is JsonException or
+                InvalidOperationException or
+                FormatException)
         {
             throw new InvalidDataException(
                 "Discogs returned malformed search JSON.", error);
@@ -614,7 +617,10 @@ public sealed class DiscogsMetadataProvider(
                 ReadImageUri(item),
                 tracks);
         }
-        catch (JsonException error)
+        catch (Exception error) when (
+            error is JsonException or
+                InvalidOperationException or
+                FormatException)
         {
             throw new InvalidDataException(
                 "Discogs returned malformed release JSON.", error);

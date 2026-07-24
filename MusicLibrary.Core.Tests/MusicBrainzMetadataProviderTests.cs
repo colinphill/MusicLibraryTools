@@ -380,6 +380,25 @@ public sealed class MusicBrainzMetadataProviderTests
         }
     }
 
+    [Fact]
+    public async Task CancelledLookup_StopsBeforeRecordedTransport()
+    {
+        var transport = new RecordingTransport(new(
+            HttpStatusCode.OK,
+            RecordedReleasePage));
+        var provider = new MusicBrainzMetadataProvider(transport);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => provider.ResolveRecordingAsync(
+                Guid.Parse(
+                    "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),
+                ct: cancellation.Token));
+
+        Assert.Equal(0, transport.RequestCount);
+    }
+
     [Theory]
     [InlineData("not-json")]
     [InlineData(
@@ -400,6 +419,7 @@ public sealed class MusicBrainzMetadataProviderTests
             Uri uri,
             CancellationToken ct = default)
         {
+            ct.ThrowIfCancellationRequested();
             Uri = uri;
             RequestCount++;
             return Task.FromResult(result);
