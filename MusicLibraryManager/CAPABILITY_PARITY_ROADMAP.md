@@ -883,7 +883,13 @@ per-operation capability flags.
   - Real-file preview/apply equality, stale-plan rejection, immediate cache
     refresh from the saved media object, and Library undo reindexing are all
     asserted independently.
-- [ ] Golden report and playlist output tests across encodings and path styles.
+- [x] Golden report and playlist output tests across encodings and path styles.
+  - Exact byte-array tests cover all four report formats with UTF-8, UTF-8
+    BOM, and UTF-16 little-endian output, including each renderer's newline,
+    escaping, and non-ASCII behavior.
+  - M3U, M3U8, and WPL output is compared byte-for-byte across every path
+    style and persisted encoding. A separate complete format/line-ending
+    matrix covers platform, CRLF, and LF serialization.
 - [ ] Parser corpus tests for valid, unusual, truncated, and corrupt files.
 - [x] Full existing solution tests at every milestone. Every completed slice is
   gated by the Release build, all portable solution tests, and `git diff

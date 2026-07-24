@@ -9,6 +9,38 @@ namespace MusicLibrary.Core.Tests;
 
 public sealed class PlaylistWriterTests
 {
+    public static TheoryData<string, PlaylistPathStyle, PlaylistWorkspaceEncoding>
+        FormatEncodingAndPathStyleCases
+    {
+        get
+        {
+            var cases = new TheoryData<
+                string,
+                PlaylistPathStyle,
+                PlaylistWorkspaceEncoding>();
+            foreach (string format in new[] { "m3u", "m3u8", "wpl" })
+            foreach (PlaylistPathStyle pathStyle in
+                     Enum.GetValues<PlaylistPathStyle>())
+            foreach (PlaylistWorkspaceEncoding encoding in
+                     Enum.GetValues<PlaylistWorkspaceEncoding>())
+                cases.Add(format, pathStyle, encoding);
+            return cases;
+        }
+    }
+
+    public static TheoryData<string, PlaylistLineEnding> FormatAndLineEndingCases
+    {
+        get
+        {
+            var cases = new TheoryData<string, PlaylistLineEnding>();
+            foreach (string format in new[] { "m3u", "m3u8", "wpl" })
+            foreach (PlaylistLineEnding lineEnding in
+                     Enum.GetValues<PlaylistLineEnding>())
+                cases.Add(format, lineEnding);
+            return cases;
+        }
+    }
+
     [Fact]
     public void CoreServicesRegisterBothBuiltInWriters()
     {
@@ -109,6 +141,94 @@ public sealed class PlaylistWriterTests
     }
 
     [Theory]
+    [MemberData(nameof(FormatEncodingAndPathStyleCases))]
+    public void WritersProduceGoldenBytesForEveryFormatEncodingAndPathStyle(
+        string format,
+        PlaylistPathStyle pathStyle,
+        PlaylistWorkspaceEncoding workspaceEncoding)
+    {
+        using var workspace = new TempDirectory();
+        string target = Directory.CreateDirectory(
+            Path.Combine(workspace.Path, "playlists")).FullName;
+        string suppliedPath = Path.Combine("media", "café.flac");
+        Encoding encoding = SelectEncoding(workspaceEncoding);
+        bool emitPreamble =
+            workspaceEncoding != PlaylistWorkspaceEncoding.Utf8;
+        IPlaylistWriter writer = format == "wpl"
+            ? new WplPlaylistWriter()
+            : new M3uPlaylistWriter();
+        var options = new PlaylistWriterOptions
+        {
+            PathStyle = pathStyle,
+            Encoding = encoding,
+            EmitByteOrderMark = emitPreamble,
+            LineEnding = PlaylistLineEnding.Lf,
+            IncludeExtendedInfo = true,
+        };
+
+        PlaylistWriterOutput output = writer.Write(
+            new(
+                format,
+                "Golden",
+                target,
+                [new(suppliedPath, 61, "Artist - Café")]),
+            options);
+
+        string resolvedPath = pathStyle switch
+        {
+            PlaylistPathStyle.AsProvided => suppliedPath,
+            PlaylistPathStyle.Absolute =>
+                Path.GetFullPath(suppliedPath, target),
+            PlaylistPathStyle.Relative =>
+                Path.GetRelativePath(
+                    target,
+                    Path.GetFullPath(suppliedPath, target)),
+            _ => throw new ArgumentOutOfRangeException(nameof(pathStyle)),
+        };
+        string expectedText = ExpectedPlaylist(
+            format, resolvedPath, "\n");
+        Assert.Equal(
+            Encode(expectedText, encoding, emitPreamble),
+            output.Content.ToArray());
+    }
+
+    [Theory]
+    [MemberData(nameof(FormatAndLineEndingCases))]
+    public void WritersProduceGoldenBytesForEveryLineEnding(
+        string format,
+        PlaylistLineEnding lineEnding)
+    {
+        IPlaylistWriter writer = format == "wpl"
+            ? new WplPlaylistWriter()
+            : new M3uPlaylistWriter();
+        string newLine = lineEnding switch
+        {
+            PlaylistLineEnding.Platform => Environment.NewLine,
+            PlaylistLineEnding.CrLf => "\r\n",
+            PlaylistLineEnding.Lf => "\n",
+            _ => throw new ArgumentOutOfRangeException(nameof(lineEnding)),
+        };
+
+        PlaylistWriterOutput output = writer.Write(
+            new(
+                format,
+                "Golden",
+                Environment.CurrentDirectory,
+                [new("café.flac", 61, "Artist - Café")]),
+            new()
+            {
+                Encoding = Encoding.UTF8,
+                EmitByteOrderMark = false,
+                LineEnding = lineEnding,
+            });
+
+        Assert.Equal(
+            Encoding.UTF8.GetBytes(
+                ExpectedPlaylist(format, "café.flac", newLine)),
+            output.Content.ToArray());
+    }
+
+    [Theory]
     [InlineData("m3u")]
     [InlineData("m3u8")]
     [InlineData("wpl")]
@@ -126,6 +246,53 @@ public sealed class PlaylistWriterTests
 
         Assert.Equal(2, exception.TrackCount);
         Assert.Equal(1, exception.MaximumTrackCount);
+    }
+
+    private static Encoding SelectEncoding(
+        PlaylistWorkspaceEncoding encoding) =>
+        encoding switch
+        {
+            PlaylistWorkspaceEncoding.Utf8 =>
+                new UTF8Encoding(false),
+            PlaylistWorkspaceEncoding.Utf8WithBom =>
+                new UTF8Encoding(true),
+            PlaylistWorkspaceEncoding.Utf16LittleEndian =>
+                new UnicodeEncoding(false, true),
+            _ => throw new ArgumentOutOfRangeException(nameof(encoding)),
+        };
+
+    private static byte[] Encode(
+        string text,
+        Encoding encoding,
+        bool emitPreamble) =>
+        emitPreamble
+            ? [.. encoding.GetPreamble(), .. encoding.GetBytes(text)]
+            : encoding.GetBytes(text);
+
+    private static string ExpectedPlaylist(
+        string format,
+        string path,
+        string newLine)
+    {
+        if (format is "m3u" or "m3u8")
+            return "#EXTM3U" + newLine +
+                   "#EXTINF:61,Artist - Café" + newLine +
+                   path + newLine;
+        return "<?wpl version=\"1.0\"?>" + newLine +
+               "<smil>" + newLine +
+               "  <head>" + newLine +
+               "    <meta name=\"Generator\" " +
+               "content=\"CrossSyncPlaylists\" />" + newLine +
+               "    <meta name=\"ItemCount\" content=\"1\" />" +
+               newLine +
+               "    <title>Golden</title>" + newLine +
+               "  </head>" + newLine +
+               "  <body>" + newLine +
+               "    <seq>" + newLine +
+               $"      <media src=\"{path}\" />" + newLine +
+               "    </seq>" + newLine +
+               "  </body>" + newLine +
+               "</smil>";
     }
 
     private sealed class TempDirectory : IDisposable

@@ -11,6 +11,22 @@ namespace MusicLibrary.Core.Tests;
 
 public sealed class ReportExportServiceTests
 {
+    public static TheoryData<ReportFormat, ReportEncoding>
+        FormatAndEncodingCases
+    {
+        get
+        {
+            var cases =
+                new TheoryData<ReportFormat, ReportEncoding>();
+            foreach (ReportFormat format in
+                     Enum.GetValues<ReportFormat>())
+            foreach (ReportEncoding encoding in
+                     Enum.GetValues<ReportEncoding>())
+                cases.Add(format, encoding);
+            return cases;
+        }
+    }
+
     [Fact]
     public void CsvRendererQuotesValuesAndNeutralizesFormulas()
     {
@@ -149,6 +165,35 @@ public sealed class ReportExportServiceTests
         Assert.Contains("track2.flac", csv);
         Assert.Contains("900", csv);
         Assert.Equal(OperationPhase.Completed, reports[^1].Phase);
+    }
+
+    [Theory]
+    [MemberData(nameof(FormatAndEncodingCases))]
+    public async Task PreviewProducesGoldenBytesForEveryFormatAndEncoding(
+        ReportFormat format,
+        ReportEncoding encoding)
+    {
+        using var temp = new TempDirectory();
+        string source = Path.Combine(temp.Path, "source.flac");
+        var service = CreateService(
+            new FakeDocuments(Document(source, title: "Café")),
+            new RecordingExecutor());
+        var configuration = new ReportConfiguration(
+            "Golden",
+            format,
+            Path.Combine(temp.Path, "report"),
+            [ReportFieldDescriptor.Known(TagFields.Title)],
+            Encoding: encoding);
+
+        ReportExportPlan plan = await service.PreviewAsync(
+            new([source], configuration),
+            ct: TestContext.Current.CancellationToken);
+
+        FileMutationAction action =
+            Assert.Single(plan.MutationPlan.Actions);
+        Assert.Equal(
+            Encode(ExpectedReport(format), encoding),
+            action.Content.ToArray());
     }
 
     [Fact]
@@ -303,6 +348,43 @@ public sealed class ReportExportServiceTests
                 {
                     [field.Id] = value.Value,
                 })).ToArray());
+    }
+
+    private static string ExpectedReport(ReportFormat format) =>
+        format switch
+        {
+            ReportFormat.Text =>
+                "Title" + Environment.NewLine +
+                "Café" + Environment.NewLine,
+            ReportFormat.Csv =>
+                "Title\r\nCafé\r\n",
+            ReportFormat.Html =>
+                "<!doctype html>\n<html><head><meta charset=\"utf-8\">" +
+                "<title>Music library report</title></head><body><table>\n" +
+                "<thead><tr><th>Title</th></tr></thead>\n<tbody>\n" +
+                "<tr><td>Caf&#233;</td></tr>\n</tbody>\n" +
+                "</table></body></html>\n",
+            ReportFormat.Rtf =>
+                @"{\rtf1\ansi\deff0" + Environment.NewLine +
+                @"\b Title\b0 \par" + Environment.NewLine +
+                @"Caf\u233?\par" + Environment.NewLine +
+                "}",
+            _ => throw new ArgumentOutOfRangeException(nameof(format)),
+        };
+
+    private static byte[] Encode(
+        string text,
+        ReportEncoding encoding)
+    {
+        Encoding selected = encoding switch
+        {
+            ReportEncoding.Utf8 => new UTF8Encoding(false),
+            ReportEncoding.Utf8WithBom => new UTF8Encoding(true),
+            ReportEncoding.Utf16LittleEndian =>
+                new UnicodeEncoding(false, true),
+            _ => throw new ArgumentOutOfRangeException(nameof(encoding)),
+        };
+        return [.. selected.GetPreamble(), .. selected.GetBytes(text)];
     }
 
     private static MediaDocument Document(
