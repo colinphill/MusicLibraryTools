@@ -262,9 +262,13 @@ and restored without creating or indexing a library.
 - [x] Ordered visual operation list.
 - [x] Typed conditions per operation.
 - [x] Enable/disable, duplicate, rename, and reorder operations.
-- [~] Representative-file preview while editing. Both surfaces render a full
-  authoritative preview before apply, but the operation editor does not yet
-  update a live representative row while a draft is being changed.
+- [x] Representative-file preview while editing.
+  - The shared editor emits complete change notifications for draft controls,
+    recipe-step additions/removals/reordering, enablement, and renamed steps.
+  - Workbench and Library debounce those changes into a cancellable
+    authoritative preview for the focused or first scoped file, with side-by-
+    side before/after values. This live result is deliberately separate from
+    the full reviewed plan and can never be applied directly.
 - [x] Apply every applicable operation to Workbench or explicit Library scope
   through the same operation catalog and editor.
 - [x] Persist personal recipes through `IAppSettings`.
@@ -619,8 +623,10 @@ per-operation capability flags.
   ordered multi-values, and no longer writes directly without recovery. The
   curated inspector's read and write commands now share those document and
   preview/apply paths as well, completing the Phase 1 migration tail.
-- Remaining Phase 2 work: ad-hoc shared file mutations and live representative
-  draft preview.
+- Revisited and completed in this audit: both surfaces now show a debounced,
+  cancellable, non-applyable representative-file preview while operation
+  drafts and recipe steps are edited.
+- Remaining Phase 2 work: ad-hoc shared file mutations.
 - Revisited and completed in this audit: application-local/configured/system
   fpcalc resolution, explicit-path validation, OptimFROG decode bridging for
   all three registered variants, and real official-tool verification that

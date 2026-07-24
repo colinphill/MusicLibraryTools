@@ -447,9 +447,36 @@
               </StackPanel>
             </Grid>
 
-            <Grid Grid.Row="5" RowDefinitions="Auto,*" RowSpacing="8">
+            <Grid Grid.Row="5" RowDefinitions="Auto,Auto,*" RowSpacing="8">
               <TextBlock Classes="section-title" Text="Reviewed changes" />
-              <controls:AppDataGrid x:Name="PreviewGrid" Grid.Row="1"
+              <Border x:Name="WorkbenchRepresentativePreview"
+                      Grid.Row="1" Padding="10"
+                      Background="{DynamicResource AppInsetBrush}"
+                      BorderBrush="{DynamicResource AppBorderBrush}"
+                      BorderThickness="1" CornerRadius="7">
+                <StackPanel Spacing="6">
+                  <TextBlock FontWeight="SemiBold"
+                             Text="Live representative draft" />
+                  <TextBlock Classes="muted" TextWrapping="Wrap"
+                             Text="{Binding RepresentativePreview.Status}" />
+                  <ProgressBar IsVisible="{Binding RepresentativePreview.IsBusy}"
+                               IsIndeterminate="True" Height="3" />
+                  <Grid IsVisible="{Binding RepresentativePreview.HasPreview}"
+                        ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <StackPanel Spacing="3">
+                      <TextBlock Classes="muted" Text="Before" />
+                      <TextBlock Text="{Binding RepresentativePreview.BeforeText}"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="3">
+                      <TextBlock Classes="muted" Text="After" />
+                      <TextBlock Text="{Binding RepresentativePreview.AfterText}"
+                                 TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Grid>
+                </StackPanel>
+              </Border>
+              <controls:AppDataGrid x:Name="PreviewGrid" Grid.Row="2"
                   ItemsSource="{Binding PreviewChanges}" />
             </Grid>
           </Grid>

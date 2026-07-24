@@ -488,9 +488,39 @@
 
             <TabControl Grid.Row="5" MinHeight="190">
               <TabItem Header="Metadata preview">
-                <controls:AppDataGrid x:Name="LibraryOperationPreviewGrid"
-                    Margin="0,6,0,0"
-                    ItemsSource="{Binding OperationPreviewChanges}" />
+                <Grid Margin="0,6,0,0"
+                      RowDefinitions="Auto,*" RowSpacing="8">
+                  <Border x:Name="LibraryRepresentativePreview"
+                          Padding="10"
+                          Background="{DynamicResource AppInsetBrush}"
+                          BorderBrush="{DynamicResource AppBorderBrush}"
+                          BorderThickness="1" CornerRadius="7">
+                    <StackPanel Spacing="6">
+                      <TextBlock FontWeight="SemiBold"
+                                 Text="Live representative draft" />
+                      <TextBlock Classes="muted" TextWrapping="Wrap"
+                                 Text="{Binding RepresentativePreview.Status}" />
+                      <ProgressBar IsVisible="{Binding RepresentativePreview.IsBusy}"
+                                   IsIndeterminate="True" Height="3" />
+                      <Grid IsVisible="{Binding RepresentativePreview.HasPreview}"
+                            ColumnDefinitions="*,*" ColumnSpacing="12">
+                        <StackPanel Spacing="3">
+                          <TextBlock Classes="muted" Text="Before" />
+                          <TextBlock Text="{Binding RepresentativePreview.BeforeText}"
+                                     TextWrapping="Wrap" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Spacing="3">
+                          <TextBlock Classes="muted" Text="After" />
+                          <TextBlock Text="{Binding RepresentativePreview.AfterText}"
+                                     TextWrapping="Wrap" />
+                        </StackPanel>
+                      </Grid>
+                    </StackPanel>
+                  </Border>
+                  <controls:AppDataGrid x:Name="LibraryOperationPreviewGrid"
+                      Grid.Row="1"
+                      ItemsSource="{Binding OperationPreviewChanges}" />
+                </Grid>
               </TabItem>
               <TabItem Header="Audio matches">
                 <controls:AppDataGrid x:Name="LibraryAudioDiscoveryGrid"

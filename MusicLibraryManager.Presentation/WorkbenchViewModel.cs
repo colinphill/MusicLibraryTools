@@ -289,6 +289,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         _platform = platform;
         OperationEditor = new(
             operationCatalog, MetadataOperationSurface.Workbench, recipeStore);
+        RepresentativePreview =
+            new(_operations);
+        OperationEditor.Changed +=
+            ScheduleRepresentativePreview;
         ShortcutEditor = new(shortcutStore, recipeStore);
         ColumnEditor = new(
             metadataColumns,
@@ -343,6 +347,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     public WorkbenchShortcutEditorViewModel ShortcutEditor { get; }
     public MetadataGridColumnEditorViewModel ColumnEditor { get; }
     public MetadataOperationEditorViewModel OperationEditor { get; }
+    public RepresentativeMetadataPreviewViewModel
+        RepresentativePreview { get; }
     public IReadOnlyList<MetadataFieldChoice> KnownFieldChoices { get; }
     public IReadOnlyList<WorkbenchFieldEditMode> FieldEditModes { get; } =
         Enum.GetValues<WorkbenchFieldEditMode>();
@@ -459,6 +465,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             SetSelectedFiles([value]);
         RebuildMetadataFields();
         _ = RebuildStagedArtworkAsync(value);
+        ScheduleRepresentativePreview();
         DiscoverSelectedAudioCommand.NotifyCanExecuteChanged();
         MoveUpCommand.NotifyCanExecuteChanged();
         MoveDownCommand.NotifyCanExecuteChanged();
@@ -2285,6 +2292,12 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             MetadataFields.Add(row);
         SelectedMetadataField = MetadataFields.FirstOrDefault();
     }
+
+    private void ScheduleRepresentativePreview() =>
+        RepresentativePreview.Schedule(
+            SelectedFile?.Path,
+            () => OperationEditor.CreateRecipe(
+                "Draft representative preview"));
 
     public static IReadOnlyList<WorkbenchMetadataFieldRow>
         BuildMetadataFieldRows(

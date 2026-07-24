@@ -1,4 +1,6 @@
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MusicFileUtilities;
@@ -171,10 +173,13 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
         ReloadRecipes();
         if (_recipes is not null)
             _recipes.Changed += (_, _) => ReloadRecipes();
+        PropertyChanged += OnEditorPropertyChanged;
+        Steps.CollectionChanged += OnStepsChanged;
     }
 
     public ObservableCollection<MetadataRecipeStepViewModel> Steps { get; } = [];
     public ObservableCollection<OperationRecipe> SavedRecipes { get; } = [];
+    public event Action? Changed;
     public IReadOnlyList<MetadataOperationDescriptor> OperationDescriptors { get; }
     public IReadOnlyList<MetadataFieldChoice> Fields { get; }
     public IReadOnlyList<MetadataCaseMode> CaseModes { get; } =
@@ -423,4 +428,32 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
             ? null
             : SavedRecipes.FirstOrDefault(recipe => recipe.Id == selected);
     }
+
+    private void OnEditorPropertyChanged(
+        object? sender,
+        PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(SelectedStep))
+            Changed?.Invoke();
+    }
+
+    private void OnStepsChanged(
+        object? sender,
+        NotifyCollectionChangedEventArgs e)
+    {
+        if (e.OldItems is not null)
+            foreach (MetadataRecipeStepViewModel step in
+                     e.OldItems)
+                step.PropertyChanged -= OnStepChanged;
+        if (e.NewItems is not null)
+            foreach (MetadataRecipeStepViewModel step in
+                     e.NewItems)
+                step.PropertyChanged += OnStepChanged;
+        Changed?.Invoke();
+    }
+
+    private void OnStepChanged(
+        object? sender,
+        PropertyChangedEventArgs e) =>
+        Changed?.Invoke();
 }

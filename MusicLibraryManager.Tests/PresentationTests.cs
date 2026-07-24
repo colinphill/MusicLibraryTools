@@ -1848,6 +1848,73 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public async Task Representative_preview_debounces_to_the_latest_file()
+    {
+        var operations =
+            new FakeMetadataOperationService();
+        var preview =
+            new RepresentativeMetadataPreviewViewModel(
+                operations);
+        static OperationRecipe Recipe() =>
+            OperationRecipe.Create(
+                "Draft",
+                new AssignFieldOperation(
+                    MetadataFieldKey.Known(
+                        TagFields.Title),
+                    "Reviewed"));
+
+        preview.Schedule(
+            @"C:\first.flac",
+            Recipe);
+        preview.Schedule(
+            @"C:\second.flac",
+            Recipe);
+        DateTime deadline =
+            DateTime.UtcNow.AddSeconds(3);
+        while (preview.IsBusy &&
+               DateTime.UtcNow < deadline)
+            await Task.Delay(
+                10,
+                TestContext.Current.CancellationToken);
+
+        Assert.False(preview.IsBusy);
+        Assert.Equal(
+            [@"C:\second.flac"],
+            operations.PreviewedPaths);
+        Assert.True(preview.HasPreview);
+        Assert.Contains(
+            "Title: Before",
+            preview.BeforeText);
+        Assert.Contains(
+            "Title: Reviewed",
+            preview.AfterText);
+    }
+
+    [Fact]
+    public void Operation_editor_change_event_includes_draft_and_step_edits()
+    {
+        var editor =
+            new MetadataOperationEditorViewModel(
+                new MetadataOperationCatalog(),
+                MetadataOperationSurface.Workbench);
+        int changed = 0;
+        editor.Changed += () => changed++;
+
+        editor.OperationValue = "Reviewed";
+
+        Assert.True(changed > 0);
+        changed = 0;
+        editor.AddCurrentOperationCommand.Execute(null);
+
+        Assert.True(changed > 0);
+        changed = 0;
+        Assert.Single(editor.Steps).Name =
+            "Renamed draft step";
+
+        Assert.True(changed > 0);
+    }
+
+    [Fact]
     public void Report_editor_builds_and_reorders_typed_configuration()
     {
         var editor = new ReportEditorViewModel

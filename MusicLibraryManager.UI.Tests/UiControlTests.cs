@@ -800,6 +800,8 @@ public sealed class UiControlTests
                 "Save shortcut",
                 workbench.FindControl<Button>(
                     "SaveShortcutButton")!.Content);
+            Assert.NotNull(workbench.FindControl<Border>(
+                "WorkbenchRepresentativePreview"));
 
             navigation.Navigate(ShellDestination.Library);
             Dispatcher.UIThread.RunJobs();
@@ -835,6 +837,8 @@ public sealed class UiControlTests
                 "Save column",
                 library.FindControl<Button>(
                     "SaveLibraryMetadataColumnButton")!.Content);
+            Assert.NotNull(library.FindControl<Border>(
+                "LibraryRepresentativePreview"));
             Button visualFilter = library.FindControl<Button>(
                 "VisualFilterButton")!;
             Popup visualFilterPopover =

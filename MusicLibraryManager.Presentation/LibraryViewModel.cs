@@ -294,16 +294,20 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             operationCatalog ?? new MetadataOperationCatalog(),
             MetadataOperationSurface.Library,
             recipeStore);
+        RepresentativePreview = metadataOperations is null
+            ? null
+            : new(metadataOperations);
         ColumnEditor = new(
             metadataColumns,
             MetadataGridSurface.Library);
         VisualFilterEditor = new();
         OperationEditor.PropertyChanged += (_, _) =>
         {
-            InvalidateLibraryOperationPreview();
             CopyLibraryMetadataFieldCommand.NotifyCanExecuteChanged();
             PasteLibraryMetadataFieldCommand.NotifyCanExecuteChanged();
         };
+        OperationEditor.Changed +=
+            InvalidateLibraryOperationPreview;
         ReleaseImport.PropertyChanged += OnReleaseImportChanged;
         ReleaseSearch.PropertyChanged += (_, _) =>
             SearchLibraryMusicBrainzReleasesCommand.NotifyCanExecuteChanged();
@@ -365,6 +369,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     public IReadOnlyList<LibraryOperationScope> OperationScopes { get; } =
         Enum.GetValues<LibraryOperationScope>();
     public MetadataOperationEditorViewModel OperationEditor { get; }
+    public RepresentativeMetadataPreviewViewModel?
+        RepresentativePreview { get; }
     public SelectionInspectorViewModel Inspector => _inspector;
     public IndexingViewModel Indexing { get; }
     public int TotalCount => _allRows.Count;
@@ -2193,6 +2199,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
 
     private void InvalidateLibraryOperationPreview()
     {
+        ScheduleRepresentativePreview();
         if (_libraryOperationPlan is null && OperationPreviewChanges.Count == 0)
             return;
         _libraryOperationPlan = null;
@@ -2201,6 +2208,18 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         OperationStatus =
             "Operation or scope changed. Preview authoritative metadata again.";
         OnPropertyChanged(nameof(HasUnsavedChanges));
+    }
+
+    private void ScheduleRepresentativePreview()
+    {
+        if (RepresentativePreview is null)
+            return;
+        string? path = ResolveOperationPaths()
+            .FirstOrDefault();
+        RepresentativePreview.Schedule(
+            path,
+            () => OperationEditor.CreateRecipe(
+                "Draft representative preview"));
     }
 
     partial void OnSelectedOperationScopeChanged(LibraryOperationScope value)
@@ -2215,6 +2234,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
 
     partial void OnRowsChanged(IReadOnlyList<LibraryRow> value)
     {
+        ScheduleRepresentativePreview();
         ClearReleaseTrackMappings();
         ClearDiscogsTrackMappings();
         InvalidateReportPlan();
