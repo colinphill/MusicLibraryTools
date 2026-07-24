@@ -93,7 +93,7 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
 
         var completed = new List<CompletedMutation>();
         var createdDirectories = new List<string>();
-        int copied = 0, replaced = 0, quarantined = 0, deleted = 0;
+        int copied = 0, moved = 0, replaced = 0, quarantined = 0, deleted = 0;
         try
         {
             for (int index = 0; index < plan.Actions.Count; index++)
@@ -119,6 +119,7 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
                 switch (action.Kind)
                 {
                     case FileMutationKind.Copy or FileMutationKind.Write: copied++; break;
+                    case FileMutationKind.Move: moved++; break;
                     case FileMutationKind.Replace or FileMutationKind.ReplaceGenerated: replaced++; break;
                     case FileMutationKind.Quarantine: quarantined++; break;
                 }
@@ -167,7 +168,10 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
             }
             progress?.Report(new(OperationPhase.Completed, plan.Actions.Count, plan.Actions.Count,
                 Message: "Mutation plan completed"));
-            return new(copied, replaced, quarantined, deleted, journalPath, plan.Issues);
+            return new(copied, replaced, quarantined, deleted, journalPath, plan.Issues)
+            {
+                Moved = moved,
+            };
         }
         catch
         {
@@ -220,7 +224,7 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
         IProgress<OperationProgress>? progress,
         CancellationToken ct)
     {
-        int copied = 0, replaced = 0, deleted = 0;
+        int copied = 0, moved = 0, replaced = 0, deleted = 0;
         for (int index = 0; index < plan.Actions.Count; index++)
         {
             ct.ThrowIfCancellationRequested();
@@ -237,6 +241,11 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
                     Directory.CreateDirectory(Path.GetDirectoryName(action.DestinationPath)!);
                     CopyAtomically(action.SourcePath, action.DestinationPath, replace: false);
                     copied++;
+                    break;
+                case FileMutationKind.Move:
+                    Directory.CreateDirectory(Path.GetDirectoryName(action.DestinationPath)!);
+                    File.Move(action.SourcePath, action.DestinationPath, false);
+                    moved++;
                     break;
                 case FileMutationKind.Replace:
                     Directory.CreateDirectory(Path.GetDirectoryName(action.DestinationPath)!);
@@ -273,7 +282,10 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
         }
         progress?.Report(new(OperationPhase.Completed, plan.Actions.Count, plan.Actions.Count,
             Message: "Mutation plan completed"));
-        return new(copied, replaced, 0, deleted, null, plan.Issues);
+        return new(copied, replaced, 0, deleted, null, plan.Issues)
+        {
+            Moved = moved,
+        };
     }
 
     private static async Task<CompletedMutation> ApplyOneAsync(
@@ -299,6 +311,20 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
                     throw;
                 }
                 return new(action, null);
+
+            case FileMutationKind.Move:
+                File.Move(action.SourcePath, action.DestinationPath, false);
+                try
+                {
+                    await WriteJournalAsync(journal, journalStream,
+                        $"MOVE\tFILE\t{action.SourcePath}\t{action.DestinationPath}", ct);
+                }
+                catch
+                {
+                    File.Move(action.DestinationPath, action.SourcePath, false);
+                    throw;
+                }
+                return new(action, action.DestinationPath);
 
             case FileMutationKind.Replace:
                 string backup = BackupPath(plan.RecoveryRoot, action.DestinationPath);
@@ -416,7 +442,7 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
                     File.Move(mutation.BackupPath, action.DestinationPath, false);
                 }
                 break;
-            case FileMutationKind.Quarantine or FileMutationKind.Delete:
+            case FileMutationKind.Move or FileMutationKind.Quarantine or FileMutationKind.Delete:
                 if (File.Exists(action.DestinationPath) && !File.Exists(action.SourcePath))
                 {
                     Directory.CreateDirectory(Path.GetDirectoryName(action.SourcePath)!);
@@ -528,6 +554,8 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
         FileMutationKind.Copy or FileMutationKind.Replace or FileMutationKind.Write or
             FileMutationKind.ReplaceGenerated =>
             $"PLAN_INSTALL\t{action.Kind.ToString().ToUpperInvariant()}\t{action.DestinationPath}",
+        FileMutationKind.Move =>
+            $"PLAN_MOVE\tFILE\t{action.SourcePath}\t{action.DestinationPath}",
         FileMutationKind.Quarantine =>
             $"PLAN_QUARANTINE\tSTALE\t{action.SourcePath}\t{action.DestinationPath}",
         FileMutationKind.Delete =>
@@ -540,6 +568,8 @@ public sealed class FileMutationPlanExecutor : IFileMutationPlanExecutor
         {
             FileMutationKind.Copy or FileMutationKind.Write =>
                 MediaCatalogMutation.Add(action.DestinationPath),
+            FileMutationKind.Move =>
+                MediaCatalogMutation.Relocate(action.SourcePath, action.DestinationPath),
             FileMutationKind.Replace or FileMutationKind.ReplaceGenerated =>
                 MediaCatalogMutation.Refresh(action.DestinationPath),
             FileMutationKind.Quarantine or FileMutationKind.Delete =>

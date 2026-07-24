@@ -38,7 +38,16 @@ public sealed record OperationIssue(
     string Message,
     string? Path = null);
 
-public enum FileMutationKind { Copy, Replace, Write, ReplaceGenerated, Quarantine, Delete }
+public enum FileMutationKind
+{
+    Copy,
+    Move,
+    Replace,
+    Write,
+    ReplaceGenerated,
+    Quarantine,
+    Delete,
+}
 
 /// <summary>
 /// One immutable filesystem decision. Source and destination snapshots describe the exact state
@@ -73,7 +82,10 @@ public sealed record FileMutationSummary(
     int Quarantined,
     int Deleted,
     string? JournalPath,
-    IReadOnlyList<OperationIssue> Issues);
+    IReadOnlyList<OperationIssue> Issues)
+{
+    public int Moved { get; init; }
+}
 
 public sealed record FileInventory(
     string Root,

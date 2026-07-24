@@ -2,6 +2,7 @@
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:MusicLibraryManager.Controls"
+             xmlns:views="using:MusicLibraryManager.Views"
              DragDrop.AllowDrop="True"
              DragDrop.DragOver="OnDragOver"
              DragDrop.Drop="OnDrop"
@@ -544,6 +545,12 @@
               </StackPanel>
             </ScrollViewer>
           </Grid>
+        </TabItem>
+
+        <TabItem Header="Files">
+          <views:ReviewedFileOperationEditorView
+              x:Name="WorkbenchFileOperationEditor"
+              DataContext="{Binding FileOperations}" />
         </TabItem>
 
         <TabItem Header="Online metadata">

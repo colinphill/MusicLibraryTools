@@ -267,7 +267,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         IWorkbenchShortcutStore? shortcutStore = null,
         IMetadataGridColumnStore? metadataColumns = null,
         IDelimitedMetadataImportService? delimitedImports = null,
-        IPlatformService? platform = null)
+        IPlatformService? platform = null,
+        IReviewedFileOperationService? fileOperations = null)
     {
         _workbench = workbench;
         _operations = operations;
@@ -291,6 +292,28 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             operationCatalog, MetadataOperationSurface.Workbench, recipeStore);
         RepresentativePreview =
             new(_operations);
+        FileOperations = fileOperations is null
+            ? null
+            : new(
+                fileOperations,
+                files,
+                dialogs,
+                () => EditTargets
+                    .Select(file => file.Path)
+                    .ToArray(),
+                FileOperationPreflightMessage,
+                RefreshAfterFileOperationAsync);
+        if (FileOperations is not null)
+            FileOperations.PropertyChanged +=
+                (_, args) =>
+                {
+                    if (args.PropertyName ==
+                        nameof(
+                            ReviewedFileOperationEditorViewModel
+                                .HasUnsavedChanges))
+                        OnPropertyChanged(
+                            nameof(HasUnsavedChanges));
+                };
         OperationEditor.Changed +=
             ScheduleRepresentativePreview;
         ShortcutEditor = new(shortcutStore, recipeStore);
@@ -349,6 +372,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     public MetadataOperationEditorViewModel OperationEditor { get; }
     public RepresentativeMetadataPreviewViewModel
         RepresentativePreview { get; }
+    public ReviewedFileOperationEditorViewModel?
+        FileOperations { get; }
     public IReadOnlyList<MetadataFieldChoice> KnownFieldChoices { get; }
     public IReadOnlyList<WorkbenchFieldEditMode> FieldEditModes { get; } =
         Enum.GetValues<WorkbenchFieldEditMode>();
@@ -379,6 +404,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         _externalToolPlan is not null ||
         _stagedArtworkDirty ||
         _artworkDrafts.Count > 0 ||
+        FileOperations?.HasUnsavedChanges == true ||
         Files.Any(file => file.HasChanges);
     public bool CanUndoLatest => _history.CanUndo && !IsBusy;
     public bool CanRedoLatest => _history.CanRedo && !IsBusy;
@@ -493,6 +519,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         OnPropertyChanged(nameof(SelectedFiles));
         OnPropertyChanged(nameof(SelectedFileCount));
         OnPropertyChanged(nameof(FieldSelectionSummary));
+        FileOperations?.InvalidateTargets();
         RebuildMetadataFields();
         PreviewFieldValuesCommand.NotifyCanExecuteChanged();
         PasteMetadataFieldCommand.NotifyCanExecuteChanged();
@@ -681,6 +708,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         if (index <= 0)
             return;
         Files.Move(index, index - 1);
+        FileOperations?.InvalidateTargets();
         CancelPlan();
         InvalidateReportPlan();
         InvalidatePlaylistPlan();
@@ -696,6 +724,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         if (index < 0 || index >= Files.Count - 1)
             return;
         Files.Move(index, index + 1);
+        FileOperations?.InvalidateTargets();
         CancelPlan();
         InvalidateReportPlan();
         InvalidatePlaylistPlan();
@@ -2700,6 +2729,119 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         RemoveCurrentCommand.NotifyCanExecuteChanged();
         MoveUpCommand.NotifyCanExecuteChanged();
         MoveDownCommand.NotifyCanExecuteChanged();
+    }
+
+    private string? FileOperationPreflightMessage()
+    {
+        if (_plan is not null ||
+            _stagedArtworkDirty ||
+            EditTargets.Any(file => file.HasChanges))
+            return "Apply or discard the current metadata and artwork edits before moving files.";
+        return null;
+    }
+
+    private async Task RefreshAfterFileOperationAsync(
+        ReviewedFileOperationPlan plan)
+    {
+        FileMutationAction[] actions =
+            plan.MutationPlan.Actions.ToArray();
+        string[] destinations = actions
+            .Where(action =>
+                action.Kind is FileMutationKind.Copy or
+                    FileMutationKind.Move)
+            .Select(action => action.DestinationPath)
+            .ToArray();
+        WorkbenchLoadResult loaded =
+            destinations.Length == 0
+                ? new([], [])
+                : await _workbench.LoadAsync(
+                    new(
+                        destinations,
+                        Recursive: false));
+        var documents = loaded.Documents.ToDictionary(
+            document => document.Path,
+            PathComparer);
+        HashSet<string> selected = EditTargets
+            .Select(file => file.Path)
+            .ToHashSet(PathComparer);
+        var resultingSelection =
+            new HashSet<string>(PathComparer);
+
+        foreach (FileMutationAction action in actions)
+        {
+            WorkbenchTrackViewModel? source =
+                Files.FirstOrDefault(file =>
+                    PathComparer.Equals(
+                        file.Path,
+                        action.SourcePath));
+            if (action.Kind == FileMutationKind.Copy)
+            {
+                if (documents.TryGetValue(
+                        action.DestinationPath,
+                        out MediaDocument? copied) &&
+                    Files.All(file =>
+                        !PathComparer.Equals(
+                            file.Path,
+                            copied.Path)))
+                    AddTrack(new(copied));
+                if (selected.Contains(action.SourcePath))
+                    resultingSelection.Add(
+                        action.SourcePath);
+                continue;
+            }
+
+            if (source is null)
+                continue;
+            int index = Files.IndexOf(source);
+            source.PropertyChanged -= OnTrackChanged;
+            if (action.Kind == FileMutationKind.Move &&
+                documents.TryGetValue(
+                    action.DestinationPath,
+                    out MediaDocument? moved))
+            {
+                var replacement =
+                    new WorkbenchTrackViewModel(moved);
+                replacement.PropertyChanged +=
+                    OnTrackChanged;
+                Files[index] = replacement;
+                if (selected.Contains(action.SourcePath))
+                    resultingSelection.Add(
+                        action.DestinationPath);
+                if (ReferenceEquals(
+                        SelectedFile,
+                        source))
+                    SelectedFile = replacement;
+            }
+            else
+            {
+                Files.RemoveAt(index);
+                _artworkDrafts.Remove(
+                    action.SourcePath);
+                if (ReferenceEquals(
+                        SelectedFile,
+                        source))
+                    SelectedFile =
+                        Files.Count == 0
+                            ? null
+                            : Files[
+                                Math.Min(
+                                    index,
+                                    Files.Count - 1)];
+            }
+        }
+
+        AudioMatches.Clear();
+        ReleaseMatches.Clear();
+        SelectedRelease = null;
+        ClearReleaseTrackMappings();
+        ClearDiscogsTrackMappings();
+        CancelPlan();
+        InvalidateReportPlan();
+        InvalidatePlaylistPlan();
+        InvalidateExternalToolPlan();
+        SetSelectedFiles(Files.Where(file =>
+            resultingSelection.Contains(file.Path)));
+        NotifySessionChanged();
     }
 
     private void LoadRecentLocations()

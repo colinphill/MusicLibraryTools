@@ -267,7 +267,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         IExternalToolStore? externalToolStore = null,
         IMetadataGridColumnStore? metadataColumns = null,
         IDelimitedMetadataImportService? delimitedImports = null,
-        IPlatformService? platform = null)
+        IPlatformService? platform = null,
+        IReviewedFileOperationService? fileOperations = null)
     {
         _library = library;
         _reindex = reindex;
@@ -297,6 +298,29 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         RepresentativePreview = metadataOperations is null
             ? null
             : new(metadataOperations);
+        FileOperations =
+            fileOperations is null ||
+            files is null ||
+            dialogs is null
+                ? null
+                : new(
+                    fileOperations,
+                    files,
+                    dialogs,
+                    () => ResolveOperationPaths(),
+                    FileOperationPreflightMessage,
+                    RefreshAfterFileOperationAsync);
+        if (FileOperations is not null)
+            FileOperations.PropertyChanged +=
+                (_, args) =>
+                {
+                    if (args.PropertyName ==
+                        nameof(
+                            ReviewedFileOperationEditorViewModel
+                                .HasUnsavedChanges))
+                        OnPropertyChanged(
+                            nameof(HasUnsavedChanges));
+                };
         ColumnEditor = new(
             metadataColumns,
             MetadataGridSurface.Library);
@@ -371,6 +395,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     public MetadataOperationEditorViewModel OperationEditor { get; }
     public RepresentativeMetadataPreviewViewModel?
         RepresentativePreview { get; }
+    public ReviewedFileOperationEditorViewModel?
+        FileOperations { get; }
     public SelectionInspectorViewModel Inspector => _inspector;
     public IndexingViewModel Indexing { get; }
     public int TotalCount => _allRows.Count;
@@ -392,7 +418,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         _libraryOperationPlan is not null ||
         _reportPlan is not null ||
         _playlistPlan is not null ||
-        _externalToolPlan is not null;
+        _externalToolPlan is not null ||
+        FileOperations?.HasUnsavedChanges == true;
     public event Action? HealthFilterClearRequested;
 
     partial void OnSelectedReleaseChanged(MusicBrainzReleaseRow? value)
@@ -640,7 +667,11 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     {
         if (!await _inspector.ConfirmDiscardChangesAsync())
             return false;
-        if ((_libraryOperationPlan is null && _reportPlan is null) ||
+        if ((_libraryOperationPlan is null &&
+             _reportPlan is null &&
+             _playlistPlan is null &&
+             _externalToolPlan is null &&
+             FileOperations?.HasUnsavedChanges != true) ||
             _dialogs is null)
             return true;
         return await _dialogs.ConfirmAsync(
@@ -669,6 +700,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             return;
         _selectedPaths = distinct;
         OnPropertyChanged(nameof(SelectedPaths));
+        FileOperations?.InvalidateTargets();
         InvalidateLibraryOperationPreview();
         ClearReleaseTrackMappings();
         ClearDiscogsTrackMappings();
@@ -2222,8 +2254,34 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                 "Draft representative preview"));
     }
 
+    private string? FileOperationPreflightMessage()
+    {
+        if (_inspector.HasUnsavedChanges ||
+            _libraryOperationPlan is not null)
+            return "Apply or discard the current metadata edits before moving files.";
+        return null;
+    }
+
+    private async Task RefreshAfterFileOperationAsync(
+        ReviewedFileOperationPlan plan)
+    {
+        foreach (FileMutationAction action in
+                 plan.MutationPlan.Actions)
+        {
+            if (action.Kind != FileMutationKind.Copy)
+                await _reindex.ReindexFileAsync(
+                    action.SourcePath);
+            if (action.Kind is FileMutationKind.Copy or
+                FileMutationKind.Move)
+                await _reindex.ReindexFileAsync(
+                    action.DestinationPath);
+        }
+        await ReloadAsync();
+    }
+
     partial void OnSelectedOperationScopeChanged(LibraryOperationScope value)
     {
+        FileOperations?.InvalidateTargets();
         InvalidateLibraryOperationPreview();
         ClearReleaseTrackMappings();
         ClearDiscogsTrackMappings();
@@ -2234,6 +2292,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
 
     partial void OnRowsChanged(IReadOnlyList<LibraryRow> value)
     {
+        FileOperations?.InvalidateTargets();
         ScheduleRepresentativePreview();
         ClearReleaseTrackMappings();
         ClearDiscogsTrackMappings();

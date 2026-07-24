@@ -522,6 +522,11 @@
                       ItemsSource="{Binding OperationPreviewChanges}" />
                 </Grid>
               </TabItem>
+              <TabItem Header="Files">
+                <views:ReviewedFileOperationEditorView
+                    x:Name="LibraryFileOperationEditor"
+                    DataContext="{Binding FileOperations}" />
+              </TabItem>
               <TabItem Header="Audio matches">
                 <controls:AppDataGrid x:Name="LibraryAudioDiscoveryGrid"
                     Margin="0,6,0,0"

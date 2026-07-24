@@ -30,6 +30,27 @@ namespace MusicLibraryManager.UI.Tests;
 public sealed class UiControlTests
 {
     [AvaloniaFact]
+    public void Reviewed_file_operation_editor_exposes_preview_and_apply_actions()
+    {
+        var view =
+            new ReviewedFileOperationEditorView();
+
+        Assert.Equal(
+            "Preview destinations",
+            view.FindControl<Button>(
+                "PreviewReviewedFileOperationButton")!
+                .Content);
+        Assert.Equal(
+            "Apply reviewed plan",
+            view.FindControl<Button>(
+                "ApplyReviewedFileOperationButton")!
+                .Content);
+        Assert.NotNull(
+            view.FindControl<AppDataGrid>(
+                "ReviewedFileOperationPreviewGrid"));
+    }
+
+    [AvaloniaFact]
     public void Top_search_focus_is_drawn_by_the_full_composite_control()
     {
         using ServiceProvider services = BuildIsolatedServices();
@@ -802,6 +823,10 @@ public sealed class UiControlTests
                     "SaveShortcutButton")!.Content);
             Assert.NotNull(workbench.FindControl<Border>(
                 "WorkbenchRepresentativePreview"));
+            Assert.NotNull(
+                workbench.FindControl<
+                    ReviewedFileOperationEditorView>(
+                    "WorkbenchFileOperationEditor"));
 
             navigation.Navigate(ShellDestination.Library);
             Dispatcher.UIThread.RunJobs();
@@ -839,6 +864,10 @@ public sealed class UiControlTests
                     "SaveLibraryMetadataColumnButton")!.Content);
             Assert.NotNull(library.FindControl<Border>(
                 "LibraryRepresentativePreview"));
+            Assert.NotNull(
+                library.FindControl<
+                    ReviewedFileOperationEditorView>(
+                    "LibraryFileOperationEditor"));
             Button visualFilter = library.FindControl<Button>(
                 "VisualFilterButton")!;
             Popup visualFilterPopover =

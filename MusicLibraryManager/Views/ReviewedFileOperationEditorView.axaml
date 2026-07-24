@@ -1,0 +1,87 @@
+<UserControl x:Class="MusicLibraryManager.Views.ReviewedFileOperationEditorView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:MusicLibraryManager.Controls">
+  <Grid Margin="0,10,0,0"
+        RowDefinitions="Auto,Auto,*,Auto"
+        RowSpacing="10">
+    <Grid ColumnDefinitions="170,*,Auto"
+          ColumnSpacing="8">
+      <ComboBox x:Name="ReviewedFileOperationKind"
+                Classes="app"
+                ItemsSource="{Binding OperationKinds}"
+                SelectedItem="{Binding SelectedKind, Mode=TwoWay}" />
+      <Grid Grid.Column="1"
+            ColumnDefinitions="*,Auto"
+            ColumnSpacing="7"
+            IsVisible="{Binding NeedsDestination}">
+        <TextBox x:Name="ReviewedFileOperationDestination"
+                 Classes="app"
+                 Text="{Binding DestinationDirectory, Mode=TwoWay}"
+                 PlaceholderText="Destination or quarantine folder" />
+        <Button Grid.Column="1"
+                Classes="app"
+                Content="Browse"
+                Command="{Binding BrowseDestinationCommand}" />
+      </Grid>
+      <TextBlock Grid.Column="2"
+                 Classes="muted"
+                 VerticalAlignment="Center"
+                 Text="{Binding TargetSummary}" />
+    </Grid>
+
+    <Grid Grid.Row="1"
+          ColumnDefinitions="*,170,Auto,Auto,Auto"
+          ColumnSpacing="8">
+      <TextBox x:Name="ReviewedFileNameTemplate"
+               Classes="app"
+               Text="{Binding FileNameTemplate, Mode=TwoWay}"
+               PlaceholderText="{}{Name}{Extension}" />
+      <ComboBox Grid.Column="1"
+                Classes="app"
+                ItemsSource="{Binding CollisionPolicies}"
+                SelectedItem="{Binding SelectedCollisionPolicy, Mode=TwoWay}" />
+      <CheckBox Grid.Column="2"
+                VerticalAlignment="Center"
+                Content="Preserve relative folders"
+                IsEnabled="{Binding NeedsDestination}"
+                IsChecked="{Binding PreserveRelativeLayout, Mode=TwoWay}" />
+      <Button x:Name="PreviewReviewedFileOperationButton"
+              Grid.Column="3"
+              Classes="app"
+              Content="Preview destinations"
+              Command="{Binding PreviewCommand}" />
+      <Button x:Name="ApplyReviewedFileOperationButton"
+              Grid.Column="4"
+              Classes="app primary"
+              Content="Apply reviewed plan"
+              Command="{Binding ApplyCommand}" />
+    </Grid>
+
+    <controls:AppDataGrid x:Name="ReviewedFileOperationPreviewGrid"
+                          Grid.Row="2"
+                          MinHeight="180"
+                          ItemsSource="{Binding PreviewItems}" />
+
+    <Grid Grid.Row="3"
+          ColumnDefinitions="*,180,Auto"
+          ColumnSpacing="8">
+      <TextBlock Classes="muted"
+                 VerticalAlignment="Center"
+                 TextWrapping="Wrap"
+                 AutomationProperties.LiveSetting="Polite"
+                 Text="{Binding Status}" />
+      <ProgressBar Grid.Column="1"
+                   VerticalAlignment="Center"
+                   IsVisible="{Binding IsBusy}"
+                   IsIndeterminate="{Binding IsProgressIndeterminate}"
+                   Maximum="{Binding ProgressMaximum}"
+                   Value="{Binding ProgressValue}" />
+      <Button Grid.Column="2"
+              Classes="app"
+              IsVisible="{Binding IsBusy}"
+              Content="Cancel"
+              Command="{Binding CancelCommand}" />
+    </Grid>
+  </Grid>
+</UserControl>

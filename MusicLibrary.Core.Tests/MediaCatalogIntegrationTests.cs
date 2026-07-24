@@ -48,6 +48,77 @@ public sealed class MediaCatalogIntegrationTests
         }
     }
 
+    [Fact]
+    public async Task MoveMutationRelocatesConfiguredCatalogEntry()
+    {
+        string root = Path.Combine(
+            Path.GetTempPath(),
+            $"catalog-move-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            string source =
+                Path.Combine(root, "source.flac");
+            string destination =
+                Path.Combine(root, "renamed.flac");
+            await File.WriteAllTextAsync(
+                source,
+                "audio");
+            var sourceInfo =
+                new FileInfo(source);
+            var integration =
+                new RecordingIntegration();
+            var executor =
+                new FileMutationPlanExecutor(
+                    new FileMutationCoordinator(),
+                    catalogIntegrations:
+                        [integration]);
+            var plan = new FileMutationPlan(
+                "test",
+                root,
+                Path.Combine(root, "recovery"),
+                [new(
+                    FileMutationKind.Move,
+                    source,
+                    destination,
+                    new(
+                        true,
+                        false,
+                        sourceInfo.Length,
+                        sourceInfo.LastWriteTimeUtc)
+                    {
+                        Path = source,
+                    },
+                    OperationPathSnapshot.Missing(
+                        destination))],
+                [],
+                DateTimeOffset.UtcNow);
+
+            FileMutationSummary result =
+                await executor.ApplyAsync(plan);
+
+            Assert.Equal(1, result.Moved);
+            MediaCatalogMutation mutation =
+                Assert.Single(
+                    integration.Session.Mutations);
+            Assert.Equal(
+                MediaCatalogMutationKind.Relocate,
+                mutation.Kind);
+            Assert.Equal(
+                source,
+                mutation.OriginalPath);
+            Assert.Equal(
+                destination,
+                mutation.CurrentPath);
+        }
+        finally
+        {
+            Directory.Delete(
+                root,
+                recursive: true);
+        }
+    }
+
     private sealed class RecordingIntegration : IMediaCatalogIntegration
     {
         public string Id => "recording";

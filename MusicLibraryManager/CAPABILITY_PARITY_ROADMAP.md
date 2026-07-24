@@ -77,7 +77,7 @@ the same editor, preview, policy checks, recovery behavior, and history.
   - [x] Core services compiled and covered by tests.
   - [x] Initial Workbench page and navigation implemented.
   - [x] End-to-end preview, apply, restart-safe undo, and redo verified.
-- [~] Phase 2: Typed bulk operations and recipes
+- [x] Phase 2: Typed bulk operations and recipes
 - [x] Phase 3: Online metadata and artwork
 - [x] Phase 4: Flexible views, reporting, playlists, and tools
 - [x] Phase 5: Native format and tag-layer expansion
@@ -249,9 +249,15 @@ and restored without creating or indexing a library.
   roles and descriptions. Workbench changes route through the shared
   authoritative preview, native-writer dry run, policy checks, recovery,
   apply, and history path.
-- [~] Copy, move, rename, and quarantine files. Recoverable Organize, ingest,
-  repair, export, and sync workflows cover policy-driven mutations; an ad-hoc
-  shared Workbench/Library file-operation editor remains.
+- [x] Copy, move, rename, and quarantine files.
+  - Workbench and Library expose the same explicitly scoped editor with
+    filename tokens, relative-layout preservation, and stop-or-suffix
+    collision handling.
+  - Preview resolves every destination, captures source and collision
+    snapshots, and enforces active root permissions and policy fingerprints.
+    Apply revalidates the whole plan before its first mutation and uses the
+    shared coordinator, durable journal, rollback, catalog relocation, and
+    Operations restore path for eligible moves and quarantines.
 - [x] Generate reports or playlists as dedicated final workflows rather than
   recipe steps. Both surfaces share preview/apply services and explicit
   selection scopes; nesting file outputs inside metadata recipes was
@@ -626,7 +632,8 @@ per-operation capability flags.
 - Revisited and completed in this audit: both surfaces now show a debounced,
   cancellable, non-applyable representative-file preview while operation
   drafts and recipe steps are edited.
-- Remaining Phase 2 work: ad-hoc shared file mutations.
+- Phase 2 is complete: ad-hoc copy, move, rename, and quarantine mutations now
+  share one reviewed Workbench/Library editor and Core execution path.
 - Revisited and completed in this audit: application-local/configured/system
   fpcalc resolution, explicit-path validation, OptimFROG decode bridging for
   all three registered variants, and real official-tool verification that
