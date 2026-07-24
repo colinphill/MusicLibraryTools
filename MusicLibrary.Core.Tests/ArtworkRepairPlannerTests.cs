@@ -132,6 +132,38 @@ public sealed class ArtworkRepairPlannerTests
             update.Completed == 1 && update.Total == 1);
     }
 
+    [Fact]
+    public async Task MalformedCandidateThumbnailIsReportedOnceWithoutFailingTheRepairList()
+    {
+        var library = new PlannerLibrary(
+            [Track("one.flac", "One")],
+            [],
+            new Dictionary<string, byte[]>
+            {
+                ["one.flac"] = [1, 2, 3],
+            });
+        var thumbnails = new MalformedThumbnailService();
+        var candidate = new ArtworkRepairCandidateViewModel(
+            "one.flac",
+            "One",
+            "hash",
+            "JPEG",
+            600,
+            600,
+            3,
+            library,
+            thumbnails);
+
+        await candidate.EnsureThumbnailAsync(
+            TestContext.Current.CancellationToken);
+        await candidate.EnsureThumbnailAsync(
+            TestContext.Current.CancellationToken);
+
+        Assert.Null(candidate.ImageSource);
+        Assert.Equal("Malformed fixture image.", candidate.ThumbnailError);
+        Assert.Equal(1, thumbnails.CallCount);
+    }
+
     private static TrackRecord Track(string path, string title) => new()
     {
         Path = path,
@@ -193,6 +225,21 @@ public sealed class ArtworkRepairPlannerTests
         {
             CallCount++;
             return Task.FromResult<object?>(new object());
+        }
+    }
+
+    private sealed class MalformedThumbnailService : IThumbnailService
+    {
+        public int CallCount { get; private set; }
+
+        public Task<object?> CreateImageSourceAsync(
+            byte[] data,
+            int decodePixelWidth = 0,
+            CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            CallCount++;
+            throw new InvalidDataException("Malformed fixture image.");
         }
     }
 

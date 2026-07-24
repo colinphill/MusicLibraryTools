@@ -32,6 +32,7 @@ public partial class ArtworkRepairCandidateViewModel(
 {
     private readonly SemaphoreSlim _loadGate = new(1, 1);
     private bool _dataLoaded;
+    private bool _thumbnailLoaded;
 
     public string SourcePath { get; } = sourcePath;
     public string Label { get; } = label;
@@ -47,6 +48,9 @@ public partial class ArtworkRepairCandidateViewModel(
 
     [ObservableProperty]
     private object? _imageSource;
+
+    [ObservableProperty]
+    private string? _thumbnailError;
 
     public async Task<byte[]?> EnsureDataAsync(CancellationToken ct = default)
     {
@@ -71,13 +75,32 @@ public partial class ArtworkRepairCandidateViewModel(
     public async Task EnsureThumbnailAsync(CancellationToken ct = default)
     {
         byte[]? data = await EnsureDataAsync(ct);
-        if (data is null || data.Length == 0 || thumbnails is null || ImageSource is not null)
+        if (data is null || data.Length == 0 || thumbnails is null ||
+            _thumbnailLoaded)
             return;
         await _loadGate.WaitAsync(ct);
         try
         {
-            if (ImageSource is null)
-                ImageSource = await thumbnails.CreateImageSourceAsync(data, 180, ct);
+            if (_thumbnailLoaded)
+                return;
+            try
+            {
+                ImageSource = await thumbnails.CreateImageSourceAsync(
+                    data,
+                    180,
+                    ct);
+                ThumbnailError = null;
+                _thumbnailLoaded = true;
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception error)
+            {
+                ThumbnailError = error.Message;
+                _thumbnailLoaded = true;
+            }
         }
         finally
         {

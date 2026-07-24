@@ -119,8 +119,7 @@ editing outcomes.
 
 The following are Phase 6 validation gaps, not missing capability outcomes:
 
-- keyboard, accessibility, high-DPI, malformed artwork, and three-platform
-  behavior;
+- keyboard, accessibility, and three-platform behavior;
 - complete operation/condition, provider, fingerprint, library-scope, output,
   and parser corpora.
 

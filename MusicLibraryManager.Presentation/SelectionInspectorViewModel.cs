@@ -302,11 +302,27 @@ public partial class SelectionInspectorViewModel : ObservableObject
                 return;
             if (embeddedArtwork.Length == 0)
                 return;
+            int invalidArtwork = 0;
             for (int index = 0; index < embeddedArtwork.Length; index++)
             {
                 ArtworkModel image = embeddedArtwork[index];
-                object? source = await _thumbnails.CreateImageSourceAsync(
-                    image.Data, cancellationToken: cancellation.Token);
+                object? source = null;
+                try
+                {
+                    source = await _thumbnails.CreateImageSourceAsync(
+                        image.Data,
+                        cancellationToken: cancellation.Token);
+                }
+                catch (OperationCanceledException) when (
+                    cancellation.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch
+                {
+                    // Keep malformed artwork visible so it can still be removed or replaced.
+                    invalidArtwork++;
+                }
                 if (generation != _generation)
                     return;
                 var preview = new ArtworkPreviewItem(
@@ -319,10 +335,23 @@ public partial class SelectionInspectorViewModel : ObservableObject
                 preview.PropertyChanged += OnArtworkItemChanged;
                 ArtworkItems.Add(preview);
             }
-            ArtworkSource = ArtworkItems.FirstOrDefault()?.Source;
+            ArtworkSource = ArtworkItems
+                .FirstOrDefault(item => item.Source is not null)
+                ?.Source;
             ArtworkSummary = embeddedArtwork.Length == 1
                 ? ArtworkItems[0].Summary
                 : $"{embeddedArtwork.Length:N0} embedded artworks";
+            if (invalidArtwork > 0)
+            {
+                string warning =
+                    $"{invalidArtwork:N0} embedded artwork " +
+                    $"{(invalidArtwork == 1 ? "image" : "images")} could not be decoded. " +
+                    "Invalid entries remain available to remove or replace.";
+                StatusTone = MessageTone.Warning;
+                StatusMessage = string.IsNullOrWhiteSpace(StatusMessage)
+                    ? warning
+                    : $"{StatusMessage} {warning}";
+            }
             if (selection.Paths.Count > 1)
                 ArtworkSummary += $" · shared by {selection.Paths.Count:N0} tracks";
         }

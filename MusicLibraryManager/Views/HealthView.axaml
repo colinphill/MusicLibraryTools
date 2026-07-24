@@ -596,6 +596,13 @@
                                           <TextBlock Text="{Binding Label}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
                                           <TextBlock Classes="muted" FontSize="11" Text="{Binding Details}"
                                                      TextWrapping="Wrap" MaxLines="2" />
+                                          <TextBlock Foreground="{DynamicResource AppWarningBrush}"
+                                                     FontSize="11"
+                                                     Text="{Binding ThumbnailError}"
+                                                     TextWrapping="Wrap"
+                                                     MaxLines="2"
+                                                     IsVisible="{Binding !!ThumbnailError}"
+                                                     AutomationProperties.LiveSetting="Polite" />
                                         </StackPanel>
                                       </DataTemplate>
                                     </ListBox.ItemTemplate>

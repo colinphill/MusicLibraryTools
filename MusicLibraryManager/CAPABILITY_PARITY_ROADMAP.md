@@ -694,7 +694,19 @@ per-operation capability flags.
     codecs with Unicode filenames and metadata while retaining artwork and
     audio packets.
 - [ ] Audit keyboard and accessibility behavior.
-- [ ] Audit high-DPI and malformed artwork.
+- [x] Audit high-DPI and malformed artwork.
+  - Headless shell coverage increases text size across every destination,
+    verifies visible header commands remain in bounds, and checks logical-to-
+    pixel scaling. Full-resolution artwork previews retain landscape and
+    portrait aspect ratios and clamp their initial size to the scaled working
+    area.
+  - Empty or invalid full-size previews fail without opening a window. Library
+    and Workbench thumbnail failures remain isolated to their row or artwork
+    item; Selection Inspector preserves malformed entries for removal or
+    replacement while continuing to decode healthy siblings.
+  - Health artwork candidates record and display a per-image decode warning,
+    and do not repeatedly retry a known-malformed thumbnail as virtualized rows
+    are realized.
 - [ ] Audit Windows, macOS, and Linux behavior.
 - [ ] Remove legacy paths only after replacements ship and migrate.
 

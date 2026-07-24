@@ -801,6 +801,65 @@ public sealed class PresentationTests
     }
 
     [Fact]
+    public async Task Selection_inspector_keeps_malformed_artwork_editable_and_loads_healthy_siblings()
+    {
+        const string path = @"C:\one.flac";
+        var library = new FakeLibrary([]);
+        library.ImageSignatures[path] = "mixed-validity-artwork";
+        MediaFileModel model = Model(path, "Title", "Artist") with
+        {
+            Artwork =
+            [
+                new ArtworkModel
+                {
+                    Category = "FrontCover",
+                    ImageType = "image/jpeg",
+                    Width = 1200,
+                    Height = 1200,
+                    Size = 3,
+                    Data = [1, 2, 3],
+                },
+                new ArtworkModel
+                {
+                    Category = "BackCover",
+                    ImageType = "image/png",
+                    Width = 900,
+                    Height = 880,
+                    Size = 3,
+                    Data = [4, 5, 6],
+                },
+            ],
+        };
+        var thumbnails = new SelectiveThumbnailService();
+        var inspector = new SelectionInspectorViewModel(
+            new FakeMediaService(model),
+            library,
+            new FakeTagWriter(),
+            new FakeArtworkService(),
+            new FakeFilePicker(),
+            new FakeDialogs(),
+            new FakeFieldsEditor(),
+            thumbnails,
+            new AppActivityService());
+
+        await inspector.LoadAsync(new SelectionContext([path]));
+
+        Assert.Collection(
+            inspector.ArtworkItems,
+            invalid => Assert.Null(invalid.Source),
+            valid => Assert.NotNull(valid.Source));
+        Assert.Same(inspector.ArtworkItems[1].Source, inspector.ArtworkSource);
+        Assert.True(inspector.IsStatusWarning);
+        Assert.Contains("1 embedded artwork image could not be decoded",
+            inspector.StatusMessage);
+
+        inspector.RemoveArtworkItem(inspector.ArtworkItems[0]);
+
+        Assert.Single(inspector.ArtworkItems);
+        Assert.True(inspector.HasPendingArtworkChanges);
+    }
+
+    [Fact]
     public async Task Selection_inspector_saves_each_artwork_card_without_reencoding_it()
     {
         const string musicPath = @"C:\Music\one.flac";
@@ -3940,6 +3999,21 @@ internal sealed class FakeThumbnails : IThumbnailService
 {
     public Task<object?> CreateImageSourceAsync(byte[] data, int decodePixelWidth = 0,
         CancellationToken cancellationToken = default) => Task.FromResult<object?>(null);
+}
+
+internal sealed class SelectiveThumbnailService : IThumbnailService
+{
+    public Task<object?> CreateImageSourceAsync(
+        byte[] data,
+        int decodePixelWidth = 0,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return data.FirstOrDefault() == 1
+            ? Task.FromException<object?>(
+                new InvalidDataException("Malformed fixture image."))
+            : Task.FromResult<object?>(new object());
+    }
 }
 
 internal sealed class FakeTheme : IThemeService
