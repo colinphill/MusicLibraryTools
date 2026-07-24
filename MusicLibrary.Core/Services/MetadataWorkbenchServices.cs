@@ -2027,7 +2027,7 @@ public sealed class MetadataOperationService(
         MediaDocument document,
         Dictionary<MetadataFieldKey, ImmutableArray<string>> fields)
     {
-        if (condition is null || condition.Operator == MetadataConditionOperator.Always)
+        if (condition is null)
             return true;
         ImmutableArray<string> values = condition.Field is null
             ? []
@@ -2035,6 +2035,7 @@ public sealed class MetadataOperationService(
         string expected = condition.Value ?? "";
         bool result = condition.Operator switch
         {
+            MetadataConditionOperator.Always => true,
             MetadataConditionOperator.Present => values.Length > 0,
             MetadataConditionOperator.Missing => values.Length == 0,
             MetadataConditionOperator.Equals => values.Any(value =>

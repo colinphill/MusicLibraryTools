@@ -756,7 +756,15 @@ per-operation capability flags.
     being flattened into delimiter-separated text.
 - [ ] Preserve unknown fields, additional tag layers, artwork, and audio
   payloads.
-- [ ] Typed-operation tests for every operation and condition combination.
+- [x] Typed-operation tests for every operation and condition combination.
+  - A Cartesian contract test covers all 13 typed operation families against
+    no condition plus every condition operator with matching, non-matching,
+    and negated forms (299 combinations). It verifies that only matching
+    operations produce a plan and that no combination raises an operation
+    blocker.
+  - Negated `Always` is explicitly covered and now evaluates to false; the
+    audit corrected the earlier short-circuit that ignored negation for that
+    operator.
 - [ ] Preview/apply equivalence.
 - [ ] Stale-plan rejection.
 - [ ] Collision, cancellation, insufficient-space, rollback, and recovery tests.

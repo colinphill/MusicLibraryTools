@@ -529,6 +529,242 @@ public sealed class MetadataWorkbenchServicesTests
     }
 
     [Fact]
+    public async Task EveryTypedOperationHonorsEveryConditionFormAndNegation()
+    {
+        using var media = MediaFixtures.Copy("sample.flac");
+        string statePath = Path.Combine(
+            Path.GetTempPath(),
+            "mlm-settings-" + Guid.NewGuid().ToString("N") + ".json");
+        try
+        {
+            MetadataFieldKey title =
+                MetadataFieldKey.Known(TagFields.Title);
+            MetadataFieldKey artist =
+                MetadataFieldKey.Known(TagFields.Artist);
+            MetadataFieldKey album =
+                MetadataFieldKey.Known(TagFields.Album);
+            MetadataFieldKey genre =
+                MetadataFieldKey.Known(TagFields.Genre);
+            MetadataFieldKey comment =
+                MetadataFieldKey.Known(TagFields.Comment);
+            MetadataFieldKey track =
+                MetadataFieldKey.Known(TagFields.TrackNumber);
+            MetadataFieldKey trackTotal =
+                MetadataFieldKey.Known(TagFields.TotalTracks);
+            MetadataFieldKey missing =
+                MetadataFieldKey.Custom("MATRIX_MISSING");
+            var info = new FileInfo(media.Path);
+            var document = new MediaDocument(
+                media.Path,
+                [new(
+                    "VorbisComment",
+                    [
+                        new(title, ["Zulu/One", "Alpha/Two"]),
+                        new(artist, ["ConditionValue"]),
+                        new(album, ["  padded value  "]),
+                        new(genre, ["Rock", "rock"]),
+                    ],
+                    SupportsCustomFields: true,
+                    IsWritable: true,
+                    SupportsMultipleValues: true,
+                    SupportsCustomMultipleValues: true)],
+                [],
+                null,
+                new(
+                    media.Path,
+                    info.Length,
+                    info.LastWriteTimeUtc,
+                    "matrix"),
+                true);
+            var settings = new AppSettings(statePath);
+            var service = new MetadataOperationService(
+                new StaticDocumentService(document),
+                MediaFormatRegistry.Default,
+                new FileMutationPlanExecutor(settings: settings),
+                settings);
+            var operations =
+                new (string Name,
+                    Func<MetadataCondition?, MetadataOperation> Create)[]
+                {
+                    ("assign", condition =>
+                        new AssignFieldOperation(
+                            comment, "Assigned", condition)),
+                    ("remove", condition =>
+                        new RemoveFieldOperation(album, condition)),
+                    ("copy", condition =>
+                        new CopyFieldOperation(
+                            title, comment, When: condition)),
+                    ("replace", condition =>
+                        new ReplaceTextOperation(
+                            album, "padded", "clean",
+                            When: condition)),
+                    ("case", condition =>
+                        new ChangeCaseOperation(
+                            album,
+                            MetadataCaseMode.Upper,
+                            condition)),
+                    ("trim", condition =>
+                        new TrimFieldOperation(
+                            album,
+                            NormalizeInternalWhitespace: true,
+                            condition)),
+                    ("sequence", condition =>
+                        new SequenceNumberOperation(
+                            track,
+                            Start: 7,
+                            TotalField: trackTotal,
+                            When: condition)),
+                    ("combine", condition =>
+                        new CombineFieldsOperation(
+                            title,
+                            artist,
+                            comment,
+                            When: condition)),
+                    ("split", condition =>
+                        new SplitFieldOperation(
+                            title, "/", When: condition)),
+                    ("join", condition =>
+                        new JoinFieldValuesOperation(
+                            title, "; ", condition)),
+                    ("deduplicate", condition =>
+                        new DeduplicateFieldValuesOperation(
+                            genre, When: condition)),
+                    ("reorder", condition =>
+                        new ReorderFieldValuesOperation(
+                            title,
+                            MetadataValueOrder.Ascending,
+                            When: condition)),
+                    ("extract-path", condition =>
+                        new ExtractPathComponentOperation(
+                            comment,
+                            MetadataPathComponent.FileName,
+                            When: condition)),
+                };
+            var conditions =
+                new (string Name, MetadataCondition? Value, bool Matches)[]
+                {
+                    ("none", null, true),
+                    ("always", new(Operator:
+                        MetadataConditionOperator.Always), true),
+                    ("not always", new(
+                        Operator: MetadataConditionOperator.Always,
+                        Negate: true), false),
+                    ("present", new(
+                        artist,
+                        MetadataConditionOperator.Present), true),
+                    ("present false", new(
+                        missing,
+                        MetadataConditionOperator.Present), false),
+                    ("not present", new(
+                        artist,
+                        MetadataConditionOperator.Present,
+                        Negate: true), false),
+                    ("not present true", new(
+                        missing,
+                        MetadataConditionOperator.Present,
+                        Negate: true), true),
+                    ("missing", new(
+                        missing,
+                        MetadataConditionOperator.Missing), true),
+                    ("missing false", new(
+                        artist,
+                        MetadataConditionOperator.Missing), false),
+                    ("not missing", new(
+                        missing,
+                        MetadataConditionOperator.Missing,
+                        Negate: true), false),
+                    ("not missing true", new(
+                        artist,
+                        MetadataConditionOperator.Missing,
+                        Negate: true), true),
+                    ("equals", new(
+                        artist,
+                        MetadataConditionOperator.Equals,
+                        "conditionvalue"), true),
+                    ("equals false", new(
+                        artist,
+                        MetadataConditionOperator.Equals,
+                        "different"), false),
+                    ("not equals", new(
+                        artist,
+                        MetadataConditionOperator.Equals,
+                        "conditionvalue",
+                        Negate: true), false),
+                    ("not equals true", new(
+                        artist,
+                        MetadataConditionOperator.Equals,
+                        "different",
+                        Negate: true), true),
+                    ("contains", new(
+                        artist,
+                        MetadataConditionOperator.Contains,
+                        "DITION"), true),
+                    ("contains false", new(
+                        artist,
+                        MetadataConditionOperator.Contains,
+                        "absent"), false),
+                    ("not contains", new(
+                        artist,
+                        MetadataConditionOperator.Contains,
+                        "DITION",
+                        Negate: true), false),
+                    ("not contains true", new(
+                        artist,
+                        MetadataConditionOperator.Contains,
+                        "absent",
+                        Negate: true), true),
+                    ("regex", new(
+                        artist,
+                        MetadataConditionOperator.MatchesRegularExpression,
+                        "^Condition"), true),
+                    ("regex false", new(
+                        artist,
+                        MetadataConditionOperator.MatchesRegularExpression,
+                        "^Absent"), false),
+                    ("not regex", new(
+                        artist,
+                        MetadataConditionOperator.MatchesRegularExpression,
+                        "^Condition",
+                        Negate: true), false),
+                    ("not regex true", new(
+                        artist,
+                        MetadataConditionOperator.MatchesRegularExpression,
+                        "^Absent",
+                        Negate: true), true),
+                };
+
+            foreach ((string operationName,
+                         Func<MetadataCondition?, MetadataOperation> create)
+                     in operations)
+            foreach ((string conditionName,
+                         MetadataCondition? condition,
+                         bool matches)
+                     in conditions)
+            {
+                MetadataOperationPlan plan = await service.PreviewAsync(
+                    [media.Path],
+                    OperationRecipe.Create(
+                        $"{operationName}/{conditionName}",
+                        create(condition)));
+                MetadataFilePlan file = Assert.Single(plan.Files);
+                Assert.True(
+                    file.HasChanges == matches,
+                    $"{operationName} with '{conditionName}' expected " +
+                    $"HasChanges={matches}, got {file.HasChanges}. " +
+                    string.Join("; ", file.Issues.Select(issue =>
+                        $"{issue.Code}: {issue.Message}")));
+                Assert.DoesNotContain(
+                    file.Issues,
+                    issue => issue.Code == "metadata.operation");
+            }
+        }
+        finally
+        {
+            try { File.Delete(statePath); } catch { }
+        }
+    }
+
+    [Fact]
     public async Task Preview_ShapesAndCombinesOrderedValuesWithoutWriting()
     {
         using var media = MediaFixtures.Copy("sample.flac");
@@ -2153,6 +2389,19 @@ public sealed class MetadataWorkbenchServicesTests
                     info.LastWriteTimeUtc,
                     ""),
                 true));
+        }
+    }
+
+    private sealed class StaticDocumentService(MediaDocument document) :
+        IMetadataDocumentService
+    {
+        public Task<MediaDocument> LoadAsync(
+            string path,
+            bool includeArtwork = true,
+            CancellationToken ct = default)
+        {
+            ct.ThrowIfCancellationRequested();
+            return Task.FromResult(document);
         }
     }
 }
