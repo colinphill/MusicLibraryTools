@@ -426,6 +426,61 @@ public sealed class Id3VersionConversionTests
     }
 
     [Fact]
+    public void MetadataEditPreservesOpaqueFrameCustomFieldArtworkId3v1AndAudio()
+    {
+        using var media = MediaFixtures.Copy("sample.mp3");
+        byte[] audio = StripTagLayers(File.ReadAllBytes(media.Path));
+        byte[] opaquePayload = [0xde, 0xad, 0xbe, 0xef, 0x00, 0xff];
+        byte[] cover = [1, 3, 3, 7];
+
+        var seeded = Assert.IsType<MP3File>(
+            MediaFile.GetFile(media.Path, readOnly: false));
+        seeded.SetUserString("X-OPAQUE-CUSTOM", "keep me");
+        seeded.SetAttachedImage(
+            ID3v2Util.APICType.FrontCover,
+            "image/png",
+            "preserved cover",
+            cover);
+        seeded.Frames.Add(new ID3v2Frame(seeded)
+        {
+            FrameID = "XRAW",
+            Data = opaquePayload.ToArray(),
+        });
+        seeded.AddTagLayer(
+            TagLayerKind.Id3v1,
+            TagLayerCopyMode.CopyPrimary);
+        seeded.Save();
+
+        var editable = Assert.IsType<MP3File>(
+            MediaFile.GetFile(media.Path, readOnly: false));
+        editable.SetField(TagFields.Title, "Only this field changed");
+        editable.Save();
+
+        var reloaded = Assert.IsType<MP3File>(
+            MediaFile.GetFile(media.Path, readArtwork: true));
+        Assert.Equal("Only this field changed", reloaded.Title);
+        Assert.Contains(
+            reloaded.GetUserStrings(),
+            value => value.Key == "X-OPAQUE-CUSTOM" &&
+                value.Value == "keep me");
+        Assert.Equal(
+            opaquePayload,
+            Assert.Single(
+                reloaded.Frames,
+                frame => frame.FrameID == "XRAW").Data);
+        Assert.Equal(
+            cover,
+            Assert.Single(reloaded.GetImageMetadata()).Data);
+        Assert.Equal(
+            ["ID3v23", "ID3v1"],
+            reloaded.Tags.Select(tag => tag.TagType));
+        Assert.Equal("TestTitle", reloaded.Tags.Last().Title);
+        Assert.Equal(
+            audio,
+            StripTagLayers(File.ReadAllBytes(media.Path)));
+    }
+
+    [Fact]
     public void ConvertedMp3CanBeSavedAgainInPlace()
     {
         byte[] source = File.ReadAllBytes(MediaFixtures.Path_("sample.mp3"));
@@ -543,6 +598,18 @@ public sealed class Id3VersionConversionTests
         int size = (file[6] << 21) | (file[7] << 14) | (file[8] << 7) | file[9];
         int footer = file[3] == 4 && (file[5] & 0x10) != 0 ? 10 : 0;
         return file[(10 + size + footer)..];
+    }
+
+    private static byte[] StripTagLayers(byte[] file)
+    {
+        byte[] withoutLeading = StripLeadingId3(file);
+        return withoutLeading.Length >= 128 &&
+            Encoding.ASCII.GetString(
+                withoutLeading,
+                withoutLeading.Length - 128,
+                3) == "TAG"
+            ? withoutLeading[..^128]
+            : withoutLeading;
     }
 
     private static string CreateUntaggedMp3()

@@ -754,8 +754,19 @@ per-operation capability flags.
     backed codec, compatible ID3v2.4 containers, MP4 AAC/ALAC, and ASF.
   - Per-field singleton representations are tested as unsupported instead of
     being flattened into delimiter-separated text.
-- [ ] Preserve unknown fields, additional tag layers, artwork, and audio
+- [x] Preserve unknown fields, additional tag layers, artwork, and audio
   payloads.
+  - MP3 edit/save/reopen coverage retains an opaque ID3 frame, arbitrary TXXX
+    field, embedded artwork, a secondary ID3v1 layer, and byte-identical MPEG
+    audio in one end-to-end gate. Raw AAC separately exercises ID3v2 and APEv2
+    layers together, including independent layer editing, copy/removal,
+    artwork, and unchanged ADTS frames.
+  - FLAC/Vorbis/Opus/Speex preserve pictures, setup/header packets, and audio
+    packets; MP4 preserves `mdat`; every APEv2-backed codec preserves its
+    native payload; ASF preserves its Data Object; and Matroska preserves
+    attachments, chapters, cues, and clusters. RIFF/RF64/AIFF/AIFF-C retain
+    unknown chunks and audio chunks, while DSF retains its data region across
+    tail-ID3 writes.
 - [x] Typed-operation tests for every operation and condition combination.
   - A Cartesian contract test covers all 13 typed operation families against
     no condition plus every condition operator with matching, non-matching,
