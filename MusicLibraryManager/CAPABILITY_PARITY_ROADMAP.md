@@ -731,7 +731,21 @@ per-operation capability flags.
     Selection Inspector record matching now follow the same rule, preserving
     files that differ only by case on case-sensitive Linux and macOS volumes
     while retaining Windows case-insensitive identity.
-- [ ] Remove legacy paths only after replacements ship and migrate.
+- [x] Remove legacy paths only after replacements ship and migrate.
+  - Every shell destination now has a shipped native view; the unreachable
+    migration placeholder was removed and an unknown destination fails through
+    the contained navigation error path instead of presenting an unfinished
+    surface. The unused presentation-only `Organize` alias was removed after
+    root permissions became authoritative.
+  - Core contains no linked CLI `Program` sources, conditional CLI build mode,
+    raw argument execution, or console redirection. Existing executables remain
+    supported thin adapters over typed Core plans for automation and CLI
+    compatibility; the App never invokes them.
+  - Legacy XML attributes, saved-state readers, path modes, and profile presets
+    remain deliberately supported migration inputs. Golden tests prove that
+    opening and saving upgrades them without losing behavior, and schema
+    backups provide rollback; these compatibility readers are not dead
+    execution paths.
 
 ## Test plan
 

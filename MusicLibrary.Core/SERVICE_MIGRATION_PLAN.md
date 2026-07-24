@@ -220,8 +220,9 @@ Core compilation should remain in an executable project.
 9. Add typed Operations-tab editors as services become available.
 10. Reduce each CLI to its final adapter only after characterization and parity tests pass.
 
-The legacy executables may remain temporarily as reference implementations during migration, but
-Core and the App must not invoke them.
+The command-line executables remain supported thin adapters for automation and
+existing workflows. They are not reference implementations: Core owns their
+algorithms, and neither Core nor the App invokes an executable adapter.
 
 ## Completion verification
 

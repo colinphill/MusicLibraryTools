@@ -135,6 +135,7 @@ public sealed class NavigationService : INavigationService
 
     private async Task NavigateCoreAsync(ShellDestination destination, long version)
     {
+        ShellDestination previous = Current;
         try
         {
             Func<ShellDestination, Task<bool>>? guard = Guard;
@@ -150,7 +151,10 @@ public sealed class NavigationService : INavigationService
         catch (Exception error)
         {
             if (version == Volatile.Read(ref _requestVersion))
+            {
+                Current = previous;
                 LastError = error;
+            }
             try
             {
                 NavigationFailed?.Invoke(error);

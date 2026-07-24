@@ -335,7 +335,6 @@ public partial class IndexTargetEditorRow : ObservableObject
             OnPropertyChanged(nameof(AllowOrganization));
             OnPropertyChanged(nameof(AllowIngestOutput));
             OnPropertyChanged(nameof(AllowSynchronizationOutput));
-            OnPropertyChanged(nameof(Organize));
             OnPropertyChanged(nameof(IsReadOnly));
             OnPropertyChanged(nameof(PermissionSummary));
         }
@@ -369,13 +368,6 @@ public partial class IndexTargetEditorRow : ObservableObject
     {
         get => HasPermission(LibraryRootPermissions.SynchronizeOutput);
         set => SetPermission(LibraryRootPermissions.SynchronizeOutput, value);
-    }
-
-    // Retained for callers that still use the legacy organization switch.
-    public bool Organize
-    {
-        get => AllowOrganization;
-        set => AllowOrganization = value;
     }
 
     public bool IsReadOnly => Permissions == LibraryRootPermissions.None;

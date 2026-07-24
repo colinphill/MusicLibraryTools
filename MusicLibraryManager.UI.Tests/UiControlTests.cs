@@ -1440,6 +1440,26 @@ public sealed class UiControlTests
     }
 
     [AvaloniaFact]
+    public async Task Unknown_shell_destination_is_contained_without_a_migration_placeholder()
+    {
+        using ServiceProvider services = BuildIsolatedServices();
+        App.UseServicesForTests(services);
+        MainWindow window = services.GetRequiredService<MainWindow>();
+        var navigation = Assert.IsType<NavigationService>(
+            services.GetRequiredService<INavigationService>());
+        ContentControl host =
+            window.FindControl<ContentControl>("ContentHost")!;
+        Control original = Assert.IsType<HomeView>(host.Content);
+
+        await navigation.NavigateAsync((ShellDestination)int.MaxValue);
+
+        Assert.IsType<ArgumentOutOfRangeException>(
+            navigation.LastError);
+        Assert.Equal(ShellDestination.Home, navigation.Current);
+        Assert.Same(original, host.Content);
+    }
+
+    [AvaloniaFact]
     public void Health_long_result_lists_realize_only_the_visible_containers()
     {
         using ServiceProvider services = BuildIsolatedServices();

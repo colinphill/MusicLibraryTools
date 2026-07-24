@@ -1264,7 +1264,7 @@ public sealed class PresentationTests
         Assert.Equal(LibraryProfilePresets.CatalogOnlyId, first.ProfileId);
         Assert.Equal(LibraryRootPermissions.None, first.Permissions);
         Assert.True(first.IsReadOnly);
-        Assert.False(first.Organize);
+        Assert.False(first.AllowOrganization);
 
         viewModel.AddIndexTargetCommand.Execute(null);
 

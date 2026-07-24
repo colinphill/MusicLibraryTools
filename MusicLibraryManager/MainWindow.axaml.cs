@@ -203,7 +203,10 @@ public partial class MainWindow : Window
                 ShellDestination.Devices => new DevicesView(),
                 ShellDestination.Operations => new OperationsView(),
                 ShellDestination.Settings => new SettingsView(),
-                _ => new PlaceholderView(destination.ToString()),
+                _ => throw new ArgumentOutOfRangeException(
+                    nameof(destination),
+                    destination,
+                    "Unsupported shell destination."),
             };
             _views[destination] = view;
         }
