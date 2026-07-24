@@ -28,7 +28,7 @@ the same editor, preview, policy checks, recovery behavior, and history.
 
 ## Long-running operation invariant
 
-- [~] Every operation that scans, reads, fingerprints, queries, previews,
+- [x] Every operation that scans, reads, fingerprints, queries, previews,
   applies, restores, exports, or indexes multiple files reports progress and
   accepts cancellation through its Core contract.
 - [x] Workbench source loading, preview, apply, reload, and undo expose live
@@ -37,8 +37,19 @@ the same editor, preview, policy checks, recovery behavior, and history.
   indicators and cancellation.
 - [x] Chromaprint generation and AcoustID lookup accept cancellation and report
   progress.
-- [ ] Audit pre-existing ingest, health, artwork, playlist, export, and external
+- [x] Audit pre-existing ingest, health, artwork, playlist, export, and external
   tool workflows for the same invariant before parity hardening is complete.
+  - Ingest preview now reports discovery and parallel metadata-read progress
+    through its Core contract, observes mid-scan cancellation, and drives a
+    determinate preview progress bar and shell activity.
+  - Health analysis and artwork normalization already report their scan,
+    planning, apply, rollback, and completion phases with cancellation checks
+    at record, album, media-file, and hash-stream boundaries.
+  - Playlist workspace/export, configured and report export, and external-tool
+    preview/run now report operation-level planning and completion, check
+    cancellation while resolving every selected source, target, generated
+    output, and reconciliation action, and forward both arguments to shared
+    mutation executors.
 
 ## Cross-surface operation parity invariant
 
@@ -82,7 +93,7 @@ the same editor, preview, policy checks, recovery behavior, and history.
 - [x] Phase 3: Online metadata and artwork
 - [x] Phase 4: Flexible views, reporting, playlists, and tools
 - [x] Phase 5: Native format and tag-layer expansion
-- [ ] Phase 6: Integration and parity hardening
+- [x] Phase 6: Integration and parity hardening
 
 The detailed checklists below are updated as implementation proceeds. An item is
 marked complete only after its implementation has been validated by an
@@ -639,8 +650,9 @@ per-operation capability flags.
   fpcalc resolution, explicit-path validation, OptimFROG decode bridging for
   all three registered variants, and real official-tool verification that
   `.ofr`, `.ofs`, and `.off` yield the same Chromaprint as their PCM source.
-- Cross-cutting work still applies: finish the progress/cancellation audit and
-  close the remaining Workbench/Library operation-parity gaps.
+- The final cross-cutting audit completed progress/cancellation coverage,
+  Workbench/Library operation parity, parser corpus hardening, and golden
+  generated-output coverage.
 
 ## Phase 6: Integration and parity hardening
 

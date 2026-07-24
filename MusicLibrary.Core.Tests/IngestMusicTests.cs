@@ -14,6 +14,45 @@ namespace MusicLibrary.Core.Tests;
 public class IngestMusicTests
 {
     [Fact]
+    public async Task Preview_ReportsLiveProgressAndObservesMidScanCancellation()
+    {
+        using var tree = new TempTree();
+        tree.FileFromFixture("incoming", "one.flac", "sample.flac");
+        tree.FileFromFixture("incoming", "two.flac", "sample.flac");
+        var service = new IngestMusicService(
+            new FakeFfmpeg(),
+            previewParallelism: 1);
+        var reports = new List<IngestProgress>();
+
+        IngestPlan plan = await service.PreviewAsync(
+            new(tree.Path("incoming"), tree.Config()),
+            new InlineProgress<IngestProgress>(reports.Add),
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(plan);
+        Assert.Contains(reports, report =>
+            report.Operation == "Discovering source files");
+        Assert.Contains(reports, report =>
+            report.Operation == "Reading source metadata" &&
+            report.CompletedItems == report.TotalItems);
+        IngestProgress completed = reports[^1];
+        Assert.Equal("Preview complete", completed.Operation);
+        Assert.Equal(completed.TotalItems, completed.CompletedItems);
+
+        using var cancellation = new CancellationTokenSource();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => service.PreviewAsync(
+                new(tree.Path("incoming"), tree.Config()),
+                new InlineProgress<IngestProgress>(report =>
+                {
+                    if (report.Operation == "Reading source metadata" &&
+                        report.CompletedItems > 0)
+                        cancellation.Cancel();
+                }),
+                cancellation.Token));
+    }
+
+    [Fact]
     public async Task Preview_NormalizesMultiDiscAlbumAndTrackOffsets()
     {
         using var tree = new TempTree();
@@ -43,6 +82,12 @@ public class IngestMusicTests
             Assert.Contains("legacy-aac", file.Summary);
             Assert.Contains("Quarantine after successful ingest", file.Summary);
         });
+    }
+
+    private sealed class InlineProgress<T>(Action<T> report) :
+        IProgress<T>
+    {
+        public void Report(T value) => report(value);
     }
 
     [Fact]

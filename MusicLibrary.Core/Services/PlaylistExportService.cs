@@ -147,6 +147,13 @@ public sealed class PlaylistExportService : IPlaylistExportService
         foreach (LibraryPlaylistTarget target in targets)
         {
             ct.ThrowIfCancellationRequested();
+            progress?.Report(new(
+                OperationPhase.Planning,
+                targetIndex,
+                targets.Count,
+                target.Target,
+                $"Rendering playlist target {targetIndex + 1:N0} " +
+                $"of {targets.Count:N0}"));
             IPlaylistWriter[] matchingWriters = _writers.Where(candidate =>
                 candidate.CanWrite(target.Type)).Take(2).ToArray();
             if (matchingWriters.Length != 1)
@@ -221,6 +228,7 @@ public sealed class PlaylistExportService : IPlaylistExportService
                 foreach (OperationPathSnapshot existing in pair.Value.Files.Values
                              .OrderBy(file => file.Path, PathComparer))
                 {
+                    ct.ThrowIfCancellationRequested();
                     string stagedDelete = Path.Combine(recoveryRoot, "deleted",
                         Path.GetFileName(pair.Key), Path.GetRelativePath(pair.Key, existing.Path!));
                     actions.Add(new(FileMutationKind.Delete, existing.Path!, stagedDelete,
@@ -230,6 +238,7 @@ public sealed class PlaylistExportService : IPlaylistExportService
 
         foreach (GeneratedPlaylist output in generated.OrderBy(item => item.Path, PathComparer))
         {
+            ct.ThrowIfCancellationRequested();
             FileInventory inventory = inventories[Path.GetFullPath(targets[output.TargetIndex].Target)];
             if (inventory.Files.TryGetValue(output.Path, out OperationPathSnapshot? existing))
                 actions.Add(new(clean ? FileMutationKind.Write : FileMutationKind.ReplaceGenerated,
@@ -243,6 +252,13 @@ public sealed class PlaylistExportService : IPlaylistExportService
             actions, issues, createdAt, RetainRecovery: true,
             PolicyFingerprint: input.Configuration.PolicySnapshot.Fingerprint,
             LibraryId: input.Configuration.LibraryId);
+        progress?.Report(new(
+            OperationPhase.Completed,
+            targetPlans.Count,
+            targets.Count,
+            Message:
+                $"Prepared {generated.Count:N0} playlist(s) for " +
+                $"{targetPlans.Count:N0} target(s)"));
         return new(request, targetPlans, mutationPlan, issues);
     }
 

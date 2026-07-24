@@ -24,11 +24,15 @@ public sealed class PlaylistExportServiceTests
         LibraryOperationContext context = CreateContext(workspace.Path,
             playlistType: playlistType);
         var service = CreateService(context);
+        var progress = new List<OperationProgress>();
 
         PlaylistExportPlan plan = await service.PreviewAsync(
             new(Path.Combine(workspace.Path, "library.xml")),
+            new SynchronousProgress<OperationProgress>(
+                progress.Add),
             ct: TestContext.Current.CancellationToken);
 
+        Assert.Equal(OperationPhase.Completed, progress[^1].Phase);
         PlaylistExportFile file = Assert.Single(Assert.Single(plan.Targets).Files,
             file => file.PlaylistName == "Favorites");
         FileMutationAction write = Assert.Single(plan.MutationPlan.Actions,
@@ -39,6 +43,26 @@ public sealed class PlaylistExportServiceTests
             ? RenderLegacyWpl("Favorites", "../default/track.flac")
             : RenderLegacyM3u(duration, "../default/track.flac");
         Assert.Equal(expected, write.Content.ToArray());
+    }
+
+    [Fact]
+    public async Task PreviewObservesCancellationAfterTargetProgress()
+    {
+        using var workspace = new TempDirectory();
+        var service = CreateService(CreateContext(workspace.Path));
+        using var cancellation = new CancellationTokenSource();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => service.PreviewAsync(
+                new(Path.Combine(workspace.Path, "library.xml")),
+                new SynchronousProgress<OperationProgress>(
+                    report =>
+                    {
+                        if (report.Phase == OperationPhase.Planning &&
+                            report.CurrentPath is not null)
+                            cancellation.Cancel();
+                    }),
+                cancellation.Token));
     }
 
     [Fact]

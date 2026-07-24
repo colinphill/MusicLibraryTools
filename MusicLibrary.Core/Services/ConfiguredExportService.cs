@@ -120,9 +120,16 @@ public sealed class ConfiguredExportService : IConfiguredExportService
         progress?.Report(new(OperationPhase.Planning, Message: "Resolving export destinations"));
         var claimed = new Dictionary<string, string>(PathComparer);
         var projected = new List<ProjectedFile>(selected.Count);
+        int selectedIndex = 0;
         foreach ((string source, MetadataCacheEntry entry) in selected)
         {
             ct.ThrowIfCancellationRequested();
+            progress?.Report(new(
+                OperationPhase.Planning,
+                selectedIndex++,
+                selected.Count,
+                source,
+                "Resolving export destinations"));
             if (!TryCapture(source, out OperationPathSnapshot? sourceSnapshot))
             {
                 issues.Add(new("export-source-missing", OperationIssueSeverity.Blocker,
@@ -168,6 +175,7 @@ public sealed class ConfiguredExportService : IConfiguredExportService
         int unchanged = 0;
         foreach (ProjectedFile item in projected.OrderBy(item => item.DestinationPath, PathComparer))
         {
+            ct.ThrowIfCancellationRequested();
             if (!inventory.Files.TryGetValue(item.DestinationPath, out OperationPathSnapshot? existing))
             {
                 actions.Add(new(FileMutationKind.Copy, item.SourcePath, item.DestinationPath,
@@ -214,6 +222,7 @@ public sealed class ConfiguredExportService : IConfiguredExportService
 
         foreach (OperationPathSnapshot extra in extras)
         {
+            ct.ThrowIfCancellationRequested();
             string path = extra.Path!;
             switch (profile.Reconciliation.ExtraFiles)
             {
@@ -245,6 +254,13 @@ public sealed class ConfiguredExportService : IConfiguredExportService
         if (transportPlan is not null && transportPlan.Issues.Count > 0)
             reviewedIssues = [.. reviewedIssues, .. transportPlan.Issues];
 
+        progress?.Report(new(
+            OperationPhase.Completed,
+            files.Count,
+            files.Count,
+            Message:
+                $"Prepared {files.Count:N0} export file(s) and " +
+                $"{extras.Length:N0} reconciliation candidate(s)"));
         return new(request, profile, configuration.LibraryId, libraryFingerprint,
             profile.Fingerprint, destinationRoot, files, unchanged, extras.Length,
             transportPlan, reviewedIssues);

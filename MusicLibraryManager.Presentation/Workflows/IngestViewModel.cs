@@ -51,6 +51,10 @@ public partial class IngestViewModel : ViewModelBase
     [ObservableProperty]
     private int _applyProgressMaximum = 1;
     [ObservableProperty]
+    private int _previewProgress;
+    [ObservableProperty]
+    private int _previewProgressMaximum = 1;
+    [ObservableProperty]
     private string? _selectedRecentSource;
     [ObservableProperty]
     private IngestPreviewFilter _selectedPreviewFilter;
@@ -271,6 +275,7 @@ public partial class IngestViewModel : ViewModelBase
     private async Task PreviewAsync()
     {
         IsBusy = true; IsPreviewing = true; HasApplicablePreview = false; _plan = null;
+        PreviewProgress = 0; PreviewProgressMaximum = 1;
         _allFiles.Clear(); Files.Clear(); Conflicts.Clear(); HasPreviewSummary = false;
         OnPropertyChanged(nameof(IsPreviewEmpty));
         _cts = new CancellationTokenSource();
@@ -279,7 +284,28 @@ public partial class IngestViewModel : ViewModelBase
         try
         {
             StatusText = "Scanning and planning…";
-            var plan = await _service.PreviewAsync(new IngestRequest(SourceDirectory!), _cts.Token);
+            var progress = new DispatchingProgress<IngestProgress>(p =>
+            {
+                PreviewProgressMaximum = Math.Max(1, p.TotalItems);
+                PreviewProgress = Math.Min(
+                    PreviewProgressMaximum,
+                    p.CompletedItems);
+                StatusText = p.TotalItems > 0
+                    ? $"{p.Operation} ({p.CompletedItems}/{p.TotalItems})"
+                    : $"{p.Operation} ({p.CompletedItems} found)";
+                if (activity is { } id)
+                    _activities?.Report(
+                        id,
+                        StatusText,
+                        p.TotalItems <= 0
+                            ? null
+                            : (double)p.CompletedItems / p.TotalItems);
+            });
+            var plan = await _service.PreviewAsync(
+                new IngestRequest(SourceDirectory!),
+                progress,
+                _cts.Token);
+            await progress.DrainAsync();
             _plan = plan;
             foreach (var file in plan.Files)
             {

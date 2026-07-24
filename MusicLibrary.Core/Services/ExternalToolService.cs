@@ -89,6 +89,13 @@ public interface IExternalToolService
         ExternalToolDefinition definition,
         IReadOnlyList<string> paths);
 
+    ExternalToolPlan Preview(
+        ExternalToolDefinition definition,
+        IReadOnlyList<string> paths,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default) =>
+        Preview(definition, paths);
+
     Task<ExternalToolRunResult> RunAsync(
         ExternalToolPlan plan,
         IProgress<OperationProgress>? progress = null,
@@ -187,7 +194,14 @@ public sealed class ExternalToolService(
 
     public ExternalToolPlan Preview(
         ExternalToolDefinition definition,
-        IReadOnlyList<string> paths)
+        IReadOnlyList<string> paths) =>
+        Preview(definition, paths, progress: null, CancellationToken.None);
+
+    public ExternalToolPlan Preview(
+        ExternalToolDefinition definition,
+        IReadOnlyList<string> paths,
+        IProgress<OperationProgress>? progress = null,
+        CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(paths);
@@ -195,9 +209,17 @@ public sealed class ExternalToolService(
         var normalized = new List<string>(paths.Count);
         for (int index = 0; index < paths.Count; index++)
         {
+            ct.ThrowIfCancellationRequested();
             string path = paths[index];
             if (string.IsNullOrWhiteSpace(path))
                 continue;
+            progress?.Report(new(
+                OperationPhase.Planning,
+                index,
+                paths.Count,
+                path,
+                $"Preparing {definition.Name}: " +
+                $"{index + 1:N0} of {paths.Count:N0}"));
             try
             {
                 string fullPath = Path.GetFullPath(path);
@@ -230,12 +252,19 @@ public sealed class ExternalToolService(
         ValidateExecutable(definition.Executable, issues);
         if (issues.Any(issue =>
                 issue.Severity == OperationIssueSeverity.Blocker))
+        {
+            progress?.Report(new(
+                OperationPhase.Completed,
+                normalized.Count,
+                paths.Count,
+                Message: "External-tool preview is blocked"));
             return new(
                 definition,
                 [],
                 issues,
                 DateTimeOffset.UtcNow,
                 CaptureSnapshots(normalized));
+        }
 
         var invocations = new List<ExternalToolInvocation>();
         if (definition.InvocationMode ==
@@ -264,6 +293,12 @@ public sealed class ExternalToolService(
                     issues);
             }
         }
+        progress?.Report(new(
+            OperationPhase.Completed,
+            normalized.Count,
+            paths.Count,
+            Message:
+                $"Prepared {invocations.Count:N0} external-tool invocation(s)"));
         return new(
             definition,
             invocations,

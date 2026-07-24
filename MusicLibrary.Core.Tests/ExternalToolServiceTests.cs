@@ -82,6 +82,46 @@ public sealed class ExternalToolServiceTests
     }
 
     [Fact]
+    public void PreviewReportsProgressAndObservesCancellation()
+    {
+        using var temp = new TempDirectory();
+        string first = temp.CreateFile("one.flac");
+        string second = temp.CreateFile("two.flac");
+        var service = new ExternalToolService(
+            new RecordingRunner());
+        var definition = new ExternalToolDefinition(
+            Guid.NewGuid(),
+            "Inspect",
+            "tool",
+            ["{File}"],
+            InvocationMode:
+                ExternalToolInvocationMode.OncePerFile);
+        var reports = new List<OperationProgress>();
+
+        ExternalToolPlan plan = service.Preview(
+            definition,
+            [first, second],
+            new SynchronousProgress<OperationProgress>(
+                reports.Add),
+            TestContext.Current.CancellationToken);
+
+        Assert.True(plan.CanRun);
+        Assert.Equal(OperationPhase.Completed, reports[^1].Phase);
+        using var cancellation = new CancellationTokenSource();
+        Assert.ThrowsAny<OperationCanceledException>(() =>
+            service.Preview(
+                definition,
+                [first, second],
+                new SynchronousProgress<OperationProgress>(
+                    report =>
+                    {
+                        if (report.Completed == 0)
+                            cancellation.Cancel();
+                    }),
+                cancellation.Token));
+    }
+
+    [Fact]
     public void PreviewBlocksUnsafeOrAmbiguousTemplates()
     {
         using var temp = new TempDirectory();

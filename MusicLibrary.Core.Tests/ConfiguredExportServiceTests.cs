@@ -21,13 +21,17 @@ public sealed class ConfiguredExportServiceTests
             reconciliation: new(ExportExtraFileDisposition.Quarantine,
                 ReplaceChangedFiles: true, MaximumRemovals: 5));
         ConfiguredExportService service = CreateService(library, [source]);
+        var progress = new List<OperationProgress>();
 
         ConfiguredExportPlan plan = await service.PreviewAsync(
             new("portable", library.ConfigurationPath),
+            new SynchronousProgress<OperationProgress>(
+                progress.Add),
             ct: TestContext.Current.CancellationToken);
 
         Assert.True(plan.CanApply, string.Join(Environment.NewLine,
             plan.Issues.Select(issue => issue.Message)));
+        Assert.Equal(OperationPhase.Completed, progress[^1].Phase);
         Assert.Equal(library.Configuration.LibraryId, plan.LibraryId);
         Assert.Equal(library.Configuration.PolicySnapshot.Fingerprint,
             plan.LibraryFingerprint);
@@ -72,6 +76,30 @@ public sealed class ConfiguredExportServiceTests
         Assert.Equal(Path.Combine(library.TargetRoot, "disc-one", "selected.flac"),
             file.DestinationPath);
         Assert.DoesNotContain(plan.Files, item => item.SourcePath == omitted);
+    }
+
+    [Fact]
+    public async Task PreviewObservesCancellationBetweenSelectedFiles()
+    {
+        using var workspace = new TestWorkspace();
+        string first = workspace.Media("source", "one.flac");
+        string second = workspace.Media("source", "two.flac");
+        TestLibrary library = workspace.Library(
+            ExportSelectionPolicy.EntireLibrary);
+        ConfiguredExportService service =
+            CreateService(library, [first, second]);
+        using var cancellation = new CancellationTokenSource();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => service.PreviewAsync(
+                new("portable", library.ConfigurationPath),
+                new SynchronousProgress<OperationProgress>(
+                    report =>
+                    {
+                        if (report.CurrentPath is not null)
+                            cancellation.Cancel();
+                    }),
+                cancellation.Token));
     }
 
     [Fact]

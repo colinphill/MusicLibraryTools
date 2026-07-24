@@ -129,7 +129,16 @@ public sealed class IngestViewModelTests
             WriteReadyLibraryConfig(configPath);
             var settings = new AppSettings(state);
             settings.LoadConfig(configPath);
-            var viewModel = new IngestViewModel(new StubIngest(plan), new StubFiles(), new StubDialogs(),
+            var viewModel = new IngestViewModel(
+                new StubIngest(plan)
+                {
+                    PreviewProgress = new(
+                        "Preview",
+                        "Reading source metadata",
+                        2,
+                        2),
+                },
+                new StubFiles(), new StubDialogs(),
                 settings, new StubLibrary());
             viewModel.SourceDirectory = "source";
 
@@ -139,6 +148,8 @@ public sealed class IngestViewModelTests
             Assert.Equal(2, viewModel.OutputCount);
             Assert.Equal(1, viewModel.ConflictCount);
             Assert.Equal(3, viewModel.CleanupCount);
+            Assert.Equal(2, viewModel.PreviewProgress);
+            Assert.Equal(2, viewModel.PreviewProgressMaximum);
             viewModel.SelectedPreviewFilter = IngestPreviewFilter.Outputs;
             Assert.Equal(2, viewModel.Files.Count);
             Assert.All(viewModel.Files, item => Assert.True(item.IsOutput));
@@ -360,9 +371,19 @@ public sealed class IngestViewModelTests
     private sealed class StubIngest(IngestPlan? plan = null) : IIngestMusicService
     {
         public int ApplyCalls { get; private set; }
+        public IngestProgress? PreviewProgress { get; init; }
         public IngestProgress? ApplyProgress { get; init; }
         public Task<IngestPlan> PreviewAsync(IngestRequest request, CancellationToken ct = default) =>
             plan is null ? throw new NotSupportedException() : Task.FromResult(plan);
+        public Task<IngestPlan> PreviewAsync(
+            IngestRequest request,
+            IProgress<IngestProgress>? progress,
+            CancellationToken ct = default)
+        {
+            if (PreviewProgress is { } update)
+                progress?.Report(update);
+            return PreviewAsync(request, ct);
+        }
         public async Task<IngestResult> ApplyAsync(IngestPlan plan,
             IReadOnlyList<IngestApprovalDecision> approvals, IProgress<IngestProgress>? progress = null,
             CancellationToken ct = default)

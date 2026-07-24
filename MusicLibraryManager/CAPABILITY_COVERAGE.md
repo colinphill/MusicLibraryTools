@@ -19,9 +19,9 @@ configuration format.
   workflow. These rows are release gaps.
 
 There are currently no accepted earlier-phase parity capabilities classified
-as **Not implemented**. Remaining Phase 6 work is integration, migration,
-platform, accessibility, scale, and corpus hardening rather than missing
-editing outcomes.
+as **Not implemented**. Phase 6 integration, migration, platform,
+accessibility, scale, progress/cancellation, golden-output, and corpus
+hardening are complete.
 
 ## Metadata and batch editing
 

@@ -41,9 +41,18 @@ public sealed class IngestMusicService : IIngestMusicService
     }
 
     public Task<IngestPlan> PreviewAsync(IngestRequest request, CancellationToken ct = default)
-        => Task.Run(() => Preview(request, ct), ct);
+        => PreviewAsync(request, progress: null, ct);
 
-    private IngestPlan Preview(IngestRequest request, CancellationToken ct)
+    public Task<IngestPlan> PreviewAsync(
+        IngestRequest request,
+        IProgress<IngestProgress>? progress,
+        CancellationToken ct = default)
+        => Task.Run(() => Preview(request, progress, ct), ct);
+
+    private IngestPlan Preview(
+        IngestRequest request,
+        IProgress<IngestProgress>? progress,
+        CancellationToken ct)
     {
         string sourceRoot = Path.GetFullPath(request.SourceDirectory);
         if (!Directory.Exists(sourceRoot))
@@ -79,6 +88,7 @@ public sealed class IngestMusicService : IIngestMusicService
             throw new InvalidDataException("Ingestion destination directories must not overlap each other.");
         var sourceDirectories = new List<string>();
         var scanFiles = new List<PreviewFile>();
+        int discoveredFiles = 0;
         // One buffered traversal supplies paths, size/timestamp snapshots, and the directory list.
         // The previous implementation walked the whole tree once for files, once for directories,
         // then issued a FileInfo metadata request for every file -- particularly costly over SMB.
@@ -93,6 +103,15 @@ public sealed class IngestMusicService : IIngestMusicService
 
             string extension = Path.GetExtension(entry.Name);
             var snapshot = new IngestFileSnapshot(entry.Name, entry.Size, entry.Modified);
+            discoveredFiles++;
+            if (discoveredFiles == 1 || (discoveredFiles & 31) == 0)
+                progress?.Report(new(
+                    "Preview",
+                    "Discovering source files",
+                    discoveredFiles,
+                    0,
+                    entry.Name,
+                    IngestFileProgressState.InProgress));
             if (!enabledRecipes.Any(recipe => recipe.InputExtensions.Contains(
                     extension, StringComparer.OrdinalIgnoreCase)))
             {
@@ -114,6 +133,13 @@ public sealed class IngestMusicService : IIngestMusicService
         }
         bool inferSuffixForGrouping = enabledRecipes.Any(recipe =>
             config.ResolveDestinationProfile(recipe).Disc.InferAlbumSuffix);
+        int completedScans = scanFiles.Count - supportedIndexes.Count;
+        progress?.Report(new(
+            "Preview",
+            "Reading source metadata",
+            completedScans,
+            scanFiles.Count));
+        object progressSync = new();
 
         // Parsing is independent per file. Bound the global reader count so high-latency opens can
         // overlap without allowing a large incoming tree to flood the share or retain unbounded tag
@@ -121,9 +147,23 @@ public sealed class IngestMusicService : IIngestMusicService
         Parallel.ForEach(
             supportedIndexes,
             new ParallelOptions { MaxDegreeOfParallelism = _previewParallelism, CancellationToken = ct },
-            index => scanResults[index] = ScanPreviewFile(
-                scanFiles[index].Snapshot, ingestProfile, enabledRecipes,
-                inferSuffixForGrouping));
+            index =>
+            {
+                PreviewFile file = scanFiles[index];
+                scanResults[index] = ScanPreviewFile(
+                    file.Snapshot, ingestProfile, enabledRecipes,
+                    inferSuffixForGrouping);
+                int completed = Interlocked.Increment(
+                    ref completedScans);
+                lock (progressSync)
+                    progress?.Report(new(
+                        "Preview",
+                        "Reading source metadata",
+                        completed,
+                        scanFiles.Count,
+                        file.Snapshot.Path,
+                        IngestFileProgressState.Completed));
+            });
 
         var conflicts = new List<IngestConflict>();
         var ignoredSnapshots = new List<IngestFileSnapshot>();
@@ -243,7 +283,7 @@ public sealed class IngestMusicService : IIngestMusicService
                     : "Source → Leave unchanged"));
         }
 
-        return new IngestPlan
+        var plan = new IngestPlan
         {
             Request = request with
             {
@@ -261,6 +301,12 @@ public sealed class IngestMusicService : IIngestMusicService
             ItunesLibrarySnapshot = itunesLibrarySnapshot,
             PolicyFingerprint = config.PolicySnapshot?.Fingerprint,
         };
+        progress?.Report(new(
+            "Preview",
+            "Preview complete",
+            scanFiles.Count,
+            scanFiles.Count));
+        return plan;
     }
 
     private static List<IngestTrackPlan> BuildTrackPlans(
