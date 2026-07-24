@@ -44,22 +44,40 @@ public partial class VisualFilterConditionViewModel :
             string fieldLabel = FieldKind switch
             {
                 LibraryFilterFieldKind.Technical =>
-                    SelectedTechnicalField?.Label ?? "Technical",
+                    SelectedTechnicalField?.Label ??
+                    LocalizedText.Get(
+                        "Library.VisualFilter.Field.Technical"),
                 LibraryFilterFieldKind.KnownMetadata =>
-                    SelectedKnownField?.Label ?? "Known",
-                _ => CustomFieldName ?? "Custom",
+                    SelectedKnownField?.Label ??
+                    LocalizedText.Get(
+                        "Library.VisualFilter.Field.Known"),
+                _ => CustomFieldName ??
+                    LocalizedText.Get(
+                        "Library.VisualFilter.Field.Custom"),
             };
-            return $"Group {Group}: {fieldLabel} {Comparison}" +
+            string summary = LocalizedText.Format(
+                "Library.VisualFilter.ConditionSummary",
+                Group,
+                fieldLabel,
+                LocalizedText.Get(
+                    $"Library.VisualFilter.Choice.Comparison.{Comparison}"));
+            return summary +
                 (string.IsNullOrWhiteSpace(Value)
                     ? ""
-                    : $" {Value}");
+                    : LocalizedText.Format(
+                        "Library.VisualFilter.ConditionValue",
+                        Value));
         }
     }
+
+    public void RefreshLocalizedText() =>
+        OnPropertyChanged(nameof(Summary));
 }
 
 public partial class VisualFilterEditorViewModel :
     ObservableObject
 {
+    private readonly ILocalizationService? _localization;
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RemoveConditionCommand))]
     private VisualFilterConditionViewModel? _selectedCondition;
@@ -68,23 +86,18 @@ public partial class VisualFilterEditorViewModel :
         LibraryFilterGroupMode.All;
     [ObservableProperty] private string _status = "";
 
-    public VisualFilterEditorViewModel()
+    public VisualFilterEditorViewModel(
+        ILocalizationService? localization = null)
     {
+        _localization = localization;
         FieldKinds = Enum.GetValues<LibraryFilterFieldKind>();
         Comparisons = Enum.GetValues<LibraryFilterComparison>();
         RootModes = Enum.GetValues<LibraryFilterGroupMode>();
-        TechnicalFields = DetailsColumns.All
-            .Select(column => new LibraryFilterFieldChoice(
-                column.Key,
-                column.Header))
-            .ToArray();
-        KnownFields = Enum.GetValues<TagFields>()
-            .Where(field => field != TagFields.NullField)
-            .Select(field => new MetadataFieldChoice(
-                field,
-                field.ToString()))
-            .ToArray();
+        RefreshLocalizedChoices();
         AddCondition();
+        if (_localization is not null)
+            _localization.CultureChanged +=
+                OnLocalizationCultureChanged;
     }
 
     public ObservableCollection<VisualFilterConditionViewModel>
@@ -92,9 +105,16 @@ public partial class VisualFilterEditorViewModel :
     public IReadOnlyList<LibraryFilterFieldKind> FieldKinds { get; }
     public IReadOnlyList<LibraryFilterComparison> Comparisons { get; }
     public IReadOnlyList<LibraryFilterGroupMode> RootModes { get; }
-    public IReadOnlyList<LibraryFilterFieldChoice>
-        TechnicalFields { get; }
-    public IReadOnlyList<MetadataFieldChoice> KnownFields { get; }
+    public ObservableCollection<LibraryFilterFieldChoice>
+        TechnicalFields { get; } = [];
+    public ObservableCollection<MetadataFieldChoice>
+        KnownFields { get; } = [];
+    public ObservableCollection<LocalizedChoice<LibraryFilterFieldKind>>
+        FieldKindChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<LibraryFilterComparison>>
+        ComparisonChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<LibraryFilterGroupMode>>
+        RootModeChoices { get; } = [];
 
     [RelayCommand]
     private void AddCondition()
@@ -106,7 +126,8 @@ public partial class VisualFilterEditorViewModel :
         };
         Conditions.Add(condition);
         SelectedCondition = condition;
-        Status = "Edit the selected condition, then apply the filter.";
+        Status = L(
+            "Library.VisualFilter.Editor.Status.EditCondition");
     }
 
     [RelayCommand(CanExecute = nameof(CanRemoveCondition))]
@@ -137,7 +158,8 @@ public partial class VisualFilterEditorViewModel :
             LibraryFilterField? field = Field(row);
             if (field is null)
             {
-                error = "Every condition requires a field.";
+                error = L(
+                    "Library.VisualFilter.Editor.Error.FieldRequired");
                 return null;
             }
             if (row.Comparison is not
@@ -145,8 +167,9 @@ public partial class VisualFilterEditorViewModel :
                     LibraryFilterComparison.Missing &&
                 string.IsNullOrWhiteSpace(row.Value))
             {
-                error =
-                    $"{field.Name} requires a comparison value.";
+                error = LF(
+                    "Library.VisualFilter.Editor.Error.ValueRequired",
+                    field.Name);
                 return null;
             }
             built.Add((
@@ -270,5 +293,99 @@ public partial class VisualFilterEditorViewModel :
                     if (nested is LibraryFilterCondition item)
                         yield return (groupNumber, item);
         }
+    }
+
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string LF(
+        string key,
+        params object?[] arguments) =>
+        _localization?.Format(key, arguments) ??
+        LocalizedText.Format(key, arguments);
+
+    private void RefreshLocalizedChoices()
+    {
+        string? technicalName =
+            SelectedCondition?.SelectedTechnicalField?.Name;
+        TagFields? knownField =
+            SelectedCondition?.SelectedKnownField?.Field;
+        TechnicalFields.Clear();
+        foreach (DetailsColumn column in DetailsColumns.All)
+            TechnicalFields.Add(new(
+                column.Key,
+                L($"Column.{column.Key}")));
+        KnownFields.Clear();
+        foreach (TagFields field in Enum.GetValues<TagFields>()
+                     .Where(field =>
+                         field != TagFields.NullField))
+            KnownFields.Add(new(
+                field,
+                L($"Settings.Choice.TagFields.{field}")));
+        RefreshChoices(
+            FieldKindChoices,
+            FieldKinds,
+            "Library.VisualFilter.Choice.FieldKind");
+        RefreshChoices(
+            ComparisonChoices,
+            Comparisons,
+            "Library.VisualFilter.Choice.Comparison");
+        RefreshChoices(
+            RootModeChoices,
+            RootModes,
+            "Library.VisualFilter.Choice.RootMode");
+
+        foreach (VisualFilterConditionViewModel condition in
+                 Conditions)
+        {
+            string? selectedTechnical =
+                condition.SelectedTechnicalField?.Name ??
+                technicalName;
+            TagFields? selectedKnown =
+                condition.SelectedKnownField?.Field ??
+                knownField;
+            condition.SelectedTechnicalField =
+                TechnicalFields.FirstOrDefault(choice =>
+                    choice.Name.Equals(
+                        selectedTechnical,
+                        StringComparison.OrdinalIgnoreCase)) ??
+                TechnicalFields.FirstOrDefault();
+            condition.SelectedKnownField =
+                selectedKnown is { } known
+                    ? KnownFields.FirstOrDefault(choice =>
+                        choice.Field == known)
+                    : KnownFields.FirstOrDefault();
+            condition.RefreshLocalizedText();
+        }
+    }
+
+    private void RefreshChoices<T>(
+        ObservableCollection<LocalizedChoice<T>> target,
+        IEnumerable<T> values,
+        string keyPrefix)
+    {
+        foreach (T value in values)
+        {
+            LocalizedChoice<T>? choice =
+                target.FirstOrDefault(item =>
+                    EqualityComparer<T>.Default.Equals(
+                        item.Value,
+                        value));
+            string label = L($"{keyPrefix}.{value}");
+            if (choice is null)
+                target.Add(new(value, label));
+            else
+                choice.Label = label;
+        }
+    }
+
+    private void OnLocalizationCultureChanged(
+        object? sender,
+        EventArgs e)
+    {
+        RefreshLocalizedChoices();
+        Status = L(
+            "Library.VisualFilter.Editor.Status.EditCondition");
     }
 }

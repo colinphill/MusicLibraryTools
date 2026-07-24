@@ -4,6 +4,7 @@ using global::Avalonia.Controls.Primitives;
 using global::Avalonia.Input;
 using global::Avalonia.Interactivity;
 using global::Avalonia.Markup.Xaml;
+using global::Avalonia.Styling;
 using MusicLibraryManager.Services;
 
 namespace MusicLibraryManager.Controls;
@@ -25,7 +26,9 @@ public partial class PersistedSplitView : UserControl
     public static readonly StyledProperty<string?> PersistenceKeyProperty =
         AvaloniaProperty.Register<PersistedSplitView, string?>(nameof(PersistenceKey));
     public static readonly StyledProperty<string> LabelProperty =
-        AvaloniaProperty.Register<PersistedSplitView, string>(nameof(Label), "Resize panes");
+        AvaloniaProperty.Register<PersistedSplitView, string>(
+            nameof(Label),
+            string.Empty);
 
     public object? Left { get => GetValue(LeftProperty); set => SetValue(LeftProperty, value); }
     public object? Right { get => GetValue(RightProperty); set => SetValue(RightProperty, value); }
@@ -39,6 +42,7 @@ public partial class PersistedSplitView : UserControl
     private SplitStateService? _state;
     private bool _compact;
     private bool _initialized;
+    private bool _usesDefaultLabel;
     private double? _lastPersistedWidth;
     private double _expandedLeftWidth;
 
@@ -54,8 +58,8 @@ public partial class PersistedSplitView : UserControl
             else if (args.Property == RightProperty)
                 RightPresenter.Content = Right;
         };
-        AttachedToVisualTree += (_, _) => InitializeWidth();
-        DetachedFromVisualTree += (_, _) => Persist();
+        AttachedToVisualTree += OnAttachedToVisualTree;
+        DetachedFromVisualTree += OnDetachedFromVisualTree;
         SplitGrid.SizeChanged += (_, _) => EnsurePanesFit();
         Splitter.AddHandler(Thumb.DragCompletedEvent, OnSplitterDragCompleted,
             RoutingStrategies.Bubble, handledEventsToo: true);
@@ -65,9 +69,57 @@ public partial class PersistedSplitView : UserControl
 
     internal double CurrentLeftWidth => SplitGrid.ColumnDefinitions[0].Width.Value;
 
+    private void OnAttachedToVisualTree(
+        object? sender,
+        VisualTreeAttachmentEventArgs e)
+    {
+        _usesDefaultLabel =
+            string.IsNullOrWhiteSpace(Label);
+        if (_usesDefaultLabel)
+            ApplyDefaultLabel();
+        AvaloniaLocalizationResourceBridge.ResourcesApplied +=
+            OnLocalizationResourcesApplied;
+        InitializeWidth();
+    }
+
+    private void OnDetachedFromVisualTree(
+        object? sender,
+        VisualTreeAttachmentEventArgs e)
+    {
+        AvaloniaLocalizationResourceBridge.ResourcesApplied -=
+            OnLocalizationResourcesApplied;
+        Persist();
+    }
+
+    private void OnLocalizationResourcesApplied(
+        object? sender,
+        EventArgs e)
+    {
+        if (_usesDefaultLabel)
+            ApplyDefaultLabel();
+    }
+
+    private void ApplyDefaultLabel()
+    {
+        if (Application.Current is not { } application)
+            return;
+        if (application.TryGetResource(
+                AvaloniaLocalizationResourceBridge.ResourcePrefix +
+                "Common.ResizePanes",
+                ThemeVariant.Default,
+                out object? value) &&
+            value is string localized)
+            Label = localized;
+    }
+
     internal void CommitLeftWidth(double width)
     {
-        SetLeftWidth(width);
+        _expandedLeftWidth =
+            Math.Clamp(
+                width,
+                MinLeftWidth,
+                MaxLeftWidth);
+        SetLeftWidth(_expandedLeftWidth);
         Persist();
     }
 
@@ -103,15 +155,18 @@ public partial class PersistedSplitView : UserControl
     {
         if (_compact || !SplitGrid.ColumnDefinitions[0].Width.IsAbsolute)
             return;
-        SetLeftWidth(SplitGrid.ColumnDefinitions[0].Width.Value);
+        SetLeftWidth(
+            _expandedLeftWidth > 0
+                ? _expandedLeftWidth
+                : SplitGrid.ColumnDefinitions[0]
+                    .Width.Value);
     }
 
     private void Persist()
     {
         if (!_initialized || _compact || PersistenceKey is null)
             return;
-        ColumnDefinition left = SplitGrid.ColumnDefinitions[0];
-        double width = left.Width.IsAbsolute ? left.Width.Value : left.ActualWidth;
+        double width = _expandedLeftWidth;
         if (!double.IsFinite(width) || width <= 0 ||
             (_lastPersistedWidth is double previous && Math.Abs(previous - width) < 0.5))
             return;
@@ -126,8 +181,6 @@ public partial class PersistedSplitView : UserControl
         if (compact)
         {
             Persist();
-            if (SplitGrid.ColumnDefinitions[0].Width.IsAbsolute)
-                _expandedLeftWidth = SplitGrid.ColumnDefinitions[0].Width.Value;
         }
         _compact = compact;
         Splitter.IsVisible = !compact;
@@ -179,7 +232,29 @@ public partial class PersistedSplitView : UserControl
             RightPresenter.IsVisible = !RightPresenter.IsVisible;
     }
 
-    private void OnSplitterDragCompleted(object? sender, VectorEventArgs e) => Persist();
+    private void OnSplitterDragCompleted(
+        object? sender,
+        VectorEventArgs e)
+    {
+        if (!_compact)
+        {
+            ColumnDefinition left =
+                SplitGrid.ColumnDefinitions[0];
+            double width = left.Width.IsAbsolute
+                ? left.Width.Value
+                : left.ActualWidth;
+            if (double.IsFinite(width) &&
+                width > 0)
+            {
+                _expandedLeftWidth =
+                    Math.Clamp(
+                        width,
+                        MinLeftWidth,
+                        MaxLeftWidth);
+            }
+        }
+        Persist();
+    }
 
     private void OnSplitterKeyDown(object? sender, KeyEventArgs e)
     {

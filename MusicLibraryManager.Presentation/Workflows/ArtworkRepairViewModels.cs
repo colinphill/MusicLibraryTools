@@ -52,6 +52,13 @@ public partial class ArtworkRepairCandidateViewModel(
     [ObservableProperty]
     private string? _thumbnailError;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasThumbnailDiagnosticDetail))]
+    private string? _thumbnailDiagnosticDetail;
+
+    public bool HasThumbnailDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(ThumbnailDiagnosticDetail);
+
     public async Task<byte[]?> EnsureDataAsync(CancellationToken ct = default)
     {
         if (_dataLoaded)
@@ -90,6 +97,7 @@ public partial class ArtworkRepairCandidateViewModel(
                     180,
                     ct);
                 ThumbnailError = null;
+                ThumbnailDiagnosticDetail = null;
                 _thumbnailLoaded = true;
             }
             catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -98,7 +106,9 @@ public partial class ArtworkRepairCandidateViewModel(
             }
             catch (Exception error)
             {
-                ThumbnailError = error.Message;
+                ThumbnailError = LocalizedText.Get(
+                    "Health.Artwork.ThumbnailLoadFailed");
+                ThumbnailDiagnosticDetail = error.Message;
                 _thumbnailLoaded = true;
             }
         }
@@ -129,8 +139,15 @@ public partial class ArtworkRepairItemViewModel : ViewModelBase
     public bool IsActive => CanApply && CanChangeDisposition &&
         Disposition == AnalysisRepairDisposition.Active;
     public string TargetSummary =>
-        $"Target: at most {MaximumDimension:N0}px and {MaximumBytes / 1024d / 1024d:0.##} MiB";
+        LocalizedText.Format(
+            "Health.Artwork.TargetSummary",
+            MaximumDimension,
+            MaximumBytes / 1024d / 1024d);
     public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; }
+    public IReadOnlyList<LocalizedChoice<AnalysisRepairDisposition>>
+        DispositionChoices => CanApply
+            ? HealthLocalizedChoices.RepairDispositions
+            : HealthLocalizedChoices.BlockedRepairDispositions;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsActive))]
@@ -149,6 +166,13 @@ public partial class ArtworkRepairItemViewModel : ViewModelBase
     [ObservableProperty]
     private string? _resultText;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasResultDiagnosticDetail))]
+    private string? _resultDiagnosticDetail;
+
+    public bool HasResultDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(ResultDiagnosticDetail);
+
     public event Action? StateChanged;
 
     public ArtworkRepairItemViewModel(
@@ -166,8 +190,12 @@ public partial class ArtworkRepairItemViewModel : ViewModelBase
     {
         Kind = kind;
         Title = title;
-        Artist = string.IsNullOrWhiteSpace(artist) ? "Unknown Artist" : artist;
-        Album = string.IsNullOrWhiteSpace(album) ? "Unknown Album" : album;
+        Artist = string.IsNullOrWhiteSpace(artist)
+            ? LocalizedText.Get("Health.Common.UnknownArtist")
+            : artist;
+        Album = string.IsNullOrWhiteSpace(album)
+            ? LocalizedText.Get("Health.Common.UnknownAlbum")
+            : album;
         Description = description;
         AffectedPaths = affectedPaths.Select(path => new ArtistPathViewModel(path)).ToList();
         Candidates = candidates;
@@ -222,6 +250,8 @@ public abstract class ArtworkRepairGroupViewModel : ViewModelBase
     public int ActiveCount => DescendantItems.Count(item => item.IsActive);
     public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
         Enum.GetValues<AnalysisRepairDisposition>();
+    public IReadOnlyList<LocalizedChoice<AnalysisRepairDisposition>>
+        DispositionChoices => HealthLocalizedChoices.AllRepairDispositions;
 
     public AnalysisRepairDisposition Disposition
     {
@@ -275,7 +305,9 @@ public abstract class ArtworkRepairGroupViewModel : ViewModelBase
 
 public sealed class ArtworkRepairCategoryGroupViewModel : ArtworkRepairGroupViewModel
 {
-    public string Category { get; }
+    public string Category => Kind == ArtworkRepairKind.NormalizeAlbum
+        ? LocalizedText.Get("Health.Artwork.Category.MixedAlbum")
+        : LocalizedText.Get("Health.Artwork.Category.File");
     public ArtworkRepairKind Kind { get; }
     public IReadOnlyList<ArtworkRepairArtistGroupViewModel> Artists { get; }
 
@@ -285,9 +317,6 @@ public sealed class ArtworkRepairCategoryGroupViewModel : ArtworkRepairGroupView
         IReadOnlyList<ArtworkRepairArtistGroupViewModel> artists) : base(items)
     {
         Kind = kind;
-        Category = kind == ArtworkRepairKind.NormalizeAlbum
-            ? "Mixed album artwork"
-            : "File artwork";
         Artists = artists;
     }
 
@@ -298,7 +327,11 @@ public sealed class ArtworkRepairCategoryGroupViewModel : ArtworkRepairGroupView
     {
         var result = new List<ArtworkRepairCategoryGroupViewModel>();
         int completed = 0;
-        progress?.Report(new(0, items.Count, "repair actions", "Grouping artwork repairs"));
+        progress?.Report(new(
+            0,
+            items.Count,
+            LocalizedText.Get("Health.Progress.Unit.RepairActions"),
+            LocalizedText.Get("Health.Progress.Stage.GroupingArtworkRepairs")));
         foreach (IGrouping<ArtworkRepairKind, ArtworkRepairItemViewModel> category in items
                      .GroupBy(item => item.Kind).OrderBy(group => group.Key))
         {
@@ -320,8 +353,12 @@ public sealed class ArtworkRepairCategoryGroupViewModel : ArtworkRepairGroupView
             result.Add(new ArtworkRepairCategoryGroupViewModel(
                 category.Key, categoryItems, artists));
             completed += categoryItems.Count;
-            progress?.Report(new(completed, items.Count, "repair actions",
-                "Grouping artwork repairs", category.Key.ToString()));
+            progress?.Report(new(
+                completed,
+                items.Count,
+                LocalizedText.Get("Health.Progress.Unit.RepairActions"),
+                LocalizedText.Get("Health.Progress.Stage.GroupingArtworkRepairs"),
+                category.Key.ToString()));
         }
         return result;
     }
@@ -398,7 +435,11 @@ public static class ArtworkRepairPlanner
         CancellationToken ct = default)
     {
         var byPath = new Dictionary<string, ArtworkAuditFile>(artwork.Count, PathComparer);
-        progress?.Report(new(0, artwork.Count, "files", "Indexing artwork audit"));
+        progress?.Report(new(
+            0,
+            artwork.Count,
+            LocalizedText.Get("Health.Progress.Unit.Files"),
+            LocalizedText.Get("Health.Progress.Stage.IndexingArtworkAudit")));
         for (int index = 0; index < artwork.Count; index++)
         {
             ct.ThrowIfCancellationRequested();
@@ -406,11 +447,20 @@ public static class ArtworkRepairPlanner
             byPath.Add(file.Path, file);
             int completed = index + 1;
             if ((completed & 127) == 0 || completed == artwork.Count)
-                progress?.Report(new(completed, artwork.Count, "files",
-                    "Indexing artwork audit", file.Path));
+                progress?.Report(new(
+                    completed,
+                    artwork.Count,
+                    LocalizedText.Get("Health.Progress.Unit.Files"),
+                    LocalizedText.Get("Health.Progress.Stage.IndexingArtworkAudit"),
+                    file.Path));
         }
         var recordsByPath = new Dictionary<string, TrackRecord>(records.Count, PathComparer);
-        progress?.Report(new(0, records.Count, "tracks", "Indexing tracks for artwork repairs"));
+        progress?.Report(new(
+            0,
+            records.Count,
+            LocalizedText.Get("Health.Progress.Unit.Tracks"),
+            LocalizedText.Get(
+                "Health.Progress.Stage.IndexingTracksForArtworkRepairs")));
         for (int index = 0; index < records.Count; index++)
         {
             ct.ThrowIfCancellationRequested();
@@ -418,8 +468,13 @@ public static class ArtworkRepairPlanner
             recordsByPath.Add(record.Path, record);
             int completed = index + 1;
             if ((completed & 127) == 0 || completed == records.Count)
-                progress?.Report(new(completed, records.Count, "tracks",
-                    "Indexing tracks for artwork repairs", record.Path));
+                progress?.Report(new(
+                    completed,
+                    records.Count,
+                    LocalizedText.Get("Health.Progress.Unit.Tracks"),
+                    LocalizedText.Get(
+                        "Health.Progress.Stage.IndexingTracksForArtworkRepairs"),
+                    record.Path));
         }
         var plans = new List<PlannedAction>();
         var coveredPaths = new HashSet<string>(PathComparer);
@@ -429,7 +484,12 @@ public static class ArtworkRepairPlanner
             : record => LibraryAlbumIdentityResolver.Key(record, configuration);
         int completedTracks = 0;
         int lastReportedTracks = 0;
-        progress?.Report(new(0, records.Count, "tracks", "Planning album artwork repairs"));
+        progress?.Report(new(
+            0,
+            records.Count,
+            LocalizedText.Get("Health.Progress.Unit.Tracks"),
+            LocalizedText.Get(
+                "Health.Progress.Stage.PlanningAlbumArtworkRepairs")));
         foreach (IGrouping<string, TrackRecord> album in records.GroupBy(albumKey))
         {
             ct.ThrowIfCancellationRequested();
@@ -468,10 +528,15 @@ public static class ArtworkRepairPlanner
                 coveredPaths.Add(path);
             plans.Add(new(
                 ArtworkRepairKind.NormalizeAlbum,
-                $"{artist} — {albumName}",
+                LocalizedText.Format(
+                    "Health.Artwork.AlbumTitleFormat",
+                    artist,
+                    albumName),
                 hasMissing
-                    ? "Replace every scanned track's embedded-artwork set with the selected album image, including tracks whose artwork is missing."
-                    : "Replace every track's embedded-artwork set with the selected album image.",
+                    ? LocalizedText.Get(
+                        "Health.Artwork.Description.NormalizeAlbumWithMissing")
+                    : LocalizedText.Get(
+                        "Health.Artwork.Description.NormalizeAlbum"),
                 targets,
                 candidates,
                 artist,
@@ -484,13 +549,22 @@ public static class ArtworkRepairPlanner
                 completedTracks += albumTrackCount;
                 if (completedTracks - lastReportedTracks < 128 && completedTracks != records.Count)
                     return;
-                progress?.Report(new(completedTracks, records.Count, "tracks",
-                    "Planning album artwork repairs"));
+                progress?.Report(new(
+                    completedTracks,
+                    records.Count,
+                    LocalizedText.Get("Health.Progress.Unit.Tracks"),
+                    LocalizedText.Get(
+                        "Health.Progress.Stage.PlanningAlbumArtworkRepairs")));
                 lastReportedTracks = completedTracks;
             }
         }
 
-        progress?.Report(new(0, artwork.Count, "files", "Planning file artwork repairs"));
+        progress?.Report(new(
+            0,
+            artwork.Count,
+            LocalizedText.Get("Health.Progress.Unit.Files"),
+            LocalizedText.Get(
+                "Health.Progress.Stage.PlanningFileArtworkRepairs")));
         for (int fileIndex = 0; fileIndex < artwork.Count; fileIndex++)
         {
             ArtworkAuditFile file = artwork[fileIndex];
@@ -511,7 +585,7 @@ public static class ArtworkRepairPlanner
                     TrackRecord? record = recordsByPath.GetValueOrDefault(file.Path);
                     CandidateDescriptor? candidate = record is null ? null : Candidate(record, file);
                     string artist = string.IsNullOrWhiteSpace(record?.EffectiveAlbumArtist)
-                        ? "Unknown Artist"
+                        ? LocalizedText.Get("Health.Common.UnknownArtist")
                         : record.EffectiveAlbumArtist!;
                     string? taggedAlbum = record is null
                         ? null
@@ -519,18 +593,23 @@ public static class ArtworkRepairPlanner
                             ? record.StrippedAlbum
                             : record.Album;
                     string albumName = string.IsNullOrWhiteSpace(taggedAlbum)
-                        ? Path.GetFileName(Path.GetDirectoryName(file.Path)) ?? "Unknown Album"
+                        ? Path.GetFileName(Path.GetDirectoryName(file.Path)) ??
+                          LocalizedText.Get("Health.Common.UnknownAlbum")
                         : taggedAlbum;
                     plans.Add(new(
                         ArtworkRepairKind.NormalizeFile,
                         Path.GetFileName(file.Path),
                         unreadable
-                            ? "Re-encode the first readable image and replace the invalid embedded-artwork set."
+                            ? LocalizedText.Get(
+                                "Health.Artwork.Description.ReencodeUnreadable")
                             : oversized && duplicates
-                            ? "Re-encode the first image within the configured limits and remove duplicate embedded images."
+                            ? LocalizedText.Get(
+                                "Health.Artwork.Description.ReencodeAndDeduplicate")
                             : oversized
-                                ? "Re-encode the first image within the configured artwork limits."
-                                : "Keep the first image and remove duplicate embedded images.",
+                                ? LocalizedText.Get(
+                                    "Health.Artwork.Description.ReencodeOversized")
+                                : LocalizedText.Get(
+                                    "Health.Artwork.Description.Deduplicate"),
                         [file.Path],
                         candidate is null ? [] : [candidate],
                         artist,
@@ -540,12 +619,22 @@ public static class ArtworkRepairPlanner
             }
             int completedFiles = fileIndex + 1;
             if ((completedFiles & 127) == 0 || completedFiles == artwork.Count)
-                progress?.Report(new(completedFiles, artwork.Count, "files",
-                    "Planning file artwork repairs", file.Path));
+                progress?.Report(new(
+                    completedFiles,
+                    artwork.Count,
+                    LocalizedText.Get("Health.Progress.Unit.Files"),
+                    LocalizedText.Get(
+                        "Health.Progress.Stage.PlanningFileArtworkRepairs"),
+                    file.Path));
         }
 
         var result = new List<ArtworkRepairItemViewModel>(plans.Count);
-        progress?.Report(new(0, plans.Count, "repair actions", "Preparing artwork repair choices"));
+        progress?.Report(new(
+            0,
+            plans.Count,
+            LocalizedText.Get("Health.Progress.Unit.RepairActions"),
+            LocalizedText.Get(
+                "Health.Progress.Stage.PreparingArtworkRepairChoices")));
         for (int planIndex = 0; planIndex < plans.Count; planIndex++)
         {
             PlannedAction plan = plans[planIndex];
@@ -557,9 +646,12 @@ public static class ArtworkRepairPlanner
                 .ToList();
             string[] unsupported = plan.Paths.Where(path => !artworkService.SupportsWrite(path)).ToArray();
             string? blocking = unsupported.Length > 0
-                ? $"Artwork writing is not supported for {unsupported.Length:N0} affected file(s)."
+                ? LocalizedText.FormatCount(
+                    "Health.Artwork.Blocking.UnsupportedWrite",
+                    unsupported.Length)
                 : candidates.Count == 0
-                    ? "No readable source image is available for this repair."
+                    ? LocalizedText.Get(
+                        "Health.Artwork.Blocking.NoReadableSource")
                     : null;
             result.Add(new ArtworkRepairItemViewModel(
                 plan.Kind, plan.Title, plan.Description, plan.Paths, candidates,
@@ -567,8 +659,13 @@ public static class ArtworkRepairPlanner
                 settings.RepairTargetDimension, blocking, plan.Artist, plan.Album));
             int completedPlans = planIndex + 1;
             if ((completedPlans & 63) == 0 || completedPlans == plans.Count)
-                progress?.Report(new(completedPlans, plans.Count, "repair actions",
-                    "Preparing artwork repair choices", plan.Title));
+                progress?.Report(new(
+                    completedPlans,
+                    plans.Count,
+                    LocalizedText.Get("Health.Progress.Unit.RepairActions"),
+                    LocalizedText.Get(
+                        "Health.Progress.Stage.PreparingArtworkRepairChoices"),
+                    plan.Title));
         }
         return Task.FromResult<IReadOnlyList<ArtworkRepairItemViewModel>>(result);
     }
@@ -581,7 +678,12 @@ public static class ArtworkRepairPlanner
             record.Path,
             image.Hash,
             string.IsNullOrWhiteSpace(record.Title) ? Path.GetFileName(record.Path) : record.Title!,
-            $"{image.Width:N0}×{image.Height:N0} · {image.Size / 1024d:0.#} KiB · {Path.GetFileName(record.Path)}",
+            LocalizedText.Format(
+                "Health.Artwork.CandidateDetailsFormat",
+                image.Width,
+                image.Height,
+                image.Size / 1024d,
+                Path.GetFileName(record.Path)),
             image.Width,
             image.Height,
             image.Size);
@@ -601,7 +703,7 @@ public static class ArtworkRepairPlanner
         .GroupBy(value => value!, StringComparer.CurrentCultureIgnoreCase)
         .OrderByDescending(group => group.Count())
         .Select(group => group.First()!)
-        .FirstOrDefault() ?? "(unknown)";
+        .FirstOrDefault() ?? LocalizedText.Get("Health.Common.Unknown");
 
     private sealed record CandidateDescriptor(
         string Path,

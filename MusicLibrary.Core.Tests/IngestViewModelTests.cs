@@ -31,7 +31,7 @@ public sealed class IngestViewModelTests
 
             Assert.True(viewModel.IsConfigurationReady);
             Assert.True(viewModel.PreviewCommand.CanExecute(null));
-            Assert.Contains("configured", viewModel.ConfigurationReadinessText,
+            Assert.Contains("ready", viewModel.ConfigurationReadinessText,
                 StringComparison.OrdinalIgnoreCase);
 
             WriteReadyLibraryConfig(config);

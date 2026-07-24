@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     private readonly INavigationService _navigation;
     private readonly IWindowStateService _windowState;
     private readonly DialogService _dialogs;
+    private readonly ILocalizationService _localization;
     private readonly Dictionary<ShellDestination, Button> _navigationButtons;
     private readonly Dictionary<ShellDestination, Control> _views = [];
     private readonly ContentControl _contentHost;
@@ -38,6 +39,7 @@ public partial class MainWindow : Window
             navigationService.Guard = CanNavigateAsync;
         _windowState = App.GetService<IWindowStateService>();
         _dialogs = App.GetService<DialogService>();
+        _localization = App.GetService<ILocalizationService>();
         DataContext = _shell;
         _navigationButtons = new()
         {
@@ -52,6 +54,7 @@ public partial class MainWindow : Window
             [ShellDestination.Settings] = this.FindControl<Button>("SettingsNav")!,
         };
         _navigation.NavigationRequested += Navigate;
+        _localization.CultureChanged += OnCultureChanged;
         Opened += OnOpened;
         Closing += OnClosing;
         PositionChanged += (_, _) => CaptureNormalBounds();
@@ -144,6 +147,7 @@ public partial class MainWindow : Window
         }
 
         _navigation.NavigationRequested -= Navigate;
+        _localization.CultureChanged -= OnCultureChanged;
         if (_navigation is NavigationService navigationService)
             navigationService.Guard = null;
         CaptureNormalBounds();
@@ -176,9 +180,9 @@ public partial class MainWindow : Window
         if (!_shell.HasRunningActivity)
             return true;
         return await App.GetService<IDialogCoordinator>().ConfirmAsync(
-            "Quit while work is running?",
-            "A library operation is still running. Quit only if you are prepared to inspect its recovery state the next time the app starts.",
-            "Quit");
+            _localization.Get("Shell.Quit.Title"),
+            _localization.Get("Shell.Quit.Message"),
+            _localization.Get("Shell.Quit.Action"));
     }
 
     private void Navigate(ShellDestination destination)
@@ -188,7 +192,11 @@ public partial class MainWindow : Window
             bool isActive = key == destination;
             button.Classes.Set("active", isActive);
             global::Avalonia.Automation.AutomationProperties.SetItemStatus(
-                button, isActive ? "Selected" : "Not selected");
+                button,
+                _localization.Get(
+                    isActive
+                        ? "Shell.Selection.Selected"
+                        : "Shell.Selection.NotSelected"));
         }
         if (!_views.TryGetValue(destination, out Control? view))
         {
@@ -224,6 +232,24 @@ public partial class MainWindow : Window
 
     private void OnConfigurationClick(object? sender, RoutedEventArgs e) =>
         _navigation.Navigate(ShellDestination.Settings);
+
+    private void OnCultureChanged(
+        object? sender,
+        EventArgs e) =>
+        Dispatcher.UIThread.Post(() =>
+        {
+            foreach ((ShellDestination destination, Button button) in
+                     _navigationButtons)
+            {
+                bool isActive = destination == _navigation.Current;
+                global::Avalonia.Automation.AutomationProperties.SetItemStatus(
+                    button,
+                    _localization.Get(
+                        isActive
+                            ? "Shell.Selection.Selected"
+                            : "Shell.Selection.NotSelected"));
+            }
+        });
 
     private void OnSearchKeyDown(object? sender, KeyEventArgs e)
     {

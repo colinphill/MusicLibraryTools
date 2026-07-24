@@ -1,6 +1,7 @@
 <UserControl x:Class="MusicLibraryManager.Views.SelectionInspectorView"
              xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:MusicLibraryManager.Controls">
   <UserControl.Styles>
     <Style Selector="Border.artwork-preview-target:pointerover">
       <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
@@ -13,18 +14,19 @@
   <Grid RowDefinitions="Auto,*">
     <Grid Margin="12,10,10,0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
       <StackPanel>
-        <TextBlock Classes="faint" Text="SELECTION" FontSize="12" FontWeight="SemiBold" />
+        <TextBlock Classes="faint" Text="{DynamicResource Loc.Inspector.View.Selection}" FontSize="12" FontWeight="SemiBold" />
         <TextBlock Classes="muted" Text="{Binding UnsavedChangesSummary}"
                    IsVisible="{Binding HasUnsavedChanges}" />
       </StackPanel>
-      <Button Grid.Column="1" Classes="app" Width="30" Height="30" Padding="0" Content="&#x2715;"
-              Click="OnClose" ToolTip.Tip="Close inspector" AutomationProperties.Name="Close inspector" />
+      <Button x:Name="InspectorCloseButton"
+              Grid.Column="1" Classes="app" Width="30" Height="30" Padding="0" Content="&#x2715;"
+              Click="OnClose" ToolTip.Tip="{DynamicResource Loc.Inspector.View.Close}" AutomationProperties.Name="{DynamicResource Loc.Inspector.View.Close}" />
     </Grid>
 
     <Border x:Name="EmptyState" Grid.Row="1" IsVisible="{Binding !HasSelection}" Padding="24">
       <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8" MaxWidth="240">
-        <TextBlock Text="No selection" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
-        <TextBlock Classes="muted" Text="Select one or more tracks to inspect metadata and artwork."
+        <TextBlock Text="{DynamicResource Loc.Inspector.View.EmptyTitle}" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
+        <TextBlock Classes="muted" Text="{DynamicResource Loc.Inspector.View.EmptyDescription}"
                    TextAlignment="Center" TextWrapping="Wrap" />
       </StackPanel>
     </Border>
@@ -47,7 +49,7 @@
                          AutomationProperties.Name="{Binding Label}"
                          AutomationProperties.HelpText="{Binding VerificationMessage}" />
                 <TextBlock Classes="warning" FontSize="12" IsVisible="{Binding IsUnverified}"
-                           Text="Current value not verified across all selected tracks."
+                           Text="{DynamicResource Loc.Inspector.View.UnverifiedValue}"
                            TextWrapping="Wrap" />
               </StackPanel>
             </DataTemplate>
@@ -59,66 +61,126 @@
                 Classes.warning="{Binding IsStatusWarning}"
                 Classes.error="{Binding IsStatusError}"
                 IsVisible="{Binding HasStatusMessage}">
-          <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+          <Grid ColumnDefinitions="Auto,*"
+                RowDefinitions="Auto,Auto"
+                ColumnSpacing="8"
+                RowSpacing="3">
             <TextBlock Classes="status-icon" Text="{Binding StatusIcon}" />
             <TextBlock Grid.Column="1" Text="{Binding StatusMessage}" TextWrapping="Wrap"
                        AutomationProperties.LiveSetting="Polite" />
+            <controls:LocalizedFormatTextBlock
+                Grid.Row="1"
+                Grid.Column="1"
+                Classes="muted"
+                FontSize="11"
+                TextWrapping="Wrap"
+                ResourceKey="Common.DiagnosticDetailFormat"
+                Value="{Binding StatusDiagnosticDetail}"
+                IsVisible="{Binding HasStatusDiagnosticDetail}" />
           </Grid>
         </Border>
         <WrapPanel>
-          <Button Classes="app primary" Margin="0,0,8,6" Content="Save tags" Command="{Binding SaveTagsCommand}" />
-          <Button Classes="app" Margin="0,0,8,6" Content="All fields..." Command="{Binding EditAllFieldsCommand}" />
-          <Button Classes="app" Margin="0,0,8,6" Content="Revert" Command="{Binding RevertCommand}" />
+          <Button Classes="app primary" Margin="0,0,8,6" Content="{DynamicResource Loc.Inspector.View.SaveTags}" Command="{Binding SaveTagsCommand}" />
+          <Button Classes="app" Margin="0,0,8,6" Content="{DynamicResource Loc.Inspector.View.AllFields}" Command="{Binding EditAllFieldsCommand}" />
+          <Button Classes="app" Margin="0,0,8,6" Content="{DynamicResource Loc.Inspector.View.Revert}" Command="{Binding RevertCommand}" />
         </WrapPanel>
 
         <Border Height="1" Background="{DynamicResource AppBorderBrush}" />
-        <TextBlock Classes="section-title" Text="Artwork" />
+        <TextBlock Classes="section-title" Text="{DynamicResource Loc.Inspector.View.Artwork}" />
         <TextBlock Classes="muted" Text="{Binding ArtworkSummary}" TextWrapping="Wrap" />
-        <Border Height="220" CornerRadius="10" Background="{DynamicResource AppInsetBrush}"
+        <Border Height="120" CornerRadius="10" Background="{DynamicResource AppInsetBrush}"
                 IsVisible="{Binding IsArtworkMixed}">
-          <TextBlock Classes="muted" Text="Mixed artwork" HorizontalAlignment="Center" VerticalAlignment="Center" />
+          <TextBlock Classes="muted" Text="{DynamicResource Loc.Inspector.View.MixedArtwork}" HorizontalAlignment="Center" VerticalAlignment="Center" />
         </Border>
         <ItemsControl ItemsSource="{Binding ArtworkItems}">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
               <Border Classes="card" Padding="8" Margin="0,0,0,10">
-                <StackPanel Spacing="7">
-                  <Border Classes="artwork-preview-target" Height="220" CornerRadius="10"
-                          Background="{DynamicResource AppInsetBrush}" BorderBrush="Transparent"
-                          BorderThickness="2" ClipToBounds="True" Focusable="True" Cursor="Hand"
-                          Tag="{Binding}" DoubleTapped="OnArtworkDoubleTapped" KeyDown="OnArtworkKeyDown"
-                          ToolTip.Tip="Double-click or press Enter to open the full-size artwork"
-                          AutomationProperties.Name="Artwork preview"
-                          AutomationProperties.HelpText="Double-click or press Enter to open full size.">
-                    <Image Source="{Binding Source}" Stretch="Uniform" IsHitTestVisible="False" />
+                <Grid ColumnDefinitions="92,*"
+                      ColumnSpacing="9">
+                  <Border Classes="artwork-preview-target"
+                          Width="84"
+                          Height="84"
+                          CornerRadius="8"
+                          Background="{DynamicResource AppInsetBrush}"
+                          BorderBrush="Transparent"
+                          BorderThickness="2"
+                          ClipToBounds="True"
+                          Focusable="True"
+                          Cursor="Hand"
+                          Tag="{Binding}"
+                          DoubleTapped="OnArtworkDoubleTapped"
+                          KeyDown="OnArtworkKeyDown"
+                          ToolTip.Tip="{DynamicResource Loc.Inspector.View.ArtworkPreviewHelp}"
+                          AutomationProperties.Name="{DynamicResource Loc.Inspector.View.ArtworkPreview}"
+                          AutomationProperties.HelpText="{DynamicResource Loc.Inspector.View.ArtworkPreviewHelp}">
+                    <Image Source="{Binding Source}"
+                           Stretch="Uniform"
+                           IsHitTestVisible="False" />
                   </Border>
-                  <TextBlock Classes="muted" Text="Artwork type" FontSize="12" FontWeight="SemiBold" />
-                  <ComboBox Classes="app"
-                            ItemsSource="{Binding DataContext.ArtworkTypes, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                            SelectedItem="{Binding Type, Mode=TwoWay}"
-                            AutomationProperties.Name="Artwork type" />
-                  <TextBlock Classes="muted" Text="Description" FontSize="12" FontWeight="SemiBold" />
-                  <TextBox Classes="app" Text="{Binding Description, Mode=TwoWay}"
-                           PlaceholderText="Optional description" AutomationProperties.Name="Artwork description" />
-                  <TextBlock Classes="muted" Text="{Binding Summary}" TextWrapping="Wrap" />
-                  <WrapPanel>
-                    <Button Classes="app" Margin="0,0,8,6" Content="Save to file..." Tag="{Binding}"
-                            Click="OnSaveArtwork" AutomationProperties.Name="Save artwork to file" />
-                    <Button Classes="app" Margin="0,0,8,6" Content="Replace this artwork..." Tag="{Binding}" Click="OnReplaceArtwork" />
-                  </WrapPanel>
-                  <Button Classes="app danger" Content="Remove this artwork" Tag="{Binding}" Click="OnRemoveArtwork" />
-                </StackPanel>
+                  <StackPanel Grid.Column="1"
+                              Spacing="6">
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="6">
+                      <TextBlock Classes="muted"
+                                 VerticalAlignment="Center"
+                                 Text="{Binding Summary}"
+                                 TextWrapping="Wrap" />
+                      <Button Grid.Column="1"
+                              Classes="app"
+                              Width="34"
+                              Height="34"
+                              Padding="0"
+                              Content="&#x22EF;"
+                              ToolTip.Tip="{DynamicResource Loc.Inspector.View.ArtworkActions}"
+                              AutomationProperties.Name="{DynamicResource Loc.Inspector.View.ArtworkActions}">
+                        <Button.Flyout>
+                          <MenuFlyout>
+                            <MenuItem Header="{DynamicResource Loc.Inspector.View.SaveArtworkToFile}"
+                                      AutomationProperties.Name="{DynamicResource Loc.Inspector.View.SaveArtworkToFileAutomation}"
+                                      Tag="{Binding}"
+                                      Click="OnSaveArtwork" />
+                            <MenuItem Header="{DynamicResource Loc.Inspector.View.ReplaceArtwork}"
+                                      AutomationProperties.Name="{DynamicResource Loc.Inspector.View.ReplaceArtworkAutomation}"
+                                      Tag="{Binding}"
+                                      Click="OnReplaceArtwork" />
+                            <MenuItem Header="{DynamicResource Loc.Inspector.View.RemoveArtwork}"
+                                      AutomationProperties.Name="{DynamicResource Loc.Inspector.View.RemoveArtworkAutomation}"
+                                      Tag="{Binding}"
+                                      Click="OnRemoveArtwork" />
+                          </MenuFlyout>
+                        </Button.Flyout>
+                      </Button>
+                    </Grid>
+                    <ComboBox Classes="app"
+                              ItemsSource="{Binding DataContext.ArtworkTypeChoices, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              DisplayMemberBinding="{Binding Label}"
+                              SelectedValueBinding="{Binding Value}"
+                              SelectedValue="{Binding Type, Mode=TwoWay}"
+                              AutomationProperties.Name="{DynamicResource Loc.Inspector.View.ArtworkType}" />
+                    <TextBox Classes="app"
+                             Text="{Binding Description, Mode=TwoWay}"
+                             PlaceholderText="{DynamicResource Loc.Inspector.View.DescriptionPlaceholder}"
+                             AutomationProperties.Name="{DynamicResource Loc.Inspector.View.ArtworkDescription}" />
+                  </StackPanel>
+                </Grid>
               </Border>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
-        <TextBlock Classes="muted" Text="Maximum dimension" FontSize="12" FontWeight="SemiBold" />
+        <TextBlock Classes="muted" Text="{DynamicResource Loc.Inspector.View.MaximumDimension}" FontSize="12" FontWeight="SemiBold" />
         <NumericUpDown Classes="app" Minimum="64" Value="{Binding ArtworkMaxDimension, Mode=TwoWay}"
-                       AutomationProperties.Name="Maximum artwork dimension" />
+                       AutomationProperties.Name="{DynamicResource Loc.Inspector.View.MaximumDimensionAutomation}" />
         <WrapPanel>
-          <Button Classes="app" Margin="0,0,8,6" Content="Add artwork..." Command="{Binding AddArtworkCommand}" />
-          <Button Classes="app" Margin="0,0,8,6" Content="Optimize" Command="{Binding ScrubArtworkCommand}" />
-          <Button Classes="app danger" Margin="0,0,8,6" Content="Remove all" Command="{Binding RemoveArtworkCommand}" />
+          <Button Classes="app" Margin="0,0,8,6" Content="{DynamicResource Loc.Inspector.View.AddArtwork}"
+                  AutomationProperties.Name="{DynamicResource Loc.Inspector.View.AddArtworkAutomation}"
+                  Command="{Binding AddArtworkCommand}" />
+          <Button Classes="app" Margin="0,0,8,6" Content="{DynamicResource Loc.Inspector.View.Optimize}"
+                  AutomationProperties.Name="{DynamicResource Loc.Inspector.View.OptimizeAutomation}"
+                  Command="{Binding ScrubArtworkCommand}" />
+          <Button Classes="app danger" Margin="0,0,8,6" Content="{DynamicResource Loc.Inspector.View.RemoveAll}"
+                  AutomationProperties.Name="{DynamicResource Loc.Inspector.View.RemoveAllAutomation}"
+                  Command="{Binding RemoveArtworkCommand}" />
         </WrapPanel>
       </StackPanel>
     </ScrollViewer>

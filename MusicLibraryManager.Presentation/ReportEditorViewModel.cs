@@ -19,13 +19,24 @@ public sealed record ReportFieldEditorRow(
     public string Source => Descriptor.Kind switch
     {
         ReportFieldKind.KnownMetadata =>
-            $"Metadata: {Descriptor.KnownField}",
+            LocalizedText.Format(
+                "Workbench.Reports.Source.Metadata",
+                Descriptor.KnownField is { } knownField
+                    ? LocalizedText.Get(
+                        $"Settings.Choice.TagFields.{knownField}")
+                    : ""),
         ReportFieldKind.CustomMetadata =>
-            $"Custom: {Descriptor.Name}",
+            LocalizedText.Format(
+                "Workbench.Reports.Source.Custom",
+                Descriptor.Name),
         ReportFieldKind.FileProperty =>
-            $"File: {Descriptor.Name}",
+            LocalizedText.Format(
+                "Workbench.Reports.Source.File",
+                Descriptor.Name),
         ReportFieldKind.TechnicalProperty =>
-            $"Technical: {Descriptor.Name}",
+            LocalizedText.Format(
+                "Workbench.Reports.Source.Technical",
+                Descriptor.Name),
         _ => Descriptor.Kind.ToString(),
     };
 }
@@ -38,6 +49,7 @@ public sealed record ReportOutputRow(
 
 public partial class ReportEditorViewModel : ObservableObject
 {
+    private readonly ILocalizationService? _localization;
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(AddSelectedFieldCommand))]
     private ReportFieldChoice? _selectedAvailableField;
@@ -49,7 +61,7 @@ public partial class ReportEditorViewModel : ObservableObject
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(AddCustomFieldCommand))]
     private string? _customFieldName;
-    [ObservableProperty] private string _name = "Music library report";
+    [ObservableProperty] private string _name = "";
     [ObservableProperty] private ReportFormat _format = ReportFormat.Csv;
     [ObservableProperty] private ReportEncoding _encoding = ReportEncoding.Utf8;
     [ObservableProperty] private string? _outputPath;
@@ -62,9 +74,12 @@ public partial class ReportEditorViewModel : ObservableObject
         ReportSortType.Natural;
     [ObservableProperty] private bool _sortDescending;
 
-    public ReportEditorViewModel()
+    public ReportEditorViewModel(
+        ILocalizationService? localization = null)
     {
-        AvailableFields = BuildChoices();
+        _localization = localization;
+        Name = L("Workbench.Reports.DefaultName");
+        RefreshLocalizedChoices();
         Fields.CollectionChanged += OnFieldsChanged;
         AddDefault(TagFields.Artist);
         AddDefault(TagFields.Album);
@@ -72,20 +87,31 @@ public partial class ReportEditorViewModel : ObservableObject
         AddDefault(TagFields.TrackNumber);
         AddDefault(TagFields.Title);
         Fields.Add(new(ReportFieldDescriptor.File(
-            "FileName", "File name")));
+            "FileName",
+            L("Workbench.Reports.Field.FileName"))));
         SelectedAvailableField = AvailableFields.FirstOrDefault();
         SelectedSortField = Fields.FirstOrDefault(row =>
             row.Descriptor.KnownField == TagFields.TrackNumber);
+        if (_localization is not null)
+            _localization.CultureChanged +=
+                OnLocalizationCultureChanged;
     }
 
     public ObservableCollection<ReportFieldEditorRow> Fields { get; } = [];
-    public IReadOnlyList<ReportFieldChoice> AvailableFields { get; }
+    public ObservableCollection<ReportFieldChoice>
+        AvailableFields { get; } = [];
     public IReadOnlyList<ReportFormat> Formats { get; } =
         Enum.GetValues<ReportFormat>();
     public IReadOnlyList<ReportEncoding> Encodings { get; } =
         Enum.GetValues<ReportEncoding>();
     public IReadOnlyList<ReportSortType> SortTypes { get; } =
         Enum.GetValues<ReportSortType>();
+    public ObservableCollection<LocalizedChoice<ReportFormat>>
+        FormatChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<ReportEncoding>>
+        EncodingChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<ReportSortType>>
+        SortTypeChoices { get; } = [];
     public string SuggestedExtension => Format switch
     {
         ReportFormat.Text => "txt",
@@ -246,52 +272,141 @@ public partial class ReportEditorViewModel : ObservableObject
     private void AddDefault(TagFields field) =>
         Fields.Add(new(ReportFieldDescriptor.Known(field)));
 
-    private static IReadOnlyList<ReportFieldChoice> BuildChoices()
+    private IReadOnlyList<ReportFieldChoice> BuildChoices()
     {
         var choices = Enum.GetValues<TagFields>()
             .Where(field => field != TagFields.NullField)
             .Select(field => new ReportFieldChoice(
-                $"Metadata — {field}",
+                LF(
+                    "Workbench.Reports.Field.Metadata",
+                    L($"Settings.Choice.TagFields.{field}")),
                 ReportFieldDescriptor.Known(field)))
             .ToList();
         choices.AddRange(
         [
-            Choice("File — Path", ReportFieldDescriptor.File("Path")),
-            Choice("File — File name",
-                ReportFieldDescriptor.File("FileName", "File name")),
-            Choice("File — Directory",
+            FileChoice("Path", ReportFieldDescriptor.File("Path")),
+            FileChoice("FileName",
+                ReportFieldDescriptor.File(
+                    "FileName",
+                    L("Workbench.Reports.Field.FileName"))),
+            FileChoice("Directory",
                 ReportFieldDescriptor.File("Directory")),
-            Choice("File — Extension",
+            FileChoice("Extension",
                 ReportFieldDescriptor.File("Extension")),
-            Choice("File — Length",
-                ReportFieldDescriptor.File("Length", "File size")),
-            Choice("File — Modified",
+            FileChoice("Length",
+                ReportFieldDescriptor.File(
+                    "Length",
+                    L("Workbench.Reports.Field.FileSize"))),
+            FileChoice("Modified",
                 ReportFieldDescriptor.File("Modified")),
-            Choice("Technical — Codec",
+            TechnicalChoice("Codec",
                 ReportFieldDescriptor.Technical("Codec")),
-            Choice("Technical — Codec type",
-                ReportFieldDescriptor.Technical("CodecType", "Codec type")),
-            Choice("Technical — Bitrate",
+            TechnicalChoice("CodecType",
+                ReportFieldDescriptor.Technical(
+                    "CodecType",
+                    L("Workbench.Reports.Field.CodecType"))),
+            TechnicalChoice("Bitrate",
                 ReportFieldDescriptor.Technical("Bitrate")),
-            Choice("Technical — Maximum bitrate",
+            TechnicalChoice("MaximumBitrate",
                 ReportFieldDescriptor.Technical(
-                    "MaxBitrate", "Maximum bitrate")),
-            Choice("Technical — Bits per sample",
+                    "MaxBitrate",
+                    L("Workbench.Reports.Field.MaximumBitrate"))),
+            TechnicalChoice("BitsPerSample",
                 ReportFieldDescriptor.Technical(
-                    "BitsPerSample", "Bits per sample")),
-            Choice("Technical — Sample rate",
+                    "BitsPerSample",
+                    L("Workbench.Reports.Field.BitsPerSample"))),
+            TechnicalChoice("SampleRate",
                 ReportFieldDescriptor.Technical(
-                    "SampleRate", "Sample rate")),
-            Choice("Technical — Channels",
+                    "SampleRate",
+                    L("Workbench.Reports.Field.SampleRate"))),
+            TechnicalChoice("Channels",
                 ReportFieldDescriptor.Technical("Channels")),
-            Choice("Technical — Duration",
+            TechnicalChoice("Duration",
                 ReportFieldDescriptor.Technical("Duration")),
         ]);
         return choices;
 
-        static ReportFieldChoice Choice(
-            string label,
+        ReportFieldChoice FileChoice(
+            string name,
             ReportFieldDescriptor descriptor) =>
-            new(label, descriptor);
+            new(
+                LF(
+                    "Workbench.Reports.Field.File",
+                    L($"Workbench.Reports.Field.{name}")),
+                descriptor);
+
+        ReportFieldChoice TechnicalChoice(
+            string name,
+            ReportFieldDescriptor descriptor) =>
+            new(
+                LF(
+                    "Workbench.Reports.Field.Technical",
+                    L($"Workbench.Reports.Field.{name}")),
+                descriptor);
+    }
+
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string LF(
+        string key,
+        params object?[] arguments) =>
+        _localization?.Format(key, arguments) ??
+        LocalizedText.Format(key, arguments);
+
+    private void RefreshLocalizedChoices()
+    {
+        string? selectedId =
+            SelectedAvailableField?.Descriptor.Id;
+        AvailableFields.Clear();
+        foreach (ReportFieldChoice choice in BuildChoices())
+            AvailableFields.Add(choice);
+        SelectedAvailableField = selectedId is null
+            ? AvailableFields.FirstOrDefault()
+            : AvailableFields.FirstOrDefault(choice =>
+                choice.Descriptor.Id.Equals(
+                    selectedId,
+                    StringComparison.OrdinalIgnoreCase));
+        RefreshChoices(
+            FormatChoices,
+            Formats,
+            "Workbench.Choice.ReportFormat");
+        RefreshChoices(
+            EncodingChoices,
+            Encodings,
+            "Workbench.Choice.ReportEncoding");
+        RefreshChoices(
+            SortTypeChoices,
+            SortTypes,
+            "Workbench.Choice.ReportSortType");
+    }
+
+    private void RefreshChoices<T>(
+        ObservableCollection<LocalizedChoice<T>> target,
+        IEnumerable<T> values,
+        string keyPrefix)
+    {
+        foreach (T value in values)
+        {
+            LocalizedChoice<T>? choice =
+                target.FirstOrDefault(item =>
+                    EqualityComparer<T>.Default.Equals(
+                        item.Value,
+                        value));
+            string label = L($"{keyPrefix}.{value}");
+            if (choice is null)
+                target.Add(new(value, label));
+            else
+                choice.Label = label;
+        }
+    }
+
+    private void OnLocalizationCultureChanged(
+        object? sender,
+        EventArgs e)
+    {
+        RefreshLocalizedChoices();
+        OnPropertyChanged(nameof(Fields));
     }
 }

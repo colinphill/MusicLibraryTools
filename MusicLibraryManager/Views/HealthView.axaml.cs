@@ -1,6 +1,7 @@
 using global::Avalonia;
 using global::Avalonia.Controls;
 using global::Avalonia.Controls.Documents;
+using global::Avalonia.Controls.Primitives;
 using global::Avalonia.Controls.Templates;
 using global::Avalonia.Data;
 using global::Avalonia.Input;
@@ -19,6 +20,7 @@ public partial class HealthView : UserControl
     private readonly IPlatformService _platform;
     private readonly WorkbenchViewModel _workbench;
     private readonly INavigationService _navigation;
+    private readonly ILocalizationService _localization;
     private bool _updatingRootDisposition;
 
     public HealthView()
@@ -28,15 +30,27 @@ public partial class HealthView : UserControl
         _platform = App.GetService<IPlatformService>();
         _workbench = App.GetService<WorkbenchViewModel>();
         _navigation = App.GetService<INavigationService>();
+        _localization = App.GetService<ILocalizationService>();
         GridStateService gridState = App.GetService<GridStateService>();
         DataContext = _viewModel;
-        FindingRootDisposition.ItemsSource = Enum.GetValues<AnalysisFindingDisposition>();
-        IReadOnlyList<AnalysisRepairDisposition> rootDispositions = Enum.GetValues<AnalysisRepairDisposition>();
-        ArtistRootDisposition.ItemsSource = rootDispositions;
-        RepairRootDisposition.ItemsSource = rootDispositions;
-        RepresentationRootDisposition.ItemsSource = rootDispositions;
-        ItlRepairRootDisposition.ItemsSource = rootDispositions;
-        ArtworkRepairRootDisposition.ItemsSource = rootDispositions;
+        FindingRootDisposition.ItemsSource =
+            _viewModel.FindingDispositionChoices;
+        FindingRootDisposition.SelectedValueBinding =
+            new Binding(nameof(LocalizedChoice<AnalysisFindingDisposition>.Value));
+        foreach (ComboBox comboBox in new[]
+                 {
+                     ArtistRootDisposition,
+                     RepairRootDisposition,
+                     RepresentationRootDisposition,
+                     ItlRepairRootDisposition,
+                     ArtworkRepairRootDisposition,
+                 })
+        {
+            comboBox.ItemsSource =
+                _viewModel.RepairDispositionChoices;
+            comboBox.SelectedValueBinding =
+                new Binding(nameof(LocalizedChoice<AnalysisRepairDisposition>.Value));
+        }
         FindingRootDisposition.SelectionChanged += OnFindingRootDispositionChanged;
         ArtistRootDisposition.SelectionChanged += OnArtistRootDispositionChanged;
         RepairRootDisposition.SelectionChanged += OnRepairRootDispositionChanged;
@@ -55,8 +69,10 @@ public partial class HealthView : UserControl
         {
             var select = new ComboBox { MinWidth = 115 };
             select.Bind(ItemsControl.ItemsSourceProperty,
-                new Binding(nameof(AnalysisFindingViewModel.Dispositions)));
-            select.Bind(ComboBox.SelectedItemProperty,
+                new Binding(nameof(AnalysisFindingViewModel.DispositionChoices)));
+            select.SelectedValueBinding =
+                new Binding(nameof(LocalizedChoice<AnalysisFindingDisposition>.Value));
+            select.Bind(SelectingItemsControl.SelectedValueProperty,
                 new Binding(nameof(AnalysisFindingViewModel.Disposition))
                 {
                     Mode = BindingMode.TwoWay,
@@ -66,24 +82,30 @@ public partial class HealthView : UserControl
         var dispositionTemplate = new FuncDataTemplate<AnalysisRepairItemViewModel>((_, _) =>
         {
             var select = new ComboBox { MinWidth = 115 };
-            select.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(AnalysisRepairItemViewModel.Dispositions)));
-            select.Bind(ComboBox.SelectedItemProperty, new Binding(nameof(AnalysisRepairItemViewModel.Disposition)) { Mode = BindingMode.TwoWay });
+            select.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(AnalysisRepairItemViewModel.DispositionChoices)));
+            select.SelectedValueBinding =
+                new Binding(nameof(LocalizedChoice<AnalysisRepairDisposition>.Value));
+            select.Bind(SelectingItemsControl.SelectedValueProperty, new Binding(nameof(AnalysisRepairItemViewModel.Disposition)) { Mode = BindingMode.TwoWay });
             select.Bind(IsEnabledProperty, new Binding(nameof(AnalysisRepairItemViewModel.CanChangeDisposition)));
             return select;
         });
         var representationDispositionTemplate = new FuncDataTemplate<RepresentationRepairActionItemViewModel>((_, _) =>
         {
             var select = new ComboBox { MinWidth = 115 };
-            select.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(RepresentationRepairActionItemViewModel.Dispositions)));
-            select.Bind(ComboBox.SelectedItemProperty, new Binding(nameof(RepresentationRepairActionItemViewModel.Disposition)) { Mode = BindingMode.TwoWay });
+            select.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(RepresentationRepairActionItemViewModel.DispositionChoices)));
+            select.SelectedValueBinding =
+                new Binding(nameof(LocalizedChoice<AnalysisRepairDisposition>.Value));
+            select.Bind(SelectingItemsControl.SelectedValueProperty, new Binding(nameof(RepresentationRepairActionItemViewModel.Disposition)) { Mode = BindingMode.TwoWay });
             select.Bind(IsEnabledProperty, new Binding(nameof(RepresentationRepairActionItemViewModel.CanChangeDisposition)));
             return select;
         });
         var itlDispositionTemplate = new FuncDataTemplate<ItlMetadataRepairItemViewModel>((_, _) =>
         {
             var select = new ComboBox { MinWidth = 115 };
-            select.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(ItlMetadataRepairItemViewModel.Dispositions)));
-            select.Bind(ComboBox.SelectedItemProperty, new Binding(nameof(ItlMetadataRepairItemViewModel.Disposition)) { Mode = BindingMode.TwoWay });
+            select.Bind(ItemsControl.ItemsSourceProperty, new Binding(nameof(ItlMetadataRepairItemViewModel.DispositionChoices)));
+            select.SelectedValueBinding =
+                new Binding(nameof(LocalizedChoice<AnalysisRepairDisposition>.Value));
+            select.Bind(SelectingItemsControl.SelectedValueProperty, new Binding(nameof(ItlMetadataRepairItemViewModel.Disposition)) { Mode = BindingMode.TwoWay });
             select.Bind(IsEnabledProperty, new Binding(nameof(ItlMetadataRepairItemViewModel.CanChangeDisposition)));
             return select;
         });
@@ -111,40 +133,86 @@ public partial class HealthView : UserControl
 
         PersistedGridLayout.Configure(FindingGrid, gridState, "health.findings",
             [new("Disposition", "Disposition", null, 145, 125,
-                    CellTemplate: findingDispositionTemplate, Sortable: false),
-                new("Path", "Track", "Path", 380, 220),
-                new("Description", "Reason", "Description", 420, 220)]);
+                    CellTemplate: findingDispositionTemplate, Sortable: false,
+                    HeaderResourceKey: "Column.Disposition"),
+                new("Path", "Track", "Path", 380, 220,
+                    HeaderResourceKey: "Column.Track"),
+                new("Description", "Reason", "Description", 420, 220,
+                    HeaderResourceKey: "Column.Reason")]);
         PersistedGridLayout.Configure(RepairGrid, gridState, "health.metadata-repairs", [
-            new("Disposition", "Disposition", null, 145, 125, CellTemplate: dispositionTemplate, Sortable: false), new("Path", "Track", "DisplayPath", 320, 190),
-            new("Before", "Before", "Before", 180, 100, CellTemplate: beforeDifferenceTemplate),
-            new("After", "After", "After", 180, 100, CellTemplate: afterDifferenceTemplate),
-            new("Reason", "Reason", "Reason", 320, 180),
-            new("Result", "Result", "ResultText", 260, 160)]);
+            new("Disposition", "Disposition", null, 145, 125,
+                CellTemplate: dispositionTemplate, Sortable: false,
+                HeaderResourceKey: "Column.Disposition"),
+            new("Path", "Track", "DisplayPath", 320, 190,
+                HeaderResourceKey: "Column.Track"),
+            new("Before", "Before", "Before", 180, 100,
+                CellTemplate: beforeDifferenceTemplate,
+                HeaderResourceKey: "Column.Before"),
+            new("After", "After", "After", 180, 100,
+                CellTemplate: afterDifferenceTemplate,
+                HeaderResourceKey: "Column.After"),
+            new("Reason", "Reason", "Reason", 320, 180,
+                HeaderResourceKey: "Column.Reason"),
+            new("Result", "Result", "ResultText", 260, 160,
+                HeaderResourceKey: "Column.Result"),
+            new("TechnicalDetails", "Technical details", "ResultDiagnosticDetail", 320, 180,
+                HeaderResourceKey: "Column.TechnicalDetails")]);
         PersistedGridLayout.Configure(RepresentationGrid, gridState, "health.file-repairs", [
-            new("Disposition", "Disposition", null, 145, 125, CellTemplate: representationDispositionTemplate, Sortable: false), new("Source", "Track", "SourcePath", 320, 190),
-            new("Action", "Action", "Description", 250, 160), new("Destination", "Destination", "DestinationPath", 340, 200), new("Result", "Result", "ResultText", 180, 110)]);
+            new("Disposition", "Disposition", null, 145, 125,
+                CellTemplate: representationDispositionTemplate, Sortable: false,
+                HeaderResourceKey: "Column.Disposition"),
+            new("Source", "Track", "SourcePath", 320, 190,
+                HeaderResourceKey: "Column.Track"),
+            new("Action", "Action", "Description", 250, 160,
+                HeaderResourceKey: "Column.Action"),
+            new("Destination", "Destination", "DestinationPath", 340, 200,
+                HeaderResourceKey: "Column.Destination"),
+            new("Result", "Result", "ResultText", 180, 110,
+                HeaderResourceKey: "Column.Result"),
+            new("TechnicalDetails", "Technical details", "ResultDiagnosticDetail", 320, 180,
+                HeaderResourceKey: "Column.TechnicalDetails")]);
         PersistedGridLayout.Configure(ItlRepairGrid, gridState, "health.itl-metadata-repairs", [
-            new("Disposition", "Disposition", null, 145, 125, CellTemplate: itlDispositionTemplate, Sortable: false),
-            new("Path", "Track", "DisplayPath", 330, 200),
-            new("Fields", "Fields", "Fields", 210, 130),
-            new("Before", "Before", "Before", 280, 160, CellTemplate: itlBeforeDifferenceTemplate),
-            new("After", "After", "After", 280, 160, CellTemplate: itlAfterDifferenceTemplate),
-            new("Result", "Result", "ResultText", 200, 120)]);
+            new("Disposition", "Disposition", null, 145, 125,
+                CellTemplate: itlDispositionTemplate, Sortable: false,
+                HeaderResourceKey: "Column.Disposition"),
+            new("Path", "Track", "DisplayPath", 330, 200,
+                HeaderResourceKey: "Column.Track"),
+            new("Fields", "Fields", "Fields", 210, 130,
+                HeaderResourceKey: "Column.Fields"),
+            new("Before", "Before", "Before", 280, 160,
+                CellTemplate: itlBeforeDifferenceTemplate,
+                HeaderResourceKey: "Column.Before"),
+            new("After", "After", "After", 280, 160,
+                CellTemplate: itlAfterDifferenceTemplate,
+                HeaderResourceKey: "Column.After"),
+            new("Result", "Result", "ResultText", 200, 120,
+                HeaderResourceKey: "Column.Result"),
+            new("TechnicalDetails", "Technical details", "ResultDiagnosticDetail", 320, 180,
+                HeaderResourceKey: "Column.TechnicalDetails")]);
         PersistedGridLayout.Configure(ConflictGrid, gridState, "health.conflicts", [
-            new("Album", "Album", "Album", 190, 120), new("Field", "Field", "Field", 130, 90), new("Files", "Files", "FileCount", 75, 60),
-            new("Canonical", "Canonical value", null, 230, 150, CellTemplate: conflictTemplate, Sortable: false), new("Directory", "Directory", "Directory", 360, 200)]);
+            new("Album", "Album", "Album", 190, 120,
+                HeaderResourceKey: "Column.Album"),
+            new("Field", "Field", "Field", 130, 90,
+                HeaderResourceKey: "Column.Field"),
+            new("Files", "Files", "FileCount", 75, 60,
+                HeaderResourceKey: "Column.Files"),
+            new("Canonical", "Canonical value", null, 230, 150,
+                CellTemplate: conflictTemplate, Sortable: false,
+                HeaderResourceKey: "Column.CanonicalValue"),
+            new("Directory", "Directory", "Directory", 360, 200,
+                HeaderResourceKey: "Column.Directory")]);
     }
 
     private void UpdateRootDispositions()
     {
         _updatingRootDisposition = true;
-        FindingRootDisposition.SelectedItem = AnalysisProblemGroupViewModel.Aggregate(
+        FindingRootDisposition.SelectedValue = AnalysisProblemGroupViewModel.Aggregate(
             _viewModel.FindingGroups.Select(group => group.Disposition));
-        RepairRootDisposition.SelectedItem = Aggregate(_viewModel.RepairGroups.Select(group => group.Disposition));
-        ArtistRootDisposition.SelectedItem = Aggregate(_viewModel.ArtistGroups.Select(group => group.Disposition));
-        RepresentationRootDisposition.SelectedItem = Aggregate(_viewModel.RepresentationActionGroups.Select(group => group.Disposition));
-        ItlRepairRootDisposition.SelectedItem = Aggregate(_viewModel.ItlRepairGroups.Select(group => group.Disposition));
-        ArtworkRepairRootDisposition.SelectedItem = Aggregate(
+        RepairRootDisposition.SelectedValue = Aggregate(_viewModel.RepairGroups.Select(group => group.Disposition));
+        ArtistRootDisposition.SelectedValue = Aggregate(_viewModel.ArtistGroups.Select(group => group.Disposition));
+        RepresentationRootDisposition.SelectedValue = Aggregate(_viewModel.RepresentationActionGroups.Select(group => group.Disposition));
+        ItlRepairRootDisposition.SelectedValue = Aggregate(_viewModel.ItlRepairGroups.Select(group => group.Disposition));
+        ArtworkRepairRootDisposition.SelectedValue = Aggregate(
             _viewModel.ArtworkRepairItems.Select(item => item.Disposition));
         _updatingRootDisposition = false;
     }
@@ -152,7 +220,7 @@ public partial class HealthView : UserControl
     private void OnFindingRootDispositionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (_updatingRootDisposition ||
-            FindingRootDisposition.SelectedItem is not AnalysisFindingDisposition value ||
+            FindingRootDisposition.SelectedValue is not AnalysisFindingDisposition value ||
             value == AnalysisFindingDisposition.Mixed)
             return;
         foreach (AnalysisProblemGroupViewModel group in _viewModel.FindingGroups)
@@ -162,7 +230,7 @@ public partial class HealthView : UserControl
 
     private void OnRepairRootDispositionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (_updatingRootDisposition || RepairRootDisposition.SelectedItem is not AnalysisRepairDisposition value || value == AnalysisRepairDisposition.Mixed)
+        if (_updatingRootDisposition || RepairRootDisposition.SelectedValue is not AnalysisRepairDisposition value || value == AnalysisRepairDisposition.Mixed)
             return;
         foreach (AnalysisRepairCategoryGroupViewModel group in _viewModel.RepairGroups)
             group.Disposition = value;
@@ -172,7 +240,7 @@ public partial class HealthView : UserControl
     private void OnArtistRootDispositionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (_updatingRootDisposition ||
-            ArtistRootDisposition.SelectedItem is not AnalysisRepairDisposition value ||
+            ArtistRootDisposition.SelectedValue is not AnalysisRepairDisposition value ||
             value == AnalysisRepairDisposition.Mixed)
             return;
         foreach (ArtistGroupViewModel group in _viewModel.ArtistGroups)
@@ -182,7 +250,7 @@ public partial class HealthView : UserControl
 
     private void OnRepresentationRootDispositionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (_updatingRootDisposition || RepresentationRootDisposition.SelectedItem is not AnalysisRepairDisposition value || value == AnalysisRepairDisposition.Mixed)
+        if (_updatingRootDisposition || RepresentationRootDisposition.SelectedValue is not AnalysisRepairDisposition value || value == AnalysisRepairDisposition.Mixed)
             return;
         foreach (RepresentationRepairCategoryGroupViewModel group in _viewModel.RepresentationActionGroups)
             group.Disposition = value;
@@ -191,7 +259,7 @@ public partial class HealthView : UserControl
 
     private void OnItlRepairRootDispositionChanged(object? sender, SelectionChangedEventArgs e)
     {
-        if (_updatingRootDisposition || ItlRepairRootDisposition.SelectedItem is not AnalysisRepairDisposition value || value == AnalysisRepairDisposition.Mixed)
+        if (_updatingRootDisposition || ItlRepairRootDisposition.SelectedValue is not AnalysisRepairDisposition value || value == AnalysisRepairDisposition.Mixed)
             return;
         foreach (ItlMetadataRepairCategoryGroupViewModel group in _viewModel.ItlRepairGroups)
             group.Disposition = value;
@@ -201,7 +269,7 @@ public partial class HealthView : UserControl
     private void OnArtworkRepairRootDispositionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (_updatingRootDisposition ||
-            ArtworkRepairRootDisposition.SelectedItem is not AnalysisRepairDisposition value ||
+            ArtworkRepairRootDisposition.SelectedValue is not AnalysisRepairDisposition value ||
             value == AnalysisRepairDisposition.Mixed)
             return;
         foreach (ArtworkRepairItemViewModel item in _viewModel.ArtworkRepairItems
@@ -230,12 +298,16 @@ public partial class HealthView : UserControl
             return;
 
         var first = CreateArtworkSelectionMenuItem(
-            "Select first image and mark Active", node, ArtworkCandidateSelectionRule.First);
+            _localization.Get("Health.Artwork.Action.SelectFirst"),
+            node,
+            ArtworkCandidateSelectionRule.First);
         var resolution = CreateArtworkSelectionMenuItem(
-            "Select highest resolution and mark Active", node,
+            _localization.Get("Health.Artwork.Action.SelectHighestResolution"),
+            node,
             ArtworkCandidateSelectionRule.HighestResolution);
         var size = CreateArtworkSelectionMenuItem(
-            "Select largest file and mark Active", node,
+            _localization.Get("Health.Artwork.Action.SelectLargestFile"),
+            node,
             ArtworkCandidateSelectionRule.LargestFile);
         var menu = new ContextMenu { ItemsSource = new[] { first, resolution, size } };
         menu.Open(source ?? (Control)sender!);
@@ -251,9 +323,7 @@ public partial class HealthView : UserControl
         item.Click += (_, _) =>
         {
             int activated = _viewModel.AutomaticallySelectMixedArtwork(node, rule);
-            _viewModel.StatusText = activated == 0
-                ? "No eligible mixed-artwork repairs were changed."
-                : $"Selected artwork and marked {activated:N0} repair(s) Active.";
+            _viewModel.ReportAutomaticArtworkSelection(activated);
         };
         return item;
     }
@@ -278,7 +348,8 @@ public partial class HealthView : UserControl
         ContextMenu? menu = HealthResultContextMenuFactory.CreateForSource(
             e.Source,
             _platform,
-            OpenInWorkbenchAsync);
+            OpenInWorkbenchAsync,
+            _localization);
         if (menu is null)
             return;
 
@@ -354,37 +425,64 @@ public static class HealthResultContextMenuFactory
     public static ContextMenu? CreateForSource(
         object? source,
         IPlatformService platform,
-        Func<string, Task>? openInWorkbench = null)
+        Func<string, Task>? openInWorkbench = null,
+        ILocalizationService? localization = null)
     {
         object? result = (source as global::Avalonia.StyledElement)?.DataContext;
         return HealthResultPathResolver.TryGetPath(result, out string path)
-            ? Create(path, platform, openInWorkbench)
+            ? Create(
+                path,
+                platform,
+                openInWorkbench,
+                localization)
             : null;
     }
 
     public static ContextMenu Create(
         string path,
         IPlatformService platform,
-        Func<string, Task>? openInWorkbench = null)
+        Func<string, Task>? openInWorkbench = null,
+        ILocalizationService? localization = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         ArgumentNullException.ThrowIfNull(platform);
 
-        var copy = new MenuItem { Header = "Copy path" };
+        var copy = new MenuItem
+        {
+            Header = Localize(
+                "Health.Context.CopyPath",
+                localization),
+        };
         copy.Click += async (_, _) => await platform.CopyTextAsync(path);
 
         var items = new List<MenuItem> { copy };
         if (openInWorkbench is not null)
         {
-            var workbench = new MenuItem { Header = "Open in Workbench" };
+            var workbench = new MenuItem
+            {
+                Header = Localize(
+                    "Health.Context.OpenWorkbench",
+                    localization),
+            };
             workbench.Click += async (_, _) => await openInWorkbench(path);
             items.Add(workbench);
         }
 
-        var reveal = new MenuItem { Header = "Reveal in File Explorer" };
+        var reveal = new MenuItem
+        {
+            Header = Localize(
+                "Health.Context.RevealExplorer",
+                localization),
+        };
         reveal.Click += (_, _) => platform.RevealFile(path);
         items.Add(reveal);
 
         return new ContextMenu { ItemsSource = items };
     }
+
+    private static string Localize(
+        string key,
+        ILocalizationService? localization) =>
+        localization?.Get(key) ??
+        LocalizedText.Get(key);
 }

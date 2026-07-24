@@ -2,7 +2,7 @@
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              IsVisible="False" Focusable="False" KeyDown="OnKeyDown"
-             AutomationProperties.Name="Dialog layer">
+             AutomationProperties.Name="{DynamicResource Loc.Dialog.LayerAutomationName}">
   <Grid>
     <Border x:Name="DialogScrim" Background="{DynamicResource AppScrimBrush}"
             Focusable="False" PointerPressed="OnScrimPressed" />
@@ -10,14 +10,14 @@
             HorizontalAlignment="Stretch" VerticalAlignment="Center"
             Background="{DynamicResource AppPanelBrush}" BorderBrush="{DynamicResource AppBorderStrongBrush}"
             BorderThickness="1" CornerRadius="12" Padding="18" BoxShadow="0 24 80 0 #99000000"
-            KeyboardNavigation.TabNavigation="Cycle" AutomationProperties.Name="Dialog">
+            KeyboardNavigation.TabNavigation="Cycle" AutomationProperties.Name="{DynamicResource Loc.Dialog.AutomationName}">
       <Grid RowDefinitions="Auto,*,Auto" RowSpacing="14">
         <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,4">
           <TextBlock x:Name="DialogTitle" FontSize="19" FontWeight="SemiBold" TextWrapping="Wrap"
                      AutomationProperties.HeadingLevel="2" />
           <Button x:Name="DialogCloseButton" Grid.Column="1" Classes="caption close"
-                  Width="34" Height="34" Content="&#x2715;" ToolTip.Tip="Close dialog"
-                  AutomationProperties.Name="Close dialog" Click="OnClose" />
+                  Width="34" Height="34" Content="&#x2715;" ToolTip.Tip="{DynamicResource Loc.Common.CloseDialog}"
+                  AutomationProperties.Name="{DynamicResource Loc.Common.CloseDialog}" Click="OnClose" />
         </Grid>
         <ContentControl x:Name="DialogContent" Grid.Row="1" />
         <StackPanel x:Name="DialogButtons" Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" />

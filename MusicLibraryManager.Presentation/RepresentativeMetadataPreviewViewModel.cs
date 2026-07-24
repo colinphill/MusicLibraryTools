@@ -12,13 +12,24 @@ public partial class RepresentativeMetadataPreviewViewModel :
     ObservableObject
 {
     private readonly IMetadataOperationService _operations;
+    private readonly ILocalizationService? _localization;
     private CancellationTokenSource? _cancellation;
     private int _generation;
+    private string? _statusKey;
+    private object?[] _statusArguments = [];
+    private long? _statusCount;
 
     public RepresentativeMetadataPreviewViewModel(
-        IMetadataOperationService operations)
+        IMetadataOperationService operations,
+        ILocalizationService? localization = null)
     {
         _operations = operations;
+        _localization = localization;
+        SetStatus(
+            "Workbench.Representative.Status.ChooseFile");
+        if (_localization is not null)
+            _localization.CultureChanged +=
+                OnLocalizationCultureChanged;
     }
 
     [ObservableProperty]
@@ -28,8 +39,12 @@ public partial class RepresentativeMetadataPreviewViewModel :
     private bool _hasPreview;
 
     [ObservableProperty]
-    private string _status =
-        "Choose a representative file and edit an operation.";
+    private string _status = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(
+        nameof(HasStatusDiagnosticDetail))]
+    private string? _statusDiagnosticDetail;
 
     [ObservableProperty]
     private string? _beforeText;
@@ -51,8 +66,8 @@ public partial class RepresentativeMetadataPreviewViewModel :
             HasPreview = false;
             BeforeText = null;
             AfterText = null;
-            Status =
-                "Choose a representative file and edit an operation.";
+            SetStatus(
+                "Workbench.Representative.Status.ChooseFile");
             return;
         }
 
@@ -60,8 +75,9 @@ public partial class RepresentativeMetadataPreviewViewModel :
             new CancellationTokenSource();
         _cancellation = cancellation;
         IsBusy = true;
-        Status =
-            $"Updating draft preview for {Path.GetFileName(path)}…";
+        SetStatus(
+            "Workbench.Representative.Status.Updating",
+            Path.GetFileName(path));
         _ = RunAsync(
             generation,
             path,
@@ -92,7 +108,8 @@ public partial class RepresentativeMetadataPreviewViewModel :
             MetadataFilePlan file =
                 plan.Files.FirstOrDefault() ??
                 throw new InvalidOperationException(
-                    "The representative preview returned no file.");
+                    L(
+                        "Workbench.Representative.Error.NoFile"));
             OperationIssue? blocker = file.Issues
                 .FirstOrDefault(issue =>
                     issue.Severity ==
@@ -102,8 +119,9 @@ public partial class RepresentativeMetadataPreviewViewModel :
                 HasPreview = false;
                 BeforeText = null;
                 AfterText = null;
-                Status =
-                    $"Draft preview blocked: {blocker.Message}";
+                SetFailure(
+                    "Workbench.Representative.Status.Blocked",
+                    blocker.Message);
                 return;
             }
             if (file.Differences.Length == 0)
@@ -111,8 +129,9 @@ public partial class RepresentativeMetadataPreviewViewModel :
                 HasPreview = false;
                 BeforeText = null;
                 AfterText = null;
-                Status =
-                    $"{Path.GetFileName(path)}: no metadata changes.";
+                SetStatus(
+                    "Workbench.Representative.Status.NoChanges",
+                    Path.GetFileName(path));
                 return;
             }
 
@@ -127,10 +146,10 @@ public partial class RepresentativeMetadataPreviewViewModel :
                     $"{difference.Field.DisplayName}: " +
                     FormatValues(difference.After)));
             HasPreview = true;
-            Status =
-                $"{Path.GetFileName(path)} · " +
-                $"{file.Differences.Length:N0} proposed " +
-                $"{(file.Differences.Length == 1 ? "field change" : "field changes")}";
+            SetCountStatus(
+                "Workbench.Representative.Status.Ready",
+                file.Differences.Length,
+                Path.GetFileName(path));
         }
         catch (OperationCanceledException) when (
             cancellation.IsCancellationRequested)
@@ -143,8 +162,9 @@ public partial class RepresentativeMetadataPreviewViewModel :
             HasPreview = false;
             BeforeText = null;
             AfterText = null;
-            Status =
-                $"Draft preview unavailable: {error.Message}";
+            SetFailure(
+                "Workbench.Representative.Status.Unavailable",
+                error.Message);
         }
         finally
         {
@@ -160,6 +180,84 @@ public partial class RepresentativeMetadataPreviewViewModel :
     private static string FormatValues(
         IReadOnlyList<string> values) =>
         values.Count == 0
-            ? "(missing)"
-            : string.Join(" · ", values);
+            ? LocalizedText.Get(
+                "Workbench.Representative.Missing")
+            : string.Join(
+                LocalizedText.Get(
+                    "Workbench.Representative.ValueSeparator"),
+                values);
+
+    public bool HasStatusDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(StatusDiagnosticDetail);
+
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string LF(
+        string key,
+        params object?[] arguments) =>
+        _localization?.Format(key, arguments) ??
+        LocalizedText.Format(key, arguments);
+
+    private string LC(
+        string key,
+        long count,
+        params object?[] arguments) =>
+        _localization?.FormatCount(
+            key,
+            count,
+            arguments) ??
+        LocalizedText.FormatCount(
+            key,
+            count,
+            arguments);
+
+    private void SetStatus(
+        string key,
+        params object?[] arguments)
+    {
+        _statusKey = key;
+        _statusArguments = arguments;
+        _statusCount = null;
+        Status = LF(key, arguments);
+        StatusDiagnosticDetail = null;
+    }
+
+    private void SetCountStatus(
+        string key,
+        long count,
+        params object?[] arguments)
+    {
+        _statusKey = key;
+        _statusArguments = arguments;
+        _statusCount = count;
+        Status = LC(key, count, arguments);
+        StatusDiagnosticDetail = null;
+    }
+
+    private void SetFailure(
+        string key,
+        string? diagnosticDetail)
+    {
+        SetStatus(key);
+        StatusDiagnosticDetail =
+            diagnosticDetail;
+    }
+
+    private void OnLocalizationCultureChanged(
+        object? sender,
+        EventArgs e)
+    {
+        if (_statusKey is null)
+            return;
+        Status = _statusCount is { } count
+            ? LC(
+                _statusKey,
+                count,
+                _statusArguments)
+            : LF(
+                _statusKey,
+                _statusArguments);
+    }
 }

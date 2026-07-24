@@ -7,71 +7,274 @@ using MusicLibrary.Core.Services;
 
 namespace MusicLibraryManager.Presentation;
 
-public sealed partial class DeviceSyncActionRow(DeviceSyncAction action) : ObservableObject
+public sealed class DeviceSyncActionRow : ObservableObject
 {
-    public DeviceSyncMutationKind Kind => action.Kind;
-    public string RelativePath => action.RelativePath;
-    public string Reason => action.Reason;
-    public bool IsDirectory => action.IsDirectory;
-    public long Length => action.Length;
-    public long ModifiedSeconds => action.ModifiedSeconds;
+    private readonly DeviceSyncAction _action;
+    private readonly ILocalizationService? _localization;
+    private OperationItemStatus? _statusValue;
 
-    [ObservableProperty] private string _status = "";
+    public DeviceSyncMutationKind KindValue =>
+        _action.Kind;
+    public string Kind => L(
+        $"Devices.ActionKind.{KindValue}");
+    public string RelativePath => _action.RelativePath;
+    public string Reason => L(
+        $"Devices.ActionReason.{KindValue}");
+    public string DiagnosticDetail => _action.Reason;
+    public bool IsDirectory => _action.IsDirectory;
+    public long Length => _action.Length;
+    public long ModifiedSeconds => _action.ModifiedSeconds;
+    public OperationItemStatus? StatusValue =>
+        _statusValue;
+    public string Status => _statusValue is { } status
+        ? L($"Devices.ActionStatus.{status}")
+        : "";
+    public bool IsInProgress =>
+        _statusValue ==
+        OperationItemStatus.InProgress;
 
-    public bool IsInProgress => Status == "In progress";
+    public DeviceSyncActionRow(
+        DeviceSyncAction action,
+        ILocalizationService? localization = null)
+    {
+        _action = action;
+        _localization = localization;
+    }
 
     public void SetStatus(OperationItemStatus status)
     {
-        string next = status switch
-        {
-            OperationItemStatus.InProgress => "In progress",
-            OperationItemStatus.Complete => "Complete",
-            OperationItemStatus.Failed => "Failed",
-            _ => "",
-        };
-        if ((Status == "Complete" || Status == "Failed") && next == "In progress") return;
-        Status = next;
+        if (_statusValue is
+                OperationItemStatus.Complete or
+                OperationItemStatus.Failed &&
+            status ==
+            OperationItemStatus.InProgress)
+            return;
+        if (_statusValue == status)
+            return;
+        _statusValue = status;
+        OnPropertyChanged(nameof(StatusValue));
+        OnPropertyChanged(nameof(Status));
+        OnPropertyChanged(nameof(IsInProgress));
     }
+
+    public void RefreshLocalization()
+    {
+        OnPropertyChanged(nameof(Kind));
+        OnPropertyChanged(nameof(Reason));
+        OnPropertyChanged(nameof(Status));
+    }
+
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
 }
 
-public sealed record DeviceSelectionOption(
-    string? Id,
-    string? Serial,
-    string DisplayName,
-    string State,
-    bool IsReady,
-    string? Connection = null,
-    bool IsRemembered = false)
+public sealed class DeviceSelectionOption : ObservableObject
 {
+    private readonly ILocalizationService? _localization;
+    private readonly string _displayName;
+    private readonly string _state;
+
+    public string? Id { get; }
+    public string? Serial { get; }
+    public bool IsReady { get; }
+    public string? Connection { get; }
+    public bool IsRemembered { get; }
     public bool IsManual => Id is null;
     public bool IsAvailable => IsManual || IsReady;
-    public string Details => IsManual
-        ? "Leave blank to use the only ready device"
+    public string DisplayName => IsManual
+        ? L("Devices.Selection.Manual")
         : IsRemembered
-            ? $"{Serial} · not currently reported by ADB"
+            ? RememberedDisplayName()
+            : _displayName;
+    public string StateValue => _state;
+    public string State => IsManual
+        ? L("Devices.Selection.State.Manual")
+        : IsRemembered
+            ? L("Devices.Selection.State.NotConnected")
+            : LocalizeState(_state);
+    public string Details => IsManual
+        ? L("Devices.Selection.ManualDetails")
+        : IsRemembered
+            ? LF(
+                "Devices.Selection.RememberedDetails",
+                Serial)
             : IsReady
-            ? string.IsNullOrWhiteSpace(Connection) ? Serial! : $"{Serial} · {Connection}"
-            : $"{Serial} · {State}";
+                ? string.IsNullOrWhiteSpace(Connection)
+                    ? Serial!
+                    : LF(
+                        "Devices.Selection.ReadyDetails",
+                        Serial,
+                        Connection)
+                : LF(
+                    "Devices.Selection.UnavailableDetails",
+                    Serial,
+                    State);
 
-    public static DeviceSelectionOption Manual { get; } =
-        new(null, null, "Automatic or manual serial", "manual", true);
-
-    public static DeviceSelectionOption FromDevice(DeviceSyncDevice device) => new(
-        device.Id,
-        device.Serial,
-        string.IsNullOrWhiteSpace(device.DisplayName) ? device.Id : device.DisplayName,
-        device.State,
-        device.IsReady,
-        device.Connection);
-
-    public static DeviceSelectionOption Remembered(string id, string serial)
+    private DeviceSelectionOption(
+        string? id,
+        string? serial,
+        string displayName,
+        string state,
+        bool isReady,
+        string? connection,
+        bool isRemembered,
+        ILocalizationService? localization)
     {
-        int separator = id.LastIndexOf('|');
-        string model = separator > 0 ? id[..separator] : "Previously selected device";
-        if (StringComparer.Ordinal.Equals(model, "unknown")) model = "Previously selected device";
-        else model = model.Replace('_', ' ') + $" ({serial})";
-        return new(id, serial, model, "not connected", false, IsRemembered: true);
+        Id = id;
+        Serial = serial;
+        _displayName = displayName;
+        _state = state;
+        IsReady = isReady;
+        Connection = connection;
+        IsRemembered = isRemembered;
+        _localization = localization;
     }
+
+    public static DeviceSelectionOption Manual =>
+        ManualFor();
+
+    public static DeviceSelectionOption ManualFor(
+        ILocalizationService? localization = null) =>
+        new(
+            null,
+            null,
+            "",
+            "manual",
+            true,
+            null,
+            false,
+            localization);
+
+    public static DeviceSelectionOption FromDevice(
+        DeviceSyncDevice device,
+        ILocalizationService? localization = null) =>
+        new(
+            device.Id,
+            device.Serial,
+            string.IsNullOrWhiteSpace(
+                device.DisplayName)
+                ? device.Id
+                : device.DisplayName,
+            device.State,
+            device.IsReady,
+            device.Connection,
+            false,
+            localization);
+
+    public static DeviceSelectionOption Remembered(
+        string id,
+        string serial,
+        ILocalizationService? localization = null) =>
+        new(
+            id,
+            serial,
+            "",
+            "not connected",
+            false,
+            null,
+            true,
+            localization);
+
+    public void RefreshLocalization()
+    {
+        OnPropertyChanged(nameof(DisplayName));
+        OnPropertyChanged(nameof(State));
+        OnPropertyChanged(nameof(Details));
+    }
+
+    private string RememberedDisplayName()
+    {
+        int separator = Id!.LastIndexOf('|');
+        string model = separator > 0
+            ? Id[..separator]
+            : "";
+        if (string.IsNullOrWhiteSpace(model) ||
+            StringComparer.Ordinal.Equals(
+                model,
+                "unknown"))
+            return L(
+                "Devices.Selection.PreviouslySelected");
+        return LF(
+            "Devices.Selection.RememberedName",
+            model.Replace('_', ' '),
+            Serial);
+    }
+
+    private string LocalizeState(
+        string state) =>
+        state.Trim()
+            .ToLowerInvariant() switch
+        {
+            "device" =>
+                L("Devices.Selection.State.Ready"),
+            "offline" =>
+                L("Devices.Selection.State.Offline"),
+            "unauthorized" =>
+                L("Devices.Selection.State.Unauthorized"),
+            "no permissions" =>
+                L("Devices.Selection.State.NoPermissions"),
+            _ =>
+                L("Devices.Selection.State.Unavailable"),
+        };
+
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string LF(
+        string key,
+        params object?[] arguments) =>
+        _localization?.Format(
+            key,
+            arguments) ??
+        LocalizedText.Format(
+            key,
+            arguments);
+}
+
+public sealed class DeviceIssueRow : ObservableObject
+{
+    private readonly ILocalizationService? _localization;
+
+    public OperationIssue Issue { get; }
+    public string Code => Issue.Code;
+    public OperationIssueSeverity Severity =>
+        Issue.Severity;
+    public string? Path => Issue.Path;
+    public string Message => L(
+        Issue.Code switch
+        {
+            "removal-limit" =>
+                "Devices.Issue.RemovalLimit",
+            "direct-mode" =>
+                "Devices.Issue.DirectMode",
+            _ when Issue.Severity ==
+                   OperationIssueSeverity.Blocker =>
+                "Devices.Issue.GenericBlocker",
+            _ when Issue.Severity ==
+                   OperationIssueSeverity.Warning =>
+                "Devices.Issue.GenericWarning",
+            _ =>
+                "Devices.Issue.GenericInformation",
+        });
+    public string DiagnosticDetail =>
+        Issue.Message;
+
+    public DeviceIssueRow(
+        OperationIssue issue,
+        ILocalizationService? localization = null)
+    {
+        Issue = issue;
+        _localization = localization;
+    }
+
+    public void RefreshLocalization() =>
+        OnPropertyChanged(nameof(Message));
+
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
 }
 
 public partial class DevicesViewModel : ViewModelBase
@@ -83,8 +286,13 @@ public partial class DevicesViewModel : ViewModelBase
     private readonly IFilePickerService _files;
     private readonly IDialogCoordinator _dialogs;
     private readonly IActivityService _activities;
+    private readonly ILocalizationService? _localization;
+    private readonly DeviceSelectionOption _manualDeviceOption;
     private CancellationTokenSource? _cts;
     private DeviceSyncPlan? _plan;
+    private string? _statusKey =
+        "Devices.Status.Ready";
+    private object?[] _statusArguments = [];
     private bool _loadingProfile;
     private bool _updatingDeviceSelection;
     private readonly Dictionary<string, DeviceDirectories> _deviceDirectories =
@@ -125,6 +333,10 @@ public partial class DevicesViewModel : ViewModelBase
     private string _deviceEnumerationError = "";
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDeviceEnumerationDiagnosticDetail))]
+    private string? _deviceEnumerationDiagnosticDetail;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasNoEnumeratedDevices))]
     [NotifyPropertyChangedFor(nameof(NeedsDeviceSelection))]
     private bool _hasCompletedDeviceEnumeration;
@@ -139,8 +351,13 @@ public partial class DevicesViewModel : ViewModelBase
     [NotifyCanExecuteChangedFor(nameof(RestoreCommand))]
     private bool _isLoadingDevices;
 
-    [ObservableProperty] private string _statusText =
-        "Choose a local source and initialize a managed Android destination before previewing.";
+    [ObservableProperty]
+    private string _statusText =
+        LocalizedText.Get("Devices.Status.Ready");
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDiagnosticDetail))]
+    private string? _diagnosticDetail;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PreviewCommand))]
@@ -157,13 +374,19 @@ public partial class DevicesViewModel : ViewModelBase
     private bool _hasApplicablePreview;
 
     public ObservableCollection<DeviceSyncActionRow> Actions { get; } = [];
-    public ObservableCollection<OperationIssue> Issues { get; } = [];
+    public ObservableCollection<DeviceIssueRow> Issues { get; } = [];
     public ObservableCollection<DeviceSelectionOption> AvailableDevices { get; } = [];
     public bool IsConfigurationEnabled => !IsBusy && !IsLoadingDevices;
     public bool IsActionListEmpty => Actions.Count == 0;
     public bool IsManualDeviceSelected => SelectedDevice?.IsManual != false;
     public bool IsSelectedDeviceUnavailable => SelectedDevice is { IsAvailable: false };
     public bool HasDeviceEnumerationError => !string.IsNullOrWhiteSpace(DeviceEnumerationError);
+    public bool HasDeviceEnumerationDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(
+            DeviceEnumerationDiagnosticDetail);
+    public bool HasDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(
+            DiagnosticDetail);
     public bool HasNoEnumeratedDevices => HasCompletedDeviceEnumeration &&
         !IsLoadingDevices && !HasDeviceEnumerationError &&
         AvailableDevices.All(device => device.IsManual || device.IsRemembered);
@@ -176,13 +399,22 @@ public partial class DevicesViewModel : ViewModelBase
         IAppSettings settings,
         IFilePickerService files,
         IDialogCoordinator dialogs,
-        IActivityService activities)
+        IActivityService activities,
+        ILocalizationService? localization = null)
     {
         _sync = sync;
         _settings = settings;
         _files = files;
         _dialogs = dialogs;
         _activities = activities;
+        _localization = localization;
+        _manualDeviceOption =
+            DeviceSelectionOption.ManualFor(
+                localization);
+        SetStatus("Devices.Status.Ready");
+        if (_localization is not null)
+            _localization.CultureChanged +=
+                OnLocalizationCultureChanged;
         LoadProfile();
         settings.ConfigurationChanged += (_, _) =>
         {
@@ -190,8 +422,8 @@ public partial class DevicesViewModel : ViewModelBase
             LoadProfile();
         };
         _updatingDeviceSelection = true;
-        AvailableDevices.Add(DeviceSelectionOption.Manual);
-        SelectedDevice = DeviceSelectionOption.Manual;
+        AvailableDevices.Add(_manualDeviceOption);
+        SelectedDevice = _manualDeviceOption;
         _updatingDeviceSelection = false;
     }
 
@@ -225,6 +457,7 @@ public partial class DevicesViewModel : ViewModelBase
         IsLoadingDevices = true;
         HasCompletedDeviceEnumeration = false;
         DeviceEnumerationError = "";
+        DeviceEnumerationDiagnosticDetail = null;
         try
         {
             IReadOnlyList<DeviceSyncDevice> devices = await _sync
@@ -238,7 +471,10 @@ public partial class DevicesViewModel : ViewModelBase
         catch (Exception error)
         {
             ShowManualDeviceOption();
-            DeviceEnumerationError = error.Message;
+            DeviceEnumerationError =
+                L("Devices.Enumeration.Failed");
+            DeviceEnumerationDiagnosticDetail =
+                error.Message;
         }
         finally
         {
@@ -251,36 +487,48 @@ public partial class DevicesViewModel : ViewModelBase
     [RelayCommand]
     private async Task BrowseSourceAsync()
     {
-        string? path = await _files.PickFolderAsync("Choose the local folder to mirror");
+        string? path = await _files.PickFolderAsync(
+            L("Devices.Dialog.ChooseSource"));
         if (path is not null) SourcePath = path;
     }
 
     [RelayCommand]
     private async Task BrowseAdbAsync()
     {
-        string? path = await _files.PickFileAsync("Choose adb executable");
+        string? path = await _files.PickFileAsync(
+            L("Devices.Dialog.ChooseAdb"));
         if (path is not null) AdbPath = path;
     }
 
     [RelayCommand(CanExecute = nameof(CanInitialize))]
     private async Task InitializeAsync()
     {
-        string action = Adopt ? "Adopt" : "Initialize";
-        string warning = Adopt
-            ? $"Adopt '{DestinationPath}' as a managed syncer destination? Existing contents will be included in the first preview and may be quarantined when Apply is allowed."
-            : $"Initialize '{DestinationPath}' as a managed syncer destination? The folder must be new or empty.";
-        if (!await _dialogs.ConfirmAsync($"{action} Android destination", warning, action))
+        string actionKey = Adopt
+            ? "Devices.Dialog.Initialize.Adopt"
+            : "Devices.Dialog.Initialize.Create";
+        if (!await _dialogs.ConfirmAsync(
+                L(
+                    Adopt
+                        ? "Devices.Dialog.Initialize.AdoptTitle"
+                        : "Devices.Dialog.Initialize.Title"),
+                LF(
+                    Adopt
+                        ? "Devices.Dialog.Initialize.AdoptMessage"
+                        : "Devices.Dialog.Initialize.Message",
+                    DestinationPath),
+                L(actionKey)))
             return;
 
-        await RunAsync("Initialize Android destination", async (progress, ct) =>
+        await RunAsync(
+            "Devices.Activity.Initialize.Title",
+            async (progress, ct) =>
         {
             var request = new DeviceSyncInitializationRequest(
                 DestinationPath.Trim(), Clean(DeviceSerial), Clean(AdbPath), Adopt);
             DeviceSyncInitializationResult result = await Task.Run(() => _sync.InitializeAsync(
                 request, progress, ct), ct);
-            StatusText = string.IsNullOrWhiteSpace(result.Message)
-                ? "Android destination initialized."
-                : result.Message;
+            SetStatus(
+                "Devices.Status.Initialized");
         });
     }
 
@@ -288,36 +536,65 @@ public partial class DevicesViewModel : ViewModelBase
     private async Task PreviewAsync()
     {
         InvalidatePreview();
-        await RunAsync("Preview Android synchronization", async (progress, ct) =>
+        await RunAsync(
+            "Devices.Activity.Preview.Title",
+            async (progress, ct) =>
         {
             DeviceSyncRequest request = CreateRequest();
             DeviceSyncPlan plan = await Task.Run(
                 () => _sync.PreviewAsync(request, progress, ct), ct);
             _plan = plan;
-            foreach (DeviceSyncAction action in plan.Actions) Actions.Add(new(action));
+            foreach (DeviceSyncAction action in
+                     plan.Actions)
+                Actions.Add(
+                    new DeviceSyncActionRow(
+                        action,
+                        _localization));
             OnPropertyChanged(nameof(IsActionListEmpty));
-            foreach (OperationIssue issue in plan.Issues) Issues.Add(issue);
+            foreach (OperationIssue issue in
+                     plan.Issues)
+                Issues.Add(
+                    new DeviceIssueRow(
+                        issue,
+                        _localization));
             HasApplicablePreview = plan.CanApply;
-            StatusText = plan.CanApply
-                ? $"Review {plan.Actions.Count:N0} action(s), {plan.RemovalCount:N0} removal(s), and {plan.TransferBytes:N0} transfer byte(s)."
-                : plan.Issues.FirstOrDefault()?.Message ?? "Preview is blocked.";
+            SetStatus(
+                plan.CanApply
+                    ? "Devices.Status.PreviewReady"
+                    : "Devices.Status.PreviewBlocked",
+                plan.Actions.Count,
+                plan.RemovalCount,
+                plan.TransferBytes);
+            if (!plan.CanApply)
+                DiagnosticDetail =
+                    plan.Issues.FirstOrDefault()
+                        ?.Message;
         });
     }
 
     [RelayCommand(CanExecute = nameof(CanApply))]
     private async Task ApplyAsync()
     {
-        DeviceSyncPlan plan = _plan ?? throw new InvalidOperationException("Preview is required.");
-        string recovery = plan.Request.Direct
-            ? "Recovery is not available because Direct transfer bypasses staging."
-            : "Recovery is available: replaced and removed destination items will be quarantined in a recovery run.";
+        DeviceSyncPlan plan = _plan ??
+            throw new InvalidOperationException(
+                L("Devices.Error.PreviewRequired"));
         if (!await _dialogs.ConfirmAsync(
-                "Apply Android synchronization",
-                $"Apply {plan.Actions.Count:N0} planned action(s), including " +
-                $"{plan.RemovalCount:N0} removal(s), and transfer {plan.TransferBytes:N0} byte(s)?\n\n{recovery}",
-                plan.Request.Direct ? "Apply without recovery" : "Synchronize"))
+                L("Devices.Dialog.Apply.Title"),
+                LF(
+                    plan.Request.Direct
+                        ? "Devices.Dialog.Apply.DirectMessage"
+                        : "Devices.Dialog.Apply.Message",
+                    plan.Actions.Count,
+                    plan.RemovalCount,
+                    plan.TransferBytes),
+                L(
+                    plan.Request.Direct
+                        ? "Devices.Dialog.Apply.DirectPrimary"
+                        : "Devices.Dialog.Apply.Primary")))
             return;
-        await RunAsync("Synchronize Android device", async (progress, ct) =>
+        await RunAsync(
+            "Devices.Activity.Apply.Title",
+            async (progress, ct) =>
         {
             DeviceSyncResult result;
             try
@@ -332,10 +609,14 @@ public partial class DevicesViewModel : ViewModelBase
             }
             foreach (DeviceSyncActionRow row in Actions)
                 row.SetStatus(OperationItemStatus.Complete);
-            StatusText = $"Synchronized {result.CopiedFileCount:N0} file(s), " +
-                $"quarantined {result.QuarantinedCount:N0} path(s), and transferred " +
-                $"{result.TransferredBytes:N0} byte(s)." +
-                (result.RecoveryId is null ? "" : $" Recovery run: {result.RecoveryId}.");
+            SetStatus(
+                result.RecoveryId is null
+                    ? "Devices.Status.ApplyComplete"
+                    : "Devices.Status.ApplyCompleteWithRecovery",
+                result.CopiedFileCount,
+                result.QuarantinedCount,
+                result.TransferredBytes,
+                result.RecoveryId);
             if (!string.IsNullOrWhiteSpace(result.RecoveryId))
                 SetRecovery(result.RecoveryId, plan.Request.Destination.Trim(),
                     Clean(result.DeviceSerial), _selectedDeviceId);
@@ -349,14 +630,24 @@ public partial class DevicesViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanRestore))]
     private async Task RestoreAsync()
     {
-        string recoveryId = _recoveryId ?? throw new InvalidOperationException("No recovery run is available.");
-        string destination = _recoveryDestination ?? throw new InvalidOperationException("No recovery destination is available.");
-        if (!await _dialogs.ConfirmAsync("Restore previous Android synchronization",
-            $"Restore recovery run '{recoveryId}' at '{destination}'? The synchronized files will be removed, quarantined originals will be restored, and displaced current content will remain preserved in the recovery run.",
-            "Restore"))
+        string recoveryId = _recoveryId ??
+            throw new InvalidOperationException(
+                L("Devices.Error.NoRecovery"));
+        string destination = _recoveryDestination ??
+            throw new InvalidOperationException(
+                L("Devices.Error.NoRecoveryDestination"));
+        if (!await _dialogs.ConfirmAsync(
+                L("Devices.Dialog.Restore.Title"),
+                LF(
+                    "Devices.Dialog.Restore.Message",
+                    recoveryId,
+                    destination),
+                L("Devices.Dialog.Restore.Primary")))
             return;
 
-        await RunAsync("Restore Android synchronization", async (progress, ct) =>
+        await RunAsync(
+            "Devices.Activity.Restore.Title",
+            async (progress, ct) =>
         {
             var request = new DeviceSyncRestoreRequest(
                 destination, recoveryId, _recoveryDeviceSerial, Clean(AdbPath));
@@ -364,7 +655,10 @@ public partial class DevicesViewModel : ViewModelBase
                 request, progress, ct), ct);
             ClearRecovery();
             InvalidatePreview();
-            StatusText = $"Restored recovery run {result.RecoveryId} on {result.DeviceSerial}.";
+            SetStatus(
+                "Devices.Status.Restored",
+                result.RecoveryId,
+                result.DeviceSerial);
         });
     }
 
@@ -372,20 +666,31 @@ public partial class DevicesViewModel : ViewModelBase
     private void Cancel() => _cts?.Cancel();
 
     private async Task RunAsync(
-        string activityTitle,
+        string activityTitleKey,
         Func<IProgress<OperationProgress>, CancellationToken, Task> operation)
     {
         IsBusy = true;
         _cts = new CancellationTokenSource();
+        DiagnosticDetail = null;
         Guid activity = _activities.Start(
-            activityTitle, "Starting…", ShellDestination.Devices, Cancel);
+            L(activityTitleKey),
+            L("Devices.Activity.Starting"),
+            ShellDestination.Devices,
+            Cancel);
         var progress = new Progress<OperationProgress>(value =>
         {
             UpdateActionStatus(value);
-            string message = value.Message ?? value.Phase.ToString();
-            StatusText = message;
+            if (value.Message is { } rawMessage &&
+                ProgressMessageKey(rawMessage) is null)
+                DiagnosticDetail = rawMessage;
+            SetStatus(
+                ProgressStatusKey(value),
+                value.CurrentPath);
             double? fraction = value.Total is > 0 ? (double)value.Completed / value.Total : null;
-            _activities.Report(activity, message, fraction);
+            _activities.Report(
+                activity,
+                StatusText,
+                fraction);
         });
         try
         {
@@ -394,14 +699,23 @@ public partial class DevicesViewModel : ViewModelBase
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Operation cancelled. The native server will release the destination lock.";
+            SetStatus("Devices.Status.Cancelled");
             _activities.Finish(activity, StatusText, AppActivityState.Cancelled);
         }
         catch (Exception error)
         {
-            StatusText = error.Message;
-            _activities.Finish(activity, error.Message, AppActivityState.Failed);
-            await _dialogs.ShowMessageAsync($"{activityTitle} failed", error.Message);
+            SetFailure(error);
+            _activities.Finish(
+                activity,
+                StatusText,
+                AppActivityState.Failed);
+            await _dialogs.ShowMessageAsync(
+                LF(
+                    "Devices.Dialog.Failure.Title",
+                    L(activityTitleKey)),
+                LF(
+                    "Devices.Dialog.Failure.Message",
+                    L(activityTitleKey)));
         }
         finally
         {
@@ -409,6 +723,101 @@ public partial class DevicesViewModel : ViewModelBase
             _cts = null;
             IsBusy = false;
         }
+    }
+
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string LF(
+        string key,
+        params object?[] arguments) =>
+        _localization?.Format(
+            key,
+            arguments) ??
+        LocalizedText.Format(
+            key,
+            arguments);
+
+    private void SetStatus(
+        string key,
+        params object?[] arguments)
+    {
+        _statusKey = key;
+        _statusArguments = arguments;
+        StatusText = LF(
+            key,
+            arguments);
+    }
+
+    private void SetFailure(
+        Exception error)
+    {
+        SetStatus("Devices.Status.Failed");
+        DiagnosticDetail = error.Message;
+    }
+
+    private static string? ProgressMessageKey(
+        string message) =>
+        message switch
+        {
+            "Initializing managed Android destination" =>
+                "Devices.Progress.Initializing",
+            "Scanning the source and managed Android destination" =>
+                "Devices.Progress.ScanningBoth",
+            "Validating affected paths from the saved sync plan" =>
+                "Devices.Progress.ValidatingPlan",
+            "Android synchronization completed" =>
+                "Devices.Progress.SynchronizationComplete",
+            "Restoring the previous Android synchronization" =>
+                "Devices.Progress.Restoring",
+            "Android synchronization restored" =>
+                "Devices.Progress.RestoreComplete",
+            "Scanning the synchronization source" =>
+                "Devices.Progress.ScanningSource",
+            "Scanning the managed Android destination" =>
+                "Devices.Progress.ScanningDestination",
+            "Selecting synchronization changes" =>
+                "Devices.Progress.SelectingChanges",
+            "Staging file on the Android device" =>
+                "Devices.Progress.StagingFile",
+            "Transferring file to the Android device" =>
+                "Devices.Progress.TransferringFile",
+            "Applying synchronization changes" =>
+                "Devices.Progress.ApplyingChanges",
+            "Synchronization change complete" =>
+                "Devices.Progress.ChangeComplete",
+            "Synchronization change failed" =>
+                "Devices.Progress.ChangeFailed",
+            _ => null,
+        };
+
+    private static string ProgressStatusKey(
+        OperationProgress progress) =>
+        progress.Message is { } message &&
+        ProgressMessageKey(message) is { } messageKey
+            ? messageKey
+            : $"Devices.Progress.Phase.{progress.Phase}";
+
+    private void OnLocalizationCultureChanged(
+        object? sender,
+        EventArgs e)
+    {
+        if (_statusKey is { } key)
+            StatusText = LF(
+                key,
+                _statusArguments);
+        if (HasDeviceEnumerationError)
+            DeviceEnumerationError =
+                L("Devices.Enumeration.Failed");
+        foreach (DeviceSelectionOption option in
+                 AvailableDevices)
+            option.RefreshLocalization();
+        foreach (DeviceSyncActionRow action in
+                 Actions)
+            action.RefreshLocalization();
+        foreach (DeviceIssueRow issue in Issues)
+            issue.RefreshLocalization();
     }
 
     private DeviceSyncRequest CreateRequest() => new(
@@ -422,7 +831,10 @@ public partial class DevicesViewModel : ViewModelBase
         string? previousDeviceId = _selectedDeviceId;
         DeviceSelectionOption[] choices = devices
             .GroupBy(device => device.Id, StringComparer.Ordinal)
-            .Select(group => DeviceSelectionOption.FromDevice(group.First()))
+            .Select(group =>
+                DeviceSelectionOption.FromDevice(
+                    group.First(),
+                    _localization))
             .OrderByDescending(device => device.IsReady)
             .ThenBy(device => device.DisplayName, StringComparer.CurrentCultureIgnoreCase)
             .ThenBy(device => device.Serial, StringComparer.Ordinal)
@@ -436,7 +848,10 @@ public partial class DevicesViewModel : ViewModelBase
         if (target is null && selectedId is not null)
         {
             remembered = DeviceSelectionOption.Remembered(
-                selectedId, Clean(DeviceSerial) ?? SerialFromIdentity(selectedId));
+                selectedId,
+                Clean(DeviceSerial) ??
+                SerialFromIdentity(selectedId),
+                _localization);
             target = remembered;
         }
         target ??= _allowLegacySerialMigration && Clean(DeviceSerial) is { } serial
@@ -445,7 +860,7 @@ public partial class DevicesViewModel : ViewModelBase
         target ??= _manualSelectionPreference != true && Clean(DeviceSerial) is null &&
             choices.Count(device => device.IsReady) == 1
             ? choices.Single(device => device.IsReady)
-            : DeviceSelectionOption.Manual;
+            : _manualDeviceOption;
 
         _updatingDeviceSelection = true;
         try
@@ -453,7 +868,7 @@ public partial class DevicesViewModel : ViewModelBase
             AvailableDevices.Clear();
             foreach (DeviceSelectionOption choice in choices) AvailableDevices.Add(choice);
             if (remembered is not null) AvailableDevices.Add(remembered);
-            AvailableDevices.Add(DeviceSelectionOption.Manual);
+            AvailableDevices.Add(_manualDeviceOption);
             SelectedDevice = target;
 
             if (!target.IsManual)
@@ -500,11 +915,16 @@ public partial class DevicesViewModel : ViewModelBase
             AvailableDevices.Clear();
             DeviceSelectionOption? remembered = _selectedDeviceId is { } selectedId
                 ? DeviceSelectionOption.Remembered(
-                    selectedId, Clean(DeviceSerial) ?? SerialFromIdentity(selectedId))
+                    selectedId,
+                    Clean(DeviceSerial) ??
+                    SerialFromIdentity(selectedId),
+                    _localization)
                 : null;
             if (remembered is not null) AvailableDevices.Add(remembered);
-            AvailableDevices.Add(DeviceSelectionOption.Manual);
-            SelectedDevice = remembered ?? DeviceSelectionOption.Manual;
+            AvailableDevices.Add(_manualDeviceOption);
+            SelectedDevice =
+                remembered ??
+                _manualDeviceOption;
             if (remembered is not null)
             {
                 _activeDeviceKey = remembered.Id!;

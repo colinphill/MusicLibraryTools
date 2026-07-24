@@ -160,7 +160,12 @@ public sealed class ArtworkRepairPlannerTests
             TestContext.Current.CancellationToken);
 
         Assert.Null(candidate.ImageSource);
-        Assert.Equal("Malformed fixture image.", candidate.ThumbnailError);
+        Assert.Equal(
+            "The artwork preview could not be loaded.",
+            candidate.ThumbnailError);
+        Assert.Equal(
+            "Malformed fixture image.",
+            candidate.ThumbnailDiagnosticDetail);
         Assert.Equal(1, thumbnails.CallCount);
     }
 

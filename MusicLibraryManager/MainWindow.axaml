@@ -2,7 +2,7 @@
         xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="using:MusicLibraryManager.Views"
-        Title="Music Library Manager"
+        Title="{DynamicResource Loc.App.Title}"
         Icon="/Assets/AppIcon.ico"
         Width="1440" Height="900" MinWidth="900" MinHeight="600"
         WindowDecorations="Full" CanResize="True"
@@ -41,40 +41,40 @@
                 </Canvas>
               </Viewbox>
               <StackPanel x:Name="BrandCopy" Grid.Column="1" VerticalAlignment="Center">
-                <TextBlock Text="Music Library" FontFamily="{DynamicResource AppDisplayFont}" FontSize="14" FontWeight="Bold" />
+                <TextBlock Text="{DynamicResource Loc.App.Brand}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="14" FontWeight="Bold" />
               </StackPanel>
             </Grid>
           </Border>
 
           <StackPanel Grid.Row="2" Spacing="3">
-            <Button x:Name="HomeNav" Classes="nav active" Tag="Home" Click="OnNavigationClick" ToolTip.Tip="Home" AutomationProperties.Name="Home">
-              <Grid Classes="nav-content" ColumnDefinitions="24,*" ColumnSpacing="12"><Border Classes="nav-marker" Width="3" Height="22" Margin="-12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" IsHitTestVisible="False" /><Viewbox Classes="nav-icon"><Path Classes="nav-icon-path" Data="M3,11 L12,3 L21,11 M5,10 L5,21 L10,21 L10,15 L14,15 L14,21 L19,21 L19,10" /></Viewbox><TextBlock Grid.Column="1" Classes="nav-label" Text="Home" FontWeight="SemiBold" /></Grid>
+            <Button x:Name="HomeNav" Classes="nav active" Tag="Home" Click="OnNavigationClick" ToolTip.Tip="{DynamicResource Loc.Navigation.Home}" AutomationProperties.Name="{DynamicResource Loc.Navigation.Home}">
+              <Grid Classes="nav-content" ColumnDefinitions="24,*" ColumnSpacing="12"><Border Classes="nav-marker" Width="3" Height="22" Margin="-12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" IsHitTestVisible="False" /><Viewbox Classes="nav-icon"><Path Classes="nav-icon-path" Data="M3,11 L12,3 L21,11 M5,10 L5,21 L10,21 L10,15 L14,15 L14,21 L19,21 L19,10" /></Viewbox><TextBlock Grid.Column="1" Classes="nav-label" Text="{DynamicResource Loc.Navigation.Home}" FontWeight="SemiBold" /></Grid>
             </Button>
-            <Button x:Name="LibraryNav" Classes="nav" Tag="Library" Click="OnNavigationClick" ToolTip.Tip="Library" AutomationProperties.Name="Library">
-              <Grid Classes="nav-content" ColumnDefinitions="24,*" ColumnSpacing="12"><Border Classes="nav-marker" Width="3" Height="22" Margin="-12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" IsHitTestVisible="False" /><Viewbox Classes="nav-icon"><Path Classes="nav-icon-path" Data="M9,5 L20,3 L20,16 M9,9 L20,7 M9,5 L9,18 M9,18 C9,20 7.5,21.5 5.5,21.5 C3.7,21.5 2.5,20.5 2.5,19 C2.5,17.5 4,16.5 6,16.5 C7.2,16.5 8.2,16.8 9,17.3 M20,16 C20,18 18.5,19.5 16.5,19.5 C14.7,19.5 13.5,18.5 13.5,17 C13.5,15.5 15,14.5 17,14.5 C18.2,14.5 19.2,14.8 20,15.3" /></Viewbox><TextBlock Grid.Column="1" Classes="nav-label" Text="Library" FontWeight="SemiBold" /></Grid>
+            <Button x:Name="LibraryNav" Classes="nav" Tag="Library" Click="OnNavigationClick" ToolTip.Tip="{DynamicResource Loc.Navigation.Library}" AutomationProperties.Name="{DynamicResource Loc.Navigation.Library}">
+              <Grid Classes="nav-content" ColumnDefinitions="24,*" ColumnSpacing="12"><Border Classes="nav-marker" Width="3" Height="22" Margin="-12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" IsHitTestVisible="False" /><Viewbox Classes="nav-icon"><Path Classes="nav-icon-path" Data="M9,5 L20,3 L20,16 M9,9 L20,7 M9,5 L9,18 M9,18 C9,20 7.5,21.5 5.5,21.5 C3.7,21.5 2.5,20.5 2.5,19 C2.5,17.5 4,16.5 6,16.5 C7.2,16.5 8.2,16.8 9,17.3 M20,16 C20,18 18.5,19.5 16.5,19.5 C14.7,19.5 13.5,18.5 13.5,17 C13.5,15.5 15,14.5 17,14.5 C18.2,14.5 19.2,14.8 20,15.3" /></Viewbox><TextBlock Grid.Column="1" Classes="nav-label" Text="{DynamicResource Loc.Navigation.Library}" FontWeight="SemiBold" /></Grid>
             </Button>
-            <Button x:Name="WorkbenchNav" Classes="nav" Tag="Workbench" Click="OnNavigationClick" ToolTip.Tip="Metadata Workbench" AutomationProperties.Name="Metadata Workbench">
-              <Grid Classes="nav-content" ColumnDefinitions="24,*" ColumnSpacing="12"><Border Classes="nav-marker" Width="3" Height="22" Margin="-12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" IsHitTestVisible="False" /><Viewbox Classes="nav-icon"><Path Classes="nav-icon-path" Data="M4,5 L20,5 L20,19 L4,19 Z M8,9 L16,9 M8,13 L16,13 M8,17 L13,17" /></Viewbox><TextBlock Grid.Column="1" Classes="nav-label" Text="Workbench" FontWeight="SemiBold" /></Grid>
+            <Button x:Name="WorkbenchNav" Classes="nav" Tag="Workbench" Click="OnNavigationClick" ToolTip.Tip="{DynamicResource Loc.Navigation.WorkbenchAutomation}" AutomationProperties.Name="{DynamicResource Loc.Navigation.WorkbenchAutomation}">
+              <Grid Classes="nav-content" ColumnDefinitions="24,*" ColumnSpacing="12"><Border Classes="nav-marker" Width="3" Height="22" Margin="-12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" IsHitTestVisible="False" /><Viewbox Classes="nav-icon"><Path Classes="nav-icon-path" Data="M4,5 L20,5 L20,19 L4,19 Z M8,9 L16,9 M8,13 L16,13 M8,17 L13,17" /></Viewbox><TextBlock Grid.Column="1" Classes="nav-label" Text="{DynamicResource Loc.Navigation.Workbench}" FontWeight="SemiBold" /></Grid>
             </Button>
-            <Button x:Name="HealthNav" Classes="nav" Tag="Health" Click="OnNavigationClick" ToolTip.Tip="Health (load a library configuration first)" AutomationProperties.Name="Health" IsEnabled="{Binding CanOpenHealth}">
-              <Grid Classes="nav-content" ColumnDefinitions="24,*" ColumnSpacing="12"><Border Classes="nav-marker" Width="3" Height="22" Margin="-12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" IsHitTestVisible="False" /><Viewbox Classes="nav-icon"><Path Classes="nav-icon-path" Data="M12,2 L22,12 L12,22 L2,12 Z M6.5,12 L9.5,12 L11,8 L13.5,16 L15,12 L18,12" /></Viewbox><TextBlock Grid.Column="1" Classes="nav-label" Text="Health" FontWeight="SemiBold" /></Grid>
+            <Button x:Name="HealthNav" Classes="nav" Tag="Health" Click="OnNavigationClick" ToolTip.Tip="{DynamicResource Loc.Navigation.HealthDisabledTooltip}" AutomationProperties.Name="{DynamicResource Loc.Navigation.Health}" IsEnabled="{Binding CanOpenHealth}">
+              <Grid Classes="nav-content" ColumnDefinitions="24,*" ColumnSpacing="12"><Border Classes="nav-marker" Width="3" Height="22" Margin="-12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" IsHitTestVisible="False" /><Viewbox Classes="nav-icon"><Path Classes="nav-icon-path" Data="M12,2 L22,12 L12,22 L2,12 Z M6.5,12 L9.5,12 L11,8 L13.5,16 L15,12 L18,12" /></Viewbox><TextBlock Grid.Column="1" Classes="nav-label" Text="{DynamicResource Loc.Navigation.Health}" FontWeight="SemiBold" /></Grid>
             </Button>
-            <Button x:Name="IngestNav" Classes="nav" Tag="Ingest" Click="OnNavigationClick" ToolTip.Tip="Ingest (requires an enabled recipe and writable output root)" AutomationProperties.Name="Ingest" IsEnabled="{Binding CanOpenIngest}">
-              <Grid Classes="nav-content" ColumnDefinitions="24,*" ColumnSpacing="12"><Border Classes="nav-marker" Width="3" Height="22" Margin="-12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" IsHitTestVisible="False" /><Viewbox Classes="nav-icon"><Path Classes="nav-icon-path" Data="M12,3 L12,16 M7,11 L12,16 L17,11 M4,20 L20,20" /></Viewbox><TextBlock Grid.Column="1" Classes="nav-label" Text="Ingest" FontWeight="SemiBold" /></Grid>
+            <Button x:Name="IngestNav" Classes="nav" Tag="Ingest" Click="OnNavigationClick" ToolTip.Tip="{DynamicResource Loc.Navigation.IngestDisabledTooltip}" AutomationProperties.Name="{DynamicResource Loc.Navigation.Ingest}" IsEnabled="{Binding CanOpenIngest}">
+              <Grid Classes="nav-content" ColumnDefinitions="24,*" ColumnSpacing="12"><Border Classes="nav-marker" Width="3" Height="22" Margin="-12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" IsHitTestVisible="False" /><Viewbox Classes="nav-icon"><Path Classes="nav-icon-path" Data="M12,3 L12,16 M7,11 L12,16 L17,11 M4,20 L20,20" /></Viewbox><TextBlock Grid.Column="1" Classes="nav-label" Text="{DynamicResource Loc.Navigation.Ingest}" FontWeight="SemiBold" /></Grid>
             </Button>
-            <Button x:Name="OrganizeNav" Classes="nav" Tag="Organize" Click="OnNavigationClick" ToolTip.Tip="Organize (requires a root that permits file moves)" AutomationProperties.Name="Organize" IsEnabled="{Binding CanOpenOrganize}">
-              <Grid Classes="nav-content" ColumnDefinitions="24,*" ColumnSpacing="12"><Border Classes="nav-marker" Width="3" Height="22" Margin="-12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" IsHitTestVisible="False" /><Viewbox Classes="nav-icon"><Path Classes="nav-icon-path" Data="M4,7 L19,7 M15,3 L19,7 L15,11 M20,17 L5,17 M9,13 L5,17 L9,21" /></Viewbox><TextBlock Grid.Column="1" Classes="nav-label" Text="Organize" FontWeight="SemiBold" /></Grid>
+            <Button x:Name="OrganizeNav" Classes="nav" Tag="Organize" Click="OnNavigationClick" ToolTip.Tip="{DynamicResource Loc.Navigation.OrganizeDisabledTooltip}" AutomationProperties.Name="{DynamicResource Loc.Navigation.Organize}" IsEnabled="{Binding CanOpenOrganize}">
+              <Grid Classes="nav-content" ColumnDefinitions="24,*" ColumnSpacing="12"><Border Classes="nav-marker" Width="3" Height="22" Margin="-12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" IsHitTestVisible="False" /><Viewbox Classes="nav-icon"><Path Classes="nav-icon-path" Data="M4,7 L19,7 M15,3 L19,7 L15,11 M20,17 L5,17 M9,13 L5,17 L9,21" /></Viewbox><TextBlock Grid.Column="1" Classes="nav-label" Text="{DynamicResource Loc.Navigation.Organize}" FontWeight="SemiBold" /></Grid>
             </Button>
-            <Button x:Name="DevicesNav" Classes="nav" Tag="Devices" Click="OnNavigationClick" ToolTip.Tip="Devices (configure an export profile first)" AutomationProperties.Name="Devices" IsEnabled="{Binding CanOpenDevices}">
-              <Grid Classes="nav-content" ColumnDefinitions="24,*" ColumnSpacing="12"><Border Classes="nav-marker" Width="3" Height="22" Margin="-12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" IsHitTestVisible="False" /><Viewbox Classes="nav-icon"><Path Classes="nav-icon-path" Data="M7,2 L17,2 C18.1,2 19,2.9 19,4 L19,20 C19,21.1 18.1,22 17,22 L7,22 C5.9,22 5,21.1 5,20 L5,4 C5,2.9 5.9,2 7,2 Z M9,5 L15,5 M10,19 L14,19" /></Viewbox><TextBlock Grid.Column="1" Classes="nav-label" Text="Devices" FontWeight="SemiBold" /></Grid>
+            <Button x:Name="DevicesNav" Classes="nav" Tag="Devices" Click="OnNavigationClick" ToolTip.Tip="{DynamicResource Loc.Navigation.DevicesDisabledTooltip}" AutomationProperties.Name="{DynamicResource Loc.Navigation.Devices}" IsEnabled="{Binding CanOpenDevices}">
+              <Grid Classes="nav-content" ColumnDefinitions="24,*" ColumnSpacing="12"><Border Classes="nav-marker" Width="3" Height="22" Margin="-12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" IsHitTestVisible="False" /><Viewbox Classes="nav-icon"><Path Classes="nav-icon-path" Data="M7,2 L17,2 C18.1,2 19,2.9 19,4 L19,20 C19,21.1 18.1,22 17,22 L7,22 C5.9,22 5,21.1 5,20 L5,4 C5,2.9 5.9,2 7,2 Z M9,5 L15,5 M10,19 L14,19" /></Viewbox><TextBlock Grid.Column="1" Classes="nav-label" Text="{DynamicResource Loc.Navigation.Devices}" FontWeight="SemiBold" /></Grid>
             </Button>
-            <Button x:Name="OperationsNav" Classes="nav" Tag="Operations" Click="OnNavigationClick" ToolTip.Tip="Operations" AutomationProperties.Name="Operations">
-              <Grid Classes="nav-content" ColumnDefinitions="24,*" ColumnSpacing="12"><Border Classes="nav-marker" Width="3" Height="22" Margin="-12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" IsHitTestVisible="False" /><Viewbox Classes="nav-icon"><Path Classes="nav-icon-path" Data="M4,6 L20,6 M8,12 L20,12 M4,18 L16,18 M14,3 L14,9 M6,9 L6,15 M18,15 L18,21" /></Viewbox><TextBlock Grid.Column="1" Classes="nav-label" Text="Operations" FontWeight="SemiBold" /></Grid>
+            <Button x:Name="OperationsNav" Classes="nav" Tag="Operations" Click="OnNavigationClick" ToolTip.Tip="{DynamicResource Loc.Navigation.Operations}" AutomationProperties.Name="{DynamicResource Loc.Navigation.Operations}">
+              <Grid Classes="nav-content" ColumnDefinitions="24,*" ColumnSpacing="12"><Border Classes="nav-marker" Width="3" Height="22" Margin="-12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" IsHitTestVisible="False" /><Viewbox Classes="nav-icon"><Path Classes="nav-icon-path" Data="M4,6 L20,6 M8,12 L20,12 M4,18 L16,18 M14,3 L14,9 M6,9 L6,15 M18,15 L18,21" /></Viewbox><TextBlock Grid.Column="1" Classes="nav-label" Text="{DynamicResource Loc.Navigation.Operations}" FontWeight="SemiBold" /></Grid>
             </Button>
           </StackPanel>
 
-          <Button x:Name="SettingsNav" Grid.Row="3" Classes="nav" Tag="Settings" Click="OnNavigationClick" ToolTip.Tip="Settings" AutomationProperties.Name="Settings">
-            <Grid Classes="nav-content" ColumnDefinitions="24,*" ColumnSpacing="12"><Border Classes="nav-marker" Width="3" Height="22" Margin="-12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" IsHitTestVisible="False" /><Viewbox Classes="nav-icon"><Path Classes="nav-icon-path" Data="M12,8 C9.8,8 8,9.8 8,12 C8,14.2 9.8,16 12,16 C14.2,16 16,14.2 16,12 C16,9.8 14.2,8 12,8 Z M12,2 L12,5 M12,19 L12,22 M2,12 L5,12 M19,12 L22,12 M4.9,4.9 L7,7 M17,17 L19.1,19.1 M19.1,4.9 L17,7 M7,17 L4.9,19.1" /></Viewbox><TextBlock Grid.Column="1" Classes="nav-label" Text="Settings" FontWeight="SemiBold" /></Grid>
+          <Button x:Name="SettingsNav" Grid.Row="3" Classes="nav" Tag="Settings" Click="OnNavigationClick" ToolTip.Tip="{DynamicResource Loc.Navigation.Settings}" AutomationProperties.Name="{DynamicResource Loc.Navigation.Settings}">
+            <Grid Classes="nav-content" ColumnDefinitions="24,*" ColumnSpacing="12"><Border Classes="nav-marker" Width="3" Height="22" Margin="-12,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" CornerRadius="2" Background="{DynamicResource AppAccentBrush}" IsHitTestVisible="False" /><Viewbox Classes="nav-icon"><Path Classes="nav-icon-path" Data="M12,8 C9.8,8 8,9.8 8,12 C8,14.2 9.8,16 12,16 C14.2,16 16,14.2 16,12 C16,9.8 14.2,8 12,8 Z M12,2 L12,5 M12,19 L12,22 M2,12 L5,12 M19,12 L22,12 M4.9,4.9 L7,7 M17,17 L19.1,19.1 M19.1,4.9 L17,7 M7,17 L4.9,19.1" /></Viewbox><TextBlock Grid.Column="1" Classes="nav-label" Text="{DynamicResource Loc.Navigation.Settings}" FontWeight="SemiBold" /></Grid>
           </Button>
         </Grid>
       </Border>
@@ -86,14 +86,14 @@
             <Border x:Name="SearchChrome" Classes="top-search" MaxWidth="650" HorizontalAlignment="Stretch" Height="38" Padding="11,0"
                     Background="{DynamicResource AppInsetBrush}" CornerRadius="9">
               <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-                <Viewbox Width="16" Height="16" VerticalAlignment="Center" AutomationProperties.Name="Search">
+                <Viewbox Width="16" Height="16" VerticalAlignment="Center" AutomationProperties.Name="{DynamicResource Loc.Shell.Search}">
                   <Path Data="M10,4 A6,6 0 1 0 10,16 A6,6 0 1 0 10,4 M14.5,14.5 L20,20"
-                        Fill="Transparent" Stroke="{DynamicResource AppFaintTextBrush}" StrokeThickness="2" />
+                        Fill="Transparent" Stroke="{DynamicResource AppFaintBrush}" StrokeThickness="2" />
                 </Viewbox>
                 <TextBox x:Name="SearchBox" Classes="top-search-input" Grid.Column="1" Padding="0" BorderThickness="0" Background="Transparent"
                          VerticalContentAlignment="Center"
-                         Text="{Binding GlobalSearchText, Mode=TwoWay}" PlaceholderText="Search the library"
-                         AutomationProperties.Name="Search the library"
+                         Text="{Binding GlobalSearchText, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Shell.SearchLibrary}"
+                         AutomationProperties.Name="{DynamicResource Loc.Shell.SearchLibrary}"
                          KeyDown="OnSearchKeyDown" />
                 <Border x:Name="SearchShortcut" Grid.Column="2" Padding="6,2" VerticalAlignment="Center"
                         BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1" CornerRadius="5"
@@ -103,7 +103,7 @@
               </Grid>
             </Border>
             <Button Grid.Column="1" Classes="app" Height="38" Click="OnConfigurationClick"
-                    ToolTip.Tip="Open library configuration" AutomationProperties.Name="Open library configuration">
+                    ToolTip.Tip="{DynamicResource Loc.Shell.OpenLibraryConfiguration}" AutomationProperties.Name="{DynamicResource Loc.Shell.OpenLibraryConfiguration}">
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="&#x2699;" FontSize="16" VerticalAlignment="Center" />
                 <TextBlock x:Name="ConfigurationChipText" Text="{Binding ConfigurationName}" MaxWidth="180" TextTrimming="CharacterEllipsis" />
@@ -146,11 +146,11 @@
                           Text="{Binding ActivityStateText}" VerticalAlignment="Center" />
             </StackPanel>
             <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8">
-              <Button Classes="app" Content="Open" Command="{Binding OpenActivityCommand}" />
-              <Button x:Name="ActivityCancelButton" Classes="app" Content="Cancel"
+            <Button Classes="app" Content="{DynamicResource Loc.Common.Open}" Command="{Binding OpenActivityCommand}" />
+            <Button x:Name="ActivityCancelButton" Classes="app" Content="{DynamicResource Loc.Common.Cancel}"
                       IsVisible="{Binding IsActivityCancelVisible}"
                       Command="{Binding CancelActivityCommand}" />
-              <Button x:Name="ActivityDismissButton" Classes="app" Content="Dismiss"
+            <Button x:Name="ActivityDismissButton" Classes="app" Content="{DynamicResource Loc.Common.Dismiss}"
                       IsVisible="{Binding IsActivityDismissVisible}"
                       Command="{Binding DismissActivityCommand}" />
             </StackPanel>

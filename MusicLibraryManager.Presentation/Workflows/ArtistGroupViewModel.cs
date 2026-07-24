@@ -23,6 +23,8 @@ public partial class ArtistGroupViewModel : ViewModelBase
     public bool CanEditCanonical => Variants.All(variant => !variant.IsApplied);
     public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
         Enum.GetValues<AnalysisRepairDisposition>();
+    public IReadOnlyList<LocalizedChoice<AnalysisRepairDisposition>>
+        DispositionChoices => HealthLocalizedChoices.AllRepairDispositions;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasCanonicalName))]
@@ -106,6 +108,8 @@ public partial class ArtistVariantViewModel : ViewModelBase
         Enum.GetValues<AnalysisRepairDisposition>()
             .Where(value => value != AnalysisRepairDisposition.Mixed)
             .ToArray();
+    public IReadOnlyList<LocalizedChoice<AnalysisRepairDisposition>>
+        DispositionChoices => HealthLocalizedChoices.RepairDispositions;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsActive))]
@@ -124,6 +128,13 @@ public partial class ArtistVariantViewModel : ViewModelBase
     [ObservableProperty]
     private string? _resultText;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasResultDiagnosticDetail))]
+    private string? _resultDiagnosticDetail;
+
+    public bool HasResultDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(ResultDiagnosticDetail);
+
     public event Action? StateChanged;
 
     public ArtistVariantViewModel(ArtistVariant variant)
@@ -134,7 +145,7 @@ public partial class ArtistVariantViewModel : ViewModelBase
             .OrderBy(path => path, StringComparer.CurrentCultureIgnoreCase)
             .Select(path => new ArtistPathViewModel(path))
             .ToList();
-        Folders = Files.Select(file => Path.GetDirectoryName(file.Path) ?? "(no folder)")
+        Folders = Files.Select(file => Path.GetDirectoryName(file.Path) ?? string.Empty)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(path => path, StringComparer.CurrentCultureIgnoreCase)
             .Select(path => new ArtistPathViewModel(path))
@@ -157,5 +168,7 @@ public partial class ArtistVariantViewModel : ViewModelBase
 /// <summary>A concrete file or folder shown beneath an artist spelling.</summary>
 public sealed record ArtistPathViewModel(string Path)
 {
-    public string Name => System.IO.Path.GetFileName(Path);
+    public string Name => string.IsNullOrWhiteSpace(Path)
+        ? LocalizedText.Get("Health.Common.NoFolder")
+        : System.IO.Path.GetFileName(Path);
 }

@@ -14,6 +14,7 @@ public sealed class WorkflowIntegrationService : IDisposable
     private readonly INavigationService _navigation;
     private readonly IPlatformService _platform;
     private readonly IActivityService _activities;
+    private readonly ILocalizationService? _localization;
     private readonly Dictionary<INotifyPropertyChanged, WorkflowState> _workflows = [];
     private bool _started;
 
@@ -25,7 +26,8 @@ public sealed class WorkflowIntegrationService : IDisposable
         LibraryViewModel library,
         INavigationService navigation,
         IPlatformService platform,
-        IActivityService activities)
+        IActivityService activities,
+        ILocalizationService? localization = null)
     {
         _health = health;
         _ingest = ingest;
@@ -35,6 +37,7 @@ public sealed class WorkflowIntegrationService : IDisposable
         _navigation = navigation;
         _platform = platform;
         _activities = activities;
+        _localization = localization;
     }
 
     public void Start()
@@ -53,7 +56,10 @@ public sealed class WorkflowIntegrationService : IDisposable
         _organize.MovesApplied += LibraryChanged;
         _operations.ArtworkNormalized += FilesChanged;
 
-        Observe(_health, "Health analysis", ShellDestination.Health,
+        Observe(
+            _health,
+            Text("Activity.HealthAnalysis"),
+            ShellDestination.Health,
             () => _health.IsBusy, () => _health.StatusText,
             () => _health.LastActivityState,
             () => ExecuteIfAvailable(_health.CancelCommand),
@@ -92,12 +98,14 @@ public sealed class WorkflowIntegrationService : IDisposable
             if (state.IsBusy() && state.ActivityId is null)
                 state.ActivityId = _activities.Start(
                     state.Title,
-                    state.Status() ?? "Starting…",
+                    state.Status() ??
+                        Text("Activity.Starting"),
                     state.Destination,
                     state.Cancel);
             else if (!state.IsBusy() && state.ActivityId is Guid id)
             {
-                string message = state.Status() ?? "Finished.";
+                string message = state.Status() ??
+                    Text("Activity.Finished");
                 _activities.Finish(id, message, state.Outcome());
                 state.ActivityId = null;
             }
@@ -107,7 +115,11 @@ public sealed class WorkflowIntegrationService : IDisposable
                   nameof(AnalyzerViewModel.IsAnalysisProgressIndeterminate)) &&
                  state.ActivityId is Guid id)
         {
-            _activities.Report(id, state.Status() ?? "Working…", state.Progress?.Invoke());
+            _activities.Report(
+                id,
+                state.Status() ??
+                    Text("Activity.Working"),
+                state.Progress?.Invoke());
         }
     }
 
@@ -123,6 +135,10 @@ public sealed class WorkflowIntegrationService : IDisposable
         _navigation.Navigate(ShellDestination.Operations);
         await _operations.OpenRunFromHistoryAsync(summary);
     }
+
+    private string Text(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
 
     public void Dispose()
     {

@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using MusicLibraryManager.Presentation;
 using MusicLibrary.Core;
+using MusicLibrary.Core.Services;
 using MusicLibraryManager.Services;
 using LegacyDialogs = MusicLibraryManager.Presentation.IDialogService;
 using LegacyFiles = MusicLibraryManager.Presentation.IFileDialogService;
@@ -25,6 +26,11 @@ public static class Composition
         services.AddSingleton<IPlatformService, PlatformService>();
         services.AddSingleton<IWindowStateService, WindowStateService>();
         services.AddSingleton<IThemeService, ThemeService>();
+        services.AddSingleton<ILocalizationService>(sp =>
+            new ResourceLocalizationService(
+                sp.GetRequiredService<IAppSettings>()));
+        services.AddSingleton<
+            AvaloniaLocalizationResourceBridge>();
         services.AddSingleton<GridStateService>();
         services.AddSingleton<SplitStateService>();
         services.AddSingleton<DropService>();

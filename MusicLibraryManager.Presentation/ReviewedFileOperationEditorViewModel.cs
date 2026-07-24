@@ -21,8 +21,12 @@ public partial class ReviewedFileOperationEditorViewModel :
     private readonly Func<string?>? _preflightMessage;
     private readonly Func<ReviewedFileOperationPlan, Task>?
         _applied;
+    private readonly ILocalizationService? _localization;
     private ReviewedFileOperationPlan? _plan;
     private CancellationTokenSource? _cancellation;
+    private string? _statusKey;
+    private object?[] _statusArguments = [];
+    private long? _statusCount;
 
     public ReviewedFileOperationEditorViewModel(
         IReviewedFileOperationService operations,
@@ -30,7 +34,8 @@ public partial class ReviewedFileOperationEditorViewModel :
         IDialogCoordinator dialogs,
         Func<IReadOnlyList<string>> targetProvider,
         Func<string?>? preflightMessage = null,
-        Func<ReviewedFileOperationPlan, Task>? applied = null)
+        Func<ReviewedFileOperationPlan, Task>? applied = null,
+        ILocalizationService? localization = null)
     {
         _operations = operations;
         _files = files;
@@ -38,6 +43,13 @@ public partial class ReviewedFileOperationEditorViewModel :
         _targetProvider = targetProvider;
         _preflightMessage = preflightMessage;
         _applied = applied;
+        _localization = localization;
+        RefreshLocalizedChoices();
+        SetStatus(
+            "ReviewedFileOperation.Status.Ready");
+        if (_localization is not null)
+            _localization.CultureChanged +=
+                OnLocalizationCultureChanged;
     }
 
     public ObservableCollection<ReviewedFileOperationItem>
@@ -50,6 +62,12 @@ public partial class ReviewedFileOperationEditorViewModel :
     public IReadOnlyList<ReviewedFileCollisionPolicy>
         CollisionPolicies { get; } =
             Enum.GetValues<ReviewedFileCollisionPolicy>();
+    public ObservableCollection<
+        LocalizedChoice<ReviewedFileOperationKind>>
+        OperationKindChoices { get; } = [];
+    public ObservableCollection<
+        LocalizedChoice<ReviewedFileCollisionPolicy>>
+        CollisionPolicyChoices { get; } = [];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(NeedsDestination))]
@@ -86,8 +104,12 @@ public partial class ReviewedFileOperationEditorViewModel :
     private double _progressMaximum = 1;
 
     [ObservableProperty]
-    private string _status =
-        "Choose an operation and preview the current scope.";
+    private string _status = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(
+        nameof(HasStatusDiagnosticDetail))]
+    private string? _statusDiagnosticDetail;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
@@ -111,10 +133,11 @@ public partial class ReviewedFileOperationEditorViewModel :
             int count =
                 _targetProvider().Count;
             return count == 0
-                ? "No files in the current scope."
-                : $"{count:N0} " +
-                  (count == 1 ? "file" : "files") +
-                  " in the current scope.";
+                ? L(
+                    "ReviewedFileOperation.Target.None")
+                : LC(
+                    "ReviewedFileOperation.Target.Files",
+                    count);
         }
     }
 
@@ -152,8 +175,10 @@ public partial class ReviewedFileOperationEditorViewModel :
             await _files.PickFolderAsync(
                 SelectedKind ==
                 ReviewedFileOperationKind.Quarantine
-                    ? "Choose reviewed quarantine folder"
-                    : "Choose file-operation destination");
+                    ? L(
+                        "ReviewedFileOperation.Picker.Quarantine")
+                    : L(
+                        "ReviewedFileOperation.Picker.Destination"));
         if (path is not null)
             DestinationDirectory = path;
     }
@@ -166,6 +191,8 @@ public partial class ReviewedFileOperationEditorViewModel :
         if (!string.IsNullOrWhiteSpace(preflight))
         {
             Status = preflight;
+            _statusKey = null;
+            StatusDiagnosticDetail = null;
             return;
         }
 
@@ -175,7 +202,9 @@ public partial class ReviewedFileOperationEditorViewModel :
             .Distinct(PathComparer)
             .ToArray();
         BeginOperation(
-            $"Planning {SelectedKind.ToString().ToLowerInvariant()}");
+            LF(
+                "ReviewedFileOperation.Activity.Planning",
+                KindLabel(SelectedKind)));
         try
         {
             ReviewedFileOperationPlan plan =
@@ -202,25 +231,31 @@ public partial class ReviewedFileOperationEditorViewModel :
                 issue =>
                     issue.Severity ==
                     OperationIssueSeverity.Blocker);
-            Status = blockers > 0
-                ? $"Preview blocked by {blockers:N0} " +
-                  (blockers == 1 ? "issue." : "issues.")
-                : HasApplicablePreview
-                    ? $"{plan.MutationPlan.Actions.Count:N0} " +
-                      "reviewed file mutation(s) ready to apply."
-                    : "The reviewed operation has no filesystem changes.";
+            if (blockers > 0)
+                SetCountStatus(
+                    "ReviewedFileOperation.Status.PreviewBlocked",
+                    blockers);
+            else if (HasApplicablePreview)
+                SetCountStatus(
+                    "ReviewedFileOperation.Status.PreviewReady",
+                    plan.MutationPlan.Actions.Count);
+            else
+                SetStatus(
+                    "ReviewedFileOperation.Status.NoChanges");
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
         catch (OperationCanceledException)
         {
-            Status = "File-operation preview cancelled.";
+            SetStatus(
+                "ReviewedFileOperation.Status.PreviewCancelled");
         }
         catch (Exception error)
         {
             _plan = null;
             HasApplicablePreview = false;
-            Status =
-                $"Could not preview file operations: {error.Message}";
+            SetFailure(
+                "ReviewedFileOperation.Status.PreviewFailed",
+                error.Message);
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
         finally
@@ -235,20 +270,24 @@ public partial class ReviewedFileOperationEditorViewModel :
         ReviewedFileOperationPlan plan =
             _plan ??
             throw new InvalidOperationException(
-                "Preview the file operation first.");
+                L(
+                    "ReviewedFileOperation.Error.PreviewFirst"));
         int count =
             plan.MutationPlan.Actions.Count;
         bool confirmed =
             await _dialogs.ConfirmAsync(
-                $"Apply {plan.Request.Kind.ToString().ToLowerInvariant()}?",
-                $"Apply the {count:N0} reviewed file " +
-                (count == 1 ? "mutation" : "mutations") +
-                "? A durable journal will be retained for history and eligible restores.",
-                "Apply");
+                LF(
+                    "ReviewedFileOperation.Dialog.Apply.Title",
+                    KindLabel(plan.Request.Kind)),
+                LC(
+                    "ReviewedFileOperation.Dialog.Apply.Message",
+                    count),
+                L("Common.Apply"));
         if (!confirmed)
             return;
 
-        BeginOperation("Applying reviewed file operation");
+        BeginOperation(
+            L("ReviewedFileOperation.Activity.Applying"));
         try
         {
             FileMutationSummary result =
@@ -261,19 +300,22 @@ public partial class ReviewedFileOperationEditorViewModel :
             OnPropertyChanged(nameof(HasUnsavedChanges));
             if (_applied is not null)
                 await _applied(plan);
-            Status =
-                $"Completed: {result.Copied:N0} copied, " +
-                $"{result.Moved:N0} moved, " +
-                $"{result.Quarantined:N0} quarantined.";
+            SetStatus(
+                "ReviewedFileOperation.Status.Completed",
+                result.Copied,
+                result.Moved,
+                result.Quarantined);
         }
         catch (OperationCanceledException)
         {
-            Status = "File operation cancelled; completed actions were rolled back.";
+            SetStatus(
+                "ReviewedFileOperation.Status.ApplyCancelled");
         }
         catch (Exception error)
         {
-            Status =
-                $"Could not apply file operation: {error.Message}";
+            SetFailure(
+                "ReviewedFileOperation.Status.ApplyFailed",
+                error.Message);
         }
         finally
         {
@@ -317,8 +359,8 @@ public partial class ReviewedFileOperationEditorViewModel :
         PreviewItems.Clear();
         OnPropertyChanged(nameof(HasPreview));
         OnPropertyChanged(nameof(HasUnsavedChanges));
-        Status =
-            "Operation settings or scope changed. Preview again.";
+        SetStatus(
+            "ReviewedFileOperation.Status.Invalidated");
         PreviewCommand.NotifyCanExecuteChanged();
         BrowseDestinationCommand
             .NotifyCanExecuteChanged();
@@ -336,6 +378,8 @@ public partial class ReviewedFileOperationEditorViewModel :
         ProgressValue = 0;
         ProgressMaximum = 1;
         Status = status;
+        _statusKey = null;
+        StatusDiagnosticDetail = null;
         CancelCommand.NotifyCanExecuteChanged();
     }
 
@@ -372,8 +416,125 @@ public partial class ReviewedFileOperationEditorViewModel :
                 }
                 if (!string.IsNullOrWhiteSpace(
                         progress.Message))
+                {
                     Status = progress.Message;
+                    _statusKey = null;
+                    StatusDiagnosticDetail = null;
+                }
             });
+
+    public bool HasStatusDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(StatusDiagnosticDetail);
+
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string LF(
+        string key,
+        params object?[] arguments) =>
+        _localization?.Format(key, arguments) ??
+        LocalizedText.Format(key, arguments);
+
+    private string LC(
+        string key,
+        long count,
+        params object?[] arguments) =>
+        _localization?.FormatCount(
+            key,
+            count,
+            arguments) ??
+        LocalizedText.FormatCount(
+            key,
+            count,
+            arguments);
+
+    private string KindLabel(
+        ReviewedFileOperationKind kind) =>
+        L(
+            $"ReviewedFileOperation.Choice.Kind.{kind}");
+
+    private void SetStatus(
+        string key,
+        params object?[] arguments)
+    {
+        _statusKey = key;
+        _statusArguments = arguments;
+        _statusCount = null;
+        Status = LF(key, arguments);
+        StatusDiagnosticDetail = null;
+    }
+
+    private void SetCountStatus(
+        string key,
+        long count,
+        params object?[] arguments)
+    {
+        _statusKey = key;
+        _statusArguments = arguments;
+        _statusCount = count;
+        Status = LC(key, count, arguments);
+        StatusDiagnosticDetail = null;
+    }
+
+    private void SetFailure(
+        string key,
+        string? diagnosticDetail)
+    {
+        SetStatus(key);
+        StatusDiagnosticDetail =
+            diagnosticDetail;
+    }
+
+    private void RefreshLocalizedChoices()
+    {
+        RefreshChoices(
+            OperationKindChoices,
+            OperationKinds,
+            "ReviewedFileOperation.Choice.Kind");
+        RefreshChoices(
+            CollisionPolicyChoices,
+            CollisionPolicies,
+            "ReviewedFileOperation.Choice.CollisionPolicy");
+    }
+
+    private void RefreshChoices<T>(
+        ObservableCollection<LocalizedChoice<T>> target,
+        IEnumerable<T> values,
+        string keyPrefix)
+    {
+        foreach (T value in values)
+        {
+            LocalizedChoice<T>? choice =
+                target.FirstOrDefault(item =>
+                    EqualityComparer<T>.Default.Equals(
+                        item.Value,
+                        value));
+            string label = L($"{keyPrefix}.{value}");
+            if (choice is null)
+                target.Add(new(value, label));
+            else
+                choice.Label = label;
+        }
+    }
+
+    private void OnLocalizationCultureChanged(
+        object? sender,
+        EventArgs e)
+    {
+        RefreshLocalizedChoices();
+        OnPropertyChanged(nameof(TargetSummary));
+        if (_statusKey is null)
+            return;
+        Status = _statusCount is { } count
+            ? LC(
+                _statusKey,
+                count,
+                _statusArguments)
+            : LF(
+                _statusKey,
+                _statusArguments);
+    }
 
     private static readonly StringComparer PathComparer =
         OperatingSystem.IsWindows()

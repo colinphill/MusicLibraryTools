@@ -18,6 +18,53 @@ public enum WorkbenchFieldEditMode
     RemoveField,
 }
 
+public enum WorkbenchSection
+{
+    Session = 0,
+    BulkOperation = 1,
+    AllFields = 2,
+    Files = 3,
+    OnlineMetadata = 4,
+    Reports = 5,
+    Playlists = 6,
+    Tools = 7,
+    Shortcuts = 8,
+}
+
+public enum WorkbenchOnlineMetadataScope
+{
+    SelectedFile,
+    AllFiles,
+}
+
+public enum WorkbenchOnlineMetadataProvider
+{
+    MusicBrainz,
+    Discogs,
+}
+
+public enum WorkbenchOnlineMetadataResultStep
+{
+    AudioCandidates = 0,
+    MusicBrainzReleases = 1,
+    DiscogsReleases = 2,
+    TrackMapping = 3,
+    Artwork = 4,
+}
+
+public sealed record WorkbenchSectionOption(
+    WorkbenchSection Section,
+    string Group,
+    string Label);
+
+public sealed record WorkbenchOnlineMetadataScopeOption(
+    WorkbenchOnlineMetadataScope Scope,
+    string Label);
+
+public sealed record WorkbenchOnlineMetadataProviderOption(
+    WorkbenchOnlineMetadataProvider Provider,
+    string Label);
+
 public sealed record WorkbenchMetadataFieldRow(
     MetadataFieldKey Field,
     string Layers,
@@ -27,18 +74,26 @@ public sealed record WorkbenchMetadataFieldRow(
     int PresentFileCount = 1)
 {
     public string Name => Field.DisplayName;
-    public string Kind => Field.IsKnown ? "Known" : "Custom";
+    public string Kind => Field.IsKnown
+        ? LocalizedText.Get("Workbench.Metadata.Kind.Known")
+        : LocalizedText.Get("Workbench.Metadata.Kind.Custom");
     public string DisplayValue => IsMixed
-        ? $"Mixed across {SelectedFileCount:N0} selected files"
+        ? LocalizedText.FormatCount(
+            "Workbench.Metadata.Mixed",
+            SelectedFileCount)
         : string.Join("; ", Values);
     public string Coverage => SelectedFileCount <= 1
         ? ""
-        : $"{PresentFileCount:N0}/{SelectedFileCount:N0} files";
+        : LocalizedText.Format(
+            "Workbench.Metadata.Coverage",
+            PresentFileCount,
+            SelectedFileCount);
 }
 
 public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
 {
     private const string RecentLocationsPreference = "manager.workbench.recentLocations.v1";
+    private const string UiPreference = "manager.workbench.ui.v1";
     private const int RecentLocationLimit = 12;
     private readonly IWorkbenchService _workbench;
     private readonly IMetadataOperationService _operations;
@@ -61,6 +116,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private readonly WorkbenchSelectionInspectorViewModel? _inspector;
     private readonly IIngestSourceHandoff? _ingestHandoff;
     private readonly INavigationService? _navigation;
+    private readonly ILocalizationService? _localization;
+    private string? _statusTextKey;
+    private object?[] _statusTextArguments = [];
+    private long? _statusTextCount;
     private MetadataOperationPlan? _plan;
     private ReportExportPlan? _reportPlan;
     private PlaylistWorkspacePlan? _playlistPlan;
@@ -71,6 +130,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private bool _stagedArtworkDirty;
     private string? _stagedArtworkPath;
     private bool _settingArtworkMaxDimension;
+    private bool _loadingUiPreferences;
     private readonly Dictionary<
         string,
         ArtworkSetPreviewRequest> _artworkDrafts =
@@ -86,12 +146,14 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(UndoCommand))]
     [NotifyCanExecuteChangedFor(nameof(DiscoverSelectedAudioCommand))]
     [NotifyCanExecuteChangedFor(nameof(DiscoverAllAudioCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DiscoverOnlineAudioCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewAudioIdentifiersCommand))]
     [NotifyCanExecuteChangedFor(nameof(ResolveSelectedRecordingCommand))]
     [NotifyCanExecuteChangedFor(nameof(BuildReleaseMappingCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewReleaseMetadataCommand))]
     [NotifyCanExecuteChangedFor(nameof(SearchMusicBrainzReleasesCommand))]
     [NotifyCanExecuteChangedFor(nameof(SearchDiscogsReleasesCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SearchOnlineReleasesCommand))]
     [NotifyCanExecuteChangedFor(nameof(LoadDiscogsReleaseDetailsCommand))]
     [NotifyCanExecuteChangedFor(nameof(BuildDiscogsReleaseMappingCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewDiscogsReleaseMetadataCommand))]
@@ -166,6 +228,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(PasteMetadataFieldCommand))]
     [NotifyCanExecuteChangedFor(nameof(AddStagedArtworkCommand))]
     [NotifyCanExecuteChangedFor(nameof(PreviewStagedArtworkCommand))]
+    [NotifyCanExecuteChangedFor(nameof(DiscoverOnlineAudioCommand))]
     private WorkbenchTrackViewModel? _selectedFile;
 
     [ObservableProperty]
@@ -242,8 +305,39 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private bool _recursive = true;
 
     [ObservableProperty]
-    private string _statusText =
-        "Add files, folders, playlists, or cuesheets. No library configuration is required.";
+    private WorkbenchSection _selectedSection =
+        WorkbenchSection.Session;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(DiscoverOnlineAudioCommand))]
+    private WorkbenchOnlineMetadataScopeOption
+        _selectedOnlineMetadataScope =
+            new(
+                WorkbenchOnlineMetadataScope.SelectedFile,
+                "");
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SearchOnlineReleasesCommand))]
+    private WorkbenchOnlineMetadataProviderOption
+        _selectedOnlineMetadataProvider =
+            new(
+                WorkbenchOnlineMetadataProvider.MusicBrainz,
+                "MusicBrainz");
+
+    [ObservableProperty]
+    private WorkbenchOnlineMetadataResultStep
+        _selectedOnlineMetadataResultStep =
+            WorkbenchOnlineMetadataResultStep.AudioCandidates;
+
+    [ObservableProperty]
+    private bool _isInspectorOpen = true;
+
+    [ObservableProperty]
+    private string _statusText = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasStatusDiagnosticDetail))]
+    private string? _statusDiagnosticDetail;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
@@ -276,7 +370,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         IReviewedFileOperationService? fileOperations = null,
         WorkbenchSelectionInspectorViewModel? inspector = null,
         IIngestSourceHandoff? ingestHandoff = null,
-        INavigationService? navigation = null)
+        INavigationService? navigation = null,
+        ILocalizationService? localization = null)
     {
         _workbench = workbench;
         _operations = operations;
@@ -299,6 +394,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         _inspector = inspector;
         _ingestHandoff = ingestHandoff;
         _navigation = navigation;
+        _localization = localization;
         if (_inspector is not null)
         {
             _inspector.FilesChanged += OnInspectorFilesChanged;
@@ -322,7 +418,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         OperationEditor = new(
             operationCatalog, MetadataOperationSurface.Workbench, recipeStore);
         RepresentativePreview =
-            new(_operations);
+            new(_operations, localization);
         FileOperations = fileOperations is null
             ? null
             : new(
@@ -333,7 +429,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                     .Select(file => file.Path)
                     .ToArray(),
                 FileOperationPreflightMessage,
-                RefreshAfterFileOperationAsync);
+                RefreshAfterFileOperationAsync,
+                localization);
         if (FileOperations is not null)
             FileOperations.PropertyChanged +=
                 (_, args) =>
@@ -347,29 +444,45 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                 };
         OperationEditor.Changed +=
             ScheduleRepresentativePreview;
-        ShortcutEditor = new(shortcutStore, recipeStore);
+        ShortcutEditor = new(
+            shortcutStore,
+            recipeStore,
+            localization);
         ColumnEditor = new(
             metadataColumns,
-            MetadataGridSurface.Workbench);
+            MetadataGridSurface.Workbench,
+            localization);
         ReleaseImport.PropertyChanged += OnReleaseImportChanged;
         ReleaseSearch.PropertyChanged += (_, _) =>
+        {
             SearchMusicBrainzReleasesCommand.NotifyCanExecuteChanged();
+            SearchOnlineReleasesCommand.NotifyCanExecuteChanged();
+        };
         DiscogsSearch.PropertyChanged += (_, _) =>
+        {
             SearchDiscogsReleasesCommand.NotifyCanExecuteChanged();
+            SearchOnlineReleasesCommand.NotifyCanExecuteChanged();
+        };
         DiscogsImport.PropertyChanged += (_, _) =>
         {
             CancelPlan();
             PreviewDiscogsReleaseMetadataCommand.NotifyCanExecuteChanged();
         };
+        ReportEditor = new(localization);
+        PlaylistEditor = new(localization);
         ReportEditor.Changed += InvalidateReportPlan;
         PlaylistEditor.Changed += InvalidatePlaylistPlan;
-        ExternalToolEditor = new(externalToolStore);
+        ExternalToolEditor = new(
+            externalToolStore,
+            localization);
         ExternalToolEditor.Changed += InvalidateExternalToolPlan;
-        KnownFieldChoices = Enum.GetValues<TagFields>()
-            .Where(field => field != TagFields.NullField)
-            .Select(field => new MetadataFieldChoice(field, field.ToString()))
-            .ToArray();
+        RefreshLocalizedChoices();
         SelectedNewKnownField = KnownFieldChoices[0];
+        SetStatus("Workbench.Status.Ready");
+        if (_localization is not null)
+            _localization.CultureChanged +=
+                OnLocalizationCultureChanged;
+        LoadUiPreferences();
         LoadRecentLocations();
     }
 
@@ -394,12 +507,46 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     public ObservableCollection<ExternalToolInvocationRow>
         ExternalToolInvocations { get; } = [];
     public ObservableCollection<string> RecentLocations { get; } = [];
+    public ObservableCollection<WorkbenchSectionOption>
+        SectionOptions { get; } = [];
+    public ObservableCollection<WorkbenchOnlineMetadataScopeOption>
+        OnlineMetadataScopeOptions { get; } = [];
+    public ObservableCollection<WorkbenchOnlineMetadataProviderOption>
+        OnlineMetadataProviderOptions { get; } = [];
+    public bool IsMusicBrainzOnlineMetadataProvider =>
+        SelectedOnlineMetadataProvider.Provider ==
+        WorkbenchOnlineMetadataProvider.MusicBrainz;
+    public bool IsDiscogsOnlineMetadataProvider =>
+        SelectedOnlineMetadataProvider.Provider ==
+        WorkbenchOnlineMetadataProvider.Discogs;
+    public int SelectedOnlineMetadataResultIndex
+    {
+        get => (int)SelectedOnlineMetadataResultStep;
+        set
+        {
+            if (Enum.IsDefined(
+                    typeof(WorkbenchOnlineMetadataResultStep),
+                    value))
+                SelectedOnlineMetadataResultStep =
+                    (WorkbenchOnlineMetadataResultStep)value;
+        }
+    }
+    public WorkbenchSectionOption SelectedSectionOption
+    {
+        get => SectionOptions.First(option =>
+            option.Section == SelectedSection);
+        set
+        {
+            if (value is not null)
+                SelectedSection = value.Section;
+        }
+    }
     public MusicBrainzImportSelectionViewModel ReleaseImport { get; } = new();
     public MusicBrainzReleaseSearchViewModel ReleaseSearch { get; } = new();
     public DiscogsReleaseSearchViewModel DiscogsSearch { get; } = new();
     public DiscogsImportSelectionViewModel DiscogsImport { get; } = new();
-    public ReportEditorViewModel ReportEditor { get; } = new();
-    public PlaylistEditorViewModel PlaylistEditor { get; } = new();
+    public ReportEditorViewModel ReportEditor { get; }
+    public PlaylistEditorViewModel PlaylistEditor { get; }
     public ExternalToolEditorViewModel ExternalToolEditor { get; }
     public WorkbenchShortcutEditorViewModel ShortcutEditor { get; }
     public MetadataGridColumnEditorViewModel ColumnEditor { get; }
@@ -409,18 +556,30 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     public ReviewedFileOperationEditorViewModel?
         FileOperations { get; }
     public SelectionInspectorViewModel? Inspector => _inspector;
-    public IReadOnlyList<MetadataFieldChoice> KnownFieldChoices { get; }
+    public ObservableCollection<MetadataFieldChoice>
+        KnownFieldChoices { get; } = [];
     public IReadOnlyList<WorkbenchFieldEditMode> FieldEditModes { get; } =
         Enum.GetValues<WorkbenchFieldEditMode>();
+    public ObservableCollection<LocalizedChoice<WorkbenchFieldEditMode>>
+        FieldEditModeChoices { get; } = [];
     public IReadOnlyList<DelimitedMetadataEmptyCellMode>
         ImportEmptyCellModes { get; } =
             Enum.GetValues<DelimitedMetadataEmptyCellMode>();
+    public ObservableCollection<
+        LocalizedChoice<DelimitedMetadataEmptyCellMode>>
+        ImportEmptyCellModeChoices { get; } = [];
     public IReadOnlyList<ID3v2Version> Id3Versions { get; } =
         Enum.GetValues<ID3v2Version>();
+    public ObservableCollection<LocalizedChoice<ID3v2Version>>
+        Id3VersionChoices { get; } = [];
     public IReadOnlyList<ID3TextEncodingPolicy> Id3EncodingPolicies { get; } =
         Enum.GetValues<ID3TextEncodingPolicy>();
+    public ObservableCollection<LocalizedChoice<ID3TextEncodingPolicy>>
+        Id3EncodingPolicyChoices { get; } = [];
     public IReadOnlyList<ID3v2Util.APICType> ArtworkTypes { get; } =
         Enum.GetValues<ID3v2Util.APICType>();
+    public ObservableCollection<LocalizedChoice<ID3v2Util.APICType>>
+        ArtworkTypeChoices { get; } = [];
     public bool HasFiles => Files.Count > 0;
     public IReadOnlyList<WorkbenchTrackViewModel> SelectedFiles =>
         _selectedFiles;
@@ -429,8 +588,12 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     {
         0 => "",
         1 => EditTargets[0].Path,
-        _ => $"{SelectedFileCount:N0} files selected",
+        _ => LC(
+            "Workbench.Selection.Files",
+            SelectedFileCount),
     };
+    public bool HasStatusDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(StatusDiagnosticDetail);
     public bool HasPreview => PreviewChanges.Count > 0;
     public bool HasUnsavedChanges =>
         _plan is not null ||
@@ -460,8 +623,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                     candidate.Id == binding.RecipeId);
             if (recipe is null)
             {
-                StatusText =
-                    $"Shortcut recipe '{binding.TargetLabel}' no longer exists.";
+                SetStatus(
+                    "Workbench.Status.ShortcutRecipeMissing",
+                    binding.TargetLabel);
                 return;
             }
             if (IsBusy || Files.Count == 0)
@@ -472,9 +636,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                     recipe,
                     progress,
                     ct));
-            StatusText =
-                $"Shortcut regenerated '{recipe.Name}' for the current " +
-                "Workbench files. Review before applying.";
+            SetStatus(
+                "Workbench.Status.ShortcutRecipeRegenerated",
+                recipe.Name);
             return;
         }
 
@@ -528,6 +692,21 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         MoveUpCommand.NotifyCanExecuteChanged();
         MoveDownCommand.NotifyCanExecuteChanged();
     }
+
+    partial void OnSelectedOnlineMetadataProviderChanged(
+        WorkbenchOnlineMetadataProviderOption value)
+    {
+        OnPropertyChanged(
+            nameof(IsMusicBrainzOnlineMetadataProvider));
+        OnPropertyChanged(
+            nameof(IsDiscogsOnlineMetadataProvider));
+        SearchOnlineReleasesCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnSelectedOnlineMetadataResultStepChanged(
+        WorkbenchOnlineMetadataResultStep value) =>
+        OnPropertyChanged(
+            nameof(SelectedOnlineMetadataResultIndex));
 
     partial void OnSelectedMetadataFieldChanged(WorkbenchMetadataFieldRow? value)
     {
@@ -637,8 +816,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private async Task BrowseFilesAsync()
     {
         IReadOnlyList<string> paths = await _files.PickFilesAsync(
-            "Add media, playlists, or cuesheets",
-            [new("Supported sources",
+            L("Workbench.Picker.AddSources.Title"),
+            [new(L("Workbench.Picker.SupportedSources"),
                 [".mp3", ".flac", ".ogg", ".wv", ".m4a", ".mp4", ".m4p", ".m4r",
                  ".m4b", ".m4v", ".wma", ".asf", ".wmv",
                  ".dsf", ".m3u", ".m3u8", ".cue"])]);
@@ -649,7 +828,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [RelayCommand(CanExecute = nameof(CanBrowse))]
     private async Task BrowseFolderAsync()
     {
-        string? path = await _files.PickFolderAsync("Add a media folder");
+        string? path = await _files.PickFolderAsync(
+            L("Workbench.Picker.AddFolder.Title"));
         if (path is not null)
             await AddSourcesAsync([path]);
     }
@@ -667,7 +847,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             return;
         CancelPlan();
         ClearReleaseTrackMappings();
-        BeginOperation("Scanning Workbench sources");
+        BeginOperation(L("Workbench.Activity.ScanningSources"));
         try
         {
             WorkbenchLoadResult loaded = await _workbench.LoadAsync(
@@ -686,18 +866,31 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             }
             foreach (string source in sources)
                 AddRecentLocation(source);
-            StatusText = loaded.Issues.Length == 0
-                ? $"Added {added:N0} file(s); {Files.Count:N0} in this Workbench session."
-                : $"Added {added:N0} file(s) with {loaded.Issues.Length:N0} warning(s): " +
-                  loaded.Issues[0].Message;
+            if (loaded.Issues.Length == 0)
+                SetCountStatus(
+                    "Workbench.Status.SourcesAdded",
+                    added,
+                    Files.Count);
+            else
+            {
+                SetCountStatus(
+                    "Workbench.Status.SourcesAddedWithWarnings",
+                    added,
+                    Files.Count,
+                    loaded.Issues.Length);
+                StatusDiagnosticDetail =
+                    loaded.Issues[0].Message;
+            }
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Loading cancelled.";
+            SetStatus("Workbench.Status.LoadingCancelled");
         }
         catch (Exception error)
         {
-            StatusText = $"Could not load the selected sources: {error.Message}";
+            SetFailure(
+                "Workbench.Status.LoadingFailed",
+                error.Message);
         }
         finally
         {
@@ -734,7 +927,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             ? null
             : Files[Math.Min(index, Files.Count - 1)];
         CancelPlan();
-        StatusText = $"{Files.Count:N0} file(s) in this Workbench session.";
+        SetCountStatus(
+            "Workbench.Status.SessionFileCount",
+            Files.Count);
         NotifySessionChanged();
     }
 
@@ -759,14 +954,14 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             _ingestHandoff.SetSourceFiles(paths);
         if (!result.Accepted)
         {
-            StatusText =
-                result.Error ??
-                "The selected files could not be sent to Ingest.";
+            SetFailure(
+                "Workbench.Status.SendToIngestFailed",
+                result.Error);
             return;
         }
-        StatusText =
-            $"Sent {paths.Length:N0} selected " +
-            $"{(paths.Length == 1 ? "file" : "files")} to Ingest.";
+        SetCountStatus(
+            "Workbench.Status.SentToIngest",
+            paths.Length);
         _navigation.Navigate(
             ShellDestination.Ingest);
     }
@@ -777,9 +972,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         if (Files.Count == 0)
             return;
         if (HasUnsavedChanges && !await _dialogs.ConfirmAsync(
-                "Clear Workbench?",
-                "This removes the current session and its uncommitted edits. Files on disk are not changed.",
-                "Clear"))
+                L("Workbench.Dialog.Clear.Title"),
+                L("Workbench.Dialog.Clear.Message"),
+                L("Common.Clear")))
             return;
         foreach (WorkbenchTrackViewModel file in Files)
             file.PropertyChanged -= OnTrackChanged;
@@ -800,7 +995,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         ApplySelectedFiles([]);
         if (_inspector is not null)
             await _inspector.LoadAsync(SelectionContext.Empty);
-        StatusText = "Workbench cleared. Files on disk were not changed.";
+        SetStatus("Workbench.Status.Cleared");
         NotifySessionChanged();
     }
 
@@ -847,7 +1042,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         if (edits.Count == 0)
             return;
         await PreviewAsync((progress, ct) => _operations.PreviewEditsAsync(
-            edits, "Workbench field edits", progress, ct));
+            edits,
+            L("Workbench.Operation.FieldEdits"),
+            progress,
+            ct));
     }
 
     [RelayCommand(CanExecute = nameof(CanImportDelimitedMetadata))]
@@ -856,9 +1054,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         if (_delimitedImports is null)
             return;
         string? path = await _files.PickFileAsync(
-            "Import metadata from CSV or delimited text",
+            L("Workbench.Picker.ImportMetadata.Title"),
             [new(
-                "Delimited metadata",
+                L("Workbench.Picker.DelimitedMetadata"),
                 [".csv", ".tsv", ".txt"])]);
         if (path is null)
             return;
@@ -878,12 +1076,14 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                         issue.Severity ==
                             DelimitedMetadataImportIssueSeverity.Blocker)
                     ?.Message ??
-                    "No import rows matched this Workbench session.";
+                    L("Workbench.Error.NoImportRowsMatched");
                 throw new InvalidDataException(reason);
             }
             return await _operations.PreviewValueEditsAsync(
                 imported.EditsByPath,
-                $"Import metadata from {Path.GetFileName(path)}",
+                LF(
+                    "Workbench.Operation.ImportMetadata",
+                    Path.GetFileName(path)),
                 progress,
                 ct);
         });
@@ -892,12 +1092,13 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             int warnings = imported.Issues.Count(issue =>
                 issue.Severity ==
                     DelimitedMetadataImportIssueSeverity.Warning);
-            StatusText +=
-                $" Mapped {imported.MatchedRows:N0} of " +
-                $"{imported.DataRows:N0} row(s)" +
-                (warnings == 0
-                    ? "."
-                    : $" with {warnings:N0} warning(s).");
+            SetStatus(
+                warnings == 0
+                    ? "Workbench.Status.ImportMapped"
+                    : "Workbench.Status.ImportMappedWithWarnings",
+                imported.MatchedRows,
+                imported.DataRows,
+                warnings);
         }
     }
 
@@ -932,8 +1133,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                     entered);
         await PreviewAsync((progress, ct) => _operations.PreviewValueEditsAsync(
             edits,
-            $"Edit {field.DisplayName} values for " +
-            $"{targets.Count:N0} file(s)",
+            LF(
+                "Workbench.Operation.EditFieldValues",
+                field.DisplayName,
+                targets.Count),
             progress,
             ct));
     }
@@ -950,9 +1153,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         string text = MetadataClipboardCodec.Encode(
             new(selected.Field, values));
         await _platform.CopyTextAsync(text);
-        StatusText =
-            $"Copied {values.Length:N0} ordered {selected.Name} " +
-            $"value(s) with tag identity.";
+        SetCountStatus(
+            "Workbench.Status.CopiedFieldValues",
+            values.Length,
+            selected.Name);
     }
 
     [RelayCommand(CanExecute = nameof(CanPasteMetadataField))]
@@ -965,8 +1169,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         string? text = await _platform.ReadTextAsync();
         if (string.IsNullOrEmpty(text))
         {
-            StatusText =
-                "The clipboard does not contain text metadata.";
+            SetStatus(
+                "Workbench.Status.ClipboardHasNoMetadata");
             return;
         }
 
@@ -978,8 +1182,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                     out MetadataClipboardPayload? payload) &&
                 fallback is null)
             {
-                StatusText =
-                    "Select or name a destination field before pasting plain text.";
+                SetStatus(
+                    "Workbench.Status.SelectPasteDestination");
                 return;
             }
             payload ??= MetadataClipboardCodec.DecodeOrPlainText(
@@ -999,14 +1203,18 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             await PreviewAsync((progress, ct) =>
                 _operations.PreviewValueEditsAsync(
                     edits,
-                    $"Paste {payload.Field.DisplayName} values for " +
-                    $"{targets.Count:N0} file(s)",
+                    LF(
+                        "Workbench.Operation.PasteFieldValues",
+                        payload.Field.DisplayName,
+                        targets.Count),
                     progress,
                     ct));
         }
         catch (InvalidDataException error)
         {
-            StatusText = $"Paste failed: {error.Message}";
+            SetFailure(
+                "Workbench.Status.PasteFailed",
+                error.Message);
         }
     }
 
@@ -1053,14 +1261,23 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                         : TagLayerCopyMode.Empty),
             ],
         };
-        string action = mode == TagLayerEditMode.Add ? "Add" : "Remove";
-        string layerName = kind == TagLayerKind.Id3v2
-            ? "ID3v2"
-            : "APEv2";
+        string action = mode == TagLayerEditMode.Add
+            ? L("Workbench.Action.Add")
+            : L("Common.Remove");
+        string layerName = kind switch
+        {
+            TagLayerKind.Id3v2 => "ID3v2",
+            TagLayerKind.Id3v1 => "ID3v1",
+            TagLayerKind.ApeV2 => "APEv2",
+            _ => kind.ToString(),
+        };
         await PreviewAsync((progress, ct) =>
             _operations.PreviewTagLayerEditsAsync(
                 edits,
-                $"{action} {layerName} tag layer",
+                LF(
+                    "Workbench.Operation.TagLayer",
+                    action,
+                    layerName),
                 progress,
                 ct));
     }
@@ -1108,7 +1325,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         await PreviewAsync((progress, ct) =>
             _operations.PreviewId3VersionEditsAsync(
                 edits,
-                $"Convert to ID3v2.{(int)TargetId3Version}",
+                LF(
+                    "Workbench.Operation.ConvertId3Version",
+                    (int)TargetId3Version),
                 progress,
                 ct));
     }
@@ -1142,7 +1361,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         await PreviewAsync((progress, ct) =>
             _operations.PreviewTagLayerConversionsAsync(
                 edits,
-                $"Convert {source} to {target}",
+                LF(
+                    "Workbench.Operation.ConvertTagLayer",
+                    source,
+                    target),
                 progress,
                 ct));
     }
@@ -1174,7 +1396,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         await PreviewAsync((progress, ct) =>
             _operations.PreviewId3VersionEditsAsync(
                 edits,
-                $"Re-encode ID3 text as {SelectedId3EncodingPolicy}",
+                LF(
+                    "Workbench.Operation.ReencodeId3",
+                    L(
+                        $"Workbench.Choice.Id3EncodingPolicy.{SelectedId3EncodingPolicy}")),
                 progress,
                 ct));
     }
@@ -1189,7 +1414,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         Func<IProgress<OperationProgress>, CancellationToken,
             Task<MetadataOperationPlan>> action)
     {
-        BeginOperation("Building metadata preview");
+        BeginOperation(L("Workbench.Activity.BuildingPreview"));
         try
         {
             MetadataOperationPlan plan = await action(
@@ -1201,20 +1426,27 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             HasApplicablePreview = plan.CanApply;
             int blockers = plan.Files.SelectMany(file => file.Issues)
                 .Count(issue => issue.Severity == OperationIssueSeverity.Blocker);
-            StatusText = blockers > 0
-                ? $"Preview has {blockers:N0} blocker(s). No files have been changed."
-                : $"Preview: {plan.ChangeCount:N0} metadata change(s) in " +
-                  $"{plan.ChangedFileCount:N0} file(s). No files have been changed.";
+            if (blockers > 0)
+                SetCountStatus(
+                    "Workbench.Status.PreviewBlocked",
+                    blockers);
+            else
+                SetCountStatus(
+                    "Workbench.Status.PreviewReady",
+                    plan.ChangeCount,
+                    plan.ChangedFileCount);
         }
         catch (OperationCanceledException)
         {
             CancelPlan();
-            StatusText = "Preview cancelled. No files were changed.";
+            SetStatus("Workbench.Status.PreviewCancelled");
         }
         catch (Exception error)
         {
             CancelPlan();
-            StatusText = $"Preview failed: {error.Message}";
+            SetFailure(
+                "Workbench.Status.PreviewFailed",
+                error.Message);
         }
         finally
         {
@@ -1229,7 +1461,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         if (_plan is null &&
             !HasDirectPendingChanges)
             return;
-        BeginOperation("Applying reviewed metadata changes");
+        BeginOperation(
+            L("Workbench.Activity.ApplyingReviewedChanges"));
         try
         {
             IProgress<OperationProgress> progress = CreateProgress();
@@ -1238,7 +1471,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                 _cancellation!.Token);
             if (_plan is null)
             {
-                StatusText = "There are no pending metadata changes to apply.";
+                SetStatus(
+                    "Workbench.Status.NoPendingChanges");
                 return;
             }
             MetadataPreviewRowBuilder.Populate(
@@ -1255,9 +1489,13 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                     .FirstOrDefault(issue =>
                         issue.Severity ==
                         OperationIssueSeverity.Blocker);
-                StatusText = blocker is null
-                    ? "The pending edits produce no applicable file changes."
-                    : $"Pending changes cannot be applied: {blocker.Message}";
+                if (blocker is null)
+                    SetStatus(
+                        "Workbench.Status.NoApplicableChanges");
+                else
+                    SetFailure(
+                        "Workbench.Status.PendingChangesBlocked",
+                        blocker.Message);
                 return;
             }
             MetadataApplyResult result = await _operations.ApplyAsync(
@@ -1276,16 +1514,19 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             PendingOperations.Clear();
             RebuildPendingChanges();
             HasApplicablePreview = false;
-            StatusText = $"Applied {result.ChangedFiles:N0} file(s). Originals are retained " +
-                "in Workbench recovery and can be restored from Operations.";
+            SetCountStatus(
+                "Workbench.Status.Applied",
+                result.ChangedFiles);
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Apply cancelled. Completed mutations remain recoverable.";
+            SetStatus("Workbench.Status.ApplyCancelled");
         }
         catch (Exception error)
         {
-            StatusText = $"Apply stopped safely: {error.Message}";
+            SetFailure(
+                "Workbench.Status.ApplyFailed",
+                error.Message);
         }
         finally
         {
@@ -1307,8 +1548,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         if (_inspector?.HasUnsavedChanges == true)
             await _inspector.DiscardPendingChangesAsync();
         CancelPlan();
-        StatusText =
-            "Pending preview reverted. No files were changed.";
+        SetStatus("Workbench.Status.PendingReverted");
         NotifySessionChanged();
     }
 
@@ -1318,11 +1558,12 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private async Task UndoAsync()
     {
         if (!await _dialogs.ConfirmAsync(
-                "Restore the last Workbench operation?",
-                "Current files will be replaced by the retained originals. A collision backup is created when required.",
-                "Restore"))
+                L("Workbench.Dialog.Restore.Title"),
+                L("Workbench.Dialog.Restore.Message"),
+                L("Common.Restore")))
             return;
-        BeginOperation("Restoring the latest Workbench operation");
+        BeginOperation(
+            L("Workbench.Activity.RestoringLatest"));
         try
         {
             var restoreProgress = new Progress<int>(completed =>
@@ -1330,22 +1571,28 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                     OperationPhase.Applying,
                     completed,
                     Math.Max(1, Files.Count),
-                    Message: $"Restored {completed:N0} file(s)")));
+                    Message: LC(
+                        "Workbench.Progress.Restored",
+                        completed))));
             int restored = await _history.UndoLatestAsync(
                 restoreProgress, _cancellation!.Token);
             await ReloadAsync(
                 Files.Select(file => file.Path).ToArray(),
                 CreateProgress(),
                 _cancellation.Token);
-            StatusText = $"Restored {restored:N0} file(s) from the latest Workbench operation.";
+            SetCountStatus(
+                "Workbench.Status.Restored",
+                restored);
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Restore cancelled. Any completed restores remain recoverable.";
+            SetStatus("Workbench.Status.RestoreCancelled");
         }
         catch (Exception error)
         {
-            StatusText = $"Restore failed: {error.Message}";
+            SetFailure(
+                "Workbench.Status.RestoreFailed",
+                error.Message);
         }
         finally
         {
@@ -1363,7 +1610,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             return;
         await PreviewAsync((progress, ct) => _operations.PreviewAsync(
             candidate.Paths, candidate.Recipe, progress, ct));
-        StatusText = "Redo was regenerated against the current files. Review the preview before applying.";
+        SetStatus("Workbench.Status.RedoRegenerated");
     }
 
     [RelayCommand(CanExecute = nameof(CanRepeat))]
@@ -1374,7 +1621,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             return;
         await PreviewAsync((progress, ct) => _operations.PreviewAsync(
             Files.Select(file => file.Path).ToArray(), recipe, progress, ct));
-        StatusText = "The latest recipe was regenerated for the current Workbench files. Review before applying.";
+        SetStatus("Workbench.Status.RecipeRegenerated");
     }
 
     [RelayCommand]
@@ -1384,12 +1631,38 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private async Task DiscoverSelectedAudioAsync()
     {
         if (SelectedFile is not null)
+        {
+            SelectedOnlineMetadataResultStep =
+                WorkbenchOnlineMetadataResultStep.AudioCandidates;
             await DiscoverAudioAsync([SelectedFile.Path]);
+        }
     }
 
     [RelayCommand(CanExecute = nameof(CanDiscoverAllAudio))]
-    private async Task DiscoverAllAudioAsync() =>
-        await DiscoverAudioAsync(Files.Select(file => file.Path).ToArray());
+    private async Task DiscoverAllAudioAsync()
+    {
+        SelectedOnlineMetadataResultStep =
+            WorkbenchOnlineMetadataResultStep.AudioCandidates;
+        await DiscoverAudioAsync(
+            Files.Select(file => file.Path).ToArray());
+    }
+
+    [RelayCommand(CanExecute = nameof(CanDiscoverOnlineAudio))]
+    private async Task DiscoverOnlineAudioAsync()
+    {
+        SelectedOnlineMetadataResultStep =
+            WorkbenchOnlineMetadataResultStep.AudioCandidates;
+        if (SelectedOnlineMetadataScope.Scope ==
+            WorkbenchOnlineMetadataScope.SelectedFile)
+        {
+            if (SelectedFile is not null)
+                await DiscoverAudioAsync([SelectedFile.Path]);
+            return;
+        }
+
+        await DiscoverAudioAsync(
+            Files.Select(file => file.Path).ToArray());
+    }
 
     [RelayCommand(CanExecute = nameof(CanPreviewAudioIdentifiers))]
     private async Task PreviewAudioIdentifiersAsync()
@@ -1400,8 +1673,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             AudioDiscoveryRows.CreateTagRecipe(SelectedAudioMatch);
         await PreviewAsync((progress, ct) => _operations.PreviewAsync(
             [SelectedAudioMatch.Path], recipe, progress, ct));
-        StatusText =
-            "Audio identifiers were added to the normal metadata preview. Review before applying.";
+        SetStatus(
+            "Workbench.Status.AudioIdentifiersPreviewed");
     }
 
     [RelayCommand(CanExecute = nameof(CanResolveSelectedRecording))]
@@ -1410,7 +1683,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         if (SelectedAudioMatch is null ||
             SelectedAudioMatch.MusicBrainzRecordingIdValues.Length != 1)
             return;
-        BeginOperation("Resolving MusicBrainz release editions");
+        BeginOperation(
+            L("Workbench.Activity.ResolvingMusicBrainz"));
         try
         {
             MusicBrainzReleaseResult result =
@@ -1423,17 +1697,22 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                          SelectedAudioMatch.Path, result))
                 ReleaseMatches.Add(row);
             SelectedRelease = ReleaseMatches.FirstOrDefault();
-            StatusText =
-                $"MusicBrainz returned {ReleaseMatches.Count:N0} release edition(s). " +
-                "No metadata was selected or changed.";
+            SelectedOnlineMetadataResultStep =
+                WorkbenchOnlineMetadataResultStep.MusicBrainzReleases;
+            SetCountStatus(
+                "Workbench.Status.MusicBrainzResolved",
+                ReleaseMatches.Count);
         }
         catch (OperationCanceledException)
         {
-            StatusText = "MusicBrainz release lookup cancelled.";
+            SetStatus(
+                "Workbench.Status.MusicBrainzLookupCancelled");
         }
         catch (Exception error)
         {
-            StatusText = $"MusicBrainz release lookup failed: {error.Message}";
+            SetFailure(
+                "Workbench.Status.MusicBrainzLookupFailed",
+                error.Message);
         }
         finally
         {
@@ -1445,7 +1724,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     [RelayCommand(CanExecute = nameof(CanSearchMusicBrainzReleases))]
     private async Task SearchMusicBrainzReleasesAsync()
     {
-        BeginOperation("Searching MusicBrainz releases");
+        SelectedOnlineMetadataResultStep =
+            WorkbenchOnlineMetadataResultStep.MusicBrainzReleases;
+        BeginOperation(
+            L("Workbench.Activity.SearchingMusicBrainz"));
         try
         {
             MusicBrainzReleaseSearchResult result =
@@ -1461,17 +1743,20 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                      MusicBrainzReleaseRows.CreateSearch(sourcePath, result))
                 ReleaseMatches.Add(row);
             SelectedRelease = ReleaseMatches.FirstOrDefault();
-            StatusText =
-                $"MusicBrainz found {ReleaseMatches.Count:N0} release edition(s). " +
-                "Choose one and build a file-to-track mapping.";
+            SetCountStatus(
+                "Workbench.Status.MusicBrainzFound",
+                ReleaseMatches.Count);
         }
         catch (OperationCanceledException)
         {
-            StatusText = "MusicBrainz release search cancelled.";
+            SetStatus(
+                "Workbench.Status.MusicBrainzSearchCancelled");
         }
         catch (Exception error)
         {
-            StatusText = $"MusicBrainz release search failed: {error.Message}";
+            SetFailure(
+                "Workbench.Status.MusicBrainzSearchFailed",
+                error.Message);
         }
         finally
         {
@@ -1480,12 +1765,33 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         }
     }
 
+    [RelayCommand(CanExecute = nameof(CanSearchOnlineReleases))]
+    private async Task SearchOnlineReleasesAsync()
+    {
+        if (SelectedOnlineMetadataProvider.Provider ==
+            WorkbenchOnlineMetadataProvider.MusicBrainz)
+        {
+            SelectedOnlineMetadataResultStep =
+                WorkbenchOnlineMetadataResultStep.MusicBrainzReleases;
+            await SearchMusicBrainzReleasesAsync();
+        }
+        else
+        {
+            SelectedOnlineMetadataResultStep =
+                WorkbenchOnlineMetadataResultStep.DiscogsReleases;
+            await SearchDiscogsReleasesAsync();
+        }
+    }
+
     [RelayCommand(CanExecute = nameof(CanSearchDiscogsReleases))]
     private async Task SearchDiscogsReleasesAsync()
     {
         if (_discogs is null)
             return;
-        BeginOperation("Searching Discogs releases");
+        SelectedOnlineMetadataResultStep =
+            WorkbenchOnlineMetadataResultStep.DiscogsReleases;
+        BeginOperation(
+            L("Workbench.Activity.SearchingDiscogs"));
         try
         {
             DiscogsReleaseSearchResult result =
@@ -1496,23 +1802,28 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             SelectedDiscogsRelease = null;
             DiscogsMatches.Clear();
             string source = result.OfflineFallback
-                ? "Offline cache"
-                : result.FromCache ? "Cache" : "Discogs";
+                ? L("Workbench.Online.Source.OfflineCache")
+                : result.FromCache
+                    ? L("Workbench.Online.Source.Cache")
+                    : "Discogs";
             foreach (DiscogsReleaseCandidate candidate in result.Releases)
                 DiscogsMatches.Add(
                     DiscogsReleaseRow.Create(candidate, source));
             SelectedDiscogsRelease = DiscogsMatches.FirstOrDefault();
-            StatusText =
-                $"Discogs found {DiscogsMatches.Count:N0} release edition(s). " +
-                "Select one to load its complete track and edition details.";
+            SetCountStatus(
+                "Workbench.Status.DiscogsFound",
+                DiscogsMatches.Count);
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Discogs release search cancelled.";
+            SetStatus(
+                "Workbench.Status.DiscogsSearchCancelled");
         }
         catch (Exception error)
         {
-            StatusText = $"Discogs release search failed: {error.Message}";
+            SetFailure(
+                "Workbench.Status.DiscogsSearchFailed",
+                error.Message);
         }
         finally
         {
@@ -1526,7 +1837,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     {
         if (_discogs is null || SelectedDiscogsRelease is null)
             return;
-        BeginOperation("Loading Discogs release details");
+        BeginOperation(
+            L("Workbench.Activity.LoadingDiscogsDetails"));
         try
         {
             DiscogsReleaseRow selected = SelectedDiscogsRelease;
@@ -1541,18 +1853,21 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             if (index >= 0)
                 DiscogsMatches[index] = detailed;
             SelectedDiscogsRelease = detailed;
-            StatusText =
-                $"Loaded Discogs release {release.ReleaseId} with " +
-                $"{release.Tracks.Length:N0} track(s). No metadata was changed.";
+            SetCountStatus(
+                "Workbench.Status.DiscogsDetailsLoaded",
+                release.Tracks.Length,
+                release.ReleaseId);
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Discogs release detail lookup cancelled.";
+            SetStatus(
+                "Workbench.Status.DiscogsDetailsCancelled");
         }
         catch (Exception error)
         {
-            StatusText =
-                $"Discogs release detail lookup failed: {error.Message}";
+            SetFailure(
+                "Workbench.Status.DiscogsDetailsFailed",
+                error.Message);
         }
         finally
         {
@@ -1566,7 +1881,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     {
         if (_discogsMapping is null || SelectedDiscogsRelease is null)
             return;
-        BeginOperation("Matching Workbench files to Discogs tracks");
+        BeginOperation(
+            L("Workbench.Activity.MappingDiscogsTracks"));
         try
         {
             DiscogsReleaseCandidate release =
@@ -1597,18 +1913,24 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                 row.PropertyChanged += OnDiscogsMappingChanged;
                 DiscogsTrackMappings.Add(row);
             }
-            StatusText =
-                $"Suggested {mapping.SuggestedCount:N0} of {mapping.Files.Length:N0} " +
-                $"Discogs file-to-track mappings; " +
-                $"{mapping.AmbiguousCount:N0} need review.";
+            SelectedOnlineMetadataResultStep =
+                WorkbenchOnlineMetadataResultStep.TrackMapping;
+            SetStatus(
+                "Workbench.Status.DiscogsMappingReady",
+                mapping.SuggestedCount,
+                mapping.Files.Length,
+                mapping.AmbiguousCount);
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Discogs track mapping cancelled.";
+            SetStatus(
+                "Workbench.Status.DiscogsMappingCancelled");
         }
         catch (Exception error)
         {
-            StatusText = $"Discogs track mapping failed: {error.Message}";
+            SetFailure(
+                "Workbench.Status.DiscogsMappingFailed",
+                error.Message);
         }
         finally
         {
@@ -1635,12 +1957,13 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         await PreviewAsync((progress, ct) =>
             _operations.PreviewValueEditsAsync(
                 edits,
-                $"Discogs: {SelectedDiscogsRelease.Title}",
+                LF(
+                    "Workbench.Operation.DiscogsMetadata",
+                    SelectedDiscogsRelease.Title),
                 progress,
                 ct));
-        StatusText =
-            "Mapped Discogs fields were added to the normal metadata preview. " +
-            "Review every change before applying.";
+        SetStatus(
+            "Workbench.Status.DiscogsMetadataPreviewed");
     }
 
     [RelayCommand(CanExecute = nameof(CanPreviewDiscogsReleaseArtwork))]
@@ -1662,7 +1985,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                 ID3v2Util.APICType.FrontCover,
                 download.ContentType,
                 download.Data,
-                $"Discogs release {selected.ReleaseId}");
+                LF(
+                    "Workbench.Online.DiscogsArtworkDescription",
+                    selected.ReleaseId));
             var edits = paths.ToDictionary(
                 path => path,
                 _ => new ArtworkValueEdit(
@@ -1671,15 +1996,16 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                 PathComparer);
             return await _operations.PreviewArtworkEditsAsync(
                 edits,
-                $"Discogs artwork: {releaseTitle}",
+                LF(
+                    "Workbench.Operation.DiscogsArtwork",
+                    releaseTitle),
                 progress,
                 ct);
         });
         if (_plan is not null)
         {
-            StatusText =
-                "The selected Discogs cover was added to the normal artwork preview. " +
-                "Review every change before applying.";
+            SetStatus(
+                "Workbench.Status.DiscogsArtworkPreviewed");
         }
     }
 
@@ -1688,9 +2014,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     {
         string? path = ReportEditor.OneFilePerGroup
             ? await _files.PickFolderAsync(
-                "Choose report output folder")
+                L("Workbench.Picker.ReportFolder.Title"))
             : await _files.SaveFileAsync(
-                "Choose report output",
+                L("Workbench.Picker.ReportOutput.Title"),
                 "music-library-report." +
                 ReportEditor.SuggestedExtension,
                 ReportEditor.SuggestedExtension);
@@ -1703,7 +2029,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     {
         if (_reports is null)
             return;
-        BeginOperation("Building report preview");
+        BeginOperation(
+            L("Workbench.Activity.BuildingReportPreview"));
         try
         {
             ReportExportPlan plan = await _reports.PreviewAsync(
@@ -1717,29 +2044,36 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             foreach (ReportFilePlan file in plan.Files)
                 ReportOutputs.Add(new(
                     string.IsNullOrWhiteSpace(file.Group)
-                        ? "All"
+                        ? L("Common.All")
                         : file.Group,
                     file.DestinationPath,
                     file.RowCount,
                     file.ByteCount));
             int blockers = plan.Issues.Count(issue =>
                 issue.Severity == OperationIssueSeverity.Blocker);
-            StatusText = blockers > 0
-                ? $"Report preview has {blockers:N0} blocker(s). No output was written."
-                : $"Previewed {plan.Files.Count:N0} report file(s). " +
-                  "Review the destinations before applying.";
+            if (blockers > 0)
+                SetCountStatus(
+                    "Workbench.Status.ReportPreviewBlocked",
+                    blockers);
+            else
+                SetCountStatus(
+                    "Workbench.Status.ReportPreviewReady",
+                    plan.Files.Count);
             ApplyReportCommand.NotifyCanExecuteChanged();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
         catch (OperationCanceledException)
         {
             InvalidateReportPlan();
-            StatusText = "Report preview cancelled.";
+            SetStatus(
+                "Workbench.Status.ReportPreviewCancelled");
         }
         catch (Exception error)
         {
             InvalidateReportPlan();
-            StatusText = $"Report preview failed: {error.Message}";
+            SetFailure(
+                "Workbench.Status.ReportPreviewFailed",
+                error.Message);
         }
         finally
         {
@@ -1752,7 +2086,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     {
         if (_reports is null || _reportPlan is null)
             return;
-        BeginOperation("Writing reviewed report");
+        BeginOperation(
+            L("Workbench.Activity.WritingReport"));
         try
         {
             ReportExportResult result = await _reports.ApplyAsync(
@@ -1760,19 +2095,23 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                 CreateProgress(),
                 _cancellation!.Token);
             _reportPlan = null;
-            StatusText =
-                $"Wrote {result.FileCount:N0} report file(s) with " +
-                $"{result.RowCount:N0} row(s).";
+            SetCountStatus(
+                "Workbench.Status.ReportWritten",
+                result.FileCount,
+                result.RowCount);
             ApplyReportCommand.NotifyCanExecuteChanged();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Report output cancelled.";
+            SetStatus(
+                "Workbench.Status.ReportOutputCancelled");
         }
         catch (Exception error)
         {
-            StatusText = $"Report output failed: {error.Message}";
+            SetFailure(
+                "Workbench.Status.ReportOutputFailed",
+                error.Message);
         }
         finally
         {
@@ -1785,9 +2124,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     {
         string? path = PlaylistEditor.OnePlaylistPerGroup
             ? await _files.PickFolderAsync(
-                "Choose playlist output folder")
+                L("Workbench.Picker.PlaylistFolder.Title"))
             : await _files.SaveFileAsync(
-                "Choose playlist output",
+                L("Workbench.Picker.PlaylistOutput.Title"),
                 "music-playlist." +
                 PlaylistEditor.SuggestedExtension,
                 PlaylistEditor.SuggestedExtension);
@@ -1800,7 +2139,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     {
         if (_playlists is null)
             return;
-        BeginOperation("Building playlist preview");
+        BeginOperation(
+            L("Workbench.Activity.BuildingPlaylistPreview"));
         try
         {
             PlaylistWorkspacePlan plan =
@@ -1815,30 +2155,36 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             foreach (PlaylistWorkspaceFilePlan file in plan.Files)
                 PlaylistOutputs.Add(new(
                     string.IsNullOrWhiteSpace(file.Group)
-                        ? "All"
+                        ? L("Common.All")
                         : file.Group,
                     file.DestinationPath,
                     file.TrackCount,
                     file.ByteCount));
             int blockers = plan.Issues.Count(issue =>
                 issue.Severity == OperationIssueSeverity.Blocker);
-            StatusText = blockers > 0
-                ? $"Playlist preview has {blockers:N0} blocker(s). No output was written."
-                : $"Previewed {plan.Files.Count:N0} playlist file(s). " +
-                  "Review the destinations before applying.";
+            if (blockers > 0)
+                SetCountStatus(
+                    "Workbench.Status.PlaylistPreviewBlocked",
+                    blockers);
+            else
+                SetCountStatus(
+                    "Workbench.Status.PlaylistPreviewReady",
+                    plan.Files.Count);
             ApplyPlaylistCommand.NotifyCanExecuteChanged();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
         catch (OperationCanceledException)
         {
             InvalidatePlaylistPlan();
-            StatusText = "Playlist preview cancelled.";
+            SetStatus(
+                "Workbench.Status.PlaylistPreviewCancelled");
         }
         catch (Exception error)
         {
             InvalidatePlaylistPlan();
-            StatusText =
-                $"Playlist preview failed: {error.Message}";
+            SetFailure(
+                "Workbench.Status.PlaylistPreviewFailed",
+                error.Message);
         }
         finally
         {
@@ -1851,7 +2197,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     {
         if (_playlists is null || _playlistPlan is null)
             return;
-        BeginOperation("Writing reviewed playlist");
+        BeginOperation(
+            L("Workbench.Activity.WritingPlaylist"));
         try
         {
             PlaylistWorkspaceResult result =
@@ -1860,20 +2207,23 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                     CreateProgress(),
                     _cancellation!.Token);
             _playlistPlan = null;
-            StatusText =
-                $"Wrote {result.PlaylistCount:N0} playlist file(s) with " +
-                $"{result.TrackReferenceCount:N0} track reference(s).";
+            SetCountStatus(
+                "Workbench.Status.PlaylistWritten",
+                result.PlaylistCount,
+                result.TrackReferenceCount);
             ApplyPlaylistCommand.NotifyCanExecuteChanged();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Playlist output cancelled.";
+            SetStatus(
+                "Workbench.Status.PlaylistOutputCancelled");
         }
         catch (Exception error)
         {
-            StatusText =
-                $"Playlist output failed: {error.Message}";
+            SetFailure(
+                "Workbench.Status.PlaylistOutputFailed",
+                error.Message);
         }
         finally
         {
@@ -1886,7 +2236,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private async Task BrowseExternalToolExecutableAsync()
     {
         string? path = await _files.PickFileAsync(
-            "Choose external tool executable");
+            L("Workbench.Picker.ExternalTool.Title"));
         if (!string.IsNullOrWhiteSpace(path))
             ExternalToolEditor.Executable = path;
     }
@@ -1896,7 +2246,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private async Task BrowseExternalToolWorkingDirectoryAsync()
     {
         string? path = await _files.PickFolderAsync(
-            "Choose external tool working directory");
+            L("Workbench.Picker.ExternalWorkingDirectory.Title"));
         if (!string.IsNullOrWhiteSpace(path))
             ExternalToolEditor.WorkingDirectory = path;
     }
@@ -1921,15 +2271,20 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                 string.Join(
                     Environment.NewLine,
                     invocation.Arguments),
-                invocation.WorkingDirectory ?? "(application default)",
+                invocation.WorkingDirectory ??
+                    L("Workbench.Tools.ApplicationDefault"),
                 invocation.SourcePaths.Count));
         }
         int blockers = plan.Issues.Count(issue =>
             issue.Severity == OperationIssueSeverity.Blocker);
-        StatusText = blockers > 0
-            ? $"External-tool preview has {blockers:N0} blocker(s). Nothing can run."
-            : $"Previewed {plan.Invocations.Count:N0} process invocation(s). " +
-              "External tools run outside MusicLibraryManager recovery.";
+        if (blockers > 0)
+            SetCountStatus(
+                "Workbench.Status.ExternalToolPreviewBlocked",
+                blockers);
+        else
+            SetCountStatus(
+                "Workbench.Status.ExternalToolPreviewReady",
+                plan.Invocations.Count);
         RunExternalToolCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(HasUnsavedChanges));
     }
@@ -1940,15 +2295,17 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         if (_externalTools is null || _externalToolPlan is null)
             return;
         if (!await _dialogs.ConfirmAsync(
-                "Run external tool?",
-                $"Run '{_externalToolPlan.Definition.Name}' " +
-                $"{_externalToolPlan.Invocations.Count:N0} time(s)? " +
-                "External tools can change files and are outside " +
-                "MusicLibraryManager recovery.",
-                "Run"))
+                L("Workbench.Dialog.RunTool.Title"),
+                LF(
+                    "Workbench.Dialog.RunTool.Message",
+                    _externalToolPlan.Definition.Name,
+                    _externalToolPlan.Invocations.Count),
+                L("Common.Run")))
             return;
         BeginOperation(
-            $"Running {_externalToolPlan.Definition.Name}");
+            LF(
+                "Workbench.Activity.RunningTool",
+                _externalToolPlan.Definition.Name));
         try
         {
             ExternalToolRunResult result =
@@ -1957,21 +2314,23 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                     CreateProgress(),
                     _cancellation!.Token);
             _externalToolPlan = null;
-            StatusText =
-                $"External tool finished: {result.SucceededCount:N0} " +
-                $"succeeded, {result.FailedCount:N0} failed.";
+            SetStatus(
+                "Workbench.Status.ExternalToolFinished",
+                result.SucceededCount,
+                result.FailedCount);
             RunExternalToolCommand.NotifyCanExecuteChanged();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
         catch (OperationCanceledException)
         {
-            StatusText =
-                "External tool cancelled. The active process was stopped.";
+            SetStatus(
+                "Workbench.Status.ExternalToolCancelled");
         }
         catch (Exception error)
         {
-            StatusText =
-                $"External tool stopped: {error.Message}";
+            SetFailure(
+                "Workbench.Status.ExternalToolFailed",
+                error.Message);
         }
         finally
         {
@@ -1984,7 +2343,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     {
         if (SelectedRelease is null)
             return;
-        BeginOperation("Finding Cover Art Archive images");
+        BeginOperation(
+            L("Workbench.Activity.FindingCoverArt"));
         try
         {
             IProgress<OperationProgress> progress = CreateProgress();
@@ -2004,8 +2364,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                     OperationPhase.Planning,
                     index,
                     ArtworkMatches.Count,
-                    Message: $"Loading artwork thumbnail {index + 1:N0} " +
-                        $"of {ArtworkMatches.Count:N0}"));
+                    Message: LF(
+                        "Workbench.Progress.LoadingArtworkThumbnail",
+                        index + 1,
+                        ArtworkMatches.Count)));
                 try
                 {
                     CoverArtDownload download =
@@ -2017,8 +2379,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                         await _thumbnails.CreateImageSourceAsync(
                             download.Data, 180, _cancellation.Token);
                     row.ThumbnailStatus = download.FromCache
-                        ? "Cached"
-                        : $"{download.Data.Length:N0} bytes";
+                        ? L("Workbench.Online.Thumbnail.Cached")
+                        : LF(
+                            "Workbench.Online.Thumbnail.Bytes",
+                            download.Data.Length);
                 }
                 catch (Exception error) when (
                     error is not OperationCanceledException)
@@ -2028,18 +2392,26 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             }
             SelectedArtworkMatch = ArtworkMatches.FirstOrDefault(row =>
                 row.Candidate.IsFront) ?? ArtworkMatches.FirstOrDefault();
-            StatusText = ArtworkMatches.Count == 0
-                ? "This release has no Cover Art Archive images."
-                : $"Loaded {ArtworkMatches.Count:N0} artwork candidate(s). " +
-                  "No files were changed.";
+            SelectedOnlineMetadataResultStep =
+                WorkbenchOnlineMetadataResultStep.Artwork;
+            if (ArtworkMatches.Count == 0)
+                SetStatus(
+                    "Workbench.Status.NoCoverArt");
+            else
+                SetCountStatus(
+                    "Workbench.Status.CoverArtLoaded",
+                    ArtworkMatches.Count);
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Cover Art Archive lookup cancelled.";
+            SetStatus(
+                "Workbench.Status.CoverArtCancelled");
         }
         catch (Exception error)
         {
-            StatusText = $"Cover Art Archive lookup failed: {error.Message}";
+            SetFailure(
+                "Workbench.Status.CoverArtFailed",
+                error.Message);
         }
         finally
         {
@@ -2078,15 +2450,16 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                 PathComparer);
             return await _operations.PreviewArtworkEditsAsync(
                 edits,
-                $"Cover Art Archive: {releaseTitle}",
+                LF(
+                    "Workbench.Operation.CoverArtArchive",
+                    releaseTitle),
                 progress,
                 ct);
         });
         if (_plan is not null)
         {
-            StatusText =
-                "The selected front cover was added to the normal metadata preview. " +
-                "Review every artwork change before applying.";
+            SetStatus(
+                "Workbench.Status.ReleaseArtworkPreviewed");
         }
     }
 
@@ -2094,8 +2467,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private async Task PreviewLocalArtworkAsync()
     {
         string? artworkPath = await _files.PickFileAsync(
-            "Choose front-cover artwork",
-            [new("Artwork images",
+            L("Workbench.Picker.FrontCover.Title"),
+            [new(L("Workbench.Picker.ArtworkImages"),
                 [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"])]);
         if (artworkPath is null || SelectedFile is null)
             return;
@@ -2107,7 +2480,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                 0,
                 1,
                 artworkPath,
-                $"Reading {Path.GetFileName(artworkPath)}"));
+                LF(
+                    "Workbench.Progress.ReadingFile",
+                    Path.GetFileName(artworkPath))));
             byte[] data = await File.ReadAllBytesAsync(artworkPath, ct);
             var edits = new Dictionary<string, ArtworkValueEdit>(
                 PathComparer)
@@ -2121,7 +2496,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                         Path.GetFileNameWithoutExtension(artworkPath))),
             };
             return await _operations.PreviewArtworkEditsAsync(
-                edits, "Replace front cover", progress, ct);
+                edits,
+                L("Workbench.Operation.ReplaceFrontCover"),
+                progress,
+                ct);
         });
     }
 
@@ -2138,7 +2516,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         };
         await PreviewAsync((progress, ct) =>
             _operations.PreviewArtworkEditsAsync(
-                edits, "Remove front cover", progress, ct));
+                edits,
+                L("Workbench.Operation.RemoveFrontCover"),
+                progress,
+                ct));
     }
 
     [RelayCommand(CanExecute = nameof(CanPreviewSelectedArtwork))]
@@ -2153,14 +2534,17 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         };
         await PreviewAsync((progress, ct) =>
             _operations.PreviewArtworkEditsAsync(
-                edits, "Remove all artwork", progress, ct));
+                edits,
+                L("Workbench.Operation.RemoveAllArtwork"),
+                progress,
+                ct));
     }
 
     [RelayCommand(CanExecute = nameof(CanAddStagedArtwork))]
     private async Task AddStagedArtworkAsync()
     {
         string? path = await PickArtworkFileAsync(
-            "Choose artwork to add");
+            L("Workbench.Picker.AddArtwork.Title"));
         if (path is null)
             return;
         byte[] data = await File.ReadAllBytesAsync(path);
@@ -2194,7 +2578,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         if (SelectedStagedArtwork is not { } item)
             return;
         string? path = await PickArtworkFileAsync(
-            "Choose replacement artwork");
+            L("Workbench.Picker.ReplaceArtwork.Title"));
         if (path is null)
             return;
         byte[] data = await File.ReadAllBytesAsync(path);
@@ -2260,18 +2644,21 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         string extension = ArtworkFileExtension(
             item.MimeType);
         string baseName = Path.GetFileNameWithoutExtension(
-            SelectedFile?.Path) ?? "artwork";
+            SelectedFile?.Path) ??
+            L("Inspector.Artwork.DefaultFileName");
         string suggested =
             $"{baseName}-{item.Type}{extension}";
         string? path = await _files.SaveFileAsync(
-            "Export embedded artwork",
+            L("Workbench.Picker.ExportArtwork.Title"),
             suggested,
             extension);
         if (path is null)
             return;
         await File.WriteAllBytesAsync(path, item.Data);
-        StatusText =
-            $"Exported {item.Label.ToLowerInvariant()} artwork to {path}.";
+        SetStatus(
+            "Workbench.Status.ArtworkExported",
+            item.Label,
+            path);
     }
 
     [RelayCommand(CanExecute = nameof(CanPreviewStagedArtwork))]
@@ -2287,8 +2674,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         await PreviewAsync((progress, ct) =>
             _operations.PreviewArtworkSetsAsync(
                 requests,
-                $"Edit embedded artwork for " +
-                $"{targets.Count:N0} file(s)",
+                LF(
+                    "Workbench.Operation.EditEmbeddedArtwork",
+                    targets.Count),
                 progress,
                 ct));
     }
@@ -2298,7 +2686,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     {
         if (SelectedRelease is null)
             return;
-        BeginOperation("Matching Workbench files to release tracks");
+        BeginOperation(
+            L("Workbench.Activity.MappingReleaseTracks"));
         try
         {
             MusicBrainzReleaseCandidate release =
@@ -2333,17 +2722,24 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                 row.PropertyChanged += OnReleaseMappingChanged;
                 ReleaseTrackMappings.Add(row);
             }
-            StatusText =
-                $"Suggested {mapping.SuggestedCount:N0} of {mapping.Files.Length:N0} " +
-                $"file-to-track mappings; {mapping.AmbiguousCount:N0} need review.";
+            SelectedOnlineMetadataResultStep =
+                WorkbenchOnlineMetadataResultStep.TrackMapping;
+            SetStatus(
+                "Workbench.Status.ReleaseMappingReady",
+                mapping.SuggestedCount,
+                mapping.Files.Length,
+                mapping.AmbiguousCount);
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Release track mapping cancelled.";
+            SetStatus(
+                "Workbench.Status.ReleaseMappingCancelled");
         }
         catch (Exception error)
         {
-            StatusText = $"Release track mapping failed: {error.Message}";
+            SetFailure(
+                "Workbench.Status.ReleaseMappingFailed",
+                error.Message);
         }
         finally
         {
@@ -2370,17 +2766,19 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         await PreviewAsync((progress, ct) =>
             _operations.PreviewValueEditsAsync(
                 edits,
-                $"MusicBrainz: {SelectedRelease.Title}",
+                LF(
+                    "Workbench.Operation.MusicBrainzMetadata",
+                    SelectedRelease.Title),
                 progress,
                 ct));
-        StatusText =
-            "Mapped MusicBrainz fields were added to the normal metadata preview. " +
-            "Review every change before applying.";
+        SetStatus(
+            "Workbench.Status.MusicBrainzMetadataPreviewed");
     }
 
     private async Task DiscoverAudioAsync(IReadOnlyList<string> paths)
     {
-        BeginOperation("Preparing audio fingerprint discovery");
+        BeginOperation(
+            L("Workbench.Activity.PreparingFingerprint"));
         try
         {
             AcoustIdDiscoveryResult result = await _audioDiscovery.DiscoverAsync(
@@ -2393,17 +2791,22 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                 AudioMatches.Add(row);
             SelectedAudioMatch = AudioMatches.FirstOrDefault();
             int issues = result.Files.Sum(file => file.Issues.Length);
-            StatusText =
-                $"Fingerprint discovery: {result.FingerprintedFileCount:N0} file(s), " +
-                $"{result.CandidateCount:N0} candidate(s), {issues:N0} warning(s).";
+            SetStatus(
+                "Workbench.Status.FingerprintDiscovery",
+                result.FingerprintedFileCount,
+                result.CandidateCount,
+                issues);
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Audio fingerprint discovery cancelled.";
+            SetStatus(
+                "Workbench.Status.FingerprintCancelled");
         }
         catch (Exception error)
         {
-            StatusText = $"Audio fingerprint discovery failed: {error.Message}";
+            SetFailure(
+                "Workbench.Status.FingerprintFailed",
+                error.Message);
         }
         finally
         {
@@ -2417,9 +2820,9 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         if (!HasUnsavedChanges)
             return Task.FromResult(true);
         return _dialogs.ConfirmAsync(
-            "Leave the Workbench?",
-            "The current preview and inline edits remain in this session, but have not been applied to disk.",
-            "Leave");
+            L("Workbench.Dialog.Leave.Title"),
+            L("Workbench.Dialog.Leave.Message"),
+            L("Workbench.Dialog.Leave.Confirm"));
     }
 
     private async Task ReloadAsync(
@@ -2466,19 +2869,25 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     private async Task ReloadAfterInspectorSaveAsync(
         IReadOnlyList<string> paths)
     {
-        BeginOperation("Reloading inspector changes");
+        BeginOperation(
+            L("Workbench.Activity.ReloadingInspectorChanges"));
         try
         {
             await ReloadAsync(paths, CreateProgress(), _cancellation!.Token);
-            StatusText = $"Reloaded {paths.Count:N0} file(s) after inspector changes.";
+            SetCountStatus(
+                "Workbench.Status.InspectorChangesReloaded",
+                paths.Count);
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Reload after inspector changes was cancelled.";
+            SetStatus(
+                "Workbench.Status.InspectorReloadCancelled");
         }
         catch (Exception error)
         {
-            StatusText = $"Could not reload inspector changes: {error.Message}";
+            SetFailure(
+                "Workbench.Status.InspectorReloadFailed",
+                error.Message);
         }
         finally
         {
@@ -2517,7 +2926,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         RepresentativePreview.Schedule(
             SelectedFile?.Path,
             () => OperationEditor.CreateRecipe(
-                "Draft representative preview"));
+                L("Workbench.Operation.DraftRepresentativePreview")));
 
     public static IReadOnlyList<WorkbenchMetadataFieldRow>
         BuildMetadataFieldRows(
@@ -2823,7 +3232,7 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         await _files.PickFileAsync(
             title,
             [new(
-                "Artwork images",
+                L("Workbench.Picker.ArtworkImages"),
                 [
                     ".jpg",
                     ".jpeg",
@@ -2869,15 +3278,26 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
 
     private static string ArtworkDetails(
         ArtworkModel image) =>
-        $"{image.ImageType ?? "image"} · " +
-        $"{image.Width:N0} × {image.Height:N0} · " +
-        $"{FormatBytes(image.Size)}";
+        LocalizedText.Format(
+            "Inspector.Artwork.Details",
+            image.ImageType ??
+                LocalizedText.Get(
+                    "Inspector.Artwork.Image"),
+            image.Width,
+            image.Height,
+            FormatBytes(image.Size));
 
     private static string FormatBytes(long bytes) => bytes switch
     {
-        >= 1024 * 1024 => $"{bytes / 1024d / 1024d:N1} MB",
-        >= 1024 => $"{bytes / 1024d:N0} KB",
-        _ => $"{bytes:N0} bytes",
+        >= 1024 * 1024 => LocalizedText.Format(
+            "Inspector.Size.Megabytes",
+            bytes / 1024d / 1024d),
+        >= 1024 => LocalizedText.Format(
+            "Inspector.Size.Kilobytes",
+            bytes / 1024d),
+        _ => LocalizedText.FormatCount(
+            "Inspector.Size.Bytes",
+            bytes),
     };
 
     private void OnTrackChanged(object? sender, PropertyChangedEventArgs e)
@@ -2984,20 +3404,20 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
                         MetadataValueEdit>)pair.Value.Values
                         .ToArray(),
                     PathComparer),
-                "Workbench grid and inspector edits",
+                L("Workbench.Operation.GridAndInspectorEdits"),
                 progress,
                 cancellationToken);
         MetadataOperationPlan? artworkPlan = artworkEdits is null
             ? null
             : await _operations.PreviewArtworkSetsAsync(
                 artworkEdits,
-                "Workbench inspector artwork",
+                L("Workbench.Operation.InspectorArtwork"),
                 progress,
                 cancellationToken);
         if (valuesPlan is null && artworkPlan is null)
             return null;
         return MetadataOperationPlanComposer.Combine(
-            "Workbench pending changes",
+            L("Workbench.Operation.PendingChanges"),
             valuesPlan,
             artworkPlan);
 
@@ -3034,6 +3454,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         RepeatCommand.NotifyCanExecuteChanged();
         DiscoverSelectedAudioCommand.NotifyCanExecuteChanged();
         DiscoverAllAudioCommand.NotifyCanExecuteChanged();
+        DiscoverOnlineAudioCommand.NotifyCanExecuteChanged();
+        SearchOnlineReleasesCommand.NotifyCanExecuteChanged();
         PreviewAudioIdentifiersCommand.NotifyCanExecuteChanged();
         ResolveSelectedRecordingCommand.NotifyCanExecuteChanged();
         BuildReleaseMappingCommand.NotifyCanExecuteChanged();
@@ -3048,7 +3470,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         if (_plan is not null ||
             _stagedArtworkDirty ||
             EditTargets.Any(file => file.HasChanges))
-            return "Apply or discard the current metadata and artwork edits before moving files.";
+            return L(
+                "Workbench.FileOperations.PendingMetadataPreflight");
         return null;
     }
 
@@ -3170,6 +3593,60 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         catch { }
     }
 
+    private void LoadUiPreferences()
+    {
+        _loadingUiPreferences = true;
+        try
+        {
+            string? json = _settings.GetPreference(UiPreference);
+            WorkbenchUiPreferences? preferences =
+                string.IsNullOrWhiteSpace(json)
+                    ? null
+                    : JsonSerializer.Deserialize<
+                        WorkbenchUiPreferences>(json);
+            if (preferences is null)
+                return;
+            if (Enum.IsDefined(preferences.Section))
+                SelectedSection = preferences.Section;
+            IsInspectorOpen = preferences.InspectorOpen;
+        }
+        catch
+        {
+            SelectedSection = WorkbenchSection.Session;
+            IsInspectorOpen = true;
+        }
+        finally
+        {
+            _loadingUiPreferences = false;
+        }
+    }
+
+    private void PersistUiPreferences()
+    {
+        if (_loadingUiPreferences)
+            return;
+        try
+        {
+            _settings.SetPreference(
+                UiPreference,
+                JsonSerializer.Serialize(
+                    new WorkbenchUiPreferences(
+                        SelectedSection,
+                        IsInspectorOpen)));
+        }
+        catch { }
+    }
+
+    partial void OnSelectedSectionChanged(
+        WorkbenchSection value)
+    {
+        OnPropertyChanged(nameof(SelectedSectionOption));
+        PersistUiPreferences();
+    }
+
+    partial void OnIsInspectorOpenChanged(bool value) =>
+        PersistUiPreferences();
+
     private void AddRecentLocation(string path)
     {
         string fullPath;
@@ -3269,6 +3746,11 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         _history.Entries.FirstOrDefault()?.Recipe is not null;
     private bool CanDiscoverSelectedAudio() => !IsBusy && SelectedFile is not null;
     private bool CanDiscoverAllAudio() => !IsBusy && Files.Count > 0;
+    private bool CanDiscoverOnlineAudio() =>
+        SelectedOnlineMetadataScope.Scope ==
+            WorkbenchOnlineMetadataScope.SelectedFile
+            ? CanDiscoverSelectedAudio()
+            : CanDiscoverAllAudio();
     private bool CanPreviewAudioIdentifiers() =>
         !IsBusy && SelectedAudioMatch?.AcoustId is not null &&
         !string.IsNullOrWhiteSpace(SelectedAudioMatch.Fingerprint);
@@ -3279,6 +3761,11 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         !IsBusy && ReleaseSearch.HasCriteria;
     private bool CanSearchDiscogsReleases() =>
         !IsBusy && _discogs is not null && DiscogsSearch.HasCriteria;
+    private bool CanSearchOnlineReleases() =>
+        SelectedOnlineMetadataProvider.Provider ==
+            WorkbenchOnlineMetadataProvider.MusicBrainz
+            ? CanSearchMusicBrainzReleases()
+            : CanSearchDiscogsReleases();
     private bool CanLoadDiscogsReleaseDetails() =>
         !IsBusy && _discogs is not null && SelectedDiscogsRelease is not null;
     private bool CanBuildDiscogsReleaseMapping() =>
@@ -3516,7 +4003,8 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
             CancellationToken ct)
     {
         MusicBrainzReleaseRow selected = SelectedRelease ??
-            throw new InvalidOperationException("Choose a MusicBrainz release.");
+            throw new InvalidOperationException(
+                L("Workbench.Error.ChooseMusicBrainzRelease"));
         if (selected.Candidate.Tracks.Length > 0)
             return selected.Candidate;
         MusicBrainzReleaseCandidate detailed =
@@ -3538,10 +4026,10 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
     {
         if (_discogs is null)
             throw new InvalidOperationException(
-                "Discogs is unavailable.");
+                L("Workbench.Error.DiscogsUnavailable"));
         DiscogsReleaseRow selected = SelectedDiscogsRelease ??
             throw new InvalidOperationException(
-                "Choose a Discogs release.");
+                L("Workbench.Error.ChooseDiscogsRelease"));
         if (selected.Candidate.Tracks.Length > 0)
             return selected.Candidate;
         DiscogsReleaseCandidate release =
@@ -3556,9 +4044,201 @@ public partial class WorkbenchViewModel : ObservableObject, INavigationGuard
         return release;
     }
 
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string LF(
+        string key,
+        params object?[] arguments) =>
+        _localization?.Format(key, arguments) ??
+        LocalizedText.Format(key, arguments);
+
+    private string LC(
+        string key,
+        long count,
+        params object?[] arguments) =>
+        _localization?.FormatCount(
+            key,
+            count,
+            arguments) ??
+        LocalizedText.FormatCount(
+            key,
+            count,
+            arguments);
+
+    private void SetStatus(
+        string key,
+        params object?[] arguments)
+    {
+        _statusTextKey = key;
+        _statusTextArguments = arguments;
+        _statusTextCount = null;
+        StatusText = LF(key, arguments);
+        StatusDiagnosticDetail = null;
+    }
+
+    private void SetCountStatus(
+        string key,
+        long count,
+        params object?[] arguments)
+    {
+        _statusTextKey = key;
+        _statusTextArguments = arguments;
+        _statusTextCount = count;
+        StatusText = LC(key, count, arguments);
+        StatusDiagnosticDetail = null;
+    }
+
+    private void SetFailure(
+        string key,
+        string? diagnosticDetail,
+        params object?[] arguments)
+    {
+        SetStatus(key, arguments);
+        StatusDiagnosticDetail = diagnosticDetail;
+    }
+
+    private void RefreshLocalizedChoices()
+    {
+        WorkbenchOnlineMetadataScope selectedScope =
+            SelectedOnlineMetadataScope.Scope;
+        WorkbenchOnlineMetadataProvider selectedProvider =
+            SelectedOnlineMetadataProvider.Provider;
+        TagFields? selectedKnown =
+            SelectedNewKnownField?.Field;
+
+        SectionOptions.Clear();
+        foreach (WorkbenchSection section in
+                 Enum.GetValues<WorkbenchSection>())
+        {
+            string group = section switch
+            {
+                WorkbenchSection.Session =>
+                    L("Workbench.Navigation.Group.Workspace"),
+                WorkbenchSection.BulkOperation or
+                    WorkbenchSection.AllFields or
+                    WorkbenchSection.Files =>
+                    L("Workbench.Navigation.Group.Edit"),
+                WorkbenchSection.OnlineMetadata =>
+                    L("Workbench.Navigation.Group.Enrich"),
+                WorkbenchSection.Reports or
+                    WorkbenchSection.Playlists =>
+                    L("Workbench.Navigation.Group.Output"),
+                _ =>
+                    L("Workbench.Navigation.Group.Automate"),
+            };
+            SectionOptions.Add(new(
+                section,
+                group,
+                L($"Workbench.Navigation.Section.{section}")));
+        }
+
+        OnlineMetadataScopeOptions.Clear();
+        foreach (WorkbenchOnlineMetadataScope scope in
+                 Enum.GetValues<WorkbenchOnlineMetadataScope>())
+            OnlineMetadataScopeOptions.Add(new(
+                scope,
+                L($"Workbench.Choice.OnlineScope.{scope}")));
+        SelectedOnlineMetadataScope =
+            OnlineMetadataScopeOptions.First(option =>
+                option.Scope == selectedScope);
+
+        OnlineMetadataProviderOptions.Clear();
+        foreach (WorkbenchOnlineMetadataProvider provider in
+                 Enum.GetValues<WorkbenchOnlineMetadataProvider>())
+            OnlineMetadataProviderOptions.Add(new(
+                provider,
+                L($"Workbench.Choice.OnlineProvider.{provider}")));
+        SelectedOnlineMetadataProvider =
+            OnlineMetadataProviderOptions.First(option =>
+                option.Provider == selectedProvider);
+
+        KnownFieldChoices.Clear();
+        foreach (TagFields field in Enum.GetValues<TagFields>()
+                     .Where(field =>
+                         field != TagFields.NullField))
+            KnownFieldChoices.Add(new(
+                field,
+                L($"Settings.Choice.TagFields.{field}")));
+        if (selectedKnown is { } known)
+            SelectedNewKnownField =
+                KnownFieldChoices.First(choice =>
+                    choice.Field == known);
+
+        RefreshChoices(
+            FieldEditModeChoices,
+            FieldEditModes,
+            "Workbench.Choice.FieldEditMode");
+        RefreshChoices(
+            ImportEmptyCellModeChoices,
+            ImportEmptyCellModes,
+            "Workbench.Choice.ImportEmptyCellMode");
+        RefreshChoices(
+            Id3VersionChoices,
+            Id3Versions,
+            "Workbench.Choice.Id3Version");
+        RefreshChoices(
+            Id3EncodingPolicyChoices,
+            Id3EncodingPolicies,
+            "Workbench.Choice.Id3EncodingPolicy");
+        RefreshChoices(
+            ArtworkTypeChoices,
+            ArtworkTypes,
+            "Inspector.Artwork.Type",
+            ".Label");
+        OnPropertyChanged(nameof(SelectedSectionOption));
+    }
+
+    private void RefreshChoices<T>(
+        ObservableCollection<LocalizedChoice<T>> target,
+        IEnumerable<T> values,
+        string keyPrefix,
+        string keySuffix = "")
+    {
+        foreach (T value in values)
+        {
+            LocalizedChoice<T>? choice =
+                target.FirstOrDefault(item =>
+                    EqualityComparer<T>.Default.Equals(
+                        item.Value,
+                        value));
+            string label = L(
+                $"{keyPrefix}.{value}{keySuffix}");
+            if (choice is null)
+                target.Add(new(value, label));
+            else
+                choice.Label = label;
+        }
+    }
+
+    private void OnLocalizationCultureChanged(
+        object? sender,
+        EventArgs e)
+    {
+        RefreshLocalizedChoices();
+        if (_statusTextKey is not null)
+            StatusText = _statusTextCount is { } count
+                ? LC(
+                    _statusTextKey,
+                    count,
+                    _statusTextArguments)
+                : LF(
+                    _statusTextKey,
+                    _statusTextArguments);
+        RebuildMetadataFields();
+        foreach (WorkbenchTrackViewModel file in Files)
+            file.RefreshLocalizedText();
+        OnPropertyChanged(nameof(FieldSelectionSummary));
+    }
+
     private static readonly StringComparer PathComparer = OperatingSystem.IsWindows()
         ? StringComparer.OrdinalIgnoreCase
         : StringComparer.Ordinal;
+
+    private sealed record WorkbenchUiPreferences(
+        WorkbenchSection Section,
+        bool InspectorOpen);
 }
 
 public partial class WorkbenchTrackViewModel : ObservableObject
@@ -3602,7 +4282,9 @@ public partial class WorkbenchTrackViewModel : ObservableObject
     public string Codec => Document.Codec?.CodecName ?? "";
     public string CodecType => Document.Codec?.CodecType.ToString() ?? "";
     public string SampleRate => Document.Codec?.Samplerate is > 0
-        ? $"{Document.Codec.Samplerate:N0} Hz"
+        ? LocalizedText.Format(
+            "Workbench.Value.SampleRate",
+            Document.Codec.Samplerate)
         : "";
     public string BitsPerSample => Document.Codec?.BitsPerSample is > 0
         ? Document.Codec.BitsPerSample.ToString()
@@ -3614,7 +4296,9 @@ public partial class WorkbenchTrackViewModel : ObservableObject
         ? ""
         : TimeSpan.FromSeconds(Document.Codec.DurationInSeconds).ToString(@"h\:mm\:ss");
     public string Bitrate => Document.Codec?.AverageBitrate is > 0
-        ? $"{Document.Codec.AverageBitrate / 1000:N0} kbps"
+        ? LocalizedText.Format(
+            "Workbench.Value.Bitrate",
+            Document.Codec.AverageBitrate / 1000)
         : "";
     public string LayerSummary => string.Join(", ",
         Document.TagLayers.Select(layer => layer.TagType));
@@ -3628,7 +4312,9 @@ public partial class WorkbenchTrackViewModel : ObservableObject
     public string Modified => Document.Snapshot.LastWriteTimeUtc == default
         ? ""
         : Document.Snapshot.LastWriteTimeUtc.ToLocalTime()
-            .ToString("yyyy-MM-dd HH:mm");
+            .ToString(
+                "g",
+                System.Globalization.CultureInfo.CurrentCulture);
 
     [ObservableProperty, NotifyPropertyChangedFor(nameof(HasChanges))]
     private string? _title;
@@ -3691,6 +4377,14 @@ public partial class WorkbenchTrackViewModel : ObservableObject
         Comment = _original[TagFields.Comment];
     }
 
+    public void RefreshLocalizedText()
+    {
+        OnPropertyChanged(nameof(SampleRate));
+        OnPropertyChanged(nameof(Bitrate));
+        OnPropertyChanged(nameof(FileSize));
+        OnPropertyChanged(nameof(Modified));
+    }
+
     private Dictionary<TagFields, string?> CurrentValues() => new()
     {
         [TagFields.Title] = Title,
@@ -3726,7 +4420,14 @@ public partial class WorkbenchTrackViewModel : ObservableObject
 
     private static string FormatBytes(long bytes)
     {
-        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        string[] units =
+        [
+            LocalizedText.Get("Workbench.Size.Bytes"),
+            LocalizedText.Get("Workbench.Size.Kilobytes"),
+            LocalizedText.Get("Workbench.Size.Megabytes"),
+            LocalizedText.Get("Workbench.Size.Gigabytes"),
+            LocalizedText.Get("Workbench.Size.Terabytes"),
+        ];
         double value = Math.Max(0, bytes);
         int unit = 0;
         while (value >= 1024 && unit < units.Length - 1)

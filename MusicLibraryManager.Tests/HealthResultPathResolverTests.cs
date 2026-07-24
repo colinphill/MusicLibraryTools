@@ -51,6 +51,8 @@ public sealed class HealthResultPathResolverTests
         Assert.False(HealthResultPathResolver.TryGetPath(new object(), out _));
         Assert.False(HealthResultPathResolver.TryGetPath(
             new TrackRecord { Path = "   " }, out _));
+        Assert.False(HealthResultPathResolver.TryGetPath(
+            new ArtistPathViewModel(string.Empty), out _));
         Assert.False(HealthResultPathResolver.TryGetPath(null, out _));
     }
 

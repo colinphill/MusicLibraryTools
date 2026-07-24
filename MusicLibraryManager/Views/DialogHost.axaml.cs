@@ -5,6 +5,7 @@ using global::Avalonia.Interactivity;
 using global::Avalonia.Markup.Xaml;
 using global::Avalonia.Threading;
 using global::Avalonia.VisualTree;
+using MusicLibraryManager.Presentation;
 using MusicLibraryManager.Services;
 
 namespace MusicLibraryManager.Views;
@@ -12,6 +13,7 @@ namespace MusicLibraryManager.Views;
 public partial class DialogHost : UserControl
 {
     private readonly DialogService _dialogs;
+    private readonly ILocalizationService _localization;
     private DialogRequest? _renderedRequest;
     private IInputElement? _priorFocus;
     private Button? _cancelButton;
@@ -21,6 +23,7 @@ public partial class DialogHost : UserControl
     {
         InitializeComponent();
         _dialogs = App.GetService<DialogService>();
+        _localization = App.GetService<ILocalizationService>();
         _dialogs.Changed += DialogChanged;
         DetachedFromVisualTree += (_, _) => _dialogs.Changed -= DialogChanged;
     }
@@ -55,12 +58,19 @@ public partial class DialogHost : UserControl
                 break;
             case MessageRequest message:
                 DialogContent.Content = Message(message.Message, request.Tone);
-                _primaryButton = ActionButton("OK", true, request, primary: true);
+                _primaryButton = ActionButton(
+                    _localization.Get("Common.Ok"),
+                    true,
+                    request,
+                    primary: true);
                 DialogButtons.Children.Add(_primaryButton);
                 break;
             case ConfirmRequest confirm:
                 DialogContent.Content = Message(confirm.Message, request.Tone);
-                _cancelButton = ActionButton("Cancel", false, request);
+                _cancelButton = ActionButton(
+                    _localization.Get("Common.Cancel"),
+                    false,
+                    request);
                 _primaryButton = ActionButton(confirm.PrimaryText, true, request, primary: true);
                 DialogButtons.Children.Add(_cancelButton);
                 DialogButtons.Children.Add(_primaryButton);
@@ -72,7 +82,7 @@ public partial class DialogHost : UserControl
             DispatcherPriority.Input);
     }
 
-    private static Control Message(string text, DialogTone tone)
+    private Control Message(string text, DialogTone tone)
     {
         var icon = new TextBlock
         {
@@ -246,12 +256,13 @@ public partial class DialogHost : UserControl
         _ => "i",
     };
 
-    private static string ToneName(DialogTone tone) => tone switch
+    private string ToneName(DialogTone tone) =>
+        _localization.Get(tone switch
     {
-        DialogTone.Success => "Success",
-        DialogTone.Warning => "Warning",
-        DialogTone.Error => "Error",
-        DialogTone.Danger => "Danger",
-        _ => "Information",
-    };
+        DialogTone.Success => "Dialog.Tone.Success",
+        DialogTone.Warning => "Dialog.Tone.Warning",
+        DialogTone.Error => "Dialog.Tone.Error",
+        DialogTone.Danger => "Dialog.Tone.Danger",
+        _ => "Dialog.Tone.Information",
+    });
 }

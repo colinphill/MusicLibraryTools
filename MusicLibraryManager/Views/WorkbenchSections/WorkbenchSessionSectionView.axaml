@@ -1,0 +1,138 @@
+<UserControl x:Class="MusicLibraryManager.Views.WorkbenchSections.WorkbenchSessionSectionView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:MusicLibraryManager.Controls">
+  <Grid Margin="0,4,0,0"
+        RowDefinitions="Auto,*,Auto,Auto"
+        RowSpacing="8">
+    <WrapPanel>
+      <Button x:Name="WorkbenchColumnsButton"
+              Classes="app"
+              Margin="0,0,8,6"
+              Content="{DynamicResource Loc.Workbench.Session.Columns}"
+              Click="OnColumnsClick" />
+      <Button x:Name="ImportDelimitedMetadataButton"
+              Classes="app"
+              Margin="0,0,8,6"
+              Content="{DynamicResource Loc.Workbench.Session.ImportDelimited}"
+              Command="{Binding ImportDelimitedMetadataCommand}" />
+      <ComboBox x:Name="ImportEmptyCellMode"
+                Classes="app"
+                Width="145"
+                Margin="0,0,8,6"
+                ItemsSource="{Binding ImportEmptyCellModeChoices}"
+                DisplayMemberBinding="{Binding Label}"
+                SelectedValueBinding="{Binding Value}"
+                SelectedValue="{Binding ImportEmptyCellMode, Mode=TwoWay}"
+                ToolTip.Tip="{DynamicResource Loc.Workbench.Session.EmptyCellTooltip}"
+                AutomationProperties.Name="{DynamicResource Loc.Workbench.Session.EmptyCellAutomation}" />
+      <Button x:Name="WorkbenchSessionActionsButton"
+              Classes="app"
+              Margin="0,0,8,6"
+              Content="{DynamicResource Loc.Workbench.Session.SelectionActions}"
+              AutomationProperties.Name="{DynamicResource Loc.Workbench.Session.SelectionActions}">
+        <Button.Flyout>
+          <MenuFlyout>
+            <MenuItem Header="{DynamicResource Loc.Workbench.Session.Action.RemoveSelected}"
+                      Command="{Binding RemoveCurrentCommand}" />
+            <MenuItem Header="{DynamicResource Loc.Workbench.Action.MoveUp}"
+                      Command="{Binding MoveUpCommand}" />
+            <MenuItem Header="{DynamicResource Loc.Workbench.Action.MoveDown}"
+                      Command="{Binding MoveDownCommand}" />
+            <MenuItem Header="{DynamicResource Loc.Workbench.Session.Action.SendToIngest}"
+                      Command="{Binding SendSelectedToIngestCommand}" />
+            <Separator />
+            <MenuItem Header="{DynamicResource Loc.Workbench.Session.Action.Clear}"
+                      Command="{Binding ClearCommand}" />
+          </MenuFlyout>
+        </Button.Flyout>
+      </Button>
+    </WrapPanel>
+
+    <Grid Grid.Row="1">
+      <controls:AppDataGrid x:Name="WorkbenchGrid"
+                            MinHeight="220"
+                            ItemsSource="{Binding Files}"
+                            SelectedItem="{Binding SelectedFile, Mode=TwoWay}"
+                            SelectionChanged="OnWorkbenchSelectionChanged"
+                            AutomationProperties.Name="{DynamicResource Loc.Workbench.Session.GridAutomation}">
+        <controls:AppDataGrid.ContextMenu>
+          <ContextMenu>
+            <MenuItem Header="{DynamicResource Loc.Workbench.Session.Action.RemoveSelected}"
+                      Command="{Binding RemoveCurrentCommand}" />
+            <MenuItem Header="{DynamicResource Loc.Workbench.Action.MoveUp}"
+                      Command="{Binding MoveUpCommand}" />
+            <MenuItem Header="{DynamicResource Loc.Workbench.Action.MoveDown}"
+                      Command="{Binding MoveDownCommand}" />
+            <MenuItem Header="{DynamicResource Loc.Workbench.Session.Action.SendToIngest}"
+                      Command="{Binding SendSelectedToIngestCommand}" />
+            <Separator />
+            <MenuItem Header="{DynamicResource Loc.Workbench.Session.Action.Clear}"
+                      Command="{Binding ClearCommand}" />
+          </ContextMenu>
+        </controls:AppDataGrid.ContextMenu>
+      </controls:AppDataGrid>
+      <StackPanel HorizontalAlignment="Center"
+                  VerticalAlignment="Center"
+                  Spacing="7"
+                  IsVisible="{Binding !HasFiles}"
+                  MaxWidth="430">
+        <TextBlock HorizontalAlignment="Center"
+                   FontSize="18"
+                   FontWeight="SemiBold"
+                   Text="{DynamicResource Loc.Workbench.Session.EmptyTitle}" />
+        <TextBlock x:Name="EmptyStateSupportingText"
+                   Classes="muted"
+                   TextAlignment="Center"
+                   TextWrapping="Wrap"
+                   Text="{DynamicResource Loc.Workbench.Session.EmptyDescription}" />
+      </StackPanel>
+    </Grid>
+
+    <Border Grid.Row="2"
+            Classes="status-banner info"
+            AutomationProperties.LiveSetting="Polite">
+      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+        <TextBlock Classes="status-icon" Text="i" />
+        <StackPanel Grid.Column="1" Spacing="2">
+          <TextBlock Text="{Binding StatusText}"
+                     TextWrapping="Wrap" />
+          <controls:LocalizedFormatTextBlock
+              Classes="muted"
+              FontSize="11"
+              TextWrapping="Wrap"
+              ResourceKey="Common.DiagnosticDetailFormat"
+              Value="{Binding StatusDiagnosticDetail}"
+              IsVisible="{Binding HasStatusDiagnosticDetail}" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <Grid x:Name="SessionSummary"
+          Grid.Row="3"
+          ColumnDefinitions="*,Auto,Auto,Auto"
+          ColumnSpacing="16"
+          IsVisible="{Binding SelectedFile}">
+      <TextBlock Classes="muted"
+                 Text="{Binding FieldSelectionSummary}"
+                 TextTrimming="CharacterEllipsis" />
+      <controls:LocalizedFormatTextBlock
+          Grid.Column="1"
+          Classes="summary-label"
+          ResourceKey="Workbench.Session.TagsFormat"
+          Value="{Binding SelectedFile.LayerSummary}" />
+      <controls:LocalizedFormatTextBlock
+          Grid.Column="2"
+          Classes="summary-label"
+          ResourceKey="Workbench.Session.ArtworkCount"
+          UseCountVariant="True"
+          Value="{Binding SelectedFile.ArtworkCount}" />
+      <controls:LocalizedFormatTextBlock
+          Grid.Column="3"
+          Classes="summary-label"
+          ResourceKey="Workbench.Session.FieldsCount"
+          UseCountVariant="True"
+          Value="{Binding SelectedFile.FieldCount}" />
+    </Grid>
+  </Grid>
+</UserControl>

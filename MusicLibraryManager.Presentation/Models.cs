@@ -46,13 +46,36 @@ public sealed record LibraryViewDefinition(
     LibrarySortState? Sort,
     LibraryVisualFilterNode? VisualFilter = null);
 
-public partial class LibraryColumnChoice(string key, string header, bool isVisible) : ObservableObject
+public partial class LibraryColumnChoice : ObservableObject
 {
-    public string Key { get; } = key;
-    public string Header { get; } = header;
+    public LibraryColumnChoice(
+        string key,
+        string header,
+        bool isVisible,
+        string? headerResourceKey = null)
+    {
+        Key = key;
+        _header = header;
+        _isVisible = isVisible;
+        HeaderResourceKey = headerResourceKey;
+    }
+
+    public string Key { get; }
+    public string? HeaderResourceKey { get; }
 
     [ObservableProperty]
-    private bool _isVisible = isVisible;
+    private string _header;
+
+    [ObservableProperty]
+    private bool _isVisible;
+
+    public void RefreshLocalizedText(
+        Func<string, string> getText)
+    {
+        ArgumentNullException.ThrowIfNull(getText);
+        if (HeaderResourceKey is not null)
+            Header = getText(HeaderResourceKey);
+    }
 }
 
 public sealed record SelectionContext(
@@ -64,9 +87,12 @@ public sealed record SelectionContext(
     public bool HasSelection => Paths.Count > 0;
     public string Summary => Paths.Count switch
     {
-        0 => "Nothing selected",
+        0 => LocalizedText.Get(
+            "Inspector.Selection.NothingSelected"),
         1 => Path.GetFileName(Paths[0]),
-        _ => $"{Paths.Count:N0} tracks selected",
+        _ => LocalizedText.FormatCount(
+            "Inspector.Selection.TracksSelected",
+            Paths.Count),
     };
 }
 
@@ -150,16 +176,33 @@ public partial class LibraryRow : ObservableObject
     }
 }
 
-public partial class EditableTagField(TagFields field, string label) : ObservableObject
+public partial class EditableTagField : ObservableObject
 {
     private string? _loadedValue;
     private bool _loadedMixed;
+    private Func<string, string> _getText =
+        LocalizedText.Get;
 
-    public TagFields Field { get; } = field;
-    public string Label { get; } = label;
+    public EditableTagField(
+        TagFields field,
+        string label,
+        string? labelResourceKey = null)
+    {
+        Field = field;
+        _label = label;
+        LabelResourceKey = labelResourceKey;
+    }
+
+    public TagFields Field { get; }
+    public string? LabelResourceKey { get; }
+
+    [ObservableProperty]
+    private string _label;
+
     public string OriginalDisplayValue =>
         _loadedMixed
-            ? "(mixed values)"
+            ? _getText(
+                "Inspector.Field.MixedValues")
             : _loadedValue ?? "";
 
     [ObservableProperty]
@@ -179,13 +222,32 @@ public partial class EditableTagField(TagFields field, string label) : Observabl
 
     public bool IsUnverified => Verification == FieldValueVerification.Unverified;
     public string PlaceholderText => IsUnverified
-        ? "Not verified across the full selection - type to replace"
+        ? _getText(
+            "Inspector.Field.UnverifiedPlaceholder")
         : IsMixed
-            ? "Mixed values - type to replace"
-            : "No value";
+            ? _getText(
+                "Inspector.Field.MixedPlaceholder")
+            : _getText(
+                "Inspector.Field.NoValuePlaceholder");
     public string? VerificationMessage => IsUnverified
-        ? "The cache does not contain this field for every selected track. Its current value is not shown; typing a value will intentionally replace it on the full selection."
+        ? _getText(
+            "Inspector.Field.UnverifiedHelp")
         : null;
+
+    public void RefreshLocalizedText(
+        Func<string, string> getText)
+    {
+        ArgumentNullException.ThrowIfNull(getText);
+        _getText = getText;
+        if (LabelResourceKey is not null)
+            Label = getText(LabelResourceKey);
+        OnPropertyChanged(
+            nameof(OriginalDisplayValue));
+        OnPropertyChanged(
+            nameof(PlaceholderText));
+        OnPropertyChanged(
+            nameof(VerificationMessage));
+    }
 
     public void SetLoaded(string? value, bool mixed)
         => SetLoaded(string.IsNullOrEmpty(value) ? [] : [value], mixed, FieldValueVerification.Exact);
@@ -222,6 +284,8 @@ public partial class EditableTagField(TagFields field, string label) : Observabl
 public partial class ArtworkPreviewItem : ObservableObject
 {
     private string _technicalSummary;
+    private Func<ID3v2Util.APICType, string>
+        _formatType = FormatType;
 
     public ArtworkPreviewItem(
         object? source,
@@ -242,7 +306,7 @@ public partial class ArtworkPreviewItem : ObservableObject
     public object? Source { get; private set; }
     public string MimeType { get; private set; }
     public byte[] Data { get; private set; }
-    public string Label => FormatType(Type);
+    public string Label => _formatType(Type);
     public string Summary => string.IsNullOrWhiteSpace(Description)
         ? _technicalSummary
         : $"{Description} · {_technicalSummary}";
@@ -284,6 +348,29 @@ public partial class ArtworkPreviewItem : ObservableObject
         MarkModified();
     }
 
+    public void RefreshLocalizedText(
+        Func<ID3v2Util.APICType, string>
+            formatType)
+    {
+        ArgumentNullException.ThrowIfNull(formatType);
+        _formatType = formatType;
+        OnPropertyChanged(nameof(Label));
+    }
+
+    public void RefreshTechnicalSummary(
+        string technicalSummary)
+    {
+        ArgumentNullException.ThrowIfNull(
+            technicalSummary);
+        if (string.Equals(
+                _technicalSummary,
+                technicalSummary,
+                StringComparison.Ordinal))
+            return;
+        _technicalSummary = technicalSummary;
+        OnPropertyChanged(nameof(Summary));
+    }
+
     private void MarkModified()
     {
         if (IsModified)
@@ -305,6 +392,7 @@ public partial class ArtworkPreviewItem : ObservableObject
 public partial class IndexTargetEditorRow : ObservableObject
 {
     private bool _refreshingProfileChoices;
+    private Func<LibraryRootPermissions, string>? _permissionSummaryFormatter;
     [ObservableProperty]
     private Guid _id = Guid.NewGuid();
 
@@ -382,9 +470,21 @@ public partial class IndexTargetEditorRow : ObservableObject
 
     public bool IsReadOnly => Permissions == LibraryRootPermissions.None;
 
-    public string PermissionSummary => IsReadOnly
-        ? "Catalog-only: this root is read-only."
-        : "Allowed changes: " + string.Join(", ", PermissionLabels());
+    public string PermissionSummary =>
+        _permissionSummaryFormatter?.Invoke(Permissions) ??
+        (IsReadOnly
+            ? "Catalog-only: this root is read-only."
+            : "Allowed changes: " + string.Join(", ", PermissionLabels()));
+
+    public void SetPermissionSummaryFormatter(
+        Func<LibraryRootPermissions, string> formatter)
+    {
+        _permissionSummaryFormatter = formatter;
+        OnPropertyChanged(nameof(PermissionSummary));
+    }
+
+    public void RefreshPermissionSummary() =>
+        OnPropertyChanged(nameof(PermissionSummary));
 
     [ObservableProperty]
     private bool _isSyncTarget;
@@ -834,18 +934,21 @@ public partial class IngestRecipeEditorRow : ObservableObject
     }
 
     public void RefreshDestinationRootChoices(
-        IEnumerable<IndexTargetEditorRow> roots)
+        IEnumerable<IndexTargetEditorRow> roots,
+        string noDirectRootLabel = "No direct root",
+        string newRootLabel = "New library root",
+        Func<Guid, string>? missingRootLabel = null)
     {
         Guid? selectedId = DestinationRootId;
         _refreshingDestinationRoots = true;
         try
         {
             DestinationRootChoices.Clear();
-            DestinationRootChoices.Add(new(null, "No direct root"));
+            DestinationRootChoices.Add(new(null, noDirectRootLabel));
             foreach (IndexTargetEditorRow root in roots)
             {
                 string path = string.IsNullOrWhiteSpace(root.Path)
-                    ? "New library root"
+                    ? newRootLabel
                     : root.Path.Trim();
                 DestinationRootChoices.Add(new(root.Id, path));
             }
@@ -854,6 +957,7 @@ public partial class IngestRecipeEditorRow : ObservableObject
             if (selected is null && selectedId is not null)
             {
                 selected = new(selectedId,
+                    missingRootLabel?.Invoke(selectedId.Value) ??
                     $"Missing root ({selectedId.Value:D})");
                 DestinationRootChoices.Add(selected);
             }

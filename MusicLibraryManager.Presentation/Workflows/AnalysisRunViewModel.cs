@@ -27,15 +27,137 @@ public enum AnalysisRepairDisposition
 }
 
 /// <summary>
+/// Stable identity for a retained Health result. Display names are localized independently so
+/// application behavior never depends on translated text.
+/// </summary>
+public enum AnalysisRunKind
+{
+    Unknown,
+    Inconsistencies,
+    LossyFiles,
+    Duplicates,
+    SimilarArtists,
+    AlbumMetadataMatrix,
+    ArtworkHealth,
+    AlbumRepresentations,
+    DecodedAudioVerification,
+    RepresentationFileRepairs,
+    RepresentationMetadataRepairs,
+    MetadataRepairs,
+    AlbumArtistConflicts,
+    ConflictRepairs,
+    ItlMetadataRepairs,
+    CrossSetCheck,
+}
+
+/// <summary>A resource-backed display identity for a retained Health run.</summary>
+public sealed record HealthRunText(
+    AnalysisRunKind Kind,
+    string NameResourceKey,
+    string SummaryResourceKey,
+    long? SummaryCount = null,
+    object?[]? SummaryArguments = null)
+{
+    public string ResolveName(ILocalizationService? localization) =>
+        localization?.Get(NameResourceKey) ??
+        LocalizedText.Get(NameResourceKey);
+
+    public string ResolveSummary(ILocalizationService? localization)
+    {
+        object?[] arguments = SummaryArguments ?? [];
+        return SummaryCount is { } count
+            ? localization?.FormatCount(SummaryResourceKey, count, arguments) ??
+              LocalizedText.FormatCount(SummaryResourceKey, count, arguments)
+            : localization?.Format(SummaryResourceKey, arguments) ??
+              LocalizedText.Format(SummaryResourceKey, arguments);
+    }
+}
+
+/// <summary>
+/// Shared observable labels for Health choices. Every view model keeps the enum value as its
+/// semantic state while these labels update in place when the UI culture changes.
+/// </summary>
+public static class HealthLocalizedChoices
+{
+    private static readonly LocalizedChoice<AnalysisFindingDisposition>[]
+        FindingChoices = Enum.GetValues<AnalysisFindingDisposition>()
+            .Select(value => new LocalizedChoice<AnalysisFindingDisposition>(
+                value,
+                LocalizedText.Get($"Health.Choice.FindingDisposition.{value}")))
+            .ToArray();
+
+    private static readonly LocalizedChoice<AnalysisRepairDisposition>[]
+        RepairChoices = Enum.GetValues<AnalysisRepairDisposition>()
+            .Select(value => new LocalizedChoice<AnalysisRepairDisposition>(
+                value,
+                LocalizedText.Get($"Health.Choice.RepairDisposition.{value}")))
+            .ToArray();
+
+    public static IReadOnlyList<LocalizedChoice<AnalysisFindingDisposition>>
+        AllFindingDispositions { get; } = FindingChoices;
+
+    public static IReadOnlyList<LocalizedChoice<AnalysisFindingDisposition>>
+        FindingDispositions { get; } = FindingChoices
+            .Where(choice => choice.Value != AnalysisFindingDisposition.Mixed)
+            .ToArray();
+
+    public static IReadOnlyList<LocalizedChoice<AnalysisRepairDisposition>>
+        AllRepairDispositions { get; } = RepairChoices;
+
+    public static IReadOnlyList<LocalizedChoice<AnalysisRepairDisposition>>
+        RepairDispositions { get; } = RepairChoices
+            .Where(choice => choice.Value != AnalysisRepairDisposition.Mixed)
+            .ToArray();
+
+    public static IReadOnlyList<LocalizedChoice<AnalysisRepairDisposition>>
+        BlockedRepairDispositions { get; } = RepairChoices
+            .Where(choice => choice.Value is not (
+                AnalysisRepairDisposition.Active or
+                AnalysisRepairDisposition.Completed or
+                AnalysisRepairDisposition.Mixed))
+            .ToArray();
+
+    public static void Refresh(Func<string, string> localize)
+    {
+        ArgumentNullException.ThrowIfNull(localize);
+        foreach (LocalizedChoice<AnalysisFindingDisposition> choice in FindingChoices)
+            choice.Label = localize(
+                $"Health.Choice.FindingDisposition.{choice.Value}");
+        foreach (LocalizedChoice<AnalysisRepairDisposition> choice in RepairChoices)
+            choice.Label = localize(
+                $"Health.Choice.RepairDisposition.{choice.Value}");
+    }
+}
+
+/// <summary>
 /// An immutable analysis result snapshot. The contained finding and action view models remain
 /// mutable so review state survives while the user navigates between runs.
 /// </summary>
 public sealed class AnalysisRunViewModel : ViewModelBase
 {
     private bool _clearingFilterDispositions;
+    private readonly ILocalizationService? _localization;
+    private readonly HealthRunText? _localizedText;
+    private string _name;
+    private string _summary;
 
-    public string Name { get; }
-    public string Summary { get; }
+    public AnalysisRunKind Kind => _localizedText?.Kind ?? AnalysisRunKind.Unknown;
+    public string Name
+    {
+        get => _name;
+        private set
+        {
+            if (SetProperty(ref _name, value))
+                OnPropertyChanged(nameof(DisplayLabel));
+        }
+    }
+
+    public string Summary
+    {
+        get => _summary;
+        private set => SetProperty(ref _summary, value);
+    }
+    public string? DiagnosticDetail { get; }
     public DateTimeOffset CreatedAt { get; }
     public AnalysisResultView View { get; }
     public IReadOnlyList<AnalysisProblemGroupViewModel> FindingGroups { get; }
@@ -83,7 +205,16 @@ public sealed class AnalysisRunViewModel : ViewModelBase
             .Select(item => item.Path))
         .Distinct(StringComparer.OrdinalIgnoreCase)
         .ToArray();
-    public string DisplayLabel => $"{Name} · {Count:N0} · {CreatedAt:HH:mm:ss}";
+    public string DisplayLabel => (_localization?.Format(
+            "Health.Run.DisplayLabel",
+            Name,
+            Count,
+            CreatedAt) ??
+        LocalizedText.Format(
+            "Health.Run.DisplayLabel",
+            Name,
+            Count,
+            CreatedAt));
 
     private AnalysisRunViewModel(
         string name,
@@ -104,10 +235,16 @@ public sealed class AnalysisRunViewModel : ViewModelBase
         IReadOnlyList<ArtworkRepairItemViewModel>? artworkRepairItems = null,
         IReadOnlyList<ArtworkRepairCategoryGroupViewModel>? artworkRepairGroups = null,
         IReadOnlyList<ItlMetadataRepairItemViewModel>? itlRepairItems = null,
-        ItlMetadataRepairPlan? itlRepairPlan = null)
+        ItlMetadataRepairPlan? itlRepairPlan = null,
+        HealthRunText? localizedText = null,
+        ILocalizationService? localization = null,
+        string? diagnosticDetail = null)
     {
-        Name = name;
-        Summary = summary;
+        _localization = localization;
+        _localizedText = localizedText;
+        _name = localizedText?.ResolveName(localization) ?? name;
+        _summary = localizedText?.ResolveSummary(localization) ?? summary;
+        DiagnosticDetail = diagnosticDetail;
         View = view;
         Count = count;
         CreatedAt = DateTimeOffset.Now;
@@ -148,69 +285,130 @@ public sealed class AnalysisRunViewModel : ViewModelBase
             item.PropertyChanged += FilterDispositionChanged;
     }
 
+    public void RefreshLocalizedText()
+    {
+        if (_localizedText is null)
+        {
+            OnPropertyChanged(nameof(DisplayLabel));
+            return;
+        }
+
+        Name = _localizedText.ResolveName(_localization);
+        Summary = _localizedText.ResolveSummary(_localization);
+        OnPropertyChanged(nameof(DisplayLabel));
+    }
+
     public static AnalysisRunViewModel ForFindings(
         AnalysisReport report,
         IReadOnlyList<TrackRecord> records,
-        string summary) =>
+        string summary,
+        HealthRunText? localizedText = null,
+        ILocalizationService? localization = null,
+        string? diagnosticDetail = null) =>
         new(report.Name, summary, AnalysisResultView.Findings, report.Count,
-            findingGroups: AnalysisProblemGroupViewModel.Build(report.Findings, records));
+            findingGroups: AnalysisProblemGroupViewModel.Build(report.Findings, records),
+            localizedText: localizedText,
+            localization: localization,
+            diagnosticDetail: diagnosticDetail);
 
     public static AnalysisRunViewModel ForDuplicates(
         string name,
         IReadOnlyList<DuplicateGroup> groups,
-        string summary) =>
-        new(name, summary, AnalysisResultView.Duplicates, groups.Count, duplicates: groups);
+        string summary,
+        HealthRunText? localizedText = null,
+        ILocalizationService? localization = null) =>
+        new(name, summary, AnalysisResultView.Duplicates, groups.Count,
+            duplicates: groups,
+            localizedText: localizedText,
+            localization: localization);
 
     public static AnalysisRunViewModel ForArtists(
         string name,
         IReadOnlyList<ArtistGroupViewModel> groups,
-        string summary) =>
-        new(name, summary, AnalysisResultView.Artists, groups.Count, artistGroups: groups);
+        string summary,
+        HealthRunText? localizedText = null,
+        ILocalizationService? localization = null) =>
+        new(name, summary, AnalysisResultView.Artists, groups.Count,
+            artistGroups: groups,
+            localizedText: localizedText,
+            localization: localization);
 
     public static AnalysisRunViewModel ForConflicts(
         IReadOnlyList<AnalysisConflictGroupViewModel> groups,
-        string summary) =>
-        new("Album artist conflicts", summary, AnalysisResultView.Conflicts, groups.Count,
-            conflictGroups: groups);
+        string summary,
+        HealthRunText? localizedText = null,
+        ILocalizationService? localization = null) =>
+        new(LocalizedText.Get("Health.Run.Name.AlbumArtistConflicts"),
+            summary,
+            AnalysisResultView.Conflicts,
+            groups.Count,
+            conflictGroups: groups,
+            localizedText: localizedText,
+            localization: localization);
 
     public static AnalysisRunViewModel ForRepairs(
         AnalysisRepairPlan plan,
         IReadOnlyList<AnalysisRepairItemViewModel> items,
         IReadOnlyList<TrackRecord> records,
-        string summary) =>
+        string summary,
+        HealthRunText? localizedText = null,
+        ILocalizationService? localization = null) =>
         new(plan.Name, summary, AnalysisResultView.Repairs, items.Count,
             repairItems: items,
             repairGroups: AnalysisRepairCategoryGroupViewModel.Build(items, records),
-            repairPlan: plan);
+            repairPlan: plan,
+            localizedText: localizedText,
+            localization: localization);
 
     public static AnalysisRunViewModel ForRepresentationRepairs(
         IReadOnlyList<RepresentationRepairAction> actions,
         IReadOnlyList<string> warnings,
         IReadOnlyList<TrackRecord> records,
-        string summary)
+        string summary,
+        HealthRunText? localizedText = null,
+        ILocalizationService? localization = null)
     {
         var items = actions.Select(action =>
             new RepresentationRepairActionItemViewModel(action)).ToList();
-        return new("Representation file repairs", summary,
+        return new(LocalizedText.Get("Health.Run.Name.RepresentationFileRepairs"), summary,
             AnalysisResultView.RepresentationRepairs, actions.Count,
             representationActionItems: items,
             representationActionGroups:
                 RepresentationRepairCategoryGroupViewModel.Build(items, records),
-            representationWarnings: warnings);
+            representationWarnings: warnings,
+            localizedText: localizedText,
+            localization: localization);
     }
 
     public static AnalysisRunViewModel ForMatrices(
         IReadOnlyList<AlbumMetadataMatrix> matrices,
-        string summary) =>
-        new("Album metadata matrix", summary, AnalysisResultView.Matrix, matrices.Count,
-            matrices: matrices);
+        string summary,
+        HealthRunText? localizedText = null,
+        ILocalizationService? localization = null) =>
+        new(LocalizedText.Get("Health.Run.Name.AlbumMetadataMatrix"),
+            summary,
+            AnalysisResultView.Matrix,
+            matrices.Count,
+            matrices: matrices,
+            localizedText: localizedText,
+            localization: localization);
 
     public static AnalysisRunViewModel ForArtwork(
         AnalysisReport report,
         IReadOnlyList<TrackRecord> records,
         IReadOnlyList<ArtworkRepairItemViewModel> repairs,
-        string summary) =>
-        ForArtwork(report, records, repairs, summary, null, default);
+        string summary,
+        HealthRunText? localizedText = null,
+        ILocalizationService? localization = null) =>
+        ForArtwork(
+            report,
+            records,
+            repairs,
+            summary,
+            null,
+            default,
+            localizedText,
+            localization);
 
     public static AnalysisRunViewModel ForArtwork(
         AnalysisReport report,
@@ -218,24 +416,40 @@ public sealed class AnalysisRunViewModel : ViewModelBase
         IReadOnlyList<ArtworkRepairItemViewModel> repairs,
         string summary,
         IProgress<AnalysisProgress>? progress,
-        CancellationToken ct)
+        CancellationToken ct,
+        HealthRunText? localizedText = null,
+        ILocalizationService? localization = null)
     {
         IReadOnlyList<AnalysisProblemGroupViewModel> findingGroups =
             AnalysisProblemGroupViewModel.Build(report.Findings, records, progress, ct,
-                "Preparing artwork findings");
+                LocalizedText.Get(
+                    "Health.Progress.Stage.PreparingArtworkFindings"));
         IReadOnlyList<ArtworkRepairCategoryGroupViewModel> repairGroups =
             ArtworkRepairCategoryGroupViewModel.Build(repairs, progress, ct);
-        return new("Artwork health", summary, AnalysisResultView.ArtworkRepairs,
+        return new(LocalizedText.Get("Health.Run.Name.ArtworkHealth"),
+            summary,
+            AnalysisResultView.ArtworkRepairs,
             report.Count, findingGroups: findingGroups,
-            artworkRepairItems: repairs, artworkRepairGroups: repairGroups);
+            artworkRepairItems: repairs,
+            artworkRepairGroups: repairGroups,
+            localizedText: localizedText,
+            localization: localization);
     }
 
     public static AnalysisRunViewModel ForItlRepairs(
         ItlMetadataRepairPlan plan,
         IReadOnlyList<ItlMetadataRepairItemViewModel> items,
-        string summary) =>
-        new("iTunes library metadata repairs", summary, AnalysisResultView.ItlRepairs,
-            items.Count, itlRepairItems: items, itlRepairPlan: plan);
+        string summary,
+        HealthRunText? localizedText = null,
+        ILocalizationService? localization = null) =>
+        new(LocalizedText.Get("Health.Run.Name.ItlMetadataRepairs"),
+            summary,
+            AnalysisResultView.ItlRepairs,
+            items.Count,
+            itlRepairItems: items,
+            itlRepairPlan: plan,
+            localizedText: localizedText,
+            localization: localization);
 
     private void FindingGroupChanged(object? sender, PropertyChangedEventArgs e)
     {
@@ -314,6 +528,8 @@ public sealed class AnalysisRepairCategoryGroupViewModel : ViewModelBase
     public int ActiveCount => Artists.Sum(artist => artist.ActiveCount);
     public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
         Enum.GetValues<AnalysisRepairDisposition>();
+    public IReadOnlyList<LocalizedChoice<AnalysisRepairDisposition>>
+        DispositionChoices => HealthLocalizedChoices.AllRepairDispositions;
 
     public AnalysisRepairDisposition Disposition
     {
@@ -356,7 +572,8 @@ public sealed class AnalysisRepairCategoryGroupViewModel : ViewModelBase
                 return new
                 {
                     Item = item,
-                    Artist = record?.EffectiveAlbumArtist ?? "Unknown Artist",
+                    Artist = record?.EffectiveAlbumArtist ??
+                             LocalizedText.Get("Health.Common.UnknownArtist"),
                     Album = AlbumLabel(item.Path, record),
                 };
             })
@@ -388,12 +605,16 @@ public sealed class AnalysisRepairCategoryGroupViewModel : ViewModelBase
             string? album = !string.IsNullOrWhiteSpace(record.StrippedAlbum)
                 ? record.StrippedAlbum
                 : record.Album;
-            return string.IsNullOrWhiteSpace(album) ? "Unknown Album" : album;
+            return string.IsNullOrWhiteSpace(album)
+                ? LocalizedText.Get("Health.Common.UnknownAlbum")
+                : album;
         }
 
         string? directory = Path.GetDirectoryName(path);
         string? folder = string.IsNullOrWhiteSpace(directory) ? null : Path.GetFileName(directory);
-        return string.IsNullOrWhiteSpace(folder) ? "Unknown Album" : folder;
+        return string.IsNullOrWhiteSpace(folder)
+            ? LocalizedText.Get("Health.Common.UnknownAlbum")
+            : folder;
     }
 
     private void ArtistChanged(object? sender, PropertyChangedEventArgs e)
@@ -433,6 +654,8 @@ public sealed class AnalysisRepairArtistGroupViewModel : ViewModelBase
     public int ActiveCount => Albums.Sum(album => album.ActiveCount);
     public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
         Enum.GetValues<AnalysisRepairDisposition>();
+    public IReadOnlyList<LocalizedChoice<AnalysisRepairDisposition>>
+        DispositionChoices => HealthLocalizedChoices.AllRepairDispositions;
 
     public AnalysisRepairDisposition Disposition
     {
@@ -490,6 +713,8 @@ public sealed class AnalysisRepairAlbumGroupViewModel : ViewModelBase
     public int ActiveCount => Items.Count(item => item.IsActive);
     public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
         Enum.GetValues<AnalysisRepairDisposition>();
+    public IReadOnlyList<LocalizedChoice<AnalysisRepairDisposition>>
+        DispositionChoices => HealthLocalizedChoices.AllRepairDispositions;
 
     public AnalysisRepairDisposition Disposition
     {
@@ -548,6 +773,8 @@ public sealed class RepresentationRepairCategoryGroupViewModel : ViewModelBase
     public int ActiveCount => Artists.Sum(artist => artist.ActiveCount);
     public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
         Enum.GetValues<AnalysisRepairDisposition>();
+    public IReadOnlyList<LocalizedChoice<AnalysisRepairDisposition>>
+        DispositionChoices => HealthLocalizedChoices.AllRepairDispositions;
 
     public AnalysisRepairDisposition Disposition
     {
@@ -592,7 +819,8 @@ public sealed class RepresentationRepairCategoryGroupViewModel : ViewModelBase
                 return new
                 {
                     Item = item,
-                    Artist = record?.EffectiveAlbumArtist ?? "Unknown Artist",
+                    Artist = record?.EffectiveAlbumArtist ??
+                             LocalizedText.Get("Health.Common.UnknownArtist"),
                     Album = AlbumLabel(item.SourcePath, record),
                 };
             })
@@ -624,7 +852,9 @@ public sealed class RepresentationRepairCategoryGroupViewModel : ViewModelBase
             : !string.IsNullOrWhiteSpace(record.StrippedAlbum)
                 ? record.StrippedAlbum
                 : record.Album;
-        return string.IsNullOrWhiteSpace(album) ? "Unknown Album" : album;
+        return string.IsNullOrWhiteSpace(album)
+            ? LocalizedText.Get("Health.Common.UnknownAlbum")
+            : album;
     }
 
     private void ArtistChanged(object? sender, PropertyChangedEventArgs e)
@@ -655,6 +885,8 @@ public sealed class RepresentationRepairArtistGroupViewModel : ViewModelBase
     public int ActiveCount => Albums.Sum(album => album.ActiveCount);
     public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
         Enum.GetValues<AnalysisRepairDisposition>();
+    public IReadOnlyList<LocalizedChoice<AnalysisRepairDisposition>>
+        DispositionChoices => HealthLocalizedChoices.AllRepairDispositions;
 
     public AnalysisRepairDisposition Disposition
     {
@@ -711,6 +943,8 @@ public sealed class RepresentationRepairAlbumGroupViewModel : ViewModelBase
     public int ActiveCount => Items.Count(item => item.IsActive);
     public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
         Enum.GetValues<AnalysisRepairDisposition>();
+    public IReadOnlyList<LocalizedChoice<AnalysisRepairDisposition>>
+        DispositionChoices => HealthLocalizedChoices.AllRepairDispositions;
 
     public AnalysisRepairDisposition Disposition
     {
@@ -765,14 +999,19 @@ public partial class RepresentationRepairActionItemViewModel : ViewModelBase
     public string Description => Action.Description;
     public string Category => Action.Kind switch
     {
-        RepresentationRepairKind.DeriveCdFlac => "Derive missing CD FLAC",
-        RepresentationRepairKind.DeriveAac => "Derive missing AAC",
-        _ => "Organize representation",
+        RepresentationRepairKind.DeriveCdFlac => LocalizedText.Get(
+            "Health.Representation.Category.DeriveCdFlac"),
+        RepresentationRepairKind.DeriveAac => LocalizedText.Get(
+            "Health.Representation.Category.DeriveAac"),
+        _ => LocalizedText.Get(
+            "Health.Representation.Category.Organize"),
     };
     public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
         Enum.GetValues<AnalysisRepairDisposition>()
             .Where(value => value != AnalysisRepairDisposition.Mixed)
             .ToArray();
+    public IReadOnlyList<LocalizedChoice<AnalysisRepairDisposition>>
+        DispositionChoices => HealthLocalizedChoices.RepairDispositions;
     public bool IsActive => Disposition == AnalysisRepairDisposition.Active && !IsApplied;
     public bool CanChangeDisposition => !IsApplied;
 
@@ -787,6 +1026,13 @@ public partial class RepresentationRepairActionItemViewModel : ViewModelBase
 
     [ObservableProperty]
     private string? _resultText;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasResultDiagnosticDetail))]
+    private string? _resultDiagnosticDetail;
+
+    public bool HasResultDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(ResultDiagnosticDetail);
 
     public event Action? StateChanged;
 
@@ -809,6 +1055,8 @@ public sealed class AnalysisProblemGroupViewModel : ViewModelBase
     public int ActiveCount => Artists.Sum(artist => artist.ActiveCount);
     public IReadOnlyList<AnalysisFindingDisposition> Dispositions { get; } =
         Enum.GetValues<AnalysisFindingDisposition>();
+    public IReadOnlyList<LocalizedChoice<AnalysisFindingDisposition>>
+        DispositionChoices => HealthLocalizedChoices.AllFindingDispositions;
 
     public AnalysisFindingDisposition Disposition
     {
@@ -842,12 +1090,18 @@ public sealed class AnalysisProblemGroupViewModel : ViewModelBase
         IReadOnlyList<TrackRecord> records,
         IProgress<AnalysisProgress>? progress = null,
         CancellationToken ct = default,
-        string stage = "Preparing analysis findings")
+        string? stage = null)
     {
+        stage ??= LocalizedText.Get(
+            "Health.Progress.Stage.PreparingAnalysisFindings");
         var recordsByPath = new Dictionary<string, TrackRecord>(
             StringComparer.OrdinalIgnoreCase);
-        progress?.Report(new(0, records.Count, "tracks",
-            "Indexing tracks for artwork results"));
+        progress?.Report(new(
+            0,
+            records.Count,
+            LocalizedText.Get("Health.Progress.Unit.Tracks"),
+            LocalizedText.Get(
+                "Health.Progress.Stage.IndexingTracksForArtworkResults")));
         for (int index = 0; index < records.Count; index++)
         {
             ct.ThrowIfCancellationRequested();
@@ -855,12 +1109,21 @@ public sealed class AnalysisProblemGroupViewModel : ViewModelBase
             recordsByPath.TryAdd(record.Path, record);
             int completed = index + 1;
             if ((completed & 127) == 0 || completed == records.Count)
-                progress?.Report(new(completed, records.Count, "tracks",
-                    "Indexing tracks for artwork results", record.Path));
+                progress?.Report(new(
+                    completed,
+                    records.Count,
+                    LocalizedText.Get("Health.Progress.Unit.Tracks"),
+                    LocalizedText.Get(
+                        "Health.Progress.Stage.IndexingTracksForArtworkResults"),
+                    record.Path));
         }
 
         var items = new List<AnalysisFindingViewModel>(findings.Count);
-        progress?.Report(new(0, findings.Count, "findings", stage));
+        progress?.Report(new(
+            0,
+            findings.Count,
+            LocalizedText.Get("Health.Progress.Unit.Findings"),
+            stage));
         for (int index = 0; index < findings.Count; index++)
         {
             ct.ThrowIfCancellationRequested();
@@ -871,7 +1134,12 @@ public sealed class AnalysisProblemGroupViewModel : ViewModelBase
                 AlbumLabel(finding.Path, recordsByPath.GetValueOrDefault(finding.Path))));
             int completed = index + 1;
             if ((completed & 127) == 0 || completed == findings.Count)
-                progress?.Report(new(completed, findings.Count, "findings", stage, finding.Path));
+                progress?.Report(new(
+                    completed,
+                    findings.Count,
+                    LocalizedText.Get("Health.Progress.Unit.Findings"),
+                    stage,
+                    finding.Path));
         }
 
         return items
@@ -894,7 +1162,8 @@ public sealed class AnalysisProblemGroupViewModel : ViewModelBase
     }
 
     private static string ArtistLabel(TrackRecord? record) =>
-        record?.EffectiveAlbumArtist ?? "Unknown Artist";
+        record?.EffectiveAlbumArtist ??
+        LocalizedText.Get("Health.Common.UnknownArtist");
 
     private static string AlbumLabel(string path, TrackRecord? record)
     {
@@ -903,12 +1172,16 @@ public sealed class AnalysisProblemGroupViewModel : ViewModelBase
             string? album = !string.IsNullOrWhiteSpace(record.StrippedAlbum)
                 ? record.StrippedAlbum
                 : record.Album;
-            return string.IsNullOrWhiteSpace(album) ? "Unknown Album" : album;
+            return string.IsNullOrWhiteSpace(album)
+                ? LocalizedText.Get("Health.Common.UnknownAlbum")
+                : album;
         }
 
         var directory = Path.GetDirectoryName(path);
         var folder = string.IsNullOrWhiteSpace(directory) ? null : Path.GetFileName(directory);
-        return string.IsNullOrWhiteSpace(folder) ? "Unknown Album" : folder;
+        return string.IsNullOrWhiteSpace(folder)
+            ? LocalizedText.Get("Health.Common.UnknownAlbum")
+            : folder;
     }
 
     private void ArtistChanged(object? sender, PropertyChangedEventArgs e)
@@ -950,6 +1223,8 @@ public sealed class AnalysisArtistGroupViewModel : ViewModelBase
     public int ActiveCount => Albums.Sum(album => album.ActiveCount);
     public IReadOnlyList<AnalysisFindingDisposition> Dispositions { get; } =
         Enum.GetValues<AnalysisFindingDisposition>();
+    public IReadOnlyList<LocalizedChoice<AnalysisFindingDisposition>>
+        DispositionChoices => HealthLocalizedChoices.AllFindingDispositions;
 
     public AnalysisFindingDisposition Disposition
     {
@@ -1009,6 +1284,8 @@ public sealed class AnalysisAlbumGroupViewModel : ViewModelBase
         finding.Disposition == AnalysisFindingDisposition.None);
     public IReadOnlyList<AnalysisFindingDisposition> Dispositions { get; } =
         Enum.GetValues<AnalysisFindingDisposition>();
+    public IReadOnlyList<LocalizedChoice<AnalysisFindingDisposition>>
+        DispositionChoices => HealthLocalizedChoices.AllFindingDispositions;
 
     public AnalysisFindingDisposition Disposition
     {
@@ -1064,6 +1341,8 @@ public partial class AnalysisFindingViewModel : ViewModelBase
         Enum.GetValues<AnalysisFindingDisposition>()
             .Where(value => value != AnalysisFindingDisposition.Mixed)
             .ToArray();
+    public IReadOnlyList<LocalizedChoice<AnalysisFindingDisposition>>
+        DispositionChoices => HealthLocalizedChoices.FindingDispositions;
 
     [ObservableProperty]
     private AnalysisFindingDisposition _disposition;

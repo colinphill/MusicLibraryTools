@@ -24,8 +24,15 @@ public sealed class DevicesViewModelTests
         await viewModel.PreviewCommand.ExecuteAsync(null);
 
         Assert.Equal("Preview Android synchronization failed", dialogs.Title);
-        Assert.Contains("syncer executable was not found", dialogs.Message);
-        Assert.Equal(dialogs.Message, viewModel.StatusText);
+        Assert.Contains(
+            "could not be completed",
+            dialogs.Message);
+        Assert.Contains(
+            "syncer executable was not found",
+            viewModel.DiagnosticDetail);
+        Assert.DoesNotContain(
+            "syncer executable was not found",
+            viewModel.StatusText);
     }
 
     [Fact]
@@ -333,7 +340,12 @@ public sealed class DevicesViewModelTests
         await viewModel.RefreshDevicesCommand.ExecuteAsync(null);
 
         Assert.True(viewModel.HasDeviceEnumerationError);
-        Assert.Contains("adb server is unavailable", viewModel.DeviceEnumerationError);
+        Assert.Contains(
+            "could not enumerate",
+            viewModel.DeviceEnumerationError);
+        Assert.Equal(
+            "adb server is unavailable",
+            viewModel.DeviceEnumerationDiagnosticDetail);
         Assert.True(viewModel.IsManualDeviceSelected);
         Assert.Single(viewModel.AvailableDevices);
         Assert.Null(dialogs.Title);

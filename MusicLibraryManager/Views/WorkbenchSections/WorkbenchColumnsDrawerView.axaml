@@ -1,0 +1,111 @@
+<UserControl x:Class="MusicLibraryManager.Views.WorkbenchSections.WorkbenchColumnsDrawerView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Grid RowDefinitions="Auto,*"
+        RowSpacing="10">
+    <Grid Margin="12,10,10,0"
+          ColumnDefinitions="*,Auto"
+          ColumnSpacing="8">
+      <StackPanel Spacing="2">
+        <TextBlock Text="{DynamicResource Loc.Workbench.Columns.Title}"
+                   FontSize="16"
+                   FontWeight="SemiBold" />
+        <TextBlock Classes="muted"
+                   Text="{DynamicResource Loc.Workbench.Columns.Description}"
+                   TextWrapping="Wrap" />
+      </StackPanel>
+      <Button x:Name="WorkbenchColumnsCloseButton"
+              Grid.Column="1"
+              Classes="app"
+              Width="30"
+              Height="30"
+              Padding="0"
+              Content="&#x2715;"
+              ToolTip.Tip="{DynamicResource Loc.Workbench.Columns.Close}"
+              AutomationProperties.Name="{DynamicResource Loc.Workbench.Columns.Close}"
+              Click="OnClose" />
+    </Grid>
+
+    <ScrollViewer Grid.Row="1"
+                  VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Margin="12"
+                  Spacing="10">
+        <TextBlock Classes="section-title"
+                   Text="{DynamicResource Loc.Workbench.Columns.Visible}" />
+        <WrapPanel x:Name="WorkbenchColumnOptions" />
+
+        <Border Height="1"
+                Background="{DynamicResource AppBorderBrush}" />
+        <TextBlock Classes="section-title"
+                   Text="{DynamicResource Loc.Workbench.Columns.Metadata}" />
+        <ListBox x:Name="WorkbenchMetadataColumnList"
+                 MaxHeight="120"
+                 ItemsSource="{Binding ColumnEditor.Columns}"
+                 SelectedItem="{Binding ColumnEditor.SelectedColumn, Mode=TwoWay}">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <Grid ColumnDefinitions="*,Auto"
+                    ColumnSpacing="8">
+                <TextBlock Text="{Binding Label}" />
+                <TextBlock Grid.Column="1"
+                           Classes="muted"
+                           Text="{Binding Field}" />
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="7">
+          <TextBox Classes="app"
+                   Text="{Binding ColumnEditor.Label, Mode=TwoWay}"
+                   PlaceholderText="{DynamicResource Loc.Workbench.Columns.LabelPlaceholder}" />
+          <ComboBox Grid.Column="1"
+                    Classes="app"
+                    ItemsSource="{Binding ColumnEditor.FieldKindChoices}"
+                    DisplayMemberBinding="{Binding Label}"
+                    SelectedValueBinding="{Binding Value}"
+                    SelectedValue="{Binding ColumnEditor.FieldKind, Mode=TwoWay}" />
+        </Grid>
+        <ComboBox Classes="app"
+                  ItemsSource="{Binding ColumnEditor.KnownFields}"
+                  DisplayMemberBinding="{Binding Label}"
+                  SelectedItem="{Binding ColumnEditor.SelectedKnownField, Mode=TwoWay}"
+                  PlaceholderText="{DynamicResource Loc.Workbench.Columns.KnownFieldPlaceholder}" />
+        <TextBox Classes="app"
+                 Text="{Binding ColumnEditor.CustomFieldName, Mode=TwoWay}"
+                 PlaceholderText="{DynamicResource Loc.Workbench.Common.CustomFieldPlaceholder}" />
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="7">
+          <ComboBox Classes="app"
+                    ItemsSource="{Binding ColumnEditor.SortTypeChoices}"
+                    DisplayMemberBinding="{Binding Label}"
+                    SelectedValueBinding="{Binding Value}"
+                    SelectedValue="{Binding ColumnEditor.SortType, Mode=TwoWay}" />
+          <NumericUpDown Grid.Column="1"
+                         Classes="app"
+                         Minimum="50"
+                         Maximum="2000"
+                         Value="{Binding ColumnEditor.Width, Mode=TwoWay}"
+                         FormatString="0" />
+        </Grid>
+        <CheckBox Content="{DynamicResource Loc.Workbench.Columns.AllowInlineEditing}"
+                  IsEnabled="{Binding ColumnEditor.CanInlineEdit}"
+                  IsChecked="{Binding ColumnEditor.InlineEditable, Mode=TwoWay}" />
+        <WrapPanel>
+          <Button Classes="app"
+                  Content="{DynamicResource Loc.Workbench.Action.New}"
+                  Command="{Binding ColumnEditor.NewColumnCommand}" />
+          <Button x:Name="SaveWorkbenchMetadataColumnButton"
+                  Classes="app primary"
+                  Content="{DynamicResource Loc.Workbench.Columns.Action.Save}"
+                  Command="{Binding ColumnEditor.SaveColumnCommand}" />
+          <Button Classes="app danger"
+                  Content="{DynamicResource Loc.Common.Remove}"
+                  Command="{Binding ColumnEditor.DeleteColumnCommand}" />
+        </WrapPanel>
+        <TextBlock Classes="muted"
+                   TextWrapping="Wrap"
+                   Text="{Binding ColumnEditor.Status}" />
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

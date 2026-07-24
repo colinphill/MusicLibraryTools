@@ -3,13 +3,17 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:MusicLibraryManager.Controls">
   <Grid Margin="26,22,26,26" RowDefinitions="Auto,Auto,*" RowSpacing="14">
-    <controls:PageHeader Title="Organize"
-        Subtitle="Move eligible files into the canonical library layout with rollback protection.">
+    <controls:PageHeader Title="{DynamicResource Loc.Organize.Title}"
+        Subtitle="{DynamicResource Loc.Organize.Subtitle}">
       <controls:PageHeader.Actions>
         <WrapPanel>
-          <Button Classes="app" Content="Preview" Command="{Binding PreviewCommand}" />
-          <Button Classes="app primary" Margin="8,0,0,0" Content="Apply moves" Command="{Binding ApplyCommand}" />
-          <Button Classes="app" Margin="8,0,0,0" Content="Cancel" Command="{Binding CancelCommand}" />
+        <Button Classes="app" Content="{DynamicResource Loc.Organize.Action.Preview}" Command="{Binding PreviewCommand}" />
+        <Button Classes="app primary" Margin="8,0,0,0" Content="{DynamicResource Loc.Organize.Action.Apply}" Command="{Binding ApplyCommand}" />
+        <Button Classes="app"
+                Margin="8,0,0,0"
+                Content="{DynamicResource Loc.Common.Cancel}"
+                Command="{Binding CancelCommand}"
+                IsVisible="{Binding IsBusy}" />
         </WrapPanel>
       </controls:PageHeader.Actions>
     </controls:PageHeader>
@@ -17,12 +21,22 @@
       <Grid x:Name="SummaryLayout" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
         <Ellipse Width="8" Height="8" Fill="{DynamicResource AppAccentBrush}" />
         <StackPanel Grid.Column="1" Spacing="3">
-          <TextBlock Text="Preview before applying" FontWeight="SemiBold" />
+        <TextBlock Text="{DynamicResource Loc.Organize.PreviewReminder}" FontWeight="SemiBold" />
           <TextBlock Classes="muted" Text="{Binding StatusText}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+          <TextBlock Classes="error"
+                     Text="{Binding DiagnosticDetail}"
+                     TextWrapping="Wrap"
+                     IsVisible="{Binding HasDiagnosticDetail}" />
         </StackPanel>
-        <TextBlock x:Name="PlannedCount" Grid.Column="2"
-                   Classes="summary-label"
-                   Text="{Binding Moves.Count, StringFormat={}{0} planned}" />
+        <controls:LocalizedFormatTextBlock
+            x:Name="PlannedCount"
+            Grid.Column="2"
+            Classes="summary-label"
+            VerticalAlignment="Center"
+            FontWeight="SemiBold"
+            ResourceKey="Organize.PlannedCount"
+            UseCountVariant="True"
+            Value="{Binding Moves.Count}" />
       </Grid>
     </Border>
     <Border Grid.Row="2" Classes="card" Padding="0" ClipToBounds="True">
@@ -30,9 +44,9 @@
         <controls:AppDataGrid x:Name="MovesGrid" ItemsSource="{Binding Moves}" />
         <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6"
                     IsVisible="{Binding IsMoveListEmpty}" MaxWidth="420">
-          <TextBlock HorizontalAlignment="Center" FontWeight="SemiBold" Text="No planned moves" />
+          <TextBlock HorizontalAlignment="Center" FontWeight="SemiBold" Text="{DynamicResource Loc.Organize.Empty.Title}" />
           <TextBlock Classes="muted" TextAlignment="Center" TextWrapping="Wrap"
-                     Text="Preview the active library to see files that need canonical locations." />
+                     Text="{DynamicResource Loc.Organize.Empty.Description}" />
         </StackPanel>
       </Grid>
     </Border>

@@ -17,10 +17,14 @@ public partial class IngestView : UserControl
         _viewModel = App.GetService<IngestViewModel>();
         DataContext = _viewModel;
         PreviewGrid.ConfigureColumns([
-            new AppGridColumnDefinition("Type", "Type", "SourceType", 140, 100),
-            new AppGridColumnDefinition("Source", "Source", "Source", 360, 220),
-            new AppGridColumnDefinition("Plan", "Plan", "Summary", 420, 240),
-            new AppGridColumnDefinition("Progress", "Progress", "ProgressText", 160, 110),
+            new AppGridColumnDefinition("Type", "Type", "SourceType", 140, 100,
+                HeaderResourceKey: "Column.Type"),
+            new AppGridColumnDefinition("Source", "Source", "Source", 360, 220,
+                HeaderResourceKey: "Column.Source"),
+            new AppGridColumnDefinition("Plan", "Plan", "Summary", 420, 240,
+                HeaderResourceKey: "Column.Plan"),
+            new AppGridColumnDefinition("Progress", "Progress", "ProgressText", 160, 110,
+                HeaderResourceKey: "Column.Progress"),
         ]);
         SizeChanged += (_, _) => ApplyResponsiveLayout();
     }

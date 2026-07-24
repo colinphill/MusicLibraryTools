@@ -31,7 +31,9 @@ public sealed class OrganizeViewModelTests
 
             Assert.Equal(0, organizer.ApplyCalls);
             Assert.True(viewModel.ApplyCommand.CanExecute(null));
-            Assert.Contains("Move 2 file", dialogs.ApplyMessage);
+            Assert.Contains(
+                "Apply 2 planned moves",
+                dialogs.ApplyMessage);
             Assert.Contains("Recovery is available", dialogs.ApplyMessage);
             Assert.False(viewModel.CancelCommand.CanExecute(null));
         }

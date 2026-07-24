@@ -12,8 +12,10 @@ public partial class OrganizeView : UserControl
         InitializeComponent();
         DataContext = App.GetService<OrganizeViewModel>();
         MovesGrid.ConfigureColumns([
-            new AppGridColumnDefinition("Source", "Current location", "Source", 520, 260),
-            new AppGridColumnDefinition("Destination", "New location", "Destination", 620, 300),
+            new AppGridColumnDefinition("Source", "Current location", "Source", 520, 260,
+                HeaderResourceKey: "Column.CurrentLocation"),
+            new AppGridColumnDefinition("Destination", "New location", "Destination", 620, 300,
+                HeaderResourceKey: "Column.NewLocation"),
         ]);
     }
 }

@@ -24,8 +24,8 @@ public sealed class UserMetadataColumnRow(
     public string Label => Descriptor.Label;
     public string Field => Descriptor.Field.DisplayName;
     public string Kind => Descriptor.Field.IsKnown
-        ? "Known"
-        : "Custom";
+        ? LocalizedText.Get("Workbench.Metadata.Kind.Known")
+        : LocalizedText.Get("Workbench.Metadata.Kind.Custom");
 }
 
 public sealed class MetadataGridRowComparer(
@@ -123,7 +123,10 @@ public partial class MetadataGridColumnEditorViewModel :
 {
     private readonly IMetadataGridColumnStore? _store;
     private readonly MetadataGridSurface _surface;
+    private readonly ILocalizationService? _localization;
     private bool _loading;
+    private string? _statusKey;
+    private object?[] _statusArguments = [];
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveColumnCommand))]
@@ -152,28 +155,34 @@ public partial class MetadataGridColumnEditorViewModel :
 
     public MetadataGridColumnEditorViewModel(
         IMetadataGridColumnStore? store,
-        MetadataGridSurface surface)
+        MetadataGridSurface surface,
+        ILocalizationService? localization = null)
     {
         _store = store;
         _surface = surface;
-        KnownFields = Enum.GetValues<TagFields>()
-            .Where(field => field != TagFields.NullField)
-            .Select(field => new MetadataFieldChoice(
-                field,
-                field.ToString()))
-            .ToArray();
+        _localization = localization;
+        RefreshLocalizedChoices();
         SelectedKnownField = KnownFields.First();
+        if (_localization is not null)
+            _localization.CultureChanged +=
+                OnLocalizationCultureChanged;
         Reload();
     }
 
     public event Action? Changed;
     public ObservableCollection<UserMetadataColumnRow>
         Columns { get; } = [];
-    public IReadOnlyList<MetadataFieldChoice> KnownFields { get; }
+    public ObservableCollection<MetadataFieldChoice>
+        KnownFields { get; } = [];
     public IReadOnlyList<MetadataGridFieldKind> FieldKinds { get; } =
         Enum.GetValues<MetadataGridFieldKind>();
     public IReadOnlyList<MetadataGridColumnSortType> SortTypes { get; } =
         Enum.GetValues<MetadataGridColumnSortType>();
+    public ObservableCollection<LocalizedChoice<MetadataGridFieldKind>>
+        FieldKindChoices { get; } = [];
+    public ObservableCollection<
+        LocalizedChoice<MetadataGridColumnSortType>>
+        SortTypeChoices { get; } = [];
     public bool SupportsInlineEditing =>
         _surface == MetadataGridSurface.Workbench;
     public bool CanInlineEdit =>
@@ -213,7 +222,7 @@ public partial class MetadataGridColumnEditorViewModel :
             SortType = MetadataGridColumnSortType.Text;
             Width = 160;
             InlineEditable = false;
-            Status = "New unsaved metadata column.";
+            SetStatus("Workbench.Columns.Status.New");
         }
         finally
         {
@@ -229,13 +238,13 @@ public partial class MetadataGridColumnEditorViewModel :
         MetadataFieldKey? field = CreateField();
         if (field is null)
         {
-            Status = "Choose a known field or enter a custom field name.";
+            SetStatus("Workbench.Columns.Status.ChooseField");
             return;
         }
         string label = Label?.Trim() ?? "";
         if (label.Length == 0)
         {
-            Status = "Enter a column label.";
+            SetStatus("Workbench.Columns.Status.EnterLabel");
             return;
         }
         bool editable = InlineEditable && CanInlineEdit;
@@ -262,7 +271,9 @@ public partial class MetadataGridColumnEditorViewModel :
             descriptors[index] = descriptor;
         _store.Save(_surface, descriptors);
         Reload(descriptor.Id);
-        Status = $"Saved metadata column '{descriptor.Label}'.";
+        SetStatus(
+            "Workbench.Columns.Status.Saved",
+            descriptor.Label);
         Changed?.Invoke();
     }
 
@@ -289,7 +300,9 @@ public partial class MetadataGridColumnEditorViewModel :
                 .ToArray());
         Reload();
         NewColumn();
-        Status = $"Removed metadata column '{label}'.";
+        SetStatus(
+            "Workbench.Columns.Status.Removed",
+            label);
         Changed?.Invoke();
     }
 
@@ -398,5 +411,88 @@ public partial class MetadataGridColumnEditorViewModel :
             ? null
             : Columns.FirstOrDefault(row =>
                 row.Descriptor.Id == selected);
+    }
+
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string LF(
+        string key,
+        params object?[] arguments) =>
+        _localization?.Format(key, arguments) ??
+        LocalizedText.Format(key, arguments);
+
+    private void SetStatus(
+        string key,
+        params object?[] arguments)
+    {
+        _statusKey = key;
+        _statusArguments = arguments;
+        Status = LF(key, arguments);
+    }
+
+    private void RefreshLocalizedChoices()
+    {
+        TagFields? selectedField =
+            SelectedKnownField?.Field;
+        KnownFields.Clear();
+        foreach (TagFields field in Enum.GetValues<TagFields>()
+                     .Where(field =>
+                         field != TagFields.NullField))
+            KnownFields.Add(new(
+                field,
+                L($"Settings.Choice.TagFields.{field}")));
+        if (selectedField is { } selected)
+            SelectedKnownField = KnownFields.First(
+                choice => choice.Field == selected);
+        RefreshChoices(
+            FieldKindChoices,
+            Enum.GetValues<MetadataGridFieldKind>(),
+            "Workbench.Choice.MetadataGridFieldKind");
+        RefreshChoices(
+            SortTypeChoices,
+            SortTypes,
+            "Workbench.Choice.MetadataGridSortType");
+        OnPropertyChanged(nameof(Columns));
+    }
+
+    private void RefreshChoices<T>(
+        ObservableCollection<LocalizedChoice<T>> target,
+        IEnumerable<T> values,
+        string keyPrefix)
+    {
+        foreach (T value in values)
+        {
+            LocalizedChoice<T>? choice =
+                target.FirstOrDefault(item =>
+                    EqualityComparer<T>.Default.Equals(
+                        item.Value,
+                        value));
+            string label = L($"{keyPrefix}.{value}");
+            if (choice is null)
+                target.Add(new(value, label));
+            else
+                choice.Label = label;
+        }
+    }
+
+    private void OnLocalizationCultureChanged(
+        object? sender,
+        EventArgs e)
+    {
+        Guid? selectedId =
+            SelectedColumn?.Descriptor.Id;
+        UserMetadataColumnDescriptor[] descriptors =
+            Columns.Select(row =>
+                row.Descriptor).ToArray();
+        RefreshLocalizedChoices();
+        ReplaceRows(
+            descriptors,
+            selectedId);
+        if (_statusKey is not null)
+            Status = LF(
+                _statusKey,
+                _statusArguments);
     }
 }

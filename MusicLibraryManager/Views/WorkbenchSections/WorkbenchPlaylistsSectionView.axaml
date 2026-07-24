@@ -1,0 +1,116 @@
+<UserControl x:Class="MusicLibraryManager.Views.WorkbenchSections.WorkbenchPlaylistsSectionView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:MusicLibraryManager.Controls">
+  <Grid x:Name="SectionLayout"
+        Margin="0,12,0,0"
+        ColumnDefinitions="0.85*,14,1.15*">
+    <ScrollViewer x:Name="EditorScroll"
+                  VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="9">
+        <TextBlock Classes="section-title"
+                   Text="{DynamicResource Loc.Workbench.Playlists.Title}" />
+        <TextBlock x:Name="SupportingText"
+                   Classes="muted"
+                   TextWrapping="Wrap"
+                   Text="{DynamicResource Loc.Workbench.Playlists.Description}" />
+        <Grid ColumnDefinitions="*,130" ColumnSpacing="8">
+          <TextBox Classes="app"
+                   Text="{Binding PlaylistEditor.Name, Mode=TwoWay}"
+                   PlaceholderText="{DynamicResource Loc.Workbench.Playlists.NamePlaceholder}" />
+          <ComboBox Grid.Column="1"
+                    Classes="app"
+                    ItemsSource="{Binding PlaylistEditor.Formats}"
+                    SelectedItem="{Binding PlaylistEditor.Format, Mode=TwoWay}" />
+        </Grid>
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+          <TextBox Classes="app"
+                   Text="{Binding PlaylistEditor.OutputPath, Mode=TwoWay}"
+                   PlaceholderText="{DynamicResource Loc.Workbench.Common.OutputPathPlaceholder}" />
+          <Button Grid.Column="1"
+                  Classes="app"
+                  Content="{DynamicResource Loc.Common.Browse}"
+                  Command="{Binding BrowsePlaylistOutputCommand}" />
+        </Grid>
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+          <StackPanel Spacing="4">
+            <TextBlock Classes="muted" Text="{DynamicResource Loc.Workbench.Playlists.PathStyle}" />
+            <ComboBox Classes="app"
+                      ItemsSource="{Binding PlaylistEditor.PathStyleChoices}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedValueBinding="{Binding Value}"
+                      SelectedValue="{Binding PlaylistEditor.PathStyle, Mode=TwoWay}" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Spacing="4">
+            <TextBlock Classes="muted" Text="{DynamicResource Loc.Workbench.Playlists.Encoding}" />
+            <ComboBox Classes="app"
+                      ItemsSource="{Binding PlaylistEditor.EncodingChoices}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedValueBinding="{Binding Value}"
+                      SelectedValue="{Binding PlaylistEditor.Encoding, Mode=TwoWay}" />
+          </StackPanel>
+        </Grid>
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+          <ComboBox Classes="app"
+                    ItemsSource="{Binding PlaylistEditor.LineEndingChoices}"
+                    DisplayMemberBinding="{Binding Label}"
+                    SelectedValueBinding="{Binding Value}"
+                    SelectedValue="{Binding PlaylistEditor.LineEnding, Mode=TwoWay}" />
+          <CheckBox Grid.Column="1"
+                    VerticalAlignment="Center"
+                    Content="{DynamicResource Loc.Workbench.Playlists.ExtendedInfo}"
+                    IsChecked="{Binding PlaylistEditor.IncludeExtendedInfo, Mode=TwoWay}" />
+        </Grid>
+        <CheckBox Content="{DynamicResource Loc.Workbench.Playlists.OnePerGroup}"
+                  IsChecked="{Binding PlaylistEditor.OnePlaylistPerGroup, Mode=TwoWay}" />
+        <ComboBox Classes="app"
+                  ItemsSource="{Binding PlaylistEditor.GroupFields}"
+                  DisplayMemberBinding="{Binding Label}"
+                  SelectedItem="{Binding PlaylistEditor.SelectedGroupField, Mode=TwoWay}" />
+        <TextBox Classes="app"
+                 Text="{Binding PlaylistEditor.GroupFileNameTemplate, Mode=TwoWay}"
+                 PlaceholderText="{}{Name} - {Group}" />
+        <Border x:Name="SafetyNote"
+                Classes="status-banner info">
+          <TextBlock TextWrapping="Wrap"
+                     Text="{DynamicResource Loc.Workbench.Playlists.Safety}" />
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+
+    <Grid x:Name="ReviewedPanel"
+          Grid.Column="2"
+          RowDefinitions="Auto,*,Auto,Auto"
+          RowSpacing="9">
+      <TextBlock Classes="section-title"
+                 Text="{DynamicResource Loc.Workbench.Playlists.Reviewed}" />
+      <controls:AppDataGrid x:Name="PlaylistOutputGrid"
+                            Grid.Row="1"
+                            MinHeight="150"
+                            ItemsSource="{Binding PlaylistOutputs}" />
+      <Border Grid.Row="2" Classes="status-banner info">
+        <StackPanel Spacing="2">
+          <TextBlock Text="{Binding StatusText}"
+                     TextWrapping="Wrap" />
+          <controls:LocalizedFormatTextBlock
+              Classes="muted"
+              FontSize="11"
+              TextWrapping="Wrap"
+              ResourceKey="Common.DiagnosticDetailFormat"
+              Value="{Binding StatusDiagnosticDetail}"
+              IsVisible="{Binding HasStatusDiagnosticDetail}" />
+        </StackPanel>
+      </Border>
+      <WrapPanel Grid.Row="3"
+                 HorizontalAlignment="Right">
+        <Button x:Name="PreviewPlaylistButton"
+                Classes="app"
+                Content="{DynamicResource Loc.Workbench.Playlists.Action.Preview}"
+                Command="{Binding PreviewPlaylistCommand}" />
+        <Button Classes="app primary"
+                Content="{DynamicResource Loc.Workbench.Playlists.Action.Write}"
+                Command="{Binding ApplyPlaylistCommand}" />
+      </WrapPanel>
+    </Grid>
+  </Grid>
+</UserControl>

@@ -1,0 +1,158 @@
+<UserControl x:Class="MusicLibraryManager.Views.WorkbenchSections.WorkbenchReportsSectionView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:MusicLibraryManager.Controls">
+  <Grid x:Name="SectionLayout"
+        Margin="0,12,0,0"
+        ColumnDefinitions="0.9*,14,1.1*">
+    <ScrollViewer x:Name="EditorScroll"
+                  VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="9">
+        <TextBlock Classes="section-title"
+                   Text="{DynamicResource Loc.Workbench.Reports.Title}" />
+        <TextBox Classes="app"
+                 Text="{Binding ReportEditor.Name, Mode=TwoWay}"
+                 PlaceholderText="{DynamicResource Loc.Workbench.Reports.NamePlaceholder}" />
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+          <ComboBox Classes="app"
+                    ItemsSource="{Binding ReportEditor.FormatChoices}"
+                    DisplayMemberBinding="{Binding Label}"
+                    SelectedValueBinding="{Binding Value}"
+                    SelectedValue="{Binding ReportEditor.Format, Mode=TwoWay}" />
+          <ComboBox Grid.Column="1"
+                    Classes="app"
+                    ItemsSource="{Binding ReportEditor.EncodingChoices}"
+                    DisplayMemberBinding="{Binding Label}"
+                    SelectedValueBinding="{Binding Value}"
+                    SelectedValue="{Binding ReportEditor.Encoding, Mode=TwoWay}" />
+        </Grid>
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+          <TextBox Classes="app"
+                   Text="{Binding ReportEditor.OutputPath, Mode=TwoWay}"
+                   PlaceholderText="{DynamicResource Loc.Workbench.Common.OutputPathPlaceholder}" />
+          <Button Grid.Column="1"
+                  Classes="app"
+                  Content="{DynamicResource Loc.Common.Browse}"
+                  Command="{Binding BrowseReportOutputCommand}" />
+        </Grid>
+        <CheckBox Content="{DynamicResource Loc.Workbench.Reports.OnePerGroup}"
+                  IsChecked="{Binding ReportEditor.OneFilePerGroup, Mode=TwoWay}" />
+        <TextBox Classes="app"
+                 Text="{Binding ReportEditor.GroupFileNameTemplate, Mode=TwoWay}"
+                 PlaceholderText="{}{Group}.{Format}" />
+
+        <TextBlock Classes="section-title"
+                   Margin="0,8,0,0"
+                   Text="{DynamicResource Loc.Workbench.Reports.Columns}" />
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+          <ComboBox Classes="app"
+                    ItemsSource="{Binding ReportEditor.AvailableFields}"
+                    DisplayMemberBinding="{Binding Label}"
+                    SelectedItem="{Binding ReportEditor.SelectedAvailableField, Mode=TwoWay}" />
+          <Button Grid.Column="1"
+                  Classes="app"
+                  Content="{DynamicResource Loc.Workbench.Action.Add}"
+                  Command="{Binding ReportEditor.AddSelectedFieldCommand}" />
+        </Grid>
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+          <TextBox Classes="app"
+                   Text="{Binding ReportEditor.CustomFieldName, Mode=TwoWay}"
+                   PlaceholderText="{DynamicResource Loc.Workbench.Common.CustomFieldPlaceholder}" />
+          <Button Grid.Column="1"
+                  Classes="app"
+                  Content="{DynamicResource Loc.Workbench.Reports.Action.AddCustom}"
+                  Command="{Binding ReportEditor.AddCustomFieldCommand}" />
+        </Grid>
+        <ListBox MinHeight="120"
+                 MaxHeight="210"
+                 ItemsSource="{Binding ReportEditor.Fields}"
+                 SelectedItem="{Binding ReportEditor.SelectedField, Mode=TwoWay}">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <TextBlock Text="{Binding Label}" />
+                <TextBlock Grid.Column="1"
+                           Classes="muted"
+                           Text="{Binding Source}" />
+              </Grid>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+        <WrapPanel>
+          <Button Classes="app"
+                  Content="{DynamicResource Loc.Common.Remove}"
+                  Command="{Binding ReportEditor.RemoveFieldCommand}" />
+          <Button Classes="app"
+                  Content="{DynamicResource Loc.Workbench.Action.MoveUp}"
+                  Command="{Binding ReportEditor.MoveFieldUpCommand}" />
+          <Button Classes="app"
+                  Content="{DynamicResource Loc.Workbench.Action.MoveDown}"
+                  Command="{Binding ReportEditor.MoveFieldDownCommand}" />
+        </WrapPanel>
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+          <StackPanel Spacing="4">
+            <TextBlock Classes="muted" Text="{DynamicResource Loc.Workbench.Reports.GroupBy}" />
+            <ComboBox Classes="app"
+                      ItemsSource="{Binding ReportEditor.Fields}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedItem="{Binding ReportEditor.SelectedGroupField, Mode=TwoWay}"
+                      PlaceholderText="{DynamicResource Loc.Workbench.Reports.NoGrouping}" />
+          </StackPanel>
+          <StackPanel Grid.Column="1" Spacing="4">
+            <TextBlock Classes="muted" Text="{DynamicResource Loc.Workbench.Reports.SortBy}" />
+            <ComboBox Classes="app"
+                      ItemsSource="{Binding ReportEditor.Fields}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedItem="{Binding ReportEditor.SelectedSortField, Mode=TwoWay}"
+                      PlaceholderText="{DynamicResource Loc.Workbench.Reports.SourceOrder}" />
+          </StackPanel>
+        </Grid>
+        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+          <ComboBox Classes="app"
+                    ItemsSource="{Binding ReportEditor.SortTypeChoices}"
+                    DisplayMemberBinding="{Binding Label}"
+                    SelectedValueBinding="{Binding Value}"
+                    SelectedValue="{Binding ReportEditor.SortType, Mode=TwoWay}" />
+          <CheckBox Grid.Column="1"
+                    VerticalAlignment="Center"
+                    Content="{DynamicResource Loc.Workbench.Reports.Descending}"
+                    IsChecked="{Binding ReportEditor.SortDescending, Mode=TwoWay}" />
+        </Grid>
+      </StackPanel>
+    </ScrollViewer>
+
+    <Grid x:Name="ReviewedPanel"
+          Grid.Column="2"
+          RowDefinitions="Auto,*,Auto,Auto"
+          RowSpacing="9">
+      <TextBlock Classes="section-title"
+                 Text="{DynamicResource Loc.Workbench.Reports.Reviewed}" />
+      <controls:AppDataGrid x:Name="ReportOutputGrid"
+                            Grid.Row="1"
+                            MinHeight="150"
+                            ItemsSource="{Binding ReportOutputs}" />
+      <Border Grid.Row="2" Classes="status-banner info">
+        <StackPanel Spacing="2">
+          <TextBlock Text="{Binding StatusText}"
+                     TextWrapping="Wrap" />
+          <controls:LocalizedFormatTextBlock
+              Classes="muted"
+              FontSize="11"
+              TextWrapping="Wrap"
+              ResourceKey="Common.DiagnosticDetailFormat"
+              Value="{Binding StatusDiagnosticDetail}"
+              IsVisible="{Binding HasStatusDiagnosticDetail}" />
+        </StackPanel>
+      </Border>
+      <WrapPanel Grid.Row="3"
+                 HorizontalAlignment="Right">
+        <Button Classes="app"
+                Content="{DynamicResource Loc.Workbench.Reports.Action.Preview}"
+                Command="{Binding PreviewReportCommand}" />
+        <Button Classes="app primary"
+                Content="{DynamicResource Loc.Workbench.Reports.Action.Write}"
+                Command="{Binding ApplyReportCommand}" />
+      </WrapPanel>
+    </Grid>
+  </Grid>
+</UserControl>

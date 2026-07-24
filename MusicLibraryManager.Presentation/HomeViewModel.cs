@@ -12,6 +12,12 @@ public partial class HomeViewModel : ObservableObject
     private readonly IAppSettings _settings;
     private readonly INavigationService _navigation;
     private readonly IActivityService _activities;
+    private readonly ILocalizationService? _localization;
+    private DateTime? _lastSuccessfulIndex;
+    private (int Healthy, int Degraded, int Unavailable)?
+        _rootCounts;
+    private bool _hasNoScanHistory;
+    private bool _refreshFailed;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RefreshCommand))]
@@ -26,26 +32,41 @@ public partial class HomeViewModel : ObservableObject
     [ObservableProperty] private string _albumCount = "—";
     [ObservableProperty] private string _artistCount = "—";
     [ObservableProperty] private string _artworkCount = "—";
-    [ObservableProperty] private string _lastIndexTime = "Not indexed yet";
+    [ObservableProperty]
+    private string _lastIndexTime =
+        LocalizedText.Get(
+            "Home.NotIndexedYet");
     [ObservableProperty] private string _attentionCount = "—";
-    [ObservableProperty] private string _rootHealth = "Load a configuration to see library health.";
+    [ObservableProperty]
+    private string _rootHealth =
+        LocalizedText.Get(
+            "Home.LoadConfigurationHealth");
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasError))]
     private string? _errorMessage;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasErrorDetail))]
+    private string? _errorDetail;
 
     public HomeViewModel(
         ILibraryService library,
         IAppSettings settings,
         INavigationService navigation,
         IndexingViewModel indexing,
-        IActivityService activities)
+        IActivityService activities,
+        ILocalizationService? localization = null)
     {
         _library = library;
         _settings = settings;
         _navigation = navigation;
         _activities = activities;
+        _localization = localization;
         Indexing = indexing;
         HasConfiguration = settings.Configuration is not null;
+        RefreshLocalizedText();
+        if (_localization is not null)
+            _localization.CultureChanged +=
+                OnCultureChanged;
         HasRecentActivity = activities.Activities.Count > 0;
         settings.ConfigurationChanged += (_, _) =>
         {
@@ -65,6 +86,8 @@ public partial class HomeViewModel : ObservableObject
     public IReadOnlyList<AppActivity> RecentActivityItems => _activities.Activities.Take(3).ToArray();
     public bool NeedsSetup => !HasConfiguration;
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
+    public bool HasErrorDetail =>
+        !string.IsNullOrWhiteSpace(ErrorDetail);
 
     private bool CanRefresh() => HasConfiguration && !IsBusy;
 
@@ -75,6 +98,8 @@ public partial class HomeViewModel : ObservableObject
             return;
         IsBusy = true;
         ErrorMessage = null;
+        ErrorDetail = null;
+        _refreshFailed = false;
         try
         {
             var records = await _library.GetAllRecordsAsync();
@@ -91,22 +116,26 @@ public partial class HomeViewModel : ObservableObject
             ArtistCount = counts.Artists.ToString("N0");
             ArtworkCount = (await _library.GetMaterializedArtworkFileCountAsync()).ToString("N0");
             IReadOnlyList<ScanRootHealth> roots = await _library.GetScanRootHealthAsync();
-            DateTime? lastSuccessfulIndex = roots
+            _lastSuccessfulIndex = roots
                 .Where(root => root.LastSuccessUtc is not null)
                 .Select(root => root.LastSuccessUtc)
                 .Max();
-            LastIndexTime = lastSuccessfulIndex is { } completed
+            LastIndexTime = _lastSuccessfulIndex is { } completed
                 ? completed.ToLocalTime().ToString("g")
-                : "Not indexed yet";
+                : Text("Home.NotIndexedYet");
             AttentionCount = roots.Count(root => root.State is
                 ScanRootState.Degraded or ScanRootState.Unavailable).ToString("N0");
-            RootHealth = roots.Count == 0
-                ? "No scan history yet. Your cached library remains available offline."
+            _hasNoScanHistory = roots.Count == 0;
+            RootHealth = _hasNoScanHistory
+                ? Text("Home.NoScanHistory")
                 : DescribeRoots(roots);
         }
         catch (Exception error)
         {
-            ErrorMessage = error.Message;
+            _refreshFailed = true;
+            ErrorMessage = Text(
+                "Home.RefreshFailed");
+            ErrorDetail = error.Message;
         }
         finally
         {
@@ -125,11 +154,61 @@ public partial class HomeViewModel : ObservableObject
     [RelayCommand]
     private void OpenHealth() => _navigation.Navigate(ShellDestination.Health);
 
-    private static string DescribeRoots(IReadOnlyList<ScanRootHealth> roots)
+    private string DescribeRoots(
+        IReadOnlyList<ScanRootHealth> roots)
     {
         int available = roots.Count(root => root.State == ScanRootState.Healthy);
         int degraded = roots.Count(root => root.State == ScanRootState.Degraded);
         int unavailable = roots.Count(root => root.State == ScanRootState.Unavailable);
-        return $"{available:N0} healthy · {degraded:N0} need attention · {unavailable:N0} offline";
+        _rootCounts = (
+            available,
+            degraded,
+            unavailable);
+        return Format(
+            "Home.RootHealthFormat",
+            available,
+            degraded,
+            unavailable);
+    }
+
+    private string Text(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string Format(
+        string key,
+        params object?[] arguments) =>
+        _localization?.Format(
+            key,
+            arguments) ??
+        LocalizedText.Format(
+            key,
+            arguments);
+
+    private void OnCultureChanged(
+        object? sender,
+        EventArgs e) =>
+        RefreshLocalizedText();
+
+    private void RefreshLocalizedText()
+    {
+        if (_lastSuccessfulIndex is null)
+            LastIndexTime = Text(
+                "Home.NotIndexedYet");
+        if (!HasConfiguration)
+            RootHealth = Text(
+                "Home.LoadConfigurationHealth");
+        else if (_hasNoScanHistory)
+            RootHealth = Text(
+                "Home.NoScanHistory");
+        else if (_rootCounts is { } counts)
+            RootHealth = Format(
+                "Home.RootHealthFormat",
+                counts.Healthy,
+                counts.Degraded,
+                counts.Unavailable);
+        if (_refreshFailed)
+            ErrorMessage = Text(
+                "Home.RefreshFailed");
     }
 }

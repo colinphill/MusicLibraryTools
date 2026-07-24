@@ -2,55 +2,120 @@
              xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:MusicLibraryManager.Controls"
-             xmlns:views="using:MusicLibraryManager.Views"
+             xmlns:sections="using:MusicLibraryManager.Views.WorkbenchSections"
              DragDrop.AllowDrop="True"
              DragDrop.DragOver="OnDragOver"
              DragDrop.Drop="OnDrop"
              KeyDown="OnWorkbenchKeyDown">
-  <Grid Margin="26,22,26,26" RowDefinitions="Auto,Auto,*" RowSpacing="14">
-    <controls:PageHeader Title="Metadata Workbench"
-        Subtitle="Inspect, edit, and recover metadata for ad-hoc files without creating a library.">
+  <Grid x:Name="WorkbenchRoot"
+        Margin="26,22,26,26"
+        RowDefinitions="Auto,Auto,*"
+        RowSpacing="14">
+    <controls:PageHeader x:Name="WorkbenchHeader"
+                         Title="{DynamicResource Loc.Workbench.Title}"
+                         Subtitle="{DynamicResource Loc.Workbench.Subtitle}">
       <controls:PageHeader.Actions>
         <WrapPanel>
-          <Button x:Name="WorkbenchInspectorToggle"
-                  Classes="app" Margin="0,0,8,6" Content="Inspector"
-                  Click="OnInspectorToggle" />
-          <Button Classes="app" Margin="0,0,8,6"
-                  Content="Undo last apply"
-                  Command="{Binding UndoCommand}" />
-          <Button Classes="app" Margin="0,0,8,6" Content="Redo"
-                  Command="{Binding RedoCommand}" />
-          <Button Classes="app" Margin="0,0,8,6"
-                  Content="Repeat recipe"
-                  Command="{Binding RepeatCommand}" />
           <Button x:Name="WorkbenchPendingChangesButton"
-                  Classes="app" Margin="0,0,8,6"
-                  Content="{Binding PendingChanges.Count, StringFormat=Pending changes ({0})}"
-                  Click="OnWorkbenchPendingChangesClick" />
-          <Button Classes="app primary" Margin="0,0,0,6"
-                  Content="Apply preview"
-                  Command="{Binding ApplyCommand}" />
+                  Classes="app primary"
+                  Margin="0,0,8,6"
+                  AutomationProperties.Name="{DynamicResource Loc.Workbench.PendingChanges.ReviewAutomation}"
+                  Click="OnWorkbenchPendingChangesClick">
+            <controls:LocalizedFormatTextBlock
+                ResourceKey="Workbench.PendingChanges.Review"
+                UseCountVariant="True"
+                Value="{Binding PendingChanges.Count}" />
+          </Button>
+          <Button x:Name="WorkbenchInspectorToggle"
+                  Classes="app"
+                  Margin="0,0,8,6"
+                  Content="{DynamicResource Loc.Workbench.Action.Inspector}"
+                  AutomationProperties.Name="{DynamicResource Loc.Workbench.Action.InspectorAutomation}"
+                  Click="OnInspectorToggle" />
+          <Button x:Name="WorkbenchMoreButton"
+                  Classes="app"
+                  Margin="0,0,0,6"
+                  Content="{DynamicResource Loc.Workbench.Action.More}"
+                  AutomationProperties.Name="{DynamicResource Loc.Workbench.Action.MoreAutomation}">
+            <Button.Flyout>
+              <MenuFlyout>
+                <MenuItem Header="{DynamicResource Loc.Workbench.Action.UndoLastApply}"
+                          Command="{Binding UndoCommand}" />
+                <MenuItem Header="{DynamicResource Loc.Workbench.Action.Redo}"
+                          Command="{Binding RedoCommand}" />
+                <MenuItem Header="{DynamicResource Loc.Workbench.Action.RepeatRecipe}"
+                          Command="{Binding RepeatCommand}" />
+              </MenuFlyout>
+            </Button.Flyout>
+          </Button>
         </WrapPanel>
       </controls:PageHeader.Actions>
     </controls:PageHeader>
 
-    <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,Auto,Auto,*,280,Auto" ColumnSpacing="8">
-      <Button Classes="app primary" Content="Add files" Command="{Binding BrowseFilesCommand}" />
-      <Button Grid.Column="1" Classes="app" Content="Add folder"
-              Command="{Binding BrowseFolderCommand}" />
-      <CheckBox Grid.Column="2" Margin="8,0" VerticalAlignment="Center"
-                Content="Include subfolders" IsChecked="{Binding Recursive, Mode=TwoWay}" />
-      <ComboBox x:Name="RecentLocationsBox" Grid.Column="3" Classes="app"
-                MinWidth="220" MaxWidth="390"
-                ItemsSource="{Binding RecentLocations}"
-                PlaceholderText="Recent locations"
-                AutomationProperties.Name="Recent Workbench locations" />
-      <Button x:Name="AddRecentWorkbenchSourceButton"
-              Grid.Column="4" HorizontalAlignment="Left" Classes="app"
-              Content="Add recent" Command="{Binding AddRecentCommand}"
-              CommandParameter="{Binding SelectedItem, ElementName=RecentLocationsBox}" />
-      <StackPanel Grid.Column="5" Spacing="3" IsVisible="{Binding IsBusy}">
-        <TextBlock Classes="muted" FontSize="11" Text="{Binding ProgressText}"
+    <WrapPanel x:Name="WorkbenchSourceBar"
+               Grid.Row="1"
+               VerticalAlignment="Center">
+      <SplitButton x:Name="AddWorkbenchSourceButton"
+                   Classes="app primary"
+                   Margin="0,0,8,6"
+                   Content="{DynamicResource Loc.Workbench.Action.AddFiles}"
+                   Command="{Binding BrowseFilesCommand}"
+                   AutomationProperties.Name="{DynamicResource Loc.Workbench.Source.AddAutomation}">
+        <SplitButton.Flyout>
+          <Flyout Placement="BottomEdgeAlignedLeft">
+            <Border Width="320"
+                    Padding="12"
+                    Background="{DynamicResource AppPanelBrush}">
+              <StackPanel Spacing="9">
+                <TextBlock FontSize="16"
+                           FontWeight="SemiBold"
+                           Text="{DynamicResource Loc.Workbench.Source.Title}" />
+                <TextBlock Classes="muted"
+                           Text="{DynamicResource Loc.Workbench.Source.Description}"
+                           TextWrapping="Wrap" />
+                <Button x:Name="ChooseWorkbenchFilesButton"
+                        Classes="app primary"
+                        HorizontalContentAlignment="Left"
+                        Content="{DynamicResource Loc.Workbench.Source.ChooseFiles}"
+                        AutomationProperties.Name="{DynamicResource Loc.Workbench.Source.ChooseFilesAutomation}"
+                        Command="{Binding BrowseFilesCommand}" />
+                <Button x:Name="ChooseWorkbenchFolderButton"
+                        Classes="app"
+                        HorizontalContentAlignment="Left"
+                        Content="{DynamicResource Loc.Workbench.Source.ChooseFolder}"
+                        AutomationProperties.Name="{DynamicResource Loc.Workbench.Source.ChooseFolderAutomation}"
+                        Command="{Binding BrowseFolderCommand}" />
+                <CheckBox x:Name="WorkbenchIncludeSubfoldersCheckBox"
+                          Content="{DynamicResource Loc.Workbench.Source.IncludeSubfolders}"
+                          IsChecked="{Binding Recursive, Mode=TwoWay}" />
+                <Border Height="1"
+                        Background="{DynamicResource AppBorderBrush}" />
+                <TextBlock FontWeight="SemiBold"
+                           Text="{DynamicResource Loc.Workbench.Source.RecentLocation}" />
+                <ComboBox x:Name="RecentLocationsBox"
+                          Classes="app"
+                          ItemsSource="{Binding RecentLocations}"
+                          PlaceholderText="{DynamicResource Loc.Workbench.Source.RecentPlaceholder}"
+                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Source.RecentAutomation}" />
+                <Button x:Name="AddRecentWorkbenchSourceButton"
+                        Classes="app"
+                        HorizontalContentAlignment="Left"
+                        Content="{DynamicResource Loc.Workbench.Source.AddRecent}"
+                        Command="{Binding AddRecentCommand}"
+                        CommandParameter="{Binding SelectedItem, ElementName=RecentLocationsBox}" />
+              </StackPanel>
+            </Border>
+          </Flyout>
+        </SplitButton.Flyout>
+      </SplitButton>
+      <StackPanel x:Name="WorkbenchProgressPanel"
+                  Width="250"
+                  Margin="0,0,8,6"
+                  Spacing="3"
+                  IsVisible="{Binding IsBusy}">
+        <TextBlock Classes="muted"
+                   FontSize="11"
+                   Text="{Binding ProgressText}"
                    TextTrimming="CharacterEllipsis"
                    AutomationProperties.LiveSetting="Polite" />
         <ProgressBar Height="4"
@@ -58,1211 +123,199 @@
                      Maximum="{Binding ProgressMaximum}"
                      Value="{Binding ProgressValue}" />
       </StackPanel>
-      <Button Grid.Column="6" Classes="app" Content="Cancel"
-              Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />
-    </Grid>
+      <Button Classes="app"
+              Margin="0,0,0,6"
+              Content="{DynamicResource Loc.Common.Cancel}"
+              Command="{Binding CancelCommand}"
+              IsVisible="{Binding IsBusy}" />
+    </WrapPanel>
 
-    <controls:PersistedSplitView x:Name="WorkbenchSplit" Grid.Row="2"
-                                 InitialLeftWidth="980" MinLeftWidth="420"
-                                 MaxLeftWidth="1800" MinRightWidth="320"
+    <controls:PersistedSplitView x:Name="WorkbenchSplit"
+                                 Grid.Row="2"
+                                 InitialLeftWidth="980"
+                                 MinLeftWidth="420"
+                                 MaxLeftWidth="1800"
+                                 MinRightWidth="320"
                                  PersistenceKey="workbench"
-                                 Label="Resize Workbench and inspector">
+                                 Label="{DynamicResource Loc.Workbench.Split.Resize}">
       <controls:PersistedSplitView.Left>
-        <Border Classes="card" Padding="12" ClipToBounds="True">
-          <TabControl x:Name="WorkbenchTabs">
-        <TabItem Header="Session">
-          <Grid Margin="0,12,0,0" RowDefinitions="Auto,*,Auto,Auto,Auto,Auto" RowSpacing="10">
-            <WrapPanel>
-              <Button Classes="app" Margin="0,0,8,6" Content="Remove"
-                      Command="{Binding RemoveCurrentCommand}" />
-              <Button Classes="app" Margin="0,0,8,6" Content="Move up"
-                      Command="{Binding MoveUpCommand}" />
-              <Button Classes="app" Margin="0,0,8,6" Content="Move down"
-                      Command="{Binding MoveDownCommand}" />
-              <Button Classes="app" Margin="0,0,8,6" Content="Clear"
-                      Command="{Binding ClearCommand}" />
-              <Button Classes="app" Margin="0,0,8,6"
-                      Content="Send selected to Ingest"
-                      Command="{Binding SendSelectedToIngestCommand}" />
-              <Button x:Name="WorkbenchColumnsButton" Classes="app"
-                      Margin="0,0,8,6" Content="Columns"
-                      Click="OnWorkbenchColumnsClick" />
-              <Button Classes="app primary" Margin="0,0,8,6"
-                      Content="Preview inline edits"
-                      Command="{Binding PreviewEditsCommand}" />
-              <Button x:Name="ImportDelimitedMetadataButton"
-                      Classes="app" Margin="0,0,8,6"
-                      Content="Import CSV/TSV"
-                      Command="{Binding ImportDelimitedMetadataCommand}" />
-              <ComboBox x:Name="ImportEmptyCellMode"
-                        Classes="app" Width="145" Margin="0,0,8,6"
-                        ItemsSource="{Binding ImportEmptyCellModes}"
-                        SelectedItem="{Binding ImportEmptyCellMode, Mode=TwoWay}"
-                        ToolTip.Tip="How empty import cells are handled"
-                        AutomationProperties.Name="Empty import cell behavior" />
-            </WrapPanel>
-
-            <Grid Grid.Row="1">
-              <controls:AppDataGrid x:Name="WorkbenchGrid"
-                  ItemsSource="{Binding Files}"
-                  SelectedItem="{Binding SelectedFile, Mode=TwoWay}"
-                  SelectionChanged="OnWorkbenchSelectionChanged"
-                  AutomationProperties.Name="Workbench files" />
-              <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center"
-                          Spacing="7" IsVisible="{Binding !HasFiles}" MaxWidth="430">
-                <TextBlock HorizontalAlignment="Center" FontSize="18"
-                           FontWeight="SemiBold" Text="Drop music here" />
-                <TextBlock Classes="muted" TextAlignment="Center" TextWrapping="Wrap"
-                           Text="Add files, folders, M3U/M3U8 playlists, or cuesheets. Supported metadata is read directly from each file." />
-              </StackPanel>
-            </Grid>
-
-            <Border Grid.Row="2" Classes="status-banner info"
-                    AutomationProperties.LiveSetting="Polite">
-              <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                <TextBlock Classes="status-icon" Text="i" />
-                <TextBlock Grid.Column="1" Text="{Binding StatusText}" TextWrapping="Wrap" />
-              </Grid>
-            </Border>
-
-            <Border Grid.Row="3" Padding="10" CornerRadius="7"
-                    BorderBrush="{DynamicResource AppBorderBrush}"
-                    BorderThickness="1"
-                    IsVisible="{Binding SelectedFile.HasEditableTagLayers}">
-              <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,*"
-                    ColumnSpacing="8">
-                <TextBlock VerticalAlignment="Center"
-                           FontWeight="SemiBold"
-                           Text="Physical tag layers" />
-                <Button Grid.Column="1" Classes="app"
-                        Content="Add ID3v2"
-                        Command="{Binding PreviewAddId3LayerCommand}" />
-                <Button Grid.Column="2" Classes="app"
-                        Content="Remove ID3v2"
-                        Command="{Binding PreviewRemoveId3LayerCommand}" />
-                <Button Grid.Column="3" Classes="app"
-                        Content="Add APEv2"
-                        Command="{Binding PreviewAddApeLayerCommand}" />
-                <Button Grid.Column="4" Classes="app"
-                        Content="Remove APEv2"
-                        Command="{Binding PreviewRemoveApeLayerCommand}" />
-                <Button Grid.Column="5" Classes="app"
-                        Content="Add ID3v1"
-                        Command="{Binding PreviewAddId3v1LayerCommand}" />
-                <Button Grid.Column="6" Classes="app"
-                        Content="Remove ID3v1"
-                        Command="{Binding PreviewRemoveId3v1LayerCommand}" />
-                <CheckBox Grid.Column="7" HorizontalAlignment="Right"
-                          VerticalAlignment="Center"
-                          Content="Copy primary metadata into a new layer"
-                          IsChecked="{Binding CopyPrimaryMetadataToNewLayer, Mode=TwoWay}" />
-              </Grid>
-            </Border>
-
-            <Border Grid.Row="4" Padding="10" CornerRadius="7"
-                    BorderBrush="{DynamicResource AppBorderBrush}"
-                    BorderThickness="1"
-                    IsVisible="{Binding SelectedFile.HasId3Tag}">
-              <Grid ColumnDefinitions="Auto,120,Auto,Auto,Auto,Auto,Auto,120,Auto,*"
-                    ColumnSpacing="8">
-                <TextBlock VerticalAlignment="Center"
-                           FontWeight="SemiBold"
-                           Text="ID3 version" />
-                <ComboBox Grid.Column="1" Classes="app"
-                          ItemsSource="{Binding Id3Versions}"
-                          SelectedItem="{Binding TargetId3Version, Mode=TwoWay}" />
-                <CheckBox Grid.Column="2" VerticalAlignment="Center"
-                          Content="Drop unsupported frames"
-                          IsChecked="{Binding DropUnsupportedId3Frames, Mode=TwoWay}" />
-                <CheckBox Grid.Column="3" VerticalAlignment="Center"
-                          Content="Join multi-value text"
-                          IsChecked="{Binding CoalesceId3TextValues, Mode=TwoWay}" />
-                <Button Grid.Column="4" Classes="app primary"
-                        Content="Preview conversion"
-                        Command="{Binding PreviewId3VersionCommand}" />
-                <Button Grid.Column="5" Classes="app"
-                        Content="Copy v2 → v1"
-                        Command="{Binding PreviewId3v2ToId3v1Command}" />
-                <Button Grid.Column="6" Classes="app"
-                        Content="Copy v1 → v2"
-                        Command="{Binding PreviewId3v1ToId3v2Command}" />
-                <ComboBox Grid.Column="7" Classes="app"
-                          ItemsSource="{Binding Id3EncodingPolicies}"
-                          SelectedItem="{Binding SelectedId3EncodingPolicy, Mode=TwoWay}" />
-                <Button Grid.Column="8" Classes="app"
-                        Content="Preview encoding"
-                        Command="{Binding PreviewId3EncodingCommand}" />
-                <TextBlock Grid.Column="9" Classes="muted"
-                           VerticalAlignment="Center"
-                           Text="{Binding SelectedFile.Document.Id3Version, StringFormat='Current: {0}'}" />
-              </Grid>
-            </Border>
-
-            <Grid Grid.Row="5" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="16"
-                  IsVisible="{Binding SelectedFile}">
-              <TextBlock Classes="muted" Text="{Binding FieldSelectionSummary}"
-                         TextTrimming="CharacterEllipsis" />
-              <TextBlock Grid.Column="1" Classes="summary-label"
-                         Text="{Binding SelectedFile.LayerSummary, StringFormat='Tags: {0}'}" />
-              <TextBlock Grid.Column="2" Classes="summary-label"
-                         Text="{Binding SelectedFile.ArtworkCount, StringFormat='Artwork: {0}'}" />
-              <TextBlock Grid.Column="3" Classes="summary-label"
-                         Text="{Binding SelectedFile.FieldCount, StringFormat='Fields: {0}'}" />
-            </Grid>
-
-            <Popup x:Name="WorkbenchColumnPopover"
-                   PlacementTarget="{Binding #WorkbenchColumnsButton}"
-                   Placement="BottomEdgeAlignedLeft"
-                   VerticalOffset="8"
-                   IsLightDismissEnabled="True"
-                   IsOpen="False">
-              <Border Width="650" MaxHeight="610"
-                      Background="{DynamicResource AppPanelBrush}"
-                      BorderBrush="{DynamicResource AppBorderStrongBrush}"
-                      BorderThickness="1" CornerRadius="9"
-                      Padding="12" BoxShadow="0 14 40 0 #77000000">
-                <Grid RowDefinitions="Auto,*" ColumnDefinitions="220,*"
-                      RowSpacing="8" ColumnSpacing="14">
-                  <Grid Grid.ColumnSpan="2"
-                        ColumnDefinitions="*,Auto">
-                    <TextBlock VerticalAlignment="Center"
-                               Text="Workbench columns"
-                               FontSize="14" FontWeight="SemiBold" />
-                    <Button Grid.Column="1" Classes="app"
-                            Width="28" Height="28" Padding="0"
-                            Content="&#x2715;"
-                            ToolTip.Tip="Close column selector"
-                            Click="OnWorkbenchColumnsClose" />
-                  </Grid>
-                  <ScrollViewer Grid.Row="1"
-                                VerticalScrollBarVisibility="Auto">
-                    <StackPanel x:Name="WorkbenchColumnOptions"
-                                Spacing="8" />
-                  </ScrollViewer>
-                  <StackPanel Grid.Row="1" Grid.Column="1" Spacing="7">
-                    <TextBlock Classes="section-title"
-                               Text="Metadata columns" />
-                    <ListBox x:Name="WorkbenchMetadataColumnList"
-                             MaxHeight="105"
-                             ItemsSource="{Binding ColumnEditor.Columns}"
-                             SelectedItem="{Binding ColumnEditor.SelectedColumn, Mode=TwoWay}">
-                      <ListBox.ItemTemplate>
-                        <DataTemplate>
-                          <Grid ColumnDefinitions="*,Auto"
-                                ColumnSpacing="8">
-                            <TextBlock Text="{Binding Label}" />
-                            <TextBlock Grid.Column="1" Classes="muted"
-                                       Text="{Binding Field}" />
-                          </Grid>
-                        </DataTemplate>
-                      </ListBox.ItemTemplate>
-                    </ListBox>
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="7">
-                      <TextBox Classes="app"
-                               Text="{Binding ColumnEditor.Label, Mode=TwoWay}"
-                               PlaceholderText="Column label" />
-                      <ComboBox Grid.Column="1" Classes="app"
-                                ItemsSource="{Binding ColumnEditor.FieldKinds}"
-                                SelectedItem="{Binding ColumnEditor.FieldKind, Mode=TwoWay}" />
-                    </Grid>
-                    <ComboBox Classes="app"
-                              ItemsSource="{Binding ColumnEditor.KnownFields}"
-                              DisplayMemberBinding="{Binding Label}"
-                              SelectedItem="{Binding ColumnEditor.SelectedKnownField, Mode=TwoWay}"
-                              PlaceholderText="Known metadata field" />
-                    <TextBox Classes="app"
-                             Text="{Binding ColumnEditor.CustomFieldName, Mode=TwoWay}"
-                             PlaceholderText="Native custom field name" />
-                    <Grid ColumnDefinitions="*,*" ColumnSpacing="7">
-                      <ComboBox Classes="app"
-                                ItemsSource="{Binding ColumnEditor.SortTypes}"
-                                SelectedItem="{Binding ColumnEditor.SortType, Mode=TwoWay}" />
-                      <NumericUpDown Grid.Column="1" Classes="app"
-                                     Minimum="50" Maximum="2000"
-                                     Value="{Binding ColumnEditor.Width, Mode=TwoWay}"
-                                     FormatString="0" />
-                    </Grid>
-                    <CheckBox Content="Allow inline editing when supported"
-                              IsEnabled="{Binding ColumnEditor.CanInlineEdit}"
-                              IsChecked="{Binding ColumnEditor.InlineEditable, Mode=TwoWay}" />
-                    <WrapPanel>
-                      <Button Classes="app" Content="New"
-                              Command="{Binding ColumnEditor.NewColumnCommand}" />
-                      <Button x:Name="SaveWorkbenchMetadataColumnButton"
-                              Classes="app primary" Content="Save column"
-                              Command="{Binding ColumnEditor.SaveColumnCommand}" />
-                      <Button Classes="app danger" Content="Remove"
-                              Command="{Binding ColumnEditor.DeleteColumnCommand}" />
-                    </WrapPanel>
-                    <TextBlock Classes="muted" TextWrapping="Wrap"
-                               Text="{Binding ColumnEditor.Status}" />
-                  </StackPanel>
-                </Grid>
-              </Border>
-            </Popup>
-          </Grid>
-        </TabItem>
-
-        <TabItem Header="Bulk operation">
-          <Grid Margin="0,12,0,0" RowDefinitions="Auto,Auto,Auto,Auto,190,*" RowSpacing="12">
-            <Grid ColumnDefinitions="190,190,190,190,170,*" ColumnSpacing="10">
-              <StackPanel Spacing="5">
-                <TextBlock Classes="muted" Text="Operation" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox x:Name="WorkbenchOperationPicker" Classes="app"
-                          ItemsSource="{Binding OperationEditor.OperationDescriptors}"
-                          DisplayMemberBinding="{Binding DisplayName}"
-                          SelectedItem="{Binding OperationEditor.SelectedOperation, Mode=TwoWay}" />
-              </StackPanel>
-              <StackPanel Grid.Column="1" Spacing="5">
-                <TextBlock Classes="muted" Text="Field" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox x:Name="WorkbenchOperationFieldPicker"
-                          Classes="app" ItemsSource="{Binding OperationEditor.Fields}"
-                          DisplayMemberBinding="{Binding Label}"
-                          SelectedItem="{Binding OperationEditor.SelectedField, Mode=TwoWay}" />
-              </StackPanel>
-              <StackPanel Grid.Column="2" Spacing="5">
-                <TextBlock Classes="muted" Text="Destination field" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.Fields}"
-                          DisplayMemberBinding="{Binding Label}"
-                          SelectedItem="{Binding OperationEditor.DestinationField, Mode=TwoWay}" />
-              </StackPanel>
-              <StackPanel Grid.Column="3" Spacing="5">
-                <TextBlock Classes="muted" Text="Second source field" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.Fields}"
-                          DisplayMemberBinding="{Binding Label}"
-                          SelectedItem="{Binding OperationEditor.SecondaryField, Mode=TwoWay}" />
-              </StackPanel>
-              <StackPanel Grid.Column="4" Spacing="5">
-                <TextBlock Classes="muted" Text="Case" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.CaseModes}"
-                          SelectedItem="{Binding OperationEditor.SelectedCaseMode, Mode=TwoWay}" />
-              </StackPanel>
-              <Button Grid.Column="5" VerticalAlignment="Bottom" HorizontalAlignment="Left"
-                      Classes="app primary" Content="Preview operation"
-                      Command="{Binding PreviewOperationCommand}" />
-            </Grid>
-
-            <Grid Grid.Row="1" ColumnDefinitions="*,*,*,160,160" ColumnSpacing="10">
-              <StackPanel Spacing="5">
-                <TextBlock Classes="muted" Text="Value" FontSize="12" FontWeight="SemiBold" />
-                <TextBox x:Name="WorkbenchOperationValueEditor"
-                         Classes="app" Text="{Binding OperationEditor.OperationValue, Mode=TwoWay}"
-                         PlaceholderText="Assignment value" />
-              </StackPanel>
-              <StackPanel Grid.Column="1" Spacing="5">
-                <TextBlock Classes="muted" Text="Find" FontSize="12" FontWeight="SemiBold" />
-                <TextBox Classes="app" Text="{Binding OperationEditor.SearchText, Mode=TwoWay}"
-                         PlaceholderText="Text or regular expression" />
-              </StackPanel>
-              <StackPanel Grid.Column="2" Spacing="5">
-                <TextBlock Classes="muted" Text="Replace with" FontSize="12" FontWeight="SemiBold" />
-                <TextBox Classes="app" Text="{Binding OperationEditor.ReplacementText, Mode=TwoWay}" />
-              </StackPanel>
-              <StackPanel Grid.Column="3" Spacing="5">
-                <TextBlock Classes="muted" Text="Separator" FontSize="12" FontWeight="SemiBold" />
-                <TextBox Classes="app" Text="{Binding OperationEditor.Separator, Mode=TwoWay}" />
-              </StackPanel>
-              <StackPanel Grid.Column="4" Spacing="5">
-                <TextBlock Classes="muted" Text="Value order" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.ValueOrders}"
-                          SelectedItem="{Binding OperationEditor.SelectedValueOrder, Mode=TwoWay}" />
-              </StackPanel>
-            </Grid>
-
-            <WrapPanel Grid.Row="2">
-              <CheckBox Margin="0,0,18,0" Content="Use regular expression"
-                        IsChecked="{Binding OperationEditor.UseRegularExpression, Mode=TwoWay}" />
-              <TextBlock Classes="muted" VerticalAlignment="Center"
-                         Text="Sequence start" />
-              <NumericUpDown Classes="app" Margin="8,0,18,0" Width="90"
-                             Minimum="0" Value="{Binding OperationEditor.SequenceStart, Mode=TwoWay}" />
-              <TextBlock Classes="muted" VerticalAlignment="Center"
-                         Text="Padding" />
-              <NumericUpDown Classes="app" Margin="8,0,0,0" Width="90"
-                             Minimum="0" Maximum="12"
-                             Value="{Binding OperationEditor.SequencePadding, Mode=TwoWay}" />
-              <Button x:Name="AddWorkbenchRecipeStepButton"
-                      Classes="app" Margin="18,0,0,0"
-                      Content="Add operation to recipe"
-                      Command="{Binding OperationEditor.AddCurrentOperationCommand}" />
-              <CheckBox Margin="18,0,8,0" VerticalAlignment="Center"
-                        Content="Condition"
-                        IsChecked="{Binding OperationEditor.ConditionEnabled, Mode=TwoWay}" />
-              <ComboBox Classes="app" Width="150" Margin="0,0,8,0"
-                        ItemsSource="{Binding OperationEditor.Fields}"
-                        DisplayMemberBinding="{Binding Label}"
-                        SelectedItem="{Binding OperationEditor.SelectedConditionField, Mode=TwoWay}" />
-              <ComboBox Classes="app" Width="130" Margin="0,0,8,0"
-                        ItemsSource="{Binding OperationEditor.ConditionOperators}"
-                        SelectedItem="{Binding OperationEditor.SelectedConditionOperator, Mode=TwoWay}" />
-              <TextBox Classes="app" Width="150"
-                       Text="{Binding OperationEditor.ConditionValue, Mode=TwoWay}"
-                       PlaceholderText="Condition value" />
-            </WrapPanel>
-
-            <Grid Grid.Row="3" ColumnDefinitions="220,100,*,160" ColumnSpacing="10">
-              <StackPanel Spacing="5">
-                <TextBlock Classes="muted" Text="Path component" FontSize="12" FontWeight="SemiBold" />
-                <ComboBox Classes="app" ItemsSource="{Binding OperationEditor.PathComponents}"
-                          SelectedItem="{Binding OperationEditor.SelectedPathComponent, Mode=TwoWay}" />
-              </StackPanel>
-              <StackPanel Grid.Column="1" Spacing="5">
-                <TextBlock Classes="muted" Text="Parent level" FontSize="12" FontWeight="SemiBold" />
-                <NumericUpDown Classes="app" Minimum="1"
-                               Value="{Binding OperationEditor.ParentLevel, Mode=TwoWay}" />
-              </StackPanel>
-              <StackPanel Grid.Column="2" Spacing="5">
-                <TextBlock Classes="muted" Text="Optional extraction pattern" FontSize="12" FontWeight="SemiBold" />
-                <TextBox Classes="app"
-                         Text="{Binding OperationEditor.ExtractionPattern, Mode=TwoWay}"
-                         PlaceholderText="Regular expression with a named capture" />
-              </StackPanel>
-              <StackPanel Grid.Column="3" Spacing="5">
-                <TextBlock Classes="muted" Text="Capture group" FontSize="12" FontWeight="SemiBold" />
-                <TextBox Classes="app"
-                         Text="{Binding OperationEditor.ExtractionGroup, Mode=TwoWay}" />
-              </StackPanel>
-            </Grid>
-
-            <Grid Grid.Row="4" ColumnDefinitions="1.2*,12,0.8*">
-              <Grid RowDefinitions="Auto,*,Auto" RowSpacing="6">
-                <TextBlock Classes="section-title" Text="Ordered recipe" />
-                <ListBox x:Name="WorkbenchRecipeSteps"
-                         Grid.Row="1" ItemsSource="{Binding OperationEditor.Steps}"
-                         SelectedItem="{Binding OperationEditor.SelectedStep, Mode=TwoWay}">
-                  <ListBox.ItemTemplate>
-                    <DataTemplate>
-                      <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                        <CheckBox IsChecked="{Binding Enabled, Mode=TwoWay}" />
-                        <TextBox Grid.Column="1" Classes="app" BorderThickness="0"
-                                 Background="Transparent"
-                                 Text="{Binding Name, Mode=TwoWay}" />
-                      </Grid>
-                    </DataTemplate>
-                  </ListBox.ItemTemplate>
-                </ListBox>
-                <WrapPanel Grid.Row="2">
-                  <Button Classes="app" Margin="0,0,6,0" Content="Up"
-                          Command="{Binding OperationEditor.MoveStepUpCommand}" />
-                  <Button Classes="app" Margin="0,0,6,0" Content="Down"
-                          Command="{Binding OperationEditor.MoveStepDownCommand}" />
-                  <Button Classes="app" Margin="0,0,6,0" Content="Duplicate"
-                          Command="{Binding OperationEditor.DuplicateStepCommand}" />
-                  <Button Classes="app danger" Content="Remove"
-                          Command="{Binding OperationEditor.RemoveStepCommand}" />
-                </WrapPanel>
-              </Grid>
-              <StackPanel Grid.Column="2" Spacing="7">
-                <TextBlock Classes="section-title" Text="Personal recipes" />
-                <ComboBox Classes="app"
-                          ItemsSource="{Binding OperationEditor.SavedRecipes}"
-                          SelectedItem="{Binding OperationEditor.SelectedSavedRecipe, Mode=TwoWay}"
-                          DisplayMemberBinding="{Binding Name}"
-                          PlaceholderText="Choose a saved recipe" />
-                <TextBox Classes="app"
-                         Text="{Binding OperationEditor.RecipeName, Mode=TwoWay}"
-                         PlaceholderText="Recipe name" />
-                <WrapPanel>
-                  <Button Classes="app" Margin="0,0,6,0" Content="Load"
-                          Command="{Binding OperationEditor.LoadRecipeCommand}" />
-                  <Button Classes="app primary" Margin="0,0,6,0" Content="Save"
-                          Command="{Binding OperationEditor.SaveRecipeCommand}" />
-                  <Button Classes="app" Margin="0,0,6,0" Content="New"
-                          Command="{Binding OperationEditor.NewRecipeCommand}" />
-                  <Button Classes="app danger" Content="Delete"
-                          Command="{Binding OperationEditor.DeleteRecipeCommand}" />
-                </WrapPanel>
-              </StackPanel>
-            </Grid>
-
-            <Grid Grid.Row="5"
-                  RowDefinitions="Auto,130,Auto,Auto,*"
-                  RowSpacing="8">
-              <TextBlock Classes="section-title"
-                         Text="Pending metadata operations" />
-              <controls:AppDataGrid x:Name="PendingOperationsGrid"
-                                    Grid.Row="1"
-                                    ItemsSource="{Binding PendingOperations}"
-                                    AutomationProperties.Name="Pending metadata operations" />
-              <TextBlock Grid.Row="2" Classes="section-title"
-                         Text="Reviewed changes" />
-              <Border x:Name="WorkbenchRepresentativePreview"
-                      Grid.Row="3" Padding="10"
-                      Background="{DynamicResource AppInsetBrush}"
-                      BorderBrush="{DynamicResource AppBorderBrush}"
-                      BorderThickness="1" CornerRadius="7">
-                <StackPanel Spacing="6">
-                  <TextBlock FontWeight="SemiBold"
-                             Text="Live representative draft" />
-                  <TextBlock Classes="muted" TextWrapping="Wrap"
-                             Text="{Binding RepresentativePreview.Status}" />
-                  <ProgressBar IsVisible="{Binding RepresentativePreview.IsBusy}"
-                               IsIndeterminate="True" Height="3" />
-                  <Grid IsVisible="{Binding RepresentativePreview.HasPreview}"
-                        ColumnDefinitions="*,*" ColumnSpacing="12">
-                    <StackPanel Spacing="3">
-                      <TextBlock Classes="muted" Text="Before" />
-                      <TextBlock Text="{Binding RepresentativePreview.BeforeText}"
-                                 TextWrapping="Wrap" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Spacing="3">
-                      <TextBlock Classes="muted" Text="After" />
-                      <TextBlock Text="{Binding RepresentativePreview.AfterText}"
-                                 TextWrapping="Wrap" />
-                    </StackPanel>
-                  </Grid>
+        <Grid RowDefinitions="Auto,*"
+              RowSpacing="8">
+          <ComboBox x:Name="WorkbenchSectionPicker"
+                    Classes="app"
+                    ItemsSource="{Binding SectionOptions}"
+                    DisplayMemberBinding="{Binding Label}"
+                    SelectedItem="{Binding SelectedSectionOption, Mode=TwoWay}"
+                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Navigation.SectionAutomation}" />
+          <Grid x:Name="WorkbenchBody"
+                Grid.Row="1"
+                ColumnDefinitions="156,10,*">
+            <Border x:Name="WorkbenchSectionRail"
+                    Classes="card"
+                    Padding="8"
+                    ClipToBounds="True"
+                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Navigation.Automation}">
+              <ScrollViewer VerticalScrollBarVisibility="Auto"
+                            HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Spacing="3">
+                  <TextBlock Classes="faint"
+                             Margin="8,5,8,2"
+                             FontSize="11"
+                             FontWeight="SemiBold"
+                             Text="{DynamicResource Loc.Workbench.Navigation.Group.Workspace}" />
+                  <Button x:Name="WorkbenchSectionSession"
+                          Classes="app quiet"
+                          HorizontalContentAlignment="Left"
+                          Content="{DynamicResource Loc.Workbench.Section.Session}"
+                          Tag="Session"
+                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Section.SessionAutomation}"
+                          Click="OnWorkbenchSectionClick" />
+                  <TextBlock Classes="faint"
+                             Margin="8,10,8,2"
+                             FontSize="11"
+                             FontWeight="SemiBold"
+                             Text="{DynamicResource Loc.Workbench.Navigation.Group.Edit}" />
+                  <Button x:Name="WorkbenchSectionBulkOperation"
+                          Classes="app quiet"
+                          HorizontalContentAlignment="Left"
+                          Content="{DynamicResource Loc.Workbench.Section.BulkOperation}"
+                          Tag="BulkOperation"
+                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Section.BulkOperationAutomation}"
+                          Click="OnWorkbenchSectionClick" />
+                  <Button x:Name="WorkbenchSectionAllFields"
+                          Classes="app quiet"
+                          HorizontalContentAlignment="Left"
+                          Content="{DynamicResource Loc.Workbench.Section.AllFields}"
+                          Tag="AllFields"
+                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Section.AllFieldsAutomation}"
+                          Click="OnWorkbenchSectionClick" />
+                  <Button x:Name="WorkbenchSectionFiles"
+                          Classes="app quiet"
+                          HorizontalContentAlignment="Left"
+                          Content="{DynamicResource Loc.Workbench.Section.Files}"
+                          Tag="Files"
+                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Section.FilesAutomation}"
+                          Click="OnWorkbenchSectionClick" />
+                  <TextBlock Classes="faint"
+                             Margin="8,10,8,2"
+                             FontSize="11"
+                             FontWeight="SemiBold"
+                             Text="{DynamicResource Loc.Workbench.Navigation.Group.Enrich}" />
+                  <Button x:Name="WorkbenchSectionOnlineMetadata"
+                          Classes="app quiet"
+                          HorizontalContentAlignment="Left"
+                          Content="{DynamicResource Loc.Workbench.Section.OnlineMetadata}"
+                          Tag="OnlineMetadata"
+                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Section.OnlineMetadataAutomation}"
+                          Click="OnWorkbenchSectionClick" />
+                  <TextBlock Classes="faint"
+                             Margin="8,10,8,2"
+                             FontSize="11"
+                             FontWeight="SemiBold"
+                             Text="{DynamicResource Loc.Workbench.Navigation.Group.Output}" />
+                  <Button x:Name="WorkbenchSectionReports"
+                          Classes="app quiet"
+                          HorizontalContentAlignment="Left"
+                          Content="{DynamicResource Loc.Workbench.Section.Reports}"
+                          Tag="Reports"
+                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Section.ReportsAutomation}"
+                          Click="OnWorkbenchSectionClick" />
+                  <Button x:Name="WorkbenchSectionPlaylists"
+                          Classes="app quiet"
+                          HorizontalContentAlignment="Left"
+                          Content="{DynamicResource Loc.Workbench.Section.Playlists}"
+                          Tag="Playlists"
+                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Section.PlaylistsAutomation}"
+                          Click="OnWorkbenchSectionClick" />
+                  <TextBlock Classes="faint"
+                             Margin="8,10,8,2"
+                             FontSize="11"
+                             FontWeight="SemiBold"
+                             Text="{DynamicResource Loc.Workbench.Navigation.Group.Automate}" />
+                  <Button x:Name="WorkbenchSectionTools"
+                          Classes="app quiet"
+                          HorizontalContentAlignment="Left"
+                          Content="{DynamicResource Loc.Workbench.Section.Tools}"
+                          Tag="Tools"
+                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Section.ToolsAutomation}"
+                          Click="OnWorkbenchSectionClick" />
+                  <Button x:Name="WorkbenchSectionShortcuts"
+                          Classes="app quiet"
+                          HorizontalContentAlignment="Left"
+                          Content="{DynamicResource Loc.Workbench.Section.Shortcuts}"
+                          Tag="Shortcuts"
+                          AutomationProperties.Name="{DynamicResource Loc.Workbench.Section.ShortcutsAutomation}"
+                          Click="OnWorkbenchSectionClick" />
                 </StackPanel>
-              </Border>
-              <controls:AppDataGrid x:Name="PreviewGrid" Grid.Row="4"
-                  ItemsSource="{Binding PreviewChanges}" />
-            </Grid>
+              </ScrollViewer>
+            </Border>
+            <Border x:Name="WorkbenchSectionDivider"
+                    Grid.Column="1"
+                    Width="2"
+                    Margin="4,8"
+                    CornerRadius="2"
+                    Background="{DynamicResource AppBorderBrush}" />
+            <Border x:Name="WorkbenchSectionContentCard"
+                    Grid.Column="2"
+                    Classes="card"
+                    Padding="12"
+                    ClipToBounds="True">
+              <Carousel x:Name="WorkbenchTabs">
+                <sections:WorkbenchSessionSectionView
+                    x:Name="WorkbenchSessionSection" />
+                <sections:WorkbenchBulkOperationSectionView
+                    x:Name="WorkbenchBulkOperationSection" />
+                <sections:WorkbenchAllFieldsSectionView
+                    x:Name="WorkbenchAllFieldsSection" />
+                <sections:WorkbenchFilesSectionView
+                    x:Name="WorkbenchFilesSection" />
+                <sections:WorkbenchOnlineMetadataSectionView
+                    x:Name="WorkbenchOnlineMetadataSection" />
+                <sections:WorkbenchReportsSectionView
+                    x:Name="WorkbenchReportsSection" />
+                <sections:WorkbenchPlaylistsSectionView
+                    x:Name="WorkbenchPlaylistsSection" />
+                <sections:WorkbenchToolsSectionView
+                    x:Name="WorkbenchToolsSection" />
+                <sections:WorkbenchShortcutsSectionView
+                    x:Name="WorkbenchShortcutsSection" />
+              </Carousel>
+            </Border>
+            <Border x:Name="WorkbenchInspectorScrim"
+                    Grid.ColumnSpan="3"
+                    Background="{DynamicResource AppScrimBrush}"
+                    IsVisible="False"
+                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Drawer.CloseAutomation}"
+                    PointerPressed="OnDrawerScrimPressed" />
           </Grid>
-        </TabItem>
-
-        <TabItem Header="All fields">
-          <Grid Margin="0,12,0,0" ColumnDefinitions="1.15*,14,0.85*">
-            <Grid RowDefinitions="Auto,*" RowSpacing="8">
-              <TextBlock Classes="section-title"
-                         Text="Known and native custom fields" />
-              <controls:AppDataGrid x:Name="MetadataFieldsGrid" Grid.Row="1"
-                  ItemsSource="{Binding MetadataFields}"
-                  SelectedItem="{Binding SelectedMetadataField, Mode=TwoWay}" />
-            </Grid>
-            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
-              <StackPanel Spacing="10">
-                <TextBlock Classes="section-title" Text="Ordered values" />
-                <TextBlock Classes="muted" TextWrapping="Wrap"
-                           Text="Enter one value per line. The preview preserves value order and blocks formats that cannot represent multiple values without loss." />
-                <StackPanel Spacing="4">
-                  <TextBlock Classes="muted" Text="Existing field" FontSize="12" FontWeight="SemiBold" />
-                  <TextBlock Text="{Binding SelectedMetadataField.Name}"
-                             FontWeight="SemiBold" />
-                </StackPanel>
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                  <ComboBox Classes="app" ItemsSource="{Binding KnownFieldChoices}"
-                            DisplayMemberBinding="{Binding Label}"
-                            SelectedItem="{Binding SelectedNewKnownField, Mode=TwoWay}" />
-                  <Button Grid.Column="1" Classes="app" Content="New known field"
-                          Command="{Binding BeginNewKnownFieldCommand}" />
-                </Grid>
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                  <TextBox Classes="app" Text="{Binding CustomFieldName, Mode=TwoWay}"
-                           PlaceholderText="Native custom field name" />
-                  <Button Grid.Column="1" Classes="app" Content="New custom field"
-                          Command="{Binding BeginNewCustomFieldCommand}" />
-                </Grid>
-                <StackPanel Spacing="4">
-                  <TextBlock Classes="muted" Text="Value action" FontSize="12" FontWeight="SemiBold" />
-                  <ComboBox Classes="app" ItemsSource="{Binding FieldEditModes}"
-                            SelectedItem="{Binding SelectedFieldEditMode, Mode=TwoWay}" />
-                </StackPanel>
-                <TextBox x:Name="WorkbenchFieldValuesEditor"
-                         Classes="app" MinHeight="180" AcceptsReturn="True"
-                         TextWrapping="NoWrap"
-                         ScrollViewer.VerticalScrollBarVisibility="Auto"
-                         Text="{Binding FieldValuesText, Mode=TwoWay}" />
-                <WrapPanel>
-                  <Button x:Name="CopyWorkbenchMetadataFieldButton"
-                          Classes="app" Margin="0,0,8,6"
-                          Content="Copy field"
-                          ToolTip.Tip="Copy the field identity and its ordered values"
-                          Command="{Binding CopyMetadataFieldCommand}" />
-                  <Button x:Name="PasteWorkbenchMetadataFieldButton"
-                          Classes="app" Margin="0,0,8,6"
-                          Content="Paste + preview"
-                          ToolTip.Tip="Paste tag-aware or line-delimited text and build a preview"
-                          Command="{Binding PasteMetadataFieldCommand}" />
-                  <Button Classes="app primary" Margin="0,0,8,6"
-                          Content="Preview field values"
-                          Command="{Binding PreviewFieldValuesCommand}" />
-                </WrapPanel>
-                <Border Classes="status-banner info">
-                  <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
-                </Border>
-              </StackPanel>
-            </ScrollViewer>
-          </Grid>
-        </TabItem>
-
-        <TabItem Header="Files">
-          <views:ReviewedFileOperationEditorView
-              x:Name="WorkbenchFileOperationEditor"
-              DataContext="{Binding FileOperations}" />
-        </TabItem>
-
-        <TabItem Header="Online metadata">
-          <Grid Margin="0,12,0,0" RowDefinitions="Auto,Auto,*" RowSpacing="10">
-            <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
-              <StackPanel Spacing="3">
-                <TextBlock Classes="section-title" Text="Find metadata by audio" />
-                <TextBlock Classes="muted" TextWrapping="Wrap"
-                           Text="Generate a local Chromaprint and look up every AcoustID and MusicBrainz recording candidate. Nothing is submitted." />
-              </StackPanel>
-              <Button Grid.Column="1" Classes="app" VerticalAlignment="Center"
-                      Content="Selected file"
-                      Command="{Binding DiscoverSelectedAudioCommand}" />
-              <Button Grid.Column="2" Classes="app primary" VerticalAlignment="Center"
-                      Content="All Workbench files"
-                      Command="{Binding DiscoverAllAudioCommand}" />
-              <Button Grid.Column="3" Classes="app" VerticalAlignment="Center"
-                      Content="Preview selected IDs"
-                      Command="{Binding PreviewAudioIdentifiersCommand}" />
-              <Button Grid.Column="4" Classes="app" VerticalAlignment="Center"
-                      Content="Find release editions"
-                      Command="{Binding ResolveSelectedRecordingCommand}" />
-            </Grid>
-            <Grid Grid.Row="1"
-                  ColumnDefinitions="*,*,*,*,*,Auto" ColumnSpacing="8">
-              <TextBox Classes="app"
-                       Text="{Binding ReleaseSearch.Artist, Mode=TwoWay}"
-                       PlaceholderText="Artist" />
-              <TextBox Grid.Column="1" Classes="app"
-                       Text="{Binding ReleaseSearch.Album, Mode=TwoWay}"
-                       PlaceholderText="Album/release" />
-              <TextBox Grid.Column="2" Classes="app"
-                       Text="{Binding ReleaseSearch.Barcode, Mode=TwoWay}"
-                       PlaceholderText="Barcode" />
-              <TextBox Grid.Column="3" Classes="app"
-                       Text="{Binding ReleaseSearch.CatalogNumber, Mode=TwoWay}"
-                       PlaceholderText="Catalog number" />
-              <TextBox Grid.Column="4" Classes="app"
-                       Text="{Binding ReleaseSearch.ReleaseId, Mode=TwoWay}"
-                       PlaceholderText="Release ID" />
-              <Button Grid.Column="5" Classes="app primary"
-                      Content="Search releases"
-                      Command="{Binding SearchMusicBrainzReleasesCommand}" />
-            </Grid>
-            <TabControl Grid.Row="2">
-              <TabItem Header="Audio candidates">
-                <controls:AppDataGrid x:Name="AudioDiscoveryGrid"
-                    ItemsSource="{Binding AudioMatches}"
-                    SelectedItem="{Binding SelectedAudioMatch, Mode=TwoWay}" />
-              </TabItem>
-              <TabItem Header="Release editions">
-                <controls:AppDataGrid x:Name="ReleaseDiscoveryGrid"
-                    ItemsSource="{Binding ReleaseMatches}"
-                    SelectedItem="{Binding SelectedRelease, Mode=TwoWay}" />
-              </TabItem>
-              <TabItem Header="Discogs editions">
-                <Grid RowDefinitions="Auto,*,Auto,*,Auto" RowSpacing="6">
-                  <Grid ColumnDefinitions="*,*,*,*,*,Auto,Auto" ColumnSpacing="6">
-                    <TextBox Classes="app"
-                             Text="{Binding DiscogsSearch.Artist, Mode=TwoWay}"
-                             PlaceholderText="Artist" />
-                    <TextBox Grid.Column="1" Classes="app"
-                             Text="{Binding DiscogsSearch.Album, Mode=TwoWay}"
-                             PlaceholderText="Album" />
-                    <TextBox Grid.Column="2" Classes="app"
-                             Text="{Binding DiscogsSearch.Barcode, Mode=TwoWay}"
-                             PlaceholderText="Barcode" />
-                    <TextBox Grid.Column="3" Classes="app"
-                             Text="{Binding DiscogsSearch.CatalogNumber, Mode=TwoWay}"
-                             PlaceholderText="Catalog no." />
-                    <TextBox Grid.Column="4" Classes="app"
-                             Text="{Binding DiscogsSearch.ReleaseId, Mode=TwoWay}"
-                             PlaceholderText="Discogs release ID" />
-                    <Button Grid.Column="5" Classes="app primary"
-                            Content="Search Discogs"
-                            Command="{Binding SearchDiscogsReleasesCommand}" />
-                    <Button Grid.Column="6" Classes="app"
-                            Content="Load details"
-                            Command="{Binding LoadDiscogsReleaseDetailsCommand}" />
-                  </Grid>
-                  <controls:AppDataGrid x:Name="DiscogsDiscoveryGrid"
-                      Grid.Row="1"
-                      ItemsSource="{Binding DiscogsMatches}"
-                      SelectedItem="{Binding SelectedDiscogsRelease, Mode=TwoWay}" />
-                  <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="7">
-                    <TextBlock Classes="muted" VerticalAlignment="Center"
-                               Text="Review every file-to-track suggestion before adding selected fields to the normal preview."
-                               TextWrapping="Wrap" />
-                    <Button Grid.Column="1" Classes="app"
-                            Content="Build mapping"
-                            Command="{Binding BuildDiscogsReleaseMappingCommand}" />
-                    <Button Grid.Column="2" Classes="app primary"
-                            Content="Preview mapped metadata"
-                            Command="{Binding PreviewDiscogsReleaseMetadataCommand}" />
-                    <Button Grid.Column="3" Classes="app"
-                            Content="Preview cover"
-                            Command="{Binding PreviewDiscogsReleaseArtworkCommand}" />
-                  </Grid>
-                  <controls:AppDataGrid x:Name="DiscogsTrackMappingGrid"
-                      Grid.Row="3"
-                      ItemsSource="{Binding DiscogsTrackMappings}" />
-                  <WrapPanel Grid.Row="4">
-                    <CheckBox Margin="0,0,12,0" Content="Titles"
-                              IsChecked="{Binding DiscogsImport.TrackTitles, Mode=TwoWay}" />
-                    <CheckBox Margin="0,0,12,0" Content="Track artists"
-                              IsChecked="{Binding DiscogsImport.TrackArtists, Mode=TwoWay}" />
-                    <CheckBox Margin="0,0,12,0" Content="Album/date"
-                              IsChecked="{Binding DiscogsImport.ReleaseIdentity, Mode=TwoWay}" />
-                    <CheckBox Margin="0,0,12,0" Content="Numbering"
-                              IsChecked="{Binding DiscogsImport.Numbering, Mode=TwoWay}" />
-                    <CheckBox Margin="0,0,12,0" Content="Release details"
-                              IsChecked="{Binding DiscogsImport.ReleaseDetails, Mode=TwoWay}" />
-                    <CheckBox Margin="0,0,12,0" Content="Genres/styles"
-                              IsChecked="{Binding DiscogsImport.GenresAndStyles, Mode=TwoWay}" />
-                    <CheckBox Content="Discogs release ID"
-                              IsChecked="{Binding DiscogsImport.DiscogsIdentifier, Mode=TwoWay}" />
-                  </WrapPanel>
-                </Grid>
-              </TabItem>
-              <TabItem Header="Track mapping">
-                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8">
-                  <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                    <TextBlock Classes="muted" VerticalAlignment="Center"
-                               Text="Choose a release, review every suggested file-to-track mapping, then select which field groups to preview."
-                               TextWrapping="Wrap" />
-                    <Button Grid.Column="1" Classes="app"
-                            Content="Build mapping"
-                            Command="{Binding BuildReleaseMappingCommand}" />
-                    <Button Grid.Column="2" Classes="app primary"
-                            Content="Preview mapped metadata"
-                            Command="{Binding PreviewReleaseMetadataCommand}" />
-                  </Grid>
-                  <controls:AppDataGrid x:Name="ReleaseTrackMappingGrid" Grid.Row="1"
-                      ItemsSource="{Binding ReleaseTrackMappings}" />
-                  <WrapPanel Grid.Row="2">
-                    <CheckBox Margin="0,0,14,0" Content="Titles"
-                              IsChecked="{Binding ReleaseImport.TrackTitles, Mode=TwoWay}" />
-                    <CheckBox Margin="0,0,14,0" Content="Track artists"
-                              IsChecked="{Binding ReleaseImport.TrackArtists, Mode=TwoWay}" />
-                    <CheckBox Margin="0,0,14,0" Content="Album, album artist, date"
-                              IsChecked="{Binding ReleaseImport.ReleaseIdentity, Mode=TwoWay}" />
-                    <CheckBox Margin="0,0,14,0" Content="Track/disc numbers"
-                              IsChecked="{Binding ReleaseImport.Numbering, Mode=TwoWay}" />
-                    <CheckBox Margin="0,0,14,0" Content="Release details"
-                              IsChecked="{Binding ReleaseImport.ReleaseDetails, Mode=TwoWay}" />
-                    <CheckBox Content="MusicBrainz IDs"
-                              IsChecked="{Binding ReleaseImport.MusicBrainzIdentifiers, Mode=TwoWay}" />
-                  </WrapPanel>
-                </Grid>
-              </TabItem>
-              <TabItem Header="Artwork">
-                <Grid RowDefinitions="Auto,*" RowSpacing="8">
-                  <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                    <TextBlock Classes="muted" VerticalAlignment="Center"
-                               Text="Edit the complete ordered artwork set for the selected Workbench file, or use release artwork for confirmed mappings."
-                               TextWrapping="Wrap" />
-                    <WrapPanel Grid.Column="1">
-                      <Button x:Name="AddStagedArtworkButton"
-                              Classes="app" Content="Add image"
-                              Command="{Binding AddStagedArtworkCommand}" />
-                      <Button x:Name="PreviewStagedArtworkButton"
-                              Classes="app primary"
-                              Content="Preview artwork set"
-                              Command="{Binding PreviewStagedArtworkCommand}" />
-                      <Button Classes="app" Content="Find release artwork"
-                              Command="{Binding FindReleaseArtworkCommand}" />
-                      <Button Classes="app primary"
-                              Content="Preview release cover"
-                              Command="{Binding PreviewReleaseArtworkCommand}" />
-                    </WrapPanel>
-                  </Grid>
-                  <TabControl Grid.Row="1">
-                    <TabItem Header="Embedded artwork set">
-                      <Grid Margin="0,8,0,0"
-                            ColumnDefinitions="1.1*,12,0.9*">
-                        <ListBox x:Name="StagedArtworkList"
-                                 ItemsSource="{Binding StagedArtworkItems}"
-                                 SelectedItem="{Binding SelectedStagedArtwork, Mode=TwoWay}">
-                          <ListBox.ItemTemplate>
-                            <DataTemplate>
-                              <Grid Margin="4" ColumnDefinitions="72,*"
-                                    ColumnSpacing="10">
-                                <Border Width="64" Height="64"
-                                        Background="{DynamicResource AppInsetBrush}"
-                                        CornerRadius="5">
-                                  <Image Source="{Binding Source}"
-                                         Stretch="Uniform" />
-                                </Border>
-                                <StackPanel Grid.Column="1"
-                                            VerticalAlignment="Center">
-                                  <TextBlock Text="{Binding Label}"
-                                             FontWeight="SemiBold" />
-                                  <TextBlock Classes="muted"
-                                             Text="{Binding Summary}"
-                                             TextWrapping="Wrap" />
-                                </StackPanel>
-                              </Grid>
-                            </DataTemplate>
-                          </ListBox.ItemTemplate>
-                        </ListBox>
-                        <StackPanel Grid.Column="2" Spacing="8">
-                          <TextBlock Classes="section-title"
-                                     Text="Selected image" />
-                          <TextBlock Classes="muted" Text="Artwork role" />
-                          <ComboBox x:Name="StagedArtworkTypePicker"
-                                    Classes="app"
-                                    ItemsSource="{Binding ArtworkTypes}"
-                                    SelectedItem="{Binding SelectedStagedArtwork.Type, Mode=TwoWay}" />
-                          <TextBlock Classes="muted" Text="Description" />
-                          <TextBox Classes="app"
-                                   Text="{Binding SelectedStagedArtwork.Description, Mode=TwoWay}" />
-                          <TextBlock Classes="muted"
-                                     Text="Maximum width or height for preview/apply (0 preserves size)" />
-                          <NumericUpDown Classes="app" Minimum="0"
-                                         Maximum="100000"
-                                         Value="{Binding ArtworkMaxDimension, Mode=TwoWay}" />
-                          <WrapPanel>
-                            <Button x:Name="MoveStagedArtworkUpButton"
-                                    Classes="app" Content="Move up"
-                                    Command="{Binding MoveStagedArtworkUpCommand}" />
-                            <Button x:Name="MoveStagedArtworkDownButton"
-                                    Classes="app" Content="Move down"
-                                    Command="{Binding MoveStagedArtworkDownCommand}" />
-                            <Button Classes="app" Content="Replace"
-                                    Command="{Binding ReplaceStagedArtworkCommand}" />
-                            <Button Classes="app" Content="Export"
-                                    Command="{Binding ExportStagedArtworkCommand}" />
-                            <Button Classes="app danger" Content="Remove"
-                                    Command="{Binding RemoveStagedArtworkCommand}" />
-                          </WrapPanel>
-                          <TextBlock Classes="muted" TextWrapping="Wrap"
-                                     Text="Role, order, description, image data, and resizing are validated by the native writer before the reviewed plan can be applied." />
-                        </StackPanel>
-                      </Grid>
-                    </TabItem>
-                    <TabItem Header="Release artwork candidates">
-                      <controls:AppDataGrid x:Name="ReleaseArtworkGrid"
-                          Margin="0,8,0,0"
-                          ItemsSource="{Binding ArtworkMatches}"
-                          SelectedItem="{Binding SelectedArtworkMatch, Mode=TwoWay}" />
-                    </TabItem>
-                  </TabControl>
-                </Grid>
-              </TabItem>
-            </TabControl>
-          </Grid>
-        </TabItem>
-
-        <TabItem Header="Reports">
-          <Grid Margin="0,12,0,0" ColumnDefinitions="0.9*,14,1.1*">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-              <StackPanel Spacing="9">
-                <TextBlock Classes="section-title"
-                           Text="Structured report" />
-                <TextBox Classes="app"
-                         Text="{Binding ReportEditor.Name, Mode=TwoWay}"
-                         PlaceholderText="Report name" />
-                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                  <ComboBox Classes="app"
-                            ItemsSource="{Binding ReportEditor.Formats}"
-                            SelectedItem="{Binding ReportEditor.Format, Mode=TwoWay}" />
-                  <ComboBox Grid.Column="1" Classes="app"
-                            ItemsSource="{Binding ReportEditor.Encodings}"
-                            SelectedItem="{Binding ReportEditor.Encoding, Mode=TwoWay}" />
-                </Grid>
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                  <TextBox Classes="app"
-                           Text="{Binding ReportEditor.OutputPath, Mode=TwoWay}"
-                           PlaceholderText="Output file or folder" />
-                  <Button Grid.Column="1" Classes="app" Content="Browse"
-                          Command="{Binding BrowseReportOutputCommand}" />
-                </Grid>
-                <CheckBox Content="Write one file per group"
-                          IsChecked="{Binding ReportEditor.OneFilePerGroup, Mode=TwoWay}" />
-                <TextBox Classes="app"
-                         Text="{Binding ReportEditor.GroupFileNameTemplate, Mode=TwoWay}"
-                         PlaceholderText="{}{Group}.{Format}" />
-
-                <TextBlock Classes="section-title" Margin="0,8,0,0"
-                           Text="Columns" />
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                  <ComboBox Classes="app"
-                            ItemsSource="{Binding ReportEditor.AvailableFields}"
-                            DisplayMemberBinding="{Binding Label}"
-                            SelectedItem="{Binding ReportEditor.SelectedAvailableField, Mode=TwoWay}" />
-                  <Button Grid.Column="1" Classes="app" Content="Add"
-                          Command="{Binding ReportEditor.AddSelectedFieldCommand}" />
-                </Grid>
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                  <TextBox Classes="app"
-                           Text="{Binding ReportEditor.CustomFieldName, Mode=TwoWay}"
-                           PlaceholderText="Native custom field name" />
-                  <Button Grid.Column="1" Classes="app"
-                          Content="Add custom"
-                          Command="{Binding ReportEditor.AddCustomFieldCommand}" />
-                </Grid>
-                <ListBox MinHeight="150" MaxHeight="230"
-                         ItemsSource="{Binding ReportEditor.Fields}"
-                         SelectedItem="{Binding ReportEditor.SelectedField, Mode=TwoWay}">
-                  <ListBox.ItemTemplate>
-                    <DataTemplate>
-                      <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                        <TextBlock Text="{Binding Label}" />
-                        <TextBlock Grid.Column="1" Classes="muted"
-                                   Text="{Binding Source}" />
-                      </Grid>
-                    </DataTemplate>
-                  </ListBox.ItemTemplate>
-                </ListBox>
-                <WrapPanel>
-                  <Button Classes="app" Content="Remove"
-                          Command="{Binding ReportEditor.RemoveFieldCommand}" />
-                  <Button Classes="app" Content="Move up"
-                          Command="{Binding ReportEditor.MoveFieldUpCommand}" />
-                  <Button Classes="app" Content="Move down"
-                          Command="{Binding ReportEditor.MoveFieldDownCommand}" />
-                </WrapPanel>
-                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                  <StackPanel Spacing="4">
-                    <TextBlock Classes="muted" Text="Group by" />
-                    <ComboBox Classes="app"
-                              ItemsSource="{Binding ReportEditor.Fields}"
-                              DisplayMemberBinding="{Binding Label}"
-                              SelectedItem="{Binding ReportEditor.SelectedGroupField, Mode=TwoWay}"
-                              PlaceholderText="No grouping" />
-                  </StackPanel>
-                  <StackPanel Grid.Column="1" Spacing="4">
-                    <TextBlock Classes="muted" Text="Sort by" />
-                    <ComboBox Classes="app"
-                              ItemsSource="{Binding ReportEditor.Fields}"
-                              DisplayMemberBinding="{Binding Label}"
-                              SelectedItem="{Binding ReportEditor.SelectedSortField, Mode=TwoWay}"
-                              PlaceholderText="Source order" />
-                  </StackPanel>
-                </Grid>
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                  <ComboBox Classes="app"
-                            ItemsSource="{Binding ReportEditor.SortTypes}"
-                            SelectedItem="{Binding ReportEditor.SortType, Mode=TwoWay}" />
-                  <CheckBox Grid.Column="1" VerticalAlignment="Center"
-                            Content="Descending"
-                            IsChecked="{Binding ReportEditor.SortDescending, Mode=TwoWay}" />
-                </Grid>
-              </StackPanel>
-            </ScrollViewer>
-
-            <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto,Auto"
-                  RowSpacing="9">
-              <TextBlock Classes="section-title"
-                         Text="Reviewed output" />
-              <controls:AppDataGrid x:Name="ReportOutputGrid" Grid.Row="1"
-                  ItemsSource="{Binding ReportOutputs}" />
-              <Border Grid.Row="2" Classes="status-banner info">
-                <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
-              </Border>
-              <WrapPanel Grid.Row="3" HorizontalAlignment="Right">
-                <Button Classes="app" Content="Preview report"
-                        Command="{Binding PreviewReportCommand}" />
-                <Button Classes="app primary" Content="Write reviewed report"
-                        Command="{Binding ApplyReportCommand}" />
-              </WrapPanel>
-            </Grid>
-          </Grid>
-        </TabItem>
-
-        <TabItem Header="Playlists">
-          <Grid Margin="0,12,0,0" ColumnDefinitions="0.85*,14,1.15*">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-              <StackPanel Spacing="9">
-                <TextBlock Classes="section-title"
-                           Text="Playlist output" />
-                <TextBlock Classes="muted" TextWrapping="Wrap"
-                           Text="The current Workbench order becomes playlist order. Add, remove, and reorder files before previewing." />
-                <Grid ColumnDefinitions="*,130" ColumnSpacing="8">
-                  <TextBox Classes="app"
-                           Text="{Binding PlaylistEditor.Name, Mode=TwoWay}"
-                           PlaceholderText="Playlist name" />
-                  <ComboBox Grid.Column="1" Classes="app"
-                            ItemsSource="{Binding PlaylistEditor.Formats}"
-                            SelectedItem="{Binding PlaylistEditor.Format, Mode=TwoWay}" />
-                </Grid>
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                  <TextBox Classes="app"
-                           Text="{Binding PlaylistEditor.OutputPath, Mode=TwoWay}"
-                           PlaceholderText="Output file or folder" />
-                  <Button Grid.Column="1" Classes="app" Content="Browse"
-                          Command="{Binding BrowsePlaylistOutputCommand}" />
-                </Grid>
-                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                  <StackPanel Spacing="4">
-                    <TextBlock Classes="muted" Text="Path style" />
-                    <ComboBox Classes="app"
-                              ItemsSource="{Binding PlaylistEditor.PathStyles}"
-                              SelectedItem="{Binding PlaylistEditor.PathStyle, Mode=TwoWay}" />
-                  </StackPanel>
-                  <StackPanel Grid.Column="1" Spacing="4">
-                    <TextBlock Classes="muted" Text="Encoding" />
-                    <ComboBox Classes="app"
-                              ItemsSource="{Binding PlaylistEditor.Encodings}"
-                              SelectedItem="{Binding PlaylistEditor.Encoding, Mode=TwoWay}" />
-                  </StackPanel>
-                </Grid>
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                  <ComboBox Classes="app"
-                            ItemsSource="{Binding PlaylistEditor.LineEndings}"
-                            SelectedItem="{Binding PlaylistEditor.LineEnding, Mode=TwoWay}" />
-                  <CheckBox Grid.Column="1" VerticalAlignment="Center"
-                            Content="Extended track info"
-                            IsChecked="{Binding PlaylistEditor.IncludeExtendedInfo, Mode=TwoWay}" />
-                </Grid>
-                <CheckBox Content="Generate one playlist per metadata group"
-                          IsChecked="{Binding PlaylistEditor.OnePlaylistPerGroup, Mode=TwoWay}" />
-                <ComboBox Classes="app"
-                          ItemsSource="{Binding PlaylistEditor.GroupFields}"
-                          DisplayMemberBinding="{Binding Label}"
-                          SelectedItem="{Binding PlaylistEditor.SelectedGroupField, Mode=TwoWay}" />
-                <TextBox Classes="app"
-                         Text="{Binding PlaylistEditor.GroupFileNameTemplate, Mode=TwoWay}"
-                         PlaceholderText="{}{Name} - {Group}" />
-                <Border Classes="status-banner info">
-                  <TextBlock TextWrapping="Wrap"
-                             Text="Preview reads metadata from disk, resolves relative paths against each destination, and records exact output bytes. Existing playlists are retained for recovery." />
-                </Border>
-              </StackPanel>
-            </ScrollViewer>
-
-            <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto,Auto"
-                  RowSpacing="9">
-              <TextBlock Classes="section-title"
-                         Text="Reviewed playlists" />
-              <controls:AppDataGrid x:Name="PlaylistOutputGrid" Grid.Row="1"
-                  ItemsSource="{Binding PlaylistOutputs}" />
-              <Border Grid.Row="2" Classes="status-banner info">
-                <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
-              </Border>
-              <WrapPanel Grid.Row="3" HorizontalAlignment="Right">
-                <Button x:Name="PreviewPlaylistButton"
-                        Classes="app" Content="Preview playlist"
-                        Command="{Binding PreviewPlaylistCommand}" />
-                <Button Classes="app primary"
-                        Content="Write reviewed playlist"
-                        Command="{Binding ApplyPlaylistCommand}" />
-              </WrapPanel>
-            </Grid>
-          </Grid>
-        </TabItem>
-
-        <TabItem Header="Tools">
-          <Grid Margin="0,12,0,0" ColumnDefinitions="0.9*,14,1.1*">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-              <StackPanel Spacing="9">
-                <TextBlock Classes="section-title"
-                           Text="Personal external tool" />
-                <Grid ColumnDefinitions="*,Auto,Auto,Auto,Auto"
-                      ColumnSpacing="7">
-                  <ComboBox Classes="app"
-                            ItemsSource="{Binding ExternalToolEditor.SavedTools}"
-                            DisplayMemberBinding="{Binding Name}"
-                            SelectedItem="{Binding ExternalToolEditor.SelectedSavedTool, Mode=TwoWay}"
-                            PlaceholderText="Saved personal tool" />
-                  <Button Grid.Column="1" Classes="app" Content="Load"
-                          Command="{Binding ExternalToolEditor.LoadToolCommand}" />
-                  <Button Grid.Column="2" Classes="app" Content="New"
-                          Command="{Binding ExternalToolEditor.NewToolCommand}" />
-                  <Button Grid.Column="3" Classes="app" Content="Save"
-                          Command="{Binding ExternalToolEditor.SaveToolCommand}" />
-                  <Button Grid.Column="4" Classes="app" Content="Delete"
-                          Command="{Binding ExternalToolEditor.DeleteToolCommand}" />
-                </Grid>
-                <Grid ColumnDefinitions="*,190" ColumnSpacing="8">
-                  <TextBox Classes="app"
-                           Text="{Binding ExternalToolEditor.Name, Mode=TwoWay}"
-                           PlaceholderText="Tool name" />
-                  <ComboBox Grid.Column="1" Classes="app"
-                            ItemsSource="{Binding ExternalToolEditor.InvocationModes}"
-                            SelectedItem="{Binding ExternalToolEditor.InvocationMode, Mode=TwoWay}" />
-                </Grid>
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                  <TextBox Classes="app"
-                           Text="{Binding ExternalToolEditor.Executable, Mode=TwoWay}"
-                           PlaceholderText="Executable path or command name" />
-                  <Button Grid.Column="1" Classes="app"
-                          Content="Browse executable"
-                          Command="{Binding BrowseExternalToolExecutableCommand}" />
-                </Grid>
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                  <TextBox Classes="app"
-                           Text="{Binding ExternalToolEditor.WorkingDirectory, Mode=TwoWay}"
-                           PlaceholderText="Optional working directory or {Directory}" />
-                  <Button Grid.Column="1" Classes="app"
-                          Content="Browse folder"
-                          Command="{Binding BrowseExternalToolWorkingDirectoryCommand}" />
-                </Grid>
-                <TextBlock Classes="muted"
-                           Text="Arguments — one argument per line" />
-                <TextBox Classes="app" MinHeight="125"
-                         AcceptsReturn="True"
-                         TextWrapping="NoWrap"
-                         Text="{Binding ExternalToolEditor.ArgumentsText, Mode=TwoWay}"
-                         PlaceholderText="{}{Files}" />
-                <TextBlock Classes="muted" TextWrapping="Wrap"
-                           Text="Documented placeholders: {Files} for one selection process; or {File}, {Directory}, {FileName}, {FileNameWithoutExtension}, {Extension}, {Index}, and {Count} for one process per file. {Files} must be its own argument." />
-                <Border Classes="status-banner warning">
-                  <TextBlock TextWrapping="Wrap"
-                             Text="No shell is used, but the selected executable can still change files. External tools are outside MusicLibraryManager recovery and always require confirmation." />
-                </Border>
-                <TextBlock Classes="muted"
-                           Text="{Binding ExternalToolEditor.StoreStatus}" />
-              </StackPanel>
-            </ScrollViewer>
-
-            <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto,Auto"
-                  RowSpacing="9">
-              <TextBlock Classes="section-title"
-                         Text="Reviewed process invocations" />
-              <controls:AppDataGrid x:Name="ExternalToolInvocationGrid"
-                  Grid.Row="1"
-                  ItemsSource="{Binding ExternalToolInvocations}" />
-              <Border Grid.Row="2" Classes="status-banner info">
-                <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
-              </Border>
-              <WrapPanel Grid.Row="3" HorizontalAlignment="Right">
-                <Button x:Name="PreviewExternalToolButton"
-                        Classes="app" Content="Preview tool"
-                        Command="{Binding PreviewExternalToolCommand}" />
-                <Button Classes="app primary" Content="Run reviewed tool"
-                        Command="{Binding RunExternalToolCommand}" />
-              </WrapPanel>
-            </Grid>
-          </Grid>
-        </TabItem>
-
-        <TabItem Header="Shortcuts">
-          <Grid Margin="0,12,0,0" ColumnDefinitions="1.1*,14,0.9*">
-            <Grid RowDefinitions="Auto,*,Auto" RowSpacing="9">
-              <TextBlock Classes="section-title"
-                         Text="Personal Workbench shortcuts" />
-              <ListBox x:Name="ShortcutBindingList" Grid.Row="1"
-                       ItemsSource="{Binding ShortcutEditor.Bindings}"
-                       SelectedItem="{Binding ShortcutEditor.SelectedBinding, Mode=TwoWay}">
-                <ListBox.ItemTemplate>
-                  <DataTemplate>
-                    <Grid ColumnDefinitions="150,*" ColumnSpacing="12"
-                          Margin="4">
-                      <TextBlock FontWeight="SemiBold"
-                                 Text="{Binding Gesture}" />
-                      <TextBlock Grid.Column="1"
-                                 Text="{Binding Target}" />
-                    </Grid>
-                  </DataTemplate>
-                </ListBox.ItemTemplate>
-              </ListBox>
-              <Border Grid.Row="2" Classes="status-banner info">
-                <TextBlock TextWrapping="Wrap"
-                           Text="Recipe shortcuts only regenerate a preview for the current Workbench files. They never apply changes automatically." />
-              </Border>
-            </Grid>
-
-            <StackPanel Grid.Column="2" Spacing="9">
-              <TextBlock Classes="section-title"
-                         Text="Shortcut binding" />
-              <TextBox Classes="app"
-                       Text="{Binding ShortcutEditor.GestureText, Mode=TwoWay}"
-                       PlaceholderText="Ctrl+Shift+P" />
-              <TextBlock Classes="muted" TextWrapping="Wrap"
-                         Text="Use a modifier and an Avalonia key name, for example Ctrl+Alt+R, Meta+F8, or Ctrl+Shift+Enter." />
-              <ComboBox Classes="app"
-                        ItemsSource="{Binding ShortcutEditor.TargetKinds}"
-                        SelectedItem="{Binding ShortcutEditor.TargetKind, Mode=TwoWay}" />
-              <StackPanel Spacing="4">
-                <TextBlock Classes="muted" Text="Workbench command" />
-                <ComboBox Classes="app"
-                          ItemsSource="{Binding ShortcutEditor.Commands}"
-                          DisplayMemberBinding="{Binding Label}"
-                          SelectedItem="{Binding ShortcutEditor.SelectedCommand, Mode=TwoWay}" />
-              </StackPanel>
-              <StackPanel Spacing="4">
-                <TextBlock Classes="muted" Text="Saved recipe" />
-                <ComboBox Classes="app"
-                          ItemsSource="{Binding ShortcutEditor.Recipes}"
-                          DisplayMemberBinding="{Binding Name}"
-                          SelectedItem="{Binding ShortcutEditor.SelectedRecipe, Mode=TwoWay}"
-                          PlaceholderText="Choose a recipe target" />
-              </StackPanel>
-              <WrapPanel>
-                <Button Classes="app" Content="New"
-                        Command="{Binding ShortcutEditor.NewShortcutCommand}" />
-                <Button x:Name="SaveShortcutButton"
-                        Classes="app primary" Content="Save shortcut"
-                        Command="{Binding ShortcutEditor.SaveShortcutCommand}" />
-                <Button Classes="app danger" Content="Remove"
-                        Command="{Binding ShortcutEditor.RemoveShortcutCommand}" />
-              </WrapPanel>
-              <Border Classes="status-banner warning">
-                <TextBlock TextWrapping="Wrap"
-                           Text="Shortcuts are ignored while a text or choice editor has focus. Ctrl+K and Ctrl+I remain reserved for global search and indexing." />
-              </Border>
-              <TextBlock Classes="muted" TextWrapping="Wrap"
-                         Text="{Binding ShortcutEditor.Status}" />
-            </StackPanel>
-          </Grid>
-        </TabItem>
-          </TabControl>
-        </Border>
+        </Grid>
       </controls:PersistedSplitView.Left>
       <controls:PersistedSplitView.Right>
-        <Border Classes="card" Padding="0" ClipToBounds="True">
-          <views:SelectionInspectorView x:Name="WorkbenchInspectorView"
-                                        DataContext="{Binding Inspector}" />
+        <Border x:Name="WorkbenchDrawerPane"
+                Classes="card"
+                Padding="0"
+                ClipToBounds="True"
+                AutomationProperties.Name="{DynamicResource Loc.Workbench.Drawer.Automation}">
+          <Grid>
+            <sections:WorkbenchInspectorDrawerView
+                x:Name="WorkbenchInspectorDrawer"
+                IsVisible="False" />
+            <sections:WorkbenchPendingChangesDrawerView
+                x:Name="WorkbenchPendingChangesDrawer"
+                IsVisible="False" />
+            <sections:WorkbenchColumnsDrawerView
+                x:Name="WorkbenchColumnsDrawer"
+                IsVisible="False" />
+          </Grid>
         </Border>
       </controls:PersistedSplitView.Right>
     </controls:PersistedSplitView>
 
-    <Popup x:Name="WorkbenchPendingChangesPopover"
-           PlacementTarget="{Binding #WorkbenchPendingChangesButton}"
-           Placement="BottomEdgeAlignedRight" VerticalOffset="8"
-           IsLightDismissEnabled="True" IsOpen="False">
-      <Border Width="900" MaxHeight="620"
-              Background="{DynamicResource AppPanelBrush}"
-              BorderBrush="{DynamicResource AppBorderStrongBrush}"
-              BorderThickness="1" CornerRadius="9" Padding="14"
-              BoxShadow="0 14 40 0 #77000000">
-        <Grid RowDefinitions="Auto,Auto,420,Auto"
-              RowSpacing="10">
-          <Grid ColumnDefinitions="*,Auto">
-            <StackPanel Spacing="2">
-              <TextBlock Text="Pending changes"
-                         FontSize="16" FontWeight="SemiBold" />
-              <TextBlock Classes="muted"
-                         Text="Every staged or reviewed metadata edit that Apply will validate before writing." />
-            </StackPanel>
-            <Button Grid.Column="1" Classes="app"
-                    Width="28" Height="28" Padding="0"
-                    Content="&#x2715;"
-                    ToolTip.Tip="Close pending changes"
-                    Click="OnWorkbenchPendingChangesClose" />
-          </Grid>
-
-          <TextBlock Grid.Row="1" Classes="summary-label"
-                     Text="{Binding PendingChanges.Count, StringFormat={}{0} pending edit(s)}" />
-
-          <Grid Grid.Row="2">
-            <controls:AppDataGrid
-                x:Name="WorkbenchPendingChangesGrid"
-                ItemsSource="{Binding PendingChanges}"
-                AutomationProperties.Name="Workbench pending changes" />
-            <Border Background="{DynamicResource AppInsetBrush}"
-                    IsVisible="{Binding !PendingChanges.Count}">
-              <StackPanel HorizontalAlignment="Center"
-                          VerticalAlignment="Center" Spacing="6">
-                <TextBlock FontWeight="SemiBold"
-                           Text="No pending changes" />
-                <TextBlock Classes="muted"
-                           Text="Preview metadata edits to review them here before applying." />
-              </StackPanel>
-            </Border>
-          </Grid>
-
-          <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto"
-                ColumnSpacing="8">
-            <TextBlock Classes="muted" VerticalAlignment="Center"
-                       Text="{Binding StatusText}"
-                       TextTrimming="CharacterEllipsis" />
-            <Button x:Name="WorkbenchRevertPendingChangesButton"
-                    Grid.Column="1" Classes="app"
-                    Content="Revert"
-                    ToolTip.Tip="Discard this pending preview without changing files"
-                    Command="{Binding RevertPendingChangesCommand}" />
-            <Button x:Name="WorkbenchApplyPendingChangesButton"
-                    Grid.Column="2" Classes="app primary"
-                    Content="Apply"
-                    Command="{Binding ApplyCommand}" />
-          </Grid>
-        </Grid>
-      </Border>
-    </Popup>
+    <Border x:Name="WorkbenchHeaderScrim"
+            Grid.RowSpan="2"
+            Background="{DynamicResource AppScrimBrush}"
+            IsVisible="False"
+            AutomationProperties.Name="{DynamicResource Loc.Workbench.Drawer.CloseAutomation}"
+            PointerPressed="OnDrawerScrimPressed" />
   </Grid>
 </UserControl>

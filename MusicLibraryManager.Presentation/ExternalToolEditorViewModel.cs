@@ -16,12 +16,15 @@ public sealed record ExternalToolInvocationRow(
 public partial class ExternalToolEditorViewModel : ObservableObject
 {
     private readonly IExternalToolStore? _store;
+    private readonly ILocalizationService? _localization;
     private bool _loading;
+    private string? _storeStatusKey;
+    private object?[] _storeStatusArguments = [];
 
     [ObservableProperty] private ExternalToolDefinition?
         _selectedSavedTool;
     [ObservableProperty] private Guid _id = Guid.NewGuid();
-    [ObservableProperty] private string _name = "External tool";
+    [ObservableProperty] private string _name = "";
     [ObservableProperty] private string? _executable;
     [ObservableProperty] private string _argumentsText = "{Files}";
     [ObservableProperty] private string? _workingDirectory;
@@ -31,9 +34,16 @@ public partial class ExternalToolEditorViewModel : ObservableObject
     [ObservableProperty] private string _storeStatus = "";
 
     public ExternalToolEditorViewModel(
-        IExternalToolStore? store = null)
+        IExternalToolStore? store = null,
+        ILocalizationService? localization = null)
     {
         _store = store;
+        _localization = localization;
+        Name = L("Workbench.Tools.DefaultName");
+        RefreshLocalizedChoices();
+        if (_localization is not null)
+            _localization.CultureChanged +=
+                OnLocalizationCultureChanged;
         ReloadSavedTools();
     }
 
@@ -42,6 +52,9 @@ public partial class ExternalToolEditorViewModel : ObservableObject
     public IReadOnlyList<ExternalToolInvocationMode>
         InvocationModes { get; } =
             Enum.GetValues<ExternalToolInvocationMode>();
+    public ObservableCollection<
+        LocalizedChoice<ExternalToolInvocationMode>>
+        InvocationModeChoices { get; } = [];
 
     public event Action? Changed;
 
@@ -73,13 +86,13 @@ public partial class ExternalToolEditorViewModel : ObservableObject
         {
             SelectedSavedTool = null;
             Id = Guid.NewGuid();
-            Name = "External tool";
+            Name = L("Workbench.Tools.DefaultName");
             Executable = null;
             ArgumentsText = "{Files}";
             WorkingDirectory = null;
             InvocationMode =
                 ExternalToolInvocationMode.OnceForSelection;
-            StoreStatus = "New unsaved tool.";
+            SetStatus("Workbench.Tools.Status.New");
         }
         finally
         {
@@ -94,7 +107,9 @@ public partial class ExternalToolEditorViewModel : ObservableObject
         if (SelectedSavedTool is null)
             return;
         Load(SelectedSavedTool);
-        StoreStatus = $"Loaded '{SelectedSavedTool.Name}'.";
+        SetStatus(
+            "Workbench.Tools.Status.Loaded",
+            SelectedSavedTool.Name);
     }
 
     private bool CanLoadTool() => SelectedSavedTool is not null;
@@ -110,7 +125,9 @@ public partial class ExternalToolEditorViewModel : ObservableObject
         ReloadSavedTools();
         SelectedSavedTool = SavedTools.FirstOrDefault(tool =>
             tool.Id == definition.Id);
-        StoreStatus = $"Saved '{definition.Name}' as a personal tool.";
+        SetStatus(
+            "Workbench.Tools.Status.Saved",
+            definition.Name);
     }
 
     private bool CanSaveTool() =>
@@ -128,7 +145,9 @@ public partial class ExternalToolEditorViewModel : ObservableObject
         _store.Delete(id);
         ReloadSavedTools();
         NewTool();
-        StoreStatus = $"Deleted personal tool '{name}'.";
+        SetStatus(
+            "Workbench.Tools.Status.Deleted",
+            name);
     }
 
     private bool CanDeleteTool() =>
@@ -194,4 +213,51 @@ public partial class ExternalToolEditorViewModel : ObservableObject
             .Select(argument => argument.Trim())
             .Where(argument => argument.Length > 0)
             .ToImmutableArray();
+
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string LF(
+        string key,
+        params object?[] arguments) =>
+        _localization?.Format(key, arguments) ??
+        LocalizedText.Format(key, arguments);
+
+    private void SetStatus(
+        string key,
+        params object?[] arguments)
+    {
+        _storeStatusKey = key;
+        _storeStatusArguments = arguments;
+        StoreStatus = LF(key, arguments);
+    }
+
+    private void RefreshLocalizedChoices()
+    {
+        foreach (ExternalToolInvocationMode value in
+                 InvocationModes)
+        {
+            LocalizedChoice<ExternalToolInvocationMode>?
+                choice = InvocationModeChoices.FirstOrDefault(
+                    item => item.Value == value);
+            string label = L(
+                $"Workbench.Choice.ExternalToolInvocationMode.{value}");
+            if (choice is null)
+                InvocationModeChoices.Add(new(value, label));
+            else
+                choice.Label = label;
+        }
+    }
+
+    private void OnLocalizationCultureChanged(
+        object? sender,
+        EventArgs e)
+    {
+        RefreshLocalizedChoices();
+        if (_storeStatusKey is not null)
+            StoreStatus = LF(
+                _storeStatusKey,
+                _storeStatusArguments);
+    }
 }

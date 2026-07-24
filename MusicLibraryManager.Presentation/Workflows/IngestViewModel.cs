@@ -29,11 +29,18 @@ public partial class IngestViewModel :
     private readonly IIngestPreflightService? _preflight;
     private readonly IOperationJournalService? _journals;
     private readonly IActivityService? _activities;
+    private readonly ILocalizationService? _localization;
     private CancellationTokenSource? _cts;
     private IngestPlan? _plan;
     private readonly List<IngestFileItemViewModel> _allFiles = [];
     private IReadOnlyList<string> _sourceFiles = [];
     private bool _settingExplicitSourceFiles;
+    private string? _statusKey = "Ingest.Status.ChooseSource";
+    private object?[] _statusArguments = [];
+    private long? _statusCount;
+    private string? _historyStatusKey = "Ingest.History.Status.Ready";
+    private object?[] _historyStatusArguments = [];
+    private long? _historyStatusCount;
 
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(PreviewCommand)),
      NotifyCanExecuteChangedFor(nameof(PreflightCommand))]
@@ -46,7 +53,11 @@ public partial class IngestViewModel :
     [ObservableProperty, NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
     private bool _hasApplicablePreview;
     [ObservableProperty]
-    private string _statusText = "Choose an incoming folder, then Preview.";
+    private string _statusText =
+        LocalizedText.Get("Ingest.Status.ChooseSource");
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDiagnosticDetail))]
+    private string? _diagnosticDetail;
     [ObservableProperty]
     private bool _isPreviewing;
     [ObservableProperty]
@@ -81,14 +92,20 @@ public partial class IngestViewModel :
     [NotifyCanExecuteChangedFor(nameof(OpenHistoryCommand))]
     private IngestHistoryItemViewModel? _selectedHistory;
     [ObservableProperty]
-    private string _historyStatus = "Refresh to discover persistent ingest journals and interrupted runs.";
+    private string _historyStatus =
+        LocalizedText.Get("Ingest.History.Status.Ready");
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasHistoryDiagnosticDetail))]
+    private string? _historyDiagnosticDetail;
 
     public ObservableCollection<IngestFileItemViewModel> Files { get; } = [];
     public ObservableCollection<IngestConflict> Conflicts { get; } = [];
     public ObservableCollection<string> RecentSources { get; } = [];
-    public ObservableCollection<IngestPreflightCheck> PreflightChecks { get; } = [];
+    public ObservableCollection<IngestPreflightCheckViewModel> PreflightChecks { get; } = [];
     public ObservableCollection<IngestHistoryItemViewModel> History { get; } = [];
     public IReadOnlyList<IngestPreviewFilter> PreviewFilters { get; } = Enum.GetValues<IngestPreviewFilter>();
+    public ObservableCollection<LocalizedChoice<IngestPreviewFilter>>
+        PreviewFilterChoices { get; } = [];
     public bool HasPreflightChecks => PreflightChecks.Count > 0;
     public bool IsPreviewEmpty => Files.Count == 0;
     public bool HasHistory => History.Count > 0;
@@ -98,9 +115,9 @@ public partial class IngestViewModel :
     public int ExplicitSourceFileCount =>
         _sourceFiles.Count;
     public string ExplicitSourceSummary =>
-        $"{_sourceFiles.Count:N0} Workbench-selected " +
-        $"{(_sourceFiles.Count == 1 ? "file" : "files")} will be ingested. " +
-        "Other files in the incoming folder are excluded.";
+        LFC(
+            "Ingest.SelectedSources.Summary",
+            _sourceFiles.Count);
     public int InterruptedHistoryCount => History.Count(item => item.IsInterrupted);
     public bool IsConfigurationReady => GetConfigurationIssues().Count == 0;
     public string ConfigurationReadinessIcon => IsConfigurationReady ? "i" : "⚠";
@@ -110,21 +127,40 @@ public partial class IngestViewModel :
         {
             IReadOnlyList<string> issues = GetConfigurationIssues();
             return issues.Count == 0
-                ? "Ingest destinations and tools are configured in the active library configuration."
-                : "Ingest setup required: " + string.Join(" ", issues);
+                ? L("Ingest.Configuration.Ready")
+                : LFC(
+                    "Ingest.Configuration.Incomplete",
+                    issues.Count);
         }
     }
+    public string? ConfigurationDiagnosticDetail =>
+        GetConfigurationIssues() is { Count: > 0 } issues
+            ? string.Join(
+                Environment.NewLine,
+                issues)
+            : null;
+    public bool HasDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(DiagnosticDetail);
+    public bool HasHistoryDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(HistoryDiagnosticDetail);
     public event Action? IngestCompleted;
     public event Action<OperationJournalSummary>? RecoveryRequested;
 
     public IngestViewModel(IIngestMusicService service, IFileDialogService files, IDialogService dialogs,
         IAppSettings settings, ILibraryService library, IIngestPreflightService? preflight = null,
-        IOperationJournalService? journals = null, IActivityService? activities = null)
+        IOperationJournalService? journals = null, IActivityService? activities = null,
+        ILocalizationService? localization = null)
     {
         _service = service; _files = files; _dialogs = dialogs; _settings = settings; _library = library;
         _preflight = preflight;
         _journals = journals;
         _activities = activities;
+        _localization = localization;
+        SetStatus("Ingest.Status.ChooseSource");
+        SetHistoryStatus("Ingest.History.Status.Ready");
+        RefreshLocalizedChoices();
+        if (_localization is not null)
+            _localization.CultureChanged += OnLocalizationCultureChanged;
         LoadRecentSources();
         SourceDirectory = settings.GetLibraryPreference(SourcePreference);
         settings.ConfigurationChanged += (_, _) =>
@@ -134,6 +170,7 @@ public partial class IngestViewModel :
             OnPropertyChanged(nameof(IsConfigurationReady));
             OnPropertyChanged(nameof(ConfigurationReadinessText));
             OnPropertyChanged(nameof(ConfigurationReadinessIcon));
+            OnPropertyChanged(nameof(ConfigurationDiagnosticDetail));
             InvalidatePreview();
             NotifyCommands();
         };
@@ -166,13 +203,14 @@ public partial class IngestViewModel :
         if (_plan is null) return;
         _plan = null;
         HasApplicablePreview = false;
-        StatusText = "Inputs changed. Preview again before applying.";
+        SetStatus("Ingest.Status.InputsChanged");
     }
 
     [RelayCommand]
     private async Task BrowseSourceAsync()
     {
-        string? path = await _files.PickFolderAsync("Select incoming music directory");
+        string? path = await _files.PickFolderAsync(
+            L("Ingest.Dialog.SelectSource"));
         if (path is not null)
         {
             SourceDirectory = path;
@@ -189,7 +227,7 @@ public partial class IngestViewModel :
             return;
         SourceDirectory = Path.GetFullPath(path);
         AddRecentSource(SourceDirectory);
-        StatusText = "Source folder selected from drop. Run Preflight or Preview.";
+        SetStatus("Ingest.Status.SourceDropped");
     }
 
     public IngestSourceHandoffResult SetSourceFiles(
@@ -198,7 +236,7 @@ public partial class IngestViewModel :
         if (IsBusy)
             return new(
                 false,
-                "Ingest is busy. Cancel or finish the current operation before replacing its inputs.");
+                L("Ingest.Handoff.Busy"));
         string[] selected;
         try
         {
@@ -211,28 +249,30 @@ public partial class IngestViewModel :
         }
         catch (Exception error)
         {
+            DiagnosticDetail = error.Message;
             return new(
                 false,
-                $"The selected paths are invalid: {error.Message}");
+                L("Ingest.Handoff.InvalidPaths"));
         }
         if (selected.Length == 0)
             return new(
                 false,
-                "Select one or more Workbench files first.");
+                L("Ingest.Handoff.NoneSelected"));
         string? unavailable =
             selected.FirstOrDefault(path =>
                 !File.Exists(path));
         if (unavailable is not null)
             return new(
                 false,
-                $"The selected file is unavailable: {unavailable}");
+                LF(
+                    "Ingest.Handoff.Unavailable",
+                    unavailable));
         string? commonRoot =
             CommonSourceRoot(selected);
         if (commonRoot is null)
             return new(
                 false,
-                "Selected files must share a source tree on one volume. " +
-                "Choose files beneath a common incoming folder.");
+                L("Ingest.Handoff.CommonTreeRequired"));
 
         _settingExplicitSourceFiles = true;
         try
@@ -244,10 +284,9 @@ public partial class IngestViewModel :
         {
             _settingExplicitSourceFiles = false;
         }
-        StatusText =
-            $"{selected.Length:N0} Workbench-selected " +
-            $"{(selected.Length == 1 ? "file is" : "files are")} " +
-            "ready. Run Preflight or Preview.";
+        SetCountStatus(
+            "Ingest.Handoff.Ready",
+            selected.Length);
         NotifyCommands();
         return new(true);
     }
@@ -257,8 +296,7 @@ public partial class IngestViewModel :
     {
         SetExplicitSourceFiles([]);
         SourceDirectory = null;
-        StatusText =
-            "Workbench file selection cleared. Choose an incoming folder.";
+        SetStatus("Ingest.Status.SelectionCleared");
         NotifyCommands();
     }
 
@@ -275,34 +313,48 @@ public partial class IngestViewModel :
             return;
         IsBusy = true;
         _cts = new CancellationTokenSource();
+        DiagnosticDetail = null;
         Guid? activity = _activities?.Start(
-            "Preflight ingest", "Checking ingest prerequisites", ShellDestination.Ingest, Cancel);
+            L("Ingest.Activity.Preflight.Title"),
+            L("Ingest.Activity.Preflight.Starting"),
+            ShellDestination.Ingest,
+            Cancel);
         PreflightChecks.Clear();
         OnPropertyChanged(nameof(HasPreflightChecks));
         try
         {
-            StatusText = "Checking ingest configuration and external tools…";
+            SetStatus("Ingest.Status.PreflightChecking");
             var result = await _preflight.CheckAsync(
                 CreateRequest(), _cts.Token);
             foreach (var check in result.Checks)
-                PreflightChecks.Add(check);
+                PreflightChecks.Add(
+                    new IngestPreflightCheckViewModel(
+                        check,
+                        _localization));
             OnPropertyChanged(nameof(HasPreflightChecks));
-            StatusText = result.CanProceed
-                ? result.WarningCount == 0
-                    ? "Preflight passed. The source is ready to scan."
-                    : $"Preflight passed with {result.WarningCount:N0} warning(s). Review before previewing."
-                : $"Preflight found {result.ErrorCount:N0} blocking error(s).";
+            if (!result.CanProceed)
+                SetCountStatus(
+                    "Ingest.Status.PreflightErrors",
+                    result.ErrorCount);
+            else if (result.WarningCount > 0)
+                SetCountStatus(
+                    "Ingest.Status.PreflightWarnings",
+                    result.WarningCount);
+            else
+                SetStatus("Ingest.Status.PreflightPassed");
             FinishActivity(activity, StatusText,
                 result.CanProceed ? AppActivityState.Completed : AppActivityState.Failed);
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Preflight cancelled.";
+            SetStatus("Ingest.Status.PreflightCancelled");
             FinishActivity(activity, StatusText, AppActivityState.Cancelled);
         }
         catch (Exception ex)
         {
-            StatusText = $"Preflight failed: {ex.Message}";
+            SetFailure(
+                "Ingest.Status.PreflightFailed",
+                ex);
             FinishActivity(activity, StatusText, AppActivityState.Failed);
         }
         finally { FinishBusy(); }
@@ -322,31 +374,46 @@ public partial class IngestViewModel :
             .ToList();
         if (roots.Count == 0)
         {
-            HistoryStatus = "Choose a source folder before refreshing ingest history.";
+            SetHistoryStatus("Ingest.History.Status.ChooseSource");
             return;
         }
         IsHistoryBusy = true;
+        HistoryDiagnosticDetail = null;
         Guid? activity = _activities?.Start(
-            "Refresh ingest history", "Searching for ingest journals", ShellDestination.Ingest);
+            L("Ingest.Activity.History.Title"),
+            L("Ingest.Activity.History.Starting"),
+            ShellDestination.Ingest);
         try
         {
-            HistoryStatus = $"Searching {roots.Count:N0} source root(s) for ingest journals…";
+            SetHistoryCountStatus(
+                "Ingest.History.Status.SearchingRoots",
+                roots.Count);
             var result = await _journals.DiscoverAsync(roots);
             SelectedHistory = null;
             History.Clear();
             foreach (var run in result.Runs.Where(run => run.Kind == OperationJournalKind.Ingest).Take(50))
-                History.Add(new IngestHistoryItemViewModel(run));
+                History.Add(
+                    new IngestHistoryItemViewModel(
+                        run,
+                        _localization));
             OnPropertyChanged(nameof(HasHistory));
             OnPropertyChanged(nameof(IsHistoryEmpty));
             OnPropertyChanged(nameof(InterruptedHistoryCount));
-            HistoryStatus = $"{History.Count:N0} ingest run(s); {InterruptedHistoryCount:N0} interrupted"
-                + (result.Warnings.Count == 0 ? "." : $"; {result.Warnings.Count:N0} root warning(s).");
+            SetHistoryStatus(
+                result.Warnings.Count == 0
+                    ? "Ingest.History.Status.Summary"
+                    : "Ingest.History.Status.SummaryWithWarnings",
+                History.Count,
+                InterruptedHistoryCount,
+                result.Warnings.Count);
             FinishActivity(activity, HistoryStatus,
                 result.Warnings.Count == 0 ? AppActivityState.Completed : AppActivityState.Failed);
         }
         catch (Exception ex)
         {
-            HistoryStatus = $"Ingest history refresh failed: {ex.Message}";
+            SetHistoryFailure(
+                "Ingest.History.Status.Failed",
+                ex);
             FinishActivity(activity, HistoryStatus, AppActivityState.Failed);
         }
         finally { IsHistoryBusy = false; }
@@ -369,20 +436,28 @@ public partial class IngestViewModel :
         _allFiles.Clear(); Files.Clear(); Conflicts.Clear(); HasPreviewSummary = false;
         OnPropertyChanged(nameof(IsPreviewEmpty));
         _cts = new CancellationTokenSource();
+        DiagnosticDetail = null;
         Guid? activity = _activities?.Start(
-            "Preview ingest", "Scanning incoming music", ShellDestination.Ingest, Cancel);
+            L("Ingest.Activity.Preview.Title"),
+            L("Ingest.Activity.Preview.Starting"),
+            ShellDestination.Ingest,
+            Cancel);
         try
         {
-            StatusText = "Scanning and planning…";
+            SetStatus("Ingest.Status.PreviewScanning");
             var progress = new DispatchingProgress<IngestProgress>(p =>
             {
                 PreviewProgressMaximum = Math.Max(1, p.TotalItems);
                 PreviewProgress = Math.Min(
                     PreviewProgressMaximum,
                     p.CompletedItems);
-                StatusText = p.TotalItems > 0
-                    ? $"{p.Operation} ({p.CompletedItems}/{p.TotalItems})"
-                    : $"{p.Operation} ({p.CompletedItems} found)";
+                SetStatus(
+                    p.TotalItems > 0
+                        ? "Ingest.Status.PreviewProgress"
+                        : "Ingest.Status.PreviewFound",
+                    LocalizeOperation(p.Operation),
+                    p.CompletedItems,
+                    p.TotalItems);
                 if (activity is { } id)
                     _activities?.Report(
                         id,
@@ -400,15 +475,25 @@ public partial class IngestViewModel :
             foreach (var file in plan.Files)
             {
                 bool cleanup = file.SourceType.Equals("Unsupported/non-audio", StringComparison.OrdinalIgnoreCase);
-                _allFiles.Add(new IngestFileItemViewModel(file, isAlbum: !cleanup,
-                    isCleanup: cleanup));
+                _allFiles.Add(
+                    new IngestFileItemViewModel(
+                        file,
+                        isAlbum: !cleanup,
+                        isCleanup: cleanup,
+                        localization: _localization));
             }
             foreach (var output in plan.Albums.SelectMany(album => album.Outputs))
-                _allFiles.Add(IngestFileItemViewModel.ForOutput(output));
+                _allFiles.Add(
+                    IngestFileItemViewModel.ForOutput(
+                        output,
+                        _localization));
             foreach (var conflict in plan.Conflicts)
             {
                 Conflicts.Add(conflict);
-                _allFiles.Add(IngestFileItemViewModel.ForConflict(conflict));
+                _allFiles.Add(
+                    IngestFileItemViewModel.ForConflict(
+                        conflict,
+                        _localization));
             }
             AlbumCount = plan.Albums.Count;
             OutputCount = plan.Albums.Sum(album => album.Outputs.Count);
@@ -419,25 +504,36 @@ public partial class IngestViewModel :
             HasApplicablePreview = plan.CanApply;
             _settings.SetLibraryPreference(SourcePreference, plan.Request.SourceDirectory);
             AddRecentSource(plan.Request.SourceDirectory);
-            StatusText = plan.CanApply
-                ? plan.Albums.Count == 0
-                    ? $"No music albums found. {plan.IgnoredFileSnapshots.Count} non-music files and "
-                      + $"{plan.SourceDirectories.Count} source folders are ready for cleanup. Review, then Apply."
-                    : $"{plan.Albums.Count} albums, {plan.Files.Count} source files, {plan.RequiredApprovals.Count} derivation approvals. Review, then Apply."
-                : plan.Conflicts.Count > 0
-                    ? $"Preview has {plan.Conflicts.Count} conflicts and cannot be applied."
-                    : "No importable music albums or enabled non-music cleanup items were found.";
+            if (plan.CanApply && plan.Albums.Count == 0)
+                SetStatus(
+                    "Ingest.Status.PreviewCleanupReady",
+                    plan.IgnoredFileSnapshots.Count,
+                    plan.SourceDirectories.Count);
+            else if (plan.CanApply)
+                SetStatus(
+                    "Ingest.Status.PreviewReady",
+                    plan.Albums.Count,
+                    plan.Files.Count,
+                    plan.RequiredApprovals.Count);
+            else if (plan.Conflicts.Count > 0)
+                SetCountStatus(
+                    "Ingest.Status.PreviewConflicts",
+                    plan.Conflicts.Count);
+            else
+                SetStatus("Ingest.Status.PreviewEmpty");
             FinishActivity(activity, StatusText,
                 plan.CanApply ? AppActivityState.Completed : AppActivityState.Failed);
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Preview cancelled.";
+            SetStatus("Ingest.Status.PreviewCancelled");
             FinishActivity(activity, StatusText, AppActivityState.Cancelled);
         }
         catch (Exception ex)
         {
-            StatusText = $"Preview failed: {ex.Message}";
+            SetFailure(
+                "Ingest.Status.PreviewFailed",
+                ex);
             FinishActivity(activity, StatusText, AppActivityState.Failed);
         }
         finally { FinishBusy(); }
@@ -511,6 +607,7 @@ public partial class IngestViewModel :
         IngestPlan plan = _plan;
         IsBusy = true; IsApplying = true; ApplyProgress = 0; ApplyProgressMaximum = 1; _cts = new CancellationTokenSource();
         foreach (var file in _allFiles) file.ResetProgress();
+        DiagnosticDetail = null;
         Guid? activity = null;
         try
         {
@@ -521,29 +618,46 @@ public partial class IngestViewModel :
                 decisions.Add(new IngestApprovalDecision(item.AlbumKey, approved));
                 if (!approved)
                 {
-                    StatusText = "Derivation declined; the entire run was cancelled and nothing was changed.";
+                    SetStatus("Ingest.Status.DerivationDeclined");
                     return;
                 }
             }
             int outputs = plan.Albums.Sum(album => album.Outputs.Count);
             int cleanup = plan.IgnoredFileSnapshots.Count + plan.SourceDirectories.Count;
             if (!await _dialogs.ConfirmApplyAsync(
-                    "Apply ingest plan",
-                    $"Import {plan.Albums.Count:N0} album(s), create {outputs:N0} output file(s), " +
-                    $"and clean up {cleanup:N0} source item(s)?\n\n" +
-                    "Recovery is available: completed albums and cleanup actions are recorded in operation journals.",
-                    "Apply ingest"))
+                    L("Ingest.Dialog.Apply.Title"),
+                    LF(
+                        "Ingest.Dialog.Apply.Message",
+                        plan.Albums.Count,
+                        outputs,
+                        cleanup),
+                    L("Ingest.Dialog.Apply.Primary")))
             {
-                StatusText = "Ingest was not applied. The reviewed preview remains available.";
+                SetStatus("Ingest.Status.ApplyDeclined");
                 return;
             }
             activity = _activities?.Start(
-                "Ingest music", "Starting ingest", ShellDestination.Ingest, Cancel);
+                L("Ingest.Activity.Apply.Title"),
+                L("Ingest.Activity.Apply.Starting"),
+                ShellDestination.Ingest,
+                Cancel);
             var progress = new DispatchingProgress<IngestProgress>(p =>
             {
                 ApplyProgressMaximum = Math.Max(1, p.TotalItems);
                 ApplyProgress = p.CompletedItems;
-                StatusText = $"{p.Operation}: {p.Album} ({p.CompletedItems}/{p.TotalItems})";
+                SetStatus(
+                    "Ingest.Status.ApplyProgress",
+                    LocalizeOperation(p.Operation),
+                    LocalizeAlbum(p.Album),
+                    p.CompletedItems,
+                    p.TotalItems);
+                if (p.FileState ==
+                        IngestFileProgressState.Failed &&
+                    !p.Operation.Equals(
+                        "Cancelled",
+                        StringComparison.Ordinal))
+                    DiagnosticDetail =
+                        p.Operation;
                 if (p.SourcePath is not null && p.FileState is { } state)
                 {
                     // A source row can have several output rows. Updating only the first match
@@ -564,20 +678,34 @@ public partial class IngestViewModel :
             {
                 // Once ingestion commits files, finish the cache refresh even if the user presses
                 // Cancel; otherwise disk and the library view would knowingly diverge.
-                StatusText = "Ingestion committed. Re-indexing the library…";
+                SetStatus("Ingest.Status.Reindexing");
                 var indexed = await _library.IndexAsync(ct: CancellationToken.None);
-                StatusText = $"Installed {result.Installed} files; {result.Failed} albums failed. "
-                    + $"Index: {indexed.Added} added, {indexed.Modified} modified, {indexed.Removed} removed.";
+                SetStatus(
+                    "Ingest.Status.ApplyIndexed",
+                    result.Installed,
+                    result.Failed,
+                    indexed.Added,
+                    indexed.Modified,
+                    indexed.Removed);
                 IngestCompleted?.Invoke();
             }
             else
             {
-                StatusText = result.Cancelled ? result.Message ?? "Cancelled."
-                    : _plan.Albums.Count == 0
-                        ? "Non-music cleanup completed."
-                        : $"Installed {result.Installed} files; {result.Failed} albums failed."
-                          + (!_library.IsReady && result.Albums.Any(a => a.Success)
-                              ? " No library configuration is loaded, so re-indexing was skipped." : "");
+                if (result.Cancelled)
+                {
+                    SetStatus("Ingest.Status.ApplyCancelledByResult");
+                    DiagnosticDetail = result.Message;
+                }
+                else if (plan.Albums.Count == 0)
+                    SetStatus("Ingest.Status.CleanupComplete");
+                else
+                    SetStatus(
+                        !_library.IsReady &&
+                        result.Albums.Any(album => album.Success)
+                            ? "Ingest.Status.ApplyResultNoLibrary"
+                            : "Ingest.Status.ApplyResult",
+                        result.Installed,
+                        result.Failed);
                 if (!result.Cancelled) IngestCompleted?.Invoke();
             }
             HasApplicablePreview = false; _plan = null;
@@ -589,12 +717,14 @@ public partial class IngestViewModel :
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Cancelled; any album already committed remains safely journaled.";
+            SetStatus("Ingest.Status.ApplyCancelled");
             FinishActivity(activity, StatusText, AppActivityState.Cancelled);
         }
         catch (Exception ex)
         {
-            StatusText = $"Apply failed: {ex.Message}";
+            SetFailure(
+                "Ingest.Status.ApplyFailed",
+                ex);
             FinishActivity(activity, StatusText, AppActivityState.Failed);
         }
         finally { FinishBusy(); }
@@ -667,8 +797,209 @@ public partial class IngestViewModel :
     private IReadOnlyList<string> GetConfigurationIssues()
     {
         if (_settings.Configuration is not { } configuration)
-            return ["Load a library configuration."];
+            return [
+                L(
+                    "Ingest.Configuration.Diagnostic.NotLoaded"),
+            ];
         return IngestMusicConfiguration.MissingLibrarySettings(configuration);
+    }
+
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string LF(
+        string key,
+        params object?[] arguments) =>
+        _localization?.Format(
+            key,
+            arguments) ??
+        LocalizedText.Format(
+            key,
+            arguments);
+
+    private string LFC(
+        string key,
+        long count,
+        params object?[] arguments) =>
+        _localization?.FormatCount(
+            key,
+            count,
+            arguments) ??
+        LocalizedText.FormatCount(
+            key,
+            count,
+            arguments);
+
+    private void SetStatus(
+        string key,
+        params object?[] arguments)
+    {
+        _statusKey = key;
+        _statusArguments = arguments;
+        _statusCount = null;
+        StatusText = LF(
+            key,
+            arguments);
+    }
+
+    private void SetCountStatus(
+        string key,
+        long count,
+        params object?[] arguments)
+    {
+        _statusKey = key;
+        _statusArguments = arguments;
+        _statusCount = count;
+        StatusText = LFC(
+            key,
+            count,
+            arguments);
+    }
+
+    private void SetHistoryStatus(
+        string key,
+        params object?[] arguments)
+    {
+        _historyStatusKey = key;
+        _historyStatusArguments = arguments;
+        _historyStatusCount = null;
+        HistoryStatus = LF(
+            key,
+            arguments);
+    }
+
+    private void SetHistoryCountStatus(
+        string key,
+        long count,
+        params object?[] arguments)
+    {
+        _historyStatusKey = key;
+        _historyStatusArguments = arguments;
+        _historyStatusCount = count;
+        HistoryStatus = LFC(
+            key,
+            count,
+            arguments);
+    }
+
+    private void SetFailure(
+        string key,
+        Exception error)
+    {
+        SetStatus(key);
+        DiagnosticDetail = error.Message;
+    }
+
+    private void SetHistoryFailure(
+        string key,
+        Exception error)
+    {
+        SetHistoryStatus(key);
+        HistoryDiagnosticDetail = error.Message;
+    }
+
+    private string LocalizeOperation(
+        string operation)
+    {
+        string? key = operation switch
+        {
+            "Staging outputs" =>
+                "Ingest.Operation.StagingOutputs",
+            "Source complete" =>
+                "Ingest.Operation.SourceComplete",
+            "Cancelled" =>
+                "Ingest.Operation.Cancelled",
+            "Complete" =>
+                "Ingest.Operation.Complete",
+            "Preparing" =>
+                "Ingest.Operation.Preparing",
+            "Encoding" =>
+                "Ingest.Operation.Encoding",
+            "Empty folders removed" =>
+                "Ingest.Operation.EmptyFoldersRemoved",
+            _ => null,
+        };
+        if (key is not null)
+            return L(key);
+        if (operation.StartsWith(
+                "Staged ",
+                StringComparison.Ordinal))
+            return LF(
+                "Ingest.Operation.Staged",
+                operation["Staged ".Length..]);
+        if (operation.StartsWith(
+                "Processing ",
+                StringComparison.Ordinal))
+            return LF(
+                "Ingest.Operation.Processing",
+                operation["Processing ".Length..]);
+        return L("Ingest.Operation.Working");
+    }
+
+    private string LocalizeAlbum(
+        string album) =>
+        album.Equals(
+            "Non-music cleanup",
+            StringComparison.Ordinal)
+            ? L("Ingest.Operation.NonMusicCleanup")
+            : album;
+
+    private void RefreshLocalizedChoices()
+    {
+        IngestPreviewFilter[] filters =
+            Enum.GetValues<IngestPreviewFilter>();
+        if (PreviewFilterChoices.Count == 0)
+        {
+            foreach (IngestPreviewFilter filter in filters)
+                PreviewFilterChoices.Add(
+                    new LocalizedChoice<IngestPreviewFilter>(
+                        filter,
+                        L(
+                            $"Ingest.PreviewFilter.{filter}")));
+            return;
+        }
+
+        foreach (LocalizedChoice<IngestPreviewFilter> choice in
+                 PreviewFilterChoices)
+            choice.Label = L(
+                $"Ingest.PreviewFilter.{choice.Value}");
+    }
+
+    private void OnLocalizationCultureChanged(
+        object? sender,
+        EventArgs e)
+    {
+        if (_statusKey is { } statusKey)
+            StatusText = _statusCount is { } statusCount
+                ? LFC(
+                    statusKey,
+                    statusCount,
+                    _statusArguments)
+                : LF(
+                    statusKey,
+                    _statusArguments);
+        if (_historyStatusKey is { } historyKey)
+            HistoryStatus =
+                _historyStatusCount is { } historyCount
+                    ? LFC(
+                        historyKey,
+                        historyCount,
+                        _historyStatusArguments)
+                    : LF(
+                        historyKey,
+                        _historyStatusArguments);
+
+        RefreshLocalizedChoices();
+        foreach (IngestPreflightCheckViewModel check in
+                 PreflightChecks)
+            check.RefreshLocalization();
+        foreach (IngestHistoryItemViewModel item in History)
+            item.RefreshLocalization();
+        foreach (IngestFileItemViewModel item in _allFiles)
+            item.RefreshLocalization();
+        OnPropertyChanged(nameof(ExplicitSourceSummary));
+        OnPropertyChanged(nameof(ConfigurationReadinessText));
     }
 
     private void NotifyCommands()
@@ -691,73 +1022,385 @@ public partial class IngestViewModel :
                 : StringComparison.Ordinal;
 }
 
-public sealed class IngestHistoryItemViewModel(OperationJournalSummary summary)
+public sealed class IngestPreflightCheckViewModel
+    : ViewModelBase
 {
-    public OperationJournalSummary Summary { get; } = summary;
-    public string Created => Summary.CreatedAtUtc.ToLocalTime().ToString("g");
-    public string State => Summary.State switch
+    private readonly ILocalizationService? _localization;
+
+    public IngestPreflightCheck Check { get; }
+    public IngestPreflightSeverity Severity =>
+        Check.Severity;
+    public string Name => L(
+        Check.Name switch
+        {
+            "Source" =>
+                "Ingest.Preflight.Check.Source",
+            "Selected files" =>
+                "Ingest.Preflight.Check.SelectedFiles",
+            "Configuration" =>
+                "Ingest.Preflight.Check.Configuration",
+            "Path isolation" =>
+                "Ingest.Preflight.Check.PathIsolation",
+            "Destinations" =>
+                "Ingest.Preflight.Check.Destinations",
+            "iTunes library" =>
+                "Ingest.Preflight.Check.ITunesLibrary",
+            "ffmpeg" =>
+                "Ingest.Preflight.Check.Ffmpeg",
+            "WavPack" =>
+                "Ingest.Preflight.Check.WavPack",
+            _ =>
+                "Ingest.Preflight.Check.Generic",
+        });
+    public string Message => L(
+        Severity switch
+        {
+            IngestPreflightSeverity.Pass =>
+                "Ingest.Preflight.Result.Pass",
+            IngestPreflightSeverity.Warning =>
+                "Ingest.Preflight.Result.Warning",
+            _ =>
+                "Ingest.Preflight.Result.Error",
+        });
+    public string DiagnosticDetail =>
+        Check.Message;
+
+    public IngestPreflightCheckViewModel(
+        IngestPreflightCheck check,
+        ILocalizationService? localization = null)
     {
-        OperationJournalState.Completed => "Completed",
-        OperationJournalState.Interrupted => "Interrupted — recovery available",
-        OperationJournalState.RolledBack => "Rolled back",
-        _ => "Quarantine present",
-    };
-    public bool IsInterrupted => Summary.State == OperationJournalState.Interrupted;
-    public string AffectedItems => Summary.AffectedItemCount is int count
-        ? $"{count:N0} item(s)" : "Open for item details";
+        Check = check;
+        _localization = localization;
+    }
+
+    public void RefreshLocalization()
+    {
+        OnPropertyChanged(nameof(Name));
+        OnPropertyChanged(nameof(Message));
+    }
+
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+}
+
+public sealed class IngestHistoryItemViewModel
+    : ViewModelBase
+{
+    private readonly ILocalizationService? _localization;
+
+    public OperationJournalSummary Summary { get; }
+    public string Created =>
+        Summary.CreatedAtUtc
+            .ToLocalTime()
+            .ToString(
+                "g",
+                _localization?.CurrentUICulture ??
+                System.Globalization.CultureInfo
+                    .CurrentCulture);
+    public string State => L(
+        Summary.State switch
+        {
+            OperationJournalState.Completed =>
+                "Ingest.History.State.Completed",
+            OperationJournalState.Interrupted =>
+                "Ingest.History.State.Interrupted",
+            OperationJournalState.RolledBack =>
+                "Ingest.History.State.RolledBack",
+            _ =>
+                "Ingest.History.State.Quarantine",
+        });
+    public OperationJournalState StateValue =>
+        Summary.State;
+    public bool IsInterrupted =>
+        Summary.State ==
+        OperationJournalState.Interrupted;
+    public string AffectedItems =>
+        Summary.AffectedItemCount is int count
+            ? LFC(
+                "Ingest.History.AffectedItems",
+                count)
+            : L("Ingest.History.OpenForDetails");
     public string RunPath => Summary.RunPath;
+
+    public IngestHistoryItemViewModel(
+        OperationJournalSummary summary,
+        ILocalizationService? localization = null)
+    {
+        Summary = summary;
+        _localization = localization;
+    }
+
+    public void RefreshLocalization()
+    {
+        OnPropertyChanged(nameof(Created));
+        OnPropertyChanged(nameof(State));
+        OnPropertyChanged(nameof(AffectedItems));
+    }
+
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string LFC(
+        string key,
+        long count,
+        params object?[] arguments) =>
+        _localization?.FormatCount(
+            key,
+            count,
+            arguments) ??
+        LocalizedText.FormatCount(
+            key,
+            count,
+            arguments);
 }
 
 public partial class IngestFileItemViewModel : ViewModelBase
 {
     private readonly IngestFileSummary _file;
+    private readonly ILocalizationService? _localization;
+    private readonly IngestConflict? _conflict;
+    private readonly IngestOutputPlan? _output;
+    private IngestFileProgressState? _progressState;
+    private string? _progressOperation;
+
     public string Source => _file.Source;
-    public string SourceType => _file.SourceType;
-    public string Summary => _file.Summary;
+    public string SourceType =>
+        _conflict is not null
+            ? L("Ingest.File.Type.Conflict")
+            : _output is not null
+                ? LF(
+                    "Ingest.File.Type.Output",
+                    LocalizeOutputKind(
+                        _output.Kind))
+                : _file.SourceType switch
+                {
+                    "Hi-Res ALAC" =>
+                        L("Ingest.File.Type.HiResAlac"),
+                    "Hi-Res FLAC" =>
+                        L("Ingest.File.Type.HiResFlac"),
+                    "CD-quality ALAC" =>
+                        L("Ingest.File.Type.CdAlac"),
+                    "CD FLAC" =>
+                        L("Ingest.File.Type.CdFlac"),
+                    "Unsupported/non-audio" =>
+                        L("Ingest.File.Type.Unsupported"),
+                    _ =>
+                        _file.SourceType,
+                };
+    public string Summary =>
+        _conflict is not null
+            ? LF(
+                "Ingest.File.ConflictSummary",
+                _conflict.Message)
+            : _output is not null
+                ? LF(
+                    "Ingest.File.OutputDestination",
+                    _output.DestinationPath)
+                : _file.Summary;
     public bool IsAlbum { get; }
     public bool IsOutput { get; }
     public bool IsCleanup { get; }
     public bool IsConflict { get; }
+    public IngestFileProgressState? ProgressState =>
+        _progressState;
+    public string? ProgressText =>
+        _progressState switch
+        {
+            IngestFileProgressState.InProgress =>
+                LF(
+                    "Ingest.File.Progress.InProgress",
+                    LocalizeOperation(
+                        _progressOperation)),
+            IngestFileProgressState.Completed =>
+                L("Ingest.File.Progress.Complete"),
+            IngestFileProgressState.Failed =>
+                L("Ingest.File.Progress.Failed"),
+            _ =>
+                null,
+        };
+    public string? DiagnosticDetail { get; private set; }
+    public bool HasDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(
+            DiagnosticDetail);
 
     [ObservableProperty]
     private bool _isComplete;
-    [ObservableProperty]
-    private string? _progressText;
 
-    public IngestFileItemViewModel(IngestFileSummary file, bool isAlbum = false,
-        bool isOutput = false, bool isCleanup = false, bool isConflict = false)
+    public IngestFileItemViewModel(
+        IngestFileSummary file,
+        bool isAlbum = false,
+        bool isOutput = false,
+        bool isCleanup = false,
+        bool isConflict = false,
+        ILocalizationService? localization = null)
+        : this(
+            file,
+            isAlbum,
+            isOutput,
+            isCleanup,
+            isConflict,
+            localization,
+            null,
+            null)
+    {
+    }
+
+    private IngestFileItemViewModel(
+        IngestFileSummary file,
+        bool isAlbum,
+        bool isOutput,
+        bool isCleanup,
+        bool isConflict,
+        ILocalizationService? localization,
+        IngestConflict? conflict,
+        IngestOutputPlan? output)
     {
         _file = file;
+        _localization = localization;
+        _conflict = conflict;
+        _output = output;
         IsAlbum = isAlbum;
         IsOutput = isOutput;
         IsCleanup = isCleanup;
         IsConflict = isConflict;
+        DiagnosticDetail = conflict?.Message;
     }
 
-    public static IngestFileItemViewModel ForConflict(IngestConflict conflict) => new(
-        new IngestFileSummary(conflict.Path, "Conflict", conflict.Message), isConflict: true);
+    public static IngestFileItemViewModel ForConflict(
+        IngestConflict conflict,
+        ILocalizationService? localization = null) =>
+        new(
+            new IngestFileSummary(
+                conflict.Path,
+                "",
+                ""),
+            false,
+            false,
+            false,
+            true,
+            localization,
+            conflict,
+            null);
 
-    public static IngestFileItemViewModel ForOutput(IngestOutputPlan output) => new(
-        new IngestFileSummary(output.SourcePath, $"{output.Kind} output",
-            $"Destination → {output.DestinationPath}"), isOutput: true);
+    public static IngestFileItemViewModel ForOutput(
+        IngestOutputPlan output,
+        ILocalizationService? localization = null) =>
+        new(
+            new IngestFileSummary(
+                output.SourcePath,
+                "",
+                ""),
+            false,
+            true,
+            false,
+            false,
+            localization,
+            null,
+            output);
 
     public void ResetProgress()
     {
         IsComplete = false;
-        ProgressText = null;
+        _progressState = null;
+        _progressOperation = null;
+        if (_conflict is null)
+            DiagnosticDetail = null;
+        OnPropertyChanged(nameof(ProgressState));
+        OnPropertyChanged(nameof(ProgressText));
+        OnPropertyChanged(nameof(DiagnosticDetail));
+        OnPropertyChanged(nameof(HasDiagnosticDetail));
     }
 
-    public void SetProgress(IngestFileProgressState state, string operation)
+    public void SetProgress(
+        IngestFileProgressState state,
+        string operation)
     {
-        if (IsComplete && state == IngestFileProgressState.InProgress)
+        if (IsComplete &&
+            state ==
+            IngestFileProgressState.InProgress)
             return;
-        IsComplete = state == IngestFileProgressState.Completed;
-        ProgressText = state switch
+        IsComplete =
+            state ==
+            IngestFileProgressState.Completed;
+        _progressState = state;
+        _progressOperation = operation;
+        if (state ==
+            IngestFileProgressState.Failed &&
+            !operation.Equals(
+                "Cancelled",
+                StringComparison.Ordinal))
+            DiagnosticDetail = operation;
+        OnPropertyChanged(nameof(ProgressState));
+        OnPropertyChanged(nameof(ProgressText));
+        OnPropertyChanged(nameof(DiagnosticDetail));
+        OnPropertyChanged(nameof(HasDiagnosticDetail));
+    }
+
+    public void RefreshLocalization()
+    {
+        OnPropertyChanged(nameof(SourceType));
+        OnPropertyChanged(nameof(Summary));
+        OnPropertyChanged(nameof(ProgressText));
+    }
+
+    private string LocalizeOutputKind(
+        IngestOutputKind kind) =>
+        L(
+            $"Ingest.OutputKind.{kind}");
+
+    private string LocalizeOperation(
+        string? operation)
+    {
+        if (operation is null)
+            return L("Ingest.Operation.Working");
+        string? key = operation switch
         {
-            IngestFileProgressState.InProgress => $"● In progress — {operation}",
-            IngestFileProgressState.Completed => "✓ Complete",
-            IngestFileProgressState.Failed => $"✕ Not completed — {operation}",
+            "Staging outputs" =>
+                "Ingest.Operation.StagingOutputs",
+            "Source complete" =>
+                "Ingest.Operation.SourceComplete",
+            "Cancelled" =>
+                "Ingest.Operation.Cancelled",
+            "Complete" =>
+                "Ingest.Operation.Complete",
+            "Preparing" =>
+                "Ingest.Operation.Preparing",
+            "Encoding" =>
+                "Ingest.Operation.Encoding",
+            "Empty folders removed" =>
+                "Ingest.Operation.EmptyFoldersRemoved",
             _ => null,
         };
+        if (key is not null)
+            return L(key);
+        if (operation.StartsWith(
+                "Staged ",
+                StringComparison.Ordinal))
+            return LF(
+                "Ingest.Operation.Staged",
+                operation["Staged ".Length..]);
+        if (operation.StartsWith(
+                "Processing ",
+                StringComparison.Ordinal))
+            return LF(
+                "Ingest.Operation.Processing",
+                operation["Processing ".Length..]);
+        return L("Ingest.Operation.Working");
     }
+
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string LF(
+        string key,
+        params object?[] arguments) =>
+        _localization?.Format(
+            key,
+            arguments) ??
+        LocalizedText.Format(
+            key,
+            arguments);
 }

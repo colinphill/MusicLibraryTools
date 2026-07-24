@@ -1,662 +1,554 @@
+using global::Avalonia;
+using global::Avalonia.Automation;
 using global::Avalonia.Controls;
 using global::Avalonia.Controls.Presenters;
-using global::Avalonia.Controls.Templates;
-using global::Avalonia.Data;
 using global::Avalonia.Input;
 using global::Avalonia.Interactivity;
-using global::Avalonia.Markup.Xaml;
-using global::Avalonia.Media;
 using global::Avalonia.Platform.Storage;
 using global::Avalonia.Threading;
-using MusicLibrary.Core.Models;
+using System.ComponentModel;
 using MusicLibrary.Core.Services;
-using MusicLibraryManager.Controls;
 using MusicLibraryManager.Presentation;
-using MusicLibraryManager.Services;
 
 namespace MusicLibraryManager.Views;
 
 public partial class WorkbenchView : UserControl
 {
+    private enum WorkbenchDrawerSurface
+    {
+        None,
+        Inspector,
+        PendingChanges,
+        Columns,
+    }
+
     private readonly WorkbenchViewModel _viewModel;
-    private readonly GridStateService _gridState;
-    private readonly List<AppGridColumnDefinition>
-        _workbenchColumns = [];
-    private LibrarySortState? _workbenchSort;
+    private readonly ILocalizationService _localization;
+    private WorkbenchDrawerSurface _activeDrawer;
     private bool _responsiveCompact;
-    private bool _inspectorOpen = true;
-    private bool _inspectorDrawerOpen;
-    private bool _restoringWorkbenchSelection;
-    private bool _workbenchSelectionChangePending;
+    private bool _compactSectionPicker;
+    private bool _compactHeight;
+    private bool _sectionSuppressesInspector;
+    private bool _inspectorPreference;
+    private bool _resumeInspectorAfterTransientDrawer;
+    private Control? _drawerFocusOwner;
 
     public WorkbenchView()
     {
         InitializeComponent();
         _viewModel = App.GetService<WorkbenchViewModel>();
-        _gridState = App.GetService<GridStateService>();
+        _localization =
+            App.GetService<ILocalizationService>();
         DataContext = _viewModel;
-        WorkbenchGrid.IsReadOnly = false;
-        BuildWorkbenchColumns();
-        ApplyWorkbenchSnapshot(
-            _gridState.Load("workbench.session"));
-        ConfigureWorkbenchGrid();
-        BuildWorkbenchColumnOptions();
-        WorkbenchGrid.LayoutChanged += (_, _) =>
-            PersistWorkbenchLayout();
-        WorkbenchGrid.SortChanged += (_, _) =>
-            Dispatcher.UIThread.Post(
-                CaptureWorkbenchSortAndPersist);
+
+        _inspectorPreference = _viewModel.IsInspectorOpen;
+        _activeDrawer = _inspectorPreference
+            ? WorkbenchDrawerSurface.Inspector
+            : WorkbenchDrawerSurface.None;
+
+        WorkbenchSessionSection.ColumnsRequested +=
+            OnColumnsRequested;
+        WorkbenchColumnsDrawer.Attach(
+            WorkbenchSessionSection);
+        WorkbenchColumnsDrawer.CloseRequested +=
+            OnDrawerCloseRequested;
+        WorkbenchPendingChangesDrawer.CloseRequested +=
+            OnDrawerCloseRequested;
+        WorkbenchInspectorDrawer.CloseRequested +=
+            OnInspectorCloseRequested;
+
         AttachedToVisualTree += (_, _) =>
-            _viewModel.ColumnEditor.Changed +=
-                RebuildWorkbenchMetadataColumns;
+        {
+            _viewModel.PropertyChanged +=
+                OnViewModelPropertyChanged;
+            _localization.CultureChanged +=
+                OnLocalizationCultureChanged;
+            ApplySectionSelection();
+        };
         DetachedFromVisualTree += (_, _) =>
-            _viewModel.ColumnEditor.Changed -=
-                RebuildWorkbenchMetadataColumns;
-        PreviewGrid.ConfigureColumns(
-        [
-            new("File", "File", "File", 220, 140),
-            new("Field", "Field", "Field", 150, 100),
-            new("Before", "Before", "Before", 320, 180),
-            new("After", "After", "After", 320, 180),
-        ]);
-        PendingOperationsGrid.ConfigureColumns(
-        [
-            new("Number", "#", "Number", 55, 45),
-            new("Operation", "Operation", "Operation", 220, 130),
-            new("Target", "Target / details", "Target", 360, 180),
-            new("AppliesTo", "Applies to", "AppliesTo", 120, 90),
-        ]);
-        WorkbenchPendingChangesGrid.ConfigureColumns(
-        [
-            new("File", "File", "File", 220, 140),
-            new("Field", "Field", "Field", 150, 100),
-            new("Before", "Before", "Before", 320, 180),
-            new("After", "After", "After", 320, 180),
-        ]);
-        MetadataFieldsGrid.ConfigureColumns(
-        [
-            new("Name", "Field", "Name", 210, 120),
-            new("Kind", "Kind", "Kind", 90, 70),
-            new("Layers", "Tag layers", "Layers", 150, 100),
-            new("Coverage", "Selected files", "Coverage", 105, 80),
-            new("Value", "Values", "DisplayValue", 340, 180),
-        ]);
-        AudioDiscoveryGrid.ConfigureColumns(
-        [
-            new("File", "File", "File", 220, 130),
-            new("Duration", "Duration", "Duration", 90, 70),
-            new("Confidence", "Confidence", "Confidence", 105, 85),
-            new("AcoustID", "AcoustID", "AcoustId", 285, 180),
-            new("MusicBrainz", "MusicBrainz recording IDs",
-                "MusicBrainzRecordingIds", 390, 220),
-            new("Status", "Status", "Status", 280, 160),
-        ]);
-        ReleaseDiscoveryGrid.ConfigureColumns(
-        [
-            new("Title", "Release", "Title", 240, 140),
-            new("Artist", "Artist credit", "Artist", 190, 110),
-            new("Date", "Date", "Date", 100, 75),
-            new("Country", "Country", "Country", 80, 65),
-            new("Status", "Status", "Status", 90, 70),
-            new("Label", "Label", "Label", 170, 100),
-            new("Catalog", "Catalog no.", "CatalogNumber", 120, 85),
-            new("Formats", "Formats", "Formats", 140, 90),
-            new("Position", "Matched position", "MatchedTrackPositions", 140, 95),
-            new("Tracks", "Tracks", "TrackCount", 75, 60),
-            new("ReleaseID", "MusicBrainz release ID", "ReleaseId", 280, 180),
-        ]);
-        ConfigureDiscogsGrid(DiscogsDiscoveryGrid);
-        ConfigureDiscogsTrackMappingGrid(DiscogsTrackMappingGrid);
-        ConfigureReleaseTrackMappingGrid(ReleaseTrackMappingGrid);
-        ConfigureReleaseArtworkGrid(ReleaseArtworkGrid);
-        ReportOutputGrid.ConfigureColumns(
-        [
-            new("Group", "Group", "Group", 150, 90),
-            new("File", "Destination", "File", 420, 220),
-            new("Rows", "Rows", "Rows", 80, 60),
-            new("Bytes", "Bytes", "Bytes", 100, 70),
-        ]);
-        PlaylistOutputGrid.ConfigureColumns(
-        [
-            new("Group", "Group", "Group", 150, 90),
-            new("File", "Destination", "File", 420, 220),
-            new("Tracks", "Tracks", "Tracks", 80, 60),
-            new("Bytes", "Bytes", "Bytes", 100, 70),
-        ]);
-        ExternalToolInvocationGrid.ConfigureColumns(
-        [
-            new("Number", "#", "Number", 55, 45),
-            new("Executable", "Executable", "Executable", 190, 120),
-            new("Arguments", "Arguments", "Arguments", 360, 190),
-            new("WorkingDirectory", "Working directory",
-                "WorkingDirectory", 220, 130),
-            new("Files", "Files", "Files", 65, 52),
-        ]);
-        WorkbenchInspectorView.CloseRequested += OnInspectorCloseRequested;
-    }
-
-    private void BuildWorkbenchColumns()
-    {
-        _workbenchColumns.AddRange(
-        [
-            new("File", "File", "FileName", 220, 140),
-            new("Title", "Title", "Title", 220, 120,
-                Editable: true),
-            new("Artist", "Artist", "Artist", 190, 110,
-                Editable: true),
-            new("AlbumArtist", "Album artist", "AlbumArtist",
-                190, 110, Editable: true),
-            new("Album", "Album", "Album", 210, 120,
-                Editable: true),
-            new("Genre", "Genre", "Genre", 130, 90,
-                Editable: true),
-            new("Composer", "Composer", "Composer", 170, 100,
-                Editable: true),
-            new("Date", "Date", "Date", 90, 70,
-                Editable: true),
-            new("Track", "Track", "Track", 75, 60,
-                Editable: true),
-            new("Disc", "Disc", "Disc", 70, 60,
-                Editable: true),
-            new("Format", "Format", "Format", 80, 65),
-            new("Codec", "Codec", "Codec", 110, 80, false),
-            new("CodecType", "Codec type", "CodecType",
-                105, 80, false),
-            new("SampleRate", "Sample rate", "SampleRate",
-                115, 85, false),
-            new("BitsPerSample", "Bits", "BitsPerSample",
-                70, 55, false),
-            new("Channels", "Channels", "Channels",
-                85, 65, false),
-            new("Duration", "Duration", "Duration", 90, 75),
-            new("Bitrate", "Bitrate", "Bitrate", 100, 75),
-            new("TagLayers", "Tag layers", "LayerSummary",
-                170, 105, false),
-            new("Artwork", "Artwork", "ArtworkCount",
-                85, 65, false),
-            new("FileSize", "File size", "FileSize",
-                105, 75, false),
-            new("Modified", "Modified", "Modified",
-                155, 110, false),
-            new("Path", "Path", "Path", 420, 180, false),
-        ]);
-        AddWorkbenchMetadataColumns();
-    }
-
-    private void AddWorkbenchMetadataColumns()
-    {
-        foreach (UserMetadataColumnRow row in
-                 _viewModel.ColumnEditor.Columns.OrderBy(column =>
-                     column.Descriptor.Order))
         {
-            UserMetadataColumnDescriptor descriptor =
-                row.Descriptor;
-            string? editPath = descriptor.EditTarget is null
-                ? null
-                : WorkbenchEditPath(descriptor.EditTarget);
-            var definition = new AppGridColumnDefinition(
-                descriptor.ColumnKey,
-                descriptor.Label,
-                editPath ??
-                    $"MetadataValues[{descriptor.ValueKey}]",
-                descriptor.Width,
-                70,
-                descriptor.Visible,
-                Editable: editPath is not null,
-                CustomSortComparer: editPath is null
-                    ? new MetadataGridRowComparer(
-                        descriptor.ValueKey,
-                        descriptor.SortType)
-                    : null);
-            _workbenchColumns.Insert(
-                Math.Clamp(
-                    descriptor.Order,
-                    0,
-                    _workbenchColumns.Count),
-                definition);
-        }
+            _viewModel.PropertyChanged -=
+                OnViewModelPropertyChanged;
+            _localization.CultureChanged -=
+                OnLocalizationCultureChanged;
+        };
+        SizeChanged += (_, _) =>
+            ApplyResponsiveLayout(
+                Bounds.Width <= 1100);
+
+        ApplySectionSelection();
+        ApplyResponsiveLayout(compact: false);
     }
 
-    private static string? WorkbenchEditPath(
-        MetadataFieldKey field) =>
-        field.KnownField is { } known
-            ? MetadataGridColumnEditorViewModel.InlineEditPath(known)
-            : null;
-
-    private void RebuildWorkbenchMetadataColumns()
-    {
-        List<LibraryColumnState> columns =
-            CaptureWorkbenchColumns()
-                .Where(column =>
-                    !column.Key.StartsWith(
-                        "Metadata.",
-                        StringComparison.Ordinal))
-                .ToList();
-        columns.AddRange(
-            _viewModel.ColumnEditor.Columns.Select(row =>
-                new LibraryColumnState(
-                    row.Descriptor.ColumnKey,
-                    row.Descriptor.Width,
-                    row.Descriptor.Order,
-                    row.Descriptor.Visible)));
-        GridSnapshot snapshot = new(
-            columns,
-            _workbenchSort);
-        _workbenchColumns.RemoveAll(column =>
-            column.Key.StartsWith(
-                "Metadata.",
-                StringComparison.Ordinal));
-        AddWorkbenchMetadataColumns();
-        ApplyWorkbenchSnapshot(snapshot);
-        ConfigureWorkbenchGrid();
-        BuildWorkbenchColumnOptions();
-        PersistWorkbenchLayout();
-    }
-
-    private void ApplyWorkbenchSnapshot(GridSnapshot? snapshot)
-    {
-        if (snapshot is null)
-            return;
-        IReadOnlyList<AppGridColumnDefinition> restored =
-            PersistedGridLayout.ApplySnapshot(
-                _workbenchColumns,
-                snapshot);
-        _workbenchColumns.Clear();
-        _workbenchColumns.AddRange(restored);
-        _workbenchSort = snapshot.Sort;
-    }
-
-    private void ConfigureWorkbenchGrid()
-    {
-        WorkbenchGrid.ConfigureColumns(_workbenchColumns);
-        WorkbenchGrid.ApplySort(_workbenchSort);
-    }
-
-    private async void OnWorkbenchSelectionChanged(
-        object? sender,
-        SelectionChangedEventArgs e)
-    {
-        if (_restoringWorkbenchSelection ||
-            _workbenchSelectionChangePending)
-            return;
-        if (_viewModel.Inspector?.HasUnsavedChanges != true)
-        {
-            _viewModel.SetSelectedFiles(
-                WorkbenchGrid.SelectedItems
-                    .OfType<WorkbenchTrackViewModel>());
-            return;
-        }
-        WorkbenchTrackViewModel[] previous =
-            _viewModel.SelectedFiles.ToArray();
-        WorkbenchTrackViewModel[] selected =
-            WorkbenchGrid.SelectedItems
-                .OfType<WorkbenchTrackViewModel>()
-                .ToArray();
-        _workbenchSelectionChangePending = true;
-        bool accepted;
-        try
-        {
-            accepted = await _viewModel.TrySetSelectedFilesAsync(selected);
-        }
-        finally
-        {
-            _workbenchSelectionChangePending = false;
-        }
-        if (accepted)
-            return;
-        _restoringWorkbenchSelection = true;
-        try
-        {
-            WorkbenchGrid.SelectedItems.Clear();
-            foreach (WorkbenchTrackViewModel file in previous)
-                WorkbenchGrid.SelectedItems.Add(file);
-            _viewModel.SelectedFile = previous.FirstOrDefault();
-        }
-        finally
-        {
-            _restoringWorkbenchSelection = false;
-        }
-    }
-
-    private void OnInspectorToggle(object? sender, RoutedEventArgs e)
-    {
-        if (_responsiveCompact)
-        {
-            _inspectorOpen = true;
-            _inspectorDrawerOpen = !_inspectorDrawerOpen;
-        }
-        else
-        {
-            _inspectorOpen = !_inspectorOpen;
-        }
-        ApplyInspectorVisibility();
-    }
-
-    public void ApplyResponsiveLayout(bool compact)
-    {
-        _responsiveCompact = compact;
-        if (!compact)
-            _inspectorDrawerOpen = false;
-        ApplyInspectorVisibility();
-    }
-
-    private void ApplyInspectorVisibility()
-    {
-        WorkbenchSplit.SetCompact(_responsiveCompact || !_inspectorOpen);
-        ContentPresenter? presenter =
-            WorkbenchSplit.FindControl<ContentPresenter>("RightPresenter");
-        if (presenter is not null)
-        {
-            presenter.Width = _responsiveCompact ? 320 : double.NaN;
-            presenter.IsVisible = _inspectorOpen &&
-                (!_responsiveCompact || _inspectorDrawerOpen);
-        }
-        bool visible = _inspectorOpen &&
-            (!_responsiveCompact || _inspectorDrawerOpen);
-        WorkbenchInspectorToggle.Content = visible
-            ? "Hide inspector"
-            : "Inspector";
-    }
-
-    private void OnInspectorCloseRequested(object? sender, EventArgs e)
-    {
-        _inspectorOpen = false;
-        _inspectorDrawerOpen = false;
-        ApplyInspectorVisibility();
-    }
-
-    private void BuildWorkbenchColumnOptions()
-    {
-        WorkbenchColumnOptions.Children.Clear();
-        foreach (AppGridColumnDefinition definition in
-                 _workbenchColumns)
-        {
-            var check = new CheckBox
-            {
-                Content = definition.Header,
-                IsChecked = definition.Visible,
-                Tag = definition.Key,
-            };
-            check.IsCheckedChanged +=
-                OnWorkbenchColumnChecked;
-            WorkbenchColumnOptions.Children.Add(check);
-        }
-    }
-
-    private void OnWorkbenchColumnChecked(
+    private void OnWorkbenchSectionClick(
         object? sender,
         RoutedEventArgs e)
     {
-        if (sender is not CheckBox
-            {
-                Tag: string key,
-                IsChecked: bool visible,
-            })
-            return;
-        int index = _workbenchColumns.FindIndex(column =>
-            column.Key == key);
-        if (index < 0)
-            return;
-        if (!visible &&
-            _workbenchColumns.Count(column => column.Visible) == 1)
+        if (sender is Button { Tag: string section } &&
+            Enum.TryParse(
+                section,
+                ignoreCase: false,
+                out WorkbenchSection selected))
+            _viewModel.SelectedSection = selected;
+    }
+
+    private void OnViewModelPropertyChanged(
+        object? sender,
+        PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName ==
+            nameof(WorkbenchViewModel.SelectedSection))
         {
-            ((CheckBox)sender).IsChecked = true;
+            ApplySectionSelection();
             return;
         }
-        _workbenchColumns[index] =
-            _workbenchColumns[index] with { Visible = visible };
-        ConfigureWorkbenchGrid();
-        PersistWorkbenchLayout();
-    }
 
-    private IReadOnlyList<LibraryColumnState>
-        CaptureWorkbenchColumns()
-    {
-        IReadOnlyList<LibraryColumnState> visible =
-            WorkbenchGrid.CaptureColumnLayout();
-        Dictionary<string, LibraryColumnState> byKey =
-            visible.ToDictionary(
-                column => column.Key,
-                StringComparer.OrdinalIgnoreCase);
-        int displayIndex = 0;
-        var result = new List<LibraryColumnState>(
-            _workbenchColumns.Count);
-        foreach (AppGridColumnDefinition definition in
-                 _workbenchColumns.OrderBy(column =>
-                     byKey.TryGetValue(
-                         column.Key,
-                         out LibraryColumnState? state)
-                         ? state.DisplayIndex
-                         : int.MaxValue))
+        if (e.PropertyName !=
+            nameof(WorkbenchViewModel.IsInspectorOpen))
+            return;
+
+        _inspectorPreference =
+            _viewModel.IsInspectorOpen;
+        if (!_inspectorPreference &&
+            _activeDrawer ==
+                WorkbenchDrawerSurface.Inspector)
         {
-            if (byKey.TryGetValue(
-                    definition.Key,
-                    out LibraryColumnState? state))
-                result.Add(state with
-                {
-                    DisplayIndex = displayIndex++,
-                    Visible = true,
-                });
-            else
-                result.Add(new(
-                    definition.Key,
-                    definition.Width,
-                    displayIndex++,
-                    false));
+            _activeDrawer =
+                WorkbenchDrawerSurface.None;
         }
-        return result;
+        else if (_inspectorPreference &&
+                 !_responsiveCompact &&
+                 !_sectionSuppressesInspector &&
+                 _activeDrawer ==
+                    WorkbenchDrawerSurface.None)
+        {
+            _activeDrawer =
+                WorkbenchDrawerSurface.Inspector;
+        }
+        ApplyDrawerState();
     }
 
-    private void PersistWorkbenchLayout() =>
-        SaveWorkbenchLayout(CaptureWorkbenchColumns());
-
-    private void SaveWorkbenchLayout(
-        IReadOnlyList<LibraryColumnState> columns)
+    private void ApplySectionSelection()
     {
-        IReadOnlyList<AppGridColumnDefinition> synchronized =
-            PersistedGridLayout.ApplySnapshot(
-                _workbenchColumns,
-                new GridSnapshot(
-                    columns,
-                    _workbenchSort));
-        _workbenchColumns.Clear();
-        _workbenchColumns.AddRange(
-            synchronized);
-        _gridState.Save(
-            "workbench.session",
-            new(columns, _workbenchSort));
-        _viewModel.ColumnEditor.PersistLayout(columns);
+        WorkbenchSection section =
+            _viewModel.SelectedSection;
+        WorkbenchTabs.SelectedIndex =
+            (int)section;
+
+        foreach ((WorkbenchSection value, Button button) in
+                 SectionButtons())
+        {
+            bool selected = value == section;
+            button.Classes.Set(
+                "primary",
+                selected);
+            AutomationProperties.SetItemStatus(
+                button,
+                selected
+                    ? L("Shell.Selection.Selected")
+                    : L("Shell.Selection.NotSelected"));
+        }
+
+        _sectionSuppressesInspector =
+            section is
+                WorkbenchSection.Reports or
+                WorkbenchSection.Playlists or
+                WorkbenchSection.Tools or
+                WorkbenchSection.Shortcuts;
+        WorkbenchInspectorToggle.IsVisible =
+            !_sectionSuppressesInspector;
+
+        if (_sectionSuppressesInspector &&
+            _activeDrawer ==
+                WorkbenchDrawerSurface.Inspector)
+        {
+            _activeDrawer =
+                WorkbenchDrawerSurface.None;
+        }
+        else if (!_sectionSuppressesInspector &&
+                 !_responsiveCompact &&
+                 _inspectorPreference &&
+                 _activeDrawer ==
+                    WorkbenchDrawerSurface.None)
+        {
+            _activeDrawer =
+                WorkbenchDrawerSurface.Inspector;
+        }
+
+        if (section != WorkbenchSection.Session &&
+            _activeDrawer ==
+                WorkbenchDrawerSurface.Columns)
+        {
+            CloseActiveDrawer(
+                restoreFocus: false);
+        }
+
+        ApplyDrawerState();
     }
 
-    private void CaptureWorkbenchSortAndPersist()
+    private IEnumerable<(WorkbenchSection Section, Button Button)>
+        SectionButtons()
     {
-        _workbenchSort =
-            WorkbenchGrid.CurrentSortKey is not { } key
-                ? null
-                : new(
-                    key,
-                    WorkbenchGrid.CurrentSortDescending);
-        PersistWorkbenchLayout();
+        yield return (
+            WorkbenchSection.Session,
+            WorkbenchSectionSession);
+        yield return (
+            WorkbenchSection.BulkOperation,
+            WorkbenchSectionBulkOperation);
+        yield return (
+            WorkbenchSection.AllFields,
+            WorkbenchSectionAllFields);
+        yield return (
+            WorkbenchSection.Files,
+            WorkbenchSectionFiles);
+        yield return (
+            WorkbenchSection.OnlineMetadata,
+            WorkbenchSectionOnlineMetadata);
+        yield return (
+            WorkbenchSection.Reports,
+            WorkbenchSectionReports);
+        yield return (
+            WorkbenchSection.Playlists,
+            WorkbenchSectionPlaylists);
+        yield return (
+            WorkbenchSection.Tools,
+            WorkbenchSectionTools);
+        yield return (
+            WorkbenchSection.Shortcuts,
+            WorkbenchSectionShortcuts);
     }
 
-    private void OnWorkbenchColumnsClick(
+    private void OnInspectorToggle(
         object? sender,
-        RoutedEventArgs e) =>
-        WorkbenchColumnPopover.IsOpen =
-            !WorkbenchColumnPopover.IsOpen;
+        RoutedEventArgs e)
+    {
+        if (_sectionSuppressesInspector)
+            return;
+        if (_activeDrawer ==
+            WorkbenchDrawerSurface.Inspector)
+        {
+            CloseActiveDrawer(
+                restoreFocus: true,
+                persistInspectorClose: true);
+            return;
+        }
 
-    private void OnWorkbenchColumnsClose(
-        object? sender,
-        RoutedEventArgs e) =>
-        WorkbenchColumnPopover.IsOpen = false;
+        _inspectorPreference = true;
+        _viewModel.IsInspectorOpen = true;
+        ShowDrawer(
+            WorkbenchDrawerSurface.Inspector,
+            WorkbenchInspectorToggle);
+    }
 
     private void OnWorkbenchPendingChangesClick(
         object? sender,
         RoutedEventArgs e) =>
-        WorkbenchPendingChangesPopover.IsOpen =
-            !WorkbenchPendingChangesPopover.IsOpen;
+        ToggleTransientDrawer(
+            WorkbenchDrawerSurface.PendingChanges,
+            WorkbenchPendingChangesButton);
 
-    private void OnWorkbenchPendingChangesClose(
+    private void OnColumnsRequested(
         object? sender,
-        RoutedEventArgs e) =>
-        WorkbenchPendingChangesPopover.IsOpen = false;
+        EventArgs e) =>
+        ToggleTransientDrawer(
+            WorkbenchDrawerSurface.Columns,
+            WorkbenchSessionSection.ColumnsButton);
 
-    private static void ConfigureDiscogsGrid(AppDataGrid grid) =>
-        grid.ConfigureColumns(
-        [
-            new("Title", "Release", "Title", 220, 130),
-            new("Artist", "Artist credit", "Artist", 180, 105),
-            new("Year", "Year", "Year", 75, 60),
-            new("Country", "Country", "Country", 75, 62),
-            new("Labels", "Labels", "Labels", 160, 95),
-            new("Catalog", "Catalog no.", "CatalogNumbers", 130, 85),
-            new("Formats", "Formats", "Formats", 150, 90),
-            new("Genres", "Genres", "Genres", 130, 85),
-            new("Styles", "Styles", "Styles", 140, 90),
-            new("Tracks", "Tracks", "TrackCount", 70, 55),
-            new("Source", "Source", "Source", 100, 75),
-            new("ReleaseID", "Discogs release ID", "ReleaseId", 150, 100),
-        ]);
-
-    private static void ConfigureDiscogsTrackMappingGrid(
-        AppDataGrid grid)
+    private void ToggleTransientDrawer(
+        WorkbenchDrawerSurface surface,
+        Control focusOwner)
     {
-        var includeTemplate =
-            new FuncDataTemplate<DiscogsTrackMappingRow>(
-                (_, _) =>
-                {
-                    var check = new CheckBox();
-                    check.Bind(
-                        CheckBox.IsCheckedProperty,
-                        new Binding(
-                            nameof(DiscogsTrackMappingRow.IsIncluded))
-                        {
-                            Mode = BindingMode.TwoWay,
-                        });
-                    return check;
-                });
-        var trackTemplate =
-            new FuncDataTemplate<DiscogsTrackMappingRow>(
-                (_, _) =>
-                {
-                    var combo = new ComboBox
-                    {
-                        DisplayMemberBinding = new Binding(
-                            nameof(DiscogsTrackChoice.Display)),
-                    };
-                    combo.Bind(
-                        ItemsControl.ItemsSourceProperty,
-                        new Binding(
-                            nameof(DiscogsTrackMappingRow.TrackChoices)));
-                    combo.Bind(
-                        ComboBox.SelectedItemProperty,
-                        new Binding(
-                            nameof(DiscogsTrackMappingRow.SelectedTrack))
-                        {
-                            Mode = BindingMode.TwoWay,
-                        });
-                    return combo;
-                });
-        grid.ConfigureColumns(
-        [
-            new("Include", "Use", null, 58, 48,
-                CellTemplate: includeTemplate, Sortable: false),
-            new("File", "File", "File", 180, 110),
-            new("Track", "Discogs track", null, 330, 190,
-                CellTemplate: trackTemplate, Sortable: false),
-            new("Position", "Position", "Position", 80, 62),
-            new("Confidence", "Confidence", "Confidence", 100, 76),
-            new("Status", "Reason", "Status", 260, 150),
-        ]);
+        if (_activeDrawer == surface)
+        {
+            CloseActiveDrawer(
+                restoreFocus: true);
+            return;
+        }
+        ShowDrawer(
+            surface,
+            focusOwner);
     }
 
-    private static void ConfigureReleaseArtworkGrid(AppDataGrid grid)
+    private void ShowDrawer(
+        WorkbenchDrawerSurface surface,
+        Control focusOwner)
     {
-        var thumbnailTemplate = new FuncDataTemplate<CoverArtCandidateRow>(
-            (_, _) =>
+        bool resumeInspector =
+            _activeDrawer ==
+                WorkbenchDrawerSurface.Inspector ||
+            IsTransientDrawer(_activeDrawer) &&
+            _resumeInspectorAfterTransientDrawer;
+
+        _resumeInspectorAfterTransientDrawer =
+            IsTransientDrawer(surface) &&
+            resumeInspector;
+        _activeDrawer = surface;
+        _drawerFocusOwner = focusOwner;
+        ApplyDrawerState();
+
+        Control initialFocus =
+            surface switch
             {
-                var image = new Image
-                {
-                    Width = 72,
-                    Height = 72,
-                    Stretch = Stretch.Uniform,
-                };
-                image.Bind(Image.SourceProperty,
-                    new Binding(nameof(CoverArtCandidateRow.ThumbnailSource)));
-                return image;
-            });
-        grid.RowHeight = 82;
-        grid.ConfigureColumns(
-        [
-            new("Thumbnail", "Preview", null, 90, 80,
-                CellTemplate: thumbnailTemplate, Sortable: false),
-            new("Roles", "Types", "Roles", 170, 100),
-            new("Front", "Front", "Front", 70, 55),
-            new("Back", "Back", "Back", 70, 55),
-            new("Approved", "Approved", "Approved", 85, 65),
-            new("Comment", "Comment", "Comment", 240, 130),
-            new("Status", "Thumbnail", "ThumbnailStatus", 150, 90),
-            new("Id", "Archive ID", "Id", 150, 100),
-        ]);
+                WorkbenchDrawerSurface.Inspector =>
+                    WorkbenchInspectorDrawer.InitialFocus,
+                WorkbenchDrawerSurface.PendingChanges =>
+                    WorkbenchPendingChangesDrawer.InitialFocus,
+                WorkbenchDrawerSurface.Columns =>
+                    WorkbenchColumnsDrawer.InitialFocus,
+                _ => focusOwner,
+            };
+        Dispatcher.UIThread.Post(
+            () => initialFocus.Focus(),
+            DispatcherPriority.Input);
     }
 
-    private static void ConfigureReleaseTrackMappingGrid(AppDataGrid grid)
+    private void OnDrawerCloseRequested(
+        object? sender,
+        EventArgs e) =>
+        CloseActiveDrawer(
+            restoreFocus: true);
+
+    private void OnInspectorCloseRequested(
+        object? sender,
+        EventArgs e) =>
+        CloseActiveDrawer(
+            restoreFocus: true,
+            persistInspectorClose: true);
+
+    private void CloseActiveDrawer(
+        bool restoreFocus,
+        bool persistInspectorClose = false)
     {
-        var includeTemplate = new FuncDataTemplate<MusicBrainzTrackMappingRow>(
-            (_, _) =>
-            {
-                var check = new CheckBox();
-                check.Bind(CheckBox.IsCheckedProperty,
-                    new Binding(nameof(MusicBrainzTrackMappingRow.IsIncluded))
-                    {
-                        Mode = BindingMode.TwoWay,
-                    });
-                return check;
-            });
-        var trackTemplate = new FuncDataTemplate<MusicBrainzTrackMappingRow>(
-            (_, _) =>
-            {
-                var combo = new ComboBox
-                {
-                    DisplayMemberBinding =
-                        new Binding(nameof(MusicBrainzTrackChoice.Display)),
-                };
-                combo.Bind(ItemsControl.ItemsSourceProperty,
-                    new Binding(nameof(MusicBrainzTrackMappingRow.TrackChoices)));
-                combo.Bind(ComboBox.SelectedItemProperty,
-                    new Binding(nameof(MusicBrainzTrackMappingRow.SelectedTrack))
-                    {
-                        Mode = BindingMode.TwoWay,
-                    });
-                return combo;
-            });
-        grid.ConfigureColumns(
-        [
-            new("Include", "Use", null, 60, 50,
-                CellTemplate: includeTemplate, Sortable: false),
-            new("File", "File", "File", 210, 120),
-            new("Track", "Release track", null, 390, 220,
-                CellTemplate: trackTemplate, Sortable: false),
-            new("Confidence", "Confidence", "Confidence", 110, 80),
-            new("Status", "Reason", "Status", 310, 170),
-        ]);
+        WorkbenchDrawerSurface closing =
+            _activeDrawer;
+        if (closing == WorkbenchDrawerSurface.None)
+            return;
+
+        if (persistInspectorClose &&
+            closing ==
+                WorkbenchDrawerSurface.Inspector)
+        {
+            _inspectorPreference = false;
+            _viewModel.IsInspectorOpen = false;
+        }
+
+        bool resumeInspector =
+            IsTransientDrawer(closing) &&
+            _resumeInspectorAfterTransientDrawer &&
+            _inspectorPreference &&
+            !_sectionSuppressesInspector;
+        _activeDrawer = resumeInspector
+            ? WorkbenchDrawerSurface.Inspector
+            : WorkbenchDrawerSurface.None;
+        _resumeInspectorAfterTransientDrawer = false;
+
+        Control? focusOwner =
+            _drawerFocusOwner;
+        _drawerFocusOwner = null;
+        ApplyDrawerState();
+        if (restoreFocus)
+            RestoreDrawerFocus(focusOwner);
     }
 
-    private void OnDragOver(object? sender, DragEventArgs e)
+    private static bool IsTransientDrawer(
+        WorkbenchDrawerSurface surface) =>
+        surface is
+            WorkbenchDrawerSurface.PendingChanges or
+            WorkbenchDrawerSurface.Columns;
+
+    private void ApplyDrawerState()
     {
-        e.DragEffects = e.DataTransfer.TryGetFiles()?.Any() == true
-            ? DragDropEffects.Copy
-            : DragDropEffects.None;
+        if (_activeDrawer ==
+                WorkbenchDrawerSurface.Inspector &&
+            _sectionSuppressesInspector)
+        {
+            _activeDrawer =
+                WorkbenchDrawerSurface.None;
+        }
+
+        bool drawerVisible =
+            _activeDrawer !=
+                WorkbenchDrawerSurface.None;
+        WorkbenchInspectorDrawer.IsVisible =
+            _activeDrawer ==
+                WorkbenchDrawerSurface.Inspector;
+        WorkbenchPendingChangesDrawer.IsVisible =
+            _activeDrawer ==
+                WorkbenchDrawerSurface.PendingChanges;
+        WorkbenchColumnsDrawer.IsVisible =
+            _activeDrawer ==
+                WorkbenchDrawerSurface.Columns;
+
+        WorkbenchSplit.SetCompact(
+            _responsiveCompact ||
+            !drawerVisible);
+        ContentPresenter? presenter =
+            WorkbenchSplit.FindControl<ContentPresenter>(
+                "RightPresenter");
+        if (presenter is not null)
+        {
+            double drawerWidth =
+                Math.Min(
+                    430,
+                    Math.Max(
+                        300,
+                        WorkbenchSplit.Bounds.Width -
+                        24));
+            presenter.Width =
+                _responsiveCompact
+                    ? drawerWidth
+                    : double.NaN;
+            presenter.IsVisible =
+                drawerVisible;
+            WorkbenchDrawerPane.Width =
+                _responsiveCompact
+                    ? drawerWidth
+                    : double.NaN;
+        }
+
+        bool scrimVisible =
+            drawerVisible &&
+            (_responsiveCompact ||
+             IsTransientDrawer(_activeDrawer));
+        WorkbenchInspectorScrim.IsVisible =
+            scrimVisible;
+        WorkbenchHeaderScrim.IsVisible =
+            scrimVisible;
+        WorkbenchInspectorToggle.Content =
+            _activeDrawer ==
+                WorkbenchDrawerSurface.Inspector
+                ? L("Workbench.Action.HideInspector")
+                : L("Workbench.Action.Inspector");
+    }
+
+    private void OnDrawerScrimPressed(
+        object? sender,
+        PointerPressedEventArgs e)
+    {
+        CloseActiveDrawer(
+            restoreFocus: true);
         e.Handled = true;
     }
 
-    private async void OnDrop(object? sender, DragEventArgs e)
+    private static void RestoreDrawerFocus(
+        Control? focusOwner)
     {
-        string[] paths = e.DataTransfer.TryGetFiles()?
-            .Select(item => item.TryGetLocalPath())
-            .Where(path => path is not null)
-            .Cast<string>()
-            .ToArray() ?? [];
+        if (focusOwner is null)
+            return;
+        Dispatcher.UIThread.Post(
+            () => focusOwner.Focus(),
+            DispatcherPriority.Input);
+    }
+
+    public void ApplyResponsiveLayout(
+        bool compact)
+    {
+        double width = Bounds.Width;
+        bool wasResponsiveCompact =
+            _responsiveCompact;
+        _responsiveCompact =
+            width > 0
+                ? width < 1200
+                : compact;
+        _compactSectionPicker =
+            width > 0
+                ? width < 880
+                : compact;
+        _compactHeight =
+            Bounds.Height > 0 &&
+            Bounds.Height <= 700;
+
+        WorkbenchSectionPicker.IsVisible =
+            _compactSectionPicker;
+        WorkbenchSectionRail.IsVisible =
+            !_compactSectionPicker;
+        WorkbenchSectionDivider.IsVisible =
+            !_compactSectionPicker;
+        WorkbenchBody.ColumnDefinitions[0].Width =
+            _compactSectionPicker
+                ? new GridLength(0)
+                : new GridLength(156);
+        WorkbenchBody.ColumnDefinitions[1].Width =
+            _compactSectionPicker
+                ? new GridLength(0)
+                : new GridLength(10);
+        WorkbenchRoot.Margin =
+            _compactHeight
+                ? new Thickness(
+                    10,
+                    8,
+                    10,
+                    10)
+                : _compactSectionPicker
+                    ? new Thickness(
+                        16,
+                        14,
+                        16,
+                        16)
+                    : new Thickness(
+                        26,
+                        22,
+                        26,
+                        26);
+        WorkbenchRoot.RowSpacing =
+            _compactHeight
+                ? 8
+                : 14;
+        WorkbenchHeader.Subtitle =
+            _compactHeight
+                ? string.Empty
+                : L("Workbench.Subtitle");
+        WorkbenchSectionContentCard.Padding =
+            _compactHeight
+                ? new Thickness(8)
+                : new Thickness(12);
+
+        if (_responsiveCompact &&
+            !wasResponsiveCompact &&
+            _activeDrawer ==
+                WorkbenchDrawerSurface.Inspector)
+        {
+            _activeDrawer =
+                WorkbenchDrawerSurface.None;
+        }
+        else if (!_responsiveCompact &&
+                 wasResponsiveCompact &&
+                 _activeDrawer ==
+                    WorkbenchDrawerSurface.None &&
+                 _inspectorPreference &&
+                 !_sectionSuppressesInspector)
+        {
+            _activeDrawer =
+                WorkbenchDrawerSurface.Inspector;
+        }
+
+        ApplyDrawerState();
+    }
+
+    private void OnDragOver(
+        object? sender,
+        DragEventArgs e)
+    {
+        e.DragEffects =
+            e.DataTransfer.TryGetFiles()?.Any() == true
+                ? DragDropEffects.Copy
+                : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private async void OnDrop(
+        object? sender,
+        DragEventArgs e)
+    {
+        string[] paths =
+            e.DataTransfer.TryGetFiles()?
+                .Select(item =>
+                    item.TryGetLocalPath())
+                .Where(path =>
+                    path is not null)
+                .Cast<string>()
+                .ToArray() ??
+            [];
         await AddDroppedSourcesAsync(paths);
         e.Handled = true;
     }
@@ -664,44 +556,80 @@ public partial class WorkbenchView : UserControl
     internal Task AddDroppedSourcesAsync(
         IEnumerable<string?> paths)
     {
-        string[] usablePaths = paths
-            .Where(path => !string.IsNullOrWhiteSpace(path))
-            .Cast<string>()
-            .ToArray();
+        string[] usablePaths =
+            paths
+                .Where(path =>
+                    !string.IsNullOrWhiteSpace(path))
+                .Cast<string>()
+                .ToArray();
         return usablePaths.Length == 0
             ? Task.CompletedTask
-            : _viewModel.AddSourcesAsync(usablePaths);
+            : _viewModel.AddSourcesAsync(
+                usablePaths);
     }
 
     private async void OnWorkbenchKeyDown(
         object? sender,
         KeyEventArgs e)
     {
-        if (e.Key == Key.Escape &&
-            WorkbenchPendingChangesPopover.IsOpen)
+        bool requestsContextMenu =
+            e.Key == Key.Apps ||
+            e.Key == Key.F10 &&
+            e.KeyModifiers.HasFlag(
+                KeyModifiers.Shift);
+        if (requestsContextMenu &&
+            _viewModel.SelectedSection ==
+                WorkbenchSection.Session &&
+            WorkbenchSessionSection.SessionGrid
+                .ContextMenu is
+                { } sessionMenu)
         {
-            WorkbenchPendingChangesPopover.IsOpen = false;
+            sessionMenu.Open(
+                WorkbenchSessionSection.SessionGrid);
             e.Handled = true;
             return;
         }
 
-        object? focused = TopLevel.GetTopLevel(this)?
-            .FocusManager?
-            .GetFocusedElement();
-        if (focused is TextBox or ComboBox or NumericUpDown)
+        if (e.Key == Key.Escape &&
+            _activeDrawer !=
+                WorkbenchDrawerSurface.None)
+        {
+            CloseActiveDrawer(
+                restoreFocus: true);
+            e.Handled = true;
+            return;
+        }
+
+        object? focused =
+            TopLevel.GetTopLevel(this)?
+                .FocusManager?
+                .GetFocusedElement();
+        if (focused is
+            TextBox or
+            ComboBox or
+            NumericUpDown)
             return;
 
         WorkbenchShortcutModifiers modifiers =
             WorkbenchShortcutModifiers.None;
-        if (e.KeyModifiers.HasFlag(KeyModifiers.Control))
-            modifiers |= WorkbenchShortcutModifiers.Control;
-        if (e.KeyModifiers.HasFlag(KeyModifiers.Alt))
-            modifiers |= WorkbenchShortcutModifiers.Alt;
-        if (e.KeyModifiers.HasFlag(KeyModifiers.Shift))
-            modifiers |= WorkbenchShortcutModifiers.Shift;
-        if (e.KeyModifiers.HasFlag(KeyModifiers.Meta))
-            modifiers |= WorkbenchShortcutModifiers.Meta;
-        if (modifiers == WorkbenchShortcutModifiers.None ||
+        if (e.KeyModifiers.HasFlag(
+                KeyModifiers.Control))
+            modifiers |=
+                WorkbenchShortcutModifiers.Control;
+        if (e.KeyModifiers.HasFlag(
+                KeyModifiers.Alt))
+            modifiers |=
+                WorkbenchShortcutModifiers.Alt;
+        if (e.KeyModifiers.HasFlag(
+                KeyModifiers.Shift))
+            modifiers |=
+                WorkbenchShortcutModifiers.Shift;
+        if (e.KeyModifiers.HasFlag(
+                KeyModifiers.Meta))
+            modifiers |=
+                WorkbenchShortcutModifiers.Meta;
+        if (modifiers ==
+                WorkbenchShortcutModifiers.None ||
             !_viewModel.ShortcutEditor.TryMatch(
                 modifiers,
                 e.Key.ToString(),
@@ -710,6 +638,23 @@ public partial class WorkbenchView : UserControl
             return;
 
         e.Handled = true;
-        await _viewModel.ExecuteShortcutAsync(binding);
+        await _viewModel.ExecuteShortcutAsync(
+            binding);
     }
+
+    private string L(string key) =>
+        _localization.Get(key);
+
+    private void OnLocalizationCultureChanged(
+        object? sender,
+        EventArgs e) =>
+        Dispatcher.UIThread.Post(() =>
+        {
+            ApplySectionSelection();
+            ApplyDrawerState();
+            WorkbenchHeader.Subtitle =
+                _compactHeight
+                    ? string.Empty
+                    : L("Workbench.Subtitle");
+        });
 }

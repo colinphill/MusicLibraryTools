@@ -44,6 +44,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private readonly IDialogCoordinator? _dialogs;
     private readonly IPlatformService? _platform;
     private readonly IEditHistoryService? _history;
+    private readonly ILocalizationService? _localization;
     private MetadataOperationPlan? _libraryOperationPlan;
     private ReportExportPlan? _reportPlan;
     private PlaylistWorkspacePlan? _playlistPlan;
@@ -63,6 +64,13 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private CancellationTokenSource? _filterCancellation;
     private CancellationTokenSource? _operationCancellation;
     private bool _loadingWorkspace;
+    private string? _statusTextKey;
+    private object?[] _statusTextArguments = [];
+    private long? _statusTextCount;
+    private string? _operationStatusKey;
+    private object?[] _operationStatusArguments = [];
+    private long? _operationStatusCount;
+    private string? _visualFilterStatusKey;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ReloadCommand))]
@@ -111,11 +119,21 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     private string? _filterError;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(
+        nameof(HasFilterDiagnosticDetail))]
+    private string? _filterDiagnosticDetail;
+
+    [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasVisualFilter))]
     private LibraryVisualFilterNode? _visualFilterExpression;
 
     [ObservableProperty]
-    private string _statusText = "Load a configuration to browse your library.";
+    private string _statusText = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(
+        nameof(HasStatusDiagnosticDetail))]
+    private string? _statusDiagnosticDetail;
 
     [ObservableProperty]
     private string? _newViewName;
@@ -197,7 +215,17 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
 
     [ObservableProperty]
     private string _operationStatus =
-        "Choose an operation and scope, then preview authoritative metadata from disk.";
+        "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(
+        nameof(HasOperationDiagnosticDetail))]
+    private string? _operationDiagnosticDetail;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(
+        nameof(HasVisualFilterDiagnosticDetail))]
+    private string? _visualFilterDiagnosticDetail;
 
     [ObservableProperty]
     private DelimitedMetadataEmptyCellMode _importEmptyCellMode =
@@ -274,7 +302,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         IDelimitedMetadataImportService? delimitedImports = null,
         IPlatformService? platform = null,
         IReviewedFileOperationService? fileOperations = null,
-        IEditHistoryService? history = null)
+        IEditHistoryService? history = null,
+        ILocalizationService? localization = null)
     {
         _library = library;
         _reindex = reindex;
@@ -298,6 +327,11 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         _dialogs = dialogs;
         _platform = platform;
         _history = history;
+        _localization = localization;
+        SetStatusText(
+            "Library.Status.LoadConfiguration");
+        SetOperationStatus(
+            "Library.Operation.Choose");
         OperationEditor = new(
             operationCatalog ?? new MetadataOperationCatalog(),
             MetadataOperationSurface.Library,
@@ -331,7 +365,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         ColumnEditor = new(
             metadataColumns,
             MetadataGridSurface.Library);
-        VisualFilterEditor = new();
+        VisualFilterEditor = new(localization);
         OperationEditor.PropertyChanged += (_, _) =>
         {
             CopyLibraryMetadataFieldCommand.NotifyCanExecuteChanged();
@@ -356,7 +390,17 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         ExternalToolEditor.Changed += InvalidateExternalToolPlan;
         Indexing = indexing;
         foreach (DetailsColumn column in DetailsColumns.All)
-            Columns.Add(new LibraryColumnChoice(column.Key, column.Header, DetailsColumns.DefaultVisible.Contains(column.Key)));
+        {
+            string resourceKey =
+                ColumnResourceKey(column.Key);
+            Columns.Add(new LibraryColumnChoice(
+                column.Key,
+                L(resourceKey),
+                DetailsColumns.DefaultVisible.Contains(
+                    column.Key),
+                resourceKey));
+        }
+        RefreshLocalizedChoices();
         LoadViews();
         LoadWorkspace();
         settings.ConfigurationChanged += OnConfigurationChanged;
@@ -384,6 +428,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         };
         OperationPreviewChanges.CollectionChanged +=
             (_, _) => RebuildPendingChanges();
+        _localization?.CultureChanged +=
+            OnLocalizationCultureChanged;
     }
 
     public ObservableCollection<LibraryViewDefinition> SavedViews { get; } = [];
@@ -403,6 +449,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     public IReadOnlyList<DelimitedMetadataEmptyCellMode>
         ImportEmptyCellModes { get; } =
             Enum.GetValues<DelimitedMetadataEmptyCellMode>();
+    public ObservableCollection<
+        LocalizedChoice<DelimitedMetadataEmptyCellMode>>
+        ImportEmptyCellModeChoices { get; } = [];
     public ObservableCollection<MetadataPreviewRow> OperationPreviewChanges { get; } = [];
     public ObservableCollection<MetadataPreviewRow> PendingChanges { get; } = [];
     public MusicBrainzImportSelectionViewModel ReleaseImport { get; } = new();
@@ -415,8 +464,14 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     public MetadataGridColumnEditorViewModel ColumnEditor { get; }
     public VisualFilterEditorViewModel VisualFilterEditor { get; }
     public IReadOnlyList<FilterMode> FilterModes { get; } = Enum.GetValues<FilterMode>();
+    public ObservableCollection<
+        LocalizedChoice<FilterMode>>
+        FilterModeChoices { get; } = [];
     public IReadOnlyList<LibraryOperationScope> OperationScopes { get; } =
         Enum.GetValues<LibraryOperationScope>();
+    public ObservableCollection<
+        LocalizedChoice<LibraryOperationScope>>
+        OperationScopeChoices { get; } = [];
     public MetadataOperationEditorViewModel OperationEditor { get; }
     public RepresentativeMetadataPreviewViewModel?
         RepresentativePreview { get; }
@@ -427,15 +482,34 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     public int TotalCount => _allRows.Count;
     public int HealthFilterCount => _healthFilterPaths.Count;
     public bool HasHealthFilter => _healthFilterPaths.Count > 0;
-    public string HealthFilterSummary => $"Health results: {HealthFilterCount:N0} track(s)";
+    public string HealthFilterSummary => LC(
+        "Library.HealthFilter.Tracks",
+        HealthFilterCount);
     public bool HasTextFilter => !string.IsNullOrWhiteSpace(FilterText);
     public bool HasVisualFilter => VisualFilterExpression is not null;
     public bool HasRows => Rows.Count > 0;
     public bool HasEmptyState => Rows.Count == 0 && PageState != LibraryPageState.Loading;
     public bool HasFilterError => !string.IsNullOrWhiteSpace(FilterError);
+    public bool HasFilterDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(
+            FilterDiagnosticDetail);
+    public bool HasStatusDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(
+            StatusDiagnosticDetail);
+    public bool HasOperationDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(
+            OperationDiagnosticDetail);
+    public bool HasVisualFilterDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(
+            VisualFilterDiagnosticDetail);
     public string ResultCountText => Rows.Count == TotalCount
-        ? $"{Rows.Count:N0} tracks"
-        : $"{Rows.Count:N0} of {TotalCount:N0}";
+        ? LC(
+            "Library.Results.Tracks",
+            Rows.Count)
+        : LF(
+            "Library.Results.OfTotal",
+            Rows.Count,
+            TotalCount);
     public IReadOnlyList<string> SelectedPaths => _selectedPaths;
     public bool HasUnsavedSelectionChanges => Inspector.HasUnsavedChanges;
     public bool HasUnsavedChanges =>
@@ -469,30 +543,44 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     }
     public string EmptyStateTitle => PageState switch
     {
-        LibraryPageState.NoConfiguration => "Choose a library configuration",
-        LibraryPageState.NotIndexed => "This library has not been indexed",
-        LibraryPageState.FilteredToZero => "No tracks match this filter",
-        LibraryPageState.NoResults => "No tracks match the Health results",
-        LibraryPageState.Error => "The library could not be loaded",
-        _ => "No tracks to show",
+        LibraryPageState.NoConfiguration => L(
+            "Library.Empty.NoConfiguration.Title"),
+        LibraryPageState.NotIndexed => L(
+            "Library.Empty.NotIndexed.Title"),
+        LibraryPageState.FilteredToZero => L(
+            "Library.Empty.Filtered.Title"),
+        LibraryPageState.NoResults => L(
+            "Library.Empty.Health.Title"),
+        LibraryPageState.Error => L(
+            "Library.Empty.Error.Title"),
+        _ => L("Library.Empty.Default.Title"),
     };
     public string EmptyStateMessage => PageState switch
     {
-        LibraryPageState.NoConfiguration => "Open Settings to choose or create a configuration before browsing.",
-        LibraryPageState.NotIndexed => "Index the configured music roots to populate the cached library.",
-        LibraryPageState.FilteredToZero => "Clear or revise the filter to show tracks again.",
-        LibraryPageState.NoResults => "Clear the Health filter to return to the full library.",
+        LibraryPageState.NoConfiguration => L(
+            "Library.Empty.NoConfiguration.Message"),
+        LibraryPageState.NotIndexed => L(
+            "Library.Empty.NotIndexed.Message"),
+        LibraryPageState.FilteredToZero => L(
+            "Library.Empty.Filtered.Message"),
+        LibraryPageState.NoResults => L(
+            "Library.Empty.Health.Message"),
         LibraryPageState.Error => StatusText,
-        _ => "Adjust this view or reload the library.",
+        _ => L("Library.Empty.Default.Message"),
     };
     public string EmptyStateActionLabel => PageState switch
     {
-        LibraryPageState.NoConfiguration => "Open Settings",
-        LibraryPageState.NotIndexed => "Index library",
-        LibraryPageState.FilteredToZero => "Clear filter",
-        LibraryPageState.NoResults => "Clear Health filter",
-        LibraryPageState.Error => "Try again",
-        _ => "Reload",
+        LibraryPageState.NoConfiguration => L(
+            "Library.Empty.NoConfiguration.Action"),
+        LibraryPageState.NotIndexed => L(
+            "Library.Empty.NotIndexed.Action"),
+        LibraryPageState.FilteredToZero => L(
+            "Library.Empty.Filtered.Action"),
+        LibraryPageState.NoResults => L(
+            "Library.Empty.Health.Action"),
+        LibraryPageState.Error => L(
+            "Library.Empty.Error.Action"),
+        _ => L("Common.Reload"),
     };
 
     private async void OnConfigurationChanged(object? sender, EventArgs args)
@@ -567,21 +655,24 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             VisualFilterEditor.Build(out string? error);
         if (error is not null)
         {
-            VisualFilterEditor.Status = error;
+            SetVisualFilterStatus(
+                "Library.VisualFilter.Status.Invalid",
+                error);
             return;
         }
         var compiled = new LibraryVisualFilter(expression);
         if (!compiled.IsValid)
         {
-            VisualFilterEditor.Status =
-                compiled.Error ?? "Invalid visual filter.";
+            SetVisualFilterStatus(
+                "Library.VisualFilter.Status.Invalid",
+                compiled.Error);
             return;
         }
         VisualFilterExpression = expression;
-        VisualFilterEditor.Status =
+        SetVisualFilterStatus(
             expression is null
-                ? "No visual filter is active."
-                : "Visual filter applied.";
+                ? "Library.VisualFilter.Status.None"
+                : "Library.VisualFilter.Status.Applied");
         SaveWorkspace();
         await ApplyFilterAsync(immediate: true);
     }
@@ -591,7 +682,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     {
         VisualFilterExpression = null;
         VisualFilterEditor.Load(null);
-        VisualFilterEditor.Status = "Visual filter cleared.";
+        SetVisualFilterStatus(
+            "Library.VisualFilter.Status.Cleared");
         SaveWorkspace();
         await ApplyFilterAsync(immediate: true);
     }
@@ -643,14 +735,16 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             _allRows = [];
             Rows = [];
             PageState = LibraryPageState.NoConfiguration;
-            StatusText = "Choose a library configuration in Settings.";
+            SetStatusText(
+                "Library.Status.ChooseConfiguration");
             OnPropertyChanged(nameof(TotalCount));
             OnPropertyChanged(nameof(ResultCountText));
             return;
         }
         IsBusy = true;
         PageState = LibraryPageState.Loading;
-        StatusText = "Loading the cached library…";
+        SetStatusText(
+            "Library.Status.LoadingCache");
         try
         {
             var records = await _library.GetAllRecordsAsync(cancellation.Token);
@@ -671,7 +765,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         }
         catch (Exception error)
         {
-            StatusText = $"Could not load the cached library: {error.Message}";
+            SetStatusFailure(
+                "Library.Status.LoadFailed",
+                error.Message);
             PageState = LibraryPageState.Error;
         }
         finally
@@ -713,9 +809,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             _dialogs is null)
             return true;
         return await _dialogs.ConfirmAsync(
-            "Leave the Library operation?",
-            "The reviewed operation or report remains available in this Library session, but has not been applied.",
-            "Leave");
+            L("Library.Dialog.Leave.Title"),
+            L("Library.Dialog.Leave.Message"),
+            L("Library.Dialog.Leave.Confirm"));
     }
 
     public Task<bool> ConfirmNavigationAsync() => ConfirmCanNavigateAwayAsync();
@@ -788,11 +884,13 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         string[] paths = ResolveOperationPaths();
         if (paths.Length == 0)
         {
-            OperationStatus = "The selected Library scope contains no files.";
+            SetOperationStatus(
+                "Library.Operation.NoFiles");
             return;
         }
 
-        BeginLibraryOperation("Building metadata preview");
+        BeginLibraryOperation(
+            "Library.Progress.BuildingMetadataPreview");
         try
         {
             OperationRecipe recipe = OperationEditor.CreateRecipe();
@@ -807,22 +905,31 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             HasApplicableOperationPreview = plan.CanApply;
             int blockers = plan.Files.SelectMany(file => file.Issues)
                 .Count(issue => issue.Severity == OperationIssueSeverity.Blocker);
-            OperationStatus = blockers > 0
-                ? $"Previewed {paths.Length:N0} file(s) with {blockers:N0} blocker(s). " +
-                  "No files were changed."
-                : $"Previewed {plan.ChangeCount:N0} change(s) in " +
-                  $"{plan.ChangedFileCount:N0} of {paths.Length:N0} file(s).";
+            if (blockers > 0)
+                SetOperationStatus(
+                    "Library.Operation.PreviewBlockers",
+                    paths.Length,
+                    blockers);
+            else
+                SetOperationStatus(
+                    "Library.Operation.PreviewComplete",
+                    plan.ChangeCount,
+                    plan.ChangedFileCount,
+                    paths.Length);
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
         catch (OperationCanceledException)
         {
             InvalidateLibraryOperationPreview();
-            OperationStatus = "Preview cancelled. No files were changed.";
+            SetOperationStatus(
+                "Library.Operation.PreviewCancelled");
         }
         catch (Exception error)
         {
             InvalidateLibraryOperationPreview();
-            OperationStatus = $"Preview failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.PreviewFailed",
+                error.Message);
         }
         finally
         {
@@ -841,8 +948,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             candidate => PathComparer.Equals(candidate.Path, path));
         if (row is null)
         {
-            OperationStatus =
-                "The selected Library scope contains no cached metadata to copy.";
+            SetOperationStatus(
+                "Library.Operation.Copy.NoMetadata");
             return;
         }
 
@@ -854,9 +961,11 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         await _platform.CopyTextAsync(
             MetadataClipboardCodec.Encode(
                 new(field, values.ToImmutableArray())));
-        OperationStatus =
-            $"Copied {values.Length:N0} ordered {selected.Label} " +
-            $"value(s) from {Path.GetFileName(row.Path)} with tag identity.";
+        SetOperationStatus(
+            "Library.Operation.Copy.Complete",
+            values.Length,
+            selected.Label,
+            Path.GetFileName(row.Path));
     }
 
     [RelayCommand(CanExecute = nameof(CanPasteLibraryMetadataField))]
@@ -870,12 +979,13 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         string? text = await _platform.ReadTextAsync();
         if (string.IsNullOrEmpty(text))
         {
-            OperationStatus =
-                "The clipboard does not contain text metadata.";
+            SetOperationStatus(
+                "Library.Operation.Clipboard.NoText");
             return;
         }
 
-        BeginLibraryOperation("Building clipboard metadata preview");
+        BeginLibraryOperation(
+            "Library.Progress.BuildingClipboardPreview");
         try
         {
             MetadataClipboardPayload payload =
@@ -895,8 +1005,10 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             MetadataOperationPlan plan =
                 await _metadataOperations.PreviewValueEditsAsync(
                     edits,
-                    $"Paste {payload.Field.DisplayName} values for " +
-                    $"{paths.Length:N0} file(s)",
+                    LF(
+                        "Library.OperationName.PasteValues",
+                        payload.Field.DisplayName,
+                        paths.Length),
                     CreateOperationProgress(),
                     _operationCancellation!.Token);
             _libraryOperationPlan = plan;
@@ -908,24 +1020,29 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                 .SelectMany(file => file.Issues)
                 .Count(issue => issue.Severity ==
                     OperationIssueSeverity.Blocker);
-            OperationStatus = blockers > 0
-                ? $"Clipboard preview has {blockers:N0} blocker(s). " +
-                  "No files were changed."
-                : $"Previewed {plan.ChangeCount:N0} pasted " +
-                  $"change(s) in {plan.ChangedFileCount:N0} file(s).";
+            if (blockers > 0)
+                SetCountOperationStatus(
+                    "Library.Operation.Clipboard.Blockers",
+                    blockers);
+            else
+                SetOperationStatus(
+                    "Library.Operation.Clipboard.Complete",
+                    plan.ChangeCount,
+                    plan.ChangedFileCount);
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
         catch (OperationCanceledException)
         {
             InvalidateLibraryOperationPreview();
-            OperationStatus =
-                "Clipboard preview cancelled. No files were changed.";
+            SetOperationStatus(
+                "Library.Operation.Clipboard.Cancelled");
         }
         catch (Exception error)
         {
             InvalidateLibraryOperationPreview();
-            OperationStatus =
-                $"Clipboard preview failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.Clipboard.Failed",
+                error.Message);
         }
         finally
         {
@@ -943,19 +1060,20 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         string[] paths = ResolveOperationPaths();
         if (paths.Length == 0)
         {
-            OperationStatus =
-                "The selected Library scope contains no files.";
+            SetOperationStatus(
+                "Library.Operation.NoFiles");
             return;
         }
         string? source = await _files.PickFileAsync(
-            "Import metadata from CSV or delimited text",
+            L("Library.Picker.ImportMetadata.Title"),
             [new(
-                "Delimited metadata",
+                L("Library.Picker.DelimitedMetadata"),
                 [".csv", ".tsv", ".txt"])]);
         if (source is null)
             return;
 
-        BeginLibraryOperation("Mapping metadata import");
+        BeginLibraryOperation(
+            "Library.Progress.MappingMetadataImport");
         try
         {
             IProgress<OperationProgress> progress =
@@ -974,14 +1092,16 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                         issue.Severity ==
                             DelimitedMetadataImportIssueSeverity.Blocker)
                     ?.Message ??
-                    "No import rows matched the selected Library scope.";
+                    L(
+                        "Library.Operation.Import.NoRowsMatched");
                 throw new InvalidDataException(reason);
             }
             MetadataOperationPlan plan =
                 await _metadataOperations.PreviewValueEditsAsync(
                     imported.EditsByPath,
-                    $"Import metadata from " +
-                    $"{Path.GetFileName(source)}",
+                    LF(
+                        "Library.OperationName.ImportMetadata",
+                        Path.GetFileName(source)),
                     progress,
                     _operationCancellation.Token);
             _libraryOperationPlan = plan;
@@ -996,29 +1116,39 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             int warnings = imported.Issues.Count(issue =>
                 issue.Severity ==
                     DelimitedMetadataImportIssueSeverity.Warning);
-            OperationStatus = blockers > 0
-                ? $"Import preview has {blockers:N0} blocker(s). " +
-                  "No files were changed."
-                : $"Previewed {plan.ChangeCount:N0} imported " +
-                  $"change(s) in {plan.ChangedFileCount:N0} file(s). " +
-                  $"Mapped {imported.MatchedRows:N0} of " +
-                  $"{imported.DataRows:N0} row(s)" +
-                  (warnings == 0
-                      ? "."
-                      : $" with {warnings:N0} warning(s).");
+            if (blockers > 0)
+                SetCountOperationStatus(
+                    "Library.Operation.Import.Blockers",
+                    blockers);
+            else if (warnings == 0)
+                SetOperationStatus(
+                    "Library.Operation.Import.Complete",
+                    plan.ChangeCount,
+                    plan.ChangedFileCount,
+                    imported.MatchedRows,
+                    imported.DataRows);
+            else
+                SetOperationStatus(
+                    "Library.Operation.Import.CompleteWithWarnings",
+                    plan.ChangeCount,
+                    plan.ChangedFileCount,
+                    imported.MatchedRows,
+                    imported.DataRows,
+                    warnings);
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
         catch (OperationCanceledException)
         {
             InvalidateLibraryOperationPreview();
-            OperationStatus =
-                "Import preview cancelled. No files were changed.";
+            SetOperationStatus(
+                "Library.Operation.Import.Cancelled");
         }
         catch (Exception error)
         {
             InvalidateLibraryOperationPreview();
-            OperationStatus =
-                $"Import preview failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.Import.Failed",
+                error.Message);
         }
         finally
         {
@@ -1033,7 +1163,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             _libraryOperationPlan is null &&
             !_inspector.HasUnsavedChanges)
             return;
-        BeginLibraryOperation("Applying reviewed metadata changes");
+        BeginLibraryOperation(
+            "Library.Progress.ApplyingMetadataChanges");
         try
         {
             _libraryOperationPlan ??=
@@ -1042,8 +1173,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                     _operationCancellation!.Token);
             if (_libraryOperationPlan is null)
             {
-                OperationStatus =
-                    "There are no pending metadata changes to apply.";
+                SetOperationStatus(
+                    "Library.Operation.Apply.NoPending");
                 return;
             }
             MetadataPreviewRowBuilder.Populate(
@@ -1059,9 +1190,13 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                     .FirstOrDefault(issue =>
                         issue.Severity ==
                         OperationIssueSeverity.Blocker);
-                OperationStatus = blocker is null
-                    ? "The pending edits produce no applicable file changes."
-                    : $"Pending changes cannot be applied: {blocker.Message}";
+                if (blocker is null)
+                    SetOperationStatus(
+                        "Library.Operation.Apply.NoApplicable");
+                else
+                    SetOperationFailure(
+                        "Library.Operation.Apply.Blocked",
+                        blocker.Message);
                 return;
             }
             MetadataApplyResult result =
@@ -1076,18 +1211,21 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                     _inspector.Selection);
             RebuildPendingChanges();
             HasApplicableOperationPreview = false;
-            OperationStatus = $"Applied {result.ChangedFiles:N0} file(s). Originals are " +
-                "available through Operations recovery.";
+            SetCountOperationStatus(
+                "Library.Operation.Apply.Complete",
+                result.ChangedFiles);
             await ReloadAsync();
         }
         catch (OperationCanceledException)
         {
-            OperationStatus =
-                "Apply cancelled. Completed mutations remain available through Operations recovery.";
+            SetOperationStatus(
+                "Library.Operation.Apply.Cancelled");
         }
         catch (Exception error)
         {
-            OperationStatus = $"Apply stopped safely: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.Apply.Failed",
+                error.Message);
         }
         finally
         {
@@ -1110,8 +1248,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             await _inspector.DiscardPendingChangesAsync();
         RebuildPendingChanges();
         HasApplicableOperationPreview = false;
-        OperationStatus =
-            "Pending preview reverted. No files were changed.";
+        SetOperationStatus(
+            "Library.Operation.PendingReverted");
         OnPropertyChanged(nameof(HasUnsavedChanges));
     }
 
@@ -1126,12 +1264,13 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             _history.Entries.FirstOrDefault() is not { } candidate)
             return;
         if (!await _dialogs.ConfirmAsync(
-                "Restore the latest metadata operation?",
-                "Current files will be replaced by the retained originals. Collision backups are created when required.",
-                "Restore"))
+                L("Library.Dialog.Restore.Title"),
+                L("Library.Dialog.Restore.Message"),
+                L("Common.Restore")))
             return;
 
-        BeginLibraryOperation("Restoring the latest metadata operation");
+        BeginLibraryOperation(
+            "Library.Progress.RestoringMetadataOperation");
         try
         {
             var progress = new Progress<int>(completed =>
@@ -1144,8 +1283,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                         completed,
                         0,
                         OperationProgressMaximum);
-                OperationProgressText =
-                    $"Restored {completed:N0} file(s)";
+                OperationProgressText = LC(
+                    "Library.Progress.RestoredFiles",
+                    completed);
             });
             int restored =
                 await _history.UndoLatestAsync(
@@ -1156,18 +1296,20 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                     path,
                     _operationCancellation.Token);
             await ReloadAsync();
-            OperationStatus =
-                $"Restored {restored:N0} file(s) from the latest metadata operation.";
+            SetCountOperationStatus(
+                "Library.Operation.Restore.Complete",
+                restored);
         }
         catch (OperationCanceledException)
         {
-            OperationStatus =
-                "Restore cancelled. Any completed restores remain recoverable.";
+            SetOperationStatus(
+                "Library.Operation.Restore.Cancelled");
         }
         catch (Exception error)
         {
-            OperationStatus =
-                $"Restore failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.Restore.Failed",
+                error.Message);
         }
         finally
         {
@@ -1187,7 +1329,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         await PreviewHistoryRecipeAsync(
             candidate.Paths,
             candidate.Recipe,
-            "Redo was regenerated against the current files. Review before applying.");
+            "Library.Operation.History.RedoReady");
     }
 
     [RelayCommand(CanExecute = nameof(CanRepeatLibraryRecipe))]
@@ -1200,18 +1342,19 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         await PreviewHistoryRecipeAsync(
             ResolveOperationPaths(),
             recipe,
-            "The latest recipe was regenerated for the current Library scope. Review before applying.");
+            "Library.Operation.History.RepeatReady");
     }
 
     private async Task PreviewHistoryRecipeAsync(
         IReadOnlyList<string> paths,
         OperationRecipe recipe,
-        string successMessage)
+        string successMessageKey)
     {
         if (_metadataOperations is null ||
             paths.Count == 0)
             return;
-        BeginLibraryOperation("Regenerating metadata preview");
+        BeginLibraryOperation(
+            "Library.Progress.RegeneratingMetadataPreview");
         try
         {
             MetadataOperationPlan plan =
@@ -1226,21 +1369,23 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                 plan);
             HasApplicableOperationPreview =
                 plan.CanApply;
-            OperationStatus = successMessage;
+            SetOperationStatus(
+                successMessageKey);
             OnPropertyChanged(
                 nameof(HasUnsavedChanges));
         }
         catch (OperationCanceledException)
         {
             InvalidateLibraryOperationPreview();
-            OperationStatus =
-                "History preview cancelled. No files were changed.";
+            SetOperationStatus(
+                "Library.Operation.History.Cancelled");
         }
         catch (Exception error)
         {
             InvalidateLibraryOperationPreview();
-            OperationStatus =
-                $"History preview failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.History.Failed",
+                error.Message);
         }
         finally
         {
@@ -1257,11 +1402,13 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         string[] paths = ResolveOperationPaths();
         if (paths.Length == 0)
         {
-            OperationStatus = "The selected Library scope contains no files.";
+            SetOperationStatus(
+                "Library.Operation.NoFiles");
             return;
         }
 
-        BeginLibraryOperation("Preparing audio fingerprint discovery");
+        BeginLibraryOperation(
+            "Library.Progress.PreparingAudioDiscovery");
         try
         {
             AcoustIdDiscoveryResult result = await _audioDiscovery.DiscoverAsync(
@@ -1274,17 +1421,22 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                 AudioMatches.Add(row);
             SelectedAudioMatch = AudioMatches.FirstOrDefault();
             int issues = result.Files.Sum(file => file.Issues.Length);
-            OperationStatus =
-                $"Fingerprint discovery: {result.FingerprintedFileCount:N0} file(s), " +
-                $"{result.CandidateCount:N0} candidate(s), {issues:N0} warning(s).";
+            SetOperationStatus(
+                "Library.Operation.Audio.DiscoveryComplete",
+                result.FingerprintedFileCount,
+                result.CandidateCount,
+                issues);
         }
         catch (OperationCanceledException)
         {
-            OperationStatus = "Audio fingerprint discovery cancelled.";
+            SetOperationStatus(
+                "Library.Operation.Audio.DiscoveryCancelled");
         }
         catch (Exception error)
         {
-            OperationStatus = $"Audio fingerprint discovery failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.Audio.DiscoveryFailed",
+                error.Message);
         }
         finally
         {
@@ -1297,7 +1449,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     {
         if (_metadataOperations is null || SelectedAudioMatch is null)
             return;
-        BeginLibraryOperation("Building audio identifier preview");
+        BeginLibraryOperation(
+            "Library.Progress.BuildingAudioIdentifierPreview");
         try
         {
             OperationRecipe recipe =
@@ -1310,17 +1463,20 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             _libraryOperationPlan = plan;
             MetadataPreviewRowBuilder.Populate(OperationPreviewChanges, plan);
             HasApplicableOperationPreview = plan.CanApply;
-            OperationStatus =
-                "Audio identifiers were added to the normal metadata preview. Review before applying.";
+            SetOperationStatus(
+                "Library.Operation.Audio.IdentifiersReady");
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
         catch (OperationCanceledException)
         {
-            OperationStatus = "Audio identifier preview cancelled.";
+            SetOperationStatus(
+                "Library.Operation.Audio.IdentifierPreviewCancelled");
         }
         catch (Exception error)
         {
-            OperationStatus = $"Audio identifier preview failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.Audio.IdentifierPreviewFailed",
+                error.Message);
         }
         finally
         {
@@ -1334,7 +1490,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         if (_musicBrainz is null || SelectedAudioMatch is null ||
             SelectedAudioMatch.MusicBrainzRecordingIdValues.Length != 1)
             return;
-        BeginLibraryOperation("Resolving MusicBrainz release editions");
+        BeginLibraryOperation(
+            "Library.Progress.ResolvingMusicBrainzReleases");
         try
         {
             MusicBrainzReleaseResult result =
@@ -1347,17 +1504,20 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                          SelectedAudioMatch.Path, result))
                 ReleaseMatches.Add(row);
             SelectedRelease = ReleaseMatches.FirstOrDefault();
-            OperationStatus =
-                $"MusicBrainz returned {ReleaseMatches.Count:N0} release edition(s). " +
-                "No metadata was selected or changed.";
+            SetCountOperationStatus(
+                "Library.Operation.MusicBrainz.LookupComplete",
+                ReleaseMatches.Count);
         }
         catch (OperationCanceledException)
         {
-            OperationStatus = "MusicBrainz release lookup cancelled.";
+            SetOperationStatus(
+                "Library.Operation.MusicBrainz.LookupCancelled");
         }
         catch (Exception error)
         {
-            OperationStatus = $"MusicBrainz release lookup failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.MusicBrainz.LookupFailed",
+                error.Message);
         }
         finally
         {
@@ -1370,7 +1530,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     {
         if (_musicBrainz is null)
             return;
-        BeginLibraryOperation("Searching MusicBrainz releases");
+        BeginLibraryOperation(
+            "Library.Progress.SearchingMusicBrainzReleases");
         try
         {
             MusicBrainzReleaseSearchResult result =
@@ -1387,17 +1548,20 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                      MusicBrainzReleaseRows.CreateSearch(sourcePath, result))
                 ReleaseMatches.Add(row);
             SelectedRelease = ReleaseMatches.FirstOrDefault();
-            OperationStatus =
-                $"MusicBrainz found {ReleaseMatches.Count:N0} release edition(s). " +
-                "Choose one and build a file-to-track mapping.";
+            SetCountOperationStatus(
+                "Library.Operation.MusicBrainz.SearchComplete",
+                ReleaseMatches.Count);
         }
         catch (OperationCanceledException)
         {
-            OperationStatus = "MusicBrainz release search cancelled.";
+            SetOperationStatus(
+                "Library.Operation.MusicBrainz.SearchCancelled");
         }
         catch (Exception error)
         {
-            OperationStatus = $"MusicBrainz release search failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.MusicBrainz.SearchFailed",
+                error.Message);
         }
         finally
         {
@@ -1410,7 +1574,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     {
         if (_discogs is null)
             return;
-        BeginLibraryOperation("Searching Discogs releases");
+        BeginLibraryOperation(
+            "Library.Progress.SearchingDiscogsReleases");
         try
         {
             DiscogsReleaseSearchResult result =
@@ -1421,24 +1586,28 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             SelectedDiscogsRelease = null;
             DiscogsMatches.Clear();
             string source = result.OfflineFallback
-                ? "Offline cache"
-                : result.FromCache ? "Cache" : "Discogs";
+                ? L("Library.ProviderSource.OfflineCache")
+                : result.FromCache
+                    ? L("Library.ProviderSource.Cache")
+                    : L("Library.ProviderSource.Discogs");
             foreach (DiscogsReleaseCandidate candidate in result.Releases)
                 DiscogsMatches.Add(
                     DiscogsReleaseRow.Create(candidate, source));
             SelectedDiscogsRelease = DiscogsMatches.FirstOrDefault();
-            OperationStatus =
-                $"Discogs found {DiscogsMatches.Count:N0} release edition(s). " +
-                "Select one to load its complete track and edition details.";
+            SetCountOperationStatus(
+                "Library.Operation.Discogs.SearchComplete",
+                DiscogsMatches.Count);
         }
         catch (OperationCanceledException)
         {
-            OperationStatus = "Discogs release search cancelled.";
+            SetOperationStatus(
+                "Library.Operation.Discogs.SearchCancelled");
         }
         catch (Exception error)
         {
-            OperationStatus =
-                $"Discogs release search failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.Discogs.SearchFailed",
+                error.Message);
         }
         finally
         {
@@ -1451,7 +1620,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     {
         if (_discogs is null || SelectedDiscogsRelease is null)
             return;
-        BeginLibraryOperation("Loading Discogs release details");
+        BeginLibraryOperation(
+            "Library.Progress.LoadingDiscogsDetails");
         try
         {
             DiscogsReleaseRow selected = SelectedDiscogsRelease;
@@ -1466,18 +1636,21 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             if (index >= 0)
                 DiscogsMatches[index] = detailed;
             SelectedDiscogsRelease = detailed;
-            OperationStatus =
-                $"Loaded Discogs release {release.ReleaseId} with " +
-                $"{release.Tracks.Length:N0} track(s). No metadata was changed.";
+            SetOperationStatus(
+                "Library.Operation.Discogs.DetailsComplete",
+                release.ReleaseId,
+                release.Tracks.Length);
         }
         catch (OperationCanceledException)
         {
-            OperationStatus = "Discogs release detail lookup cancelled.";
+            SetOperationStatus(
+                "Library.Operation.Discogs.DetailsCancelled");
         }
         catch (Exception error)
         {
-            OperationStatus =
-                $"Discogs release detail lookup failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.Discogs.DetailsFailed",
+                error.Message);
         }
         finally
         {
@@ -1494,7 +1667,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         string[] paths = ResolveOperationPaths();
         if (paths.Length == 0)
             return;
-        BeginLibraryOperation("Matching Library files to Discogs tracks");
+        BeginLibraryOperation(
+            "Library.Progress.MatchingDiscogsTracks");
         try
         {
             DiscogsReleaseCandidate release =
@@ -1537,19 +1711,22 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                 row.PropertyChanged += OnDiscogsMappingChanged;
                 DiscogsTrackMappings.Add(row);
             }
-            OperationStatus =
-                $"Suggested {mapping.SuggestedCount:N0} of {mapping.Files.Length:N0} " +
-                $"Discogs file-to-track mappings; " +
-                $"{mapping.AmbiguousCount:N0} need review.";
+            SetOperationStatus(
+                "Library.Operation.Discogs.MappingComplete",
+                mapping.SuggestedCount,
+                mapping.Files.Length,
+                mapping.AmbiguousCount);
         }
         catch (OperationCanceledException)
         {
-            OperationStatus = "Discogs track mapping cancelled.";
+            SetOperationStatus(
+                "Library.Operation.Discogs.MappingCancelled");
         }
         catch (Exception error)
         {
-            OperationStatus =
-                $"Discogs track mapping failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.Discogs.MappingFailed",
+                error.Message);
         }
         finally
         {
@@ -1577,34 +1754,38 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                 SelectedDiscogsRelease.Candidate,
                 confirmed,
                 DiscogsImport.CreateOptions());
-        BeginLibraryOperation("Building Discogs metadata preview");
+        BeginLibraryOperation(
+            "Library.Progress.BuildingDiscogsMetadataPreview");
         try
         {
             MetadataOperationPlan plan =
                 await _metadataOperations.PreviewValueEditsAsync(
                     edits,
-                    $"Discogs: {SelectedDiscogsRelease.Title}",
+                    LF(
+                        "Library.OperationName.DiscogsMetadata",
+                        SelectedDiscogsRelease.Title),
                     CreateOperationProgress(),
                     _operationCancellation!.Token);
             _libraryOperationPlan = plan;
             MetadataPreviewRowBuilder.Populate(
                 OperationPreviewChanges, plan);
             HasApplicableOperationPreview = plan.CanApply;
-            OperationStatus =
-                "Mapped Discogs fields were added to the normal metadata preview. " +
-                "Review every change before applying.";
+            SetOperationStatus(
+                "Library.Operation.Discogs.MetadataReady");
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
         catch (OperationCanceledException)
         {
             InvalidateLibraryOperationPreview();
-            OperationStatus = "Discogs metadata preview cancelled.";
+            SetOperationStatus(
+                "Library.Operation.Discogs.MetadataCancelled");
         }
         catch (Exception error)
         {
             InvalidateLibraryOperationPreview();
-            OperationStatus =
-                $"Discogs metadata preview failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.Discogs.MetadataFailed",
+                error.Message);
         }
         finally
         {
@@ -1623,7 +1804,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         DiscogsReleaseRow selected = SelectedDiscogsRelease;
         string[] paths = ConfirmedDiscogsReleasePaths();
         string releaseTitle = selected.Title;
-        BeginLibraryOperation("Building Discogs artwork preview");
+        BeginLibraryOperation(
+            "Library.Progress.BuildingDiscogsArtworkPreview");
         try
         {
             IProgress<OperationProgress> progress =
@@ -1647,28 +1829,31 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             MetadataOperationPlan plan =
                 await _metadataOperations.PreviewArtworkEditsAsync(
                     edits,
-                    $"Discogs artwork: {releaseTitle}",
+                    LF(
+                        "Library.OperationName.DiscogsArtwork",
+                        releaseTitle),
                     progress,
                     _operationCancellation.Token);
             _libraryOperationPlan = plan;
             MetadataPreviewRowBuilder.Populate(
                 OperationPreviewChanges, plan);
             HasApplicableOperationPreview = plan.CanApply;
-            OperationStatus =
-                "The selected Discogs cover was added to the normal artwork preview. " +
-                "Review every change before applying.";
+            SetOperationStatus(
+                "Library.Operation.Discogs.ArtworkReady");
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
         catch (OperationCanceledException)
         {
             InvalidateLibraryOperationPreview();
-            OperationStatus = "Discogs artwork preview cancelled.";
+            SetOperationStatus(
+                "Library.Operation.Discogs.ArtworkCancelled");
         }
         catch (Exception error)
         {
             InvalidateLibraryOperationPreview();
-            OperationStatus =
-                $"Discogs artwork preview failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.Discogs.ArtworkFailed",
+                error.Message);
         }
         finally
         {
@@ -1683,9 +1868,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             return;
         string? path = ReportEditor.OneFilePerGroup
             ? await _files.PickFolderAsync(
-                "Choose report output folder")
+                L("Library.Picker.ReportFolder"))
             : await _files.SaveFileAsync(
-                "Choose report output",
+                L("Library.Picker.ReportOutput"),
                 "music-library-report." +
                 ReportEditor.SuggestedExtension,
                 ReportEditor.SuggestedExtension);
@@ -1699,7 +1884,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         if (_reports is null)
             return;
         string[] paths = ResolveOperationPaths();
-        BeginLibraryOperation("Building report preview");
+        BeginLibraryOperation(
+            "Library.Progress.BuildingReportPreview");
         try
         {
             ReportExportPlan plan = await _reports.PreviewAsync(
@@ -1711,29 +1897,36 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             foreach (ReportFilePlan file in plan.Files)
                 ReportOutputs.Add(new(
                     string.IsNullOrWhiteSpace(file.Group)
-                        ? "All"
+                        ? L("Common.All")
                         : file.Group,
                     file.DestinationPath,
                     file.RowCount,
                     file.ByteCount));
             int blockers = plan.Issues.Count(issue =>
                 issue.Severity == OperationIssueSeverity.Blocker);
-            OperationStatus = blockers > 0
-                ? $"Report preview has {blockers:N0} blocker(s). No output was written."
-                : $"Previewed {plan.Files.Count:N0} report file(s). " +
-                  "Review the destinations before applying.";
+            if (blockers > 0)
+                SetCountOperationStatus(
+                    "Library.Operation.Report.Blockers",
+                    blockers);
+            else
+                SetCountOperationStatus(
+                    "Library.Operation.Report.Ready",
+                    plan.Files.Count);
             ApplyLibraryReportCommand.NotifyCanExecuteChanged();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
         catch (OperationCanceledException)
         {
             InvalidateReportPlan();
-            OperationStatus = "Report preview cancelled.";
+            SetOperationStatus(
+                "Library.Operation.Report.PreviewCancelled");
         }
         catch (Exception error)
         {
             InvalidateReportPlan();
-            OperationStatus = $"Report preview failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.Report.PreviewFailed",
+                error.Message);
         }
         finally
         {
@@ -1746,7 +1939,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     {
         if (_reports is null || _reportPlan is null)
             return;
-        BeginLibraryOperation("Writing reviewed report");
+        BeginLibraryOperation(
+            "Library.Progress.WritingReport");
         try
         {
             ReportExportResult result = await _reports.ApplyAsync(
@@ -1754,19 +1948,23 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                 CreateOperationProgress(),
                 _operationCancellation!.Token);
             _reportPlan = null;
-            OperationStatus =
-                $"Wrote {result.FileCount:N0} report file(s) with " +
-                $"{result.RowCount:N0} row(s).";
+            SetOperationStatus(
+                "Library.Operation.Report.Written",
+                result.FileCount,
+                result.RowCount);
             ApplyLibraryReportCommand.NotifyCanExecuteChanged();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
         catch (OperationCanceledException)
         {
-            OperationStatus = "Report output cancelled.";
+            SetOperationStatus(
+                "Library.Operation.Report.OutputCancelled");
         }
         catch (Exception error)
         {
-            OperationStatus = $"Report output failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.Report.OutputFailed",
+                error.Message);
         }
         finally
         {
@@ -1782,9 +1980,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             return;
         string? path = PlaylistEditor.OnePlaylistPerGroup
             ? await _files.PickFolderAsync(
-                "Choose playlist output folder")
+                L("Library.Picker.PlaylistFolder"))
             : await _files.SaveFileAsync(
-                "Choose playlist output",
+                L("Library.Picker.PlaylistOutput"),
                 "music-playlist." +
                 PlaylistEditor.SuggestedExtension,
                 PlaylistEditor.SuggestedExtension);
@@ -1799,7 +1997,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         if (_playlists is null)
             return;
         string[] paths = ResolveOperationPaths();
-        BeginLibraryOperation("Building playlist preview");
+        BeginLibraryOperation(
+            "Library.Progress.BuildingPlaylistPreview");
         try
         {
             PlaylistWorkspacePlan plan =
@@ -1814,30 +2013,36 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             foreach (PlaylistWorkspaceFilePlan file in plan.Files)
                 PlaylistOutputs.Add(new(
                     string.IsNullOrWhiteSpace(file.Group)
-                        ? "All"
+                        ? L("Common.All")
                         : file.Group,
                     file.DestinationPath,
                     file.TrackCount,
                     file.ByteCount));
             int blockers = plan.Issues.Count(issue =>
                 issue.Severity == OperationIssueSeverity.Blocker);
-            OperationStatus = blockers > 0
-                ? $"Playlist preview has {blockers:N0} blocker(s). No output was written."
-                : $"Previewed {plan.Files.Count:N0} playlist file(s). " +
-                  "Review the destinations before applying.";
+            if (blockers > 0)
+                SetCountOperationStatus(
+                    "Library.Operation.Playlist.Blockers",
+                    blockers);
+            else
+                SetCountOperationStatus(
+                    "Library.Operation.Playlist.Ready",
+                    plan.Files.Count);
             ApplyLibraryPlaylistCommand.NotifyCanExecuteChanged();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
         catch (OperationCanceledException)
         {
             InvalidatePlaylistPlan();
-            OperationStatus = "Playlist preview cancelled.";
+            SetOperationStatus(
+                "Library.Operation.Playlist.PreviewCancelled");
         }
         catch (Exception error)
         {
             InvalidatePlaylistPlan();
-            OperationStatus =
-                $"Playlist preview failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.Playlist.PreviewFailed",
+                error.Message);
         }
         finally
         {
@@ -1851,7 +2056,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     {
         if (_playlists is null || _playlistPlan is null)
             return;
-        BeginLibraryOperation("Writing reviewed playlist");
+        BeginLibraryOperation(
+            "Library.Progress.WritingPlaylist");
         try
         {
             PlaylistWorkspaceResult result =
@@ -1860,20 +2066,23 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                     CreateOperationProgress(),
                     _operationCancellation!.Token);
             _playlistPlan = null;
-            OperationStatus =
-                $"Wrote {result.PlaylistCount:N0} playlist file(s) with " +
-                $"{result.TrackReferenceCount:N0} track reference(s).";
+            SetOperationStatus(
+                "Library.Operation.Playlist.Written",
+                result.PlaylistCount,
+                result.TrackReferenceCount);
             ApplyLibraryPlaylistCommand.NotifyCanExecuteChanged();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
         catch (OperationCanceledException)
         {
-            OperationStatus = "Playlist output cancelled.";
+            SetOperationStatus(
+                "Library.Operation.Playlist.OutputCancelled");
         }
         catch (Exception error)
         {
-            OperationStatus =
-                $"Playlist output failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.Playlist.OutputFailed",
+                error.Message);
         }
         finally
         {
@@ -1888,7 +2097,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         if (_files is null)
             return;
         string? path = await _files.PickFileAsync(
-            "Choose external tool executable");
+            L("Library.Picker.ExternalToolExecutable"));
         if (!string.IsNullOrWhiteSpace(path))
             ExternalToolEditor.Executable = path;
     }
@@ -1900,7 +2109,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         if (_files is null)
             return;
         string? path = await _files.PickFolderAsync(
-            "Choose external tool working directory");
+            L("Library.Picker.ExternalToolDirectory"));
         if (!string.IsNullOrWhiteSpace(path))
             ExternalToolEditor.WorkingDirectory = path;
     }
@@ -1926,15 +2135,20 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                 string.Join(
                     Environment.NewLine,
                     invocation.Arguments),
-                invocation.WorkingDirectory ?? "(application default)",
+                invocation.WorkingDirectory ??
+                L("Library.Tools.ApplicationDefault"),
                 invocation.SourcePaths.Count));
         }
         int blockers = plan.Issues.Count(issue =>
             issue.Severity == OperationIssueSeverity.Blocker);
-        OperationStatus = blockers > 0
-            ? $"External-tool preview has {blockers:N0} blocker(s). Nothing can run."
-            : $"Previewed {plan.Invocations.Count:N0} process invocation(s). " +
-              "External tools run outside MusicLibraryManager recovery.";
+        if (blockers > 0)
+            SetCountOperationStatus(
+                "Library.Operation.ExternalTool.Blockers",
+                blockers);
+        else
+            SetCountOperationStatus(
+                "Library.Operation.ExternalTool.Ready",
+                plan.Invocations.Count);
         RunLibraryExternalToolCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(HasUnsavedChanges));
     }
@@ -1947,15 +2161,16 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             _dialogs is null)
             return;
         if (!await _dialogs.ConfirmAsync(
-                "Run external tool?",
-                $"Run '{_externalToolPlan.Definition.Name}' " +
-                $"{_externalToolPlan.Invocations.Count:N0} time(s)? " +
-                "External tools can change files and are outside " +
-                "MusicLibraryManager recovery.",
-                "Run"))
+                L("Library.Dialog.ExternalTool.Title"),
+                LF(
+                    "Library.Dialog.ExternalTool.Message",
+                    _externalToolPlan.Definition.Name,
+                    _externalToolPlan.Invocations.Count),
+                L("Common.Run")))
             return;
         BeginLibraryOperation(
-            $"Running {_externalToolPlan.Definition.Name}");
+            "Library.Progress.RunningExternalTool",
+            _externalToolPlan.Definition.Name);
         try
         {
             ExternalToolRunResult result =
@@ -1964,21 +2179,23 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                     CreateOperationProgress(),
                     _operationCancellation!.Token);
             _externalToolPlan = null;
-            OperationStatus =
-                $"External tool finished: {result.SucceededCount:N0} " +
-                $"succeeded, {result.FailedCount:N0} failed.";
+            SetOperationStatus(
+                "Library.Operation.ExternalTool.Complete",
+                result.SucceededCount,
+                result.FailedCount);
             RunLibraryExternalToolCommand.NotifyCanExecuteChanged();
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
         catch (OperationCanceledException)
         {
-            OperationStatus =
-                "External tool cancelled. The active process was stopped.";
+            SetOperationStatus(
+                "Library.Operation.ExternalTool.Cancelled");
         }
         catch (Exception error)
         {
-            OperationStatus =
-                $"External tool stopped: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.ExternalTool.Failed",
+                error.Message);
         }
         finally
         {
@@ -1991,7 +2208,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     {
         if (_coverArt is null || SelectedRelease is null)
             return;
-        BeginLibraryOperation("Finding Cover Art Archive images");
+        BeginLibraryOperation(
+            "Library.Progress.FindingCoverArt");
         try
         {
             IProgress<OperationProgress> progress = CreateOperationProgress();
@@ -2003,6 +2221,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             ArtworkMatches.Clear();
             foreach (CoverArtArchiveCandidate candidate in result.Images)
                 ArtworkMatches.Add(new(candidate));
+            var thumbnailDiagnostics =
+                new List<string>();
             for (int index = 0; index < ArtworkMatches.Count; index++)
             {
                 _operationCancellation.Token.ThrowIfCancellationRequested();
@@ -2011,8 +2231,10 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                     OperationPhase.Planning,
                     index,
                     ArtworkMatches.Count,
-                    Message: $"Loading artwork thumbnail {index + 1:N0} " +
-                        $"of {ArtworkMatches.Count:N0}"));
+                    Message: LF(
+                        "Library.Progress.LoadingArtworkThumbnail",
+                        index + 1,
+                        ArtworkMatches.Count)));
                 try
                 {
                     CoverArtDownload download =
@@ -2024,29 +2246,45 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                         await _thumbnails.CreateImageSourceAsync(
                             download.Data, 180, _operationCancellation.Token);
                     row.ThumbnailStatus = download.FromCache
-                        ? "Cached"
-                        : $"{download.Data.Length:N0} bytes";
+                        ? L("Library.Artwork.Cached")
+                        : LC(
+                            "Library.Artwork.Bytes",
+                            download.Data.Length);
                 }
                 catch (Exception error) when (
                     error is not OperationCanceledException)
                 {
-                    row.ThumbnailStatus = error.Message;
+                    row.ThumbnailStatus = L(
+                        "Library.Artwork.ThumbnailFailed");
+                    thumbnailDiagnostics.Add(
+                        error.Message);
                 }
             }
             SelectedArtworkMatch = ArtworkMatches.FirstOrDefault(row =>
                 row.Candidate.IsFront) ?? ArtworkMatches.FirstOrDefault();
-            OperationStatus = ArtworkMatches.Count == 0
-                ? "This release has no Cover Art Archive images."
-                : $"Loaded {ArtworkMatches.Count:N0} artwork candidate(s). " +
-                  "No files were changed.";
+            if (ArtworkMatches.Count == 0)
+                SetOperationStatus(
+                    "Library.Operation.CoverArt.None");
+            else
+                SetCountOperationStatus(
+                    "Library.Operation.CoverArt.Loaded",
+                    ArtworkMatches.Count);
+            if (thumbnailDiagnostics.Count > 0)
+                OperationDiagnosticDetail =
+                    string.Join(
+                        Environment.NewLine,
+                        thumbnailDiagnostics);
         }
         catch (OperationCanceledException)
         {
-            OperationStatus = "Cover Art Archive lookup cancelled.";
+            SetOperationStatus(
+                "Library.Operation.CoverArt.Cancelled");
         }
         catch (Exception error)
         {
-            OperationStatus = $"Cover Art Archive lookup failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.CoverArt.Failed",
+                error.Message);
         }
         finally
         {
@@ -2065,7 +2303,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         string[] paths = ConfirmedReleasePaths();
         CoverArtCandidateRow selected = SelectedArtworkMatch;
         string releaseTitle = SelectedRelease.Title;
-        BeginLibraryOperation("Building artwork preview");
+        BeginLibraryOperation(
+            "Library.Progress.BuildingArtworkPreview");
         try
         {
             IProgress<OperationProgress> progress = CreateOperationProgress();
@@ -2090,27 +2329,31 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             MetadataOperationPlan plan =
                 await _metadataOperations.PreviewArtworkEditsAsync(
                     edits,
-                    $"Cover Art Archive: {releaseTitle}",
+                    LF(
+                        "Library.OperationName.CoverArt",
+                        releaseTitle),
                     progress,
                     _operationCancellation.Token);
             _libraryOperationPlan = plan;
             MetadataPreviewRowBuilder.Populate(
                 OperationPreviewChanges, plan);
             HasApplicableOperationPreview = plan.CanApply;
-            OperationStatus =
-                "The selected front cover was added to the normal metadata preview. " +
-                "Review every artwork change before applying.";
+            SetOperationStatus(
+                "Library.Operation.Artwork.ReleaseReady");
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
         catch (OperationCanceledException)
         {
             InvalidateLibraryOperationPreview();
-            OperationStatus = "Artwork preview cancelled.";
+            SetOperationStatus(
+                "Library.Operation.Artwork.PreviewCancelled");
         }
         catch (Exception error)
         {
             InvalidateLibraryOperationPreview();
-            OperationStatus = $"Artwork preview failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.Artwork.PreviewFailed",
+                error.Message);
         }
         finally
         {
@@ -2124,8 +2367,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         if (_files is null)
             return;
         string? artworkPath = await _files.PickFileAsync(
-            "Choose front-cover artwork",
-            [new("Artwork images",
+            L("Library.Picker.FrontCover"),
+            [new(L("Library.Picker.ArtworkImages"),
                 [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"])]);
         if (artworkPath is null)
             return;
@@ -2137,7 +2380,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                     0,
                     1,
                     artworkPath,
-                    $"Reading {Path.GetFileName(artworkPath)}"));
+                    LF(
+                        "Library.Progress.ReadingFile",
+                        Path.GetFileName(artworkPath))));
                 byte[] data =
                     await File.ReadAllBytesAsync(artworkPath, ct);
                 return new(
@@ -2148,7 +2393,7 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                         data,
                         Path.GetFileNameWithoutExtension(artworkPath)));
             },
-            "Replace front cover");
+            L("Library.OperationName.ReplaceFrontCover"));
     }
 
     [RelayCommand(CanExecute = nameof(CanPreviewLibraryArtwork))]
@@ -2156,14 +2401,14 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         await PreviewLibraryArtworkEditAsync(
             (_, _) => Task.FromResult(new ArtworkValueEdit(
                 ArtworkValueEditMode.RemoveFrontCover)),
-            "Remove front cover");
+            L("Library.OperationName.RemoveFrontCover"));
 
     [RelayCommand(CanExecute = nameof(CanPreviewLibraryArtwork))]
     private async Task PreviewRemoveAllLibraryArtworkAsync() =>
         await PreviewLibraryArtworkEditAsync(
             (_, _) => Task.FromResult(new ArtworkValueEdit(
                 ArtworkValueEditMode.RemoveAll)),
-            "Remove all artwork");
+            L("Library.OperationName.RemoveAllArtwork"));
 
     private async Task PreviewLibraryArtworkEditAsync(
         Func<IProgress<OperationProgress>, CancellationToken,
@@ -2175,7 +2420,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         string[] paths = ResolveOperationPaths();
         if (paths.Length == 0)
             return;
-        BeginLibraryOperation("Building artwork preview");
+        BeginLibraryOperation(
+            "Library.Progress.BuildingArtworkPreview");
         try
         {
             IProgress<OperationProgress> progress =
@@ -2199,21 +2445,29 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             int blockers = plan.Files.SelectMany(file => file.Issues)
                 .Count(issue =>
                     issue.Severity == OperationIssueSeverity.Blocker);
-            OperationStatus = blockers > 0
-                ? $"Artwork preview has {blockers:N0} blocker(s). No files were changed."
-                : $"Previewed artwork changes for {plan.ChangedFileCount:N0} " +
-                  $"of {paths.Length:N0} file(s). No files were changed.";
+            if (blockers > 0)
+                SetCountOperationStatus(
+                    "Library.Operation.Artwork.Blockers",
+                    blockers);
+            else
+                SetOperationStatus(
+                    "Library.Operation.Artwork.Ready",
+                    plan.ChangedFileCount,
+                    paths.Length);
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
         catch (OperationCanceledException)
         {
             InvalidateLibraryOperationPreview();
-            OperationStatus = "Artwork preview cancelled.";
+            SetOperationStatus(
+                "Library.Operation.Artwork.PreviewCancelled");
         }
         catch (Exception error)
         {
             InvalidateLibraryOperationPreview();
-            OperationStatus = $"Artwork preview failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.Artwork.PreviewFailed",
+                error.Message);
         }
         finally
         {
@@ -2229,7 +2483,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         string[] paths = ResolveOperationPaths();
         if (paths.Length == 0)
             return;
-        BeginLibraryOperation("Matching Library files to release tracks");
+        BeginLibraryOperation(
+            "Library.Progress.MatchingReleaseTracks");
         try
         {
             MusicBrainzReleaseCandidate release =
@@ -2273,17 +2528,22 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                 mappingRow.PropertyChanged += OnReleaseMappingChanged;
                 ReleaseTrackMappings.Add(mappingRow);
             }
-            OperationStatus =
-                $"Suggested {mapping.SuggestedCount:N0} of {mapping.Files.Length:N0} " +
-                $"file-to-track mappings; {mapping.AmbiguousCount:N0} need review.";
+            SetOperationStatus(
+                "Library.Operation.MusicBrainz.MappingComplete",
+                mapping.SuggestedCount,
+                mapping.Files.Length,
+                mapping.AmbiguousCount);
         }
         catch (OperationCanceledException)
         {
-            OperationStatus = "Release track mapping cancelled.";
+            SetOperationStatus(
+                "Library.Operation.MusicBrainz.MappingCancelled");
         }
         catch (Exception error)
         {
-            OperationStatus = $"Release track mapping failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.MusicBrainz.MappingFailed",
+                error.Message);
         }
         finally
         {
@@ -2309,32 +2569,37 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                 SelectedRelease.Candidate,
                 confirmed,
                 ReleaseImport.CreateOptions());
-        BeginLibraryOperation("Building MusicBrainz metadata preview");
+        BeginLibraryOperation(
+            "Library.Progress.BuildingMusicBrainzMetadataPreview");
         try
         {
             MetadataOperationPlan plan =
                 await _metadataOperations.PreviewValueEditsAsync(
                     edits,
-                    $"MusicBrainz: {SelectedRelease.Title}",
+                    LF(
+                        "Library.OperationName.MusicBrainzMetadata",
+                        SelectedRelease.Title),
                     CreateOperationProgress(),
                     _operationCancellation!.Token);
             _libraryOperationPlan = plan;
             MetadataPreviewRowBuilder.Populate(OperationPreviewChanges, plan);
             HasApplicableOperationPreview = plan.CanApply;
-            OperationStatus =
-                "Mapped MusicBrainz fields were added to the normal metadata preview. " +
-                "Review every change before applying.";
+            SetOperationStatus(
+                "Library.Operation.MusicBrainz.MetadataReady");
             OnPropertyChanged(nameof(HasUnsavedChanges));
         }
         catch (OperationCanceledException)
         {
             InvalidateLibraryOperationPreview();
-            OperationStatus = "MusicBrainz metadata preview cancelled.";
+            SetOperationStatus(
+                "Library.Operation.MusicBrainz.MetadataCancelled");
         }
         catch (Exception error)
         {
             InvalidateLibraryOperationPreview();
-            OperationStatus = $"MusicBrainz metadata preview failed: {error.Message}";
+            SetOperationFailure(
+                "Library.Operation.MusicBrainz.MetadataFailed",
+                error.Message);
         }
         finally
         {
@@ -2349,11 +2614,15 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         _loadCancellation?.Cancel();
     }
 
-    private void BeginLibraryOperation(string message)
+    private void BeginLibraryOperation(
+        string messageKey,
+        params object?[] arguments)
     {
         _operationCancellation?.Dispose();
         _operationCancellation = new();
-        OperationProgressText = message;
+        OperationProgressText = LF(
+            messageKey,
+            arguments);
         OperationProgressValue = 0;
         OperationProgressMaximum = 1;
         IsOperationProgressIndeterminate = true;
@@ -2463,8 +2732,8 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         _libraryOperationPlan = null;
         OperationPreviewChanges.Clear();
         HasApplicableOperationPreview = false;
-        OperationStatus =
-            "Operation or scope changed. Preview authoritative metadata again.";
+        SetOperationStatus(
+            "Library.Operation.PreviewInvalidated");
         OnPropertyChanged(nameof(HasUnsavedChanges));
     }
 
@@ -2493,14 +2762,16 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         RepresentativePreview.Schedule(
             path,
             () => OperationEditor.CreateRecipe(
-                "Draft representative preview"));
+                L(
+                    "Library.OperationName.RepresentativePreview")));
     }
 
     private string? FileOperationPreflightMessage()
     {
         if (_inspector.HasUnsavedChanges ||
             _libraryOperationPlan is not null)
-            return "Apply or discard the current metadata edits before moving files.";
+            return L(
+                "Library.FileOperation.MetadataEditsPending");
         return null;
     }
 
@@ -2873,7 +3144,9 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
             CancellationToken ct)
     {
         MusicBrainzReleaseRow selected = SelectedRelease ??
-            throw new InvalidOperationException("Choose a MusicBrainz release.");
+            throw new InvalidOperationException(
+                L(
+                    "Library.Error.ChooseMusicBrainzRelease"));
         if (selected.Candidate.Tracks.Length > 0)
             return selected.Candidate;
         MusicBrainzReleaseCandidate detailed =
@@ -2895,10 +3168,11 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
     {
         if (_discogs is null)
             throw new InvalidOperationException(
-                "Discogs is unavailable.");
+                L("Library.Error.DiscogsUnavailable"));
         DiscogsReleaseRow selected = SelectedDiscogsRelease ??
             throw new InvalidOperationException(
-                "Choose a Discogs release.");
+                L(
+                    "Library.Error.ChooseDiscogsRelease"));
         if (selected.Candidate.Tracks.Length > 0)
             return selected.Candidate;
         DiscogsReleaseCandidate release =
@@ -3130,12 +3404,21 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         LibraryFilterQuery query = LibraryFilterQuery.Create(FilterText, FilterMode);
         var visual = new LibraryVisualFilter(
             VisualFilterExpression);
-        FilterError = query.Error ?? visual.Error;
+        string? filterDiagnostic =
+            query.Error ?? visual.Error;
         if (!query.IsValid || !visual.IsValid)
         {
-            StatusText = FilterError ?? "Invalid filter.";
+            FilterError = L(
+                "Library.Filter.Invalid");
+            FilterDiagnosticDetail =
+                filterDiagnostic;
+            SetStatusFailure(
+                "Library.Status.InvalidFilter",
+                filterDiagnostic);
             return;
         }
+        FilterError = null;
+        FilterDiagnosticDetail = null;
         List<LibraryRow> source = _allRows;
         HashSet<string>? healthPaths = _healthFilterPaths.Count == 0
             ? null
@@ -3177,13 +3460,29 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
         // virtualized table spend seconds processing changes on the UI thread and also starves
         // live window layout while a large library is loading or being filtered.
         Rows = filtered;
-        StatusText = healthPaths is not null
-            ? $"{filtered.Count:N0} Health-filtered track(s) of {source.Count:N0} total"
-            : filtered.Count == source.Count
-                ? $"{source.Count:N0} tracks"
-                : $"{filtered.Count:N0} of {source.Count:N0} tracks";
-        if (preservedSelectionCount > 0)
-            StatusText += $" · {preservedSelectionCount:N0} selected with unsaved changes kept visible";
+        if (healthPaths is not null)
+            SetStatusText(
+                preservedSelectionCount > 0
+                    ? "Library.Status.HealthFilteredPreserved"
+                    : "Library.Status.HealthFiltered",
+                filtered.Count,
+                source.Count,
+                preservedSelectionCount);
+        else if (filtered.Count == source.Count)
+            SetCountStatusText(
+                preservedSelectionCount > 0
+                    ? "Library.Status.TracksPreserved"
+                    : "Library.Status.Tracks",
+                source.Count,
+                preservedSelectionCount);
+        else
+            SetStatusText(
+                preservedSelectionCount > 0
+                    ? "Library.Status.FilteredPreserved"
+                    : "Library.Status.Filtered",
+                filtered.Count,
+                source.Count,
+                preservedSelectionCount);
         PageState = source.Count == 0
             ? LibraryPageState.NotIndexed
             : filtered.Count > 0
@@ -3256,6 +3555,207 @@ public partial class LibraryViewModel : ObservableObject, INavigationGuard
                 FilterMode,
                 IsInspectorOpen,
                 VisualFilterExpression)));
+
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string LF(
+        string key,
+        params object?[] arguments) =>
+        _localization?.Format(
+            key,
+            arguments) ??
+        LocalizedText.Format(
+            key,
+            arguments);
+
+    private string LC(
+        string key,
+        long count,
+        params object?[] arguments) =>
+        _localization?.FormatCount(
+            key,
+            count,
+            arguments) ??
+        LocalizedText.FormatCount(
+            key,
+            count,
+            arguments);
+
+    private void SetStatusText(
+        string key,
+        params object?[] arguments)
+    {
+        _statusTextKey = key;
+        _statusTextArguments = arguments;
+        _statusTextCount = null;
+        StatusText = LF(key, arguments);
+        StatusDiagnosticDetail = null;
+    }
+
+    private void SetCountStatusText(
+        string key,
+        long count,
+        params object?[] arguments)
+    {
+        _statusTextKey = key;
+        _statusTextArguments = arguments;
+        _statusTextCount = count;
+        StatusText = LC(
+            key,
+            count,
+            arguments);
+        StatusDiagnosticDetail = null;
+    }
+
+    private void SetStatusFailure(
+        string key,
+        string? diagnosticDetail,
+        params object?[] arguments)
+    {
+        SetStatusText(key, arguments);
+        StatusDiagnosticDetail =
+            diagnosticDetail;
+    }
+
+    private void SetOperationStatus(
+        string key,
+        params object?[] arguments)
+    {
+        _operationStatusKey = key;
+        _operationStatusArguments = arguments;
+        _operationStatusCount = null;
+        OperationStatus = LF(key, arguments);
+        OperationDiagnosticDetail = null;
+    }
+
+    private void SetCountOperationStatus(
+        string key,
+        long count,
+        params object?[] arguments)
+    {
+        _operationStatusKey = key;
+        _operationStatusArguments = arguments;
+        _operationStatusCount = count;
+        OperationStatus = LC(
+            key,
+            count,
+            arguments);
+        OperationDiagnosticDetail = null;
+    }
+
+    private void SetOperationFailure(
+        string key,
+        string? diagnosticDetail,
+        params object?[] arguments)
+    {
+        SetOperationStatus(key, arguments);
+        OperationDiagnosticDetail =
+            diagnosticDetail;
+    }
+
+    private void SetVisualFilterStatus(
+        string key,
+        string? diagnosticDetail = null)
+    {
+        _visualFilterStatusKey = key;
+        VisualFilterEditor.Status = L(key);
+        VisualFilterDiagnosticDetail =
+            diagnosticDetail;
+    }
+
+    private void RefreshLocalizedChoices()
+    {
+        RefreshChoices(
+            FilterModeChoices,
+            FilterModes,
+            "Library.Choice.FilterMode");
+        RefreshChoices(
+            OperationScopeChoices,
+            OperationScopes,
+            "Library.Choice.OperationScope");
+        RefreshChoices(
+            ImportEmptyCellModeChoices,
+            ImportEmptyCellModes,
+            "Library.Choice.ImportEmptyCellMode");
+        foreach (LibraryColumnChoice column in Columns)
+            column.RefreshLocalizedText(L);
+    }
+
+    private void RefreshChoices<T>(
+        ObservableCollection<LocalizedChoice<T>>
+            target,
+        IEnumerable<T> values,
+        string keyPrefix)
+    {
+        foreach (T value in values)
+        {
+            LocalizedChoice<T>? choice =
+                target.FirstOrDefault(item =>
+                    EqualityComparer<T>.Default
+                        .Equals(
+                            item.Value,
+                            value));
+            string label = L(
+                $"{keyPrefix}.{value}");
+            if (choice is null)
+                target.Add(new(value, label));
+            else
+                choice.Label = label;
+        }
+    }
+
+    private void OnLocalizationCultureChanged(
+        object? sender,
+        EventArgs e)
+    {
+        RefreshLocalizedChoices();
+        if (_statusTextKey is not null)
+            StatusText =
+                _statusTextCount is { } statusCount
+                    ? LC(
+                        _statusTextKey,
+                        statusCount,
+                        _statusTextArguments)
+                    : LF(
+                        _statusTextKey,
+                        _statusTextArguments);
+        if (_operationStatusKey is not null)
+            OperationStatus =
+                _operationStatusCount is { } operationCount
+                    ? LC(
+                        _operationStatusKey,
+                        operationCount,
+                        _operationStatusArguments)
+                    : LF(
+                        _operationStatusKey,
+                        _operationStatusArguments);
+        if (_visualFilterStatusKey is not null)
+            VisualFilterEditor.Status = L(
+                _visualFilterStatusKey);
+        if (FilterError is not null)
+            FilterError = L(
+                "Library.Filter.Invalid");
+        OnPropertyChanged(
+            nameof(HealthFilterSummary));
+        OnPropertyChanged(
+            nameof(ResultCountText));
+        OnPropertyChanged(
+            nameof(EmptyStateTitle));
+        OnPropertyChanged(
+            nameof(EmptyStateMessage));
+        OnPropertyChanged(
+            nameof(EmptyStateActionLabel));
+    }
+
+    private static string ColumnResourceKey(
+        string key) =>
+        key switch
+        {
+            "Type" => "Column.CodecType",
+            _ => $"Column.{key}",
+        };
 
     private sealed record LibraryWorkspaceSnapshot(
         string? Filter,

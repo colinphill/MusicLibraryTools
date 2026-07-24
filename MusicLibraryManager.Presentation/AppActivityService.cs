@@ -6,9 +6,12 @@ public sealed class AppActivityService : IActivityService
 {
     private readonly ObservableCollection<AppActivity> _activities = [];
     private readonly Dictionary<Guid, Action> _cancellations = [];
+    private readonly ILocalizationService? _localization;
 
-    public AppActivityService()
+    public AppActivityService(
+        ILocalizationService? localization = null)
     {
+        _localization = localization;
         Activities = new ReadOnlyObservableCollection<AppActivity>(_activities);
     }
 
@@ -63,7 +66,10 @@ public sealed class AppActivityService : IActivityService
         cancel();
         Replace(id, activity => activity with
         {
-            Message = "Cancelling…",
+            Message = _localization?.Get(
+                "Activity.Cancelling") ??
+                LocalizedText.Get(
+                    "Activity.Cancelling"),
             CanCancel = false,
         });
         return true;

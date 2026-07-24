@@ -2,9 +2,12 @@ using global::Avalonia;
 using global::Avalonia.Controls;
 using global::Avalonia.Controls.Templates;
 using global::Avalonia.Data;
+using global::Avalonia.Styling;
+using global::Avalonia.Threading;
 using System.Collections;
 using System.ComponentModel;
 using MusicLibraryManager.Presentation;
+using MusicLibraryManager.Services;
 
 namespace MusicLibraryManager.Controls;
 
@@ -18,12 +21,16 @@ public sealed record AppGridColumnDefinition(
     IDataTemplate? CellTemplate = null,
     bool Sortable = true,
     bool Editable = false,
-    IComparer? CustomSortComparer = null);
+    IComparer? CustomSortComparer = null,
+    string? HeaderResourceKey = null);
 
 public sealed class AppDataGrid : DataGrid
 {
     private readonly Dictionary<DataGridColumn, AppGridColumnDefinition> _definitions = [];
     private bool _configuring;
+    private string? _programmaticSortKey;
+    private bool _programmaticSortDescending;
+    private int _sortApplicationVersion;
 
     // Avalonia styles custom subclasses by their concrete type. Reuse DataGrid's style key so
     // the official Fluent control theme supplies the native header, rows, scrollbars, and cells.
@@ -45,6 +52,15 @@ public sealed class AppDataGrid : DataGrid
         ColumnDisplayIndexChanged += (_, _) => NotifyLayoutChanged();
         ColumnReordered += (_, _) => NotifyLayoutChanged();
         Sorting += OnSorting;
+        AttachedToVisualTree += (_, _) =>
+        {
+            AvaloniaLocalizationResourceBridge.ResourcesApplied +=
+                OnLocalizationResourcesApplied;
+            RefreshLocalizedHeaders();
+        };
+        DetachedFromVisualTree += (_, _) =>
+            AvaloniaLocalizationResourceBridge.ResourcesApplied -=
+                OnLocalizationResourcesApplied;
     }
 
     public event EventHandler? LayoutChanged;
@@ -77,7 +93,7 @@ public sealed class AppDataGrid : DataGrid
                                 : BindingMode.OneWay,
                         },
                     };
-                column.Header = definition.Header;
+                column.Header = ResolveHeader(definition);
                 column.IsReadOnly = !definition.Editable;
                 column.Width = new DataGridLength(definition.Width);
                 column.MinWidth = definition.MinWidth;
@@ -114,9 +130,30 @@ public sealed class AppDataGrid : DataGrid
         if (target is null || !target.CanUserSort)
             return false;
 
-        CurrentSortKey = KeyFor(target);
-        CurrentSortDescending = sort.Descending;
-        target.Sort(sort.Descending ? ListSortDirection.Descending : ListSortDirection.Ascending);
+        string targetKey = KeyFor(target)!;
+        int version = ++_sortApplicationVersion;
+        _programmaticSortKey = targetKey;
+        _programmaticSortDescending =
+            sort.Descending;
+        CurrentSortKey = targetKey;
+        CurrentSortDescending =
+            sort.Descending;
+        target.Sort(
+            sort.Descending
+                ? ListSortDirection.Descending
+                : ListSortDirection.Ascending);
+        SortChanged?.Invoke(this, EventArgs.Empty);
+        Dispatcher.UIThread.Post(
+            () =>
+            {
+                if (_sortApplicationVersion != version)
+                    return;
+                _programmaticSortKey = null;
+                CurrentSortKey = targetKey;
+                CurrentSortDescending =
+                    sort.Descending;
+            },
+            DispatcherPriority.Background);
         return true;
     }
 
@@ -132,6 +169,38 @@ public sealed class AppDataGrid : DataGrid
 
     public string? KeyFor(DataGridColumn column) =>
         _definitions.TryGetValue(column, out AppGridColumnDefinition? definition) ? definition.Key : null;
+
+    /// <summary>
+    /// Refreshes localized display headers without rebuilding columns or disturbing their
+    /// persisted order, widths, visibility, or sort state.
+    /// </summary>
+    public void RefreshLocalizedHeaders()
+    {
+        foreach ((DataGridColumn column, AppGridColumnDefinition definition) in
+                 _definitions)
+            column.Header = ResolveHeader(definition);
+    }
+
+    private static object ResolveHeader(
+        AppGridColumnDefinition definition)
+    {
+        if (definition.HeaderResourceKey is not { Length: > 0 } key)
+            return definition.Header;
+        if (Application.Current is not { } application)
+            return $"\u27E6{key}\u27E7";
+        return application.TryGetResource(
+                   AvaloniaLocalizationResourceBridge.ResourcePrefix + key,
+                   ThemeVariant.Default,
+                   out object? value) &&
+               value is string localized
+            ? localized
+            : $"\u27E6{key}\u27E7";
+    }
+
+    private void OnLocalizationResourcesApplied(
+        object? sender,
+        EventArgs e) =>
+        RefreshLocalizedHeaders();
 
     private void NotifyLayoutChanged()
     {
@@ -150,6 +219,18 @@ public sealed class AppDataGrid : DataGrid
         string? key = KeyFor(e.Column);
         if (key is null)
             return;
+        if (string.Equals(
+                _programmaticSortKey,
+                key,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            CurrentSortKey = key;
+            CurrentSortDescending =
+                _programmaticSortDescending;
+            _programmaticSortKey = null;
+            return;
+        }
+        _sortApplicationVersion++;
         CurrentSortDescending = CurrentSortKey == key && !CurrentSortDescending;
         CurrentSortKey = key;
         SortChanged?.Invoke(this, EventArgs.Empty);

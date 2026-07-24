@@ -5,9 +5,17 @@
       <FontFamily x:Key="AppTextFont">Segoe UI Variable Text, Inter</FontFamily>
       <FontFamily x:Key="AppDisplayFont">Segoe UI Variable Display, Inter</FontFamily>
 
-      <x:Double x:Key="AppRadiusSmall">6</x:Double>
-      <x:Double x:Key="AppRadius">8</x:Double>
-      <x:Double x:Key="AppRadiusLarge">11</x:Double>
+      <CornerRadius x:Key="AppRadiusSmall">6</CornerRadius>
+      <CornerRadius x:Key="AppRadius">8</CornerRadius>
+      <CornerRadius x:Key="AppRadiusLarge">11</CornerRadius>
+      <x:Double x:Key="AppSpaceXSmall">4</x:Double>
+      <x:Double x:Key="AppSpaceSmall">8</x:Double>
+      <x:Double x:Key="AppSpaceMedium">12</x:Double>
+      <x:Double x:Key="AppSpaceLarge">16</x:Double>
+      <x:Double x:Key="AppSpaceXLarge">24</x:Double>
+      <x:Double x:Key="AppControlHeight">36</x:Double>
+      <x:Double x:Key="AppIconButtonSize">36</x:Double>
+      <x:Double x:Key="AppIconSize">18</x:Double>
 
       <ResourceDictionary.ThemeDictionaries>
         <ResourceDictionary x:Key="Dark">
@@ -90,6 +98,7 @@
   </Style>
   <Style Selector="TextBlock.muted"><Setter Property="Foreground" Value="{DynamicResource AppMutedBrush}" /></Style>
   <Style Selector="TextBlock.faint"><Setter Property="Foreground" Value="{DynamicResource AppFaintBrush}" /></Style>
+  <Style Selector="TextBlock.error"><Setter Property="Foreground" Value="{DynamicResource AppDangerBrush}" /></Style>
   <Style Selector="TextBlock.summary-label">
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
@@ -137,6 +146,14 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="11" />
     <Setter Property="Padding" Value="16" />
+  </Style>
+  <Style Selector="Border.toolbar">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="StackPanel.toolbar">
+    <Setter Property="Spacing" Value="{DynamicResource AppSpaceSmall}" />
   </Style>
   <Style Selector="Border.inset"><Setter Property="Background" Value="{DynamicResource AppInsetBrush}" /></Style>
   <Style Selector="Border.status-banner">
@@ -191,7 +208,7 @@
   <Style Selector="Border.status-banner.error TextBlock.status-icon"><Setter Property="Foreground" Value="{DynamicResource AppDangerBrush}" /></Style>
 
   <Style Selector="Button.app">
-    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="MinHeight" Value="{DynamicResource AppControlHeight}" />
     <Setter Property="Padding" Value="13,0" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
@@ -201,6 +218,30 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="CornerRadius" Value="8" />
     <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="SplitButton.app">
+    <Setter Property="MinHeight" Value="{DynamicResource AppControlHeight}" />
+    <Setter Property="Background" Value="{DynamicResource AppRaisedBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppTextBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderStrongBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="SplitButton.app:pointerover">
+    <Setter Property="Background" Value="{DynamicResource AppHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
+  <Style Selector="SplitButton.app:pressed">
+    <Setter Property="Background" Value="{DynamicResource AppSelectionBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
+  <Style Selector="SplitButton.app:focus-visible">
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+  <Style Selector="SplitButton.app:disabled">
+    <Setter Property="Opacity" Value="0.52" />
   </Style>
   <Style Selector="Button.app:pointerover /template/ ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource AppHoverBrush}" />
@@ -221,10 +262,48 @@
   <Style Selector="Button.app:disabled">
     <Setter Property="Opacity" Value="0.52" />
   </Style>
+  <Style Selector="Button.app.quiet">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="Button.app.quiet:pointerover /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppBorderBrush}" />
+  </Style>
+  <Style Selector="Button.app.quiet:pressed /template/ ContentPresenter">
+    <Setter Property="Background" Value="{DynamicResource AppSelectionBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
+  <Style Selector="Button.app.icon">
+    <Setter Property="Width" Value="{DynamicResource AppIconButtonSize}" />
+    <Setter Property="Height" Value="{DynamicResource AppIconButtonSize}" />
+    <Setter Property="MinWidth" Value="{DynamicResource AppIconButtonSize}" />
+    <Setter Property="MinHeight" Value="{DynamicResource AppIconButtonSize}" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="Button.app.overflow">
+    <Setter Property="Padding" Value="11,0" />
+  </Style>
+  <Style Selector="MenuItem.danger">
+    <Setter Property="Foreground" Value="{DynamicResource AppDangerBrush}" />
+  </Style>
   <Style Selector="Button.app.primary">
     <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />
     <Setter Property="Foreground" Value="{DynamicResource AppAccentInkBrush}" />
     <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
+  <Style Selector="SplitButton.app.primary">
+    <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppAccentInkBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentBrush}" />
+  </Style>
+  <Style Selector="SplitButton.app.primary:pointerover">
+    <Setter Property="Background" Value="{DynamicResource AppAccentHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentHoverBrush}" />
+  </Style>
+  <Style Selector="SplitButton.app.primary:pressed">
+    <Setter Property="Background" Value="{DynamicResource AppAccentBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource AppAccentInkBrush}" />
   </Style>
   <Style Selector="Button.app.primary:pointerover /template/ ContentPresenter">
     <Setter Property="Background" Value="{DynamicResource AppAccentHoverBrush}" />

@@ -12,11 +12,16 @@ public partial class OperationsView : UserControl
         InitializeComponent();
         DataContext = App.GetService<OperationsViewModel>();
         HistoryGrid.ConfigureColumns([
-            new AppGridColumnDefinition("Created", "When", "Created", 150, 120),
-            new AppGridColumnDefinition("Job", "Job", "JobName", 190, 140),
-            new AppGridColumnDefinition("State", "State", "State", 140, 100),
-            new AppGridColumnDefinition("Elapsed", "Elapsed", "Elapsed", 90, 70),
-            new AppGridColumnDefinition("Output", "Output", "Output", 420, 240),
+            new AppGridColumnDefinition("Created", "When", "Created", 150, 120,
+                HeaderResourceKey: "Column.When"),
+            new AppGridColumnDefinition("Job", "Job", "JobName", 190, 140,
+                HeaderResourceKey: "Column.Job"),
+            new AppGridColumnDefinition("State", "State", "State", 140, 100,
+                HeaderResourceKey: "Column.State"),
+            new AppGridColumnDefinition("Elapsed", "Elapsed", "Elapsed", 90, 70,
+                HeaderResourceKey: "Column.Elapsed"),
+            new AppGridColumnDefinition("Output", "Output", "Output", 420, 240,
+                HeaderResourceKey: "Column.Output"),
         ]);
     }
 }

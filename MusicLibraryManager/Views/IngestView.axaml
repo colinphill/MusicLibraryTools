@@ -4,14 +4,28 @@
              xmlns:controls="using:MusicLibraryManager.Controls"
              DragDrop.AllowDrop="True" DragDrop.DragOver="OnDragOver" DragDrop.Drop="OnDrop">
   <Grid Margin="26,22,26,26" RowDefinitions="Auto,Auto,*" RowSpacing="14">
-    <controls:PageHeader Title="Ingest"
-        Subtitle="Preflight, preview, and safely import music into the active library.">
+    <controls:PageHeader Title="{DynamicResource Loc.Ingest.Title}"
+        Subtitle="{DynamicResource Loc.Ingest.Subtitle}">
       <controls:PageHeader.Actions>
         <WrapPanel>
-          <Button Classes="app" Content="Preflight" Command="{Binding PreflightCommand}" />
-          <Button Classes="app" Margin="8,0,0,0" Content="Preview" Command="{Binding PreviewCommand}" />
-          <Button Classes="app primary" Margin="8,0,0,0" Content="Apply" Command="{Binding ApplyCommand}" />
-          <Button Classes="app" Margin="8,0,0,0" Content="Cancel" Command="{Binding CancelCommand}" />
+          <Button Classes="app" Margin="0,0,8,6"
+                  Content="{DynamicResource Loc.Ingest.Action.Preview}" Command="{Binding PreviewCommand}" />
+          <Button Classes="app primary" Margin="0,0,8,6"
+                  Content="{DynamicResource Loc.Common.ApplyReviewedPlan}" Command="{Binding ApplyCommand}" />
+          <Button x:Name="IngestMoreButton"
+                  Classes="app quiet overflow" Margin="0,0,8,6"
+                  Content="{DynamicResource Loc.Ingest.Action.More}"
+                  AutomationProperties.Name="{DynamicResource Loc.Ingest.Action.MoreAutomation}">
+            <Button.Flyout>
+              <MenuFlyout Placement="BottomEdgeAlignedRight">
+              <MenuItem Header="{DynamicResource Loc.Ingest.Action.RunPreflight}"
+                          Command="{Binding PreflightCommand}" />
+              </MenuFlyout>
+            </Button.Flyout>
+          </Button>
+          <Button Classes="app" Margin="0,0,0,6"
+                  Content="{DynamicResource Loc.Common.Cancel}" Command="{Binding CancelCommand}"
+                  IsVisible="{Binding IsBusy}" />
         </WrapPanel>
       </controls:PageHeader.Actions>
     </controls:PageHeader>
@@ -19,9 +33,9 @@
     <Border x:Name="SetupCard" Grid.Row="1" Classes="card">
       <StackPanel x:Name="SetupPanel" Spacing="10">
         <Grid ColumnDefinitions="*,Auto,220" ColumnSpacing="8">
-          <StackPanel Spacing="5"><TextBlock Classes="muted" Text="Incoming folder" FontSize="12" FontWeight="SemiBold" /><TextBox Classes="app" Text="{Binding SourceDirectory, Mode=TwoWay}" PlaceholderText="Drop a folder here or browse" AutomationProperties.Name="Incoming folder" /></StackPanel>
-          <Button Grid.Column="1" Classes="app" VerticalAlignment="Bottom" Content="Browse" Command="{Binding BrowseSourceCommand}" />
-          <ComboBox x:Name="RecentFoldersCombo" Grid.Column="2" Classes="app" VerticalAlignment="Bottom" ItemsSource="{Binding RecentSources}" SelectedItem="{Binding SelectedRecentSource, Mode=TwoWay}" PlaceholderText="Recent folders" AutomationProperties.Name="Recent ingest folders" />
+          <StackPanel Spacing="5"><TextBlock Classes="muted" Text="{DynamicResource Loc.Ingest.IncomingFolder}" FontSize="12" FontWeight="SemiBold" /><TextBox Classes="app" Text="{Binding SourceDirectory, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Ingest.IncomingFolderPlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Ingest.IncomingFolder}" /></StackPanel>
+          <Button Grid.Column="1" Classes="app" VerticalAlignment="Bottom" Content="{DynamicResource Loc.Common.Browse}" Command="{Binding BrowseSourceCommand}" />
+          <ComboBox x:Name="RecentFoldersCombo" Grid.Column="2" Classes="app" VerticalAlignment="Bottom" ItemsSource="{Binding RecentSources}" SelectedItem="{Binding SelectedRecentSource, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Ingest.RecentFolders}" AutomationProperties.Name="{DynamicResource Loc.Ingest.RecentFoldersAutomation}" />
         </Grid>
         <Border Classes="status-banner info"
                 IsVisible="{Binding HasExplicitSourceFiles}">
@@ -31,7 +45,7 @@
                        Text="{Binding ExplicitSourceSummary}"
                        TextWrapping="Wrap" />
             <Button Grid.Column="2" Classes="app"
-                    Content="Clear selected files"
+                  Content="{DynamicResource Loc.Ingest.Action.ClearSelectedFiles}"
                     Command="{Binding ClearExplicitSourcesCommand}" />
           </Grid>
         </Border>
@@ -40,46 +54,100 @@
                 AutomationProperties.LiveSetting="Polite">
           <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
             <TextBlock Classes="status-icon" Text="{Binding ConfigurationReadinessIcon}" />
-            <TextBlock Grid.Column="1" Text="{Binding ConfigurationReadinessText}" TextWrapping="Wrap" />
+            <StackPanel Grid.Column="1" Spacing="2">
+              <TextBlock Text="{Binding ConfigurationReadinessText}" TextWrapping="Wrap" />
+              <TextBlock Classes="faint"
+                         Text="{Binding ConfigurationDiagnosticDetail}"
+                         TextWrapping="Wrap"
+                         IsVisible="{Binding !IsConfigurationReady}" />
+            </StackPanel>
           </Grid>
         </Border>
         <ItemsControl ItemsSource="{Binding PreflightChecks}" IsVisible="{Binding HasPreflightChecks}">
           <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate></ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate><DataTemplate><TextBlock Classes="summary-label" Margin="0,0,12,6" Text="{Binding Message}" /></DataTemplate></ItemsControl.ItemTemplate>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Classes="card" Margin="0,0,8,6" Padding="9" MinWidth="220" MaxWidth="420">
+                <StackPanel Spacing="2">
+                  <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                  <TextBlock Classes="muted" Text="{Binding Message}" TextWrapping="Wrap" />
+                  <TextBlock Classes="faint" Text="{Binding DiagnosticDetail}" TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
         </ItemsControl>
         <ProgressBar Classes="app" Minimum="0" Maximum="{Binding PreviewProgressMaximum}" Value="{Binding PreviewProgress}" IsVisible="{Binding IsPreviewing}" />
         <ProgressBar Classes="app" Minimum="0" Maximum="{Binding ApplyProgressMaximum}" Value="{Binding ApplyProgress}" IsVisible="{Binding IsApplying}" />
         <TextBlock Classes="muted" Text="{Binding StatusText}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+        <TextBlock Classes="faint"
+                   Text="{Binding DiagnosticDetail}"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding HasDiagnosticDetail}" />
       </StackPanel>
     </Border>
 
     <Border Grid.Row="2" Classes="card" Padding="12" ClipToBounds="True">
       <TabControl>
-        <TabItem Header="Preview">
+        <TabItem Header="{DynamicResource Loc.Ingest.Tab.Preview}">
           <Grid RowDefinitions="Auto,*" RowSpacing="10" Margin="0,12,0,0">
             <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,220" ColumnSpacing="8">
-              <TextBlock Classes="summary-label" Text="{Binding AlbumCount, StringFormat={}{0} albums}" />
-              <TextBlock Grid.Column="1" Classes="summary-label" Text="{Binding OutputCount, StringFormat={}{0} outputs}" />
-              <TextBlock Grid.Column="2" Classes="summary-label" Text="{Binding ConflictCount, StringFormat={}{0} conflicts}" />
-              <TextBlock Grid.Column="3" Classes="summary-label" Text="{Binding CleanupCount, StringFormat={}{0} cleanup}" />
-              <ComboBox Grid.Column="5" Classes="app" ItemsSource="{Binding PreviewFilters}" SelectedItem="{Binding SelectedPreviewFilter, Mode=TwoWay}" AutomationProperties.Name="Preview filter" />
+                  <controls:LocalizedFormatTextBlock
+                      Classes="summary-label"
+                      ResourceKey="Ingest.Summary.AlbumCount"
+                      UseCountVariant="True"
+                      Value="{Binding AlbumCount}" />
+                  <controls:LocalizedFormatTextBlock
+                      Grid.Column="1"
+                      Classes="summary-label"
+                      ResourceKey="Ingest.Summary.OutputCount"
+                      UseCountVariant="True"
+                      Value="{Binding OutputCount}" />
+                  <controls:LocalizedFormatTextBlock
+                      Grid.Column="2"
+                      Classes="summary-label"
+                      ResourceKey="Ingest.Summary.ConflictCount"
+                      UseCountVariant="True"
+                      Value="{Binding ConflictCount}" />
+                  <controls:LocalizedFormatTextBlock
+                      Grid.Column="3"
+                      Classes="summary-label"
+                      ResourceKey="Ingest.Summary.CleanupCount"
+                      UseCountVariant="True"
+                      Value="{Binding CleanupCount}" />
+                <ComboBox Grid.Column="5" Classes="app"
+                          ItemsSource="{Binding PreviewFilterChoices}"
+                          SelectedValue="{Binding SelectedPreviewFilter, Mode=TwoWay}"
+                          SelectedValueBinding="{Binding Value}"
+                          DisplayMemberBinding="{Binding Label}"
+                          AutomationProperties.Name="{DynamicResource Loc.Ingest.PreviewFilterAutomation}" />
             </Grid>
             <Grid Grid.Row="1">
               <controls:AppDataGrid x:Name="PreviewGrid" ItemsSource="{Binding Files}" />
               <Border Margin="0,39,0,0" Padding="10" Background="{DynamicResource AppRaisedBrush}"
                       IsVisible="{Binding IsPreviewEmpty}">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6" MaxWidth="420">
-                  <TextBlock HorizontalAlignment="Center" FontWeight="SemiBold" Text="Nothing to review yet" />
+                    <TextBlock HorizontalAlignment="Center" FontWeight="SemiBold" Text="{DynamicResource Loc.Ingest.Empty.Title}" />
                   <TextBlock x:Name="PreviewEmptyDescription" Classes="muted" TextAlignment="Center" TextWrapping="Wrap"
-                             Text="Choose an incoming folder and run Preview to see albums, outputs, conflicts, and cleanup." />
+                               Text="{DynamicResource Loc.Ingest.Empty.Description}" />
                 </StackPanel>
               </Border>
             </Grid>
           </Grid>
         </TabItem>
-        <TabItem Header="History">
+        <TabItem Header="{DynamicResource Loc.Ingest.Tab.History}">
           <Grid RowDefinitions="Auto,*" RowSpacing="10" Margin="0,12,0,0">
-            <WrapPanel><Button Classes="app" Margin="0,0,8,6" Content="Refresh history" Command="{Binding RefreshHistoryCommand}" /><Button Classes="app" Margin="0,0,8,6" Content="Open in Recovery" Command="{Binding OpenHistoryCommand}" /><TextBlock Classes="muted" Margin="0,0,0,6" VerticalAlignment="Center" Text="{Binding HistoryStatus}" /></WrapPanel>
+            <WrapPanel>
+              <Button Classes="app" Margin="0,0,8,6" Content="{DynamicResource Loc.Ingest.Action.RefreshHistory}" Command="{Binding RefreshHistoryCommand}" />
+              <Button Classes="app" Margin="0,0,8,6" Content="{DynamicResource Loc.Ingest.Action.OpenRecovery}" Command="{Binding OpenHistoryCommand}" />
+              <StackPanel Margin="0,0,0,6" VerticalAlignment="Center" Spacing="2">
+                <TextBlock Classes="muted" Text="{Binding HistoryStatus}" />
+                <TextBlock Classes="faint"
+                           Text="{Binding HistoryDiagnosticDetail}"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding HasHistoryDiagnosticDetail}" />
+              </StackPanel>
+            </WrapPanel>
             <Grid Grid.Row="1">
               <ListBox ItemsSource="{Binding History}" SelectedItem="{Binding SelectedHistory, Mode=TwoWay}"
                        Background="Transparent" BorderThickness="0">
@@ -87,9 +155,9 @@
               </ListBox>
               <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6"
                           IsVisible="{Binding IsHistoryEmpty}" MaxWidth="420">
-                <TextBlock HorizontalAlignment="Center" FontWeight="SemiBold" Text="No ingest runs found" />
+                  <TextBlock HorizontalAlignment="Center" FontWeight="SemiBold" Text="{DynamicResource Loc.Ingest.History.EmptyTitle}" />
                 <TextBlock x:Name="HistoryEmptyDescription" Classes="muted" TextAlignment="Center" TextWrapping="Wrap"
-                           Text="Choose a source folder, then refresh to discover journaled and interrupted ingest runs." />
+                             Text="{DynamicResource Loc.Ingest.History.EmptyDescription}" />
               </StackPanel>
             </Grid>
           </Grid>

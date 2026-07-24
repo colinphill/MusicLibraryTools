@@ -11,12 +11,17 @@ public partial class ShellViewModel : ObservableObject
     private readonly IAppSettings _settings;
     private readonly INavigationService _navigation;
     private readonly IActivityService _activities;
+    private readonly ILocalizationService? _localization;
 
     [ObservableProperty]
-    private string _configurationName = "Choose a library";
+    private string _configurationName =
+        LocalizedText.Get(
+            "Shell.ChooseLibrary");
 
     [ObservableProperty]
-    private string _activityText = "Ready";
+    private string _activityText =
+        LocalizedText.Get(
+            "Shell.Activity.Ready");
 
     [ObservableProperty]
     private bool _hasRunningActivity;
@@ -30,21 +35,31 @@ public partial class ShellViewModel : ObservableObject
     [ObservableProperty]
     private string? _globalSearchText;
 
-    public ShellViewModel(IAppSettings settings, INavigationService navigation, IActivityService activities)
+    public ShellViewModel(
+        IAppSettings settings,
+        INavigationService navigation,
+        IActivityService activities,
+        ILocalizationService? localization = null)
     {
         _settings = settings;
         _navigation = navigation;
         _activities = activities;
+        _localization = localization;
         RecentConfigurations = new ObservableCollection<string>(settings.RecentConfigPaths);
         settings.ConfigurationChanged += (_, _) => RefreshConfiguration();
         activities.Changed += RefreshActivity;
+        if (_localization is not null)
+            _localization.CultureChanged +=
+                OnCultureChanged;
         RefreshConfiguration();
         RefreshActivity();
     }
 
     public ObservableCollection<string> RecentConfigurations { get; }
     public ReadOnlyObservableCollection<AppActivity> Activities => _activities.Activities;
-    public string ActivityTitle => VisibleActivity?.Title ?? "Activity";
+    public string ActivityTitle =>
+        VisibleActivity?.Title ??
+        Text("Shell.Activity.Title");
     public bool CanOpenHealth => _settings.Configuration is not null;
     public bool CanOpenIngest => _settings.Configuration is { } configuration &&
         (configuration.ActiveProfile.Preset == LibraryProfilePreset.LegacyMusicLibraryTools ||
@@ -74,10 +89,14 @@ public partial class ShellViewModel : ObservableObject
     public bool ActivityIsError => VisibleActivity?.State == AppActivityState.Failed;
     public string ActivityStateText => VisibleActivity?.State switch
     {
-        AppActivityState.Completed => "Completed",
-        AppActivityState.Failed => "Failed",
-        AppActivityState.Cancelled => "Cancelled",
-        _ => "In progress",
+        AppActivityState.Completed =>
+            Text("Shell.Activity.State.Completed"),
+        AppActivityState.Failed =>
+            Text("Shell.Activity.State.Failed"),
+        AppActivityState.Cancelled =>
+            Text("Shell.Activity.State.Cancelled"),
+        _ => Text(
+            "Shell.Activity.State.InProgress"),
     };
 
     public void RestoreConfiguration()
@@ -91,7 +110,8 @@ public partial class ShellViewModel : ObservableObject
         }
         catch
         {
-            ConfigurationName = "Configuration needs attention";
+            ConfigurationName = Text(
+                "Shell.ConfigurationNeedsAttention");
         }
     }
 
@@ -136,7 +156,7 @@ public partial class ShellViewModel : ObservableObject
     {
         ConfigurationName = _settings.ConfigPath is { } configPath
             ? Path.GetFileNameWithoutExtension(configPath)
-            : "Choose a library";
+            : Text("Shell.ChooseLibrary");
         RecentConfigurations.Clear();
         foreach (string recentPath in _settings.RecentConfigPaths)
             RecentConfigurations.Add(recentPath);
@@ -152,7 +172,8 @@ public partial class ShellViewModel : ObservableObject
         HasRunningActivity = current is not null;
         VisibleActivity = current ?? _activities.Activities.FirstOrDefault();
         HasVisibleActivity = VisibleActivity is not null;
-        ActivityText = VisibleActivity?.Message ?? "Ready";
+        ActivityText = VisibleActivity?.Message ??
+            Text("Shell.Activity.Ready");
         OnPropertyChanged(nameof(ActivityTitle));
         OnPropertyChanged(nameof(ActivityProgress));
         OnPropertyChanged(nameof(HasDeterminateActivityProgress));
@@ -168,5 +189,17 @@ public partial class ShellViewModel : ObservableObject
         OpenActivityCommand.NotifyCanExecuteChanged();
         CancelActivityCommand.NotifyCanExecuteChanged();
         DismissActivityCommand.NotifyCanExecuteChanged();
+    }
+
+    private string Text(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private void OnCultureChanged(
+        object? sender,
+        EventArgs e)
+    {
+        RefreshConfiguration();
+        RefreshActivity();
     }
 }

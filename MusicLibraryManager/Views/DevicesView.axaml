@@ -3,25 +3,39 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:MusicLibraryManager.Controls">
   <Grid Margin="26,22,26,26" RowDefinitions="Auto,Auto,*" RowSpacing="14">
-    <controls:PageHeader Title="Devices"
-        Subtitle="Mirror a local music folder into a verified, managed Android destination over ADB.">
+    <controls:PageHeader Title="{DynamicResource Loc.Devices.Title}"
+        Subtitle="{DynamicResource Loc.Devices.Subtitle}">
       <controls:PageHeader.Actions>
         <WrapPanel>
-          <Button Classes="app" Content="Initialize" Command="{Binding InitializeCommand}" />
-          <Button Classes="app" Margin="8,0,0,0" Content="Preview" Command="{Binding PreviewCommand}" />
-          <Button Classes="app primary" Margin="8,0,0,0" Content="Apply" Command="{Binding ApplyCommand}" />
-          <Button x:Name="RestoreButton" Classes="app" Margin="8,0,0,0" Content="Restore" Command="{Binding RestoreCommand}" />
-          <Button Classes="app" Margin="8,0,0,0" Content="Cancel" Command="{Binding CancelCommand}" />
+          <Button Classes="app" Content="{DynamicResource Loc.Devices.Action.Initialize}" Command="{Binding InitializeCommand}" />
+          <Button Classes="app" Margin="8,0,0,0" Content="{DynamicResource Loc.Common.Preview}" Command="{Binding PreviewCommand}" />
+          <Button Classes="app primary" Margin="8,0,0,0" Content="{DynamicResource Loc.Common.Apply}" Command="{Binding ApplyCommand}" />
+          <Button x:Name="RestoreButton" Classes="app" Margin="8,0,0,0" Content="{DynamicResource Loc.Devices.Action.Restore}" Command="{Binding RestoreCommand}" />
+          <Button Classes="app"
+                  Margin="8,0,0,0"
+                  Content="{DynamicResource Loc.Common.Cancel}"
+                  Command="{Binding CancelCommand}"
+                  IsVisible="{Binding IsBusy}" />
         </WrapPanel>
       </controls:PageHeader.Actions>
     </controls:PageHeader>
 
     <Border Grid.Row="1" Classes="status-banner info" AutomationProperties.LiveSetting="Polite">
       <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-        <TextBlock Classes="status-icon" Text="i" AutomationProperties.Name="Information" />
-        <TextBlock Grid.Column="1" Text="{Binding StatusText}" TextWrapping="Wrap" />
-        <TextBlock Grid.Column="2" Classes="summary-label"
-                   Text="{Binding Actions.Count, StringFormat={}{0} planned}" />
+        <TextBlock Classes="status-icon" Text="i" AutomationProperties.Name="{DynamicResource Loc.Devices.InformationAutomation}" />
+        <StackPanel Grid.Column="1" Spacing="2">
+          <TextBlock Text="{Binding StatusText}" TextWrapping="Wrap" />
+          <TextBlock Classes="faint"
+                     Text="{Binding DiagnosticDetail}"
+                     TextWrapping="Wrap"
+                     IsVisible="{Binding HasDiagnosticDetail}" />
+        </StackPanel>
+        <controls:LocalizedFormatTextBlock
+            Grid.Column="2"
+            Classes="summary-label"
+            ResourceKey="Devices.PlannedCount"
+            UseCountVariant="True"
+            Value="{Binding Actions.Count}" />
       </Grid>
     </Border>
 
@@ -31,13 +45,13 @@
                     IsEnabled="{Binding IsConfigurationEnabled}">
           <Border Classes="card">
             <StackPanel Spacing="8">
-              <TextBlock Classes="section-title" Text="Mirror profile" />
-              <TextBlock Classes="muted" Text="Android device" FontSize="12" FontWeight="SemiBold" />
+              <TextBlock Classes="section-title" Text="{DynamicResource Loc.Devices.MirrorProfile}" />
+              <TextBlock Classes="muted" Text="{DynamicResource Loc.Devices.AndroidDevice}" FontSize="12" FontWeight="SemiBold" />
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                 <ComboBox x:Name="DeviceSelector" Classes="app"
                           ItemsSource="{Binding AvailableDevices}"
                           SelectedItem="{Binding SelectedDevice, Mode=TwoWay}"
-                          AutomationProperties.Name="Android device">
+                          AutomationProperties.Name="{DynamicResource Loc.Devices.AndroidDevice}">
                   <ComboBox.ItemTemplate>
                     <DataTemplate>
                       <StackPanel Spacing="1">
@@ -48,18 +62,22 @@
                   </ComboBox.ItemTemplate>
                 </ComboBox>
                 <Button x:Name="RefreshDevicesButton" Grid.Column="1" Classes="app"
-                        Content="Refresh" Command="{Binding RefreshDevicesCommand}"
-                        AutomationProperties.Name="Refresh Android devices" />
+                        Content="{DynamicResource Loc.Common.Refresh}" Command="{Binding RefreshDevicesCommand}"
+                        AutomationProperties.Name="{DynamicResource Loc.Devices.RefreshAutomation}" />
               </Grid>
               <ProgressBar Classes="app" IsIndeterminate="True" IsVisible="{Binding IsLoadingDevices}"
-                           AutomationProperties.Name="Discovering Android devices" />
+                           AutomationProperties.Name="{DynamicResource Loc.Devices.DiscoveringAutomation}" />
               <Border Classes="status-banner error" IsVisible="{Binding HasDeviceEnumerationError}"
                       AutomationProperties.LiveSetting="Polite">
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                   <TextBlock Classes="status-icon" Text="!" />
                   <StackPanel Grid.Column="1" Spacing="2">
-                    <TextBlock Text="Device discovery failed" FontWeight="SemiBold" />
+                    <TextBlock Text="{DynamicResource Loc.Devices.DeviceDiscoveryFailed}" FontWeight="SemiBold" />
                     <TextBlock Text="{Binding DeviceEnumerationError}" TextWrapping="Wrap" />
+                    <TextBlock Classes="faint"
+                               Text="{Binding DeviceEnumerationDiagnosticDetail}"
+                               TextWrapping="Wrap"
+                               IsVisible="{Binding HasDeviceEnumerationDiagnosticDetail}" />
                   </StackPanel>
                 </Grid>
               </Border>
@@ -67,7 +85,7 @@
                       AutomationProperties.LiveSetting="Polite">
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                   <TextBlock Classes="status-icon" Text="i" />
-                  <TextBlock Grid.Column="1" Text="No Android devices were reported by ADB. Connect a device or enter its serial manually."
+                  <TextBlock Grid.Column="1" Text="{DynamicResource Loc.Devices.NoDevices}"
                              TextWrapping="Wrap" />
                 </Grid>
               </Border>
@@ -76,7 +94,7 @@
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                   <TextBlock Classes="status-icon" Text="!" />
                   <TextBlock Grid.Column="1"
-                             Text="More than one ready device is connected. Choose one above or enter a device serial before synchronizing."
+                             Text="{DynamicResource Loc.Devices.MultipleReady}"
                              TextWrapping="Wrap" />
                 </Grid>
               </Border>
@@ -84,37 +102,37 @@
                       AutomationProperties.LiveSetting="Polite">
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                   <TextBlock Classes="status-icon" Text="!" />
-                  <TextBlock Grid.Column="1" Text="This device is unavailable. Authorize or reconnect it, then refresh before synchronizing."
+                  <TextBlock Grid.Column="1" Text="{DynamicResource Loc.Devices.Unavailable}"
                              TextWrapping="Wrap" />
                 </Grid>
               </Border>
               <StackPanel Spacing="4" IsVisible="{Binding IsManualDeviceSelected}">
-                <TextBlock Classes="muted" Text="Device serial (optional)" FontSize="12" FontWeight="SemiBold" />
+                <TextBlock Classes="muted" Text="{DynamicResource Loc.Devices.DeviceSerialOptional}" FontSize="12" FontWeight="SemiBold" />
                 <TextBox x:Name="ManualDeviceSerial" Classes="app" Text="{Binding DeviceSerial, Mode=TwoWay}"
-                         PlaceholderText="Auto-select the only ready device"
-                         AutomationProperties.Name="Device serial" />
+                         PlaceholderText="{DynamicResource Loc.Devices.DeviceSerialPlaceholder}"
+                         AutomationProperties.Name="{DynamicResource Loc.Devices.DeviceSerial}" />
               </StackPanel>
-              <TextBlock Classes="muted" Text="Local source" FontSize="12" FontWeight="SemiBold" />
+              <TextBlock Classes="muted" Text="{DynamicResource Loc.Devices.LocalSource}" FontSize="12" FontWeight="SemiBold" />
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <TextBox Classes="app" Text="{Binding SourcePath, Mode=TwoWay}" PlaceholderText="Local music folder" AutomationProperties.Name="Local music source folder" />
-                <Button Grid.Column="1" Classes="app" Content="Browse" Command="{Binding BrowseSourceCommand}" />
+                <TextBox Classes="app" Text="{Binding SourcePath, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Devices.LocalSourcePlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Devices.LocalSourceAutomation}" />
+                <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Common.Browse}" Command="{Binding BrowseSourceCommand}" />
               </Grid>
-              <TextBlock Classes="muted" Text="Android destination" FontSize="12" FontWeight="SemiBold" />
+              <TextBlock Classes="muted" Text="{DynamicResource Loc.Devices.AndroidDestination}" FontSize="12" FontWeight="SemiBold" />
               <TextBox Classes="app" Text="{Binding DestinationPath, Mode=TwoWay}"
-                       PlaceholderText="music or /storage/…/Music" AutomationProperties.Name="Android destination" />
+                       PlaceholderText="music or /storage/…/Music" AutomationProperties.Name="{DynamicResource Loc.Devices.AndroidDestination}" />
               <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                         Text="The ‘music’ alias selects removable SD storage only. Use /sdcard/Music for internal shared storage." />
-              <TextBlock Classes="muted" Text="ADB executable override (optional)" FontSize="12" FontWeight="SemiBold" />
+                         Text="{DynamicResource Loc.Devices.DestinationAliasDescription}" />
+              <TextBlock Classes="muted" Text="{DynamicResource Loc.Devices.AdbOverride}" FontSize="12" FontWeight="SemiBold" />
               <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <TextBox Classes="app" Text="{Binding AdbPath, Mode=TwoWay}" PlaceholderText="Auto-detect adb" AutomationProperties.Name="ADB executable override" />
-                <Button Grid.Column="1" Classes="app" Content="Browse" Command="{Binding BrowseAdbCommand}" />
+                <TextBox Classes="app" Text="{Binding AdbPath, Mode=TwoWay}" PlaceholderText="{DynamicResource Loc.Devices.AdbOverridePlaceholder}" AutomationProperties.Name="{DynamicResource Loc.Devices.AdbOverrideAutomation}" />
+                <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Common.Browse}" Command="{Binding BrowseAdbCommand}" />
               </Grid>
               <Border Classes="status-banner warning">
                 <StackPanel Spacing="5">
-                  <TextBlock FontWeight="SemiBold" Text="Existing destination" />
-                  <CheckBox Content="Adopt an existing non-empty destination" IsChecked="{Binding Adopt, Mode=TwoWay}" />
+                  <TextBlock FontWeight="SemiBold" Text="{DynamicResource Loc.Devices.ExistingDestination}" />
+                  <CheckBox Content="{DynamicResource Loc.Devices.AdoptExisting}" IsChecked="{Binding Adopt, Mode=TwoWay}" />
                   <TextBlock Classes="muted" TextWrapping="Wrap"
-                             Text="Adoption trusts the current destination contents and includes them in the first synchronization preview." />
+                             Text="{DynamicResource Loc.Devices.AdoptDescription}" />
                 </StackPanel>
               </Border>
             </StackPanel>
@@ -122,31 +140,31 @@
 
           <Border Classes="card">
             <StackPanel Spacing="8">
-              <TextBlock Classes="section-title" Text="Policy" />
+              <TextBlock Classes="section-title" Text="{DynamicResource Loc.Devices.Policy}" />
               <Border Classes="status-banner warning">
                 <StackPanel Spacing="6">
-                  <TextBlock FontWeight="SemiBold" Text="Deletion and recovery" />
-                  <CheckBox Content="Delete destination-only entries" IsChecked="{Binding DeleteExtras, Mode=TwoWay}" />
-                  <CheckBox Content="Direct transfer (advanced; no staging or recovery)" IsChecked="{Binding Direct, Mode=TwoWay}" />
+                  <TextBlock FontWeight="SemiBold" Text="{DynamicResource Loc.Devices.DeletionRecovery}" />
+                  <CheckBox Content="{DynamicResource Loc.Devices.DeleteExtras}" IsChecked="{Binding DeleteExtras, Mode=TwoWay}" />
+                  <CheckBox Content="{DynamicResource Loc.Devices.DirectTransfer}" IsChecked="{Binding Direct, Mode=TwoWay}" />
                   <TextBlock Classes="muted" TextWrapping="Wrap"
-                             Text="Direct transfer is faster but cannot be restored. Preview and review the final confirmation carefully." />
+                             Text="{DynamicResource Loc.Devices.DirectTransferDescription}" />
                 </StackPanel>
               </Border>
               <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                 <StackPanel Spacing="4">
-                  <TextBlock Classes="muted" Text="Maximum removals" FontSize="12" FontWeight="SemiBold" />
-                  <NumericUpDown Classes="app" Minimum="0" Value="{Binding MaxRemovals, Mode=TwoWay}" AutomationProperties.Name="Maximum removals" />
+                  <TextBlock Classes="muted" Text="{DynamicResource Loc.Devices.MaximumRemovals}" FontSize="12" FontWeight="SemiBold" />
+                  <NumericUpDown Classes="app" Minimum="0" Value="{Binding MaxRemovals, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Devices.MaximumRemovals}" />
                   <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                             Text="Blank allows any number; 0 allows none." />
+                             Text="{DynamicResource Loc.Devices.MaximumRemovalsDescription}" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Spacing="4">
-                  <TextBlock Classes="muted" Text="Mtime tolerance (sec)" FontSize="12" FontWeight="SemiBold" />
-                  <NumericUpDown Classes="app" Minimum="0" Value="{Binding MtimeToleranceSeconds, Mode=TwoWay}" AutomationProperties.Name="Modification time tolerance in seconds" />
+                  <TextBlock Classes="muted" Text="{DynamicResource Loc.Devices.MtimeTolerance}" FontSize="12" FontWeight="SemiBold" />
+                  <NumericUpDown Classes="app" Minimum="0" Value="{Binding MtimeToleranceSeconds, Mode=TwoWay}" AutomationProperties.Name="{DynamicResource Loc.Devices.MtimeToleranceAutomation}" />
                 </StackPanel>
               </Grid>
-              <TextBlock Classes="muted" Text="Exclusion globs (one per line)" FontSize="12" FontWeight="SemiBold" />
+              <TextBlock Classes="muted" Text="{DynamicResource Loc.Devices.ExclusionGlobs}" FontSize="12" FontWeight="SemiBold" />
               <TextBox Classes="app" Text="{Binding Exclusions, Mode=TwoWay}" AcceptsReturn="True"
-                       MinHeight="88" PlaceholderText="**/*.tmp" AutomationProperties.Name="Exclusion globs" />
+                       MinHeight="88" PlaceholderText="**/*.tmp" AutomationProperties.Name="{DynamicResource Loc.Devices.ExclusionGlobsAutomation}" />
             </StackPanel>
           </Border>
         </StackPanel>
@@ -159,7 +177,10 @@
               <Border Classes="status-banner info" Margin="0,0,0,6" AutomationProperties.LiveSetting="Polite">
                 <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
                   <TextBlock Classes="status-icon" Text="i" />
-                  <TextBlock Grid.Column="1" Text="{Binding Message}" TextWrapping="Wrap" />
+                  <StackPanel Grid.Column="1" Spacing="2">
+                    <TextBlock Text="{Binding Message}" TextWrapping="Wrap" />
+                    <TextBlock Classes="faint" Text="{Binding DiagnosticDetail}" TextWrapping="Wrap" />
+                  </StackPanel>
                 </Grid>
               </Border>
             </DataTemplate>
@@ -170,9 +191,9 @@
             <controls:AppDataGrid x:Name="ActionsGrid" ItemsSource="{Binding Actions}" />
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6"
                         IsVisible="{Binding IsActionListEmpty}" MaxWidth="420">
-              <TextBlock HorizontalAlignment="Center" FontWeight="SemiBold" Text="No synchronization actions" />
+              <TextBlock HorizontalAlignment="Center" FontWeight="SemiBold" Text="{DynamicResource Loc.Devices.NoActions.Title}" />
               <TextBlock Classes="muted" TextAlignment="Center" TextWrapping="Wrap"
-                         Text="Configure the destination and run Preview to compare it with the local source." />
+                         Text="{DynamicResource Loc.Devices.NoActions.Description}" />
             </StackPanel>
           </Grid>
         </Border>

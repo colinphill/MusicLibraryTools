@@ -1,0 +1,81 @@
+<UserControl x:Class="MusicLibraryManager.Views.WorkbenchSections.WorkbenchPendingChangesDrawerView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:MusicLibraryManager.Controls">
+  <Grid x:Name="WorkbenchPendingChangesLayout"
+        Margin="12,10,10,12"
+        RowDefinitions="Auto,Auto,*,Auto"
+        RowSpacing="10">
+    <Grid ColumnDefinitions="*,Auto">
+      <StackPanel Spacing="2">
+        <TextBlock Text="{DynamicResource Loc.Workbench.PendingChanges.Title}"
+                   FontSize="16"
+                   FontWeight="SemiBold" />
+        <TextBlock x:Name="SupportingText"
+                   Classes="muted"
+                   Text="{DynamicResource Loc.Workbench.PendingChanges.Description}"
+                   TextWrapping="Wrap" />
+      </StackPanel>
+      <Button x:Name="WorkbenchPendingChangesCloseButton"
+              Grid.Column="1"
+              Classes="app"
+              Width="30"
+              Height="30"
+              Padding="0"
+              Content="&#x2715;"
+              ToolTip.Tip="{DynamicResource Loc.Workbench.PendingChanges.Close}"
+              AutomationProperties.Name="{DynamicResource Loc.Workbench.PendingChanges.Close}"
+              Click="OnClose" />
+    </Grid>
+
+    <controls:LocalizedFormatTextBlock
+        Grid.Row="1"
+        Classes="summary-label"
+        ResourceKey="Workbench.PendingChanges.Count"
+        UseCountVariant="True"
+        Value="{Binding PendingChanges.Count}" />
+
+    <Grid Grid.Row="2">
+      <controls:AppDataGrid
+          x:Name="WorkbenchPendingChangesGrid"
+          MinHeight="180"
+          ItemsSource="{Binding PendingChanges}"
+          AutomationProperties.Name="{DynamicResource Loc.Workbench.PendingChanges.GridAutomation}" />
+      <Border Background="{DynamicResource AppInsetBrush}"
+              IsVisible="{Binding !PendingChanges.Count}">
+        <StackPanel HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Spacing="6">
+          <TextBlock FontWeight="SemiBold"
+                     Text="{DynamicResource Loc.Workbench.PendingChanges.EmptyTitle}" />
+          <TextBlock Classes="muted"
+                     Text="{DynamicResource Loc.Workbench.PendingChanges.EmptyDescription}"
+                     TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <Grid Grid.Row="3"
+          ColumnDefinitions="*,Auto,Auto"
+          ColumnSpacing="8">
+      <TextBlock x:Name="StatusText"
+                 Classes="muted"
+                 VerticalAlignment="Center"
+                 Text="{Binding StatusText}"
+                 ToolTip.Tip="{Binding StatusDiagnosticDetail}"
+                 TextTrimming="CharacterEllipsis" />
+      <Button x:Name="WorkbenchRevertPendingChangesButton"
+              Grid.Column="1"
+              Classes="app"
+              Content="{DynamicResource Loc.Workbench.Action.Revert}"
+              ToolTip.Tip="{DynamicResource Loc.Workbench.PendingChanges.RevertTooltip}"
+              Command="{Binding RevertPendingChangesCommand}" />
+      <Button x:Name="WorkbenchApplyPendingChangesButton"
+              Grid.Column="2"
+              Classes="app primary"
+              Content="{DynamicResource Loc.Common.Apply}"
+              ToolTip.Tip="{DynamicResource Loc.Workbench.PendingChanges.ApplyTooltip}"
+              Command="{Binding ApplyCommand}" />
+    </Grid>
+  </Grid>
+</UserControl>

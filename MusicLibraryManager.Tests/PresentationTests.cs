@@ -1692,7 +1692,7 @@ public sealed class PresentationTests
         await viewModel.BrowseFfmpegCommand.ExecuteAsync(null);
 
         Assert.Equal("/usr/local/bin/ffmpeg", viewModel.FfmpegPath);
-        Assert.Equal("Choose ffmpeg executable", picker.LastPickTitle);
+        Assert.Equal("Choose FFmpeg executable", picker.LastPickTitle);
         Assert.Null(picker.LastPickTypes);
     }
 

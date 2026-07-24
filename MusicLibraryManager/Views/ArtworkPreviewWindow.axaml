@@ -20,10 +20,10 @@
       <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
         <StackPanel VerticalAlignment="Center" Spacing="2">
           <TextBlock x:Name="PreviewDetails" Classes="muted" TextWrapping="Wrap" />
-          <TextBlock Classes="faint" FontSize="12" Text="Scroll to inspect the image at full resolution. Press Esc to close." />
+      <TextBlock Classes="faint" FontSize="12" Text="{DynamicResource Loc.ArtworkPreview.Instructions}" />
         </StackPanel>
-        <Button Grid.Column="1" Classes="app" Content="Close" Click="OnClose"
-                AutomationProperties.Name="Close artwork preview" />
+      <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.ArtworkPreview.Close}" Click="OnClose"
+              AutomationProperties.Name="{DynamicResource Loc.ArtworkPreview.CloseAutomation}" />
       </Grid>
     </Border>
   </Grid>

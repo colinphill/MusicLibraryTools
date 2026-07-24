@@ -680,7 +680,7 @@ public sealed class AnalyzerViewModelTests
         Assert.Equal("Canoncial", call.From);
         Assert.Equal("Canonical", call.To);
         Assert.Equal(typo.Files.Select(file => file.Path), call.Paths);
-        Assert.Contains("2 track(s)", dialogs.Message);
+        Assert.Contains("2 tracks", dialogs.Message);
         Assert.Contains("no recovery journal", dialogs.Message);
         Assert.True(typo.IsApplied);
         Assert.Equal(AnalysisRepairDisposition.Completed, typo.Disposition);

@@ -426,6 +426,41 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
     [ObservableProperty]
     private MetadataOperationDescriptor? _selectedOperation;
 
+    public bool ShowDestinationField =>
+        SelectedOperation?.Kind is
+            MetadataOperationKind.Copy or
+            MetadataOperationKind.Combine;
+    public bool ShowSecondaryField =>
+        SelectedOperation?.Kind ==
+        MetadataOperationKind.Combine;
+    public bool ShowValue =>
+        SelectedOperation?.Kind ==
+        MetadataOperationKind.Assign;
+    public bool ShowTextReplacement =>
+        SelectedOperation?.Kind ==
+        MetadataOperationKind.ReplaceText;
+    public bool ShowCase =>
+        SelectedOperation?.Kind ==
+        MetadataOperationKind.ChangeCase;
+    public bool ShowSeparator =>
+        SelectedOperation?.Kind is
+            MetadataOperationKind.Combine or
+            MetadataOperationKind.Split or
+            MetadataOperationKind.Join;
+    public bool ShowRegularExpression =>
+        SelectedOperation?.Kind is
+            MetadataOperationKind.ReplaceText or
+            MetadataOperationKind.Split;
+    public bool ShowSequence =>
+        SelectedOperation?.Kind ==
+        MetadataOperationKind.Sequence;
+    public bool ShowValueOrder =>
+        SelectedOperation?.Kind ==
+        MetadataOperationKind.Reorder;
+    public bool ShowPathExtraction =>
+        SelectedOperation?.Kind ==
+        MetadataOperationKind.ExtractPathComponent;
+
     [ObservableProperty]
     private MetadataFieldChoice? _selectedField;
 
@@ -501,6 +536,21 @@ public partial class MetadataOperationEditorViewModel : ObservableObject
     private MetadataRecipeStepViewModel? _selectedStep;
 
     public bool CanCreate => SelectedOperation is not null && SelectedField is not null;
+
+    partial void OnSelectedOperationChanged(
+        MetadataOperationDescriptor? value)
+    {
+        OnPropertyChanged(nameof(ShowDestinationField));
+        OnPropertyChanged(nameof(ShowSecondaryField));
+        OnPropertyChanged(nameof(ShowValue));
+        OnPropertyChanged(nameof(ShowTextReplacement));
+        OnPropertyChanged(nameof(ShowCase));
+        OnPropertyChanged(nameof(ShowSeparator));
+        OnPropertyChanged(nameof(ShowRegularExpression));
+        OnPropertyChanged(nameof(ShowSequence));
+        OnPropertyChanged(nameof(ShowValueOrder));
+        OnPropertyChanged(nameof(ShowPathExtraction));
+    }
 
     public OperationRecipe CreateRecipe(string? name = null)
     {

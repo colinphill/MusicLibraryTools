@@ -32,7 +32,8 @@ public sealed record WorkbenchShortcutRow(
     public string Gesture => Binding.Gesture;
     public string Target => Binding.TargetLabel ??
         Binding.Command?.ToString() ??
-        "Recipe";
+        LocalizedText.Get(
+            "Workbench.Shortcuts.Target.Recipe");
 }
 
 public static class WorkbenchShortcutGestureParser
@@ -56,8 +57,8 @@ public static class WorkbenchShortcutGestureParser
                 StringSplitOptions.TrimEntries);
         if (parts.Length < 2)
         {
-            error =
-                "Use at least one modifier plus a key, such as Ctrl+Shift+P.";
+            error = LocalizedText.Get(
+                "Workbench.Shortcuts.Validation.ModifierAndKeyExample");
             return false;
         }
         WorkbenchShortcutModifiers modifiers =
@@ -82,7 +83,9 @@ public static class WorkbenchShortcutGestureParser
             {
                 if (modifiers.HasFlag(modifier))
                 {
-                    error = $"Modifier '{part}' is repeated.";
+                    error = LocalizedText.Format(
+                        "Workbench.Shortcuts.Validation.RepeatedModifier",
+                        part);
                     return false;
                 }
                 modifiers |= modifier;
@@ -90,7 +93,8 @@ public static class WorkbenchShortcutGestureParser
             }
             if (key is not null)
             {
-                error = "A shortcut can contain only one non-modifier key.";
+                error = LocalizedText.Get(
+                    "Workbench.Shortcuts.Validation.OneKey");
                 return false;
             }
             key = part;
@@ -98,13 +102,14 @@ public static class WorkbenchShortcutGestureParser
         if (modifiers == WorkbenchShortcutModifiers.None ||
             string.IsNullOrWhiteSpace(key))
         {
-            error = "A modifier and a key are required.";
+            error = LocalizedText.Get(
+                "Workbench.Shortcuts.Validation.ModifierAndKeyRequired");
             return false;
         }
         if (!KeyName.IsMatch(key))
         {
-            error =
-                "Use an Avalonia key name such as P, Enter, Delete, or F8.";
+            error = LocalizedText.Get(
+                "Workbench.Shortcuts.Validation.KeyName");
             return false;
         }
         string display = BuildDisplay(modifiers, key);
@@ -145,7 +150,10 @@ public partial class WorkbenchShortcutEditorViewModel :
 
     private readonly IWorkbenchShortcutStore? _store;
     private readonly IOperationRecipeStore? _recipes;
+    private readonly ILocalizationService? _localization;
     private bool _loading;
+    private string? _statusKey;
+    private object?[] _statusArguments = [];
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveShortcutCommand))]
@@ -167,50 +175,35 @@ public partial class WorkbenchShortcutEditorViewModel :
 
     public WorkbenchShortcutEditorViewModel(
         IWorkbenchShortcutStore? store = null,
-        IOperationRecipeStore? recipes = null)
+        IOperationRecipeStore? recipes = null,
+        ILocalizationService? localization = null)
     {
         _store = store;
         _recipes = recipes;
-        Commands =
-        [
-            new(WorkbenchShortcutCommand.AddFiles, "Add files"),
-            new(WorkbenchShortcutCommand.AddFolder, "Add folder"),
-            new(
-                WorkbenchShortcutCommand.PreviewInlineEdits,
-                "Preview inline edits"),
-            new(
-                WorkbenchShortcutCommand.PreviewCurrentRecipe,
-                "Preview current recipe"),
-            new(
-                WorkbenchShortcutCommand.ApplyReviewedChanges,
-                "Apply reviewed changes"),
-            new(
-                WorkbenchShortcutCommand.UndoLastApply,
-                "Undo last apply"),
-            new(WorkbenchShortcutCommand.Redo, "Redo"),
-            new(
-                WorkbenchShortcutCommand.RepeatLastRecipe,
-                "Repeat last recipe"),
-            new(
-                WorkbenchShortcutCommand.CancelCurrentOperation,
-                "Cancel current operation"),
-        ];
+        _localization = localization;
+        RefreshLocalizedChoices();
         SelectedCommand = Commands[0];
         ReloadRecipes();
         ReloadBindings();
         if (_recipes is not null)
             _recipes.Changed += (_, _) => ReloadRecipes();
+        if (_localization is not null)
+            _localization.CultureChanged +=
+                OnLocalizationCultureChanged;
     }
 
     public ObservableCollection<WorkbenchShortcutRow>
         Bindings { get; } = [];
     public ObservableCollection<OperationRecipe>
         Recipes { get; } = [];
-    public IReadOnlyList<WorkbenchShortcutCommandChoice>
-        Commands { get; }
+    public ObservableCollection<WorkbenchShortcutCommandChoice>
+        Commands { get; } = [];
     public IReadOnlyList<WorkbenchShortcutTargetKind>
         TargetKinds { get; } =
             Enum.GetValues<WorkbenchShortcutTargetKind>();
+    public ObservableCollection<
+        LocalizedChoice<WorkbenchShortcutTargetKind>>
+        TargetKindChoices { get; } = [];
 
     [RelayCommand]
     private void NewShortcut()
@@ -224,7 +217,7 @@ public partial class WorkbenchShortcutEditorViewModel :
                 WorkbenchShortcutTargetKind.Command;
             SelectedCommand = Commands[0];
             SelectedRecipe = Recipes.FirstOrDefault();
-            Status = "New unsaved shortcut.";
+            SetStatus("Workbench.Shortcuts.Status.New");
         }
         finally
         {
@@ -243,13 +236,18 @@ public partial class WorkbenchShortcutEditorViewModel :
                 out ParsedWorkbenchShortcut? gesture,
                 out string? error))
         {
-            Status = error ?? "The shortcut is invalid.";
+            Status = error ?? L(
+                "Workbench.Shortcuts.Validation.Invalid");
+            _statusKey = error is null
+                ? "Workbench.Shortcuts.Validation.Invalid"
+                : null;
             return;
         }
         if (ReservedGestures.Contains(gesture!.Display))
         {
-            Status =
-                $"{gesture.Display} is reserved by the application shell.";
+            SetStatus(
+                "Workbench.Shortcuts.Validation.Reserved",
+                gesture.Display);
             return;
         }
         WorkbenchShortcutRow? conflict = Bindings.FirstOrDefault(row =>
@@ -259,8 +257,10 @@ public partial class WorkbenchShortcutEditorViewModel :
                 StringComparison.OrdinalIgnoreCase));
         if (conflict is not null)
         {
-            Status =
-                $"{gesture.Display} is already assigned to {conflict.Target}.";
+            SetStatus(
+                "Workbench.Shortcuts.Validation.Conflict",
+                gesture.Display,
+                conflict.Target);
             return;
         }
         WorkbenchShortcutBinding binding;
@@ -287,7 +287,8 @@ public partial class WorkbenchShortcutEditorViewModel :
         }
         else
         {
-            Status = "Choose a shortcut target.";
+            SetStatus(
+                "Workbench.Shortcuts.Validation.ChooseTarget");
             return;
         }
         List<WorkbenchShortcutBinding> bindings =
@@ -300,7 +301,10 @@ public partial class WorkbenchShortcutEditorViewModel :
             bindings[index] = binding;
         _store.Save(bindings);
         ReloadBindings(binding.Id);
-        Status = $"Saved {binding.Gesture} for {binding.TargetLabel}.";
+        SetStatus(
+            "Workbench.Shortcuts.Status.Saved",
+            binding.Gesture,
+            binding.TargetLabel);
     }
 
     private bool CanSaveShortcut() =>
@@ -322,7 +326,9 @@ public partial class WorkbenchShortcutEditorViewModel :
             .ToArray());
         ReloadBindings();
         NewShortcut();
-        Status = $"Removed {gesture}.";
+        SetStatus(
+            "Workbench.Shortcuts.Status.Removed",
+            gesture);
     }
 
     private bool CanRemoveShortcut() =>
@@ -406,5 +412,65 @@ public partial class WorkbenchShortcutEditorViewModel :
             : Recipes.FirstOrDefault(recipe =>
                 recipe.Id == selected);
         SaveShortcutCommand.NotifyCanExecuteChanged();
+    }
+
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string LF(
+        string key,
+        params object?[] arguments) =>
+        _localization?.Format(key, arguments) ??
+        LocalizedText.Format(key, arguments);
+
+    private void SetStatus(
+        string key,
+        params object?[] arguments)
+    {
+        _statusKey = key;
+        _statusArguments = arguments;
+        Status = LF(key, arguments);
+    }
+
+    private void RefreshLocalizedChoices()
+    {
+        WorkbenchShortcutCommand? selected =
+            SelectedCommand?.Command;
+        Commands.Clear();
+        foreach (WorkbenchShortcutCommand command in
+                 Enum.GetValues<WorkbenchShortcutCommand>())
+            Commands.Add(new(
+                command,
+                L($"Workbench.Shortcuts.Command.{command}")));
+        if (selected is { } selectedCommand)
+            SelectedCommand = Commands.First(
+                choice =>
+                    choice.Command == selectedCommand);
+
+        foreach (WorkbenchShortcutTargetKind value in
+                 TargetKinds)
+        {
+            LocalizedChoice<WorkbenchShortcutTargetKind>?
+                choice = TargetKindChoices.FirstOrDefault(
+                    item => item.Value == value);
+            string label = L(
+                $"Workbench.Choice.ShortcutTargetKind.{value}");
+            if (choice is null)
+                TargetKindChoices.Add(new(value, label));
+            else
+                choice.Label = label;
+        }
+    }
+
+    private void OnLocalizationCultureChanged(
+        object? sender,
+        EventArgs e)
+    {
+        RefreshLocalizedChoices();
+        if (_statusKey is not null)
+            Status = LF(
+                _statusKey,
+                _statusArguments);
     }
 }

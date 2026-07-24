@@ -16,12 +16,20 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     private readonly IFilePickerService _files;
     private readonly IDialogCoordinator _dialogs;
     private readonly IThemeService _theme;
+    private readonly ILocalizationService _localization;
     private readonly ISecretStore _secrets;
     private readonly IMetadataFieldMappingService _fieldMappings;
     private EditableLibraryConfig _editing = EditableLibraryConfig.CreateNew();
     private bool _suppressDirty = true;
     private bool _refreshingSyncTargetChoices;
+    private bool _refreshingDisplayLanguage;
     private readonly HashSet<INotifyPropertyChanged> _trackedRows = [];
+    private string? _statusMessageKey;
+    private object?[] _statusMessageArguments = [];
+    private string? _discogsStatusKey;
+    private object?[] _discogsStatusArguments = [];
+    private string? _fieldMappingStatusKey;
+    private object?[] _fieldMappingStatusArguments = [];
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(EditCurrentConfigurationCommand))]
@@ -41,8 +49,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     [NotifyCanExecuteChangedFor(nameof(SaveDiscogsTokenCommand))]
     private string? _discogsToken;
     [ObservableProperty]
-    private string _discogsCredentialStatus =
-        "Checking secure credential storage...";
+    private string _discogsCredentialStatus = "";
     [ObservableProperty] private int _oversizedArtworkByteThreshold =
         LibraryArtworkHealthSettings.DefaultOversizedByteThreshold;
     [ObservableProperty] private int _oversizedArtworkDimensionThreshold =
@@ -60,14 +67,16 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     [ObservableProperty] private LibraryIngestProfile? _selectedIngestProfile;
     [ObservableProperty] private IngestProfileEditorRow? _advancedIngestProfile;
     [ObservableProperty] private SettingsRootChoice? _selectedSyncTargetRoot;
-    [ObservableProperty] private string _statusMessage = "Choose an existing configuration or create a new one.";
+    [ObservableProperty] private string _statusMessage = "";
     [ObservableProperty] private string _selectedTheme;
     [ObservableProperty] private ThemeChoice? _selectedThemeChoice;
+    [ObservableProperty]
+    private LocalizedChoice<string>?
+        _selectedDisplayLanguage;
     [ObservableProperty] private int _selectedTabIndex;
     [ObservableProperty] private bool _isGuidedSetupActive;
     [ObservableProperty]
-    private string _fieldMappingStatus =
-        "Mappings are personal application settings and apply to Workbench and Library edits.";
+    private string _fieldMappingStatus = "";
     [ObservableProperty] private int _validationTabIndex = 1;
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SaveConfigurationCommand))]
@@ -84,12 +93,15 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         IDialogCoordinator dialogs,
         IThemeService theme,
         ISecretStore? secrets = null,
-        IMetadataFieldMappingService? fieldMappings = null)
+        IMetadataFieldMappingService? fieldMappings = null,
+        ILocalizationService? localization = null)
     {
         _settings = settings;
         _files = files;
         _dialogs = dialogs;
         _theme = theme;
+        _localization = localization ??
+            new ResourceLocalizationService(settings);
         _secrets = secrets ?? new SessionSecretStore();
         _fieldMappings = fieldMappings ??
             new MetadataFieldMappingService(settings, MediaFormatRegistry.Default);
@@ -106,12 +118,20 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             settings.GetPreference(
                 ProviderNetworkPolicy.OfflinePreferenceKey),
             out bool offline) && offline;
+        RefreshLocalizedChoices();
         string? storedTheme = settings.GetPreference(ThemePreference);
-        ThemeChoice? storedChoice = ThemeChoices.FirstOrDefault(choice => choice.Name == storedTheme);
+        ThemeChoice? storedChoice = ThemeChoices.FirstOrDefault(choice =>
+            string.Equals(choice.Value, storedTheme, StringComparison.Ordinal));
         _selectedThemeChoice = storedChoice ?? ThemeChoices[0];
-        _selectedTheme = _selectedThemeChoice.Name;
+        _selectedTheme = _selectedThemeChoice.Value;
         if (storedTheme is not null && storedChoice is null)
             settings.SetPreference(ThemePreference, _selectedTheme);
+        RefreshDisplayLanguageChoices();
+        SetStatus("Settings.Status.ChooseConfiguration");
+        SetDiscogsStatus("Settings.Discogs.Checking");
+        SetFieldMappingStatus("Settings.FieldMappings.Status.Description");
+        _localization.CultureChanged +=
+            OnLocalizationCultureChanged;
         RecentConfigurations = new ObservableCollection<string>(settings.RecentConfigPaths);
         PropertyChanged += OnOwnPropertyChanged;
         IndexTargets.CollectionChanged += OnTrackedCollectionChanged;
@@ -142,6 +162,60 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     public ObservableCollection<PlaylistTargetEditorRow> PlaylistTargets { get; } = [];
     public ObservableCollection<ExportProfileEditorRow> ExportProfiles { get; } = [];
     public ObservableCollection<MetadataFieldMappingEditorRow> FieldMappings { get; } = [];
+    public ObservableCollection<LocalizedChoice<string>>
+        DisplayLanguageChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<LibraryPathCollisionPolicy>>
+        CollisionPolicyChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<LibraryUnicodeNormalization>>
+        UnicodeNormalizationChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<LibraryDiscStrategy>>
+        DiscStrategyChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<LibraryTrackTotalScope>>
+        TrackTotalScopeChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<LibraryHealthSeverity>>
+        HealthSeverityChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<LibrarySourceDisposition>>
+        SourceDispositionChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<LibraryIngestAction>>
+        IngestActionChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<LibraryIngestAlbumCondition>>
+        IngestAlbumConditionChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<LibraryIngestSourceSelection>>
+        IngestSourceSelectionChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<SettingsChannelChoice>>
+        ChannelLocalizedChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<LibraryArtworkStorage>>
+        ArtworkStorageLocalizedChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<LibraryArtworkRoleSelection>>
+        ArtworkRoleLocalizedChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<LibraryArtworkEncoding>>
+        ArtworkEncodingLocalizedChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<LibrarySidecarDisposition>>
+        SidecarDispositionChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<string>>
+        PlaylistTypeChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<string>>
+        PlaylistSourceTypeChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<string>>
+        PlaylistPathStyleChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<string>>
+        PlaylistEncodingChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<string>>
+        PlaylistLineEndingChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<string>>
+        PlaylistFileNameTransformChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<ExportSelectionKind>>
+        ExportSelectionKindChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<ExportTransformMode>>
+        ExportTransformModeChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<ExportArtworkMode>>
+        ExportArtworkModeChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<ExportExtraFileDisposition>>
+        ExportExtraFileDispositionChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<MediaFormatFamily>>
+        MetadataFormatFamilyChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<TagFields>>
+        MetadataCanonicalFieldChoices { get; } = [];
     public ObservableCollection<LibraryProfile> LibraryProfiles { get; } = [];
     public ObservableCollection<LibraryIngestProfile> IngestProfiles { get; } = [];
     public ObservableCollection<SettingsRootChoice> SyncTargetRootChoices { get; } = [];
@@ -158,12 +232,12 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         Enum.GetValues<TagFields>()
             .Where(field => field != TagFields.NullField)
             .ToArray();
-    public IReadOnlyList<ThemeChoice> ThemeChoices { get; } =
+    public ObservableCollection<ThemeChoice> ThemeChoices { get; } =
     [
-        new("System", "#0D1417", "#F8FBFA", "#2CC7BC"),
-        new("Light", "#EEF4F3", "#FFFFFF", "#087F8C"),
-        new("Dark", "#0D1417", "#18262B", "#2CC7BC"),
-        new("Steel Blue", "#101C2A", "#1D3043", "#3AAFB8"),
+        new("System", "System", "#0D1417", "#F8FBFA", "#2CC7BC"),
+        new("Light", "Light", "#EEF4F3", "#FFFFFF", "#087F8C"),
+        new("Dark", "Dark", "#0D1417", "#18262B", "#2CC7BC"),
+        new("Steel Blue", "Steel Blue", "#101C2A", "#1D3043", "#3AAFB8"),
     ];
     public IReadOnlyList<LibraryPathCollisionPolicy> CollisionPolicies =>
         SettingsChoiceLists.CollisionPolicies;
@@ -203,35 +277,47 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         SettingsChoiceLists.ExportExtraFileDispositions;
     public bool HasValidationError => !string.IsNullOrWhiteSpace(ValidationSummary);
     public bool IsEditorValid => ValidationIssues().Count == 0;
+    public string ActiveConfigurationDisplay =>
+        string.IsNullOrWhiteSpace(ActiveConfigurationPath)
+            ? _localization.Get("Settings.Configuration.NoneLoaded")
+            : ActiveConfigurationPath;
     public string EffectivePolicySummary
     {
         get
         {
             LibraryProfile? profile = AdvancedProfile?.Build() ?? SelectedLibraryProfile;
             if (profile is null)
-                return "No root policy profile is selected.";
+                return _localization.Get("Settings.PolicySummary.NoRootPolicy");
 
             string permissions = FormatPermissions(profile.DefaultRootPermissions);
             string naming = profile.Naming.UseItunesCanonicalNaming
-                ? "iTunes-compatible paths"
+                ? _localization.Get("Settings.PolicySummary.Naming.Itunes")
                 : profile.Preset == LibraryProfilePreset.CatalogOnly
-                    ? "existing paths are preserved"
-                    : $"{profile.Naming.DirectoryTemplate}/{profile.Naming.FileNameTemplate}";
+                    ? _localization.Get("Settings.PolicySummary.Naming.Preserved")
+                    : _localization.Format("Settings.PolicySummary.Naming.Template",
+                        profile.Naming.DirectoryTemplate,
+                        profile.Naming.FileNameTemplate);
             LibraryIngestProfile? ingestProfile = AdvancedIngestProfile?.Build() ??
                 SelectedIngestProfile;
             string ingest = ingestProfile?.Ingest.Enabled == true
-                ? $"enabled; sources {ingestProfile.Ingest.SourceDisposition.ToString().ToLowerInvariant()}"
-                : "disabled; sources preserved";
+                ? _localization.Format("Settings.PolicySummary.Ingest.Enabled",
+                    ChoiceLabel(SourceDispositionChoices,
+                        ingestProfile.Ingest.SourceDisposition))
+                : _localization.Get("Settings.PolicySummary.Ingest.Disabled");
             int writableRoots = IndexTargets.Count(root => !root.IsReadOnly);
             int profileOverrides = IndexTargets.Count(root => !string.Equals(
                 root.ProfileId, profile.Id, StringComparison.OrdinalIgnoreCase));
-            return $"Root policy being edited: {profile.Name}{Environment.NewLine}" +
-                   $"New-root permissions: {permissions}{Environment.NewLine}" +
-                   $"Naming: {naming}{Environment.NewLine}" +
-                   $"Discs: {FormatWords(profile.Disc.Strategy.ToString())}{Environment.NewLine}" +
-                   $"Ingest profile: {ingestProfile?.Name ?? "none"}; {ingest}{Environment.NewLine}" +
-                   $"Configured roots: {IndexTargets.Count}; roots permitting changes: {writableRoots}; " +
-                   $"root policy overrides: {profileOverrides}";
+            return string.Join(Environment.NewLine,
+                _localization.Format("Settings.PolicySummary.RootPolicy", profile.Name),
+                _localization.Format("Settings.PolicySummary.Permissions", permissions),
+                _localization.Format("Settings.PolicySummary.Naming", naming),
+                _localization.Format("Settings.PolicySummary.Discs",
+                    ChoiceLabel(DiscStrategyChoices, profile.Disc.Strategy)),
+                _localization.Format("Settings.PolicySummary.Ingest",
+                    ingestProfile?.Name ??
+                    _localization.Get("Settings.PolicySummary.None"), ingest),
+                _localization.Format("Settings.PolicySummary.RootCounts",
+                    IndexTargets.Count, writableRoots, profileOverrides));
         }
     }
 
@@ -241,43 +327,49 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         {
             LibraryProfile? profile = AdvancedProfile?.Build() ?? SelectedLibraryProfile;
             if (profile is null)
-                return "No active policy is available.";
+                return _localization.Get("Settings.PolicyDetails.NoActivePolicy");
 
             string formats = string.Join(", ", MediaFormatRegistry.Default
                 .GetExtensions(MediaFormatCapabilities.LibraryIndex));
             string roots = IndexTargets.Count == 0
-                ? "No music folders are configured yet."
+                ? _localization.Get("Settings.PolicyDetails.NoRoots")
                 : string.Join(Environment.NewLine, IndexTargets.Select(root =>
                 {
                     string path = string.IsNullOrWhiteSpace(root.Path)
-                        ? "a folder whose path has not been set"
+                        ? _localization.Get("Settings.PolicyDetails.UnsetPath")
                         : root.Path;
                     string availability = Directory.Exists(root.Path)
                         ? ""
-                        : " It is currently offline or cannot be reached.";
+                        : _localization.Get("Settings.PolicyDetails.RootOffline");
                     string included = string.IsNullOrWhiteSpace(root.IndexIncludePatterns)
-                        ? "Every matching music file is included."
-                        : $"Only files matching {root.IndexIncludePatterns} are included.";
+                        ? _localization.Get("Settings.PolicyDetails.AllIncluded")
+                        : _localization.Format("Settings.PolicyDetails.PatternsIncluded",
+                            root.IndexIncludePatterns);
                     string excluded = string.IsNullOrWhiteSpace(root.IndexExcludePatterns)
                         ? ""
-                        : $" Files matching {root.IndexExcludePatterns} are excluded.";
+                        : _localization.Format("Settings.PolicyDetails.PatternsExcluded",
+                            root.IndexExcludePatterns);
                     string rootFormats = string.IsNullOrWhiteSpace(root.IndexFormats)
-                        ? "all recognized music formats"
+                        ? _localization.Get("Settings.PolicyDetails.AllFormats")
                         : root.IndexFormats;
-                    return $"• In {path}, the app indexes {rootFormats}. " +
-                           DescribeRootPermissions(root.Permissions) + " " +
-                           included + excluded + availability;
+                    return _localization.Format("Settings.PolicyDetails.RootLine",
+                        path, rootFormats, DescribeRootPermissions(root.Permissions),
+                        included, excluded, availability);
                 }));
             string example;
             try
             {
                 string exampleRoot = Path.Combine(Path.GetPathRoot(Environment.CurrentDirectory)!,
-                    "Music");
+                    _localization.Get("Settings.PolicyDetails.Example.MusicFolder"));
                 var metadata = new LibraryPathMetadata(
-                    "Example Artist", "Example Artist", "Example Album", "Example Song",
-                    3, 1, false, "2026", "03 Example Song", ".flac")
+                    _localization.Get("Settings.PolicyDetails.Example.Artist"),
+                    _localization.Get("Settings.PolicyDetails.Example.Artist"),
+                    _localization.Get("Settings.PolicyDetails.Example.Album"),
+                    _localization.Get("Settings.PolicyDetails.Example.Song"),
+                    3, 1, false, "2026",
+                    _localization.Get("Settings.PolicyDetails.Example.FileName"), ".flac")
                 {
-                    Genre = "Rock",
+                    Genre = _localization.Get("Settings.PolicyDetails.Example.Genre"),
                 };
                 example = Path.GetRelativePath(exampleRoot,
                     LibraryPathLayoutResolver.Shared.Resolve(exampleRoot, profile, metadata,
@@ -285,78 +377,121 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             }
             catch (Exception ex)
             {
-                example = $"Unavailable: {ex.Message}";
+                example = _localization.Format(
+                    "Settings.PolicyDetails.ExampleUnavailable", ex.Message);
             }
 
             LibraryHealthRulePolicy[] enabledRules = profile.Health.Rules
                 .Where(rule => rule.Enabled).ToArray();
             string rules = enabledRules.Length == 0
-                ? "none"
+                ? _localization.Get("Settings.PolicyDetails.None")
                 : string.Join(", ", enabledRules.Select(rule =>
-                    $"{rule.Id} ({rule.Severity.ToString().ToLowerInvariant()}" +
-                    (rule.ApplyRepair ? ", apply" : rule.ProposeRepair ? ", propose" : "") + ")"));
+                    _localization.Format("Settings.PolicyDetails.HealthRule",
+                        rule.Id,
+                        ChoiceLabel(HealthSeverityChoices, rule.Severity),
+                        rule.ApplyRepair
+                            ? _localization.Get("Settings.PolicyDetails.Repair.Apply")
+                            : rule.ProposeRepair
+                                ? _localization.Get(
+                                    "Settings.PolicyDetails.Repair.Propose")
+                                : _localization.Get(
+                                    "Settings.PolicyDetails.Repair.None"))));
             LibraryIngestProfile? ingestProfile = AdvancedIngestProfile?.Build() ??
                 SelectedIngestProfile;
             LibraryIngestRecipe[] recipes = (ingestProfile?.Ingest.Recipes ?? [])
                 .Where(recipe => recipe.Enabled).ToArray();
             string ingest = ingestProfile?.Ingest.Enabled != true
-                ? "disabled"
+                ? _localization.Get("Settings.PolicyDetails.Ingest.Disabled")
                 : recipes.Length == 0
-                    ? "enabled, but no output recipes"
+                    ? _localization.Get("Settings.PolicyDetails.Ingest.NoRecipes")
                     : string.Join(", ", recipes.Select(recipe =>
-                        $"{recipe.Name}: {recipe.Action} to " +
-                        (recipe.DestinationRootId is { } rootId
-                            ? IndexTargets.FirstOrDefault(root => root.Id == rootId)?.Path ??
-                              "missing root"
-                            : "no direct root")));
+                        _localization.Format("Settings.PolicyDetails.Ingest.Recipe",
+                            recipe.Name,
+                            ChoiceLabel(IngestActionChoices, recipe.Action),
+                            recipe.DestinationRootId is { } rootId
+                                ? IndexTargets.FirstOrDefault(root => root.Id == rootId)?.Path ??
+                                  _localization.Get(
+                                      "Settings.PolicyDetails.Ingest.MissingRoot")
+                                : _localization.Get(
+                                    "Settings.PolicyDetails.Ingest.NoDirectRoot"))));
             string integrations = string.IsNullOrWhiteSpace(ItunesLibraryPath)
-                ? "File playlists (M3U/M3U8); no media catalog integration configured"
-                : $"File playlists (M3U/M3U8); iTunes catalog: {ItunesLibraryPath}";
+                ? _localization.Get("Settings.PolicyDetails.Integrations.NoCatalog")
+                : _localization.Format("Settings.PolicyDetails.Integrations.Itunes",
+                    ItunesLibraryPath);
             string exports = ExportProfiles.Count == 0
-                ? "none configured"
+                ? _localization.Get("Settings.PolicyDetails.Exports.None")
                 : string.Join(", ", ExportProfiles.Select(item =>
-                    $"{item.Name} ({(item.Enabled ? "enabled" : "disabled")})"));
+                    _localization.Format("Settings.PolicyDetails.Export",
+                        item.Name,
+                        _localization.Get(item.Enabled
+                            ? "Settings.PolicyDetails.Enabled"
+                            : "Settings.PolicyDetails.Disabled"))));
 
             string naming = profile.Preset == LibraryProfilePreset.CatalogOnly
-                ? "The app leaves file and folder names where they are."
-                : $"When files are organized, they are named like “{example}”. " +
-                  $"If that name already exists, the app uses the " +
-                  $"{FormatWords(profile.Naming.CollisionPolicy.ToString())} rule.";
+                ? _localization.Get("Settings.PolicyDetails.Naming.CatalogOnly")
+                : _localization.Format("Settings.PolicyDetails.Naming.Organized",
+                    example,
+                    ChoiceLabel(CollisionPolicyChoices,
+                        profile.Naming.CollisionPolicy));
             string artworkReading = profile.Artwork.ReadAtIndexTime
-                ? "Artwork is read and cached during indexing, so browsing and artwork audits are immediately complete. Indexing will take longer and the cache will use more space."
-                : "Artwork is not read during indexing. It is loaded and cached later when you view it or run an artwork audit, which keeps indexing faster and the initial cache smaller.";
+                ? _localization.Get("Settings.PolicyDetails.Artwork.Eager")
+                : _localization.Get("Settings.PolicyDetails.Artwork.Lazy");
             string discHandling = profile.Disc.Strategy ==
                 LibraryDiscStrategy.PreserveTags
-                ? "Disc numbers remain in the tags."
-                : $"Disc numbers are represented using " +
-                  $"{FormatWords(profile.Disc.Strategy.ToString())}, and the disc tags are removed.";
+                ? _localization.Get("Settings.PolicyDetails.Discs.Preserve")
+                : _localization.Format("Settings.PolicyDetails.Discs.Transform",
+                    ChoiceLabel(DiscStrategyChoices, profile.Disc.Strategy));
             string ingestBehavior = ingestProfile?.Ingest.Enabled == true
-                ? $"Ingest is enabled through “{ingestProfile.Name}”. The active recipes are {ingest}, and source files are {FormatWords(ingestProfile.Ingest.SourceDisposition.ToString())} after a successful ingest."
-                : "Automatic ingest is disabled, so source files are preserved.";
+                ? _localization.Format("Settings.PolicyDetails.Ingest.Enabled",
+                    ingestProfile.Name, ingest,
+                    ChoiceLabel(SourceDispositionChoices,
+                        ingestProfile.Ingest.SourceDisposition))
+                : _localization.Get("Settings.PolicyDetails.Ingest.Preserved");
 
-            return $"This policy is “{profile.Name}” ({FormatWords(profile.Preset.ToString())}). " +
-                   $"The indexer recognizes: {formats}.{Environment.NewLine}{Environment.NewLine}" +
-                   $"{naming} Unicode characters are " +
-                   $"{(profile.Naming.PreserveUnicode ? "kept" : "normalized or replaced")}. " +
-                   $"Path-length limits use the application and platform defaults unless you entered an override.{Environment.NewLine}{Environment.NewLine}" +
-                   $"{discHandling} A recording is considered high resolution at " +
-                   $"{profile.Quality.HighResolutionMinimumSampleRateHz:N0} Hz or " +
-                   $"{profile.Quality.HighResolutionMinimumBitsPerSample}-bit.{Environment.NewLine}{Environment.NewLine}" +
-                   $"When metadata is copied, ReplayGain is {OnOff(profile.Metadata.PreserveReplayGain)}, " +
-                   $"MusicBrainz identifiers are {OnOff(profile.Metadata.PreserveMusicBrainzIdentifiers)}, " +
-                   $"custom fields are {OnOff(profile.Metadata.PreserveCustomFields)}, and compilation information is " +
-                   $"{OnOff(profile.Metadata.PreserveCompilationSemantics)}.{Environment.NewLine}{Environment.NewLine}" +
-                   $"{artworkReading} Written artwork uses {FormatWords(profile.Artwork.Storage.ToString())} storage, " +
-                   $"{FormatWords(profile.Artwork.Roles.ToString())}, and {FormatWords(profile.Artwork.Encoding.ToString())} encoding.{Environment.NewLine}{Environment.NewLine}" +
-                   $"Health checks currently enabled: {rules}. Files that do not match a sidecar rule are " +
-                   $"{FormatWords(profile.Sidecars.UnknownFileDisposition.ToString())}.{Environment.NewLine}{Environment.NewLine}" +
-                   $"{ingestBehavior}{Environment.NewLine}{Environment.NewLine}" +
-                   $"Playlist and catalog connections: {integrations}. Export profiles: {exports}.{Environment.NewLine}{Environment.NewLine}" +
-                   $"Configured music folders:{Environment.NewLine}{roots}{Environment.NewLine}{Environment.NewLine}" +
-                   $"External tools use FFmpeg at “{FfmpegPath}” and WavPack at “{WavpackPath}”. " +
-                   (string.IsNullOrWhiteSpace(MachineBindingsFile)
-                       ? "Folder paths are stored directly in this configuration."
-                       : $"Machine-specific folder paths come from “{MachineBindingsFile}”.");
+            return string.Join(Environment.NewLine + Environment.NewLine,
+                _localization.Format("Settings.PolicyDetails.Introduction",
+                    profile.Name,
+                    ChoiceLabelForProfilePreset(profile.Preset),
+                    formats),
+                _localization.Format("Settings.PolicyDetails.NamingParagraph",
+                    naming,
+                    _localization.Get(profile.Naming.PreserveUnicode
+                        ? "Settings.PolicyDetails.Unicode.Kept"
+                        : "Settings.PolicyDetails.Unicode.Normalized")),
+                _localization.Format("Settings.PolicyDetails.QualityParagraph",
+                    discHandling,
+                    profile.Quality.HighResolutionMinimumSampleRateHz,
+                    profile.Quality.HighResolutionMinimumBitsPerSample),
+                _localization.Format("Settings.PolicyDetails.MetadataParagraph",
+                    OnOff(profile.Metadata.PreserveReplayGain),
+                    OnOff(profile.Metadata.PreserveMusicBrainzIdentifiers),
+                    OnOff(profile.Metadata.PreserveCustomFields),
+                    OnOff(profile.Metadata.PreserveCompilationSemantics)),
+                _localization.Format("Settings.PolicyDetails.ArtworkParagraph",
+                    artworkReading,
+                    ChoiceLabel(ArtworkStorageLocalizedChoices,
+                        profile.Artwork.Storage),
+                    ChoiceLabel(ArtworkRoleLocalizedChoices,
+                        profile.Artwork.Roles),
+                    ChoiceLabel(ArtworkEncodingLocalizedChoices,
+                        profile.Artwork.Encoding)),
+                _localization.Format("Settings.PolicyDetails.HealthParagraph",
+                    rules,
+                    ChoiceLabel(SidecarDispositionChoices,
+                        profile.Sidecars.UnknownFileDisposition)),
+                ingestBehavior,
+                _localization.Format("Settings.PolicyDetails.ConnectionsParagraph",
+                    integrations, exports),
+                _localization.Format("Settings.PolicyDetails.RootsParagraph",
+                    Environment.NewLine, roots),
+                _localization.Format("Settings.PolicyDetails.ToolsParagraph",
+                    FfmpegPath, WavpackPath,
+                    string.IsNullOrWhiteSpace(MachineBindingsFile)
+                        ? _localization.Get(
+                            "Settings.PolicyDetails.Paths.StoredDirectly")
+                        : _localization.Format(
+                            "Settings.PolicyDetails.Paths.MachineBindings",
+                            MachineBindingsFile)));
         }
     }
     public decimal OversizedArtworkSizeThresholdMib
@@ -436,15 +571,233 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     {
         _settings.SetPreference(ThemePreference, value);
         _theme.Apply(value);
-        ThemeChoice? choice = ThemeChoices.FirstOrDefault(item => item.Name == value);
+        ThemeChoice? choice = ThemeChoices.FirstOrDefault(item =>
+            string.Equals(item.Value, value, StringComparison.Ordinal));
         if (choice is not null && SelectedThemeChoice != choice)
             SelectedThemeChoice = choice;
     }
 
     partial void OnSelectedThemeChoiceChanged(ThemeChoice? value)
     {
-        if (value is not null && SelectedTheme != value.Name)
-            SelectedTheme = value.Name;
+        if (value is not null && SelectedTheme != value.Value)
+            SelectedTheme = value.Value;
+    }
+
+    partial void OnActiveConfigurationPathChanged(string? value) =>
+        OnPropertyChanged(nameof(ActiveConfigurationDisplay));
+
+    partial void OnSelectedDisplayLanguageChanged(
+        LocalizedChoice<string>? value)
+    {
+        if (!_refreshingDisplayLanguage &&
+            value is not null)
+            _localization.SetCulture(value.Value);
+    }
+
+    private void OnLocalizationCultureChanged(
+        object? sender,
+        EventArgs e)
+    {
+        RefreshDisplayLanguageChoices();
+        RefreshLocalizedChoices();
+        RefreshLocalizedRuntimeText();
+    }
+
+    private void RefreshDisplayLanguageChoices()
+    {
+        _refreshingDisplayLanguage = true;
+        try
+        {
+            foreach (var culture in
+                     _localization.SupportedCultures)
+            {
+                LocalizedChoice<string>? choice =
+                    DisplayLanguageChoices.FirstOrDefault(
+                        item => string.Equals(
+                            item.Value,
+                            culture.Name,
+                            StringComparison.OrdinalIgnoreCase));
+                string label = _localization.Get(
+                    LocalizationKeys.CultureName(
+                        culture.Name));
+                if (choice is null)
+                    DisplayLanguageChoices.Add(
+                        new(culture.Name, label));
+                else
+                    choice.Label = label;
+            }
+            SelectedDisplayLanguage =
+                DisplayLanguageChoices.First(
+                    item => string.Equals(
+                        item.Value,
+                        _localization.CurrentUICulture.Name,
+                        StringComparison.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            _refreshingDisplayLanguage = false;
+        }
+    }
+
+    private void RefreshLocalizedChoices()
+    {
+        RefreshChoices(CollisionPolicyChoices, SettingsChoiceLists.CollisionPolicies);
+        RefreshChoices(UnicodeNormalizationChoices, SettingsChoiceLists.UnicodeNormalizations);
+        RefreshChoices(DiscStrategyChoices, SettingsChoiceLists.DiscStrategies);
+        RefreshChoices(TrackTotalScopeChoices, SettingsChoiceLists.TrackTotalScopes);
+        RefreshChoices(HealthSeverityChoices, SettingsChoiceLists.HealthSeverities);
+        RefreshChoices(SourceDispositionChoices, SettingsChoiceLists.SourceDispositions);
+        RefreshChoices(IngestActionChoices, SettingsChoiceLists.IngestActions);
+        RefreshChoices(IngestAlbumConditionChoices,
+            SettingsChoiceLists.IngestAlbumConditions);
+        RefreshChoices(IngestSourceSelectionChoices,
+            SettingsChoiceLists.IngestSourceSelections);
+        RefreshChoices(ArtworkStorageLocalizedChoices,
+            SettingsChoiceLists.ArtworkStorageChoices);
+        RefreshChoices(ArtworkRoleLocalizedChoices,
+            SettingsChoiceLists.ArtworkRoleChoices);
+        RefreshChoices(ArtworkEncodingLocalizedChoices,
+            SettingsChoiceLists.ArtworkEncodingChoices);
+        RefreshChoices(SidecarDispositionChoices,
+            SettingsChoiceLists.SidecarDispositions);
+        RefreshChoices(ExportSelectionKindChoices,
+            SettingsChoiceLists.ExportSelectionKinds);
+        RefreshChoices(ExportTransformModeChoices,
+            SettingsChoiceLists.ExportTransformModes);
+        RefreshChoices(ExportArtworkModeChoices,
+            SettingsChoiceLists.ExportArtworkModes);
+        RefreshChoices(ExportExtraFileDispositionChoices,
+            SettingsChoiceLists.ExportExtraFileDispositions);
+        RefreshChoices(MetadataFormatFamilyChoices, MetadataFormatFamilies);
+        RefreshChoices(MetadataCanonicalFieldChoices, MetadataCanonicalFields);
+        RefreshStringChoices(PlaylistTypeChoices, "PlaylistType",
+            SettingsChoiceLists.PlaylistTypes);
+        RefreshStringChoices(PlaylistSourceTypeChoices, "PlaylistSourceType",
+            SettingsChoiceLists.PlaylistSourceTypes);
+        RefreshStringChoices(PlaylistPathStyleChoices, "PlaylistPathStyle",
+            SettingsChoiceLists.PlaylistPathStyles);
+        RefreshStringChoices(PlaylistEncodingChoices, "PlaylistEncoding",
+            SettingsChoiceLists.PlaylistEncodings);
+        RefreshStringChoices(PlaylistLineEndingChoices, "PlaylistLineEnding",
+            SettingsChoiceLists.PlaylistLineEndings);
+        RefreshStringChoices(PlaylistFileNameTransformChoices,
+            "PlaylistFileNameTransform",
+            SettingsChoiceLists.PlaylistFileNameTransforms);
+
+        foreach (SettingsChannelChoice value in SettingsChoiceLists.ChannelChoices)
+        {
+            LocalizedChoice<SettingsChannelChoice>? choice =
+                ChannelLocalizedChoices.FirstOrDefault(item =>
+                    item.Value.Value == value.Value);
+            string label = _localization.Get(
+                $"Settings.Choice.LibraryChannelSelection.{value.Value}");
+            if (choice is null)
+            {
+                choice = new(value, label);
+                ChannelLocalizedChoices.Add(choice);
+            }
+            else
+                choice.Label = label;
+        }
+
+        foreach (ThemeChoice theme in ThemeChoices)
+            theme.Name = _localization.Get(
+                $"Settings.Choice.Theme.{ChoiceToken(theme.Value)}");
+    }
+
+    private void RefreshChoices<T>(
+        ObservableCollection<LocalizedChoice<T>> target,
+        IReadOnlyList<T> values)
+    {
+        foreach (T value in values)
+        {
+            LocalizedChoice<T>? choice = target.FirstOrDefault(item =>
+                EqualityComparer<T>.Default.Equals(item.Value, value));
+            string label = _localization.Get(
+                $"Settings.Choice.{typeof(T).Name}.{value}");
+            if (choice is null)
+            {
+                choice = new(value, label);
+                target.Add(choice);
+            }
+            else
+                choice.Label = label;
+        }
+    }
+
+    private void RefreshStringChoices(
+        ObservableCollection<LocalizedChoice<string>> target,
+        string group,
+        IReadOnlyList<string> values)
+    {
+        foreach (string value in values)
+        {
+            LocalizedChoice<string>? choice = target.FirstOrDefault(item =>
+                string.Equals(item.Value, value, StringComparison.Ordinal));
+            string label = _localization.Get(
+                $"Settings.Choice.{group}.{ChoiceToken(value)}");
+            if (choice is null)
+            {
+                choice = new(value, label);
+                target.Add(choice);
+            }
+            else
+                choice.Label = label;
+        }
+    }
+
+    private static string ChoiceToken(string value) =>
+        string.Concat(value.Select(character =>
+            char.IsLetterOrDigit(character) ? character : '_'));
+
+    private string ChoiceLabel<T>(
+        IEnumerable<LocalizedChoice<T>> choices,
+        T value) =>
+        choices.FirstOrDefault(choice =>
+            EqualityComparer<T>.Default.Equals(choice.Value, value))?.Label ??
+        value?.ToString() ?? "";
+
+    private void SetStatus(string key, params object?[] arguments)
+    {
+        _statusMessageKey = key;
+        _statusMessageArguments = arguments;
+        StatusMessage = _localization.Format(key, arguments);
+    }
+
+    private void SetDiscogsStatus(string key, params object?[] arguments)
+    {
+        _discogsStatusKey = key;
+        _discogsStatusArguments = arguments;
+        DiscogsCredentialStatus = _localization.Format(key, arguments);
+    }
+
+    private void SetFieldMappingStatus(string key, params object?[] arguments)
+    {
+        _fieldMappingStatusKey = key;
+        _fieldMappingStatusArguments = arguments;
+        FieldMappingStatus = _localization.Format(key, arguments);
+    }
+
+    private void RefreshLocalizedRuntimeText()
+    {
+        if (_statusMessageKey is not null)
+            StatusMessage = _localization.Format(
+                _statusMessageKey, _statusMessageArguments);
+        if (_discogsStatusKey is not null)
+            DiscogsCredentialStatus = _localization.Format(
+                _discogsStatusKey, _discogsStatusArguments);
+        if (_fieldMappingStatusKey is not null)
+            FieldMappingStatus = _localization.Format(
+                _fieldMappingStatusKey, _fieldMappingStatusArguments);
+        foreach (IndexTargetEditorRow root in IndexTargets)
+            root.RefreshPermissionSummary();
+        OnPropertyChanged(nameof(ActiveConfigurationDisplay));
+        OnPropertyChanged(nameof(EffectivePolicySummary));
+        OnPropertyChanged(nameof(EffectivePolicyDetails));
+        RefreshSyncTargetChoices();
+        RefreshDestinationRootChoices();
+        if (ValidationSummary is not null)
+            UpdateValidation();
     }
 
     partial void OnFpcalcPathChanged(string value) =>
@@ -479,21 +832,21 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     {
         string token = DiscogsToken?.Trim() ??
             throw new InvalidOperationException(
-                "Enter a Discogs personal access token.");
+                _localization.Get("Settings.Discogs.EnterToken"));
         try
         {
             await _secrets.WriteAsync(
                 DiscogsMetadataProvider.TokenSecretKey,
                 token);
             DiscogsToken = null;
-            DiscogsCredentialStatus = _secrets.IsPersistent
-                ? $"Discogs token stored in {_secrets.Kind}."
-                : "Discogs token stored for this application session only.";
+            if (_secrets.IsPersistent)
+                SetDiscogsStatus("Settings.Discogs.StoredPersistent", _secrets.Kind);
+            else
+                SetDiscogsStatus("Settings.Discogs.StoredSession");
         }
         catch (Exception error)
         {
-            DiscogsCredentialStatus =
-                $"Could not store the Discogs token: {error.Message}";
+            SetDiscogsStatus("Settings.Discogs.StoreFailed", error.Message);
         }
     }
 
@@ -505,12 +858,11 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             await _secrets.DeleteAsync(
                 DiscogsMetadataProvider.TokenSecretKey);
             DiscogsToken = null;
-            DiscogsCredentialStatus = "No Discogs token is stored.";
+            SetDiscogsStatus("Settings.Discogs.NoneStored");
         }
         catch (Exception error)
         {
-            DiscogsCredentialStatus =
-                $"Could not clear the Discogs token: {error.Message}";
+            SetDiscogsStatus("Settings.Discogs.ClearFailed", error.Message);
         }
     }
 
@@ -520,16 +872,16 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         {
             string? token = await _secrets.ReadAsync(
                 DiscogsMetadataProvider.TokenSecretKey);
-            DiscogsCredentialStatus = string.IsNullOrWhiteSpace(token)
-                ? "No Discogs token is stored."
-                : _secrets.IsPersistent
-                    ? $"A Discogs token is stored in {_secrets.Kind}."
-                    : "A Discogs token is stored for this application session only.";
+            if (string.IsNullOrWhiteSpace(token))
+                SetDiscogsStatus("Settings.Discogs.NoneStored");
+            else if (_secrets.IsPersistent)
+                SetDiscogsStatus("Settings.Discogs.ExistsPersistent", _secrets.Kind);
+            else
+                SetDiscogsStatus("Settings.Discogs.ExistsSession");
         }
         catch (Exception error)
         {
-            DiscogsCredentialStatus =
-                $"Secure credential storage is unavailable: {error.Message}";
+            SetDiscogsStatus("Settings.Discogs.Unavailable", error.Message);
         }
     }
 
@@ -683,8 +1035,9 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         ValidationTabIndex = issues.FirstOrDefault().Tab;
         ValidationSummary = issues.Count == 0
             ? null
-            : "Fix the following before saving:" + Environment.NewLine +
-              string.Join(Environment.NewLine, issues.Select(issue => $"• {issue.Message}"));
+            : _localization.Get("Settings.Validation.Header") + Environment.NewLine +
+              string.Join(Environment.NewLine, issues.Select(issue =>
+                  _localization.Format("Settings.Validation.Item", issue.Message)));
         SaveConfigurationCommand.NotifyCanExecuteChanged();
         SaveConfigurationAsCommand.NotifyCanExecuteChanged();
     }
@@ -693,11 +1046,14 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     {
         var issues = new List<(int, string)>();
         if (SelectedLibraryProfile is null)
-            issues.Add((5, "Choose a root/naming policy."));
+            issues.Add((5, _localization.Get(
+                "Settings.Validation.ChooseRootPolicy")));
         if (SelectedIngestProfile is null)
-            issues.Add((6, "Choose an active ingest profile."));
+            issues.Add((6, _localization.Get(
+                "Settings.Validation.ChooseIngestProfile")));
         if (!IndexTargets.Any(target => !string.IsNullOrWhiteSpace(target.Path)))
-            issues.Add((1, "Add at least one library root."));
+            issues.Add((1, _localization.Get(
+                "Settings.Validation.AddLibraryRoot")));
         foreach (IndexTargetEditorRow target in IndexTargets.Where(target =>
                      !string.IsNullOrWhiteSpace(target.Path)))
         {
@@ -709,16 +1065,19 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             }
             catch (InvalidDataException error)
             {
-                issues.Add((1, $"Library root '{target.Path}': {error.Message}"));
+                issues.Add((1, _localization.Format(
+                    "Settings.Validation.LibraryRootError",
+                    target.Path, error.Message)));
             }
             if (target.IsSyncTarget && !target.AllowSynchronizationOutput)
-                issues.Add((1,
-                    $"Library root '{target.Path}' is a sync target but does not allow sync output."));
+                issues.Add((1, _localization.Format(
+                    "Settings.Validation.SyncOutputNotAllowed", target.Path)));
             if (!string.IsNullOrWhiteSpace(target.ProfileId) &&
                 _editing.Profiles.All(profile => !string.Equals(profile.Id,
                     target.ProfileId, StringComparison.OrdinalIgnoreCase)))
-                issues.Add((1,
-                    $"Library root '{target.Path}' references unknown profile '{target.ProfileId}'."));
+                issues.Add((1, _localization.Format(
+                    "Settings.Validation.UnknownRootProfile",
+                    target.Path, target.ProfileId)));
         }
         var configuredSets = IndexTargets.SelectMany(target => target.Memberships)
             .SelectMany(membership => LibraryConfiguration.ParseScanSets(membership.Name))
@@ -726,25 +1085,27 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         foreach (PlaylistSourceEditorRow source in PlaylistSources.Where(source =>
                      !string.IsNullOrWhiteSpace(source.Location)))
             if (!string.Equals(source.Type, "m3u", StringComparison.OrdinalIgnoreCase))
-                issues.Add((2,
-                    $"Playlist source '{source.Location}' must have a type of m3u."));
+                issues.Add((2, _localization.Format(
+                    "Settings.Validation.PlaylistSourceType", source.Location)));
         foreach (PlaylistTargetEditorRow target in PlaylistTargets.Where(target =>
                      !string.IsNullOrWhiteSpace(target.Target)))
         {
             if (!PlaylistTypes.Contains(target.Type, StringComparer.OrdinalIgnoreCase))
-                issues.Add((2,
-                    $"Playlist target '{target.Target}' has unsupported type '{target.Type}'."));
+                issues.Add((2, _localization.Format(
+                    "Settings.Validation.PlaylistTargetType",
+                    target.Target, target.Type)));
             IReadOnlyList<string> selectedSets =
                 LibraryConfiguration.ParseScanSets(target.Sets);
             if (selectedSets.Count == 0)
-                issues.Add((2,
-                    $"Playlist target '{target.Target}' must select at least one scan set."));
+                issues.Add((2, _localization.Format(
+                    "Settings.Validation.PlaylistTargetSetRequired",
+                    target.Target)));
             string[] unknownSets = selectedSets.Where(set => !configuredSets.Contains(set))
                 .ToArray();
             if (unknownSets.Length > 0)
-                issues.Add((2,
-                    $"Playlist target '{target.Target}' references unknown scan set(s): " +
-                    string.Join(", ", unknownSets)));
+                issues.Add((2, _localization.Format(
+                    "Settings.Validation.PlaylistUnknownSets",
+                    target.Target, string.Join(", ", unknownSets))));
             if (!PlaylistPathStyles.Contains(target.PathStyle,
                     StringComparer.OrdinalIgnoreCase) ||
                 !PlaylistEncodings.Contains(target.Encoding,
@@ -753,11 +1114,13 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                     StringComparer.OrdinalIgnoreCase) ||
                 !PlaylistFileNameTransforms.Contains(target.FileNameTransform,
                     StringComparer.OrdinalIgnoreCase))
-                issues.Add((2,
-                    $"Playlist target '{target.Target}' contains an unsupported output option."));
+                issues.Add((2, _localization.Format(
+                    "Settings.Validation.PlaylistUnsupportedOption",
+                    target.Target)));
             if (target.MaxTrackCount <= 0)
-                issues.Add((2,
-                    $"Playlist target '{target.Target}' must allow at least one track."));
+                issues.Add((2, _localization.Format(
+                    "Settings.Validation.PlaylistTrackRequired",
+                    target.Target)));
         }
         LibraryProfile? editedProfile = null;
         if (AdvancedProfile is not null)
@@ -769,7 +1132,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             }
             catch (Exception error) when (error is InvalidDataException or ArgumentException)
             {
-                issues.Add((5, error.Message));
+                issues.Add((5, _localization.Format(
+                    "Settings.Validation.PolicyError", error.Message)));
             }
         }
         LibraryIngestProfile? editedIngestProfile = null;
@@ -783,13 +1147,14 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                 foreach (LibraryIngestRecipe recipe in editedIngestProfile.Ingest.Recipes)
                     if (recipe.DestinationRootId is { } destinationRootId &&
                         !rootIds.Contains(destinationRootId))
-                        issues.Add((6,
-                            $"Ingest recipe '{recipe.Id}' references unknown destination root " +
-                            $"'{destinationRootId:D}'."));
+                        issues.Add((6, _localization.Format(
+                            "Settings.Validation.IngestUnknownRoot",
+                            recipe.Id, destinationRootId)));
             }
             catch (Exception error) when (error is InvalidDataException or ArgumentException)
             {
-                issues.Add((6, error.Message));
+                issues.Add((6, _localization.Format(
+                    "Settings.Validation.IngestError", error.Message)));
             }
         }
         var exportIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -800,32 +1165,42 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
                 LibraryExportProfile profile = row.Build();
                 LibraryExportProfileXml.Validate(profile);
                 if (!exportIds.Add(profile.Id))
-                    issues.Add((2, $"Duplicate export profile ID '{profile.Id}'."));
+                    issues.Add((2, _localization.Format(
+                        "Settings.Validation.DuplicateExportId", profile.Id)));
                 if (profile.Naming.LibraryProfileId is { } namingId &&
                     _editing.Profiles.All(item => !string.Equals(item.Id, namingId,
                         StringComparison.OrdinalIgnoreCase)))
-                    issues.Add((2, $"Export profile '{profile.Id}' references unknown naming profile '{namingId}'."));
+                    issues.Add((2, _localization.Format(
+                        "Settings.Validation.ExportUnknownNamingProfile",
+                        profile.Id, namingId)));
                 if (profile.Transform.RecipeId is { } recipeId &&
                     (editedIngestProfile?.Ingest.Recipes.All(recipe => !string.Equals(recipe.Id,
                         recipeId, StringComparison.OrdinalIgnoreCase)) ?? true) &&
                     _editing.IngestProfiles.SelectMany(item => item.Ingest.Recipes).All(recipe =>
                         !string.Equals(recipe.Id, recipeId,
                             StringComparison.OrdinalIgnoreCase)))
-                    issues.Add((2, $"Export profile '{profile.Id}' references unknown ingest recipe '{recipeId}'."));
+                    issues.Add((2, _localization.Format(
+                        "Settings.Validation.ExportUnknownRecipe",
+                        profile.Id, recipeId)));
             }
             catch (Exception error) when (error is InvalidDataException or ArgumentException)
             {
-                issues.Add((2, error.Message));
+                issues.Add((2, _localization.Format(
+                    "Settings.Validation.ExportError", error.Message)));
             }
         }
         if (OversizedArtworkByteThreshold is < 262_144 or > 1_073_741_824)
-            issues.Add((4, "Oversized artwork size threshold must be between 0.25 and 1,024 MiB."));
+            issues.Add((4, _localization.Get(
+                "Settings.Validation.ArtworkSizeThreshold")));
         if (OversizedArtworkDimensionThreshold is < 64 or > 100_000)
-            issues.Add((4, "Oversized artwork dimension threshold must be between 64 and 100,000 pixels."));
+            issues.Add((4, _localization.Get(
+                "Settings.Validation.ArtworkDimensionThreshold")));
         if (ArtworkRepairTargetByteSize is < 65_536 or > 1_073_741_824)
-            issues.Add((4, "Artwork repair size target must be between 0.0625 and 1,024 MiB."));
+            issues.Add((4, _localization.Get(
+                "Settings.Validation.ArtworkRepairSize")));
         if (ArtworkRepairTargetDimension is < 64 or > 100_000)
-            issues.Add((4, "Artwork repair dimension target must be between 64 and 100,000 pixels."));
+            issues.Add((4, _localization.Get(
+                "Settings.Validation.ArtworkRepairDimension")));
         return issues;
     }
 
@@ -837,9 +1212,9 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         if (!HasUnsavedChanges)
             return true;
         return await _dialogs.ConfirmAsync(
-            "Discard unsaved configuration changes?",
-            "The library configuration has changes that have not been saved.",
-            "Discard changes");
+            _localization.Get("Settings.Dialog.Discard.Title"),
+            _localization.Get("Settings.Dialog.Discard.Message"),
+            _localization.Get("Settings.Dialog.Discard.Accept"));
     }
 
     public async Task<bool> ConfirmNavigationAsync()
@@ -858,7 +1233,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         if (!string.IsNullOrWhiteSpace(ActiveConfigurationPath))
         {
             LoadEditor(ActiveConfigurationPath);
-            StatusMessage = "Unsaved configuration changes were discarded.";
+            SetStatus("Settings.Status.ChangesDiscarded");
             return;
         }
 
@@ -888,7 +1263,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         _suppressDirty = false;
         HasUnsavedChanges = false;
         ValidationSummary = null;
-        StatusMessage = "Unsaved configuration changes were discarded.";
+        SetStatus("Settings.Status.ChangesDiscarded");
     }
 
     private bool CanDiscardChanges() => HasUnsavedChanges;
@@ -905,8 +1280,11 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     {
         if (!await ConfirmDiscardChangesAsync())
             return;
-        string? path = await _files.PickFileAsync("Open library configuration",
-            [new FilePickerType("Library configuration", [".xml"])]);
+        string? path = await _files.PickFileAsync(
+            _localization.Get("Settings.FilePicker.OpenConfiguration"),
+            [new FilePickerType(
+                _localization.Get("Settings.FilePicker.ConfigurationType"),
+                [".xml"])]);
         if (path is not null)
             LoadConfiguration(path);
     }
@@ -962,7 +1340,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         CleanCrossSyncPlaylists = false;
         ClearEditorCollections();
         IndexTargets.Add(CreateIndexTargetRow(_editing.CreateIndexTarget()));
-        StatusMessage = "New configuration. Add at least one library root, then Save as.";
+        SetStatus("Settings.Status.NewConfiguration");
         SelectedTabIndex = 1;
         _suppressDirty = false;
         HasUnsavedChanges = true;
@@ -979,7 +1357,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         if (_editing.LibraryId == previousLibraryId || !HasUnsavedChanges)
             return;
         IsGuidedSetupActive = true;
-        StatusMessage = "Guided setup: choose a preservation-first profile, add the library root, then review the effective policy.";
+        SetStatus("Settings.Status.GuidedSetup");
         SelectedTabIndex = 1;
     }
 
@@ -997,11 +1375,11 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         LibraryProfile profile = LibraryProfilePresets.Create(
             LibraryProfilePreset.Custom,
             UniqueProfileId(),
-            UniqueProfileName("New profile"));
+            UniqueProfileName(_localization.Get("Settings.Profile.NewName")));
         _editing.Profiles.Add(profile);
         LibraryProfiles.Add(profile);
         SelectedLibraryProfile = profile;
-        StatusMessage = $"Created profile '{profile.Name}'.";
+        SetStatus("Settings.Status.ProfileCreated", profile.Name);
         MarkDirty();
     }
 
@@ -1018,13 +1396,15 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         LibraryProfile duplicate = source with
         {
             Id = id,
-            Name = UniqueProfileName(source.Name + " copy"),
+            Name = UniqueProfileName(source.Name +
+                _localization.Get("Settings.Profile.CopySuffix")),
             Preset = LibraryProfilePreset.Custom,
         };
         _editing.Profiles.Add(duplicate);
         LibraryProfiles.Add(duplicate);
         SelectedLibraryProfile = duplicate;
-        StatusMessage = $"Duplicated '{source.Name}' as '{duplicate.Name}'.";
+        SetStatus("Settings.Status.ProfileDuplicated",
+            source.Name, duplicate.Name);
         MarkDirty();
     }
 
@@ -1047,13 +1427,24 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         int workflowReferences = ExportProfiles.Count(profile => string.Equals(
                 profile.NamingProfileId, selected.Id, StringComparison.OrdinalIgnoreCase));
         string reassignment = rootReferences + workflowReferences == 0
-            ? "It has no configured references."
-            : $"{rootReferences} root reference(s) and {workflowReferences} workflow " +
-              $"reference(s) will be reassigned to '{fallback.Name}'.";
+            ? _localization.Get(
+                "Settings.Dialog.DeleteProfile.NoReferences")
+            : _localization.Format(
+                "Settings.Dialog.DeleteProfile.Reassignment",
+                _localization.FormatCount(
+                    "Settings.Dialog.DeleteProfile.RootReferences",
+                    rootReferences),
+                _localization.FormatCount(
+                    "Settings.Dialog.DeleteProfile.WorkflowReferences",
+                    workflowReferences),
+                fallback.Name);
         if (!await _dialogs.ConfirmAsync(
-                $"Delete profile '{selected.Name}'?",
-                reassignment + " This cannot be undone after saving.",
-                "Delete profile"))
+                _localization.Format(
+                    "Settings.Dialog.DeleteProfile.Title", selected.Name),
+                _localization.Format(
+                    "Settings.Dialog.DeleteProfile.Message", reassignment),
+                _localization.Get(
+                    "Settings.Dialog.DeleteProfile.Accept")))
             return;
 
         bool previousSuppression = _suppressDirty;
@@ -1081,7 +1472,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         {
             _suppressDirty = previousSuppression;
         }
-        StatusMessage = $"Deleted profile '{selected.Name}' and reassigned its references.";
+        SetStatus("Settings.Status.ProfileDeleted", selected.Name);
         MarkDirty();
     }
 
@@ -1092,12 +1483,13 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         string id = UniqueIngestProfileId();
         var profile = new LibraryIngestProfile(
             id,
-            UniqueIngestProfileName("New ingest profile"),
+            UniqueIngestProfileName(
+                _localization.Get("Settings.IngestProfile.NewName")),
             new(false, LibrarySourceDisposition.Preserve, true, []));
         _editing.IngestProfiles.Add(profile);
         IngestProfiles.Add(profile);
         SelectedIngestProfile = profile;
-        StatusMessage = $"Created ingest profile '{profile.Name}'.";
+        SetStatus("Settings.Status.IngestProfileCreated", profile.Name);
         MarkDirty();
     }
 
@@ -1113,12 +1505,13 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         var duplicate = source with
         {
             Id = UniqueIngestProfileId(),
-            Name = UniqueIngestProfileName(source.Name + " copy"),
+            Name = UniqueIngestProfileName(source.Name +
+                _localization.Get("Settings.Profile.CopySuffix")),
         };
         _editing.IngestProfiles.Add(duplicate);
         IngestProfiles.Add(duplicate);
         SelectedIngestProfile = duplicate;
-        StatusMessage = $"Duplicated ingest profile '{source.Name}'.";
+        SetStatus("Settings.Status.IngestProfileDuplicated", source.Name);
         MarkDirty();
     }
 
@@ -1136,10 +1529,14 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         LibraryIngestProfile fallback = IngestProfiles.First(profile =>
             !string.Equals(profile.Id, selected.Id, StringComparison.OrdinalIgnoreCase));
         if (!await _dialogs.ConfirmAsync(
-                $"Delete ingest profile '{selected.Name}'?",
-                $"The active ingest workflow will change to '{fallback.Name}'. " +
-                "This cannot be undone after saving.",
-                "Delete ingest profile"))
+                _localization.Format(
+                    "Settings.Dialog.DeleteIngestProfile.Title",
+                    selected.Name),
+                _localization.Format(
+                    "Settings.Dialog.DeleteIngestProfile.Message",
+                    fallback.Name),
+                _localization.Get(
+                    "Settings.Dialog.DeleteIngestProfile.Accept")))
             return;
         _editing.IngestProfiles.RemoveAll(profile => string.Equals(
             profile.Id, selected.Id, StringComparison.OrdinalIgnoreCase));
@@ -1150,7 +1547,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         _editing.ActiveIngestProfileId = fallback.Id;
         SelectedIngestProfile = IngestProfiles.Single(profile => string.Equals(
             profile.Id, fallback.Id, StringComparison.OrdinalIgnoreCase));
-        StatusMessage = $"Deleted ingest profile '{selected.Name}'.";
+        SetStatus("Settings.Status.IngestProfileDeleted", selected.Name);
         MarkDirty();
     }
 
@@ -1160,7 +1557,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         UpdateValidation();
         if (!IsEditorValid)
         {
-            StatusMessage = "Resolve the highlighted setup issues before saving.";
+            SetStatus("Settings.Status.ResolveSetupIssues");
             SelectedTabIndex = ValidationTabIndex;
             return;
         }
@@ -1252,12 +1649,16 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         {
             _fieldMappings.Save(
                 FieldMappings.Select(row => row.Build()).ToArray());
-            FieldMappingStatus =
-                $"Saved {FieldMappings.Count:N0} format-specific field mapping(s).";
+            SetFieldMappingStatus(
+                FieldMappings.Count == 1
+                    ? "Settings.FieldMappings.Status.Saved.One"
+                    : "Settings.FieldMappings.Status.Saved.Other",
+                FieldMappings.Count);
         }
         catch (Exception error)
         {
-            FieldMappingStatus = $"Could not save field mappings: {error.Message}";
+            SetFieldMappingStatus(
+                "Settings.FieldMappings.Status.SaveFailed", error.Message);
         }
     }
 
@@ -1273,7 +1674,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     {
         if (row is null)
             return;
-        string? path = await _files.PickFolderAsync("Choose an export destination");
+        string? path = await _files.PickFolderAsync(
+            _localization.Get("Settings.FilePicker.ExportDestination"));
         if (path is not null)
             row.TransportDestination = path;
     }
@@ -1305,7 +1707,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     {
         if (row is null)
             return;
-        string? path = await _files.PickFolderAsync("Choose a music library root");
+        string? path = await _files.PickFolderAsync(
+            _localization.Get("Settings.FilePicker.LibraryRoot"));
         if (path is not null)
             row.Path = path;
     }
@@ -1315,7 +1718,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     {
         if (row is null)
             return;
-        string? path = await _files.PickFolderAsync("Choose a playlist export folder");
+        string? path = await _files.PickFolderAsync(
+            _localization.Get("Settings.FilePicker.PlaylistExportFolder"));
         if (path is not null)
             row.Target = path;
     }
@@ -1325,8 +1729,11 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     {
         if (row is null)
             return;
-        string? path = await _files.PickFileAsync("Choose an M3U/M3U8 playlist source",
-            [new FilePickerType("File playlists", [".m3u", ".m3u8"])]);
+        string? path = await _files.PickFileAsync(
+            _localization.Get("Settings.FilePicker.PlaylistSource"),
+            [new FilePickerType(
+                _localization.Get("Settings.FilePicker.PlaylistType"),
+                [".m3u", ".m3u8"])]);
         if (path is not null)
             row.Location = path;
     }
@@ -1334,7 +1741,9 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     [RelayCommand]
     private async Task BrowseDatabaseAsync()
     {
-        string? path = await _files.SaveFileAsync("Choose metadata cache", "cache.db", ".db");
+        string? path = await _files.SaveFileAsync(
+            _localization.Get("Settings.FilePicker.MetadataCache"),
+            "cache.db", ".db");
         if (path is not null)
             DatabaseFile = path;
     }
@@ -1343,7 +1752,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     private async Task BrowseMachineBindingsAsync()
     {
         string? path = await _files.SaveFileAsync(
-            "Choose machine-local bindings file", "library.bindings.xml", ".xml");
+            _localization.Get("Settings.FilePicker.MachineBindings"),
+            "library.bindings.xml", ".xml");
         if (path is not null)
             MachineBindingsFile = path;
     }
@@ -1351,8 +1761,11 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     [RelayCommand]
     private async Task BrowseItunesLibraryAsync()
     {
-        string? path = await _files.PickFileAsync("Choose iTunes library",
-            [new FilePickerType("iTunes library", [".itl"])]);
+        string? path = await _files.PickFileAsync(
+            _localization.Get("Settings.FilePicker.ItunesLibrary"),
+            [new FilePickerType(
+                _localization.Get("Settings.FilePicker.ItunesLibraryType"),
+                [".itl"])]);
         if (path is not null)
             ItunesLibraryPath = path;
     }
@@ -1362,7 +1775,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     {
         // Executables commonly have no extension on macOS and Linux. Leaving the picker
         // unfiltered supports ffmpeg, ffmpeg.exe, and user-provided wrapper scripts.
-        string? path = await _files.PickFileAsync("Choose ffmpeg executable");
+        string? path = await _files.PickFileAsync(
+            _localization.Get("Settings.FilePicker.Ffmpeg"));
         if (path is not null)
             FfmpegPath = path;
     }
@@ -1371,7 +1785,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     private async Task BrowseWavpackAsync()
     {
         // Executables commonly have no extension on macOS and Linux.
-        string? path = await _files.PickFileAsync("Choose WavPack executable");
+        string? path = await _files.PickFileAsync(
+            _localization.Get("Settings.FilePicker.Wavpack"));
         if (path is not null)
             WavpackPath = path;
     }
@@ -1379,7 +1794,8 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     [RelayCommand]
     private async Task BrowseFpcalcAsync()
     {
-        string? path = await _files.PickFileAsync("Choose fpcalc executable");
+        string? path = await _files.PickFileAsync(
+            _localization.Get("Settings.FilePicker.Fpcalc"));
         if (path is not null)
             FpcalcPath = path;
     }
@@ -1388,7 +1804,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     private async Task BrowseOptimFrogToolsAsync()
     {
         string? path = await _files.PickFolderAsync(
-            "Choose OptimFROG tools directory");
+            _localization.Get("Settings.FilePicker.OptimFrog"));
         if (path is not null)
             OptimFrogToolsDirectory = path;
     }
@@ -1408,7 +1824,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
     {
         _settings.ClearRecentConfigs();
         RefreshRecentConfigurations();
-        StatusMessage = "Recent configuration history cleared.";
+        SetStatus("Settings.Status.RecentConfigurationsCleared");
     }
 
     private void LoadConfiguration(string path)
@@ -1419,11 +1835,11 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             _settings.LoadConfig(path);
             LoadEditor(path);
             SelectedTabIndex = 1;
-            StatusMessage = "Configuration loaded. Cached browsing is available while roots are offline.";
+            SetStatus("Settings.Status.ConfigurationLoaded");
         }
         catch (Exception error)
         {
-            StatusMessage = $"Could not load configuration: {error.Message}";
+            SetStatus("Settings.Status.ConfigurationLoadFailed", error.Message);
         }
     }
 
@@ -1499,7 +1915,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         }
         catch (Exception error)
         {
-            StatusMessage = $"Could not edit configuration: {error.Message}";
+            SetStatus("Settings.Status.ConfigurationEditFailed", error.Message);
         }
         finally
         {
@@ -1514,11 +1930,13 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         if (!IsEditorValid)
         {
             UpdateValidation();
-            StatusMessage = "Resolve the validation issues before saving.";
+            SetStatus("Settings.Status.ResolveValidationIssues");
             SelectedTabIndex = ValidationTabIndex;
             return;
         }
-        path ??= await _files.SaveFileAsync("Save library configuration", "library.xml", ".xml");
+        path ??= await _files.SaveFileAsync(
+            _localization.Get("Settings.FilePicker.SaveConfiguration"),
+            "library.xml", ".xml");
         if (path is null)
             return;
         try
@@ -1526,9 +1944,11 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             CommitAdvancedProfile(updateProfileChoices: false);
             CommitAdvancedIngestProfile(updateProfileChoices: false);
             _editing.ActiveProfileId = SelectedLibraryProfile?.Id ??
-                throw new InvalidDataException("Choose a root/naming policy.");
+                throw new InvalidDataException(_localization.Get(
+                    "Settings.Validation.ChooseRootPolicy"));
             _editing.ActiveIngestProfileId = SelectedIngestProfile?.Id ??
-                throw new InvalidDataException("Choose an active ingest profile.");
+                throw new InvalidDataException(_localization.Get(
+                    "Settings.Validation.ChooseIngestProfile"));
             ApplyAdvancedCompatibilityDefaults(
                 _editing.ActiveProfile, _editing.ActiveIngestProfile);
             _editing.MachineBindingsFile = CleanOptional(MachineBindingsFile);
@@ -1612,15 +2032,17 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             _editing.Save(path);
             _settings.LoadConfig(path);
             LoadEditor(path);
-            StatusMessage = "Configuration saved and loaded.";
+            SetStatus("Settings.Status.ConfigurationSaved");
             HasUnsavedChanges = false;
             IsGuidedSetupActive = false;
             ValidationSummary = null;
         }
         catch (Exception error)
         {
-            StatusMessage = $"Could not save configuration: {error.Message}";
-            await _dialogs.ShowMessageAsync("Configuration was not saved", error.Message);
+            SetStatus("Settings.Status.ConfigurationSaveFailed", error.Message);
+            await _dialogs.ShowMessageAsync(
+                _localization.Get("Settings.Dialog.SaveFailed.Title"),
+                error.Message);
         }
     }
 
@@ -1633,7 +2055,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         {
             if (HasUnsavedChanges)
             {
-                StatusMessage = "The active configuration changed, but your unsaved editor changes were retained. Save them as a separate file or discard them before editing the active configuration.";
+                SetStatus("Settings.Status.ActiveConfigurationChanged");
                 return;
             }
             LoadEditor(ActiveConfigurationPath);
@@ -1698,7 +2120,12 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         if (AdvancedIngestProfile is null)
             return;
         foreach (IngestRecipeEditorRow recipe in AdvancedIngestProfile.Recipes)
-            recipe.RefreshDestinationRootChoices(IndexTargets);
+            recipe.RefreshDestinationRootChoices(
+                IndexTargets,
+                _localization.Get("Settings.DestinationRoot.None"),
+                _localization.Get("Settings.DestinationRoot.NewRoot"),
+                id => _localization.Format(
+                    "Settings.DestinationRoot.Missing", id));
     }
 
     private void RefreshSyncTargetChoices()
@@ -1708,11 +2135,12 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         try
         {
             SyncTargetRootChoices.Clear();
-            SyncTargetRootChoices.Add(new(null, "No sync target"));
+            SyncTargetRootChoices.Add(new(null,
+                _localization.Get("Settings.SyncTarget.None")));
             foreach (IndexTargetEditorRow root in IndexTargets)
             {
                 string label = string.IsNullOrWhiteSpace(root.Path)
-                    ? "New library root"
+                    ? _localization.Get("Settings.SyncTarget.NewRoot")
                     : root.Path.Trim();
                 SyncTargetRootChoices.Add(new(root.Id, label));
             }
@@ -1837,6 +2265,7 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
             Permissions = target.Permissions ?? profile.DefaultRootPermissions,
             Source = target,
         };
+        row.SetPermissionSummaryFormatter(FormatPermissionSummary);
         row.RefreshProfileChoices(LibraryProfiles);
         return row;
     }
@@ -1846,47 +2275,78 @@ public partial class SettingsViewModel : ObservableObject, INavigationGuard
         IndexTargetEntry target) =>
         CleanOptional(membership.Offset) ?? CleanOptional(target.DefaultOffset);
 
-    private static string FormatPermissions(LibraryRootPermissions permissions)
+    private string FormatPermissions(LibraryRootPermissions permissions)
     {
         if (permissions == LibraryRootPermissions.None)
-            return "catalog only (read-only)";
+            return _localization.Get("Settings.Permissions.CatalogOnly");
         var labels = new List<string>();
-        if (permissions.HasFlag(LibraryRootPermissions.WriteMetadata)) labels.Add("metadata");
-        if (permissions.HasFlag(LibraryRootPermissions.WriteArtwork)) labels.Add("artwork");
-        if (permissions.HasFlag(LibraryRootPermissions.OrganizeFiles)) labels.Add("organization");
-        if (permissions.HasFlag(LibraryRootPermissions.IngestOutput)) labels.Add("ingest output");
-        if (permissions.HasFlag(LibraryRootPermissions.SynchronizeOutput)) labels.Add("sync output");
+        if (permissions.HasFlag(LibraryRootPermissions.WriteMetadata))
+            labels.Add(_localization.Get("Settings.Permissions.Metadata"));
+        if (permissions.HasFlag(LibraryRootPermissions.WriteArtwork))
+            labels.Add(_localization.Get("Settings.Permissions.Artwork"));
+        if (permissions.HasFlag(LibraryRootPermissions.OrganizeFiles))
+            labels.Add(_localization.Get("Settings.Permissions.Organization"));
+        if (permissions.HasFlag(LibraryRootPermissions.IngestOutput))
+            labels.Add(_localization.Get("Settings.Permissions.IngestOutput"));
+        if (permissions.HasFlag(LibraryRootPermissions.SynchronizeOutput))
+            labels.Add(_localization.Get("Settings.Permissions.SyncOutput"));
         return string.Join(", ", labels);
     }
 
-    private static string DescribeRootPermissions(
+    private string FormatPermissionSummary(
+        LibraryRootPermissions permissions) =>
+        permissions == LibraryRootPermissions.None
+            ? _localization.Get("Settings.Permissions.Summary.ReadOnly")
+            : _localization.Format("Settings.Permissions.Summary.Allowed",
+                FormatPermissions(permissions));
+
+    private string DescribeRootPermissions(
         LibraryRootPermissions permissions)
     {
         if (permissions == LibraryRootPermissions.None)
-            return "The app only catalogs this folder and will not change its files.";
+            return _localization.Get("Settings.Permissions.Description.ReadOnly");
         var actions = new List<string>();
         if (permissions.HasFlag(LibraryRootPermissions.WriteMetadata))
-            actions.Add("edit metadata");
+            actions.Add(_localization.Get("Settings.Permissions.Action.Metadata"));
         if (permissions.HasFlag(LibraryRootPermissions.WriteArtwork))
-            actions.Add("edit artwork");
+            actions.Add(_localization.Get("Settings.Permissions.Action.Artwork"));
         if (permissions.HasFlag(LibraryRootPermissions.OrganizeFiles))
-            actions.Add("rename and move files");
+            actions.Add(_localization.Get("Settings.Permissions.Action.Organize"));
         if (permissions.HasFlag(LibraryRootPermissions.IngestOutput))
-            actions.Add("write ingest results");
+            actions.Add(_localization.Get("Settings.Permissions.Action.Ingest"));
         if (permissions.HasFlag(LibraryRootPermissions.SynchronizeOutput))
-            actions.Add("write synchronized copies");
-        return $"The app may {string.Join(", ", actions)} in this folder.";
+            actions.Add(_localization.Get("Settings.Permissions.Action.Sync"));
+        return _localization.Format("Settings.Permissions.Description.Writable",
+            string.Join(", ", actions));
     }
 
-    private static string FormatWords(string value) => string.Concat(value.Select(
-        (character, index) => index > 0 && char.IsUpper(character)
-            ? " " + char.ToLowerInvariant(character)
-            : char.ToLowerInvariant(character).ToString()));
+    private string ChoiceLabelForProfilePreset(LibraryProfilePreset value) =>
+        _localization.Get($"Settings.Choice.LibraryProfilePreset.{value}");
 
-    private static string OnOff(bool value) => value ? "preserved" : "not copied";
+    private string OnOff(bool value) => _localization.Get(value
+        ? "Settings.PolicyDetails.Preserved"
+        : "Settings.PolicyDetails.NotCopied");
 
     private static string? CleanOptional(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
-public sealed record ThemeChoice(string Name, string Canvas, string Raised, string Accent);
+public sealed class ThemeChoice(
+    string value,
+    string name,
+    string canvas,
+    string raised,
+    string accent) : ObservableObject
+{
+    private string _name = name;
+
+    public string Value { get; } = value;
+    public string Name
+    {
+        get => _name;
+        set => SetProperty(ref _name, value);
+    }
+    public string Canvas { get; } = canvas;
+    public string Raised { get; } = raised;
+    public string Accent { get; } = accent;
+}

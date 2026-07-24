@@ -17,7 +17,11 @@ public partial class OrganizeViewModel : ViewModelBase
     private readonly IAppSettings _settings;
     private readonly IDialogService _dialogs;
     private readonly IActivityService? _activities;
+    private readonly ILocalizationService? _localization;
     private CancellationTokenSource? _cts;
+    private string? _statusKey = "Organize.Status.Ready";
+    private object?[] _statusArguments = [];
+    private long? _statusCount;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(PreviewCommand))]
@@ -26,7 +30,12 @@ public partial class OrganizeViewModel : ViewModelBase
     private bool _isBusy;
 
     [ObservableProperty]
-    private string? _statusText = "Preview to see what would be renamed. No files move until you Apply.";
+    private string? _statusText =
+        LocalizedText.Get("Organize.Status.Ready");
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDiagnosticDetail))]
+    private string? _diagnosticDetail;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ApplyCommand))]
@@ -34,6 +43,8 @@ public partial class OrganizeViewModel : ViewModelBase
 
     public ObservableCollection<PlannedMove> Moves { get; } = [];
     public bool IsMoveListEmpty => Moves.Count == 0;
+    public bool HasDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(DiagnosticDetail);
 
     /// <summary>Raised after moves are applied (the cache is already synced) so the grid can refresh.</summary>
     public event Action? MovesApplied;
@@ -42,13 +53,20 @@ public partial class OrganizeViewModel : ViewModelBase
         ILibraryOrganizer organizer,
         IAppSettings settings,
         IDialogService dialogs,
-        IActivityService? activities = null)
+        IActivityService? activities = null,
+        ILocalizationService? localization = null)
     {
         _organizer = organizer;
         _settings = settings;
         _dialogs = dialogs;
         _activities = activities;
-        _settings.ConfigurationChanged += (_, _) => PreviewCommand.NotifyCanExecuteChanged();
+        _localization = localization;
+        SetStatus("Organize.Status.Ready");
+        if (_localization is not null)
+            _localization.CultureChanged +=
+                OnLocalizationCultureChanged;
+        _settings.ConfigurationChanged += (_, _) =>
+            PreviewCommand.NotifyCanExecuteChanged();
     }
 
     private bool IsReady => _settings.Configuration is not null;
@@ -61,34 +79,50 @@ public partial class OrganizeViewModel : ViewModelBase
         HasPreview = false;
         PreviewCommand.NotifyCanExecuteChanged();
         _cts = new CancellationTokenSource();
+        DiagnosticDetail = null;
         Guid? activity = _activities?.Start(
-            "Preview file organization", "Computing moves", ShellDestination.Organize, Cancel);
-        StatusText = "Computing moves…";
+            L("Organize.Activity.Preview.Title"),
+            L("Organize.Activity.Preview.Starting"),
+            ShellDestination.Organize,
+            Cancel);
+        SetStatus("Organize.Status.Computing");
         try
         {
-            var moves = await _organizer.PreviewMovesAsync(_cts.Token);
+            IReadOnlyList<PlannedMove> moves =
+                await _organizer.PreviewMovesAsync(_cts.Token);
             Moves.Clear();
-            foreach (var m in moves)
-                Moves.Add(m);
+            foreach (PlannedMove move in moves)
+                Moves.Add(move);
             OnPropertyChanged(nameof(IsMoveListEmpty));
             HasPreview = moves.Count > 0;
-            StatusText = moves.Count == 0
-                ? LibraryOrganizationPolicy.EligibleRoots(
-                    _settings.Configuration!.IndexLocations).Count == 0
-                    ? "No organization-eligible IndexTargets are configured."
-                    : "Everything eligible is already in its canonical location."
-                : $"{moves.Count:N0} files would be moved. Review below, then Apply.";
-            FinishActivity(activity, StatusText ?? "Preview completed.");
+            if (moves.Count > 0)
+                SetCountStatus(
+                    "Organize.Status.PreviewMoves",
+                    moves.Count);
+            else if (LibraryOrganizationPolicy.EligibleRoots(
+                         _settings.Configuration!.IndexLocations).Count == 0)
+                SetStatus("Organize.Status.NoEligibleRoots");
+            else
+                SetStatus("Organize.Status.AlreadyCanonical");
+            FinishActivity(activity, StatusText!);
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Preview cancelled.";
-            FinishActivity(activity, StatusText, AppActivityState.Cancelled);
+            SetStatus("Organize.Status.PreviewCancelled");
+            FinishActivity(
+                activity,
+                StatusText!,
+                AppActivityState.Cancelled);
         }
-        catch (Exception ex)
+        catch (Exception error)
         {
-            StatusText = $"Preview failed: {ex.Message}";
-            FinishActivity(activity, StatusText, AppActivityState.Failed);
+            SetFailure(
+                "Organize.Status.PreviewFailed",
+                error);
+            FinishActivity(
+                activity,
+                StatusText!,
+                AppActivityState.Failed);
         }
         finally
         {
@@ -106,45 +140,75 @@ public partial class OrganizeViewModel : ViewModelBase
     {
         PlannedMove[] moves = [.. Moves];
         if (!await _dialogs.ConfirmApplyAsync(
-                "Apply file moves",
-                $"Move {moves.Length:N0} file(s) into their canonical library locations?\n\n" +
-                "Recovery is available: a journal will be written, and completed moves are rolled back if the operation does not finish.",
-                "Move files"))
+                L("Organize.Dialog.Apply.Title"),
+                LFC(
+                    "Organize.Dialog.Apply.Message",
+                    moves.Length),
+                L("Organize.Dialog.Apply.Primary")))
             return;
 
         IsBusy = true;
         ApplyCommand.NotifyCanExecuteChanged();
         _cts = new CancellationTokenSource();
-        var total = moves.Length;
+        DiagnosticDetail = null;
+        int total = moves.Length;
         Guid? activity = _activities?.Start(
-            "Organize library files", $"Moving 0/{total:N0}", ShellDestination.Organize, Cancel);
-        var progress = new Progress<int>(n => StatusText = $"Moving… {n:N0}/{total:N0}");
+            L("Organize.Activity.Apply.Title"),
+            LF(
+                "Organize.Status.Moving",
+                0,
+                total),
+            ShellDestination.Organize,
+            Cancel);
+        var progress = new Progress<int>(completed =>
+            SetStatus(
+                "Organize.Status.Moving",
+                completed,
+                total));
         try
         {
-            var result = await _organizer.ApplyMovesAsync(moves, progress, _cts.Token);
-            StatusText = result.FailedCount == 0
-                ? $"Moved {result.Moved:N0} files. Cache updated."
-                : $"Moved {result.Moved:N0}, {result.FailedCount:N0} failed. Cache updated.";
+            OrganizeResult result = await _organizer.ApplyMovesAsync(
+                moves,
+                progress,
+                _cts.Token);
+            SetStatus(
+                result.FailedCount == 0
+                    ? "Organize.Status.ApplyComplete"
+                    : "Organize.Status.ApplyPartial",
+                result.Moved,
+                result.FailedCount);
             Moves.Clear();
             OnPropertyChanged(nameof(IsMoveListEmpty));
             HasPreview = false;
             MovesApplied?.Invoke();
-            FinishActivity(activity, StatusText,
-                result.FailedCount == 0 ? AppActivityState.Completed : AppActivityState.Failed);
+            FinishActivity(
+                activity,
+                StatusText!,
+                result.FailedCount == 0
+                    ? AppActivityState.Completed
+                    : AppActivityState.Failed);
         }
         catch (OperationCanceledException)
         {
-            StatusText = "Cancelled — completed moves were rolled back.";
+            SetStatus("Organize.Status.ApplyCancelled");
             Moves.Clear();
             OnPropertyChanged(nameof(IsMoveListEmpty));
             HasPreview = false;
             MovesApplied?.Invoke();
-            FinishActivity(activity, StatusText, AppActivityState.Cancelled);
+            FinishActivity(
+                activity,
+                StatusText!,
+                AppActivityState.Cancelled);
         }
-        catch (Exception ex)
+        catch (Exception error)
         {
-            StatusText = $"Apply failed: {ex.Message}";
-            FinishActivity(activity, StatusText, AppActivityState.Failed);
+            SetFailure(
+                "Organize.Status.ApplyFailed",
+                error);
+            FinishActivity(
+                activity,
+                StatusText!,
+                AppActivityState.Failed);
         }
         finally
         {
@@ -160,12 +224,92 @@ public partial class OrganizeViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanCancel))]
     private void Cancel() => _cts?.Cancel();
 
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string LF(
+        string key,
+        params object?[] arguments) =>
+        _localization?.Format(
+            key,
+            arguments) ??
+        LocalizedText.Format(
+            key,
+            arguments);
+
+    private string LFC(
+        string key,
+        long count,
+        params object?[] arguments) =>
+        _localization?.FormatCount(
+            key,
+            count,
+            arguments) ??
+        LocalizedText.FormatCount(
+            key,
+            count,
+            arguments);
+
+    private void SetStatus(
+        string key,
+        params object?[] arguments)
+    {
+        _statusKey = key;
+        _statusArguments = arguments;
+        _statusCount = null;
+        StatusText = LF(
+            key,
+            arguments);
+    }
+
+    private void SetCountStatus(
+        string key,
+        long count,
+        params object?[] arguments)
+    {
+        _statusKey = key;
+        _statusArguments = arguments;
+        _statusCount = count;
+        StatusText = LFC(
+            key,
+            count,
+            arguments);
+    }
+
+    private void SetFailure(
+        string key,
+        Exception error)
+    {
+        SetStatus(key);
+        DiagnosticDetail = error.Message;
+    }
+
+    private void OnLocalizationCultureChanged(
+        object? sender,
+        EventArgs e)
+    {
+        if (_statusKey is not { } key)
+            return;
+        StatusText = _statusCount is { } count
+            ? LFC(
+                key,
+                count,
+                _statusArguments)
+            : LF(
+                key,
+                _statusArguments);
+    }
+
     private void FinishActivity(
         Guid? activity,
         string message,
         AppActivityState state = AppActivityState.Completed)
     {
         if (activity is { } id)
-            _activities?.Finish(id, message, state);
+            _activities?.Finish(
+                id,
+                message,
+                state);
     }
 }

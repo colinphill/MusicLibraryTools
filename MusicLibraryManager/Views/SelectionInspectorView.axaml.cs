@@ -20,6 +20,9 @@ public partial class SelectionInspectorView : UserControl
 
     public event EventHandler? CloseRequested;
 
+    public Control CloseButton =>
+        InspectorCloseButton;
+
     private SelectionInspectorViewModel ViewModel =>
         DataContext as SelectionInspectorViewModel ??
         App.GetService<SelectionInspectorViewModel>();
@@ -28,19 +31,19 @@ public partial class SelectionInspectorView : UserControl
 
     private async void OnReplaceArtwork(object? sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: ArtworkPreviewItem item })
+        if (sender is Control { Tag: ArtworkPreviewItem item })
             await ViewModel.ReplaceArtworkItemAsync(item);
     }
 
     private async void OnSaveArtwork(object? sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: ArtworkPreviewItem item })
+        if (sender is Control { Tag: ArtworkPreviewItem item })
             await ViewModel.SaveArtworkItemToFileAsync(item);
     }
 
     private void OnRemoveArtwork(object? sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: ArtworkPreviewItem item })
+        if (sender is Control { Tag: ArtworkPreviewItem item })
             ViewModel.RemoveArtworkItem(item);
     }
 

@@ -28,13 +28,28 @@ public partial class ArtworkPreviewWindow : Window
     {
         _bitmap = bitmap;
 
-        string label = string.IsNullOrWhiteSpace(item.Label) ? "Artwork" : item.Label;
-        Title = $"{label} artwork preview";
+        string label = string.IsNullOrWhiteSpace(item.Label)
+            ? LocalizedText.Get(
+                "ArtworkPreview.FallbackLabel")
+            : item.Label;
+        Title = LocalizedText.Format(
+            "ArtworkPreview.WindowTitleFormat",
+            label);
         AutomationProperties.SetName(this, Title);
-        AutomationProperties.SetName(PreviewImage, $"Full-resolution {label.ToLowerInvariant()} artwork");
+        AutomationProperties.SetName(
+            PreviewImage,
+            LocalizedText.Format(
+                "ArtworkPreview.AutomationFormat",
+                label.ToLower(
+                    System.Globalization.CultureInfo
+                        .CurrentUICulture)));
         PreviewImage.Source = bitmap;
-        PreviewDetails.Text = $"{bitmap.PixelSize.Width:N0} x {bitmap.PixelSize.Height:N0} pixels · " +
-                              $"{item.MimeType} · {FormatBytes(item.Data.LongLength)}";
+        PreviewDetails.Text = LocalizedText.Format(
+            "ArtworkPreview.DetailsFormat",
+            bitmap.PixelSize.Width,
+            bitmap.PixelSize.Height,
+            item.MimeType,
+            FormatBytes(item.Data.LongLength));
 
         ApplyInitialSize(GetWorkingArea(owner));
         Closed += OnClosed;
@@ -128,8 +143,15 @@ public partial class ArtworkPreviewWindow : Window
 
     private static string FormatBytes(long bytes) => bytes switch
     {
-        >= 1024 * 1024 => $"{bytes / 1024d / 1024d:0.##} MB",
-        >= 1024 => $"{bytes / 1024d:0.#} KB",
-        _ => $"{bytes:N0} bytes",
+        >= 1024 * 1024 => LocalizedText.Format(
+            "ArtworkPreview.Size.MegabytesFormat",
+            bytes / 1024d / 1024d),
+        >= 1024 => LocalizedText.Format(
+            "ArtworkPreview.Size.KilobytesFormat",
+            bytes / 1024d),
+        _ => LocalizedText.Format(
+            "ArtworkPreview.Size.BytesFormat",
+            bytes),
     };
+
 }

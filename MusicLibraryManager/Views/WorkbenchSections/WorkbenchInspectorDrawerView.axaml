@@ -1,0 +1,120 @@
+<UserControl x:Class="MusicLibraryManager.Views.WorkbenchSections.WorkbenchInspectorDrawerView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:views="using:MusicLibraryManager.Views"
+             xmlns:controls="using:MusicLibraryManager.Controls">
+  <Grid RowDefinitions="*,Auto">
+    <views:SelectionInspectorView
+        x:Name="WorkbenchInspectorView"
+        DataContext="{Binding Inspector}" />
+    <Expander x:Name="WorkbenchTagToolsExpander"
+              Grid.Row="1"
+              Margin="10,0,10,10"
+              Header="{DynamicResource Loc.Workbench.Inspector.TagLayers}"
+              IsVisible="{Binding SelectedFile.HasEditableTagLayers}">
+      <ScrollViewer MaxHeight="360"
+                    VerticalScrollBarVisibility="Auto"
+                    HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="2,8,2,2"
+                    Spacing="8">
+          <controls:LocalizedFormatTextBlock
+              Classes="muted"
+              ResourceKey="Workbench.Inspector.CurrentLayersFormat"
+              Value="{Binding SelectedFile.LayerSummary}"
+              TextWrapping="Wrap" />
+          <CheckBox Content="{DynamicResource Loc.Workbench.Inspector.CopyPrimaryMetadata}"
+                    IsChecked="{Binding CopyPrimaryMetadataToNewLayer, Mode=TwoWay}" />
+          <TextBlock FontWeight="SemiBold"
+                     Text="ID3v2" />
+          <WrapPanel>
+            <Button Classes="app"
+                    Margin="0,0,6,6"
+                    Content="{DynamicResource Loc.Workbench.Action.Add}"
+                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Inspector.AddId3v2Automation}"
+                    Command="{Binding PreviewAddId3LayerCommand}" />
+            <Button Classes="app"
+                    Margin="0,0,6,6"
+                    Content="{DynamicResource Loc.Common.Remove}"
+                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Inspector.RemoveId3v2Automation}"
+                    Command="{Binding PreviewRemoveId3LayerCommand}" />
+          </WrapPanel>
+          <TextBlock FontWeight="SemiBold"
+                     Text="APEv2" />
+          <WrapPanel>
+            <Button Classes="app"
+                    Margin="0,0,6,6"
+                    Content="{DynamicResource Loc.Workbench.Action.Add}"
+                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Inspector.AddApeV2Automation}"
+                    Command="{Binding PreviewAddApeLayerCommand}" />
+            <Button Classes="app"
+                    Margin="0,0,6,6"
+                    Content="{DynamicResource Loc.Common.Remove}"
+                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Inspector.RemoveApeV2Automation}"
+                    Command="{Binding PreviewRemoveApeLayerCommand}" />
+          </WrapPanel>
+          <TextBlock FontWeight="SemiBold"
+                     Text="ID3v1" />
+          <WrapPanel>
+            <Button Classes="app"
+                    Margin="0,0,6,6"
+                    Content="{DynamicResource Loc.Workbench.Action.Add}"
+                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Inspector.AddId3v1Automation}"
+                    Command="{Binding PreviewAddId3v1LayerCommand}" />
+            <Button Classes="app"
+                    Margin="0,0,6,6"
+                    Content="{DynamicResource Loc.Common.Remove}"
+                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Inspector.RemoveId3v1Automation}"
+                    Command="{Binding PreviewRemoveId3v1LayerCommand}" />
+          </WrapPanel>
+          <StackPanel Spacing="7"
+                      IsVisible="{Binding SelectedFile.HasId3Tag}">
+            <Border Height="1"
+                    Background="{DynamicResource AppBorderBrush}" />
+            <TextBlock FontWeight="SemiBold"
+                     Text="{DynamicResource Loc.Workbench.Inspector.Id3Conversion}" />
+          <controls:LocalizedFormatTextBlock
+              Classes="muted"
+              ResourceKey="Workbench.Inspector.CurrentValueFormat"
+              Value="{Binding SelectedFile.Document.Id3Version}" />
+            <ComboBox Classes="app"
+                      ItemsSource="{Binding Id3VersionChoices}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedValueBinding="{Binding Value}"
+                      SelectedValue="{Binding TargetId3Version, Mode=TwoWay}"
+                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Inspector.TargetId3VersionAutomation}" />
+          <CheckBox Content="{DynamicResource Loc.Workbench.Inspector.DropUnsupportedFrames}"
+                      IsChecked="{Binding DropUnsupportedId3Frames, Mode=TwoWay}" />
+          <CheckBox Content="{DynamicResource Loc.Workbench.Inspector.JoinMultiValueText}"
+                      IsChecked="{Binding CoalesceId3TextValues, Mode=TwoWay}" />
+            <Button Classes="app primary"
+                    Content="{DynamicResource Loc.Workbench.Inspector.PreviewConversion}"
+                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Inspector.PreviewConversionAutomation}"
+                    Command="{Binding PreviewId3VersionCommand}" />
+            <WrapPanel>
+              <Button Classes="app"
+                      Margin="0,0,6,6"
+                      Content="{DynamicResource Loc.Workbench.Inspector.CopyV2ToV1}"
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Inspector.CopyV2ToV1Automation}"
+                      Command="{Binding PreviewId3v2ToId3v1Command}" />
+              <Button Classes="app"
+                      Margin="0,0,6,6"
+                      Content="{DynamicResource Loc.Workbench.Inspector.CopyV1ToV2}"
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Inspector.CopyV1ToV2Automation}"
+                      Command="{Binding PreviewId3v1ToId3v2Command}" />
+            </WrapPanel>
+            <ComboBox Classes="app"
+                      ItemsSource="{Binding Id3EncodingPolicyChoices}"
+                      DisplayMemberBinding="{Binding Label}"
+                      SelectedValueBinding="{Binding Value}"
+                      SelectedValue="{Binding SelectedId3EncodingPolicy, Mode=TwoWay}"
+                      AutomationProperties.Name="{DynamicResource Loc.Workbench.Inspector.Id3EncodingAutomation}" />
+            <Button Classes="app"
+                    Content="{DynamicResource Loc.Workbench.Inspector.PreviewEncoding}"
+                    AutomationProperties.Name="{DynamicResource Loc.Workbench.Inspector.PreviewEncodingAutomation}"
+                    Command="{Binding PreviewId3EncodingCommand}" />
+          </StackPanel>
+        </StackPanel>
+      </ScrollViewer>
+    </Expander>
+  </Grid>
+</UserControl>

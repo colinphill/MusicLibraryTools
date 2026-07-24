@@ -1,0 +1,96 @@
+<UserControl x:Class="MusicLibraryManager.Views.WorkbenchSections.WorkbenchShortcutsSectionView"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Grid x:Name="SectionLayout"
+        Margin="0,12,0,0"
+        ColumnDefinitions="1.1*,14,0.9*">
+    <Grid x:Name="BindingsPanel"
+          RowDefinitions="Auto,*,Auto"
+          RowSpacing="9">
+      <TextBlock Classes="section-title"
+                 Text="{DynamicResource Loc.Workbench.Shortcuts.Title}" />
+      <ListBox x:Name="ShortcutBindingList"
+               Grid.Row="1"
+               MinHeight="150"
+               ItemsSource="{Binding ShortcutEditor.Bindings}"
+               SelectedItem="{Binding ShortcutEditor.SelectedBinding, Mode=TwoWay}">
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <Grid ColumnDefinitions="150,*"
+                  ColumnSpacing="12"
+                  Margin="4">
+              <TextBlock FontWeight="SemiBold"
+                         Text="{Binding Gesture}" />
+              <TextBlock Grid.Column="1"
+                         Text="{Binding Target}" />
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+      <Border x:Name="SafetyNote"
+              Grid.Row="2"
+              Classes="status-banner info">
+        <TextBlock TextWrapping="Wrap"
+                   Text="{DynamicResource Loc.Workbench.Shortcuts.Safety}" />
+      </Border>
+    </Grid>
+
+    <ScrollViewer x:Name="EditorScroll"
+                  Grid.Column="2"
+                  VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="9">
+        <TextBlock Classes="section-title"
+                   Text="{DynamicResource Loc.Workbench.Shortcuts.BindingTitle}" />
+        <TextBox Classes="app"
+                 Text="{Binding ShortcutEditor.GestureText, Mode=TwoWay}"
+                 PlaceholderText="{DynamicResource Loc.Workbench.Shortcuts.GesturePlaceholder}" />
+        <TextBlock x:Name="GestureHelp"
+                   Classes="muted"
+                   TextWrapping="Wrap"
+                   Text="{DynamicResource Loc.Workbench.Shortcuts.GestureHelp}" />
+        <ComboBox Classes="app"
+                  ItemsSource="{Binding ShortcutEditor.TargetKindChoices}"
+                  DisplayMemberBinding="{Binding Label}"
+                  SelectedValueBinding="{Binding Value}"
+                  SelectedValue="{Binding ShortcutEditor.TargetKind, Mode=TwoWay}" />
+        <StackPanel Spacing="4">
+          <TextBlock Classes="muted"
+                     Text="{DynamicResource Loc.Workbench.Shortcuts.Command}" />
+          <ComboBox Classes="app"
+                    ItemsSource="{Binding ShortcutEditor.Commands}"
+                    DisplayMemberBinding="{Binding Label}"
+                    SelectedItem="{Binding ShortcutEditor.SelectedCommand, Mode=TwoWay}" />
+        </StackPanel>
+        <StackPanel Spacing="4">
+          <TextBlock Classes="muted"
+                     Text="{DynamicResource Loc.Workbench.Shortcuts.Recipe}" />
+          <ComboBox Classes="app"
+                    ItemsSource="{Binding ShortcutEditor.Recipes}"
+                    DisplayMemberBinding="{Binding Name}"
+                    SelectedItem="{Binding ShortcutEditor.SelectedRecipe, Mode=TwoWay}"
+                    PlaceholderText="{DynamicResource Loc.Workbench.Shortcuts.RecipePlaceholder}" />
+        </StackPanel>
+        <WrapPanel>
+          <Button Classes="app"
+                  Content="{DynamicResource Loc.Workbench.Shortcuts.New}"
+                  Command="{Binding ShortcutEditor.NewShortcutCommand}" />
+          <Button x:Name="SaveShortcutButton"
+                  Classes="app primary"
+                  Content="{DynamicResource Loc.Workbench.Shortcuts.Save}"
+                  Command="{Binding ShortcutEditor.SaveShortcutCommand}" />
+          <Button Classes="app danger"
+                  Content="{DynamicResource Loc.Common.Remove}"
+                  Command="{Binding ShortcutEditor.RemoveShortcutCommand}" />
+        </WrapPanel>
+        <Border x:Name="InputWarning"
+                Classes="status-banner warning">
+          <TextBlock TextWrapping="Wrap"
+                     Text="{DynamicResource Loc.Workbench.Shortcuts.InputWarning}" />
+        </Border>
+        <TextBlock Classes="muted"
+                   TextWrapping="Wrap"
+                   Text="{Binding ShortcutEditor.Status}" />
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

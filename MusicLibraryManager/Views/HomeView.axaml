@@ -4,20 +4,27 @@
   <Grid Margin="26,22,26,26" RowDefinitions="Auto,Auto,*" RowSpacing="14">
     <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
       <StackPanel Spacing="5">
-        <TextBlock Classes="page-title" Text="Your music, clearly managed" />
-        <TextBlock Classes="muted" Text="A calm view of the collection, its health, and what needs attention next." />
+        <TextBlock Classes="page-title" Text="{DynamicResource Loc.Home.Title}" />
+        <TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Subtitle}" />
       </StackPanel>
       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasConfiguration}">
-        <Button Classes="app" Content="Refresh" Command="{Binding RefreshCommand}" />
-        <Button Classes="app primary" Content="Open library" Command="{Binding OpenLibraryCommand}" />
+          <Button Classes="app" Content="{DynamicResource Loc.Home.Action.Refresh}" Command="{Binding RefreshCommand}" />
+          <Button Classes="app primary" Content="{DynamicResource Loc.Home.Action.OpenLibrary}" Command="{Binding OpenLibraryCommand}" />
       </StackPanel>
-      <Button Grid.Column="1" Classes="app" Content="Set up library"
+          <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Home.Action.SetUpLibrary}"
               IsVisible="{Binding NeedsSetup}" Command="{Binding OpenSettingsCommand}" />
     </Grid>
 
     <Border Grid.Row="1" Classes="status-banner error" IsVisible="{Binding HasError}"
             AutomationProperties.LiveSetting="Assertive">
-      <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
+      <StackPanel Spacing="3">
+        <TextBlock Text="{Binding ErrorMessage}"
+                   TextWrapping="Wrap" />
+        <TextBlock Classes="muted"
+                   Text="{Binding ErrorDetail}"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding HasErrorDetail}" />
+      </StackPanel>
     </Border>
 
     <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
@@ -25,27 +32,27 @@
         <Border Classes="card" IsVisible="{Binding NeedsSetup}">
           <Grid ColumnDefinitions="1.2*,0.8*" ColumnSpacing="28">
             <StackPanel Spacing="10">
-              <TextBlock Classes="section-title" Text="Set up your music library" />
-              <TextBlock Classes="muted" Text="Connect a configuration before browsing, auditing, or organizing music. Your existing files are not changed during setup." TextWrapping="Wrap" />
-              <Button Classes="app primary" HorizontalAlignment="Left" Content="Choose or create configuration"
+          <TextBlock Classes="section-title" Text="{DynamicResource Loc.Home.Empty.Title}" />
+          <TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Empty.Description}" TextWrapping="Wrap" />
+          <Button Classes="app primary" HorizontalAlignment="Left" Content="{DynamicResource Loc.Home.Empty.Action}"
                       Command="{Binding OpenSettingsCommand}" />
             </StackPanel>
             <StackPanel Grid.Column="1" Spacing="10">
               <Grid ColumnDefinitions="28,*" ColumnSpacing="10">
                 <Border Width="26" Height="26" CornerRadius="13" Background="{DynamicResource AppAccentBrush}"><TextBlock Text="1" Foreground="{DynamicResource AppAccentInkBrush}" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
-                <StackPanel Grid.Column="1"><TextBlock Text="Choose a configuration" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="Open an existing XML file or create one." TextWrapping="Wrap" /></StackPanel>
+              <StackPanel Grid.Column="1"><TextBlock Text="{DynamicResource Loc.Home.Step.ChooseConfiguration.Title}" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Step.ChooseConfiguration.Description}" TextWrapping="Wrap" /></StackPanel>
               </Grid>
               <Grid ColumnDefinitions="28,*" ColumnSpacing="10">
                 <Border Width="26" Height="26" CornerRadius="13" Background="{DynamicResource AppInsetBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"><TextBlock Text="2" Classes="muted" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
-                <StackPanel Grid.Column="1"><TextBlock Text="Add library roots" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="Tell the manager where your music lives." TextWrapping="Wrap" /></StackPanel>
+              <StackPanel Grid.Column="1"><TextBlock Text="{DynamicResource Loc.Home.Step.AddRoots.Title}" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Step.AddRoots.Description}" TextWrapping="Wrap" /></StackPanel>
               </Grid>
               <Grid ColumnDefinitions="28,*" ColumnSpacing="10">
                 <Border Width="26" Height="26" CornerRadius="13" Background="{DynamicResource AppInsetBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"><TextBlock Text="3" Classes="muted" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
-                <StackPanel Grid.Column="1"><TextBlock Text="Index the library" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="Build the local cache without changing your files." TextWrapping="Wrap" /></StackPanel>
+              <StackPanel Grid.Column="1"><TextBlock Text="{DynamicResource Loc.Home.Step.Index.Title}" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Step.Index.Description}" TextWrapping="Wrap" /></StackPanel>
               </Grid>
               <Grid ColumnDefinitions="28,*" ColumnSpacing="10">
                 <Border Width="26" Height="26" CornerRadius="13" Background="{DynamicResource AppInsetBrush}" BorderBrush="{DynamicResource AppBorderBrush}" BorderThickness="1"><TextBlock Text="4" Classes="muted" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" /></Border>
-                <StackPanel Grid.Column="1"><TextBlock Text="Browse and review" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="Explore the indexed collection and run a Health audit." TextWrapping="Wrap" /></StackPanel>
+              <StackPanel Grid.Column="1"><TextBlock Text="{DynamicResource Loc.Home.Step.Browse.Title}" FontWeight="SemiBold" /><TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Step.Browse.Description}" TextWrapping="Wrap" /></StackPanel>
               </Grid>
             </StackPanel>
           </Grid>
@@ -55,41 +62,45 @@
           <Grid x:Name="IndexingBannerLayout" ColumnDefinitions="Auto,*" ColumnSpacing="12">
             <ProgressBar Width="22" Height="22" IsIndeterminate="True" />
             <StackPanel Grid.Column="1" Spacing="3">
-              <TextBlock Text="Scanning library" FontWeight="SemiBold" />
+            <TextBlock Text="{DynamicResource Loc.Home.Indexing.Scanning}" FontWeight="SemiBold" />
               <TextBlock Classes="muted" Text="{Binding Indexing.StatusText}" />
+              <TextBlock Classes="faint"
+                         Text="{Binding Indexing.DiagnosticDetail}"
+                         TextWrapping="Wrap"
+                         IsVisible="{Binding Indexing.HasDiagnosticDetail}" />
             </StackPanel>
           </Grid>
         </Border>
 
         <UniformGrid Columns="4" Rows="1" IsVisible="{Binding HasConfiguration}">
           <Border Classes="card" Margin="0,0,9,0">
-            <StackPanel Spacing="8"><TextBlock Classes="muted" Text="Tracks" FontWeight="SemiBold" /><TextBlock Text="{Binding TrackCount}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="28" FontWeight="SemiBold" /></StackPanel>
+            <StackPanel Spacing="8"><TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Metric.Tracks}" FontWeight="SemiBold" /><TextBlock Text="{Binding TrackCount}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="28" FontWeight="SemiBold" /></StackPanel>
           </Border>
           <Border Classes="card" Margin="3,0,6,0">
-            <StackPanel Spacing="8"><TextBlock Classes="muted" Text="Albums" FontWeight="SemiBold" /><TextBlock Text="{Binding AlbumCount}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="28" FontWeight="SemiBold" /></StackPanel>
+            <StackPanel Spacing="8"><TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Metric.Albums}" FontWeight="SemiBold" /><TextBlock Text="{Binding AlbumCount}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="28" FontWeight="SemiBold" /></StackPanel>
           </Border>
           <Border Classes="card" Margin="6,0,3,0">
-            <StackPanel Spacing="8"><TextBlock Classes="muted" Text="Album artists" FontWeight="SemiBold" /><TextBlock Text="{Binding ArtistCount}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="28" FontWeight="SemiBold" /></StackPanel>
+            <StackPanel Spacing="8"><TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Metric.AlbumArtists}" FontWeight="SemiBold" /><TextBlock Text="{Binding ArtistCount}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="28" FontWeight="SemiBold" /></StackPanel>
           </Border>
           <Border Classes="card" Margin="9,0,0,0">
-            <StackPanel Spacing="8"><TextBlock Classes="muted" Text="Artwork cached" FontWeight="SemiBold" /><TextBlock Text="{Binding ArtworkCount}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="28" FontWeight="SemiBold" /></StackPanel>
+            <StackPanel Spacing="8"><TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Metric.ArtworkCached}" FontWeight="SemiBold" /><TextBlock Text="{Binding ArtworkCount}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="28" FontWeight="SemiBold" /></StackPanel>
           </Border>
         </UniformGrid>
 
         <Grid ColumnDefinitions="*,14,*" IsVisible="{Binding HasConfiguration}">
           <Border Grid.Column="0" Classes="card">
             <StackPanel Spacing="8">
-              <TextBlock Classes="muted" Text="Last successful index" FontWeight="SemiBold" />
+              <TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Metric.LastSuccessfulIndex}" FontWeight="SemiBold" />
               <TextBlock Text="{Binding LastIndexTime}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="20" FontWeight="SemiBold" />
             </StackPanel>
           </Border>
           <Border Grid.Column="2" Classes="card">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
               <StackPanel Spacing="8">
-                <TextBlock Classes="muted" Text="Roots needing attention" FontWeight="SemiBold" />
+                <TextBlock Classes="muted" Text="{DynamicResource Loc.Home.Metric.RootsNeedingAttention}" FontWeight="SemiBold" />
                 <TextBlock Text="{Binding AttentionCount}" FontFamily="{DynamicResource AppDisplayFont}" FontSize="20" FontWeight="SemiBold" />
               </StackPanel>
-              <Button Grid.Column="1" Classes="app" Content="Open Health" Command="{Binding OpenHealthCommand}" VerticalAlignment="Center" />
+              <Button Grid.Column="1" Classes="app" Content="{DynamicResource Loc.Home.Action.OpenHealth}" Command="{Binding OpenHealthCommand}" VerticalAlignment="Center" />
             </Grid>
           </Border>
         </Grid>
@@ -97,20 +108,24 @@
         <Grid ColumnDefinitions="1.45*,14,1*" IsVisible="{Binding HasConfiguration}">
           <Border Grid.Column="0" Classes="card">
             <StackPanel Spacing="10">
-              <StackPanel Orientation="Horizontal" Spacing="8"><Ellipse Width="8" Height="8" Fill="{DynamicResource AppAccentBrush}" /><TextBlock Classes="section-title" Text="Library roots" /></StackPanel>
+              <StackPanel Orientation="Horizontal" Spacing="8"><Ellipse Width="8" Height="8" Fill="{DynamicResource AppAccentBrush}" /><TextBlock Classes="section-title" Text="{DynamicResource Loc.Home.Roots.Title}" /></StackPanel>
               <TextBlock Classes="muted" Text="{Binding RootHealth}" TextWrapping="Wrap" />
-              <TextBlock Classes="faint" Text="Offline roots never remove cached tracks. Reconnect and index when they are available again." TextWrapping="Wrap" />
-              <Button Classes="app" HorizontalAlignment="Left" Content="Review configuration" Command="{Binding OpenSettingsCommand}" />
+              <TextBlock Classes="faint" Text="{DynamicResource Loc.Home.Roots.Description}" TextWrapping="Wrap" />
+              <Button Classes="app" HorizontalAlignment="Left" Content="{DynamicResource Loc.Home.Action.ReviewConfiguration}" Command="{Binding OpenSettingsCommand}" />
             </StackPanel>
           </Border>
           <Border Grid.Column="2" Classes="card">
             <StackPanel Spacing="10">
-              <TextBlock Classes="section-title" Text="Indexing" />
+            <TextBlock Classes="section-title" Text="{DynamicResource Loc.Home.Indexing.Title}" />
               <TextBlock Classes="muted" Text="{Binding Indexing.StatusText}" TextWrapping="Wrap" />
+              <TextBlock Classes="faint"
+                         Text="{Binding Indexing.DiagnosticDetail}"
+                         TextWrapping="Wrap"
+                         IsVisible="{Binding Indexing.HasDiagnosticDetail}" />
               <ProgressBar Classes="app" Minimum="0" Maximum="1" Value="{Binding Indexing.Progress}" IsVisible="{Binding Indexing.IsIndexing}" />
               <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Classes="app" Content="Index library" Command="{Binding Indexing.IndexCommand}" />
-                <Button Classes="app" Content="Cancel" Command="{Binding Indexing.CancelCommand}" />
+                <Button Classes="app" Content="{DynamicResource Loc.Home.Indexing.IndexLibrary}" Command="{Binding Indexing.IndexCommand}" />
+                <Button Classes="app" Content="{DynamicResource Loc.Home.Indexing.Cancel}" Command="{Binding Indexing.CancelCommand}" />
               </StackPanel>
             </StackPanel>
           </Border>
@@ -118,7 +133,7 @@
 
         <Border Classes="card" IsVisible="{Binding HasRecentActivity}">
           <StackPanel Spacing="10">
-            <TextBlock Classes="section-title" Text="Recent activity" />
+            <TextBlock Classes="section-title" Text="{DynamicResource Loc.Home.RecentActivity.Title}" />
             <ItemsControl ItemsSource="{Binding RecentActivityItems}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>

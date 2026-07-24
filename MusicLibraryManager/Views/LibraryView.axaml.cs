@@ -21,6 +21,7 @@ public partial class LibraryView : UserControl
     private readonly LibraryViewModel _viewModel;
     private readonly GridStateService _gridState;
     private readonly IPlatformService _platform;
+    private readonly ILocalizationService _localization;
     private readonly List<AppGridColumnDefinition> _columns = [];
     private IReadOnlyList<LibraryRow> _selected = [];
     private LibrarySortState? _sort;
@@ -35,45 +36,69 @@ public partial class LibraryView : UserControl
         _viewModel = App.GetService<LibraryViewModel>();
         _gridState = App.GetService<GridStateService>();
         _platform = App.GetService<IPlatformService>();
+        _localization = App.GetService<ILocalizationService>();
         DataContext = _viewModel;
         BuildColumns();
         ApplySnapshot(_gridState.Load());
         ConfigureGrid();
         LibraryOperationPreviewGrid.ConfigureColumns(
         [
-            new("File", "File", "File", 200, 130),
-            new("Field", "Field", "Field", 140, 90),
-            new("Before", "Before", "Before", 280, 160),
-            new("After", "After", "After", 280, 160),
+            new("File", "File", "File", 200, 130,
+                HeaderResourceKey: "Column.File"),
+            new("Field", "Field", "Field", 140, 90,
+                HeaderResourceKey: "Column.Field"),
+            new("Before", "Before", "Before", 280, 160,
+                HeaderResourceKey: "Column.Before"),
+            new("After", "After", "After", 280, 160,
+                HeaderResourceKey: "Column.After"),
         ]);
         LibraryPendingChangesGrid.ConfigureColumns(
         [
-            new("File", "File", "File", 220, 140),
-            new("Field", "Field", "Field", 150, 100),
-            new("Before", "Before", "Before", 320, 180),
-            new("After", "After", "After", 320, 180),
+            new("File", "File", "File", 220, 140,
+                HeaderResourceKey: "Column.File"),
+            new("Field", "Field", "Field", 150, 100,
+                HeaderResourceKey: "Column.Field"),
+            new("Before", "Before", "Before", 320, 180,
+                HeaderResourceKey: "Column.Before"),
+            new("After", "After", "After", 320, 180,
+                HeaderResourceKey: "Column.After"),
         ]);
         LibraryAudioDiscoveryGrid.ConfigureColumns(
         [
-            new("File", "File", "File", 190, 120),
-            new("Duration", "Duration", "Duration", 90, 70),
-            new("Confidence", "Confidence", "Confidence", 105, 85),
-            new("AcoustID", "AcoustID", "AcoustId", 270, 170),
+            new("File", "File", "File", 190, 120,
+                HeaderResourceKey: "Column.File"),
+            new("Duration", "Duration", "Duration", 90, 70,
+                HeaderResourceKey: "Column.Duration"),
+            new("Confidence", "Confidence", "Confidence", 105, 85,
+                HeaderResourceKey: "Column.Confidence"),
+            new("AcoustID", "AcoustID", "AcoustId", 270, 170,
+                HeaderResourceKey: "Column.AcoustId"),
             new("MusicBrainz", "MusicBrainz recording IDs",
-                "MusicBrainzRecordingIds", 360, 210),
-            new("Status", "Status", "Status", 240, 140),
+                "MusicBrainzRecordingIds", 360, 210,
+                HeaderResourceKey: "Column.MusicBrainzRecordingIds"),
+            new("Status", "Status", "Status", 240, 140,
+                HeaderResourceKey: "Column.Status"),
         ]);
         LibraryReleaseDiscoveryGrid.ConfigureColumns(
         [
-            new("Title", "Release", "Title", 220, 130),
-            new("Artist", "Artist credit", "Artist", 180, 105),
-            new("Date", "Date", "Date", 95, 72),
-            new("Country", "Country", "Country", 75, 62),
-            new("Label", "Label", "Label", 150, 90),
-            new("Catalog", "Catalog no.", "CatalogNumber", 110, 80),
-            new("Formats", "Formats", "Formats", 125, 85),
-            new("Position", "Matched position", "MatchedTrackPositions", 130, 90),
-            new("ReleaseID", "MusicBrainz release ID", "ReleaseId", 260, 170),
+            new("Title", "Release", "Title", 220, 130,
+                HeaderResourceKey: "Column.Release"),
+            new("Artist", "Artist credit", "Artist", 180, 105,
+                HeaderResourceKey: "Column.ArtistCredit"),
+            new("Date", "Date", "Date", 95, 72,
+                HeaderResourceKey: "Column.Date"),
+            new("Country", "Country", "Country", 75, 62,
+                HeaderResourceKey: "Column.Country"),
+            new("Label", "Label", "Label", 150, 90,
+                HeaderResourceKey: "Column.Label"),
+            new("Catalog", "Catalog no.", "CatalogNumber", 110, 80,
+                HeaderResourceKey: "Column.CatalogNumber"),
+            new("Formats", "Formats", "Formats", 125, 85,
+                HeaderResourceKey: "Column.Formats"),
+            new("Position", "Matched position", "MatchedTrackPositions", 130, 90,
+                HeaderResourceKey: "Column.MatchedPosition"),
+            new("ReleaseID", "MusicBrainz release ID", "ReleaseId", 260, 170,
+                HeaderResourceKey: "Column.MusicBrainzReleaseId"),
         ]);
         ConfigureDiscogsGrid(LibraryDiscogsDiscoveryGrid);
         ConfigureDiscogsTrackMappingGrid(
@@ -82,32 +107,46 @@ public partial class LibraryView : UserControl
         ConfigureReleaseArtworkGrid(LibraryReleaseArtworkGrid);
         LibraryReportOutputGrid.ConfigureColumns(
         [
-            new("Group", "Group", "Group", 140, 85),
-            new("File", "Destination", "File", 380, 210),
-            new("Rows", "Rows", "Rows", 75, 58),
-            new("Bytes", "Bytes", "Bytes", 95, 68),
+            new("Group", "Group", "Group", 140, 85,
+                HeaderResourceKey: "Column.Group"),
+            new("File", "Destination", "File", 380, 210,
+                HeaderResourceKey: "Column.Destination"),
+            new("Rows", "Rows", "Rows", 75, 58,
+                HeaderResourceKey: "Column.Rows"),
+            new("Bytes", "Bytes", "Bytes", 95, 68,
+                HeaderResourceKey: "Column.Bytes"),
         ]);
         LibraryPlaylistOutputGrid.ConfigureColumns(
         [
-            new("Group", "Group", "Group", 140, 85),
-            new("File", "Destination", "File", 380, 210),
-            new("Tracks", "Tracks", "Tracks", 75, 58),
-            new("Bytes", "Bytes", "Bytes", 95, 68),
+            new("Group", "Group", "Group", 140, 85,
+                HeaderResourceKey: "Column.Group"),
+            new("File", "Destination", "File", 380, 210,
+                HeaderResourceKey: "Column.Destination"),
+            new("Tracks", "Tracks", "Tracks", 75, 58,
+                HeaderResourceKey: "Column.Tracks"),
+            new("Bytes", "Bytes", "Bytes", 95, 68,
+                HeaderResourceKey: "Column.Bytes"),
         ]);
         LibraryExternalToolInvocationGrid.ConfigureColumns(
         [
-            new("Number", "#", "Number", 52, 44),
-            new("Executable", "Executable", "Executable", 175, 110),
-            new("Arguments", "Arguments", "Arguments", 330, 180),
+            new("Number", "#", "Number", 52, 44,
+                HeaderResourceKey: "Column.NumberSign"),
+            new("Executable", "Executable", "Executable", 175, 110,
+                HeaderResourceKey: "Column.Executable"),
+            new("Arguments", "Arguments", "Arguments", 330, 180,
+                HeaderResourceKey: "Column.Arguments"),
             new("WorkingDirectory", "Working directory",
-                "WorkingDirectory", 200, 120),
-            new("Files", "Files", "Files", 62, 50),
+                "WorkingDirectory", 200, 120,
+                HeaderResourceKey: "Column.WorkingDirectory"),
+            new("Files", "Files", "Files", 62, 50,
+                HeaderResourceKey: "Column.Files"),
         ]);
         LibraryGrid.ApplySort(_sort);
         BuildColumnOptions();
         LibraryGrid.LayoutChanged += (_, _) => PersistLayout();
         LibraryGrid.SortChanged += (_, _) => Dispatcher.UIThread.Post(CaptureSortAndPersist);
         InspectorView.CloseRequested += OnInspectorCloseRequested;
+        SizeChanged += (_, _) => ApplyOverlayBounds();
         AttachedToVisualTree += OnAttachedToVisualTree;
         DetachedFromVisualTree += OnDetachedFromVisualTree;
         if (_viewModel.Rows.Count == 0)
@@ -117,18 +156,30 @@ public partial class LibraryView : UserControl
     private static void ConfigureDiscogsGrid(AppDataGrid grid) =>
         grid.ConfigureColumns(
         [
-            new("Title", "Release", "Title", 210, 125),
-            new("Artist", "Artist credit", "Artist", 170, 100),
-            new("Year", "Year", "Year", 70, 58),
-            new("Country", "Country", "Country", 72, 60),
-            new("Labels", "Labels", "Labels", 150, 90),
-            new("Catalog", "Catalog no.", "CatalogNumbers", 125, 82),
-            new("Formats", "Formats", "Formats", 140, 88),
-            new("Genres", "Genres", "Genres", 125, 82),
-            new("Styles", "Styles", "Styles", 135, 88),
-            new("Tracks", "Tracks", "TrackCount", 68, 54),
-            new("Source", "Source", "Source", 95, 72),
-            new("ReleaseID", "Discogs release ID", "ReleaseId", 145, 95),
+            new("Title", "Release", "Title", 210, 125,
+                HeaderResourceKey: "Column.Release"),
+            new("Artist", "Artist credit", "Artist", 170, 100,
+                HeaderResourceKey: "Column.ArtistCredit"),
+            new("Year", "Year", "Year", 70, 58,
+                HeaderResourceKey: "Column.Year"),
+            new("Country", "Country", "Country", 72, 60,
+                HeaderResourceKey: "Column.Country"),
+            new("Labels", "Labels", "Labels", 150, 90,
+                HeaderResourceKey: "Column.Labels"),
+            new("Catalog", "Catalog no.", "CatalogNumbers", 125, 82,
+                HeaderResourceKey: "Column.CatalogNumber"),
+            new("Formats", "Formats", "Formats", 140, 88,
+                HeaderResourceKey: "Column.Formats"),
+            new("Genres", "Genres", "Genres", 125, 82,
+                HeaderResourceKey: "Column.Genres"),
+            new("Styles", "Styles", "Styles", 135, 88,
+                HeaderResourceKey: "Column.Styles"),
+            new("Tracks", "Tracks", "TrackCount", 68, 54,
+                HeaderResourceKey: "Column.Tracks"),
+            new("Source", "Source", "Source", 95, 72,
+                HeaderResourceKey: "Column.Source"),
+            new("ReleaseID", "Discogs release ID", "ReleaseId", 145, 95,
+                HeaderResourceKey: "Column.DiscogsReleaseId"),
         ]);
 
     private static void ConfigureDiscogsTrackMappingGrid(
@@ -173,13 +224,19 @@ public partial class LibraryView : UserControl
         grid.ConfigureColumns(
         [
             new("Include", "Use", null, 58, 48,
-                CellTemplate: includeTemplate, Sortable: false),
-            new("File", "File", "File", 180, 110),
+                CellTemplate: includeTemplate, Sortable: false,
+                HeaderResourceKey: "Column.Use"),
+            new("File", "File", "File", 180, 110,
+                HeaderResourceKey: "Column.File"),
             new("Track", "Discogs track", null, 320, 185,
-                CellTemplate: trackTemplate, Sortable: false),
-            new("Position", "Position", "Position", 78, 60),
-            new("Confidence", "Confidence", "Confidence", 98, 74),
-            new("Status", "Reason", "Status", 250, 145),
+                CellTemplate: trackTemplate, Sortable: false,
+                HeaderResourceKey: "Column.DiscogsTrack"),
+            new("Position", "Position", "Position", 78, 60,
+                HeaderResourceKey: "Column.Position"),
+            new("Confidence", "Confidence", "Confidence", 98, 74,
+                HeaderResourceKey: "Column.Confidence"),
+            new("Status", "Reason", "Status", 250, 145,
+                HeaderResourceKey: "Column.Reason"),
         ]);
     }
 
@@ -216,12 +273,17 @@ public partial class LibraryView : UserControl
         grid.ConfigureColumns(
         [
             new("Include", "Use", null, 58, 48,
-                CellTemplate: includeTemplate, Sortable: false),
-            new("File", "File", "File", 180, 110),
+                CellTemplate: includeTemplate, Sortable: false,
+                HeaderResourceKey: "Column.Use"),
+            new("File", "File", "File", 180, 110,
+                HeaderResourceKey: "Column.File"),
             new("Track", "Release track", null, 330, 190,
-                CellTemplate: trackTemplate, Sortable: false),
-            new("Confidence", "Confidence", "Confidence", 100, 76),
-            new("Status", "Reason", "Status", 260, 150),
+                CellTemplate: trackTemplate, Sortable: false,
+                HeaderResourceKey: "Column.ReleaseTrack"),
+            new("Confidence", "Confidence", "Confidence", 100, 76,
+                HeaderResourceKey: "Column.Confidence"),
+            new("Status", "Reason", "Status", 260, 150,
+                HeaderResourceKey: "Column.Reason"),
         ]);
     }
 
@@ -244,13 +306,20 @@ public partial class LibraryView : UserControl
         grid.ConfigureColumns(
         [
             new("Thumbnail", "Preview", null, 82, 72,
-                CellTemplate: thumbnailTemplate, Sortable: false),
-            new("Roles", "Types", "Roles", 140, 90),
-            new("Front", "Front", "Front", 65, 52),
-            new("Back", "Back", "Back", 65, 52),
-            new("Approved", "Approved", "Approved", 80, 62),
-            new("Comment", "Comment", "Comment", 200, 120),
-            new("Status", "Thumbnail", "ThumbnailStatus", 130, 82),
+                CellTemplate: thumbnailTemplate, Sortable: false,
+                HeaderResourceKey: "Column.Preview"),
+            new("Roles", "Types", "Roles", 140, 90,
+                HeaderResourceKey: "Column.Types"),
+            new("Front", "Front", "Front", 65, 52,
+                HeaderResourceKey: "Column.Front"),
+            new("Back", "Back", "Back", 65, 52,
+                HeaderResourceKey: "Column.Back"),
+            new("Approved", "Approved", "Approved", 80, 62,
+                HeaderResourceKey: "Column.Approved"),
+            new("Comment", "Comment", "Comment", 200, 120,
+                HeaderResourceKey: "Column.Comment"),
+            new("Status", "Thumbnail", "ThumbnailStatus", 130, 82,
+                HeaderResourceKey: "Column.Thumbnail"),
         ]);
     }
 
@@ -272,30 +341,55 @@ public partial class LibraryView : UserControl
             return image;
         });
         _columns.AddRange([
-            new("Artwork", "Artwork", null, 100, 100, CellTemplate: artworkTemplate, Sortable: false),
-            new("Title", "Title", "Title", 280, 140),
-            new("Artist", "Artist", "Artist", 190, 100),
-            new("AlbumArtist", "Album artist", "AlbumArtist", 190, 100, false),
-            new("Album", "Album", "Album", 230, 120),
-            new("Genre", "Genre", "Genre", 150, 90, false),
-            new("Composer", "Composer", "Composer", 190, 100, false),
-            new("Grouping", "Grouping", "Grouping", 170, 100, false),
-            new("Year", "Year", "Year", 70, 58, false),
-            new("Track", "Track", "Track", 70, 58),
-            new("TrackTotal", "Track total", "TrackTotal", 90, 72, false),
-            new("Disc", "Disc", "Disc", 65, 58, false),
-            new("DiscTotal", "Disc total", "DiscTotal", 85, 70, false),
-            new("Codec", "Codec", "Codec", 105, 80),
-            new("TagType", "Tag type", "TagType", 120, 85, false),
-            new("CodecType", "Codec type", "CodecType", 105, 80, false),
-            new("SampleRate", "Sample rate", "SampleRate", 115, 85, false),
-            new("BitsPerSample", "Bits", "BitsPerSample", 70, 55, false),
-            new("Bitrate", "Bitrate", "Bitrate", 100, 75, false),
-            new("Channels", "Channels", "Channels", 85, 65, false),
-            new("Duration", "Duration", "Duration", 90, 75),
-            new("FileSize", "File size", "FileSize", 105, 75, false),
-            new("Modified", "Modified", "Modified", 150, 110, false),
-            new("Path", "Path", "Path", 420, 180),
+            new("Artwork", "Artwork", null, 100, 100,
+                CellTemplate: artworkTemplate, Sortable: false,
+                HeaderResourceKey: "Column.Artwork"),
+            new("Title", "Title", "Title", 280, 140,
+                HeaderResourceKey: "Column.Title"),
+            new("Artist", "Artist", "Artist", 190, 100,
+                HeaderResourceKey: "Column.Artist"),
+            new("AlbumArtist", "Album artist", "AlbumArtist", 190, 100, false,
+                HeaderResourceKey: "Column.AlbumArtist"),
+            new("Album", "Album", "Album", 230, 120,
+                HeaderResourceKey: "Column.Album"),
+            new("Genre", "Genre", "Genre", 150, 90, false,
+                HeaderResourceKey: "Column.Genre"),
+            new("Composer", "Composer", "Composer", 190, 100, false,
+                HeaderResourceKey: "Column.Composer"),
+            new("Grouping", "Grouping", "Grouping", 170, 100, false,
+                HeaderResourceKey: "Column.Grouping"),
+            new("Year", "Year", "Year", 70, 58, false,
+                HeaderResourceKey: "Column.Year"),
+            new("Track", "Track", "Track", 70, 58,
+                HeaderResourceKey: "Column.Track"),
+            new("TrackTotal", "Track total", "TrackTotal", 90, 72, false,
+                HeaderResourceKey: "Column.TrackTotal"),
+            new("Disc", "Disc", "Disc", 65, 58, false,
+                HeaderResourceKey: "Column.Disc"),
+            new("DiscTotal", "Disc total", "DiscTotal", 85, 70, false,
+                HeaderResourceKey: "Column.DiscTotal"),
+            new("Codec", "Codec", "Codec", 105, 80,
+                HeaderResourceKey: "Column.Codec"),
+            new("TagType", "Tag type", "TagType", 120, 85, false,
+                HeaderResourceKey: "Column.TagType"),
+            new("CodecType", "Codec type", "CodecType", 105, 80, false,
+                HeaderResourceKey: "Column.CodecType"),
+            new("SampleRate", "Sample rate", "SampleRate", 115, 85, false,
+                HeaderResourceKey: "Column.SampleRate"),
+            new("BitsPerSample", "Bits", "BitsPerSample", 70, 55, false,
+                HeaderResourceKey: "Column.Bits"),
+            new("Bitrate", "Bitrate", "Bitrate", 100, 75, false,
+                HeaderResourceKey: "Column.Bitrate"),
+            new("Channels", "Channels", "Channels", 85, 65, false,
+                HeaderResourceKey: "Column.Channels"),
+            new("Duration", "Duration", "Duration", 90, 75,
+                HeaderResourceKey: "Column.Duration"),
+            new("FileSize", "File size", "FileSize", 105, 75, false,
+                HeaderResourceKey: "Column.FileSize"),
+            new("Modified", "Modified", "Modified", 150, 110, false,
+                HeaderResourceKey: "Column.Modified"),
+            new("Path", "Path", "Path", 420, 180,
+                HeaderResourceKey: "Column.Path"),
         ]);
         AddMetadataColumns();
     }
@@ -487,9 +581,20 @@ public partial class LibraryView : UserControl
             _viewModel.ReleaseThumbnail(row);
     }
 
-    private void OnColumnsClick(object? sender, RoutedEventArgs e) => ColumnPopover.IsOpen = !ColumnPopover.IsOpen;
+    private void OnColumnsClick(object? sender, RoutedEventArgs e)
+    {
+        bool open = !ColumnPopover.IsOpen;
+        CloseTransientPopups();
+        ColumnPopover.IsOpen = open;
+        if (open)
+            Dispatcher.UIThread.Post(() => CloseColumnsButton.Focus());
+    }
 
-    private void OnColumnsClose(object? sender, RoutedEventArgs e) => ColumnPopover.IsOpen = false;
+    private void OnColumnsClose(object? sender, RoutedEventArgs e)
+    {
+        ColumnPopover.IsOpen = false;
+        ColumnsButton.Focus();
+    }
 
     private void OnLibraryKeyDown(object? sender, KeyEventArgs e)
     {
@@ -498,46 +603,77 @@ public partial class LibraryView : UserControl
         if (ColumnPopover.IsOpen)
         {
             ColumnPopover.IsOpen = false;
+            ColumnsButton.Focus();
+            e.Handled = true;
+        }
+        else if (LibraryOperationsPopover.IsOpen)
+        {
+            _viewModel.CloseOperationsCommand.Execute(null);
+            LibraryOperationsButton.Focus();
             e.Handled = true;
         }
         else if (LibraryPendingChangesPopover.IsOpen)
         {
             LibraryPendingChangesPopover.IsOpen = false;
+            LibraryPendingChangesButton.Focus();
             e.Handled = true;
         }
         else if (ViewsPopover.IsOpen)
         {
             ViewsPopover.IsOpen = false;
+            ViewsButton.Focus();
             e.Handled = true;
         }
         else if (FilterHelpPopover.IsOpen)
         {
             FilterHelpPopover.IsOpen = false;
+            FilterHelpButton.Focus();
             e.Handled = true;
         }
         else if (VisualFilterPopover.IsOpen)
         {
             VisualFilterPopover.IsOpen = false;
+            VisualFilterButton.Focus();
+            e.Handled = true;
+        }
+        else if (_responsiveCompact &&
+                 _drawerOpen)
+        {
+            _drawerOpen = false;
+            ApplyInspectorVisibility();
+            InspectorToggle.Focus();
             e.Handled = true;
         }
     }
 
     private void OnLibraryPendingChangesClick(
         object? sender,
-        RoutedEventArgs e) =>
-        LibraryPendingChangesPopover.IsOpen =
-            !LibraryPendingChangesPopover.IsOpen;
+        RoutedEventArgs e)
+    {
+        bool open = !LibraryPendingChangesPopover.IsOpen;
+        CloseTransientPopups();
+        LibraryPendingChangesPopover.IsOpen = open;
+        if (open)
+            Dispatcher.UIThread.Post(() =>
+                CloseLibraryPendingChangesButton.Focus());
+    }
 
     private void OnLibraryPendingChangesClose(
         object? sender,
-        RoutedEventArgs e) =>
+        RoutedEventArgs e)
+    {
         LibraryPendingChangesPopover.IsOpen = false;
+        LibraryPendingChangesButton.Focus();
+    }
 
     private void OnVisualFilterClick(
         object? sender,
-        RoutedEventArgs e) =>
-        VisualFilterPopover.IsOpen =
-            !VisualFilterPopover.IsOpen;
+        RoutedEventArgs e)
+    {
+        bool open = !VisualFilterPopover.IsOpen;
+        CloseTransientPopups();
+        VisualFilterPopover.IsOpen = open;
+    }
 
     private void OnVisualFilterClose(
         object? sender,
@@ -546,6 +682,9 @@ public partial class LibraryView : UserControl
 
     private void OnInspectorToggle(object? sender, RoutedEventArgs e)
     {
+        bool wasDrawerVisible =
+            _responsiveCompact &&
+            _drawerOpen;
         if (!_viewModel.IsInspectorOpen)
         {
             _viewModel.IsInspectorOpen = true;
@@ -556,6 +695,20 @@ public partial class LibraryView : UserControl
             _drawerOpen = !_drawerOpen;
         }
         ApplyInspectorVisibility();
+        bool drawerVisible =
+            _responsiveCompact &&
+            _drawerOpen;
+        if (drawerVisible)
+        {
+            Dispatcher.UIThread.Post(
+                () =>
+                    InspectorView.CloseButton
+                        .Focus());
+        }
+        else if (wasDrawerVisible)
+        {
+            InspectorToggle.Focus();
+        }
     }
 
     public void ApplyResponsiveLayout(bool compact)
@@ -603,6 +756,7 @@ public partial class LibraryView : UserControl
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         _viewModel.ColumnEditor.Changed +=
             RebuildMetadataColumns;
+        _localization.CultureChanged += OnLocalizationCultureChanged;
         Dispatcher.UIThread.Post(() =>
         {
             RestoreVisibleSelection();
@@ -610,8 +764,13 @@ public partial class LibraryView : UserControl
         });
     }
 
-    private void OnDetachedFromVisualTree(object? sender, VisualTreeAttachmentEventArgs e) =>
+    private void OnDetachedFromVisualTree(
+        object? sender,
+        VisualTreeAttachmentEventArgs e)
+    {
         DetachViewModelEvents();
+        _localization.CultureChanged -= OnLocalizationCultureChanged;
+    }
 
     private void DetachViewModelEvents()
     {
@@ -625,8 +784,16 @@ public partial class LibraryView : UserControl
         if (e.PropertyName is nameof(LibraryViewModel.Rows) or nameof(LibraryViewModel.SelectedPaths))
             Dispatcher.UIThread.Post(RestoreVisibleSelection);
         else if (e.PropertyName is nameof(LibraryViewModel.IsInspectorOpen) or
-                 nameof(LibraryViewModel.HasUnsavedSelectionChanges))
+                  nameof(LibraryViewModel.HasUnsavedSelectionChanges))
             Dispatcher.UIThread.Post(ApplyInspectorVisibility);
+        else if (e.PropertyName == nameof(LibraryViewModel.IsOperationsOpen) &&
+                 _viewModel.IsOperationsOpen)
+            Dispatcher.UIThread.Post(() =>
+            {
+                CloseTransientPopups(includeOperations: false);
+                ApplyOverlayBounds();
+                CloseLibraryOperationsButton.Focus();
+            });
     }
 
     private void RestoreVisibleSelection()
@@ -652,7 +819,9 @@ public partial class LibraryView : UserControl
         bool hasSelection = _selected.Count > 0;
         SelectedCountLabel.IsVisible = CopyButton.IsVisible = RevealButton.IsVisible =
             ReindexButton.IsVisible = hasSelection;
-        SelectedCountLabel.Text = $"{_selected.Count:N0} selected";
+        SelectedCountLabel.Text = _localization.Format(
+            "Library.Selection.CountFormat",
+            _selected.Count);
     }
 
     private void OnInspectorCloseRequested(object? sender, EventArgs e)
@@ -660,6 +829,7 @@ public partial class LibraryView : UserControl
         _drawerOpen = false;
         _viewModel.IsInspectorOpen = false;
         ApplyInspectorVisibility();
+        InspectorToggle.Focus();
     }
 
     private void ApplyInspectorVisibility()
@@ -676,22 +846,69 @@ public partial class LibraryView : UserControl
         bool drawerVisible = inspectorOpen && _responsiveCompact && _drawerOpen;
         InspectorScrim.IsVisible = drawerVisible;
         InspectorToggle.IsVisible = _responsiveCompact || !inspectorOpen;
-        InspectorToggle.Content = drawerVisible ? "Hide inspector" :
-            _viewModel.HasUnsavedSelectionChanges ? "Inspector (unsaved)" : "Inspector";
+        InspectorToggle.Content = _localization.Get(
+            drawerVisible
+                ? "Library.Action.HideInspector"
+                : _viewModel.HasUnsavedSelectionChanges
+                    ? "Library.Action.InspectorUnsaved"
+                    : "Library.Action.Inspector");
     }
+
+    private void OnLocalizationCultureChanged(
+        object? sender,
+        EventArgs e) =>
+        Dispatcher.UIThread.Post(() =>
+        {
+            UpdateSelectionActions();
+            ApplyInspectorVisibility();
+        });
 
     private void OnInspectorScrimPressed(object? sender, PointerPressedEventArgs e)
     {
         _drawerOpen = false;
         ApplyInspectorVisibility();
+        InspectorToggle.Focus();
         e.Handled = true;
     }
 
-    private void OnViewsClick(object? sender, RoutedEventArgs e) =>
-        ViewsPopover.IsOpen = !ViewsPopover.IsOpen;
+    private void OnViewsClick(object? sender, RoutedEventArgs e)
+    {
+        bool open = !ViewsPopover.IsOpen;
+        CloseTransientPopups();
+        ViewsPopover.IsOpen = open;
+    }
 
-    private void OnViewsClose(object? sender, RoutedEventArgs e) => ViewsPopover.IsOpen = false;
+    private void OnViewsClose(object? sender, RoutedEventArgs e)
+    {
+        ViewsPopover.IsOpen = false;
+        ViewsButton.Focus();
+    }
 
-    private void OnFilterHelpClick(object? sender, RoutedEventArgs e) =>
-        FilterHelpPopover.IsOpen = !FilterHelpPopover.IsOpen;
+    private void OnFilterHelpClick(object? sender, RoutedEventArgs e)
+    {
+        bool open = !FilterHelpPopover.IsOpen;
+        CloseTransientPopups();
+        FilterHelpPopover.IsOpen = open;
+    }
+
+    private void CloseTransientPopups(bool includeOperations = true)
+    {
+        ColumnPopover.IsOpen = false;
+        LibraryPendingChangesPopover.IsOpen = false;
+        ViewsPopover.IsOpen = false;
+        FilterHelpPopover.IsOpen = false;
+        VisualFilterPopover.IsOpen = false;
+        if (includeOperations && _viewModel.IsOperationsOpen)
+            _viewModel.CloseOperationsCommand.Execute(null);
+    }
+
+    private void ApplyOverlayBounds()
+    {
+        double availableWidth = Math.Max(320, Bounds.Width - 24);
+        double availableHeight = Math.Max(320, Bounds.Height - 32);
+        LibraryOperationsSurface.Width = Math.Min(980, availableWidth);
+        LibraryOperationsSurface.Height = Math.Min(690, availableHeight);
+        LibraryPendingChangesSurface.Width = Math.Min(900, availableWidth);
+        LibraryPendingChangesSurface.Height = Math.Min(620, availableHeight);
+    }
 }

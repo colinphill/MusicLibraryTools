@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using MusicFileUtilities;
 using MusicLibrary.Core.Models;
@@ -17,7 +18,8 @@ public sealed record PlaylistOutputRow(
 
 public partial class PlaylistEditorViewModel : ObservableObject
 {
-    [ObservableProperty] private string _name = "Music playlist";
+    private readonly ILocalizationService? _localization;
+    [ObservableProperty] private string _name = "";
     [ObservableProperty] private string _format = "m3u8";
     [ObservableProperty] private string? _outputPath;
     [ObservableProperty] private PlaylistPathStyle _pathStyle =
@@ -33,16 +35,17 @@ public partial class PlaylistEditorViewModel : ObservableObject
     [ObservableProperty] private string _groupFileNameTemplate =
         "{Name} - {Group}";
 
-    public PlaylistEditorViewModel()
+    public PlaylistEditorViewModel(
+        ILocalizationService? localization = null)
     {
-        GroupFields = Enum.GetValues<TagFields>()
-            .Where(field => field != TagFields.NullField)
-            .Select(field => new PlaylistGroupFieldChoice(
-                field.ToString(),
-                MetadataFieldKey.Known(field)))
-            .ToArray();
+        _localization = localization;
+        Name = L("Workbench.Playlists.DefaultName");
+        RefreshLocalizedChoices();
         SelectedGroupField = GroupFields.First(choice =>
             choice.Field.KnownField == TagFields.Album);
+        if (_localization is not null)
+            _localization.CultureChanged +=
+                OnLocalizationCultureChanged;
     }
 
     public IReadOnlyList<string> Formats { get; } =
@@ -53,7 +56,15 @@ public partial class PlaylistEditorViewModel : ObservableObject
         Enum.GetValues<PlaylistWorkspaceEncoding>();
     public IReadOnlyList<PlaylistLineEnding> LineEndings { get; } =
         Enum.GetValues<PlaylistLineEnding>();
-    public IReadOnlyList<PlaylistGroupFieldChoice> GroupFields { get; }
+    public ObservableCollection<PlaylistGroupFieldChoice>
+        GroupFields { get; } = [];
+    public ObservableCollection<LocalizedChoice<PlaylistPathStyle>>
+        PathStyleChoices { get; } = [];
+    public ObservableCollection<
+        LocalizedChoice<PlaylistWorkspaceEncoding>>
+        EncodingChoices { get; } = [];
+    public ObservableCollection<LocalizedChoice<PlaylistLineEnding>>
+        LineEndingChoices { get; } = [];
     public string SuggestedExtension => Format.ToLowerInvariant() switch
     {
         "m3u" => "m3u",
@@ -99,4 +110,62 @@ public partial class PlaylistEditorViewModel : ObservableObject
                 ? SelectedGroupField?.Field
                 : null,
             GroupFileNameTemplate);
+
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private void RefreshLocalizedChoices()
+    {
+        TagFields? selected =
+            SelectedGroupField?.Field.KnownField;
+        GroupFields.Clear();
+        foreach (TagFields field in Enum.GetValues<TagFields>()
+                     .Where(field =>
+                         field != TagFields.NullField))
+            GroupFields.Add(new(
+                L($"Settings.Choice.TagFields.{field}"),
+                MetadataFieldKey.Known(field)));
+        if (selected is { } selectedField)
+            SelectedGroupField = GroupFields.First(
+                choice =>
+                    choice.Field.KnownField == selectedField);
+        RefreshChoices(
+            PathStyleChoices,
+            PathStyles,
+            "Workbench.Choice.PlaylistPathStyle");
+        RefreshChoices(
+            EncodingChoices,
+            Encodings,
+            "Workbench.Choice.PlaylistEncoding");
+        RefreshChoices(
+            LineEndingChoices,
+            LineEndings,
+            "Workbench.Choice.PlaylistLineEnding");
+    }
+
+    private void RefreshChoices<T>(
+        ObservableCollection<LocalizedChoice<T>> target,
+        IEnumerable<T> values,
+        string keyPrefix)
+    {
+        foreach (T value in values)
+        {
+            LocalizedChoice<T>? choice =
+                target.FirstOrDefault(item =>
+                    EqualityComparer<T>.Default.Equals(
+                        item.Value,
+                        value));
+            string label = L($"{keyPrefix}.{value}");
+            if (choice is null)
+                target.Add(new(value, label));
+            else
+                choice.Label = label;
+        }
+    }
+
+    private void OnLocalizationCultureChanged(
+        object? sender,
+        EventArgs e) =>
+        RefreshLocalizedChoices();
 }

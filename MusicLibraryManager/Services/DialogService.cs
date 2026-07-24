@@ -57,7 +57,8 @@ public sealed record FieldsRequest(FieldsDialogViewModel ViewModel)
 public sealed class DialogService(
     IMetadataDocumentService documents,
     IMetadataOperationService operations,
-    IActivityService activities)
+    IActivityService activities,
+    ILocalizationService? localization = null)
     : IDialogCoordinator, IFieldsEditorService
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -122,18 +123,25 @@ public sealed class DialogService(
             paths,
             activities);
         Guid loadActivity = activities.Start(
-            "Load metadata fields",
-            $"Reading metadata from {paths.Count:N0} selected file(s)",
+            Text("Dialog.Fields.LoadActivity"),
+            FormatCount(
+                "Dialog.Fields.ReadingSelectedFiles",
+                paths.Count),
             ShellDestination.Library);
         try
         {
             await viewModel.Loading;
             activities.Finish(loadActivity,
-                $"Loaded fields from {paths.Count:N0} selected file(s)");
+                FormatCount(
+                    "Dialog.Fields.LoadedSelectedFiles",
+                    paths.Count));
         }
-        catch (Exception error)
+        catch (Exception)
         {
-            activities.Finish(loadActivity, error.Message, AppActivityState.Failed);
+            activities.Finish(
+                loadActivity,
+                Text("Dialog.Fields.LoadFailed"),
+                AppActivityState.Failed);
             throw;
         }
         void Close(bool result) => Complete(result);
@@ -181,11 +189,26 @@ public sealed class DialogService(
             _gate.Release();
         }
     }
+
+    private string Text(string key) =>
+        localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string FormatCount(
+        string key,
+        long count) =>
+        localization?.FormatCount(
+            key,
+            count) ??
+        LocalizedText.FormatCount(
+            key,
+            count);
 }
 
 public sealed class WorkflowDialogService(
     DialogService dialogs,
-    INavigationService navigation) : LegacyDialogs
+    INavigationService navigation,
+    ILocalizationService? localization = null) : LegacyDialogs
 {
     public Task<bool> ShowFieldsEditorAsync(IReadOnlyList<string> paths) => dialogs.ShowAsync(paths);
 
@@ -199,20 +222,46 @@ public sealed class WorkflowDialogService(
         dialogs.ConfirmAsync(title, message, primaryText, DialogTone.Warning);
 
     public Task<bool> ConfirmCdDerivationAsync(IngestApprovalItem item) => dialogs.ConfirmAsync(
-        "Approve CD derivation",
-        $"{item.AlbumDisplay}\n\nGenerate the missing tracks below?\n\n{string.Join("\n", item.MissingTracks)}",
-        "Generate",
+        Text("Dialog.CdDerivation.Title"),
+        Format(
+            "Dialog.CdDerivation.MessageFormat",
+            item.AlbumDisplay,
+            string.Join(
+                "\n",
+                item.MissingTracks)),
+        Text("Dialog.CdDerivation.Action"),
         DialogTone.Warning);
 
     public Task<bool> ConfirmRestoreAsync(OperationRestorePlan plan) => dialogs.ConfirmAsync(
-        "Restore operation items",
-        $"Restore {plan.Actions.Count:N0} selected item(s)?\n\n{plan.CollisionCount:N0} existing destination(s) will be preserved as collision backups.",
-        "Restore",
+        Text("Dialog.Restore.Title"),
+        Format(
+            "Dialog.Restore.MessageFormat",
+            plan.Actions.Count,
+            plan.CollisionCount),
+        Text("Dialog.Restore.Action"),
         DialogTone.Warning);
 
     public Task<bool> ConfirmPurgeAsync(OperationPurgePlan plan) => dialogs.ConfirmAsync(
-        "Permanently purge operation history",
-        $"Permanently delete {plan.Runs.Count:N0} operation run(s), {plan.FileCount:N0} file(s), and {plan.TotalBytes:N0} bytes?\n\nThis cannot be undone.",
-        "Purge",
+        Text("Dialog.Purge.Title"),
+        Format(
+            "Dialog.Purge.MessageFormat",
+            plan.Runs.Count,
+            plan.FileCount,
+            plan.TotalBytes),
+        Text("Dialog.Purge.Action"),
         DialogTone.Danger);
+
+    private string Text(string key) =>
+        localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string Format(
+        string key,
+        params object?[] arguments) =>
+        localization?.Format(
+            key,
+            arguments) ??
+        LocalizedText.Format(
+            key,
+            arguments);
 }

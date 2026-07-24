@@ -45,6 +45,7 @@ public partial class AnalyzerViewModel : ViewModelBase
     private readonly IDialogCoordinator? _dialogs;
     private readonly IArtworkService? _artwork;
     private readonly IThumbnailService? _thumbnails;
+    private readonly ILocalizationService? _localization;
     private CancellationTokenSource? _cts;
     private IReadOnlyList<TrackRecord> _representationRecords = [];
     private IReadOnlyList<DecodedAudioPair> _decodedAudioPairs = [];
@@ -55,6 +56,11 @@ public partial class AnalyzerViewModel : ViewModelBase
     private long _analysisProgressTotal;
     private long _analysisProgressOrigin;
     private long _analysisProgressCompleted;
+    private AnalysisProgress? _lastAnalysisProgress;
+    private string? _statusTextKey;
+    private object?[] _statusTextArguments = [];
+    private long? _statusTextCount;
+    private bool _statusUsesSelectedRun;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasDeterminateAnalysisProgress))]
@@ -70,7 +76,11 @@ public partial class AnalyzerViewModel : ViewModelBase
     private bool _isAnalysisProgressIndeterminate = true;
 
     [ObservableProperty]
-    private string? _statusText = "Choose an analysis to run.";
+    private string? _statusText;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasStatusDiagnosticDetail))]
+    private string? _statusDiagnosticDetail;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsStatusInfo))]
@@ -135,6 +145,12 @@ public partial class AnalyzerViewModel : ViewModelBase
     public string FfmpegPath => _settings.Configuration?.FfmpegPath ?? "ffmpeg";
 
     public ObservableCollection<AnalysisRunViewModel> Runs { get; } = [];
+    public IReadOnlyList<LocalizedChoice<AnalysisFindingDisposition>>
+        FindingDispositionChoices =>
+            HealthLocalizedChoices.AllFindingDispositions;
+    public IReadOnlyList<LocalizedChoice<AnalysisRepairDisposition>>
+        RepairDispositionChoices =>
+            HealthLocalizedChoices.AllRepairDispositions;
     public IReadOnlyList<AnalysisProblemGroupViewModel> FindingGroups => SelectedRun?.FindingGroups ?? [];
     public int FindingCount => FindingGroups.Sum(group => group.Count);
     public IReadOnlyList<DuplicateGroup> Duplicates => SelectedRun?.Duplicates ?? [];
@@ -174,6 +190,8 @@ public partial class AnalyzerViewModel : ViewModelBase
     public bool IsStatusSuccess => StatusTone == MessageTone.Success;
     public bool IsStatusWarning => StatusTone == MessageTone.Warning;
     public bool IsStatusError => StatusTone == MessageTone.Error;
+    public bool HasStatusDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(StatusDiagnosticDetail);
     public string StatusIcon => StatusTone switch
     {
         MessageTone.Success => "✓",
@@ -187,7 +205,8 @@ public partial class AnalyzerViewModel : ViewModelBase
     public bool HasMatrixResults => Matrices.Count > 0;
     public bool HasArtworkRepairResults => ArtworkRepairItems.Count > 0;
     public int ActiveArtworkRepairCount => ArtworkRepairItems.Count(item => item.IsActive);
-    public bool IsArtworkHealthRun => SelectedRun?.Name == "Artwork health";
+    public bool IsArtworkHealthRun =>
+        SelectedRun?.Kind == AnalysisRunKind.ArtworkHealth;
     public IReadOnlyList<string> DeferredArtworkPaths => IsArtworkHealthRun
         ? FindingGroups.Where(group => group.Problem == "Artwork scan deferred")
             .SelectMany(group => group.Artists)
@@ -200,8 +219,8 @@ public partial class AnalyzerViewModel : ViewModelBase
     public int DeferredArtworkCount => DeferredArtworkPaths.Count;
     public bool HasDeferredArtwork => DeferredArtworkCount > 0;
     public string FindingsEmptyText => FindingCount == 0
-        ? "This analysis found no matching tracks."
-        : "Select a findings branch.";
+        ? L("Health.Findings.Empty.NoMatches")
+        : L("Health.Findings.Empty.SelectBranch");
 
     private object? _selectedFindingNode;
     private object? _selectedRepairNode;
@@ -348,6 +367,17 @@ public partial class AnalyzerViewModel : ViewModelBase
         return activated;
     }
 
+    public void ReportAutomaticArtworkSelection(int activated)
+    {
+        if (activated == 0)
+            SetStatusText(
+                "Health.Artwork.Selection.NoneChanged");
+        else
+            SetCountStatusText(
+                "Health.Artwork.Selection.Changed",
+                activated);
+    }
+
     private static IReadOnlyList<ArtworkRepairItemViewModel> ArtworkItemsForNode(object? node) =>
         node switch
         {
@@ -425,7 +455,8 @@ public partial class AnalyzerViewModel : ViewModelBase
         IItlMetadataRepairService? itlMetadataRepairs = null,
         IDialogCoordinator? dialogs = null,
         IArtworkService? artwork = null,
-        IThumbnailService? thumbnails = null)
+        IThumbnailService? thumbnails = null,
+        ILocalizationService? localization = null)
     {
         _library = library;
         _reconciler = reconciler;
@@ -437,14 +468,18 @@ public partial class AnalyzerViewModel : ViewModelBase
         _dialogs = dialogs;
         _artwork = artwork;
         _thumbnails = thumbnails;
+        _localization = localization;
+        HealthLocalizedChoices.Refresh(L);
+        _localization?.CultureChanged += OnLocalizationCultureChanged;
         if (double.TryParse(settings.GetLibraryPreference(ArtistThresholdPreference),
                 NumberStyles.Float, CultureInfo.InvariantCulture, out double storedThreshold))
         {
             _artistThreshold = Math.Clamp(storedThreshold, 0, 1);
             _artistThresholdText = _artistThreshold.ToString("0.##", CultureInfo.CurrentCulture);
         }
-        if (settings.Configuration is null)
-            StatusText = "Choose a library configuration in Settings before running an audit.";
+        SetStatusText(settings.Configuration is null
+            ? "Health.Status.ChooseConfiguration"
+            : "Health.Status.ChooseAnalysis");
         settings.ConfigurationChanged += (_, _) =>
         {
             if (double.TryParse(settings.GetLibraryPreference(ArtistThresholdPreference),
@@ -456,9 +491,9 @@ public partial class AnalyzerViewModel : ViewModelBase
             ClearRuns();
             _representationRecords = [];
             _decodedAudioPairs = [];
-            StatusText = settings.Configuration is null
-                ? "Choose a library configuration in Settings before running an audit."
-                : "Choose an analysis to run.";
+            SetStatusText(settings.Configuration is null
+                ? "Health.Status.ChooseConfiguration"
+                : "Health.Status.ChooseAnalysis");
         };
     }
 
@@ -521,11 +556,11 @@ public partial class AnalyzerViewModel : ViewModelBase
         if (value is not null)
         {
             ActiveView = value.View;
-            StatusText = value.Summary;
+            SetStatusFromRun(value);
         }
         else
         {
-            StatusText = "Choose an analysis to run.";
+            SetStatusText("Health.Status.ChooseAnalysis");
         }
 
         NotifyCommands();
@@ -554,43 +589,112 @@ public partial class AnalyzerViewModel : ViewModelBase
                     LibraryProfilePreset.LegacyMusicLibraryTools).Health);
 
     [RelayCommand(CanExecute = nameof(CanRun))]
-    private Task RunInconsistencies() => RunOverRecords("Inconsistencies", AnalysisResultView.Findings, (records, progress, ct) =>
+    private Task RunInconsistencies() => RunOverRecords(
+        "Health.Run.Name.Inconsistencies",
+        AnalysisResultView.Findings,
+        (records, progress, ct) =>
     {
         var report = ApplyCurrentHealthPolicy(LibraryAnalyzer.Inconsistencies(records, progress, ct));
-        string status = report.Count == 0 ? "Inconsistencies: none found." : $"Inconsistencies: {report.Count:N0} finding(s).";
-        return (status, AnalysisRunViewModel.ForFindings(report, records, status));
+        HealthRunText text = report.Count == 0
+            ? RunText(
+                AnalysisRunKind.Inconsistencies,
+                "Health.Run.Name.Inconsistencies",
+                "Health.Status.Inconsistencies.None")
+            : RunText(
+                AnalysisRunKind.Inconsistencies,
+                "Health.Run.Name.Inconsistencies",
+                "Health.Status.Inconsistencies.Findings",
+                report.Count);
+        string status = text.ResolveSummary(_localization);
+        return (status, AnalysisRunViewModel.ForFindings(
+            report,
+            records,
+            status,
+            text,
+            _localization));
     });
 
     [RelayCommand(CanExecute = nameof(CanRun))]
-    private Task RunLossy() => RunOverRecords("Lossy files", AnalysisResultView.Findings, (records, progress, ct) =>
+    private Task RunLossy() => RunOverRecords(
+        "Health.Run.Name.LossyFiles",
+        AnalysisResultView.Findings,
+        (records, progress, ct) =>
     {
         var report = ApplyCurrentHealthPolicy(LibraryAnalyzer.Lossless(records, progress, ct));
-        string status = report.Count == 0 ? "No lossy files." : $"Lossy files: {report.Count:N0}.";
-        return (status, AnalysisRunViewModel.ForFindings(report, records, status));
+        HealthRunText text = report.Count == 0
+            ? RunText(
+                AnalysisRunKind.LossyFiles,
+                "Health.Run.Name.LossyFiles",
+                "Health.Status.LossyFiles.None")
+            : RunText(
+                AnalysisRunKind.LossyFiles,
+                "Health.Run.Name.LossyFiles",
+                "Health.Status.LossyFiles.Count",
+                report.Count);
+        string status = text.ResolveSummary(_localization);
+        return (status, AnalysisRunViewModel.ForFindings(
+            report,
+            records,
+            status,
+            text,
+            _localization));
     });
 
     [RelayCommand(CanExecute = nameof(CanRun))]
-    private Task RunDuplicates() => RunOverRecords("Duplicates", AnalysisResultView.Duplicates, (records, progress, ct) =>
+    private Task RunDuplicates() => RunOverRecords(
+        "Health.Run.Name.Duplicates",
+        AnalysisResultView.Duplicates,
+        (records, progress, ct) =>
     {
         var dupes = _settings.Configuration is { } configuration
             ? DuplicateFinder.Find(records, configuration, progress, ct)
             : DuplicateFinder.Find(records, progress, ct);
-        string status = dupes.Count == 0 ? "No duplicates found." : $"{dupes.Count:N0} duplicate group(s).";
-        return (status, AnalysisRunViewModel.ForDuplicates("Duplicates", dupes, status));
+        HealthRunText text = dupes.Count == 0
+            ? RunText(
+                AnalysisRunKind.Duplicates,
+                "Health.Run.Name.Duplicates",
+                "Health.Status.Duplicates.None")
+            : RunText(
+                AnalysisRunKind.Duplicates,
+                "Health.Run.Name.Duplicates",
+                "Health.Status.Duplicates.Groups",
+                dupes.Count);
+        string status = text.ResolveSummary(_localization);
+        return (status, AnalysisRunViewModel.ForDuplicates(
+            text.ResolveName(_localization),
+            dupes,
+            status,
+            text,
+            _localization));
     });
 
     [RelayCommand(CanExecute = nameof(CanRun))]
-    private Task RunSimilarArtists() => RunOverRecords("Similar artists", AnalysisResultView.Artists, (records, progress, ct) =>
+    private Task RunSimilarArtists() => RunOverRecords(
+        "Health.Run.Name.SimilarArtists",
+        AnalysisResultView.Artists,
+        (records, progress, ct) =>
     {
         var groups = _reconciler.FindSimilarArtists(records, ArtistThreshold, progress, ct);
-        string status = groups.Count == 0
-            ? $"No similar artist names found at threshold {ArtistThreshold:0.00}."
-            : $"{groups.Count:N0} cluster(s) of similar artist names at threshold " +
-              $"{ArtistThreshold:0.00}. Review variants, then apply active.";
+        HealthRunText text = groups.Count == 0
+            ? RunText(
+                AnalysisRunKind.SimilarArtists,
+                "Health.Run.Name.SimilarArtists",
+                "Health.Status.SimilarArtists.None",
+                null,
+                ArtistThreshold)
+            : RunText(
+                AnalysisRunKind.SimilarArtists,
+                "Health.Run.Name.SimilarArtists",
+                "Health.Status.SimilarArtists.Clusters",
+                groups.Count,
+                ArtistThreshold);
+        string status = text.ResolveSummary(_localization);
         return (status, AnalysisRunViewModel.ForArtists(
-            "Similar artists",
+            text.ResolveName(_localization),
             groups.Select(group => new ArtistGroupViewModel(group)).ToList(),
-            status));
+            status,
+            text,
+            _localization));
     });
 
     private bool CanApplySimilarArtists() => !IsBusy && ArtistGroups.Any(group =>
@@ -612,14 +716,18 @@ public partial class AnalyzerViewModel : ViewModelBase
             .DistinctBy(file => file.Path, StringComparer.OrdinalIgnoreCase).Count();
         int selectedGroups = selected.Select(action => action.Group).Distinct().Count();
         if (_dialogs is not null && !await _dialogs.ConfirmAsync(
-                "Apply similar artist merges",
-                $"Rename {selected.Count:N0} reviewed spelling variant(s) across " +
-                $"{selectedTracks:N0} track(s) in {selectedGroups:N0} cluster(s)? " +
-                "Files are written directly; no recovery journal is created.",
-                "Apply artist merges"))
+                L("Health.Dialog.ArtistMerge.Title"),
+                LF(
+                    "Health.Dialog.ArtistMerge.Message",
+                    selected.Count,
+                    selectedTracks,
+                    selectedGroups),
+                L("Health.Dialog.ArtistMerge.Confirm")))
             return;
 
-        using var scope = BeginRun("Apply similar artist merges", AnalysisResultView.Artists);
+        using var scope = BeginRun(
+            "Health.Operation.ApplySimilarArtists",
+            AnalysisResultView.Artists);
         var changedPaths = new List<string>();
         int changed = 0;
         int failed = 0;
@@ -630,7 +738,10 @@ public partial class AnalyzerViewModel : ViewModelBase
             {
                 scope.Token.ThrowIfCancellationRequested();
                 string canonical = action.Group.CanonicalName.Trim();
-                StatusText = $"Applying similar artist merges… {processed:N0}/{selected.Count:N0} variants";
+                SetStatusText(
+                    "Health.Progress.ApplyingSimilarArtists",
+                    processed,
+                    selected.Count);
                 try
                 {
                     int variantChanged = await _reconciler.RenameArtistAsync(
@@ -642,8 +753,11 @@ public partial class AnalyzerViewModel : ViewModelBase
                     if (variantChanged > 0)
                         changedPaths.AddRange(action.Variant.Files.Select(file => file.Path));
                     action.Variant.ResultText = variantChanged == 0
-                        ? "Already correct"
-                        : $"Renamed {variantChanged:N0} file(s)";
+                        ? L("Health.Result.AlreadyCorrect")
+                        : LC(
+                            "Health.Result.FilesRenamed",
+                            variantChanged);
+                    action.Variant.ResultDiagnosticDetail = null;
                     action.Variant.IsApplied = true;
                     action.Variant.Disposition = AnalysisRepairDisposition.Completed;
                 }
@@ -654,13 +768,19 @@ public partial class AnalyzerViewModel : ViewModelBase
                 catch (Exception ex)
                 {
                     failed++;
-                    action.Variant.ResultText = $"Failed: {ex.Message}";
+                    action.Variant.ResultText = L(
+                        "Health.Result.Failed");
+                    action.Variant.ResultDiagnosticDetail =
+                        ex.Message;
                 }
                 processed++;
             }
 
-            StatusText = $"Similar artist merges: {changed:N0} file(s) renamed, " +
-                $"{selected.Count - failed:N0} variant(s) completed, {failed:N0} failed.";
+            SetStatusText(
+                "Health.Status.ArtistMerge.Completed",
+                changed,
+                selected.Count - failed,
+                failed);
             scope.Complete(failed > 0 ? MessageTone.Warning : MessageTone.Success);
             if (changedPaths.Count > 0)
                 RepairsApplied?.Invoke(changedPaths.Distinct(StringComparer.OrdinalIgnoreCase).ToList());
@@ -668,7 +788,8 @@ public partial class AnalyzerViewModel : ViewModelBase
         catch (OperationCanceledException)
         {
             scope.Cancel();
-            StatusText = "Similar artist merge apply cancelled. Review the affected files before retrying.";
+            SetStatusText(
+                "Health.Status.ArtistMerge.Cancelled");
         }
         finally
         {
@@ -677,22 +798,39 @@ public partial class AnalyzerViewModel : ViewModelBase
     }
 
     [RelayCommand(CanExecute = nameof(CanRun))]
-    private Task RunAlbumMatrix() => RunOverRecords("Album metadata matrix", AnalysisResultView.Matrix, (records, progress, ct) =>
+    private Task RunAlbumMatrix() => RunOverRecords(
+        "Health.Run.Name.AlbumMetadataMatrix",
+        AnalysisResultView.Matrix,
+        (records, progress, ct) =>
     {
         var matrices = _settings.Configuration is { } configuration
             ? AlbumMetadataMatrixBuilder.Build(records, configuration, progress, ct)
             : AlbumMetadataMatrixBuilder.Build(records, progress, ct);
-        string status = matrices.Count == 0
-            ? "Album metadata matrix: no inconsistent albums found."
-            : $"Album metadata matrix: {matrices.Count:N0} album(s), " +
-              $"{matrices.Sum(matrix => matrix.InconsistentCellCount):N0} inconsistent cell(s).";
-        return (status, AnalysisRunViewModel.ForMatrices(matrices, status));
+        HealthRunText text = matrices.Count == 0
+            ? RunText(
+                AnalysisRunKind.AlbumMetadataMatrix,
+                "Health.Run.Name.AlbumMetadataMatrix",
+                "Health.Status.AlbumMatrix.None")
+            : RunText(
+                AnalysisRunKind.AlbumMetadataMatrix,
+                "Health.Run.Name.AlbumMetadataMatrix",
+                "Health.Status.AlbumMatrix.Results",
+                matrices.Count,
+                matrices.Sum(matrix => matrix.InconsistentCellCount));
+        string status = text.ResolveSummary(_localization);
+        return (status, AnalysisRunViewModel.ForMatrices(
+            matrices,
+            status,
+            text,
+            _localization));
     });
 
     [RelayCommand(CanExecute = nameof(CanRun))]
     private async Task RunArtworkHealth()
     {
-        using var scope = BeginRun("Artwork health", AnalysisResultView.ArtworkRepairs);
+        using var scope = BeginRun(
+            "Health.Run.Name.ArtworkHealth",
+            AnalysisResultView.ArtworkRepairs);
         try
         {
             var records = await _library.GetAllRecordsAsync(scope.Token);
@@ -701,8 +839,18 @@ public partial class AnalyzerViewModel : ViewModelBase
                 records, artwork, GetArtworkHealthSettings(), CreateAnalysisProgress(), scope.Token);
             AddRun(run);
         }
-        catch (OperationCanceledException) { scope.Cancel(); StatusText = "Artwork health audit cancelled."; }
-        catch (Exception ex) { scope.Fail(); StatusText = $"Artwork health audit failed: {ex.Message}"; }
+        catch (OperationCanceledException)
+        {
+            scope.Cancel();
+            SetStatusText("Health.Status.ArtworkHealth.Cancelled");
+        }
+        catch (Exception ex)
+        {
+            scope.Fail();
+            SetStatusFailure(
+                "Health.Status.ArtworkHealth.Failed",
+                ex.Message);
+        }
     }
 
     private LibraryArtworkHealthSettings GetArtworkHealthSettings() =>
@@ -730,13 +878,31 @@ public partial class AnalyzerViewModel : ViewModelBase
         int deferred = report.Findings.Count(finding =>
             finding.Problem == "Artwork scan deferred");
         int actionable = report.Count - deferred;
-        string status = report.Count == 0
-            ? "Artwork health: no issues found."
-            : $"Artwork health: {actionable:N0} issue(s), {repairs.Count:N0} repair action(s), " +
-              $"{deferred:N0} deferred file(s).";
+        HealthRunText text = report.Count == 0
+            ? RunText(
+                AnalysisRunKind.ArtworkHealth,
+                "Health.Run.Name.ArtworkHealth",
+                "Health.Status.ArtworkHealth.None")
+            : RunText(
+                AnalysisRunKind.ArtworkHealth,
+                "Health.Run.Name.ArtworkHealth",
+                "Health.Status.ArtworkHealth.Results",
+                null,
+                actionable,
+                repairs.Count,
+                deferred);
+        string status = text.ResolveSummary(_localization);
         return await Task.Run(
             () => AnalysisRunViewModel.ForArtwork(
-                report, records, repairs, status, progress, ct), ct);
+                report,
+                records,
+                repairs,
+                status,
+                progress,
+                ct,
+                text,
+                _localization),
+            ct);
     }
 
     private bool CanForceScanDeferredArtwork() =>
@@ -749,20 +915,35 @@ public partial class AnalyzerViewModel : ViewModelBase
         if (paths.Length == 0)
             return;
 
-        using var scope = BeginRun("Force scan deferred artwork", AnalysisResultView.ArtworkRepairs);
+        using var scope = BeginRun(
+            "Health.Operation.ForceScanDeferredArtwork",
+            AnalysisResultView.ArtworkRepairs);
         try
         {
-            StatusText = $"Reading embedded artwork from {paths.Length:N0} deferred file(s)...";
+            SetCountStatusText(
+                "Health.Progress.ReadingDeferredArtwork",
+                paths.Length);
             _ = await _library.GetImageSignaturesAsync(paths, scope.Token);
             var records = await _library.GetAllRecordsAsync(scope.Token);
             var artwork = await _library.GetArtworkAuditFilesAsync(scope.Token);
             AnalysisRunViewModel run = await BuildArtworkHealthRunAsync(
                 records, artwork, GetArtworkHealthSettings(), CreateAnalysisProgress(), scope.Token);
             AddRun(run);
-            StatusText = run.Summary;
+            SetStatusFromRun(run);
         }
-        catch (OperationCanceledException) { scope.Cancel(); StatusText = "Deferred artwork scan cancelled."; }
-        catch (Exception ex) { scope.Fail(); StatusText = $"Deferred artwork scan failed: {ex.Message}"; }
+        catch (OperationCanceledException)
+        {
+            scope.Cancel();
+            SetStatusText(
+                "Health.Status.DeferredArtwork.Cancelled");
+        }
+        catch (Exception ex)
+        {
+            scope.Fail();
+            SetStatusFailure(
+                "Health.Status.DeferredArtwork.Failed",
+                ex.Message);
+        }
     }
 
     private bool CanApplyArtworkRepairs() =>
@@ -780,13 +961,17 @@ public partial class AnalyzerViewModel : ViewModelBase
         int fileCount = selected.SelectMany(item => item.AffectedPaths)
             .Select(item => item.Path).Distinct(StringComparer.OrdinalIgnoreCase).Count();
         if (_dialogs is not null && !await _dialogs.ConfirmAsync(
-                "Apply artwork repairs",
-                $"Replace the entire embedded-artwork set in {fileCount:N0} file(s) using " +
-                $"{selected.Length:N0} reviewed action(s)? Files are written directly; no recovery journal is created.",
-                "Apply artwork repairs"))
+                L("Health.Dialog.ArtworkRepair.Title"),
+                LF(
+                    "Health.Dialog.ArtworkRepair.Message",
+                    fileCount,
+                    selected.Length),
+                L("Health.Dialog.ArtworkRepair.Confirm")))
             return;
 
-        using var scope = BeginRun("Apply artwork repairs", AnalysisResultView.ArtworkRepairs);
+        using var scope = BeginRun(
+            "Health.Operation.ApplyArtworkRepairs",
+            AnalysisResultView.ArtworkRepairs);
         var changedPaths = new List<string>();
         int completed = 0;
         int failed = 0;
@@ -795,12 +980,17 @@ public partial class AnalyzerViewModel : ViewModelBase
             foreach (ArtworkRepairItemViewModel item in selected)
             {
                 scope.Token.ThrowIfCancellationRequested();
-                StatusText = $"Applying artwork repairs... {completed + failed:N0}/{selected.Length:N0}";
+                SetStatusText(
+                    "Health.Progress.ApplyingArtworkRepairs",
+                    completed + failed,
+                    selected.Length);
                 PreparedImage? prepared = await PrepareArtworkWithinLimitsAsync(item, scope.Token);
                 if (prepared is null)
                 {
                     failed++;
-                    item.ResultText = "Failed: the selected image could not be encoded within the repair targets.";
+                    item.ResultText = L(
+                        "Health.Result.ArtworkEncodingFailed");
+                    item.ResultDiagnosticDetail = null;
                     continue;
                 }
 
@@ -814,7 +1004,11 @@ public partial class AnalyzerViewModel : ViewModelBase
                     if (result.Success)
                         changedPaths.Add(target.Path);
                     else
-                        itemFailures.Add($"{Path.GetFileName(target.Path)}: {result.Error ?? "unknown error"}");
+                        itemFailures.Add(LF(
+                            "Health.Diagnostic.FileError",
+                            Path.GetFileName(target.Path),
+                            result.Error ??
+                            L("Health.Common.UnknownError")));
                 }
 
                 if (itemFailures.Count == 0)
@@ -822,18 +1016,29 @@ public partial class AnalyzerViewModel : ViewModelBase
                     completed++;
                     item.IsApplied = true;
                     item.Disposition = AnalysisRepairDisposition.Completed;
-                    item.ResultText = $"Completed for {item.FileCount:N0} file(s) - " +
-                        $"{prepared.Width:N0}x{prepared.Height:N0} - {prepared.Data.Length / 1024d:0.#} KiB";
+                    item.ResultText = LF(
+                        "Health.Result.ArtworkCompleted",
+                        item.FileCount,
+                        prepared.Width,
+                        prepared.Height,
+                        prepared.Data.Length / 1024d);
+                    item.ResultDiagnosticDetail = null;
                 }
                 else
                 {
                     failed++;
-                    item.ResultText = $"Failed for {itemFailures.Count:N0} file(s): " +
+                    item.ResultText = LC(
+                        "Health.Result.ArtworkFilesFailed",
+                        itemFailures.Count);
+                    item.ResultDiagnosticDetail =
                         string.Join("; ", itemFailures.Take(3));
                 }
             }
 
-            StatusText = $"Artwork repairs: {completed:N0} action(s) completed, {failed:N0} failed.";
+            SetStatusText(
+                "Health.Status.ArtworkRepair.Completed",
+                completed,
+                failed);
             scope.Complete(failed > 0 ? MessageTone.Warning : MessageTone.Success);
             if (changedPaths.Count > 0)
                 RepairsApplied?.Invoke(changedPaths.Distinct(StringComparer.OrdinalIgnoreCase).ToArray());
@@ -841,7 +1046,8 @@ public partial class AnalyzerViewModel : ViewModelBase
         catch (OperationCanceledException)
         {
             scope.Cancel();
-            StatusText = "Artwork repair apply cancelled. Review the affected files before retrying.";
+            SetStatusText(
+                "Health.Status.ArtworkRepair.Cancelled");
         }
         finally
         {
@@ -878,7 +1084,9 @@ public partial class AnalyzerViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanRun))]
     private async Task RunRepresentations()
     {
-        using var scope = BeginRun("Album representations", AnalysisResultView.Findings);
+        using var scope = BeginRun(
+            "Health.Run.Name.AlbumRepresentations",
+            AnalysisResultView.Findings);
         try
         {
             var records = await _library.GetAllRecordsAsync(scope.Token);
@@ -899,9 +1107,12 @@ public partial class AnalyzerViewModel : ViewModelBase
             _decodedAudioPairs = prepared.Pairs;
             var artworkPaths = prepared.ArtworkPaths;
             IReadOnlyList<AnalysisFinding> artworkFindings = [];
+            string? artworkDiagnostic = null;
             if (artworkPaths.Count > 0)
             {
-                StatusText = $"Comparing embedded artwork for {artworkPaths.Count:N0} matched counterpart file(s)…";
+                SetCountStatusText(
+                    "Health.Progress.ComparingEmbeddedArtwork",
+                    artworkPaths.Count);
                 try
                 {
                     var signatures = await _library.GetImageSignaturesAsync(artworkPaths, scope.Token);
@@ -918,24 +1129,52 @@ public partial class AnalyzerViewModel : ViewModelBase
                 catch (OperationCanceledException) { throw; }
                 catch (Exception ex)
                 {
+                    artworkDiagnostic = ex.Message;
                     artworkFindings = [new(artworkPaths[0],
-                        $"Artwork comparison could not hydrate all matched files: {ex.Message}",
-                        "Artwork comparison unavailable")];
+                        L("Health.Finding.ArtworkComparisonUnavailable.Description"),
+                        L("Health.Finding.ArtworkComparisonUnavailable.Problem"))];
                 }
             }
             var result = await Task.Run(() =>
             {
                 var combined = new AnalysisReport(prepared.Report.Name,
                     [.. prepared.Report.Findings, .. artworkFindings]);
-                string status = combined.Count == 0
-                    ? "Album representations: no counterpart, metadata, duration, or artwork drift found."
-                    : $"Album representations: {combined.Count:N0} finding(s).";
-                return (Status: status, Run: AnalysisRunViewModel.ForFindings(combined, records, status));
+                HealthRunText text = combined.Count == 0
+                    ? RunText(
+                        AnalysisRunKind.AlbumRepresentations,
+                        "Health.Run.Name.AlbumRepresentations",
+                        "Health.Status.AlbumRepresentations.None")
+                    : RunText(
+                        AnalysisRunKind.AlbumRepresentations,
+                        "Health.Run.Name.AlbumRepresentations",
+                        "Health.Status.AlbumRepresentations.Findings",
+                        combined.Count);
+                string status = text.ResolveSummary(_localization);
+                return (
+                    Status: status,
+                    Run: AnalysisRunViewModel.ForFindings(
+                        combined,
+                        records,
+                        status,
+                        text,
+                        _localization,
+                        artworkDiagnostic));
             }, scope.Token);
             AddRun(result.Run);
         }
-        catch (OperationCanceledException) { scope.Cancel(); StatusText = "Album representation comparison cancelled."; }
-        catch (Exception ex) { scope.Fail(); StatusText = $"Album representation comparison failed: {ex.Message}"; }
+        catch (OperationCanceledException)
+        {
+            scope.Cancel();
+            SetStatusText(
+                "Health.Status.AlbumRepresentations.Cancelled");
+        }
+        catch (Exception ex)
+        {
+            scope.Fail();
+            SetStatusFailure(
+                "Health.Status.AlbumRepresentations.Failed",
+                ex.Message);
+        }
         finally { VerifyDecodedAudioCommand.NotifyCanExecuteChanged(); }
     }
 
@@ -947,23 +1186,55 @@ public partial class AnalyzerViewModel : ViewModelBase
     {
         if (_decodedAudio is null || _decodedAudioPairs.Count == 0)
             return;
-        using var scope = BeginRun("decoded-audio verification", AnalysisResultView.Findings);
+        using var scope = BeginRun(
+            "Health.Run.Name.DecodedAudioVerification",
+            AnalysisResultView.Findings);
         try
         {
             var progress = new Progress<DecodedAudioProgress>(item =>
-                ReportAnalysisProgress(new(item.CompletedFiles, item.TotalFiles, "files",
-                    "Decoding audio", item.Path)));
+                ReportAnalysisProgress(new(
+                    item.CompletedFiles,
+                    item.TotalFiles,
+                    "Health.Progress.Unit.Files",
+                    "Health.Progress.Stage.DecodingAudio",
+                    item.Path)));
             var report = await _decodedAudio.VerifyAsync(
                 FfmpegPath, _decodedAudioPairs, progress, scope.Token);
-            string status = report.Count == 0
-                ? $"Decoded-audio verification: {_decodedAudioPairs.Count:N0} compatible pair(s) match."
-                : $"Decoded-audio verification: {report.Count:N0} pair(s) differ.";
+            HealthRunText text = report.Count == 0
+                ? RunText(
+                    AnalysisRunKind.DecodedAudioVerification,
+                    "Health.Run.Name.DecodedAudioVerification",
+                    "Health.Status.DecodedAudioVerification.Match",
+                    _decodedAudioPairs.Count)
+                : RunText(
+                    AnalysisRunKind.DecodedAudioVerification,
+                    "Health.Run.Name.DecodedAudioVerification",
+                    "Health.Status.DecodedAudioVerification.Differ",
+                    report.Count);
+            string status = text.ResolveSummary(_localization);
             var run = await Task.Run(
-                () => AnalysisRunViewModel.ForFindings(report, _representationRecords, status), scope.Token);
+                () => AnalysisRunViewModel.ForFindings(
+                    report,
+                    _representationRecords,
+                    status,
+                    text,
+                    _localization),
+                scope.Token);
             AddRun(run);
         }
-        catch (OperationCanceledException) { scope.Cancel(); StatusText = "Decoded-audio verification cancelled."; }
-        catch (Exception ex) { scope.Fail(); StatusText = $"Decoded-audio verification failed: {ex.Message}"; }
+        catch (OperationCanceledException)
+        {
+            scope.Cancel();
+            SetStatusText(
+                "Health.Status.DecodedAudioVerification.Cancelled");
+        }
+        catch (Exception ex)
+        {
+            scope.Fail();
+            SetStatusFailure(
+                "Health.Status.DecodedAudioVerification.Failed",
+                ex.Message);
+        }
     }
 
     private bool CanPreviewRepresentationRepairs() => CanRun() && _representationRepairs is not null;
@@ -974,7 +1245,7 @@ public partial class AnalyzerViewModel : ViewModelBase
         if (_representationRepairs is null)
             return;
         using var scope = BeginRun(
-            "representation repair preview",
+            "Health.Operation.PreviewRepresentationRepairs",
             AnalysisResultView.RepresentationRepairs);
         try
         {
@@ -984,26 +1255,51 @@ public partial class AnalyzerViewModel : ViewModelBase
                 () => _representationRepairs.PreviewAsync(
                     records, _settings.Configuration, progress, scope.Token),
                 scope.Token);
-            progress.Report(new(0, 0, "results",
-                "Preparing representation repair results"));
+            progress.Report(new(
+                0,
+                0,
+                "Health.Progress.Unit.Results",
+                "Health.Progress.Stage.PreparingRepresentationRepairResults"));
             var runs = await Task.Run(() =>
             {
                 var projected = new List<AnalysisRunViewModel>(2);
                 if (preview.FileActions.Count > 0 || preview.Warnings.Count > 0)
                 {
-                    string actionStatus = $"Representation file repairs: {preview.FileActions.Count:N0} action(s), " +
-                        $"{preview.Warnings.Count:N0} warning(s). No files were changed.";
+                    HealthRunText actionText = RunText(
+                        AnalysisRunKind.RepresentationFileRepairs,
+                        "Health.Run.Name.RepresentationFileRepairs",
+                        "Health.Status.RepresentationRepairPreview.FileActions",
+                        null,
+                        preview.FileActions.Count,
+                        preview.Warnings.Count);
+                    string actionStatus =
+                        actionText.ResolveSummary(_localization);
                     projected.Add(AnalysisRunViewModel.ForRepresentationRepairs(
-                        preview.FileActions, preview.Warnings, records, actionStatus));
+                        preview.FileActions,
+                        preview.Warnings,
+                        records,
+                        actionStatus,
+                        actionText,
+                        _localization));
                 }
 
                 if (preview.MetadataCopies.Items.Count > 0)
                 {
                     var items = preview.MetadataCopies.Items.Select(CreateRepairItem).ToList();
-                    string metadataStatus = $"Representation metadata: {items.Count:N0} copy operation(s). " +
-                        "Review the source role in each reason, then apply selected.";
+                    HealthRunText metadataText = RunText(
+                        AnalysisRunKind.RepresentationMetadataRepairs,
+                        "Health.Run.Name.RepresentationMetadataRepairs",
+                        "Health.Status.RepresentationRepairPreview.MetadataCopies",
+                        items.Count);
+                    string metadataStatus =
+                        metadataText.ResolveSummary(_localization);
                     projected.Add(AnalysisRunViewModel.ForRepairs(
-                        preview.MetadataCopies, items, records, metadataStatus));
+                        preview.MetadataCopies,
+                        items,
+                        records,
+                        metadataStatus,
+                        metadataText,
+                        _localization));
                 }
                 return projected;
             }, scope.Token);
@@ -1011,10 +1307,22 @@ public partial class AnalyzerViewModel : ViewModelBase
             foreach (var run in runs)
                 AddRun(run);
             if (runs.Count == 0)
-                StatusText = "No representation derivation, metadata-copy, or organization repairs were found.";
+                SetStatusText(
+                    "Health.Status.RepresentationRepairPreview.None");
         }
-        catch (OperationCanceledException) { scope.Cancel(); StatusText = "Representation repair preview cancelled."; }
-        catch (Exception ex) { scope.Fail(); StatusText = $"Representation repair preview failed: {ex.Message}"; }
+        catch (OperationCanceledException)
+        {
+            scope.Cancel();
+            SetStatusText(
+                "Health.Status.RepresentationRepairPreview.Cancelled");
+        }
+        catch (Exception ex)
+        {
+            scope.Fail();
+            SetStatusFailure(
+                "Health.Status.RepresentationRepairPreview.Failed",
+                ex.Message);
+        }
         finally
         {
             ApplyRepairsCommand.NotifyCanExecuteChanged();
@@ -1025,7 +1333,9 @@ public partial class AnalyzerViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanRun))]
     private async Task PreviewMetadataRepairs()
     {
-        using var scope = BeginRun("Metadata repair preview", AnalysisResultView.Repairs);
+        using var scope = BeginRun(
+            "Health.Operation.PreviewMetadataRepairs",
+            AnalysisResultView.Repairs);
         try
         {
             var records = await _library.GetAllRecordsAsync(scope.Token);
@@ -1040,24 +1350,56 @@ public partial class AnalyzerViewModel : ViewModelBase
                 AnalysisRepairPlan plan = StampPolicy(preview);
                 var repairItems = plan.Items.Select(CreateRepairItem).ToList();
                 int applicable = plan.Items.Count(item => item.CanApply);
-                string status = plan.Items.Count == 0
-                    ? "No safely inferable metadata repairs were found."
+                HealthRunText text = plan.Items.Count == 0
+                    ? RunText(
+                        AnalysisRunKind.MetadataRepairs,
+                        "Health.Run.Name.MetadataRepairs",
+                        "Health.Status.MetadataRepairPreview.None")
                     : applicable == 0
-                        ? $"Found {plan.Items.Count:N0} metadata repair opportunity(s), but none can be applied. Review the warnings."
-                        : $"Previewed {plan.Items.Count:N0} metadata repair(s), {applicable:N0} applicable. Review, then apply active.";
-                return AnalysisRunViewModel.ForRepairs(plan, repairItems, records, status);
+                        ? RunText(
+                            AnalysisRunKind.MetadataRepairs,
+                            "Health.Run.Name.MetadataRepairs",
+                            "Health.Status.MetadataRepairPreview.Blocked",
+                            plan.Items.Count)
+                        : RunText(
+                            AnalysisRunKind.MetadataRepairs,
+                            "Health.Run.Name.MetadataRepairs",
+                            "Health.Status.MetadataRepairPreview.Results",
+                            plan.Items.Count,
+                            applicable);
+                string status = text.ResolveSummary(_localization);
+                return AnalysisRunViewModel.ForRepairs(
+                    plan,
+                    repairItems,
+                    records,
+                    status,
+                    text,
+                    _localization);
             }, scope.Token);
             AddRun(run);
         }
-        catch (OperationCanceledException) { scope.Cancel(); StatusText = "Metadata repair preview cancelled."; }
-        catch (Exception ex) { scope.Fail(); StatusText = $"Metadata repair preview failed: {ex.Message}"; }
+        catch (OperationCanceledException)
+        {
+            scope.Cancel();
+            SetStatusText(
+                "Health.Status.MetadataRepairPreview.Cancelled");
+        }
+        catch (Exception ex)
+        {
+            scope.Fail();
+            SetStatusFailure(
+                "Health.Status.MetadataRepairPreview.Failed",
+                ex.Message);
+        }
         finally { ApplyRepairsCommand.NotifyCanExecuteChanged(); }
     }
 
     [RelayCommand(CanExecute = nameof(CanRun))]
     private async Task FindAlbumArtistConflicts()
     {
-        using var scope = BeginRun("Album artist conflicts", AnalysisResultView.Conflicts);
+        using var scope = BeginRun(
+            "Health.Run.Name.AlbumArtistConflicts",
+            AnalysisResultView.Conflicts);
         try
         {
             var records = await _library.GetAllRecordsAsync(scope.Token);
@@ -1069,15 +1411,38 @@ public partial class AnalyzerViewModel : ViewModelBase
                     group.SelectionChanged += () => PreviewConflictRepairsCommand.NotifyCanExecuteChanged();
                     return group;
                 }).ToList();
-                string status = groups.Count == 0
-                    ? "No conflicting album artists were found."
-                    : $"Found {groups.Count:N0} album(s) with conflicting album artists. Choose canonical values to continue.";
-                return AnalysisRunViewModel.ForConflicts(groups, status);
+                HealthRunText text = groups.Count == 0
+                    ? RunText(
+                        AnalysisRunKind.AlbumArtistConflicts,
+                        "Health.Run.Name.AlbumArtistConflicts",
+                        "Health.Status.AlbumArtistConflicts.None")
+                    : RunText(
+                        AnalysisRunKind.AlbumArtistConflicts,
+                        "Health.Run.Name.AlbumArtistConflicts",
+                        "Health.Status.AlbumArtistConflicts.Results",
+                        groups.Count);
+                string status = text.ResolveSummary(_localization);
+                return AnalysisRunViewModel.ForConflicts(
+                    groups,
+                    status,
+                    text,
+                    _localization);
             }, scope.Token);
             AddRun(run);
         }
-        catch (OperationCanceledException) { scope.Cancel(); StatusText = "Album artist conflict search cancelled."; }
-        catch (Exception ex) { scope.Fail(); StatusText = $"Album artist conflict search failed: {ex.Message}"; }
+        catch (OperationCanceledException)
+        {
+            scope.Cancel();
+            SetStatusText(
+                "Health.Status.AlbumArtistConflicts.Cancelled");
+        }
+        catch (Exception ex)
+        {
+            scope.Fail();
+            SetStatusFailure(
+                "Health.Status.AlbumArtistConflicts.Failed",
+                ex.Message);
+        }
         finally { PreviewConflictRepairsCommand.NotifyCanExecuteChanged(); }
     }
 
@@ -1093,7 +1458,9 @@ public partial class AnalyzerViewModel : ViewModelBase
             .ToList();
         if (resolutions.Count == 0)
             return;
-        using var scope = BeginRun("conflict repair preview", AnalysisResultView.Repairs);
+        using var scope = BeginRun(
+            "Health.Operation.PreviewConflictRepairs",
+            AnalysisResultView.Repairs);
         try
         {
             var records = await _library.GetAllRecordsAsync(scope.Token);
@@ -1102,15 +1469,40 @@ public partial class AnalyzerViewModel : ViewModelBase
                 AnalysisRepairPlan plan = StampPolicy(
                     _repairs.PreviewConflictRepairs(resolutions));
                 var items = plan.Items.Select(CreateRepairItem).ToList();
-                string status = plan.Items.Count == 0
-                    ? "The selected canonical values already match every file."
-                    : $"Previewed {plan.Items.Count:N0} user-directed repair(s). Review, then apply selected.";
-                return AnalysisRunViewModel.ForRepairs(plan, items, records, status);
+                HealthRunText text = plan.Items.Count == 0
+                    ? RunText(
+                        AnalysisRunKind.ConflictRepairs,
+                        "Health.Run.Name.ConflictRepairs",
+                        "Health.Status.ConflictRepairPreview.None")
+                    : RunText(
+                        AnalysisRunKind.ConflictRepairs,
+                        "Health.Run.Name.ConflictRepairs",
+                        "Health.Status.ConflictRepairPreview.Results",
+                        plan.Items.Count);
+                string status = text.ResolveSummary(_localization);
+                return AnalysisRunViewModel.ForRepairs(
+                    plan,
+                    items,
+                    records,
+                    status,
+                    text,
+                    _localization);
             }, scope.Token);
             AddRun(run);
         }
-        catch (OperationCanceledException) { scope.Cancel(); StatusText = "Conflict repair preview cancelled."; }
-        catch (Exception ex) { scope.Fail(); StatusText = $"Conflict repair preview failed: {ex.Message}"; }
+        catch (OperationCanceledException)
+        {
+            scope.Cancel();
+            SetStatusText(
+                "Health.Status.ConflictRepairPreview.Cancelled");
+        }
+        catch (Exception ex)
+        {
+            scope.Fail();
+            SetStatusFailure(
+                "Health.Status.ConflictRepairPreview.Failed",
+                ex.Message);
+        }
         finally { ApplyRepairsCommand.NotifyCanExecuteChanged(); }
     }
 
@@ -1124,11 +1516,15 @@ public partial class AnalyzerViewModel : ViewModelBase
     {
         if (_itlMetadataRepairs is null)
             return;
-        using var scope = BeginRun("iTunes metadata repair preview", AnalysisResultView.ItlRepairs);
+        using var scope = BeginRun(
+            "Health.Operation.PreviewItlMetadataRepairs",
+            AnalysisResultView.ItlRepairs);
         try
         {
             var progress = new Progress<OperationProgress>(value =>
-                StatusText = value.Message ?? "Preparing iTunes metadata repairs…");
+                SetProviderProgressStatus(
+                    value,
+                    "Health.Progress.PreparingItlMetadataRepairs"));
             ItlMetadataRepairPlan plan = await _itlMetadataRepairs.PreviewAsync(
                 progress: progress, ct: scope.Token);
             var items = plan.Items.Select(item =>
@@ -1137,13 +1533,37 @@ public partial class AnalyzerViewModel : ViewModelBase
                 viewModel.StateChanged += () => ApplyItlMetadataRepairsCommand.NotifyCanExecuteChanged();
                 return viewModel;
             }).ToList();
-            string status = items.Count == 0
-                ? "The iTunes library already matches the metadata cache."
-                : $"Previewed {items.Count:N0} iTunes track repair(s). Review, mark repairs active, then apply.";
-            AddRun(AnalysisRunViewModel.ForItlRepairs(plan, items, status));
+            HealthRunText text = items.Count == 0
+                ? RunText(
+                    AnalysisRunKind.ItlMetadataRepairs,
+                    "Health.Run.Name.ItlMetadataRepairs",
+                    "Health.Status.ItlMetadataRepairPreview.None")
+                : RunText(
+                    AnalysisRunKind.ItlMetadataRepairs,
+                    "Health.Run.Name.ItlMetadataRepairs",
+                    "Health.Status.ItlMetadataRepairPreview.Results",
+                    items.Count);
+            string status = text.ResolveSummary(_localization);
+            AddRun(AnalysisRunViewModel.ForItlRepairs(
+                plan,
+                items,
+                status,
+                text,
+                _localization));
         }
-        catch (OperationCanceledException) { scope.Cancel(); StatusText = "iTunes metadata repair preview cancelled."; }
-        catch (Exception ex) { scope.Fail(); StatusText = $"iTunes metadata repair preview failed: {ex.Message}"; }
+        catch (OperationCanceledException)
+        {
+            scope.Cancel();
+            SetStatusText(
+                "Health.Status.ItlMetadataRepairPreview.Cancelled");
+        }
+        catch (Exception ex)
+        {
+            scope.Fail();
+            SetStatusFailure(
+                "Health.Status.ItlMetadataRepairPreview.Failed",
+                ex.Message);
+        }
         finally { ApplyItlMetadataRepairsCommand.NotifyCanExecuteChanged(); }
     }
 
@@ -1160,15 +1580,22 @@ public partial class AnalyzerViewModel : ViewModelBase
         if (selected.Length == 0)
             return;
         if (_dialogs is not null && !await _dialogs.ConfirmAsync(
-                "Apply iTunes metadata repairs",
-                $"Apply {selected.Length:N0} selected repair(s) to the iTunes library? A backup copy will be retained.",
-                "Apply repairs"))
+                L("Health.Dialog.ItlRepair.Title"),
+                LF(
+                    "Health.Dialog.ItlRepair.Message",
+                    selected.Length),
+                L("Health.Dialog.ApplyRepairs")))
             return;
-        using var scope = BeginRun("Apply iTunes metadata repairs", AnalysisResultView.ItlRepairs);
+        using var scope = BeginRun(
+            "Health.Operation.ApplyItlMetadataRepairs",
+            AnalysisResultView.ItlRepairs);
         try
         {
             var progress = new Progress<int>(done =>
-                StatusText = $"Applying iTunes metadata repairs… {done:N0}/{selected.Length:N0}");
+                SetStatusText(
+                    "Health.Progress.ApplyingItlMetadataRepairs",
+                    done,
+                    selected.Length));
             ItlMetadataRepairApplyResult result = await _itlMetadataRepairs.ApplyAsync(
                 plan, selected.Select(item => item.Item.Id).ToArray(), progress, scope.Token);
             var byId = result.Items.ToDictionary(item => item.Item.Id);
@@ -1178,22 +1605,42 @@ public partial class AnalyzerViewModel : ViewModelBase
                     continue;
                 item.ResultText = applied.Outcome switch
                 {
-                    ItlMetadataRepairOutcome.Applied => "Applied",
-                    ItlMetadataRepairOutcome.Skipped => "Already correct",
-                    _ => applied.Error ?? "Failed",
+                    ItlMetadataRepairOutcome.Applied =>
+                        L("Health.Result.Applied"),
+                    ItlMetadataRepairOutcome.Skipped =>
+                        L("Health.Result.AlreadyCorrect"),
+                    _ => L("Health.Result.Failed"),
                 };
+                item.ResultDiagnosticDetail =
+                    applied.Outcome == ItlMetadataRepairOutcome.Failed
+                        ? applied.Error
+                        : null;
                 if (applied.Outcome is ItlMetadataRepairOutcome.Applied or ItlMetadataRepairOutcome.Skipped)
                 {
                     item.IsApplied = true;
                     item.Disposition = AnalysisRepairDisposition.Completed;
                 }
             }
-            StatusText = $"iTunes metadata repairs: {result.Applied:N0} applied, " +
-                $"{result.Skipped:N0} skipped, {result.Failed:N0} failed. A .bak backup was retained.";
+            SetStatusText(
+                "Health.Status.ItlMetadataRepair.Completed",
+                result.Applied,
+                result.Skipped,
+                result.Failed);
             scope.Complete(result.Failed > 0 ? MessageTone.Warning : MessageTone.Success);
         }
-        catch (OperationCanceledException) { scope.Cancel(); StatusText = "iTunes metadata repair apply cancelled."; }
-        catch (Exception ex) { scope.Fail(); StatusText = $"iTunes metadata repair apply failed: {ex.Message}"; }
+        catch (OperationCanceledException)
+        {
+            scope.Cancel();
+            SetStatusText(
+                "Health.Status.ItlMetadataRepair.Cancelled");
+        }
+        catch (Exception ex)
+        {
+            scope.Fail();
+            SetStatusFailure(
+                "Health.Status.ItlMetadataRepair.Failed",
+                ex.Message);
+        }
         finally { ApplyItlMetadataRepairsCommand.NotifyCanExecuteChanged(); }
     }
 
@@ -1207,18 +1654,24 @@ public partial class AnalyzerViewModel : ViewModelBase
             return;
         int selectedRepairs = selected.Count;
         if (_dialogs is not null && !await _dialogs.ConfirmAsync(
-                "Apply metadata repairs",
-                $"Write {selectedRepairs:N0} reviewed metadata repair(s) to the selected files? " +
-                "Each source is checked for changes made since preview. Files are written directly; no recovery journal is created.",
-                "Apply repairs"))
+                L("Health.Dialog.MetadataRepair.Title"),
+                LF(
+                    "Health.Dialog.MetadataRepair.Message",
+                    selectedRepairs),
+                L("Health.Dialog.ApplyRepairs")))
             return;
 
-        using var scope = BeginRun("Apply metadata repairs", AnalysisResultView.Repairs);
+        using var scope = BeginRun(
+            "Health.Operation.ApplyMetadataRepairs",
+            AnalysisResultView.Repairs);
         try
         {
             var selectedPlan = repairPlan with { Items = selected.Select(item => item.Repair).ToList() };
             var progress = new Progress<int>(done =>
-                StatusText = $"Applying metadata repairs… {done:N0}/{selectedRepairs:N0} repair(s)");
+                SetStatusText(
+                    "Health.Progress.ApplyingMetadataRepairs",
+                    done,
+                    selectedRepairs));
             AnalysisRepairApplyResult result = _settings.Configuration is { } configuration
                 ? await _repairs.ApplyReviewedAsync(
                     selectedPlan, configuration, progress, scope.Token)
@@ -1235,17 +1688,37 @@ public partial class AnalyzerViewModel : ViewModelBase
                     continue;
                 item.ResultText = applied.Outcome switch
                 {
-                    WriteOutcome.Saved => "Applied",
-                    WriteOutcome.Skipped => "Already correct",
-                    _ => applied.Error ?? "Failed",
+                    WriteOutcome.Saved =>
+                        L("Health.Result.Applied"),
+                    WriteOutcome.Skipped =>
+                        L("Health.Result.AlreadyCorrect"),
+                    _ => L("Health.Result.Failed"),
                 };
-                if (applied.CacheError is not null)
-                    item.ResultText += $"; cache refresh failed: {applied.CacheError}";
+                item.ResultDiagnosticDetail =
+                    string.Join(
+                        Environment.NewLine,
+                        new[]
+                        {
+                            applied.Outcome == WriteOutcome.Failed
+                                ? applied.Error
+                                : null,
+                            applied.CacheError is null
+                                ? null
+                                : LF(
+                                    "Health.Diagnostic.CacheRefreshFailed",
+                                    applied.CacheError),
+                        }.Where(value =>
+                            !string.IsNullOrWhiteSpace(value)));
                 item.IsApplied = applied.Outcome is WriteOutcome.Saved or WriteOutcome.Skipped;
                 if (item.IsApplied)
                     item.Disposition = AnalysisRepairDisposition.Completed;
             }
-            StatusText = $"Metadata repairs: {result.Summary}.";
+            SetStatusText(
+                "Health.Status.MetadataRepair.Completed",
+                result.SavedCount,
+                result.SkippedCount,
+                result.FailedCount,
+                result.CacheFailedCount);
             scope.Complete(result.FailedCount > 0 || result.CacheFailedCount > 0
                 ? MessageTone.Warning
                 : MessageTone.Success);
@@ -1257,8 +1730,19 @@ public partial class AnalyzerViewModel : ViewModelBase
             if (changed.Count > 0)
                 RepairsApplied?.Invoke(changed);
         }
-        catch (OperationCanceledException) { scope.Cancel(); StatusText = "Metadata repair apply cancelled."; }
-        catch (Exception ex) { scope.Fail(); StatusText = $"Metadata repair apply failed: {ex.Message}"; }
+        catch (OperationCanceledException)
+        {
+            scope.Cancel();
+            SetStatusText(
+                "Health.Status.MetadataRepair.Cancelled");
+        }
+        catch (Exception ex)
+        {
+            scope.Fail();
+            SetStatusFailure(
+                "Health.Status.MetadataRepair.Failed",
+                ex.Message);
+        }
         finally { ApplyRepairsCommand.NotifyCanExecuteChanged(); }
     }
 
@@ -1285,21 +1769,24 @@ public partial class AnalyzerViewModel : ViewModelBase
         if (active.Count == 0)
             return;
         if (_dialogs is not null && !await _dialogs.ConfirmAsync(
-                "Apply file repairs",
-                $"Apply {active.Count:N0} reviewed file repair action(s)? " +
-                "Recoverable file mutations are recorded in the operation journal; metadata-only writes do not have journal recovery.",
-                "Apply file repairs"))
+                L("Health.Dialog.FileRepair.Title"),
+                LF(
+                    "Health.Dialog.FileRepair.Message",
+                    active.Count),
+                L("Health.Dialog.FileRepair.Confirm")))
             return;
 
         using var scope = BeginRun(
-            "Apply representation file repairs",
+            "Health.Operation.ApplyRepresentationFileRepairs",
             AnalysisResultView.RepresentationRepairs);
         try
         {
             var progress = new Progress<RepresentationRepairProgress>(value =>
-                StatusText =
-                    $"Applying representation repairs\u2026 {value.Completed:N0}/{value.Total:N0}: " +
-                    Path.GetFileName(value.SourcePath));
+                SetStatusText(
+                    "Health.Progress.ApplyingRepresentationRepairs",
+                    value.Completed,
+                    value.Total,
+                    Path.GetFileName(value.SourcePath)));
             RepresentationRepairApplyResult result =
                 await _representationRepairs.ApplyAsync(
                     active.Select(item => item.Action).ToList(),
@@ -1316,19 +1803,27 @@ public partial class AnalyzerViewModel : ViewModelBase
                     continue;
                 item.ResultText = applied.Outcome switch
                 {
-                    RepresentationRepairOutcome.Applied => applied.Error ?? "Applied",
-                    RepresentationRepairOutcome.Skipped => "Skipped",
-                    _ => applied.Error ?? "Failed",
+                    RepresentationRepairOutcome.Applied =>
+                        L("Health.Result.Applied"),
+                    RepresentationRepairOutcome.Skipped =>
+                        L("Health.Result.Skipped"),
+                    _ => L("Health.Result.Failed"),
                 };
+                item.ResultDiagnosticDetail = applied.Error;
                 item.IsApplied = applied.Outcome == RepresentationRepairOutcome.Applied;
                 if (item.IsApplied)
                     item.Disposition = AnalysisRepairDisposition.Completed;
             }
 
-            StatusText = result.Cancelled
-                ? $"Representation repairs cancelled after {result.Applied:N0} action(s)."
-                : $"Representation repairs: {result.Applied:N0} applied, " +
-                  $"{result.Failed:N0} failed.";
+            if (result.Cancelled)
+                SetCountStatusText(
+                    "Health.Status.RepresentationRepair.CancelledAfter",
+                    result.Applied);
+            else
+                SetStatusText(
+                    "Health.Status.RepresentationRepair.Completed",
+                    result.Applied,
+                    result.Failed);
             if (result.Cancelled)
                 scope.Cancel();
             else
@@ -1339,12 +1834,15 @@ public partial class AnalyzerViewModel : ViewModelBase
         catch (OperationCanceledException)
         {
             scope.Cancel();
-            StatusText = "Representation repair apply cancelled.";
+            SetStatusText(
+                "Health.Status.RepresentationRepair.Cancelled");
         }
         catch (Exception ex)
         {
             scope.Fail();
-            StatusText = $"Representation repair apply failed: {ex.Message}";
+            SetStatusFailure(
+                "Health.Status.RepresentationRepair.Failed",
+                ex.Message);
         }
         finally
         {
@@ -1355,44 +1853,84 @@ public partial class AnalyzerViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(CanRun))]
     private async Task RunCheckSets()
     {
-        using var scope = BeginRun("Cross-set check", AnalysisResultView.Findings);
+        using var scope = BeginRun(
+            "Health.Run.Name.CrossSetCheck",
+            AnalysisResultView.Findings);
         try
         {
             var records = await _library.GetAllRecordsAsync(scope.Token);
             var report = await _library.CheckSetsAsync(scope.Token);
-            string status = report.Count == 0
-                ? "Cross-set check: no differences (needs 2+ configured sets to compare)."
-                : $"Cross-set check: {report.Count:N0} finding(s).";
+            HealthRunText text = report.Count == 0
+                ? RunText(
+                    AnalysisRunKind.CrossSetCheck,
+                    "Health.Run.Name.CrossSetCheck",
+                    "Health.Status.CrossSetCheck.None")
+                : RunText(
+                    AnalysisRunKind.CrossSetCheck,
+                    "Health.Run.Name.CrossSetCheck",
+                    "Health.Status.CrossSetCheck.Findings",
+                    report.Count);
+            string status = text.ResolveSummary(_localization);
             var run = await Task.Run(
-                () => AnalysisRunViewModel.ForFindings(report, records, status), scope.Token);
+                () => AnalysisRunViewModel.ForFindings(
+                    report,
+                    records,
+                    status,
+                    text,
+                    _localization),
+                scope.Token);
             AddRun(run);
         }
-        catch (OperationCanceledException) { scope.Cancel(); StatusText = "Cross-set check cancelled."; }
-        catch (Exception ex) { scope.Fail(); StatusText = $"Cross-set check failed: {ex.Message}"; }
+        catch (OperationCanceledException)
+        {
+            scope.Cancel();
+            SetStatusText(
+                "Health.Status.CrossSetCheck.Cancelled");
+        }
+        catch (Exception ex)
+        {
+            scope.Fail();
+            SetStatusFailure(
+                "Health.Status.CrossSetCheck.Failed",
+                ex.Message);
+        }
     }
 
     // Shared runner for the analyses that operate on the flat record list: fetch records, run `body`
     // off the UI thread, including result projection, then publish one completed snapshot.
-    private async Task RunOverRecords(string label, AnalysisResultView view,
+    private async Task RunOverRecords(string labelResourceKey, AnalysisResultView view,
         Func<IReadOnlyList<TrackRecord>, IProgress<AnalysisProgress>, CancellationToken,
             (string Status, AnalysisRunViewModel Run)> body)
     {
-        using var scope = BeginRun(label, view);
+        using var scope = BeginRun(labelResourceKey, view);
         try
         {
             var records = await _library.GetAllRecordsAsync(scope.Token);
             IProgress<AnalysisProgress> progress = CreateAnalysisProgress();
-            var (status, run) = await Task.Run(
+            var (_, run) = await Task.Run(
                 () => body(records, progress, scope.Token), scope.Token);
             AddRun(run);
-            StatusText = status;
+            SetStatusFromRun(run);
         }
-        catch (OperationCanceledException) { scope.Cancel(); StatusText = $"{label} cancelled."; }
-        catch (Exception ex) { scope.Fail(); StatusText = $"{label} failed: {ex.Message}"; }
+        catch (OperationCanceledException)
+        {
+            scope.Cancel();
+            SetStatusText(
+                "Health.Status.Run.Cancelled",
+                L(labelResourceKey));
+        }
+        catch (Exception ex)
+        {
+            scope.Fail();
+            SetStatusFailure(
+                "Health.Status.Run.Failed",
+                ex.Message,
+                L(labelResourceKey));
+        }
     }
 
     // Sets up busy state / cancellation / active view; disposing restores idle state.
-    private RunScope BeginRun(string label, AnalysisResultView view)
+    private RunScope BeginRun(string labelResourceKey, AnalysisResultView view)
     {
         IsBusy = true;
         AnalysisProgressFraction = 0;
@@ -1403,11 +1941,14 @@ public partial class AnalyzerViewModel : ViewModelBase
         _analysisProgressTotal = 0;
         _analysisProgressOrigin = 0;
         _analysisProgressCompleted = 0;
+        _lastAnalysisProgress = null;
         // Keep the selected retained result visible while another analysis runs. With no history
         // yet, show the destination surface so the first run still has a natural empty state.
         if (SelectedRun is null)
             ActiveView = view;
-        StatusText = $"Running {label}…";
+        SetStatusText(
+            "Health.Progress.Running",
+            L(labelResourceKey));
         StatusTone = MessageTone.Info;
         LastActivityState = AppActivityState.Running;
         _cts = new CancellationTokenSource();
@@ -1422,13 +1963,16 @@ public partial class AnalyzerViewModel : ViewModelBase
     {
         if (!IsBusy || LastActivityState != AppActivityState.Running)
             return;
+        _lastAnalysisProgress = value;
 
         long completed = Math.Clamp(value.Completed, 0, Math.Max(0, value.Total));
         long total = Math.Max(0, value.Total);
         if (total == 0)
         {
             IsAnalysisProgressIndeterminate = true;
-            StatusText = $"{value.Stage}…";
+            SetStatusText(
+                "Health.Progress.Indeterminate",
+                ProgressStage(value.Stage));
             return;
         }
 
@@ -1452,17 +1996,28 @@ public partial class AnalyzerViewModel : ViewModelBase
         string estimate;
         if (phaseCompleted <= 0 || elapsedSeconds < 0.5)
         {
-            estimate = "ETA calculating…";
+            estimate = L(
+                "Health.Progress.EtaCalculating");
         }
         else
         {
             double rate = phaseCompleted / elapsedSeconds;
             double remainingSeconds = (total - completed) / rate;
-            estimate = $"{FormatRate(rate)} {value.Unit}/sec · ETA {FormatDuration(remainingSeconds)}";
+            estimate = LF(
+                "Health.Progress.RateAndEta",
+                FormatRate(rate),
+                ProgressUnit(value.Unit),
+                FormatDuration(remainingSeconds));
         }
 
-        StatusText = $"{value.Stage}… {completed:N0}/{total:N0} {value.Unit} " +
-            $"({AnalysisProgressFraction:P0}) · {estimate}";
+        SetStatusText(
+            "Health.Progress.Determinate",
+            ProgressStage(value.Stage),
+            completed,
+            total,
+            ProgressUnit(value.Unit),
+            AnalysisProgressFraction,
+            estimate);
     }
 
     private static string FormatRate(double rate) => rate switch
@@ -1472,16 +2027,25 @@ public partial class AnalyzerViewModel : ViewModelBase
         _ => rate.ToString("N2", CultureInfo.CurrentCulture),
     };
 
-    private static string FormatDuration(double seconds)
+    private string FormatDuration(double seconds)
     {
         if (!double.IsFinite(seconds) || seconds < 0)
-            return "calculating…";
+            return L(
+                "Health.Progress.Calculating");
         TimeSpan duration = TimeSpan.FromSeconds(Math.Ceiling(seconds));
         if (duration.TotalHours >= 1)
-            return $"{(int)duration.TotalHours:N0}h {duration.Minutes:N0}m";
+            return LF(
+                "Health.Duration.HoursMinutes",
+                (int)duration.TotalHours,
+                duration.Minutes);
         if (duration.TotalMinutes >= 1)
-            return $"{duration.Minutes:N0}m {duration.Seconds:N0}s";
-        return $"{Math.Max(0, duration.Seconds):N0}s";
+            return LF(
+                "Health.Duration.MinutesSeconds",
+                duration.Minutes,
+                duration.Seconds);
+        return LF(
+            "Health.Duration.Seconds",
+            Math.Max(0, duration.Seconds));
     }
 
     private sealed class RunScope(AnalyzerViewModel vm) : IDisposable
@@ -1656,6 +2220,206 @@ public partial class AnalyzerViewModel : ViewModelBase
         if (!string.IsNullOrEmpty(path))
             OpenRequested?.Invoke(path);
     }
+
+    private string L(string key) =>
+        _localization?.Get(key) ??
+        LocalizedText.Get(key);
+
+    private string LF(
+        string key,
+        params object?[] arguments) =>
+        _localization?.Format(key, arguments) ??
+        LocalizedText.Format(key, arguments);
+
+    private string LC(
+        string key,
+        long count,
+        params object?[] arguments) =>
+        _localization?.FormatCount(key, count, arguments) ??
+        LocalizedText.FormatCount(key, count, arguments);
+
+    private void SetStatusText(
+        string key,
+        params object?[] arguments)
+    {
+        _statusTextKey = key;
+        _statusTextArguments = arguments;
+        _statusTextCount = null;
+        _statusUsesSelectedRun = false;
+        StatusText = LF(key, arguments);
+        StatusDiagnosticDetail = null;
+    }
+
+    private void SetCountStatusText(
+        string key,
+        long count,
+        params object?[] arguments)
+    {
+        _statusTextKey = key;
+        _statusTextArguments = arguments;
+        _statusTextCount = count;
+        _statusUsesSelectedRun = false;
+        StatusText = LC(key, count, arguments);
+        StatusDiagnosticDetail = null;
+    }
+
+    private void SetStatusFailure(
+        string key,
+        string? diagnosticDetail,
+        params object?[] arguments)
+    {
+        SetStatusText(key, arguments);
+        StatusDiagnosticDetail = diagnosticDetail;
+    }
+
+    private void SetStatusFromRun(AnalysisRunViewModel run)
+    {
+        _statusTextKey = null;
+        _statusTextArguments = [];
+        _statusTextCount = null;
+        _statusUsesSelectedRun = true;
+        StatusText = run.Summary;
+        StatusDiagnosticDetail = run.DiagnosticDetail;
+    }
+
+    private HealthRunText RunText(
+        AnalysisRunKind kind,
+        string nameResourceKey,
+        string summaryResourceKey,
+        long? summaryCount = null,
+        params object?[] summaryArguments) =>
+        new(
+            kind,
+            nameResourceKey,
+            summaryResourceKey,
+            summaryCount,
+            summaryArguments);
+
+    private string ProgressStage(string stage) =>
+        stage switch
+        {
+            "Analyzing duplicate candidates" =>
+                L("Health.Progress.Stage.AnalyzingDuplicateCandidates"),
+            "Building album metadata matrix" =>
+                L("Health.Progress.Stage.BuildingAlbumMetadataMatrix"),
+            "Checking artwork metadata" =>
+                L("Health.Progress.Stage.CheckingArtworkMetadata"),
+            "Checking audio formats" =>
+                L("Health.Progress.Stage.CheckingAudioFormats"),
+            "Checking metadata consistency" =>
+                L("Health.Progress.Stage.CheckingMetadataConsistency"),
+            "Comparing album artwork" =>
+                L("Health.Progress.Stage.ComparingAlbumArtwork"),
+            "Comparing album representations" =>
+                L("Health.Progress.Stage.ComparingAlbumRepresentations"),
+            "Reading artist names" =>
+                L("Health.Progress.Stage.ReadingArtistNames"),
+            "Comparing artist names" =>
+                L("Health.Progress.Stage.ComparingArtistNames"),
+            "Grouping artwork repairs" =>
+                L("Health.Progress.Stage.GroupingArtworkRepairs"),
+            "Indexing artwork audit" =>
+                L("Health.Progress.Stage.IndexingArtworkAudit"),
+            "Indexing tracks for artwork repairs" =>
+                L("Health.Progress.Stage.IndexingTracksForArtworkRepairs"),
+            "Indexing tracks for artwork results" =>
+                L("Health.Progress.Stage.IndexingTracksForArtworkResults"),
+            "Planning album artwork repairs" =>
+                L("Health.Progress.Stage.PlanningAlbumArtworkRepairs"),
+            "Planning file artwork repairs" =>
+                L("Health.Progress.Stage.PlanningFileArtworkRepairs"),
+            "Preparing analysis findings" =>
+                L("Health.Progress.Stage.PreparingAnalysisFindings"),
+            "Preparing artwork findings" =>
+                L("Health.Progress.Stage.PreparingArtworkFindings"),
+            "Preparing artwork repair choices" =>
+                L("Health.Progress.Stage.PreparingArtworkRepairChoices"),
+            "Preparing representation repair results" =>
+                L("Health.Progress.Stage.PreparingRepresentationRepairResults"),
+            "Previewing representation derivations" =>
+                L("Health.Progress.Stage.PreviewingRepresentationDerivations"),
+            "Previewing representation metadata copies" =>
+                L("Health.Progress.Stage.PreviewingRepresentationMetadataCopies"),
+            "Previewing organization moves" =>
+                L("Health.Progress.Stage.PreviewingOrganizationMoves"),
+            "Selecting organization repairs" =>
+                L("Health.Progress.Stage.SelectingOrganizationRepairs"),
+            _ when stage.StartsWith("Health.", StringComparison.Ordinal) =>
+                L(stage),
+            _ => stage,
+        };
+
+    private string ProgressUnit(string unit) =>
+        unit switch
+        {
+            "artist-name comparisons" =>
+                L("Health.Progress.Unit.ArtistNameComparisons"),
+            "files" => L("Health.Progress.Unit.Files"),
+            "findings" => L("Health.Progress.Unit.Findings"),
+            "moves" => L("Health.Progress.Unit.Moves"),
+            "repair actions" => L("Health.Progress.Unit.RepairActions"),
+            "results" => L("Health.Progress.Unit.Results"),
+            "tracks" => L("Health.Progress.Unit.Tracks"),
+            _ when unit.StartsWith("Health.", StringComparison.Ordinal) =>
+                L(unit),
+            _ => unit,
+        };
+
+    private void SetProviderProgressStatus(
+        OperationProgress progress,
+        string fallbackResourceKey)
+    {
+        string key = progress.Phase switch
+        {
+            OperationPhase.LoadingConfiguration =>
+                "Health.Progress.OperationPhase.LoadingConfiguration",
+            OperationPhase.LoadingLibrary =>
+                "Health.Progress.OperationPhase.LoadingLibrary",
+            OperationPhase.IndexingSources =>
+                "Health.Progress.OperationPhase.IndexingSources",
+            OperationPhase.InventoryingDestination =>
+                "Health.Progress.OperationPhase.InventoryingDestination",
+            OperationPhase.Planning =>
+                "Health.Progress.OperationPhase.Planning",
+            OperationPhase.Validating =>
+                "Health.Progress.OperationPhase.Validating",
+            OperationPhase.Applying =>
+                "Health.Progress.OperationPhase.Applying",
+            OperationPhase.RollingBack =>
+                "Health.Progress.OperationPhase.RollingBack",
+            OperationPhase.Completed =>
+                "Health.Progress.OperationPhase.Completed",
+            _ => fallbackResourceKey,
+        };
+        SetStatusText(key);
+    }
+
+    private void OnLocalizationCultureChanged(
+        object? sender,
+        EventArgs e)
+    {
+        HealthLocalizedChoices.Refresh(L);
+        foreach (AnalysisRunViewModel run in Runs)
+            run.RefreshLocalizedText();
+        OnPropertyChanged(nameof(FindingsEmptyText));
+
+        if (_statusUsesSelectedRun && SelectedRun is not null)
+            StatusText = SelectedRun.Summary;
+        else if (_statusTextKey is not null)
+            StatusText = _statusTextCount is { } count
+                ? LC(_statusTextKey, count, _statusTextArguments)
+                : LF(_statusTextKey, _statusTextArguments);
+
+        if (!string.IsNullOrWhiteSpace(ArtistThresholdText))
+            SetProperty(
+                ref _artistThresholdText,
+                ArtistThreshold.ToString(
+                    "0.##",
+                CultureInfo.CurrentCulture),
+                nameof(ArtistThresholdText));
+        if (IsBusy && _lastAnalysisProgress is { } progress)
+            ReportAnalysisProgress(progress);
+    }
 }
 
 public partial class ItlMetadataRepairItemViewModel : ViewModelBase
@@ -1675,6 +2439,8 @@ public partial class ItlMetadataRepairItemViewModel : ViewModelBase
         Enum.GetValues<AnalysisRepairDisposition>()
             .Where(value => value != AnalysisRepairDisposition.Mixed)
             .ToArray();
+    public IReadOnlyList<LocalizedChoice<AnalysisRepairDisposition>>
+        DispositionChoices => HealthLocalizedChoices.RepairDispositions;
     public bool CanChangeDisposition => !IsApplied;
     public bool IsActive => Disposition == AnalysisRepairDisposition.Active && !IsApplied;
 
@@ -1689,6 +2455,13 @@ public partial class ItlMetadataRepairItemViewModel : ViewModelBase
 
     [ObservableProperty]
     private string? _resultText;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasResultDiagnosticDetail))]
+    private string? _resultDiagnosticDetail;
+
+    public bool HasResultDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(ResultDiagnosticDetail);
 
     public event Action? StateChanged;
 
@@ -1707,7 +2480,11 @@ public partial class ItlMetadataRepairItemViewModel : ViewModelBase
         IEnumerable<ItlMetadataDifference> differences,
         Func<ItlMetadataDifference, string?> select) =>
         string.Join(Environment.NewLine, differences.Select(difference =>
-            $"{difference.Field}: {select(difference) ?? "(missing)"}"));
+            LocalizedText.Format(
+                "Health.Itl.DifferenceFormat",
+                difference.Field,
+                select(difference) ??
+                LocalizedText.Get("Health.Common.Missing"))));
 }
 
 public sealed class ItlMetadataRepairCategoryGroupViewModel : ViewModelBase
@@ -1721,6 +2498,8 @@ public sealed class ItlMetadataRepairCategoryGroupViewModel : ViewModelBase
     public int ActiveCount => Artists.Sum(artist => artist.ActiveCount);
     public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
         Enum.GetValues<AnalysisRepairDisposition>();
+    public IReadOnlyList<LocalizedChoice<AnalysisRepairDisposition>>
+        DispositionChoices => HealthLocalizedChoices.AllRepairDispositions;
 
     public AnalysisRepairDisposition Disposition
     {
@@ -1758,8 +2537,12 @@ public sealed class ItlMetadataRepairCategoryGroupViewModel : ViewModelBase
         items.Select(item => new
             {
                 Item = item,
-                Category = "Cached metadata",
-                Artist = item.Item.Metadata.AlbumArtist ?? item.Item.Metadata.Artist ?? "Unknown Artist",
+                Category = LocalizedText.Get(
+                    "Health.Itl.Category.CachedMetadata"),
+                Artist = item.Item.Metadata.AlbumArtist ??
+                         item.Item.Metadata.Artist ??
+                         LocalizedText.Get(
+                             "Health.Common.UnknownArtist"),
                 Album = item.Item.Metadata.Album ?? AlbumFromPath(item.Path),
             })
             .GroupBy(entry => entry.Category, StringComparer.CurrentCultureIgnoreCase)
@@ -1785,7 +2568,8 @@ public sealed class ItlMetadataRepairCategoryGroupViewModel : ViewModelBase
     private static string AlbumFromPath(string path) =>
         Path.GetFileName(Path.GetDirectoryName(path)) is { Length: > 0 } value
             ? value
-            : "Unknown Album";
+            : LocalizedText.Get(
+                "Health.Common.UnknownAlbum");
 
     private AnalysisRepairDisposition Aggregate() =>
         AnalysisRepairCategoryGroupViewModel.Aggregate(
@@ -1808,6 +2592,8 @@ public sealed class ItlMetadataRepairArtistGroupViewModel : ViewModelBase
     public int ActiveCount => Albums.Sum(album => album.ActiveCount);
     public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
         Enum.GetValues<AnalysisRepairDisposition>();
+    public IReadOnlyList<LocalizedChoice<AnalysisRepairDisposition>>
+        DispositionChoices => HealthLocalizedChoices.AllRepairDispositions;
     public AnalysisRepairDisposition Disposition
     {
         get => _disposition;
@@ -1860,6 +2646,8 @@ public sealed class ItlMetadataRepairAlbumGroupViewModel : ViewModelBase
     public int ActiveCount => Items.Count(item => item.IsActive);
     public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; } =
         Enum.GetValues<AnalysisRepairDisposition>();
+    public IReadOnlyList<LocalizedChoice<AnalysisRepairDisposition>>
+        DispositionChoices => HealthLocalizedChoices.AllRepairDispositions;
     public AnalysisRepairDisposition Disposition
     {
         get => _disposition;
@@ -1911,12 +2699,13 @@ public partial class AnalysisRepairItemViewModel : ViewModelBase
     public string Path => Repair.Path;
     public string DisplayPath => ShowWhitespace(Repair.Path);
     public string Field => Repair.Kind == AnalysisRepairKind.Path
-        ? "Path"
+        ? LocalizedText.Get("Health.Field.Path")
         : Repair.TargetId3Version is not null
-            ? "ID3 tag version"
-            : Repair.Field.ToString();
+            ? LocalizedText.Get("Health.Field.Id3TagVersion")
+            : LocalizedText.Get(
+                $"Settings.Choice.TagFields.{Repair.Field}");
     public string Before => string.IsNullOrEmpty(Repair.Before)
-        ? "(missing)"
+        ? LocalizedText.Get("Health.Common.Missing")
         : ShowWhitespace(Repair.Before);
     public string After => ShowWhitespace(Repair.After);
     public IReadOnlyList<TextDifferenceSegment> BeforeDifference => _difference.Before;
@@ -1926,6 +2715,10 @@ public partial class AnalysisRepairItemViewModel : ViewModelBase
     public string? BlockingReason => Repair.BlockingReason;
     public bool CanChangeDisposition => !IsApplied;
     public IReadOnlyList<AnalysisRepairDisposition> Dispositions { get; }
+    public IReadOnlyList<LocalizedChoice<AnalysisRepairDisposition>>
+        DispositionChoices => Repair.CanApply
+            ? HealthLocalizedChoices.RepairDispositions
+            : HealthLocalizedChoices.BlockedRepairDispositions;
     public bool IsActive =>
         Repair.CanApply && Disposition == AnalysisRepairDisposition.Active && !IsApplied;
 
@@ -1939,6 +2732,13 @@ public partial class AnalysisRepairItemViewModel : ViewModelBase
     private bool _isApplied;
 
     [ObservableProperty] private string? _resultText;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasResultDiagnosticDetail))]
+    private string? _resultDiagnosticDetail;
+
+    public bool HasResultDiagnosticDetail =>
+        !string.IsNullOrWhiteSpace(ResultDiagnosticDetail);
 
     public event Action? StateChanged;
 
