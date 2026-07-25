@@ -17,7 +17,7 @@ Last updated: 2026-07-25
   configured real FFmpeg and OptimFROG installations and encode every
   advertised pair. Representative CRLF/LF and comma-identifier table fixtures
   cover the output variants emitted on Windows, macOS, and Linux.
-- [In Progress] ENC-01: Typed FFmpeg, WavPack, and OptimFROG execution adapters.
+- [Complete] ENC-01: Typed FFmpeg, WavPack, and OptimFROG execution adapters.
   Rate controls, resampling/depth conversion, deterministic dither selection,
   thread allocation, specialist WAV bridging, OptimFROG source decoding, and
   native verification hooks are implemented. Preview now requires exact
@@ -29,8 +29,11 @@ Last updated: 2026-07-25
   Float output round-trips through that fallback. Floating or
   unspecified-precision decoded sources now receive deterministic,
   format-appropriate integer projection and dither when the lossless output
-  requires integer PCM; explicit float output remains untouched. The complete
-  advertised codec/source validation matrix remains.
+  requires integer PCM; explicit float output remains untouched. The installed
+  WavPack 5.9.0 tools now validate lossless output, hybrid/correction output,
+  native correction reconstruction, and DSF-preserving output with decoded
+  equality and native DSD inspection. The advertised codec/source validation
+  matrix is complete.
 - [Complete] CFG-01: Existing WavPack executable machine-binding round trip now
   treats WavPack as a known configured tool.
 
@@ -128,8 +131,10 @@ Last updated: 2026-07-25
   the explicit-rate/depth preview guard and DSD-to-88.2 kHz/24-bit PCM against
   the transformed reference. The real OptimFROG DualStream test creates its
   `.ofc`, reconstructs with the native decoder, and decoded-compares it with
-  the source. WavPack correction reconstruction remains covered by the
-  opt-in real-tool test and deterministic service tests.
+  the source. The real WavPack tests likewise decoded-compare ordinary
+  lossless output and hybrid-plus-correction reconstruction with the source;
+  DSF output is additionally inspected as 1-bit DSD at 2.8224 MHz and
+  decoded-compared with the DSF source.
 
 ## Transaction, recovery, catalog, and history
 
@@ -226,13 +231,12 @@ Last updated: 2026-07-25
   cases.
 - Opt-in real-tool integration passes: every advertised local FFmpeg pair and
   all three OptimFROG modes encode readable output; Float `.ofr` additionally
-  decodes through the specialist fallback into FLAC. An opt-in configured
-  WavPack test now covers lossless output, hybrid correction output, and native
-  correction reconstruction; no WavPack executable was available on this
-  validation machine, so that external-tool path remains target-machine
-  validation. Seven real-tool cases now include the 15-family FFmpeg source
-  matrix, deterministic transformed-reference equality, DSD-to-PCM, native
-  OptimFROG DualStream correction reconstruction, and a complete reviewed
+  decodes through the specialist fallback into FLAC. Installed WavPack 5.9.0
+  tools cover lossless output, hybrid correction output, native correction
+  reconstruction, decoded equality, and DSF-preserving output. Eight real-tool
+  cases now include the 15-family FFmpeg source matrix, deterministic
+  transformed-reference equality, DSD-to-PCM, native WavPack and OptimFROG
+  correction reconstruction, WavPack DSD preservation, and a complete reviewed
   MP3-to-FLAC staging pass through scheduling, output validation, and decoded
   verification.
 - The shared fixture generator now emits an 8,284-byte, FFmpeg-decodable DSD64
@@ -251,7 +255,7 @@ Last updated: 2026-07-25
   SkiaSharp licenses/notices, and the embedded four-ABI Syncer server payload;
   no ImageSharp artifact is present. Native installer/package creation still
   requires validation on each target operating system.
-- Full portable Release tests pass: Core 1,073; MusicLibraryManager 226;
+- Full portable Release tests pass: Core 1,074; MusicLibraryManager 226;
   MusicLibraryManager UI 84; MusicFileUtilities 506; DumpITL 78.
 - The MusicLibraryManager Release project builds with 0 warnings and 0 errors.
 - `git diff --check` passes; Git reports only existing line-ending
@@ -260,10 +264,11 @@ Last updated: 2026-07-25
 - The primary engine checkpoint is commit `c069eec`; Operations, scheduler,
   and cross-runtime validation are committed in `7a760e8`; destination,
   Workbench interaction, and expanded verification are committed in
-  `4497846`. The valid APE/DSF fixture and specialist correction batch is ready
-  for its next reviewable commit.
+  `4497846`; valid APE/DSF fixtures and specialist correction coverage are
+  committed in `588d6b0`.
 
 ## Resume next
 
-1. Run target-native installer/package verification and the opt-in WavPack
-   real-tool integration on a machine with WavPack installed.
+1. Run target-native installer/package verification. Cross-runtime publish
+   layouts are already verified; native installer creation still requires each
+   target operating system.

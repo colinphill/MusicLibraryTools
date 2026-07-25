@@ -737,7 +737,8 @@ public sealed class TranscodeRealToolIntegrationTests
             ],
             [],
             [8, 16, 24, 32],
-            SupportsCorrectionFile: true);
+            SupportsCorrectionFile: true,
+            SupportsDsd: true);
         string source =
             MediaFixtures.Path_("sample.flac");
         string lossless =
@@ -755,6 +756,20 @@ public sealed class TranscodeRealToolIntegrationTests
                 .CancellationToken);
         Assert.True(
             new FileInfo(lossless).Length > 0);
+        AnalysisReport losslessReport =
+            await new DecodedAudioVerificationService(
+                    new FfmpegRunner())
+                .VerifyAsync(
+                    ffmpeg,
+                    [
+                        new(
+                            source,
+                            lossless,
+                            "WavPack lossless"),
+                    ],
+                    ct: TestContext.Current
+                        .CancellationToken);
+        Assert.Empty(losslessReport.Findings);
 
         string hybrid =
             Path.Combine(temp.Path, "hybrid.wv");
@@ -790,11 +805,116 @@ public sealed class TranscodeRealToolIntegrationTests
             Assert.True(
                 new FileInfo(reconstructed)
                     .Length > 0);
+            AnalysisReport correctionReport =
+                await new DecodedAudioVerificationService(
+                        new FfmpegRunner())
+                    .VerifyAsync(
+                        ffmpeg,
+                        [
+                            new(
+                                source,
+                                reconstructed,
+                                "WavPack hybrid correction"),
+                        ],
+                        ct: TestContext.Current
+                            .CancellationToken);
+            Assert.Empty(correctionReport.Findings);
         }
         finally
         {
             File.Delete(reconstructed);
         }
+    }
+
+    [Fact]
+    public async Task ConfiguredWavPackPreservesDsfDsd()
+    {
+        string? wavpack =
+            Environment.GetEnvironmentVariable(
+                "MUSICLIBRARY_WAVPACK");
+        string? ffmpeg =
+            Environment.GetEnvironmentVariable(
+                "MUSICLIBRARY_FFMPEG");
+        if (string.IsNullOrWhiteSpace(wavpack) ||
+            string.IsNullOrWhiteSpace(ffmpeg) ||
+            !File.Exists(wavpack) ||
+            !File.Exists(ffmpeg))
+            return;
+        string wvunpack =
+            TranscodeCorrectionVerificationService
+                .ResolveSiblingTool(
+                    wavpack,
+                    "wvunpack");
+        if (!File.Exists(wvunpack))
+            return;
+        using var temp = new TempDirectory();
+        AppSettings settings = CreateSettings(
+            temp,
+            ffmpeg,
+            wavpack);
+        var processes = new ManagedProcessRunner();
+        var adapter = new AudioTranscodeAdapter(
+            settings,
+            processes);
+        var encoder = new AudioEncoderDescriptor(
+            AudioTranscodeEncoderIds.WavPackCli,
+            AudioTranscodeToolKind.WavPack,
+            "wavpack",
+            AudioEncoderThreadingMode.SingleThreaded,
+            [
+                new(
+                    AudioTranscodeRateMode.Lossless),
+            ],
+            [],
+            [8, 16, 24, 32],
+            SupportsDsd: true);
+        string source =
+            MediaFixtures.Path_("sample.dsf");
+        string destination =
+            Path.Combine(temp.Path, "preserved-dsd.wv");
+
+        await adapter.EncodeAsync(
+            source,
+            destination,
+            new(
+                AudioTranscodeFormatIds.WavPack,
+                encoder.Id,
+                AudioTranscodeRateMode.Lossless),
+            encoder,
+            threadCount: 0,
+            ct: TestContext.Current
+                .CancellationToken);
+
+        Assert.True(
+            new FileInfo(destination).Length > 0);
+        ManagedProcessResult inspection =
+            await processes.RunAsync(
+                wvunpack,
+                ["-ss", destination],
+                ct: TestContext.Current
+                    .CancellationToken);
+        Assert.Equal(0, inspection.ExitCode);
+        string diagnostics =
+            inspection.StandardOutput + "\n" +
+            inspection.StandardError;
+        Assert.Contains(
+            "1-bit DSD at 2822400 Hz",
+            diagnostics,
+            StringComparison.OrdinalIgnoreCase);
+        AnalysisReport report =
+            await new DecodedAudioVerificationService(
+                    new FfmpegRunner())
+                .VerifyAsync(
+                    ffmpeg,
+                    [
+                        new(
+                            source,
+                            destination,
+                            "WavPack DSD preservation"),
+                    ],
+                    ct: TestContext.Current
+                        .CancellationToken);
+        Assert.Empty(report.Findings);
     }
 
     private static AudioTranscodeSettings SettingsFor(
